@@ -9,13 +9,11 @@ The browser runtime does not introduce a second route system. Controllers still 
 
 ## Progressive enhancement {#progressive-enhancement}
 
-Start with elements that already express what the browser should do. An album edit page should use a real form with a real action:
+Start with elements that already express what the browser should do. The `AlbumEditForm` from Chapter 1 should keep returning a real form with a real action:
 
-```tsx filename=app/actions/albums/edit/page.tsx
-<form
-  action={routes.albums.edit.action.href({ albumId: album.id })}
-  method="post"
->
+```tsx filename=app/assets/album-edit-form.tsx
+// Partial: inside AlbumEditForm's render function.
+<form action={handle.props.action} method="post">
   <label>
     Title
     <input name="title" defaultValue={album.title} required />
@@ -515,6 +513,18 @@ export const AlbumEditForm = clientEntry(
     );
   },
 );
+```
+
+The browser entry now accepts primitive props instead of the complete album object. Update the server page to pass that flattened shape:
+
+```tsx filename=app/actions/albums/edit/page.tsx
+// Partial update to AlbumEditPage from Chapter 1.
+<AlbumEditForm
+  action={routes.albums.edit.action.href({ albumId: album.id })}
+  artist={album.artist}
+  title={album.title}
+  year={album.year}
+/>
 ```
 
 This version preserves the clicked submitter, replaces the frame with a `400` validation response, follows a successful `303` as document navigation, and clears pending state after server and network failures. A non-redirecting success reloads the frame that owns the server-rendered result. A tiny independent widget may be better served by JSON. Pick the lighter response without creating a second mutation implementation.

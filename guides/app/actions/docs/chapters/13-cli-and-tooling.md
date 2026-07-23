@@ -17,7 +17,9 @@ cd record-store
 npm i
 ```
 
-`--app-name` controls the display name in the generated document. It does not need to match the directory name. The target directory must be empty unless `--force` is present; because force permits the scaffold to write into a non-empty directory, inspect that directory first.
+`--app-name` controls the display name in the generated document. It does not need to match the directory name.
+
+The target directory must be empty unless `--force` is present. Because force permits the scaffold to write into a non-empty directory, inspect that directory first.
 
 The generated app includes these request-path files (selected files):
 
@@ -44,20 +46,20 @@ record-store/
     └── routes.ts
 ```
 
-Its scripts run TypeScript source directly:
+After the test setup in the previous chapter, the app scripts run TypeScript source directly:
 
 ```json filename=package.json
 {
   "scripts": {
     "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
     "start": "NODE_ENV=production node --import remix/node-tsx server.ts",
-    "test": "NODE_ENV=test node --import remix/node-tsx --test",
+    "test": "NODE_ENV=test RELEASE_ID=test remix test",
     "typecheck": "tsc --noEmit"
   }
 }
 ```
 
-`dev` lets Node restart the server when source changes. `start` runs the same entry without watching. The initial `test` script uses Node's test runner, and `typecheck` remains a separate compiler pass.
+`dev` lets Node restart the server when source changes. `start` runs the same entry without watching. The test script uses the Remix test runners configured in the previous chapter, and `typecheck` remains a separate compiler pass.
 
 Once the package is installed, use the local binary through package scripts or `npx remix ...` so a global install cannot silently select another Remix version.
 
@@ -69,14 +71,31 @@ Run the route inspector from anywhere under the project:
 npx remix routes
 ```
 
-It loads `app/routes.ts` as runtime code and shows the method, pattern, and controller file expected to own each route. For the album routes, the tree makes the nested controller boundary visible:
+It loads `app/routes.ts` as runtime code and shows the method, pattern, and controller file expected to own each route. At this point in the walkthrough, the tree makes every direct and nested controller boundary visible:
 
 ```txt
+assets       GET     /assets/*path -> controller.tsx
+home         ANY     /             -> controller.tsx
 albums -> albums/controller.tsx
-├─ show   GET    /albums/:albumId
+├─ show             GET     /albums/:albumId
+├─ search           GET     /albums/search
+├─ recommendations  GET     /albums/:albumId/recommendations
+├─ cover            GET     /albums/:albumId/cover
+├─ coverHead        HEAD    /albums/:albumId/cover
+├─ destroy          DELETE  /albums/:albumId
 └─ edit -> albums/edit/controller.tsx
-   ├─ index   GET    /albums/:albumId/edit
-   └─ action  POST   /albums/:albumId/edit
+   ├─ index         GET     /albums/:albumId/edit
+   └─ action        POST    /albums/:albumId/edit
+account -> account/controller.tsx
+└─ index            GET     /account
+auth -> auth/controller.ts
+├─ logout           POST    /logout
+├─ login -> auth/login/controller.tsx
+│  ├─ index         GET     /login
+│  └─ action        POST    /login
+└─ google -> auth/google/controller.ts
+   ├─ login         GET     /login/google
+   └─ callback      GET     /auth/google/callback
 ```
 
 Use the table when sorting or scanning many routes:
@@ -86,7 +105,7 @@ npx remix routes --table
 npx remix routes --table --no-headers
 ```
 
-`--verbose` prints full owner paths in the tree or table. `--json` emits the normalized route map for another tool; it cannot be combined with `--table` or `--verbose`.
+`--verbose` prints full owner paths in the tree or table. `--json` emits the normalized route map for another tool and cannot be combined with `--table` or `--verbose`.
 
 An owner marked `[missing]` is an informational route-map result, not a failed command. `remix routes` still exits zero. Use `remix doctor --strict` when missing or incomplete controller ownership should fail CI.
 
@@ -124,7 +143,7 @@ Doctor is a focused project-health check. Keep `npm run typecheck` and tests in 
 
 ## Apply low-risk fixes with remix doctor --fix {#remix-doctor-fix}
 
-`--fix` applies supported changes immediately; it has no dry-run or plan-only mode. Start from a known working tree, run the command, then inspect the diff:
+`--fix` applies supported changes immediately. It has no dry-run or plan-only mode. Start from a known working tree, run the command, then inspect the diff:
 
 ```sh
 git status --short
@@ -132,18 +151,18 @@ npx remix doctor --fix
 git diff -- app package.json tsconfig.json
 ```
 
-Fixes are deliberately narrow. Doctor may align generated project metadata, create a missing routes or controller file, or add action placeholders for route ownership. A generated placeholder is still a TODO for the application; doctor does not invent authorization, queries, or response behavior.
+Fixes are deliberately narrow. Doctor may align generated project metadata, create a missing routes or controller file, or add action placeholders for route ownership. A generated placeholder is still a TODO for the application. Doctor does not invent authorization, queries, or response behavior.
 
 The command rechecks after applying fixes. It exits 1 if warning findings still remain, which can mean a low-risk fix was unavailable or the new placeholder still needs application code. Review and test the diff before committing it.
 
 ## Run tests with remix test {#remix-test}
 
-The minimal starter uses Node's test runner. An app that needs the Remix test environments and discovery from [Testing](/testing/) can switch its script:
+The generated starter uses Node's test runner. The album app switched to the Remix test environments and discovery in [Testing](/testing/), so its script now includes the deterministic test release ID:
 
 ```json filename=package.json
 {
   "scripts": {
-    "test": "NODE_ENV=test remix test"
+    "test": "NODE_ENV=test RELEASE_ID=test remix test"
   }
 }
 ```
@@ -240,7 +259,9 @@ node --import remix/node-tsx server.ts
 node --import remix/node-tsx scripts/migrate.ts
 ```
 
-The loader transforms `.ts`, `.tsx`, and `.jsx`, including enums, runtime namespaces, and parameter properties. It reads JSX transform options from the nearest `tsconfig.json`; Node still owns module resolution. The loader does not typecheck, apply TypeScript `paths` aliases, or downlevel modern JavaScript for an older runtime. Use normal Node-resolvable imports and run the Node version declared in `package.json`.
+The loader transforms `.ts`, `.tsx`, and `.jsx`, including enums, runtime namespaces, and parameter properties. It reads JSX transform options from the nearest `tsconfig.json`. Node still owns module resolution.
+
+The loader does not typecheck, apply TypeScript `paths` aliases, or downlevel modern JavaScript for an older runtime. Use normal Node-resolvable imports and run the Node version declared in `package.json`.
 
 For development restart behavior, Node owns the watcher:
 
@@ -264,7 +285,7 @@ let exitCode = await runRemix(process.argv.slice(2), {
 process.exitCode = exitCode;
 ```
 
-`runRemix(argv?, { cwd?, remixVersion? })` resolves to the command's numeric exit code. It writes command output directly to process stdout and stderr; the caller does not receive an output buffer. The wrapper owns process exit policy, so setting `process.exitCode` allows pending output to flush.
+`runRemix(argv?, { cwd?, remixVersion? })` resolves to the command's numeric exit code. It writes command output directly to process stdout and stderr, so the caller does not receive an output buffer. The wrapper owns process exit policy. Setting `process.exitCode` allows pending output to flush.
 
 `remixVersion` is mainly useful to a host or test that intentionally controls the reported version. Normal app tooling should let the installed package supply it.
 

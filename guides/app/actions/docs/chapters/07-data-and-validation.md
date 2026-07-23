@@ -205,7 +205,6 @@ import {
   column as c,
   hasMany,
   table,
-  type LoadedRelationMap,
   type TableRow,
   type TableRowWith,
 } from "remix/data-table";
@@ -222,7 +221,10 @@ export const albums = table({
   name: "albums",
   columns: {
     id: c.text().primaryKey(),
-    artist_id: c.integer().notNull(),
+    artist_id: c
+      .integer()
+      .notNull()
+      .references("artists", "id", "albums_artist_id_fk"),
     title: c.text().notNull(),
     year: c.integer().notNull(),
     revision: c.integer().notNull().default(0),
@@ -240,13 +242,13 @@ export const albumArtist = belongsTo(albums, artists, {
 export const albumRelations = { artist: albumArtist };
 
 export type Album = TableRow<typeof albums>;
-export type AlbumWithArtist = TableRowWith<
-  typeof albums,
-  LoadedRelationMap<typeof albumRelations>
->;
+export type Artist = TableRow<typeof artists>;
+export type AlbumWithArtist = TableRowWith<typeof albums, { artist: Artist }>;
 ```
 
 Table definitions describe typed columns and runtime metadata. Relations describe how rows connect and can be composed into eager-loading queries such as `{ with: albumRelations }`. `hasOne`, `hasMany`, `belongsTo`, and `hasManyThrough` cover the common relational shapes.
+
+A one-row relation loaded by a query is nullable because the query layer cannot prove that a matching row exists. `AlbumWithArtist` is the narrower page type we will use after the controller checks that `album.artist` is present.
 
 These definitions do not run `CREATE TABLE` or add a foreign key to the database. The SQL migration still owns DDL, indexes, uniqueness, `NOT NULL`, and referential actions. Keep table metadata and SQL constraints aligned deliberately.
 
@@ -319,7 +321,10 @@ export const albums = table({
   name: "albums",
   columns: {
     id: c.text().primaryKey(),
-    artist_id: c.integer().notNull(),
+    artist_id: c
+      .integer()
+      .notNull()
+      .references("artists", "id", "albums_artist_id_fk"),
     title: c.text().notNull(),
     year: c.integer().notNull(),
     revision: c.integer().notNull().default(0),
@@ -388,9 +393,16 @@ import { createDatabase } from "remix/data-table";
 import { createSqliteDatabaseAdapter } from "remix/data-table/sqlite";
 
 export const sqlite = new DatabaseSync("./db/app.db");
+sqlite.exec("pragma foreign_keys = on");
 
 export const adapter = createSqliteDatabaseAdapter(sqlite);
 export const db = createDatabase(adapter);
+```
+
+Keep the database file local while continuing to track migrations:
+
+```gitignore filename=.gitignore
+/db/*.db
 ```
 
 The table and query APIs stay the same across adapters, but database capabilities do not become identical:
@@ -423,11 +435,18 @@ create table artists (
 
 create table albums (
   id text primary key,
-  artist_id integer not null references artists(id),
+  artist_id integer not null constraint albums_artist_id_fk references artists(id),
   title text not null,
   year integer not null check (year between 1860 and 2100),
   revision integer not null default 0
 );
+```
+
+This migration is reversible, so fill in the `down.sql` file shown in the directory tree too:
+
+```sql filename=db/migrations/20260722120000_create_albums/down.sql
+drop table if exists albums;
+drop table if exists artists;
 ```
 
 `up.sql` is required. `down.sql` is optional when a migration cannot be reversed safely. Do not import the live TypeScript table definition into a migration: an old migration must mean the same thing when a new environment replays it years later.
@@ -446,13 +465,51 @@ let runner = createMigrationRunner(adapter, migrations);
 await runner.up();
 ```
 
+Keep walkthrough data out of the migration. Chapter 12 applies the same migrations to an isolated test database and then inserts the rows that each test needs. A fixture in `up.sql` would make those inserts collide.
+
+Instead, add an idempotent development seed for the album we have used since Chapter 1:
+
+```ts filename=app/data/seed.ts
+import { albums, artists } from "./schema.ts";
+import { db } from "./database.ts";
+
+await db.transaction(async (transaction) => {
+  let album = await transaction.find(albums, "thriller");
+  if (album !== null) return;
+
+  await transaction
+    .query(artists)
+    .upsert({ name: "Michael Jackson" }, { conflictTarget: ["name"] });
+  let artist = await transaction.findOne(artists, {
+    where: { name: "Michael Jackson" },
+  });
+  if (artist === null) {
+    throw new Error("Seeded artist could not be loaded");
+  }
+
+  await transaction.create(albums, {
+    id: "thriller",
+    artist_id: artist.id,
+    title: "Thriller",
+    year: 1982,
+  });
+});
+```
+
+Run the migration and seed once now, before restarting the development server:
+
+```sh
+node --import remix/node-tsx app/data/migrate.ts
+node --import remix/node-tsx app/data/seed.ts
+```
+
 The runner journals applied IDs and checksums. Changing an already-applied `up.sql` produces drift instead of silently changing history. Use `runner.status()` to inspect state, `runner.up({ step: 1 })` for a bounded rollforward, and `runner.down({ step: 1 })` for a bounded rollback. Both directions also accept `{ to: "20260722120000" }` or `{ dryRun: true }`; `to` and `step` are mutually exclusive.
 
 Each migration uses a transaction when the adapter supports transactional DDL. Put `-- data-table/transaction: none` on the first non-blank line for a statement that must run outside a transaction, such as PostgreSQL's `create index concurrently`.
 
 ## Request-scoped database access {#request-scoped-database-access}
 
-Create one long-lived database during startup, run migrations, then expose it through middleware:
+After migrations have run, create one long-lived database in the app process and expose it through middleware:
 
 ```ts filename=app/middleware/database.ts
 import { Database } from "remix/data-table";
@@ -471,5 +528,161 @@ export function loadDatabase(): Middleware {
 Add `loadDatabase()` to the router middleware tuple and derive `AppContext` from the configured router. Controllers can then call `context.get(Database)`, and TypeScript knows that the middleware installed the key.
 
 The middleware does not open a new connection for every action. The adapter or pool owns long-lived connections; the request context provides an explicit path to the shared database and a place to substitute an isolated database in tests.
+
+## Cut the album pages over to the database {#database-controller-cutover}
+
+The request middleware is useful only after the walkthrough stops importing its in-memory array. Chapter 4 moved the album markup into `AlbumCard`, so update that component before deleting its old type import:
+
+```tsx filename=app/actions/albums/album-card.tsx
+// Partial update to AlbumCard from Chapter 4.
+import type { AlbumWithArtist } from "../../data/schema.ts";
+
+// Change the handle type to Handle<{ album: AlbumWithArtist }>.
+// Inside the existing render function, update the artist paragraph:
+<p>{album.artist.name}</p>;
+```
+
+The album page passes the same row to `AlbumCard`. Change its type import and handle type while keeping its existing document, card, and recommendations frame:
+
+```tsx filename=app/actions/albums/show-page.tsx
+// Partial update to AlbumPage from Chapter 4.
+import type { AlbumWithArtist } from "../../data/schema.ts";
+
+// Change the handle type to Handle<{ album: AlbumWithArtist }>.
+```
+
+The album controller now reads through the request-scoped `Database` and eagerly loads the artist required by the page. Keep the recommendations action added in Chapter 4 because it is another direct leaf of `routes.albums`:
+
+```tsx filename=app/actions/albums/controller.tsx
+import { Database } from "remix/data-table";
+import { createController } from "remix/router";
+
+import { albumRelations, albums } from "../../data/schema.ts";
+import { routes } from "../../routes.ts";
+import { AlbumPage } from "./show-page.tsx";
+
+export default createController(routes.albums, {
+  actions: {
+    async show(context) {
+      let album = await context
+        .get(Database)
+        .find(albums, context.params.albumId, { with: albumRelations });
+
+      if (album === null || album.artist === null) {
+        return new Response("Album not found", { status: 404 });
+      }
+
+      return context.render(
+        <AlbumPage album={{ ...album, artist: album.artist }} />,
+      );
+    },
+
+    async recommendations(context) {
+      let album = await context
+        .get(Database)
+        .find(albums, context.params.albumId);
+
+      if (album === null) {
+        return new Response("Album not found", { status: 404 });
+      }
+
+      return context.render(
+        <aside aria-labelledby="recommendations-heading">
+          <h2 id="recommendations-heading">More like {album.title}</h2>
+          <p>Recommendations are still being selected.</p>
+        </aside>,
+      );
+    },
+  },
+});
+```
+
+Chapter 5 kept the hydrated edit form's serialized props primitive. The edit page owns the relational row and flattens it at that browser boundary:
+
+```tsx filename=app/actions/albums/edit/page.tsx
+// Partial update to AlbumEditPage from Chapter 5.
+import type { AlbumWithArtist } from "../../../data/schema.ts";
+
+// Change the handle type to Handle<{ album: AlbumWithArtist }>.
+// Replace the existing AlbumEditForm call with:
+<AlbumEditForm
+  action={routes.albums.edit.action.href({ albumId: album.id })}
+  artist={album.artist.name}
+  title={album.title}
+  year={album.year}
+/>;
+```
+
+Now delete `app/actions/albums/data.ts` and replace the edit controller's array reads and writes. The album lookup, artist upsert, and album update share one transaction:
+
+```tsx filename=app/actions/albums/edit/controller.tsx
+import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { redirect } from "remix/response/redirect";
+import { createController } from "remix/router";
+
+import { albumRelations, albums, artists } from "../../../data/schema.ts";
+import { routes } from "../../../routes.ts";
+import { AlbumEditPage } from "./page.tsx";
+import { albumFormSchema } from "./schema.ts";
+
+export default createController(routes.albums.edit, {
+  actions: {
+    async index(context) {
+      let album = await context
+        .get(Database)
+        .find(albums, context.params.albumId, { with: albumRelations });
+      if (album === null || album.artist === null) {
+        return new Response("Album not found", { status: 404 });
+      }
+
+      return context.render(
+        <AlbumEditPage album={{ ...album, artist: album.artist }} />,
+      );
+    },
+
+    async action(context) {
+      let result = s.parseSafe(albumFormSchema, context.formData);
+      if (!result.success) {
+        return new Response("Invalid album data", { status: 400 });
+      }
+
+      let db = context.get(Database);
+      let albumId = await db.transaction(async (transaction) => {
+        let album = await transaction.find(albums, context.params.albumId);
+        if (album === null) return null;
+
+        await transaction
+          .query(artists)
+          .upsert({ name: result.value.artist }, { conflictTarget: ["name"] });
+        let artist = await transaction.findOne(artists, {
+          where: { name: result.value.artist },
+        });
+        if (artist === null) {
+          throw new Error("Upserted artist could not be loaded");
+        }
+
+        await transaction.update(albums, album.id, {
+          artist_id: artist.id,
+          title: result.value.title,
+          year: result.value.year,
+        });
+
+        return album.id;
+      });
+
+      if (albumId === null) {
+        return new Response("Album not found", { status: 404 });
+      }
+
+      return redirect(routes.albums.show.href({ albumId }), 303);
+    },
+  },
+});
+```
+
+The lookup returns `null` before either write when the route names a missing album. If the artist upsert or album update throws, the transaction rolls both writes back. Only the committed album ID reaches the redirect.
+
+At this point neither controller, `AlbumCard`, nor either page imports the deleted module. The next chapter changes the edit page props and replaces this controller with the field-error, revision, and conflict-aware version.
 
 With typed data in place, [Forms and Mutations](/forms-and-mutations/) returns validation issues to the page, redirects successful writes, and enhances the same form without replacing its server action.

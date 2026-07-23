@@ -11,11 +11,17 @@ Those files should not share one catch-all directory. Each kind has a different 
 
 The generated app keeps `staticFiles()` at the front of the cumulative middleware stack:
 
-```ts
+```ts filename=app/router.ts
 import { staticFiles } from "remix/middleware/static";
+import { createRouter } from "remix/router";
 
-// Inside the existing createRouter middleware array:
-staticFiles("./public", { index: false });
+// Keep this entry first in the existing createRouter options:
+createRouter({
+  middleware: [
+    staticFiles("./public", { index: false }),
+    // remaining cumulative middleware...
+  ],
+});
 ```
 
 A file such as `public/placeholder-cover.jpg` is available at `/placeholder-cover.jpg` byte for byte. This is the right path for a favicon, `robots.txt`, or another checked-in file that already has its public representation.
@@ -53,12 +59,12 @@ export const assetServer = createAssetServer({
 
 Package rules use exact package names. Dependencies and installed optional dependencies of an allowed package are included, but peer dependencies are not. Add a peer explicitly only when browser source really imports it.
 
-The route that owns `/assets/*path` delegates to the asset server:
+The generated root controller already owns `/assets/*path`. Update that existing action if its asset-server configuration changed; do not add a second import or a duplicate `assets` property:
 
 ```ts filename=app/actions/controller.tsx
 import { assetServer } from "../assets.ts";
 
-// Add this method to the existing actions object:
+// Keep this method in the existing actions object:
 async assets(context) {
   return (
     (await assetServer.fetch(context.request)) ?? new Response("Not found", { status: 404 })
@@ -73,6 +79,7 @@ async assets(context) {
 Put browser-loadable source under the allowed directory. The generated client entry is `app/assets/entry.ts`:
 
 ```ts filename=app/assets/entry.ts
+import type { FrameContent } from "remix/ui";
 import { run } from "remix/ui";
 
 let app = run({
@@ -80,27 +87,56 @@ let app = run({
     let module = await import(moduleUrl);
     return module[exportName];
   },
-  async resolveFrame(src, signal) {
+  async resolveFrame(src, signal, target): Promise<FrameContent> {
     let url = new URL(src, window.location.href);
     if (url.origin !== window.location.origin) {
       throw new Error("Refusing to render a cross-origin frame");
     }
 
-    let response = await fetch(url, {
-      headers: { Accept: "text/html", "X-Remix-Frame": "true" },
-      signal,
+    let headers = new Headers({
+      Accept: "text/html",
+      "X-Remix-Frame": "true",
     });
-    if (new URL(response.url).origin !== window.location.origin) {
+    if (target) headers.set("X-Remix-Target", target);
+
+    let response = await fetch(url, { headers, signal });
+    let responseUrl = new URL(response.url || url.href);
+    if (responseUrl.origin !== window.location.origin) {
       throw new Error("Refusing to render a cross-origin frame redirect");
     }
+
+    if (response.status === 401) {
+      let location = response.headers.get("X-Login-Location");
+      if (location === null) {
+        throw new Error(
+          "Frame authentication response is missing a login location",
+        );
+      }
+
+      let loginUrl = new URL(location, responseUrl);
+      if (loginUrl.origin !== window.location.origin) {
+        throw new Error("Refusing a cross-origin login location");
+      }
+
+      window.location.assign(loginUrl.href);
+      return "<p>Redirecting to sign in…</p>";
+    }
+
     if (!response.ok) {
       return '<p role="alert">Could not load this section. Reload the page to try again.</p>';
     }
     return response.body ?? response.text();
   },
 });
+
+app.addEventListener("error", (event) => {
+  console.error("Remix UI error:", event.error);
+});
+
 await app.ready();
 ```
+
+This keeps the frame target and authentication contract introduced earlier. A `401` may navigate only to the same-origin login location supplied by `requireUser`; other non-success responses stay inside the frame as fixed app-owned HTML. The next chapter turns those branches into an explicit error policy.
 
 When the browser requests that entry, the asset server compiles TypeScript and JavaScript, rewrites imports to public asset URLs, and serves imported package modules through their configured mount. CSS imports and CSS `@import` and `url()` references are rewritten through the same boundary.
 
@@ -255,24 +291,70 @@ Source maps, browser targets, and minification are deployment choices. Do not en
 
 ## Parse bounded form uploads {#file-uploads}
 
-Now add a cover to the existing album edit form:
+The cumulative edit form now lives in `app/assets/album-edit-form.tsx`. Extend that client entry instead of creating a second form in the server page. Add `coverError` to its props and existing destructuring:
 
-```tsx filename=app/actions/albums/edit/page.tsx
-<form
-  action={routes.albums.edit.action.href({ albumId })}
-  encType="multipart/form-data"
-  method="post"
->
-  {/* title, artist, and year fields */}
-  <input name="revision" type="hidden" value={values.revision} />
-  <input name="_csrf" type="hidden" value={csrfToken} />
+```tsx filename=app/assets/album-edit-form.tsx
+// Partial update to AlbumEditFormProps:
+export interface AlbumEditFormProps {
+  // Keep action, conflict, csrfToken, issues, and values.
+  coverError?: string;
+}
+
+// Replace the existing props destructuring in the render function:
+let {
+  action,
+  conflict,
+  coverError,
+  csrfToken,
+  issues = [],
+  values,
+} = handle.props;
+```
+
+Set `encType="multipart/form-data"` on the existing `<form>` without changing its action, method, or `on("submit", ...)` mixin. Then add this control before the existing `submissionError` and submit button:
+
+```tsx filename=app/assets/album-edit-form.tsx
+<>
+  {/* Inside the existing form: */}
   <label>
     Cover image
-    <input accept="image/jpeg,image/png" name="cover" type="file" />
+    <input
+      accept="image/jpeg,image/png"
+      aria-describedby={coverError ? "cover-error" : undefined}
+      aria-invalid={coverError ? "true" : undefined}
+      name="cover"
+      type="file"
+    />
   </label>
-  <button type="submit">Save album</button>
-</form>
+  {coverError ? (
+    <p id="cover-error" role="alert">
+      {coverError}
+    </p>
+  ) : null}
+</>
 ```
+
+The server page only passes props into that form. Carry the upload error through the existing client-entry boundary:
+
+```tsx filename=app/actions/albums/edit/page.tsx
+// Add coverError to the existing AlbumEditPageProps interface.
+interface AlbumEditPageProps {
+  // Keep albumId, conflict, csrfToken, issues, and values.
+  coverError?: string;
+}
+
+// Read coverError with the existing props, then pass it to the form:
+<AlbumEditForm
+  action={routes.albums.edit.action.href({ albumId })}
+  conflict={conflict}
+  coverError={coverError}
+  csrfToken={csrfToken}
+  issues={issues}
+  values={values}
+/>;
+```
+
+The native form now sends multipart bytes, while the Chapter 8 submit handler still constructs `FormData` from the same form and preserves its pending, redirect, authentication, validation, and cancellation behavior.
 
 For this small cover, retain the uploaded `File` until the authenticated action has validated and authorized the edit. Bound the parser before reading any fields:
 
@@ -368,6 +450,40 @@ import { createFsFileStorage } from "remix/file-storage/fs";
 export const albumCovers = createFsFileStorage("./var/album-covers");
 ```
 
+Keep the stored objects out of source control:
+
+```gitignore filename=.gitignore
+/var/album-covers/
+```
+
+Put the chosen storage behind request context just like the database. That keeps controller imports independent of the production backend:
+
+```ts filename=app/middleware/album-covers.ts
+import type { FileStorage } from "remix/file-storage";
+import { createContextKey, type Middleware } from "remix/router";
+
+export const AlbumCovers = createContextKey<FileStorage>();
+
+export function loadAlbumCovers(
+  storage: FileStorage,
+): Middleware<{ key: typeof AlbumCovers; value: FileStorage }> {
+  return (context, next) => {
+    context.set(AlbumCovers, storage);
+    return next();
+  };
+}
+```
+
+Pass the production storage when assembling the router:
+
+```ts filename=app/router.ts
+import { albumCovers } from "./files.ts";
+import { loadAlbumCovers } from "./middleware/album-covers.ts";
+
+// Add after loadDatabase() in the cumulative middleware array:
+loadAlbumCovers(albumCovers),
+```
+
 Memory storage fits tests. Filesystem storage fits one host with persistent disk. S3-compatible storage fits multiple stateless app replicas. The app code still uses `get`, `has`, `list`, `put`, `set`, and `remove`. The bundled S3 backend buffers values returned by `get()`; large-object delivery should use a presigned response or a storage adapter with a streaming read path.
 
 The `File` type and `accept` attribute do not prove that the bytes contain an image. Decode into pixels, bound the decoded size, and encode a new app-owned representation. Reuse the `sharp` decoder from the transform example to normalize every accepted cover:
@@ -413,32 +529,51 @@ export async function normalizeAlbumCover(cover: File): Promise<File> {
 
 The encoded `File` now has an app-owned name and MIME type. The pixel limit also bounds small compressed inputs that expand dramatically during decoding. Use the corresponding limits and decoder-error type when choosing another image library.
 
-After authentication, form validation, the ownership check, and resolving the submitted artist to `artistId`, store a new cover under an app-owned key and include it in the existing guarded update:
+In the complete edit action, keep the submitted `values`, schema parsing, album lookup, ownership check, and `AlbumEditConflictError` from the previous chapters. After those checks, store a new cover under an app-owned key. Then replace the existing transaction block with the artist lookup and guarded album update below:
 
-```ts filename=app/actions/albums/edit/controller.tsx
+```tsx filename=app/actions/albums/edit/controller.tsx
+import type { FileStorage } from "remix/file-storage";
+import { getCsrfToken } from "remix/middleware/csrf";
+
 import {
   InvalidAlbumCoverError,
   normalizeAlbumCover,
 } from "../../../data/album-cover.ts";
-import { albums } from "../../../data/schema.ts";
-import { albumCovers } from "../../../files.ts";
+import { albums, artists } from "../../../data/schema.ts";
+import { AlbumCovers } from "../../../middleware/album-covers.ts";
+import { AlbumEditPage } from "./page.tsx";
 
 // Inside the authenticated edit action, after validation and authorization.
 let cover = context.formData.get("cover");
 let normalizedCover: File | null = null;
 
+function renderCoverError(message: string): Response {
+  return context.render(
+    <AlbumEditPage
+      albumId={album.id}
+      coverError={message}
+      csrfToken={getCsrfToken(context)}
+      issues={[]}
+      values={values}
+    />,
+    { status: 400 },
+  );
+}
+
+if (cover !== null && !(cover instanceof File)) {
+  return renderCoverError("Cover must be an uploaded file");
+}
+
 if (cover instanceof File && cover.size > 0) {
   if (cover.type !== "image/jpeg" && cover.type !== "image/png") {
-    return new Response("Cover must be a JPEG or PNG image", { status: 400 });
+    return renderCoverError("Cover must be a JPEG or PNG image");
   }
 
   try {
     normalizedCover = await normalizeAlbumCover(cover);
   } catch (error) {
     if (error instanceof InvalidAlbumCoverError) {
-      return new Response("Cover must contain a valid JPEG or PNG image", {
-        status: 400,
-      });
+      return renderCoverError("Cover must contain a valid JPEG or PNG image");
     }
     throw error;
   }
@@ -448,56 +583,84 @@ let newCoverKey = normalizedCover
   ? `album-covers/${crypto.randomUUID()}`
   : null;
 let previousCoverKey = album.cover_key;
-let { revision, title, year } = result.value;
+let albumCovers = context.get(AlbumCovers);
+let { artist: artistName, revision, title, year } = result.value;
 
 try {
   if (newCoverKey && normalizedCover) {
     await albumCovers.set(newCoverKey, normalizedCover);
   }
 
-  let write = await db.updateMany(
-    albums,
-    {
-      artist_id: artistId,
-      title,
-      year,
-      revision: revision + 1,
-      ...(newCoverKey ? { cover_key: newCoverKey } : {}),
-    },
-    {
-      where: {
-        id: album.id,
-        owner_id: context.auth.identity.id,
-        revision,
-      },
-    },
-  );
-
-  if (write.affectedRows === 0) {
-    if (newCoverKey) await removeStoredCover(newCoverKey);
-    return new Response("Album changed before it could be saved", {
-      status: 409,
+  await db.transaction(async (transaction) => {
+    await transaction
+      .query(artists)
+      .upsert({ name: artistName }, { conflictTarget: ["name"] });
+    let artist = await transaction.findOne(artists, {
+      where: { name: artistName },
     });
-  }
+    if (artist === null) {
+      throw new Error("Upserted artist could not be loaded");
+    }
+
+    let write = await transaction.updateMany(
+      albums,
+      {
+        artist_id: artist.id,
+        title,
+        year,
+        revision: revision + 1,
+        ...(newCoverKey ? { cover_key: newCoverKey } : {}),
+      },
+      {
+        where: {
+          id: album.id,
+          owner_id: context.auth.identity.id,
+          revision,
+        },
+      },
+    );
+
+    if (write.affectedRows === 0) {
+      throw new AlbumEditConflictError();
+    }
+  });
 } catch (error) {
-  if (newCoverKey) await removeStoredCover(newCoverKey);
+  if (newCoverKey) await removeStoredCover(albumCovers, newCoverKey);
+  if (error instanceof AlbumEditConflictError) {
+    return context.render(
+      <AlbumEditPage
+        albumId={album.id}
+        conflict="This album changed after you opened the form. Reload the latest version before trying again."
+        csrfToken={getCsrfToken(context)}
+        issues={[]}
+        values={values}
+      />,
+      { status: 409 },
+    );
+  }
   throw error;
 }
 
 if (newCoverKey && previousCoverKey) {
-  void removeStoredCover(previousCoverKey);
+  void removeStoredCover(albumCovers, previousCoverKey);
 }
 
-async function removeStoredCover(key: string): Promise<void> {
+// At module scope:
+async function removeStoredCover(
+  storage: FileStorage,
+  key: string,
+): Promise<void> {
   try {
-    await albumCovers.remove(key);
+    await storage.remove(key);
   } catch (error) {
     console.error(`Failed to remove stored cover ${key}`, error);
   }
 }
 ```
 
-Keep the action's existing redirect after this excerpt. The input's filename, extension, MIME type, and `accept` match are still only client claims; the decoded and re-encoded result establishes the bytes and MIME type the app will serve. If an app does not normalize untrusted bytes, serve them as attachments rather than trusted inline media. Never join the submitted filename onto a filesystem path.
+Keep the action's existing redirect after this excerpt. A rejected cover returns the edit page with status `400`, the submitted text values, and an empty file control. Browsers do not let the server replay the rejected file selection.
+
+The input's filename, extension, MIME type, and `accept` match are still only client claims; the decoded and re-encoded result establishes the bytes and MIME type the app will serve. If an app does not normalize untrusted bytes, serve them as attachments rather than trusted inline media. Never join the submitted filename onto a filesystem path.
 
 External file storage does not participate in the database write. The compensation above attempts to remove a new object when storage or the guarded row update fails, and it schedules cleanup of the replaced object after success. Cleanup failure is reported without hiding the original database error or expected `409`. Production storage should still have an orphan cleanup job for process failures between these steps.
 
@@ -525,39 +688,154 @@ albums: {
 },
 ```
 
-`cover` and `coverHead` are direct leaves of `routes.albums`, so they use the `albumsController` mapping. Keep the previous chapter's `middleware: [requireUser]` on that controller. Add both actions and have them call the same `serveAlbumCover(context)` helper. Its body authorizes the individual album, retrieves its storage-backed `File`, and lets `createFileResponse()` implement normal file HTTP behavior:
+`cover` and `coverHead` are direct leaves of `routes.albums`, so they use the existing `albumsController` mapping. This is the complete controller at this point in the walkthrough. It keeps the previous chapter's authentication middleware, authorizes every album read, implements the earlier destroy route, and sends GET and HEAD through one cover helper:
 
-```ts
+```tsx filename=app/actions/albums/controller.tsx
+import type { FileStorage } from "remix/file-storage";
 import { Database } from "remix/data-table";
+import { getCsrfToken } from "remix/middleware/csrf";
 import { createFileResponse } from "remix/response/file";
+import { redirect } from "remix/response/redirect";
+import { createController } from "remix/router";
 
-import { albums } from "../../data/schema.ts";
-import { albumCovers } from "../../files.ts";
+import { albumRelations, albums } from "../../data/schema.ts";
+import { AlbumCovers } from "../../middleware/album-covers.ts";
+import { requireUser } from "../../middleware/require-user.ts";
+import { routes } from "../../routes.ts";
+import { AlbumPage } from "./show-page.tsx";
 
-// Inside serveAlbumCover(context) in app/actions/albums/controller.tsx:
-let db = context.get(Database);
-let album = await db.find(albums, context.params.albumId);
-if (album === null || album.cover_key === null) {
-  return new Response("Cover not found", { status: 404 });
-}
+let albumsController = createController(routes.albums, {
+  middleware: [requireUser],
+  actions: {
+    async show(context) {
+      let album = await context
+        .get(Database)
+        .find(albums, context.params.albumId, { with: albumRelations });
+      if (
+        album === null ||
+        album.artist === null ||
+        album.owner_id !== context.auth.identity.id
+      ) {
+        return new Response("Album not found", { status: 404 });
+      }
 
-if (album.owner_id !== context.auth.identity.id) {
-  return new Response("Cover not found", { status: 404 });
-}
+      return context.render(
+        <AlbumPage
+          album={{ ...album, artist: album.artist }}
+          csrfToken={getCsrfToken(context)}
+        />,
+      );
+    },
 
-let file = await albumCovers.get(album.cover_key);
-if (file === null) {
-  return new Response("Cover not found", { status: 404 });
-}
+    async recommendations(context) {
+      let album = await context
+        .get(Database)
+        .find(albums, context.params.albumId);
+      if (album === null || album.owner_id !== context.auth.identity.id) {
+        return new Response("Album not found", { status: 404 });
+      }
 
-let response = await createFileResponse(file, context.request, {
-  cacheControl: "private, no-cache",
-  etag: "strong",
+      return context.render(
+        <aside aria-labelledby="recommendations-heading">
+          <h2 id="recommendations-heading">More like {album.title}</h2>
+          <p>Recommendations are still being selected.</p>
+        </aside>,
+      );
+    },
+
+    async destroy(context) {
+      let db = context.get(Database);
+      let album = await db.find(albums, context.params.albumId);
+      if (album === null || album.owner_id !== context.auth.identity.id) {
+        return new Response("Album not found", { status: 404 });
+      }
+
+      let write = await db.deleteMany(albums, {
+        where: {
+          id: album.id,
+          owner_id: context.auth.identity.id,
+          revision: album.revision,
+        },
+      });
+      if (write.affectedRows === 0) {
+        return new Response("Album changed before it could be deleted", {
+          status: 409,
+        });
+      }
+
+      if (album.cover_key) {
+        try {
+          await context.get(AlbumCovers).remove(album.cover_key);
+        } catch (error) {
+          console.error(
+            `Failed to remove stored cover ${album.cover_key}`,
+            error,
+          );
+        }
+      }
+
+      return redirect(routes.home.href(), 303);
+    },
+
+    cover(context) {
+      return serveAlbumCover(
+        context.request,
+        context.params.albumId,
+        context.auth.identity.id,
+        context.get(Database),
+        context.get(AlbumCovers),
+      );
+    },
+
+    coverHead(context) {
+      return serveAlbumCover(
+        context.request,
+        context.params.albumId,
+        context.auth.identity.id,
+        context.get(Database),
+        context.get(AlbumCovers),
+      );
+    },
+  },
 });
-response.headers.set("Content-Disposition", 'inline; filename="album-cover"');
-response.headers.set("X-Content-Type-Options", "nosniff");
-return response;
+
+export default albumsController;
+
+async function serveAlbumCover(
+  request: Request,
+  albumId: string,
+  ownerId: string,
+  db: Database,
+  storage: FileStorage,
+): Promise<Response> {
+  let album = await db.find(albums, albumId);
+  if (
+    album === null ||
+    album.cover_key === null ||
+    album.owner_id !== ownerId
+  ) {
+    return new Response("Cover not found", { status: 404 });
+  }
+
+  let file = await storage.get(album.cover_key);
+  if (file === null) {
+    return new Response("Cover not found", { status: 404 });
+  }
+
+  let response = await createFileResponse(file, request, {
+    cacheControl: "private, no-cache",
+    etag: "strong",
+  });
+  response.headers.set(
+    "Content-Disposition",
+    'inline; filename="album-cover.jpg"',
+  );
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  return response;
+}
 ```
+
+The show action still passes its request-scoped CSRF token to the delete form. The delete repeats the owner and revision predicates used by the edit action. If an edit commits after the initial read, deletion returns `409` instead of removing the cover key from the stale row. The row is deleted before its external object; a failed object removal is logged for the orphan cleanup job rather than restoring a row whose delete already committed.
 
 For a normal `200` or `206` response, the helper sets the content type and length. It also handles `HEAD`, validators, preconditions, and one satisfiable byte range. Depending on request headers it may return `304`, `206`, `400`, `412`, or `416`. Computing the configured strong ETag reads the complete file before the response body starts; the 2 MiB upload bound makes that cost acceptable and prevents equal-size replacements from sharing a metadata-only validator. For large files, use a stable storage-provided digest rather than buffering solely to hash.
 
