@@ -1,4 +1,5 @@
 import { getTopFrame, getNamedFrame } from './run.ts'
+import type { FrameReloadOptions } from './component.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -10,6 +11,26 @@ type NavigationState = {
 type SourceElementNavigateEvent = NavigateEvent & {
   sourceElement?: Element | null
 }
+
+type FormNavigateEvent = SourceElementNavigateEvent & {
+  formData?: FormData | null
+}
+
+type SubmitterElement = HTMLButtonElement | HTMLInputElement
+
+type PendingFormSubmission = {
+  submitter: SubmitterElement | null
+  formData?: FormData
+  timeout: ReturnType<typeof setTimeout>
+  removeFormDataListener(): void
+}
+
+type RuntimeNavigation = {
+  state: NavigationState
+  getReloadOptions?: () => FrameReloadOptions | Promise<FrameReloadOptions>
+}
+
+const PENDING_FORM_SUBMISSION_TIMEOUT = 1000
 
 /**
  * Options for client-side frame-aware navigation.
@@ -42,9 +63,11 @@ export async function navigate(href: string, options?: NavigationOptions) {
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.
+ * @param canResolveFrames Whether the runtime has a resolver that can handle intercepted navigations.
  * @returns void
  */
-export function startNavigationListener(signal: AbortSignal) {
+export function startNavigationListener(signal: AbortSignal, canResolveFrames = true) {
+  if (!canResolveFrames) return
   return startNavigationListenerImpl(signal, { getTopFrame, getNamedFrame })
 }
 
@@ -57,10 +80,49 @@ export function startNavigationListenerImpl(
   },
 ) {
   let navigation = window.navigation
+  let pendingFormSubmissions = new WeakMap<HTMLFormElement, PendingFormSubmission>()
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, resetScroll: true, $rmx: true },
   })
+
+  document.addEventListener(
+    'submit',
+    (event) => {
+      let form = event.target
+      if (!(form instanceof HTMLFormElement)) return
+
+      let existing = pendingFormSubmissions.get(form)
+      if (existing) {
+        clearTimeout(existing.timeout)
+        existing.removeFormDataListener()
+      }
+
+      let eventSubmitter = event instanceof SubmitEvent ? event.submitter : null
+      let onFormData = (event: FormDataEvent) => {
+        let pending = pendingFormSubmissions.get(form)
+        if (pending) pending.formData = event.formData
+      }
+      form.addEventListener('formdata', onFormData)
+      let pending: PendingFormSubmission = {
+        submitter:
+          eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
+            ? eventSubmitter
+            : null,
+        timeout: setTimeout(() => {
+          if (pendingFormSubmissions.get(form) === pending) {
+            pendingFormSubmissions.delete(form)
+          }
+          pending.removeFormDataListener()
+        }, PENDING_FORM_SUBMISSION_TIMEOUT),
+        removeFormDataListener() {
+          form.removeEventListener('formdata', onFormData)
+        },
+      }
+      pendingFormSubmissions.set(form, pending)
+    },
+    { capture: true, signal },
+  )
 
   navigation.addEventListener(
     'navigate',
@@ -71,8 +133,9 @@ export function startNavigationListenerImpl(
       // https://html.spec.whatwg.org/multipage/nav-history-apis.html#can-have-its-url-rewritten
       if (!event.canIntercept || isCrossOriginDestination(event)) return
 
-      let state = getRuntimeNavigationState(event)
-      if (!state) return
+      let runtimeNavigation = getRuntimeNavigation(event, pendingFormSubmissions)
+      if (!runtimeNavigation) return
+      let { state } = runtimeNavigation
 
       let topFrame = options.getTopFrame()
       let namedFrame = state.target ? options.getNamedFrame(state.target) : undefined
@@ -85,7 +148,10 @@ export function startNavigationListenerImpl(
           }
 
           frame.src = frame === topFrame ? event.destination.url : state.src
-          await frame.reload()
+          await frame.reload({
+            ...(await runtimeNavigation.getReloadOptions?.()),
+            signal: event.signal,
+          })
 
           let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
           if (state.resetScroll && isNewEntry) {
@@ -107,16 +173,20 @@ function isCrossOriginDestination(event: NavigateEvent): boolean {
   return destination.origin !== window.location.origin
 }
 
-function getRuntimeNavigationState(event: NavigateEvent): NavigationState | undefined {
+function getRuntimeNavigation(
+  event: NavigateEvent,
+  pendingFormSubmissions: WeakMap<HTMLFormElement, PendingFormSubmission>,
+): RuntimeNavigation | undefined {
   if (event.navigationType === 'traverse') {
-    return getTraverseNavigationState(event)
+    let state = getTraverseNavigationState(event)
+    return state ? { state } : undefined
   }
 
-  let sourceState = getSourceElementNavigationState(event)
-  if (sourceState) return sourceState
+  let sourceNavigation = getSourceElementNavigation(event, pendingFormSubmissions)
+  if (sourceNavigation) return sourceNavigation
 
   let destinationState = event.destination.getState()
-  if (isRuntimeNavigation(destinationState)) return destinationState
+  if (isRuntimeNavigation(destinationState)) return { state: destinationState }
 }
 
 function getTraverseNavigationState(event: NavigateEvent): NavigationState | undefined {
@@ -139,19 +209,115 @@ function getTraverseNavigationState(event: NavigateEvent): NavigationState | und
   return undefined
 }
 
-function getSourceElementNavigationState(event: NavigateEvent): NavigationState | undefined {
+function getSourceElementNavigation(
+  event: NavigateEvent,
+  pendingFormSubmissions: WeakMap<HTMLFormElement, PendingFormSubmission>,
+): RuntimeNavigation | undefined {
   let sourceEvent = event as SourceElementNavigateEvent
   let sourceElement = sourceEvent.sourceElement
   if (!(sourceElement instanceof Element)) return
+
   let linkElement = sourceElement.closest('a, area')
-  if (!(linkElement instanceof Element)) return
-  if (linkElement.hasAttribute('rmx-document')) return
-  if (linkElement.hasAttribute('download')) return
+  if (linkElement instanceof Element) {
+    if (linkElement.hasAttribute('rmx-document')) return
+    if (linkElement.hasAttribute('download')) return
+
+    return {
+      state: {
+        target: linkElement.getAttribute('rmx-target') ?? undefined,
+        src: linkElement.getAttribute('rmx-src') ?? event.destination.url,
+        resetScroll: linkElement.getAttribute('rmx-reset-scroll') !== 'false',
+        $rmx: true,
+      },
+    }
+  }
+
+  let form = getSourceForm(sourceElement)
+  if (!form) return
+
+  let pending = pendingFormSubmissions.get(form)
+
+  let submitter = pending?.submitter ?? getSourceSubmitter(sourceElement)
+  if (hasSubmissionAttribute(form, submitter, 'rmx-document')) return
+
+  let method = getFormMethod(form, submitter)
+  let nativeTarget = getSubmissionAttribute(form, submitter, 'target', 'formtarget')
+  if (method === 'dialog' || nativeTarget?.toLowerCase() === '_blank') return
+
+  let formEvent = event as FormNavigateEvent
 
   return {
-    target: linkElement.getAttribute('rmx-target') ?? undefined,
-    src: linkElement.getAttribute('rmx-src') ?? event.destination.url,
-    resetScroll: linkElement.getAttribute('rmx-reset-scroll') !== 'false',
-    $rmx: true,
-  } satisfies NavigationState
+    state: {
+      target: getSubmissionAttribute(form, submitter, 'rmx-target') ?? undefined,
+      src: getSubmissionAttribute(form, submitter, 'rmx-src') ?? event.destination.url,
+      resetScroll: getSubmissionAttribute(form, submitter, 'rmx-reset-scroll') !== 'false',
+      $rmx: true,
+    },
+    async getReloadOptions() {
+      // Chromium dispatches `formdata` after `navigate`; let the browser provide the
+      // submitted entry list instead of constructing another FormData and firing a duplicate event.
+      if (!formEvent.formData && pending && !pending.formData) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 0))
+      }
+      if (pending) {
+        clearTimeout(pending.timeout)
+        pending.removeFormDataListener()
+        if (pendingFormSubmissions.get(form) === pending) {
+          pendingFormSubmissions.delete(form)
+        }
+      }
+      return {
+        formData: formEvent.formData ?? pending?.formData,
+        method,
+        encType: getFormEncType(form, submitter),
+      }
+    },
+  }
+}
+
+function getSourceForm(sourceElement: Element): HTMLFormElement | undefined {
+  if (sourceElement instanceof HTMLFormElement) return sourceElement
+  return getSourceSubmitter(sourceElement)?.form ?? undefined
+}
+
+function getSourceSubmitter(sourceElement: Element): SubmitterElement | null {
+  let submitter = sourceElement.closest('button, input')
+  if (submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement) {
+    return submitter
+  }
+  return null
+}
+
+function hasSubmissionAttribute(
+  form: HTMLFormElement,
+  submitter: SubmitterElement | null,
+  name: string,
+): boolean {
+  return submitter?.hasAttribute(name) === true || form.hasAttribute(name)
+}
+
+function getSubmissionAttribute(
+  form: HTMLFormElement,
+  submitter: SubmitterElement | null,
+  name: string,
+  submitterName = name,
+): string | null {
+  if (submitter?.hasAttribute(submitterName)) {
+    return submitter.getAttribute(submitterName)
+  }
+  return form.getAttribute(name)
+}
+
+function getFormMethod(form: HTMLFormElement, submitter: SubmitterElement | null): string {
+  if (submitter?.hasAttribute('formmethod')) {
+    return submitter.formMethod
+  }
+  return form.method
+}
+
+function getFormEncType(form: HTMLFormElement, submitter: SubmitterElement | null): string {
+  if (submitter?.hasAttribute('formenctype')) {
+    return submitter.formEnctype
+  }
+  return form.enctype
 }

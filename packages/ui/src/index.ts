@@ -32,10 +32,11 @@ export type {
   Context,
   FrameHandleEventMap,
   FrameContent,
+  FrameReloadOptions,
   FrameHandle,
   FrameProps,
 } from './runtime/component.ts'
-export type { LoadModule, ResolveFrame } from './runtime/frame.ts'
+export type { LoadModule, ResolveFrame, ResolveFrameOptions } from './runtime/frame.ts'
 
 // -- Elements/JSX/Props --
 export { createElement } from './runtime/create-element.ts'

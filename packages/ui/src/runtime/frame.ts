@@ -1,5 +1,10 @@
 import { jsx } from './jsx.ts'
-import { Frame, createFrameHandle, type FrameContent } from './component.ts'
+import {
+  Frame,
+  createFrameHandle,
+  type FrameContent,
+  type FrameReloadOptions,
+} from './component.ts'
 import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
@@ -62,15 +67,21 @@ export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Func
  * Resolves content for a browser-loaded frame.
  *
  * @param src Source string from the `<Frame src>` prop.
- * @param signal Abort signal for the active frame load or reload.
- * @param target Optional name of the frame being reloaded.
+ * @param options Information about the active frame load or form submission.
  * @returns HTML, a stream of HTML bytes, or Remix node content to render into the frame.
  */
 export type ResolveFrame = (
   src: string,
-  signal?: AbortSignal,
-  target?: string,
+  options?: ResolveFrameOptions,
 ) => Promise<FrameContent> | FrameContent
+
+/**
+ * Information available while resolving browser-loaded frame content.
+ */
+export interface ResolveFrameOptions extends FrameReloadOptions {
+  /** Optional name of the frame being loaded or reloaded. */
+  target?: string
+}
 
 type InternalFrameContent = FrameContent | DocumentFragment
 
@@ -198,14 +209,24 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let frame = createFrameHandle({
     src: init.src,
     $runtime: runtime,
-    reload: async () => {
+    reload: async (options) => {
       reloadController?.abort()
       let controller = new AbortController()
       reloadController = controller
+      let abort = () => controller.abort(options?.signal?.reason)
+      if (options?.signal?.aborted) {
+        abort()
+        return controller.signal
+      }
+      options?.signal?.addEventListener('abort', abort, { once: true })
       frame.dispatchEvent(new Event('reloadStart'))
       startSubFrameInheritedReloads(getContentNodes(), controller.signal)
       try {
-        let content = await init.resolveFrame(frame.src, controller.signal, frameName)
+        let content = await init.resolveFrame(frame.src, {
+          ...options,
+          signal: controller.signal,
+          target: frameName,
+        })
         if (reloadController !== controller || controller.signal.aborted) return controller.signal
         await render(content, { signal: controller.signal })
         return controller.signal
@@ -214,6 +235,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
         throw error
       } finally {
+        options?.signal?.removeEventListener('abort', abort)
         if (reloadController === controller) {
           frame.dispatchEvent(new Event('reloadComplete'))
         }

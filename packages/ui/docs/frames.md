@@ -183,16 +183,37 @@ On the client, `run` accepts an optional `resolveFrame` implementation:
 ```tsx
 let app = run({
   loadModule: ...,
-  async resolveFrame(src, signal, target) {
+  async resolveFrame(src, options) {
     let headers = new Headers({ Accept: 'text/html' })
-    if (target) headers.set('X-Remix-Target', target)
-    let response = await fetch(src, { headers, signal })
+    if (options?.target) headers.set('X-Remix-Target', options.target)
+    let response = await fetch(src, {
+      headers,
+      method: options?.method,
+      body: options?.method?.toLowerCase() === 'post' ? options.formData : undefined,
+      signal: options?.signal,
+    })
     return response.body ?? (await response.text())
   },
 })
 ```
 
-This is used both for initial hydration of pending frames and for `handle.frame.reload()` calls. If omitted, frames resolve to `<p>resolve frame unimplemented</p>`. Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
+This is used both for initial hydration of pending frames and for `handle.frame.reload()` calls. `options` may contain `formData`, `method`, `encType`, `signal`, and `target`. The runtime reports the form's selected transport metadata but does not encode the body or interpret fields such as `_method`; the resolver owns that policy. Return `response.body` to preserve streaming frame responses.
+
+If omitted, frames resolve to `<p>resolve frame unimplemented</p>` and document navigations are left to the browser. Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
+
+## Form navigation
+
+When `run({ resolveFrame })` is active, eligible same-origin form submissions use the same frame navigation path as links. Native constraint validation and the form's `submit` event run first, so invalid forms never reach `resolveFrame`.
+
+- Submissions reload `handle.frames.top` by default.
+- `rmx-target="name"` reloads a named frame.
+- `rmx-document` leaves the submission as a normal document navigation.
+- Submitter overrides such as `formmethod`, `formenctype`, and `formtarget` take precedence over the form attributes.
+- Cross-origin submissions, `method="dialog"`, and `target="_blank"` are left to the browser.
+
+The browser already includes GET form values in `src`; the runtime also forwards the browser's native form entry list as `formData`. For other methods, use `formData`, `method`, and `encType` to choose the request body in your resolver. For example, a resolver may send `FormData` directly for `multipart/form-data`, convert it to `URLSearchParams` for `application/x-www-form-urlencoded`, or apply an application-specific encoding policy.
+
+Forms work as normal document submissions before the client runtime loads and whenever they use `rmx-document`, so this behavior remains progressively enhanced.
 
 ## Frame lifecycle
 

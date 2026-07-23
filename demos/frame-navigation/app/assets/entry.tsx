@@ -1,4 +1,4 @@
-import type { FrameContent, Handle, RemixNode } from 'remix/ui'
+import type { FrameContent, Handle, RemixNode, ResolveFrameOptions } from 'remix/ui'
 import { createRoot, css, on, run } from 'remix/ui'
 
 import { animateEntrance, spring } from 'remix/ui/animation'
@@ -14,25 +14,29 @@ const app = run({
     }
     return exp
   },
-  async resolveFrame(src, signal, target) {
-    return resolveFrameResponse(new URL(src, window.location.href), signal, target)
+  async resolveFrame(src, options) {
+    return resolveFrameResponse(new URL(src, window.location.href), options)
   },
 })
 
 async function resolveFrameResponse(
   url: URL,
-  signal?: AbortSignal,
-  target?: string,
+  options?: ResolveFrameOptions,
 ): Promise<FrameContent> {
   let headers = new Headers()
   headers.set('Accept', 'text/html')
   headers.set('X-Remix-Frame', 'true')
 
-  if (target) {
-    headers.set('X-Remix-Target', target)
+  if (options?.target) {
+    headers.set('X-Remix-Target', options.target)
   }
 
-  let res = await fetch(url, { headers, signal })
+  let res = await fetch(url, {
+    headers,
+    method: options?.method,
+    body: options?.method?.toLowerCase() === 'get' ? undefined : options?.formData,
+    signal: options?.signal,
+  })
 
   if (res.status === 401) {
     window.location.assign(routes.auth.login.index.href())

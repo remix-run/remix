@@ -1,0 +1,1 @@
+BREAKING CHANGE: Update `remix/ui` client frame resolvers to use `resolveFrame(src, options)` instead of positional signal and target arguments. Form submissions can now progressively enhance into frame navigations, with submission metadata available to the resolver and `rmx-document` available as an opt-out.

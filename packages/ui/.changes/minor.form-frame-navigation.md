@@ -1,0 +1,3 @@
+BREAKING CHANGE: Change the browser `resolveFrame` callback from positional `resolveFrame(src, signal, target)` arguments to `resolveFrame(src, options)`, where `options` contains `signal`, `target`, and optional form submission metadata.
+
+Same-origin forms now progressively enhance into frame navigations when `run({ resolveFrame })` is configured. Native constraint validation runs before interception, submissions target the top frame by default, `rmx-target` selects a named frame, and `rmx-document` opts back into document navigation. Resolvers receive the browser's native `FormData` plus the selected method and encoding, and remain responsible for request encoding and `_method` conventions.

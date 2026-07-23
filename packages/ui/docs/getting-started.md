@@ -121,8 +121,13 @@ let app = run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, signal) {
-    let res = await fetch(src, { headers: { Accept: 'text/html' }, signal })
+  async resolveFrame(src, options) {
+    let res = await fetch(src, {
+      headers: { Accept: 'text/html' },
+      method: options?.method,
+      body: options?.method?.toLowerCase() === 'post' ? options.formData : undefined,
+      signal: options?.signal,
+    })
     return res.body ?? (await res.text())
   },
 })

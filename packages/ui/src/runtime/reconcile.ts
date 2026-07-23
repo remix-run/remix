@@ -1166,7 +1166,12 @@ function resolveClientFrame(node: VNode, runtime: FrameRuntime): void {
   let resolveController = new AbortController()
   node._frameResolveController = resolveController
 
-  Promise.resolve(runtime.resolveFrame(frameSrc, resolveController.signal, getFrameName(node)))
+  Promise.resolve(
+    runtime.resolveFrame(frameSrc, {
+      signal: resolveController.signal,
+      target: getFrameName(node),
+    }),
+  )
     .then(async (content) => {
       if (node._frameResolveToken !== token || resolveController.signal.aborted) return
       node._frameFallbackRoot?.dispose()
