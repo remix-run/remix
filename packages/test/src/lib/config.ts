@@ -83,7 +83,7 @@ export type RemixTestOnlyPattern = string | RegExp
 /**
  * User-facing configuration for the Remix test runner. Every field is optional, and unset fields
  * fall back to runner defaults. This shape may be exported from a `remix-test.config.ts` file or
- * passed to `runTests()`.
+ * passed to `runRemixTest()`.
  */
 export interface RemixTestConfig {
   /**

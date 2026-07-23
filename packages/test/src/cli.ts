@@ -24,9 +24,9 @@ const MISSING_PLAYWRIGHT_MESSAGE =
   'Playwright is required to run browser and E2E tests. Install it with `npm i -D playwright`.'
 
 /**
- * Options accepted by {@link runTests}.
+ * Options accepted by {@link runRemixTest}.
  */
-export interface RunTestsOptions extends RemixTestConfig {
+export interface RunRemixTestOptions extends RemixTestConfig {
   /**
    * Path to a test configuration file, resolved from `cwd`. When omitted, the runner looks for
    * `remix-test.config.ts` and `remix-test.config.js`.
@@ -49,7 +49,7 @@ interface DiscoveredTests {
 }
 
 /**
- * Runs tests using structured invocation options. The runner loads the user's
+ * Runs Remix tests using structured invocation options. The runner loads the user's
  * `RemixTestConfig`, discovers test files, and runs them through the server, browser, and E2E
  * pipelines configured by the project. In watch mode, the promise resolves when the user
  * terminates the runner; otherwise, it resolves once the run finishes.
@@ -60,33 +60,33 @@ interface DiscoveredTests {
  *
  * @example
  * ```ts
- * import { runTests } from 'remix/test/cli'
+ * import { runRemixTest } from 'remix/test/cli'
  *
- * let exitCode = await runTests({
+ * let exitCode = await runRemixTest({
  *   concurrency: 1,
  *   cwd: process.cwd(),
  *   type: ['server'],
  * })
  * ```
  */
-export async function runTests(options: RunTestsOptions = {}): Promise<number> {
+export async function runRemixTest(options: RunRemixTestOptions = {}): Promise<number> {
   let { config: configPath, cwd: cwdOption, ...invocationConfig } = options
   let cwd = await resolveCwd(cwdOption ?? process.cwd())
   let previousCwd = process.cwd()
 
   if (!isMainThread) {
-    return await runTestsInCwd(invocationConfig, configPath, cwd)
+    return await runRemixTestInCwd(invocationConfig, configPath, cwd)
   }
 
   try {
     process.chdir(cwd)
-    return await runTestsInCwd(invocationConfig, configPath, cwd)
+    return await runRemixTestInCwd(invocationConfig, configPath, cwd)
   } finally {
     process.chdir(previousCwd)
   }
 }
 
-async function runTestsInCwd(
+async function runRemixTestInCwd(
   invocationConfig: RemixTestConfig,
   configPath: string | undefined,
   cwd: string,
