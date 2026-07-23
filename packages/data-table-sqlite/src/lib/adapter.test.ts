@@ -50,6 +50,28 @@ describe('sqlite adapter', () => {
     assert.equal(await adapter.hasTable({ name: 'users' }), false)
   })
 
+  it('re-enables configured foreign key enforcement after wiping', async () => {
+    let adapter = createSqliteDatabaseAdapter({ filename: ':memory:', foreignKeys: true })
+
+    async function assertForeignKeysEnabled(): Promise<void> {
+      await adapter.executeScript(`
+        create table parents (id integer primary key);
+        create table children (
+          id integer primary key,
+          parent_id integer not null references parents (id)
+        );
+      `)
+      await assert.rejects(
+        () => adapter.executeScript('insert into children (id, parent_id) values (1, 1)'),
+        /FOREIGN KEY constraint failed/,
+      )
+    }
+
+    await assertForeignKeysEnabled()
+    await adapter.wipe()
+    await assertForeignKeysEnabled()
+  })
+
   it('does not wipe a database while a transaction is open', async () => {
     let adapter = createSqliteDatabaseAdapter({ filename: ':memory:' })
     let transaction = await adapter.beginTransaction()

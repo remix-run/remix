@@ -9,6 +9,7 @@ export const db = createDatabase(
       process.env.NODE_ENV === 'test'
         ? ':memory:'
         : (process.env.DATABASE_URL ?? path.join(import.meta.dirname, '../db/timebox.sqlite')),
+    foreignKeys: true,
   }),
 )
 

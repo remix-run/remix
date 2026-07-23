@@ -12,6 +12,7 @@ export const db = createDatabase(
       process.env.NODE_ENV === 'test'
         ? ':memory:'
         : path.join(import.meta.dirname, '../db/bookstore.sqlite'),
+    foreignKeys: true,
   }),
 )
 

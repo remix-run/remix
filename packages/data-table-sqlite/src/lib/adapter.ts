@@ -41,6 +41,8 @@ const SqliteDatabaseConstructor: SqliteDatabaseConstructor =
 export interface SqliteDatabaseAdapterConfig {
   /** SQLite database filename or `:memory:` for an in-memory database. */
   filename: string
+  /** Enables SQLite foreign key enforcement whenever the adapter opens the database. */
+  foreignKeys?: boolean
 }
 
 /**
@@ -87,7 +89,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
       this.#database = input
     } else {
       this.#config = input
-      this.#database = new SqliteDatabaseConstructor(input.filename)
+      this.#database = openSqliteDatabase(input)
     }
     this.capabilities = {
       returning: true,
@@ -311,7 +313,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
 
   #replaceDatabase(): void {
     if (this.#config) {
-      this.#database = new SqliteDatabaseConstructor(this.#config.filename)
+      this.#database = openSqliteDatabase(this.#config)
     }
   }
 
@@ -334,6 +336,16 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
       throw new Error('Unknown transaction token: ' + token.id)
     }
   }
+}
+
+function openSqliteDatabase(config: SqliteDatabaseAdapterConfig): SqliteDatabase {
+  let database = new SqliteDatabaseConstructor(config.filename)
+
+  if (config.foreignKeys) {
+    database.exec('pragma foreign_keys = on')
+  }
+
+  return database
 }
 
 /**

@@ -15,6 +15,7 @@ export const db = createDatabase(
       process.env.NODE_ENV === 'test'
         ? ':memory:'
         : path.join(import.meta.dirname, '../db/social-auth.sqlite'),
+    foreignKeys: true,
   }),
 )
 

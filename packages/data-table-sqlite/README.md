@@ -30,11 +30,13 @@ import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
 let db = createDatabase(
   createSqliteDatabaseAdapter({
     filename: 'app.db',
+    foreignKeys: true,
   }),
 )
 ```
 
 The config-backed adapter uses `node:sqlite` in Node.js and `bun:sqlite` in Bun. It supports `db.wipe()` and `db.reset()` because the adapter can close and reopen the database file.
+When `foreignKeys` is enabled, the adapter restores foreign key enforcement each time it opens the database, including after these destructive lifecycle operations.
 
 You may also pass an existing synchronous client when your application owns its lifecycle:
 
