@@ -43,7 +43,11 @@ export const RegistrationFields = clientEntry(
               <div mix={styles.field}>
                 <label {...RegistrationForm.getLabelAttrs('displayName')} mix={styles.label}>
                   {RegistrationForm.fields.displayName.label}
-                  <span mix={styles.required}>Required</span>
+                  {RegistrationForm.fields.displayName.required ? (
+                    <span mix={styles.required}>Required</span>
+                  ) : (
+                    <span mix={styles.optional}>Optional</span>
+                  )}
                 </label>
                 <input
                   {...RegistrationForm.getInputAttrs('displayName', submission)}
@@ -60,7 +64,11 @@ export const RegistrationFields = clientEntry(
               <div mix={styles.field}>
                 <label {...RegistrationForm.getLabelAttrs('email')} mix={styles.label}>
                   {RegistrationForm.fields.email.label}
-                  <span mix={styles.required}>Required</span>
+                  {RegistrationForm.fields.email.required ? (
+                    <span mix={styles.required}>Required</span>
+                  ) : (
+                    <span mix={styles.optional}>Optional</span>
+                  )}
                 </label>
                 <input
                   {...RegistrationForm.getInputAttrs('email', submission)}
@@ -77,7 +85,11 @@ export const RegistrationFields = clientEntry(
               <div mix={styles.field}>
                 <label {...RegistrationForm.getLabelAttrs('age')} mix={styles.label}>
                   {RegistrationForm.fields.age.label}
-                  <span mix={styles.optional}>Optional</span>
+                  {RegistrationForm.fields.age.required ? (
+                    <span mix={styles.required}>Required</span>
+                  ) : (
+                    <span mix={styles.optional}>Optional</span>
+                  )}
                 </label>
                 <input
                   {...RegistrationForm.getInputAttrs('age', submission)}
@@ -94,7 +106,11 @@ export const RegistrationFields = clientEntry(
               <div mix={styles.field}>
                 <label {...RegistrationForm.getLabelAttrs('website')} mix={styles.label}>
                   {RegistrationForm.fields.website.label}
-                  <span mix={styles.optional}>Optional</span>
+                  {RegistrationForm.fields.website.required ? (
+                    <span mix={styles.required}>Required</span>
+                  ) : (
+                    <span mix={styles.optional}>Optional</span>
+                  )}
                 </label>
                 <input
                   {...RegistrationForm.getInputAttrs('website', submission)}
@@ -112,7 +128,11 @@ export const RegistrationFields = clientEntry(
             <div mix={styles.field}>
               <label {...RegistrationForm.getLabelAttrs('password')} mix={styles.label}>
                 {RegistrationForm.fields.password.label}
-                <span mix={styles.required}>Required</span>
+                {RegistrationForm.fields.password.required ? (
+                  <span mix={styles.required}>Required</span>
+                ) : (
+                  <span mix={styles.optional}>Optional</span>
+                )}
               </label>
               <input
                 {...RegistrationForm.getInputAttrs('password', submission)}
@@ -130,6 +150,9 @@ export const RegistrationFields = clientEntry(
               <input {...RegistrationForm.getInputAttrs('terms', submission)} mix={checkbox()} />
               <label {...RegistrationForm.getLabelAttrs('terms')} mix={styles.checkboxLabel}>
                 {RegistrationForm.fields.terms.label}
+                {RegistrationForm.fields.terms.required ? (
+                  <span mix={styles.required}> Required</span>
+                ) : null}
               </label>
               <FieldErrors
                 attrs={RegistrationForm.getErrorAttrs('terms')}

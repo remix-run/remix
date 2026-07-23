@@ -29,7 +29,7 @@ export function RegistrationPage(handle: Handle<RegistrationPageProps>) {
           </p>
           <ul mix={styles.featureList}>
             <li>The model-owned id is omitted from this form.</li>
-            <li>The terms checkbox is ancillary UI data with its own schema.</li>
+            <li>Password and terms are request-only fields with their own schemas.</li>
             <li>Native validation works before the browser runtime loads.</li>
           </ul>
         </header>

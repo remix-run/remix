@@ -4,8 +4,8 @@ This demo shows how one Remix data model can drive native form constraints, serv
 
 The registration flow demonstrates:
 
-- selecting `displayName`, `email`, `age`, `website`, and `password` from an account model while omitting its server-owned `id`
-- adding a UI-only terms checkbox with its own schema
+- selecting `displayName`, `email`, `age`, and `website` from the persisted account model while omitting its server-owned `id`
+- adding request-only password and terms fields with their own schemas
 - spreading low-level helpers directly onto native labels, inputs, and error elements
 - blocking invalid submissions with the browser Constraint Validation API
 - showing invalid state after blur and updating it as the user types
@@ -25,11 +25,11 @@ pnpm -C demos/data-model-forms dev
 
 Open <http://localhost:44100>.
 
-Each router owns an in-memory SQLite database. It persists across requests for the lifetime of the demo process, while a new router created by a test receives an isolated database.
+Each router owns an in-memory SQLite database. It persists across requests for the lifetime of the demo process, while separately created routers receive isolated databases.
 
 ## How it works
 
-The client-safe account schema remains the source of truth in `app/data/account-schema.ts`. `createForm()` selects the fields this UI needs and adds the ancillary terms field separately:
+The account schema remains the source of truth for persisted account data in `app/data/account-schema.ts`. `createForm()` selects the account fields this UI needs and adds request-only password and terms fields separately:
 
 ```ts
 import * as s from 'remix/data-schema'
@@ -40,14 +40,17 @@ let Account = s.object({
   id: s.string(),
   displayName: s.string().pipe(minLength(2)),
   email: s.string().pipe(email()),
-  password: s.string().pipe(minLength(8)),
 })
 
 let RegistrationForm = createForm(Account, {
   fields: {
     displayName: { label: 'Display name', type: 'text' },
     email: { label: 'Email address', type: 'email' },
-    password: { label: 'Password', type: 'password' },
+    password: {
+      label: 'Password',
+      type: 'password',
+      schema: s.string().pipe(minLength(8)),
+    },
     terms: {
       label: 'I agree to the terms of service',
       type: 'checkbox',
@@ -57,27 +60,11 @@ let RegistrationForm = createForm(Account, {
 })
 ```
 
-The data table reuses the same field schemas for its write boundary. It projects only fields that are safe to store, so neither `password` nor the ancillary `terms` value can be passed through this model:
+The data table validates writes with the `Account` schema directly. Because request-only fields are not part of `Account`, neither `password` nor `terms` can pass through the persistence model:
 
 ```ts
 import * as s from 'remix/data-schema'
 import { column as c, table } from 'remix/data-table'
-
-let StoredAccount = s.object({
-  id: Account.shape.id,
-  displayName: Account.shape.displayName,
-  email: Account.shape.email,
-  age: Account.shape.age,
-  website: Account.shape.website,
-})
-
-let StoredAccountUpdate = s.object({
-  id: s.optional(Account.shape.id),
-  displayName: s.optional(Account.shape.displayName),
-  email: s.optional(Account.shape.email),
-  age: s.optional(Account.shape.age),
-  website: s.optional(Account.shape.website),
-})
 
 let accounts = table({
   name: 'accounts',
@@ -89,7 +76,11 @@ let accounts = table({
     website: c.text().nullable(),
   },
   validate({ operation, value }) {
-    let result = s.parseSafe(operation === 'create' ? StoredAccount : StoredAccountUpdate, value)
+    if (operation === 'update') {
+      return { issues: [{ message: 'Account updates are not supported' }] }
+    }
+
+    let result = s.parseSafe(Account, value)
     return result.success
       ? { value: result.value }
       : { issues: result.issues.map((issue) => ({ message: issue.message })) }
@@ -97,7 +88,9 @@ let accounts = table({
 })
 ```
 
-The router creates a `DatabaseSync(':memory:')` instance and exposes the resulting Remix `Database` through request middleware. Creating the database inside `createDataModelFormsRouter()` gives the server process persistent state while keeping test routers isolated.
+This POC has no account update flow, so it does not define an `AccountUpdate` schema. If partial updates are added later, that schema should be derived mechanically from `Account` rather than repeating each field by hand.
+
+The router creates a `DatabaseSync(':memory:')` instance and exposes the resulting Remix `Database` through request middleware. Creating the database inside `createDataModelFormsRouter()` gives the server process persistent state while keeping router instances isolated.
 
 The page owns its DOM structure and applies the generated attributes directly:
 
@@ -106,6 +99,7 @@ import input from 'remix/ui/input'
 
 <label {...RegistrationForm.getLabelAttrs('email')}>
   {RegistrationForm.fields.email.label}
+  {RegistrationForm.fields.email.required ? <span>Required</span> : null}
 </label>
 <input
   {...RegistrationForm.getInputAttrs('email', submission)}
@@ -174,6 +168,5 @@ Try `a@b` as the email address to see the server-error path: browsers accept it 
 ## Verify the demo
 
 ```sh
-pnpm -C demos/data-model-forms test
 pnpm -C demos/data-model-forms typecheck
 ```

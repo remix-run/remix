@@ -7,5 +7,4 @@ export const Account = s.object({
   email: s.string().pipe(email()),
   age: s.optional(s.number().pipe(min(18), max(120))),
   website: s.optional(s.string().pipe(url())),
-  password: s.string().pipe(minLength(8), maxLength(72)),
 })
