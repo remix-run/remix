@@ -10,6 +10,7 @@ import {
   type RouteBuilder,
   type RouteInstaller,
   type RouterContext,
+  type RouterOutput,
 } from './router.ts'
 import type { IsEqual } from './type-utils.ts'
 
@@ -79,6 +80,9 @@ type AdminAppContext = ContextWithEntry<
 
 const elevatedReportMiddleware = createMiddleware(setRole('admin'))
 type ElevatedAppContext = MiddlewareContext<typeof elevatedReportMiddleware, AppContext>
+
+type TestNode = string | null | TestNode[]
+type MaybeTestNode = TestNode | undefined
 
 describe('router type inference', () => {
   it('keeps context values optional when middleware has not provided them', async () => {
@@ -163,6 +167,104 @@ describe('router type inference', () => {
     }
 
     void assertContext
+  })
+
+  it('uses the default output instead of inferring it from router options', () => {
+    class CustomResponse extends Response {}
+
+    let router = createRouter({
+      defaultHandler: () => new CustomResponse(),
+    })
+
+    type Output = RouterOutput<typeof router>
+    expectTypeEquality<IsEqual<Output, Response>>()
+
+    router.get('/', () => new Response('Home'))
+  })
+
+  it('propagates a custom output through routes, middleware, and controllers', () => {
+    let router = createRouter<RequestContext, MaybeTestNode>({
+      defaultHandler: () => null,
+      middleware: [
+        async (context, next) => {
+          let downstream = next()
+          let nestedOutput = context.router.fetch('https://remix.run/account/123')
+
+          expectTypeEquality<IsEqual<typeof downstream, Promise<TestNode>>>()
+          expectTypeEquality<IsEqual<typeof nestedOutput, Promise<TestNode>>>()
+
+          return ['layout', await downstream]
+        },
+      ],
+    })
+
+    type Output = RouterOutput<typeof router>
+    expectTypeEquality<IsEqual<Output, TestNode>>()
+
+    router.get('/', (context) => {
+      let nestedOutput = context.router.fetch('https://remix.run')
+      expectTypeEquality<IsEqual<typeof nestedOutput, Promise<TestNode>>>()
+
+      return 'Home'
+    })
+
+    let controller = createController<
+      typeof routes.admin,
+      RequestContext,
+      readonly [],
+      MaybeTestNode
+    >(routes.admin, {
+      actions: {
+        dashboard(context) {
+          let nestedOutput = context.router.fetch('https://remix.run')
+          expectTypeEquality<IsEqual<typeof nestedOutput, Promise<TestNode>>>()
+
+          return 'Dashboard'
+        },
+        member(context) {
+          return ['Member', context.params.memberId]
+        },
+      },
+    })
+
+    router.map(routes.admin, controller)
+
+    router.mount('/mounted', (mountedRouter) => {
+      type MountedOutput = RouterOutput<typeof mountedRouter>
+      expectTypeEquality<IsEqual<MountedOutput, TestNode>>()
+
+      mountedRouter.get('/child', () => 'Child')
+    })
+
+    if (false as boolean) {
+      // @ts-expect-error - custom-output routes cannot return a Response
+      router.get('/response', () => new Response())
+
+      // @ts-expect-error - undefined is not a valid top-level router output
+      router.get('/undefined', () => undefined)
+
+      createRouter<RequestContext, TestNode>({
+        defaultHandler: () => null,
+        // @ts-expect-error - middleware must return the custom output type
+        middleware: [() => new Response()],
+      })
+    }
+  })
+
+  it('requires a default handler for custom outputs', () => {
+    if (false as boolean) {
+      // @ts-expect-error - only Response routers have a built-in default handler
+      createRouter<RequestContext, TestNode>()
+    }
+  })
+
+  it('uses the default output for stored middleware', () => {
+    if (false as boolean) {
+      createMiddleware(
+        // @ts-expect-error - stored middleware must return the default output type
+        () => 'invalid',
+      )
+    }
   })
 
   it('derives context from middleware factory return types', () => {

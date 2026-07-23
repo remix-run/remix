@@ -196,6 +196,22 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  demos/spa:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      vite:
+        specifier: 7.3.3
+        version: 7.3.3(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
+
   demos/sse:
     dependencies:
       remix:

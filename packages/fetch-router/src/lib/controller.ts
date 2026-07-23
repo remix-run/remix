@@ -2,24 +2,28 @@ import type { RoutePattern } from '@remix-run/route-pattern'
 import type { MatchParams } from '@remix-run/route-pattern/match'
 
 import type { AnyMiddleware, MiddlewareContext } from './middleware.ts'
-import type { ContextWithParams, RequestContext } from './request-context.ts'
+import type { ContextWithOutput, ContextWithParams, RequestContext } from './request-context.ts'
 import type { Route, RouteMap } from './route-map.ts'
-import type { DefaultContext } from './router-types.ts'
+import type { DefaultContext, DefaultOutput } from './router-types.ts'
+import type { Defined } from './type-utils.ts'
 
 /**
- * A request handler function that returns some kind of response.
+ * A request handler function that returns the router's output type.
  *
  * @param context The request context
- * @returns The response
+ * @returns The router output
  */
-export interface RequestHandler<context extends RequestContext<any, any> = RequestContext> {
+export interface RequestHandler<
+  context extends RequestContext<any, any, any> = RequestContext,
+  output = DefaultOutput,
+> {
   /**
-   * Handles a matched request and returns the response.
+   * Handles a matched request and returns the router output.
    */
-  (context: context): Response | Promise<Response>
+  (context: context): Defined<output> | Promise<Defined<output>>
 }
 
-export function isRequestHandler(object: unknown): object is RequestHandler<any> {
+export function isRequestHandler(object: unknown): object is RequestHandler<any, any> {
   return typeof object === 'function'
 }
 
@@ -34,22 +38,27 @@ type ActionPattern<route extends ActionRoute> =
 
 type ActionContext<
   route extends ActionRoute,
-  context extends RequestContext<any, any>,
-> = ContextWithParams<context, MatchParams<ActionPattern<route>>>
+  context extends RequestContext<any, any, any>,
+  output,
+> = ContextWithParams<ContextWithOutput<context, output>, MatchParams<ActionPattern<route>>>
 
 export type ActionObject<
   route extends ActionRoute,
-  context extends RequestContext<any, any> = DefaultContext,
-  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  context extends RequestContext<any, any, any> = DefaultContext,
+  middleware extends readonly AnyMiddleware<any>[] = readonly AnyMiddleware<any>[],
+  output = DefaultOutput,
 > = {
   /**
    * Middleware that runs before this action's handler.
    */
-  middleware?: readonly [...middleware]
+  middleware?: readonly [...middleware] & readonly AnyMiddleware<output>[]
   /**
    * The handler that runs after this action's middleware.
    */
-  handler: RequestHandler<MiddlewareContext<middleware, ActionContext<route, context>>>
+  handler: RequestHandler<
+    MiddlewareContext<middleware, ActionContext<route, context, output>>,
+    output
+  >
 }
 
 /**
@@ -61,9 +70,12 @@ export type ActionObject<
  */
 export type Action<
   route extends ActionRoute,
-  context extends RequestContext<any, any> = DefaultContext,
-  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
-> = RequestHandler<ActionContext<route, context>> | ActionObject<route, context, middleware>
+  context extends RequestContext<any, any, any> = DefaultContext,
+  middleware extends readonly AnyMiddleware<any>[] = readonly AnyMiddleware<any>[],
+  output = DefaultOutput,
+> =
+  | RequestHandler<ActionContext<route, context, output>, output>
+  | ActionObject<route, context, middleware, output>
 
 /**
  * Defines a route handler with route-aware params and the default router context.
@@ -78,29 +90,36 @@ export type Action<
  */
 export function createAction<
   route extends ActionRoute,
-  context extends RequestContext<any, any> = DefaultContext,
-  const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
->(route: route, action: Action<route, context, middleware>): Action<route, context, middleware> {
+  context extends RequestContext<any, any, any> = DefaultContext,
+  const middleware extends readonly AnyMiddleware<any>[] = readonly AnyMiddleware<any>[],
+  output = DefaultOutput,
+>(
+  route: route,
+  action: Action<route, context, middleware, output>,
+): Action<route, context, middleware, output> {
   void route
   return action
 }
 
-export function isAction(obj: unknown): obj is Action<any, any> {
+export function isAction(obj: unknown): obj is Action<any, any, any, any> {
   return isRequestHandler(obj) || isActionObject(obj)
 }
 
-export function isActionObject(obj: unknown): obj is ActionObject<any, any> {
+export function isActionObject(obj: unknown): obj is ActionObject<any, any, any, any> {
   return isRecord(obj) && typeof obj.handler === 'function'
 }
 
 type ControllerActions<
   routes extends RouteMap,
-  context extends RequestContext<any, any>,
+  context extends RequestContext<any, any, any>,
+  output,
 > = routes extends any
   ? {
       [name in keyof routes as routes[name] extends Route<any, any>
         ? name
-        : never]: routes[name] extends Route<any, any> ? Action<routes[name], context> : never
+        : never]: routes[name] extends Route<any, any>
+        ? Action<routes[name], context, readonly AnyMiddleware<output>[], output>
+        : never
     } & {
       [name in keyof routes as routes[name] extends RouteMap ? name : never]?: never
     }
@@ -116,11 +135,16 @@ type ControllerActions<
  */
 export type Controller<
   routes extends RouteMap,
-  context extends RequestContext<any, any> = DefaultContext,
-  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  context extends RequestContext<any, any, any> = DefaultContext,
+  middleware extends readonly AnyMiddleware<any>[] = readonly AnyMiddleware<any>[],
+  output = DefaultOutput,
 > = {
-  middleware?: readonly [...middleware]
-  actions: ControllerActions<routes, MiddlewareContext<middleware, context>>
+  middleware?: readonly [...middleware] & readonly AnyMiddleware<output>[]
+  actions: ControllerActions<
+    routes,
+    MiddlewareContext<middleware, ContextWithOutput<context, output>>,
+    output
+  >
 }
 
 /**
@@ -136,18 +160,19 @@ export type Controller<
  */
 export function createController<
   routes extends RouteMap,
-  context extends RequestContext<any, any> = DefaultContext,
-  const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  context extends RequestContext<any, any, any> = DefaultContext,
+  const middleware extends readonly AnyMiddleware<any>[] = readonly AnyMiddleware<any>[],
+  output = DefaultOutput,
 >(
   routes: routes,
-  controller: Controller<routes, context, middleware>,
-): Controller<routes, context, middleware> {
+  controller: Controller<routes, context, middleware, output>,
+): Controller<routes, context, middleware, output> {
   void routes
   return controller
 }
 
 export function isController(obj: unknown): obj is {
-  middleware?: readonly AnyMiddleware[] | undefined
+  middleware?: readonly AnyMiddleware<any>[] | undefined
   actions: Record<string, unknown>
 } {
   return isRecord(obj) && isRecord(obj.actions)

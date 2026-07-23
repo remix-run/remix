@@ -1,0 +1,22 @@
+{
+  "name": "spa-demo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "remix": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/dom-navigation": "^1.0.7",
+    "@typescript/native-preview": "catalog:",
+    "vite": "7.3.3"
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  }
+}

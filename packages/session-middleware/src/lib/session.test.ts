@@ -173,4 +173,20 @@ describe('session middleware', () => {
     let setCookie = response.headers.getSetCookie()
     assert.equal(setCookie.length, 2)
   })
+
+  it('throws when the next handler does not return a Response', async () => {
+    let cookie = createCookie('__sess', { secrets: ['secret1'] })
+    let storage = createCookieSessionStorage()
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+
+    // @ts-expect-error - exercise runtime validation for JavaScript consumers
+    router.get('/', () => 'not a response')
+
+    await assert.rejects(
+      () => router.fetch('https://remix.run/'),
+      new TypeError('session() expected next() to return a Response'),
+    )
+  })
 })
