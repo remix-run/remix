@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remix.run/schemas/remix.json",
+  "title": "Remix CLI configuration",
+  "description": "Configuration for the Remix command-line interface.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema used by editors to validate this file."
+    },
+    "test": {
+      "$ref": "#/$defs/test"
+    }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "test": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "browserFiles": {
+          "$ref": "#/$defs/stringArray",
+          "description": "Glob patterns for browser test files."
+        },
+        "concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum number of concurrent test workers."
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "e2eFiles": {
+          "$ref": "#/$defs/stringArray",
+          "description": "Glob patterns for end-to-end test files."
+        },
+        "exclude": {
+          "$ref": "#/$defs/stringArray",
+          "description": "Glob patterns excluded from test discovery."
+        },
+        "files": {
+          "$ref": "#/$defs/stringArray",
+          "description": "Glob patterns for all test files."
+        },
+        "only": {
+          "$ref": "#/$defs/stringArray",
+          "description": "Regular expression patterns used to focus tests by full name."
+        },
+        "playwright": {
+          "$ref": "#/$defs/playwright"
+        },
+        "pool": {
+          "enum": ["forks", "threads"],
+          "description": "Worker pool used for server and end-to-end tests."
+        },
+        "quiet": {
+          "type": "boolean",
+          "description": "Whether skipped tests are omitted from reporter output."
+        },
+        "reporter": {
+          "enum": ["spec", "files", "tap", "dot"],
+          "description": "Reporter used for test output."
+        },
+        "setup": {
+          "type": "string",
+          "description": "Path to a module exporting globalSetup and/or globalTeardown."
+        },
+        "type": {
+          "type": "array",
+          "items": {
+            "enum": ["server", "browser", "e2e"]
+          },
+          "description": "Test types to run."
+        },
+        "watch": {
+          "type": "boolean",
+          "description": "Whether tests rerun when files change."
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "branches": {
+          "type": "number",
+          "description": "Minimum branch coverage percentage."
+        },
+        "dir": {
+          "type": "string",
+          "description": "Directory where coverage reports are written."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether coverage is collected."
+        },
+        "exclude": {
+          "$ref": "#/$defs/stringArray",
+          "description": "Glob patterns excluded from coverage."
+        },
+        "functions": {
+          "type": "number",
+          "description": "Minimum function coverage percentage."
+        },
+        "include": {
+          "$ref": "#/$defs/stringArray",
+          "description": "Glob patterns included in coverage."
+        },
+        "lines": {
+          "type": "number",
+          "description": "Minimum line coverage percentage."
+        },
+        "statements": {
+          "type": "number",
+          "description": "Minimum statement coverage percentage."
+        }
+      }
+    },
+    "playwright": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "configFile": {
+          "type": "string",
+          "description": "Path to a Playwright configuration file."
+        },
+        "echo": {
+          "type": "boolean",
+          "description": "Whether browser console output is echoed to stdout."
+        },
+        "open": {
+          "type": "boolean",
+          "description": "Whether the browser remains open after tests finish."
+        },
+        "projects": {
+          "$ref": "#/$defs/stringArray",
+          "description": "Playwright project names to run."
+        }
+      }
+    }
+  }
+}
