@@ -44,6 +44,7 @@ describe('mysql adapter', () => {
   it('runs migration work on the pool connection that owns the lock', async () => {
     let statements: string[] = []
     let releaseCalls = 0
+    let destroyCalls = 0
     let connection = {
       async query(text: string) {
         statements.push(text)
@@ -69,6 +70,9 @@ describe('mysql adapter', () => {
       },
       release() {
         releaseCalls += 1
+      },
+      destroy() {
+        destroyCalls += 1
       },
     }
     let pool = {
@@ -100,10 +104,12 @@ describe('mysql adapter', () => {
     assert.equal(statements[4], 'commit')
     assert.match(statements[5], /release_lock/)
     assert.equal(releaseCalls, 1)
+    assert.equal(destroyCalls, 0)
   })
 
-  it('rejects a failed migration lock acquisition and releases the connection', async () => {
+  it('rejects a failed migration lock acquisition and destroys the pooled connection', async () => {
     let releaseCalls = 0
+    let destroyCalls = 0
     let callbackCalls = 0
     let connection = {
       async query() {
@@ -111,6 +117,9 @@ describe('mysql adapter', () => {
       },
       release() {
         releaseCalls += 1
+      },
+      destroy() {
+        destroyCalls += 1
       },
     }
     let pool = {
@@ -132,7 +141,69 @@ describe('mysql adapter', () => {
       /migration lock could not be acquired/,
     )
     assert.equal(callbackCalls, 0)
-    assert.equal(releaseCalls, 1)
+    assert.equal(releaseCalls, 0)
+    assert.equal(destroyCalls, 1)
+  })
+
+  it('destroys the reserved connection when migration work fails', async () => {
+    let releaseCalls = 0
+    let destroyCalls = 0
+    let connection = {
+      async query(text: string) {
+        if (text.includes('get_lock')) {
+          return [[{ acquired: 1, lock_name: 'hashed-lock-name' }], []]
+        }
+
+        return [[{ released: 1 }], []]
+      },
+      release() {
+        releaseCalls += 1
+      },
+      destroy() {
+        destroyCalls += 1
+      },
+    }
+    let pool = {
+      async query() {
+        throw new Error('not used')
+      },
+      async getConnection() {
+        return connection
+      },
+      async end() {},
+    }
+    let adapter = createMysqlDatabaseAdapter(pool as never)
+
+    await assert.rejects(
+      () =>
+        adapter.withMigrationLock('app_migrations', async () => {
+          throw new Error('migration failed')
+        }),
+      /migration failed/,
+    )
+    assert.equal(releaseCalls, 0)
+    assert.equal(destroyCalls, 1)
+  })
+
+  it('throws instead of deadlocking when migration work re-enters the lock', async () => {
+    let connection = {
+      async query(text: string) {
+        if (text.includes('get_lock')) {
+          return [[{ acquired: 1, lock_name: 'hashed-lock-name' }], []]
+        }
+
+        return [[{ released: 1 }], []]
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    await assert.rejects(
+      () =>
+        adapter.withMigrationLock('app_migrations', () =>
+          adapter.withMigrationLock('app_migrations', async () => undefined),
+        ),
+      /migration lock is already held by this adapter/,
+    )
   })
 
   it('runs migration work directly on client-backed connections', async () => {
@@ -281,7 +352,14 @@ describe('mysql adapter', () => {
     )
 
     let adapter = createMysqlDatabaseAdapter(
-      { uri: 'mysql://user:password@localhost/app?ssl=false' },
+      {
+        uri: 'mysql://user:password@localhost/app?ssl=false',
+        connectionLimit: 5,
+        maxIdle: 5,
+        idleTimeout: 1000,
+        queueLimit: 10,
+        waitForConnections: true,
+      },
       {
         characterSet: 'utf8mb4',
         collation: 'utf8mb4_unicode_ci',
@@ -293,10 +371,32 @@ describe('mysql adapter', () => {
     assert.ok(typeof maintenanceConfig === 'object' && maintenanceConfig !== null)
     assert.ok('uri' in maintenanceConfig && typeof maintenanceConfig.uri === 'string')
     assert.equal(new URL(maintenanceConfig.uri).pathname, '/')
+    assert.equal('connectionLimit' in maintenanceConfig, false)
+    assert.equal('maxIdle' in maintenanceConfig, false)
+    assert.equal('idleTimeout' in maintenanceConfig, false)
+    assert.equal('queueLimit' in maintenanceConfig, false)
+    assert.equal('waitForConnections' in maintenanceConfig, false)
     assert.deepEqual(statements, [
       'drop database if exists `app`',
       'create database `app` character set `utf8mb4` collate `utf8mb4_unicode_ci`',
     ])
+  })
+
+  it('requires a database name for wipe() even when MYSQL_DATABASE is set', async () => {
+    let previousEnv = process.env.MYSQL_DATABASE
+    process.env.MYSQL_DATABASE = 'env_db'
+
+    try {
+      let adapter = createMysqlDatabaseAdapter({ host: 'localhost', user: 'root' })
+
+      await assert.rejects(() => adapter.wipe(), /MySQL database config requires a database name/)
+    } finally {
+      if (previousEnv === undefined) {
+        delete process.env.MYSQL_DATABASE
+      } else {
+        process.env.MYSQL_DATABASE = previousEnv
+      }
+    }
   })
 
   it('preserves client-backed connections when wipe is unavailable', async () => {

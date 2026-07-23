@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { column, createDatabase, table, eq, inList, sql } from '@remix-run/data-table'
+import pg from 'pg'
 
 import { createPostgresDatabaseAdapter, PostgresDatabaseAdapter } from './adapter.ts'
 
@@ -42,7 +43,7 @@ const accountProjects = table({
 describe('postgres adapter', () => {
   it('runs migration work on the pool connection that owns the lock', async () => {
     let statements: string[] = []
-    let releaseCalls = 0
+    let releaseArgs: unknown[][] = []
     let client = {
       async query(text: string) {
         statements.push(text)
@@ -54,8 +55,8 @@ describe('postgres adapter', () => {
       async connect() {
         throw new Error('reserved clients must not reconnect')
       },
-      release() {
-        releaseCalls += 1
+      release(...args: unknown[]) {
+        releaseArgs.push(args)
       },
     }
     let pool = {
@@ -80,14 +81,228 @@ describe('postgres adapter', () => {
 
     assert.equal(result, 'done')
     assert.deepEqual(statements, [
+      'set lock_timeout to 60000',
       'select pg_advisory_lock(hashtext($1))',
+      'set lock_timeout to default',
       'create table users (id integer)',
       'begin',
       'insert into users values (1)',
       'commit',
       'select pg_advisory_unlock(hashtext($1)) as "released"',
     ])
-    assert.equal(releaseCalls, 1)
+    assert.deepEqual(releaseArgs, [[]])
+  })
+
+  it('rejects a failed migration lock acquisition and destroys the pooled connection', async () => {
+    let releaseArgs: unknown[][] = []
+    let callbackCalls = 0
+    let client = {
+      async query(text: string) {
+        if (text.includes('pg_advisory_lock')) {
+          throw new Error('canceling statement due to lock timeout')
+        }
+
+        return { rows: [], rowCount: 0 }
+      },
+      release(...args: unknown[]) {
+        releaseArgs.push(args)
+      },
+    }
+    let pool = {
+      async query() {
+        throw new Error('not used')
+      },
+      async connect() {
+        return client
+      },
+      async end() {},
+    }
+    let adapter = createPostgresDatabaseAdapter(pool as never)
+
+    await assert.rejects(
+      () =>
+        adapter.withMigrationLock('app_migrations', async () => {
+          callbackCalls += 1
+        }),
+      /Postgres migration lock could not be acquired/,
+    )
+    assert.equal(callbackCalls, 0)
+    assert.equal(releaseArgs.length, 1)
+    assert.ok(releaseArgs[0][0] instanceof Error)
+  })
+
+  it('destroys the reserved connection when migration work fails', async () => {
+    let releaseArgs: unknown[][] = []
+    let client = {
+      async query(text: string) {
+        return {
+          rows: text.includes('pg_advisory_unlock') ? [{ released: true }] : [],
+          rowCount: 0,
+        }
+      },
+      release(...args: unknown[]) {
+        releaseArgs.push(args)
+      },
+    }
+    let pool = {
+      async query() {
+        throw new Error('not used')
+      },
+      async connect() {
+        return client
+      },
+      async end() {},
+    }
+    let adapter = createPostgresDatabaseAdapter(pool as never)
+
+    await assert.rejects(
+      () =>
+        adapter.withMigrationLock('app_migrations', async () => {
+          throw new Error('migration failed')
+        }),
+      /migration failed/,
+    )
+    assert.equal(releaseArgs.length, 1)
+    assert.ok(releaseArgs[0][0] instanceof Error)
+  })
+
+  it('runs migration work directly on client-backed connections', async () => {
+    let statements: string[] = []
+    let client = {
+      async query(text: string) {
+        statements.push(text)
+        return {
+          rows: text.includes('pg_advisory_unlock') ? [{ released: true }] : [],
+          rowCount: 0,
+        }
+      },
+    }
+    let adapter = createPostgresDatabaseAdapter(client as never)
+
+    let result = await adapter.withMigrationLock('app_migrations', async (lockedAdapter) => {
+      assert.equal(lockedAdapter, adapter)
+      return 'done'
+    })
+
+    assert.equal(result, 'done')
+    assert.deepEqual(statements, [
+      'set lock_timeout to 60000',
+      'select pg_advisory_lock(hashtext($1))',
+      'set lock_timeout to default',
+      'select pg_advisory_unlock(hashtext($1)) as "released"',
+    ])
+  })
+
+  it('serializes migration locks on the same adapter', async () => {
+    let lifecycle: string[] = []
+    let signalFirstMigrationStarted: () => void = () => undefined
+    let firstMigrationStarted = new Promise<void>((resolve) => {
+      signalFirstMigrationStarted = resolve
+    })
+    let releaseFirstMigration: () => void = () => undefined
+    let firstMigrationCanFinish = new Promise<void>((resolve) => {
+      releaseFirstMigration = resolve
+    })
+    let client = {
+      async query(text: string) {
+        if (text.includes('pg_advisory_lock')) {
+          lifecycle.push('lock')
+        }
+
+        if (text.includes('pg_advisory_unlock')) {
+          lifecycle.push('unlock')
+          return { rows: [{ released: true }], rowCount: 1 }
+        }
+
+        return { rows: [], rowCount: 0 }
+      },
+    }
+    let adapter = createPostgresDatabaseAdapter(client as never)
+
+    let firstMigration = adapter.withMigrationLock('app_migrations', async () => {
+      lifecycle.push('first:start')
+      signalFirstMigrationStarted()
+      await firstMigrationCanFinish
+      lifecycle.push('first:end')
+    })
+    let secondMigration = adapter.withMigrationLock('app_migrations', async () => {
+      lifecycle.push('second')
+    })
+
+    await firstMigrationStarted
+    assert.deepEqual(lifecycle, ['lock', 'first:start'])
+
+    releaseFirstMigration()
+    await Promise.all([firstMigration, secondMigration])
+
+    assert.deepEqual(lifecycle, [
+      'lock',
+      'first:start',
+      'first:end',
+      'unlock',
+      'lock',
+      'second',
+      'unlock',
+    ])
+  })
+
+  it('preserves migration errors when releasing the lock also fails', async () => {
+    let migrationError = new Error('migration failed')
+    let client = {
+      async query(text: string) {
+        if (text.includes('pg_advisory_unlock')) {
+          throw new Error('lock cleanup failed')
+        }
+
+        return { rows: [], rowCount: 0 }
+      },
+    }
+    let adapter = createPostgresDatabaseAdapter(client as never)
+
+    await assert.rejects(
+      () =>
+        adapter.withMigrationLock('app_migrations', async () => {
+          throw migrationError
+        }),
+      (error: unknown) => error === migrationError,
+    )
+  })
+
+  it('reports lock release failures after successful migration work', async () => {
+    let client = {
+      async query(text: string) {
+        return {
+          rows: text.includes('pg_advisory_unlock') ? [{ released: false }] : [],
+          rowCount: 0,
+        }
+      },
+    }
+    let adapter = createPostgresDatabaseAdapter(client as never)
+
+    await assert.rejects(
+      () => adapter.withMigrationLock('app_migrations', async () => 'done'),
+      /migration lock was not held by the reserved connection/,
+    )
+  })
+
+  it('throws instead of deadlocking when migration work re-enters the lock', async () => {
+    let client = {
+      async query(text: string) {
+        return {
+          rows: text.includes('pg_advisory_unlock') ? [{ released: true }] : [],
+          rowCount: 0,
+        }
+      },
+    }
+    let adapter = createPostgresDatabaseAdapter(client as never)
+
+    await assert.rejects(
+      () =>
+        adapter.withMigrationLock('app_migrations', () =>
+          adapter.withMigrationLock('app_migrations', async () => undefined),
+        ),
+      /migration lock is already held by this adapter/,
+    )
   })
 
   it('preserves client-backed pools when wipe is unavailable', async () => {
@@ -110,6 +325,170 @@ describe('postgres adapter', () => {
       /Postgres adapter wipe\(\) requires config-based construction/,
     )
     assert.equal(endCalls, 0)
+  })
+
+  it('wipes connection-string configured databases through a maintenance client', async (t) => {
+    let statements: Array<{ text: string; values: unknown[] | undefined }> = []
+    let maintenanceConfig: unknown
+    let maintenanceClient = {
+      async connect() {},
+      async query(text: string, values?: unknown[]) {
+        statements.push({ text, values })
+        return { rows: [], rowCount: 0 }
+      },
+      async end() {},
+    }
+
+    t.mock.method(pg, 'Pool', function () {
+      return {
+        async query() {
+          return { rows: [], rowCount: 0 }
+        },
+        async connect() {
+          throw new Error('not used')
+        },
+        async end() {},
+      }
+    } as never)
+    t.mock.method(pg, 'Client', function (config: unknown) {
+      maintenanceConfig = config
+      return maintenanceClient
+    } as never)
+
+    let adapter = createPostgresDatabaseAdapter({
+      connectionString: 'postgres://user:password@localhost/app',
+    })
+
+    await adapter.wipe()
+
+    assert.ok(typeof maintenanceConfig === 'object' && maintenanceConfig !== null)
+    assert.ok('database' in maintenanceConfig && maintenanceConfig.database === 'postgres')
+    assert.ok(
+      'connectionString' in maintenanceConfig &&
+        typeof maintenanceConfig.connectionString === 'string',
+    )
+    assert.equal(new URL(maintenanceConfig.connectionString).pathname, '/postgres')
+    assert.equal(statements.length, 3)
+    assert.match(statements[0].text, /pg_terminate_backend/)
+    assert.deepEqual(statements[0].values, ['app'])
+    assert.equal(statements[1].text, 'drop database if exists "app"')
+    assert.equal(statements[2].text, 'create database "app" template "template0"')
+  })
+
+  it('requires a resolvable database name for wipe()', async (t) => {
+    let poolEndCalls = 0
+
+    t.mock.method(pg, 'Pool', function () {
+      return {
+        async query() {
+          return { rows: [], rowCount: 0 }
+        },
+        async connect() {
+          throw new Error('not used')
+        },
+        async end() {
+          poolEndCalls += 1
+        },
+      }
+    } as never)
+
+    let previousEnv = process.env.PGDATABASE
+    delete process.env.PGDATABASE
+
+    try {
+      let adapter = createPostgresDatabaseAdapter({ host: 'localhost', user: 'app' })
+
+      await assert.rejects(
+        () => adapter.wipe(),
+        /Postgres database config requires a database name/,
+      )
+      assert.equal(poolEndCalls, 0)
+    } finally {
+      if (previousEnv === undefined) {
+        delete process.env.PGDATABASE
+      } else {
+        process.env.PGDATABASE = previousEnv
+      }
+    }
+  })
+
+  it('falls back to PGDATABASE when config omits a database name', async (t) => {
+    let statements: string[] = []
+    let maintenanceClient = {
+      async connect() {},
+      async query(text: string) {
+        statements.push(text)
+        return { rows: [], rowCount: 0 }
+      },
+      async end() {},
+    }
+
+    t.mock.method(pg, 'Pool', function () {
+      return {
+        async query() {
+          return { rows: [], rowCount: 0 }
+        },
+        async connect() {
+          throw new Error('not used')
+        },
+        async end() {},
+      }
+    } as never)
+    t.mock.method(pg, 'Client', function () {
+      return maintenanceClient
+    } as never)
+
+    let previousEnv = process.env.PGDATABASE
+    process.env.PGDATABASE = 'env_db'
+
+    try {
+      let adapter = createPostgresDatabaseAdapter({ host: 'localhost', user: 'app' })
+
+      await adapter.wipe()
+
+      assert.equal(statements[1], 'drop database if exists "env_db"')
+      assert.equal(statements[2], 'create database "env_db" template "template0"')
+    } finally {
+      if (previousEnv === undefined) {
+        delete process.env.PGDATABASE
+      } else {
+        process.env.PGDATABASE = previousEnv
+      }
+    }
+  })
+
+  it('keeps the pool usable when the maintenance config cannot be resolved', async (t) => {
+    let poolQueries: string[] = []
+    let poolEndCalls = 0
+
+    t.mock.method(pg, 'Pool', function () {
+      return {
+        async query(text: string) {
+          poolQueries.push(text)
+          return { rows: [], rowCount: 0 }
+        },
+        async connect() {
+          throw new Error('not used')
+        },
+        async end() {
+          poolEndCalls += 1
+        },
+      }
+    } as never)
+
+    let adapter = createPostgresDatabaseAdapter({
+      connectionString: 'not a valid url',
+      database: 'app',
+    })
+
+    await assert.rejects(
+      () => adapter.wipe(),
+      /Postgres connection string must be a valid URL to resolve the maintenance database/,
+    )
+    assert.equal(poolEndCalls, 0)
+
+    await adapter.executeScript('select 1')
+    assert.deepEqual(poolQueries, ['select 1'])
   })
 
   it('checks table and column existence through adapter introspection hooks', async () => {

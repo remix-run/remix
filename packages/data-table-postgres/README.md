@@ -36,9 +36,9 @@ let db = createDatabase(
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `pg`.
 
-Config-backed adapters support `db.wipe()` and `db.reset()`. You may continue passing an existing `pg` pool or client when your application owns the driver lifecycle, but destructive lifecycle methods are unavailable in that mode.
+Config-backed adapters support `db.wipe()` and `db.reset()`. You may continue passing an existing `pg` pool or client when your application owns the driver lifecycle, but destructive lifecycle methods are unavailable in that mode. `db.wipe()` requires a database name resolvable from the connection config (`database`, the path of `connectionString`, or the `PGDATABASE` environment variable) and throws when none is present.
 
-Migration runs reserve one connection for the PostgreSQL advisory lock, migration SQL, and journal updates. The connection is always unlocked and returned to the pool after the run.
+Migration runs reserve one connection for the PostgreSQL advisory lock, migration SQL, and journal updates. Lock acquisition waits up to 60 seconds (via `lock_timeout`) and fails with an error instead of blocking forever. After a successful run the connection is unlocked and returned to the pool; if the migration or unlock fails, the reserved connection is destroyed instead of being reused, so a dirty session can never leak back into the pool. Calling `withMigrationLock()` from inside a migration callback throws instead of deadlocking.
 
 ## Adapter Capabilities
 

@@ -8,6 +8,8 @@ import type {
   TransactionOptions,
   TransactionToken,
 } from '@remix-run/data-table'
+import { AsyncLocalStorage } from 'node:async_hooks'
+
 import { getTablePrimaryKey } from '@remix-run/data-table'
 import pg from 'pg'
 import type {
@@ -57,6 +59,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
   #migrationLockQueue = Promise.resolve()
+  #migrationLockStore = new AsyncLocalStorage<boolean>()
 
   constructor(
     config: PostgresPoolConfig | PostgresQueryable,
@@ -290,10 +293,14 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     let config = this.#configOrThrow('wipe')
     this.#assertNoOpenTransactions('wipe')
     let database = resolvePostgresDatabaseName(config)
+    // Resolve the maintenance config before closing the pool so a config
+    // error cannot leave the adapter without a usable pool.
+    let maintenanceConfig = this.#maintenanceConfig(database)
     await this.#closePool()
-    let maintenance = new pg.Client(this.#maintenanceConfig(database))
+    let maintenance: PostgresClient | undefined
 
     try {
+      maintenance = new pg.Client(maintenanceConfig)
       await maintenance.connect()
       await maintenance.query(
         'select pg_terminate_backend(pid) from pg_stat_activity where datname = $1 and pid <> pg_backend_pid()',
@@ -308,7 +315,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       )
     } finally {
       try {
-        await maintenance.end()
+        await maintenance?.end()
       } finally {
         await this.#replacePool()
       }
@@ -317,6 +324,11 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
 
   /**
    * Runs migration work on the postgres connection that owns the advisory lock.
+   *
+   * Lock acquisition waits up to 60 seconds and throws when the lock cannot
+   * be acquired. Re-entering this method from inside `run` throws instead of
+   * deadlocking, and a failed run destroys the reserved connection instead of
+   * returning it to the pool.
    * @param name Logical migration lock name.
    * @param run Migration work to run with a connection-bound adapter.
    * @returns The callback result.
@@ -325,6 +337,10 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     name: string,
     run: (adapter: DatabaseAdapter) => Promise<result>,
   ): Promise<result> {
+    if (this.#migrationLockStore.getStore()) {
+      throw new Error('Postgres migration lock is already held by this adapter')
+    }
+
     let waitForPreviousLock = this.#migrationLockQueue
     let releaseQueue: () => void = () => undefined
     this.#migrationLockQueue = new Promise((resolve) => {
@@ -344,13 +360,27 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
         client = this.#client
       }
 
+      let adapter = releaseOnClose ? new PostgresDatabaseAdapter(client) : this
+
       try {
-        let adapter = releaseOnClose ? new PostgresDatabaseAdapter(client) : this
-        return await runWithPostgresMigrationLock(client, name, adapter, run)
-      } finally {
+        let value = await this.#migrationLockStore.run(true, () =>
+          runWithPostgresMigrationLock(client, name, adapter, run),
+        )
+
         if (releaseOnClose) {
           releasePostgresClient(client)
         }
+
+        return value
+      } catch (error) {
+        // A failed run can leave the reserved session dirty (aborted
+        // transaction, still-held advisory lock), so destroy the connection
+        // instead of returning it to the pool.
+        if (releaseOnClose) {
+          destroyPostgresClient(client, error)
+        }
+
+        throw error
       }
     } finally {
       releaseQueue()
@@ -455,13 +485,15 @@ function isPostgresPool(client: PostgresQueryable): client is PostgresPool {
 
 function resolvePostgresDatabaseName(config: PostgresPoolConfig): string {
   let database =
-    resolveDatabaseNameFromConnectionString(config?.connectionString) ?? config?.database
+    resolveDatabaseNameFromConnectionString(config?.connectionString) ??
+    config?.database ??
+    process.env.PGDATABASE
 
-  if (database) {
-    return database
+  if (!database) {
+    throw new Error('Postgres database config requires a database name')
   }
 
-  return process.env.PGDATABASE ?? 'postgres'
+  return database
 }
 
 function replaceDatabaseInConnectionString(
@@ -472,7 +504,17 @@ function replaceDatabaseInConnectionString(
     return undefined
   }
 
-  let url = new URL(connectionString)
+  let url: URL
+
+  try {
+    url = new URL(connectionString)
+  } catch (cause) {
+    throw new Error(
+      'Postgres connection string must be a valid URL to resolve the maintenance database',
+      { cause },
+    )
+  }
+
   url.pathname = '/' + encodeURIComponent(database)
   return url.toString()
 }
@@ -498,13 +540,37 @@ function releasePostgresClient(client: PostgresClient | PostgresPoolClient): voi
   release?.()
 }
 
+function destroyPostgresClient(client: PostgresClient | PostgresPoolClient, error: unknown): void {
+  let release = (client as { release?: (destroy?: Error | boolean) => void }).release
+
+  if (typeof release === 'function') {
+    // A truthy argument tells pg to destroy the client instead of pooling it.
+    release.call(client, error instanceof Error ? error : true)
+    return
+  }
+
+  void (client as PostgresClient).end().catch(() => undefined)
+}
+
+// Matches the 60 second wait bound used by the MySQL adapter's get_lock().
+const MIGRATION_LOCK_TIMEOUT_MS = 60_000
+
 async function runWithPostgresMigrationLock<result>(
   client: PostgresClient | PostgresPoolClient,
   name: string,
   adapter: DatabaseAdapter,
   run: (adapter: DatabaseAdapter) => Promise<result>,
 ): Promise<result> {
-  await client.query('select pg_advisory_lock(hashtext($1))', [name])
+  await client.query('set lock_timeout to ' + String(MIGRATION_LOCK_TIMEOUT_MS))
+
+  try {
+    await client.query('select pg_advisory_lock(hashtext($1))', [name])
+  } catch (cause) {
+    await client.query('set lock_timeout to default').catch(() => undefined)
+    throw new Error('Postgres migration lock could not be acquired', { cause })
+  }
+
+  await client.query('set lock_timeout to default')
 
   let outcome: { status: 'success'; value: result } | { status: 'failure'; error: unknown }
 

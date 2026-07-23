@@ -8,6 +8,8 @@ import type {
   TransactionOptions,
   TransactionToken,
 } from '@remix-run/data-table'
+import { AsyncLocalStorage } from 'node:async_hooks'
+
 import { getTablePrimaryKey } from '@remix-run/data-table'
 import mysql from 'mysql2/promise'
 import type {
@@ -63,6 +65,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
   #migrationLockQueue = Promise.resolve()
+  #migrationLockStore = new AsyncLocalStorage<boolean>()
 
   constructor(
     config: string | MysqlPoolOptions | MysqlQueryable,
@@ -351,6 +354,11 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
 
   /**
    * Runs migration work on the mysql connection that owns the named lock.
+   *
+   * Lock acquisition waits up to 60 seconds and throws when the lock cannot
+   * be acquired. Re-entering this method from inside `run` throws instead of
+   * deadlocking, and a failed run destroys the reserved connection instead of
+   * returning it to the pool.
    * @param name Logical migration lock name.
    * @param run Migration work to run with a connection-bound adapter.
    * @returns The callback result.
@@ -359,6 +367,10 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     name: string,
     run: (adapter: DatabaseAdapter) => Promise<result>,
   ): Promise<result> {
+    if (this.#migrationLockStore.getStore()) {
+      throw new Error('MySQL migration lock is already held by this adapter')
+    }
+
     let waitForPreviousLock = this.#migrationLockQueue
     let releaseQueue: () => void = () => undefined
     this.#migrationLockQueue = new Promise((resolve) => {
@@ -378,13 +390,27 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
         connection = this.#client
       }
 
+      let adapter = releaseOnClose ? new MysqlDatabaseAdapter(connection) : this
+
       try {
-        let adapter = releaseOnClose ? new MysqlDatabaseAdapter(connection) : this
-        return await runWithMysqlMigrationLock(connection, name, adapter, run)
-      } finally {
+        let value = await this.#migrationLockStore.run(true, () =>
+          runWithMysqlMigrationLock(connection, name, adapter, run),
+        )
+
         if (releaseOnClose && isMysqlPoolConnection(connection)) {
           connection.release()
         }
+
+        return value
+      } catch (error) {
+        // A failed run can leave the reserved connection dirty (open
+        // transaction, still-held named lock), so destroy the connection
+        // instead of returning it to the pool.
+        if (releaseOnClose) {
+          destroyMysqlConnection(connection)
+        }
+
+        throw error
       }
     } finally {
       releaseQueue()
@@ -483,7 +509,6 @@ function resolveMysqlDatabaseName(config: string | MysqlPoolOptions): string {
     typeof config === 'string'
       ? resolveDatabaseNameFromUrl(config)
       : (config.database ?? resolveDatabaseNameFromUrl(config.uri ?? ''))
-  database ??= process.env.MYSQL_DATABASE
 
   if (!database) {
     throw new Error('MySQL database config requires a database name')
@@ -513,7 +538,19 @@ function toMysqlServerConfig(config: string | MysqlPoolOptions): string | MysqlP
     }
   }
 
-  let { database: _database, uri, ...serverConfig } = config
+  // Pool-only options make mysql2's createConnection() log "Ignoring invalid
+  // configuration option" warnings, so strip them from the maintenance
+  // connection config.
+  let {
+    database: _database,
+    uri,
+    connectionLimit: _connectionLimit,
+    maxIdle: _maxIdle,
+    idleTimeout: _idleTimeout,
+    queueLimit: _queueLimit,
+    waitForConnections: _waitForConnections,
+    ...serverConfig
+  } = config
 
   if (uri === undefined) {
     return serverConfig
@@ -538,12 +575,25 @@ function isMysqlPoolConnection(
   return 'release' in connection && typeof connection.release === 'function'
 }
 
+function destroyMysqlConnection(connection: MysqlTransactionConnection): void {
+  let destroy = (connection as { destroy?: () => void }).destroy
+
+  if (typeof destroy === 'function') {
+    destroy.call(connection)
+    return
+  }
+
+  void connection.end().catch(() => undefined)
+}
+
 async function runWithMysqlMigrationLock<result>(
   connection: MysqlTransactionConnection,
   name: string,
   adapter: DatabaseAdapter,
   run: (adapter: DatabaseAdapter) => Promise<result>,
 ): Promise<result> {
+  // sha2(..., 256) yields 64 hex characters, exactly GET_LOCK's 64-character
+  // lock name limit, so any additional prefix must go inside the hash input.
   let [lockRows] = await connection.query(
     "select lock_name, get_lock(lock_name, 60) as `acquired` from (select sha2(concat(coalesce(database(), ''), ':', ?), 256) as lock_name) as migration_lock",
     [name],

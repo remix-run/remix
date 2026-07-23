@@ -62,9 +62,9 @@ let adapter = createMysqlDatabaseAdapter({
 })
 ```
 
-Config-backed adapters support `db.wipe()` and `db.reset()`. You may continue passing an existing `mysql2` pool or connection when your application owns the driver lifecycle, but destructive lifecycle methods are unavailable in that mode.
+Config-backed adapters support `db.wipe()` and `db.reset()`. You may continue passing an existing `mysql2` pool or connection when your application owns the driver lifecycle, but destructive lifecycle methods are unavailable in that mode. `db.wipe()` requires a database name in the connection config (`database`, or the path of a connection URI) and throws when none is present.
 
-Migration runs reserve one connection for the MySQL named lock, migration SQL, and journal updates. Lock acquisition failures are reported instead of allowing the migration to proceed, and the connection is always unlocked and returned to the pool after the run.
+Migration runs reserve one connection for the MySQL named lock, migration SQL, and journal updates. Lock acquisition waits up to 60 seconds and fails with an error instead of allowing the migration to proceed. After a successful run the connection is unlocked and returned to the pool; if the migration or unlock fails, the reserved connection is destroyed instead of being reused, so a dirty session can never leak back into the pool. Calling `withMigrationLock()` from inside a migration callback throws instead of deadlocking.
 
 ### `returning` On MySQL
 
