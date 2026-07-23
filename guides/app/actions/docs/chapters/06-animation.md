@@ -3,6 +3,8 @@ title: Animation
 description: The CSS-first animation model and Remix UI helpers for motion that respects rendering state.
 ---
 
+[Interactivity](/interactivity/) left the album app hydrating client entries and reloading frames; every one of those DOM changes is a place motion can help or hurt. This chapter steps away from the cumulative walkthrough for a moment and covers the animation model with small self-contained examples, so each technique is visible on its own before you apply it to the app's own components.
+
 ## CSS-first visual states {#css-first-visual-states}
 
 Start with CSS when the browser already owns the state. Hover, focus, active, checked, open, selected, and reduced-motion states do not need JavaScript state unless your render output also depends on them.
@@ -48,50 +50,53 @@ Use Remix animation helpers when the motion depends on rendering state: a node e
 
 `animateEntrance(...)` runs when a host node is inserted. `animateExit(...)` lets a removed node stay in the DOM until its exit animation finishes.
 
-```tsx filename=app/ui/notice.browser.tsx
+```tsx filename=app/assets/notice.tsx
 import { clientEntry, css, on } from "remix/ui";
 import { animateEntrance, animateExit, spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
 
-export const Notice = clientEntry(import.meta.url, function Notice(handle: Handle) {
-  let visible = true;
+export const Notice = clientEntry(
+  import.meta.url,
+  function Notice(handle: Handle) {
+    let visible = true;
 
-  return () => (
-    <div>
-      <button
-        mix={[
-          on("click", () => {
-            visible = !visible;
-            handle.update();
-          }),
-        ]}
-        type="button"
-      >
-        Toggle notice
-      </button>
-      {visible && (
-        <p
-          key="notice"
+    return () => (
+      <div>
+        <button
           mix={[
-            noticeStyle,
-            animateEntrance({
-              opacity: 0,
-              transform: "translateY(8px)",
-              ...spring("snappy"),
-            }),
-            animateExit({
-              opacity: 0,
-              transform: "translateY(-8px)",
-              ...spring("snappy"),
+            on("click", () => {
+              visible = !visible;
+              handle.update();
             }),
           ]}
+          type="button"
         >
-          Settings saved.
-        </p>
-      )}
-    </div>
-  );
-});
+          Toggle notice
+        </button>
+        {visible && (
+          <p
+            key="notice"
+            mix={[
+              noticeStyle,
+              animateEntrance({
+                opacity: 0,
+                transform: "translateY(8px)",
+                ...spring("snappy"),
+              }),
+              animateExit({
+                opacity: 0,
+                transform: "translateY(-8px)",
+                ...spring("snappy"),
+              }),
+            ]}
+          >
+            Settings saved.
+          </p>
+        )}
+      </div>
+    );
+  },
+);
 
 const noticeStyle = css({
   borderRadius: "12px",
@@ -111,39 +116,45 @@ Pass `true` for the default opacity animation or `false` to disable a mixin with
 
 `animateLayout(...)` measures a host node before and after a render, then animates the visual delta. This is the right tool for sorted lists, expanding cards, and elements that move because layout changed.
 
-```tsx filename=app/ui/reorder-list.browser.tsx
+```tsx filename=app/assets/reorder-list.tsx
 import { clientEntry, css, on } from "remix/ui";
 import { animateLayout, spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
 
 const initialItems = ["Design", "Build", "Review"];
 
-export const ReorderList = clientEntry(import.meta.url, function ReorderList(handle: Handle) {
-  let items = initialItems;
+export const ReorderList = clientEntry(
+  import.meta.url,
+  function ReorderList(handle: Handle) {
+    let items = initialItems;
 
-  return () => (
-    <div>
-      <button
-        mix={[
-          on("click", () => {
-            items = [...items].reverse();
-            handle.update();
-          }),
-        ]}
-        type="button"
-      >
-        Reverse
-      </button>
-      <ul mix={listStyle}>
-        {items.map((item) => (
-          <li key={item} mix={[itemStyle, animateLayout({ ...spring("bouncy") })]}>
-            {item}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-});
+    return () => (
+      <div>
+        <button
+          mix={[
+            on("click", () => {
+              items = [...items].reverse();
+              handle.update();
+            }),
+          ]}
+          type="button"
+        >
+          Reverse
+        </button>
+        <ul mix={listStyle}>
+          {items.map((item) => (
+            <li
+              key={item}
+              mix={[itemStyle, animateLayout({ ...spring("bouncy") })]}
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  },
+);
 
 const listStyle = css({
   display: "grid",
@@ -174,30 +185,33 @@ import { clientEntry, css, on } from "remix/ui";
 import { spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
 
-export const BouncySwitch = clientEntry(import.meta.url, function BouncySwitch(handle: Handle) {
-  let enabled = true;
+export const BouncySwitch = clientEntry(
+  import.meta.url,
+  function BouncySwitch(handle: Handle) {
+    let enabled = true;
 
-  return () => (
-    <button
-      aria-pressed={enabled}
-      mix={[
-        switchStyle,
-        on("click", () => {
-          enabled = !enabled;
-          handle.update();
-        }),
-      ]}
-      type="button"
-    >
-      <span
-        mix={thumbStyle}
-        style={{
-          transform: enabled ? "translateX(2.25rem)" : "translateX(0)",
-        }}
-      />
-    </button>
-  );
-});
+    return () => (
+      <button
+        aria-pressed={enabled}
+        mix={[
+          switchStyle,
+          on("click", () => {
+            enabled = !enabled;
+            handle.update();
+          }),
+        ]}
+        type="button"
+      >
+        <span
+          mix={thumbStyle}
+          style={{
+            transform: enabled ? "translateX(2.25rem)" : "translateX(0)",
+          }}
+        />
+      </button>
+    );
+  },
+);
 
 const switchStyle = css({
   border: 0,
@@ -220,10 +234,14 @@ const thumbStyle = css({
 
 Use `tween(...)` when you need a time-based value loop rather than CSS or WAAPI timing.
 
-```ts filename=app/ui/count-up.browser.ts
+```ts filename=app/assets/count-up.ts
 import { easings, tween } from "remix/ui/animation";
 
-export function countUp(from: number, to: number, onValue: (value: number) => void) {
+export function countUp(
+  from: number,
+  to: number,
+  onValue: (value: number) => void,
+) {
   let animation = tween({ from, to, duration: 300, curve: easings.easeOut });
   animation.next();
 
@@ -256,34 +274,37 @@ Event handlers receive abort signals, and animation mixins cancel or replace in-
 
 For custom imperative animations, keep the current animation in setup scope and cancel it before starting the next one:
 
-```tsx filename=app/ui/ripple-button.browser.tsx
+```tsx filename=app/assets/ripple-button.tsx
 import { clientEntry, css, on, ref } from "remix/ui";
 import { spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
 
-export const RippleButton = clientEntry(import.meta.url, function RippleButton(_handle: Handle) {
-  let node: HTMLButtonElement;
-  let currentAnimation: Animation | undefined;
+export const RippleButton = clientEntry(
+  import.meta.url,
+  function RippleButton(_handle: Handle) {
+    let node: HTMLButtonElement;
+    let currentAnimation: Animation | undefined;
 
-  return () => (
-    <button
-      mix={[
-        ref((element) => (node = element)),
-        buttonStyle,
-        on("pointerdown", () => {
-          currentAnimation?.cancel();
-          currentAnimation = node.animate(
-            [{ transform: "scale(0.96)" }, { transform: "scale(1)" }],
-            { ...spring("snappy") },
-          );
-        }),
-      ]}
-      type="button"
-    >
-      Press me
-    </button>
-  );
-});
+    return () => (
+      <button
+        mix={[
+          ref((element) => (node = element)),
+          buttonStyle,
+          on("pointerdown", () => {
+            currentAnimation?.cancel();
+            currentAnimation = node.animate(
+              [{ transform: "scale(0.96)" }, { transform: "scale(1)" }],
+              { ...spring("snappy") },
+            );
+          }),
+        ]}
+        type="button"
+      >
+        Press me
+      </button>
+    );
+  },
+);
 
 const buttonStyle = css({
   border: 0,
@@ -324,10 +345,12 @@ const panelStyle = css({
 
 For JavaScript-driven motion, check the same media query before starting work:
 
-```ts filename=app/ui/motion.browser.ts
+```ts filename=app/assets/motion.ts
 export function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 ```
 
 Reduced motion does not have to mean no feedback. Prefer shorter fades, instant layout changes, or non-motion state changes when movement is not essential.
+
+With motion under control, the walkthrough returns to the cumulative album app: [Data and Validation](/data-and-validation/) replaces its in-memory album array with validated input and a real database.

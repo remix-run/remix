@@ -3,9 +3,9 @@ title: Routing and Controllers
 description: How route maps, route helpers, controllers, actions, and responses define Remix request handling.
 ---
 
-In [Chapter 1](/start-here/), we built one end-to-end request flow: a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) comes in, Remix matches a route, a controller runs an action, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) containing HTML rendered from a Remix component.
+In [Chapter 1](/start-here/), we built one end-to-end request flow: a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) comes in, Remix matches a route, a controller runs an action, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
-Full-stack Remix apps are built around that route/controller boundary. `app/routes.ts` names URLs and methods your app accepts, controllers in `app/actions/` implement them, and each action returns the response that becomes the page, redirect, JSON payload, file, or error the browser receives.
+This chapter looks more closely at that route/controller boundary. `app/routes.ts` names the URLs and methods the app accepts, controllers in `app/actions/` implement them, and each action returns the page, redirect, JSON payload, file, or error the caller receives.
 
 ## Routes as the URL contract
 
@@ -148,7 +148,7 @@ export const routes = route({
 // routes.albums.create -> POST   /albums
 ```
 
-These helpers produce ordinary route maps and leaves, so you can nest them with hand-written definitions. Pass a map to `createController(...)`, then register it with `router.map(...)` just as you would a hand-written map. The [`remix/router` overview](https://api.remix.run/api/remix/router/overview/) covers the full route builder API.
+These helpers produce ordinary route maps and leaves, so you can nest them with hand-written definitions. Pass a map to `createController(...)`, then register it with `router.map(...)` just as you would a hand-written map. The builders are imported from `remix/routes`; the [`remix/router` overview](https://api.remix.run/api/remix/router/overview/) covers them along with the rest of the router API.
 
 ## Controllers and actions
 
@@ -226,7 +226,7 @@ return context.render(<AlbumPage album={album} />);
 
 The result is still an ordinary Web `Response`. An action can render a page, return text or JSON, redirect the browser, send a file, or return an error response.
 
-Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action or middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and return a `500` response. The [Errors and Error Boundaries](/errors-and-error-boundaries/) chapter covers that path in detail.
+Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action or middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and return a `500` response. The [Errors and Cancellation](/errors-and-error-boundaries/) chapter covers that path in detail.
 
 A text response can be as simple as:
 
@@ -242,7 +242,10 @@ import { redirect } from "remix/response/redirect";
 import { routes } from "../../../routes.ts";
 
 // inside an action:
-return redirect(routes.albums.show.href({ albumId: context.params.albumId }), 303);
+return redirect(
+  routes.albums.show.href({ albumId: context.params.albumId }),
+  303,
+);
 ```
 
 For HTML outside the Remix UI render pipeline, the `html` template tag escapes interpolated values and `createHtmlResponse(...)` sets the HTML content type and adds a doctype:
@@ -275,21 +278,21 @@ Note: `context.headers` represents the request headers, not the headers sent wit
 ```ts filename=app/router.ts
 import { createRouter } from "remix/router";
 
-import rootController from "./actions/controller.tsx";
+import controller from "./actions/controller.tsx";
 import albumsController from "./actions/albums/controller.tsx";
 import albumsEditController from "./actions/albums/edit/controller.tsx";
 import { routes } from "./routes.ts";
 
 export const router = createRouter();
 
-router.map(routes, rootController);
+router.map(routes, controller);
 router.map(routes.albums, albumsController);
 router.map(routes.albums.edit, albumsEditController);
 ```
 
 With those mappings:
 
-- `rootController` handles root-level leaves such as `home`.
+- `controller` handles root-level leaves such as `home`.
 - `albumsController` handles `routes.albums.show`.
 - `albumsEditController` handles `routes.albums.edit.index` and `routes.albums.edit.action`.
 
