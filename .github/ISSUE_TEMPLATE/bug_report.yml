@@ -16,7 +16,7 @@ body:
     attributes:
       label: Reproduction
       description: Link to reproduction and steps to reproduce the behavior
-      placeholder: Go to https://github.com/your-name/your-reproduction and click the "Submit" button
+      placeholder: Run the application at https://github.com/your-name/your-reproduction, click "Submit"...
     validations:
       required: true
   - type: textarea
