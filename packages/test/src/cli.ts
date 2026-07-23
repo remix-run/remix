@@ -68,6 +68,11 @@ interface DiscoveredTests {
  * ```
  */
 export async function runRemixTest(options: RunRemixTestOptions = {}): Promise<number> {
+  // Test files (and the worker processes that import them) must be able to
+  // rely on NODE_ENV so app modules can select test-only resources, e.g. an
+  // in-memory database instead of the development database file.
+  process.env.NODE_ENV ??= 'test'
+
   let argv = options.argv ?? process.argv.slice(2)
   let cwd = await resolveCwd(options.cwd ?? process.cwd())
   let previousCwd = process.cwd()
