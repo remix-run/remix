@@ -2,6 +2,17 @@
 
 This is the changelog for [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Session cookies now default to `HttpOnly` when the cookie's `httpOnly` option is omitted. Set `httpOnly: false` explicitly to preserve access from client-side JavaScript; the middleware emits a warning when this protection is disabled.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cookie@0.6.0`](https://github.com/remix-run/remix/releases/tag/cookie@0.6.0)
+
 ## v0.3.4
 
 ### Patch Changes

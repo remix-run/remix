@@ -2,6 +2,32 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `createAssetServer()` now uses `allowFiles` and `denyFiles` instead of `allow` and `deny` for file path access rules.
+
+  ```ts
+  import { createAssetServer } from 'remix/assets'
+
+  // Before:
+  export const assetServer = createAssetServer({
+    allow: ['app/assets/**'],
+    deny: ['app/**/*.server.*'],
+    /* ... */
+  })
+
+  // After:
+  export const assetServer = createAssetServer({
+    allowFiles: ['app/assets/**'],
+    denyFiles: ['app/**/*.server.*'],
+    /* ... */
+  })
+  ```
+
+- Add an `allowPackages` option to `createAssetServer()` for package-level access control, allowing packages and their dependencies to be served, e.g. `allowPackages: ['remix']`
+
 ## v0.4.4
 
 ### Patch Changes
