@@ -96,6 +96,22 @@ let filters = s.parse(
 
 `f.object(...)` is the root schema for `FormData` and `URLSearchParams`. Use `f.field(...)` for one text value, `f.fields(...)` for repeated text values, `f.file(...)` for one uploaded file, and `f.files(...)` for repeated files. When you want a fallback value, prefer `s.defaulted(s.string(), '')`. File helpers are intended for `FormData`; `URLSearchParams` only supports text values.
 
+## Native constraints
+
+Use `getConstraints()` to derive native HTML length and range attributes from recognized schema checks:
+
+```tsx
+import { getConstraints, string } from 'remix/data-schema'
+import { maxLength, minLength } from 'remix/data-schema/checks'
+
+let Username = string().pipe(minLength(3), maxLength(20))
+
+<input {...getConstraints(Username, { type: 'text' })} />
+// <input required minlength="3" maxlength="20" />
+```
+
+The input type supplies the control-specific requiredness and numeric step behavior. Checks without an equivalent native constraint are omitted.
+
 ## Model-backed forms
 
 Use `createForm()` to select fields from an object schema, attach UI-only metadata, derive native input constraints, and decode submitted `FormData` with the original field schemas. Fields omitted from the projection are neither rendered nor required. Ancillary fields provide their own schema.
@@ -155,7 +171,10 @@ function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
 
     return (
       <form method="post" mix={formValidation()}>
-        <label {...AccountForm.getLabelAttrs('email')}>{AccountForm.fields.email.label}</label>
+        <label {...AccountForm.getLabelAttrs('email')}>
+          {AccountForm.fields.email.label}
+          {AccountForm.fields.email.required ? <span>Required</span> : null}
+        </label>
         <input
           {...AccountForm.getInputAttrs('email', submission)}
           autoComplete="email"

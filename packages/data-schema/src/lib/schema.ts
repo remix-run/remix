@@ -80,10 +80,42 @@ type SchemaCheckMetadata = {
   values?: Record<string, unknown>
 }
 
-const schemaMetadata = new WeakMap<
-  object,
-  { checks: readonly SchemaCheckMetadata[]; acceptsUndefined?: boolean }
->()
+type SchemaMetadata = {
+  checks: readonly SchemaCheckMetadata[]
+  acceptsUndefined?: boolean
+}
+
+const schemaMetadata = Symbol('schemaMetadata')
+
+type SchemaWithMetadata = {
+  [schemaMetadata]: SchemaMetadata
+}
+
+/**
+ * Native HTML constraints that can be derived from a schema's checks.
+ */
+export interface SchemaConstraints {
+  /** Whether the input must contain a value or a checkbox must be checked. */
+  required?: true
+  /** The minimum text length accepted by the schema. */
+  minLength?: number
+  /** The maximum text length accepted by the schema. */
+  maxLength?: number
+  /** The minimum numeric value accepted by the schema. */
+  min?: number
+  /** The maximum numeric value accepted by the schema. */
+  max?: number
+  /** The interval accepted by a numeric input. */
+  step?: number | 'any'
+}
+
+/**
+ * Input control context used to derive native HTML constraints.
+ */
+export interface GetConstraintsOptions {
+  /** The native input type and its corresponding empty-value semantics. */
+  type: 'checkbox' | 'email' | 'number' | 'password' | 'text' | 'url'
+}
 
 /**
  * A sync, Standard Schema v1-compatible schema with a small chainable API.
@@ -224,12 +256,12 @@ export function createSchema<input, output>(
       })
 
       let existingChecks = getSchemaChecks(schema)
-      schemaMetadata.set(pipedSchema, {
+      setSchemaMetadata(pipedSchema, {
         checks: [
           ...existingChecks,
           ...checks.map((check) => ({ code: check.code, values: check.values })),
         ],
-        acceptsUndefined: schemaMetadata.get(schema)?.acceptsUndefined,
+        acceptsUndefined: getSchemaMetadata(schema)?.acceptsUndefined,
       })
 
       return pipedSchema
@@ -280,17 +312,68 @@ export function createSchema<input, output>(
     },
   }
 
-  schemaMetadata.set(schema, { checks: [] })
+  setSchemaMetadata(schema, { checks: [] })
 
   return schema
 }
 
-export function getSchemaChecks(schema: object): readonly SchemaCheckMetadata[] {
-  return schemaMetadata.get(schema)?.checks ?? []
+/**
+ * Returns native HTML constraints represented by a schema's recognized checks.
+ *
+ * Checks without an equivalent native constraint are omitted.
+ *
+ * @param schema The schema to inspect.
+ * @param options The input control receiving the constraints.
+ * @returns Constraint attributes that can be spread onto a native `input` element.
+ */
+export function getConstraints<input, output>(
+  schema: Schema<input, output>,
+  options: GetConstraintsOptions,
+): SchemaConstraints {
+  let constraints: SchemaConstraints = {}
+
+  if (options.type === 'number') {
+    constraints.step = 'any'
+  }
+
+  if (
+    options.type === 'checkbox'
+      ? !schemaAcceptsValue(schema, false)
+      : !schemaAcceptsUndefined(schema)
+  ) {
+    constraints.required = true
+  }
+
+  for (let check of getSchemaChecks(schema)) {
+    switch (check.code) {
+      case 'string.min_length': {
+        let minLength = getConstraintValue(check.values, 'min')
+        if (minLength !== undefined) constraints.minLength = minLength
+        break
+      }
+      case 'string.max_length': {
+        let maxLength = getConstraintValue(check.values, 'max')
+        if (maxLength !== undefined) constraints.maxLength = maxLength
+        break
+      }
+      case 'number.min': {
+        let min = getConstraintValue(check.values, 'min')
+        if (min !== undefined) constraints.min = min
+        break
+      }
+      case 'number.max': {
+        let max = getConstraintValue(check.values, 'max')
+        if (max !== undefined) constraints.max = max
+        break
+      }
+    }
+  }
+
+  return constraints
 }
 
-export function schemaAcceptsUndefined(schema: Schema<any, unknown>): boolean {
-  let acceptsUndefined = schemaMetadata.get(schema)?.acceptsUndefined
+function schemaAcceptsUndefined<input, output>(schema: Schema<input, output>): boolean {
+  let acceptsUndefined = getSchemaMetadata(schema)?.acceptsUndefined
 
   if (acceptsUndefined !== undefined) {
     return acceptsUndefined
@@ -299,10 +382,14 @@ export function schemaAcceptsUndefined(schema: Schema<any, unknown>): boolean {
   return !schema['~run'](undefined, { path: [] }).issues
 }
 
+function schemaAcceptsValue<input, output>(schema: Schema<input, output>, value: unknown): boolean {
+  return !schema['~run'](value, { path: [] }).issues
+}
+
 function copySchemaMetadata(source: object, target: object): void {
-  schemaMetadata.set(target, {
+  setSchemaMetadata(target, {
     checks: getSchemaChecks(source),
-    acceptsUndefined: schemaMetadata.get(source)?.acceptsUndefined,
+    acceptsUndefined: getSchemaMetadata(source)?.acceptsUndefined,
   })
 }
 
@@ -310,11 +397,43 @@ function setAcceptsUndefined<input, output>(
   schema: Schema<input, output>,
   acceptsUndefined: boolean,
 ): Schema<input, output> {
-  schemaMetadata.set(schema, {
+  setSchemaMetadata(schema, {
     checks: getSchemaChecks(schema),
     acceptsUndefined,
   })
   return schema
+}
+
+function getSchemaChecks(schema: object): readonly SchemaCheckMetadata[] {
+  return getSchemaMetadata(schema)?.checks ?? []
+}
+
+function getSchemaMetadata(schema: object): SchemaMetadata | undefined {
+  return hasSchemaMetadata(schema) ? schema[schemaMetadata] : undefined
+}
+
+function setSchemaMetadata(schema: object, metadata: SchemaMetadata): void {
+  if (hasSchemaMetadata(schema)) {
+    schema[schemaMetadata] = metadata
+    return
+  }
+
+  Object.defineProperty(schema, schemaMetadata, {
+    value: metadata,
+    writable: true,
+  })
+}
+
+function hasSchemaMetadata(schema: object): schema is SchemaWithMetadata {
+  return schemaMetadata in schema
+}
+
+function getConstraintValue(
+  values: Record<string, unknown> | undefined,
+  key: string,
+): number | undefined {
+  let value = values?.[key]
+  return typeof value === 'number' ? value : undefined
 }
 
 function shouldAbortEarly(options?: ParseOptions): boolean {

@@ -8,6 +8,7 @@ export {
   defaulted,
   enum_,
   fail,
+  getConstraints,
   instanceof_,
   literal,
   map,
@@ -32,6 +33,7 @@ export type {
   Check,
   ErrorMap,
   ErrorMapContext,
+  GetConstraintsOptions,
   InferInput,
   InferOutput,
   Issue,
@@ -39,6 +41,7 @@ export type {
   ObjectShape,
   ParseOptions,
   Schema,
+  SchemaConstraints,
   ValidationOptions,
   ValidationResult,
 } from './lib/schema.ts'

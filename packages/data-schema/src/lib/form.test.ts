@@ -52,6 +52,12 @@ void checkInvalidFieldTypes
 describe('createForm', () => {
   it('derives native input attributes from projected model fields', () => {
     expectType<Equal<ReturnType<typeof UserForm.getInputAttrs<'name'>>['type'], 'text'>>()
+    expectType<Equal<typeof UserForm.fields.name.required, boolean>>()
+
+    assert.equal(UserForm.fields.name.required, true)
+    assert.equal(UserForm.fields.age.required, true)
+    assert.equal(UserForm.fields.bio.required, false)
+    assert.equal(UserForm.fields.inviteCode.required, false)
 
     assert.deepEqual(UserForm.getInputAttrs('name'), {
       id: 'name',
@@ -162,7 +168,7 @@ describe('createForm', () => {
       minLength: 2,
       maxLength: 50,
       defaultValue: 'A',
-      'aria-invalid': true,
+      'aria-invalid': 'true',
       'aria-describedby': 'name-error',
       'data-form-error-id': 'name-error',
     })
@@ -195,6 +201,8 @@ describe('createForm', () => {
       type: 'checkbox',
       required: true,
     })
+    assert.equal(PreferencesForm.fields.newsletter.required, false)
+    assert.equal(PreferencesForm.fields.terms.required, true)
 
     let validData = new FormData()
     validData.set('newsletter', 'on')

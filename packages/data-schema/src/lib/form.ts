@@ -1,10 +1,18 @@
-import type { InferOutput, Issue, ObjectSchema, ObjectShape, Schema } from './schema.ts'
-import { getSchemaChecks, schemaAcceptsUndefined } from './schema.ts'
+import type {
+  GetConstraintsOptions,
+  InferOutput,
+  Issue,
+  ObjectSchema,
+  ObjectShape,
+  Schema,
+  SchemaConstraints,
+} from './schema.ts'
+import { getConstraints } from './schema.ts'
 
 /**
  * Native input types supported by a form field.
  */
-export type FormInputType = 'checkbox' | 'email' | 'number' | 'password' | 'text' | 'url'
+export type FormInputType = GetConstraintsOptions['type']
 
 /**
  * UI-only configuration for a projected model field.
@@ -56,7 +64,7 @@ export interface InputAttributes<type extends FormInputType = FormInputType> {
   /** The submitted checkbox state from a failed validation result. */
   defaultChecked?: boolean
   /** Whether server or native validation has marked the input invalid. */
-  'aria-invalid'?: true
+  'aria-invalid'?: 'true'
   /** The id of the field error describing the input. */
   'aria-describedby'?: string
   /** The server-rendered error element to clear after the input changes. */
@@ -133,6 +141,12 @@ type AnyFormFieldOptions = FormFieldOptions | AncillaryFormFieldOptions<Schema<a
 
 type FormFields = Record<string, AnyFormFieldOptions>
 
+type ResolvedFormFields<fields extends FormFields> = {
+  readonly [field in keyof fields]: Omit<fields[field], 'required'> & {
+    readonly required: boolean
+  }
+}
+
 type ValidFormFields<shape extends ObjectShape, fields extends FormFields> = {
   [key in keyof fields]: key extends keyof shape
     ? fields[key] extends { schema: unknown }
@@ -161,8 +175,8 @@ type FormValue<shape extends ObjectShape, fields extends FormFields> = {
  * A model-backed form projection with native input attributes and server parsing.
  */
 export interface FormDefinition<shape extends ObjectShape, fields extends FormFields> {
-  /** The UI-only field configuration in render order. */
-  readonly fields: fields
+  /** The field configuration in render order, including schema-derived requiredness. */
+  readonly fields: ResolvedFormFields<fields>
   /**
    * Derives native attributes for one projected model field.
    *
@@ -237,13 +251,26 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
   model: ObjectSchema<shape>,
   options: { fields: fields & ValidFormFields<shape, fields> },
 ): FormDefinition<shape, fields> {
-  let fields = options.fields
+  let configuredFields = options.fields
+  let fieldConstraints = new Map<string, SchemaConstraints>()
+  let resolvedFieldEntries: Array<[string, AnyFormFieldOptions & { readonly required: boolean }]> =
+    []
+
+  for (let field of Object.keys(configuredFields)) {
+    let fieldOptions = getFieldOptions(configuredFields, field)
+    let schema = getFieldSchema(model, field, fieldOptions)
+    let constraints = getConstraints(schema, { type: fieldOptions.type })
+
+    fieldConstraints.set(field, constraints)
+    resolvedFieldEntries.push([field, { ...fieldOptions, required: constraints.required === true }])
+  }
+
+  let fields = Object.fromEntries(resolvedFieldEntries) as ResolvedFormFields<fields>
 
   return {
     fields,
     getInputAttrs(field, submission) {
       let fieldOptions = getFieldOptions(fields, field)
-      let schema = getFieldSchema(model, field, fieldOptions)
       let id = fieldOptions.id ?? field
       let attrs: InputAttributes<typeof fieldOptions.type> = {
         id,
@@ -251,34 +278,7 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
         type: fieldOptions.type,
       }
 
-      if (fieldOptions.type === 'number') {
-        attrs.step = 'any'
-      }
-
-      if (
-        fieldOptions.type === 'checkbox'
-          ? !schemaAcceptsValue(schema, false)
-          : !schemaAcceptsUndefined(schema)
-      ) {
-        attrs.required = true
-      }
-
-      for (let check of getSchemaChecks(schema)) {
-        switch (check.code) {
-          case 'string.min_length':
-            attrs.minLength = getConstraintValue(check.values, 'min')
-            break
-          case 'string.max_length':
-            attrs.maxLength = getConstraintValue(check.values, 'max')
-            break
-          case 'number.min':
-            attrs.min = getConstraintValue(check.values, 'min')
-            break
-          case 'number.max':
-            attrs.max = getConstraintValue(check.values, 'max')
-            break
-        }
-      }
+      Object.assign(attrs, getFieldConstraints(fieldConstraints, field))
 
       let rawValue = submission?.values[field]
 
@@ -290,7 +290,7 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
 
       if (readFieldErrors(field, submission).length > 0) {
         let errorId = getErrorId(id)
-        attrs['aria-invalid'] = true
+        attrs['aria-invalid'] = 'true'
         attrs['aria-describedby'] = errorId
         attrs['data-form-error-id'] = errorId
       }
@@ -346,6 +346,19 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
       }
     },
   }
+}
+
+function getFieldConstraints(
+  constraints: ReadonlyMap<string, SchemaConstraints>,
+  field: string,
+): SchemaConstraints {
+  let fieldConstraints = constraints.get(field)
+
+  if (!fieldConstraints) {
+    throw new Error(`Unknown form field "${field}"`)
+  }
+
+  return fieldConstraints
 }
 
 function getFieldOptions<fields extends FormFields, field extends keyof fields & string>(
@@ -431,18 +444,6 @@ function getIssueField(issue: Issue, fields: ReadonlySet<string>): string | unde
   }
 
   return key && fields.has(key) ? key : undefined
-}
-
-function getConstraintValue(
-  values: Record<string, unknown> | undefined,
-  key: string,
-): number | undefined {
-  let value = values?.[key]
-  return typeof value === 'number' ? value : undefined
-}
-
-function schemaAcceptsValue(schema: Schema<any, unknown>, value: unknown): boolean {
-  return !schema['~run'](value, { path: [] }).issues
 }
 
 function readRawFormValue(
