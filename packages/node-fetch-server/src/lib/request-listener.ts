@@ -4,7 +4,6 @@ import * as net from 'node:net'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
 import type { RequestLifecycle } from './request-abort.ts'
-import { createLazyRequestFactory } from './lazy-request.ts'
 import {
   createRequestAbortError,
   createRequestLifecycle,
@@ -90,15 +89,6 @@ export function createRequestListener(
   options?: RequestListenerOptions,
 ): http.RequestListener {
   let onError = options?.onError ?? defaultErrorHandler
-  let createLazyRequest = createLazyRequestFactory(
-    options,
-    createRequestWithLifecycle,
-    createHeaders,
-    {
-      createLifecycle: createRequestLifecycle,
-      observeResponseForLifecycle: observeResponseForRequestLifecycle,
-    },
-  )
 
   if (handler.length === 0) {
     let handlerWithoutArgs = handler as () => Response | Promise<Response>
@@ -121,7 +111,7 @@ export function createRequestListener(
 
     return (req, res) => {
       let isResponseClosed = observeResponseClose(res)
-      let request = createLazyRequest(req, res)
+      let request = createRequest(req, res, options)
 
       let response: Response | Promise<Response>
       try {
@@ -149,7 +139,7 @@ export function createRequestListener(
 
   return async (req, res) => {
     let isResponseClosed = observeResponseClose(res)
-    let request = createLazyRequest(req, res)
+    let request = createRequest(req, res, options)
     let client = createClientAddress(req, options)
 
     let response: Response

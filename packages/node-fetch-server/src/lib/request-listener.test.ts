@@ -482,8 +482,8 @@ describe('createRequestListener', () => {
     assert.equal(errorHandlerFinished, true)
   })
 
-  it('rejects lazy request body reads when the request aborts before ending', async (t) => {
-    await assertLazyRequestBodyReadRejects(
+  it('rejects request body reads when the request aborts before ending', async (t) => {
+    await assertListenerRequestBodyReadRejects(
       t,
       (request) => request.text(),
       (req) => {
@@ -497,8 +497,8 @@ describe('createRequestListener', () => {
     )
   })
 
-  it('rejects lazy buffered request body reads when the request closes before ending', async (t) => {
-    await assertLazyRequestBodyReadRejects(
+  it('rejects buffered request body reads when the request closes before ending', async (t) => {
+    await assertListenerRequestBodyReadRejects(
       t,
       (request) => request.arrayBuffer(),
       (req) => {
@@ -511,10 +511,10 @@ describe('createRequestListener', () => {
     )
   })
 
-  it('treats lazy request body errors as request abort errors', async (t) => {
+  it('treats request body errors as request abort errors', async (t) => {
     let bodyError = new Error('client upload failed')
 
-    await assertLazyRequestBodyReadRejects(
+    await assertListenerRequestBodyReadRejects(
       t,
       (request) => request.bytes(),
       (req) => {
@@ -570,13 +570,13 @@ describe('createRequestListener', () => {
     assert.equal(end.mock.calls.length, 0)
   })
 
-  it('rejects lazy request body reads when the request already aborted', async (t) => {
+  it('rejects request body reads when the request already aborted', async (t) => {
     let continueHandler!: () => void
     let handlerCanContinue = new Promise<void>((resolve) => {
       continueHandler = resolve
     })
 
-    await assertLazyRequestBodyReadRejects(
+    await assertListenerRequestBodyReadRejects(
       t,
       async (request) => {
         await handlerCanContinue
@@ -594,7 +594,7 @@ describe('createRequestListener', () => {
     )
   })
 
-  it('keeps an error listener after already-aborted lazy request body reads', async (t) => {
+  it('keeps an error listener after already-aborted request body reads', async (t) => {
     let continueHandler!: () => void
     let handlerCanContinue = new Promise<void>((resolve) => {
       continueHandler = resolve
@@ -634,7 +634,7 @@ describe('createRequestListener', () => {
     await waitFor(
       handlerDone,
       100,
-      'Expected the lazy request body read to reject when the request had already aborted',
+      'Expected the request body read to reject when the request had already aborted',
     )
 
     assert.doesNotThrow(() => req.emit('error', new Error('late socket error')))
@@ -644,7 +644,7 @@ describe('createRequestListener', () => {
     assert.equal(end.mock.calls.length, 0)
   })
 
-  it('returns a stable signal after materializing lazy requests', async (t) => {
+  it('returns a stable signal from handler requests', async (t) => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async (request) => {
         let signal = request.signal
@@ -680,6 +680,35 @@ describe('createRequestListener', () => {
 
       listener(req, res)
       resolve()
+    })
+  })
+
+  it('provides native Request instances to request handlers', async (t) => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async (request) => {
+        assert.equal(Object.getPrototypeOf(request), Request.prototype)
+
+        let forwardedRequest = new Request(request, {
+          headers: {
+            'X-Forwarded': 'yes',
+          },
+        })
+
+        assert.equal(forwardedRequest.url, 'http://example.com/')
+        assert.equal(forwardedRequest.method, 'GET')
+        assert.equal(forwardedRequest.headers.get('X-Forwarded'), 'yes')
+
+        return new Response('ok')
+      }
+
+      let listener = createRequestListener(handler)
+      assert.ok(listener)
+
+      let req = createMockRequest({ headers: { Host: 'example.com' } })
+      let res = createMockResponse({ req })
+      t.mock.method(res, 'end', () => resolve())
+
+      listener(req, res)
     })
   })
 
@@ -1336,7 +1365,7 @@ describe('createRequest abort behavior', () => {
   })
 })
 
-async function assertLazyRequestBodyReadRejects(
+async function assertListenerRequestBodyReadRejects(
   t: TestContext,
   readBody: (request: Request) => Promise<unknown>,
   failRequest: (req: http.IncomingMessage) => void,
@@ -1381,7 +1410,7 @@ async function assertLazyRequestBodyReadRejects(
   await waitFor(
     handlerFinished,
     100,
-    'Expected the lazy request body read to settle when the request failed',
+    'Expected the request body read to settle when the request failed',
   )
   await new Promise((resolve) => setTimeout(resolve, 0))
 
