@@ -1,4 +1,5 @@
-import { after, before, describe } from '@remix-run/test'
+import * as assert from '@remix-run/assert'
+import { after, before, describe, it } from '@remix-run/test'
 import { createDatabase } from '@remix-run/data-table'
 import { createPool, type Pool } from 'mysql2/promise'
 
@@ -38,5 +39,14 @@ describe('mysql adapter integration', { skip: typeof DATABASE_URL !== 'string' }
       }, 'mysql')
     },
     supportsReturning: false,
+  })
+
+  it('wipes the configured database and reconnects', async () => {
+    let db = createDatabase(createMysqlDatabaseAdapter(DATABASE_URL!))
+    await db.exec('create table data_table_wipe_test (id integer primary key)')
+
+    await db.wipe()
+
+    assert.equal(await db.adapter.hasTable({ name: 'data_table_wipe_test' }), false)
   })
 })

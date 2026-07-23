@@ -38,6 +38,24 @@ describe('parseArgs', () => {
     })
   })
 
+  it('parses string option values after an equals sign', () => {
+    let result = parseArgs(['--dir=app/data'], {
+      dir: { flag: '--dir', type: 'string' },
+    })
+
+    assert.equal(result.options.dir, 'app/data')
+  })
+
+  it('rejects values assigned to boolean flags', () => {
+    assert.throws(
+      () =>
+        parseArgs(['--json=true'], {
+          json: { flag: '--json', type: 'boolean' },
+        }),
+      /Unknown argument: --json=true/,
+    )
+  })
+
   it('throws for missing string option values', () => {
     assert.throws(
       () =>

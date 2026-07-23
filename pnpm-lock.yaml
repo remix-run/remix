@@ -486,6 +486,9 @@ importers:
       '@remix-run/data-table':
         specifier: workspace:^
         version: link:../data-table
+      '@remix-run/node-tsx':
+        specifier: workspace:^
+        version: link:../node-tsx
       '@remix-run/terminal':
         specifier: workspace:^
         version: link:../terminal

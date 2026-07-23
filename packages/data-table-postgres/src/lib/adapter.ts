@@ -367,7 +367,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
 
 /**
  * Creates a postgres `DatabaseAdapter`.
- * @param config Postgres pool configuration.
+ * @param input Postgres pool configuration, pool, or client.
  * @param options Optional adapter capability overrides.
  * @returns A configured postgres adapter.
  * @example
@@ -380,10 +380,10 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
  * ```
  */
 export function createPostgresDatabaseAdapter(
-  config: PostgresPoolConfig,
+  input: PostgresPoolConfig | PostgresQueryable,
   options?: PostgresAdapterOptions,
 ): PostgresDatabaseAdapter {
-  return new PostgresDatabaseAdapter(config, options)
+  return new PostgresDatabaseAdapter(input, options)
 }
 
 function isPostgresQueryable(value: unknown): value is PostgresQueryable {

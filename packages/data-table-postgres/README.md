@@ -4,7 +4,7 @@ PostgreSQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/t
 
 ## Features
 
-- **Native `pg` Integration**: Works with `pg` `Pool` and `PoolClient` instances
+- **Native `pg` Integration**: Creates a pool from `pg` configuration or uses an existing pool or client
 - **Full `data-table` API Support**: Queries, relations, writes, and transactions
 - **Adapter-Owned Compiler**: SQL compilation lives in this adapter, with optional shared pure helpers from `data-table`
 - **Multi-Statement Migrations**: `executeScript()` runs `up.sql` / `down.sql` files natively via `pg`
@@ -24,18 +24,19 @@ npm i remix pg
 ## Usage
 
 ```ts
-import { Pool } from 'pg'
 import { createDatabase } from 'remix/data-table'
 import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
 
-let pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-})
-
-let db = createDatabase(createPostgresDatabaseAdapter(pool))
+let db = createDatabase(
+  createPostgresDatabaseAdapter({
+    connectionString: process.env.DATABASE_URL,
+  }),
+)
 ```
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `pg`.
+
+Config-backed adapters support `db.wipe()` and `db.reset()`. You may continue passing an existing `pg` pool or client when your application owns the driver lifecycle, but destructive lifecycle methods are unavailable in that mode.
 
 ## Adapter Capabilities
 

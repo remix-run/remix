@@ -1,0 +1,1 @@
+Added `remix db` commands for wiping, migrating, inspecting, seeding, and resetting the current app database. The CLI parses arguments, loads `app/db.ts` with Remix's TypeScript loader in an isolated process, and delegates structured command options to `@remix-run/data-table/cli` (see #11608).

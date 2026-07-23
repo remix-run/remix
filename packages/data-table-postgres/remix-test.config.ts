@@ -5,10 +5,10 @@ export default {
   coverage: process.argv.includes('--coverage')
     ? {
         include: ['src/**/*.ts'],
-        lines: 80,
-        branches: 80,
-        functions: 75,
-        statements: 80,
+        lines: 90,
+        branches: 90,
+        functions: 85,
+        statements: 90,
       }
     : undefined,
 } satisfies RemixTestConfig

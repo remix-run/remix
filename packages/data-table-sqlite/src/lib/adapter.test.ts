@@ -4,7 +4,11 @@ import { column, createDatabase, table, eq } from '@remix-run/data-table'
 
 import { createNativeSqliteDatabase } from '../../test/native-sqlite.ts'
 
-import { SqliteDatabaseAdapter, type SqliteDatabase } from './adapter.ts'
+import {
+  createSqliteDatabaseAdapter,
+  SqliteDatabaseAdapter,
+  type SqliteDatabase,
+} from './adapter.ts'
 
 const accounts = table({
   name: 'accounts',
@@ -35,6 +39,37 @@ const accountProjects = table({
 })
 
 describe('sqlite adapter', () => {
+  it('wipes and reopens config-backed databases', async () => {
+    let adapter = createSqliteDatabaseAdapter({ filename: ':memory:' })
+
+    await adapter.executeScript('create table users (id integer primary key)')
+    assert.equal(await adapter.hasTable({ name: 'users' }), true)
+
+    await adapter.wipe()
+
+    assert.equal(await adapter.hasTable({ name: 'users' }), false)
+  })
+
+  it('preserves client-backed databases when wipe is unavailable', async () => {
+    let closeCalls = 0
+    let sqlite = {
+      prepare() {
+        throw new Error('not used')
+      },
+      exec() {},
+      close() {
+        closeCalls += 1
+      },
+    } satisfies SqliteDatabase
+    let adapter = createSqliteDatabaseAdapter(sqlite)
+
+    await assert.rejects(
+      () => adapter.wipe(),
+      /SQLite adapter wipe\(\) requires config-based construction/,
+    )
+    assert.equal(closeCalls, 0)
+  })
+
   it('short-circuits insertMany([]) and returns empty rows for returning queries', async () => {
     let prepareCalls = 0
     let sqlite = {

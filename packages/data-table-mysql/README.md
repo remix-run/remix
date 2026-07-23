@@ -4,7 +4,7 @@ MySQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/tree/m
 
 ## Features
 
-- **Native `mysql2` Integration**: Works with `mysql2/promise` `Pool` and `PoolConnection` instances
+- **Native `mysql2` Integration**: Creates a pool from `mysql2` configuration or uses an existing pool or connection
 - **Full `data-table` API Support**: Queries, relations, writes, and transactions
 - **Adapter-Owned Compiler**: SQL compilation lives in this adapter, with optional shared pure helpers from `data-table`
 - **Multi-Statement Migrations**: `executeScript()` runs `up.sql` / `down.sql` files via `mysql2` (requires `multipleStatements: true`)
@@ -24,12 +24,15 @@ npm i remix mysql2
 ## Usage
 
 ```ts
-import { createPool } from 'mysql2/promise'
 import { createDatabase } from 'remix/data-table'
 import { createMysqlDatabaseAdapter } from 'remix/data-table/mysql'
 
-let pool = createPool(process.env.DATABASE_URL as string)
-let db = createDatabase(createMysqlDatabaseAdapter(pool))
+let db = createDatabase(
+  createMysqlDatabaseAdapter({
+    uri: process.env.DATABASE_URL,
+    multipleStatements: true,
+  }),
+)
 ```
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `mysql2/promise`.
@@ -51,13 +54,15 @@ Use `db.query(...)`, relation loading, and transactions from `remix/data-table`.
 `remix/data-table/migrations` sends each migration to the adapter as a single multi-statement SQL script. mysql2 only accepts multi-statement scripts when the connection is created with `multipleStatements: true`:
 
 ```ts
-import { createPool } from 'mysql2/promise'
+import { createMysqlDatabaseAdapter } from 'remix/data-table/mysql'
 
-let pool = createPool({
+let adapter = createMysqlDatabaseAdapter({
   uri: process.env.DATABASE_URL,
   multipleStatements: true,
 })
 ```
+
+Config-backed adapters support `db.wipe()` and `db.reset()`. You may continue passing an existing `mysql2` pool or connection when your application owns the driver lifecycle, but destructive lifecycle methods are unavailable in that mode.
 
 ### `returning` On MySQL
 

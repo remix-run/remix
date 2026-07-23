@@ -216,17 +216,13 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    * @returns Transaction token.
    */
   async wipe(): Promise<void> {
+    let config = this.#configOrThrow('wipe')
     this.#transactions.clear()
     this.#database.close?.()
 
-    if (!this.#config) {
-      this.#replaceDatabase()
-      return
-    }
-
-    await mkdir(dirname(this.#config.filename), { recursive: true })
-    await rm(this.#config.filename, { force: true })
-    let database = new SqliteDatabaseConstructor(this.#config.filename)
+    await mkdir(dirname(config.filename), { recursive: true })
+    await rm(config.filename, { force: true })
+    let database = new SqliteDatabaseConstructor(config.filename)
     database.close?.()
     this.#replaceDatabase()
   }
@@ -306,6 +302,14 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  #configOrThrow(method: string): SqliteAdapterConfig {
+    if (!this.#config) {
+      throw new Error('SQLite adapter ' + method + '() requires config-based construction')
+    }
+
+    return this.#config
+  }
+
   #assertTransaction(token: TransactionToken): void {
     if (!this.#transactions.has(token.id)) {
       throw new Error('Unknown transaction token: ' + token.id)
@@ -315,7 +319,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
 
 /**
  * Creates a sqlite `DatabaseAdapter`.
- * @param input SQLite adapter configuration.
+ * @param input SQLite adapter configuration or synchronous database client.
  * @returns A configured sqlite adapter.
  * @example
  * ```ts
@@ -326,7 +330,9 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
  * let db = createDatabase(adapter)
  * ```
  */
-export function createSqliteDatabaseAdapter(input: SqliteAdapterConfig): SqliteDatabaseAdapter {
+export function createSqliteDatabaseAdapter(
+  input: SqliteDatabase | SqliteAdapterConfig,
+): SqliteDatabaseAdapter {
   return new SqliteDatabaseAdapter(input)
 }
 

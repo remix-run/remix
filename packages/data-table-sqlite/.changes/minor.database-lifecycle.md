@@ -1,0 +1,1 @@
+Added filename-based SQLite adapter construction and database wiping for `remix db`. Existing synchronous SQLite clients remain supported for applications that own the driver lifecycle, but wiping requires config-backed construction (see #11608).

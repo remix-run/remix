@@ -40,6 +40,28 @@ const accountProjects = table({
 })
 
 describe('postgres adapter', () => {
+  it('preserves client-backed pools when wipe is unavailable', async () => {
+    let endCalls = 0
+    let pool = {
+      async query() {
+        return { rows: [], rowCount: 0 }
+      },
+      async connect() {
+        throw new Error('not used')
+      },
+      async end() {
+        endCalls += 1
+      },
+    }
+    let adapter = createPostgresDatabaseAdapter(pool as never)
+
+    await assert.rejects(
+      () => adapter.wipe(),
+      /Postgres adapter wipe\(\) requires config-based construction/,
+    )
+    assert.equal(endCalls, 0)
+  })
+
   it('checks table and column existence through adapter introspection hooks', async () => {
     let statements: Array<{ text: string; values: unknown[] | undefined }> = []
 
@@ -738,6 +760,14 @@ describe('postgres adapter', () => {
     assert.equal(adapter.dialect, 'postgres')
     await adapter.executeScript('select 1')
     assert.deepEqual(calls, [{ text: 'select 1', values: undefined }])
+  })
+
+  it('createPostgresDatabaseAdapter creates an adapter from pool configuration', () => {
+    let adapter = createPostgresDatabaseAdapter({
+      connectionString: 'postgres://postgres:postgres@localhost/app',
+    })
+
+    assert.equal(adapter.dialect, 'postgres')
   })
 
   it('executeScript forwards the script as an unparameterized query', async () => {

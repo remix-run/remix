@@ -40,6 +40,25 @@ const accountProjects = table({
 })
 
 describe('mysql adapter', () => {
+  it('preserves client-backed connections when wipe is unavailable', async () => {
+    let endCalls = 0
+    let connection = {
+      async query() {
+        return [[], []]
+      },
+      async end() {
+        endCalls += 1
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    await assert.rejects(
+      () => adapter.wipe(),
+      /MySQL adapter wipe\(\) requires config-based construction/,
+    )
+    assert.equal(endCalls, 0)
+  })
+
   it('checks table and column existence through adapter introspection hooks', async () => {
     let statements: Array<{ text: string; values: unknown[] | undefined }> = []
 
@@ -690,6 +709,16 @@ describe('mysql adapter', () => {
     assert.equal(adapter.dialect, 'mysql')
     await adapter.executeScript('select 1')
     assert.deepEqual(calls, [{ text: 'select 1', values: undefined }])
+  })
+
+  it('createMysqlDatabaseAdapter creates an adapter from pool configuration', () => {
+    let adapter = createMysqlDatabaseAdapter({
+      database: 'app',
+      host: 'localhost',
+      user: 'root',
+    })
+
+    assert.equal(adapter.dialect, 'mysql')
   })
 
   it('executeScript forwards the script through query()', async () => {

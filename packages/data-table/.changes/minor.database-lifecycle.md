@@ -1,0 +1,1 @@
+Added `Database.wipe()`, `Database.migrate()`, `Database.migrationStatus()`, and `Database.reset()` along with the typed `runDataTableCommand()` API from `remix/data-table/cli`. Apps can export `db`, `getMigrations`, and an optional `seed` function from `app/db.ts` for use by `remix db` (see #11608).

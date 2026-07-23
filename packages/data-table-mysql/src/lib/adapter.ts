@@ -397,7 +397,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
 
 /**
  * Creates a mysql `DatabaseAdapter`.
- * @param config Mysql connection string or pool options.
+ * @param input Mysql connection string, pool options, pool, or connection.
  * @param options Optional adapter capability overrides.
  * @returns A configured mysql adapter.
  * @example
@@ -410,10 +410,10 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
  * ```
  */
 export function createMysqlDatabaseAdapter(
-  config: string | MysqlPoolOptions,
+  input: string | MysqlPoolOptions | MysqlQueryable,
   options?: MysqlAdapterOptions,
 ): MysqlDatabaseAdapter {
-  return new MysqlDatabaseAdapter(config, options)
+  return new MysqlDatabaseAdapter(input, options)
 }
 
 function isMysqlQueryable(value: unknown): value is MysqlQueryable {
