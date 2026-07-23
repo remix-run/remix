@@ -35,11 +35,19 @@ export interface Scheduler {
   dequeue(): void
 }
 
-// Protect against infinite cascading updates (e.g. handle.update() during render)
-const MAX_CASCADING_UPDATES = 50
+const CASCADING_UPDATE_WARN_THRESHOLD = 50
+const MAX_CASCADING_COMPONENT_UPDATES = 50
 
 export type SchedulerPhaseEvent = Event & {
   parents: ParentNode[]
+}
+
+function getComponentName(vnode: CommittedComponentNode): string {
+  return vnode.type.name || 'Anonymous'
+}
+
+function formatComponentCounts(counts: Map<string, number>): string {
+  return Array.from(counts, ([name, count]) => `${name} x${count}`).join(', ')
 }
 
 /**
@@ -62,7 +70,10 @@ export function createScheduler(
   let postCommitTasks: EmptyFn[] = []
   let flushScheduled = false
   let flushing = false
-  let cascadingUpdateCount = 0
+  let cascadingComponentUpdateCount = 0
+  let cascadingComponentUpdateCounts = new WeakMap<CommittedComponentNode, number>()
+  let cascadingComponentNameCounts = new Map<string, number>()
+  let warnedAboutCascadingUpdates = false
   let resetScheduled = false
   let phaseEvents = new EventTarget()
   let phaseListenerCounts: Record<SchedulerPhaseType, number> = {
@@ -82,9 +93,46 @@ export function createScheduler(
     // Reset when control returns to the event loop while still allowing
     // microtask-driven flushes in the same turn to count as cascading.
     setTimeout(() => {
-      cascadingUpdateCount = 0
+      cascadingComponentUpdateCount = 0
+      cascadingComponentUpdateCounts = new WeakMap()
+      cascadingComponentNameCounts = new Map()
+      warnedAboutCascadingUpdates = false
       resetScheduled = false
     }, 0)
+  }
+
+  function trackCascadingUpdate(vnode: CommittedComponentNode): boolean {
+    cascadingComponentUpdateCount++
+
+    let componentName = getComponentName(vnode)
+    cascadingComponentNameCounts.set(
+      componentName,
+      (cascadingComponentNameCounts.get(componentName) ?? 0) + 1,
+    )
+
+    let componentUpdateCount = (cascadingComponentUpdateCounts.get(vnode) ?? 0) + 1
+    cascadingComponentUpdateCounts.set(vnode, componentUpdateCount)
+    scheduleCounterReset()
+
+    if (
+      !warnedAboutCascadingUpdates &&
+      cascadingComponentUpdateCount >= CASCADING_UPDATE_WARN_THRESHOLD
+    ) {
+      warnedAboutCascadingUpdates = true
+      console.warn(
+        `${cascadingComponentUpdateCount} cascading component updates detected in one event loop turn. Consider reducing hydration regions. Components: ${formatComponentCounts(cascadingComponentNameCounts)}`,
+      )
+    }
+
+    if (componentUpdateCount > MAX_CASCADING_COMPONENT_UPDATES) {
+      let error = new Error(
+        `handle.update() infinite loop detected in ${componentName} after ${componentUpdateCount} cascading updates. Components: ${formatComponentCounts(cascadingComponentNameCounts)}`,
+      )
+      dispatchError(error)
+      return false
+    }
+
+    return true
   }
 
   function getFrameStyleManager(vnode: CommittedComponentNode): StyleManager {
@@ -109,15 +157,6 @@ export function createScheduler(
           postCommitTasks.length > 0
         if (!hasWork) return
 
-        cascadingUpdateCount++
-        scheduleCounterReset()
-
-        if (cascadingUpdateCount > MAX_CASCADING_UPDATES) {
-          let error = new Error('handle.update() infinite loop detected')
-          dispatchError(error)
-          return
-        }
-
         documentState.capture()
 
         let updateParents = batch.size > 0 ? Array.from(new Set(batch.values())) : []
@@ -130,6 +169,7 @@ export function createScheduler(
 
           for (let [vnode, domParent] of vnodes) {
             if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
+            if (!trackCascadingUpdate(vnode)) return
             let handle = vnode._handle
             let curr = vnode._content
             let vParent = vnode._parent!
