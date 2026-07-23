@@ -111,12 +111,20 @@ export function createRequestListener(
 
     return (req, res) => {
       let isResponseClosed = observeResponseClose(res)
-      let request = createRequest(req, res, options)
+
+      let request: Request
+      try {
+        request = createRequest(req, res, options)
+      } catch (error) {
+        void sendResponseForCreationError(res, onError, error, isResponseClosed)
+        return
+      }
 
       let response: Response | Promise<Response>
       try {
         response = requestHandler(request)
       } catch (error) {
+        if (isRequestAbortError(request, error)) return
         void sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
         return
       }
@@ -139,8 +147,16 @@ export function createRequestListener(
 
   return async (req, res) => {
     let isResponseClosed = observeResponseClose(res)
-    let request = createRequest(req, res, options)
-    let client = createClientAddress(req, options)
+
+    let request: Request
+    try {
+      request = createRequest(req, res, options)
+    } catch (error) {
+      await sendResponseForCreationError(res, onError, error, isResponseClosed)
+      return
+    }
+
+    let client = createClientAddress(req, request.headers, options)
 
     let response: Response
     try {
@@ -169,6 +185,16 @@ async function sendResponseIfOpen(
 ): Promise<void> {
   if (isResponseClosed()) return
   await sendResponse(res, response)
+}
+
+async function sendResponseForCreationError(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  onError: ErrorHandler,
+  error: unknown,
+  isResponseClosed: () => boolean,
+): Promise<void> {
+  let response = await createErrorResponse(onError, error)
+  await sendResponseIfOpen(res, response, isResponseClosed)
 }
 
 async function sendErrorResponseForRequest(
@@ -290,7 +316,15 @@ function createRequestBodyStream(
   }
 
   function onData(chunk: Buffer) {
-    bodyController?.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+    if (bodyController == null) return
+    bodyController.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+
+    // Apply backpressure: once the stream's queue is full, stop pulling data off the socket until
+    // the consumer reads (see pull() below). Without this, an unread request body (e.g. a handler
+    // that rejects a large upload before reading it) would be buffered in the queue unboundedly.
+    if (bodyController.desiredSize != null && bodyController.desiredSize <= 0) {
+      req.pause()
+    }
   }
 
   function onEnd() {
@@ -331,6 +365,9 @@ function createRequestBodyStream(
         abortBody(createRequestAbortError(), { keepErrorListener: true })
       }
     },
+    pull() {
+      req.resume()
+    },
     cancel() {
       cancelBody()
     },
@@ -361,15 +398,6 @@ export function createRequest(
   let lifecycle = createRequestLifecycle()
   observeResponseForRequestLifecycle(res, lifecycle)
 
-  return createRequestWithLifecycle(req, res, options, lifecycle)
-}
-
-function createRequestWithLifecycle(
-  req: http.IncomingMessage | http2.Http2ServerRequest,
-  res: http.ServerResponse | http2.Http2ServerResponse,
-  options: RequestOptions | undefined,
-  lifecycle: RequestLifecycle,
-): Request {
   let method = req.method ?? 'GET'
   let headers = createHeaders(req)
 
@@ -406,11 +434,10 @@ function getRequestProtocol(
 
 function createClientAddress(
   req: http.IncomingMessage | http2.Http2ServerRequest,
+  headers: Headers,
   options?: RequestOptions,
 ): ClientAddress {
-  let forwardedClient = options?.trustProxy
-    ? getForwardedClientAddress(createHeaders(req))
-    : undefined
+  let forwardedClient = options?.trustProxy ? getForwardedClientAddress(headers) : undefined
   let address = forwardedClient?.address ?? req.socket.remoteAddress ?? ''
 
   return {

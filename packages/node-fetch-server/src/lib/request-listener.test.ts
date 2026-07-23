@@ -527,7 +527,7 @@ describe('createRequestListener', () => {
     )
   })
 
-  it('treats materialized request body errors as request abort errors after response close', async (t) => {
+  it('treats request body errors as request abort errors after response close', async (t) => {
     let bodyError = new Error('client upload failed')
     let handlerFinished!: () => void
     let handlerDone = new Promise<void>((resolve) => {
@@ -560,7 +560,7 @@ describe('createRequestListener', () => {
     await waitFor(
       handlerDone,
       100,
-      'Expected the materialized request body read to settle when the request failed',
+      'Expected the request body read to settle when the request failed',
     )
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -709,6 +709,82 @@ describe('createRequestListener', () => {
       t.mock.method(res, 'end', () => resolve())
 
       listener(req, res)
+    })
+  })
+
+  it('routes Request construction errors to the error handler in the request-only handler path', async (t) => {
+    await new Promise<void>((resolve) => {
+      let handlerCalled = false
+      let handler: FetchHandler = async (_request) => {
+        handlerCalled = true
+        return new Response('ok')
+      }
+      let onError = t.mock.fn(() => new Response('boom', { status: 500 }))
+      let listener = createRequestListener(handler, { onError })
+
+      // `TRACE` is a forbidden method for the `Request` constructor, so `createRequest()` throws.
+      let req = createMockRequest({ method: 'TRACE', headers: { Host: 'example.com' } })
+      let res = createMockResponse({ req })
+      let writeHead = t.mock.method(res, 'writeHead')
+      t.mock.method(res, 'end', () => {
+        assert.equal(handlerCalled, false)
+        assert.equal(onError.mock.calls.length, 1)
+        assert.equal(writeHead.mock.calls[0].arguments[0], 500)
+        resolve()
+      })
+
+      assert.doesNotThrow(() => listener(req, res))
+    })
+  })
+
+  it('routes Request construction errors to the error handler in the client-info handler path', async (t) => {
+    await new Promise<void>((resolve) => {
+      let handlerCalled = false
+      let handler: FetchHandler = async (_request, _client) => {
+        handlerCalled = true
+        return new Response('ok')
+      }
+      let onError = t.mock.fn(() => new Response('boom', { status: 500 }))
+      let listener = createRequestListener(handler, { onError })
+
+      let req = createMockRequest({ method: 'TRACE', headers: { Host: 'example.com' } })
+      let res = createMockResponse({ req })
+      let writeHead = t.mock.method(res, 'writeHead')
+      t.mock.method(res, 'end', () => {
+        assert.equal(handlerCalled, false)
+        assert.equal(onError.mock.calls.length, 1)
+        assert.equal(writeHead.mock.calls[0].arguments[0], 500)
+        resolve()
+      })
+
+      assert.doesNotThrow(() => listener(req, res))
+    })
+  })
+
+  it('applies backpressure and pauses the request when the body is not read', async (t) => {
+    await new Promise<void>((resolve) => {
+      // Takes the request argument (but never reads its body) so a body stream is created.
+      let handler: FetchHandler = async (_request) => new Response('ok')
+      let listener = createRequestListener(handler)
+
+      let req = createPendingMockRequest() // method 'POST', so a body stream is created
+      let pause = t.mock.method(req, 'pause')
+      let res = createMockResponse({ req })
+
+      listener(req, res)
+
+      // The handler never reads the body, so once the stream's queue fills the request should be
+      // paused rather than buffering every chunk in memory.
+      req.emit('data', Buffer.alloc(1024))
+      req.emit('data', Buffer.alloc(1024))
+
+      setImmediate(() => {
+        assert.ok(
+          pause.mock.calls.length >= 1,
+          'Expected the request to be paused when the body queue fills',
+        )
+        resolve()
+      })
     })
   })
 
