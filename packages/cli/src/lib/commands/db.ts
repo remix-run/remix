@@ -125,6 +125,10 @@ async function runDatabaseCommandScript(
     throw new Error(stderr.trim() || 'Database command failed.')
   }
 
+  if (stderr.length > 0) {
+    process.stderr.write(stderr)
+  }
+
   return 0
 }
 

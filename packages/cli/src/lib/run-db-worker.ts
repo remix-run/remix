@@ -114,10 +114,26 @@ function isDatabaseCommand(value: unknown): value is DatabaseCommand {
 }
 
 function exit(code: number): void {
-  process.stdout.write('', () => process.exit(code))
+  exitAfterFlushing(code)
 }
 
 function fail(error: unknown): void {
   let message = error instanceof Error ? error.message : String(error)
-  process.stderr.write(`${message}\n`, () => process.exit(1))
+  process.stderr.write(`${message}\n`)
+  exitAfterFlushing(1)
+}
+
+function exitAfterFlushing(code: number): void {
+  let pendingStreams = 2
+
+  function onFlushed(): void {
+    pendingStreams -= 1
+
+    if (pendingStreams === 0) {
+      process.exit(code)
+    }
+  }
+
+  process.stdout.write('', onFlushed)
+  process.stderr.write('', onFlushed)
 }

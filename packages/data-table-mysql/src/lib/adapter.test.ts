@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { column, createDatabase, table, eq, ilike, inList } from '@remix-run/data-table'
+import mysql from 'mysql2/promise'
 
 import { createMysqlDatabaseAdapter, MysqlDatabaseAdapter } from './adapter.ts'
 
@@ -40,6 +41,45 @@ const accountProjects = table({
 })
 
 describe('mysql adapter', () => {
+  it('wipes URI-configured databases through a server connection', async (t) => {
+    let maintenanceConfig: unknown
+    let statements: string[] = []
+    let maintenanceConnection = {
+      async query(statement: string) {
+        statements.push(statement)
+        return [[], []]
+      },
+      async end() {},
+    }
+
+    t.mock.method(
+      mysql,
+      'createConnection',
+      async (config: Parameters<typeof mysql.createConnection>[0]) => {
+        maintenanceConfig = config
+        return maintenanceConnection as never
+      },
+    )
+
+    let adapter = createMysqlDatabaseAdapter(
+      { uri: 'mysql://user:password@localhost/app?ssl=false' },
+      {
+        characterSet: 'utf8mb4',
+        collation: 'utf8mb4_unicode_ci',
+      },
+    )
+
+    await adapter.wipe()
+
+    assert.ok(typeof maintenanceConfig === 'object' && maintenanceConfig !== null)
+    assert.ok('uri' in maintenanceConfig && typeof maintenanceConfig.uri === 'string')
+    assert.equal(new URL(maintenanceConfig.uri).pathname, '/')
+    assert.deepEqual(statements, [
+      'drop database if exists `app`',
+      'create database `app` character set `utf8mb4` collate `utf8mb4_unicode_ci`',
+    ])
+  })
+
   it('preserves client-backed connections when wipe is unavailable', async () => {
     let endCalls = 0
     let connection = {

@@ -1,6 +1,7 @@
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
+import { db, getMigrations, seed } from './app/db.ts'
 import { createSocialAuthRouter } from './app/router.ts'
 import {
   externalProviderNames,
@@ -8,6 +9,9 @@ import {
   getExternalProviderLabel,
   getExternalProviderStatus,
 } from './app/utils/external-auth.ts'
+
+await db.migrate(await getMigrations())
+await seed(db)
 
 const router = createSocialAuthRouter()
 

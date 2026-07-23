@@ -34,8 +34,11 @@ type MysqlQueryResultHeader = {
 type MysqlTransactionConnection = MysqlConnection | MysqlPoolConnection
 type MysqlQueryable = MysqlPool | MysqlTransactionConnection
 
-type MysqlAdapterOptions = {
+/** Database creation options used when wiping a config-backed MySQL adapter. */
+export interface MysqlDatabaseAdapterOptions {
+  /** Character set assigned to the recreated database. */
   characterSet?: string
+  /** Collation assigned to the recreated database. */
   collation?: string
 }
 
@@ -62,7 +65,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
 
   constructor(
     config: string | MysqlPoolOptions | MysqlQueryable,
-    options: MysqlAdapterOptions = {},
+    options: MysqlDatabaseAdapterOptions = {},
   ) {
     if (isMysqlQueryable(config)) {
       this.#client = config
@@ -311,36 +314,44 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
   }
 
   /**
-   * Acquires the mysql migration lock.
-   * @returns A promise that resolves when the lock is acquired.
+   * Destructively recreates the configured MySQL database.
+   * @returns A promise that resolves when the database is ready for use.
    */
   async wipe(): Promise<void> {
     let config = this.#configOrThrow('wipe')
+    this.#assertNoOpenTransactions('wipe')
     let database = resolveMysqlDatabaseName(config)
     await this.#closePool()
-    let connection = await createMysqlConnection(toMysqlServerConfig(config))
+    let connection: MysqlConnection | undefined
 
     try {
+      connection = await createMysqlConnection(toMysqlServerConfig(config))
       await connection.query('drop database if exists ' + quoteIdentifier(database))
 
       let sql = 'create database ' + quoteIdentifier(database)
 
       if (this.#characterSet) {
-        sql += ' character set ' + this.#characterSet
+        sql += ' character set ' + quoteIdentifier(this.#characterSet)
       }
 
       if (this.#collation) {
-        sql += ' collate ' + this.#collation
+        sql += ' collate ' + quoteIdentifier(this.#collation)
       }
 
       await connection.query(sql)
     } finally {
-      await connection.end()
+      try {
+        await connection?.end()
+      } finally {
+        await this.#replacePool()
+      }
     }
-
-    await this.#replacePool()
   }
 
+  /**
+   * Acquires the mysql migration lock.
+   * @returns A promise that resolves when the lock is acquired.
+   */
   async acquireMigrationLock(): Promise<void> {
     await this.#client.query('select get_lock(?, 60)', ['data_table_migrations'])
   }
@@ -376,6 +387,12 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     return this.#config
   }
 
+  #assertNoOpenTransactions(method: string): void {
+    if (this.#transactions.size > 0) {
+      throw new Error('MySQL adapter cannot ' + method + ' while transactions are open')
+    }
+  }
+
   #resolveClient(token: TransactionToken | undefined): MysqlQueryable {
     if (!token) {
       return this.#client
@@ -398,7 +415,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
 /**
  * Creates a mysql `DatabaseAdapter`.
  * @param input Mysql connection string, pool options, pool, or connection.
- * @param options Optional adapter capability overrides.
+ * @param options Database creation options used by `wipe()`.
  * @returns A configured mysql adapter.
  * @example
  * ```ts
@@ -411,7 +428,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
  */
 export function createMysqlDatabaseAdapter(
   input: string | MysqlPoolOptions | MysqlQueryable,
-  options?: MysqlAdapterOptions,
+  options?: MysqlDatabaseAdapterOptions,
 ): MysqlDatabaseAdapter {
   return new MysqlDatabaseAdapter(input, options)
 }
@@ -435,7 +452,10 @@ function isMysqlPool(client: MysqlQueryable): client is MysqlPool {
 }
 
 function resolveMysqlDatabaseName(config: string | MysqlPoolOptions): string {
-  let database = typeof config === 'string' ? resolveDatabaseNameFromUrl(config) : config.database
+  let database =
+    typeof config === 'string'
+      ? resolveDatabaseNameFromUrl(config)
+      : (config.database ?? resolveDatabaseNameFromUrl(config.uri ?? ''))
   database ??= process.env.MYSQL_DATABASE
 
   if (!database) {
@@ -466,8 +486,23 @@ function toMysqlServerConfig(config: string | MysqlPoolOptions): string | MysqlP
     }
   }
 
-  let { database: _database, ...serverConfig } = config
-  return serverConfig
+  let { database: _database, uri, ...serverConfig } = config
+
+  if (uri === undefined) {
+    return serverConfig
+  }
+
+  return { ...serverConfig, uri: removeDatabaseFromUrl(uri) }
+}
+
+function removeDatabaseFromUrl(value: string): string {
+  try {
+    let url = new URL(value)
+    url.pathname = '/'
+    return url.toString()
+  } catch {
+    return value
+  }
 }
 
 function isMysqlPoolConnection(

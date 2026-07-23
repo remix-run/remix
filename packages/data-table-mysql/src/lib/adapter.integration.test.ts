@@ -42,7 +42,7 @@ describe('mysql adapter integration', { skip: typeof DATABASE_URL !== 'string' }
   })
 
   it('wipes the configured database and reconnects', async () => {
-    let db = createDatabase(createMysqlDatabaseAdapter(DATABASE_URL!))
+    let db = createDatabase(createMysqlDatabaseAdapter({ uri: DATABASE_URL! }))
     await db.exec('create table data_table_wipe_test (id integer primary key)')
 
     await db.wipe()

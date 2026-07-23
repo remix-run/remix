@@ -37,7 +37,9 @@ const SqliteDatabaseConstructor: SqliteDatabaseConstructor =
       (await import('bun:sqlite')).Database
     : (await import('node:sqlite')).DatabaseSync
 
-type SqliteAdapterConfig = {
+/** Configuration for an adapter-owned SQLite database. */
+export interface SqliteDatabaseAdapterConfig {
+  /** SQLite database filename or `:memory:` for an in-memory database. */
   filename: string
 }
 
@@ -75,17 +77,17 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    */
   capabilities
 
-  #config?: SqliteAdapterConfig
+  #config?: SqliteDatabaseAdapterConfig
   #database: SqliteDatabase
   #transactions = new Set<string>()
   #transactionCounter = 0
 
-  constructor(input: SqliteDatabase | SqliteAdapterConfig) {
-    if (isSqliteAdapterConfig(input)) {
+  constructor(input: SqliteDatabase | SqliteDatabaseAdapterConfig) {
+    if (isSqliteDatabase(input)) {
+      this.#database = input
+    } else {
       this.#config = input
       this.#database = new SqliteDatabaseConstructor(input.filename)
-    } else {
-      this.#database = input
     }
     this.capabilities = {
       returning: true,
@@ -211,22 +213,33 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
   }
 
   /**
+   * Destructively recreates the configured SQLite database.
+   * @returns A promise that resolves when the database is ready for use.
+   */
+  async wipe(): Promise<void> {
+    let config = this.#configOrThrow('wipe')
+    this.#assertNoOpenTransactions('wipe')
+    this.#transactions.clear()
+    this.#database.close?.()
+
+    if (config.filename === ':memory:') {
+      this.#replaceDatabase()
+      return
+    }
+
+    try {
+      await mkdir(dirname(config.filename), { recursive: true })
+      await rm(config.filename, { force: true })
+    } finally {
+      this.#replaceDatabase()
+    }
+  }
+
+  /**
    * Starts a sqlite transaction.
    * @param options Transaction options.
    * @returns Transaction token.
    */
-  async wipe(): Promise<void> {
-    let config = this.#configOrThrow('wipe')
-    this.#transactions.clear()
-    this.#database.close?.()
-
-    await mkdir(dirname(config.filename), { recursive: true })
-    await rm(config.filename, { force: true })
-    let database = new SqliteDatabaseConstructor(config.filename)
-    database.close?.()
-    this.#replaceDatabase()
-  }
-
   async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
     if (options?.isolationLevel === 'read uncommitted') {
       this.#database.exec('pragma read_uncommitted = true')
@@ -302,12 +315,18 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
-  #configOrThrow(method: string): SqliteAdapterConfig {
+  #configOrThrow(method: string): SqliteDatabaseAdapterConfig {
     if (!this.#config) {
       throw new Error('SQLite adapter ' + method + '() requires config-based construction')
     }
 
     return this.#config
+  }
+
+  #assertNoOpenTransactions(method: string): void {
+    if (this.#transactions.size > 0) {
+      throw new Error('SQLite adapter cannot ' + method + ' while transactions are open')
+    }
   }
 
   #assertTransaction(token: TransactionToken): void {
@@ -331,15 +350,20 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
  * ```
  */
 export function createSqliteDatabaseAdapter(
-  input: SqliteDatabase | SqliteAdapterConfig,
+  input: SqliteDatabase | SqliteDatabaseAdapterConfig,
 ): SqliteDatabaseAdapter {
   return new SqliteDatabaseAdapter(input)
 }
 
-function isSqliteAdapterConfig(
-  input: SqliteDatabase | SqliteAdapterConfig,
-): input is SqliteAdapterConfig {
-  return 'filename' in input && typeof input.filename === 'string'
+function isSqliteDatabase(
+  input: SqliteDatabase | SqliteDatabaseAdapterConfig,
+): input is SqliteDatabase {
+  return (
+    'prepare' in input &&
+    typeof input.prepare === 'function' &&
+    'exec' in input &&
+    typeof input.exec === 'function'
+  )
 }
 
 function normalizeRows(rows: unknown[]): Record<string, unknown>[] {

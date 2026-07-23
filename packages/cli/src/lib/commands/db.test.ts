@@ -71,6 +71,22 @@ describe('db command', () => {
     assert.match(missing.stderr, /--to requires a value/)
     assert.match(missing.stderr, /Usage:/)
   })
+
+  it('preserves application output written to both output streams', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-db-command-'))
+
+    try {
+      await writeDatabaseProject(projectDir)
+
+      let result = await captureOutput(() => runRemix(['db', 'seed'], { cwd: projectDir }))
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stdout, 'seed stdout\n')
+      assert.equal(result.stderr, 'seed stderr\n')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
 })
 
 async function writeDatabaseProject(projectDir: string): Promise<void> {
@@ -115,6 +131,11 @@ async function writeDatabaseProject(projectDir: string): Promise<void> {
       '    up: `create table ${TableName.Second} (id integer primary key)`,',
       '  },',
       ']',
+      '',
+      'export function seed() {',
+      "  console.log('seed stdout')",
+      "  console.error('seed stderr')",
+      '}',
       '',
     ].join('\n'),
     'utf8',

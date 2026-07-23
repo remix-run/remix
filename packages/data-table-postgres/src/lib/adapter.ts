@@ -26,8 +26,11 @@ type TransactionState = {
 type PostgresPoolConfig = ConstructorParameters<typeof pg.Pool>[0]
 type PostgresClientConfig = ConstructorParameters<typeof pg.Client>[0]
 
-type PostgresAdapterOptions = {
+/** Database recreation options for a config-backed PostgreSQL adapter. */
+export interface PostgresDatabaseAdapterOptions {
+  /** Database used while dropping and recreating the configured database (`postgres` by default). */
   maintenanceDatabase?: string
+  /** Template used to recreate the configured database (`template0` by default). */
   template?: string
 }
 
@@ -56,7 +59,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
 
   constructor(
     config: PostgresPoolConfig | PostgresQueryable,
-    options: PostgresAdapterOptions = {},
+    options: PostgresDatabaseAdapterOptions = {},
   ) {
     if (isPostgresQueryable(config)) {
       this.#client = config
@@ -279,17 +282,18 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   }
 
   /**
-   * Acquires the postgres migration lock.
-   * @returns A promise that resolves when the lock is acquired.
+   * Destructively recreates the configured PostgreSQL database.
+   * @returns A promise that resolves when the database is ready for use.
    */
   async wipe(): Promise<void> {
     let config = this.#configOrThrow('wipe')
+    this.#assertNoOpenTransactions('wipe')
     let database = resolvePostgresDatabaseName(config)
     await this.#closePool()
-    let maintenance = new pg.Client(this.#maintenanceConfig())
-    await maintenance.connect()
+    let maintenance = new pg.Client(this.#maintenanceConfig(database))
 
     try {
+      await maintenance.connect()
       await maintenance.query(
         'select pg_terminate_backend(pid) from pg_stat_activity where datname = $1 and pid <> pg_backend_pid()',
         [database],
@@ -302,12 +306,18 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
           quoteIdentifier(this.#template),
       )
     } finally {
-      await maintenance.end()
+      try {
+        await maintenance.end()
+      } finally {
+        await this.#replacePool()
+      }
     }
-
-    await this.#replacePool()
   }
 
+  /**
+   * Acquires the postgres migration lock.
+   * @returns A promise that resolves when the lock is acquired.
+   */
   async acquireMigrationLock(): Promise<void> {
     await this.#client.query('select pg_advisory_lock(hashtext($1))', ['data_table_migrations'])
   }
@@ -335,8 +345,20 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     return this.#config
   }
 
-  #maintenanceConfig(): PostgresClientConfig {
-    return { ...this.#configOrThrow('maintenance'), database: this.#maintenanceDatabase }
+  #assertNoOpenTransactions(method: string): void {
+    if (this.#transactions.size > 0) {
+      throw new Error('Postgres adapter cannot ' + method + ' while transactions are open')
+    }
+  }
+
+  #maintenanceConfig(targetDatabase: string): PostgresClientConfig {
+    let maintenanceDatabase = this.#maintenanceDatabase
+
+    if (maintenanceDatabase === targetDatabase) {
+      maintenanceDatabase = targetDatabase === 'postgres' ? 'template1' : 'postgres'
+    }
+
+    return { ...this.#configOrThrow('maintenance'), database: maintenanceDatabase }
   }
 
   async #replacePool(): Promise<void> {
@@ -368,7 +390,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
 /**
  * Creates a postgres `DatabaseAdapter`.
  * @param input Postgres pool configuration, pool, or client.
- * @param options Optional adapter capability overrides.
+ * @param options Database recreation options used by `wipe()`.
  * @returns A configured postgres adapter.
  * @example
  * ```ts
@@ -381,7 +403,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
  */
 export function createPostgresDatabaseAdapter(
   input: PostgresPoolConfig | PostgresQueryable,
-  options?: PostgresAdapterOptions,
+  options?: PostgresDatabaseAdapterOptions,
 ): PostgresDatabaseAdapter {
   return new PostgresDatabaseAdapter(input, options)
 }

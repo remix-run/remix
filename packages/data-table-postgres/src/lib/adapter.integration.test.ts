@@ -13,6 +13,7 @@ import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-
 import { createPostgresDatabaseAdapter } from './adapter.ts'
 
 const DATABASE_URL = process.env.REMIX_DATA_TABLE_POSTGRES_TEST_URL
+const WIPE_DATABASE = 'data_table_wipe_test'
 
 describe('postgres adapter integration', { skip: typeof DATABASE_URL !== 'string' }, () => {
   let pool: Pool
@@ -42,11 +43,29 @@ describe('postgres adapter integration', { skip: typeof DATABASE_URL !== 'string
   })
 
   it('wipes the configured database and reconnects', async () => {
-    let db = createDatabase(createPostgresDatabaseAdapter({ connectionString: DATABASE_URL! }))
-    await db.exec('create table data_table_wipe_test (id integer primary key)')
+    await pool.query(
+      'select pg_terminate_backend(pid) from pg_stat_activity where datname = $1 and pid <> pg_backend_pid()',
+      [WIPE_DATABASE],
+    )
+    await pool.query('drop database if exists ' + WIPE_DATABASE)
+    await pool.query('create database ' + WIPE_DATABASE)
 
-    await db.wipe()
+    let db = createDatabase(
+      createPostgresDatabaseAdapter({
+        connectionString: DATABASE_URL!,
+        database: WIPE_DATABASE,
+      }),
+    )
 
-    assert.equal(await db.adapter.hasTable({ name: 'data_table_wipe_test' }), false)
+    try {
+      await db.exec('create table users (id integer primary key)')
+
+      await db.wipe()
+
+      assert.equal(await db.adapter.hasTable({ name: 'users' }), false)
+    } finally {
+      await db.wipe()
+      await pool.query('drop database if exists ' + WIPE_DATABASE)
+    }
   })
 })
