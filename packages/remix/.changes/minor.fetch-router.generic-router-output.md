@@ -1,0 +1,1 @@
+Expose generic router output contracts through the `remix/router` and `remix/fetch-router` entrypoints, including URL-to-node routers that retain `RequestContext` and `router.fetch(url, { signal })` cancellation. Response-dependent middleware is rejected by custom-output routers.
