@@ -339,17 +339,24 @@ function resolveOnlyPatterns(
 function parseRegexLiteral(pattern: string): SerializedOnlyPattern | undefined {
   if (!pattern.startsWith('/') || pattern.length < 2) return undefined
 
+  // The closing delimiter is the last unescaped slash; escape state must be
+  // tracked left-to-right since it depends on the preceding backslashes.
+  let closingIndex = -1
   let escaped = false
-  for (let index = pattern.length - 1; index > 0; index--) {
-    let char = pattern[index]
-    if (char === '/' && !escaped) {
-      return {
-        source: pattern.slice(1, index),
-        flags: pattern.slice(index + 1),
-      }
+  for (let index = 1; index < pattern.length; index++) {
+    if (escaped) {
+      escaped = false
+    } else if (pattern[index] === '\\') {
+      escaped = true
+    } else if (pattern[index] === '/') {
+      closingIndex = index
     }
-    escaped = char === '\\' && !escaped
   }
 
-  return undefined
+  if (closingIndex === -1) return undefined
+
+  return {
+    source: pattern.slice(1, closingIndex),
+    flags: pattern.slice(closingIndex + 1),
+  }
 }

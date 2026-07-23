@@ -399,6 +399,43 @@ describe('run', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('runs commands that do not read the config despite an invalid remix.json', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-broken-config-'))
+
+    try {
+      await fs.writeFile(path.join(projectDir, 'remix.json'), '{ "test": nope }', 'utf8')
+
+      let help = await captureOutput(() => run(['--help'], { cwd: projectDir }))
+      let version = await captureOutput(() =>
+        run(['version'], { cwd: projectDir, remixVersion: '9.9.9' }),
+      )
+
+      assert.equal(help.exitCode, 0)
+      assert.equal(help.stdout, ROOT_HELP_TEXT)
+      assert.equal(version.exitCode, 0)
+      assert.equal(version.stdout, '9.9.9\n')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('validates an explicitly selected config for every command', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-explicit-config-'))
+
+    try {
+      await fs.writeFile(path.join(projectDir, 'remix.json'), '{ "test": nope }', 'utf8')
+
+      let result = await captureOutput(() =>
+        run(['--config', 'remix.json', 'version'], { cwd: projectDir, remixVersion: '9.9.9' }),
+      )
+
+      assert.equal(result.exitCode, 1)
+      assert.match(result.stderr, /Error \[RMX_INVALID_CONFIG\]/)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('fails for unknown commands', async () => {
     let result = await captureOutput(() => run(['unknown']))
 

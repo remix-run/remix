@@ -20,6 +20,31 @@ describe('loadRemixConfig', () => {
     }
   })
 
+  it('treats an empty or comments-only config as empty', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-empty-'))
+
+    try {
+      await fs.writeFile(path.join(cwd, 'remix.json'), '', 'utf8')
+      assert.deepEqual(await loadRemixConfig(cwd, undefined), {})
+
+      await fs.writeFile(path.join(cwd, 'remix.json'), '// nothing configured yet\n', 'utf8')
+      assert.deepEqual(await loadRemixConfig(cwd, undefined), {})
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('ignores a UTF-8 byte order mark', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-bom-'))
+
+    try {
+      await fs.writeFile(path.join(cwd, 'remix.json'), '﻿{ "test": { "watch": true } }', 'utf8')
+      assert.deepEqual(await loadRemixConfig(cwd, undefined), { test: { watch: true } })
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
   it('rejects a missing explicitly selected config', async () => {
     let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-missing-explicit-'))
 
@@ -160,6 +185,24 @@ describe('loadRemixConfig', () => {
           return true
         },
       )
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('treats a pattern whose trailing slash is escaped as a plain pattern', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-escaped-only-'))
+
+    try {
+      // "/a\\/" has no closing delimiter (the trailing slash is escaped), so it
+      // falls back to a case-insensitive plain pattern instead of a literal.
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        ['{', '  "test": {', '    "only": ["/a\\\\/"]', '  }', '}'].join('\n'),
+        'utf8',
+      )
+
+      assert.deepEqual(await loadRemixConfig(cwd, undefined), { test: { only: ['/a\\/'] } })
     } finally {
       await fs.rm(cwd, { recursive: true, force: true })
     }

@@ -2,21 +2,22 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import {
   findNodeAtLocation,
-  parse,
+  getNodeValue,
   parseTree,
   printParseErrorCode,
   type Node as JsonNode,
   type ParseError,
 } from 'jsonc-parser'
+import type { RemixTestPool } from '@remix-run/test/cli'
 
 import { invalidRemixConfig, remixConfigNotFound } from './errors.ts'
 
 const reporters = ['spec', 'files', 'tap', 'dot'] as const
-const testPools = ['forks', 'threads'] as const
+const testPools: readonly RemixTestPool[] = ['forks', 'threads']
 const testTypes = ['server', 'browser', 'e2e'] as const
 
 type Reporter = (typeof reporters)[number]
-type TestPool = (typeof testPools)[number]
+type TestPool = RemixTestPool
 type TestType = (typeof testTypes)[number]
 type JsonPath = Array<number | string>
 
@@ -79,16 +80,26 @@ export async function loadRemixConfig(
     throw error
   }
 
+  // Editors saving "UTF-8 with BOM" prefix the file with U+FEFF, which
+  // jsonc-parser reports as an InvalidSymbol error.
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1)
+
   let parseErrors: ParseError[] = []
-  let value: unknown = parse(text, parseErrors, {
+  let root = parseTree(text, parseErrors, {
     allowTrailingComma: true,
     disallowComments: false,
   })
-  let root = parseTree(text, [], {
-    allowTrailingComma: true,
-    disallowComments: false,
-  })
+  let value: unknown = root === undefined ? undefined : getNodeValue(root)
   let source = { filePath, root, text }
+
+  // An empty or comments-only file has no JSON value at all; treat it like a
+  // missing file rather than a malformed one.
+  if (
+    root === undefined &&
+    parseErrors.every((error) => printParseErrorCode(error.error) === 'ValueExpected')
+  ) {
+    return {}
+  }
 
   if (parseErrors.length > 0) {
     let error = parseErrors[0]!
@@ -343,12 +354,7 @@ function optionalEnum<const value extends string>(
   propertyPath: JsonPath,
 ): value | undefined {
   if (input === undefined) return undefined
-  let string = requireString(input, source, propertyPath)
-  let matched = values.find((value) => value === string)
-  if (matched === undefined) {
-    throwConfigError(source, propertyPath, `Expected one of: ${values.join(', ')}`)
-  }
-  return matched
+  return requireEnum(input, values, source, propertyPath)
 }
 
 function optionalEnumArray<const value extends string>(
@@ -360,15 +366,21 @@ function optionalEnumArray<const value extends string>(
   if (input === undefined) return undefined
   if (!Array.isArray(input)) throwConfigError(source, propertyPath, 'Expected an array')
 
-  return input.map((item, index) => {
-    let itemPath = [...propertyPath, index]
-    let string = requireString(item, source, itemPath)
-    let matched = values.find((value) => value === string)
-    if (matched === undefined) {
-      throwConfigError(source, itemPath, `Expected one of: ${values.join(', ')}`)
-    }
-    return matched
-  })
+  return input.map((item, index) => requireEnum(item, values, source, [...propertyPath, index]))
+}
+
+function requireEnum<const value extends string>(
+  input: unknown,
+  values: readonly value[],
+  source: ConfigSource,
+  propertyPath: JsonPath,
+): value {
+  let string = requireString(input, source, propertyPath)
+  let matched = values.find((value) => value === string)
+  if (matched === undefined) {
+    throwConfigError(source, propertyPath, `Expected one of: ${values.join(', ')}`)
+  }
+  return matched
 }
 
 function resolveGlobs(values: string[], configDir: string, cwd: string): string[] {
@@ -397,19 +409,26 @@ function validateOnlyPattern(pattern: string, source: ConfigSource, propertyPath
 function parseRegexLiteral(pattern: string): { flags: string; source: string } | undefined {
   if (!pattern.startsWith('/') || pattern.length < 2) return undefined
 
+  // The closing delimiter is the last unescaped slash; escape state must be
+  // tracked left-to-right since it depends on the preceding backslashes.
+  let closingIndex = -1
   let escaped = false
-  for (let index = pattern.length - 1; index > 0; index--) {
-    let char = pattern[index]
-    if (char === '/' && !escaped) {
-      return {
-        flags: pattern.slice(index + 1),
-        source: pattern.slice(1, index),
-      }
+  for (let index = 1; index < pattern.length; index++) {
+    if (escaped) {
+      escaped = false
+    } else if (pattern[index] === '\\') {
+      escaped = true
+    } else if (pattern[index] === '/') {
+      closingIndex = index
     }
-    escaped = char === '\\' && !escaped
   }
 
-  return undefined
+  if (closingIndex === -1) return undefined
+
+  return {
+    flags: pattern.slice(closingIndex + 1),
+    source: pattern.slice(1, closingIndex),
+  }
 }
 
 function throwConfigError(

@@ -11,8 +11,9 @@ interface ResolveCliContextOptions {
 }
 
 export interface CliContext {
-  config: RemixConfig
   cwd: string
+  /** Loads and validates the Remix config file, memoizing the result. */
+  loadConfig(): Promise<RemixConfig>
   remixVersion?: string
 }
 
@@ -22,9 +23,18 @@ export async function resolveCliContext(
   let cwd = resolveCwd(options.cwd)
   let remixVersion = normalizeRemixVersion(options.remixVersion)
 
+  let configPromise: Promise<RemixConfig> | undefined
+  let loadConfig = () => (configPromise ??= loadRemixConfig(cwd, options.configPath))
+
+  // Validate an explicitly selected config file up front so every command
+  // fails fast on a bad --config path. The default remix.json is loaded
+  // lazily by the commands that read it, so an invalid file doesn't break
+  // unrelated commands like help, version, or shell completion.
+  if (options.configPath !== undefined) await loadConfig()
+
   return {
-    config: await loadRemixConfig(cwd, options.configPath),
     cwd,
+    loadConfig,
     remixVersion: remixVersion ?? (await resolveDefaultRemixVersion(cwd)),
   }
 }

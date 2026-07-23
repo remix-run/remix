@@ -166,7 +166,8 @@ export async function runTestCommand(argv: string[], context: CliContext): Promi
 
   try {
     let { remixTestPools, runRemixTest } = await import('@remix-run/test/cli')
-    let options = resolveTestCommandOptions(argv, context.config.test, remixTestPools)
+    let config = await context.loadConfig()
+    let options = resolveTestCommandOptions(argv, config.test, remixTestPools)
     return await runRemixTest({ ...options, cwd: context.cwd })
   } catch (error) {
     process.stderr.write(
@@ -357,20 +358,14 @@ function mergeTestOptions(
 ): RemixTestConfig {
   if (cli === undefined) return config
 
+  // CLI options are compacted (no undefined values), so spreading them over
+  // the config gives CLI input precedence; nested objects merge by field.
   return {
+    ...config,
+    ...cli,
     browser: mergeObject(config.browser, cli.browser),
-    concurrency: cli.concurrency ?? config.concurrency,
     coverage: mergeCoverage(config.coverage, cli.coverage),
     glob: mergeObject(config.glob, cli.glob),
-    only: cli.only ?? config.only,
-    playwrightConfig: cli.playwrightConfig ?? config.playwrightConfig,
-    pool: cli.pool ?? config.pool,
-    project: cli.project ?? config.project,
-    quiet: cli.quiet ?? config.quiet,
-    reporter: cli.reporter ?? config.reporter,
-    setup: cli.setup ?? config.setup,
-    type: cli.type ?? config.type,
-    watch: cli.watch ?? config.watch,
   }
 }
 

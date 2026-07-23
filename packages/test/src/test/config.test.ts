@@ -15,7 +15,9 @@ describe('resolveConfig', () => {
 
   it('normalizes only patterns', () => {
     let config = resolveConfig({
-      only: [/server/, /checkout/i, 'browser', '/account$/'],
+      // "/a\\/" has an escaped trailing slash, so it is not a complete regex
+      // literal and falls back to a plain case-insensitive pattern.
+      only: [/server/, /checkout/i, 'browser', '/account$/', '/a\\/'],
     })
 
     assert.deepEqual(config.only, [
@@ -23,6 +25,7 @@ describe('resolveConfig', () => {
       { source: 'checkout', flags: 'i' },
       { source: 'browser', flags: 'i' },
       { source: 'account$', flags: '' },
+      { source: '/a\\/', flags: 'i' },
     ])
   })
 

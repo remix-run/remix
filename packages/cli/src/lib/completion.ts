@@ -94,7 +94,9 @@ if type complete &>/dev/null; then
     local lines
 
     if type _get_comp_words_by_ref &>/dev/null; then
-      _get_comp_words_by_ref -w words -i cword
+      # -n = keeps --config=<path> together as one word; bash's default
+      # COMP_WORDBREAKS would otherwise split it at the equals sign.
+      _get_comp_words_by_ref -n = -w words -i cword
     else
       cword="$COMP_CWORD"
       words=("\${COMP_WORDS[@]}")
@@ -114,9 +116,11 @@ if type complete &>/dev/null; then
 
     if [[ "$mode" == "mode:files" ]]; then
       if [[ "$current" == --config=* ]]; then
+        # Readline still breaks the insertion point at '=', so complete the
+        # path portion alone; prefixing --config= would duplicate the flag.
         local config_value
         config_value="\${current#--config=}"
-        COMPREPLY=($(compgen -P "--config=" -f -- "$config_value"))
+        COMPREPLY=($(compgen -f -- "$config_value"))
       else
         COMPREPLY=($(compgen -f -- "$current"))
       fi

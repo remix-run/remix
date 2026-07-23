@@ -218,7 +218,8 @@ describe('completion script', () => {
   it('completes the file portion of inline config flags', () => {
     let script = getCompletionScript()
 
-    assert.match(script, /compgen -P "--config=" -f -- "\$config_value"/)
+    assert.match(script, /_get_comp_words_by_ref -n = -w words -i cword/)
+    assert.match(script, /compgen -f -- "\$config_value"/)
     assert.match(script, /compset -P '--config='/)
   })
 })
