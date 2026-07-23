@@ -105,7 +105,7 @@ describe('runMiddleware', () => {
 
     await assert.rejects(async () => {
       await runMiddleware(middleware, context, handler)
-    }, new Error('Middleware must return a Response or call next()'))
+    }, new Error('Middleware must return a value or call next()'))
   })
 
   it('rejects when a middleware calls next() multiple times', async () => {

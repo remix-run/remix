@@ -8,7 +8,68 @@ import type { NextFunction } from './middleware.ts'
 import type { RequestContext } from './request-context.ts'
 import { createRouter, type MatchData } from './router.ts'
 
+type TestNode = string | null | TestNode[]
+
 describe('router.fetch()', () => {
+  it('returns a custom output while preserving the Request context', async () => {
+    let routes = route({ home: '/' })
+    let request = new Request('https://remix.run')
+    let router = createRouter<RequestContext, TestNode>({
+      defaultHandler: () => null,
+      middleware: [async (_, next) => ['layout', await next()]],
+    })
+
+    router.map(routes, {
+      actions: {
+        home(context) {
+          assert.equal(context.request, request)
+          assert.equal(context.request.signal, request.signal)
+          return ['home']
+        },
+      },
+    })
+
+    assert.deepEqual(await router.fetch(request), ['layout', ['home']])
+    assert.deepEqual(await router.fetch('https://remix.run/missing'), ['layout', null])
+  })
+
+  it('normalizes URL input to a Request and uses the init signal', async () => {
+    let controller = new AbortController()
+    let reason = new Error('Cancelled')
+    let requestSignal: AbortSignal | undefined
+    let startHandler: (() => void) | undefined
+    let handlerStarted = new Promise<void>((resolve) => {
+      startHandler = resolve
+    })
+    let router = createRouter<RequestContext, TestNode>({
+      defaultHandler: () => null,
+    })
+
+    router.get('/account', async (context) => {
+      assert.equal(context.url.href, 'https://remix.run/account')
+      assert.equal(context.request.url, 'https://remix.run/account')
+      requestSignal = context.request.signal
+      startHandler?.()
+
+      await new Promise<void>((resolve) => {
+        context.request.signal.addEventListener('abort', () => resolve(), { once: true })
+      })
+
+      return null
+    })
+
+    let output = router.fetch(new URL('https://remix.run/account'), {
+      signal: controller.signal,
+    })
+
+    await handlerStarted
+    controller.abort(reason)
+
+    await assert.rejects(output, reason)
+    assert.equal(requestSignal?.aborted, true)
+    assert.equal(requestSignal?.reason, reason)
+  })
+
   it('fetches a route', async () => {
     let router = createRouter()
     router.get('/', () => new Response('Home'))

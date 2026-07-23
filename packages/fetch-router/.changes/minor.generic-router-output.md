@@ -1,0 +1,1 @@
+Add a generic output contract to `createRouter`. Routers can now return application values such as `RemixNode`, with the output type propagated through middleware, controllers, mounted routes, and nested `context.router.fetch` calls. Existing `string | URL | Request` inputs and cancellation through `router.fetch(url, { signal })` remain unchanged.
