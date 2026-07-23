@@ -459,7 +459,8 @@ const loginSchema = f.object({
 
 export const passwordProvider = createCredentialsAuthProvider({
   parse(context) {
-    let result = s.parseSafe(loginSchema, context.formData);
+    let formData = context.get(FormData) ?? new FormData();
+    let result = s.parseSafe(loginSchema, formData);
     if (!result.success) return { email: "", password: "" };
 
     return {
@@ -468,9 +469,9 @@ export const passwordProvider = createCredentialsAuthProvider({
     };
   },
   async verify({ email, password }, context) {
-    let user = email
-      ? await context.get(Database).findOne(users, { where: { email } })
-      : null;
+    let db = context.get(Database);
+    let user =
+      db && email ? await db.findOne(users, { where: { email } }) : null;
     let passwordHash = user?.password_hash ?? DUMMY_PASSWORD_HASH;
     let passwordMatches = await verifyPassword(password, passwordHash);
 
@@ -480,6 +481,8 @@ export const passwordProvider = createCredentialsAuthProvider({
   },
 });
 ```
+
+Provider callbacks receive the bare request context, so middleware-added type properties such as `context.formData` are not visible there. Read the parsed body through the `FormData` context key and guard values the cumulative middleware normally installs, as both callbacks above do.
 
 The login controller owns both leaves created by `form("/login")`. Its GET action reads the one-request error and renders a CSRF token. Its POST action verifies the credentials, rotates the session, and writes the small auth record later requests will resolve:
 
@@ -1042,7 +1045,8 @@ export function loadAuth() {
           return null;
         },
         async verify(value, context) {
-          return context.get(Database).find(users, value.userId);
+          let db = context.get(Database);
+          return db ? db.find(users, value.userId) : null;
         },
         invalidate(session) {
           session.unset("auth");
@@ -1320,10 +1324,10 @@ Now wire the token into the client entry from Chapter 8. Add `csrfToken` to `Alb
 
 ```tsx filename=app/assets/album-edit-form.tsx
 // Partial update to the cumulative client entry from Chapter 8.
-export interface AlbumEditFormProps {
+export type AlbumEditFormProps = {
   // Keep action, conflict, issues, and values.
   csrfToken: string;
-}
+};
 
 // Inside AlbumEditForm's render function, include csrfToken in the
 // existing props destructuring. Inside its existing <form>, add:

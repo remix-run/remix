@@ -100,7 +100,7 @@ if (album === null) {
 
 An unmatched URL never reaches that action. By default, the router returns `Not Found: /path` with status `404`. Add a default handler when the app needs its normal document shell.
 
-This is one more option on the existing router, not a replacement router. Keep its cumulative middleware in order: `staticFiles()`, `cop()`, `uploadErrors()`, the bounded `formData()`, `methodOverride()`, `asyncContext()`, database, session, CSRF, auth, asset-entry, and render middleware. Keep every controller mapping too:
+This is one more option on the existing router, not a replacement router. Keep its cumulative middleware in order: `staticFiles()`, `cop()`, `uploadErrors()`, the bounded `formData()`, `methodOverride()`, `asyncContext()`, database, album-covers, session, CSRF, auth, asset-entry, and render middleware. Keep every controller mapping too:
 
 ```tsx
 // Inside the existing createRouter({ ... }) options, after `middleware`:

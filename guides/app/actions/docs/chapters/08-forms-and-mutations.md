@@ -515,24 +515,28 @@ The form remains a browser-valid POST and supplies the effective method in a hid
 
 Once the form works as a navigation, a client entry can intercept `submit`. Preserve the clicked submit button, follow a redirect as navigation, and clear pending state on every non-aborted outcome:
 
-Move the form itself into a browser-owned module and put the enhancement on that same form. This is the cumulative component; it preserves the field errors and native form contract from the start of the chapter:
+Move the form itself into a browser-owned module and put the enhancement on that same form. This is the cumulative component; it preserves the field errors and native form contract from the start of the chapter. Client-entry props cross a serialization boundary, so the module declares a plain `FieldIssue` shape instead of reusing the schema's `Issue` type:
 
 ```tsx filename=app/assets/album-edit-form.tsx
-import type { Issue } from "remix/data-schema";
 import { clientEntry, on } from "remix/ui";
 import type { Handle } from "remix/ui";
 
-export interface AlbumEditFormProps {
+export type FieldIssue = {
+  message: string;
+  path?: string[];
+};
+
+export type AlbumEditFormProps = {
   action: string;
   conflict?: string;
-  issues?: ReadonlyArray<Issue>;
+  issues?: FieldIssue[];
   values: {
     artist: string;
     revision: string;
     title: string;
     year: string;
   };
-}
+};
 
 export const AlbumEditForm = clientEntry(
   import.meta.url,
@@ -730,7 +734,12 @@ export function AlbumEditPage(handle: Handle<AlbumEditPageProps>) {
           <AlbumEditForm
             action={routes.albums.edit.action.href({ albumId })}
             conflict={conflict}
-            issues={issues}
+            issues={issues?.map((issue) => ({
+              message: issue.message,
+              path: issue.path?.map((segment) =>
+                String(typeof segment === "object" ? segment.key : segment),
+              ),
+            }))}
             values={values}
           />
         </main>
@@ -740,7 +749,7 @@ export function AlbumEditPage(handle: Handle<AlbumEditPageProps>) {
 }
 ```
 
-The event handler sends the same action URL and fields. Its signal cancels stale work when the handler is re-entered or removed, and the check immediately after `fetch(...)` prevents an obsolete response from changing the page. Validation and conflict bodies stream into the form's current frame, while a non-redirecting success reloads that same declared frame. Both redirect branches require a same-origin destination before starting a top-level navigation; [Auth, Sessions, and Security](/auth-sessions-security/#route-protection-with-requireauth) defines the `401` response contract.
+The page converts schema issues into the client entry's serializable `FieldIssue` shape at the boundary; everything else passes through unchanged. The event handler sends the same action URL and fields. Its signal cancels stale work when the handler is re-entered or removed, and the check immediately after `fetch(...)` prevents an obsolete response from changing the page. Validation and conflict bodies stream into the form's current frame, while a non-redirecting success reloads that same declared frame. Both redirect branches require a same-origin destination before starting a top-level navigation; [Auth, Sessions, and Security](/auth-sessions-security/#route-protection-with-requireauth) defines the `401` response contract.
 
 For validation-heavy forms, target the form frame so a `400` response can replace it with server-rendered errors. [Interactivity](/interactivity/#coordinating-forms-fetches-frame-reloads-and-navigation) covers client entries and frame reloads in detail.
 

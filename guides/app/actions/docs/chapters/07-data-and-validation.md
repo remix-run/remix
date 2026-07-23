@@ -402,8 +402,10 @@ export const db = createDatabase(adapter);
 Keep the database file local while continuing to track migrations:
 
 ```gitignore filename=.gitignore
-/db/*.db
+/db/*.db*
 ```
+
+The trailing `*` also covers the `-wal`, `-shm`, and `-journal` sidecar files SQLite creates next to the database.
 
 The table and query APIs stay the same across adapters, but database capabilities do not become identical:
 

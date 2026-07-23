@@ -295,10 +295,10 @@ The cumulative edit form now lives in `app/assets/album-edit-form.tsx`. Extend t
 
 ```tsx filename=app/assets/album-edit-form.tsx
 // Partial update to AlbumEditFormProps:
-export interface AlbumEditFormProps {
+export type AlbumEditFormProps = {
   // Keep action, conflict, csrfToken, issues, and values.
   coverError?: string;
-}
+};
 
 // Replace the existing props destructuring in the render function:
 let {
@@ -746,8 +746,11 @@ let albumsController = createController(routes.albums, {
     async destroy(context) {
       let db = context.get(Database);
       let album = await db.find(albums, context.params.albumId);
-      if (album === null || album.owner_id !== context.auth.identity.id) {
+      if (album === null) {
         return new Response("Album not found", { status: 404 });
+      }
+      if (album.owner_id !== context.auth.identity.id) {
+        return new Response("Forbidden", { status: 403 });
       }
 
       let write = await db.deleteMany(albums, {

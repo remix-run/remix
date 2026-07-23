@@ -679,7 +679,7 @@ export function createAppRouter(options: AppRouterOptions) {
 
 Four details make the controller's boundary explicit:
 
-- `requireAuth()` admits any signed-in record-store user. Replace it with app authorization middleware when catalog access is role-specific. The cumulative `cop()` and `csrf()` middleware from Chapter 12 still reject unsafe browser mutations before this controller runs.
+- `requireAuth()` admits any signed-in record-store user. Replace it with app authorization middleware when catalog access is role-specific. The cumulative `cop()` and `csrf()` middleware from Chapter 12 still reject unsafe browser mutations before this controller runs. The same stack's `formData()` and `methodOverride()` middleware consume form-encoded and multipart bodies before any action, so a proxied form-typed mutation would arrive here with its body already read and possibly a rewritten method. Proxy JSON as this section does, or mount the proxy route on a router branch that skips those two middleware.
 - `xForwardedHeaders: false` prevents the helper from adding forwarding identity, and the controller removes inbound forwarding headers. Add server-owned values only when the upstream explicitly trusts this app.
 - Buffering both directions lets the controller reject an oversized body before sending a partial response.
 - Fetch may decompress the upstream body. The proxy removes stale encoding and length metadata, the controller writes the final `Content-Length`, and it strips hop-by-hop headers, upstream CORS policy, cookies, and authentication challenges before responding.
