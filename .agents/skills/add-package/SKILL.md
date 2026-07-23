@@ -43,8 +43,8 @@ Use this skill to scaffold and standardize packages so they look and behave like
   - `build`: `tsgo -p tsconfig.build.json`
   - `clean`: `git clean -fdX`
   - `prepublishOnly`: `pnpm run build`
-  - `test`: `remix-test`
-  - `test:bun`: `bun x --bun remix-test`
+  - `test`: `remix test`
+  - `test:bun`: `bun x --bun remix test`
   - `typecheck`: `tsgo --noEmit`
 - Use baseline dev dependencies:
   - `"@remix-run/assert": "workspace:^"`

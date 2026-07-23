@@ -1,3 +1,5 @@
+import { testCommandFlags } from './commands/test.ts'
+
 export interface CompletionResult {
   mode: 'files' | 'none' | 'values'
   values?: string[]
@@ -6,6 +8,28 @@ export interface CompletionResult {
 const COMPLETION_SHELLS = ['bash', 'zsh'] as const
 const HELP_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'test', 'version'] as const
 const ROOT_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'test', 'version'] as const
+
+// Derived from the `remix test` flag table so completion stays in sync with
+// argument parsing and help text.
+const TEST_BOOLEAN_FLAGS = testCommandFlags
+  .filter((flag) => flag.type === 'boolean')
+  .map((flag) => flag.name)
+const TEST_VALUE_FLAGS = testCommandFlags
+  .filter((flag) => flag.type === 'string')
+  .map((flag) => flag.name)
+const TEST_BOOLEAN_FLAG_SET = new Set(TEST_BOOLEAN_FLAGS)
+const TEST_VALUE_FLAG_SET = new Set(TEST_VALUE_FLAGS)
+const TEST_REPEATABLE_FLAGS = new Set(
+  testCommandFlags.filter((flag) => flag.multiple).map((flag) => flag.name),
+)
+const TEST_FILE_VALUE_FLAGS = new Set(
+  testCommandFlags.filter((flag) => flag.files).map((flag) => flag.name),
+)
+const TEST_FLAG_ALIASES = new Map(
+  testCommandFlags.flatMap((flag) =>
+    flag.alias === undefined ? [] : [[flag.alias, flag.name] as const],
+  ),
+)
 
 export type CompletionShell = (typeof COMPLETION_SHELLS)[number]
 
@@ -169,7 +193,7 @@ function completeCommand(
   }
 
   if (command === 'test') {
-    return completeSimpleFlags(tokens, currentWord, usedGlobalFlags, ['--coverage', '--watch'])
+    return completeTest(tokens, currentWord, usedGlobalFlags)
   }
 
   if (command === 'completion') {
@@ -177,6 +201,108 @@ function completeCommand(
   }
 
   return completeValues([], currentWord)
+}
+
+function completeTest(
+  tokens: string[],
+  currentWord: string,
+  usedGlobalFlags: Set<string>,
+): CompletionResult {
+  let filteredTokens = filterGlobalCommandTokens(tokens, usedGlobalFlags)
+  if (filteredTokens == null) {
+    return completeValues([], currentWord)
+  }
+
+  let usedFlags = new Set<string>()
+  let expectedValueFor: string | undefined
+  let afterSeparator = false
+
+  for (let token of filteredTokens) {
+    if (expectedValueFor != null) {
+      expectedValueFor = undefined
+      continue
+    }
+
+    // Everything after a bare `--` is a positional test file glob
+    if (afterSeparator) {
+      continue
+    }
+
+    if (token === '--') {
+      afterSeparator = true
+      continue
+    }
+
+    if (token.startsWith('--')) {
+      // `--flag=value` carries its value inline
+      let equalsIndex = token.indexOf('=')
+      let flag = equalsIndex === -1 ? token : token.slice(0, equalsIndex)
+
+      if (TEST_VALUE_FLAG_SET.has(flag)) {
+        usedFlags.add(flag)
+        if (equalsIndex === -1) {
+          expectedValueFor = flag
+        }
+        continue
+      }
+
+      if (TEST_BOOLEAN_FLAG_SET.has(flag)) {
+        usedFlags.add(flag)
+        continue
+      }
+
+      return completeValues([], currentWord)
+    }
+
+    if (token.startsWith('-') && token !== '-') {
+      let aliased = TEST_FLAG_ALIASES.get(token.slice(0, 2))
+
+      // A value alias may carry its value inline (`-c1`); a bare alias
+      // expects the value in the next token.
+      if (aliased !== undefined && TEST_VALUE_FLAG_SET.has(aliased)) {
+        usedFlags.add(aliased)
+        if (token.length === 2) {
+          expectedValueFor = aliased
+        }
+        continue
+      }
+
+      // A group of boolean aliases (`-qw`)
+      let group = [...token.slice(1)].map((char) => TEST_FLAG_ALIASES.get(`-${char}`))
+      if (
+        group.every((flag): flag is string => flag !== undefined && TEST_BOOLEAN_FLAG_SET.has(flag))
+      ) {
+        for (let flag of group) {
+          usedFlags.add(flag)
+        }
+        continue
+      }
+
+      return completeValues([], currentWord)
+    }
+
+    // Anything else is a positional test file glob
+  }
+
+  if (expectedValueFor != null) {
+    return TEST_FILE_VALUE_FLAGS.has(expectedValueFor) ? { mode: 'files' } : { mode: 'none' }
+  }
+
+  if (afterSeparator) {
+    return { mode: 'files' }
+  }
+
+  let longFlags = [...TEST_BOOLEAN_FLAGS, ...TEST_VALUE_FLAGS].filter(
+    (flag) => !usedFlags.has(flag) || TEST_REPEATABLE_FLAGS.has(flag),
+  )
+  let shortFlags = [...TEST_FLAG_ALIASES].flatMap(([short, long]) =>
+    !usedFlags.has(long) || TEST_REPEATABLE_FLAGS.has(long) ? [short] : [],
+  )
+  let suggestions = withHelpFlags([...longFlags, ...shortFlags], usedGlobalFlags)
+
+  return currentWord.startsWith('-') || currentWord === ''
+    ? completeValues(suggestions, currentWord)
+    : { mode: 'files' }
 }
 
 function completeHelp(

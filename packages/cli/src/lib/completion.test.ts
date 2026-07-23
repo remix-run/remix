@@ -101,11 +101,60 @@ describe('completion engine', () => {
     assert.ok(!nested.values?.includes('--version'))
   })
 
-  it('does not duplicate help flags for commands with their own help handling', () => {
+  it('completes all test flags and aliases', () => {
     let result = getCompletionResult(['remix', 'test', ''], 2)
 
     assert.equal(result.mode, 'values')
-    assert.deepEqual(result.values, ['--coverage', '--watch', '-h', '--help', '--no-color'])
+    assert.ok(result.values?.includes('--browser.echo'))
+    assert.ok(result.values?.includes('--coverage.statements'))
+    assert.ok(result.values?.includes('--playwrightConfig'))
+    assert.ok(result.values?.includes('--project'))
+    assert.ok(result.values?.includes('-p'))
+    assert.ok(result.values?.includes('-h'))
+    assert.ok(result.values?.includes('--help'))
+    assert.ok(result.values?.includes('--no-color'))
+  })
+
+  it('uses file completion for test path flags and does not repeat singular flags', () => {
+    let configValue = getCompletionResult(['remix', 'test', '--config', ''], 3)
+    let usedCoverage = getCompletionResult(['remix', 'test', '--coverage', ''], 3)
+
+    assert.deepEqual(configValue, { mode: 'files' })
+    assert.equal(usedCoverage.mode, 'values')
+    assert.ok(!usedCoverage.values?.includes('--coverage'))
+    assert.ok(usedCoverage.values?.includes('--coverage.include'))
+  })
+
+  it('recognizes test flags with inline =values', () => {
+    let result = getCompletionResult(['remix', 'test', '--reporter=spec', ''], 3)
+
+    assert.equal(result.mode, 'values')
+    assert.ok(!result.values?.includes('--reporter'))
+    assert.ok(result.values?.includes('--watch'))
+  })
+
+  it('recognizes short test flags with attached values', () => {
+    let result = getCompletionResult(['remix', 'test', '-c1', ''], 3)
+
+    assert.equal(result.mode, 'values')
+    assert.ok(!result.values?.includes('--concurrency'))
+    assert.ok(!result.values?.includes('-c'))
+    assert.ok(result.values?.includes('--watch'))
+  })
+
+  it('recognizes grouped boolean short test flags', () => {
+    let result = getCompletionResult(['remix', 'test', '-qw', ''], 3)
+
+    assert.equal(result.mode, 'values')
+    assert.ok(!result.values?.includes('--quiet'))
+    assert.ok(!result.values?.includes('--watch'))
+    assert.ok(result.values?.includes('--coverage'))
+  })
+
+  it('treats everything after -- as positional test globs', () => {
+    let result = getCompletionResult(['remix', 'test', '--', ''], 3)
+
+    assert.deepEqual(result, { mode: 'files' })
   })
 })
 

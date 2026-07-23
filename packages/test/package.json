@@ -22,18 +22,12 @@
   "engines": {
     "node": ">=24.3.0"
   },
-  "bin": {
-    "remix-test": "./src/cli-entry.ts"
-  },
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json",
     "./cli": "./src/cli.ts"
   },
   "publishConfig": {
-    "bin": {
-      "remix-test": "./dist/cli-entry.js"
-    },
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
@@ -50,8 +44,8 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node src/cli-entry.ts",
-    "test:bun": "bun --bun src/cli-entry.ts --type server",
+    "test": "remix test",
+    "test:bun": "bun x --bun remix test --type server",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {

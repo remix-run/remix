@@ -47,6 +47,9 @@ importers:
       oxlint-tsgolint:
         specifier: ^0.17.4
         version: 0.17.4
+      remix:
+        specifier: workspace:^
+        version: link:packages/remix
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

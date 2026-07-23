@@ -55,6 +55,11 @@ export const CLI_ERROR_DEFINITIONS = {
     title: 'Could not derive a valid package name',
     fix: 'Choose an app name that can be normalized into a valid npm package name.',
   },
+  invalidOptionValue: {
+    code: 'RMX_INVALID_OPTION_VALUE',
+    title: 'Invalid option value',
+    fix: 'Check the command help for the supported option syntax.',
+  },
   missingOptionValue: {
     code: 'RMX_MISSING_OPTION_VALUE',
     title: 'Missing option value',
@@ -198,6 +203,13 @@ export function invalidPackageName(input: string): UsageError {
   return createUsageError(CLI_ERROR_DEFINITIONS.invalidPackageName, {
     context: { input },
     message: `Could not derive a valid package name from "${input}".`,
+  })
+}
+
+export function invalidOptionValue(details: string): UsageError {
+  return createUsageError(CLI_ERROR_DEFINITIONS.invalidOptionValue, {
+    context: { details },
+    message: details,
   })
 }
 

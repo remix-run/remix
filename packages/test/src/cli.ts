@@ -3,11 +3,13 @@ import type * as http from 'node:http'
 import * as path from 'node:path'
 import type * as browserTestRunner from './lib/runner-browser.ts'
 import {
-  getRemixTestHelpText,
   IS_RUNNING_FROM_SRC,
   loadConfig,
+  type RemixTestConfig,
   type ResolvedRemixTestConfig,
 } from './lib/config.ts'
+
+export { remixTestPools, type RemixTestPool } from './lib/config.ts'
 import type * as playwrightSupport from './lib/playwright.ts'
 import { generateCombinedCoverageReport } from './lib/coverage.ts'
 import { createReporter } from './lib/reporters/index.ts'
@@ -18,23 +20,21 @@ import type { Counts } from './lib/reporters/results.ts'
 import { IS_BUN } from './lib/runtime.ts'
 import { isMainThread } from 'node:worker_threads'
 
-export { getRemixTestHelpText }
-
 const MISSING_PLAYWRIGHT_MESSAGE =
   'Playwright is required to run browser and E2E tests. Install it with `npm i -D playwright`.'
 
 /**
  * Options accepted by {@link runRemixTest}.
  */
-export interface RunRemixTestOptions {
+export interface RunRemixTestOptions extends RemixTestConfig {
   /**
-   * Argument vector to parse. When omitted, `process.argv.slice(2)` is used
-   * so the regular CLI flags work transparently.
+   * Path to a test configuration file, resolved from `cwd`. When omitted, the runner looks for
+   * `remix-test.config.ts` and `remix-test.config.js`.
    */
-  argv?: string[]
+  config?: string
   /**
-   * Working directory the runner resolves config and test files against
-   * (default `process.cwd()`).
+   * Working directory the runner resolves configuration and test files against
+   * (`process.cwd()` by default).
    */
   cwd?: string
 }
@@ -49,48 +49,49 @@ interface DiscoveredTests {
 }
 
 /**
- * Programmatic entry point for the `remix-test` CLI. Loads the user's
- * {@link RemixTestConfig}, discovers test files, and runs them through the
- * server/browser/E2E pipelines configured by the project. In watch mode the
- * promise resolves when the user terminates the runner; otherwise it resolves
- * once the run finishes.
+ * Runs Remix tests using structured invocation options. The runner loads the user's
+ * `RemixTestConfig`, discovers test files, and runs them through the server, browser, and E2E
+ * pipelines configured by the project. In watch mode, the promise resolves when the user
+ * terminates the runner; otherwise, it resolves once the run finishes.
  *
- * @param options Optional overrides for the parsed argv and working directory.
- * @returns The exit code the host process should use (`0` on success, `1` on
- *          test failure or unrecoverable error).
+ * @param options Configuration overrides and invocation paths.
+ * @returns The exit code the host process should use (`0` on success, `1` on test failure or an
+ *          unrecoverable error).
  *
  * @example
  * ```ts
- * import { runRemixTest } from '@remix-run/test/cli'
+ * import { runRemixTest } from 'remix/test/cli'
  *
- * let exitCode = await runRemixTest()
- * process.exit(exitCode)
+ * let exitCode = await runRemixTest({
+ *   concurrency: 1,
+ *   cwd: process.cwd(),
+ *   type: ['server'],
+ * })
  * ```
  */
 export async function runRemixTest(options: RunRemixTestOptions = {}): Promise<number> {
-  let argv = options.argv ?? process.argv.slice(2)
-  let cwd = await resolveCwd(options.cwd ?? process.cwd())
+  let { config: configPath, cwd: cwdOption, ...invocationConfig } = options
+  let cwd = await resolveCwd(cwdOption ?? process.cwd())
   let previousCwd = process.cwd()
 
   if (!isMainThread) {
-    return await runRemixTestInCwd(argv, cwd)
+    return await runRemixTestInCwd(invocationConfig, configPath, cwd)
   }
 
   try {
     process.chdir(cwd)
-    return await runRemixTestInCwd(argv, cwd)
+    return await runRemixTestInCwd(invocationConfig, configPath, cwd)
   } finally {
     process.chdir(previousCwd)
   }
 }
 
-async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
-  if (argv.includes('--help') || argv.includes('-h')) {
-    console.log(getRemixTestHelpText())
-    return 0
-  }
-
-  let config = await loadConfig(argv, cwd)
+async function runRemixTestInCwd(
+  invocationConfig: RemixTestConfig,
+  configPath: string | undefined,
+  cwd: string,
+): Promise<number> {
+  let config = await loadConfig(invocationConfig, configPath, cwd)
   let hasExited = false
   let latestExitCode = 0
   let watcher: ReturnType<typeof createWatcher> | undefined
