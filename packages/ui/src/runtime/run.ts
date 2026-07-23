@@ -111,6 +111,7 @@ export function run(init: RunInit): AppRuntime {
     dispose: () => {
       appController.abort()
       topFrame.dispose()
+      styleManager.dispose()
     },
   })
 }

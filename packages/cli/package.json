@@ -54,7 +54,7 @@
     "postpack": "node ../../scripts/sync-cli-template.ts --clean",
     "prepack": "node ../../scripts/sync-cli-template.ts",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test --concurrency 1",
+    "test": "remix test --concurrency 1",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

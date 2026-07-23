@@ -255,9 +255,9 @@
     "lint": "pnpm -w exec oxlint packages/ui --max-warnings=0",
     "lint:fix": "pnpm -w exec oxlint packages/ui --fix --max-warnings=0",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test",
-    "test:coverage": "remix-test --coverage",
-    "test:watch": "remix-test --watch",
+    "test": "remix test",
+    "test:coverage": "remix test --coverage",
+    "test:watch": "remix test --watch",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [

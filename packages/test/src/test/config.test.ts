@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { getRemixTestHelpText, loadConfig } from '../lib/config.ts'
+import { loadConfig } from '../lib/config.ts'
 import { describe, it } from '../lib/framework.ts'
 import { fileURLToPath } from 'node:url'
 
@@ -24,7 +24,7 @@ describe('loadConfig', () => {
         ].join('\n'),
       )
 
-      let config = await loadConfig([], tmp)
+      let config = await loadConfig({}, undefined, tmp)
 
       assert.deepEqual(config.glob.test, ['src/**/*.test.ts'])
       assert.deepEqual(config.glob.browser, ['src/**/*.test.ts'])
@@ -48,7 +48,7 @@ describe('loadConfig', () => {
         ].join('\n'),
       )
 
-      let config = await loadConfig([], tmp)
+      let config = await loadConfig({}, undefined, tmp)
 
       assert.deepEqual(config.project, ['chromium', 'firefox'])
       assert.deepEqual(config.type, ['server', 'browser'])
@@ -57,12 +57,13 @@ describe('loadConfig', () => {
     }
   })
 
-  it('normalizes repeated comma-separated project and type values from CLI flags', async () => {
+  it('normalizes comma-separated project and type invocation options', async () => {
     let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
 
     try {
       let config = await loadConfig(
-        ['--project', 'chromium,firefox', '--project', 'webkit', '--type', 'server,browser'],
+        { project: ['chromium,firefox', 'webkit'], type: ['server,browser'] },
+        undefined,
         tmp,
       )
 
@@ -73,12 +74,13 @@ describe('loadConfig', () => {
     }
   })
 
-  it('normalizes repeated only values from CLI flags', async () => {
+  it('normalizes repeated only invocation options', async () => {
     let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
 
     try {
       let config = await loadConfig(
-        ['--only', 'server > matches', '--only', '/browser/', '--only', '/checkout/i'],
+        { only: ['server > matches', '/browser/', '/checkout/i'] },
+        undefined,
         tmp,
       )
 
@@ -101,7 +103,7 @@ describe('loadConfig', () => {
         ['export default {', "  only: [/server/, /checkout/i, 'browser'],", '}'].join('\n'),
       )
 
-      let config = await loadConfig([], tmp)
+      let config = await loadConfig({}, undefined, tmp)
 
       assert.deepEqual(config.only, [
         { source: 'server', flags: '' },
@@ -118,7 +120,7 @@ describe('loadConfig', () => {
 
     try {
       await assert.rejects(
-        () => loadConfig(['--only', '/(/'], tmp),
+        () => loadConfig({ only: '/(/' }, undefined, tmp),
         (error: unknown) => {
           let message = String(error)
           assert.match(message, /Invalid --only pattern/)
@@ -136,7 +138,7 @@ describe('loadConfig', () => {
 describe('config', () => {
   it('defaults to the forks pool', async () => {
     let cwd = await createConfigDir('default-pool')
-    let config = await loadConfig([], cwd)
+    let config = await loadConfig({}, undefined, cwd)
 
     assert.equal(config.pool, 'forks')
   })
@@ -148,36 +150,28 @@ describe('config', () => {
       `export default { pool: 'threads' }`,
     )
 
-    let config = await loadConfig([], cwd)
+    let config = await loadConfig({}, undefined, cwd)
 
     assert.equal(config.pool, 'threads')
   })
 
-  it('prefers the CLI pool over the config file', async () => {
-    let cwd = await createConfigDir('cli-pool')
+  it('prefers the invocation pool over the config file', async () => {
+    let cwd = await createConfigDir('invocation-pool')
     await fsp.writeFile(
       path.join(cwd, 'remix-test.config.ts'),
       `export default { pool: 'threads' }`,
     )
 
-    let config = await loadConfig(['--pool', 'forks'], cwd)
+    let config = await loadConfig({ pool: 'forks' }, undefined, cwd)
 
     assert.equal(config.pool, 'forks')
   })
 
-  it('prefers the CLI quiet flag over the config file', async () => {
-    let cwd = await createConfigDir('cli-quiet')
+  it('prefers invocation options over the config file', async () => {
+    let cwd = await createConfigDir('invocation-options')
     await fsp.writeFile(path.join(cwd, 'remix-test.config.ts'), `export default { quiet: false }`)
 
-    let config = await loadConfig(['--quiet'], cwd)
-
-    assert.equal(config.quiet, true)
-  })
-
-  it('supports the quiet shorthand flag', async () => {
-    let cwd = await createConfigDir('cli-quiet-shorthand')
-
-    let config = await loadConfig(['-q'], cwd)
+    let config = await loadConfig({ quiet: true }, undefined, cwd)
 
     assert.equal(config.quiet, true)
   })
@@ -186,28 +180,88 @@ describe('config', () => {
     let cwd = await createConfigDir('invalid-pool')
 
     await assert.rejects(
-      () => loadConfig(['--pool', 'workers'], cwd),
+      // @ts-expect-error Runtime validation protects JavaScript callers and untyped config files.
+      () => loadConfig({ pool: 'workers' }, undefined, cwd),
       /Unsupported test pool "workers"/,
     )
   })
 
-  it('includes the pool flag in help text', () => {
-    let help = getRemixTestHelpText()
+  it('loads an explicit config path before applying invocation options', async () => {
+    let cwd = await createConfigDir('explicit-config')
+    await fsp.writeFile(
+      path.join(cwd, 'custom.config.ts'),
+      `export default { concurrency: 2, type: ['browser'] }`,
+    )
 
-    assert.match(help, /--pool <value>/)
+    let config = await loadConfig({ concurrency: 1 }, 'custom.config.ts', cwd)
+
+    assert.equal(config.concurrency, 1)
+    assert.deepEqual(config.type, ['browser'])
   })
 
-  it('includes the quiet flag in help text', () => {
-    let help = getRemixTestHelpText()
+  it('preserves coverage enablement while applying invocation coverage settings', async () => {
+    let cwd = await createConfigDir('coverage-precedence')
+    await fsp.writeFile(
+      path.join(cwd, 'remix-test.config.ts'),
+      `export default { coverage: { dir: 'from-config' } }`,
+    )
 
-    assert.match(help, /--quiet/)
-    assert.match(help, /-q/)
+    let refined = await loadConfig(
+      { coverage: { dir: 'from-invocation', enabled: 'inherit' } },
+      undefined,
+      cwd,
+    )
+    let enabled = await loadConfig({ coverage: { dir: 'enabled-inline' } }, undefined, cwd)
+    let disabled = await loadConfig({ coverage: false }, undefined, cwd)
+    let disabledCwd = await createConfigDir('coverage-settings-only')
+    await fsp.writeFile(
+      path.join(disabledCwd, 'remix-test.config.ts'),
+      `export default { coverage: false }`,
+    )
+    let settingsOnly = await loadConfig(
+      { coverage: { dir: 'settings-only', enabled: 'inherit' } },
+      undefined,
+      disabledCwd,
+    )
+
+    assert.equal(refined.coverage?.dir, 'from-invocation')
+    assert.equal(enabled.coverage?.dir, 'enabled-inline')
+    assert.equal(disabled.coverage, undefined)
+    assert.equal(settingsOnly.coverage, undefined)
   })
 
-  it('includes the only flag in help text', () => {
-    let help = getRemixTestHelpText()
+  it('treats null coverage as disabled', async () => {
+    let cwd = await createConfigDir('null-coverage')
+    await fsp.writeFile(path.join(cwd, 'remix-test.config.ts'), `export default { coverage: null }`)
 
-    assert.match(help, /--only <value>/)
+    let fromFile = await loadConfig({}, undefined, cwd)
+    // @ts-expect-error Runtime validation protects JavaScript callers and untyped config files.
+    let fromInvocation = await loadConfig({ coverage: null }, undefined, cwd)
+
+    assert.equal(fromFile.coverage, undefined)
+    assert.equal(fromInvocation.coverage, undefined)
+  })
+
+  it('rejects invalid concurrency values', async () => {
+    let cwd = await createConfigDir('invalid-concurrency')
+
+    await assert.rejects(
+      () => loadConfig({ concurrency: 'abc' }, undefined, cwd),
+      /Invalid concurrency value "abc"/,
+    )
+    await assert.rejects(
+      () => loadConfig({ concurrency: 0 }, undefined, cwd),
+      /Invalid concurrency value "0"/,
+    )
+  })
+
+  it('rejects non-numeric coverage thresholds', async () => {
+    let cwd = await createConfigDir('invalid-threshold')
+
+    await assert.rejects(
+      () => loadConfig({ coverage: { lines: 'ninety' } }, undefined, cwd),
+      /Invalid coverage\.lines value "ninety"/,
+    )
   })
 })
 

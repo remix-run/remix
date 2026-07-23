@@ -15,7 +15,7 @@ export interface TestServer {
 }
 
 /**
- * Test Context providing utilities for testing via `remix-test`.  The context is
+ * Test Context providing utilities for the Remix test runner. The context is
  * passed as the first argument to the {@link test}/{@link it} functions.
  *
  * @example

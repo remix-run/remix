@@ -14,6 +14,13 @@ interface PackageJsonWithEngines {
   }
 }
 
+interface TestPackageJson extends PackageJsonWithEngines {
+  bin?: Record<string, string>
+  publishConfig: {
+    bin?: Record<string, string>
+  }
+}
+
 interface CliPackageJson extends PackageJsonWithEngines {
   bin?: Record<string, string>
   publishConfig: {
@@ -49,6 +56,14 @@ describe('cli entrypoint', () => {
     assert.equal(fs.existsSync(resolve(PACKAGE_DIR, 'src', 'cli.ts')), false)
   })
 
+  it('does not provide a standalone @remix-run/test executable', () => {
+    let testPackageJson = readTestPackageJson()
+
+    assert.equal(testPackageJson.bin, undefined)
+    assert.equal(testPackageJson.publishConfig.bin, undefined)
+    assert.equal(fs.existsSync(resolve(TEST_PACKAGE_DIR, 'src', 'cli-entry.ts')), false)
+  })
+
   it('declares the Node.js floor for published CLI entrypoints', () => {
     assert.equal(readCliPackageJson().engines.node, '>=24.3.0')
     assert.equal(readRemixPackageJson().engines.node, '>=24.3.0')
@@ -72,8 +87,8 @@ function readCliPackageJson(): CliPackageJson {
   return JSON.parse(fs.readFileSync(resolve(PACKAGE_DIR, 'package.json'), 'utf8')) as CliPackageJson
 }
 
-function readTestPackageJson(): PackageJsonWithEngines {
+function readTestPackageJson(): TestPackageJson {
   return JSON.parse(
     fs.readFileSync(resolve(TEST_PACKAGE_DIR, 'package.json'), 'utf8'),
-  ) as PackageJsonWithEngines
+  ) as TestPackageJson
 }

@@ -76,8 +76,6 @@ export default {
 
   // Code coverage options
   coverage: {
-    // Enable coverage reporting
-    enabled: true,
     // Output directory (default: ".coverage")
     dir: '.coverage',
     // Glob pattern(s) to include/exclude
@@ -143,31 +141,39 @@ remix test --config ./tests/config.ts
 
 You may also specify any config field as a CLI flag which will take precedence over config file values:
 
-| Flag                        | Short     |
-| --------------------------- | --------- | --- |
-| `--browser.echo`            |           |
-| `--browser.open`            |           |
-| `--concurrency <n>`         | `-c`      |
-| `--coverage`                |           |
-| `--coverage.dir <path>`     |           |
-| `--coverage.include`        |           |
-| `--coverage.exclude`        |           |
-| `--coverage.statements`     |           |
-| `--coverage.lines`          |           |
-| `--coverage.branches`       |           |
-| `--coverage.functions`      |           |
-| `--glob.test`               |           |
-| `--glob.browser`            |           |
-| `--glob.e2e`                |           |
-| `--playwrightConfig <path>` |           |
-| `--only <pattern>`          |           |
-| `--pool <forks              | threads>` |     |
-| `--project <name>`          | `-p`      |
-| `--quiet`                   | `-q`      |
-| `--reporter <name>`         | `-r`      |
-| `--setup <path>`            | `-s`      |
-| `--type <name>`             | `-t`      |
-| `--watch`                   | `-w`      |
+| Flag                        | Short |
+| --------------------------- | ----- |
+| `--browser.echo`            |       |
+| `--browser.open`            |       |
+| `--concurrency <n>`         | `-c`  |
+| `--coverage`                |       |
+| `--coverage.dir <path>`     |       |
+| `--coverage.include`        |       |
+| `--coverage.exclude`        |       |
+| `--coverage.statements`     |       |
+| `--coverage.lines`          |       |
+| `--coverage.branches`       |       |
+| `--coverage.functions`      |       |
+| `--glob.test`               |       |
+| `--glob.browser`            |       |
+| `--glob.e2e`                |       |
+| `--glob.exclude`            |       |
+| `--playwrightConfig <path>` |       |
+| `--only <pattern>`          |       |
+| `--pool <forks\|threads>`   |       |
+| `--project <name>`          | `-p`  |
+| `--quiet`                   | `-q`  |
+| `--reporter <name>`         | `-r`  |
+| `--setup <path>`            | `-s`  |
+| `--type <name>`             | `-t`  |
+| `--watch`                   | `-w`  |
+
+The standalone `remix-test` executable is no longer installed. Update scripts to use the main Remix CLI:
+
+```diff
+- "test": "remix-test --type server"
++ "test": "remix test --type server"
+```
 
 ### Focusing Tests
 
@@ -252,12 +258,16 @@ suite('My Test Suite', () => {
 import { runRemixTest } from 'remix/test/cli'
 
 let exitCode = await runRemixTest({
-  argv: ['--type', 'server'],
+  concurrency: 1,
   cwd: process.cwd(),
+  glob: { test: 'src/**/*.test.ts' },
+  type: ['server'],
 })
 ```
 
-`runRemixTest()` returns the runner exit code. The `remix test` bin wrapper calls `process.exit()` with that code when the run finishes so open workers, browsers, or project handles cannot keep the CLI alive.
+Invocation options override values from `remix-test.config.ts`. You may select another config file with the `config` option, and programmatic callers may pass richer values such as an inline Playwright config or `RegExp` test-name filters.
+
+`runRemixTest()` does not read `process.argv` or terminate the process; it returns the runner exit code. The main `remix` executable owns argument parsing and passes the final code to `process.exit()` so open workers, browsers, or project handles cannot keep the CLI alive. `@remix-run/test` does not install a standalone executable.
 
 ### Test Context
 
@@ -479,6 +489,16 @@ export default {
 ```
 
 Set `browser.open: true` to keep the browser open after tests finish — useful for debugging failures.
+
+## Related Packages
+
+- [`assert`](https://github.com/remix-run/remix/tree/main/packages/assert) provides assertions that work in server and browser tests.
+- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) provides the `remix/ui/test` browser rendering utilities.
+
+## Related Work
+
+- [Playwright](https://playwright.dev) provides the browser automation used by browser and E2E tests.
+- [Node.js test runner](https://nodejs.org/api/test.html) provides prior art for the test framework API and reporting model.
 
 ## License
 

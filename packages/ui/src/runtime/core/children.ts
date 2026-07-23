@@ -13,8 +13,8 @@ export function isPrimitiveChild(value: RemixNode): value is PrimitiveChild {
 }
 
 export function normalizeChildren(children: readonly RemixNode[]): RemixNode[] {
-  for (let child of children) {
-    if (Array.isArray(child)) {
+  for (let i = 0; i < children.length; i++) {
+    if (Array.isArray(children[i])) {
       return (children as unknown[]).flat(Infinity) as RemixNode[]
     }
   }

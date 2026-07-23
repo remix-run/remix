@@ -754,7 +754,7 @@
     "prepack": "pnpm run sync-readmes",
     "prepublishOnly": "pnpm run build",
     "sync-readmes": "node ../../scripts/sync-remix-readmes.ts",
-    "test": "remix-test",
+    "test": "remix test",
     "typecheck": "tsc --noEmit"
   },
   "bin": {

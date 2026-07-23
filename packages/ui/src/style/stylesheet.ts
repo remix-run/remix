@@ -1,6 +1,26 @@
 import { REMIX_UI_STYLE_LAYER } from './layers.ts'
 
-type RuleEntry = { count: number; index: number }
+// # Style ownership model
+//
+// Rules are content-addressed: a class name is a hash of the style object that
+// produced it, so `.rmxc-x` always means the same declarations. A rule can
+// never become *wrong* — only unused. That observation drives a two-tier
+// lifetime model on a single document-level registry:
+//
+// - **Server-adopted rules are pinned.** Once a `<style data-rmx>` tag is
+//   adopted, its rule stays for the life of the manager. Frame reloads,
+//   island hydration, and streamed templates never need to agree on which
+//   scope "owns" a shared rule — adoption is additive and idempotent, and the
+//   registry is bounded by the set of unique style objects the server ever
+//   renders, not by render count.
+//
+// - **Client-inserted rules are refcounted.** Dynamic style objects (e.g.
+//   interpolated values) mint a new class per distinct value, so rules that
+//   only ever existed client-side are dropped when the last css mixin using
+//   them releases its ref. A refcounted rule upgrades to pinned if a server
+//   tag for the same selector is adopted later.
+
+type RuleEntry = { count: number; index: number; pinned: boolean }
 export type ServerStyleSource = ParentNode | Iterable<Node>
 
 export interface StyleManager {
@@ -10,7 +30,6 @@ export interface StyleManager {
   getGeneration(): number
   reset(): void
   adoptServerStyles(source: ServerStyleSource): Set<string>
-  replaceServerStyles(source: ServerStyleSource): void
   selectors(): IterableIterator<string>
   dispose(): void
 }
@@ -84,16 +103,7 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
   let stylesheet: CSSStyleSheet | null = null
   let generation = 0
 
-  // Track usage count and rule index per className
-  // Using an object to track both count and index together
   let ruleMap = new Map<string, RuleEntry>()
-
-  // Selectors currently held by a server-style adoption ref. We track this
-  // separately from `ruleMap` so `replaceServerStyles` can release only the
-  // adoption refs of selectors absent from the next page, without disturbing
-  // selectors that exist solely because a client-side css mixin inserted them
-  // (e.g. transient UI state that the server never rendered).
-  let adoptedSelectors = new Set<string>()
 
   function getStylesheet(): CSSStyleSheet {
     if (!stylesheet) {
@@ -122,15 +132,11 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
     let selector = getStyleSelector(styleEl)
     if (!selector) return undefined
 
-    if (ruleMap.has(selector)) {
-      // Already tracked. Take an adoption ref if we don't already have one —
-      // the rule may have been inserted by a client-side css mixin first and
-      // the SSR'd style tag arrived afterwards (e.g. a streamed fragment).
-      if (!adoptedSelectors.has(selector)) {
-        let entry = ruleMap.get(selector)!
-        entry.count++
-        adoptedSelectors.add(selector)
-      }
+    let entry = ruleMap.get(selector)
+    if (entry) {
+      // The rule already exists — either a previous adoption or a client-side
+      // css mixin inserted it first. Pin it so it outlives any mixin refs.
+      entry.pinned = true
       styleEl.remove()
       return selector
     }
@@ -145,8 +151,7 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
       let sheet = getStylesheet()
       let index = sheet.cssRules.length
       sheet.insertRule(cssText, index)
-      ruleMap.set(selector, { count: 1, index })
-      adoptedSelectors.add(selector)
+      ruleMap.set(selector, { count: 0, index, pinned: true })
       styleEl.remove()
       return selector
     } catch {
@@ -157,7 +162,7 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
 
   function has(className: string) {
     let entry = ruleMap.get(className)
-    return entry !== undefined && entry.count > 0
+    return entry !== undefined && (entry.pinned || entry.count > 0)
   }
 
   function getGeneration() {
@@ -168,8 +173,8 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
     let entry = ruleMap.get(className)
 
     if (entry) {
-      // Already exists, just increment count
-      entry.count++
+      // Pinned rules are permanent; there is nothing to count.
+      if (!entry.pinned) entry.count++
       return
     }
 
@@ -179,13 +184,13 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
     // This may throw for invalid CSS. If it does, we intentionally let it
     // bubble so the rule is not tracked unless insertion actually succeeds.
     sheet.insertRule(`@layer ${getStyleLayerName(className, layer)} { ${rule} }`, index)
-    ruleMap.set(className, { count: 1, index })
+    ruleMap.set(className, { count: 1, index, pinned: false })
   }
 
   function remove(className: string) {
     let entry = ruleMap.get(className)
 
-    if (!entry) return
+    if (!entry || entry.pinned) return
 
     // Decrement count
     entry.count--
@@ -200,9 +205,7 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
 
     // Remove from tracking
     ruleMap.delete(className)
-    adoptedSelectors.delete(className)
 
-    // TODO: just search and remove, stop re-indexing
     if (!stylesheet) return
     stylesheet.deleteRule(indexToDelete)
 
@@ -218,7 +221,6 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
   function reset() {
     clearStylesheet()
     ruleMap.clear()
-    adoptedSelectors.clear()
     removeStylesheet()
     generation++
   }
@@ -235,31 +237,6 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
     return adopted
   }
 
-  // Snapshot the currently-adopted server selectors, adopt the incoming
-  // server styles additively, then release the adoption ref of any prior-only
-  // selectors.
-  //
-  // Refcount-aware semantics keep preserved DOM styled: a prior-only selector
-  // with no live css-mixin ref drops immediately, but one still referenced by
-  // an active mixin (e.g. inside a hydration region that the DOM diff skipped)
-  // stays in the stylesheet and is only fully removed when that mixin's
-  // `remove` event eventually fires. This avoids the FOUC that a hard
-  // `reset()` would cause between the style swap and the hydration re-render.
-  //
-  // Only adoption refs are considered — selectors that exist solely because a
-  // client-side css mixin inserted them (e.g. transient UI state never
-  // rendered by the server) are unaffected.
-  function replaceServerStyles(source: ServerStyleSource): void {
-    let prior = new Set(adoptedSelectors)
-    let adopted = adoptServerStyles(source)
-    for (let selector of prior) {
-      if (!adopted.has(selector)) {
-        adoptedSelectors.delete(selector)
-        remove(selector)
-      }
-    }
-  }
-
   function selectors(): IterableIterator<string> {
     return ruleMap.keys()
   }
@@ -268,7 +245,6 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
     removeStylesheet()
     // Clear internal state
     ruleMap.clear()
-    adoptedSelectors.clear()
     generation++
   }
 
@@ -279,7 +255,6 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
     getGeneration,
     reset,
     adoptServerStyles,
-    replaceServerStyles,
     selectors,
     dispose,
   }
