@@ -224,9 +224,11 @@ describe('form navigation', () => {
     document.body.textContent = ''
   })
 
-  it('replaces POST submission history before commit when supported', async (t) => {
+  it('replaces same-location POST submission history before commit when supported', async (t) => {
     let navigateListener: EventListener | undefined
+    let destinationUrl = window.location.href
     let stubNavigation = {
+      currentEntry: { url: destinationUrl },
       updateCurrentEntry: mock.fn(),
       addEventListener(type: string, listener: EventListener) {
         if (type === 'navigate') navigateListener = listener
@@ -261,7 +263,6 @@ describe('form navigation', () => {
         precommitHandler = (controller) => candidate(controller)
       }
     })
-    let destinationUrl = new URL('/account', window.location.origin).href
     let event = createFormNavigateEvent(form, { intercept, destinationUrl, cancelable: true })
 
     navigateListener?.(event)
@@ -277,13 +278,15 @@ describe('form navigation', () => {
     controller.abort()
   })
 
-  it('replays POST submissions as replace navigations without precommit support', async (t) => {
+  it('replays same-location POST submissions as replace navigations without precommit support', async (t) => {
     let navigateListener: EventListener | undefined
+    let destinationUrl = window.location.href
     let navigate = mock.fn((_url: string, _options?: NavigationNavigateOptions) => ({
       committed: Promise.resolve(undefined),
       finished: Promise.resolve(undefined),
     }))
     let stubNavigation = {
+      currentEntry: { url: destinationUrl },
       navigate,
       updateCurrentEntry: mock.fn(),
       addEventListener(type: string, listener: EventListener) {
@@ -309,7 +312,6 @@ describe('form navigation', () => {
     input.value = 'Ada'
     form.append(input)
 
-    let destinationUrl = new URL('/account', window.location.origin).href
     let initialIntercept = mock.fn()
     let initialEvent = createFormNavigateEvent(form, {
       intercept: initialIntercept,
@@ -353,6 +355,40 @@ describe('form navigation', () => {
     expect(reload).toHaveBeenCalledTimes(1)
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
+
+    controller.abort()
+  })
+
+  it('does not replace POST submission history for a different location', (t) => {
+    let navigateListener: EventListener | undefined
+    let stubNavigation = {
+      currentEntry: { url: window.location.href },
+      updateCurrentEntry: mock.fn(),
+      addEventListener(type: string, listener: EventListener) {
+        if (type === 'navigate') navigateListener = listener
+      },
+    }
+    stubGlobalField(t, 'navigation', stubNavigation)
+    stubGlobalField(t, 'NavigationPrecommitController', class {})
+
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, stubFrames)
+
+    let form = document.createElement('form')
+    form.method = 'post'
+    let interceptOptions: NavigationInterceptOptions | undefined
+    navigateListener?.(
+      createFormNavigateEvent(form, {
+        intercept(options) {
+          interceptOptions = options
+        },
+        destinationUrl: new URL('/account', window.location.origin).href,
+        cancelable: true,
+      }),
+    )
+
+    expect(interceptOptions).toBeDefined()
+    expect(interceptOptions && Reflect.has(interceptOptions, 'precommitHandler')).toBe(false)
 
     controller.abort()
   })

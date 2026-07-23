@@ -213,7 +213,7 @@ When `run({ resolveFrame })` is active, eligible same-origin form submissions us
 
 The browser already includes GET form values in `src`; the runtime also forwards the browser's native form entry list as `formData`. For other methods, use `formData`, `method`, and `encType` to choose the request body in your resolver. For example, a resolver may send `FormData` directly for `multipart/form-data`, convert it to `URLSearchParams` for `application/x-www-form-urlencoded`, or apply an application-specific encoding policy.
 
-Enhanced non-GET submissions replace the current navigation history entry instead of pushing a new one. Their `FormData` is used only for the active frame reload and is not retained in history. GET submissions continue to push entries because their values are represented in the destination URL.
+Enhanced non-GET submissions to the current URL replace its navigation history entry instead of pushing a duplicate. Submissions to a different URL push a new entry, as do GET submissions whose values are represented in the destination URL. Non-GET `FormData` is used only for the active frame reload and is not retained in history.
 
 Forms work as normal document submissions before the client runtime loads and whenever they use `rmx-document`, so this behavior remains progressively enhanced.
 

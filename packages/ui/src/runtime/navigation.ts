@@ -321,7 +321,9 @@ function getSourceElementNavigation(
       resetScroll: getSubmissionAttribute(form, submitter, 'rmx-reset-scroll') !== 'false',
       $rmx: true,
     },
-    replaceHistory: method.toLowerCase() !== 'get',
+    replaceHistory:
+      method.toLowerCase() !== 'get' &&
+      event.destination.url === window.navigation.currentEntry?.url,
     async getReloadOptions() {
       // Chromium dispatches `formdata` after `navigate`; let the browser provide the
       // submitted entry list instead of constructing another FormData and firing a duplicate event.
