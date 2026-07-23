@@ -252,12 +252,12 @@ suite('My Test Suite', () => {
 
 ### Programmatic runner
 
-`remix/test/cli` exports `runRemixTest()` for tools that want to run the test runner without exiting the current process:
+`remix/test/cli` exports `runTests()` for tools that want to run the test runner without exiting the current process:
 
 ```ts
-import { runRemixTest } from 'remix/test/cli'
+import { runTests } from 'remix/test/cli'
 
-let exitCode = await runRemixTest({
+let exitCode = await runTests({
   concurrency: 1,
   cwd: process.cwd(),
   glob: { test: 'src/**/*.test.ts' },
@@ -267,7 +267,7 @@ let exitCode = await runRemixTest({
 
 Invocation options override values from `remix-test.config.ts`. You may select another config file with the `config` option, and programmatic callers may pass richer values such as an inline Playwright config or `RegExp` test-name filters.
 
-`runRemixTest()` does not read `process.argv` or terminate the process; it returns the runner exit code. The main `remix` executable owns argument parsing and passes the final code to `process.exit()` so open workers, browsers, or project handles cannot keep the CLI alive. `@remix-run/test` does not install a standalone executable.
+`runTests()` does not read `process.argv` or terminate the process; it returns the runner exit code. The main `remix` executable owns argument parsing and passes the final code to `process.exit()` so open workers, browsers, or project handles cannot keep the CLI alive. `@remix-run/test` does not install a standalone executable.
 
 ### Test Context
 

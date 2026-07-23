@@ -5,7 +5,7 @@ import { stripVTControlCharacters } from 'node:util'
 import { fileURLToPath } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { runRemixTest } from '@remix-run/test/cli'
+import { runTests } from '@remix-run/test/cli'
 
 import { runRemix } from '../../index.ts'
 import { captureOutput } from '../../../test/capture-output.ts'
@@ -64,7 +64,7 @@ describe('test command', () => {
       await writeTestProject(projectDir)
 
       let result = await captureOutput(() =>
-        runRemixTest({
+        runTests({
           concurrency: 1,
           cwd: projectDir,
           glob: { test: 'sample.test.ts' },

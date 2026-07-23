@@ -269,7 +269,7 @@ Use this map to find the right package quickly. Each entry says what the package
 ### Test
 
 - `remix/test` — `describe`, `it`, and lifecycle hooks. Use as the test framework
-- `remix/test/cli` — programmatic test runner APIs such as `runRemixTest`
+- `remix/test/cli` — programmatic test runner APIs such as `runTests`
 - `remix/node-fetch-server/test` — `createTestServer` for end-to-end tests that need a real local HTTP server around a Fetch handler
 - `remix/cli` — programmatic Remix CLI API. Use the `remix` executable for project commands such as `remix test`, `remix routes`, `remix doctor`, and `remix version`
 - `remix/assert` — assertion helpers. Use in place of `node:assert` so messages render cleanly in the runner

@@ -161,9 +161,9 @@ export async function runTestCommand(argv: string[], context: CliContext): Promi
   }
 
   try {
-    let { remixTestPools, runRemixTest } = await import('@remix-run/test/cli')
+    let { remixTestPools, runTests } = await import('@remix-run/test/cli')
     let options = parseTestCommandArgs(argv, remixTestPools)
-    return await runRemixTest({ ...options, cwd: context.cwd })
+    return await runTests({ ...options, cwd: context.cwd })
   } catch (error) {
     process.stderr.write(
       renderCliError(toCliError(error), {
