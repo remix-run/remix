@@ -58,14 +58,16 @@ The `remix/node-tsx` loader transforms source at runtime and does not typecheck 
 The session and asset modules from earlier chapters already reject a missing `SESSION_SECRET` or production `RELEASE_ID` when they are imported. Keep those checks at the modules that consume the values. Add the server-owned public origin and port to a small configuration module:
 
 ```ts filename=app/config.ts
-function required(name: string): string {
-  let value = process.env[name]?.trim();
+function required(name: string, testValue?: string): string {
+  let value =
+    process.env[name]?.trim() ||
+    (process.env.NODE_ENV === "test" ? testValue : undefined);
   if (!value) throw new Error(`${name} is required`);
   return value;
 }
 
-function origin(name: string): URL {
-  let value = new URL(required(name));
+function origin(name: string, testValue?: string): URL {
+  let value = new URL(required(name, testValue));
   if (
     value.username ||
     value.password ||
@@ -92,7 +94,7 @@ function port(name: string, fallback: number): number {
 }
 
 export const config = Object.freeze({
-  origin: origin("APP_ORIGIN"),
+  origin: origin("APP_ORIGIN", "https://albums.test"),
   port: port("PORT", 44100),
 });
 
@@ -102,6 +104,17 @@ if (
 ) {
   throw new Error("APP_ORIGIN must use HTTPS in production");
 }
+```
+
+The auth module from [Auth, Sessions, and Security](/auth-sessions-security/) performed this same `APP_ORIGIN` validation inline. Now that a configuration module owns that parse, consume it there so the origin is validated once:
+
+```ts filename=app/auth.ts
+// Replace the appOrigin parsing added in the auth chapter. requiredEnv
+// stays for the provider credentials; the Google redirectUri keeps
+// resolving against this value.
+import { config } from "./config.ts";
+
+let appOrigin = config.origin;
 ```
 
 Database and storage URLs, provider credentials, and encryption keys belong at the startup boundary of the module that constructs that service. Validate values, not only presence: a path-bearing public origin and `PORT=not-a-number` should not become running configuration. The session module's byte-length check rejects obviously weak secrets, but deployment tooling should still generate them from a cryptographically secure random source.

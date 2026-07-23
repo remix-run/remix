@@ -24,7 +24,7 @@ A controller that returns the wrong status belongs in a router test. A submit bu
 
 ## Run tests with remix test
 
-Add a test script to `package.json`:
+The generated app's `test` script runs Node's built-in test runner. Replace it in `package.json` so the suite runs through `remix test` instead:
 
 ```json filename=package.json
 {
@@ -44,11 +44,11 @@ npm test
 
 By default, the runner maps each runner type to a file pattern and execution model:
 
-| Runner type | File pattern                 | Execution model                          |
-| ----------- | ---------------------------- | ---------------------------------------- |
-| `server`    | `**/*.test.{ts,tsx}`         | Server-side test worker                  |
-| `browser`   | `**/*.test.browser.{ts,tsx}` | Isolated browser frame via Playwright    |
-| `e2e`       | `**/*.test.e2e.{ts,tsx}`     | Test worker driving a Playwright browser |
+| Runner type | File pattern                                     | Execution model                          |
+| ----------- | ------------------------------------------------ | ---------------------------------------- |
+| `server`    | `**/*.test.{ts,tsx}` minus the two rows below    | Server-side test worker                  |
+| `browser`   | `**/*.test.browser.{ts,tsx}`                     | Isolated browser frame via Playwright    |
+| `e2e`       | `**/*.test.e2e.{ts,tsx}`                         | Test worker driving a Playwright browser |
 
 The `server` runner type covers both unit tests and router tests. It describes the execution model, not the test boundary.
 
@@ -538,7 +538,8 @@ export async function createTestRouter() {
       ownerId: "user_1",
       revision: 0,
       title: "Thriller",
-      year: 1981,
+      // Seed the wrong year from the quickstart so the e2e edit changes it.
+      year: 1983,
     },
   });
   try {

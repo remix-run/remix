@@ -76,7 +76,7 @@ async assets(context) {
 
 ## Browser modules, CSS, and file assets {#browser-modules-asset-roots-and-package-mounts}
 
-Put browser-loadable source under the allowed directory. The generated client entry is `app/assets/entry.ts`:
+Put browser-loadable source under the allowed directory. The client entry built in [Interactivity](/interactivity/) lives at `app/assets/entry.ts`. Update its `resolveFrame` with a response-origin check and the `401` login contract from [Auth, Sessions, and Security](/auth-sessions-security/):
 
 ```ts filename=app/assets/entry.ts
 import type { FrameContent } from "remix/ui";

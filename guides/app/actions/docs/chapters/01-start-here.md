@@ -27,13 +27,13 @@ The quickest way to start a Remix app is with the `remix` CLI. It creates a smal
 First run:
 
 ```sh
-npx remix@next new my-remix-app
+npx remix@next new record-store
 ```
 
 Next, install the project dependencies:
 
 ```sh
-cd my-remix-app
+cd record-store
 npm i
 ```
 
@@ -41,7 +41,7 @@ A note on the dependencies: go ahead and open `package.json` and you will see on
 
 ```json filename=package.json
 {
-  "name": "my-remix-app",
+  "name": "record-store",
   "private": true,
   "type": "module",
   "dependencies": {
@@ -69,7 +69,7 @@ A typical Remix application keeps the request flow visible in the file structure
 That flow gives all of your code a clear home: define routes in `routes.ts`, connect middleware, routes, and controllers in `router.ts`, handle route-specific behavior in `actions/`, put shared views and layouts in `ui/`, and keep browser-loadable modules under `app/assets/`.
 
 ```txt
-my-remix-app/
+record-store/
 ├── server.ts              # request entrypoint for this runtime
 └── app/
     ├── routes.ts          # route definitions, route map, and URL helpers

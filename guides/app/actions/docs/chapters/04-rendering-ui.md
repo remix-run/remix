@@ -35,7 +35,7 @@ export function AlbumCard(handle: Handle<{ album: Album }>) {
 
 `Handle<Props>` describes the JSX props accepted by the component. Read their current values from `handle.props` inside the render function. The render function may return elements, strings, numbers, arrays, `null`, or any other `RemixNode` value.
 
-Components compose through ordinary JSX:
+Components compose through ordinary JSX. This rewrite replaces the quickstart's inline `AlbumPage` markup with the extracted card:
 
 ```tsx filename=app/actions/albums/show-page.tsx
 import type { Handle } from "remix/ui";
@@ -135,7 +135,7 @@ Event listeners, DOM references, and browser-only cleanup enter the picture afte
 
 Components describe output, but controller actions still return Web `Response` objects. The bridge between those two APIs belongs in render middleware.
 
-Create `app/middleware/render.tsx` and install a renderer with `renderWith(...)`:
+The scaffold from [Start Here](/start-here/) already ships `app/middleware/render.tsx`. Replace it with the version this chapter builds so each piece is explicit, starting with a renderer installed through `renderWith(...)`:
 
 ```tsx filename=app/middleware/render.tsx
 import * as path from "node:path";

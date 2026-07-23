@@ -3,6 +3,8 @@ title: Animation
 description: The CSS-first animation model and Remix UI helpers for motion that respects rendering state.
 ---
 
+[Interactivity](/interactivity/) left the album app hydrating client entries and reloading frames; every one of those DOM changes is a place motion can help or hurt. This chapter steps away from the cumulative walkthrough for a moment and covers the animation model with small self-contained examples, so each technique is visible on its own before you apply it to the app's own components.
+
 ## CSS-first visual states {#css-first-visual-states}
 
 Start with CSS when the browser already owns the state. Hover, focus, active, checked, open, selected, and reduced-motion states do not need JavaScript state unless your render output also depends on them.
@@ -350,3 +352,5 @@ export function prefersReducedMotion() {
 ```
 
 Reduced motion does not have to mean no feedback. Prefer shorter fades, instant layout changes, or non-motion state changes when movement is not essential.
+
+With motion under control, the walkthrough returns to the cumulative album app: [Data and Validation](/data-and-validation/) replaces its in-memory album array with validated input and a real database.
