@@ -1,0 +1,18 @@
+{
+  "$schema": "https://remix.run/schemas/remix.json",
+  "test": {
+    "files": ["**/*.test.{ts,tsx}"],
+    "browserFiles": ["**/*.test.{ts,tsx}"],
+    "playwright": {
+      "configFile": "./playwright.config.ts"
+    },
+    "coverage": {
+      "enabled": false,
+      "include": ["src/**/*.{ts,tsx}"],
+      "statements": 85,
+      "branches": 85,
+      "functions": 85,
+      "lines": 85
+    }
+  }
+}

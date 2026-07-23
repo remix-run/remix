@@ -61,6 +61,10 @@ export function getCompletionResult(words: string[], currentIndex: number): Comp
   let currentWord = words[resolvedIndex] ?? ''
   let tokens = getTokensBeforeCursor(words, resolvedIndex)
 
+  if (currentWord.startsWith('--config=')) {
+    return { mode: 'files' }
+  }
+
   return completeTopLevel(tokens, currentWord)
 }
 
@@ -90,7 +94,9 @@ if type complete &>/dev/null; then
     local lines
 
     if type _get_comp_words_by_ref &>/dev/null; then
-      _get_comp_words_by_ref -w words -i cword
+      # -n = keeps --config=<path> together as one word; bash's default
+      # COMP_WORDBREAKS would otherwise split it at the equals sign.
+      _get_comp_words_by_ref -n = -w words -i cword
     else
       cword="$COMP_CWORD"
       words=("\${COMP_WORDS[@]}")
@@ -109,7 +115,15 @@ if type complete &>/dev/null; then
     fi
 
     if [[ "$mode" == "mode:files" ]]; then
-      COMPREPLY=($(compgen -f -- "$current"))
+      if [[ "$current" == --config=* ]]; then
+        # Readline still breaks the insertion point at '=', so complete the
+        # path portion alone; prefixing --config= would duplicate the flag.
+        local config_value
+        config_value="\${current#--config=}"
+        COMPREPLY=($(compgen -f -- "$config_value"))
+      else
+        COMPREPLY=($(compgen -f -- "$current"))
+      fi
       return 0
     fi
 
@@ -135,6 +149,9 @@ elif type compdef &>/dev/null; then
     fi
 
     if [[ "$mode" == "mode:files" ]]; then
+      if [[ "\${words[CURRENT]}" == --config=* ]]; then
+        compset -P '--config='
+      fi
       if autoload -U +X _files 2>/dev/null; then
         _files
       else
@@ -158,6 +175,19 @@ function completeTopLevel(tokens: string[], currentWord: string): CompletionResu
 
   while (index < tokens.length) {
     let token = tokens[index]
+
+    if (token === '--config') {
+      usedFlags.add('--config')
+      if (tokens[index + 1] === undefined) return { mode: 'files' }
+      index += 2
+      continue
+    }
+
+    if (token.startsWith('--config=')) {
+      usedFlags.add('--config')
+      index++
+      continue
+    }
 
     if (token === '--no-color') {
       usedFlags.add('--no-color')
@@ -187,6 +217,10 @@ function completeCommand(
   currentWord: string,
   usedGlobalFlags: Set<string>,
 ): CompletionResult {
+  if (expectsGlobalConfigValue(tokens)) {
+    return { mode: 'files' }
+  }
+
   if (command === 'help') {
     return completeHelp(tokens, currentWord, usedGlobalFlags)
   }
@@ -566,6 +600,7 @@ function completeSimpleFlags(
 
 function getTopLevelSuggestions(currentWord: string, usedFlags: Set<string>): string[] {
   let flags = [
+    ...(!usedFlags.has('--config') ? ['--config'] : []),
     ...(!usedFlags.has('-h') ? ['-h', '--help'] : []),
     ...(!usedFlags.has('--no-color') ? ['--no-color'] : []),
     ...(!usedFlags.has('-v') ? ['-v', '--version'] : []),
@@ -581,6 +616,7 @@ function getTopLevelSuggestions(currentWord: string, usedFlags: Set<string>): st
 function withHelpFlags(values: string[], usedGlobalFlags: Set<string>): string[] {
   return [
     ...values,
+    ...(!usedGlobalFlags.has('--config') ? ['--config'] : []),
     ...(!usedGlobalFlags.has('-h') ? ['-h', '--help'] : []),
     ...(!usedGlobalFlags.has('--no-color') ? ['--no-color'] : []),
   ]
@@ -592,7 +628,20 @@ function filterGlobalCommandTokens(
 ): string[] | null {
   let filtered: string[] = []
 
-  for (let token of tokens) {
+  for (let index = 0; index < tokens.length; index++) {
+    let token = tokens[index]!
+
+    if (token === '--config') {
+      usedGlobalFlags.add('--config')
+      index++
+      continue
+    }
+
+    if (token.startsWith('--config=')) {
+      usedGlobalFlags.add('--config')
+      continue
+    }
+
     if (token === '--no-color') {
       usedGlobalFlags.add('--no-color')
       continue
@@ -607,6 +656,23 @@ function filterGlobalCommandTokens(
   }
 
   return filtered
+}
+
+function expectsGlobalConfigValue(tokens: string[]): boolean {
+  let expectsValue = false
+
+  for (let token of tokens) {
+    if (expectsValue) {
+      expectsValue = false
+      continue
+    }
+
+    if (token === '--config') {
+      expectsValue = true
+    }
+  }
+
+  return expectsValue
 }
 
 function completeValues(values: string[], currentWord: string): CompletionResult {

@@ -17,6 +17,7 @@ describe('completion engine', () => {
       'routes',
       'test',
       'version',
+      '--config',
       '-h',
       '--help',
       '--no-color',
@@ -38,6 +39,7 @@ describe('completion engine', () => {
       'routes',
       'test',
       'version',
+      '--config',
       '-h',
       '--help',
       '--no-color',
@@ -58,22 +60,23 @@ describe('completion engine', () => {
       'seed',
       'status',
       'wipe',
+      '--config',
       '-h',
       '--help',
       '--no-color',
     ])
 
     assert.equal(wipeFlags.mode, 'values')
-    assert.deepEqual(wipeFlags.values, ['--force', '-h', '--help', '--no-color'])
+    assert.deepEqual(wipeFlags.values, ['--force', '--config', '-h', '--help', '--no-color'])
 
     assert.equal(resetFlags.mode, 'values')
-    assert.deepEqual(resetFlags.values, ['-h', '--help', '--no-color'])
+    assert.deepEqual(resetFlags.values, ['--config', '-h', '--help', '--no-color'])
 
     assert.equal(migrateFlags.mode, 'values')
-    assert.deepEqual(migrateFlags.values, ['--to', '-h', '--help', '--no-color'])
+    assert.deepEqual(migrateFlags.values, ['--to', '--config', '-h', '--help', '--no-color'])
 
     assert.equal(seedFlags.mode, 'values')
-    assert.deepEqual(seedFlags.values, ['-h', '--help', '--no-color'])
+    assert.deepEqual(seedFlags.values, ['--config', '-h', '--help', '--no-color'])
   })
 
   it('returns no completions for free-text migration targets', () => {
@@ -98,7 +101,7 @@ describe('completion engine', () => {
     let result = getCompletionResult(['remix', 'doctor', '--json', ''], 3)
 
     assert.equal(result.mode, 'values')
-    assert.deepEqual(result.values, ['--fix', '--strict', '-h', '--help', '--no-color'])
+    assert.deepEqual(result.values, ['--fix', '--strict', '--config', '-h', '--help', '--no-color'])
   })
 
   it('filters invalid routes flag combinations', () => {
@@ -106,12 +109,13 @@ describe('completion engine', () => {
     let tableResult = getCompletionResult(['remix', 'routes', '--table', ''], 3)
 
     assert.equal(jsonResult.mode, 'values')
-    assert.deepEqual(jsonResult.values, ['-h', '--help', '--no-color'])
+    assert.deepEqual(jsonResult.values, ['--config', '-h', '--help', '--no-color'])
 
     assert.equal(tableResult.mode, 'values')
     assert.deepEqual(tableResult.values, [
       '--no-headers',
       '--verbose',
+      '--config',
       '-h',
       '--help',
       '--no-color',
@@ -157,9 +161,14 @@ describe('completion engine', () => {
 
   it('uses file completion for test path flags and does not repeat singular flags', () => {
     let configValue = getCompletionResult(['remix', 'test', '--config', ''], 3)
+    let inlineConfigValue = getCompletionResult(['remix', 'test', '--config=custom'], 2)
+    let usedConfig = getCompletionResult(['remix', 'test', '--config=custom.json', ''], 3)
     let usedCoverage = getCompletionResult(['remix', 'test', '--coverage', ''], 3)
 
     assert.deepEqual(configValue, { mode: 'files' })
+    assert.deepEqual(inlineConfigValue, { mode: 'files' })
+    assert.equal(usedConfig.mode, 'values')
+    assert.ok(!usedConfig.values?.includes('--config'))
     assert.equal(usedCoverage.mode, 'values')
     assert.ok(!usedCoverage.values?.includes('--coverage'))
     assert.ok(usedCoverage.values?.includes('--coverage.include'))
@@ -204,5 +213,13 @@ describe('completion script', () => {
 
     assert.match(script, /remix completion -- "\$cword" "\$\{words\[@\]\}"/)
     assert.match(script, /remix completion -- "\$\(\(CURRENT - 1\)\)" "\$\{words\[@\]\}"/)
+  })
+
+  it('completes the file portion of inline config flags', () => {
+    let script = getCompletionScript()
+
+    assert.match(script, /_get_comp_words_by_ref -n = -w words -i cword/)
+    assert.match(script, /compgen -f -- "\$config_value"/)
+    assert.match(script, /compset -P '--config='/)
   })
 })
