@@ -1,0 +1,1 @@
+{"version":3,"file":"database-command.d.ts","sourceRoot":"","sources":["../../src/lib/database-command.ts"],"names":[],"mappings":"AAEA,MAAM,MAAM,eAAe,GAAG,SAAS,GAAG,OAAO,GAAG,MAAM,GAAG,QAAQ,GAAG,MAAM,CAAA;AAE9E,MAAM,WAAW,yBAAyB;IACxC,OAAO,EAAE,eAAe,CAAA;IACxB,EAAE,CAAC,EAAE,MAAM,CAAA;CACZ;AAED,wBAAgB,iBAAiB,CAAC,KAAK,EAAE,OAAO,GAAG,KAAK,IAAI,eAAe,CAQ1E"}
