@@ -334,9 +334,9 @@ pnpm run bench:update-readme
 
 <!-- benchmarks:start -->
 
-Last updated: 2026-07-23T14:50:52.104Z
+Last updated: 2026-07-23T20:29:32.942Z
 
-Environment: Darwin 25.5.0, Apple M4 Pro, Node.js v24.15.0
+Environment: Darwin 25.4.0, Apple M5 Pro, Node.js v24.18.0
 
 Command: `wrk -t12 -c400 -d30s`
 
@@ -346,9 +346,9 @@ Simple HTML response benchmarks without inspecting the incoming request.
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `node:http`               | `24.15.0` |     `50,034` |    `7.88ms` |    `10.26MB` |
-| `remix/node-fetch-server` |  `0.14.0` |     `45,593` |   `11.16ms` |     `9.26MB` |
-| `express`                 |   `5.2.1` |     `41,977` |    `9.39ms` |    `10.13MB` |
+| `node:http`               | `24.18.0` |     `66,594` |    `5.96ms` |    `13.65MB` |
+| `remix/node-fetch-server` |  `0.14.0` |     `61,587` |    `7.88ms` |    `12.51MB` |
+| `express`                 |   `5.2.1` |     `58,424` |    `8.42ms` |    `14.10MB` |
 
 ### Small Body
 
@@ -356,9 +356,9 @@ POST benchmarks that read and print the request method, headers, and a small bod
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `node:http`               | `24.15.0` |     `28,696` |   `20.22ms` |     `5.88MB` |
-| `express`                 |   `5.2.1` |     `26,227` |   `23.51ms` |     `6.33MB` |
-| `remix/node-fetch-server` |  `0.14.0` |     `22,539` |   `27.00ms` |     `4.58MB` |
+| `node:http`               | `24.18.0` |     `35,303` |   `15.60ms` |     `7.24MB` |
+| `express`                 |   `5.2.1` |     `32,614` |   `16.93ms` |     `7.87MB` |
+| `remix/node-fetch-server` |  `0.14.0` |     `29,521` |   `18.98ms` |     `6.00MB` |
 
 ### Large Body
 
@@ -366,9 +366,9 @@ POST benchmarks that read and print the request method, headers, and a 1 MB body
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `express`                 |   `5.2.1` |      `1,562` |  `252.01ms` |   `385.89KB` |
-| `node:http`               | `24.15.0` |      `1,550` |  `253.55ms` |   `325.39KB` |
-| `remix/node-fetch-server` |  `0.14.0` |      `1,455` |  `268.86ms` |   `302.69KB` |
+| `node:http`               | `24.18.0` |      `1,798` |  `206.65ms` |   `377.42KB` |
+| `remix/node-fetch-server` |  `0.14.0` |      `1,752` |  `167.69ms` |   `364.40KB` |
+| `express`                 |   `5.2.1` |      `1,731` |  `223.19ms` |   `427.67KB` |
 
 <!-- benchmarks:end -->
 
