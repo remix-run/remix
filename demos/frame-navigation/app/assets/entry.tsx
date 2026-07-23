@@ -1,4 +1,4 @@
-import type { FrameContent, Handle, RemixNode } from 'remix/ui'
+import type { FrameContent, Handle, RemixNode, ResolveFrameOptions } from 'remix/ui'
 import { createRoot, css, on, run } from 'remix/ui'
 
 import { animateEntrance, spring } from 'remix/ui/animation'
@@ -14,32 +14,36 @@ const app = run({
     }
     return exp
   },
-  async resolveFrame(src, signal, target) {
-    return resolveFrameResponse(new URL(src, window.location.href), signal, target)
+  async resolveFrame(src, options) {
+    return resolveFrameResponse(new URL(src, window.location.href), options)
   },
 })
 
 async function resolveFrameResponse(
   url: URL,
-  signal?: AbortSignal,
-  target?: string,
+  options?: ResolveFrameOptions,
 ): Promise<FrameContent> {
   let headers = new Headers()
   headers.set('Accept', 'text/html')
   headers.set('X-Remix-Frame', 'true')
 
-  if (target) {
-    headers.set('X-Remix-Target', target)
+  if (options?.target) {
+    headers.set('X-Remix-Target', options.target)
   }
 
-  let res = await fetch(url, { headers, signal })
+  let res = await fetch(url, {
+    headers,
+    method: options?.method,
+    body: getRequestBody(options?.formData, options?.method, options?.encType),
+    signal: options?.signal,
+  })
 
   if (res.status === 401) {
     window.location.assign(routes.auth.login.index.href())
     return new Promise(() => {})
   }
 
-  if (!res.ok) {
+  if (!res.ok && res.status !== 422) {
     return (
       <ErrorCard
         eyebrow="Unexpected Error"
@@ -56,6 +60,21 @@ async function resolveFrameResponse(
 
   if (res.body) return res.body
   return await res.text()
+}
+
+function getRequestBody(
+  formData?: FormData,
+  method?: string,
+  encType?: string,
+): BodyInit | undefined {
+  if (!formData || method?.toLowerCase() === 'get') return
+  if (encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
 }
 
 app.addEventListener('error', async (event) => {

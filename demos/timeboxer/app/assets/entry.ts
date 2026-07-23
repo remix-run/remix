@@ -5,14 +5,16 @@ run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, signal, target) {
+  async resolveFrame(src, options) {
     let headers = new Headers({ Accept: 'text/html' })
-    if (target) headers.set('X-Remix-Target', target)
+    if (options?.target) headers.set('X-Remix-Target', options.target)
 
     let response = await fetch(src, {
       credentials: 'same-origin',
       headers,
-      signal,
+      method: options?.method,
+      body: options?.method?.toLowerCase() === 'get' ? undefined : options?.formData,
+      signal: options?.signal,
     })
     return response.body ?? response.text()
   },

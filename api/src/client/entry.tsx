@@ -9,8 +9,13 @@ let app = run({
     }
     return Component
   },
-  async resolveFrame(src, signal) {
-    let response = await fetch(src, { headers: { accept: 'text/html' }, signal })
+  async resolveFrame(src, options) {
+    let response = await fetch(src, {
+      headers: { accept: 'text/html' },
+      method: options?.method,
+      body: options?.method?.toLowerCase() === 'get' ? undefined : options?.formData,
+      signal: options?.signal,
+    })
     if (!response.ok) {
       return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
     }

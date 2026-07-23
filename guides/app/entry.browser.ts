@@ -9,19 +9,21 @@ const app = run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, signal, target): Promise<FrameContent> {
+  async resolveFrame(src, options): Promise<FrameContent> {
     let headers = new Headers({
       Accept: 'text/html',
       'X-Remix-Frame': 'true',
     })
 
-    if (target) {
-      headers.set('X-Remix-Target', target)
+    if (options?.target) {
+      headers.set('X-Remix-Target', options.target)
     }
 
     let response = await fetch(new URL(src, window.location.href), {
       headers,
-      signal,
+      method: options?.method,
+      body: getRequestBody(options?.formData, options?.method, options?.encType),
+      signal: options?.signal,
     })
 
     if (!response.ok) {
@@ -31,6 +33,21 @@ const app = run({
     return response.body ?? response.text()
   },
 })
+
+function getRequestBody(
+  formData?: FormData,
+  method?: string,
+  encType?: string,
+): BodyInit | undefined {
+  if (!formData || method?.toLowerCase() === 'get') return
+  if (encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
+}
 
 app.ready().catch((error: unknown) => {
   console.error('Remix UI failed to start:', error)

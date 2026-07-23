@@ -53,8 +53,13 @@ let app = run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, signal) {
-    let res = await fetch(src, { headers: { Accept: 'text/html' }, signal })
+  async resolveFrame(src, options) {
+    let res = await fetch(src, {
+      headers: { Accept: 'text/html' },
+      method: options?.method,
+      body: options?.method?.toLowerCase() === 'post' ? options.formData : undefined,
+      signal: options?.signal,
+    })
     return res.body ?? (await res.text())
   },
 })
@@ -65,7 +70,7 @@ await app.ready()
 ### `run` options
 
 - **`loadModule(moduleUrl, exportName)`** (required) - Called for each client entry found in the page. Return the component function. Typically uses dynamic `import()`.
-- **`resolveFrame(src, signal, target)`** (optional) - Called when a `<Frame>` needs to load or reload content. The examples here only use `src` and `signal`, but `target` is also available when frame targeting matters. If omitted, Remix UI uses a placeholder HTML response (`<p>resolve frame unimplemented</p>`). See [Frames](./frames.md) for details.
+- **`resolveFrame(src, options)`** (optional) - Called when a `<Frame>` needs to load or reload content. `options` may contain `formData`, `method`, `encType`, `signal`, and `target`, including submission metadata from intercepted forms. If omitted, Remix UI uses a placeholder HTML response (`<p>resolve frame unimplemented</p>`) and leaves document navigation to the browser. See [Frames](./frames.md) for details.
 
 ### `app` methods
 
