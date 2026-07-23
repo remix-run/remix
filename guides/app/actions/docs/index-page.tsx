@@ -33,6 +33,10 @@ function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
           <p class="rmx-page-body">
             API reference lives separately at <a href="https://api.remix.run">api.remix.run</a>.
           </p>
+          <p class="rmx-page-body">
+            Remix 3 is in beta. For Remix 2 guides and API reference, see{' '}
+            <a href="https://v2.remix.run/docs">v2.remix.run/docs</a>.
+          </p>
         </header>
 
         <ol class="docs-index__cards" data-pagefind-ignore>

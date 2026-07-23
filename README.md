@@ -15,6 +15,8 @@
 
 This is the source repository for Remix 3. It is under active development.
 
+Remix 2 remains the stable release for existing production applications. If you are working on a v2 codebase or have not migrated yet, see the [Remix v2 documentation](https://v2.remix.run/docs).
+
 We published [a blog post](https://remix.run/blog/wake-up-remix) earlier this year with some of our thoughts around Remix 3. It explains our philosophy for web development and why we think the time is right for something new. When working on Remix 3, we follow these principles:
 
 1. **Model-First Development**. AI fundamentally shifts the human-computer interaction model for both user experience and developer workflows. Optimize the source code, documentation, tooling, and abstractions for LLMs. Additionally, develop abstractions for applications to use models in the product itself, not just as a tool to develop it.
