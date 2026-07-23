@@ -2,6 +2,23 @@
 
 This is the changelog for [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite). It follows [semantic versioning](https://semver.org/).
 
+## v0.6.0
+
+### Minor Changes
+
+- Added `close()` to the SQLite adapter to release the underlying database connection and its file handle. Config-backed adapters keep the database file locked on Windows until closed, so callers that need to move or delete the file should close the adapter first.
+
+- Added filename-based SQLite adapter construction, optional persistent foreign key enforcement, and database wiping for `remix db`. Existing synchronous SQLite clients remain supported for applications that own the driver lifecycle, but wiping requires config-backed construction (see #11608).
+
+  Config-backed adapters now make the `foreignKeys` option authoritative on every runtime: enforcement defaults to off, including on Node.js where `node:sqlite` would otherwise enable it by default. They also apply a default `busy_timeout` of 5000ms (override with the new `busyTimeout` option), and `wipe()` removes `-wal`/`-shm`/`-journal` sidecar files along with the main database file. The runtime SQLite driver now loads lazily on config-backed construction, so client-backed adapters work in environments that cannot resolve `node:sqlite` or `bun:sqlite` at import time.
+
+### Patch Changes
+
+- Use bound parameters for compiled `limit` and `offset` clauses.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.4.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.4.0)
+
 ## v0.5.1
 
 ### Patch Changes

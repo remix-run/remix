@@ -2,6 +2,61 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.6
+
+### Pre-release Changes
+
+- BREAKING CHANGE: `createAssetServer()` from `remix/assets` now uses `allowFiles` and `denyFiles` instead of `allow` and `deny` for file path access rules.
+
+  ```ts
+  import { createAssetServer } from 'remix/assets'
+
+  // Before:
+  export const assetServer = createAssetServer({
+    allow: ['app/assets/**'],
+    deny: ['app/**/*.server.*'],
+    /* ... */
+  })
+
+  // After:
+  export const assetServer = createAssetServer({
+    allowFiles: ['app/assets/**'],
+    denyFiles: ['app/**/*.server.*'],
+    /* ... */
+  })
+  ```
+
+- BREAKING CHANGE: Added static JSONC configuration through `remix.json` and the global `remix --config <path>` option for `remix test` settings and `remix doctor` strict mode. Executable `remix-test.config.ts` and `.js` files are no longer discovered; move test settings under `remix.json#test` (see #11628, #11638).
+
+- BREAKING CHANGE: `remix/cookie` now treats custom `encode` and `decode` functions as the full cookie value codec. Custom encoded values are signed and serialized as-is instead of being wrapped in the default base64 encoding. The default codec still uses the existing base64-safe representation.
+
+- BREAKING CHANGE: `remix/middleware/session` now makes session cookies HTTP-only by default when `httpOnly` is omitted, and `Cookie.httpOnly` from `remix/cookie` now returns `boolean | undefined` so omitted and explicitly disabled settings can be distinguished.
+
+- BREAKING CHANGE: Run tests through `remix test` instead of the removed `remix-test` executable. The `remix/test/cli` `runRemixTest()` API now accepts typed test-runner options instead of raw command-line arguments (see #11623).
+
+- Add an `allowPackages` option to `createAssetServer()` from `remix/assets` for package-level access control, allowing packages and their dependencies to be served, e.g. `allowPackages: ['remix']`
+
+- Added `remix db` commands for running the database lifecycle exported by `app/db.ts` (see #11608).
+
+- Added database wipe, migration, status, seed, and reset APIs through `remix/data-table` and `remix/data-table/cli`. Migration status reports applied migrations whose files are missing, and migration runs stop before executing SQL when an applied migration is absent from the current set (see #11608).
+
+- Added `package.json` `exports`:
+  - `remix/data-table/cli` to expose the typed data-table command invocation API
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.5.0`](https://github.com/remix-run/remix/releases/tag/assets@0.5.0)
+  - [`cli@0.4.0`](https://github.com/remix-run/remix/releases/tag/cli@0.4.0)
+  - [`cookie@0.6.0`](https://github.com/remix-run/remix/releases/tag/cookie@0.6.0)
+  - [`data-table@0.4.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.4.0)
+  - [`data-table-mysql@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.0)
+  - [`data-table-postgres@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.0)
+  - [`data-table-sqlite@0.6.0`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.0)
+  - [`fetch-proxy@0.8.5`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@0.8.5)
+  - [`node-fetch-server@0.14.1`](https://github.com/remix-run/remix/releases/tag/node-fetch-server@0.14.1)
+  - [`session-middleware@0.4.0`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.4.0)
+  - [`test@0.6.0`](https://github.com/remix-run/remix/releases/tag/test@0.6.0)
+  - [`ui@0.5.0`](https://github.com/remix-run/remix/releases/tag/ui@0.5.0)
+
 ## v3.0.0-beta.5
 
 ### Pre-release Changes

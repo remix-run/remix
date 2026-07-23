@@ -2,6 +2,12 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- Add an `rmx-preserve-dom` attribute that tells the DOM reconciler to preserve a matching element's current attributes and children during reloads, allowing client-owned subtrees such as custom elements to manage their own DOM.
+
 ## v0.4.0
 
 ### Minor Changes

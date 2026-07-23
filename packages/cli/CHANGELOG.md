@@ -2,6 +2,22 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Added an optional static `remix.json` configuration file for Remix CLI commands, covering every `remix test` setting and strict mode for `remix doctor`. The CLI parses the file as JSONC, resolves its relative paths and globs from the config file's directory, and lets explicit flags and positional arguments take precedence. Use the global `--config <path>` option to select another file. Negative flags such as `remix doctor --no-strict`, `--no-watch`, `--no-coverage`, `--no-quiet`, `--no-browser.open`, and `--no-browser.echo` can override configured `true` values. The former test-specific meaning of `--config` and automatic `remix-test.config.ts` or `.js` discovery have been removed; move those values under `remix.json#test` (see #11628, #11638).
+
+- Added `remix db` commands for wiping, migrating, inspecting, seeding, and resetting the current app database. The CLI parses arguments, discovers the app root by walking up from the current directory to the nearest `app/db.ts`, loads that module with Remix's TypeScript loader in an isolated process, and delegates structured command options to `@remix-run/data-table/cli` (see #11608). Destructive commands (`remix db wipe` and `remix db reset`) require `--force`, a missing `app/db.ts` is reported as a dedicated CLI error with fix guidance, and unexpected failures from app database code include stack traces.
+
+- Added complete `remix test` argument parsing, help, validation, and shell completion to the main Remix CLI. The command delegates typed runner options to `@remix-run/test/cli` while preserving positional globs, repeated flags, aliases, configuration precedence, coverage, filtering, and watch behavior (see #11623).
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.4.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.4.0)
+  - [`test@0.6.0`](https://github.com/remix-run/remix/releases/tag/test@0.6.0)
+
 ## v0.3.4
 
 ### Patch Changes
