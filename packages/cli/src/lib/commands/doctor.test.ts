@@ -10,6 +10,7 @@ import { runRemix } from '../../index.ts'
 import { getFixturePath } from '../../../test/fixtures.ts'
 import { captureOutput } from '../../../test/capture-output.ts'
 import { checkEnvironment, getEnvironmentFixPlans } from '../doctor/environment.ts'
+import { runRemixDoctor } from '../doctor/run.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
 const ANSI_CSI = `${String.fromCharCode(27)}[`
@@ -33,6 +34,25 @@ const DOCTOR_COMMAND_HELP_TEXT = [
   '  remix doctor --fix',
   '',
 ].join('\n')
+
+describe('runRemixDoctor', () => {
+  it('runs doctor with typed options', async () => {
+    let remixVersion = await readRemixVersion()
+    let result = await captureOutput(() =>
+      runRemixDoctor({
+        cwd: getFixturePath('doctor-clean'),
+        fix: false,
+        json: true,
+        remixVersion,
+        strict: false,
+      }),
+    )
+
+    assert.equal(result.exitCode, 0, result.stderr)
+    assert.deepEqual(JSON.parse(result.stdout).findings, [])
+    assert.equal(result.stderr, '')
+  })
+})
 
 describe('doctor command', () => {
   it('prints doctor command help', async () => {
