@@ -163,11 +163,11 @@ export type {
 export { createDatabase, Database } from './lib/database.ts'
 export type {
   DatabaseMigrateOptions,
-  MigrateOptions,
+  DatabaseMigrationStatusOptions,
+  DatabaseResetOptions,
   MigrateResult,
   MigrationDescriptor,
   MigrationRegistry,
-  MigrationStatusOptions,
   Migrations,
   MigrationStatus,
   MigrationStatusEntry,

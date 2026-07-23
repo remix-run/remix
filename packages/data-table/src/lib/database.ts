@@ -28,10 +28,10 @@ import { bindQueryRuntime, query as createQuery } from './query.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
 import type {
   DatabaseMigrateOptions,
+  DatabaseMigrationStatusOptions,
+  DatabaseResetOptions,
   MigrateResult,
   Migrations,
-  MigrationStatusOptions,
-  Seed,
   MigrationStatusEntry,
 } from './migrations.ts'
 import { createMigrationRunner } from './migrations/runner.ts'
@@ -400,7 +400,7 @@ export class Database implements QueryExecutionContext {
    *
    * @param migrations Migration descriptors or registry to apply.
    * @param options Migration direction, bound, dry-run, and journal configuration.
-   * @returns The migrations applied by this run and their SQL scripts.
+   * @returns The migrations applied or reverted by this run and their SQL scripts.
    */
   async migrate(migrations: Migrations, options?: DatabaseMigrateOptions): Promise<MigrateResult> {
     this.#assertLifecycleOperationAllowed('migrate')
@@ -413,12 +413,12 @@ export class Database implements QueryExecutionContext {
    * Reports the current state of the provided migrations.
    *
    * @param migrations Migration descriptors or registry to inspect.
-   * @param options Migration runner configuration.
+   * @param options Migration journal configuration.
    * @returns Status entries for the provided migrations.
    */
   async migrationStatus(
     migrations: Migrations,
-    options: MigrationStatusOptions = {},
+    options: DatabaseMigrationStatusOptions = {},
   ): Promise<MigrationStatusEntry[]> {
     this.#assertLifecycleOperationAllowed('migrationStatus')
     let runner = createMigrationRunner(this.#adapter, migrations, options)
@@ -428,14 +428,14 @@ export class Database implements QueryExecutionContext {
   /**
    * Wipes the database, applies migrations, and optionally seeds data.
    *
-   * @param args Migrations and optional seed function used to rebuild the database.
+   * @param options Migrations and optional seed function used to rebuild the database.
    * @returns A promise that resolves when the database has been rebuilt.
    */
-  async reset(args: { migrations: Migrations; seed?: Seed; journalTable?: string }): Promise<void> {
+  async reset(options: DatabaseResetOptions): Promise<void> {
     this.#assertLifecycleOperationAllowed('reset')
     await this.wipe()
-    await this.migrate(args.migrations, { journalTable: args.journalTable })
-    await args.seed?.(this)
+    await this.migrate(options.migrations, { journalTable: options.journalTable })
+    await options.seed?.(this)
   }
 
   #assertLifecycleOperationAllowed(method: 'migrate' | 'migrationStatus' | 'reset' | 'wipe'): void {

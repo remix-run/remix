@@ -445,7 +445,7 @@ remix db wipe
 
 `--to` accepts a bare migration id (`20260301113000`) or the full directory name (`20260301113000_add_user_status`).
 
-`remix db status` reports applied migrations whose files are no longer present as `missing`. Forward migration runs stop before executing SQL when an applied journal entry is missing from the current migration set. Rollbacks skip those orphaned journal entries so migrations that are still present can be reverted.
+`remix db status` reports applied migrations whose files are no longer present as `missing`. If the journal table does not exist, it reports every migration as pending without creating the table. Forward migration runs stop before executing SQL when an applied journal entry is missing from the current migration set. Rollbacks skip those orphaned journal entries so migrations that are still present can be reverted.
 
 `wipe` and `reset` are destructive. They require a config-backed adapter so the adapter can close, recreate, and reconnect to the configured database.
 

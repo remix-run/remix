@@ -1,6 +1,6 @@
 import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
 import type {
-  MigrateOptions,
+  MigrationOperationOptions,
   MigrateResult,
   MigrationDescriptor,
   MigrationDirection,
@@ -16,8 +16,8 @@ interface MigrationRunnerOptions {
 }
 
 interface MigrationRunner {
-  up(options?: MigrateOptions): Promise<MigrateResult>
-  down(options?: MigrateOptions): Promise<MigrateResult>
+  up(options?: MigrationOperationOptions): Promise<MigrateResult>
+  down(options?: MigrationOperationOptions): Promise<MigrateResult>
   status(): Promise<MigrationStatusEntry[]>
 }
 
@@ -38,7 +38,7 @@ type RunMigrationsInput = {
   migrations: MigrationDescriptor[]
   journalTable: string
   direction: MigrationDirection
-  options: MigrateOptions
+  options: MigrationOperationOptions
 }
 
 function assertStepOption(step: number | undefined): void {
@@ -51,7 +51,7 @@ function assertStepOption(step: number | undefined): void {
   }
 }
 
-function assertMigrateOptions(options: MigrateOptions): void {
+function assertMigrationOperationOptions(options: MigrationOperationOptions): void {
   if (options.to !== undefined && options.step !== undefined) {
     throw new Error('Cannot combine "to" and "step" migration options in the same run')
   }
@@ -156,7 +156,7 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
   let dryRun = Boolean(input.options.dryRun)
   let step = input.options.step
 
-  assertMigrateOptions(input.options)
+  assertMigrationOperationOptions(input.options)
   assertStepOption(step)
 
   let target = resolveTargetOption(migrations, input.options.to)
@@ -303,7 +303,7 @@ export function createMigrationRunner(
   let journalTable = options.journalTable ?? 'data_table_migrations'
 
   return {
-    async up(runOptions: MigrateOptions = {}): Promise<MigrateResult> {
+    async up(runOptions: MigrationOperationOptions = {}): Promise<MigrateResult> {
       return runMigrations({
         adapter,
         migrations: resolveMigrations(migrations),
@@ -312,7 +312,7 @@ export function createMigrationRunner(
         options: runOptions,
       })
     },
-    async down(runOptions: MigrateOptions = {}): Promise<MigrateResult> {
+    async down(runOptions: MigrationOperationOptions = {}): Promise<MigrateResult> {
       return runMigrations({
         adapter,
         migrations: resolveMigrations(migrations),
@@ -322,9 +322,9 @@ export function createMigrationRunner(
       })
     },
     async status(): Promise<MigrationStatusEntry[]> {
-      await ensureMigrationJournal(adapter, journalTable)
-
-      let journal = await loadJournalRows(adapter, journalTable)
+      let journal = (await hasMigrationJournal(adapter, journalTable))
+        ? await loadJournalRows(adapter, journalTable)
+        : []
       let journalMap = new Map(journal.map((row) => [row.id, row]))
       let sortedMigrations = resolveMigrations(migrations)
       let migrationIds = new Set(sortedMigrations.map((migration) => migration.id))

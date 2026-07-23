@@ -10,17 +10,17 @@ import type { Database } from './database.ts'
 export type MigrationTransactionMode = 'auto' | 'required' | 'none'
 
 /**
- * Migration metadata + SQL consumed by the registry/runner.
+ * Migration metadata and SQL consumed by `Database.migrate()`.
  */
 export type MigrationDescriptor = {
   /** Migration id (typically a `YYYYMMDDHHmmss` timestamp). */
   id: string
   /** Human-readable migration slug. */
   name: string
-  /** SQL executed for `runner.up(...)`. May contain multiple statements. */
+  /** SQL executed when applying the migration. May contain multiple statements. */
   up: string
   /**
-   * SQL executed for `runner.down(...)`. May contain multiple statements.
+   * SQL executed when reverting the migration. May contain multiple statements.
    * Omit (or pass `undefined`) for irreversible migrations.
    */
   down?: string
@@ -31,7 +31,7 @@ export type MigrationDescriptor = {
 }
 
 /**
- * Direction used by migration runner operations.
+ * Direction used by `Database.migrate()`.
  */
 export type MigrationDirection = 'up' | 'down'
 
@@ -57,7 +57,7 @@ export type MigrationJournalRow = {
 export type MigrationStatus = 'applied' | 'pending' | 'drifted' | 'missing'
 
 /**
- * Status row returned by `runner.status()` and `runner.up/down(...)`.
+ * Status entry returned by database migration operations.
  */
 export type MigrationStatusEntry = {
   id: string
@@ -69,13 +69,13 @@ export type MigrationStatusEntry = {
 }
 
 /**
- * Common options for `runner.up(...)` and `runner.down(...)`.
+ * Bounds and dry-run options for a migration operation.
  * `to` and `step` are mutually exclusive.
  *
  * `to` accepts a bare migration id (`20260301113000`) or the full `id_name`
  * directory form (`20260301113000_add_user_status`).
  */
-export type MigrateOptions =
+export type MigrationOperationOptions =
   | {
       to: string
       step?: never
@@ -93,7 +93,7 @@ export type MigrateOptions =
     }
 
 /**
- * Result shape returned by migration runner commands.
+ * Result returned by `Database.migrate()`.
  */
 export type MigrateResult = {
   applied: MigrationStatusEntry[]
@@ -125,7 +125,7 @@ export type Seed = (db: Database) => void | Promise<void>
 /**
  * Options for applying or reverting migrations through `Database.migrate()`.
  */
-export type DatabaseMigrateOptions = MigrateOptions & {
+export type DatabaseMigrateOptions = MigrationOperationOptions & {
   /** Migration direction. Defaults to `up`. */
   direction?: MigrationDirection
   /**
@@ -138,7 +138,22 @@ export type DatabaseMigrateOptions = MigrateOptions & {
 /**
  * Options for reading migration status through `Database.migrationStatus()`.
  */
-export interface MigrationStatusOptions {
+export interface DatabaseMigrationStatusOptions {
+  /**
+   * Journal table used to record applied migrations.
+   * Defaults to `data_table_migrations`.
+   */
+  journalTable?: string
+}
+
+/**
+ * Options for rebuilding a database through `Database.reset()`.
+ */
+export interface DatabaseResetOptions {
+  /** Migrations to apply after wiping the database. */
+  migrations: Migrations
+  /** Function that initializes application data after migrations finish. */
+  seed?: Seed
   /**
    * Journal table used to record applied migrations.
    * Defaults to `data_table_migrations`.

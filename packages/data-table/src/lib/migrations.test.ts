@@ -33,7 +33,7 @@ describe('Database migrations', () => {
       reverted.reverted.map((entry) => entry.id),
       ['20260101000000'],
     )
-    assert.deepEqual(adapter.journalRows, [])
+    assert.equal(adapter.journalRows.length, 0)
   })
 
   it('uses journal configuration for migrate and status', async () => {
@@ -58,13 +58,30 @@ describe('Database migrations', () => {
 
     let plan = await db.migrate(migrations, { dryRun: true, step: 1 })
     assert.deepEqual(plan.sql, ['create table users (id integer)'])
-    assert.deepEqual(adapter.journalRows, [])
+    assert.equal(adapter.journalRows.length, 0)
 
     await db.migrate(migrations, { to: '20260101000000_users' })
     assert.deepEqual(
       adapter.journalRows.map((row) => row.id),
       ['20260101000000'],
     )
+  })
+
+  it('reports pending migrations without creating a journal table', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    let db = new Database(adapter)
+    let migrations = [{ id: '20260101000000', name: 'users', up: 'select 1' }]
+
+    let status = await db.migrationStatus(migrations)
+
+    assert.deepEqual(status, [
+      {
+        id: '20260101000000',
+        name: 'users',
+        status: 'pending',
+      },
+    ])
+    assert.equal(adapter.journalTableCreated, false)
   })
 })
 

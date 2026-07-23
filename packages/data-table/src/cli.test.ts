@@ -5,9 +5,10 @@ import { runRemixDb } from './cli.ts'
 import { Database } from './lib/database.ts'
 import type {
   DatabaseMigrateOptions,
+  DatabaseMigrationStatusOptions,
+  DatabaseResetOptions,
   MigrateResult,
   Migrations,
-  MigrationStatusOptions,
   MigrationStatusEntry,
   Seed,
 } from './lib/migrations.ts'
@@ -27,7 +28,7 @@ class RecordingDatabase extends Database {
   migrateResult: MigrateResult = { applied: [], reverted: [], sql: [] }
   resetSeed: Seed | undefined
   resetJournalTable: string | undefined
-  statusOptions: MigrationStatusOptions | undefined
+  statusOptions: DatabaseMigrationStatusOptions | undefined
 
   constructor() {
     super(createRecordingAdapter().adapter)
@@ -48,18 +49,14 @@ class RecordingDatabase extends Database {
 
   override async migrationStatus(
     _migrations: Migrations,
-    options?: MigrationStatusOptions,
+    options?: DatabaseMigrationStatusOptions,
   ): Promise<MigrationStatusEntry[]> {
     this.calls.push('status')
     this.statusOptions = options
     return []
   }
 
-  override async reset(options: {
-    migrations: Migrations
-    seed?: Seed
-    journalTable?: string
-  }): Promise<void> {
+  override async reset(options: DatabaseResetOptions): Promise<void> {
     this.calls.push('reset')
     this.resetSeed = options.seed
     this.resetJournalTable = options.journalTable
