@@ -9,6 +9,7 @@ import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
 import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
+import { findStreamRegion, installStreamTemplateMover } from './stream-directives.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -398,7 +399,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     scheduleHydrationInContainer(container, context, initialHydrationTracker)
 
     if (currentMarker?.status === 'pending') {
-      await watchPendingFrameTemplate(currentMarker, initialHydrationTracker)
+      await watchPendingFrameTemplate(
+        currentMarker,
+        initialHydrationTracker,
+        undefined,
+        undefined,
+        true,
+      )
     }
 
     initialHydrationTracker.finalize()
@@ -553,6 +560,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     initialHydrationTracker?: InitialHydrationTracker,
     signal?: AbortSignal,
     onResolved?: () => void,
+    fromInitialHydration = false,
   ): Promise<void> {
     if (signal?.aborted) return
     if (pendingTemplateMarkerId === marker.id) return
@@ -560,10 +568,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     clearPendingFrameTemplateWatch()
     pendingTemplateMarkerId = marker.id
 
-    let early = consumeFrameTemplate(marker.id) ?? getEarlyFrameContent(marker.id)
-    if (early) {
+    // Content fetched through a runtime stream (reload/navigation) is delivered
+    // as an already-parsed fragment and reconciled into the region in place.
+    let buffered = consumeFrameTemplate(marker.id)
+    if (buffered) {
       clearPendingFrameTemplateWatch()
-      await render(early, { initialHydrationTracker, signal, contentStatus: 'resolved' })
+      await render(buffered, { initialHydrationTracker, signal, contentStatus: 'resolved' })
       if (!signal?.aborted) onResolved?.()
       return
     }
@@ -573,8 +583,31 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       return
     }
 
-    let observer = setupTemplateObserver()
+    // Live-document streaming: the browser (or the client polyfill installed by
+    // run()) moves the matching `<template for>` content into this region. The
+    // runtime never performs the swap itself; it hydrates the resolved content
+    // once the streaming directives are gone.
+    //
+    // During initial hydration the polyfill may have already swapped the region
+    // before this watch was installed, in which case the resolved content is
+    // already in place and only needs hydrating. Reloads never swap live DOM
+    // (their content arrives through the template bus), so they must not treat a
+    // directive-free region as an early swap.
+    if (fromInitialHydration && !regionHasStreamDirectives(marker.id)) {
+      await resolveStreamedRegion(initialHydrationTracker, signal, onResolved)
+      return
+    }
+
+    let regionParent = container.regionParent ?? (container.root as ParentNode)
+    let observer = new MutationObserver(() => {
+      if (signal?.aborted || pendingTemplateMarkerId !== marker.id) return
+      if (regionHasStreamDirectives(marker.id)) return
+      void resolveStreamedRegion(initialHydrationTracker, signal, onResolved)
+    })
+    observer.observe(regionParent, { childList: true, subtree: true })
     pendingTemplateObserver = observer
+
+    // Late content delivered through the template bus (fetched frame streams).
     let unsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
       if (signal?.aborted) return
       if (pendingTemplateMarkerId !== marker.id) return
@@ -593,13 +626,31 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       },
       { once: true },
     )
+  }
 
-    let buffered = consumeFrameTemplate(marker.id)
-    if (buffered) {
-      clearPendingFrameTemplateWatch()
-      await render(buffered, { initialHydrationTracker, signal, contentStatus: 'resolved' })
-      if (!signal?.aborted) onResolved?.()
-    }
+  function regionHasStreamDirectives(id: string): boolean {
+    return findStreamRegion(id, container.doc) != null
+  }
+
+  async function resolveStreamedRegion(
+    initialHydrationTracker?: InitialHydrationTracker,
+    signal?: AbortSignal,
+    onResolved?: () => void,
+  ): Promise<void> {
+    clearPendingFrameTemplateWatch()
+    if (signal?.aborted) return
+
+    // The streamed content carries its own hydration data and selector-addressed
+    // styles. Merge the data so client entries in the resolved region can hydrate;
+    // styles are adopted by the global server-style observer as they land.
+    mergeRmxDataFromDocument(context.data, container.doc)
+    context.styleManager.replaceServerStyles(collectFrameServerStyleTags(container))
+
+    scheduleHydrationInContainer(container, context, initialHydrationTracker)
+    if (signal?.aborted) return
+    await createSubFrames(container.childNodes, context, { signal })
+    displayedContentStatus = 'resolved'
+    if (!signal?.aborted) onResolved?.()
   }
 }
 
@@ -1036,48 +1087,18 @@ function disposeSubFrames(nodes: Node[], context: FrameContext): void {
   }
 }
 
-function getEarlyFrameContent(id: string): DocumentFragment | null {
-  let template = document.querySelector(`template#${id}`)
-  if (template instanceof HTMLTemplateElement) {
-    let fragment = template.content
-    template.remove()
-    return fragment
-  }
-  return null
-}
-
-function setupTemplateObserver(): MutationObserver {
-  let root = document.body ?? document.documentElement ?? document
-  let observer = new MutationObserver((mutations) => {
-    for (let mutation of mutations) {
-      for (let node of mutation.addedNodes) {
-        collectAndPublishTemplates(node)
-      }
-    }
-  })
-
-  observer.observe(root, { childList: true, subtree: true })
-  return observer
-}
-
-function collectAndPublishTemplates(node: Node): void {
-  if (node instanceof HTMLTemplateElement) {
-    publishFrameTemplateElement(node)
-    return
-  }
-
-  if (!(node instanceof Element)) return
-  let templates = Array.from(node.querySelectorAll('template'))
-  for (let template of templates) {
-    if (!(template instanceof HTMLTemplateElement)) continue
-    publishFrameTemplateElement(template)
-  }
-}
-
-function publishFrameTemplateElement(template: HTMLTemplateElement): void {
-  if (!template.id) return
-  template.remove()
-  publishFrameTemplate(template.id, template.content)
+/**
+ * Installs the client-side out-of-order streaming support for the current
+ * document. Browsers with native `<?start>`/`<?end>` directive support perform
+ * the DOM swap themselves; otherwise a MutationObserver polyfill moves
+ * `<template for>` content into place. Frame instances hydrate the resolved
+ * content independently.
+ *
+ * @param doc Document to observe. Defaults to the global document.
+ * @returns A disposer that removes the polyfill observer.
+ */
+export function installStreamResolution(doc: Document = document): () => void {
+  return installStreamTemplateMover(doc)
 }
 
 export function publishFrameTemplate(id: string, fragment: DocumentFragment): void {
@@ -1132,7 +1153,7 @@ type StreamTemplateParseResult = {
 }
 
 const COMPLETE_TEMPLATE_WITH_ID_PATTERN =
-  /<template\b[^>]*\bid=(?:"([^"]+)"|'([^']+)')[^>]*>[\s\S]*?<\/template>/gi
+  /<template\b[^>]*\bfor=(?:"([^"]+)"|'([^']+)')[^>]*>[\s\S]*?<\/template>/gi
 
 function extractTemplatesFromBuffer(
   doc: Document,
@@ -1158,8 +1179,9 @@ function extractTemplatesFromBuffer(
     if (id) {
       let parsed = createFragmentFromString(doc, fullMatch)
       let template = parsed.querySelector('template')
-      if (template instanceof HTMLTemplateElement && template.id) {
-        onTemplate(template.id, template.content)
+      let templateFor = template?.getAttribute('for')
+      if (template instanceof HTMLTemplateElement && templateFor) {
+        onTemplate(templateFor, template.content)
       }
     }
 

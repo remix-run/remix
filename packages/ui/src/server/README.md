@@ -56,7 +56,7 @@ When you render nested frame responses with `renderToStream()` inside `resolveFr
 When the stream encounters a `<Frame>` component:
 
 - **Without `fallback`** (blocking): The frame content is awaited before the initial HTML chunk is sent. The resolved content appears inline.
-- **With `fallback`** (non-blocking): The fallback is rendered inline in the initial chunk. Once the frame resolves, a `<template>` element containing the real content is streamed at the end of the response. The client swaps it in automatically.
+- **With `fallback`** (non-blocking): The fallback is rendered inline in the initial chunk, delimited by declarative `<?start name="ID">` / `<?end name="ID">` streaming directives. Once the frame resolves, a `<template for="ID">` element containing the real content is streamed at the end of the response. Browsers with native support for the directives swap the content in with no JavaScript; other browsers use a small MutationObserver polyfill installed by `run()`. Either way the client hydrates the resolved content after the swap.
 
 This means the first chunk always contains a complete, renderable page. Slow data sources don't block the initial paint.
 

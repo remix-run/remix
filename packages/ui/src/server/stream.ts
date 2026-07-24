@@ -10,6 +10,7 @@ import {
   shouldStringifyBooleanAttribute,
 } from '../runtime/core/attributes.ts'
 import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
+import { streamEndDirective, streamStartDirective } from '../runtime/stream-directives.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 
 interface VNode {
@@ -123,6 +124,9 @@ type Segment =
       frameId: string
       content: Segment | null
       pending?: Promise<void>
+      // Marks a non-blocking region whose fallback is bracketed by streaming
+      // directives and resolved later by a `<template for>` element.
+      streamed?: boolean
     }
 
 const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
@@ -478,6 +482,7 @@ function buildFrameSegment(
   let resolveFrameContext = getResolveFrameContext(frameState)
   let nonBlocking = !!props.fallback
   if (nonBlocking) {
+    seg.streamed = true
     seg.content = buildSegment(props.fallback, context, frameState)
     let framePromise = Promise.resolve(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
@@ -1127,6 +1132,12 @@ function serializeSegment(seg: Segment): string {
   let inner = seg.content ? serializeSegment(seg.content) : ''
   let start = `<!-- rmx:f:${seg.frameId} -->`
   let end = `<!-- /rmx:f -->`
+  // Non-blocking regions bracket their fallback with declarative streaming
+  // directives. A supporting browser (or the client polyfill) moves the
+  // matching `<template for>` content into this region when it resolves.
+  if (seg.streamed) {
+    inner = streamStartDirective(seg.frameId) + inner + streamEndDirective(seg.frameId)
+  }
   return start + inner + end
 }
 
@@ -1309,8 +1320,8 @@ async function streamPendingFrames(
           let { html, tail } = await promise
           if (context.signal.aborted) return
 
-          // Stream as a template element (first chunk only)
-          let templateHtml = `<template id="${frameId}">${escapeTemplateContent(html)}</template>`
+          // Stream as a template element addressed by `for` (first chunk only)
+          let templateHtml = `<template for="${frameId}">${escapeTemplateContent(html)}</template>`
           if (context.signal.aborted) return
           controller.enqueue(encoder.encode(templateHtml))
 
