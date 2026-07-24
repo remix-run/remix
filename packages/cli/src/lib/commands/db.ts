@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as process from 'node:process'
 
-import { createDatabase, type Database } from '@remix-run/data-table'
+import type { Database } from '@remix-run/data-table'
 import { runRemixDb } from '@remix-run/data-table/cli'
 import { loadMigrations, loadSeed } from '@remix-run/data-table/migrations/node'
 
@@ -256,12 +256,23 @@ function overrideConnection(
 
 async function runDatabaseCommand(plan: DatabaseCommandPlan, configDir: string): Promise<number> {
   let db = await createConfiguredDatabase(plan.adapter, configDir)
+  let result: number
 
   try {
-    return await executeDatabaseCommand(plan, db)
-  } finally {
-    await db.close()
+    result = await executeDatabaseCommand(plan, db)
+  } catch (error) {
+    try {
+      await db.close()
+    } catch (closeError) {
+      throw new AggregateError([error, closeError], 'Database command and close both failed', {
+        cause: error,
+      })
+    }
+    throw error
   }
+
+  await db.close()
+  return result
 }
 
 async function executeDatabaseCommand(plan: DatabaseCommandPlan, db: Database): Promise<number> {
@@ -321,7 +332,7 @@ async function createConfiguredDatabase(
   // optional peer dependencies; only the configured adapter's driver needs to
   // be installed.
   if (adapter.type === 'sqlite') {
-    let { createSqliteDatabaseAdapter } = await import('@remix-run/data-table-sqlite')
+    let { createSqliteDatabase } = await import('@remix-run/data-table-sqlite')
     let filename = resolveDbString(adapter.filename)
     if (filename !== ':memory:') {
       // Filenames from remix.json are config-relative; explicit flag overrides
@@ -329,34 +340,28 @@ async function createConfiguredDatabase(
       filename = path.resolve(configDir, filename)
       await fs.mkdir(path.dirname(filename), { recursive: true })
     }
-    return createDatabase(
-      createSqliteDatabaseAdapter({
-        filename,
-        foreignKeys: adapter.foreignKeys,
-        busyTimeout: adapter.busyTimeout,
-      }),
-    )
+    return createSqliteDatabase({
+      filename,
+      foreignKeys: adapter.foreignKeys,
+      busyTimeout: adapter.busyTimeout,
+    })
   }
 
   if (adapter.type === 'postgres') {
-    let { createPostgresDatabaseAdapter } = await import('@remix-run/data-table-postgres')
-    return createDatabase(
-      createPostgresDatabaseAdapter(
-        { connectionString: resolveDbString(adapter.connectionString) },
-        {
-          maintenanceDatabase: adapter.maintenanceDatabase,
-          template: adapter.template,
-        },
-      ),
+    let { createPostgresDatabase } = await import('@remix-run/data-table-postgres')
+    return createPostgresDatabase(
+      { connectionString: resolveDbString(adapter.connectionString) },
+      {
+        maintenanceDatabase: adapter.maintenanceDatabase,
+        template: adapter.template,
+      },
     )
   }
 
-  let { createMysqlDatabaseAdapter } = await import('@remix-run/data-table-mysql')
-  return createDatabase(
-    createMysqlDatabaseAdapter(
-      { uri: resolveDbString(adapter.uri), multipleStatements: true },
-      { characterSet: adapter.characterSet, collation: adapter.collation },
-    ),
+  let { createMysqlDatabase } = await import('@remix-run/data-table-mysql')
+  return createMysqlDatabase(
+    { uri: resolveDbString(adapter.uri), multipleStatements: true },
+    { characterSet: adapter.characterSet, collation: adapter.collation },
   )
 }
 

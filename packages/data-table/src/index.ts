@@ -1,37 +1,19 @@
 export type {
-  AdapterCapabilityOverrides,
-  AdapterCapabilities,
-  DataManipulationRequest,
+  DatabaseCapabilities,
   ColumnCheck,
   ColumnComputed,
   ColumnDefault,
   ColumnDefinition,
   ColumnTypeName,
-  CountOperation,
   DataManipulationResult,
-  DataManipulationOperation,
-  DeleteOperation,
-  DatabaseAdapter,
-  ExistsOperation,
   ForeignKeyAction,
   IdentityOptions,
-  InsertManyOperation,
-  InsertOperation,
-  JoinClause,
-  JoinType,
-  RawOperation,
-  ReturningSelection,
-  SelectColumn,
-  SelectOperation,
   TableRef,
   TransactionOptions,
-  TransactionToken,
-  UpdateOperation,
-  UpsertOperation,
 } from './lib/adapter.ts'
 
 export {
-  DataTableAdapterError,
+  DataTableDatabaseError,
   DataTableConstraintError,
   DataTableError,
   DataTableQueryError,
@@ -145,6 +127,7 @@ export type {
   CreateResultOptions,
   CreateRowOptions,
   DeleteManyOptions,
+  DatabaseOptions,
   FindManyOptions,
   FindOneOptions,
   OrderByInput,
@@ -160,7 +143,7 @@ export type {
   WriteRowResult,
   WriteRowsResult,
 } from './lib/database.ts'
-export { createDatabase, Database } from './lib/database.ts'
+export type { Database } from './lib/database.ts'
 export type {
   DatabaseMigrateOptions,
   DatabaseMigrationStatusOptions,

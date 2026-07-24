@@ -1,13 +1,17 @@
 import type {
-  DataManipulationRequest,
   DataManipulationResult,
-  DataManipulationOperation,
-  DatabaseAdapter,
   SqlStatement,
   TableRef,
   TransactionOptions,
-  TransactionToken,
 } from '@remix-run/data-table'
+import {
+  DatabaseImplementation,
+  type DataManipulationOperation,
+  type DataManipulationRequest,
+  type DatabaseOptions,
+  type MigrationLockContext,
+  type TransactionToken,
+} from '@remix-run/data-table/database-implementation'
 import { AsyncLocalStorage } from 'node:async_hooks'
 
 import { getTablePrimaryKey } from '@remix-run/data-table'
@@ -28,8 +32,8 @@ type TransactionState = {
 type PostgresPoolConfig = ConstructorParameters<typeof pg.Pool>[0]
 type PostgresClientConfig = ConstructorParameters<typeof pg.Client>[0]
 
-/** Database recreation options for a config-backed PostgreSQL adapter. */
-export interface PostgresDatabaseAdapterOptions {
+/** Database recreation options for a config-backed PostgreSQL implementation. */
+export interface PostgresDatabaseImplementationOptions extends DatabaseOptions {
   /** Database used while dropping and recreating the configured database (`postgres` by default). */
   maintenanceDatabase?: string
   /** Template used to recreate the configured database (`template0` by default). */
@@ -38,19 +42,33 @@ export interface PostgresDatabaseAdapterOptions {
 
 type PostgresQueryable = PostgresClient | PostgresPool | PostgresPoolClient
 
+const postgresCapabilities = Object.freeze({
+  returning: true,
+  savepoints: true,
+  upsert: true,
+  transactionalDdl: true,
+  migrationLock: true,
+})
+
+export type PostgresDatabaseInput = PostgresPoolConfig | PostgresQueryable
+
 /**
- * `DatabaseAdapter` implementation for postgres-compatible clients.
+ * PostgreSQL database implementation for postgres-compatible clients.
  */
-export class PostgresDatabaseAdapter implements DatabaseAdapter {
+export class PostgresDatabaseImplementation extends DatabaseImplementation {
   /**
-   * The SQL dialect identifier reported by this adapter.
+   * The SQL dialect identifier reported by this database.
    */
-  dialect = 'postgres'
+  override get dialect(): 'postgres' {
+    return 'postgres'
+  }
 
   /**
-   * Feature flags describing the postgres behaviors supported by this adapter.
+   * Feature flags describing the PostgreSQL behaviors supported by this database.
    */
-  capabilities
+  override get capabilities() {
+    return postgresCapabilities
+  }
 
   #config?: PostgresPoolConfig
   #client: PostgresQueryable
@@ -62,10 +80,8 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   #migrationLockStore = new AsyncLocalStorage<boolean>()
   #poolClosed = false
 
-  constructor(
-    config: PostgresPoolConfig | PostgresQueryable,
-    options: PostgresDatabaseAdapterOptions = {},
-  ) {
+  constructor(config: PostgresDatabaseInput, options: PostgresDatabaseImplementationOptions = {}) {
+    super(options)
     if (isPostgresQueryable(config)) {
       this.#client = config
     } else {
@@ -75,13 +91,6 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
 
     this.#maintenanceDatabase = options.maintenanceDatabase ?? 'postgres'
     this.#template = options.template ?? 'template0'
-    this.capabilities = {
-      returning: true,
-      savepoints: true,
-      upsert: true,
-      transactionalDdl: true,
-      migrationLock: true,
-    }
   }
 
   /**
@@ -190,10 +199,17 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       transactionClient = this.#client
     }
 
-    await transactionClient.query('begin')
+    try {
+      await transactionClient.query('begin')
 
-    if (options?.isolationLevel || options?.readOnly !== undefined) {
-      await transactionClient.query(buildSetTransactionStatement(options))
+      if (options?.isolationLevel || options?.readOnly !== undefined) {
+        await transactionClient.query(buildSetTransactionStatement(options))
+      }
+    } catch (error) {
+      if (releaseOnClose) {
+        destroyPostgresClient(transactionClient, error)
+      }
+      throw error
     }
 
     this.#transactionCounter += 1
@@ -219,13 +235,21 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       throw new Error('Unknown transaction token: ' + token.id)
     }
 
+    let failure: unknown
     try {
       await transaction.client.query('commit')
+    } catch (error) {
+      failure = error
+      throw error
     } finally {
       this.#transactions.delete(token.id)
 
       if (transaction.releaseOnClose) {
-        releasePostgresClient(transaction.client)
+        if (failure === undefined) {
+          releasePostgresClient(transaction.client)
+        } else {
+          destroyPostgresClient(transaction.client, failure)
+        }
       }
     }
   }
@@ -242,13 +266,21 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       throw new Error('Unknown transaction token: ' + token.id)
     }
 
+    let failure: unknown
     try {
       await transaction.client.query('rollback')
+    } catch (error) {
+      failure = error
+      throw error
     } finally {
       this.#transactions.delete(token.id)
 
       if (transaction.releaseOnClose) {
-        releasePostgresClient(transaction.client)
+        if (failure === undefined) {
+          releasePostgresClient(transaction.client)
+        } else {
+          destroyPostgresClient(transaction.client, failure)
+        }
       }
     }
   }
@@ -295,7 +327,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     this.#assertNoOpenTransactions('wipe')
     let database = resolvePostgresDatabaseName(config)
     // Resolve the maintenance config before closing the pool so a config
-    // error cannot leave the adapter without a usable pool.
+    // error cannot leave the database without a usable pool.
     let maintenanceConfig = this.#maintenanceConfig(database)
     await this.#closePool()
     let maintenance: PostgresClient | undefined
@@ -323,6 +355,14 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /** Closes a pool created from configuration. Supplied clients and pools remain caller-owned. */
+  async close(): Promise<void> {
+    this.#assertNoOpenTransactions('close')
+    if (this.#config) {
+      await this.#closePool()
+    }
+  }
+
   /**
    * Runs migration work on the postgres connection that owns the advisory lock.
    *
@@ -336,10 +376,10 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
    */
   async withMigrationLock<result>(
     name: string,
-    run: (adapter: DatabaseAdapter) => Promise<result>,
+    run: (database: MigrationLockContext) => Promise<result>,
   ): Promise<result> {
     if (this.#migrationLockStore.getStore()) {
-      throw new Error('Postgres migration lock is already held by this adapter')
+      throw new Error('Postgres migration lock is already held by this database')
     }
 
     let waitForPreviousLock = this.#migrationLockQueue
@@ -361,7 +401,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
         client = this.#client
       }
 
-      let adapter = releaseOnClose ? new PostgresDatabaseAdapter(client) : this
+      let adapter = releaseOnClose ? new PostgresDatabaseImplementation(client) : this
 
       try {
         let value = await this.#migrationLockStore.run(true, () =>
@@ -388,15 +428,6 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
-  /**
-   * Closes the connection pool when this adapter owns one. Adapters wrapping
-   * an injected client or pool connection leave it open for its owner. Safe to
-   * call more than once.
-   */
-  async close(): Promise<void> {
-    await this.#closePool()
-  }
-
   async #closePool(): Promise<void> {
     this.#transactions.clear()
     // pg pools reject end() when called twice, so ending must be tracked to
@@ -409,7 +440,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
 
   #configOrThrow(method: string): PostgresPoolConfig {
     if (!this.#config) {
-      throw new Error('Postgres adapter ' + method + '() requires config-based construction')
+      throw new Error('Postgres database ' + method + '() requires config-based construction')
     }
 
     return this.#config
@@ -417,7 +448,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
 
   #assertNoOpenTransactions(method: string): void {
     if (this.#transactions.size > 0) {
-      throw new Error('Postgres adapter cannot ' + method + ' while transactions are open')
+      throw new Error('Postgres database cannot ' + method + ' while transactions are open')
     }
   }
 
@@ -462,27 +493,6 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
 
     return transaction.client
   }
-}
-
-/**
- * Creates a postgres `DatabaseAdapter`.
- * @param input Postgres pool configuration, pool, or client.
- * @param options Database recreation options used by `wipe()`.
- * @returns A configured postgres adapter.
- * @example
- * ```ts
- * import { createDatabase } from 'remix/data-table'
- * import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
- *
- * let adapter = createPostgresDatabaseAdapter({ connectionString: process.env.DATABASE_URL })
- * let db = createDatabase(adapter)
- * ```
- */
-export function createPostgresDatabaseAdapter(
-  input: PostgresPoolConfig | PostgresQueryable,
-  options?: PostgresDatabaseAdapterOptions,
-): PostgresDatabaseAdapter {
-  return new PostgresDatabaseAdapter(input, options)
 }
 
 function isPostgresQueryable(value: unknown): value is PostgresQueryable {
@@ -572,8 +582,8 @@ const MIGRATION_LOCK_TIMEOUT_MS = 60_000
 async function runWithPostgresMigrationLock<result>(
   client: PostgresClient | PostgresPoolClient,
   name: string,
-  adapter: DatabaseAdapter,
-  run: (adapter: DatabaseAdapter) => Promise<result>,
+  adapter: PostgresDatabaseImplementation,
+  run: (database: MigrationLockContext) => Promise<result>,
 ): Promise<result> {
   await client.query('set lock_timeout to ' + String(MIGRATION_LOCK_TIMEOUT_MS))
 

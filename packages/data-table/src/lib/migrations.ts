@@ -3,8 +3,8 @@ import type { Database } from './database.ts'
 /**
  * Controls how each migration is wrapped in transactions.
  *
- * - `auto` (default): wrap when the adapter supports transactional DDL.
- * - `required`: wrap; throws when the adapter does not support transactional DDL.
+ * - `auto` (default): wrap when the database supports transactional DDL.
+ * - `required`: wrap; throws when the database does not support transactional DDL.
  * - `none`: never wrap.
  */
 export type MigrationTransactionMode = 'auto' | 'required' | 'none'

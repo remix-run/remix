@@ -1,6 +1,5 @@
 import * as assert from '@remix-run/assert'
 import { after, before, describe, it } from '@remix-run/test'
-import { createDatabase } from '@remix-run/data-table'
 import { createPool, type Pool } from 'mysql2/promise'
 
 import {
@@ -10,7 +9,7 @@ import {
 } from '../../../data-table/test/adapter-integration-schema.ts'
 import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
 
-import { createMysqlDatabaseAdapter } from './adapter.ts'
+import { createMysqlDatabase } from './database.ts'
 
 const DATABASE_URL = process.env.REMIX_DATA_TABLE_MYSQL_TEST_URL
 
@@ -32,7 +31,7 @@ describe('mysql adapter integration', { skip: typeof DATABASE_URL !== 'string' }
   })
 
   runAdapterIntegrationContract({
-    createDatabase: () => createDatabase(createMysqlDatabaseAdapter(DATABASE_URL!)),
+    createDatabase: () => createMysqlDatabase(DATABASE_URL!),
     resetDatabase: async () => {
       await resetAdapterIntegrationSchema(async (statement) => {
         await pool.query(statement)
@@ -47,8 +46,7 @@ describe('mysql adapter integration', { skip: typeof DATABASE_URL !== 'string' }
       connectionLimit: 1,
       multipleStatements: true,
     })
-    let adapter = createMysqlDatabaseAdapter(migrationPool)
-    let db = createDatabase(adapter)
+    let db = createMysqlDatabase(migrationPool)
     let migrations = [
       {
         id: '20260723000000',
@@ -60,7 +58,7 @@ describe('mysql adapter integration', { skip: typeof DATABASE_URL !== 'string' }
 
     try {
       await db.migrate(migrations, { journalTable: 'data_table_migration_lock_journal' })
-      assert.equal(await adapter.hasTable({ name: 'data_table_migration_lock_test' }), true)
+      assert.equal(await db.hasTable({ name: 'data_table_migration_lock_test' }), true)
       await db.migrate(migrations, {
         direction: 'down',
         journalTable: 'data_table_migration_lock_journal',
@@ -73,11 +71,11 @@ describe('mysql adapter integration', { skip: typeof DATABASE_URL !== 'string' }
   })
 
   it('wipes the configured database and reconnects', async () => {
-    let db = createDatabase(createMysqlDatabaseAdapter({ uri: DATABASE_URL! }))
+    let db = createMysqlDatabase({ uri: DATABASE_URL! })
     await db.exec('create table data_table_wipe_test (id integer primary key)')
 
     await db.wipe()
 
-    assert.equal(await db.adapter.hasTable({ name: 'data_table_wipe_test' }), false)
+    assert.equal(await db.hasTable({ name: 'data_table_wipe_test' }), false)
   })
 })

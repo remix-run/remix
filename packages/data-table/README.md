@@ -4,7 +4,7 @@ Typed relational query toolkit for JavaScript runtimes.
 
 ## Features
 
-- **One API Across Databases**: Same query and relation APIs across PostgreSQL, MySQL, and SQLite adapters
+- **One API Across Databases**: Same query and relation APIs across PostgreSQL, MySQL, and SQLite
 - **One Query API**: Build reusable `Query` objects with `query(table)` and execute them with `db.exec(...)`, or use `db.query(table)` as shorthand
 - **Type-Safe Reads**: Typed `select`, relation loading, and predicate keys
 - **Optional Runtime Validation**: Add `validate(context)` at the table level for create/update validation and coercion
@@ -34,11 +34,11 @@ npm i mysql2
 
 ## Setup
 
-Define tables once, then create a database with an adapter.
+Define tables once, then create a database for your SQL dialect.
 
 ```ts
-import { column as c, createDatabase, hasMany, query, table } from 'remix/data-table'
-import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
+import { column as c, hasMany, query, table } from 'remix/data-table'
+import { createPostgresDatabase } from 'remix/data-table/postgres'
 
 let users = table({
   name: 'users',
@@ -63,9 +63,7 @@ let orders = table({
 
 let userOrders = hasMany(users, orders)
 
-let db = createDatabase(
-  createPostgresDatabaseAdapter({ connectionString: process.env.DATABASE_URL }),
-)
+let db = createPostgresDatabase({ connectionString: process.env.DATABASE_URL })
 ```
 
 ## Query Objects
@@ -202,7 +200,7 @@ let createManyResult = await db.createMany(orders, [
   { id: 'o_102', user_id: 'u_003', status: 'pending', total: 48.5, created_at: Date.now() },
 ])
 
-// Return inserted rows (requires adapter RETURNING support)
+// Return inserted rows (requires database RETURNING support)
 let insertedRows = await db.createMany(
   orders,
   [{ id: 'o_103', user_id: 'u_003', status: 'pending', total: 12, created_at: Date.now() }],
@@ -344,7 +342,7 @@ await db.transaction(async (tx) => {
 
 ## Migrations
 
-`data-table` ships a SQL-first migration system under `remix/data-table/migrations`. Each migration is a directory containing hand-written `up.sql` and (optionally) `down.sql`. The runner journals applied migrations, detects checksum drift and missing applied migrations, and wraps each migration in a transaction when the adapter supports transactional DDL.
+`data-table` ships a SQL-first migration system under `remix/data-table/migrations`. Each migration is a directory containing hand-written `up.sql` and (optionally) `down.sql`. The runner journals applied migrations, detects checksum drift and missing applied migrations, and wraps each migration in a transaction when the database supports transactional DDL.
 
 ### Example Setup
 
@@ -389,16 +387,16 @@ drop table if exists users;
 
 ### Multi-Statement Driver Configuration
 
-The runner sends each migration to the adapter as a single multi-statement script. Make sure the underlying driver accepts multiple statements:
+The runner sends each migration to the database as a single multi-statement script. Make sure the underlying driver accepts multiple statements:
 
 - `better-sqlite3`: works out of the box (`db.exec`).
 - `pg`: works out of the box when no parameter array is passed.
 - `mysql2`: requires `multipleStatements: true` on the connection/pool.
 
 ```ts
-import { createMysqlDatabaseAdapter } from 'remix/data-table/mysql'
+import { createMysqlDatabase } from 'remix/data-table/mysql'
 
-let adapter = createMysqlDatabaseAdapter({
+let db = createMysqlDatabase({
   uri: process.env.DATABASE_URL,
   multipleStatements: true,
 })
@@ -444,7 +442,7 @@ remix db wipe
 
 `remix db status` reports applied migrations whose files are no longer present as `missing`. If the journal table does not exist, it reports every migration as pending without creating the table. Forward migration runs stop before executing SQL when an applied journal entry is missing from the current migration set. Rollbacks skip those orphaned journal entries so migrations that are still present can be reverted.
 
-`wipe` and `reset` are destructive. They require a config-backed adapter so the adapter can close, recreate, and reconnect to the configured database.
+`wipe` and `reset` are destructive. They require a config-backed database so it can close, recreate, and reconnect to the configured database.
 
 ### Programmatic Migrations
 
@@ -475,8 +473,8 @@ for (let script of plan.sql) console.log(script)
 
 `to` and `step` are mutually exclusive. Omit `journalTable` to use `data_table_migrations`.
 
-Adapters with migration locking run the complete migration and journal lifecycle through the
-connection that owns the lock. This keeps advisory locks correctly paired when the adapter uses a
+Database implementations with migration locking run the complete migration and journal lifecycle through the
+connection that owns the lock. This keeps advisory locks correctly paired when the implementation uses a
 connection pool, including pools configured with a single connection.
 
 Read status separately, or rebuild a database with migrations and an optional seed. A seed is a
@@ -493,7 +491,7 @@ await db.reset({ migrations, seed })
 await db.reset({ migrations, seed, journalTable: 'app_migrations' })
 ```
 
-When a lifecycle command is the last thing a process does, close adapter-owned connection pools so
+When a lifecycle command is the last thing a process does, close database-owned connections so
 the process can exit:
 
 ```ts
@@ -502,7 +500,7 @@ await db.close()
 
 ### Transaction Modes
 
-By default each migration is wrapped in a transaction when the adapter supports transactional DDL. Override per migration with a directive on the first non-blank line of `up.sql`:
+By default each migration is wrapped in a transaction when the database supports transactional DDL. Override per migration with a directive on the first non-blank line of `up.sql`:
 
 ```sql
 -- data-table/transaction: none
@@ -511,8 +509,8 @@ create index concurrently users_email_active_idx on users (email) where status =
 
 Supported modes:
 
-- `auto` (default): wrap when the adapter supports transactional DDL.
-- `required`: wrap; the runner throws if the adapter cannot support it.
+- `auto` (default): wrap when the database supports transactional DDL.
+- `required`: wrap; the runner throws if the database cannot support it.
 - `none`: never wrap. Use this for statements like postgres `CREATE INDEX CONCURRENTLY` that cannot run inside a transaction.
 
 You can also set `transaction` directly on a `MigrationDescriptor` when registering migrations programmatically.
@@ -560,14 +558,41 @@ let result = await db.exec(sql`
 `)
 ```
 
-`sql` keeps values parameterized per adapter dialect, so you can avoid manual string concatenation.
+`sql` keeps values parameterized for the database dialect, so you can avoid manual string concatenation.
+
+## Custom Database Implementations
+
+Applications normally use one of the concrete SQLite, PostgreSQL, or MySQL factories. Database
+integration packages can implement another dialect by extending `DatabaseImplementation` from
+`remix/data-table/database-implementation`. The resulting object is the database—do not construct
+or expose a separate adapter object.
+
+The base class supplies queries, CRUD helpers, relations, transactions, and migration methods.
+Implementations provide:
+
+- `dialect` and an immutable `capabilities` object
+- `compileSql()`, `execute()`, and `executeScript()`
+- `hasTable()`, `hasColumn()`, `wipe()`, and idempotent `close()`
+- transaction and savepoint lifecycle methods using opaque `TransactionToken` values
+
+Implementations whose capabilities report `migrationLock: true` also override
+`withMigrationLock()` and run its callback with a `MigrationLockContext` bound to the connection
+that owns the lock.
+
+The implementation subpath exports `DatabaseImplementation`, `DatabaseOptions`,
+`DataManipulationOperation`, `DataManipulationRequest`, `MigrationLockContext`, and
+`TransactionToken`. Result, SQL, capability, table-reference, and transaction-option types remain
+owned by `remix/data-table`.
+
+Concrete factories should return a dialect-specific interface that extends the common `Database`
+type and narrows details such as the `dialect` value and `close()` return type.
 
 ## Related Packages
 
 - [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Optional schema parsing you can use inside table-level `validate(...)` hooks
-- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL adapter
-- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL adapter
-- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite adapter
+- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database implementation
+- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database implementation
+- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database implementation
 
 ## License
 

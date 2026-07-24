@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { runRemixDb } from './cli.ts'
-import { Database } from './lib/database.ts'
+import type { Database } from './lib/database.ts'
 import type {
   DatabaseMigrateOptions,
   DatabaseMigrationStatusOptions,
@@ -12,7 +12,7 @@ import type {
   MigrationStatusEntry,
   Seed,
 } from './lib/migrations.ts'
-import { createRecordingAdapter } from '../test/recording-adapter.ts'
+import { createRecordingAdapter, TestDatabase } from '../test/recording-adapter.ts'
 
 const migrations: Migrations = [
   {
@@ -22,7 +22,7 @@ const migrations: Migrations = [
   },
 ]
 
-class RecordingDatabase extends Database {
+class RecordingDatabase extends TestDatabase {
   calls: string[] = []
   migrateOptions: DatabaseMigrateOptions | undefined
   migrateResult: MigrateResult = { applied: [], reverted: [], sql: [] }

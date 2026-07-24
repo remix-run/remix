@@ -1,7 +1,6 @@
 import { completeAuth, verifyCredentials } from 'remix/auth'
 import { Auth } from 'remix/middleware/auth'
 import { getCsrfToken } from 'remix/middleware/csrf'
-import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { maxLength, minLength } from 'remix/data-schema/checks'
@@ -10,6 +9,7 @@ import { redirect } from 'remix/response/redirect'
 import { Session } from 'remix/session'
 
 import { hashPassword } from '../../data/passwords.ts'
+import { databaseContext } from '../../middleware/database.ts'
 import { userPasswords, users } from '../../data/schema.ts'
 import { credentialsSchema, passwordProvider } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
@@ -124,7 +124,7 @@ export const authSignup = createController(routes.auth.signup, {
       }
 
       let { username, password } = parsed.value
-      let db = context.get(Database)
+      let db = context.get(databaseContext)
       let existingUser = await db.findOne(users, { where: { username } })
 
       if (existingUser) {

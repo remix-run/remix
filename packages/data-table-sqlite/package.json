@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/data-table-sqlite",
   "version": "0.5.1",
-  "description": "SQLite adapter for remix/data-table",
+  "description": "SQLite database implementation for remix/data-table",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {

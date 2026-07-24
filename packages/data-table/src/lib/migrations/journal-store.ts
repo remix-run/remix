@@ -1,4 +1,4 @@
-import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
+import type { MigrationLockContext, TransactionToken } from '../adapter.ts'
 import { rawSql } from '../sql.ts'
 import type { MigrationDescriptor, MigrationJournalRow } from '../migrations.ts'
 
@@ -18,7 +18,7 @@ function bytesToHex(bytes: Uint8Array): string {
 }
 
 export async function ensureMigrationJournal(
-  adapter: DatabaseAdapter,
+  adapter: MigrationLockContext,
   tableName: string,
 ): Promise<void> {
   await adapter.executeScript(
@@ -35,7 +35,7 @@ export async function ensureMigrationJournal(
 }
 
 export async function hasMigrationJournal(
-  adapter: DatabaseAdapter,
+  adapter: MigrationLockContext,
   tableName: string,
 ): Promise<boolean> {
   try {
@@ -63,7 +63,7 @@ export async function hasMigrationJournal(
 }
 
 export async function loadJournalRows(
-  adapter: DatabaseAdapter,
+  adapter: MigrationLockContext,
   tableName: string,
 ): Promise<MigrationJournalRow[]> {
   let result = await adapter.execute({
@@ -87,7 +87,7 @@ export async function loadJournalRows(
 }
 
 export async function insertJournalRow(
-  adapter: DatabaseAdapter,
+  adapter: MigrationLockContext,
   tableName: string,
   row: {
     id: string
@@ -112,7 +112,7 @@ export async function insertJournalRow(
 }
 
 export async function deleteJournalRow(
-  adapter: DatabaseAdapter,
+  adapter: MigrationLockContext,
   tableName: string,
   id: string,
   transaction?: TransactionToken,

@@ -1,5 +1,6 @@
 import { getTableName, getTablePrimaryKey } from '@remix-run/data-table'
-import type { DataManipulationOperation, Predicate, SqlStatement } from '@remix-run/data-table'
+import type { Predicate, SqlStatement } from '@remix-run/data-table'
+import type { DataManipulationOperation } from '@remix-run/data-table/database-implementation'
 import {
   collectColumns as collectColumnsHelper,
   normalizeJoinType as normalizeJoinTypeHelper,

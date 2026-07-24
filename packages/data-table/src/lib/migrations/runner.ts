@@ -1,4 +1,4 @@
-import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
+import type { DatabaseAdapter, MigrationLockContext, TransactionToken } from '../adapter.ts'
 import type {
   MigrationOperationOptions,
   MigrateResult,
@@ -33,8 +33,15 @@ import {
 } from './journal-store.ts'
 import { resolveMigrations } from './registry.ts'
 
+type MigrationRunnerContext = MigrationLockContext & {
+  withMigrationLock?<result>(
+    name: string,
+    run: (database: MigrationLockContext) => Promise<result>,
+  ): Promise<result>
+}
+
 type RunMigrationsInput = {
-  adapter: DatabaseAdapter
+  adapter: MigrationRunnerContext
   migrations: MigrationDescriptor[]
   journalTable: string
   direction: MigrationDirection
@@ -224,7 +231,7 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
       throw new Error(
         'Migration "' +
           migration.id +
-          '" requires transactional DDL, but adapter does not support it',
+          '" requires transactional DDL, but the database does not support it',
       )
     }
 
@@ -275,16 +282,22 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
           status: 'pending',
         })
       }
-
-      if (token) {
-        await adapter.commitTransaction(token)
-      }
     } catch (error) {
       if (token) {
-        await adapter.rollbackTransaction(token)
+        try {
+          await adapter.rollbackTransaction(token)
+        } catch (rollbackError) {
+          throw new AggregateError([error, rollbackError], 'Migration and rollback both failed', {
+            cause: error,
+          })
+        }
       }
 
       throw error
+    }
+
+    if (token) {
+      await adapter.commitTransaction(token)
     }
   }
 

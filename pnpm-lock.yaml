@@ -498,9 +498,6 @@ importers:
       '@remix-run/data-table-sqlite':
         specifier: workspace:^
         version: link:../data-table-sqlite
-      '@remix-run/node-tsx':
-        specifier: workspace:^
-        version: link:../node-tsx
       '@remix-run/terminal':
         specifier: workspace:^
         version: link:../terminal

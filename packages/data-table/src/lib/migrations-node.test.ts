@@ -162,10 +162,8 @@ describe('seed node loader', () => {
 
       let scripts: string[] = []
       let db = {
-        adapter: {
-          executeScript(script: string) {
-            scripts.push(script)
-          },
+        executeScript(script: string) {
+          scripts.push(script)
         },
       } as unknown as Database
       await seed(db)

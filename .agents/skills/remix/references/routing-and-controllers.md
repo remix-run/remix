@@ -103,7 +103,7 @@ export const search = createAction(routes.search, {
 
 The handler receives a context object with:
 
-- `get(key)` — read a value set by middleware (e.g. `get(Database)`, `get(Session)`, `get(Auth)`)
+- `get(key)` — read a value set by middleware (e.g. `get(databaseContext)`, `get(Session)`, `get(Auth)`)
 - `params` — typed route params
 - `url` — the request URL
 - `request` — the raw `Request`
@@ -132,7 +132,7 @@ For pages, render a component tree and return the resulting `Response`:
 
 ```typescript
 async handler({ get }) {
-  let db = get(Database)
+  let db = get(databaseContext)
   let books = await db.findMany(books, { orderBy: ['id', 'asc'] })
   return render(<IndexPage books={books} />)
 }
@@ -152,7 +152,7 @@ async create({ get }) {
     return render(<NewBookPage errors={parsed.issues} />, { status: 400 })
   }
 
-  let db = get(Database)
+  let db = get(databaseContext)
   let book = await db.create(books, parsed.value)
 
   return redirect(routes.books.show.href({ slug: book.slug }), 303)
@@ -167,7 +167,7 @@ For expected failures — validation, conflict, not found — return a `Response
 
 ```typescript
 async show({ get, params }) {
-  let db = get(Database)
+  let db = get(databaseContext)
   let book = await db.find(books, params.bookId)
   if (!book) return new Response('Not Found', { status: 404 })
   return render(<ShowPage book={book} />)
@@ -208,7 +208,7 @@ If you find yourself returning JSON for what is really a browser form submission
 
 A controller owns the direct leaf routes in one route map. Each key in `actions` matches a direct leaf route key in the route definition passed to `router.map(...)`. Nested route-map keys do not belong inside a controller's `actions`; map those route maps with their own controllers.
 
-Configure `RouterTypes.context` with your app context in the router module, then use `createController()` so `get(Database)`, `get(Session)`, `get(Auth)`, etc. are typed against your middleware stack without repeating a type clause on every controller.
+Configure `RouterTypes.context` with your app context in the router module, then use `createController()` so `get(databaseContext)`, `get(Session)`, `get(Auth)`, etc. are typed against your middleware stack without repeating a type clause on every controller.
 
 ```typescript
 import { createController } from 'remix/router'
@@ -218,13 +218,13 @@ import { routes } from '../routes.ts'
 export default createController(routes.books, {
   actions: {
     async index({ get }) {
-      let db = get(Database)
+      let db = get(databaseContext)
       let items = await db.findMany(books, { orderBy: ['id', 'asc'] })
       return render(<IndexPage items={items} />)
     },
 
     async show({ get, params }) {
-      let db = get(Database)
+      let db = get(databaseContext)
       let book = await db.find(books, params.bookId)
       if (!book) return new Response('Not Found', { status: 404 })
       return render(<ShowPage book={book} />)
@@ -359,4 +359,4 @@ declare module 'remix/router' {
 }
 ```
 
-This gives typed `context.get(Database)`, `context.get(Session)`, `context.get(Auth)`, etc.
+This gives typed `context.get(databaseContext)`, `context.get(Session)`, `context.get(Auth)`, etc.

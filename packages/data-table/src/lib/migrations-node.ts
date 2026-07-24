@@ -100,7 +100,7 @@ export async function loadMigrations(directory: string): Promise<MigrationDescri
  */
 export async function loadSeed(filename: string): Promise<Seed> {
   let sql = await fs.readFile(filename, 'utf8')
-  return (db) => db.adapter.executeScript(sql)
+  return (db) => db.executeScript(sql)
 }
 
 function isNodeFileNotFoundError(error: unknown): boolean {

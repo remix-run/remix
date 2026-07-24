@@ -1,13 +1,17 @@
 import type {
-  DataManipulationRequest,
   DataManipulationResult,
-  DataManipulationOperation,
-  DatabaseAdapter,
   SqlStatement,
   TableRef,
   TransactionOptions,
-  TransactionToken,
 } from '@remix-run/data-table'
+import {
+  DatabaseImplementation,
+  type DataManipulationOperation,
+  type DataManipulationRequest,
+  type DatabaseOptions,
+  type MigrationLockContext,
+  type TransactionToken,
+} from '@remix-run/data-table/database-implementation'
 import { AsyncLocalStorage } from 'node:async_hooks'
 
 import { getTablePrimaryKey } from '@remix-run/data-table'
@@ -36,8 +40,18 @@ type MysqlQueryResultHeader = {
 type MysqlTransactionConnection = MysqlConnection | MysqlPoolConnection
 type MysqlQueryable = MysqlPool | MysqlTransactionConnection
 
-/** Database creation options used when wiping a config-backed MySQL adapter. */
-export interface MysqlDatabaseAdapterOptions {
+export type MysqlDatabaseInput = string | MysqlPoolOptions | MysqlQueryable
+
+const mysqlCapabilities = Object.freeze({
+  returning: false,
+  savepoints: true,
+  upsert: true,
+  transactionalDdl: false,
+  migrationLock: true,
+})
+
+/** Database creation options used when wiping a config-backed MySQL implementation. */
+export interface MysqlDatabaseImplementationOptions extends DatabaseOptions {
   /** Character set assigned to the recreated database. */
   characterSet?: string
   /** Collation assigned to the recreated database. */
@@ -45,18 +59,22 @@ export interface MysqlDatabaseAdapterOptions {
 }
 
 /**
- * `DatabaseAdapter` implementation for mysql-compatible clients.
+ * MySQL database implementation for mysql-compatible clients.
  */
-export class MysqlDatabaseAdapter implements DatabaseAdapter {
+export class MysqlDatabaseImplementation extends DatabaseImplementation {
   /**
-   * The SQL dialect identifier reported by this adapter.
+   * The SQL dialect identifier reported by this database.
    */
-  dialect = 'mysql'
+  override get dialect(): 'mysql' {
+    return 'mysql'
+  }
 
   /**
-   * Feature flags describing the mysql behaviors supported by this adapter.
+   * Feature flags describing the MySQL behaviors supported by this database.
    */
-  capabilities
+  override get capabilities() {
+    return mysqlCapabilities
+  }
 
   #config?: string | MysqlPoolOptions
   #client: MysqlQueryable
@@ -68,10 +86,8 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
   #migrationLockStore = new AsyncLocalStorage<boolean>()
   #poolClosed = false
 
-  constructor(
-    config: string | MysqlPoolOptions | MysqlQueryable,
-    options: MysqlDatabaseAdapterOptions = {},
-  ) {
+  constructor(config: MysqlDatabaseInput, options: MysqlDatabaseImplementationOptions = {}) {
+    super(options)
     if (isMysqlQueryable(config)) {
       this.#client = config
     } else {
@@ -81,13 +97,6 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
 
     this.#characterSet = options.characterSet
     this.#collation = options.collation
-    this.capabilities = {
-      returning: false,
-      savepoints: true,
-      upsert: true,
-      transactionalDdl: false,
-      migrationLock: true,
-    }
   }
 
   /**
@@ -216,17 +225,24 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
       connection = this.#client
     }
 
-    if (options?.isolationLevel) {
-      await connection.query('set transaction isolation level ' + options.isolationLevel)
-    }
+    try {
+      if (options?.isolationLevel) {
+        await connection.query('set transaction isolation level ' + options.isolationLevel)
+      }
 
-    if (options?.readOnly !== undefined) {
-      await connection.query(
-        options.readOnly ? 'set transaction read only' : 'set transaction read write',
-      )
-    }
+      if (options?.readOnly !== undefined) {
+        await connection.query(
+          options.readOnly ? 'set transaction read only' : 'set transaction read write',
+        )
+      }
 
-    await connection.beginTransaction()
+      await connection.beginTransaction()
+    } catch (error) {
+      if (releaseOnClose) {
+        destroyMysqlConnection(connection)
+      }
+      throw error
+    }
 
     this.#transactionCounter += 1
     let token = { id: 'tx_' + String(this.#transactionCounter) }
@@ -251,13 +267,21 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
       throw new Error('Unknown transaction token: ' + token.id)
     }
 
+    let failed = false
     try {
       await transaction.connection.commit()
+    } catch (error) {
+      failed = true
+      throw error
     } finally {
       this.#transactions.delete(token.id)
 
-      if (transaction.releaseOnClose && isMysqlPoolConnection(transaction.connection)) {
-        transaction.connection.release()
+      if (transaction.releaseOnClose) {
+        if (failed) {
+          destroyMysqlConnection(transaction.connection)
+        } else if (isMysqlPoolConnection(transaction.connection)) {
+          transaction.connection.release()
+        }
       }
     }
   }
@@ -274,13 +298,21 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
       throw new Error('Unknown transaction token: ' + token.id)
     }
 
+    let failed = false
     try {
       await transaction.connection.rollback()
+    } catch (error) {
+      failed = true
+      throw error
     } finally {
       this.#transactions.delete(token.id)
 
-      if (transaction.releaseOnClose && isMysqlPoolConnection(transaction.connection)) {
-        transaction.connection.release()
+      if (transaction.releaseOnClose) {
+        if (failed) {
+          destroyMysqlConnection(transaction.connection)
+        } else if (isMysqlPoolConnection(transaction.connection)) {
+          transaction.connection.release()
+        }
       }
     }
   }
@@ -353,6 +385,14 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /** Closes a pool created from configuration. Supplied connections and pools remain caller-owned. */
+  async close(): Promise<void> {
+    this.#assertNoOpenTransactions('close')
+    if (this.#config) {
+      await this.#closePool()
+    }
+  }
+
   /**
    * Runs migration work on the mysql connection that owns the named lock.
    *
@@ -366,10 +406,10 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
    */
   async withMigrationLock<result>(
     name: string,
-    run: (adapter: DatabaseAdapter) => Promise<result>,
+    run: (database: MigrationLockContext) => Promise<result>,
   ): Promise<result> {
     if (this.#migrationLockStore.getStore()) {
-      throw new Error('MySQL migration lock is already held by this adapter')
+      throw new Error('MySQL migration lock is already held by this database')
     }
 
     let waitForPreviousLock = this.#migrationLockQueue
@@ -391,7 +431,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
         connection = this.#client
       }
 
-      let adapter = releaseOnClose ? new MysqlDatabaseAdapter(connection) : this
+      let adapter = releaseOnClose ? new MysqlDatabaseImplementation(connection) : this
 
       try {
         let value = await this.#migrationLockStore.run(true, () =>
@@ -418,15 +458,6 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
-  /**
-   * Closes the connection pool when this adapter owns one. Adapters wrapping
-   * an injected connection leave it open for its owner. Safe to call more
-   * than once.
-   */
-  async close(): Promise<void> {
-    await this.#closePool()
-  }
-
   async #closePool(): Promise<void> {
     this.#transactions.clear()
     // mysql2 pools error on end() when called twice, so ending must be
@@ -448,7 +479,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
 
   #configOrThrow(method: string): string | MysqlPoolOptions {
     if (!this.#config) {
-      throw new Error('MySQL adapter ' + method + '() requires config-based construction')
+      throw new Error('MySQL database ' + method + '() requires config-based construction')
     }
 
     return this.#config
@@ -456,7 +487,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
 
   #assertNoOpenTransactions(method: string): void {
     if (this.#transactions.size > 0) {
-      throw new Error('MySQL adapter cannot ' + method + ' while transactions are open')
+      throw new Error('MySQL database cannot ' + method + ' while transactions are open')
     }
   }
 
@@ -477,27 +508,6 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
 
     return transaction.connection
   }
-}
-
-/**
- * Creates a mysql `DatabaseAdapter`.
- * @param input Mysql connection string, pool options, pool, or connection.
- * @param options Database creation options used by `wipe()`.
- * @returns A configured mysql adapter.
- * @example
- * ```ts
- * import { createDatabase } from 'remix/data-table'
- * import { createMysqlDatabaseAdapter } from 'remix/data-table/mysql'
- *
- * let adapter = createMysqlDatabaseAdapter(process.env.DATABASE_URL!)
- * let db = createDatabase(adapter)
- * ```
- */
-export function createMysqlDatabaseAdapter(
-  input: string | MysqlPoolOptions | MysqlQueryable,
-  options?: MysqlDatabaseAdapterOptions,
-): MysqlDatabaseAdapter {
-  return new MysqlDatabaseAdapter(input, options)
 }
 
 function isMysqlQueryable(value: unknown): value is MysqlQueryable {
@@ -603,8 +613,8 @@ function destroyMysqlConnection(connection: MysqlTransactionConnection): void {
 async function runWithMysqlMigrationLock<result>(
   connection: MysqlTransactionConnection,
   name: string,
-  adapter: DatabaseAdapter,
-  run: (adapter: DatabaseAdapter) => Promise<result>,
+  adapter: MysqlDatabaseImplementation,
+  run: (database: MigrationLockContext) => Promise<result>,
 ): Promise<result> {
   // sha2(..., 256) yields 64 hex characters, exactly GET_LOCK's 64-character
   // lock name limit, so any additional prefix must go inside the hash input.

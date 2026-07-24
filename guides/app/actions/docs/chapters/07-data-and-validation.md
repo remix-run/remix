@@ -35,11 +35,11 @@ Cover `beforeWrite`, table-level `validate`, `afterWrite`, `beforeDelete`, `afte
 
 ## Transactions {#transactions}
 
-Use `db.transaction()` when a set of reads and writes must commit or roll back together. Note that lifecycle hooks do not create implicit transactions and that adapters may expose transaction-specific options.
+Use `db.transaction()` when a set of reads and writes must commit or roll back together. Note that lifecycle hooks do not create implicit transactions and that database implementations may expose transaction-specific options.
 
-## SQLite, PostgreSQL, and MySQL adapters {#sqlite-postgres-and-mysql-adapters}
+## SQLite, PostgreSQL, and MySQL databases {#sqlite-postgres-and-mysql-adapters}
 
-Show the shared `createDatabase(adapter)` shape, then call out runtime-specific SQLite clients, PostgreSQL transaction options, and MySQL's `RETURNING` and multi-statement limitations where those differences affect app code.
+Show the concrete `createSqliteDatabase()`, `createPostgresDatabase()`, and `createMysqlDatabase()` factories, then call out runtime-specific SQLite clients, PostgreSQL transaction options, and MySQL's `RETURNING` and multi-statement limitations where those differences affect app code.
 
 ## SQL-first migrations {#migrations}
 
@@ -47,4 +47,4 @@ Use timestamped migration directories with required `up.sql` and optional `down.
 
 ## Request-scoped database access {#request-scoped-database-access}
 
-Initialize the database and run migrations before accepting requests, then expose `Database` through middleware and derive the app context type from that stack. Actions should read the request-scoped database with `context.get(Database)` or the typed context property installed by the app.
+Initialize the database and run migrations before accepting requests, then expose it through an app-defined `databaseContext` key and derive the app context type from that middleware stack. Actions should read the request-scoped database with `context.get(databaseContext)` or the typed context property installed by the app.
