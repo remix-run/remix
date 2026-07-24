@@ -11,6 +11,8 @@ interface ResolveCliContextOptions {
 }
 
 export interface CliContext {
+  /** Explicit Remix configuration path selected by the caller. */
+  configPath?: string
   cwd: string
   /** Loads and validates the Remix config file, memoizing the result. */
   loadConfig(): Promise<RemixConfig>
@@ -33,6 +35,7 @@ export async function resolveCliContext(
   if (options.configPath !== undefined) await loadConfig()
 
   return {
+    configPath: options.configPath,
     cwd,
     loadConfig,
     remixVersion: remixVersion ?? (await resolveDefaultRemixVersion(cwd)),

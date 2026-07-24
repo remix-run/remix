@@ -267,7 +267,7 @@ export type DataManipulationRequest = {
 }
 
 /**
- * Adapter data-manipulation result payload.
+ * Database data-manipulation result payload.
  */
 export type DataManipulationResult = {
   rows?: Record<string, unknown>[]
@@ -276,50 +276,44 @@ export type DataManipulationResult = {
 }
 
 /**
- * Declares adapter feature support.
+ * Declares database feature support.
  */
-export type AdapterCapabilities = {
-  returning: boolean
-  savepoints: boolean
-  upsert: boolean
-  transactionalDdl: boolean
-  migrationLock: boolean
+export type DatabaseCapabilities = {
+  readonly returning: boolean
+  readonly savepoints: boolean
+  readonly upsert: boolean
+  readonly transactionalDdl: boolean
+  readonly migrationLock: boolean
 }
 
-/**
- * Partial capabilities used to override adapter defaults.
- */
-export type AdapterCapabilityOverrides = Pretty<Partial<AdapterCapabilities>>
-
-/**
- * Runtime contract implemented by concrete database adapters.
- */
-export interface DatabaseAdapter {
-  /** Database dialect name exposed by the adapter. */
-  dialect: string
-  /** Feature flags describing the adapter's supported behaviors. */
-  capabilities: AdapterCapabilities
-  /** Compiles a data-manipulation operation into executable SQL statements. */
-  compileSql(operation: DataManipulationOperation): SqlStatement[]
+/** Database operations available while an implementation-specific migration lock is held. */
+export interface MigrationLockContext {
+  /** Feature flags used by migration execution. */
+  capabilities: DatabaseCapabilities
   /** Executes a data-manipulation request. */
   execute(request: DataManipulationRequest): Promise<DataManipulationResult>
-  /**
-   * Executes a raw SQL script that may contain multiple statements.
-   *
-   * Drivers must be configured to accept multi-statement scripts where required
-   * (for example, mysql2 needs `multipleStatements: true`).
-   */
+  /** Executes a raw SQL script that may contain multiple statements. */
   executeScript(sql: string, transaction?: TransactionToken): Promise<void>
-  /** Checks whether a table exists. */
-  hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean>
-  /** Checks whether a column exists on a table. */
-  hasColumn(table: TableRef, column: string, transaction?: TransactionToken): Promise<boolean>
   /** Starts a new database transaction. */
   beginTransaction(options?: TransactionOptions): Promise<TransactionToken>
   /** Commits an open transaction. */
   commitTransaction(token: TransactionToken): Promise<void>
   /** Rolls back an open transaction. */
   rollbackTransaction(token: TransactionToken): Promise<void>
+}
+
+/**
+ * Runtime contract implemented by concrete database adapters.
+ */
+export interface DatabaseAdapter extends MigrationLockContext {
+  /** Database dialect name exposed by the adapter. */
+  dialect: string
+  /** Compiles a data-manipulation operation into executable SQL statements. */
+  compileSql(operation: DataManipulationOperation): SqlStatement[]
+  /** Checks whether a table exists. */
+  hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean>
+  /** Checks whether a column exists on a table. */
+  hasColumn(table: TableRef, column: string, transaction?: TransactionToken): Promise<boolean>
   /** Creates a savepoint inside an open transaction. */
   createSavepoint(token: TransactionToken, name: string): Promise<void>
   /** Rolls back to a previously created savepoint. */
@@ -328,15 +322,17 @@ export interface DatabaseAdapter {
   releaseSavepoint(token: TransactionToken, name: string): Promise<void>
   /** Destructively removes the configured database state when supported. */
   wipe?(): Promise<void>
+  /** Releases connection handles owned by the implementation. */
+  close?(): void | Promise<void>
   /**
-   * Runs migration work while holding an adapter-specific lock.
+   * Runs migration work while holding an implementation-specific lock.
    *
-   * The callback receives an adapter bound to the connection that owns the lock.
+   * The callback receives a database bound to the connection that owns the lock.
    * Implementations must release the lock when the callback rejects as well as
    * when it resolves.
    */
   withMigrationLock?<result>(
     name: string,
-    run: (adapter: DatabaseAdapter) => Promise<result>,
+    run: (database: MigrationLockContext) => Promise<result>,
   ): Promise<result>
 }

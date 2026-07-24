@@ -28,10 +28,10 @@ export const CLI_ERROR_DEFINITIONS = {
     title: 'Could not determine an app name',
     fix: 'Pass --app-name or choose a target directory name that can become an app name.',
   },
-  dbFileNotFound: {
-    code: 'RMX_DB_FILE_NOT_FOUND',
-    title: 'Could not find app/db.ts',
-    fix: 'Run this command inside a Remix app that has an app/db.ts file.',
+  dbConfigRequired: {
+    code: 'RMX_DB_CONFIG_REQUIRED',
+    title: 'Database configuration is required',
+    fix: 'Add a db configuration to remix.json.',
   },
   dbForceRequired: {
     code: 'RMX_DB_FORCE_REQUIRED',
@@ -194,10 +194,10 @@ export function appNameUnavailable(targetDir?: string): UsageError {
   })
 }
 
-export function dbFileNotFound(startDir?: string): CliError {
-  return createCliError(CLI_ERROR_DEFINITIONS.dbFileNotFound, {
-    context: startDir == null ? undefined : { startDir },
-    message: 'Could not find app/db.ts. Run this command inside a Remix app.',
+export function dbConfigRequired(filePath: string): CliError {
+  return createCliError(CLI_ERROR_DEFINITIONS.dbConfigRequired, {
+    context: { filePath },
+    message: `Database configuration is missing from ${filePath}.`,
   })
 }
 

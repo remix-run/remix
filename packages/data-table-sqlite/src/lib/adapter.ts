@@ -3,33 +3,36 @@ import { mkdir, rm } from 'node:fs/promises'
 import { setTimeout } from 'node:timers/promises'
 
 import type {
-  DataManipulationRequest,
   DataManipulationResult,
-  DataManipulationOperation,
-  DatabaseAdapter,
   SqlStatement,
   TableRef,
   TransactionOptions,
-  TransactionToken,
 } from '@remix-run/data-table'
+import {
+  DatabaseImplementation,
+  type DataManipulationOperation,
+  type DataManipulationRequest,
+  type DatabaseOptions,
+  type TransactionToken,
+} from '@remix-run/data-table/database-implementation'
 import { getTablePrimaryKey } from '@remix-run/data-table'
 
 import { compileSqliteOperation } from './sql-compiler.ts'
 
 /**
- * Synchronous SQLite database client accepted by the sqlite adapter.
+ * Synchronous SQLite client accepted by `createSqliteDatabase()`.
  *
  * This matches the shared surface of Node's `node:sqlite` `DatabaseSync`, Bun's `bun:sqlite`
  * `Database`, and compatible synchronous SQLite clients.
  */
-export interface SqliteDatabase {
+export interface SqliteDatabaseClient {
   prepare(sql: string): SqliteStatement
   exec(sql: string): unknown
   close?: () => void
 }
 
 type SqliteDatabaseConstructor = {
-  new (path: string): SqliteDatabase
+  new (path: string): SqliteDatabaseClient
 }
 
 type SqliteDriverModule = {
@@ -37,9 +40,17 @@ type SqliteDriverModule = {
   DatabaseSync?: SqliteDatabaseConstructor
 }
 
+const sqliteCapabilities = Object.freeze({
+  returning: true,
+  savepoints: true,
+  upsert: true,
+  transactionalDdl: true,
+  migrationLock: false,
+})
+
 let loadedDriverConstructor: SqliteDatabaseConstructor | undefined
 
-// The runtime driver loads lazily on config-backed construction so client-backed adapters
+// The runtime driver loads lazily on config-backed construction so client-backed databases
 // keep working in environments that cannot resolve node:sqlite or bun:sqlite at import time,
 // and so bundlers never try to resolve those specifiers statically.
 function loadSqliteDatabaseConstructor(): SqliteDatabaseConstructor {
@@ -60,7 +71,7 @@ function loadSqliteDatabaseConstructor(): SqliteDatabaseConstructor {
 
     if (!loadedDriverConstructor) {
       throw new Error(
-        'SQLite adapter config-based construction requires node:sqlite (Node.js 22.5+) or bun:sqlite; pass a SQLite database client instead',
+        'SQLite config-based construction requires node:sqlite (Node.js 22.5+) or bun:sqlite; pass a SQLite database client instead',
       )
     }
   }
@@ -68,25 +79,25 @@ function loadSqliteDatabaseConstructor(): SqliteDatabaseConstructor {
   return loadedDriverConstructor
 }
 
-/** Configuration for an adapter-owned SQLite database. */
-export interface SqliteDatabaseAdapterConfig {
+/** Configuration for a SQLite database created by `createSqliteDatabase()`. */
+export interface SqliteDatabaseConfig {
   /** SQLite database filename or `:memory:` for an in-memory database. */
   filename: string
   /**
-   * Enables SQLite foreign key enforcement whenever the adapter opens the database.
+   * Enables SQLite foreign key enforcement whenever the database opens a connection.
    * Defaults to `false` (enforcement off) on every runtime, including Node.js where
    * `node:sqlite` would otherwise enable it by default.
    */
   foreignKeys?: boolean
   /**
-   * SQLite `busy_timeout` in milliseconds, applied whenever the adapter opens the database.
+   * SQLite `busy_timeout` in milliseconds, applied whenever the database opens a connection.
    * Defaults to `5000`. Set `0` to fail immediately when another process holds a write lock.
    */
   busyTimeout?: number
 }
 
 /**
- * Prepared statement shape used by {@link SqliteDatabase}.
+ * Prepared statement shape used by {@link SqliteDatabaseClient}.
  */
 export interface SqliteStatement {
   all(...values: unknown[]): unknown[]
@@ -106,38 +117,36 @@ export interface SqliteRunResult {
 }
 
 /**
- * `DatabaseAdapter` implementation for synchronous SQLite clients.
+ * SQLite database implementation for synchronous SQLite clients.
  */
-export class SqliteDatabaseAdapter implements DatabaseAdapter {
+export class SqliteDatabaseImplementation extends DatabaseImplementation {
   /**
-   * The SQL dialect identifier reported by this adapter.
+   * The SQL dialect identifier reported by this database.
    */
-  dialect = 'sqlite'
+  override get dialect(): 'sqlite' {
+    return 'sqlite'
+  }
 
   /**
-   * Feature flags describing the sqlite behaviors supported by this adapter.
+   * Feature flags describing the SQLite behaviors supported by this database.
    */
-  capabilities
+  override get capabilities() {
+    return sqliteCapabilities
+  }
 
-  #config?: SqliteDatabaseAdapterConfig
-  #database: SqliteDatabase
+  #config?: SqliteDatabaseConfig
+  #database: SqliteDatabaseClient
   #databaseOpen = true
   #transactions = new Set<string>()
   #transactionCounter = 0
 
-  constructor(input: SqliteDatabase | SqliteDatabaseAdapterConfig) {
+  constructor(input: SqliteDatabaseClient | SqliteDatabaseConfig, options?: DatabaseOptions) {
+    super(options)
     if (isSqliteDatabase(input)) {
       this.#database = input
     } else {
       this.#config = input
       this.#database = openSqliteDatabase(input)
-    }
-    this.capabilities = {
-      returning: true,
-      savepoints: true,
-      upsert: true,
-      transactionalDdl: true,
-      migrationLock: false,
     }
   }
 
@@ -157,6 +166,8 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    * @returns Execution result.
    */
   async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
+    this.#assertDatabaseOpen()
+
     if (request.operation.kind === 'insertMany' && request.operation.values.length === 0) {
       return {
         affectedRows: 0,
@@ -202,6 +213,8 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    * @returns A promise that resolves once execution completes.
    */
   async executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
+    this.#assertDatabaseOpen()
+
     if (transaction) {
       this.#assertTransaction(transaction)
     }
@@ -216,6 +229,8 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    * @returns `true` when the table exists.
    */
   async hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
+    this.#assertDatabaseOpen()
+
     if (transaction) {
       this.#assertTransaction(transaction)
     }
@@ -243,6 +258,8 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     column: string,
     transaction?: TransactionToken,
   ): Promise<boolean> {
+    this.#assertDatabaseOpen()
+
     if (transaction) {
       this.#assertTransaction(transaction)
     }
@@ -284,14 +301,18 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
   }
 
   /**
-   * Closes the underlying database connection and releases its file handle.
+   * Closes a database connection created from configuration.
    *
-   * Config-backed adapters keep an open handle that locks the database file on
+   * Config-backed databases keep an open handle that locks the database file on
    * Windows until it is closed, so callers that need to move or delete the file
-   * should close the adapter first. Safe to call more than once.
+   * should close the database first. Supplied clients remain caller-owned. Safe
+   * to call more than once.
    */
   close(): void {
-    this.#closeDatabase()
+    this.#assertNoOpenTransactions('close')
+    if (this.#config) {
+      this.#closeDatabase()
+    }
   }
 
   /**
@@ -300,6 +321,8 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    * @returns Transaction token.
    */
   async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
+    this.#assertDatabaseOpen()
+
     if (options?.isolationLevel === 'read uncommitted') {
       this.#database.exec('pragma read_uncommitted = true')
     }
@@ -320,8 +343,26 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    */
   async commitTransaction(token: TransactionToken): Promise<void> {
     this.#assertTransaction(token)
-    this.#database.exec('commit')
-    this.#transactions.delete(token.id)
+    try {
+      this.#database.exec('commit')
+    } catch (commitError) {
+      try {
+        this.#database.exec('rollback')
+      } catch (rollbackError) {
+        let failures: unknown[] = [commitError, rollbackError]
+        try {
+          this.#discardUncertainConnection()
+        } catch (recoveryError) {
+          failures.push(recoveryError)
+        }
+        throw new AggregateError(failures, 'SQLite commit and rollback both failed', {
+          cause: commitError,
+        })
+      }
+      throw commitError
+    } finally {
+      this.#transactions.delete(token.id)
+    }
   }
 
   /**
@@ -331,8 +372,22 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    */
   async rollbackTransaction(token: TransactionToken): Promise<void> {
     this.#assertTransaction(token)
-    this.#database.exec('rollback')
-    this.#transactions.delete(token.id)
+    try {
+      this.#database.exec('rollback')
+    } catch (rollbackError) {
+      try {
+        this.#discardUncertainConnection()
+      } catch (recoveryError) {
+        throw new AggregateError(
+          [rollbackError, recoveryError],
+          'SQLite rollback and connection cleanup both failed',
+          { cause: rollbackError },
+        )
+      }
+      throw rollbackError
+    } finally {
+      this.#transactions.delete(token.id)
+    }
   }
 
   /**
@@ -377,14 +432,25 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
 
   #closeDatabase(): void {
     if (this.#databaseOpen) {
+      this.#databaseOpen = false
       this.#database.close?.()
+    }
+  }
+
+  #discardUncertainConnection(): void {
+    if (this.#config) {
+      this.#closeDatabase()
+      this.#replaceDatabase()
+    } else {
+      // The supplied client remains caller-owned, but this wrapper cannot safely
+      // reuse a connection whose transaction state is unknown.
       this.#databaseOpen = false
     }
   }
 
-  #configOrThrow(method: string): SqliteDatabaseAdapterConfig {
+  #configOrThrow(method: string): SqliteDatabaseConfig {
     if (!this.#config) {
-      throw new Error('SQLite adapter ' + method + '() requires config-based construction')
+      throw new Error('SQLite database ' + method + '() requires config-based construction')
     }
 
     return this.#config
@@ -392,13 +458,20 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
 
   #assertNoOpenTransactions(method: string): void {
     if (this.#transactions.size > 0) {
-      throw new Error('SQLite adapter cannot ' + method + ' while transactions are open')
+      throw new Error('SQLite database cannot ' + method + ' while transactions are open')
     }
   }
 
   #assertTransaction(token: TransactionToken): void {
+    this.#assertDatabaseOpen()
     if (!this.#transactions.has(token.id)) {
       throw new Error('Unknown transaction token: ' + token.id)
+    }
+  }
+
+  #assertDatabaseOpen(): void {
+    if (!this.#databaseOpen) {
+      throw new Error('SQLite database is closed')
     }
   }
 }
@@ -428,7 +501,7 @@ function isRetryableRemoveError(error: unknown): boolean {
   return code === 'EBUSY' || code === 'EPERM' || code === 'EMFILE' || code === 'ENFILE'
 }
 
-function openSqliteDatabase(config: SqliteDatabaseAdapterConfig): SqliteDatabase {
+function openSqliteDatabase(config: SqliteDatabaseConfig): SqliteDatabaseClient {
   let SqliteDatabaseConstructor = loadSqliteDatabaseConstructor()
   let database = new SqliteDatabaseConstructor(config.filename)
 
@@ -442,28 +515,9 @@ function openSqliteDatabase(config: SqliteDatabaseAdapterConfig): SqliteDatabase
   return database
 }
 
-/**
- * Creates a sqlite `DatabaseAdapter`.
- * @param input SQLite adapter configuration or synchronous database client.
- * @returns A configured sqlite adapter.
- * @example
- * ```ts
- * import { createDatabase } from 'remix/data-table'
- * import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
- *
- * let adapter = createSqliteDatabaseAdapter({ filename: './data/app.db' })
- * let db = createDatabase(adapter)
- * ```
- */
-export function createSqliteDatabaseAdapter(
-  input: SqliteDatabase | SqliteDatabaseAdapterConfig,
-): SqliteDatabaseAdapter {
-  return new SqliteDatabaseAdapter(input)
-}
-
 function isSqliteDatabase(
-  input: SqliteDatabase | SqliteDatabaseAdapterConfig,
-): input is SqliteDatabase {
+  input: SqliteDatabaseClient | SqliteDatabaseConfig,
+): input is SqliteDatabaseClient {
   return (
     'prepare' in input &&
     typeof input.prepare === 'function' &&

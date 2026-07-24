@@ -74,7 +74,7 @@ export function parseArgs<const definitions extends ParseArgsOptionDefinitions>(
       }
 
       let next = argv[index + 1]
-      if (next == null || next.startsWith('-')) {
+      if (next == null || next.length === 0 || next.startsWith('-')) {
         throw missingOptionValue(flag)
       }
 

@@ -1,12 +1,89 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type { DatabaseAdapter } from './adapter.ts'
+import type { DatabaseAdapter, MigrationLockContext, TransactionToken } from './adapter.ts'
 import { parseTransactionDirective } from './migrations/directive.ts'
 import { parseMigrationDirectoryName } from './migrations/directory-name.ts'
 import { createMigrationRegistry } from './migrations/registry.ts'
 import { createMigrationRunner } from './migrations/runner.ts'
 import { MemoryMigrationAdapter } from '../../test/memory-migration-adapter.ts'
+import { TestDatabase } from '../../test/recording-adapter.ts'
+
+describe('Database migrations', () => {
+  it('applies and reverts migrations through Database.migrate()', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    let db = new TestDatabase(adapter)
+    let migrations = [
+      {
+        id: '20260101000000',
+        name: 'create_users',
+        up: 'create table users (id integer)',
+        down: 'drop table users',
+      },
+    ]
+
+    let applied = await db.migrate(migrations)
+    assert.deepEqual(
+      applied.applied.map((entry) => entry.id),
+      ['20260101000000'],
+    )
+
+    let reverted = await db.migrate(migrations, { direction: 'down', step: 1 })
+    assert.deepEqual(
+      reverted.reverted.map((entry) => entry.id),
+      ['20260101000000'],
+    )
+    assert.equal(adapter.journalRows.length, 0)
+  })
+
+  it('uses journal configuration for migrate and status', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    adapter.journalTableName = 'app_migrations'
+    let db = new TestDatabase(adapter)
+    let migrations = [{ id: '20260101000000', name: 'users', up: 'select 1' }]
+
+    await db.migrate(migrations, { journalTable: 'app_migrations' })
+    await db.migrationStatus(migrations, { journalTable: 'app_migrations' })
+
+    assert.equal(adapter.journalTableName, 'app_migrations')
+  })
+
+  it('supports targets, steps, and dry runs through Database.migrate()', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    let db = new TestDatabase(adapter)
+    let migrations = [
+      { id: '20260101000000', name: 'users', up: 'create table users (id integer)' },
+      { id: '20260102000000', name: 'posts', up: 'create table posts (id integer)' },
+    ]
+
+    let plan = await db.migrate(migrations, { dryRun: true, step: 1 })
+    assert.deepEqual(plan.sql, ['create table users (id integer)'])
+    assert.equal(adapter.journalRows.length, 0)
+
+    await db.migrate(migrations, { to: '20260101000000_users' })
+    assert.deepEqual(
+      adapter.journalRows.map((row) => row.id),
+      ['20260101000000'],
+    )
+  })
+
+  it('reports pending migrations without creating a journal table', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    let db = new TestDatabase(adapter)
+    let migrations = [{ id: '20260101000000', name: 'users', up: 'select 1' }]
+
+    let status = await db.migrationStatus(migrations)
+
+    assert.deepEqual(status, [
+      {
+        id: '20260101000000',
+        name: 'users',
+        status: 'pending',
+      },
+    ])
+    assert.equal(adapter.journalTableCreated, false)
+  })
+})
 
 describe('migration runner', () => {
   it('applies pending migrations and records them in the journal', async () => {
@@ -295,13 +372,62 @@ describe('migration runner', () => {
     assert.equal(adapter.commitTransactionCount, 0)
   })
 
+  it('preserves commit failures without attempting an invalid rollback', async () => {
+    class CommitFailingAdapter extends MemoryMigrationAdapter {
+      override async commitTransaction(token: { id: string }): Promise<void> {
+        await super.commitTransaction(token)
+        throw new Error('commit failed')
+      }
+    }
+
+    let adapter = new CommitFailingAdapter()
+    let runner = createMigrationRunner(adapter, [
+      { id: '20260101000000', name: 'users', up: 'create table users (id integer)' },
+    ])
+
+    await assert.rejects(() => runner.up(), /commit failed/)
+    assert.equal(adapter.commitTransactionCount, 1)
+    assert.equal(adapter.rollbackTransactionCount, 0)
+  })
+
+  it('preserves migration and rollback failures', async () => {
+    let migrationError = new Error('migration failed')
+    let rollbackError = new Error('rollback failed')
+
+    class RollbackFailingAdapter extends MemoryMigrationAdapter {
+      override async executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
+        if (transaction) throw migrationError
+        await super.executeScript(sql, transaction)
+      }
+
+      override async rollbackTransaction(): Promise<void> {
+        throw rollbackError
+      }
+    }
+
+    let adapter = new RollbackFailingAdapter()
+    adapter.journalTableCreated = true
+    let runner = createMigrationRunner(adapter, [
+      { id: '20260101000000', name: 'users', up: 'create table users (id integer)' },
+    ])
+
+    await assert.rejects(
+      () => runner.up(),
+      (error: unknown) =>
+        error instanceof AggregateError &&
+        error.cause === migrationError &&
+        error.errors[0] === migrationError &&
+        error.errors[1] === rollbackError,
+    )
+  })
+
   it('runs journal reads/writes and scripts through the lock-owning adapter', async () => {
     let lockAdapter = new MemoryMigrationAdapter()
 
     class LockDelegatingAdapter extends MemoryMigrationAdapter {
       override async withMigrationLock<result>(
         _name: string,
-        run: (adapter: DatabaseAdapter) => Promise<result>,
+        run: (adapter: MigrationLockContext) => Promise<result>,
       ): Promise<result> {
         return run(lockAdapter)
       }

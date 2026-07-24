@@ -113,30 +113,30 @@ export const books = table({
 
 ## Database Setup
 
-Create a database with an adapter and expose it via middleware:
+Create a database and expose it via middleware:
 
 ```typescript
 import BetterSqlite3 from 'better-sqlite3'
-import { createDatabase, Database } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
+import { createSqliteDatabase } from 'remix/data-table/sqlite'
 
 let sqlite = new BetterSqlite3('./db/app.db')
 sqlite.pragma('foreign_keys = ON')
-let adapter = createSqliteDatabaseAdapter(sqlite)
-export let db = createDatabase(adapter)
+export let db = createSqliteDatabase(sqlite)
 ```
 
-`createSqliteDatabaseAdapter` accepts synchronous SQLite clients with a shared `prepare`/`exec` surface, including Node's `node:sqlite`, Bun's `bun:sqlite`, and compatible clients. Use whichever client fits the runtime instead of assuming `better-sqlite3` is required.
+`createSqliteDatabase` accepts synchronous SQLite clients with a shared `prepare`/`exec` surface, including Node's `node:sqlite`, Bun's `bun:sqlite`, and compatible clients. Use whichever client fits the runtime instead of assuming `better-sqlite3` is required.
 
 ### Database middleware
 
 ```typescript
-import type { Middleware } from 'remix/router'
-import { Database } from 'remix/data-table'
+import type { Database } from 'remix/data-table'
+import { createContextKey, type Middleware } from 'remix/router'
+
+export const databaseContext = createContextKey<Database>()
 
 export function loadDatabase(): Middleware {
   return async (context, next) => {
-    context.set(Database, db)
+    context.set(databaseContext, db)
     return next()
   }
 }
@@ -145,7 +145,7 @@ export function loadDatabase(): Middleware {
 ### Querying
 
 ```typescript
-let db = get(Database)
+let db = get(databaseContext)
 
 // Find by primary key
 let book = await db.find(books, id)
@@ -220,7 +220,7 @@ Do **not** import app code (e.g. `app/data/schema.ts`) into migration files. Mig
 
 ### Transaction modes
 
-Migrations run inside a transaction by default (when the adapter supports transactional DDL). Override per migration with a directive comment in `up.sql`:
+Migrations run inside a transaction by default (when the database supports transactional DDL). Override per migration with a directive comment in `up.sql`:
 
 ```sql
 -- data-table/transaction: none
@@ -232,15 +232,15 @@ Modes: `auto` (default — wrap when supported), `required` (wrap; throw if unsu
 ### Running migrations
 
 ```typescript
-import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
 
 let migrations = await loadMigrations('./db/migrations')
-let runner = createMigrationRunner(adapter, migrations)
-await runner.up()
+await db.migrate(migrations)
 ```
 
-The runner checksums each `up.sql` and detects drift if a previously applied migration changes. Use `runner.status()` to inspect applied/pending/drifted state, and `runner.down()` to revert.
+The database checksums each `up.sql` and detects drift if a previously applied migration changes.
+Use `db.migrationStatus(migrations)` to inspect applied/pending/drifted state, and
+`db.migrate(migrations, { direction: 'down' })` to revert.
 
 ## Input Validation (`remix/data-schema`)
 

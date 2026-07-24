@@ -10,6 +10,9 @@
       "type": "string",
       "description": "JSON Schema used by editors to validate this file."
     },
+    "db": {
+      "$ref": "#/$defs/db"
+    },
     "doctor": {
       "$ref": "#/$defs/doctor"
     },
@@ -18,6 +21,83 @@
     }
   },
   "$defs": {
+    "db": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter"],
+      "properties": {
+        "adapter": {
+          "oneOf": [
+            { "$ref": "#/$defs/dbSqliteAdapter" },
+            { "$ref": "#/$defs/dbPostgresAdapter" },
+            { "$ref": "#/$defs/dbMysqlAdapter" }
+          ]
+        },
+        "migrations": {
+          "$ref": "#/$defs/dbMigrations"
+        },
+        "seed": {
+          "type": "string",
+          "description": "Path to a SQL seed file."
+        }
+      }
+    },
+    "dbString": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["env"],
+          "properties": {
+            "env": { "type": "string" },
+            "default": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "dbSqliteAdapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "filename"],
+      "properties": {
+        "type": { "const": "sqlite" },
+        "filename": { "$ref": "#/$defs/dbString" },
+        "foreignKeys": { "type": "boolean" },
+        "busyTimeout": { "type": "number", "minimum": 0 }
+      }
+    },
+    "dbPostgresAdapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "connectionString"],
+      "properties": {
+        "type": { "const": "postgres" },
+        "connectionString": { "$ref": "#/$defs/dbString" },
+        "maintenanceDatabase": { "type": "string" },
+        "template": { "type": "string" }
+      }
+    },
+    "dbMysqlAdapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "uri"],
+      "properties": {
+        "type": { "const": "mysql" },
+        "uri": { "$ref": "#/$defs/dbString" },
+        "characterSet": { "type": "string" },
+        "collation": { "type": "string" }
+      }
+    },
+    "dbMigrations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["directory"],
+      "properties": {
+        "directory": { "type": "string" },
+        "journalTable": { "type": "string" }
+      }
+    },
     "doctor": {
       "type": "object",
       "additionalProperties": false,

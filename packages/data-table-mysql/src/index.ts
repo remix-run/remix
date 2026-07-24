@@ -1,2 +1,3 @@
-export { createMysqlDatabaseAdapter, MysqlDatabaseAdapter } from './lib/adapter.ts'
-export type { MysqlDatabaseAdapterOptions } from './lib/adapter.ts'
+export { createMysqlDatabase } from './lib/database.ts'
+export type { MysqlDatabase, MysqlDatabaseOptions } from './lib/database.ts'
+export type { MysqlDatabaseInput } from './lib/adapter.ts'

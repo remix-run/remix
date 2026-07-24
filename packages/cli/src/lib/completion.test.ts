@@ -67,22 +67,63 @@ describe('completion engine', () => {
     ])
 
     assert.equal(wipeFlags.mode, 'values')
-    assert.deepEqual(wipeFlags.values, ['--force', '--config', '-h', '--help', '--no-color'])
+    assert.deepEqual(wipeFlags.values, [
+      '--force',
+      '--connection-env',
+      '--config',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
 
     assert.equal(resetFlags.mode, 'values')
-    assert.deepEqual(resetFlags.values, ['--config', '-h', '--help', '--no-color'])
+    assert.deepEqual(resetFlags.values, [
+      '--connection-env',
+      '--journal-table',
+      '--migrations',
+      '--seed',
+      '--config',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
 
     assert.equal(migrateFlags.mode, 'values')
-    assert.deepEqual(migrateFlags.values, ['--to', '--config', '-h', '--help', '--no-color'])
+    assert.deepEqual(migrateFlags.values, [
+      '--connection-env',
+      '--journal-table',
+      '--migrations',
+      '--to',
+      '--config',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
 
     assert.equal(seedFlags.mode, 'values')
-    assert.deepEqual(seedFlags.values, ['--config', '-h', '--help', '--no-color'])
+    assert.deepEqual(seedFlags.values, [
+      '--connection-env',
+      '--seed',
+      '--config',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
   })
 
   it('returns no completions for free-text migration targets', () => {
     let result = getCompletionResult(['remix', 'db', 'migrate', '--to', ''], 4)
 
     assert.deepEqual(result, { mode: 'none' })
+  })
+
+  it('uses file completion for database migration and seed paths', () => {
+    assert.deepEqual(getCompletionResult(['remix', 'db', 'migrate', '--migrations', ''], 4), {
+      mode: 'files',
+    })
+    assert.deepEqual(getCompletionResult(['remix', 'db', 'seed', '--seed', ''], 4), {
+      mode: 'files',
+    })
   })
 
   it('uses file completion for new target directories', () => {

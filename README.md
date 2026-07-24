@@ -62,9 +62,9 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [csrf-middleware](packages/csrf-middleware): Middleware for CSRF protection in Fetch API servers
 - [data-schema](packages/data-schema): Tiny, standards-aligned schema validation
 - [data-table](packages/data-table): A typed, relational query toolkit for JavaScript
-- [data-table-mysql](packages/data-table-mysql): MySQL adapter for remix/data-table
-- [data-table-postgres](packages/data-table-postgres): PostgreSQL adapter for remix/data-table
-- [data-table-sqlite](packages/data-table-sqlite): SQLite adapter for remix/data-table
+- [data-table-mysql](packages/data-table-mysql): MySQL database implementation for remix/data-table
+- [data-table-postgres](packages/data-table-postgres): PostgreSQL database implementation for remix/data-table
+- [data-table-sqlite](packages/data-table-sqlite): SQLite database implementation for remix/data-table
 - [fetch-proxy](packages/fetch-proxy): An HTTP proxy for the web Fetch API
 - [fetch-router](packages/fetch-router): A minimal, composable router for the web Fetch API
 - [file-storage](packages/file-storage): Key/value storage for JavaScript File objects

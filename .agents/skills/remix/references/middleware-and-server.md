@@ -116,11 +116,11 @@ Use `context.set(key, value)` to add typed values accessible downstream via `con
 
 ```typescript
 import type { Middleware } from 'remix/router'
-import { Database } from 'remix/data-table'
+import { databaseContext } from '~/middleware/database.ts'
 
 export function loadDatabase(): Middleware {
   return async (context, next) => {
-    context.set(Database, db)
+    context.set(databaseContext, db)
     return next()
   }
 }
@@ -150,11 +150,11 @@ export function requireAdmin(): Middleware {
 // app/utils/context.ts
 import { getContext } from 'remix/middleware/async-context'
 import { Auth } from 'remix/middleware/auth'
-import { Database } from 'remix/data-table'
+import { databaseContext } from '~/middleware/database.ts'
 import { Session } from 'remix/session'
 
 export function getCurrentDb() {
-  return getContext().get(Database)
+  return getContext().get(databaseContext)
 }
 
 export function getCurrentSession() {

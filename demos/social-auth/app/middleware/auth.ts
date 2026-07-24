@@ -6,7 +6,6 @@ import {
 } from 'remix/middleware/auth'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
-import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { authAccounts, normalizeEmail, users } from '../data/schema.ts'
@@ -14,6 +13,7 @@ import type { AuthIdentity, AuthSession } from '../utils/auth-session.ts'
 import { parseAuthSession, parseProviderProfile } from '../utils/auth-session.ts'
 import { verifyPassword } from '../utils/password-hash.ts'
 import { routes } from '../routes.ts'
+import { databaseContext } from './database.ts'
 
 const loginSchema = f.object({
   email: f.field(s.defaulted(s.string(), '')),
@@ -28,7 +28,7 @@ export function loadAuth() {
           return parseAuthSession(session.get('auth'))
         },
         async verify(value, context) {
-          let db = context.get(Database)
+          let db = context.get(databaseContext)
           if (db == null) {
             throw new Error('Expected loadDatabase() middleware before loadAuth()')
           }
@@ -71,7 +71,7 @@ export const passwordProvider = createCredentialsAuthProvider({
     }
   },
   async verify({ email, password }, context) {
-    let db = context.get(Database)
+    let db = context.get(databaseContext)
     if (db == null) {
       throw new Error('Expected loadDatabase() middleware before password auth provider')
     }

@@ -3,11 +3,11 @@ import { describe, it } from 'remix/test'
 
 process.env.SESSION_SECRET = 'test-session-secret'
 
-const { db, getMigrations, seed } = await import('./db.ts')
+const { db, loadAppMigrations } = await import('./db.ts')
 const { router } = await import('./router.ts')
 const { routes } = await import('./routes.ts')
 
-await db.reset({ migrations: await getMigrations(), seed })
+await db.reset({ migrations: await loadAppMigrations() })
 
 describe('security middleware', () => {
   it('rejects auth mutations with missing or invalid CSRF tokens', async () => {

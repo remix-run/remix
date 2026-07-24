@@ -1,14 +1,22 @@
 import type {
   ColumnDefinition,
   DataManipulationOperation,
+  DataManipulationRequest,
   DataManipulationResult,
+  DatabaseCapabilities,
   DatabaseAdapter,
+  MigrationLockContext,
+  TableRef,
   TransactionOptions,
   TransactionToken,
 } from './adapter.ts'
 import type { ColumnBuilder } from './column.ts'
-import { DataTableAdapterError, DataTableQueryError } from './errors.ts'
-import { executeOperation, type QueryExecutionContext } from './database/execution-context.ts'
+import { DataTableDatabaseError, DataTableQueryError } from './errors.ts'
+import {
+  executeOperation,
+  runInTransaction,
+  type QueryExecutionContext,
+} from './database/execution-context.ts'
 import {
   asQueryTableInput,
   getPrimaryKeyWhere,
@@ -27,11 +35,11 @@ import type {
 import { bindQueryRuntime, query as createQuery } from './query.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
 import type {
-  MigrateOptions,
+  DatabaseMigrateOptions,
+  DatabaseMigrationStatusOptions,
+  DatabaseResetOptions,
   MigrateResult,
   Migrations,
-  MigrationRunnerOptions,
-  Seed,
   MigrationStatusEntry,
 } from './migrations.ts'
 import { createMigrationRunner } from './migrations/runner.ts'
@@ -336,7 +344,9 @@ type SavepointCounter = {
   value: number
 }
 
-type DatabaseOptions = {
+/** Options shared by concrete database implementations. */
+export interface DatabaseOptions {
+  /** Clock function used for auto-managed timestamps. */
   now?: () => unknown
 }
 
@@ -345,103 +355,128 @@ type DatabaseInternalState = {
   savepointCounter: SavepointCounter
 }
 
-const createInternalDatabase = Symbol('createInternalDatabase')
-
 /**
- * High-level database runtime used to build and execute data manipulation operations.
+ * Base class for concrete database implementations.
  *
- * Create instances directly with `new Database(adapter, options)` or use
- * `createDatabase(adapter, options)` as a thin wrapper.
+ * Subclasses implement the dialect-specific execution and transaction primitives while this
+ * class provides the shared query, persistence, migration, and reset APIs.
  */
-export class Database implements QueryExecutionContext {
-  #adapter: DatabaseAdapter
+export abstract class DatabaseImplementation implements QueryExecutionContext {
   #token?: TransactionToken
   #now: () => unknown
   #savepointCounter: SavepointCounter
 
-  constructor(adapter: DatabaseAdapter, options?: DatabaseOptions) {
-    this.#adapter = adapter
+  protected constructor(options?: DatabaseOptions) {
     this.#now = options?.now ?? defaultNow
     this.#savepointCounter = { value: 0 }
   }
 
-  static [createInternalDatabase](
+  static #createInternalDatabase(
     adapter: DatabaseAdapter,
     options: DatabaseOptions | undefined,
     internal: DatabaseInternalState,
-  ): Database {
-    let database = new Database(adapter, options)
+  ): DatabaseImplementation {
+    let database = new TransactionDatabase(adapter, options, internal.token)
     database.#token = internal.token
     database.#savepointCounter = internal.savepointCounter
     return database
   }
 
-  get adapter(): DatabaseAdapter {
-    return this.#adapter
-  }
-
+  /** Stable identifier for the SQL dialect. */
+  abstract get dialect(): string
+  /** Immutable feature flags used by shared query and migration behavior. */
+  abstract get capabilities(): DatabaseCapabilities
+  /** Compiles a structured operation into one or more dialect-specific SQL statements. */
+  abstract compileSql(operation: DataManipulationOperation): SqlStatement[]
+  /** Executes a structured operation, optionally in the transaction carried by the request. */
+  abstract execute(request: DataManipulationRequest): Promise<DataManipulationResult>
+  /** Executes a migration or raw multi-statement SQL script. */
+  abstract executeScript(sql: string, transaction?: TransactionToken): Promise<void>
+  /** Reports whether a table exists. */
+  abstract hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean>
+  /** Reports whether a column exists on a table. */
+  abstract hasColumn(
+    table: TableRef,
+    column: string,
+    transaction?: TransactionToken,
+  ): Promise<boolean>
+  /** Starts a transaction and returns an opaque token used by later operations. */
+  abstract beginTransaction(options?: TransactionOptions): Promise<TransactionToken>
+  /** Commits and releases the transaction represented by the token. */
+  abstract commitTransaction(token: TransactionToken): Promise<void>
+  /** Rolls back and releases the transaction represented by the token. */
+  abstract rollbackTransaction(token: TransactionToken): Promise<void>
+  /** Creates a nested-transaction savepoint. */
+  abstract createSavepoint(token: TransactionToken, name: string): Promise<void>
+  /** Rolls a transaction back to a savepoint. */
+  abstract rollbackToSavepoint(token: TransactionToken, name: string): Promise<void>
+  /** Releases a savepoint after success or rollback. */
+  abstract releaseSavepoint(token: TransactionToken, name: string): Promise<void>
+  /** Closes resources owned by this database. Implementations must be safe to close repeatedly. */
+  abstract close(): void | Promise<void>
+  /** Destructively recreates the configured database. */
+  abstract wipe(): Promise<void>
   /**
-   * Destructively recreates the configured database.
+   * Runs migration work without additional locking by default.
    *
-   * @returns A promise that resolves when the database is ready for use.
+   * Implementations whose capabilities report `migrationLock: true` override this method and call
+   * the callback with a database bound to the connection that owns the lock.
+   * @param name Logical migration lock name.
+   * @param run Migration work to run while the lock is held.
+   * @returns The callback result.
    */
-  async wipe(): Promise<void> {
-    this.#assertLifecycleOperationAllowed('wipe')
-
-    if (!this.#adapter.wipe) {
-      throw new DataTableQueryError('Database adapter does not support wipe()')
-    }
-
-    await this.#adapter.wipe()
+  async withMigrationLock<result>(
+    name: string,
+    run: (database: MigrationLockContext) => Promise<result>,
+  ): Promise<result> {
+    void name
+    return run(this)
   }
 
   /**
-   * Applies pending migrations in order.
+   * Applies or reverts migrations in order.
    *
    * @param migrations Migration descriptors or registry to apply.
-   * @param options Migration target and runner configuration.
-   * @returns The migrations applied by this run and their SQL scripts.
+   * @param options Migration direction, bound, dry-run, and journal configuration.
+   * @returns The migrations applied or reverted by this run and their SQL scripts.
    */
-  async migrate(
-    migrations: Migrations,
-    options?: MigrateOptions & MigrationRunnerOptions,
-  ): Promise<MigrateResult> {
+  async migrate(migrations: Migrations, options?: DatabaseMigrateOptions): Promise<MigrateResult> {
     this.#assertLifecycleOperationAllowed('migrate')
-    let { journalTable, ...migrateOptions } = options ?? {}
-    let runner = createMigrationRunner(this.#adapter, migrations, { journalTable })
-    return runner.up(migrateOptions)
+    let { direction = 'up', journalTable, ...migrateOptions } = options ?? {}
+    let runner = createMigrationRunner(this, migrations, { journalTable })
+    return direction === 'up' ? runner.up(migrateOptions) : runner.down(migrateOptions)
   }
 
   /**
    * Reports the current state of the provided migrations.
    *
    * @param migrations Migration descriptors or registry to inspect.
-   * @param options Migration runner configuration.
+   * @param options Migration journal configuration.
    * @returns Status entries for the provided migrations.
    */
   async migrationStatus(
     migrations: Migrations,
-    options: MigrationRunnerOptions = {},
+    options: DatabaseMigrationStatusOptions = {},
   ): Promise<MigrationStatusEntry[]> {
     this.#assertLifecycleOperationAllowed('migrationStatus')
-    let runner = createMigrationRunner(this.#adapter, migrations, options)
+    let runner = createMigrationRunner(this, migrations, options)
     return runner.status()
   }
 
   /**
    * Wipes the database, applies migrations, and optionally seeds data.
    *
-   * @param args Migrations and optional seed function used to rebuild the database.
+   * @param options Migrations and optional seed function used to rebuild the database.
    * @returns A promise that resolves when the database has been rebuilt.
    */
-  async reset(args: { migrations: Migrations; seed?: Seed }): Promise<void> {
+  async reset(options: DatabaseResetOptions): Promise<void> {
     this.#assertLifecycleOperationAllowed('reset')
     await this.wipe()
-    await this.migrate(args.migrations)
-    await args.seed?.(this)
+    await this.migrate(options.migrations, { journalTable: options.journalTable })
+    await options.seed?.(this)
   }
 
-  #assertLifecycleOperationAllowed(method: 'migrate' | 'migrationStatus' | 'reset' | 'wipe'): void {
+  #assertLifecycleOperationAllowed(method: 'migrate' | 'migrationStatus' | 'reset'): void {
     if (this.#token) {
       throw new DataTableQueryError(
         'Cannot call ' + method + '() from a transaction-scoped database',
@@ -501,7 +536,7 @@ export class Database implements QueryExecutionContext {
       return toWriteResult(result)
     }
 
-    if (this.#adapter.capabilities.returning) {
+    if (this.capabilities.returning) {
       let result = (await query.insert(values, {
         returning: '*',
         touch,
@@ -563,9 +598,9 @@ export class Database implements QueryExecutionContext {
     let query: QueryForTable<table> = this.query(asQueryTableInput(table))
 
     if (options?.returnRows === true) {
-      if (!this.#adapter.capabilities.returning) {
+      if (!this.capabilities.returning) {
         throw new DataTableQueryError(
-          'createMany({ returnRows: true }) is not supported by this adapter',
+          'createMany({ returnRows: true }) is not supported by this database',
         )
       }
 
@@ -694,7 +729,7 @@ export class Database implements QueryExecutionContext {
   ): Promise<TableRowWith<table, LoadedRelationMap<relations>>> {
     let where = getPrimaryKeyWhere(table, value)
 
-    if (this.#adapter.capabilities.returning) {
+    if (this.capabilities.returning) {
       let updateResult = (await this.query(asQueryTableInput(table)).where(where).update(changes, {
         touch: options?.touch,
         returning: '*',
@@ -820,10 +855,17 @@ export class Database implements QueryExecutionContext {
     callback: (database: Database) => Promise<result>,
     options?: TransactionOptions,
   ): Promise<result> {
+    return this[runInTransaction](callback, options)
+  }
+
+  async [runInTransaction]<result>(
+    callback: (database: QueryExecutionContext) => Promise<result>,
+    options?: TransactionOptions,
+  ): Promise<result> {
     if (!this.#token) {
-      let token = await this.#adapter.beginTransaction(options)
-      let tx = Database[createInternalDatabase](
-        this.#adapter,
+      let token = await this.beginTransaction(options)
+      let tx = DatabaseImplementation.#createInternalDatabase(
+        this,
         { now: this.#now },
         {
           token,
@@ -831,47 +873,71 @@ export class Database implements QueryExecutionContext {
         },
       )
 
+      let result: result
       try {
-        let result = await callback(tx)
-        await this.#adapter.commitTransaction(token)
-        return result
+        result = await callback(tx)
       } catch (error) {
-        await this.#adapter.rollbackTransaction(token)
+        try {
+          await this.rollbackTransaction(token)
+        } catch (rollbackError) {
+          throw new AggregateError(
+            [error, rollbackError],
+            'Database transaction and rollback both failed',
+            { cause: error },
+          )
+        }
         throw error
       }
+
+      await this.commitTransaction(token)
+      return result
     }
 
-    if (!this.#adapter.capabilities.savepoints) {
-      throw new DataTableQueryError('Nested transactions require adapter savepoint support')
+    if (!this.capabilities.savepoints) {
+      throw new DataTableQueryError('Nested transactions require database savepoint support')
     }
 
     let savepointName = 'sp_' + String(this.#savepointCounter.value)
     this.#savepointCounter.value += 1
 
-    await this.#adapter.createSavepoint(this.#token, savepointName)
+    await this.createSavepoint(this.#token, savepointName)
 
+    let result: result
     try {
-      let result = await callback(this)
-      await this.#adapter.releaseSavepoint(this.#token, savepointName)
-      return result
+      result = await callback(this)
     } catch (error) {
-      await this.#adapter.rollbackToSavepoint(this.#token, savepointName)
-      await this.#adapter.releaseSavepoint(this.#token, savepointName)
+      let failures: unknown[] = [error]
+      try {
+        await this.rollbackToSavepoint(this.#token, savepointName)
+      } catch (rollbackError) {
+        failures.push(rollbackError)
+      }
+      try {
+        await this.releaseSavepoint(this.#token, savepointName)
+      } catch (releaseError) {
+        failures.push(releaseError)
+      }
+      if (failures.length > 1) {
+        throw new AggregateError(failures, 'Nested transaction cleanup failed', { cause: error })
+      }
       throw error
     }
+
+    await this.releaseSavepoint(this.#token, savepointName)
+    return result
   }
 
   async [executeOperation](operation: DataManipulationOperation): Promise<DataManipulationResult> {
     try {
-      return await this.#adapter.execute({
+      return await this.execute({
         operation,
         transaction: this.#token,
       })
     } catch (error) {
-      throw new DataTableAdapterError('Adapter execution failed', {
+      throw new DataTableDatabaseError('Database execution failed', {
         cause: error,
         metadata: {
-          dialect: this.#adapter.dialect,
+          dialect: this.dialect,
           operationKind: operation.kind,
         },
       })
@@ -879,54 +945,109 @@ export class Database implements QueryExecutionContext {
   }
 }
 
-/**
- * Creates a database runtime from an adapter.
- * Thin wrapper around `new Database(adapter, options)`.
- * @param adapter Adapter implementation responsible for SQL execution.
- * @param options Optional runtime options.
- * @param options.now Clock function used for auto-managed timestamps.
- * @returns A {@link Database} API instance.
- * @example
- * ```ts
- * import { column as c, createDatabase, table } from 'remix/data-table'
- *
- * let users = table({
- *   name: 'users',
- *   columns: {
- *     id: c.integer(),
- *     email: c.varchar(255),
- *   },
- * })
- *
- * let db = createDatabase(adapter)
- * let rows = await db.query(users).where({ id: 1 }).all()
- * ```
- */
-export function createDatabase(
-  adapter: DatabaseAdapter,
-  options?: { now?: () => unknown },
-): Database {
-  return new Database(adapter, options)
+/** Common database API implemented by every supported database runtime. */
+export type Database = Pick<
+  DatabaseImplementation,
+  | 'migrate'
+  | 'migrationStatus'
+  | 'reset'
+  | 'now'
+  | 'query'
+  | 'create'
+  | 'createMany'
+  | 'find'
+  | 'findOne'
+  | 'findMany'
+  | 'count'
+  | 'update'
+  | 'updateMany'
+  | 'delete'
+  | 'deleteMany'
+  | 'exec'
+  | 'transaction'
+> & {
+  readonly dialect: string
+  readonly capabilities: DatabaseCapabilities
+  hasTable(table: TableRef): Promise<boolean>
+  hasColumn(table: TableRef, column: string): Promise<boolean>
+  executeScript(sql: string): Promise<void>
+  close(): void | Promise<void>
+  wipe(): Promise<void>
 }
 
-/**
- * Creates a database runtime bound to an existing adapter transaction token.
- * This is an internal helper used by the migration runner.
- * @param adapter Adapter implementation responsible for SQL execution.
- * @param token Active adapter transaction token.
- * @param options Optional runtime options.
- * @param options.now Clock function used for auto-managed timestamps.
- * @returns A {@link Database} API instance bound to the provided transaction.
- */
-export function createDatabaseWithTransaction(
-  adapter: DatabaseAdapter,
-  token: TransactionToken,
-  options?: { now?: () => unknown },
-): Database {
-  return Database[createInternalDatabase](adapter, options, {
-    token,
-    savepointCounter: { value: 0 },
-  })
+class TransactionDatabase extends DatabaseImplementation {
+  #driver: DatabaseAdapter
+  #transaction?: TransactionToken
+
+  constructor(
+    driver: DatabaseAdapter,
+    options: DatabaseOptions | undefined,
+    transaction: TransactionToken | undefined,
+  ) {
+    super(options)
+    this.#driver = driver
+    this.#transaction = transaction
+  }
+
+  get dialect(): string {
+    return this.#driver.dialect
+  }
+
+  get capabilities(): DatabaseCapabilities {
+    return this.#driver.capabilities
+  }
+
+  compileSql(operation: DataManipulationOperation): SqlStatement[] {
+    return this.#driver.compileSql(operation)
+  }
+
+  execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
+    return this.#driver.execute(request)
+  }
+
+  executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
+    return this.#driver.executeScript(sql, transaction ?? this.#transaction)
+  }
+
+  hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
+    return this.#driver.hasTable(table, transaction ?? this.#transaction)
+  }
+
+  hasColumn(table: TableRef, column: string, transaction?: TransactionToken): Promise<boolean> {
+    return this.#driver.hasColumn(table, column, transaction ?? this.#transaction)
+  }
+
+  beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
+    return this.#driver.beginTransaction(options)
+  }
+
+  commitTransaction(token: TransactionToken): Promise<void> {
+    return this.#driver.commitTransaction(token)
+  }
+
+  rollbackTransaction(token: TransactionToken): Promise<void> {
+    return this.#driver.rollbackTransaction(token)
+  }
+
+  createSavepoint(token: TransactionToken, name: string): Promise<void> {
+    return this.#driver.createSavepoint(token, name)
+  }
+
+  rollbackToSavepoint(token: TransactionToken, name: string): Promise<void> {
+    return this.#driver.rollbackToSavepoint(token, name)
+  }
+
+  releaseSavepoint(token: TransactionToken, name: string): Promise<void> {
+    return this.#driver.releaseSavepoint(token, name)
+  }
+
+  async wipe(): Promise<void> {
+    throw new DataTableQueryError('Cannot call wipe() from a transaction-scoped database')
+  }
+
+  close(): never {
+    throw new DataTableQueryError('Cannot call close() from a transaction-scoped database')
+  }
 }
 
 function defaultNow(): Date {

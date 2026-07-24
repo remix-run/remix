@@ -5,7 +5,6 @@ import {
   createSessionAuthScheme,
   requireAuth as requireAuthenticated,
 } from 'remix/middleware/auth'
-import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../data/schema.ts'
@@ -13,6 +12,7 @@ import type { User } from '../data/schema.ts'
 import { routes } from '../routes.ts'
 import { parseId } from '../utils/ids.ts'
 import { verifyPassword } from '../utils/password-hash.ts'
+import { databaseContext } from './database.ts'
 
 interface BookstoreAuthSession {
   userId: number
@@ -26,7 +26,7 @@ export function loadAuth() {
           return parseBookstoreAuthSession(session.get('auth'))
         },
         async verify(value, context) {
-          let db = context.get(Database)
+          let db = context.get(databaseContext)
           if (db == null) {
             throw new Error('Expected loadDatabase() middleware before loadAuth()')
           }
@@ -54,7 +54,7 @@ export const passwordProvider = createCredentialsAuthProvider({
     }
   },
   async verify({ email, password }, context) {
-    let db = context.get(Database)
+    let db = context.get(databaseContext)
     if (db == null) {
       throw new Error('Expected loadDatabase() middleware before password auth provider')
     }

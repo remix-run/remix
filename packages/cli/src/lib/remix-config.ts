@@ -22,8 +22,40 @@ type TestType = (typeof testTypes)[number]
 type JsonPath = Array<number | string>
 
 export interface RemixConfig {
+  db?: RemixDbCommandConfig
   doctor?: RemixDoctorCommandConfig
   test?: RemixTestCommandConfig
+}
+
+export type RemixDbString = string | { env: string; default?: string }
+
+export type RemixDbAdapterConfig =
+  | {
+      type: 'sqlite'
+      filename: RemixDbString
+      foreignKeys?: boolean
+      busyTimeout?: number
+    }
+  | {
+      type: 'postgres'
+      connectionString: RemixDbString
+      maintenanceDatabase?: string
+      template?: string
+    }
+  | {
+      type: 'mysql'
+      uri: RemixDbString
+      characterSet?: string
+      collation?: string
+    }
+
+export interface RemixDbCommandConfig {
+  adapter: RemixDbAdapterConfig
+  migrations?: {
+    directory: string
+    journalTable?: string
+  }
+  seed?: string
 }
 
 export interface RemixDoctorCommandConfig {
@@ -121,13 +153,17 @@ function parseConfig(
   cwd: string,
 ): RemixConfig {
   let object = requireObject(value, source, [])
-  requireKnownProperties(object, ['$schema', 'doctor', 'test'], source, [])
+  requireKnownProperties(object, ['$schema', 'db', 'doctor', 'test'], source, [])
 
   if (object.$schema !== undefined) {
     requireString(object.$schema, source, ['$schema'])
   }
 
   let config: RemixConfig = {}
+
+  if (object.db !== undefined) {
+    config.db = parseDbConfig(object.db, source, configDir)
+  }
 
   if (object.doctor !== undefined) {
     config.doctor = parseDoctorConfig(object.doctor, source)
@@ -138,6 +174,117 @@ function parseConfig(
   }
 
   return config
+}
+
+function parseDbConfig(
+  value: unknown,
+  source: ConfigSource,
+  configDir: string,
+): RemixDbCommandConfig {
+  let objectPath = ['db']
+  let object = requireObject(value, source, objectPath)
+  requireKnownProperties(object, ['adapter', 'migrations', 'seed'], source, objectPath)
+
+  if (object.adapter === undefined) {
+    throwConfigError(source, [...objectPath, 'adapter'], 'Expected an adapter configuration')
+  }
+
+  let config: RemixDbCommandConfig = {
+    adapter: parseDbAdapterConfig(object.adapter, source),
+  }
+
+  if (object.migrations !== undefined) {
+    let migrationsPath = [...objectPath, 'migrations']
+    let migrations = requireObject(object.migrations, source, migrationsPath)
+    requireKnownProperties(migrations, ['directory', 'journalTable'], source, migrationsPath)
+    let directory = requireString(migrations.directory, source, [...migrationsPath, 'directory'])
+    let journalTable = optionalString(migrations.journalTable, source, [
+      ...migrationsPath,
+      'journalTable',
+    ])
+    config.migrations = {
+      directory: path.resolve(configDir, directory),
+      journalTable,
+    }
+  }
+
+  if (object.seed !== undefined) {
+    let seed = requireString(object.seed, source, [...objectPath, 'seed'])
+    config.seed = path.resolve(configDir, seed)
+  }
+
+  return config
+}
+
+function parseDbAdapterConfig(value: unknown, source: ConfigSource): RemixDbAdapterConfig {
+  let objectPath = ['db', 'adapter']
+  let object = requireObject(value, source, objectPath)
+  let type = requireEnum(object.type, ['sqlite', 'postgres', 'mysql'], source, [
+    ...objectPath,
+    'type',
+  ])
+
+  if (type === 'sqlite') {
+    requireKnownProperties(
+      object,
+      ['busyTimeout', 'filename', 'foreignKeys', 'type'],
+      source,
+      objectPath,
+    )
+    let busyTimeout = optionalNumber(object.busyTimeout, source, [...objectPath, 'busyTimeout'])
+    if (busyTimeout !== undefined && busyTimeout < 0) {
+      throwConfigError(source, [...objectPath, 'busyTimeout'], 'Expected a non-negative number')
+    }
+    return {
+      type,
+      filename: parseDbString(object.filename, source, [...objectPath, 'filename']),
+      foreignKeys: optionalBoolean(object.foreignKeys, source, [...objectPath, 'foreignKeys']),
+      busyTimeout,
+    }
+  }
+
+  if (type === 'postgres') {
+    requireKnownProperties(
+      object,
+      ['connectionString', 'maintenanceDatabase', 'template', 'type'],
+      source,
+      objectPath,
+    )
+    return {
+      type,
+      connectionString: parseDbString(object.connectionString, source, [
+        ...objectPath,
+        'connectionString',
+      ]),
+      maintenanceDatabase: optionalString(object.maintenanceDatabase, source, [
+        ...objectPath,
+        'maintenanceDatabase',
+      ]),
+      template: optionalString(object.template, source, [...objectPath, 'template']),
+    }
+  }
+
+  requireKnownProperties(object, ['characterSet', 'collation', 'type', 'uri'], source, objectPath)
+  return {
+    type,
+    uri: parseDbString(object.uri, source, [...objectPath, 'uri']),
+    characterSet: optionalString(object.characterSet, source, [...objectPath, 'characterSet']),
+    collation: optionalString(object.collation, source, [...objectPath, 'collation']),
+  }
+}
+
+function parseDbString(
+  value: unknown,
+  source: ConfigSource,
+  propertyPath: JsonPath,
+): RemixDbString {
+  if (typeof value === 'string') return value
+
+  let object = requireObject(value, source, propertyPath)
+  requireKnownProperties(object, ['default', 'env'], source, propertyPath)
+  let env = requireString(object.env, source, [...propertyPath, 'env'])
+  let defaultValue = optionalString(object.default, source, [...propertyPath, 'default'])
+  return defaultValue === undefined ? { env } : { env, default: defaultValue }
 }
 
 function parseDoctorConfig(value: unknown, source: ConfigSource): RemixDoctorCommandConfig {

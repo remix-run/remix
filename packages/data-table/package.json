@@ -22,6 +22,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./cli": "./src/cli.ts",
+    "./database-implementation": "./src/database-implementation.ts",
     "./migrations": "./src/migrations.ts",
     "./migrations/node": "./src/migrations/node.ts",
     "./operators": "./src/operators.ts",
@@ -37,6 +38,10 @@
       "./cli": {
         "types": "./dist/cli.d.ts",
         "default": "./dist/cli.js"
+      },
+      "./database-implementation": {
+        "types": "./dist/database-implementation.d.ts",
+        "default": "./dist/database-implementation.js"
       },
       "./migrations": {
         "types": "./dist/migrations.d.ts",
