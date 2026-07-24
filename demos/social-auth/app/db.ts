@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import { createDatabase } from 'remix/data-table'
-import { loadMigrations } from 'remix/data-table/migrations/node'
+import { loadMigrations, loadSeed } from 'remix/data-table/migrations/node'
 import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
 
 export const db = createDatabase(
@@ -15,4 +15,8 @@ export const db = createDatabase(
 
 export function loadAppMigrations() {
   return loadMigrations(path.join(import.meta.dirname, '../db/migrations'))
+}
+
+export function loadAppSeed() {
+  return loadSeed(path.join(import.meta.dirname, '../db/seed.sql'))
 }

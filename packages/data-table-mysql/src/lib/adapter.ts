@@ -66,6 +66,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
   #transactionCounter = 0
   #migrationLockQueue = Promise.resolve()
   #migrationLockStore = new AsyncLocalStorage<boolean>()
+  #poolClosed = false
 
   constructor(
     config: string | MysqlPoolOptions | MysqlQueryable,
@@ -417,9 +418,21 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /**
+   * Closes the connection pool when this adapter owns one. Adapters wrapping
+   * an injected connection leave it open for its owner. Safe to call more
+   * than once.
+   */
+  async close(): Promise<void> {
+    await this.#closePool()
+  }
+
   async #closePool(): Promise<void> {
     this.#transactions.clear()
-    if (isMysqlPool(this.#client)) {
+    // mysql2 pools error on end() when called twice, so ending must be
+    // tracked to keep close() idempotent.
+    if (isMysqlPool(this.#client) && !this.#poolClosed) {
+      this.#poolClosed = true
       await this.#client.end()
     }
   }
@@ -429,6 +442,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
 
     if (this.#config) {
       this.#client = createMysqlPool(this.#config)
+      this.#poolClosed = false
     }
   }
 

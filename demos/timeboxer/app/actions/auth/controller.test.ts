@@ -5,9 +5,8 @@ process.env.SESSION_SECRET = 'test-session-secret'
 
 const { router } = await import('../../router.ts')
 const { routes } = await import('../../routes.ts')
-const { seed } = await import('../../data/seed.ts')
 const { db, loadAppMigrations } = await import('../../db.ts')
-await db.reset({ migrations: await loadAppMigrations(), seed })
+await db.reset({ migrations: await loadAppMigrations() })
 const { users } = await import('../../data/schema.ts')
 
 describe('auth endpoints', () => {

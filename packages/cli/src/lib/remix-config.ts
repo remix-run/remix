@@ -48,11 +48,6 @@ export type RemixDbAdapterConfig =
       characterSet?: string
       collation?: string
     }
-  | {
-      type: 'module'
-      module: string
-      export: string
-    }
 
 export interface RemixDbCommandConfig {
   adapter: RemixDbAdapterConfig
@@ -60,10 +55,7 @@ export interface RemixDbCommandConfig {
     directory: string
     journalTable?: string
   }
-  seed?: {
-    module: string
-    export: string
-  }
+  seed?: string
 }
 
 export interface RemixDoctorCommandConfig {
@@ -198,7 +190,7 @@ function parseDbConfig(
   }
 
   let config: RemixDbCommandConfig = {
-    adapter: parseDbAdapterConfig(object.adapter, source, configDir),
+    adapter: parseDbAdapterConfig(object.adapter, source),
   }
 
   if (object.migrations !== undefined) {
@@ -217,25 +209,17 @@ function parseDbConfig(
   }
 
   if (object.seed !== undefined) {
-    let seedPath = [...objectPath, 'seed']
-    let seed = requireObject(object.seed, source, seedPath)
-    requireKnownProperties(seed, ['export', 'module'], source, seedPath)
-    let module = requireString(seed.module, source, [...seedPath, 'module'])
-    let exportName = optionalString(seed.export, source, [...seedPath, 'export']) ?? 'seed'
-    config.seed = { module: path.resolve(configDir, module), export: exportName }
+    let seed = requireString(object.seed, source, [...objectPath, 'seed'])
+    config.seed = path.resolve(configDir, seed)
   }
 
   return config
 }
 
-function parseDbAdapterConfig(
-  value: unknown,
-  source: ConfigSource,
-  configDir: string,
-): RemixDbAdapterConfig {
+function parseDbAdapterConfig(value: unknown, source: ConfigSource): RemixDbAdapterConfig {
   let objectPath = ['db', 'adapter']
   let object = requireObject(value, source, objectPath)
-  let type = requireEnum(object.type, ['sqlite', 'postgres', 'mysql', 'module'], source, [
+  let type = requireEnum(object.type, ['sqlite', 'postgres', 'mysql'], source, [
     ...objectPath,
     'type',
   ])
@@ -280,22 +264,12 @@ function parseDbAdapterConfig(
     }
   }
 
-  if (type === 'mysql') {
-    requireKnownProperties(object, ['characterSet', 'collation', 'type', 'uri'], source, objectPath)
-    return {
-      type,
-      uri: parseDbString(object.uri, source, [...objectPath, 'uri']),
-      characterSet: optionalString(object.characterSet, source, [...objectPath, 'characterSet']),
-      collation: optionalString(object.collation, source, [...objectPath, 'collation']),
-    }
-  }
-
-  requireKnownProperties(object, ['export', 'module', 'type'], source, objectPath)
-  let module = requireString(object.module, source, [...objectPath, 'module'])
+  requireKnownProperties(object, ['characterSet', 'collation', 'type', 'uri'], source, objectPath)
   return {
     type,
-    module: path.resolve(configDir, module),
-    export: optionalString(object.export, source, [...objectPath, 'export']) ?? 'createDatabase',
+    uri: parseDbString(object.uri, source, [...objectPath, 'uri']),
+    characterSet: optionalString(object.characterSet, source, [...objectPath, 'characterSet']),
+    collation: optionalString(object.collation, source, [...objectPath, 'collation']),
   }
 }
 

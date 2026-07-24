@@ -41,7 +41,6 @@
     "@remix-run/data-table-mysql": "workspace:^",
     "@remix-run/data-table-postgres": "workspace:^",
     "@remix-run/data-table-sqlite": "workspace:^",
-    "@remix-run/node-tsx": "workspace:^",
     "@remix-run/terminal": "workspace:^",
     "@remix-run/test": "workspace:^",
     "jsonc-parser": "^3.3.1",

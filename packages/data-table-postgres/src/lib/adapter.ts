@@ -60,6 +60,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   #transactionCounter = 0
   #migrationLockQueue = Promise.resolve()
   #migrationLockStore = new AsyncLocalStorage<boolean>()
+  #poolClosed = false
 
   constructor(
     config: PostgresPoolConfig | PostgresQueryable,
@@ -387,9 +388,21 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /**
+   * Closes the connection pool when this adapter owns one. Adapters wrapping
+   * an injected client or pool connection leave it open for its owner. Safe to
+   * call more than once.
+   */
+  async close(): Promise<void> {
+    await this.#closePool()
+  }
+
   async #closePool(): Promise<void> {
     this.#transactions.clear()
-    if (isPostgresPool(this.#client)) {
+    // pg pools reject end() when called twice, so ending must be tracked to
+    // keep close() idempotent.
+    if (isPostgresPool(this.#client) && !this.#poolClosed) {
+      this.#poolClosed = true
       await this.#client.end()
     }
   }
@@ -428,6 +441,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     await this.#closePool().catch(() => undefined)
     if (this.#config) {
       this.#client = new pg.Pool(this.#config)
+      this.#poolClosed = false
     }
   }
 

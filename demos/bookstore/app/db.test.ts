@@ -2,13 +2,12 @@ import * as assert from 'remix/assert'
 import { beforeEach, describe, it } from 'remix/test'
 import { sql } from 'remix/data-table'
 
-import { seed } from './data/seed.ts'
-import { db, loadAppMigrations } from './db.ts'
+import { db, loadAppMigrations, loadAppSeed } from './db.ts'
 import { users } from './data/schema.ts'
 import { verifyPassword } from './utils/password-hash.ts'
 
 beforeEach(async () => {
-  await db.reset({ migrations: await loadAppMigrations(), seed })
+  await db.reset({ migrations: await loadAppMigrations(), seed: await loadAppSeed() })
 })
 
 describe('bookstore database seed', () => {
@@ -30,6 +29,7 @@ describe('bookstore database seed', () => {
     let journalBefore = await db.exec(sql`select count(*) as count from data_table_migrations`)
 
     await db.migrate(await loadAppMigrations())
+    let seed = await loadAppSeed()
     await seed(db)
 
     let journalAfter = await db.exec(sql`select count(*) as count from data_table_migrations`)

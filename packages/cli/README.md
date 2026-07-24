@@ -103,10 +103,7 @@ trailing commas. Every top-level field is optional:
       "directory": "./db/migrations",
       "journalTable": "data_table_migrations",
     },
-    "seed": {
-      "module": "./app/data/seed.ts",
-      "export": "seed",
-    },
+    "seed": "./db/seed.sql",
   },
 
   "doctor": {
@@ -160,14 +157,13 @@ configured arrays, while nested Playwright and coverage settings merge by field.
 globs are resolved from the directory containing the config file. Use `remix doctor --no-strict` to
 disable configured strict mode for one run.
 
-`remix db` requires `db.adapter`. Built-in adapters use `type: "sqlite"`, `type: "postgres"`, or
+`remix db` requires `db.adapter`. Adapters use `type: "sqlite"`, `type: "postgres"`, or
 `type: "mysql"`; PostgreSQL uses `connectionString` and MySQL uses `uri`. A connection value may be
-a string or an object naming an environment variable with an optional default. Custom adapters use
-`{ "type": "module", "module": "./database.ts", "export": "createDatabase" }`; the export must be
-a factory that returns a `Database`. Database flags such as `--migrations`, `--seed`,
-`--journal-table`, and `--connection-env` override the corresponding config for one invocation.
-When no global `--config` is provided, database commands find the nearest `remix.json` by walking up
-from the working directory.
+a string or an object naming an environment variable with an optional default. `db.seed` names a
+SQL file that `remix db seed` and `remix db reset` run against the database. Database flags such as
+`--migrations`, `--seed`, `--journal-table`, and `--connection-env` override the corresponding
+config for one invocation. When no global `--config` is provided, database commands find the
+nearest `remix.json` by walking up from the working directory.
 
 Use the global `--config` option to select another JSONC file. The option itself is resolved from the
 CLI working directory and may appear before or after the command:

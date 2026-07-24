@@ -30,15 +30,15 @@
           "oneOf": [
             { "$ref": "#/$defs/dbSqliteAdapter" },
             { "$ref": "#/$defs/dbPostgresAdapter" },
-            { "$ref": "#/$defs/dbMysqlAdapter" },
-            { "$ref": "#/$defs/dbModuleAdapter" }
+            { "$ref": "#/$defs/dbMysqlAdapter" }
           ]
         },
         "migrations": {
           "$ref": "#/$defs/dbMigrations"
         },
         "seed": {
-          "$ref": "#/$defs/dbModuleExport"
+          "type": "string",
+          "description": "Path to a SQL seed file."
         }
       }
     },
@@ -89,16 +89,6 @@
         "collation": { "type": "string" }
       }
     },
-    "dbModuleAdapter": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["type", "module"],
-      "properties": {
-        "type": { "const": "module" },
-        "module": { "type": "string" },
-        "export": { "type": "string", "default": "createDatabase" }
-      }
-    },
     "dbMigrations": {
       "type": "object",
       "additionalProperties": false,
@@ -106,15 +96,6 @@
       "properties": {
         "directory": { "type": "string" },
         "journalTable": { "type": "string" }
-      }
-    },
-    "dbModuleExport": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["module"],
-      "properties": {
-        "module": { "type": "string" },
-        "export": { "type": "string", "default": "seed" }
       }
     },
     "doctor": {

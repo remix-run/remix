@@ -2,15 +2,12 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { fileURLToPath } from 'node:url'
 
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { runRemix } from '../../index.ts'
 import { captureOutput } from '../../../test/capture-output.ts'
-
-const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
 
 describe('db command', () => {
   it('prints database command help', async () => {
@@ -59,13 +56,15 @@ describe('db command', () => {
         runRemix(['db', 'reset', '--force'], { cwd: projectDir }),
       )
       assert.equal(reset.exitCode, 0, reset.stderr)
-      assert.match(reset.stdout, /seed stdout/)
+      assert.match(reset.stdout, /database reset/)
       assert.ok(readTableNames(projectDir).includes('second_table'))
+      assert.equal(countSeededRows(projectDir), 1)
 
       let seed = await captureOutput(() => runRemix(['db', 'seed'], { cwd: projectDir }))
       assert.equal(seed.exitCode, 0, seed.stderr)
-      assert.equal(seed.stdout, 'seed stdout\n')
-      assert.equal(seed.stderr, 'seed stderr\n')
+      assert.equal(seed.stdout, 'database seeded\n')
+      assert.equal(seed.stderr, '')
+      assert.equal(countSeededRows(projectDir), 1)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -160,20 +159,28 @@ describe('db command', () => {
     }
   })
 
-  it('loads a configured custom database factory', async () => {
-    let projectDir = await createDatabaseProject({ customAdapter: true })
+  it('runs a seed file selected with --seed', async () => {
+    let projectDir = await createDatabaseProject()
 
     try {
-      let result = await captureOutput(() => runRemix(['db', 'status'], { cwd: projectDir }))
+      await fs.writeFile(
+        path.join(projectDir, 'db/extra-seed.sql'),
+        'create table if not exists extra_table (id integer primary key);\n',
+        'utf8',
+      )
+
+      let result = await captureOutput(() =>
+        runRemix(['db', 'seed', '--seed', './db/extra-seed.sql'], { cwd: projectDir }),
+      )
       assert.equal(result.exitCode, 0, result.stderr)
-      assert.match(result.stdout, /20260715120000 create_first pending/)
+      assert.ok(readTableNames(projectDir).includes('extra_table'))
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
   })
 
-  it('does not load seed code for commands that do not use it', async () => {
-    let projectDir = await createDatabaseProject({ throwingSeed: true })
+  it('does not read the seed file for commands that do not use it', async () => {
+    let projectDir = await createDatabaseProject({ missingSeed: true })
 
     try {
       let status = await captureOutput(() => runRemix(['db', 'status'], { cwd: projectDir }))
@@ -181,7 +188,7 @@ describe('db command', () => {
 
       let seed = await captureOutput(() => runRemix(['db', 'seed'], { cwd: projectDir }))
       assert.equal(seed.exitCode, 1)
-      assert.match(seed.stderr, /seed module boom/)
+      assert.match(seed.stderr, /seed\.sql/)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -193,7 +200,7 @@ describe('db command', () => {
     try {
       let seed = await captureOutput(() => runRemix(['db', 'seed'], { cwd: projectDir }))
       assert.equal(seed.exitCode, 0, seed.stderr)
-      assert.equal(seed.stdout, 'seed stdout\n')
+      assert.equal(seed.stdout, 'database seeded\n')
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -218,6 +225,10 @@ describe('db command', () => {
       )
       assert.equal(missingMigrations.exitCode, 1)
       assert.match(missingMigrations.stderr, /requires db\.migrations\.directory or --migrations/)
+
+      let missingSeed = await captureOutput(() => runRemix(['db', 'seed'], { cwd: projectDir }))
+      assert.equal(missingSeed.exitCode, 1)
+      assert.match(missingSeed.stderr, /requires db\.seed or --seed/)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -225,7 +236,7 @@ describe('db command', () => {
 
   it('reports unknown subcommands and invalid command options', async () => {
     let unknown = await captureOutput(() => runRemix(['db', 'wat']))
-    let invalid = await captureOutput(() => runRemix(['db', 'migrate', '--seed', './seed.ts']))
+    let invalid = await captureOutput(() => runRemix(['db', 'migrate', '--seed', './seed.sql']))
 
     assert.equal(unknown.exitCode, 1)
     assert.match(unknown.stderr, /Unknown command: db wat/)
@@ -244,11 +255,17 @@ function readTableNames(projectDir: string): unknown[] {
   return tables
 }
 
+function countSeededRows(projectDir: string): number {
+  let sqlite = new DatabaseSync(path.join(projectDir, 'database.sqlite'))
+  let row = sqlite.prepare('select count(*) as count from seeded').get()
+  sqlite.close()
+  return Number(row?.count)
+}
+
 async function createDatabaseProject(
   options: {
-    customAdapter?: boolean
     migrationsDirectory?: string
-    throwingSeed?: boolean
+    missingSeed?: boolean
   } = {},
 ): Promise<string> {
   let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-db-command-'))
@@ -259,17 +276,7 @@ async function createDatabaseProject(
   await fs.mkdir(path.join(projectDir, 'db/migrations/20260715130000_create_second'), {
     recursive: true,
   })
-  await fs.mkdir(path.join(projectDir, 'node_modules'), { recursive: true })
-  await fs.symlink(
-    path.join(ROOT_DIR, 'packages/remix'),
-    path.join(projectDir, 'node_modules/remix'),
-  )
 
-  await fs.writeFile(
-    path.join(projectDir, 'package.json'),
-    `${JSON.stringify({ name: 'database-command-fixture', private: true, type: 'module' }, null, 2)}\n`,
-    'utf8',
-  )
   await fs.writeFile(
     path.join(projectDir, 'db/migrations/20260715120000_create_first/up.sql'),
     'create table first_table (id integer primary key);\n',
@@ -285,36 +292,13 @@ async function createDatabaseProject(
     'create table second_table (id integer primary key);\n',
     'utf8',
   )
-  await fs.writeFile(
-    path.join(projectDir, 'app/seed.ts'),
-    options.throwingSeed
-      ? "throw new Error('seed module boom')\n"
-      : [
-          'export function seed() {',
-          "  console.log('seed stdout')",
-          "  console.error('seed stderr')",
-          '}',
-          '',
-        ].join('\n'),
-    'utf8',
-  )
 
-  let adapter: Record<string, unknown> = {
-    type: 'sqlite',
-    filename: './database.sqlite',
-    foreignKeys: true,
-  }
-  if (options.customAdapter) {
-    adapter = { type: 'module', module: './app/database.ts' }
+  if (!options.missingSeed) {
     await fs.writeFile(
-      path.join(projectDir, 'app/database.ts'),
+      path.join(projectDir, 'db/seed.sql'),
       [
-        "import { createDatabase as createDataTableDatabase } from 'remix/data-table'",
-        "import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'",
-        '',
-        'export function createDatabase() {',
-        "  return createDataTableDatabase(createSqliteDatabaseAdapter({ filename: './database.sqlite' }))",
-        '}',
+        'create table if not exists seeded (id integer primary key);',
+        'insert or ignore into seeded (id) values (1);',
         '',
       ].join('\n'),
       'utf8',
@@ -326,9 +310,9 @@ async function createDatabaseProject(
     JSON.stringify(
       {
         db: {
-          adapter,
+          adapter: { type: 'sqlite', filename: './database.sqlite', foreignKeys: true },
           migrations: { directory: options.migrationsDirectory ?? './db/migrations' },
-          seed: { module: './app/seed.ts' },
+          seed: './db/seed.sql',
         },
       },
       null,

@@ -152,16 +152,19 @@ describe('runRemixDb', () => {
     let db = new RecordingDatabase()
     let seededDatabase: Database | undefined
 
-    let exitCode = await runRemixDb({
-      command: 'seed',
-      db,
-      seed(database) {
-        seededDatabase = database
-      },
-    })
+    let { value: exitCode, lines } = await captureLog(() =>
+      runRemixDb({
+        command: 'seed',
+        db,
+        seed(database) {
+          seededDatabase = database
+        },
+      }),
+    )
 
     assert.equal(exitCode, 0)
     assert.equal(seededDatabase, db)
+    assert.deepEqual(lines, ['database seeded'])
   })
 
   it('loads migration status', async () => {

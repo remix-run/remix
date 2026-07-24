@@ -438,7 +438,19 @@ export class Database implements QueryExecutionContext {
     await options.seed?.(this)
   }
 
-  #assertLifecycleOperationAllowed(method: 'migrate' | 'migrationStatus' | 'reset' | 'wipe'): void {
+  /**
+   * Releases the adapter's underlying connection handles when it owns any.
+   *
+   * @returns A promise that resolves when the connections are closed.
+   */
+  async close(): Promise<void> {
+    this.#assertLifecycleOperationAllowed('close')
+    await this.#adapter.close?.()
+  }
+
+  #assertLifecycleOperationAllowed(
+    method: 'close' | 'migrate' | 'migrationStatus' | 'reset' | 'wipe',
+  ): void {
     if (this.#token) {
       throw new DataTableQueryError(
         'Cannot call ' + method + '() from a transaction-scoped database',

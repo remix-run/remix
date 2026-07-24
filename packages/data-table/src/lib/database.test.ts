@@ -1041,6 +1041,10 @@ describe('transactions and raw sql', () => {
         () => transactionDatabase.reset({ migrations: [] }),
         /Cannot call reset\(\) from a transaction-scoped database/,
       )
+      await assert.rejects(
+        () => transactionDatabase.close(),
+        /Cannot call close\(\) from a transaction-scoped database/,
+      )
     })
   })
 
@@ -1088,6 +1092,28 @@ describe('transactions and raw sql', () => {
         return error instanceof DataTableQueryError
       },
     )
+  })
+})
+
+describe('connection lifecycle', () => {
+  it('closes the adapter when it implements close()', async () => {
+    let recording = createRecordingAdapter()
+    let closeCount = 0
+    recording.adapter.close = () => {
+      closeCount++
+    }
+    let db = createTestDatabase(recording.adapter)
+
+    await db.close()
+
+    assert.equal(closeCount, 1)
+  })
+
+  it('resolves for adapters without close()', async () => {
+    let recording = createRecordingAdapter()
+    let db = createTestDatabase(recording.adapter)
+
+    await db.close()
   })
 })
 

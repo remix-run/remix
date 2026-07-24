@@ -329,6 +329,12 @@ export interface DatabaseAdapter {
   /** Destructively removes the configured database state when supported. */
   wipe?(): Promise<void>
   /**
+   * Releases the adapter's underlying connection handles when it owns any.
+   *
+   * Implementations must be safe to call more than once.
+   */
+  close?(): void | Promise<void>
+  /**
    * Runs migration work while holding an adapter-specific lock.
    *
    * The callback receives an adapter bound to the connection that owns the lock.

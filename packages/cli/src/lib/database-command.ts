@@ -16,10 +16,7 @@ export interface DatabaseCommandPlan {
   command: DatabaseCommand
   journalTable?: string
   migrations?: string
-  seed?: {
-    module: string
-    export: string
-  }
+  seed?: string
   to?: string
 }
 

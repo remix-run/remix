@@ -421,10 +421,7 @@ environment variable at command runtime, and paths are resolved relative to `rem
       "directory": "./db/migrations",
       "journalTable": "app_migrations",
     },
-    "seed": {
-      "module": "./app/data/seed.ts",
-      "export": "seed",
-    },
+    "seed": "./db/seed.sql",
   },
 }
 ```
@@ -482,13 +479,25 @@ Adapters with migration locking run the complete migration and journal lifecycle
 connection that owns the lock. This keeps advisory locks correctly paired when the adapter uses a
 connection pool, including pools configured with a single connection.
 
-Read status separately, or rebuild a database with migrations and an optional seed:
+Read status separately, or rebuild a database with migrations and an optional seed. A seed is a
+function that receives the database; `loadSeed()` builds one from a SQL file:
 
 ```ts
+import { loadSeed } from 'remix/data-table/migrations/node'
+
+let seed = await loadSeed('./db/seed.sql')
+
 let status = await db.migrationStatus(migrations, { journalTable: 'app_migrations' })
 await db.reset({ migrations })
 await db.reset({ migrations, seed })
 await db.reset({ migrations, seed, journalTable: 'app_migrations' })
+```
+
+When a lifecycle command is the last thing a process does, close adapter-owned connection pools so
+the process can exit:
+
+```ts
+await db.close()
 ```
 
 ### Transaction Modes

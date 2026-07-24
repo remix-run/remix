@@ -11,7 +11,6 @@ import {
   type ScheduleBlockInput,
 } from './schedules.ts'
 import { db, loadAppMigrations } from '../db.ts'
-import { seed } from './seed.ts'
 import { scheduleBlocks, schedules, users } from './schema.ts'
 
 describe('schedule persistence lifecycle', () => {
@@ -143,7 +142,7 @@ describe('schedule persistence lifecycle', () => {
 })
 
 async function withTestDatabase<T>(callback: (db: Database) => Promise<T>): Promise<T> {
-  await db.reset({ migrations: await loadAppMigrations(), seed })
+  await db.reset({ migrations: await loadAppMigrations() })
   return await callback(db)
 }
 

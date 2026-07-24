@@ -90,6 +90,9 @@ export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
 
   if (options.command === 'seed') {
     await options.seed(options.db)
+
+    console.log('database seeded')
+
     return 0
   }
 

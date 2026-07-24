@@ -9,9 +9,6 @@
     "migrations": {
       "directory": "./db/migrations"
     },
-    "seed": {
-      "module": "./app/data/seed.ts",
-      "export": "seed"
-    }
+    "seed": "./db/seed.sql"
   }
 }
