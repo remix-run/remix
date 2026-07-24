@@ -20,6 +20,8 @@ import { normalizeFilePath, normalizePathname } from './paths.ts'
 import { compileRoutes } from './routes.ts'
 import type { CompiledRoutes } from './routes.ts'
 import { createResponseForScript, createScriptCompiler } from './scripts/compiler.ts'
+import { normalizeScriptTransforms } from './scripts/config.ts'
+import type { AssetServerScriptOptions, ResolvedAssetScriptTransform } from './scripts/config.ts'
 import { supportedScriptExtensions } from './scripts/resolve.ts'
 import { createResponseForStyle, createStyleCompiler, isStyleFilePath } from './styles/compiler.ts'
 import { resolveScriptTarget, resolveStyleTarget } from './target.ts'
@@ -53,16 +55,6 @@ interface FingerprintOptions {
 
 type AssetSourceMaps = 'inline' | 'external'
 type AssetSourceMapSourcePaths = 'url' | 'absolute'
-
-interface AssetServerScriptOptions {
-  /**
-   * Replace global expressions with constant values during transform, e.g.
-   * `{ 'process.env.NODE_ENV': '"production"' }`
-   */
-  define?: Record<string, string>
-  /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
-  external?: string[]
-}
 
 const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
 
@@ -197,6 +189,7 @@ type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
   routes: CompiledRoutes
   sourceMapSourcePaths: 'url' | 'absolute'
   sourceMaps?: 'inline' | 'external'
+  scriptTransforms: readonly ResolvedAssetScriptTransform[]
   scriptsTarget?: ResolvedScriptTarget
   stylesTarget?: ResolvedStyleTarget
   watchOptions: AssetServerWatchOptions | null
@@ -261,6 +254,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     external: resolvedOptions.external,
     fingerprintAssets: resolvedOptions.fingerprintAssets,
     isAllowed: accessPolicy.isAllowed,
+    isDependency: accessPolicy.isDependency,
     minify: resolvedOptions.minify,
     onWatchDirectoriesChange: (delta) => {
       if (!watcher) return
@@ -271,6 +265,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     sourceMapSourcePaths: resolvedOptions.sourceMapSourcePaths,
     sourceMaps: resolvedOptions.sourceMaps,
     target: resolvedOptions.scriptsTarget,
+    transforms: resolvedOptions.scriptTransforms,
     watchIgnore: resolvedOptions.watchOptions?.ignore,
     watchMode: resolvedOptions.watchOptions !== null,
   })
@@ -715,6 +710,7 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
     ]),
     sourceMapSourcePaths: options.sourceMapSourcePaths ?? 'url',
     sourceMaps: options.sourceMaps,
+    scriptTransforms: normalizeScriptTransforms(scriptOptions.transforms),
     scriptsTarget: resolveScriptTarget(options.target),
     stylesTarget: resolveStyleTarget(options.target),
     watchOptions: normalizeWatchOptions(options.watch),

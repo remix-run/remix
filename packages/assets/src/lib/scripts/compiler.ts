@@ -32,6 +32,7 @@ import type {
 } from '../module-store.ts'
 import { createTsconfigTransformOptionsResolver, transformModule } from './transform.ts'
 import type { ResolveModuleResult, TransformArgs, TransformedModule } from './transform.ts'
+import type { ResolvedAssetScriptTransform } from './config.ts'
 import { ResolverFactory } from 'oxc-resolver'
 import type { EmittedAsset, EmittedModule } from './emit.ts'
 
@@ -66,6 +67,7 @@ type ScriptCompilerOptions = {
   external: string[]
   fingerprintAssets: boolean
   isAllowed(absolutePath: string): boolean
+  isDependency(absolutePath: string): boolean
   minify: boolean
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
   rootDir: string
@@ -73,6 +75,7 @@ type ScriptCompilerOptions = {
   sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps?: 'external' | 'inline'
   target?: ResolvedScriptTarget
+  transforms: readonly ResolvedAssetScriptTransform[]
   watchIgnore?: readonly string[]
   watchMode: boolean
 }
@@ -126,6 +129,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     buildId: resolvedOptions.buildId ?? null,
     define: resolvedOptions.define ?? null,
     externalSet: resolvedOptions.externalSet,
+    isDependency: resolvedOptions.isDependency,
     isWatchIgnored,
     minify: resolvedOptions.minify,
     resolveActualPath,
@@ -133,6 +137,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     sourceMapSourcePaths: resolvedOptions.sourceMapSourcePaths,
     sourceMaps: resolvedOptions.sourceMaps ?? null,
     target: resolvedOptions.target ?? null,
+    transforms: resolvedOptions.transforms,
     tsconfigTransformOptionsResolver,
   }
   let resolveArgs: ResolveArgs = {
