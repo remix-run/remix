@@ -5,8 +5,21 @@ import { invariant } from '../runtime/invariant.ts'
 import { createMixin } from '../runtime/mixins/mixin.ts'
 import type { MixinBeforeRemoveEvent } from '../runtime/mixins/mixin.ts'
 import { css } from './css-mixin.ts'
+import type { CSSMixinDescriptor } from './css-mixin.ts'
 
 describe('css mixin', () => {
+  it('styles select elements', () => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    let selectStyle: CSSMixinDescriptor = css({ color: 'red' })
+    root.render(<select mix={[css({ backgroundColor: 'white' }), selectStyle]} />)
+    root.flush()
+
+    let select = container.querySelector('select')
+    invariant(select)
+    expect(select.className).toMatch(/rmxc-/)
+  })
+
   it('concatenates generated classes with existing className', () => {
     let container = document.createElement('div')
     let root = createRoot(container)
