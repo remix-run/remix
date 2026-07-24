@@ -1,0 +1,1 @@
+Scaffold browser-owned modules with explicit `*.browser.*` filenames instead of a general `app/assets/` directory, and generate the browser entry URL with `assetServer.getHref()` so it stays aligned with the asset server's URL configuration (see #11404).
