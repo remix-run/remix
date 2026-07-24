@@ -5,9 +5,6 @@ import * as process from 'node:process'
 import { createDatabase, type Database, type Seed } from '@remix-run/data-table'
 import { runRemixDb } from '@remix-run/data-table/cli'
 import { loadMigrations } from '@remix-run/data-table/migrations/node'
-import { createMysqlDatabaseAdapter } from '@remix-run/data-table-mysql'
-import { createPostgresDatabaseAdapter } from '@remix-run/data-table-postgres'
-import { createSqliteDatabaseAdapter } from '@remix-run/data-table-sqlite'
 import { loadModule } from '@remix-run/node-tsx/load-module'
 
 import { isDatabaseCommand, type DatabaseCommandPlan } from './database-command.ts'
@@ -65,7 +62,11 @@ async function run(): Promise<number> {
 }
 
 async function createConfiguredDatabase(adapter: RemixDbAdapterConfig): Promise<Database> {
+  // Adapter packages are imported lazily because their database drivers are
+  // optional peer dependencies; only the configured adapter's driver needs to
+  // be installed.
   if (adapter.type === 'sqlite') {
+    let { createSqliteDatabaseAdapter } = await import('@remix-run/data-table-sqlite')
     let filename = resolveDbString(adapter.filename)
     if (filename !== ':memory:') {
       filename = path.resolve(filename)
@@ -81,6 +82,7 @@ async function createConfiguredDatabase(adapter: RemixDbAdapterConfig): Promise<
   }
 
   if (adapter.type === 'postgres') {
+    let { createPostgresDatabaseAdapter } = await import('@remix-run/data-table-postgres')
     return createDatabase(
       createPostgresDatabaseAdapter(
         { connectionString: resolveDbString(adapter.connectionString) },
@@ -93,6 +95,7 @@ async function createConfiguredDatabase(adapter: RemixDbAdapterConfig): Promise<
   }
 
   if (adapter.type === 'mysql') {
+    let { createMysqlDatabaseAdapter } = await import('@remix-run/data-table-mysql')
     return createDatabase(
       createMysqlDatabaseAdapter(
         { uri: resolveDbString(adapter.uri), multipleStatements: true },
@@ -157,8 +160,10 @@ function readModuleExport(module: unknown, exportName: string, modulePath: strin
 
 function resolveDbString(value: RemixDbString): string {
   if (typeof value === 'string') return value
-  let resolved = process.env[value.env] ?? value.default
-  if (resolved === undefined) {
+  // An env var that is set but empty is treated as unset so it falls back to
+  // the configured default instead of producing an empty connection value.
+  let resolved = process.env[value.env] || value.default
+  if (resolved === undefined || resolved === '') {
     throw new ExpectedWorkerError(`Database environment variable ${value.env} is not set`)
   }
   return resolved

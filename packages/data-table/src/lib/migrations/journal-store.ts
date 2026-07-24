@@ -48,6 +48,16 @@ export async function hasMigrationJournal(
 
     return true
   } catch {
+    // The probe fails both when the journal table is missing and when the
+    // database itself is unreachable. Only the former means "no journal yet";
+    // rethrow connection/auth failures via a table-independent query.
+    await adapter.execute({
+      operation: {
+        kind: 'raw',
+        sql: rawSql('select 1'),
+      },
+    })
+
     return false
   }
 }

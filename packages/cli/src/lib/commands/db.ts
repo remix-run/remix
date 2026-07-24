@@ -188,7 +188,7 @@ function resolveDatabaseCommandPlan(
   config: RemixDbCommandConfig,
   cwd: string,
 ): DatabaseCommandPlan {
-  let adapter = overrideConnection(config.adapter, invocation.connectionEnv)
+  let adapter = overrideConnection(config.adapter, invocation.connectionEnv, cwd)
   let migrations = invocation.migrations
     ? path.resolve(cwd, invocation.migrations)
     : config.migrations?.directory
@@ -225,9 +225,23 @@ function resolveDatabaseCommandPlan(
 function overrideConnection(
   adapter: RemixDbCommandConfig['adapter'],
   environmentName: string | undefined,
+  cwd: string,
 ): RemixDbCommandConfig['adapter'] {
   if (environmentName === undefined) return adapter
-  if (adapter.type === 'sqlite') return { ...adapter, filename: { env: environmentName } }
+  if (adapter.type === 'sqlite') {
+    // Resolve a relative sqlite filename here, against the directory the
+    // command was invoked from (like --migrations and --seed). The worker runs
+    // with cwd set to the config directory, which would silently retarget the
+    // path.
+    let filename = process.env[environmentName]
+    if (filename === undefined || filename === '') {
+      throw invalidOptionValue(`Database environment variable ${environmentName} is not set`)
+    }
+    return {
+      ...adapter,
+      filename: filename === ':memory:' ? filename : path.resolve(cwd, filename),
+    }
+  }
   if (adapter.type === 'postgres') {
     return { ...adapter, connectionString: { env: environmentName } }
   }
