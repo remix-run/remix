@@ -268,7 +268,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         },
         (error: unknown) =>
           error instanceof DataTableQueryError &&
-          error.message === 'insertMany() returning is not supported by this adapter',
+          error.message === 'insertMany() returning is not supported by this database',
       )
 
       await db.query(accounts).insert({
@@ -287,7 +287,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         },
         (error: unknown) =>
           error instanceof DataTableQueryError &&
-          error.message === 'delete() returning is not supported by this adapter',
+          error.message === 'delete() returning is not supported by this database',
       )
 
       return
