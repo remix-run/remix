@@ -83,14 +83,14 @@ For a server-rendered app, define your page as a component, render it with `rend
 ```tsx
 import { renderToStream } from 'remix/ui/server'
 import { Frame } from 'remix/ui'
-import { Counter } from './assets/counter.tsx'
+import { Counter } from './ui/public/counter.tsx'
 
 function App() {
   return () => (
     <html>
       <head>
         <title>My App</title>
-        <script async type="module" src="/assets/entry.js" />
+        <script async type="module" src="/assets/app/public/entry.ts" />
       </head>
       <body>
         <h1>Hello</h1>
@@ -113,7 +113,7 @@ return new Response(stream, {
 ### Client entry module
 
 ```tsx
-// assets/entry.tsx
+// app/public/entry.ts
 import { run } from 'remix/ui'
 
 let app = run({
@@ -133,11 +133,11 @@ await app.ready()
 ### Client entry component
 
 ```tsx
-// assets/counter.tsx
+// app/ui/public/counter.tsx
 import { clientEntry, on, type Handle } from 'remix/ui'
 
 export let Counter = clientEntry(
-  '/assets/counter.js#Counter',
+  '/assets/app/ui/public/counter.tsx#Counter',
   function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
     let count = handle.props.initialCount ?? 0
 

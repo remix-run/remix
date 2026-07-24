@@ -83,20 +83,22 @@ Use these root directories consistently:
 
 - `app/` for runtime application code
 - `db/` for migrations and local database files
-- `public/` for static assets served as-is
+- root `public/` for static assets served as-is from the app root
 - `test/` for shared helpers, fixtures, and integration coverage
 - `tmp/` for uploads, caches, local session files, and other scratch data
 
 Inside `app/`, organize by responsibility:
 
-- `assets/` for client entrypoints and client-owned browser behavior
 - `actions/` for controller-owned route handlers, route-local response rendering, and route-local UI/helpers that are not shared across route areas
 - `data/` for schema, queries, persistence setup, migrations, and runtime data initialization
 - `middleware/` for request lifecycle concerns such as auth, sessions, uploads, and database injection
+- `public/` directories inside the narrowest owner for browser-reachable source code, with `app/public/entry.ts` as the browser runtime entrypoint
 - `ui/` for shared cross-route UI primitives
 - `utils/` only for genuinely cross-layer helpers that do not clearly belong elsewhere
-- `routes.ts` for the route contract
+- `routes.ts` for the shared server-and-browser route contract and type-safe href generation
 - `router.ts` for router setup and wiring
+
+Keep every local dependency of a browser module in a `public/` directory inside `app/` so the complete browser module graph is explicitly reachable. The shared `app/routes.ts` contract is browser-readable so modules can build type-safe links with `routes.*.href(...)`; packages allowed by the asset server are the other exception. A feature can colocate its browser code in a directory such as `app/actions/cart/public/`, while static files that do not need compilation belong in the root `public/` directory.
 
 ### Placement Precedence
 

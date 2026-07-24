@@ -1,0 +1,1 @@
+Scaffold browser-reachable source in colocated `public/` directories throughout `app/`, while keeping the shared `app/routes.ts` contract browser-readable and serving unchanged static files from the root `public/` directory.
