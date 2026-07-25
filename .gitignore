@@ -19,6 +19,6 @@ autoresearch-results/
 *.sqlite3-*
 *.cpuprofile
 
-.env
 
 /reference
+config.bat
