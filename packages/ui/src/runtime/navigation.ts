@@ -79,6 +79,10 @@ export function startNavigationListenerImpl(
       let frame = namedFrame ?? topFrame
 
       event.intercept({
+        // Take full control of scrolling so the browser's built-in post-intercept
+        // scroll doesn't override rmx-reset-scroll="false". The manual window.scrollTo
+        // call below only fires when resetScroll is true, matching the expected behavior.
+        scroll: 'manual',
         async handler() {
           if (event.navigationType !== 'traverse') {
             navigation.updateCurrentEntry({ state })
