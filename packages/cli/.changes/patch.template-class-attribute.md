@@ -1,0 +1,1 @@
+Cleaned up the `PromptButton` component in the default app template so scaffolded apps model the conventions we recommend: `class` instead of `className`, and `css(...)` mixins keyed off a `data-state` attribute instead of inline styles for values that only change between fixed states.
