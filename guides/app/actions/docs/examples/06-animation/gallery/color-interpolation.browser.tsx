@@ -84,7 +84,7 @@ export function ColorInterpolation() {
         ]}
       >
         <div
-          className="oklch-box"
+          class="oklch-box"
           mix={[
             css({
               width: 100,

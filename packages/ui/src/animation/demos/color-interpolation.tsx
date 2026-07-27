@@ -57,7 +57,7 @@ export function ColorInterpolation() {
 
       <div mix={[css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 })]}>
         <div
-          className="oklch-box"
+          class="oklch-box"
           mix={[
             css({
               width: 100,
