@@ -93,11 +93,10 @@ export const ImageCarousel = clientEntry(
                 cursor: 'pointer',
                 outline: 'none',
                 transition: 'background-color 150ms ease, opacity 150ms ease',
+                opacity: 0.9,
+                '&:disabled': { opacity: 0.4 },
               }),
             ]}
-            style={{
-              opacity: index === 0 ? 0.4 : 0.9,
-            }}
           >
             <span mix={css({ fontSize: '22px', lineHeight: '1' })}>{'‹'}</span>
           </button>
@@ -124,11 +123,10 @@ export const ImageCarousel = clientEntry(
                 cursor: 'pointer',
                 outline: 'none',
                 transition: 'background-color 150ms ease, opacity 150ms ease',
+                opacity: 0.9,
+                '&:disabled': { opacity: 0.4 },
               }),
             ]}
-            style={{
-              opacity: index === total - 1 ? 0.4 : 0.9,
-            }}
           >
             <span mix={css({ fontSize: '22px', lineHeight: '1' })}>{'›'}</span>
           </button>
