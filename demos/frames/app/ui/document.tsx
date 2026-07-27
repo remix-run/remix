@@ -1,6 +1,7 @@
 import type { Handle, RemixNode } from 'remix/ui'
 
 import { getAssetEntry } from '../middleware/asset-entry.ts'
+import { bodyStyle, containerStyle } from './styles.ts'
 
 type DocumentProps = {
   title: string
@@ -24,17 +25,11 @@ export function Document(handle: Handle<DocumentProps>) {
           ))}
           <script async type="module" src={scriptSrc} />
         </head>
-        <body
-          style={{
-            fontFamily:
-              'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
-            margin: 0,
-            padding: 24,
-            background: '#0b1020',
-            color: '#e9eefc',
-          }}
-        >
-          <div style={{ maxWidth, margin: '0 auto' }}>{children}</div>
+        <body mix={bodyStyle}>
+          {/* `maxWidth` is caller-driven, so it stays an inline style. */}
+          <div mix={containerStyle} style={{ maxWidth }}>
+            {children}
+          </div>
         </body>
       </html>
     )

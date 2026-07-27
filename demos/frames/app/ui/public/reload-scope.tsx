@@ -25,15 +25,13 @@ export const ReloadScope = clientEntry(import.meta.url, function ReloadScope(han
     <div mix={css({ display: 'flex', gap: 8, flexWrap: 'wrap' })}>
       <button
         type="button"
+        data-pending={framePending ? '' : undefined}
         mix={[
-          reloadButtonStyle(framePending),
+          reloadButtonStyle,
           on('click', () => {
             void handle.frame.reload()
           }),
         ]}
-        style={{
-          '--frame-bg': framePending ? undefined : 'rgba(255,255,255,0.10)',
-        }}
       >
         {framePending ? 'Reloading frame…' : 'Reload this frame'}
       </button>
@@ -65,29 +63,26 @@ export const ReloadTopFrame = clientEntry(import.meta.url, function ReloadTopFra
   return () => (
     <button
       type="button"
+      data-pending={pending ? '' : undefined}
       mix={[
-        reloadButtonStyle(pending),
+        reloadButtonStyle,
         on('click', () => {
           void handle.frames.top.reload()
         }),
       ]}
-      style={{
-        '--frame-bg': pending ? undefined : 'rgba(255,255,255,0.10)',
-      }}
     >
       {pending ? 'Reloading page…' : 'Reload top frame'}
     </button>
   )
 })
 
-function reloadButtonStyle(pending: boolean) {
-  return css({
-    padding: '6px 10px',
-    borderRadius: 10,
-    border: '1px solid rgba(255,255,255,0.18)',
-    background: pending ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
-    color: '#e9eefc',
-    cursor: 'pointer',
-    '&:hover': { background: 'var(--frame-bg)' },
-  })
-}
+const reloadButtonStyle = css({
+  padding: '6px 10px',
+  borderRadius: 10,
+  border: '1px solid rgba(255,255,255,0.18)',
+  background: 'rgba(255,255,255,0.06)',
+  color: '#e9eefc',
+  cursor: 'pointer',
+  '&:hover': { background: 'rgba(255,255,255,0.10)' },
+  '&[data-pending]': { background: 'rgba(255,255,255,0.04)' },
+})
