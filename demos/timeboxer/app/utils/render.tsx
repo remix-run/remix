@@ -3,7 +3,7 @@ import * as path from 'node:path'
 import type { RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
 
-import { assetServer } from '../controllers/assets.ts'
+import { assetServer } from '../actions/assets/controller.ts'
 import { router } from '../router.ts'
 
 export function render(node: RemixNode, request: Request, init?: ResponseInit) {

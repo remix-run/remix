@@ -1,10 +1,7 @@
-import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import * as util from 'node:util'
 import type { PlaywrightTestConfig } from 'playwright/test'
-import { importModule } from './import-module.ts'
 
 export const IS_RUNNING_FROM_SRC = path.extname(new URL(import.meta.url).pathname) === '.ts'
 
@@ -30,118 +27,6 @@ export function getBrowserTestRootDir(): string {
     : process.cwd()
 }
 
-// prettier-ignore
-// Note: `description` is not a field used by parseArgs(), it's an additional field
-// we use for `--help`
-const cliOptions = {
-  'browser.echo': {
-    type: 'boolean',
-    description: 'Echo browser console output to stdout',
-  },
-  'browser.open': {
-    type: 'boolean',
-    description: 'Open browser window and keep open after tests finish',
-  },
-  'glob.browser': {
-    type: 'string',
-    multiple: true,
-    description: 'Glob pattern(s) for browser test files',
-  },
-  'glob.e2e': {
-    type: 'string',
-    multiple: true,
-    description: 'Glob pattern(s) for E2E test files',
-  },
-  'glob.exclude': {
-    type: 'string',
-    multiple: true,
-    description: 'Glob pattern(s) for paths to exclude from discovery',
-  },
-  'glob.test': {
-    type: 'string',
-    multiple: true,
-    description: 'Glob pattern(s) for all test files',
-  },
-  concurrency: {
-    type: 'string',
-    short: 'c',
-    description: 'Max number of concurrent test workers (default: os.availableParallelism())',
-  },
-  config: {
-    type: 'string',
-    description: 'Path to config file (default: remix-test.config.ts)',
-  },
-  coverage: {
-    type: 'boolean',
-    description: 'Enable or disable coverage collection (default: false)',
-  },
-  'coverage.dir': {
-    type: 'string',
-    description: 'Directory to output coverage reports (default: .coverage)',
-  },
-  'coverage.include': {
-    type: 'string',
-    multiple: true,
-    description: 'Glob pattern(s) for files to include in coverage',
-  },
-  'coverage.exclude': {
-    type: 'string',
-    multiple: true,
-    description: 'Glob pattern(s) for files to exclude from coverage',
-  },
-  'coverage.branches': {
-    type: 'string',
-    description: 'Branches coverage threshold percentage',
-  },
-  'coverage.functions': {
-    type: 'string',
-    description: 'Functions coverage threshold percentage',
-  },
-  'coverage.lines': {
-    type: 'string',
-    description: 'Lines coverage threshold percentage',
-  },
-  'coverage.statements': {
-    type: 'string',
-    description: 'Statements coverage threshold percentage',
-  },
-  setup: {
-    type: 'string',
-    short: 's',
-    description: 'Path to a setup module exporting globalSetup/globalTeardown',
-  },
-  playwrightConfig: {
-    type: 'string',
-    description: 'Path to a Playwright config file',
-  },
-  project: {
-    type: 'string',
-    short: 'p',
-    multiple: true,
-    description: 'Filter to specific Playwright project(s)',
-  },
-  pool: {
-    type: 'string',
-    description: 'Pool used to run server and E2E test files: forks, threads (default: forks)',
-  },
-  reporter: {
-    type: 'string',
-    short: 'r',
-    description: 'Test reporter: spec, files, tap, dot (default: spec)',
-  },
-  type: {
-    type: 'string',
-    short: 't',
-    multiple: true,
-    description: 'Test types to run (default: server, browser, e2e)',
-  },
-  watch: {
-    type: 'boolean',
-    short: 'w',
-    description: 'Re-run tests on file changes',
-  },
-} as const
-
 const defaultValues: ResolvedRemixTestConfig = {
   browser: {
     echo: false,
@@ -164,8 +49,10 @@ const defaultValues: ResolvedRemixTestConfig = {
     exclude: ['node_modules/**'],
   },
   pool: 'forks',
+  only: undefined,
   playwrightConfig: undefined,
   project: undefined,
+  quiet: false,
   reporter: process.env.CI === 'true' ? 'files' : 'spec',
   setup: undefined,
   type: ['server', 'browser', 'e2e'],
@@ -173,26 +60,36 @@ const defaultValues: ResolvedRemixTestConfig = {
 }
 
 /**
- * Worker pool used by `remix-test` to run server and E2E test files.
+ * Worker pools supported by the Remix test runner.
+ */
+export const remixTestPools = ['forks', 'threads'] as const
+
+/**
+ * Worker pool used by Remix to run server and E2E test files.
  * `'forks'` (default) uses child processes for stronger isolation; `'threads'`
  * uses worker threads for projects that prefer lower-overhead startup.
  */
-export type RemixTestPool = 'forks' | 'threads'
+export type RemixTestPool = (typeof remixTestPools)[number]
+
+export interface SerializedOnlyPattern {
+  source: string
+  flags: string
+}
+
+export type RemixTestOnlyPattern = string | RegExp
 
 /**
- * User-facing configuration for the `remix-test` CLI. Every field is
- * optional — unset fields fall back to runner defaults. The same shape can
- * be exported from a config file (see `--config`) or passed inline to
- * {@link runRemixTest} via the corresponding flags.
+ * User-facing configuration for the Remix test runner. Every field is optional, and unset fields
+ * fall back to runner defaults. Pass this shape to `runRemixTest()`.
  */
 export interface RemixTestConfig {
   /**
-   * Options for controlling the playwright browser
-   *  - `browser.echo`: Echo browser console output to stdout (--browser.echo)
-   *  - `browser.open`: Open browser window and keep open after test finish (--browser.open)
+   * Options for controlling Playwright browsers.
    */
   browser?: {
+    /** Echo browser console output to stdout. */
     echo?: boolean
+    /** Open a browser window and keep it open after tests finish. */
     open?: boolean
   }
   /**
@@ -204,9 +101,13 @@ export interface RemixTestConfig {
    *  - `glob.exclude`: Glob pattern(s) for paths to exclude from discovery (--glob.exclude)
    */
   glob?: {
+    /** Glob patterns for all test files. */
     test?: string | string[]
+    /** Glob patterns for the subset of browser test files. */
     browser?: string | string[]
+    /** Glob patterns for the subset of E2E test files. */
     e2e?: string | string[]
+    /** Glob patterns excluded from test discovery. */
     exclude?: string | string[]
   }
   /** Max number of concurrent test workers (--concurrency) */
@@ -218,12 +119,24 @@ export interface RemixTestConfig {
   coverage?:
     | boolean
     | {
+        /**
+         * Enables or disables coverage when specified. A coverage object enables coverage by
+         * default. `'inherit'` applies settings without enabling coverage.
+         */
+        enabled?: boolean | 'inherit'
+        /** Directory where coverage reports are written. */
         dir?: string
+        /** Glob patterns for files included in coverage. */
         include?: string | string[]
+        /** Glob patterns for files excluded from coverage. */
         exclude?: string | string[]
+        /** Minimum statement coverage percentage. */
         statements?: number | string
+        /** Minimum line coverage percentage. */
         lines?: number | string
+        /** Minimum branch coverage percentage. */
         branches?: number | string
+        /** Minimum function coverage percentage. */
         functions?: number | string
       }
   /**
@@ -242,10 +155,20 @@ export interface RemixTestConfig {
    */
   pool?: RemixTestPool
   /**
+   * Regular expression pattern(s) to focus tests by their full name (--only).
+   * Matching suite names focus the whole suite, while matching test names focus
+   * the individual test. Plain string patterns are case-insensitive. Use a
+   * slash-delimited pattern or a `RegExp` in programmatic options to control flags
+   * explicitly. `--only` may be repeated on the CLI.
+   */
+  only?: RemixTestOnlyPattern | RemixTestOnlyPattern[]
+  /**
    * Filter tests to specific playwright project(s) (--project). Accepts a single
    * project name or an array of names; `--project` may be repeated on the CLI.
    */
   project?: string | string[]
+  /** Quiet mode — do not print skipped tests (--quiet, -q) */
+  quiet?: boolean
   /** Test reporter (--reporter) */
   reporter?: string
   /**
@@ -282,52 +205,55 @@ export interface ResolvedRemixTestConfig {
   }
   playwrightConfig: string | PlaywrightTestConfig | undefined
   project: string[] | undefined
+  quiet: boolean
   reporter: string
   pool: RemixTestPool
+  only: SerializedOnlyPattern[] | undefined
   setup: string | undefined
   type: string[]
   watch: boolean
 }
 
-export async function loadConfig(args: string[] = process.argv.slice(2), cwd = process.cwd()) {
-  let parsed = parseCliArgs(args)
-  let fileConfig = await loadConfigFile(parsed.values.config, cwd)
-  let config = resolveConfig(fileConfig, parsed)
-  return config
-}
+export function resolveConfig(config: RemixTestConfig = {}): ResolvedRemixTestConfig {
+  let coverageOptions = typeof config.coverage === 'boolean' ? {} : config.coverage || {}
+  let coverageEnabled = isCoverageEnabled(config.coverage)
 
-/**
- * Returns the formatted `remix-test --help` text. Useful for embedding the
- * runner's CLI options in higher-level tooling.
- *
- * @param _target Output stream the help text will be written to. Reserved
- *                for future use (e.g. width-aware formatting); currently
- *                unused.
- * @returns The help text as a single string ready to write to a stream.
- */
-export function getRemixTestHelpText(_target: NodeJS.WriteStream = process.stdout): string {
-  let lines = [
-    'Usage: remix-test [glob...] [options]',
-    '',
-    'Arguments:',
-    `  glob                     Glob pattern(s) for test files (default: "${defaultValues.glob.test.join(', ')}")`,
-    '',
-    'Options:',
-  ]
-
-  for (let [long, opt] of Object.entries(cliOptions)) {
-    let short = 'short' in opt ? `/-${opt.short}` : ''
-    let label = opt.type === 'string' ? `--${long}${short} <value>` : `--${long}${short}`
-    lines.push(`  ${label.padEnd(30)} ${opt.description}`)
+  return {
+    glob: {
+      test: toArray(config.glob?.test ?? defaultValues.glob.test),
+      browser: toArray(config.glob?.browser ?? defaultValues.glob.browser),
+      e2e: toArray(config.glob?.e2e ?? defaultValues.glob.e2e),
+      exclude: toArray(config.glob?.exclude ?? defaultValues.glob.exclude),
+    },
+    browser: {
+      echo: config.browser?.echo ?? defaultValues.browser.echo,
+      open: config.browser?.open ?? defaultValues.browser.open,
+    },
+    concurrency: resolveConcurrency(config.concurrency ?? defaultValues.concurrency),
+    coverage: coverageEnabled
+      ? {
+          dir: coverageOptions.dir ?? defaultValues.coverage!.dir,
+          include: optionalArray(coverageOptions.include ?? defaultValues.coverage!.include),
+          exclude: optionalArray(coverageOptions.exclude ?? defaultValues.coverage!.exclude),
+          statements: optionalNumber(coverageOptions.statements, 'coverage.statements'),
+          lines: optionalNumber(coverageOptions.lines, 'coverage.lines'),
+          branches: optionalNumber(coverageOptions.branches, 'coverage.branches'),
+          functions: optionalNumber(coverageOptions.functions, 'coverage.functions'),
+        }
+      : undefined,
+    setup: config.setup ?? defaultValues.setup,
+    playwrightConfig: config.playwrightConfig ?? defaultValues.playwrightConfig,
+    pool: resolvePool(config.pool ?? defaultValues.pool),
+    only: resolveOnlyPatterns(config.only),
+    project: (() => {
+      let raw = config.project ?? defaultValues.project
+      return raw === undefined ? undefined : toCommaSeparatedArray(raw)
+    })(),
+    quiet: config.quiet ?? defaultValues.quiet,
+    reporter: config.reporter ?? defaultValues.reporter,
+    type: toCommaSeparatedArray(config.type ?? defaultValues.type),
+    watch: config.watch ?? defaultValues.watch,
   }
-
-  lines.push(`  ${'-h, --help'.padEnd(30)} Show this help message`)
-
-  return lines.join('\n')
-}
-
-function parseCliArgs(args: string[]) {
-  return util.parseArgs({ args, options: cliOptions, allowPositionals: true })
 }
 
 function toArray<T>(value: T | readonly T[]): T[] {
@@ -343,121 +269,94 @@ function toCommaSeparatedArray(value: string | readonly string[]): string[] {
   )
 }
 
-function resolveConfig(
-  fileConfig: RemixTestConfig,
-  { values: cliValues, positionals }: ReturnType<typeof parseCliArgs>,
-): ResolvedRemixTestConfig {
-  let fileCoverage = typeof fileConfig.coverage === 'boolean' ? {} : fileConfig.coverage || {}
-  return {
-    glob: {
-      test: toArray(
-        positionals.length > 0
-          ? positionals
-          : (cliValues['glob.test'] ?? fileConfig.glob?.test ?? defaultValues.glob.test),
-      ),
-      browser: toArray(
-        cliValues['glob.browser'] ?? fileConfig.glob?.browser ?? defaultValues.glob.browser,
-      ),
-      e2e: toArray(cliValues['glob.e2e'] ?? fileConfig.glob?.e2e ?? defaultValues.glob.e2e),
-      exclude: toArray(
-        cliValues['glob.exclude'] ?? fileConfig.glob?.exclude ?? defaultValues.glob.exclude,
-      ),
-    },
-    browser: {
-      echo: cliValues['browser.echo'] ?? fileConfig.browser?.echo ?? defaultValues.browser.echo,
-      open: cliValues['browser.open'] ?? fileConfig.browser?.open ?? defaultValues.browser.open,
-    },
-    concurrency: Number(
-      cliValues.concurrency ?? fileConfig.concurrency ?? defaultValues.concurrency,
-    ),
-    coverage:
-      cliValues.coverage === true || !!fileConfig.coverage
-        ? {
-            dir: cliValues['coverage.dir'] ?? fileCoverage.dir ?? defaultValues.coverage!.dir,
-            include: (() => {
-              let raw =
-                cliValues['coverage.include'] ??
-                fileCoverage.include ??
-                defaultValues.coverage!.include
-              return raw === undefined ? undefined : toArray(raw)
-            })(),
-            exclude: (() => {
-              let raw =
-                cliValues['coverage.exclude'] ??
-                fileCoverage.exclude ??
-                defaultValues.coverage!.exclude
-              return raw === undefined ? undefined : toArray(raw)
-            })(),
-            statements:
-              cliValues['coverage.statements'] !== undefined
-                ? Number(cliValues['coverage.statements'])
-                : fileCoverage.statements !== undefined
-                  ? Number(fileCoverage.statements)
-                  : undefined,
-            lines:
-              cliValues['coverage.lines'] !== undefined
-                ? Number(cliValues['coverage.lines'])
-                : fileCoverage.lines !== undefined
-                  ? Number(fileCoverage.lines)
-                  : undefined,
-            branches:
-              cliValues['coverage.branches'] !== undefined
-                ? Number(cliValues['coverage.branches'])
-                : fileCoverage.branches !== undefined
-                  ? Number(fileCoverage.branches)
-                  : undefined,
-            functions:
-              cliValues['coverage.functions'] !== undefined
-                ? Number(cliValues['coverage.functions'])
-                : fileCoverage.functions !== undefined
-                  ? Number(fileCoverage.functions)
-                  : undefined,
-          }
-        : undefined,
-    setup: cliValues.setup ?? fileConfig.setup ?? defaultValues.setup,
-    playwrightConfig:
-      cliValues.playwrightConfig ?? fileConfig.playwrightConfig ?? defaultValues.playwrightConfig,
-    pool: resolvePool(cliValues.pool ?? fileConfig.pool ?? defaultValues.pool),
-    project: (() => {
-      let raw = cliValues.project ?? fileConfig.project ?? defaultValues.project
-      return raw === undefined ? undefined : toCommaSeparatedArray(raw)
-    })(),
-    reporter: cliValues.reporter ?? fileConfig.reporter ?? defaultValues.reporter,
-    type: toCommaSeparatedArray(cliValues.type ?? fileConfig.type ?? defaultValues.type),
-    watch: cliValues.watch ?? fileConfig.watch ?? defaultValues.watch,
+function optionalArray<value>(input: value | readonly value[] | undefined): value[] | undefined {
+  return input === undefined ? undefined : toArray(input)
+}
+
+function optionalNumber(input: number | string | undefined, name: string): number | undefined {
+  if (input === undefined) return undefined
+
+  let value = Number(input)
+  if (Number.isNaN(value)) {
+    throw new Error(`Invalid ${name} value "${input}". Expected a number`)
   }
+
+  return value
+}
+
+function resolveConcurrency(value: number | string): number {
+  let concurrency = Number(value)
+  if (!Number.isInteger(concurrency) || concurrency < 1) {
+    throw new Error(`Invalid concurrency value "${value}". Expected a positive integer`)
+  }
+
+  return concurrency
+}
+
+function isCoverageEnabled(coverage: RemixTestConfig['coverage']): boolean {
+  if (typeof coverage === 'boolean') return coverage
+  return coverage != null && coverage.enabled !== false && coverage.enabled !== 'inherit'
 }
 
 function resolvePool(value: string): RemixTestPool {
-  if (value === 'forks' || value === 'threads') {
-    return value
+  if ((remixTestPools as readonly string[]).includes(value)) {
+    return value as RemixTestPool
   }
 
-  throw new Error(`Unsupported test pool "${value}". Supported pools are: forks, threads`)
+  throw new Error(
+    `Unsupported test pool "${value}". Supported pools are: ${remixTestPools.join(', ')}`,
+  )
 }
 
-async function loadConfigFile(
-  configPath: string | undefined,
-  cwd: string,
-): Promise<RemixTestConfig> {
-  let candidates = configPath
-    ? [path.resolve(cwd, configPath)]
-    : [path.join(cwd, 'remix-test.config.ts'), path.join(cwd, 'remix-test.config.js')]
+function resolveOnlyPatterns(
+  value: RemixTestOnlyPattern | readonly RemixTestOnlyPattern[] | undefined,
+): SerializedOnlyPattern[] | undefined {
+  if (value === undefined) return undefined
 
-  for (let candidate of candidates) {
-    try {
-      await fsp.access(candidate)
-    } catch {
-      // not found — try the next candidate
-      continue
+  return toArray(value).map((pattern) => {
+    let serialized: SerializedOnlyPattern
+    if (typeof pattern === 'string') {
+      serialized = parseRegexLiteral(pattern) ?? { source: pattern, flags: 'i' }
+    } else {
+      serialized = { source: pattern.source, flags: pattern.flags }
     }
-    // The file exists; let import errors propagate rather than silently
-    // falling through to defaults — that masking is what hid "Windows
-    // absolute paths aren't valid ESM specifiers" by classifying every
-    // browser test as a server test.
-    let mod = await importModule(candidate, import.meta)
-    return mod.default ?? mod
+
+    try {
+      new RegExp(serialized.source, serialized.flags)
+    } catch (error) {
+      let reason = error instanceof Error ? error.message : String(error)
+      throw new Error(
+        `Invalid --only pattern "${pattern}". ` +
+          `--only patterns must be valid JavaScript regular expressions, ` +
+          `or regex literals like "/pattern/flags". ${reason}`,
+      )
+    }
+
+    return serialized
+  })
+}
+
+function parseRegexLiteral(pattern: string): SerializedOnlyPattern | undefined {
+  if (!pattern.startsWith('/') || pattern.length < 2) return undefined
+
+  // The closing delimiter is the last unescaped slash; escape state must be
+  // tracked left-to-right since it depends on the preceding backslashes.
+  let closingIndex = -1
+  let escaped = false
+  for (let index = 1; index < pattern.length; index++) {
+    if (escaped) {
+      escaped = false
+    } else if (pattern[index] === '\\') {
+      escaped = true
+    } else if (pattern[index] === '/') {
+      closingIndex = index
+    }
   }
 
-  return {}
+  if (closingIndex === -1) return undefined
+
+  return {
+    source: pattern.slice(1, closingIndex),
+    flags: pattern.slice(closingIndex + 1),
+  }
 }

@@ -103,7 +103,6 @@ Releases are automated via the [release-pr workflow](/.github/workflows/release-
 2. **A "Release" PR is automatically opened** (or updated if one exists)
 
    The PR contains:
-
    - Updated `package.json` versions
    - Updated `CHANGELOG.md` files
    - Deleted change files

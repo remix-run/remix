@@ -68,17 +68,6 @@ export { attrs } from './runtime/mixins/attrs-mixin.ts'
 export { css } from './style/css-mixin.ts'
 export type { CSSMixinDescriptor } from './style/css-mixin.ts'
 
-// -- UI helpers used by headless primitives and composed components --
-export { onKeyDown } from './interactions/keydown/keydown.ts'
-export {
-  hiddenTypeahead,
-  matchNextItemBySearchText,
-} from './interactions/typeahead/typeahead-mixin.ts'
-export type { SearchValue } from './interactions/typeahead/typeahead-mixin.ts'
-export { flashAttribute } from './utils/flash-attribute.ts'
-export { wait } from './utils/wait.ts'
-export { waitForCssTransition } from './utils/wait-for-css-transition.ts'
-
 // -- Navigation --
 export { navigate } from './runtime/navigation.ts'
 export type { NavigationOptions } from './runtime/navigation.ts'

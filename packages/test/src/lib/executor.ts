@@ -1,6 +1,7 @@
 import { createTestContext, type CreateTestContextE2EOptions, type TestContext } from './context.ts'
 import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
+import type { SerializedOnlyPattern } from './config.ts'
 
 type PendingMeta = boolean | string
 
@@ -33,9 +34,13 @@ interface RegisteredTest extends RunnableOptions {
   todo?: PendingMeta
 }
 
-export async function runTests(
-  options?: Omit<CreateTestContextE2EOptions, 'addE2ECoverageEntries'>,
-): Promise<TestResults> {
+type RunTestsE2EOptions = Omit<CreateTestContextE2EOptions, 'addE2ECoverageEntries'>
+
+export interface RunTestsOptions extends Partial<RunTestsE2EOptions> {
+  only?: SerializedOnlyPattern[]
+}
+
+export async function runTests(options?: RunTestsOptions): Promise<TestResults> {
   let suites = getRegisteredSuites()
   let e2eCoverageEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }> = []
   let results: TestResults = {
@@ -46,11 +51,37 @@ export async function runTests(
     tests: [],
   }
 
-  let hasOnlySuites = suites.some((suite) => suite.only)
+  let onlyRegexes =
+    options?.only === undefined || options.only.length === 0
+      ? undefined
+      : options.only.map((pattern) => new RegExp(pattern.source, pattern.flags))
+  let hasOnlyPatterns = onlyRegexes !== undefined
+  let hasOnlySuites = false
+  let hasOnlyTests = false
 
   for (let suite of suites) {
-    // If any suite uses .only, skip all non-only suites
-    if (hasOnlySuites && !suite.only) {
+    if (onlyRegexes && matchesAny(onlyRegexes, suite.name)) {
+      suite.only = true
+    }
+    hasOnlySuites ||= suite.only === true
+
+    for (let test of suite.tests) {
+      if (onlyRegexes && matchesAny(onlyRegexes, getFullTestName(suite.name, test.name))) {
+        test.only = true
+      }
+      hasOnlyTests ||= test.only === true
+    }
+
+    if (!onlyRegexes && hasOnlySuites && hasOnlyTests) break
+  }
+
+  let hasOnly = hasOnlyPatterns || hasOnlySuites || hasOnlyTests
+
+  for (let suite of suites) {
+    let suiteHasOnlyTests = suite.tests.some((test) => test.only)
+
+    // If any suite or test uses .only, skip suites that do not contain focused work
+    if (hasOnly && !suite.only && !suiteHasOnlyTests) {
       for (let test of suite.tests) {
         results.tests.push(createPendingResult(test.name, suite.name, 'skipped'))
         results.skipped++
@@ -86,11 +117,9 @@ export async function runTests(
       }
     }
 
-    let hasOnlyTests = suite.tests.some((test) => test.only)
-
     for (let test of suite.tests) {
-      // If any test uses .only, skip all non-only tests in this suite
-      if (hasOnlyTests && !test.only) {
+      // If any suite or test uses .only, skip tests that are not focused
+      if (hasOnly && !suite.only && !test.only) {
         results.tests.push(createPendingResult(test.name, suite.name, 'skipped'))
         results.skipped++
         continue
@@ -125,12 +154,7 @@ export async function runTests(
       let testAbortController = new AbortController()
       let { testContext, cleanup } = createTestContext({
         signal: testAbortController.signal,
-        e2e: options
-          ? {
-              ...options,
-              addE2ECoverageEntries: (e) => e2eCoverageEntries.push(e),
-            }
-          : undefined,
+        e2e: createE2EOptions(options, (e) => e2eCoverageEntries.push(e)),
       })
 
       try {
@@ -199,9 +223,45 @@ export async function runTests(
   return results
 }
 
+function createE2EOptions(
+  options: RunTestsOptions | undefined,
+  addE2ECoverageEntries: CreateTestContextE2EOptions['addE2ECoverageEntries'],
+): CreateTestContextE2EOptions | undefined {
+  if (options?.browser === undefined) {
+    return undefined
+  }
+
+  if (
+    options.coverage === undefined ||
+    options.open === undefined ||
+    options.playwrightPageOptions === undefined
+  ) {
+    throw new Error('Incomplete E2E test options')
+  }
+
+  return {
+    addE2ECoverageEntries,
+    browser: options.browser,
+    coverage: options.coverage,
+    open: options.open,
+    playwrightPageOptions: options.playwrightPageOptions,
+  }
+}
+
 function getRegisteredSuites(): RegisteredSuite[] {
   let global = globalThis as typeof globalThis & { __testSuites?: RegisteredSuite[] }
   return global.__testSuites ?? []
+}
+
+function matchesAny(regexes: RegExp[], value: string): boolean {
+  return regexes.some((regex) => {
+    regex.lastIndex = 0
+    return regex.test(value)
+  })
+}
+
+function getFullTestName(suiteName: string, testName: string): string {
+  return testName ? `${suiteName} > ${testName}` : suiteName
 }
 
 function getPendingStatus(value: {

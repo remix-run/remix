@@ -1,6 +1,6 @@
 import type { Parse, Token } from './parse.ts'
 
-// prettier-ignore
+// oxfmt-ignore
 export type ParseParams<source extends string> =
   string extends source ? Record<string, string | undefined> :
   Parse<source> extends infer pattern ?
@@ -11,7 +11,7 @@ export type ParseParams<source extends string> =
     never :
   never
 
-// prettier-ignore
+// oxfmt-ignore
 type ParsePartParams<tokens extends Token[], optional extends boolean = false> =
   Token[] extends tokens ? Record<string, string | undefined> :
   tokens extends [infer token extends Token, ...infer rest extends Token[]] ?

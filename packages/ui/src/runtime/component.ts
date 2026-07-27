@@ -221,13 +221,21 @@ type ComponentConfig = {
 }
 
 /**
+ * Minimal structural view of the scheduler used for handle.update() so this
+ * module doesn't depend on the reconciler.
+ */
+export interface UpdateQueue {
+  enqueue(vnode: object, domParent: ParentNode): void
+}
+
+/**
  * Runtime handle returned by {@link createComponent}.
  */
 export interface ComponentHandle<C = NoContext> {
   frame: FrameHandle
   render(nextProps: ElementProps): [RemixNode, Array<() => void>]
   remove(): Array<() => void>
-  setScheduleUpdate(nextScheduleUpdate: () => void): void
+  setScheduleUpdate(queue: UpdateQueue, vnode: object, domParent: ParentNode): void
   getContextValue(): C | undefined
   isRemoved(): boolean
 }
@@ -253,8 +261,15 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
   #renderController: AbortController | undefined
   #renderFn: RenderFn | undefined
   #removed = false
-  #scheduleUpdate: () => void = () => {
-    throw new Error('scheduleUpdate not implemented')
+  // The schedule target is stored as fields (updated each render) rather than
+  // a closure so re-renders don't allocate a new function per component.
+  #updateQueue: UpdateQueue | undefined
+  #updateVNode: object | undefined
+  #updateDomParent: ParentNode | undefined
+  #scheduleUpdate = (): void => {
+    let queue = this.#updateQueue
+    if (!queue) throw new Error('scheduleUpdate not implemented')
+    queue.enqueue(this.#updateVNode!, this.#updateDomParent!)
   }
   #tasks: Task[] = []
 
@@ -291,15 +306,18 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
   }
 
   remove = (): Array<() => void> => {
-    if (this.#removed) return []
+    if (this.#removed) return EMPTY_TASKS
     this.#removed = true
     this.#connectedController?.abort()
     this.#abortRenderSignal()
-    return this.#dequeueTasks(AbortSignal.abort())
+    if (this.#tasks.length === 0) return EMPTY_TASKS
+    return this.#dequeueTasks((sharedAbortedSignal ??= AbortSignal.abort()))
   }
 
-  setScheduleUpdate = (nextScheduleUpdate: () => void): void => {
-    this.#scheduleUpdate = nextScheduleUpdate
+  setScheduleUpdate = (queue: UpdateQueue, vnode: object, domParent: ParentNode): void => {
+    this.#updateQueue = queue
+    this.#updateVNode = vnode
+    this.#updateDomParent = domParent
   }
 
   getContextValue = (): C | undefined => this.#contextValue
@@ -358,6 +376,8 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
   }
 
   #dequeueTasks(signal?: AbortSignal): Array<() => void> {
+    if (this.#tasks.length === 0) return EMPTY_TASKS
+
     let needsSignal = signal === undefined && this.#tasks.some((task) => task.length >= 1)
 
     if (needsSignal) {
@@ -369,6 +389,11 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
     return tasks.map((task) => () => task(signal!))
   }
 }
+
+// Shared empty result and aborted signal so the common no-task removal path
+// (large subtree teardowns dispose many components at once) allocates nothing.
+const EMPTY_TASKS: Array<() => void> = []
+let sharedAbortedSignal: AbortSignal | undefined
 
 function syncProps(target: ElementProps, next: ElementProps): void {
   for (let key in target) {

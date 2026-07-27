@@ -2,6 +2,17 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.4
+
+### Patch Changes
+
+- Fixed asset route resolution for URL pathnames that contain percent-encoded file path characters, including scoped package names such as `%40remix-run`.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`file-storage@0.13.7`](https://github.com/remix-run/remix/releases/tag/file-storage@0.13.7)
+  - [`mime@0.4.2`](https://github.com/remix-run/remix/releases/tag/mime@0.4.2)
+  - [`route-pattern@0.23.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.23.0)
+
 ## v0.4.3
 
 ### Patch Changes

@@ -10,18 +10,22 @@ export interface Reporter {
   onSectionStart(label: string): void
 }
 
+export interface ReporterOptions {
+  quiet?: boolean
+}
+
 export { DotReporter, FilesReporter, SpecReporter, TapReporter }
 
-export function createReporter(type: string): Reporter {
+export function createReporter(type: string, options: ReporterOptions = {}): Reporter {
   switch (type) {
     case 'tap':
-      return new TapReporter()
+      return new TapReporter(options)
     case 'dot':
-      return new DotReporter()
+      return new DotReporter(options)
     case 'files':
-      return new FilesReporter()
+      return new FilesReporter(options)
     case 'spec':
     default:
-      return new SpecReporter()
+      return new SpecReporter(options)
   }
 }

@@ -1,5 +1,5 @@
 import { createCookie } from 'remix/cookie'
-import { createFsSessionStorage } from 'remix/session/fs-storage'
+import { createFsSessionStorage } from 'remix/session-storage/fs'
 
 const sessionSecret = process.env.SESSION_SECRET
 

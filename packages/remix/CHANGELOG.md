@@ -2,6 +2,99 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.5
+
+### Pre-release Changes
+
+- Added `package.json` `exports`:
+  - `remix/ui/accordion` to re-export APIs from `@remix-run/ui/accordion`
+  - `remix/ui/accordion/primitives` to re-export APIs from `@remix-run/ui/accordion/primitives`
+  - `remix/ui/anchor` to re-export APIs from `@remix-run/ui/anchor`
+  - `remix/ui/breadcrumbs` to re-export APIs from `@remix-run/ui/breadcrumbs`
+  - `remix/ui/button` to re-export APIs from `@remix-run/ui/button`
+  - `remix/ui/checkbox` to re-export APIs from `@remix-run/ui/checkbox`
+  - `remix/ui/combobox` to re-export APIs from `@remix-run/ui/combobox`
+  - `remix/ui/combobox/primitives` to re-export APIs from `@remix-run/ui/combobox/primitives`
+  - `remix/ui/input` to re-export APIs from `@remix-run/ui/input`
+  - `remix/ui/listbox` to re-export APIs from `@remix-run/ui/listbox`
+  - `remix/ui/menu` to re-export APIs from `@remix-run/ui/menu`
+  - `remix/ui/menu/primitives` to re-export APIs from `@remix-run/ui/menu/primitives`
+  - `remix/ui/popover` to re-export APIs from `@remix-run/ui/popover`
+  - `remix/ui/radio` to re-export APIs from `@remix-run/ui/radio`
+  - `remix/ui/select` to re-export APIs from `@remix-run/ui/select`
+  - `remix/ui/select/primitives` to re-export APIs from `@remix-run/ui/select/primitives`
+  - `remix/ui/tabs` to re-export APIs from `@remix-run/ui/tabs`
+  - `remix/ui/tabs/primitives` to re-export APIs from `@remix-run/ui/tabs/primitives`
+  - `remix/ui/toggle` to re-export APIs from `@remix-run/ui/toggle`
+  - `remix/ui/toggle/primitives` to re-export APIs from `@remix-run/ui/toggle/primitives`
+
+  Removed helper re-exports from `remix/ui`:
+  - `flashAttribute`
+  - `hiddenTypeahead`
+  - `matchNextItemBySearchText`
+  - `onKeyDown`
+  - `SearchValue`
+  - `wait`
+  - `waitForCssTransition`
+
+  Updated `remix/route-pattern` exports for the `RoutePattern` API:
+  - Added `getRoutePatternCaptures`, `RoutePatternCapture`, and `RoutePatternJSON` to `remix/route-pattern`
+  - Added `CreateHrefErrorDetails` to `remix/route-pattern/href`
+  - Added `MatchParamMeta` to `remix/route-pattern/match`
+
+  Removed `package.json` `exports`:
+  - `remix/components/accordion`
+  - `remix/components/accordion/primitives`
+  - `remix/components/anchor`
+  - `remix/components/breadcrumbs`
+  - `remix/components/button`
+  - `remix/components/checkbox`
+  - `remix/components/checkbox/primitives`
+  - `remix/components/combobox`
+  - `remix/components/combobox/primitives`
+  - `remix/components/input`
+  - `remix/components/listbox`
+  - `remix/components/menu`
+  - `remix/components/menu/primitives`
+  - `remix/components/popover`
+  - `remix/components/select`
+  - `remix/components/select/primitives`
+  - `remix/ui/glyph`
+  - `remix/ui/scroll-lock`
+  - `remix/ui/separator`
+  - `remix/ui/theme`
+
+- Added the `trustProxy` option to `remix/node-fetch-server` for apps behind trusted reverse proxies that need `request.url` and handler client address information to reflect trusted `Forwarded` and `X-Forwarded-*` headers.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.4.4`](https://github.com/remix-run/remix/releases/tag/assets@0.4.4)
+  - [`async-context-middleware@0.3.4`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.3.4)
+  - [`auth@0.2.6`](https://github.com/remix-run/remix/releases/tag/auth@0.2.6)
+  - [`auth-middleware@0.2.4`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.2.4)
+  - [`cli@0.3.4`](https://github.com/remix-run/remix/releases/tag/cli@0.3.4)
+  - [`compression-middleware@0.1.12`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.12)
+  - [`cop-middleware@0.1.7`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.7)
+  - [`cors-middleware@0.1.7`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.1.7)
+  - [`csrf-middleware@0.1.7`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.7)
+  - [`fetch-proxy@0.8.4`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@0.8.4)
+  - [`fetch-router@0.20.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.1)
+  - [`file-storage@0.13.7`](https://github.com/remix-run/remix/releases/tag/file-storage@0.13.7)
+  - [`file-storage-s3@0.1.4`](https://github.com/remix-run/remix/releases/tag/file-storage-s3@0.1.4)
+  - [`form-data-middleware@0.3.4`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.3.4)
+  - [`form-data-parser@0.17.4`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.4)
+  - [`fs@0.4.6`](https://github.com/remix-run/remix/releases/tag/fs@0.4.6)
+  - [`lazy-file@5.0.6`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.6)
+  - [`logger-middleware@0.3.4`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.3.4)
+  - [`method-override-middleware@0.1.12`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.12)
+  - [`mime@0.4.2`](https://github.com/remix-run/remix/releases/tag/mime@0.4.2)
+  - [`node-fetch-server@0.14.0`](https://github.com/remix-run/remix/releases/tag/node-fetch-server@0.14.0)
+  - [`render-middleware@0.1.4`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.1.4)
+  - [`response@0.3.7`](https://github.com/remix-run/remix/releases/tag/response@0.3.7)
+  - [`route-pattern@0.23.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.23.0)
+  - [`session-middleware@0.3.4`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.3.4)
+  - [`static-middleware@0.4.13`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.13)
+  - [`ui@0.4.0`](https://github.com/remix-run/remix/releases/tag/ui@0.4.0)
+
 ## v3.0.0-beta.4
 
 ### Pre-release Changes
@@ -65,7 +158,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 ### Pre-release Changes
 
 - Added `package.json` `exports`:
-
   - `remix/headers/accept` to re-export APIs from `@remix-run/headers/accept`
   - `remix/headers/accept-encoding` to re-export APIs from `@remix-run/headers/accept-encoding`
   - `remix/headers/accept-language` to re-export APIs from `@remix-run/headers/accept-language`
@@ -253,7 +345,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   Previously, `remix/route-pattern` bundled URL generation, matching, and specificity helpers into one entrypoint. A typical Remix app does not do any client-side matching, but all the matching logic would ship to the browser anyway, causing JS bloat.
 
   Now, route pattern features are organized into separate subpath exports, so even without a bundler, only the code you need ends up in the browser:
-
   - `remix/route-pattern/href` generates hrefs for patterns with type-safe params.
   - `remix/route-pattern/match` matches against one pattern with type inference for params, or against many patterns with deterministic ranking and attached data.
   - `remix/route-pattern/join` combines two patterns into one, including protocol, hostname, port, pathname, and search constraints.
@@ -268,7 +359,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 - Updated the `remix` package with domain-oriented exports, no longer only mapping 1:1 to underlying `@remix-run/*` packages. Existing 1:1 package exports remain available during the beta migration and will be removed before a Remix 3.0.0 stable release.
 
   Preferred package mappings:
-
   - `remix/async-context-middleware` → `remix/middleware/async-context`
   - `remix/auth-middleware` → `remix/middleware/auth`
   - `remix/compression-middleware` → `remix/middleware/compression`
@@ -374,18 +464,15 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 - BREAKING CHANGE: Removed the deprecated `remix/component`, `remix/component/jsx-runtime`, `remix/component/jsx-dev-runtime`, and `remix/component/server` package exports. Import the consolidated UI runtime from `remix/ui`, `remix/ui/jsx-runtime`, `remix/ui/jsx-dev-runtime`, and `remix/ui/server` instead.
 
   Removed `package.json` `bin` commands:
-
   - `remix-test`
 
   Added `package.json` `exports`:
-
   - `remix/node-fetch-server/test` to re-export APIs from `@remix-run/node-fetch-server/test`
   - `remix/node-serve` to re-export APIs from `@remix-run/node-serve`
   - `remix/terminal` to re-export APIs from `@remix-run/terminal`
   - `remix/test/cli` to re-export APIs from `@remix-run/test/cli`
 
   Added `package.json` `exports` for the consolidated UI runtime:
-
   - `remix/ui` to re-export APIs from `@remix-run/ui`
   - `remix/ui/jsx-runtime` to re-export APIs from `@remix-run/ui/jsx-runtime`
   - `remix/ui/jsx-dev-runtime` to re-export APIs from `@remix-run/ui/jsx-dev-runtime`
@@ -443,17 +530,14 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 - BREAKING CHANGE: Removed the deprecated `remix/component`, `remix/component/jsx-runtime`, `remix/component/jsx-dev-runtime`, and `remix/component/server` package exports. Import the consolidated UI runtime from `remix/ui`, `remix/ui/jsx-runtime`, `remix/ui/jsx-dev-runtime`, and `remix/ui/server` instead.
 
   Removed `package.json` `bin` commands:
-
   - `remix-test`
 
   Added `package.json` `exports`:
-
   - `remix/node-fetch-server/test` to re-export APIs from `@remix-run/node-fetch-server/test`
   - `remix/terminal` to re-export APIs from `@remix-run/terminal`
   - `remix/test/cli` to re-export APIs from `@remix-run/test/cli`
 
   Added `package.json` `exports` for the consolidated UI runtime:
-
   - `remix/ui` to re-export APIs from `@remix-run/ui`
   - `remix/ui/jsx-runtime` to re-export APIs from `@remix-run/ui/jsx-runtime`
   - `remix/ui/jsx-dev-runtime` to re-export APIs from `@remix-run/ui/jsx-dev-runtime`
@@ -475,7 +559,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   - `remix/ui/test` to re-export APIs from `@remix-run/ui/test`
 
 - Added `package.json` exports and binaries for the Remix CLI:
-
   - `remix/cli` to expose the Remix CLI programmatic API
   - `remix` as a `package.json` `bin` command that delegates to `@remix-run/cli`
 
@@ -510,12 +593,10 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 ### Pre-release Changes
 
 - Added `package.json` `exports`:
-
   - `remix/assert` to re-export APIs from `@remix-run/assert`
   - `remix/test` to re-export APIs from `@remix-run/test`
 
   Added `package.json` `bin` commands:
-
   - `remix-test` delegating to `@remix-run/test`
 
 - Bumped `@remix-run/*` dependencies:
@@ -558,7 +639,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   The incidental `QueryMethod` type export has also been removed; use `Database['query']` or `QueryForTable<table>` when you need that type shape.
 
   Added `package.json` `exports`:
-
   - `remix/auth-middleware` to re-export APIs from `@remix-run/auth-middleware`
   - `remix/auth` to re-export APIs from `@remix-run/auth`
 
@@ -569,7 +649,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   `remix/ui` now exposes `navigate(href, { src, target, history })`, `link(href, { src, target, history })`, `run({ loadModule, resolveFrame })`, and the `handle.frames.top` and `handle.frames.get(name)` helpers, while `remix/ui/server` re-exports the SSR frame source APIs including `frameSrc`, `topFrameSrc`, and `ResolveFrameContext`.
 
 - Add browser-origin and CSRF protection middleware APIs to `remix`.
-
   - `remix/cop-middleware` exposes `cop(options)` for browser-focused cross-origin protection using `Sec-Fetch-Site` with `Origin` fallback, trusted origins, and configurable bypasses.
   - `remix/csrf-middleware` exposes `csrf(options)` and `getCsrfToken(context)` for session-backed CSRF tokens plus origin validation.
   - Apps can use either middleware independently or layer `cop()`, `session()`, and `csrf()` together when they want both browser-origin filtering and token-backed protection.
@@ -603,7 +682,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 ### Pre-release Changes
 
 - Added `package.json` `exports`:
-
   - `remix/data-schema` to re-export APIs from `@remix-run/data-schema`
   - `remix/data-schema/checks` to re-export APIs from `@remix-run/data-schema/checks`
   - `remix/data-schema/coerce` to re-export APIs from `@remix-run/data-schema/coerce`
@@ -649,7 +727,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 ### Pre-release Changes
 
 - Added `package.json` `exports`:
-
   - `remix/route-pattern/specificity` to re-export APIs from `@remix-run/route-pattern/specificity`
 
 - Bumped `@remix-run/*` dependencies:

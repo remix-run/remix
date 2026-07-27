@@ -11,6 +11,7 @@ Typed relational query toolkit for JavaScript runtimes.
 - **Relation-First Queries**: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`, and nested eager loading
 - **Safe Scoped Writes**: `update`/`delete` with `orderBy`/`limit` run safely in a transaction
 - **First-Class Migrations**: Plain SQL `up.sql`/`down.sql` files with a journaling runner and dry-run planning
+- **Database Lifecycle Commands**: Wipe, migrate, inspect, seed, and reset through `remix db`
 - **Raw SQL Escape Hatch**: Execute SQL directly with `db.exec(sql\`...\`)`
 
 `data-table` gives you two complementary APIs:
@@ -36,7 +37,6 @@ npm i mysql2
 Define tables once, then create a database with an adapter.
 
 ```ts
-import { Pool } from 'pg'
 import { column as c, createDatabase, hasMany, query, table } from 'remix/data-table'
 import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
 
@@ -63,8 +63,9 @@ let orders = table({
 
 let userOrders = hasMany(users, orders)
 
-let pool = new Pool({ connectionString: process.env.DATABASE_URL })
-let db = createDatabase(createPostgresDatabaseAdapter(pool))
+let db = createDatabase(
+  createPostgresDatabaseAdapter({ connectionString: process.env.DATABASE_URL }),
+)
 ```
 
 ## Query Objects
@@ -343,7 +344,7 @@ await db.transaction(async (tx) => {
 
 ## Migrations
 
-`data-table` ships a SQL-first migration system under `remix/data-table/migrations`. Each migration is a directory containing hand-written `up.sql` and (optionally) `down.sql`. The runner journals applied migrations, detects checksum drift, and wraps each migration in a transaction when the adapter supports transactional DDL.
+`data-table` ships a SQL-first migration system under `remix/data-table/migrations`. Each migration is a directory containing hand-written `up.sql` and (optionally) `down.sql`. The runner journals applied migrations, detects checksum drift and missing applied migrations, and wraps each migration in a transaction when the adapter supports transactional DDL.
 
 ### Example Setup
 
@@ -357,7 +358,7 @@ app/
       20260301113000_add_user_status/
         up.sql
         down.sql
-    migrate.ts
+  db.ts
 ```
 
 - Keep migration directories in one parent directory (for example `app/db/migrations`).
@@ -395,61 +396,71 @@ The runner sends each migration to the adapter as a single multi-statement scrip
 - `mysql2`: requires `multipleStatements: true` on the connection/pool.
 
 ```ts
-import { createPool } from 'mysql2/promise'
+import { createMysqlDatabaseAdapter } from 'remix/data-table/mysql'
 
-let pool = createPool({
+let adapter = createMysqlDatabaseAdapter({
   uri: process.env.DATABASE_URL,
   multipleStatements: true,
 })
 ```
 
-### Runner Script Example
+### Application Database Module
 
-In `app/db/migrate.ts`:
+Export the database, migration loader, and optional seed function from `app/db.ts`:
 
 ```ts
-import path from 'node:path'
-import { Pool } from 'pg'
+import * as path from 'node:path'
+import { createDatabase, type GetMigrations, type Seed } from 'remix/data-table'
 import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
-import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
 
-let directionArg = process.argv[2] ?? 'up'
-let direction = directionArg === 'down' ? 'down' : 'up'
-let to = process.argv[3]
+export let db = createDatabase(
+  createPostgresDatabaseAdapter({ connectionString: process.env.DATABASE_URL }),
+)
 
-let pool = new Pool({ connectionString: process.env.DATABASE_URL })
-let adapter = createPostgresDatabaseAdapter(pool)
-let migrations = await loadMigrations(path.resolve('app/db/migrations'))
-let runner = createMigrationRunner(adapter, migrations)
+export let getMigrations: GetMigrations = () =>
+  loadMigrations(path.join(import.meta.dirname, 'db/migrations'))
 
-try {
-  let result = direction === 'up' ? await runner.up({ to }) : await runner.down({ to })
-  console.log(direction + ' complete', {
-    applied: result.applied.map((entry) => entry.id),
-    reverted: result.reverted.map((entry) => entry.id),
-  })
-} finally {
-  await pool.end()
+export let seed: Seed = async (db) => {
+  // Initialize application data.
 }
 ```
 
-Use `journalTable` if you want a custom migrations journal table name:
+Run lifecycle commands through the Remix CLI:
+
+```sh
+remix db status
+remix db migrate
+remix db migrate --to 20260301113000_add_user_status
+remix db seed
+remix db reset
+remix db wipe
+```
+
+`--to` accepts a bare migration id (`20260301113000`) or the full directory name (`20260301113000_add_user_status`).
+
+`remix db status` reports applied migrations whose files are no longer present as `missing`. Forward migration runs (`remix db migrate`, `runner.up()`) stop before executing SQL when an applied journal entry is missing from the current migration set. Rollbacks (`runner.down()`) skip those orphaned journal entries so migrations that are still present can be reverted.
+
+`wipe` and `reset` are destructive. They require a config-backed adapter so the adapter can close, recreate, and reconnect to the configured database.
+
+### Programmatic Migration Runner
+
+Use `createMigrationRunner()` directly when you need rollback, step, or dry-run behavior that is not exposed by `remix db`:
 
 ```ts
-let runner = createMigrationRunner(adapter, migrations, {
+import { createMigrationRunner } from 'remix/data-table/migrations'
+
+let migrations = await getMigrations()
+let runner = createMigrationRunner(db.adapter, migrations, {
   journalTable: 'app_migrations',
 })
 ```
 
-Run it with your runtime, for example:
+Omit `journalTable` to use `data_table_migrations`.
 
-```sh
-node ./app/db/migrate.ts up
-node ./app/db/migrate.ts up 20260301113000
-node ./app/db/migrate.ts down
-node ./app/db/migrate.ts down 20260228090000
-```
+Adapters with migration locking run the complete migration and journal lifecycle through the
+connection that owns the lock. This keeps advisory locks correctly paired when the adapter uses a
+connection pool, including pools configured with a single connection.
 
 Use `step` for bounded rollforward/rollback behavior instead of a target id:
 
@@ -458,7 +469,7 @@ await runner.up({ step: 1 })
 await runner.down({ step: 1 })
 ```
 
-`to` and `step` are mutually exclusive within a single run.
+`to` and `step` are mutually exclusive within a single run. Like `--to` on the CLI, `to` accepts a bare migration id or the full `id_name` directory form.
 
 Use `dryRun` to inspect the SQL plan without applying or journaling anything:
 

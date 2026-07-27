@@ -27,7 +27,7 @@ bench('new > shopify', async () => {
 
 /** Type-only utility to force eager evaluation of href param types */
 function eagerlyEvaluateTypesForNew<patterns extends ReadonlyArray<string>>(
-  // prettier-ignore
+  // oxfmt-ignore
   _: patterns & (
     { [pattern in patterns[number]]: RoutePattern<pattern> } extends
     { [pattern in patterns[number]]: RoutePattern<string> }

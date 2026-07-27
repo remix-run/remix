@@ -2,6 +2,12 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
+## v0.8.4
+
+### Patch Changes
+
+- Fix proxied requests so the incoming `Host` header is dropped instead of being forwarded to the proxy target (see #10769).
+
 ## v0.8.3
 
 ### Patch Changes

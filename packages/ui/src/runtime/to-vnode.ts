@@ -14,8 +14,9 @@ function flatMapChildrenToVNodes(node: RemixElement): VNode[] {
 }
 
 function flattenChildrenToVNodes(nodes: RemixNode[], out: VNode[]): void {
-  for (let child of normalizeChildren(nodes)) {
-    out.push(toVNode(child))
+  let children = normalizeChildren(nodes)
+  for (let i = 0; i < children.length; i++) {
+    out.push(toVNode(children[i]))
   }
 }
 

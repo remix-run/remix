@@ -6,7 +6,7 @@ export interface SplitPattern {
   search: string | undefined
 }
 
-// prettier-ignore
+// oxfmt-ignore
 export type Split<T extends string> =
   _Split<T> extends infer S ?
   [S] extends [never] ? never :
@@ -20,7 +20,7 @@ export type Split<T extends string> =
   never :
   never
 
-// prettier-ignore
+// oxfmt-ignore
 type _Split<T extends string> =
   T extends '' ? {} :
   T extends `${infer L}?${infer R}` ? _Split<L> & { search: R } :
@@ -35,7 +35,7 @@ type _Split<T extends string> =
   T extends `/${infer Pathname}` ? { pathname: Pathname } :
   { pathname: T }
 
-// prettier-ignore
+// oxfmt-ignore
 type SplitHost<T extends string> =
   T extends `${infer L}:${infer R}` ?
     IsDigits<R> extends true ? (L extends '' ? never : { hostname: L; port: R}) :
@@ -48,7 +48,7 @@ type ToPathname<T extends string> = T extends '' ? {} : { pathname: T }
 
 type _0_9 = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
-// prettier-ignore
+// oxfmt-ignore
 type IsDigits<S extends string> =
   S extends `${_0_9}${infer T}` ?
     T extends '' ? true :

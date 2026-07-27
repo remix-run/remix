@@ -3,7 +3,7 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
-import { IS_RUNNING_FROM_SRC, type RemixTestPool } from './config.ts'
+import { IS_RUNNING_FROM_SRC, type RemixTestPool, type SerializedOnlyPattern } from './config.ts'
 import {
   collectCoverageMapFromPlaywright,
   collectServerCoverageMap,
@@ -33,6 +33,7 @@ interface RunFileOptions {
   cwd?: string
   coverage?: CoverageConfig
   open?: boolean
+  only?: SerializedOnlyPattern[]
   playwrightUseOpts?: PlaywrightUseOpts
   pool?: RemixTestPool
 }
@@ -45,6 +46,7 @@ export async function runServerTests(
   options: {
     cwd?: string
     open?: boolean
+    only?: SerializedOnlyPattern[]
     playwrightUseOpts?: PlaywrightUseOpts
     projectName?: string
     coverage?: CoverageConfig
@@ -235,6 +237,7 @@ export function runFileInWorker(
             file: pathToFileURL(file).href,
             type,
             coverage: options.coverage,
+            only: options.only,
             open: options.open,
             playwrightUseOpts: options.playwrightUseOpts,
           },
@@ -244,6 +247,7 @@ export function runFileInWorker(
             file: pathToFileURL(file).href,
             type,
             coverage: options.coverage,
+            only: options.only,
           },
         })
 
@@ -340,6 +344,7 @@ function runFileInProcess(
         file: pathToFileURL(file).href,
         type,
         coverage: options.coverage,
+        only: options.only,
         open: options.open,
         playwrightUseOpts: options.playwrightUseOpts,
       },

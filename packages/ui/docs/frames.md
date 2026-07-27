@@ -128,6 +128,26 @@ When a frame reloads:
 
 This means a counter inside a reloading frame keeps its count, but sees any new props the server sends.
 
+## Preserving client-owned DOM
+
+Add `rmx-preserve-dom` to an element when its live DOM should be owned by client code after the element has been matched during a frame reload:
+
+```tsx
+function SearchWidget() {
+  return () => (
+    <pagefind-ui data-key="search" rmx-preserve-dom>
+      <button type="button">Search</button>
+    </pagefind-ui>
+  )
+}
+```
+
+During server rendering and streaming, Remix UI still renders the element's attributes and children. During initial client boot, hydration still discovers and hydrates client entries inside the element. The attribute only affects later frame reconciliation: when incoming frame HTML contains `rmx-preserve-dom` on a matched element, Remix UI preserves the current element attributes and children instead of applying incoming DOM changes below that element.
+
+Use this for custom elements, third-party widgets, and imperative integrations that take ownership of their own subtree after initial render. Keep the preserved boundary as small as possible, and add `data-key` when the element can move among siblings so reloads can match the same live element before falling back to index-based matching.
+
+Avoid wrapping Remix-owned UI that should continue receiving server-driven frame updates. A client entry inside `rmx-preserve-dom` can hydrate from the initial HTML, but later frame reloads will not patch new server-rendered children or props through the preserved host. Put the client entry outside the preserved boundary when it needs future frame data, or put `rmx-preserve-dom` inside the client entry around only the imperative DOM island.
+
 ## Nested frames
 
 Frames can nest. Each frame owns its own region of the DOM and hydrates its client entries independently:

@@ -359,8 +359,6 @@ declare global {
     }
 
     export interface IntrinsicElements
-      extends IntrinsicSVGElements,
-        IntrinsicMathMLElements,
-        IntrinsicHTMLElements {}
+      extends IntrinsicSVGElements, IntrinsicMathMLElements, IntrinsicHTMLElements {}
   }
 }

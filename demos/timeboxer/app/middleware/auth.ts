@@ -1,5 +1,5 @@
 import { createCredentialsAuthProvider } from 'remix/auth'
-import { auth, createSessionAuthScheme } from 'remix/auth-middleware'
+import { auth, createSessionAuthScheme } from 'remix/middleware/auth'
 import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'

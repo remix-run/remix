@@ -246,8 +246,8 @@ describe('mysql sql-compiler', () => {
 
       let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select * from `accounts` limit 10 offset 5',
-        values: [],
+        text: 'select * from `accounts` limit ? offset ?',
+        values: [10, 5],
       })
     })
 

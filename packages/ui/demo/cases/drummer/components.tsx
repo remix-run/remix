@@ -254,6 +254,7 @@ export function Button(handle: Handle<Props<'button'>>) {
         mix={[
           css({
             all: 'unset',
+            boxSizing: 'border-box',
             letterSpacing: 0.9,
             height: 120,
             display: 'flex',

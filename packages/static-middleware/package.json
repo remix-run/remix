@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/static-middleware",
-  "version": "0.4.12",
+  "version": "0.4.13",
   "description": "Middleware for serving static files from the filesystem",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -53,8 +53,8 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test",
-    "test:bun": "bun x --bun remix-test",
+    "test": "remix test",
+    "test:bun": "bun x --bun remix test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

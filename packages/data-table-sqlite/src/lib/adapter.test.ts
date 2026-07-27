@@ -1,10 +1,19 @@
+import { existsSync } from 'node:fs'
+import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { column, createDatabase, table, eq } from '@remix-run/data-table'
 
 import { createNativeSqliteDatabase } from '../../test/native-sqlite.ts'
 
-import { createSqliteDatabaseAdapter, type SqliteDatabase } from './adapter.ts'
+import {
+  createSqliteDatabaseAdapter,
+  SqliteDatabaseAdapter,
+  type SqliteDatabase,
+} from './adapter.ts'
 
 const accounts = table({
   name: 'accounts',
@@ -34,7 +43,187 @@ const accountProjects = table({
   primaryKey: ['account_id', 'project_id'],
 })
 
+async function readPragma(
+  adapter: SqliteDatabaseAdapter,
+  pragma: string,
+): Promise<Record<string, unknown> | undefined> {
+  let result = await adapter.execute({
+    operation: { kind: 'raw', sql: { text: 'pragma ' + pragma, values: [] } },
+    transaction: undefined,
+  })
+
+  return result.rows?.[0]
+}
+
 describe('sqlite adapter', () => {
+  it('wipes and reopens config-backed databases', async () => {
+    let adapter = createSqliteDatabaseAdapter({ filename: ':memory:' })
+
+    await adapter.executeScript('create table users (id integer primary key)')
+    assert.equal(await adapter.hasTable({ name: 'users' }), true)
+
+    await adapter.wipe()
+
+    assert.equal(await adapter.hasTable({ name: 'users' }), false)
+  })
+
+  it('re-enables configured foreign key enforcement after wiping', async () => {
+    let adapter = createSqliteDatabaseAdapter({ filename: ':memory:', foreignKeys: true })
+
+    async function assertForeignKeysEnabled(): Promise<void> {
+      await adapter.executeScript(`
+        create table parents (id integer primary key);
+        create table children (
+          id integer primary key,
+          parent_id integer not null references parents (id)
+        );
+      `)
+      await assert.rejects(
+        () => adapter.executeScript('insert into children (id, parent_id) values (1, 1)'),
+        /FOREIGN KEY constraint failed/,
+      )
+    }
+
+    await assertForeignKeysEnabled()
+    await adapter.wipe()
+    await assertForeignKeysEnabled()
+  })
+
+  it('keeps foreign key enforcement off unless configured', async () => {
+    let omitted = createSqliteDatabaseAdapter({ filename: ':memory:' })
+    assert.deepEqual(await readPragma(omitted, 'foreign_keys'), { foreign_keys: 0 })
+
+    let disabled = createSqliteDatabaseAdapter({ filename: ':memory:', foreignKeys: false })
+    assert.deepEqual(await readPragma(disabled, 'foreign_keys'), { foreign_keys: 0 })
+
+    let enabled = createSqliteDatabaseAdapter({ filename: ':memory:', foreignKeys: true })
+    assert.deepEqual(await readPragma(enabled, 'foreign_keys'), { foreign_keys: 1 })
+  })
+
+  it('applies a default busy timeout and supports overrides, including zero', async () => {
+    let defaulted = createSqliteDatabaseAdapter({ filename: ':memory:' })
+    assert.deepEqual(await readPragma(defaulted, 'busy_timeout'), { timeout: 5000 })
+
+    let overridden = createSqliteDatabaseAdapter({ filename: ':memory:', busyTimeout: 250 })
+    assert.deepEqual(await readPragma(overridden, 'busy_timeout'), { timeout: 250 })
+
+    let disabled = createSqliteDatabaseAdapter({ filename: ':memory:', busyTimeout: 0 })
+    assert.deepEqual(await readPragma(disabled, 'busy_timeout'), { timeout: 0 })
+  })
+
+  it('wipes file-backed databases together with their sidecar files', async () => {
+    let dir = await mkdtemp(join(tmpdir(), 'data-table-sqlite-'))
+    let adapter: SqliteDatabaseAdapter | undefined
+
+    try {
+      let filename = join(dir, 'app.db')
+      adapter = createSqliteDatabaseAdapter({ filename })
+
+      await adapter.executeScript('pragma journal_mode = wal')
+      await adapter.executeScript('create table users (id integer primary key)')
+      await adapter.executeScript('insert into users (id) values (1)')
+
+      assert.equal(existsSync(filename + '-wal'), true)
+      assert.equal(existsSync(filename + '-shm'), true)
+      // simulate a crashed writer that left a rollback journal behind
+      await writeFile(filename + '-journal', 'stale journal')
+
+      await adapter.wipe()
+
+      // wipe reopens the database, so the main file exists again as a fresh, empty database
+      assert.equal((await stat(filename)).size, 0)
+      assert.equal(existsSync(filename + '-wal'), false)
+      assert.equal(existsSync(filename + '-shm'), false)
+      assert.equal(existsSync(filename + '-journal'), false)
+
+      assert.equal(await adapter.hasTable({ name: 'users' }), false)
+      await adapter.executeScript('create table projects (id integer primary key)')
+      assert.equal(await adapter.hasTable({ name: 'projects' }), true)
+    } finally {
+      // release the reopened handle so Windows can unlink the database file
+      adapter?.close()
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('recreates missing parent directories when wiping file-backed databases', async () => {
+    let dir = await mkdtemp(join(tmpdir(), 'data-table-sqlite-'))
+    let adapter: SqliteDatabaseAdapter | undefined
+
+    try {
+      let filename = join(dir, 'nested', 'app.db')
+      await mkdir(dirname(filename), { recursive: true })
+
+      adapter = createSqliteDatabaseAdapter({ filename })
+      await adapter.executeScript('create table users (id integer primary key)')
+
+      // close the handle so Windows can remove the parent directory, then let
+      // wipe() recreate it
+      adapter.close()
+      await rm(dirname(filename), { recursive: true, force: true })
+      await adapter.wipe()
+
+      assert.equal(existsSync(dirname(filename)), true)
+      await adapter.executeScript('create table projects (id integer primary key)')
+      assert.equal(await adapter.hasTable({ name: 'projects' }), true)
+    } finally {
+      // release the reopened handle so Windows can unlink the database file
+      adapter?.close()
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not wipe a database while a transaction is open', async () => {
+    let adapter = createSqliteDatabaseAdapter({ filename: ':memory:' })
+    let transaction = await adapter.beginTransaction()
+
+    await assert.rejects(
+      () => adapter.wipe(),
+      /SQLite adapter cannot wipe while transactions are open/,
+    )
+
+    await adapter.rollbackTransaction(transaction)
+  })
+
+  it('preserves client-backed databases when wipe is unavailable', async () => {
+    let closeCalls = 0
+    let sqlite = {
+      filename: 'client-owned.sqlite',
+      prepare() {
+        throw new Error('not used')
+      },
+      exec() {},
+      close() {
+        closeCalls += 1
+      },
+    } satisfies SqliteDatabase & { filename: string }
+    let adapter = createSqliteDatabaseAdapter(sqlite)
+
+    await assert.rejects(
+      () => adapter.wipe(),
+      /SQLite adapter wipe\(\) requires config-based construction/,
+    )
+    assert.equal(closeCalls, 0)
+  })
+
+  it('closes the underlying database once even when close() is called repeatedly', async () => {
+    let closeCalls = 0
+    let sqlite = {
+      prepare() {
+        throw new Error('not used')
+      },
+      exec() {},
+      close() {
+        closeCalls += 1
+      },
+    } satisfies SqliteDatabase
+    let adapter = createSqliteDatabaseAdapter(sqlite)
+
+    adapter.close()
+    adapter.close()
+    assert.equal(closeCalls, 1)
+  })
+
   it('short-circuits insertMany([]) and returns empty rows for returning queries', async () => {
     let prepareCalls = 0
     let sqlite = {
@@ -54,7 +243,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = new SqliteDatabaseAdapter(sqlite as never)
     let result = await adapter.execute({
       operation: {
         kind: 'insertMany',
@@ -110,7 +299,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = new SqliteDatabaseAdapter(sqlite as never)
     let hasTable = await adapter.hasTable({ name: 'users' })
     let hasColumn = await adapter.hasColumn({ schema: 'app', name: 'users' }, 'email')
 
@@ -135,7 +324,7 @@ describe('sqlite adapter', () => {
       },
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = new SqliteDatabaseAdapter(sqlite as never)
     let token = await adapter.beginTransaction({ isolationLevel: 'read uncommitted' })
     await adapter.commitTransaction(token)
 
@@ -155,7 +344,7 @@ describe('sqlite adapter', () => {
       },
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = new SqliteDatabaseAdapter(sqlite as never)
     let token = await adapter.beginTransaction()
 
     await adapter.createSavepoint(token, 'sp"name')
@@ -181,7 +370,7 @@ describe('sqlite adapter', () => {
       exec() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = new SqliteDatabaseAdapter(sqlite as never)
 
     await assert.rejects(
       () => adapter.commitTransaction({ id: 'tx_missing' }),
@@ -238,7 +427,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = new SqliteDatabaseAdapter(sqlite as never)
     let result = await adapter.execute({
       operation: {
         kind: 'count',
@@ -273,7 +462,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = new SqliteDatabaseAdapter(sqlite as never)
     let result = await adapter.execute({
       operation: {
         kind: 'select',
@@ -312,7 +501,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = new SqliteDatabaseAdapter(sqlite as never)
     let result = await adapter.execute({
       operation: {
         kind: 'insert',
@@ -347,7 +536,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = new SqliteDatabaseAdapter(sqlite as never)
     let result = await adapter.execute({
       operation: {
         kind: 'insert',
@@ -383,7 +572,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let db = createDatabase(createSqliteDatabaseAdapter(sqlite as never))
+    let db = createDatabase(new SqliteDatabaseAdapter(sqlite as never))
     let result = await db.updateMany(accounts, { status: 'inactive' }, { where: { id: 1 } })
 
     assert.equal(result.affectedRows, 1)
@@ -409,7 +598,7 @@ describe('sqlite adapter', () => {
       exec() {},
     } satisfies SqliteDatabase
 
-    let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+    let db = createDatabase(new SqliteDatabaseAdapter(sqlite))
     let result = await db.updateMany(accounts, { status: 'inactive' }, { where: { id: 1 } })
 
     assert.equal(result.affectedRows, 2)
@@ -438,7 +627,7 @@ describe('sqlite adapter', () => {
       exec() {},
     } satisfies SqliteDatabase
 
-    let adapter = createSqliteDatabaseAdapter(sqlite)
+    let adapter = new SqliteDatabaseAdapter(sqlite)
 
     await adapter.execute({
       operation: {
@@ -476,7 +665,7 @@ describe('sqlite adapter', () => {
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
 
-    let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+    let db = createDatabase(new SqliteDatabaseAdapter(sqlite))
 
     await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
 
@@ -514,7 +703,7 @@ describe('sqlite adapter', () => {
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
 
-    let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+    let db = createDatabase(new SqliteDatabaseAdapter(sqlite))
 
     await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
 
@@ -539,7 +728,7 @@ describe('sqlite adapter', () => {
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
 
-    let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+    let db = createDatabase(new SqliteDatabaseAdapter(sqlite))
 
     await db.transaction(
       async (transactionDatabase) => {
@@ -569,7 +758,7 @@ describe('sqlite adapter', () => {
       'create table projects (id integer primary key, account_id integer not null, name text not null)',
     )
 
-    let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+    let db = createDatabase(new SqliteDatabaseAdapter(sqlite))
 
     await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
     await db.query(projects).insert({ id: 10, account_id: 1, name: 'Alpha' })
@@ -591,7 +780,7 @@ describe('sqlite adapter', () => {
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
 
-    let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+    let db = createDatabase(new SqliteDatabaseAdapter(sqlite))
 
     await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
 
@@ -604,7 +793,7 @@ describe('sqlite adapter', () => {
 
   it('executeScript runs multi-statement SQL natively', async () => {
     let sqlite = createNativeSqliteDatabase()
-    let adapter = createSqliteDatabaseAdapter(sqlite)
+    let adapter = new SqliteDatabaseAdapter(sqlite)
 
     await adapter.executeScript(
       'create table widgets (id integer primary key); insert into widgets values (1); insert into widgets values (2);',

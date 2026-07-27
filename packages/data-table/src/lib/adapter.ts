@@ -326,8 +326,17 @@ export interface DatabaseAdapter {
   rollbackToSavepoint(token: TransactionToken, name: string): Promise<void>
   /** Releases a previously created savepoint. */
   releaseSavepoint(token: TransactionToken, name: string): Promise<void>
-  /** Acquires the adapter's migration lock when supported. */
-  acquireMigrationLock?(): Promise<void>
-  /** Releases the adapter's migration lock when supported. */
-  releaseMigrationLock?(): Promise<void>
+  /** Destructively removes the configured database state when supported. */
+  wipe?(): Promise<void>
+  /**
+   * Runs migration work while holding an adapter-specific lock.
+   *
+   * The callback receives an adapter bound to the connection that owns the lock.
+   * Implementations must release the lock when the callback rejects as well as
+   * when it resolves.
+   */
+  withMigrationLock?<result>(
+    name: string,
+    run: (adapter: DatabaseAdapter) => Promise<result>,
+  ): Promise<result>
 }

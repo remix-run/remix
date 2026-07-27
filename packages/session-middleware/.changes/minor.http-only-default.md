@@ -1,0 +1,1 @@
+BREAKING CHANGE: Session cookies now default to `HttpOnly` when the cookie's `httpOnly` option is omitted. Set `httpOnly: false` explicitly to preserve access from client-side JavaScript; the middleware emits a warning when this protection is disabled.

@@ -50,8 +50,9 @@ export type Trackable<T> = T
 /**
  * Props accepted by SVG elements.
  */
-export interface SVGProps<eventTarget extends EventTarget = SVGElement>
-  extends HTMLProps<eventTarget> {
+export interface SVGProps<
+  eventTarget extends EventTarget = SVGElement,
+> extends HTMLProps<eventTarget> {
   /** The `accentHeight` SVG attribute. */
   accentHeight?: Trackable<number | string | undefined>
   /** The `accumulate` SVG attribute. */
@@ -1142,8 +1143,7 @@ export type AriaRole = WAIAriaRole | DPubAriaRole
  * Comprehensive HTML attributes shared by specialized element prop interfaces.
  */
 export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
-  extends HostProps<eventTarget>,
-    AriaProps {
+  extends HostProps<eventTarget>, AriaProps {
   // Standard HTML Attributes
   /** The `accept` HTML attribute. */
   accept?: Trackable<string | undefined>
@@ -1557,6 +1557,14 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
   results?: Trackable<number | undefined>
   /** The `translate` HTML attribute. */
   translate?: Trackable<TranslateValue | undefined>
+  /**
+   * Preserve the current element attributes and children during frame DOM reconciliation.
+   *
+   * Server rendering and initial hydration still process this element and its children. On later
+   * frame reloads, a matched element with `rmx-preserve-dom` keeps its live DOM so custom elements
+   * and imperative widgets can own their subtree.
+   */
+  'rmx-preserve-dom'?: Trackable<boolean | '' | undefined>
 
   // RDFa Attributes
   /** The `about` HTML attribute. */
@@ -1603,8 +1611,7 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
  * Core global HTML attributes accepted by most host elements.
  */
 export interface HTMLProps<eventTarget extends EventTarget = EventTarget>
-  extends HostProps<eventTarget>,
-    AriaProps {
+  extends HostProps<eventTarget>, AriaProps {
   // Standard HTML Attributes
   /** The `accesskey` HTML attribute. */
   accesskey?: Trackable<string | undefined>
@@ -1754,8 +1761,9 @@ export type HTMLAttributeAnchorTarget = '_self' | '_blank' | '_parent' | '_top' 
 /**
  * Props accepted by `<anchor>` elements.
  */
-export interface PartialAnchorHTMLProps<eventTarget extends EventTarget>
-  extends HTMLProps<eventTarget> {
+export interface PartialAnchorHTMLProps<
+  eventTarget extends EventTarget,
+> extends HTMLProps<eventTarget> {
   /** The `download` HTML attribute. */
   download?: Trackable<any>
   /** The `hreflang` HTML attribute. */
@@ -1825,8 +1833,9 @@ export type AccessibleAnchorHTMLProps<eventTarget extends EventTarget = HTMLAnch
 /**
  * Props accepted by `<anchor>` elements.
  */
-export interface AnchorHTMLProps<eventTarget extends EventTarget = HTMLAnchorElement>
-  extends PartialAnchorHTMLProps<eventTarget> {
+export interface AnchorHTMLProps<
+  eventTarget extends EventTarget = HTMLAnchorElement,
+> extends PartialAnchorHTMLProps<eventTarget> {
   /** The `href` HTML attribute. */
   href?: Trackable<string | undefined>
   /** The `role` HTML attribute. */
@@ -1836,8 +1845,9 @@ export interface AnchorHTMLProps<eventTarget extends EventTarget = HTMLAnchorEle
 /**
  * Props accepted by `<area>` elements.
  */
-export interface PartialAreaHTMLProps<eventTarget extends EventTarget>
-  extends HTMLProps<eventTarget> {
+export interface PartialAreaHTMLProps<
+  eventTarget extends EventTarget,
+> extends HTMLProps<eventTarget> {
   /** The `alt` HTML attribute. */
   alt?: Trackable<string | undefined>
   /** The `coords` HTML attribute. */
@@ -1884,8 +1894,9 @@ export type AccessibleAreaHTMLProps<eventTarget extends EventTarget = HTMLAreaEl
 /**
  * Props accepted by `<area>` elements.
  */
-export interface AreaHTMLProps<eventTarget extends EventTarget = HTMLAreaElement>
-  extends PartialAreaHTMLProps<eventTarget> {
+export interface AreaHTMLProps<
+  eventTarget extends EventTarget = HTMLAreaElement,
+> extends PartialAreaHTMLProps<eventTarget> {
   /** The `href` HTML attribute. */
   href?: Trackable<string | undefined>
   /** The `role` HTML attribute. */
@@ -1895,8 +1906,9 @@ export interface AreaHTMLProps<eventTarget extends EventTarget = HTMLAreaElement
 /**
  * Props accepted by `<article>` elements.
  */
-export interface ArticleHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface ArticleHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<
     | 'article'
@@ -1914,8 +1926,9 @@ export interface ArticleHTMLProps<eventTarget extends EventTarget = HTMLElement>
 /**
  * Props accepted by `<aside>` elements.
  */
-export interface AsideHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface AsideHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<
     | 'complementary'
@@ -1938,8 +1951,9 @@ export interface AsideHTMLProps<eventTarget extends EventTarget = HTMLElement>
 /**
  * Props accepted by `<audio>` elements.
  */
-export interface AudioHTMLProps<eventTarget extends EventTarget = HTMLAudioElement>
-  extends MediaHTMLProps<eventTarget> {
+export interface AudioHTMLProps<
+  eventTarget extends EventTarget = HTMLAudioElement,
+> extends MediaHTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'application' | undefined>
 }
@@ -1947,8 +1961,9 @@ export interface AudioHTMLProps<eventTarget extends EventTarget = HTMLAudioEleme
 /**
  * Props accepted by `<base>` elements.
  */
-export interface BaseHTMLProps<eventTarget extends EventTarget = HTMLBaseElement>
-  extends HTMLProps<eventTarget> {
+export interface BaseHTMLProps<
+  eventTarget extends EventTarget = HTMLBaseElement,
+> extends HTMLProps<eventTarget> {
   /** The `href` HTML attribute. */
   href?: Trackable<string | undefined>
   /** The `role` HTML attribute. */
@@ -1960,8 +1975,9 @@ export interface BaseHTMLProps<eventTarget extends EventTarget = HTMLBaseElement
 /**
  * Props accepted by `<blockquote>` elements.
  */
-export interface BlockquoteHTMLProps<eventTarget extends EventTarget = HTMLQuoteElement>
-  extends HTMLProps<eventTarget> {
+export interface BlockquoteHTMLProps<
+  eventTarget extends EventTarget = HTMLQuoteElement,
+> extends HTMLProps<eventTarget> {
   /** The `cite` HTML attribute. */
   cite?: Trackable<string | undefined>
 }
@@ -1969,8 +1985,9 @@ export interface BlockquoteHTMLProps<eventTarget extends EventTarget = HTMLQuote
 /**
  * Props accepted by `<br>` elements.
  */
-export interface BrHTMLProps<eventTarget extends EventTarget = HTMLBRElement>
-  extends HTMLProps<eventTarget> {
+export interface BrHTMLProps<
+  eventTarget extends EventTarget = HTMLBRElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'none' | 'presentation' | undefined>
 }
@@ -1978,8 +1995,9 @@ export interface BrHTMLProps<eventTarget extends EventTarget = HTMLBRElement>
 /**
  * Props accepted by `<button>` elements.
  */
-export interface ButtonHTMLProps<eventTarget extends EventTarget = HTMLButtonElement>
-  extends HTMLProps<eventTarget> {
+export interface ButtonHTMLProps<
+  eventTarget extends EventTarget = HTMLButtonElement,
+> extends HTMLProps<eventTarget> {
   /** The `command` HTML attribute. */
   command?: Trackable<string | undefined>
   /** The `commandfor` HTML attribute. */
@@ -2048,8 +2066,9 @@ export interface ButtonHTMLProps<eventTarget extends EventTarget = HTMLButtonEle
 /**
  * Props accepted by `<canvas>` elements.
  */
-export interface CanvasHTMLProps<eventTarget extends EventTarget = HTMLCanvasElement>
-  extends HTMLProps<eventTarget> {
+export interface CanvasHTMLProps<
+  eventTarget extends EventTarget = HTMLCanvasElement,
+> extends HTMLProps<eventTarget> {
   /** The `height` HTML attribute. */
   height?: Trackable<number | string | undefined>
   /** The `width` HTML attribute. */
@@ -2059,8 +2078,9 @@ export interface CanvasHTMLProps<eventTarget extends EventTarget = HTMLCanvasEle
 /**
  * Props accepted by `<caption>` elements.
  */
-export interface CaptionHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface CaptionHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: 'caption'
 }
@@ -2068,8 +2088,9 @@ export interface CaptionHTMLProps<eventTarget extends EventTarget = HTMLElement>
 /**
  * Props accepted by `<col>` elements.
  */
-export interface ColHTMLProps<eventTarget extends EventTarget = HTMLTableColElement>
-  extends HTMLProps<eventTarget> {
+export interface ColHTMLProps<
+  eventTarget extends EventTarget = HTMLTableColElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: never
   /** The `span` HTML attribute. */
@@ -2081,8 +2102,9 @@ export interface ColHTMLProps<eventTarget extends EventTarget = HTMLTableColElem
 /**
  * Props accepted by `<colgroup>` elements.
  */
-export interface ColgroupHTMLProps<eventTarget extends EventTarget = HTMLTableColElement>
-  extends HTMLProps<eventTarget> {
+export interface ColgroupHTMLProps<
+  eventTarget extends EventTarget = HTMLTableColElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: never
   /** The `span` HTML attribute. */
@@ -2092,8 +2114,9 @@ export interface ColgroupHTMLProps<eventTarget extends EventTarget = HTMLTableCo
 /**
  * Props accepted by `<data>` elements.
  */
-export interface DataHTMLProps<eventTarget extends EventTarget = HTMLDataElement>
-  extends HTMLProps<eventTarget> {
+export interface DataHTMLProps<
+  eventTarget extends EventTarget = HTMLDataElement,
+> extends HTMLProps<eventTarget> {
   /** The `value` HTML attribute. */
   value?: Trackable<string | number | undefined>
 }
@@ -2101,8 +2124,9 @@ export interface DataHTMLProps<eventTarget extends EventTarget = HTMLDataElement
 /**
  * Props accepted by `<datalist>` elements.
  */
-export interface DataListHTMLProps<eventTarget extends EventTarget = HTMLDataListElement>
-  extends HTMLProps<eventTarget> {
+export interface DataListHTMLProps<
+  eventTarget extends EventTarget = HTMLDataListElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'listbox' | undefined>
 }
@@ -2110,8 +2134,9 @@ export interface DataListHTMLProps<eventTarget extends EventTarget = HTMLDataLis
 /**
  * Props accepted by `<dd>` elements.
  */
-export interface DdHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface DdHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: never
 }
@@ -2119,8 +2144,9 @@ export interface DdHTMLProps<eventTarget extends EventTarget = HTMLElement>
 /**
  * Props accepted by `<del>` elements.
  */
-export interface DelHTMLProps<eventTarget extends EventTarget = HTMLModElement>
-  extends HTMLProps<eventTarget> {
+export interface DelHTMLProps<
+  eventTarget extends EventTarget = HTMLModElement,
+> extends HTMLProps<eventTarget> {
   /** The `cite` HTML attribute. */
   cite?: Trackable<string | undefined>
   /** The `datetime` HTML attribute. */
@@ -2132,8 +2158,9 @@ export interface DelHTMLProps<eventTarget extends EventTarget = HTMLModElement>
 /**
  * Props accepted by `<details>` elements.
  */
-export interface DetailsHTMLProps<eventTarget extends EventTarget = HTMLDetailsElement>
-  extends HTMLProps<eventTarget> {
+export interface DetailsHTMLProps<
+  eventTarget extends EventTarget = HTMLDetailsElement,
+> extends HTMLProps<eventTarget> {
   /** The `name` HTML attribute. */
   name?: Trackable<string | undefined>
   /** The `open` HTML attribute. */
@@ -2145,8 +2172,9 @@ export interface DetailsHTMLProps<eventTarget extends EventTarget = HTMLDetailsE
 /**
  * Props accepted by `<dialog>` elements.
  */
-export interface DialogHTMLProps<eventTarget extends EventTarget = HTMLDialogElement>
-  extends HTMLProps<eventTarget> {
+export interface DialogHTMLProps<
+  eventTarget extends EventTarget = HTMLDialogElement,
+> extends HTMLProps<eventTarget> {
   /** The `open` HTML attribute. */
   open?: Trackable<boolean | undefined>
   /** The `closedby` HTML attribute. */
@@ -2160,8 +2188,9 @@ export interface DialogHTMLProps<eventTarget extends EventTarget = HTMLDialogEle
 /**
  * Props accepted by `<dl>` elements.
  */
-export interface DlHTMLProps<eventTarget extends EventTarget = HTMLDListElement>
-  extends HTMLProps<eventTarget> {
+export interface DlHTMLProps<
+  eventTarget extends EventTarget = HTMLDListElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'group' | 'list' | 'none' | 'presentation' | undefined>
 }
@@ -2169,8 +2198,9 @@ export interface DlHTMLProps<eventTarget extends EventTarget = HTMLDListElement>
 /**
  * Props accepted by `<dt>` elements.
  */
-export interface DtHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface DtHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'listitem' | undefined>
 }
@@ -2178,8 +2208,9 @@ export interface DtHTMLProps<eventTarget extends EventTarget = HTMLElement>
 /**
  * Props accepted by `<embed>` elements.
  */
-export interface EmbedHTMLProps<eventTarget extends EventTarget = HTMLEmbedElement>
-  extends HTMLProps<eventTarget> {
+export interface EmbedHTMLProps<
+  eventTarget extends EventTarget = HTMLEmbedElement,
+> extends HTMLProps<eventTarget> {
   /** The `height` HTML attribute. */
   height?: Trackable<number | string | undefined>
   /** The `role` HTML attribute. */
@@ -2195,8 +2226,9 @@ export interface EmbedHTMLProps<eventTarget extends EventTarget = HTMLEmbedEleme
 /**
  * Props accepted by `<fieldset>` elements.
  */
-export interface FieldsetHTMLProps<eventTarget extends EventTarget = HTMLFieldSetElement>
-  extends HTMLProps<eventTarget> {
+export interface FieldsetHTMLProps<
+  eventTarget extends EventTarget = HTMLFieldSetElement,
+> extends HTMLProps<eventTarget> {
   /** The `disabled` HTML attribute. */
   disabled?: Trackable<boolean | undefined>
   /** The `form` HTML attribute. */
@@ -2210,8 +2242,9 @@ export interface FieldsetHTMLProps<eventTarget extends EventTarget = HTMLFieldSe
 /**
  * Props accepted by `<figcaption>` elements.
  */
-export interface FigcaptionHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface FigcaptionHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'group' | 'none' | 'presentation' | undefined>
 }
@@ -2219,8 +2252,9 @@ export interface FigcaptionHTMLProps<eventTarget extends EventTarget = HTMLEleme
 /**
  * Props accepted by `<footer>` elements.
  */
-export interface FooterHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface FooterHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'contentinfo' | 'group' | 'none' | 'presentation' | 'doc-footnote' | undefined>
 }
@@ -2228,8 +2262,9 @@ export interface FooterHTMLProps<eventTarget extends EventTarget = HTMLElement>
 /**
  * Props accepted by `<form>` elements.
  */
-export interface FormHTMLProps<eventTarget extends EventTarget = HTMLFormElement>
-  extends HTMLProps<eventTarget> {
+export interface FormHTMLProps<
+  eventTarget extends EventTarget = HTMLFormElement,
+> extends HTMLProps<eventTarget> {
   /** The `accept-charset` HTML attribute. */
   'accept-charset'?: Trackable<string | undefined>
   /** The `acceptCharset` HTML attribute. */
@@ -2263,8 +2298,9 @@ export interface FormHTMLProps<eventTarget extends EventTarget = HTMLFormElement
 /**
  * Props accepted by `<heading>` elements.
  */
-export interface HeadingHTMLProps<eventTarget extends EventTarget = HTMLHeadingElement>
-  extends HTMLProps<eventTarget> {
+export interface HeadingHTMLProps<
+  eventTarget extends EventTarget = HTMLHeadingElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'heading' | 'none' | 'presentation' | 'tab' | 'doc-subtitle' | undefined>
 }
@@ -2272,8 +2308,9 @@ export interface HeadingHTMLProps<eventTarget extends EventTarget = HTMLHeadingE
 /**
  * Props accepted by `<head>` elements.
  */
-export interface HeadHTMLProps<eventTarget extends EventTarget = HTMLHeadElement>
-  extends HTMLProps<eventTarget> {
+export interface HeadHTMLProps<
+  eventTarget extends EventTarget = HTMLHeadElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: never
 }
@@ -2281,8 +2318,9 @@ export interface HeadHTMLProps<eventTarget extends EventTarget = HTMLHeadElement
 /**
  * Props accepted by `<header>` elements.
  */
-export interface HeaderHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface HeaderHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'banner' | 'group' | 'none' | 'presentation' | undefined>
 }
@@ -2290,8 +2328,9 @@ export interface HeaderHTMLProps<eventTarget extends EventTarget = HTMLElement>
 /**
  * Props accepted by `<hr>` elements.
  */
-export interface HrHTMLProps<eventTarget extends EventTarget = HTMLHRElement>
-  extends HTMLProps<eventTarget> {
+export interface HrHTMLProps<
+  eventTarget extends EventTarget = HTMLHRElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'separator' | 'none' | 'presentation' | 'doc-pagebreak' | undefined>
 }
@@ -2299,8 +2338,9 @@ export interface HrHTMLProps<eventTarget extends EventTarget = HTMLHRElement>
 /**
  * Props accepted by `<html>` elements.
  */
-export interface HtmlHTMLProps<eventTarget extends EventTarget = HTMLHtmlElement>
-  extends HTMLProps<eventTarget> {
+export interface HtmlHTMLProps<
+  eventTarget extends EventTarget = HTMLHtmlElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'document' | undefined>
 }
@@ -2308,8 +2348,9 @@ export interface HtmlHTMLProps<eventTarget extends EventTarget = HTMLHtmlElement
 /**
  * Props accepted by `<iframe>` elements.
  */
-export interface IframeHTMLProps<eventTarget extends EventTarget = HTMLIFrameElement>
-  extends HTMLProps<eventTarget> {
+export interface IframeHTMLProps<
+  eventTarget extends EventTarget = HTMLIFrameElement,
+> extends HTMLProps<eventTarget> {
   /** The `allow` HTML attribute. */
   allow?: Trackable<string | undefined>
   /** The `allowFullScreen` HTML attribute. */
@@ -2357,8 +2398,9 @@ export type HTMLAttributeCrossOrigin = 'anonymous' | 'use-credentials'
 /**
  * Props accepted by `<img>` elements.
  */
-export interface PartialImgHTMLProps<eventTarget extends EventTarget>
-  extends HTMLProps<eventTarget> {
+export interface PartialImgHTMLProps<
+  eventTarget extends EventTarget,
+> extends HTMLProps<eventTarget> {
   /** The `crossorigin` HTML attribute. */
   crossorigin?: Trackable<HTMLAttributeCrossOrigin>
   /** The `crossOrigin` HTML attribute. */
@@ -2452,8 +2494,9 @@ export type AccessibleImgHTMLProps<eventTarget extends EventTarget = HTMLImageEl
 /**
  * Props accepted by `<img>` elements.
  */
-export interface ImgHTMLProps<eventTarget extends EventTarget = HTMLImageElement>
-  extends PartialImgHTMLProps<eventTarget> {
+export interface ImgHTMLProps<
+  eventTarget extends EventTarget = HTMLImageElement,
+> extends PartialImgHTMLProps<eventTarget> {
   /** The `alt` HTML attribute. */
   alt?: Trackable<string | undefined>
   /** The `aria-label` HTML attribute. */
@@ -2495,8 +2538,9 @@ export type HTMLInputTypeAttribute =
 /**
  * Props accepted by `<input>` elements.
  */
-export interface PartialInputHTMLProps<eventTarget extends EventTarget>
-  extends HTMLProps<eventTarget> {
+export interface PartialInputHTMLProps<
+  eventTarget extends EventTarget,
+> extends HTMLProps<eventTarget> {
   /** The `accept` HTML attribute. */
   accept?: Trackable<string | undefined>
   /** The `alt` HTML attribute. */
@@ -2739,8 +2783,9 @@ export type AccessibleInputHTMLProps<eventTarget extends EventTarget = HTMLInput
 /**
  * Props accepted by `<input>` elements.
  */
-export interface InputHTMLProps<eventTarget extends EventTarget = HTMLInputElement>
-  extends PartialInputHTMLProps<eventTarget> {
+export interface InputHTMLProps<
+  eventTarget extends EventTarget = HTMLInputElement,
+> extends PartialInputHTMLProps<eventTarget> {
   /** The `type` HTML attribute. */
   type?: Trackable<HTMLInputTypeAttribute | undefined>
   /** The `role` HTML attribute. */
@@ -2770,8 +2815,9 @@ export interface InputHTMLProps<eventTarget extends EventTarget = HTMLInputEleme
 /**
  * Props accepted by `<ins>` elements.
  */
-export interface InsHTMLProps<eventTarget extends EventTarget = HTMLModElement>
-  extends HTMLProps<eventTarget> {
+export interface InsHTMLProps<
+  eventTarget extends EventTarget = HTMLModElement,
+> extends HTMLProps<eventTarget> {
   /** The `cite` HTML attribute. */
   cite?: Trackable<string | undefined>
   /** The `datetime` HTML attribute. */
@@ -2783,8 +2829,9 @@ export interface InsHTMLProps<eventTarget extends EventTarget = HTMLModElement>
 /**
  * Props accepted by `<keygen>` elements.
  */
-export interface KeygenHTMLProps<eventTarget extends EventTarget = HTMLUnknownElement>
-  extends HTMLProps<eventTarget> {
+export interface KeygenHTMLProps<
+  eventTarget extends EventTarget = HTMLUnknownElement,
+> extends HTMLProps<eventTarget> {
   /** The `challenge` HTML attribute. */
   challenge?: Trackable<string | undefined>
   /** The `disabled` HTML attribute. */
@@ -2802,8 +2849,9 @@ export interface KeygenHTMLProps<eventTarget extends EventTarget = HTMLUnknownEl
 /**
  * Props accepted by `<label>` elements.
  */
-export interface LabelHTMLProps<eventTarget extends EventTarget = HTMLLabelElement>
-  extends HTMLProps<eventTarget> {
+export interface LabelHTMLProps<
+  eventTarget extends EventTarget = HTMLLabelElement,
+> extends HTMLProps<eventTarget> {
   /** The `for` HTML attribute. */
   for?: Trackable<string | undefined>
   /** The `form` HTML attribute. */
@@ -2817,8 +2865,9 @@ export interface LabelHTMLProps<eventTarget extends EventTarget = HTMLLabelEleme
 /**
  * Props accepted by `<legend>` elements.
  */
-export interface LegendHTMLProps<eventTarget extends EventTarget = HTMLLegendElement>
-  extends HTMLProps<eventTarget> {
+export interface LegendHTMLProps<
+  eventTarget extends EventTarget = HTMLLegendElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: never
 }
@@ -2826,8 +2875,9 @@ export interface LegendHTMLProps<eventTarget extends EventTarget = HTMLLegendEle
 /**
  * Props accepted by `<li>` elements.
  */
-export interface LiHTMLProps<eventTarget extends EventTarget = HTMLLIElement>
-  extends HTMLProps<eventTarget> {
+export interface LiHTMLProps<
+  eventTarget extends EventTarget = HTMLLIElement,
+> extends HTMLProps<eventTarget> {
   /** The `value` HTML attribute. */
   value?: Trackable<string | number | undefined>
 }
@@ -2835,8 +2885,9 @@ export interface LiHTMLProps<eventTarget extends EventTarget = HTMLLIElement>
 /**
  * Props accepted by `<link>` elements.
  */
-export interface LinkHTMLProps<eventTarget extends EventTarget = HTMLLinkElement>
-  extends HTMLProps<eventTarget> {
+export interface LinkHTMLProps<
+  eventTarget extends EventTarget = HTMLLinkElement,
+> extends HTMLProps<eventTarget> {
   /** The `as` HTML attribute. */
   as?: Trackable<string | undefined>
   /** The `crossorigin` HTML attribute. */
@@ -2880,8 +2931,9 @@ export interface LinkHTMLProps<eventTarget extends EventTarget = HTMLLinkElement
 /**
  * Props accepted by `<main>` elements.
  */
-export interface MainHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface MainHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'main' | undefined>
 }
@@ -2889,8 +2941,9 @@ export interface MainHTMLProps<eventTarget extends EventTarget = HTMLElement>
 /**
  * Props accepted by `<map>` elements.
  */
-export interface MapHTMLProps<eventTarget extends EventTarget = HTMLMapElement>
-  extends HTMLProps<eventTarget> {
+export interface MapHTMLProps<
+  eventTarget extends EventTarget = HTMLMapElement,
+> extends HTMLProps<eventTarget> {
   /** The `name` HTML attribute. */
   name?: Trackable<string | undefined>
   /** The `role` HTML attribute. */
@@ -2900,8 +2953,9 @@ export interface MapHTMLProps<eventTarget extends EventTarget = HTMLMapElement>
 /**
  * Props accepted by `<marquee>` elements.
  */
-export interface MarqueeHTMLProps<eventTarget extends EventTarget = HTMLMarqueeElement>
-  extends HTMLProps<eventTarget> {
+export interface MarqueeHTMLProps<
+  eventTarget extends EventTarget = HTMLMarqueeElement,
+> extends HTMLProps<eventTarget> {
   /** The `behavior` HTML attribute. */
   behavior?: Trackable<'scroll' | 'slide' | 'alternate' | undefined>
   /** The `bgColor` HTML attribute. */
@@ -2929,8 +2983,9 @@ export interface MarqueeHTMLProps<eventTarget extends EventTarget = HTMLMarqueeE
 /**
  * Props accepted by `<media>` elements.
  */
-export interface MediaHTMLProps<eventTarget extends EventTarget = HTMLMediaElement>
-  extends HTMLProps<eventTarget> {
+export interface MediaHTMLProps<
+  eventTarget extends EventTarget = HTMLMediaElement,
+> extends HTMLProps<eventTarget> {
   /** The `autoplay` HTML attribute. */
   autoplay?: Trackable<boolean | undefined>
   /** The `autoPlay` HTML attribute. */
@@ -2978,8 +3033,9 @@ export interface MediaHTMLProps<eventTarget extends EventTarget = HTMLMediaEleme
 /**
  * Props accepted by `<menu>` elements.
  */
-export interface MenuHTMLProps<eventTarget extends EventTarget = HTMLMenuElement>
-  extends HTMLProps<eventTarget> {
+export interface MenuHTMLProps<
+  eventTarget extends EventTarget = HTMLMenuElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role:
     | 'list'
@@ -3000,8 +3056,9 @@ export interface MenuHTMLProps<eventTarget extends EventTarget = HTMLMenuElement
 /**
  * Props accepted by `<meta>` elements.
  */
-export interface MetaHTMLProps<eventTarget extends EventTarget = HTMLMetaElement>
-  extends HTMLProps<eventTarget> {
+export interface MetaHTMLProps<
+  eventTarget extends EventTarget = HTMLMetaElement,
+> extends HTMLProps<eventTarget> {
   /** The `charset` HTML attribute. */
   charset?: Trackable<string | undefined>
   /** The `charSet` HTML attribute. */
@@ -3023,8 +3080,9 @@ export interface MetaHTMLProps<eventTarget extends EventTarget = HTMLMetaElement
 /**
  * Props accepted by `<meter>` elements.
  */
-export interface MeterHTMLProps<eventTarget extends EventTarget = HTMLMeterElement>
-  extends HTMLProps<eventTarget> {
+export interface MeterHTMLProps<
+  eventTarget extends EventTarget = HTMLMeterElement,
+> extends HTMLProps<eventTarget> {
   /** The `form` HTML attribute. */
   form?: Trackable<string | undefined>
   /** The `high` HTML attribute. */
@@ -3046,8 +3104,9 @@ export interface MeterHTMLProps<eventTarget extends EventTarget = HTMLMeterEleme
 /**
  * Props accepted by `<nav>` elements.
  */
-export interface NavHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface NavHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<
     'navigation' | 'menu' | 'menubar' | 'none' | 'presentation' | 'tablist' | undefined
@@ -3057,8 +3116,9 @@ export interface NavHTMLProps<eventTarget extends EventTarget = HTMLElement>
 /**
  * Props accepted by `<noscript>` elements.
  */
-export interface NoScriptHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface NoScriptHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: never
 }
@@ -3066,8 +3126,9 @@ export interface NoScriptHTMLProps<eventTarget extends EventTarget = HTMLElement
 /**
  * Props accepted by `<object>` elements.
  */
-export interface ObjectHTMLProps<eventTarget extends EventTarget = HTMLObjectElement>
-  extends HTMLProps<eventTarget> {
+export interface ObjectHTMLProps<
+  eventTarget extends EventTarget = HTMLObjectElement,
+> extends HTMLProps<eventTarget> {
   /** The `classID` HTML attribute. */
   classID?: Trackable<string | undefined>
   /** The `data` HTML attribute. */
@@ -3095,8 +3156,9 @@ export interface ObjectHTMLProps<eventTarget extends EventTarget = HTMLObjectEle
 /**
  * Props accepted by `<ol>` elements.
  */
-export interface OlHTMLProps<eventTarget extends EventTarget = HTMLOListElement>
-  extends HTMLProps<eventTarget> {
+export interface OlHTMLProps<
+  eventTarget extends EventTarget = HTMLOListElement,
+> extends HTMLProps<eventTarget> {
   /** The `reversed` HTML attribute. */
   reversed?: Trackable<boolean | undefined>
   /** The `role` HTML attribute. */
@@ -3123,8 +3185,9 @@ export interface OlHTMLProps<eventTarget extends EventTarget = HTMLOListElement>
 /**
  * Props accepted by `<optgroup>` elements.
  */
-export interface OptgroupHTMLProps<eventTarget extends EventTarget = HTMLOptGroupElement>
-  extends HTMLProps<eventTarget> {
+export interface OptgroupHTMLProps<
+  eventTarget extends EventTarget = HTMLOptGroupElement,
+> extends HTMLProps<eventTarget> {
   /** The `disabled` HTML attribute. */
   disabled?: Trackable<boolean | undefined>
   /** The `label` HTML attribute. */
@@ -3136,8 +3199,9 @@ export interface OptgroupHTMLProps<eventTarget extends EventTarget = HTMLOptGrou
 /**
  * Props accepted by `<option>` elements.
  */
-export interface OptionHTMLProps<eventTarget extends EventTarget = HTMLOptionElement>
-  extends HTMLProps<eventTarget> {
+export interface OptionHTMLProps<
+  eventTarget extends EventTarget = HTMLOptionElement,
+> extends HTMLProps<eventTarget> {
   /** The `disabled` HTML attribute. */
   disabled?: Trackable<boolean | undefined>
   /** The `label` HTML attribute. */
@@ -3153,8 +3217,9 @@ export interface OptionHTMLProps<eventTarget extends EventTarget = HTMLOptionEle
 /**
  * Props accepted by `<output>` elements.
  */
-export interface OutputHTMLProps<eventTarget extends EventTarget = HTMLOutputElement>
-  extends HTMLProps<eventTarget> {
+export interface OutputHTMLProps<
+  eventTarget extends EventTarget = HTMLOutputElement,
+> extends HTMLProps<eventTarget> {
   /** The `for` HTML attribute. */
   for?: Trackable<string | undefined>
   /** The `form` HTML attribute. */
@@ -3168,8 +3233,9 @@ export interface OutputHTMLProps<eventTarget extends EventTarget = HTMLOutputEle
 /**
  * Props accepted by `<param>` elements.
  */
-export interface ParamHTMLProps<eventTarget extends EventTarget = HTMLParamElement>
-  extends HTMLProps<eventTarget> {
+export interface ParamHTMLProps<
+  eventTarget extends EventTarget = HTMLParamElement,
+> extends HTMLProps<eventTarget> {
   /** The `name` HTML attribute. */
   name?: Trackable<string | undefined>
   /** The `role` HTML attribute. */
@@ -3181,8 +3247,9 @@ export interface ParamHTMLProps<eventTarget extends EventTarget = HTMLParamEleme
 /**
  * Props accepted by `<picture>` elements.
  */
-export interface PictureHTMLProps<eventTarget extends EventTarget = HTMLPictureElement>
-  extends HTMLProps<eventTarget> {
+export interface PictureHTMLProps<
+  eventTarget extends EventTarget = HTMLPictureElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: never
 }
@@ -3190,8 +3257,9 @@ export interface PictureHTMLProps<eventTarget extends EventTarget = HTMLPictureE
 /**
  * Props accepted by `<progress>` elements.
  */
-export interface ProgressHTMLProps<eventTarget extends EventTarget = HTMLProgressElement>
-  extends HTMLProps<eventTarget> {
+export interface ProgressHTMLProps<
+  eventTarget extends EventTarget = HTMLProgressElement,
+> extends HTMLProps<eventTarget> {
   /** The `max` HTML attribute. */
   max?: Trackable<number | string | undefined>
   /** The `role` HTML attribute. */
@@ -3203,8 +3271,9 @@ export interface ProgressHTMLProps<eventTarget extends EventTarget = HTMLProgres
 /**
  * Props accepted by `<quote>` elements.
  */
-export interface QuoteHTMLProps<eventTarget extends EventTarget = HTMLQuoteElement>
-  extends HTMLProps<eventTarget> {
+export interface QuoteHTMLProps<
+  eventTarget extends EventTarget = HTMLQuoteElement,
+> extends HTMLProps<eventTarget> {
   /** The `cite` HTML attribute. */
   cite?: Trackable<string | undefined>
 }
@@ -3212,8 +3281,9 @@ export interface QuoteHTMLProps<eventTarget extends EventTarget = HTMLQuoteEleme
 /**
  * Props accepted by `<script>` elements.
  */
-export interface ScriptHTMLProps<eventTarget extends EventTarget = HTMLScriptElement>
-  extends HTMLProps<eventTarget> {
+export interface ScriptHTMLProps<
+  eventTarget extends EventTarget = HTMLScriptElement,
+> extends HTMLProps<eventTarget> {
   /** The `async` HTML attribute. */
   async?: Trackable<boolean | undefined>
   /** @deprecated */
@@ -3247,8 +3317,9 @@ export interface ScriptHTMLProps<eventTarget extends EventTarget = HTMLScriptEle
 /**
  * Props accepted by `<search>` elements.
  */
-export interface SearchHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface SearchHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'search' | 'form' | 'group' | 'none' | 'presentation' | 'region' | undefined>
 }
@@ -3256,8 +3327,9 @@ export interface SearchHTMLProps<eventTarget extends EventTarget = HTMLElement>
 /**
  * Props accepted by `<select>` elements.
  */
-export interface PartialSelectHTMLProps<eventTarget extends EventTarget>
-  extends HTMLProps<eventTarget> {
+export interface PartialSelectHTMLProps<
+  eventTarget extends EventTarget,
+> extends HTMLProps<eventTarget> {
   /** The `autocomplete` HTML attribute. */
   autocomplete?: Trackable<string | undefined>
   /** The `autoComplete` HTML attribute. */
@@ -3304,8 +3376,9 @@ export type AccessibleSelectHTMLProps<eventTarget extends EventTarget = HTMLSele
 /**
  * Props accepted by `<select>` elements.
  */
-export interface SelectHTMLProps<eventTarget extends EventTarget = HTMLSelectElement>
-  extends PartialSelectHTMLProps<eventTarget> {
+export interface SelectHTMLProps<
+  eventTarget extends EventTarget = HTMLSelectElement,
+> extends PartialSelectHTMLProps<eventTarget> {
   /** The `multiple` HTML attribute. */
   multiple?: Trackable<boolean | undefined>
   /** The `size` HTML attribute. */
@@ -3319,8 +3392,9 @@ export interface SelectHTMLProps<eventTarget extends EventTarget = HTMLSelectEle
 /**
  * Props accepted by `<slot>` elements.
  */
-export interface SlotHTMLProps<eventTarget extends EventTarget = HTMLSlotElement>
-  extends HTMLProps<eventTarget> {
+export interface SlotHTMLProps<
+  eventTarget extends EventTarget = HTMLSlotElement,
+> extends HTMLProps<eventTarget> {
   /** The `name` HTML attribute. */
   name?: Trackable<string | undefined>
   /** The `role` HTML attribute. */
@@ -3330,8 +3404,9 @@ export interface SlotHTMLProps<eventTarget extends EventTarget = HTMLSlotElement
 /**
  * Props accepted by `<source>` elements.
  */
-export interface SourceHTMLProps<eventTarget extends EventTarget = HTMLSourceElement>
-  extends HTMLProps<eventTarget> {
+export interface SourceHTMLProps<
+  eventTarget extends EventTarget = HTMLSourceElement,
+> extends HTMLProps<eventTarget> {
   /** The `height` HTML attribute. */
   height?: Trackable<number | string | undefined>
   /** The `media` HTML attribute. */
@@ -3355,8 +3430,9 @@ export interface SourceHTMLProps<eventTarget extends EventTarget = HTMLSourceEle
 /**
  * Props accepted by `<style>` elements.
  */
-export interface StyleHTMLProps<eventTarget extends EventTarget = HTMLStyleElement>
-  extends HTMLProps<eventTarget> {
+export interface StyleHTMLProps<
+  eventTarget extends EventTarget = HTMLStyleElement,
+> extends HTMLProps<eventTarget> {
   /** The `media` HTML attribute. */
   media?: Trackable<string | undefined>
   /** The `role` HTML attribute. */
@@ -3370,8 +3446,9 @@ export interface StyleHTMLProps<eventTarget extends EventTarget = HTMLStyleEleme
 /**
  * Props accepted by `<table>` elements.
  */
-export interface TableHTMLProps<eventTarget extends EventTarget = HTMLTableElement>
-  extends HTMLProps<eventTarget> {
+export interface TableHTMLProps<
+  eventTarget extends EventTarget = HTMLTableElement,
+> extends HTMLProps<eventTarget> {
   /** The `cellPadding` HTML attribute. */
   cellPadding?: Trackable<string | undefined>
   /** The `cellSpacing` HTML attribute. */
@@ -3385,8 +3462,9 @@ export interface TableHTMLProps<eventTarget extends EventTarget = HTMLTableEleme
 /**
  * Props accepted by `<td>` elements.
  */
-export interface TdHTMLProps<eventTarget extends EventTarget = HTMLTableCellElement>
-  extends HTMLProps<eventTarget> {
+export interface TdHTMLProps<
+  eventTarget extends EventTarget = HTMLTableCellElement,
+> extends HTMLProps<eventTarget> {
   /** The `align` HTML attribute. */
   align?: Trackable<'left' | 'center' | 'right' | 'justify' | 'char' | undefined>
   /** The `colspan` HTML attribute. */
@@ -3414,8 +3492,9 @@ export interface TdHTMLProps<eventTarget extends EventTarget = HTMLTableCellElem
 /**
  * Props accepted by `<template>` elements.
  */
-export interface TemplateHTMLProps<eventTarget extends EventTarget = HTMLTemplateElement>
-  extends HTMLProps<eventTarget> {
+export interface TemplateHTMLProps<
+  eventTarget extends EventTarget = HTMLTemplateElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: never
 }
@@ -3423,8 +3502,9 @@ export interface TemplateHTMLProps<eventTarget extends EventTarget = HTMLTemplat
 /**
  * Props accepted by `<textarea>` elements.
  */
-export interface TextareaHTMLProps<eventTarget extends EventTarget = HTMLTextAreaElement>
-  extends HTMLProps<eventTarget> {
+export interface TextareaHTMLProps<
+  eventTarget extends EventTarget = HTMLTextAreaElement,
+> extends HTMLProps<eventTarget> {
   /** Textarea content comes from `value` or `defaultValue`. */
   children?: never
   /** Textarea content comes from `value` or `defaultValue`. */
@@ -3472,8 +3552,9 @@ export interface TextareaHTMLProps<eventTarget extends EventTarget = HTMLTextAre
 /**
  * Props accepted by `<th>` elements.
  */
-export interface ThHTMLProps<eventTarget extends EventTarget = HTMLTableCellElement>
-  extends HTMLProps<eventTarget> {
+export interface ThHTMLProps<
+  eventTarget extends EventTarget = HTMLTableCellElement,
+> extends HTMLProps<eventTarget> {
   /** The `align` HTML attribute. */
   align?: Trackable<'left' | 'center' | 'right' | 'justify' | 'char' | undefined>
   /** The `colspan` HTML attribute. */
@@ -3495,8 +3576,9 @@ export interface ThHTMLProps<eventTarget extends EventTarget = HTMLTableCellElem
 /**
  * Props accepted by `<time>` elements.
  */
-export interface TimeHTMLProps<eventTarget extends EventTarget = HTMLTimeElement>
-  extends HTMLProps<eventTarget> {
+export interface TimeHTMLProps<
+  eventTarget extends EventTarget = HTMLTimeElement,
+> extends HTMLProps<eventTarget> {
   /** The `datetime` HTML attribute. */
   datetime?: Trackable<string | undefined>
   /** The `dateTime` HTML attribute. */
@@ -3506,8 +3588,9 @@ export interface TimeHTMLProps<eventTarget extends EventTarget = HTMLTimeElement
 /**
  * Props accepted by `<title>` elements.
  */
-export interface TitleHTMLProps<eventTarget extends EventTarget = HTMLTitleElement>
-  extends HTMLProps<eventTarget> {
+export interface TitleHTMLProps<
+  eventTarget extends EventTarget = HTMLTitleElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: never
 }
@@ -3515,8 +3598,9 @@ export interface TitleHTMLProps<eventTarget extends EventTarget = HTMLTitleEleme
 /**
  * Props accepted by `<track>` elements.
  */
-export interface TrackHTMLProps<eventTarget extends EventTarget = HTMLTrackElement>
-  extends MediaHTMLProps<eventTarget> {
+export interface TrackHTMLProps<
+  eventTarget extends EventTarget = HTMLTrackElement,
+> extends MediaHTMLProps<eventTarget> {
   /** The `default` HTML attribute. */
   default?: Trackable<boolean | undefined>
   /** The `kind` HTML attribute. */
@@ -3534,8 +3618,9 @@ export interface TrackHTMLProps<eventTarget extends EventTarget = HTMLTrackEleme
 /**
  * Props accepted by `<ul>` elements.
  */
-export interface UlHTMLProps<eventTarget extends EventTarget = HTMLUListElement>
-  extends HTMLProps<eventTarget> {
+export interface UlHTMLProps<
+  eventTarget extends EventTarget = HTMLUListElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<
     | 'list'
@@ -3556,8 +3641,9 @@ export interface UlHTMLProps<eventTarget extends EventTarget = HTMLUListElement>
 /**
  * Props accepted by `<video>` elements.
  */
-export interface VideoHTMLProps<eventTarget extends EventTarget = HTMLVideoElement>
-  extends MediaHTMLProps<eventTarget> {
+export interface VideoHTMLProps<
+  eventTarget extends EventTarget = HTMLVideoElement,
+> extends MediaHTMLProps<eventTarget> {
   /** The `disablePictureInPicture` HTML attribute. */
   disablePictureInPicture?: Trackable<boolean | undefined>
   /** The `height` HTML attribute. */
@@ -3577,8 +3663,9 @@ export interface VideoHTMLProps<eventTarget extends EventTarget = HTMLVideoEleme
 /**
  * Props accepted by `<wbr>` elements.
  */
-export interface WbrHTMLProps<eventTarget extends EventTarget = HTMLElement>
-  extends HTMLProps<eventTarget> {
+export interface WbrHTMLProps<
+  eventTarget extends EventTarget = HTMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `role` HTML attribute. */
   role?: Trackable<'none' | 'presentation' | undefined>
 }
@@ -3594,8 +3681,9 @@ export type DetailedHTMLProps<
 /**
  * Props accepted by MathML elements.
  */
-export interface MathMLProps<eventTarget extends EventTarget = MathMLElement>
-  extends HTMLProps<eventTarget> {
+export interface MathMLProps<
+  eventTarget extends EventTarget = MathMLElement,
+> extends HTMLProps<eventTarget> {
   /** The `dir` MathML attribute. */
   dir?: Trackable<'ltr' | 'rtl' | undefined>
   /** The `displaystyle` MathML attribute. */
@@ -3617,8 +3705,9 @@ export interface MathMLProps<eventTarget extends EventTarget = MathMLElement>
 /**
  * Props accepted by `<annotation>` MathML elements.
  */
-export interface AnnotationMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface AnnotationMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** The `encoding` MathML attribute. */
   encoding?: Trackable<string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/semantics#src */
@@ -3628,8 +3717,9 @@ export interface AnnotationMathMLProps<eventTarget extends EventTarget>
 /**
  * Props accepted by `<annotation-xml>` MathML elements.
  */
-export interface AnnotationXmlMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface AnnotationXmlMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** The `encoding` MathML attribute. */
   encoding?: Trackable<string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/semantics#src */
@@ -3639,8 +3729,9 @@ export interface AnnotationXmlMathMLProps<eventTarget extends EventTarget>
 /**
  * Props accepted by `<maction>` MathML elements.
  */
-export interface MActionMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MActionMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/maction#actiontype */
   actiontype?: Trackable<'statusline' | 'toggle' | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/maction#selection */
@@ -3658,8 +3749,9 @@ export interface MathMathMLProps<eventTarget extends EventTarget> extends MathML
 /**
  * Props accepted by `<menclose>` MathML elements.
  */
-export interface MEncloseMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MEncloseMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** The `notation` MathML attribute. */
   notation?: Trackable<string | undefined>
 }
@@ -3667,14 +3759,16 @@ export interface MEncloseMathMLProps<eventTarget extends EventTarget>
 /**
  * Props accepted by `<merror>` MathML elements.
  */
-export interface MErrorMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {}
+export interface MErrorMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {}
 
 /**
  * Props accepted by `<mfenced>` MathML elements.
  */
-export interface MFencedMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MFencedMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** The `close` MathML attribute. */
   close?: Trackable<string | undefined>
   /** The `open` MathML attribute. */
@@ -3686,8 +3780,9 @@ export interface MFencedMathMLProps<eventTarget extends EventTarget>
 /**
  * Props accepted by `<mfrac>` MathML elements.
  */
-export interface MFracMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MFracMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mfrac#denomalign */
   denomalign?: Trackable<'center' | 'left' | 'right' | undefined>
   /** The `linethickness` MathML attribute. */
@@ -3730,8 +3825,9 @@ export interface MiMathMLProps<eventTarget extends EventTarget> extends MathMLPr
 /**
  * Props accepted by `<mmultiscripts>` MathML elements.
  */
-export interface MmultiScriptsMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MmultiScriptsMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mmultiscripts#subscriptshift */
   subscriptshift?: Trackable<string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mmultiscripts#superscriptshift */
@@ -3774,8 +3870,9 @@ export interface MOMathMLProps<eventTarget extends EventTarget> extends MathMLPr
 /**
  * Props accepted by `<mover>` MathML elements.
  */
-export interface MOverMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MOverMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** The `accent` MathML attribute. */
   accent?: Trackable<boolean | undefined>
 }
@@ -3783,8 +3880,9 @@ export interface MOverMathMLProps<eventTarget extends EventTarget>
 /**
  * Props accepted by `<mpadded>` MathML elements.
  */
-export interface MPaddedMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MPaddedMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** The `depth` MathML attribute. */
   depth?: Trackable<string | undefined>
   /** The `height` MathML attribute. */
@@ -3800,26 +3898,30 @@ export interface MPaddedMathMLProps<eventTarget extends EventTarget>
 /**
  * Props accepted by `<mphantom>` MathML elements.
  */
-export interface MPhantomMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {}
+export interface MPhantomMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {}
 
 /**
  * Props accepted by `<mprescripts>` MathML elements.
  */
-export interface MPrescriptsMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {}
+export interface MPrescriptsMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {}
 
 /**
  * Props accepted by `<mroot>` MathML elements.
  */
-export interface MRootMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {}
+export interface MRootMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {}
 
 /**
  * Props accepted by `<mrow>` MathML elements.
  */
-export interface MRowMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {}
+export interface MRowMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {}
 
 /**
  * Props accepted by `<ms>` MathML elements.
@@ -3834,8 +3936,9 @@ export interface MSMathMLProps<eventTarget extends EventTarget> extends MathMLPr
 /**
  * Props accepted by `<mspace>` MathML elements.
  */
-export interface MSpaceMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MSpaceMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** The `depth` MathML attribute. */
   depth?: Trackable<string | undefined>
   /** The `height` MathML attribute. */
@@ -3847,14 +3950,16 @@ export interface MSpaceMathMLProps<eventTarget extends EventTarget>
 /**
  * Props accepted by `<msqrt>` MathML elements.
  */
-export interface MSqrtMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {}
+export interface MSqrtMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {}
 
 /**
  * Props accepted by `<mstyle>` MathML elements.
  */
-export interface MStyleMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MStyleMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mstyle#background */
   background?: Trackable<string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mstyle#color */
@@ -3882,8 +3987,9 @@ export interface MSubMathMLProps<eventTarget extends EventTarget> extends MathML
 /**
  * Props accepted by `<msubsup>` MathML elements.
  */
-export interface MSubsupMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MSubsupMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/msubsup#subscriptshift */
   subscriptshift?: Trackable<string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/msubsup#superscriptshift */
@@ -3901,8 +4007,9 @@ export interface MSupMathMLProps<eventTarget extends EventTarget> extends MathML
 /**
  * Props accepted by `<mtable>` MathML elements.
  */
-export interface MTableMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MTableMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** Non-standard attribute See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mtable#align */
   align?: Trackable<'axis' | 'baseline' | 'bottom' | 'center' | 'top' | undefined>
   /** Non-standard attribute See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mtable#columnalign */
@@ -3942,8 +4049,9 @@ export interface MTdMathMLProps<eventTarget extends EventTarget> extends MathMLP
 /**
  * Props accepted by `<mtext>` MathML elements.
  */
-export interface MTextMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {}
+export interface MTextMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {}
 
 /**
  * Props accepted by `<mtr>` MathML elements.
@@ -3958,8 +4066,9 @@ export interface MTrMathMLProps<eventTarget extends EventTarget> extends MathMLP
 /**
  * Props accepted by `<munder>` MathML elements.
  */
-export interface MUnderMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MUnderMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** The `accentunder` MathML attribute. */
   accentunder?: Trackable<boolean | undefined>
 }
@@ -3967,8 +4076,9 @@ export interface MUnderMathMLProps<eventTarget extends EventTarget>
 /**
  * Props accepted by `<munderover>` MathML elements.
  */
-export interface MUnderoverMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {
+export interface MUnderoverMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {
   /** The `accent` MathML attribute. */
   accent?: Trackable<boolean | undefined>
   /** The `accentunder` MathML attribute. */
@@ -3978,5 +4088,6 @@ export interface MUnderoverMathMLProps<eventTarget extends EventTarget>
 /**
  * Props accepted by `<semantics>` MathML elements.
  */
-export interface SemanticsMathMLProps<eventTarget extends EventTarget>
-  extends MathMLProps<eventTarget> {}
+export interface SemanticsMathMLProps<
+  eventTarget extends EventTarget,
+> extends MathMLProps<eventTarget> {}

@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/lazy-file",
-  "version": "5.0.5",
+  "version": "5.0.6",
   "description": "Lazy, streaming files for JavaScript",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
@@ -44,8 +44,8 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test",
-    "test:bun": "bun x --bun remix-test",
+    "test": "remix test",
+    "test:bun": "bun x --bun remix test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

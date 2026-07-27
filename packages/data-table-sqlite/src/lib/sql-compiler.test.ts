@@ -382,8 +382,8 @@ describe('sqlite sql-compiler', () => {
       await db.query(accounts).offset(5).limit(10).all()
       let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select * from "accounts" limit 10 offset 5',
-        values: [],
+        text: 'select * from "accounts" limit ? offset ?',
+        values: [10, 5],
       })
     })
 

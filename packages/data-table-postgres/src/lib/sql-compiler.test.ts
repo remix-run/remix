@@ -248,8 +248,8 @@ describe('postgres sql-compiler', () => {
 
       let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select * from "accounts" limit 10 offset 5',
-        values: [],
+        text: 'select * from "accounts" limit $1 offset $2',
+        values: [10, 5],
       })
     })
 

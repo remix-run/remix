@@ -104,6 +104,7 @@ This means:
 - The page is fully rendered and interactive as soon as modules load. No blank flash.
 - Only marked components ship JavaScript. Static content stays static.
 - Client entries can appear anywhere in the tree, including inside frames.
+- Client entries inside `rmx-preserve-dom` hydrate during initial boot, but future frame reloads will not patch new server-rendered children or props through that preserved host. See [Preserving client-owned DOM](./frames.md#preserving-client-owned-dom).
 
 ## See Also
 

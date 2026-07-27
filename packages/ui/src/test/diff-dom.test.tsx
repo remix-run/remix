@@ -209,6 +209,180 @@ describe('diffNodes', () => {
       expect(textarea.textContent).toBe('server')
     })
 
+    it('removes client-added element children when incoming html has none', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<div></div>'
+      let div = container.querySelector('div')
+      invariant(div)
+
+      let button = document.createElement('button')
+      button.textContent = 'Search'
+      div.append(button)
+
+      diffDom(container, '<div></div>')
+
+      expect(container.firstElementChild).toBe(div)
+      expect(div.firstElementChild).toBeNull()
+      expect(button.isConnected).toBe(false)
+    })
+
+    it('preserves rmx-preserve-dom element attributes and children', () => {
+      let container = document.createElement('div')
+      container.innerHTML =
+        '<div rmx-preserve-dom data-state="client"><button>Client</button></div>'
+      let div = container.querySelector('div')
+      invariant(div)
+      let button = div.querySelector('button')
+      invariant(button)
+
+      diffDom(container, '<div rmx-preserve-dom data-state="server"><span>Server</span></div>')
+
+      expect(container.firstElementChild).toBe(div)
+      expect(div.getAttribute('data-state')).toBe('client')
+      expect(div.firstElementChild).toBe(button)
+      expect(div.innerHTML).toBe('<button>Client</button>')
+    })
+
+    it('preserves rmx-preserve-dom custom element children added during initialization', () => {
+      let tagName = 'mock-pagefind-modal-trigger-lifecycle'
+      if (!customElements.get(tagName)) {
+        customElements.define(
+          tagName,
+          class MockPagefindModalTrigger extends HTMLElement {
+            #initialized = false
+
+            connectedCallback() {
+              if (this.#initialized) return
+              this.#initialized = true
+
+              this.innerHTML = ''
+              let button = document.createElement('button')
+              button.type = 'button'
+              button.className = 'pf-trigger-btn'
+              button.textContent = 'Search'
+              this.appendChild(button)
+            }
+
+            disconnectedCallback() {
+              this.#initialized = false
+            }
+          },
+        )
+      }
+
+      let container = document.createElement('div')
+      document.body.appendChild(container)
+
+      try {
+        let trigger = document.createElement(tagName)
+        container.appendChild(trigger)
+        let button = trigger.querySelector('button')
+        invariant(button)
+
+        diffDom(container, `<${tagName} rmx-preserve-dom></${tagName}>`)
+
+        expect(container.firstElementChild).toBe(trigger)
+        expect(trigger.hasAttribute('rmx-preserve-dom')).toBe(true)
+        expect(trigger.querySelector('button')).toBe(button)
+        expect(button.isConnected).toBe(true)
+      } finally {
+        container.remove()
+      }
+    })
+
+    it('can pair rmx-preserve-dom elements with data-key before index fallback moves them', () => {
+      let tagName = 'mock-pagefind-modal-lifecycle'
+      let connects = 0
+      let disconnects = 0
+
+      if (!customElements.get(tagName)) {
+        customElements.define(
+          tagName,
+          class MockPagefindModal extends HTMLElement {
+            connectedCallback() {
+              connects++
+            }
+
+            disconnectedCallback() {
+              disconnects++
+            }
+          },
+        )
+      }
+
+      let container = document.createElement('div')
+      document.body.appendChild(container)
+
+      try {
+        container.innerHTML = `<section><span>Old</span><${tagName} data-key="modal" rmx-preserve-dom><dialog>Client</dialog></${tagName}></section>`
+        let modal = container.querySelector(tagName)
+        invariant(modal)
+        let dialog = modal.querySelector('dialog')
+        invariant(dialog)
+        connects = 0
+        disconnects = 0
+
+        diffDom(
+          container,
+          `<section><span>New</span><p>Inserted</p><${tagName} data-key="modal" rmx-preserve-dom></${tagName}></section>`,
+        )
+
+        expect(container.querySelector(tagName)).toBe(modal)
+        expect(modal.querySelector('dialog')).toBe(dialog)
+        expect(modal.innerHTML).toBe('<dialog>Client</dialog>')
+        expect(connects).toBe(0)
+        expect(disconnects).toBe(0)
+      } finally {
+        container.remove()
+      }
+    })
+
+    it('does not reconnect keyed rmx-preserve-dom elements during reordering', () => {
+      let tagName = 'mock-pagefind-modal-stationary'
+      let connects = 0
+      let disconnects = 0
+
+      if (!customElements.get(tagName)) {
+        customElements.define(
+          tagName,
+          class MockPagefindModal extends HTMLElement {
+            connectedCallback() {
+              connects++
+            }
+
+            disconnectedCallback() {
+              disconnects++
+            }
+          },
+        )
+      }
+
+      let container = document.createElement('div')
+      document.body.appendChild(container)
+
+      try {
+        container.innerHTML = `<section><${tagName} data-key="modal" rmx-preserve-dom><dialog>Client</dialog></${tagName}><p>Old</p></section>`
+        let modal = container.querySelector(tagName)
+        invariant(modal)
+        let dialog = modal.querySelector('dialog')
+        invariant(dialog)
+        connects = 0
+        disconnects = 0
+
+        diffDom(
+          container,
+          `<section><p>New</p><${tagName} data-key="modal" rmx-preserve-dom></${tagName}></section>`,
+        )
+
+        expect(container.querySelector(tagName)).toBe(modal)
+        expect(modal.querySelector('dialog')).toBe(dialog)
+        expect(connects).toBe(0)
+        expect(disconnects).toBe(0)
+      } finally {
+        container.remove()
+      }
+    })
+
     it('preserves current select value when incoming html changes selected options', () => {
       let container = document.createElement('div')
       container.innerHTML =

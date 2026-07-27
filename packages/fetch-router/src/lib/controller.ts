@@ -25,7 +25,7 @@ export function isRequestHandler(object: unknown): object is RequestHandler<any>
 
 type ActionRoute = string | RoutePattern | Route
 
-// prettier-ignore
+// oxfmt-ignore
 type ActionPattern<route extends ActionRoute> =
   route extends string ? route :
   route extends RoutePattern<infer pattern extends string> ? pattern :

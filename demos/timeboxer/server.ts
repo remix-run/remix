@@ -1,8 +1,11 @@
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
-import { assetServer } from './app/controllers/assets.ts'
+import { assetServer } from './app/actions/assets/controller.ts'
+import { db, getMigrations } from './app/db.ts'
 import { router } from './app/router.ts'
+
+await db.migrate(await getMigrations())
 
 const server = http.createServer(
   createRequestListener(async (request) => {

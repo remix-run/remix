@@ -1,0 +1,1 @@
+Stop forwarding incoming `Accept-Encoding` headers to proxy targets, strip `Content-Encoding` and related `Content-Length` headers from proxied responses with a body, and strip `Transfer-Encoding` and related `Content-Length` headers from proxied responses.
