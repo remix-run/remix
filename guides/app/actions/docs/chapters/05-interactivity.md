@@ -191,13 +191,10 @@ function Counter(handle: Handle<{ initialCount: number }>) {
 }
 ```
 
-`initialCount` initializes local state once. If a value should always follow its parent, read it from
-`handle.props` in render instead. This is the difference between an uncontrolled value that a
-component owns and a controlled value that arrives through current props.
+`count` lives in setup scope, so it survives each render without becoming part of the component's
+props.
 
 ::frame{src="/examples/05-interactivity/basic-counter/"}
-
-::frame{src="/examples/05-interactivity/controlled-uncontrolled-values/"}
 
 Calling `handle.update()` schedules work and returns a promise. Await it when the next step needs the
 updated DOM:
@@ -306,6 +303,62 @@ stop them when the interaction finishes or the component disconnects.
 Only call `preventDefault()` when the enhanced path will finish the browser's job. If an event
 handler merely adds pending state before an ordinary form submission, allow the submission to
 continue.
+
+## Controlled and uncontrolled inputs {#controlled-and-uncontrolled-inputs}
+
+An uncontrolled input keeps its current value in the DOM, and `defaultValue` gives it an initial
+value. A controlled input gets its current value from component state instead. Its input handler
+copies the DOM value into that state and updates the component:
+
+```tsx filename=app/ui/title-inputs.browser.tsx
+import { on } from "remix/ui";
+import type { Handle } from "remix/ui";
+
+const initialTitle = "Thriller";
+
+function TitleInputs(handle: Handle) {
+  let title = initialTitle;
+
+  return () => (
+    <div>
+      <p>
+        <label>
+          Uncontrolled <input defaultValue={initialTitle} />
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Controlled{" "}
+          <input
+            value={title}
+            mix={on("input", (event) => {
+              title = event.currentTarget.value;
+              handle.update();
+            })}
+          />
+        </label>
+      </p>
+
+      <button
+        mix={on("click", () => {
+          title = initialTitle;
+          handle.update();
+        })}
+        type="button"
+      >
+        Reset controlled input
+      </button>
+    </div>
+  );
+}
+```
+
+Typing changes both inputs. Clicking the button resets the controlled input because its `value`
+comes from `title`. The uncontrolled input keeps its DOM value because `defaultValue` only applies
+its initial value.
+
+::frame{src="/examples/05-interactivity/controlled-uncontrolled-inputs/"}
 
 ## Composing behavior with mix {#the-mix-prop}
 

@@ -302,12 +302,11 @@ JavaScript to receive its component styles.
 
 ## Cascade layers and app-owned design tokens {#theme-tokens-and-cascade-layers}
 
-Generated `css(...)` rules live in the native `rmx` cascade layer. First-party UI reset rules use
-`rmx-reset`, which is ordered before `rmx`. If your app uses its own layers, declare the complete order
-once:
+Generated `css(...)` rules, including styles from first-party UI components, live in the native
+`rmx` cascade layer. If your app uses its own layers, declare the complete order once:
 
 ```css filename=app/styles/app.css
-@layer base, rmx-reset, rmx, app;
+@layer base, rmx, app;
 
 @layer base {
   :root {
