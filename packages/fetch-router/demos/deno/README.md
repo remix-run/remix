@@ -2,7 +2,7 @@
 
 This example is a [Deno](https://deno.com/) server that handles routing using `@remix-run/fetch-router`.
 
-It is the same blog application as the [Node](https://github.com/remix-run/remix/tree/main/packages/fetch-router/demos/node) and [Bun](https://github.com/remix-run/remix/tree/main/packages/fetch-router/demos/bun) examples, which shows that the router, middleware, and route helpers are all runtime-agnostic. Only the server entry point in `main.ts` is Deno-specific.
+It is the same blog application as the [Node](https://github.com/remix-run/remix/tree/main/packages/fetch-router/demos/node) and [Bun](https://github.com/remix-run/remix/tree/main/packages/fetch-router/demos/bun) examples, which shows that the router, middleware, and route helpers are all runtime-agnostic. Here there is no server entry point at all: `main.ts` just re-exports the router as the default export, and `deno serve` runs it.
 
 ## Running
 
@@ -17,10 +17,9 @@ Use `deno task start` to run without file watching, and `deno task typecheck` to
 
 ## What This Demonstrates
 
-- **`Deno.serve()` with `router.fetch()`**: the router is a plain `Request` → `Response` function, so it plugs straight into Deno's built-in HTTP server.
-- **Graceful shutdown**: `main.ts` listens for `SIGINT`/`SIGTERM` and awaits `server.shutdown()` so in-flight requests finish before the process exits.
+- **`deno serve` with no server code**: a router is already a `{ fetch }` object, which is exactly the default export shape `deno serve` expects. Deno owns the listener, port, and graceful shutdown on `SIGINT`/`SIGTERM`.
 - **npm packages from a pnpm workspace**: `deno.json` sets `"nodeModulesDir": "manual"` so Deno resolves `@remix-run/*` from the `node_modules` directory pnpm installs, instead of managing its own dependencies.
-- **Explicit permissions**: the tasks grant only `--allow-net`, `--allow-read`, and `--allow-env`.
+- **Explicit permissions**: the tasks grant only `--allow-read` and `--allow-env`; `deno serve` provides the network access it needs itself.
 - **Node built-ins in Deno**: `app/router.ts` uses `node:url` to resolve the `public` directory, and `staticFiles()` reads it through `node:fs` under the hood.
 
 ## Key APIs
