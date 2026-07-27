@@ -1,17 +1,16 @@
 import { ClientMountedPageExample } from '../assets/client-mounted-page-example.tsx'
 import { routes } from '../routes.ts'
+import { leadStyle, linkStyle, pageHeadingStyle } from '../ui/styles.ts'
 import { Document } from '../ui/document.tsx'
 
 export function ClientMountedPage() {
   return () => (
     <Document title="Client-mounted nested frame">
-      <a href={routes.home.href()} style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
+      <a href={routes.home.href()} mix={linkStyle}>
         ← Back
       </a>
-      <h1 style={{ marginTop: 16, marginBottom: 8, letterSpacing: '-0.02em' }}>
-        Client-mounted nested non-blocking frame
-      </h1>
-      <p style={{ marginTop: 0, color: '#b9c6ff' }}>
+      <h1 mix={pageHeadingStyle}>Client-mounted nested non-blocking frame</h1>
+      <p mix={leadStyle}>
         Mount the outer frame, then watch the nested frame fallback render before its server content
         streams in.
       </p>
