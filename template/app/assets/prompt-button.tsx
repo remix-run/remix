@@ -23,16 +23,11 @@ export const PromptButton = clientEntry(
           : state === 'failed'
             ? 'Copy failed'
             : promptLabel
-      let active = state === 'copied' || state === 'failed' || state === 'resetting'
 
       return (
         <button
           type="button"
-          className={state}
-          style={{
-            background: active ? 'var(--surface-4)' : undefined,
-            color: active ? 'var(--brand-blue)' : undefined,
-          }}
+          data-state={state}
           mix={[
             buttonStyle,
             on('click', async (_event, signal) => {
@@ -71,34 +66,18 @@ export const PromptButton = clientEntry(
           <span aria-hidden="true" mix={iconSlotStyle}>
             <CopyIcon />
           </span>
-          <span
-            mix={css({
-              alignItems: 'center',
-              display: 'flex',
-              fontSize: '14px',
-              flex: '1 1 0',
-              lineHeight: 1.5,
-              minWidth: 0,
-              position: 'relative',
-              transition: 'opacity 180ms ease',
-            })}
-            style={{ opacity: state === 'resetting' ? 0 : undefined }}
-          >
+          <span data-state={state} mix={labelSlotStyle}>
             <span
               aria-hidden={state === 'idle' ? true : undefined}
-              style={{
-                alignItems: 'center',
-                display: 'flex',
-                inset: 0,
-                position: 'absolute',
-                visibility: state === 'idle' ? 'hidden' : 'visible',
-              }}
+              data-state={state}
+              mix={statusLabelStyle}
             >
               {label}
             </span>
             <span
               aria-hidden={state === 'idle' ? undefined : true}
-              style={{ visibility: state === 'idle' ? 'visible' : 'hidden' }}
+              data-state={state}
+              mix={promptLabelStyle}
             >
               {promptLabel}
             </span>
@@ -145,6 +124,42 @@ const buttonStyle = css({
     background: 'var(--surface-4)',
     color: 'var(--brand-blue)',
     outline: 'none',
+  },
+  '&[data-state="copied"], &[data-state="failed"], &[data-state="resetting"]': {
+    background: 'var(--surface-4)',
+    color: 'var(--brand-blue)',
+  },
+})
+
+const labelSlotStyle = css({
+  alignItems: 'center',
+  display: 'flex',
+  fontSize: '14px',
+  flex: '1 1 0',
+  lineHeight: 1.5,
+  minWidth: 0,
+  position: 'relative',
+  transition: 'opacity 180ms ease',
+  '&[data-state="resetting"]': {
+    opacity: 0,
+  },
+})
+
+const statusLabelStyle = css({
+  alignItems: 'center',
+  display: 'flex',
+  inset: 0,
+  position: 'absolute',
+  visibility: 'visible',
+  '&[data-state="idle"]': {
+    visibility: 'hidden',
+  },
+})
+
+const promptLabelStyle = css({
+  visibility: 'hidden',
+  '&[data-state="idle"]': {
+    visibility: 'visible',
   },
 })
 
