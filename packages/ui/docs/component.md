@@ -377,7 +377,7 @@ function Button(handle: Handle) {
         }),
       ]}
     >
-      <span className="icon">★</span>
+      <span class="icon">★</span>
       Click me
     </button>
   )
