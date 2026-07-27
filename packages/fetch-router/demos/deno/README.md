@@ -19,7 +19,7 @@ Use `deno task start` to run without file watching, and `deno task typecheck` to
 
 - **`deno serve` with no server code**: a router is already a `{ fetch }` object, which is exactly the default export shape `deno serve` expects. Deno owns the listener, port, and graceful shutdown on `SIGINT`/`SIGTERM`.
 - **npm packages from a pnpm workspace**: `deno.json` sets `"nodeModulesDir": "manual"` so Deno resolves `@remix-run/*` from the `node_modules` directory pnpm installs, instead of managing its own dependencies.
-- **Explicit permissions**: the tasks grant only `--allow-read` and `--allow-env`; `deno serve` provides the network access it needs itself.
+- **Least-privilege permissions**: the tasks grant read access to `./public` only, and env access to the four variables `logger()` inspects for color detection (`CI`, `FORCE_COLOR`, `NO_COLOR`, `TERM`). Static imports need no read permission, and `deno serve` provides the network access itself, so nothing else is granted.
 - **Node built-ins in Deno**: `app/router.ts` uses `node:url` to resolve the `public` directory, and `staticFiles()` reads it through `node:fs` under the hood.
 
 ## Key APIs
