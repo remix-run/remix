@@ -1,0 +1,8 @@
+{
+  "tasks": {
+    "dev": "deno run --watch --allow-net --allow-read --allow-env main.ts",
+    "start": "deno run --allow-net --allow-read --allow-env main.ts",
+    "typecheck": "deno check main.ts"
+  },
+  "nodeModulesDir": "manual"
+}
