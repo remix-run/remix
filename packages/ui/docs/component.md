@@ -28,14 +28,14 @@ Render a full page to a streaming response:
 ```tsx
 import { renderToStream } from 'remix/ui/server'
 import { Frame } from 'remix/ui'
-import { Counter } from './ui/public/counter.tsx'
+import { Counter } from './assets/counter.tsx'
 
 function App() {
   return () => (
     <html>
       <head>
         <title>My App</title>
-        <script type="module" src="/assets/app/actions/public/entry.ts" />
+        <script async type="module" src="/assets/entry.js" />
       </head>
       <body>
         <h1>Hello</h1>
@@ -69,7 +69,7 @@ Mark components that need client-side interactivity with `clientEntry`. They ren
 import { clientEntry, on, type Handle } from 'remix/ui'
 
 export let Counter = clientEntry(
-  '/assets/app/ui/public/counter.tsx#Counter',
+  '/assets/counter.js#Counter',
   function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
     let count = handle.props.initialCount ?? 0
 
