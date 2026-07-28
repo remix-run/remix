@@ -1,9 +1,8 @@
 import * as http from 'node:http'
 
+import { createFetchProxy } from 'remix/fetch-proxy'
 import { createHmrReadyFetch, run } from 'remix/node-hmr'
 import { createRequestListener } from 'remix/node-fetch-server'
-
-import { createFetchProxy } from './fetch-proxy.ts'
 
 const originPort = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 const childPort = process.env.CHILD_PORT ? parseInt(process.env.CHILD_PORT, 10) : originPort + 1
