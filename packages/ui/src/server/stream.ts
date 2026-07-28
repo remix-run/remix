@@ -487,7 +487,7 @@ function buildFrameSegment(
     framePromise.catch(() => {})
     context.pendingFrames.push({ frameId, promise: framePromise })
   } else {
-    seg.pending = Promise.resolve(
+    let pending = Promise.resolve(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
     ).then(async (resolved) => {
       let { html, tail } = await resolveFrameHtml(resolved)
@@ -496,6 +496,11 @@ function buildFrameSegment(
         context.blockingFrameTails.push(tail)
       }
     })
+    // Blocking frames all start resolving here but are awaited one at a time, so
+    // the first rejection stops the rest from ever being awaited. Keep every
+    // promise observed so request aborts don't become unhandled rejections.
+    pending.catch(() => {})
+    seg.pending = pending
   }
 
   return seg
