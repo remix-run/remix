@@ -455,7 +455,10 @@ describe('run', () => {
       let assets = await fs.readFile(path.join(appDir, 'app', 'assets.ts'), 'utf8')
       let router = await fs.readFile(path.join(appDir, 'app', 'router.ts'), 'utf8')
       let routes = await fs.readFile(path.join(appDir, 'app', 'routes.ts'), 'utf8')
-      let entry = await fs.readFile(path.join(appDir, 'app', 'public', 'entry.ts'), 'utf8')
+      let entry = await fs.readFile(
+        path.join(appDir, 'app', 'actions', 'public', 'entry.ts'),
+        'utf8',
+      )
       let renderMiddleware = await fs.readFile(
         path.join(appDir, 'app', 'middleware', 'render.tsx'),
         'utf8',
@@ -491,7 +494,7 @@ describe('run', () => {
       assert.doesNotMatch(assets, /deny:/)
       assert.doesNotMatch(assets, /define:/)
       assert.match(assets, /allowFiles: \['app\/routes\.ts', 'app\/\*\*\/public\/\*\*'\]/)
-      assert.match(assets, /getHref\('app\/public\/entry\.ts'\)/)
+      assert.match(assets, /getHref\('app\/actions\/public\/entry\.ts'\)/)
       assert.match(assets, /watch: false/)
       assert.doesNotMatch(router, /compression/)
       assert.match(router, /staticFiles\('\.\/public'/)
@@ -507,8 +510,11 @@ describe('run', () => {
       assert.doesNotMatch(controller, /AuthPage/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
       await assertPathExists(path.join(appDir, 'app', 'assets.ts'))
-      await assertPathExists(path.join(appDir, 'app', 'ui', 'public', 'prompt-button.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'document.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'home-page.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'public', 'prompt-button.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'public', 'entry.ts'))
       await assertPathExists(path.join(appDir, 'app', 'middleware', 'render.tsx'))
       await assertPathExists(path.join(appDir, 'public', 'favicon.svg'))
       await assertPathExists(path.join(appDir, '.gitignore'))
@@ -519,7 +525,8 @@ describe('run', () => {
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'auth.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'about.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'assets'))
-      await assertPathMissing(path.join(appDir, 'app', 'ui', 'prompt-button.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'public'))
+      await assertPathMissing(path.join(appDir, 'app', 'ui'))
       await assertPathMissing(path.join(appDir, 'public', 'static', 'favicon.svg'))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
@@ -570,9 +577,12 @@ describe('run', () => {
 
       assert.equal(result.exitCode, 0)
 
-      let documentSource = await fs.readFile(path.join(appDir, 'app', 'ui', 'document.tsx'), 'utf8')
-      let scaffoldHomePageSource = await fs.readFile(
-        path.join(appDir, 'app', 'ui', 'scaffold-home-page.tsx'),
+      let documentSource = await fs.readFile(
+        path.join(appDir, 'app', 'actions', 'document.tsx'),
+        'utf8',
+      )
+      let homePageSource = await fs.readFile(
+        path.join(appDir, 'app', 'actions', 'home-page.tsx'),
         'utf8',
       )
       let encodedAppName = encodeURIComponent(appName)
@@ -581,8 +591,8 @@ describe('run', () => {
         documentSource,
         new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
       )
-      assert.ok(!scaffoldHomePageSource.includes('readAppDisplayName'))
-      assert.ok(!scaffoldHomePageSource.includes(encodedAppName))
+      assert.ok(!homePageSource.includes('readAppDisplayName'))
+      assert.ok(!homePageSource.includes(encodedAppName))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }

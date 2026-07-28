@@ -21,4 +21,4 @@ export const assetServer = createAssetServer({
   watch: false,
 })
 
-export const entryHref = await assetServer.getHref('app/public/entry.ts')
+export const entryHref = await assetServer.getHref('app/actions/public/entry.ts')
