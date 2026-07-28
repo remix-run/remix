@@ -493,6 +493,8 @@ export function diffVNodes(
       domParent,
       vParent,
       rootTarget,
+      anchor,
+      rootCursor,
     )
     return rootCursor
   }
@@ -2094,9 +2096,10 @@ function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
 
 export function findNextSiblingDomAnchor(curr: VNode): Node | null {
   let vParent = curr._parent
-  if (!vParent || !Array.isArray(vParent._children)) return null
+  if (!vParent) return null
+  if (!Array.isArray(vParent._children)) return vParent._rangeEnd ?? null
   let children = vParent._children
-  if (children.length === 0) return findNextSiblingDomAnchor(vParent)
+  if (children.length === 0) return vParent._rangeEnd ?? findNextSiblingDomAnchor(vParent)
 
   let idx = children.indexOf(curr)
   if (idx === -1) return null
@@ -2109,7 +2112,7 @@ export function findNextSiblingDomAnchor(curr: VNode): Node | null {
     return findNextSiblingDomAnchor(vParent)
   }
 
-  return null
+  return vParent._rangeEnd ?? null
 }
 
 function reclaimPersistedMixinNode(
