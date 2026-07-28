@@ -7,9 +7,10 @@ How to serve browser scripts and styles from source. Read this when the task inv
 - Configuring `createAssetServer` (`basePath`, `fileMap`, `allow`, `deny`, fingerprinting, compiler options)
 - Choosing between `staticFiles()` for already-built files and `createAssetServer()` for source assets that need import rewriting, preloads, or fingerprinted URLs
 - Generating script URLs or `<link rel="modulepreload">` tags for a client entry
+- Enabling browser HMR for source-served modules
 - Keeping server-only files out of the browser via `deny` rules
 
-For routing the URL namespace itself, see `routing-and-controllers.md`. For client entry hydration, see `hydration-frames-navigation.md`.
+For routing the URL namespace itself, see `routing-and-controllers.md`. For client entry hydration and browser update handling, see `hydration-frames-navigation.md`. For the Node HMR runner and browser HMR channel, see `middleware-and-server.md`.
 
 ## When To Reach For It
 
@@ -86,6 +87,8 @@ In development:
 - Keep `watch` enabled so source changes are picked up without restarting the server
 - Prefer stable URLs with normal revalidation
 - Enable source maps when debugging browser code
+- Use `hmr` only when the app is running under `remix/node-hmr`
+- Use `scripts.moduleHooks` for development-only browser transforms such as `uiHmr()`
 
 In deployment:
 
@@ -95,6 +98,38 @@ In deployment:
 
 Fingerprinting assumes files on disk are stable and requires `watch: false`.
 
+## Browser HMR
+
+Use browser HMR when source-served browser modules should update without a full page reload during development. Let `remix/node-hmr` own the browser HMR channel so browser updates stay coordinated with server restarts.
+
+```typescript
+import { createAssetServer } from 'remix/assets'
+import { uiHmr } from 'remix/ui-hmr/browser-module-hooks'
+
+let isDevelopment = process.env.NODE_ENV === 'development'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  hmr:
+    isDevelopment && process.env.NODE_HMR
+      ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+      : undefined,
+  scripts: {
+    moduleHooks: isDevelopment && process.env.NODE_HMR ? [uiHmr()] : undefined,
+  },
+  watch: isDevelopment,
+})
+```
+
+Rules:
+
+- Guard `remix/node-hmr/runtime` imports with `process.env.NODE_HMR`; that runtime API is only available inside the supervised child process.
+- Keep browser HMR and browser module hooks development-only.
+- Add `remix/assets/types/hmr` to `compilerOptions.types` only when browser source modules use `import.meta.hot` directly.
+- Write HMR accept calls directly as `import.meta.hot.accept(...)` with literal dependency specifiers.
+
 ## Useful Compiler Options
 
 - `minify` for production minification of scripts and styles
@@ -103,6 +138,7 @@ Fingerprinting assumes files on disk are stable and requires `watch: false`.
 - `target` as an object for shared browser targets and script-only ECMAScript output, such as `{ es: '2020', chrome: '109', safari: '16.4' }`
 - `scripts.define` to replace globals such as `process.env.NODE_ENV`
 - `scripts.external` to leave specific script imports untouched
+- `scripts.moduleHooks` to transform browser modules during compilation
 
 Do not nest shared compiler options under `scripts`. Use top-level `minify`, `sourceMaps`, `sourceMapSourcePaths`, and `target` so they apply to styles as well as scripts.
 

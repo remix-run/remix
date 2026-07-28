@@ -7,11 +7,12 @@ How server-rendered UI becomes interactive in the browser, and how the page upda
 - Marking a component for client-side hydration with `clientEntry`
 - Booting the client runtime with `run`
 - Streaming server content into a region of the page with `<Frame>` and reloading those regions
+- Handling browser HMR updates for hydrated entries
 - Triggering Navigation API transitions with `navigate(...)` or `link(...)`
 - Server rendering with `renderToStream` or `renderToString`
 - Managing the document `<head>`
 
-For component-local state and updates, see `component-model.md`. For host-element behavior and events, see `mixins-styling-events.md`.
+For component-local state and updates, see `component-model.md`. For host-element behavior and events, see `mixins-styling-events.md`. For browser asset HMR setup, see `assets-and-browser-modules.md`.
 
 ## Server First, Then Hydrate
 
@@ -128,6 +129,55 @@ await app.ready()
 - **`app.dispose()`** — tears down all hydrated components
 
 `app` is an `EventTarget` that emits `error` events from any hydrated component.
+
+## Browser HMR Updates
+
+When a browser entry accepts HMR updates, put `run(...)` behind a small start function so the old runtime can be disposed before the new one starts:
+
+```tsx
+import { run } from 'remix/ui'
+import type { AppRuntime } from 'remix/ui'
+
+let app = start()
+
+export function start(): AppRuntime {
+  return run({
+    async loadModule(moduleUrl, exportName) {
+      let mod = await import(moduleUrl)
+      return mod[exportName]
+    },
+  })
+}
+
+if (import.meta.hot) {
+  import.meta.hot.accept((module) => {
+    if (typeof module.start !== 'function') {
+      import.meta.hot?.invalidate('Updated entry module did not export start()')
+      return
+    }
+
+    app.dispose()
+    app = module.start()
+  })
+
+  import.meta.hot.dispose(() => {
+    app.dispose()
+  })
+}
+```
+
+When `remix/node-hmr` coordinates server and browser HMR, browser modules can listen for `server:update`. Prefer reloading the top frame when the document is frame-rendered and can recover from fresh server HTML:
+
+```tsx
+if (import.meta.hot) {
+  import.meta.hot.on('server:update', async () => {
+    await app.ready()
+    await app.frames.top.reload()
+  })
+}
+```
+
+Use `window.location.reload()` only when frame reload cannot safely recover the page.
 
 ## Frames
 
