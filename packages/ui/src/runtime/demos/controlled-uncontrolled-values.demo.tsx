@@ -40,7 +40,7 @@ export default function App(handle: Handle) {
         Render count: <strong>{renderCount}</strong>
       </p>
 
-      <div mix={toolbarStyle}>
+      <div mix={css({ display: 'flex', gap: '10px', marginBottom: '18px' })}>
         <button mix={[on('click', rerender)]}>Force Re-render</button>
         <button mix={[on('click', resetControlled)]}>Reset Controlled</button>
         <button mix={[on('click', remountUncontrolled)]}>Remount Uncontrolled</button>
@@ -161,8 +161,6 @@ const pageStyle = css({
   padding: '0 16px',
   lineHeight: 1.45,
 })
-
-const toolbarStyle = css({ display: 'flex', gap: '10px', marginBottom: '18px' })
 
 const sectionStyle = css({
   border: '1px solid #d0d7de',

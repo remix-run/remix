@@ -74,64 +74,42 @@ export const ImageCarousel = clientEntry(
           <button
             aria-label="Previous image"
             disabled={index === 0}
-            mix={[
-              on('click', goPrev),
-              css({
-                position: 'absolute',
-                top: '50%',
-                left: '8px',
-                transform: 'translateY(-50%)',
-                width: '40px',
-                height: '40px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'transparent',
-                color: 'white',
-                border: 'none',
-                borderRadius: '999px',
-                cursor: 'pointer',
-                outline: 'none',
-                transition: 'background-color 150ms ease, opacity 150ms ease',
-                opacity: 0.9,
-                '&:disabled': { opacity: 0.4 },
-              }),
-            ]}
+            mix={[on('click', goPrev), carouselButtonStyle, css({ left: '8px' })]}
           >
-            <span mix={css({ fontSize: '22px', lineHeight: '1' })}>{'‹'}</span>
+            <span mix={carouselButtonIconStyle}>{'‹'}</span>
           </button>
 
           <button
             aria-label="Next image"
             disabled={index === total - 1}
-            mix={[
-              on('click', () => goNext(total)),
-              css({
-                position: 'absolute',
-                top: '50%',
-                right: '8px',
-                transform: 'translateY(-50%)',
-                width: '40px',
-                height: '40px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'transparent',
-                color: 'white',
-                border: 'none',
-                borderRadius: '999px',
-                cursor: 'pointer',
-                outline: 'none',
-                transition: 'background-color 150ms ease, opacity 150ms ease',
-                opacity: 0.9,
-                '&:disabled': { opacity: 0.4 },
-              }),
-            ]}
+            mix={[on('click', () => goNext(total)), carouselButtonStyle, css({ right: '8px' })]}
           >
-            <span mix={css({ fontSize: '22px', lineHeight: '1' })}>{'›'}</span>
+            <span mix={carouselButtonIconStyle}>{'›'}</span>
           </button>
         </div>
       )
     }
   },
 )
+
+const carouselButtonStyle = css({
+  position: 'absolute',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  width: '40px',
+  height: '40px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'transparent',
+  color: 'white',
+  border: 'none',
+  borderRadius: '999px',
+  cursor: 'pointer',
+  outline: 'none',
+  transition: 'background-color 150ms ease, opacity 150ms ease',
+  opacity: 0.9,
+  '&:disabled': { opacity: 0.4 },
+})
+
+const carouselButtonIconStyle = css({ fontSize: '22px', lineHeight: '1' })

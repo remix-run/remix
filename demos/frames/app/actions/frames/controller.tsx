@@ -5,18 +5,7 @@ import { Counter } from '../../assets/counter.tsx'
 import { ReloadScope } from '../../assets/reload-scope.tsx'
 import { ReloadTime } from '../../assets/reload-time.tsx'
 import { routes } from '../../routes.ts'
-import {
-  clockLabelStyle,
-  clockValueStyle,
-  fragmentLabelStyle,
-  fragmentStyle,
-  largeClockValueStyle,
-  leadStyle,
-  listStyle,
-  mutedStyle,
-  nestedFragmentStyle,
-  nestedFrameLabelStyle,
-} from '../../ui/styles.ts'
+import { clockLabelStyle, leadStyle, mutedStyle } from '../../ui/styles.ts'
 import { searchUnitedStates } from '../../utils/us-states.ts'
 
 export const framesController = createController(routes.frames, {
@@ -259,3 +248,31 @@ function delay(ms: number) {
 
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
+
+const listStyle = css({ margin: 0, paddingLeft: 18, color: '#e9eefc' })
+
+const fragmentStyle = css({
+  border: '1px solid rgba(255,255,255,0.10)',
+  borderRadius: 10,
+  padding: 10,
+  background: 'rgba(255,255,255,0.02)',
+})
+
+const nestedFragmentStyle = css({
+  border: '1px solid rgba(255,255,255,0.10)',
+  borderRadius: 8,
+  padding: 8,
+  background: 'rgba(255,255,255,0.02)',
+})
+
+const fragmentLabelStyle = css({ fontSize: 12, color: '#b9c6ff' })
+
+const nestedFrameLabelStyle = css({ fontSize: 12, color: '#9aa8e8', marginBottom: 6 })
+
+const clockValueStyle = css({
+  fontSize: 16,
+  fontVariantNumeric: 'tabular-nums',
+  marginTop: 2,
+})
+
+const largeClockValueStyle = css({ fontSize: 18, fontVariantNumeric: 'tabular-nums' })
