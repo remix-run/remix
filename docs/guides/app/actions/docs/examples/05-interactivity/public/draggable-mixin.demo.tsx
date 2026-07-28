@@ -3,7 +3,7 @@ import { draggable } from "./draggable.tsx";
 
 export function DraggableMixinDemo(_handle: Handle) {
   return () => (
-    <main mix={pageStyle}>
+    <main mix={css({ fontFamily: "system-ui, sans-serif", padding: "24px" })}>
       <h1>Draggable mixin demo</h1>
       <p>Drag the box with your mouse or trackpad.</p>
       <div mix={canvasStyle}>
@@ -19,8 +19,6 @@ export function DraggableMixinDemo(_handle: Handle) {
     </main>
   );
 }
-
-const pageStyle = css({ fontFamily: "system-ui, sans-serif", padding: "24px" });
 
 const canvasStyle = css({
   position: "relative",

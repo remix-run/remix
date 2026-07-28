@@ -1,5 +1,7 @@
 import { clientEntry, css, on, type Handle } from 'remix/ui'
 
+import { reloadButtonStyle } from '../../actions/public/reload-button-style.ts'
+
 export const ReloadScope = clientEntry(import.meta.url, function ReloadScope(handle: Handle) {
   let framePending = false
 
@@ -25,13 +27,13 @@ export const ReloadScope = clientEntry(import.meta.url, function ReloadScope(han
     <div mix={css({ display: 'flex', gap: 8, flexWrap: 'wrap' })}>
       <button
         type="button"
-        data-pending={framePending ? '' : undefined}
         mix={[
           reloadButtonStyle,
           on('click', () => {
             void handle.frame.reload()
           }),
         ]}
+        style={framePending ? { background: 'rgba(255,255,255,0.04)' } : undefined}
       >
         {framePending ? 'Reloading frame…' : 'Reload this frame'}
       </button>
@@ -63,26 +65,15 @@ export const ReloadTopFrame = clientEntry(import.meta.url, function ReloadTopFra
   return () => (
     <button
       type="button"
-      data-pending={pending ? '' : undefined}
       mix={[
         reloadButtonStyle,
         on('click', () => {
           void handle.frames.top.reload()
         }),
       ]}
+      style={pending ? { background: 'rgba(255,255,255,0.04)' } : undefined}
     >
       {pending ? 'Reloading page…' : 'Reload top frame'}
     </button>
   )
-})
-
-const reloadButtonStyle = css({
-  padding: '6px 10px',
-  borderRadius: 10,
-  border: '1px solid rgba(255,255,255,0.18)',
-  background: 'rgba(255,255,255,0.06)',
-  color: '#e9eefc',
-  cursor: 'pointer',
-  '&:hover': { background: 'rgba(255,255,255,0.10)' },
-  '&[data-pending]': { background: 'rgba(255,255,255,0.04)' },
 })
