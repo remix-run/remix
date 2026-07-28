@@ -66,7 +66,6 @@ export function HomePage() {
 function HomeHead() {
   return () => (
     <>
-      <meta name="color-scheme" content="light dark" />
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link
