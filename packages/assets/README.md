@@ -49,7 +49,7 @@ router.get('/assets/*', ({ request }) => {
 })
 ```
 
-This example gives you an `/assets/*` endpoint that serves compiled browser source from `public/` directories throughout `app/` and from the `remix` package. An app-wide entrypoint can live at `app/actions/public/entry.ts`, while a cart feature keeps its browser modules in `app/actions/cart/public/`.
+This example gives you an `/assets/*` endpoint that serves compiled browser source from `public/` directories throughout `app/` and from the `remix` package.
 
 ## Root Directory
 
@@ -93,8 +93,6 @@ let assetServer = createAssetServer({
 Values for `allowFiles` and `denyFiles` are file paths or globs. Relative values are resolved from `rootDir`. Absolute file paths match exactly, and absolute directory paths also match their descendants.
 
 Values for `allowPackages` are exact package names. Dependencies and installed optional dependencies of packages in `allowPackages` are also allowed automatically. Peer dependencies must be listed explicitly if they should be browser-reachable. Allowed package files must still be reachable through `fileMap`.
-
-Access rules apply to the complete browser module graph, so every local dependency imported by a file in an app `public/` directory must also match `allowFiles`. In this example `app/routes.ts` is listed separately so browser modules can build type-safe links with `routes.*.href(...)`.
 
 ## File Map
 
