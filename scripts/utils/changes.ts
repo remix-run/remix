@@ -608,8 +608,14 @@ function formatChangelogEntry(content: string): string {
   let [firstLine, ...restLines] = lines
   let formatted = [`- ${firstLine}`]
 
-  for (let line of restLines) {
-    // Add proper indentation for continuation lines
+  for (let index = 0; index < restLines.length; index++) {
+    let line = restLines[index]
+    let nextLine = restLines[index + 1]
+
+    if (!line && nextLine?.startsWith('- ')) {
+      continue
+    }
+
     formatted.push(line ? `  ${line}` : '')
   }
 

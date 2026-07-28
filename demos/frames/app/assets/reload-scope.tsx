@@ -1,48 +1,45 @@
 import { clientEntry, css, on, type Handle } from 'remix/ui'
 
-export const ReloadScope = clientEntry(
-  '/assets/reload-scope.js#ReloadScope',
-  function ReloadScope(handle: Handle) {
-    let framePending = false
+export const ReloadScope = clientEntry(import.meta.url, function ReloadScope(handle: Handle) {
+  let framePending = false
 
-    handle.frame.addEventListener(
-      'reloadStart',
-      () => {
-        framePending = true
-        handle.update()
-      },
-      { signal: handle.signal },
-    )
+  handle.frame.addEventListener(
+    'reloadStart',
+    () => {
+      framePending = true
+      handle.update()
+    },
+    { signal: handle.signal },
+  )
 
-    handle.frame.addEventListener(
-      'reloadComplete',
-      () => {
-        framePending = false
-        handle.update()
-      },
-      { signal: handle.signal },
-    )
+  handle.frame.addEventListener(
+    'reloadComplete',
+    () => {
+      framePending = false
+      handle.update()
+    },
+    { signal: handle.signal },
+  )
 
-    return () => (
-      <div mix={css({ display: 'flex', gap: 8, flexWrap: 'wrap' })}>
-        <button
-          type="button"
-          mix={[
-            reloadButtonStyle(framePending),
-            on('click', () => {
-              void handle.frame.reload()
-            }),
-          ]}
-          style={{
-            '--frame-bg': framePending ? undefined : 'rgba(255,255,255,0.10)',
-          }}
-        >
-          {framePending ? 'Reloading frame…' : 'Reload this frame'}
-        </button>
-      </div>
-    )
-  },
-)
+  return () => (
+    <div mix={css({ display: 'flex', gap: 8, flexWrap: 'wrap' })}>
+      <button
+        type="button"
+        mix={[
+          reloadButtonStyle(framePending),
+          on('click', () => {
+            void handle.frame.reload()
+          }),
+        ]}
+        style={{
+          '--frame-bg': framePending ? undefined : 'rgba(255,255,255,0.10)',
+        }}
+      >
+        {framePending ? 'Reloading frame…' : 'Reload this frame'}
+      </button>
+    </div>
+  )
+})
 
 export const ReloadTopFrame = clientEntry(
   '/assets/reload-scope.js#ReloadTopFrame',

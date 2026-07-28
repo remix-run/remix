@@ -44,7 +44,7 @@ type RemixRunPackage = {
 }
 
 type BinEntry = {
-  // The bin command name: "remix-test"
+  // The bin command name, such as "remix"
   command: string
   // The export subpath derived from the bin file stem: "cli-entry" (from "./src/cli-entry.ts")
   sourceExport: string
@@ -276,7 +276,7 @@ async function updateRemixPackage() {
 
   // Generate bin wrapper files and update sub-package exports
   for (let bin of allBins) {
-    if (isRemixCliBin(bin) || isRemixTestBin(bin)) {
+    if (isRemixCliBin(bin)) {
       continue
     }
 
@@ -337,7 +337,7 @@ async function updateRemixPackage() {
     }
 
     for (let bin of allBins) {
-      if (isRemixCliBin(bin) || isRemixTestBin(bin)) {
+      if (isRemixCliBin(bin)) {
         continue
       }
 
@@ -402,10 +402,6 @@ async function updateRemixPackage() {
 
 function isRemixCliBin(bin: { command: string; packageName: string }): boolean {
   return bin.packageName === CLI_PACKAGE_NAME && bin.command === 'remix'
-}
-
-function isRemixTestBin(bin: { command: string; packageName: string }): boolean {
-  return bin.packageName === '@remix-run/test' && bin.command === 'remix-test'
 }
 
 function createExportSource(entry: ExportEntry): string {

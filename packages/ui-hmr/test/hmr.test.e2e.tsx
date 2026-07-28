@@ -1727,7 +1727,7 @@ function getNodeHmrServerSource(
     `let slowDocumentMs = ${JSON.stringify(options.slowDocumentMs ?? 0)}`,
     'void sideEffect',
     'let assetServer = createAssetServer({',
-    `  allow: [${JSON.stringify(`${appDir}/**`)}, 'packages/remix/**', 'packages/ui/**', 'packages/ui-hmr/**'],`,
+    `  allowFiles: [${JSON.stringify(`${appDir}/**`)}, 'packages/remix/**', 'packages/ui/**', 'packages/ui-hmr/**'],`,
     "  basePath: '/assets',",
     '  fileMap: {',
     `    '/app/*path': ${JSON.stringify(`${appDir}/*path`)},`,
@@ -1916,7 +1916,7 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
 
   let createCurrentAssetServer = () =>
     createAssetServer({
-      allow: [`${appDir}/**`, 'packages/remix/**', 'packages/ui/**', 'packages/ui-hmr/**'],
+      allowFiles: [`${appDir}/**`, 'packages/remix/**', 'packages/ui/**', 'packages/ui-hmr/**'],
       basePath: '/assets',
       fileMap: {
         '/app/*path': `${appDir}/*path`,

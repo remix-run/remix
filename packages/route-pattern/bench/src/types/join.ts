@@ -27,7 +27,7 @@ bench('join > mediarss', async () => {
 // }).types([5169925, 'instantiations'])
 
 function eagerlyEvaluateTypesForJoin<patterns extends ReadonlyArray<string>>(
-  // prettier-ignore
+  // oxfmt-ignore
   _: patterns & (
     { [pattern in patterns[number]]: JoinPatterns<patterns[number], string> } extends
     { [pattern in patterns[number]]: string }

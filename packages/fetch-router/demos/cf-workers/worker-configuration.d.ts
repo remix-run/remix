@@ -8318,7 +8318,7 @@ declare namespace Rpc {
     // This represents all the types that can be sent as-is over an RPC boundary
     type BaseType = void | undefined | null | boolean | number | bigint | string | TypedArray | ArrayBuffer | DataView | Date | Error | RegExp | ReadableStream<Uint8Array> | WritableStream<Uint8Array> | Request | Response | Headers;
     // Recursively rewrite all `Stubable` types with `Stub`s
-    // prettier-ignore
+    // oxfmt-ignore
     type Stubify<T> = T extends Stubable ? Stub<T> : T extends Map<infer K, infer V> ? Map<Stubify<K>, Stubify<V>> : T extends Set<infer V> ? Set<Stubify<V>> : T extends Array<infer V> ? Array<Stubify<V>> : T extends ReadonlyArray<infer V> ? ReadonlyArray<Stubify<V>> : T extends BaseType ? T : T extends {
         [key: string | number]: any;
     } ? {
@@ -8327,7 +8327,7 @@ declare namespace Rpc {
     // Recursively rewrite all `Stub<T>`s with the corresponding `T`s.
     // Note we use `StubBase` instead of `Stub` here to avoid circular dependencies:
     // `Stub` depends on `Provider`, which depends on `Unstubify`, which would depend on `Stub`.
-    // prettier-ignore
+    // oxfmt-ignore
     type Unstubify<T> = T extends StubBase<infer V> ? V : T extends Map<infer K, infer V> ? Map<Unstubify<K>, Unstubify<V>> : T extends Set<infer V> ? Set<Unstubify<V>> : T extends Array<infer V> ? Array<Unstubify<V>> : T extends ReadonlyArray<infer V> ? ReadonlyArray<Unstubify<V>> : T extends BaseType ? T : T extends {
         [key: string | number]: unknown;
     } ? {
@@ -8347,7 +8347,7 @@ declare namespace Rpc {
     // Everything else can't be passed over PRC.
     // Technically, we use custom thenables here, but they quack like `Promise`s.
     // Intersecting with `(Maybe)Provider` allows pipelining.
-    // prettier-ignore
+    // oxfmt-ignore
     type Result<R> = R extends Stubable ? Promise<Stub<R>> & Provider<R> : R extends Serializable<R> ? Promise<Stubify<R> & MaybeDisposable<R>> & MaybeProvider<R> : never;
     // Type for method or property on an RPC interface.
     // For methods, unwrap `Stub`s in parameters, and rewrite returns to be `Result`s.

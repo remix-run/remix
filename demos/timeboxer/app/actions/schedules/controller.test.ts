@@ -1,14 +1,13 @@
 import assert from 'node:assert/strict'
-import { rmSync } from 'node:fs'
 
 import { describe, it } from 'remix/test'
 
 process.env.SESSION_SECRET = 'test-session-secret'
-process.env.DATABASE_URL = `./tmp/schedules-test-${process.pid}.sqlite`
 
 const { router } = await import('../../router.ts')
 const { routes } = await import('../../routes.ts')
-const { db } = await import('../../data/database.ts')
+const { db, getMigrations, seed } = await import('../../db.ts')
+await db.reset({ migrations: await getMigrations(), seed })
 const { schedules } = await import('../../data/schema.ts')
 
 describe('schedule endpoints', () => {
@@ -554,9 +553,3 @@ function mergeCookie(currentCookie: string, headers: Headers) {
 
   return [...existingPairs, cookiePair].join('; ')
 }
-
-process.on('exit', () => {
-  if (process.env.DATABASE_URL) {
-    rmSync(process.env.DATABASE_URL, { force: true })
-  }
-})

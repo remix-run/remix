@@ -32,7 +32,7 @@ bench('match > mediarss', async () => {
 
 /** Type-only utility to force eager evaluation of match param types */
 function eagerlyEvaluateTypesForMatchParams<patterns extends ReadonlyArray<string>>(
-  // prettier-ignore
+  // oxfmt-ignore
   _: patterns & (
     { [pattern in patterns[number]]: GetMatchParams<ReturnType<Matcher<pattern>['match']>> } extends
     { [pattern in patterns[number]]: Record<string, unknown> | null }
@@ -40,7 +40,7 @@ function eagerlyEvaluateTypesForMatchParams<patterns extends ReadonlyArray<strin
   ),
 ): void {}
 
-// prettier-ignore
+// oxfmt-ignore
 type GetMatchParams<match> =
   match extends Match<string, unknown> ? match['params'] :
   null

@@ -70,8 +70,8 @@
     "build": "tsgo -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test",
-    "test:bun": "bun x --bun remix-test",
+    "test": "remix test",
+    "test:bun": "bun x --bun remix test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

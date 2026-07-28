@@ -1,7 +1,8 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { authAccounts, db, passwordResetTokens } from './data/setup.ts'
+import { db } from './db.ts'
+import { authAccounts, passwordResetTokens } from './data/schema.ts'
 import { createExternalProviderRegistry } from './utils/external-auth.ts'
 import {
   assertContains,

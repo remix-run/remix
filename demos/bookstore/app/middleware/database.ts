@@ -1,7 +1,7 @@
 import type { Middleware } from 'remix/router'
 import { Database } from 'remix/data-table'
 
-import { db } from '../data/setup.ts'
+import { db } from '../db.ts'
 
 export function loadDatabase(): Middleware<{
   key: typeof Database

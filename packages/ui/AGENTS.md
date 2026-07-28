@@ -107,14 +107,12 @@ function MyComponent(handle: Handle<Props>) {
 When a component is rendered:
 
 1. **First Render**:
-
    - The component function is called with `handle`
    - The returned render function is stored
    - The render function is called after `handle.props` is populated
    - Any tasks queued via `handle.queueTask()` are executed after rendering
 
 2. **Subsequent Updates**:
-
    - Only the render function is called
    - Setup phase is skipped, and the closure persists for the lifetime of the component instance
    - `handle.props` is updated before the render function is called

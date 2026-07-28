@@ -532,8 +532,8 @@ describe('run', () => {
     // Regression test for the demo-to-demo navigation FOUC: when a full-document
     // reload replaces one client entry with another, `diffNodes` preserves the
     // old DOM inside the hydration markers until the new module finishes
-    // loading. Style adoption must therefore be refcount-aware — the old
-    // entry's css-mixin rule has to stay live while its DOM is still visible.
+    // loading. Server-adopted rules are pinned in the style registry, so the
+    // old entry's css-mixin rule stays live while its DOM is still visible.
 
     function rulePresent(selector: string): boolean {
       return Array.from(document.adoptedStyleSheets).some((sheet) =>
@@ -641,9 +641,10 @@ describe('run', () => {
 
     expect(document.getElementById('entry-a')).toBeNull()
     expect(document.getElementById('entry-b')).not.toBeNull()
-    // Now that entry-a's mixin is torn down, its adoption ref + mixin ref
-    // both decrement to 0 and the rule is finally dropped.
-    expect(rulePresent(aSelector)).toBe(false)
+    // entry-a's rule was server-adopted, so it is pinned and stays in the
+    // registry even after its mixin tears down — content-addressed rules are
+    // only ever unused, never wrong.
+    expect(rulePresent(aSelector)).toBe(true)
     expect(rulePresent(bSelectorFromB)).toBe(true)
 
     app.dispose()

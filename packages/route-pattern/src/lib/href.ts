@@ -12,7 +12,7 @@ export type CreateHrefArgs<source extends string> =
       : _CreateHrefArgs<params>
     : never
 
-// prettier-ignore
+// oxfmt-ignore
 type _CreateHrefArgs<params> =
   {} extends params ?
     [params?: Simplify<params & Record<string, unknown>> | null | undefined, searchParams?: SearchParams]
@@ -24,7 +24,7 @@ type SearchParams = Record<
   string | number | null | undefined | Array<string | number | null | undefined>
 >
 
-// prettier-ignore
+// oxfmt-ignore
 type ParseHrefParams<source extends string> =
   Split<source> extends infer split ?
     split extends never ? never :
@@ -39,7 +39,7 @@ type ParseHrefParams<source extends string> =
   :
   never
 
-// prettier-ignore
+// oxfmt-ignore
 type Optionalize<record extends Record<string, string | undefined>> =
   & { [key in keyof record as undefined extends record[key] ? never : key]: string | number }
   & { [key in keyof record as undefined extends record[key] ? key : never]?: string | number | null | undefined }
@@ -144,7 +144,7 @@ function hrefPart(
         }
         continue
       }
-      // prettier-ignore
+      // oxfmt-ignore
       stack[stack.length - 1].href +=
         part.type === 'pathname' && token.type === ':' ? encodePathnameVariableParam(pattern, token.name, value) :
         part.type === 'pathname' && token.type === '*' ? encodePathnameWildcard(value) :

@@ -36,7 +36,7 @@ let isDevelopment = process.env.NODE_ENV === 'development'
 let assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/**'],
+  allowFiles: ['app/**'],
   hmr: isDevelopment
     ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
     : undefined,

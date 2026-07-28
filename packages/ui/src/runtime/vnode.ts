@@ -28,7 +28,6 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _parent?: VNode
   _children?: VNode[]
   _dom?: unknown
-  _controller?: AbortController
   _mixState?: unknown
   _directEventDescriptors?: unknown
   _directEventState?: unknown
@@ -84,7 +83,6 @@ export type HostNode = VNode & {
 
 export type CommittedHostNode = HostNode & {
   _dom: Element
-  _controller?: AbortController
 }
 
 export type ComponentNode = VNode & {
@@ -113,7 +111,9 @@ export function isNonRenderNode(node: VNode): node is NonRenderNode {
 }
 
 export function isCommittedTextNode(node: VNode): node is CommittedTextNode {
-  return isTextNode(node) && node._dom instanceof Text
+  // _dom on a text node is only ever assigned a Text, so a null check avoids
+  // the cost of instanceof on a DOM wrapper in hot reconciliation walks.
+  return isTextNode(node) && node._dom != null
 }
 
 export function isHostNode(node: VNode): node is HostNode {
@@ -121,7 +121,9 @@ export function isHostNode(node: VNode): node is HostNode {
 }
 
 export function isCommittedHostNode(node: VNode): node is CommittedHostNode {
-  return isHostNode(node) && node._dom instanceof Element
+  // _dom on a host node is only ever assigned an Element (see setupHostNode),
+  // so a null check avoids instanceof cost in hot reconciliation walks.
+  return isHostNode(node) && node._dom != null
 }
 
 export function isComponentNode(node: VNode): node is ComponentNode {

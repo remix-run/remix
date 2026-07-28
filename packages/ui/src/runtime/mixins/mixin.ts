@@ -71,14 +71,15 @@ type MixinHandleEventMap<node extends EventTarget = Element> = {
 /**
  * Runtime handle passed to mixin setup functions.
  *
- * Mixin render callbacks receive host props with `children` and `innerHTML` removed.
+ * The node type is covariant so a handle for a subtype host can be used by a mixin authored for
+ * its base type. Mixin render callbacks receive host props with `children` and `innerHTML` removed.
  * Returned mixin elements may patch host attributes and nested `mix`, but cannot replace
  * the host subtree.
  */
-export type MixinHandle<
-  node extends EventTarget = Element,
+export interface MixinHandle<
+  out node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
-> = TypedEventTarget<MixinHandleEventMap<node>> & {
+> extends TypedEventTarget<MixinHandleEventMap<node>> {
   id: string
   context: MixinContext
   frame: FrameHandle
@@ -121,7 +122,7 @@ export type MixinType<
  * Serializable descriptor stored in the `mix` prop.
  */
 export type MixinDescriptor<
-  node extends EventTarget = Element,
+  in node extends EventTarget = Element,
   args extends unknown[] = [],
   props extends ElementProps = ElementProps,
 > = {

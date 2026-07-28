@@ -23,7 +23,8 @@ const RUNS: readonly RunSpec[] = [
 
 async function runWithCoverage(spec: RunSpec, dir: string): Promise<void> {
   let args = [
-    'src/cli-entry.ts',
+    '../remix/src/cli-entry.ts',
+    'test',
     '--coverage',
     '--coverage.dir',
     dir,

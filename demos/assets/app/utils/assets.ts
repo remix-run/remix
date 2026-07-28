@@ -8,7 +8,7 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 export const assetServer = createAssetServer({
   basePath: assetsBase,
   rootDir: path.resolve(import.meta.dirname, '../..'),
-  allow: ['app/client/**'],
+  allowFiles: ['app/client/**'],
   fileMap: {
     '/app/client/*path': 'app/client/*path',
   },

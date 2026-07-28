@@ -1212,7 +1212,7 @@ function getNodeHmrServerSource(
     `let slowDocumentMs = ${JSON.stringify(options.slowDocumentMs ?? 0)}`,
     'void sideEffect',
     'let assetServer = createAssetServer({',
-    `  allow: [${JSON.stringify(`${appDir}/**`)}],`,
+    `  allowFiles: [${JSON.stringify(`${appDir}/**`)}],`,
     "  basePath: '/assets',",
     '  fileMap: {',
     `    '/app/*path': ${JSON.stringify(`${appDir}/*path`)},`,
@@ -1366,7 +1366,7 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
 
   let createCurrentAssetServer = () =>
     createAssetServer({
-      allow: [`${appDir}/**`],
+      allowFiles: [`${appDir}/**`],
       basePath: '/assets',
       fileMap: {
         '/app/*path': `${appDir}/*path`,

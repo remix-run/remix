@@ -119,7 +119,7 @@ import { createAssetServer } from 'remix/assets'
 let assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  allowFiles: ['app/assets/**'],
   hmr: process.env.NODE_HMR
     ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
     : undefined,
