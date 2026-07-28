@@ -23,12 +23,10 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta name="color-scheme" content="light dark" />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <title>{title}</title>
-          {/* Page hints come before asset tags so render-blocking styles are discovered first. */}
           {head}
           {entryPreloads.map((href) => (
             <link key={href} rel="modulepreload" href={href} />
           ))}
-          {/* Module scripts are deferred, so this runs after the document is parsed. */}
           <script type="module" src={entryHref}></script>
         </head>
         <body mix={css({ margin: 0 })}>{children}</body>

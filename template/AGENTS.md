@@ -26,12 +26,6 @@ Refer to ./.agents/skills/remix/SKILL.md
 - `app/assets.ts` owns the server-side asset pipeline used by the asset route and renderer
 - Root `public/` contains static files served unchanged from the app root
 
-## Browser And Static Files
-
-- Put browser-reachable source in a `public/` directory inside `app/`, beside its narrowest owner, such as `app/actions/public/` or `app/actions/cart/public/`.
-- Keep every local dependency of a browser module in one of those `public/` directories. The exceptions are `app/routes.ts`, which is browser-readable so modules can build type-safe links with `routes.*.href(...)`, and packages allowed by `app/assets.ts`.
-- Put images, fonts, and other files that do not need compilation in the root `public/` directory. It is served from the root URL, so `public/favicon.svg` is available at `/favicon.svg`.
-
 ## Route Ownership
 
 - Start from `app/routes.ts` and map each route to the narrowest owner on disk.
