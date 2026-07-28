@@ -28,11 +28,6 @@ export const PromptButton = clientEntry(
       return (
         <button
           type="button"
-          className={state}
-          style={{
-            background: active ? 'var(--surface-4)' : undefined,
-            color: active ? 'var(--brand-blue)' : undefined,
-          }}
           mix={[
             buttonStyle,
             on('click', async (_event, signal) => {
@@ -67,32 +62,23 @@ export const PromptButton = clientEntry(
               await handle.update()
             }),
           ]}
+          style={
+            active
+              ? {
+                  background: 'var(--surface-4)',
+                  color: 'var(--brand-blue)',
+                }
+              : undefined
+          }
         >
           <span aria-hidden="true" mix={iconSlotStyle}>
             <CopyIcon />
           </span>
-          <span
-            mix={css({
-              alignItems: 'center',
-              display: 'flex',
-              fontSize: '14px',
-              flex: '1 1 0',
-              lineHeight: 1.5,
-              minWidth: 0,
-              position: 'relative',
-              transition: 'opacity 180ms ease',
-            })}
-            style={{ opacity: state === 'resetting' ? 0 : undefined }}
-          >
+          <span mix={labelSlotStyle} style={{ opacity: state === 'resetting' ? 0 : 1 }}>
             <span
               aria-hidden={state === 'idle' ? true : undefined}
-              style={{
-                alignItems: 'center',
-                display: 'flex',
-                inset: 0,
-                position: 'absolute',
-                visibility: state === 'idle' ? 'hidden' : 'visible',
-              }}
+              mix={statusLabelStyle}
+              style={{ visibility: state === 'idle' ? 'hidden' : 'visible' }}
             >
               {label}
             </span>
@@ -146,6 +132,24 @@ const buttonStyle = css({
     color: 'var(--brand-blue)',
     outline: 'none',
   },
+})
+
+const labelSlotStyle = css({
+  alignItems: 'center',
+  display: 'flex',
+  fontSize: '14px',
+  flex: '1 1 0',
+  lineHeight: 1.5,
+  minWidth: 0,
+  position: 'relative',
+  transition: 'opacity 180ms ease',
+})
+
+const statusLabelStyle = css({
+  alignItems: 'center',
+  display: 'flex',
+  inset: 0,
+  position: 'absolute',
 })
 
 const iconSlotStyle = css({
