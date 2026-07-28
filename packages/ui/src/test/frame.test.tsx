@@ -5378,6 +5378,227 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('restarts pending frames inside preserved client entries during ancestor reloads', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+    let renderClientFrame = false
+
+    let EntryWithPendingFrame = clientEntry(
+      '/assets/entry-with-initially-pending-frame.js#EntryWithInitiallyPendingFrame',
+      function EntryWithInitiallyPendingFrame(handle: Handle<{ label: string }>) {
+        reloadTop = () => handle.frames.top.reload()
+        return () => {
+          handle.queueTask(() => {
+            if (renderClientFrame) return
+            renderClientFrame = true
+            void handle.update()
+          })
+
+          return (
+            <section>
+              <p id="entry-label">{handle.props.label}</p>
+              {renderClientFrame ? (
+                <Frame
+                  name="entry-frame"
+                  src="/entry-frame"
+                  fallback={<span id="entry-frame">Loading entry frame...</span>}
+                />
+              ) : null}
+            </section>
+          )
+        }
+      },
+    )
+
+    async function renderPageWithProtocol(label: string): Promise<string> {
+      let previousRenderClientFrame = renderClientFrame
+      renderClientFrame = false
+      try {
+        return await drainWithProtocol(
+          renderToStream(
+            <html>
+              <body>
+                <main>
+                  <EntryWithPendingFrame label={label} />
+                </main>
+              </body>
+            </html>,
+          ),
+        )
+      } finally {
+        renderClientFrame = previousRenderClientFrame
+      }
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderPageWithProtocol('Initial entry'),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let entryFrameSignals: AbortSignal[] = []
+    let entryFrameResolvers: Array<(content: string) => void> = []
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-initially-pending-frame.js' &&
+          exportName === 'EntryWithInitiallyPendingFrame'
+        ) {
+          return EntryWithPendingFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string, signal?: AbortSignal) {
+        if (src === document.location.href) {
+          return streamFromChunks([await renderPageWithProtocol('Reloaded entry')])
+        }
+        if (src === '/entry-frame') {
+          invariant(signal, 'Expected entry frame resolve signal')
+          let [contentPromise, resolveContent] = withResolvers<string>()
+          entryFrameSignals.push(signal)
+          entryFrameResolvers.push(resolveContent)
+          return contentPromise
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(entryFrameSignals).toHaveLength(1)
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Loading entry frame...')
+
+    invariant(reloadTop)
+    await reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(entryFrameSignals).toHaveLength(2)
+    expect(entryFrameSignals[0]?.aborted).toBe(true)
+    expect(entryFrameSignals[1]?.aborted).toBe(false)
+
+    entryFrameResolvers[0]?.('<span id="entry-frame">Stale entry frame</span>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Loading entry frame...')
+
+    entryFrameResolvers[1]?.('<span id="entry-frame">Reloaded entry frame</span>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
+    app.dispose()
+  })
+
+  it('cancels an inherited frame reload when a client update changes its src', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+    let changeFrameSrc: undefined | (() => Promise<AbortSignal>)
+    let frameSrc = '/entry-frame-a'
+
+    let EntryWithChangingFrame = clientEntry(
+      '/assets/entry-with-racing-frame.js#EntryWithRacingFrame',
+      function EntryWithRacingFrame(handle: Handle<{ label: string }>) {
+        reloadTop = () => handle.frames.top.reload()
+        changeFrameSrc = async () => {
+          frameSrc = '/entry-frame-b'
+          return await handle.update()
+        }
+        return () => (
+          <section>
+            <p id="entry-label">{handle.props.label}</p>
+            <Frame
+              name="entry-frame"
+              src={frameSrc}
+              fallback={<span id="entry-frame">Loading entry frame...</span>}
+            />
+          </section>
+        )
+      },
+    )
+
+    async function renderPageWithProtocol(label: string, frameLabel: string): Promise<string> {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <body>
+              <main>
+                <EntryWithChangingFrame label={label} />
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/entry-frame-a') {
+                return `<span id="entry-frame">${frameLabel}</span>`
+              }
+              throw new Error(`Unexpected frame src during server render: ${src}`)
+            },
+          },
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderPageWithProtocol('Initial entry', 'Initial entry frame'),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let inheritedFrameSignal: AbortSignal | undefined
+    let [inheritedFrameContentPromise, resolveInheritedFrameContent] = withResolvers<string>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-racing-frame.js' &&
+          exportName === 'EntryWithRacingFrame'
+        ) {
+          return EntryWithChangingFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string, signal?: AbortSignal) {
+        if (src === document.location.href) {
+          return streamFromChunks([
+            await renderPageWithProtocol('Reloaded entry', 'Unused streamed entry frame'),
+          ])
+        }
+        if (src === '/entry-frame-a') {
+          inheritedFrameSignal = signal
+          return inheritedFrameContentPromise
+        }
+        if (src === '/entry-frame-b') {
+          return '<span id="entry-frame">Updated entry frame</span>'
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reloadTop)
+    invariant(changeFrameSrc)
+    let clientChangeFrameSrc = changeFrameSrc
+    await reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(inheritedFrameSignal?.aborted).toBe(false)
+
+    await clientChangeFrameSrc()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(inheritedFrameSignal?.aborted).toBe(true)
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Updated entry frame')
+
+    resolveInheritedFrameContent('<span id="entry-frame">Stale inherited frame</span>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Updated entry frame')
+    app.dispose()
+  })
+
   it('ignores stale frame reloads from superseded preserved client entry rerenders', async () => {
     let reloadTop: undefined | (() => Promise<AbortSignal>)
 
@@ -5571,6 +5792,7 @@ describe('run', () => {
     let serverHtml = await renderPage('Initial entry', 'Initial entry frame')
     let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
     document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let reloadedPage = await renderPageWithProtocol('Reloaded entry', 'Unused streamed entry frame')
 
     let app = run({
       loadModule(moduleUrl, exportName) {
@@ -5582,11 +5804,9 @@ describe('run', () => {
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
       },
-      async resolveFrame(src: string) {
+      resolveFrame(src: string) {
         if (src === document.location.href) {
-          return streamFromChunks([
-            await renderPageWithProtocol('Reloaded entry', 'Unused streamed entry frame'),
-          ])
+          return streamFromChunks([reloadedPage])
         }
         if (src === '/entry-frame') {
           throw reloadError
@@ -5696,21 +5916,38 @@ describe('run', () => {
   it('loads new client-created frame src values during server-driven entry rerenders', async () => {
     let reloadTop: undefined | (() => Promise<AbortSignal>)
     let frameSrc = '/entry-frame-a'
+    let entryFrameEvents: string[] = []
 
     let EntryWithChangingFrame = clientEntry(
       '/assets/entry-with-changing-frame.js#EntryWithChangingFrame',
       function EntryWithChangingFrame(handle: Handle<{ label: string }>) {
+        let listening = false
         reloadTop = () => handle.frames.top.reload()
-        return () => (
-          <section>
-            <p id="entry-label">{handle.props.label}</p>
-            <Frame
-              name="entry-frame"
-              src={frameSrc}
-              fallback={<span id="entry-frame">Loading entry frame...</span>}
-            />
-          </section>
-        )
+        return () => {
+          handle.queueTask(() => {
+            if (listening) return
+            let entryFrame = handle.frames.get('entry-frame')
+            invariant(entryFrame, 'Expected entry frame handle')
+            entryFrame.addEventListener('reloadStart', () => entryFrameEvents.push('start'), {
+              signal: handle.signal,
+            })
+            entryFrame.addEventListener('reloadComplete', () => entryFrameEvents.push('complete'), {
+              signal: handle.signal,
+            })
+            listening = true
+          })
+
+          return (
+            <section>
+              <p id="entry-label">{handle.props.label}</p>
+              <Frame
+                name="entry-frame"
+                src={frameSrc}
+                fallback={<span id="entry-frame">Loading entry frame...</span>}
+              />
+            </section>
+          )
+        }
       },
     )
 
@@ -5747,6 +5984,7 @@ describe('run', () => {
     document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
 
     let resolvedClientFrameSrcs: string[] = []
+    let topReloadCount = 0
 
     let app = run({
       loadModule(moduleUrl, exportName) {
@@ -5760,12 +5998,13 @@ describe('run', () => {
       },
       async resolveFrame(src: string) {
         if (src === document.location.href) {
-          frameSrc = '/entry-frame-b'
+          topReloadCount++
+          frameSrc = topReloadCount === 1 ? '/entry-frame-b' : '/entry-frame-c'
           return streamFromChunks([
             await renderPageWithProtocol('Reloaded entry', 'Unused streamed entry frame'),
           ])
         }
-        if (src === '/entry-frame-b') {
+        if (src === '/entry-frame-b' || src === '/entry-frame-c') {
           resolvedClientFrameSrcs.push(src)
           return '<span id="entry-frame">Reloaded entry frame</span>'
         }
@@ -5779,17 +6018,25 @@ describe('run', () => {
     expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
     expect(resolvedClientFrameSrcs).toEqual([])
+    expect(entryFrameEvents).toEqual([])
 
     invariant(reloadTop)
-    await reloadTop()
+    let clientReloadTop = reloadTop
+    await clientReloadTop()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
     expect(resolvedClientFrameSrcs).toEqual(['/entry-frame-b'])
+    expect(entryFrameEvents).toEqual(['start', 'complete'])
+
+    await clientReloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(resolvedClientFrameSrcs).toEqual(['/entry-frame-b', '/entry-frame-c'])
+    expect(entryFrameEvents).toEqual(['start', 'complete', 'start', 'complete'])
     app.dispose()
   })
-
 
   it('cancels stale client frame streams when src changes', async () => {
     let rootContainer = document.createElement('div')

@@ -111,8 +111,7 @@ export type FrameRuntime = {
   moduleLoads: Map<string, Promise<Function | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
-  serverFrameReloadRenderInProgress: boolean
-  serverFrameReloadSignal: AbortSignal | undefined
+  serverFrameReload: { signal: AbortSignal } | undefined
 }
 
 export type FrameContext = {
@@ -158,7 +157,11 @@ export type Frame = {
   flush: () => void
   clearPendingTemplateWatch: () => void
   isDisplayingResolvedContent: () => boolean
-  reloadClientFrameForAncestorReload: (signal?: AbortSignal) => Promise<AbortSignal>
+  beginClientFrameReloadForAncestorReload: (signal: AbortSignal) => {
+    controller: AbortController
+    complete: () => void
+  }
+  cancelReload: () => void
   startInheritedReload: (signal?: AbortSignal) => void
   updateMarker: (marker: FrameMarkerData, options?: RenderOptions) => Promise<void>
   renderMarkerContent: (
@@ -184,6 +187,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   // The style registry is document-level and shared by every frame; only the
   // frame that created it (the runtime root) disposes it.
   let ownsStyleManager = !init.styleManager
+  let reloadAbortUnsubscribe: (() => void) | undefined
+  let reloadKind: 'direct' | 'ancestor' | undefined
   let styleManager = init.styleManager ?? createStyleManager()
   let currentMarker = init.marker
   let displayedContentStatus: 'pending' | 'resolved' = init.marker?.status ?? 'resolved'
@@ -401,6 +406,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   function dispose(): void {
     reloadController?.abort()
     reloadController = undefined
+    reloadAbortUnsubscribe?.()
+    reloadAbortUnsubscribe = undefined
+    reloadKind = undefined
     contentRoot?.dispose()
     contentRoot = undefined
     clearPendingFrameTemplateWatch()
@@ -429,7 +437,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     flush: () => context.scheduler.dequeue(),
     clearPendingTemplateWatch: clearPendingFrameTemplateWatch,
     isDisplayingResolvedContent: () => displayedContentStatus === 'resolved',
-    reloadClientFrameForAncestorReload,
+    beginClientFrameReloadForAncestorReload,
+    cancelReload,
     startInheritedReload,
     updateMarker,
     renderMarkerContent,
@@ -493,35 +502,59 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     return await resolveAndRenderReload(controller)
   }
 
-  async function reloadClientFrameForAncestorReload(signal?: AbortSignal): Promise<AbortSignal> {
-    let controller = startClientFrameReloadForAncestorReload(signal)
-    return await resolveAndRenderReload(controller)
-  }
-
   function startReload(): AbortController {
-    reloadController?.abort()
-    let controller = new AbortController()
-    reloadController = controller
+    let controller = replaceReloadController()
+    reloadKind = 'direct'
     frame.dispatchEvent(new Event('reloadStart'))
     startSubFrameInheritedReloads(getContentNodes(), controller.signal)
     return controller
   }
 
-  function startClientFrameReloadForAncestorReload(signal?: AbortSignal): AbortController {
+  function beginClientFrameReloadForAncestorReload(signal: AbortSignal): {
+    controller: AbortController
+    complete: () => void
+  } {
+    let inheritedReloadStarted = reuseInheritedReloadStart()
+    let continuingAncestorReload = reloadKind === 'ancestor'
+    let controller = replaceReloadController(signal)
+    reloadKind = 'ancestor'
+
+    if (!inheritedReloadStarted && !continuingAncestorReload) {
+      frame.dispatchEvent(new Event('reloadStart'))
+      startSubFrameInheritedReloads(getContentNodes(), controller.signal)
+    }
+
+    return {
+      controller,
+      complete: () => completeReload(controller),
+    }
+  }
+
+  function cancelReload(): void {
+    let controller = reloadController
+    if (!controller) return
+    controller.abort()
+    completeReload(controller)
+  }
+
+  function replaceReloadController(signal?: AbortSignal): AbortController {
     reloadController?.abort()
+    reloadAbortUnsubscribe?.()
+    reloadAbortUnsubscribe = undefined
+
     let controller = new AbortController()
     reloadController = controller
+
     if (signal) {
       if (signal.aborted) {
         controller.abort()
       } else {
-        signal.addEventListener('abort', () => controller.abort(), { once: true })
+        let abort = () => controller.abort()
+        signal.addEventListener('abort', abort, { once: true })
+        reloadAbortUnsubscribe = () => signal.removeEventListener('abort', abort)
       }
     }
-    if (!reuseInheritedReloadStart()) {
-      frame.dispatchEvent(new Event('reloadStart'))
-      startSubFrameInheritedReloads(getContentNodes(), controller.signal)
-    }
+
     return controller
   }
 
@@ -536,10 +569,16 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       throw error
     } finally {
-      if (reloadController === controller) {
-        frame.dispatchEvent(new Event('reloadComplete'))
-      }
+      completeReload(controller)
     }
+  }
+
+  function completeReload(controller: AbortController): void {
+    if (reloadController !== controller || reloadKind === undefined) return
+    reloadAbortUnsubscribe?.()
+    reloadAbortUnsubscribe = undefined
+    reloadKind = undefined
+    frame.dispatchEvent(new Event('reloadComplete'))
   }
 
   function startInheritedReload(signal?: AbortSignal): void {
@@ -672,7 +711,6 @@ export function createFrameRuntime(init: {
   moduleLoads: Map<string, Promise<Function | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
-  serverFrameReloadRenderInProgress?: boolean
 }): FrameRuntime {
   return {
     topFrame: init.topFrame,
@@ -687,8 +725,7 @@ export function createFrameRuntime(init: {
     moduleLoads: init.moduleLoads,
     frameInstances: init.frameInstances,
     namedFrames: init.namedFrames,
-    serverFrameReloadRenderInProgress: init.serverFrameReloadRenderInProgress ?? false,
-    serverFrameReloadSignal: undefined,
+    serverFrameReload: undefined,
   }
 }
 
@@ -965,19 +1002,21 @@ function hydrateRegion(
   // (for example, document root + nested frame root). Reuse the existing
   // virtual root instead of redefining the marker property.
   if (isHydratedVirtualRootMarker(start)) {
+    if (!signal) {
+      start.$rmx.render(vElement)
+      return
+    }
+
     let frameRuntime = context.frame.$runtime as FrameRuntime | undefined
     invariant(frameRuntime, 'Expected frame runtime while rendering a preserved client entry')
 
-    let previousServerFrameReloadRenderInProgress = frameRuntime.serverFrameReloadRenderInProgress
-    let previousServerFrameReloadSignal = frameRuntime.serverFrameReloadSignal
+    let previousServerFrameReload = frameRuntime.serverFrameReload
 
-    frameRuntime.serverFrameReloadRenderInProgress = true
-    frameRuntime.serverFrameReloadSignal = signal
+    frameRuntime.serverFrameReload = { signal }
     try {
       start.$rmx.render(vElement)
     } finally {
-      frameRuntime.serverFrameReloadRenderInProgress = previousServerFrameReloadRenderInProgress
-      frameRuntime.serverFrameReloadSignal = previousServerFrameReloadSignal
+      frameRuntime.serverFrameReload = previousServerFrameReload
     }
     return
   }
