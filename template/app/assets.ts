@@ -28,4 +28,7 @@ export const assetServer = createAssetServer({
   scripts: { loaders: isHmr ? [uiHmr()] : undefined },
 })
 
-export const entryHref = await assetServer.getHref('app/actions/public/entry.ts')
+const entry = 'app/actions/public/entry.ts'
+
+export const entryHref = await assetServer.getHref(entry)
+export const entryPreloads = await assetServer.getPreloads(entry)
