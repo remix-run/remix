@@ -1334,8 +1334,9 @@ async function stopChild(
   if (child.exitCode !== null || child.signalCode !== null) return
 
   await new Promise<void>((resolvePromise) => {
-    let timeout =
-      options.force ? setTimeout(() => child.kill('SIGKILL'), shutdownTimeoutMs) : undefined
+    let timeout = options.force
+      ? setTimeout(() => child.kill('SIGKILL'), shutdownTimeoutMs)
+      : undefined
 
     child.once('exit', () => {
       if (timeout !== undefined) clearTimeout(timeout)

@@ -244,9 +244,7 @@ let proxyFetch = createFetchProxy(`http://127.0.0.1:${childPort}`, {
   xForwardedHeaders: true,
 })
 
-let server = http.createServer(
-  createRequestListener(createHmrReadyFetch(hmrRunner, proxyFetch)),
-)
+let server = http.createServer(createRequestListener(createHmrReadyFetch(hmrRunner, proxyFetch)))
 
 server.listen(publicPort, '127.0.0.1')
 ```

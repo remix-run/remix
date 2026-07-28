@@ -854,11 +854,7 @@ function createSetupSource(
   return lines.join('\n')
 }
 
-function rewriteReferences(
-  root: AstNode,
-  stateNames: ReadonlySet<string>,
-  source: string,
-): string {
+function rewriteReferences(root: AstNode, stateNames: ReadonlySet<string>, source: string): string {
   let snippet = source.slice(root.start, root.end)
   if (stateNames.size === 0) return snippet
 

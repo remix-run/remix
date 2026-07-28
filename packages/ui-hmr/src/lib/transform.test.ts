@@ -942,12 +942,7 @@ function getGeneratedComponentImplementation(code: string, componentName: string
   )
   assert.notEqual(end, -1)
 
-  return code
-    .slice(start, end)
-    .replace(
-      /"[^"]+", \(__s__\) => \{/,
-      `"<setup-hash>", (__s__) => {`,
-    )
+  return code.slice(start, end).replace(/"[^"]+", \(__s__\) => \{/, `"<setup-hash>", (__s__) => {`)
 }
 
 function getGeneratedImports(code: string): string {
@@ -1017,7 +1012,10 @@ function getGeneratedUpdatedExportsCheck(code: string): string {
   assert.notEqual(start, -1)
 
   let end = findFirstIndex(
-    [`;\n      if (__remixUiHmrInvalidationMessage__)`, `;\n    if (__remixUiHmrInvalidationMessage__)`],
+    [
+      `;\n      if (__remixUiHmrInvalidationMessage__)`,
+      `;\n    if (__remixUiHmrInvalidationMessage__)`,
+    ],
     code,
     start,
   )
