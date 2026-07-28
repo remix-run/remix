@@ -29,8 +29,8 @@ Refer to ./.agents/skills/remix/SKILL.md
 ## Browser And Static Files
 
 - Put browser-reachable source in a `public/` directory inside `app/`, beside its narrowest owner, such as `app/actions/public/` or `app/actions/cart/public/`.
-- Keep every local dependency of a browser module in a `public/` directory inside `app/`. The shared `app/routes.ts` contract is browser-readable so modules can build type-safe links with `routes.*.href(...)`; packages allowed by `app/assets.ts` are the other exception.
-- Put images, fonts, and other files that do not need compilation in the root `public/` directory. They are served from the root URL, so `public/favicon.svg` is available at `/favicon.svg`.
+- Keep every local dependency of a browser module in one of those `public/` directories. The exceptions are `app/routes.ts`, which is browser-readable so modules can build type-safe links with `routes.*.href(...)`, and packages allowed by `app/assets.ts`.
+- Put images, fonts, and other files that do not need compilation in the root `public/` directory. It is served from the root URL, so `public/favicon.svg` is available at `/favicon.svg`.
 
 ## Route Ownership
 

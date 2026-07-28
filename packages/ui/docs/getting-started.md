@@ -90,7 +90,7 @@ function App() {
     <html>
       <head>
         <title>My App</title>
-        <script async type="module" src="/assets/app/public/entry.ts" />
+        <script type="module" src="/assets/app/actions/public/entry.ts" />
       </head>
       <body>
         <h1>Hello</h1>
@@ -113,7 +113,7 @@ return new Response(stream, {
 ### Client entry module
 
 ```tsx
-// app/public/entry.ts
+// app/actions/public/entry.ts
 import { run } from 'remix/ui'
 
 let app = run({

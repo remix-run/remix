@@ -47,7 +47,7 @@ router.get('/assets/*', ({ request }) => {
 })
 ```
 
-This example gives you an `/assets/*` endpoint that serves compiled browser source from `public/` directories throughout `app/` and from the `remix` package. For example, an app-wide entrypoint can live at `app/public/entry.ts`, while a cart feature can keep its browser modules in `app/cart/public/`.
+This example gives you an `/assets/*` endpoint that serves compiled browser source from `public/` directories throughout `app/` and from the `remix` package. An app-wide entrypoint can live at `app/actions/public/entry.ts`, while a cart feature keeps its browser modules in `app/actions/cart/public/`.
 
 ## Root Directory
 
@@ -92,7 +92,7 @@ Values for `allowFiles` and `denyFiles` are file paths or globs. Relative values
 
 Values for `allowPackages` are exact package names. Dependencies and installed optional dependencies of packages in `allowPackages` are also allowed automatically. Peer dependencies must be listed explicitly if they should be browser-reachable. Allowed package files must still be reachable through `fileMap`.
 
-Access rules apply to the complete browser module graph. Every local dependency imported by a file in an app `public/` directory must also match `allowFiles`; `app/routes.ts` is listed separately because it is a shared server-and-browser route contract used to build type-safe links with `routes.*.href(...)`. These app-local `public/` directories contain source compiled by the asset server and are separate from static files served unchanged from the root `public/` directory.
+Access rules apply to the complete browser module graph, so every local dependency imported by a file in an app `public/` directory must also match `allowFiles`. In this example `app/routes.ts` is listed separately so browser modules can build type-safe links with `routes.*.href(...)`.
 
 ## File Map
 
@@ -179,8 +179,8 @@ let assetServer = createAssetServer({
 Use `assetServer.getHref()` when you need the public URL for a served asset. You can provide a root-relative or absolute file path, or a `file://` URL.
 
 ```ts
-let src = await assetServer.getHref('app/public/entry.tsx')
-// '/assets/app/public/entry.tsx'
+let src = await assetServer.getHref('app/actions/public/entry.ts')
+// '/assets/app/actions/public/entry.ts'
 ```
 
 For configured `files` assets, you can also pass a `transform` pipeline to build a request URL with custom file transforms. Basic transforms are written as strings, while dynamic transforms use `[name, param]` tuples.
@@ -198,11 +198,11 @@ Use `assetServer.getPreloads()` when rendering HTML so you can turn the returned
 
 ```ts
 let preloads = await assetServer.getPreloads([
-  'app/public/entry.tsx',
+  'app/actions/public/entry.ts',
   'app/search/public/search.tsx',
 ])
 // [
-//   '/assets/app/public/entry.tsx',
+//   '/assets/app/actions/public/entry.ts',
 //   '/assets/app/search/public/search.tsx',
 //   '/assets/app/search/public/utils.ts',
 //   '/assets/npm/remix/ui/index.js',
