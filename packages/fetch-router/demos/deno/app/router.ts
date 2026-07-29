@@ -216,3 +216,6 @@ router.map(routes.posts, {
     },
   },
 })
+
+// A router is already a `{ fetch }` object, which is the shape `deno serve` expects.
+export default router
