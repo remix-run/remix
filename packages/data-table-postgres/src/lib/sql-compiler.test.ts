@@ -4,7 +4,6 @@ import {
   and,
   between,
   column,
-  createDatabase,
   table,
   eq,
   gt,
@@ -18,11 +17,11 @@ import {
   ne,
   notInList,
   notNull,
-  type DataManipulationOperation,
-  type DatabaseAdapter,
   or,
 } from '@remix-run/data-table'
+import { type DataManipulationOperation } from '@remix-run/data-table/database-implementation'
 
+import { createRecordingAdapter, TestDatabase } from '../../../data-table/test/recording-adapter.ts'
 import { compilePostgresOperation } from './sql-compiler.ts'
 
 const accounts = table({
@@ -46,19 +45,18 @@ const tasks = table({
 
 let statements: DataManipulationOperation[] = []
 
-const fakeAdapter = {
+const recording = createRecordingAdapter({
   capabilities: {
     upsert: true,
     returning: true,
   },
-
-  execute: async (request) => {
+  async execute(request) {
     statements.push(request.operation)
     return {}
   },
-} as DatabaseAdapter
+})
 
-const db = createDatabase(fakeAdapter)
+const db = new TestDatabase(recording.adapter)
 
 describe('postgres sql-compiler', () => {
   beforeEach(() => {

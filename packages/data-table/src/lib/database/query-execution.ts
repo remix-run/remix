@@ -18,7 +18,11 @@ import { cloneQueryState, querySnapshot } from '../query.ts'
 import type { AnyTable } from '../table.ts'
 import { getPrimaryKeyObject, getTableName } from '../table.ts'
 
-import { executeOperation, type QueryExecutionContext } from './execution-context.ts'
+import {
+  executeOperation,
+  runInTransaction,
+  type QueryExecutionContext,
+} from './execution-context.ts'
 import {
   buildPrimaryKeyPredicate,
   hasScopedWriteModifiers,
@@ -244,7 +248,7 @@ async function executeInsert(
   )
   let returning = options?.returning
 
-  assertReturningCapability(database.adapter, 'insert', returning)
+  assertReturningCapability(database.capabilities, 'insert', returning)
 
   if (returning) {
     let operation: InsertOperation<AnyTable> = {
@@ -314,7 +318,7 @@ async function executeInsertMany(
   }
 
   let returning = options?.returning
-  assertReturningCapability(database.adapter, 'insertMany', returning)
+  assertReturningCapability(database.capabilities, 'insertMany', returning)
 
   if (returning) {
     let operation: InsertManyOperation<AnyTable> = {
@@ -371,7 +375,7 @@ async function executeUpdate(
   options?: { returning?: ReturningInput<Record<string, unknown>>; touch?: boolean },
 ): Promise<WriteResult | WriteRowsResult<Record<string, unknown>>> {
   let returning = options?.returning
-  assertReturningCapability(database.adapter, 'update', returning)
+  assertReturningCapability(database.capabilities, 'update', returning)
   let preparedChanges = prepareUpdateValues(
     table,
     changes as never,
@@ -386,7 +390,7 @@ async function executeUpdate(
   let result: DataManipulationResult
 
   if (hasScopedWriteModifiers(state)) {
-    result = await database.transaction(async (tx) => {
+    result = await database[runInTransaction](async (tx) => {
       let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, state)
       let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
@@ -448,7 +452,7 @@ async function executeDelete(
   options?: { returning?: ReturningInput<Record<string, unknown>> },
 ): Promise<WriteResult | WriteRowsResult<Record<string, unknown>>> {
   let returning = options?.returning
-  assertReturningCapability(database.adapter, 'delete', returning)
+  assertReturningCapability(database.capabilities, 'delete', returning)
   let tableName = getTableName(table)
   let deleteContext = {
     tableName,
@@ -462,7 +466,7 @@ async function executeDelete(
   let result: DataManipulationResult
 
   if (hasScopedWriteModifiers(state)) {
-    result = await database.transaction(async (tx) => {
+    result = await database[runInTransaction](async (tx) => {
       let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, state)
       let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
@@ -527,8 +531,8 @@ async function executeUpsert(
     update?: Record<string, unknown>
   },
 ): Promise<WriteResult | WriteRowResult<Record<string, unknown>>> {
-  if (!database.adapter.capabilities.upsert) {
-    throw new DataTableQueryError('Adapter does not support upsert')
+  if (!database.capabilities.upsert) {
+    throw new DataTableQueryError('Database does not support upsert')
   }
 
   let preparedValues = prepareInsertValues(
@@ -547,7 +551,7 @@ async function executeUpsert(
       )
     : undefined
   let returning = options?.returning
-  assertReturningCapability(database.adapter, 'upsert', returning)
+  assertReturningCapability(database.capabilities, 'upsert', returning)
 
   if (returning) {
     let operation: UpsertOperation<AnyTable> = {

@@ -1,11 +1,13 @@
-import type { Middleware } from 'remix/router'
-import { Database } from 'remix/data-table'
+import { createContextKey, type Middleware } from 'remix/router'
+import type { Database } from 'remix/data-table'
 
 import { db } from '../db.ts'
 
-export function loadDatabase(): Middleware<{ key: typeof Database; value: Database }> {
+export const databaseContext = createContextKey<Database>()
+
+export function loadDatabase(): Middleware<{ key: typeof databaseContext; value: Database }> {
   return async (context, next) => {
-    context.set(Database, db)
+    context.set(databaseContext, db)
     return next()
   }
 }

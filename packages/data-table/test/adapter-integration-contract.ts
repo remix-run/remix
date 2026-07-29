@@ -4,7 +4,6 @@ import { beforeEach, it } from '@remix-run/test'
 import { column } from '../src/lib/column.ts'
 import type { Database } from '../src/lib/database.ts'
 import { DataTableQueryError } from '../src/lib/errors.ts'
-import { createMigrationRunner } from '../src/lib/migrations/runner.ts'
 import { table, hasMany, hasManyThrough } from '../src/lib/table.ts'
 import { between, eq, ilike, inList, ne } from '../src/lib/operators.ts'
 
@@ -269,7 +268,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         },
         (error: unknown) =>
           error instanceof DataTableQueryError &&
-          error.message === 'insertMany() returning is not supported by this adapter',
+          error.message === 'insertMany() returning is not supported by this database',
       )
 
       await db.query(accounts).insert({
@@ -288,7 +287,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         },
         (error: unknown) =>
           error instanceof DataTableQueryError &&
-          error.message === 'delete() returning is not supported by this adapter',
+          error.message === 'delete() returning is not supported by this database',
       )
 
       return
@@ -474,20 +473,16 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         }
       },
     })
-    let runner = createMigrationRunner(
-      db.adapter,
-      [
-        {
-          id: '20260228001000',
-          name: 'create_lifecycle_accounts',
-          up: 'create table if not exists lifecycle_accounts (id integer primary key, email text not null, status text not null)',
-          down: 'drop table if exists lifecycle_accounts',
-        },
-      ],
-      { journalTable: 'adapter_contract_migrations' },
-    )
-
-    await runner.up()
+    let migrations = [
+      {
+        id: '20260228001000',
+        name: 'create_lifecycle_accounts',
+        up: 'create table if not exists lifecycle_accounts (id integer primary key, email text not null, status text not null)',
+        down: 'drop table if exists lifecycle_accounts',
+      },
+    ]
+    let migrationOptions = { journalTable: 'adapter_contract_migrations' }
+    await db.migrate(migrations, migrationOptions)
 
     let created = await db.create(
       lifecycleAccounts,
@@ -498,7 +493,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
       { returnRow: true },
     )
     let loaded = await db.find(lifecycleAccounts, 1)
-    let statusAfterUp = await runner.status()
+    let statusAfterUp = await db.migrationStatus(migrations, migrationOptions)
 
     assert.equal(created.email, 'USER@EXAMPLE.COM')
     assert.equal(created.status, 'active')
@@ -507,9 +502,9 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     assert.equal(statusAfterUp.length, 1)
     assert.equal(statusAfterUp[0].status, 'applied')
 
-    await runner.down({ step: 1 })
+    await db.migrate(migrations, { ...migrationOptions, direction: 'down', step: 1 })
 
-    let statusAfterDown = await runner.status()
+    let statusAfterDown = await db.migrationStatus(migrations, migrationOptions)
     assert.equal(statusAfterDown.length, 1)
     assert.equal(statusAfterDown[0].status, 'pending')
   })

@@ -2,6 +2,7 @@ import type {
   DataManipulationRequest,
   DataManipulationResult,
   DatabaseAdapter,
+  MigrationLockContext,
   TableRef,
   TransactionToken,
 } from '../src/lib/adapter.ts'
@@ -167,7 +168,7 @@ export class MemoryMigrationAdapter implements DatabaseAdapter {
 
   async withMigrationLock<result>(
     _name: string,
-    run: (adapter: DatabaseAdapter) => Promise<result>,
+    run: (adapter: MigrationLockContext) => Promise<result>,
   ): Promise<result> {
     this.lockAcquireCount += 1
     try {

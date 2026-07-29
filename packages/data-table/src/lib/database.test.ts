@@ -3,11 +3,11 @@ import { describe, it } from '@remix-run/test'
 
 import type { DatabaseAdapter } from './adapter.ts'
 import { column } from './column.ts'
-import { createDatabase, Database } from './database.ts'
-import { DataTableAdapterError, DataTableQueryError, DataTableValidationError } from './errors.ts'
+import { DatabaseImplementation } from './database.ts'
+import { DataTableDatabaseError, DataTableQueryError, DataTableValidationError } from './errors.ts'
 import { table, hasMany, timestamps } from './table.ts'
 import { eq } from './operators.ts'
-import { createRecordingAdapter } from '../../test/recording-adapter.ts'
+import { createRecordingAdapter, TestDatabase } from '../../test/recording-adapter.ts'
 
 const accounts = table({
   name: 'accounts',
@@ -58,7 +58,18 @@ const tasks = table({
 const accountProjects = hasMany(accounts, projects)
 
 describe('queries', () => {
-  it('supports direct construction and createDatabase wrapper', async () => {
+  it('exposes database metadata and schema introspection directly', async () => {
+    let recording = createRecordingAdapter({ dialect: 'test' })
+    let db = new TestDatabase(recording.adapter)
+
+    assert.equal(db.dialect, 'test')
+    assert.equal(db.capabilities.returning, true)
+    assert.equal(await db.hasTable({ name: 'accounts' }), true)
+    assert.equal(await db.hasColumn({ name: 'accounts' }, 'email'), true)
+    assert.equal('adapter' in db, false)
+  })
+
+  it('supports database construction options', async () => {
     let firstAdapter = createRecordingAdapter({
       async execute() {
         return { rows: [{ id: 1, email: 'amy@studio.test', status: 'active' }] }
@@ -69,12 +80,12 @@ describe('queries', () => {
         return { rows: [{ id: 2, email: 'brad@studio.test', status: 'inactive' }] }
       },
     })
-    let direct = new Database(firstAdapter.adapter, {
+    let direct = new TestDatabase(firstAdapter.adapter, {
       now() {
         return '2026-01-01T00:00:00.000Z'
       },
     })
-    let wrapped = createDatabase(secondAdapter.adapter, {
+    let wrapped = new TestDatabase(secondAdapter.adapter, {
       now() {
         return '2026-01-01T00:00:00.000Z'
       },
@@ -83,8 +94,8 @@ describe('queries', () => {
     let directRows = await direct.query(accounts).all()
     let wrappedRows = await wrapped.query(accounts).all()
 
-    assert.equal(direct instanceof Database, true)
-    assert.equal(wrapped instanceof Database, true)
+    assert.equal(direct instanceof DatabaseImplementation, true)
+    assert.equal(wrapped instanceof DatabaseImplementation, true)
     assert.equal(direct.now(), '2026-01-01T00:00:00.000Z')
     assert.equal(wrapped.now(), '2026-01-01T00:00:00.000Z')
     assert.deepEqual(
@@ -269,7 +280,7 @@ describe('queries', () => {
       function (error: unknown) {
         return (
           error instanceof DataTableQueryError &&
-          error.message === 'createMany({ returnRows: true }) is not supported by this adapter'
+          error.message === 'createMany({ returnRows: true }) is not supported by this database'
         )
       },
     )
@@ -291,7 +302,7 @@ describe('writes and validation', () => {
         return {}
       },
     })
-    let db = createDatabase(recording.adapter, {
+    let db = new TestDatabase(recording.adapter, {
       now() {
         return createdAt
       },
@@ -399,7 +410,7 @@ describe('writes and validation', () => {
       },
     })
 
-    let db = createDatabase(recording.adapter)
+    let db = new TestDatabase(recording.adapter)
     await db
       .query(validatedAccounts)
       .upsert(
@@ -803,7 +814,7 @@ describe('writes and validation', () => {
       },
       (error: unknown) =>
         error instanceof DataTableQueryError &&
-        error.message === 'update() returning is not supported by this adapter',
+        error.message === 'update() returning is not supported by this database',
     )
   })
 
@@ -822,7 +833,7 @@ describe('writes and validation', () => {
       },
       (error: unknown) =>
         error instanceof DataTableQueryError &&
-        error.message === 'delete() returning is not supported by this adapter',
+        error.message === 'delete() returning is not supported by this database',
     )
   })
 
@@ -843,7 +854,7 @@ describe('writes and validation', () => {
       },
       (error: unknown) =>
         error instanceof DataTableQueryError &&
-        error.message === 'insert() returning is not supported by this adapter',
+        error.message === 'insert() returning is not supported by this database',
     )
 
     await assert.rejects(
@@ -858,7 +869,7 @@ describe('writes and validation', () => {
       },
       (error: unknown) =>
         error instanceof DataTableQueryError &&
-        error.message === 'insertMany() returning is not supported by this adapter',
+        error.message === 'insertMany() returning is not supported by this database',
     )
 
     await assert.rejects(
@@ -874,11 +885,11 @@ describe('writes and validation', () => {
       },
       (error: unknown) =>
         error instanceof DataTableQueryError &&
-        error.message === 'upsert() returning is not supported by this adapter',
+        error.message === 'upsert() returning is not supported by this database',
     )
   })
 
-  it('throws for upsert() when adapter does not support it', async () => {
+  it('throws for upsert() when the database does not support it', async () => {
     let recording = createRecordingAdapter({ capabilities: { upsert: false } })
     let db = createTestDatabase(recording.adapter)
 
@@ -1041,6 +1052,10 @@ describe('transactions and raw sql', () => {
         () => transactionDatabase.reset({ migrations: [] }),
         /Cannot call reset\(\) from a transaction-scoped database/,
       )
+      assert.throws(
+        () => transactionDatabase.close(),
+        /Cannot call close\(\) from a transaction-scoped database/,
+      )
     })
   })
 
@@ -1074,6 +1089,49 @@ describe('transactions and raw sql', () => {
     assert.equal(recording.requests[0].transaction?.id, recording.transactions[0].token.id)
   })
 
+  it('preserves commit failures without attempting an invalid rollback', async () => {
+    let recording = createRecordingAdapter()
+    let adapter: DatabaseAdapter = {
+      ...recording.adapter,
+      async commitTransaction(token) {
+        await recording.adapter.commitTransaction(token)
+        throw new Error('commit failed')
+      },
+    }
+    let db = createTestDatabase(adapter)
+
+    await assert.rejects(() => db.transaction(async () => 'done'), /commit failed/)
+    assert.deepEqual(
+      recording.transactions.map((transaction) => transaction.kind),
+      ['begin', 'commit'],
+    )
+  })
+
+  it('preserves callback and rollback failures', async () => {
+    let recording = createRecordingAdapter()
+    let callbackError = new Error('callback failed')
+    let rollbackError = new Error('rollback failed')
+    let adapter: DatabaseAdapter = {
+      ...recording.adapter,
+      async rollbackTransaction() {
+        throw rollbackError
+      },
+    }
+    let db = createTestDatabase(adapter)
+
+    await assert.rejects(
+      () =>
+        db.transaction(async () => {
+          throw callbackError
+        }),
+      (error: unknown) =>
+        error instanceof AggregateError &&
+        error.cause === callbackError &&
+        error.errors[0] === callbackError &&
+        error.errors[1] === rollbackError,
+    )
+  })
+
   it('throws for nested transactions without savepoints', async () => {
     let recording = createRecordingAdapter({ capabilities: { savepoints: false } })
     let db = createTestDatabase(recording.adapter)
@@ -1091,8 +1149,8 @@ describe('transactions and raw sql', () => {
   })
 })
 
-describe('adapter errors', () => {
-  it('wraps adapter failures in DataTableAdapterError', async () => {
+describe('database errors', () => {
+  it('wraps execution failures in DataTableDatabaseError', async () => {
     let recording = createRecordingAdapter({
       dialect: 'failing',
       async execute() {
@@ -1107,7 +1165,7 @@ describe('adapter errors', () => {
         await db.query(accounts).all()
       },
       function (error: unknown) {
-        if (!(error instanceof DataTableAdapterError)) {
+        if (!(error instanceof DataTableDatabaseError)) {
           return false
         }
 
@@ -1123,7 +1181,7 @@ describe('adapter errors', () => {
 })
 
 function createTestDatabase(adapter: DatabaseAdapter) {
-  return new Database(adapter, {
+  return new TestDatabase(adapter, {
     now() {
       return '2026-01-01T00:00:00.000Z'
     },

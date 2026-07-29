@@ -1,0 +1,14 @@
+{
+  "$schema": "https://remix.run/schemas/remix.json",
+  "db": {
+    "adapter": {
+      "type": "sqlite",
+      "filename": "./db/social-auth.sqlite",
+      "foreignKeys": true
+    },
+    "migrations": {
+      "directory": "./db/migrations"
+    },
+    "seed": "./db/seed.sql"
+  }
+}

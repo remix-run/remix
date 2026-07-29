@@ -1,5 +1,4 @@
 import { after, before, describe } from '@remix-run/test'
-import { createDatabase } from '@remix-run/data-table'
 
 import {
   resetAdapterIntegrationSchema,
@@ -9,7 +8,7 @@ import {
 import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
 import { createNativeSqliteDatabase, type NativeSqliteDatabase } from '../../test/native-sqlite.ts'
 
-import { SqliteDatabaseAdapter } from './adapter.ts'
+import { createSqliteDatabase } from './database.ts'
 
 describe(
   'sqlite adapter integration',
@@ -32,7 +31,7 @@ describe(
     })
 
     runAdapterIntegrationContract({
-      createDatabase: () => createDatabase(new SqliteDatabaseAdapter(sqlite)),
+      createDatabase: () => createSqliteDatabase(sqlite),
       resetDatabase: async () => {
         await resetAdapterIntegrationSchema(async (statement) => {
           sqlite.exec(statement)

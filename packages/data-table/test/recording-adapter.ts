@@ -1,16 +1,18 @@
 import type {
-  AdapterCapabilities,
+  DatabaseCapabilities,
   DataManipulationRequest,
   DataManipulationResult,
   DatabaseAdapter,
+  TableRef,
   TransactionOptions,
   TransactionToken,
 } from '../src/lib/adapter.ts'
+import { DatabaseImplementation, type DatabaseOptions } from '../src/lib/database.ts'
 import type { SqlStatement } from '../src/lib/sql.ts'
 
 export type RecordingAdapterOptions = {
   dialect?: string
-  capabilities?: Partial<AdapterCapabilities>
+  capabilities?: Partial<DatabaseCapabilities>
   execute?(request: DataManipulationRequest): Promise<DataManipulationResult>
 }
 
@@ -27,12 +29,82 @@ export type RecordingAdapter = {
   >
 }
 
-const defaultCapabilities: AdapterCapabilities = {
+const defaultCapabilities: DatabaseCapabilities = {
   returning: true,
   savepoints: true,
   upsert: true,
   transactionalDdl: false,
   migrationLock: false,
+}
+
+export class TestDatabase extends DatabaseImplementation {
+  #driver: DatabaseAdapter
+
+  constructor(driver: DatabaseAdapter, options?: DatabaseOptions) {
+    super(options)
+    this.#driver = driver
+  }
+
+  get dialect(): string {
+    return this.#driver.dialect
+  }
+
+  get capabilities(): DatabaseCapabilities {
+    return this.#driver.capabilities
+  }
+
+  compileSql(operation: Parameters<DatabaseAdapter['compileSql']>[0]): SqlStatement[] {
+    return this.#driver.compileSql(operation)
+  }
+
+  execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
+    return this.#driver.execute(request)
+  }
+
+  executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
+    return this.#driver.executeScript(sql, transaction)
+  }
+
+  hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
+    return this.#driver.hasTable(table, transaction)
+  }
+
+  hasColumn(table: TableRef, column: string, transaction?: TransactionToken): Promise<boolean> {
+    return this.#driver.hasColumn(table, column, transaction)
+  }
+
+  beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
+    return this.#driver.beginTransaction(options)
+  }
+
+  commitTransaction(token: TransactionToken): Promise<void> {
+    return this.#driver.commitTransaction(token)
+  }
+
+  rollbackTransaction(token: TransactionToken): Promise<void> {
+    return this.#driver.rollbackTransaction(token)
+  }
+
+  createSavepoint(token: TransactionToken, name: string): Promise<void> {
+    return this.#driver.createSavepoint(token, name)
+  }
+
+  rollbackToSavepoint(token: TransactionToken, name: string): Promise<void> {
+    return this.#driver.rollbackToSavepoint(token, name)
+  }
+
+  releaseSavepoint(token: TransactionToken, name: string): Promise<void> {
+    return this.#driver.releaseSavepoint(token, name)
+  }
+
+  close(): void | Promise<void> {
+    return this.#driver.close?.()
+  }
+
+  async wipe(): Promise<void> {
+    if (!this.#driver.wipe) throw new Error('Test database does not support wipe()')
+    await this.#driver.wipe()
+  }
 }
 
 export function createRecordingAdapter(options: RecordingAdapterOptions = {}): RecordingAdapter {

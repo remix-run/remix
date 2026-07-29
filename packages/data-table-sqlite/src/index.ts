@@ -1,7 +1,8 @@
-export { createSqliteDatabaseAdapter, SqliteDatabaseAdapter } from './lib/adapter.ts'
+export { createSqliteDatabase } from './lib/database.ts'
+export type { SqliteDatabase } from './lib/database.ts'
 export type {
-  SqliteDatabase,
-  SqliteDatabaseAdapterConfig,
+  SqliteDatabaseClient,
+  SqliteDatabaseConfig,
   SqliteRunResult,
   SqliteStatement,
 } from './lib/adapter.ts'

@@ -1,12 +1,12 @@
 # data-table-mysql
 
-MySQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table). Use this package when you want `data-table` APIs backed by `mysql2`.
+MySQL database implementation for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table), backed by `mysql2`.
 
 ## Features
 
 - **Native `mysql2` Integration**: Creates a pool from `mysql2` configuration or uses an existing pool or connection
 - **Full `data-table` API Support**: Queries, relations, writes, and transactions
-- **Adapter-Owned Compiler**: SQL compilation lives in this adapter, with optional shared pure helpers from `data-table`
+- **MySQL Compiler**: SQL compilation is handled automatically for MySQL
 - **Multi-Statement Migrations**: `executeScript()` runs `up.sql` / `down.sql` files via `mysql2` (requires `multipleStatements: true`)
 - **MySQL Capabilities Enabled By Default**:
   - `returning: false`
@@ -24,20 +24,17 @@ npm i remix mysql2
 ## Usage
 
 ```ts
-import { createDatabase } from 'remix/data-table'
-import { createMysqlDatabaseAdapter } from 'remix/data-table/mysql'
+import { createMysqlDatabase } from 'remix/data-table/mysql'
 
-let db = createDatabase(
-  createMysqlDatabaseAdapter({
-    uri: process.env.DATABASE_URL,
-    multipleStatements: true,
-  }),
-)
+let db = createMysqlDatabase({
+  uri: process.env.DATABASE_URL,
+  multipleStatements: true,
+})
 ```
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `mysql2/promise`.
 
-## Adapter Capabilities
+## Database Capabilities
 
 `data-table-mysql` reports this capability set by default:
 
@@ -51,26 +48,26 @@ Use `db.query(...)`, relation loading, and transactions from `remix/data-table`.
 
 ### Multi-Statement Migrations
 
-`remix/data-table/migrations` sends each migration to the adapter as a single multi-statement SQL script. mysql2 only accepts multi-statement scripts when the connection is created with `multipleStatements: true`:
+`remix/data-table/migrations` sends each migration as a single multi-statement SQL script. mysql2 only accepts multi-statement scripts when the connection is created with `multipleStatements: true`:
 
 ```ts
-import { createMysqlDatabaseAdapter } from 'remix/data-table/mysql'
+import { createMysqlDatabase } from 'remix/data-table/mysql'
 
-let adapter = createMysqlDatabaseAdapter({
+let db = createMysqlDatabase({
   uri: process.env.DATABASE_URL,
   multipleStatements: true,
 })
 ```
 
-Config-backed adapters support `db.wipe()` and `db.reset()`. You may continue passing an existing `mysql2` pool or connection when your application owns the driver lifecycle, but destructive lifecycle methods are unavailable in that mode. `db.wipe()` requires a database name in the connection config (`database`, or the path of a connection URI) and throws when none is present.
+Config-backed databases support `db.wipe()` and `db.reset()`. Call `await db.close()` during application shutdown to close the internally created pool. You may pass an existing `mysql2` pool or connection when your application owns the driver lifecycle; `db.close()` leaves supplied clients alone, and destructive lifecycle methods are unavailable in that mode. `db.wipe()` requires a database name in the connection config (`database`, or the path of a connection URI) and throws when none is present.
 
-Migration runs reserve one connection for the MySQL named lock, migration SQL, and journal updates. Lock acquisition waits up to 60 seconds and fails with an error instead of allowing the migration to proceed. After a successful run the connection is unlocked and returned to the pool; if the migration or unlock fails, the reserved connection is destroyed instead of being reused, so a dirty session can never leak back into the pool. Calling `withMigrationLock()` from inside a migration callback throws instead of deadlocking.
+Migration runs reserve one connection for the MySQL named lock, migration SQL, and journal updates. Lock acquisition waits up to 60 seconds and fails with an error instead of allowing the migration to proceed. After a successful run the connection is unlocked and returned to the pool; if the migration or unlock fails, the reserved connection is destroyed instead of being reused, so a dirty session can never leak back into the pool. Nested migration lock acquisition throws instead of deadlocking.
 
 ### `returning` On MySQL
 
-MySQL does not natively support SQL `RETURNING`. In this adapter, using `returning` on write operations throws `DataTableQueryError`.
+MySQL does not natively support SQL `RETURNING`. Using `returning` on write operations therefore throws `DataTableQueryError`.
 
-Use write metadata (`affectedRows`, `insertId`) on MySQL, or switch adapters when returned rows are required.
+Use write metadata (`affectedRows`, `insertId`) on MySQL, or switch databases when returned rows are required.
 
 ```ts
 import { DataTableQueryError } from 'remix/data-table'
@@ -81,7 +78,7 @@ try {
     .insert({ email: 'a@example.com', status: 'active' }, { returning: ['id'] })
 } catch (error) {
   if (error instanceof DataTableQueryError) {
-    // insert() returning is not supported by this adapter
+    // insert() returning is not supported by MySQL
   }
 }
 ```
@@ -115,8 +112,8 @@ podman rm -f mysql
 
 - [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) - Core query/relations API
 - [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Schema parsing and validation
-- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL adapter
-- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite adapter
+- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database implementation
+- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database implementation
 
 ## License
 

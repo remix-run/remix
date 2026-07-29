@@ -42,6 +42,7 @@
     "./data-table-postgres": "./src/data-table-postgres.ts",
     "./data-table-sqlite": "./src/data-table-sqlite.ts",
     "./data-table/cli": "./src/data-table/cli.ts",
+    "./data-table/database-implementation": "./src/data-table/database-implementation.ts",
     "./data-table/migrations": "./src/data-table/migrations.ts",
     "./data-table/migrations/node": "./src/data-table/migrations/node.ts",
     "./data-table/mysql": "./src/data-table-mysql.ts",
@@ -241,6 +242,10 @@
       "./data-table/cli": {
         "types": "./dist/data-table/cli.d.ts",
         "default": "./dist/data-table/cli.js"
+      },
+      "./data-table/database-implementation": {
+        "types": "./dist/data-table/database-implementation.d.ts",
+        "default": "./dist/data-table/database-implementation.js"
       },
       "./data-table/migrations": {
         "types": "./dist/data-table/migrations.d.ts",

@@ -1,15 +1,20 @@
 import type {
+  DatabaseCapabilities,
   DataManipulationOperation,
   DataManipulationResult,
-  DatabaseAdapter,
+  TransactionOptions,
 } from '../adapter.ts'
 import type { Database } from '../database.ts'
 
 export const executeOperation = Symbol('executeOperation')
+export const runInTransaction = Symbol('runInTransaction')
 
-export type QueryExecutionContext = {
-  adapter: DatabaseAdapter
+export type QueryExecutionContext = Database & {
+  capabilities: DatabaseCapabilities
   now(): unknown
-  transaction<result>(callback: (database: Database) => Promise<result>): Promise<result>
   [executeOperation](operation: DataManipulationOperation): Promise<DataManipulationResult>
+  [runInTransaction]<result>(
+    callback: (database: QueryExecutionContext) => Promise<result>,
+    options?: TransactionOptions,
+  ): Promise<result>
 }

@@ -1,4 +1,4 @@
-import type { DatabaseAdapter, ReturningSelection } from '../adapter.ts'
+import type { DatabaseCapabilities, ReturningSelection } from '../adapter.ts'
 import { DataTableQueryError, DataTableValidationError } from '../errors.ts'
 import type { ReturningInput } from '../database.ts'
 import type {
@@ -249,12 +249,12 @@ export function runAfterDeleteHook<table extends AnyTable>(
 }
 
 export function assertReturningCapability<row extends Record<string, unknown>>(
-  adapter: DatabaseAdapter,
+  capabilities: DatabaseCapabilities,
   operation: 'insert' | 'insertMany' | 'update' | 'delete' | 'upsert',
   returning: ReturningInput<row> | undefined,
 ): void {
-  if (returning && !adapter.capabilities.returning) {
-    throw new DataTableQueryError(operation + '() returning is not supported by this adapter')
+  if (returning && !capabilities.returning) {
+    throw new DataTableQueryError(operation + '() returning is not supported by this database')
   }
 }
 
