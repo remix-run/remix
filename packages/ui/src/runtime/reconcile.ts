@@ -46,6 +46,7 @@ import {
   type MixinRuntimeState,
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
+import { createComponentErrorEvent } from './error-event.ts'
 import { componentStalenessCheck } from './refresh.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
@@ -504,6 +505,8 @@ export function diffVNodes(
       domParent,
       vParent,
       rootTarget,
+      anchor,
+      rootCursor,
     )
     return rootCursor
   }
@@ -1039,19 +1042,25 @@ function diffFrame(
   next._frameInstance = curr._frameInstance
   next._frameFallbackRoot = curr._frameFallbackRoot
   next._frameResolveToken = curr._frameResolveToken
+  next._frameResolveController = curr._frameResolveController
   next._frameResolved = curr._frameResolved
   next._parent = vParent
 
+  let frameRuntime = getFrameRuntime(frame)
+  let frameInstance = next._frameInstance as FrameInstance | undefined
+  let serverFrameReload = frameRuntime?.serverFrameReload
+
   if (currSrc !== nextSrc) {
-    let frameInstance = next._frameInstance as FrameInstance | undefined
     if (frameInstance) {
       frameInstance.handle.src = nextSrc
     }
 
-    let runtime = getFrameRuntime(frame)
-    if (runtime) {
-      resolveClientFrame(next, runtime)
+    if (frameRuntime) {
+      resolveClientFrame(next, frameRuntime, serverFrameReload)
     }
+  } else if (frameRuntime && frameInstance && serverFrameReload) {
+    // Reload client frames that have the same src during a render triggered by an ancestor frame reload
+    resolveClientFrame(next, frameRuntime, serverFrameReload)
   }
 
   if (!next._frameResolved && next._frameFallbackRoot) {
@@ -1166,7 +1175,11 @@ function insertFrame(
   return cursor
 }
 
-function resolveClientFrame(node: VNode, runtime: FrameRuntime): void {
+function resolveClientFrame(
+  node: VNode,
+  runtime: FrameRuntime,
+  serverFrameReload?: { signal: AbortSignal },
+): void {
   let frameSrc = getFrameSrc(node)
   let instance = node._frameInstance as FrameInstance | undefined
   if (!instance) return
@@ -1174,10 +1187,17 @@ function resolveClientFrame(node: VNode, runtime: FrameRuntime): void {
   let token = (node._frameResolveToken ?? 0) + 1
   node._frameResolveToken = token
   node._frameResolveController?.abort()
-  let resolveController = new AbortController()
+  let reload = serverFrameReload
+    ? instance.beginClientFrameReloadForAncestorReload(serverFrameReload.signal)
+    : undefined
+  if (!reload) {
+    instance.cancelReload()
+  }
+  let resolveController = reload?.controller ?? new AbortController()
   node._frameResolveController = resolveController
 
-  Promise.resolve(runtime.resolveFrame(frameSrc, resolveController.signal, getFrameName(node)))
+  Promise.resolve()
+    .then(() => runtime.resolveFrame(frameSrc, resolveController.signal, getFrameName(node)))
     .then(async (content) => {
       if (node._frameResolveToken !== token || resolveController.signal.aborted) return
       node._frameFallbackRoot?.dispose()
@@ -1187,8 +1207,13 @@ function resolveClientFrame(node: VNode, runtime: FrameRuntime): void {
       if (node._frameResolveToken !== token || resolveController.signal.aborted) return
       node._frameResolved = true
     })
-    .catch(() => {})
+    .catch((error) => {
+      if (reload && node._frameResolveToken === token && !resolveController.signal.aborted) {
+        runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
+      }
+    })
     .finally(() => {
+      reload?.complete()
       if (node._frameResolveController === resolveController) {
         node._frameResolveController = undefined
       }
@@ -2105,9 +2130,10 @@ function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
 
 export function findNextSiblingDomAnchor(curr: VNode): Node | null {
   let vParent = curr._parent
-  if (!vParent || !Array.isArray(vParent._children)) return null
+  if (!vParent) return null
+  if (!Array.isArray(vParent._children)) return vParent._rangeEnd ?? null
   let children = vParent._children
-  if (children.length === 0) return findNextSiblingDomAnchor(vParent)
+  if (children.length === 0) return vParent._rangeEnd ?? findNextSiblingDomAnchor(vParent)
 
   let idx = children.indexOf(curr)
   if (idx === -1) return null
@@ -2120,7 +2146,7 @@ export function findNextSiblingDomAnchor(curr: VNode): Node | null {
     return findNextSiblingDomAnchor(vParent)
   }
 
-  return null
+  return vParent._rangeEnd ?? null
 }
 
 function reclaimPersistedMixinNode(

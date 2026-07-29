@@ -95,35 +95,55 @@ describe('compressResponse()', () => {
     assert.equal(decompressed.toString(), 'Hello, World!')
   })
 
-  it('preserves existing Vary header values when adding Accept-Encoding', async () => {
+  it('selects identity without changing representation headers', async () => {
     let request = new Request('https://remix.run', {
-      headers: { 'Accept-Encoding': 'gzip' },
+      headers: { 'Accept-Encoding': 'identity' },
     })
     let response = new Response('Hello, World!', {
+      status: 201,
+      statusText: 'Created',
       headers: {
-        Vary: 'Accept-Language, User-Agent',
+        'Content-Length': '2048',
+        ETag: '"abc123"',
       },
     })
 
     let compressed = await compressResponse(response, request)
 
-    let varyHeader = compressed.headers.get('Vary') || ''
-    let varyValues = varyHeader
-      .toLowerCase()
-      .split(',')
-      .map((v) => v.trim())
-    assert.ok(varyValues.includes('accept-language'))
-    assert.ok(varyValues.includes('user-agent'))
-    assert.ok(varyValues.includes('accept-encoding'))
+    assert.equal(compressed.status, 201)
+    assert.equal(compressed.statusText, 'Created')
+    assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.equal(compressed.headers.get('Content-Length'), '2048')
+    assert.equal(compressed.headers.get('Accept-Ranges'), null)
+    assert.equal(compressed.headers.get('ETag'), '"abc123"')
+    assert.ok(Vary.from(compressed.headers.get('Vary')).has('Accept-Encoding'))
+    assert.equal(await compressed.text(), 'Hello, World!')
+  })
+
+  it('preserves existing Vary values when identity is selected', async () => {
+    let request = new Request('https://remix.run', {
+      headers: { 'Accept-Encoding': 'identity' },
+    })
+    let response = new Response('Hello, World!', {
+      headers: {
+        Vary: 'Cookie',
+      },
+    })
+
+    let compressed = await compressResponse(response, request)
+    let vary = Vary.from(compressed.headers.get('Vary'))
+
+    assert.ok(vary.has('Cookie'))
+    assert.ok(vary.has('Accept-Encoding'))
   })
 
   it('does not duplicate Accept-Encoding in Vary header', async () => {
     let request = new Request('https://remix.run', {
-      headers: { 'Accept-Encoding': 'gzip' },
+      headers: { 'Accept-Encoding': 'identity' },
     })
     let response = new Response('Hello, World!', {
       headers: {
-        Vary: 'Accept-Encoding, Accept-Language',
+        Vary: 'Cookie, Accept-Encoding',
       },
     })
 
@@ -131,10 +151,11 @@ describe('compressResponse()', () => {
 
     let varyHeader = compressed.headers.get('Vary') || ''
     let encodingMatches = varyHeader.match(/accept-encoding/gi) || []
+    assert.ok(Vary.from(varyHeader).has('Cookie'))
     assert.equal(encodingMatches.length, 1)
   })
 
-  it('does not compress when client does not send Accept-Encoding', async () => {
+  it('selects identity when client does not send Accept-Encoding', async () => {
     let request = new Request('https://remix.run')
     let response = new Response('Hello, World!')
 
@@ -143,6 +164,7 @@ describe('compressResponse()', () => {
     // Per RFC 7231, when no Accept-Encoding header is present,
     // server should use identity (uncompressed) for compatibility
     assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.ok(Vary.from(compressed.headers.get('Vary')).has('Accept-Encoding'))
     assert.equal(await compressed.text(), 'Hello, World!')
   })
 
@@ -169,6 +191,7 @@ describe('compressResponse()', () => {
     let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.equal(compressed.headers.get('Vary'), null)
     assert.equal(await compressed.text(), 'Small')
   })
 
@@ -196,6 +219,7 @@ describe('compressResponse()', () => {
     let compressed = await compressResponse(response, request)
 
     assert.equal(compressed, response)
+    assert.equal(compressed.headers.get('Vary'), null)
   })
 
   it('skips compression when Cache-Control: no-transform is present', async () => {
@@ -209,6 +233,7 @@ describe('compressResponse()', () => {
     let compressed = await compressResponse(response, request)
 
     assert.equal(compressed, response)
+    assert.equal(compressed.headers.get('Vary'), null)
   })
 
   it('skips compression when response has no body', async () => {
@@ -220,6 +245,7 @@ describe('compressResponse()', () => {
     let compressed = await compressResponse(response, request)
 
     assert.equal(compressed, response)
+    assert.equal(compressed.headers.get('Vary'), null)
   })
 
   it('compresses with custom compression level', async () => {
@@ -322,6 +348,7 @@ describe('compressResponse()', () => {
 
     assert.equal(compressed, response)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.equal(compressed.headers.get('Vary'), null)
   })
 
   it('handles quality factors in Accept-Encoding', async () => {
@@ -393,7 +420,8 @@ describe('compressResponse()', () => {
 
     // Should return identity (no compression)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
-    assert.equal(compressed, response) // Should be the same response object
+    assert.ok(Vary.from(compressed.headers.get('Vary')).has('Accept-Encoding'))
+    assert.equal(await compressed.text(), 'Hello, World!')
   })
 
   it('requires compression when identity is explicitly rejected', async () => {
@@ -414,7 +442,9 @@ describe('compressResponse()', () => {
       // Client rejects everything including identity
       headers: { 'Accept-Encoding': 'gzip;q=0, deflate;q=0, br;q=0, identity;q=0' },
     })
-    let response = new Response('Hello, World!')
+    let response = new Response('Hello, World!', {
+      headers: { Vary: 'Cookie' },
+    })
 
     let result = await compressResponse(response, request, {
       encodings: ['gzip', 'deflate', 'br'],
@@ -423,6 +453,9 @@ describe('compressResponse()', () => {
     // Should return 406 Not Acceptable per RFC 7231
     assert.equal(result.status, 406)
     assert.equal(result.statusText, 'Not Acceptable')
+    let vary = Vary.from(result.headers.get('Vary'))
+    assert.ok(vary.has('Cookie'))
+    assert.ok(vary.has('Accept-Encoding'))
   })
 
   it('handles wildcard with quality factor', async () => {
@@ -486,7 +519,8 @@ describe('compressResponse()', () => {
 
     // Should return uncompressed since identity is explicitly acceptable
     assert.equal(compressed.headers.get('Content-Encoding'), null)
-    assert.equal(compressed, response)
+    assert.ok(Vary.from(compressed.headers.get('Vary')).has('Accept-Encoding'))
+    assert.equal(await compressed.text(), 'Hello, World!')
   })
 
   it('handles wildcard with identity rejection', async () => {
@@ -611,6 +645,7 @@ describe('compressResponse()', () => {
 
     assert.equal(compressed, response)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.equal(compressed.headers.get('Vary'), null)
   })
 
   it('skips 206 partial content responses', async () => {
@@ -626,6 +661,7 @@ describe('compressResponse()', () => {
 
     assert.equal(compressed, response)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.equal(compressed.headers.get('Vary'), null)
   })
 
   it('sets compression headers for HEAD requests without compressing', async () => {
@@ -675,8 +711,9 @@ describe('compressResponse()', () => {
 
     let compressed = await compressResponse(response, request)
 
-    assert.equal(compressed, response)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.ok(Vary.from(compressed.headers.get('Vary')).has('Accept-Encoding'))
+    assert.equal(await compressed.text(), content)
   })
 
   it('sets compression headers for HEAD requests even when body is already null', async () => {

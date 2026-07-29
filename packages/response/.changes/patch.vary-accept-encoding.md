@@ -1,0 +1,1 @@
+`compressResponse()` now adds `Vary: Accept-Encoding` to otherwise eligible identity responses, including requests that omit `Accept-Encoding`, so shared caches do not reuse an uncompressed response for compression-capable clients.
