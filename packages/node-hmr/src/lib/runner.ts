@@ -186,7 +186,7 @@ export function createWatchedProcessController(options: {
   let activeWatchedDirectories = new Set<string>()
   let pendingChangedPaths = new Set<string>()
   let pendingRestartPathEvents = new Map<string, 'add' | 'unlink'>()
-  let flushingWatchEvents = false
+  let activeWatchEventFlushCount = 0
   let pendingHotUpdateCount = 0
   let acceptedHotUpdateCount = 0
   let pendingBrowserHmrEvents: BrowserHmrEvent[] = []
@@ -221,7 +221,7 @@ export function createWatchedProcessController(options: {
     return (
       readyGeneration === pendingRestartGeneration &&
       restartTimer === undefined &&
-      !flushingWatchEvents &&
+      activeWatchEventFlushCount === 0 &&
       !waitingForEntryServerReady &&
       pendingHotUpdateCount === acceptedHotUpdateCount
     )
@@ -563,7 +563,7 @@ export function createWatchedProcessController(options: {
   }
 
   async function flushPendingWatchEvents() {
-    flushingWatchEvents = true
+    activeWatchEventFlushCount += 1
     try {
       let changedPaths = [...pendingChangedPaths]
       pendingChangedPaths = new Set()
@@ -668,7 +668,7 @@ export function createWatchedProcessController(options: {
         )
       }
     } finally {
-      flushingWatchEvents = false
+      activeWatchEventFlushCount -= 1
       resolveReadyWaiters()
     }
   }

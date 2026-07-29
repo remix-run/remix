@@ -7,6 +7,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
+import { createWatchedProcessController } from './lib/runner.ts'
+
 const packageRoot = fileURLToPath(new URL('../', import.meta.url))
 const nodeTsxImportUrl = import.meta.resolve('@remix-run/node-tsx')
 const isWindows = process.platform === 'win32'
@@ -222,6 +224,75 @@ describe('node-hmr', () => {
       await waitForOutput(server, /"type":"child-ready","message":"two"/)
     } finally {
       await server.stop()
+    }
+  })
+
+  it('waits for all overlapping browser HMR file handlers before reporting ready', async () => {
+    await using fixture = await createFixture({
+      'browser/a.css': 'one',
+      'browser/b.css': 'one',
+      'server.ts': getOverlappingBrowserHmrServerSource(),
+      'signals/.gitkeep': '',
+    })
+    let watchFileA = path.join(fixture.path, 'browser/a.css')
+    let watchFileB = path.join(fixture.path, 'browser/b.css')
+    let startedFileA = path.join(fixture.path, 'signals/a-started')
+    let startedFileB = path.join(fixture.path, 'signals/b-started')
+    let releaseFileA = path.join(fixture.path, 'signals/a-release')
+    let releaseFileB = path.join(fixture.path, 'signals/b-release')
+    let hmrUrlFile = path.join(fixture.path, 'signals/hmr-url')
+    let runner = createWatchedProcessController({
+      browserHmrChannel: { port: 0 },
+      cwd: fixture.path,
+      entry: 'server.ts',
+      entryArgs: [],
+      env: {
+        ...process.env,
+        HMR_URL_FILE: hmrUrlFile,
+        RELEASE_FILE_A: releaseFileA,
+        RELEASE_FILE_B: releaseFileB,
+        STARTED_FILE_A: startedFileA,
+        STARTED_FILE_B: startedFileB,
+        WATCH_FILE_A: watchFileA,
+        WATCH_FILE_B: watchFileB,
+      },
+      nodeArgs: ['--import', nodeTsxImportUrl],
+      registerPath: path.join(packageRoot, 'src/register.ts'),
+      watch: { poll: true, pollInterval: 10 },
+    })
+    let closed = runner.start()
+    let events: Awaited<ReturnType<typeof connectHmrEvents>> | undefined
+
+    try {
+      await runner.ready()
+      events = await connectHmrEvents(await fs.readFile(hmrUrlFile, 'utf-8'))
+
+      await fs.writeFile(watchFileA, 'two')
+      await waitForFile(startedFileA)
+      await fs.writeFile(watchFileB, 'two')
+      await waitForFile(startedFileB)
+
+      let readyResolved = false
+      let ready = runner.ready().then(() => {
+        readyResolved = true
+      })
+
+      await fs.writeFile(releaseFileA, '')
+      assert.deepEqual(await events.read(), {
+        timestamp: 1,
+        type: 'browser:update',
+        updates: [{ path: '/a.css', type: 'css' }],
+      })
+      assert.equal(readyResolved, false)
+
+      await fs.writeFile(releaseFileB, '')
+      await ready
+      assert.equal(readyResolved, true)
+    } finally {
+      await Promise.all([fs.writeFile(releaseFileA, ''), fs.writeFile(releaseFileB, '')])
+      await events?.close()
+      await runner.stop()
+      await closed
     }
   })
 
@@ -1304,6 +1375,44 @@ function getEventChannelGreetingServerSource(): string {
   ].join('\n')
 }
 
+function getOverlappingBrowserHmrServerSource(): string {
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
+
+  return [
+    `import * as fs from 'node:fs/promises'`,
+    `import { createBrowserHmrChannel, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    ``,
+    `let channel = await createBrowserHmrChannel()`,
+    `channel.updateWatchedFiles({`,
+    `  add: [process.env.WATCH_FILE_A, process.env.WATCH_FILE_B],`,
+    `  remove: [],`,
+    `})`,
+    `channel.onFileEvents(async (events) => {`,
+    `  let filePath = events[0]?.filePath`,
+    `  let isFileA = filePath === process.env.WATCH_FILE_A`,
+    `  let startedFile = isFileA ? process.env.STARTED_FILE_A : process.env.STARTED_FILE_B`,
+    `  let releaseFile = isFileA ? process.env.RELEASE_FILE_A : process.env.RELEASE_FILE_B`,
+    `  await fs.writeFile(startedFile, '')`,
+    `  while (true) {`,
+    `    try {`,
+    `      await fs.access(releaseFile)`,
+    `      break`,
+    `    } catch {`,
+    `      await new Promise((resolve) => setTimeout(resolve, 10))`,
+    `    }`,
+    `  }`,
+    `  return [{`,
+    `    timestamp: isFileA ? 1 : 2,`,
+    `    type: 'update',`,
+    `    updates: [{ path: isFileA ? '/a.css' : '/b.css', type: 'css' }],`,
+    `  }]`,
+    `})`,
+    `await fs.writeFile(process.env.HMR_URL_FILE, channel.url)`,
+    `emitServerReady()`,
+    `setInterval(() => {}, 1_000)`,
+  ].join('\n')
+}
+
 function getGenericGreetingSource(options: {
   extraExports?: Array<string>
   message: string
@@ -1584,6 +1693,20 @@ async function waitForOutput(server: ReturnType<typeof startFixtureServer>, patt
   await waitFor(
     () => pattern.test(server.output),
     () => `Timed out waiting for output ${pattern}.\n${server.output}`,
+  )
+}
+
+async function waitForFile(filePath: string): Promise<void> {
+  await waitFor(
+    async () => {
+      try {
+        await fs.access(filePath)
+        return true
+      } catch {
+        return false
+      }
+    },
+    () => `Timed out waiting for file ${filePath}`,
   )
 }
 
