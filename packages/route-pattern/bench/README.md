@@ -46,16 +46,16 @@ These results were recorded on June 18, 2026 from the `mjackson/route-pattern-do
 
 ### Bounded matcher acceptance gates
 
-The bounded matcher growth suite was recorded on July 28, 2026 on an Apple M5 Pro running macOS 26.4.1, Node v24.15.0, pnpm 10.34.2, and Vitest 4.1.6. The thresholds allow normal benchmark variance while rejecting exponential construction or backtracking growth.
+The bounded matcher growth suite was recorded on July 29, 2026 on an Apple M5 Pro running macOS 26.4.1, Node v24.15.0, pnpm 10.34.2, and Vitest 4.1.6. The thresholds allow normal benchmark variance while rejecting exponential construction or backtracking growth.
 
 | Gate                                               | Acceptance threshold |  Observed |
 | -------------------------------------------------- | -------------------: | --------: |
-| 5,000 common patterns, hot match                   |         <= 0.0200 ms | 0.0127 ms |
-| 5,000 common patterns, construction + match        |           <= 25.0 ms |  20.38 ms |
+| 5,000 common patterns, hot match                   |         <= 0.0200 ms | 0.0089 ms |
+| 5,000 common patterns, construction + match        |           <= 25.0 ms |  19.73 ms |
 | Optional construction, 8 to 64 groups              |        <= 12x growth |      7.2x |
-| Optional match, 8 to 64 groups                     |        <= 80x growth |     64.7x |
-| Wildcard near miss, 2 to 32 wildcards              |       <= 300x growth |    146.2x |
-| `matchAll()`, 10 to 1,000 equal patterns           |       <= 125x growth |     98.4x |
+| Optional match, 8 to 64 groups                     |        <= 80x growth |     65.0x |
+| Wildcard near miss, 2 to 32 wildcards              |       <= 300x growth |    148.3x |
+| `matchAll()`, 10 to 1,000 equal patterns           |       <= 125x growth |     87.4x |
 | Retained heap, 250 patterns with 8 to 64 optionals |        <= 12x growth |      6.5x |
 
 Optional construction and retained heap grow with compiled pattern size. Optional and wildcard matching may grow with both input length and reachable states, but do not show the exponential curves produced by variant expansion or regex backtracking.

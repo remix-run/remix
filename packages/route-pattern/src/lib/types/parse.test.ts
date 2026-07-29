@@ -648,6 +648,7 @@ export type Tests = [
   Assert<IsEqual<Parse<'*left(/middle)*right'>, never>>,
   Assert<IsEqual<Parse<':year-:month'>, never>>,
   Assert<IsEqual<Parse<':id(/details)-suffix'>, never>>,
+  Assert<IsEqual<Parse<':id((/details)-suffix)'>, never>>,
   Assert<IsEqual<Parse<'()'>, never>>,
   Assert<IsEqual<Parse<'users(/:id)(/:slug)'>, never>>,
   Assert<

@@ -130,8 +130,9 @@ export function parsePart(
     appendText(char)
     i += 1
   }
-  if (optionalStack.length > 0) {
-    throw new ParseError('unmatched (', source, optionalStack.at(-1)!.sourceIndex)
+  let unmatchedOptional = optionalStack.at(-1)
+  if (unmatchedOptional !== undefined) {
+    throw new ParseError('unmatched (', source, unmatchedOptional.sourceIndex)
   }
   if (emptyOptionals.length > 0) {
     throw new ParseError('empty optional', source, emptyOptionals[0])

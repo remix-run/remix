@@ -428,6 +428,14 @@ describe('Matcher', () => {
         })
       })
 
+      it('uses the earliest static continuation when wildcard splits are ambiguous', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('/*first/x/*second/end', null)
+
+        let match = matcher.match('https://example.com/1/x/2/x/3/end')
+        assert.deepEqual(match?.params, { first: '1', second: '2/x/3' })
+      })
+
       it('matches patterns with many independent optionals', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('/root(/a)(/b)(/c)(/d)(/e)(/f)(/g)(/h)(/i)(/j)(/k)(/l)(/m)(/n)(/o)(/p)', null)

@@ -1,22 +1,19 @@
-import { RoutePattern } from './route-pattern.ts'
-import { parsePattern } from './route-pattern/parse.ts'
+import type { RoutePattern } from './route-pattern.ts'
 
 import { Trie } from './match/trie.ts'
 import type { Match } from './match/types.ts'
 import type { MatcherLimits } from './match/limits.ts'
-export { MatcherResourceError } from './match/limits.ts'
-export type { MatcherLimits, MatcherResourceErrorDetails } from './match/limits.ts'
 import * as Specificity from './specificity.ts'
 
 /** Options that control route pattern matching. */
-export type MatcherOptions = {
+export interface MatcherOptions {
   /**
    * When `true`, pathname matching is case-insensitive for all patterns. Hostname is always
    * case-insensitive; search remains case-sensitive. Defaults to `false`.
    */
   ignoreCase?: boolean
 
-  /** Resource limits for pattern compilation and URL matching. */
+  /** Overrides for pattern-compilation and URL-matching resource limits. */
   limits?: Partial<MatcherLimits>
 }
 
@@ -37,7 +34,6 @@ export function createMatcher<source extends string>(
   pattern: source | RoutePattern<source>,
   options?: MatcherOptions,
 ): Matcher<source> {
-  pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
   let matcher = createMultiMatcher<undefined>(options)
   matcher.add(pattern, undefined)
 
@@ -83,7 +79,6 @@ class TrieMatcher<data = unknown> implements MultiMatcher<data> {
   }
 
   add(pattern: string | RoutePattern, data: data): void {
-    pattern = typeof pattern === 'string' ? parsePattern(pattern) : pattern
     this.#trie.insert(pattern, data)
   }
 

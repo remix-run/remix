@@ -143,15 +143,16 @@ type ValidAfterParam<tokens extends Token[]> =
   tokens extends [{ type: 'separator' } | { type: 'wildcard' }, ...Token[]] ? true :
   tokens extends [{ type: 'text', value: `.${string}` }, ...Token[]] ? true :
   tokens extends [{ type: 'optional', tokens: infer optional extends Token[] }, ...infer rest extends Token[]] ?
-    StartsWithParamDelimiter<optional> extends true ? ValidAfterParam<rest> : false :
+    AllStartsAreParamDelimiters<optional> extends true ? ValidAfterParam<rest> : false :
   false
 
 // oxfmt-ignore
-type StartsWithParamDelimiter<tokens extends Token[]> =
+type AllStartsAreParamDelimiters<tokens extends Token[]> =
+  tokens extends [] ? true :
   tokens extends [{ type: 'separator' } | { type: 'wildcard' }, ...Token[]] ? true :
   tokens extends [{ type: 'text', value: `.${string}` }, ...Token[]] ? true :
-  tokens extends [{ type: 'optional', tokens: infer optional extends Token[] }, ...Token[]] ?
-    StartsWithParamDelimiter<optional> :
+  tokens extends [{ type: 'optional', tokens: infer optional extends Token[] }, ...infer rest extends Token[]] ?
+    AllStartsAreParamDelimiters<optional> extends true ? AllStartsAreParamDelimiters<rest> : false :
   false
 
 // oxfmt-ignore

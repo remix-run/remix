@@ -1,9 +1,5 @@
-export { createMatcher, createMultiMatcher, MatcherResourceError } from './lib/match.ts'
+export { createMatcher, createMultiMatcher } from './lib/match.ts'
+export { MatcherResourceError } from './lib/match/limits.ts'
 export type { Match, MatchParamMeta, MatchParams } from './lib/match/types.ts'
-export type {
-  Matcher,
-  MatcherLimits,
-  MatcherOptions,
-  MatcherResourceErrorDetails,
-  MultiMatcher,
-} from './lib/match.ts'
+export type { MatcherLimits, MatcherResourceErrorDetails } from './lib/match/limits.ts'
+export type { Matcher, MatcherOptions, MultiMatcher } from './lib/match.ts'

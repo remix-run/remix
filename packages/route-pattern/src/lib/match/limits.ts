@@ -1,18 +1,18 @@
 /** Resource limits applied while compiling and matching route patterns. */
 export interface MatcherLimits {
-  /** Maximum UTF-8 byte length of one normalized pattern source. */
+  /** Maximum UTF-8 byte length of one pattern source. Defaults to 65,536. */
   maxPatternSourceBytes: number
 
-  /** Maximum combined UTF-8 byte length of all patterns in one matcher. */
+  /** Maximum combined UTF-8 byte length of all patterns in one matcher. Defaults to 16,777,216. */
   maxMatcherSourceBytes: number
 
-  /** Maximum combined compiled states in one matcher. */
+  /** Maximum combined compiled states in one matcher. Defaults to 1,000,000. */
   maxCompiledStates: number
 
-  /** Maximum state and input-position combinations evaluated by one part match. */
+  /** Maximum aggregate active-state work evaluated by one URL match. Defaults to 1,000,000. */
   maxActiveStates: number
 
-  /** Maximum combined capture declarations in one matcher. */
+  /** Maximum combined capture declarations in one matcher. Defaults to 100,000. */
   maxCaptureMetadata: number
 }
 
@@ -51,6 +51,22 @@ const defaultMatcherLimits: MatcherLimits = {
   maxCompiledStates: 1_000_000,
   maxActiveStates: 1_000_000,
   maxCaptureMetadata: 100_000,
+}
+
+export type MatchStateBudget = {
+  readonly maximum: number
+  actual: number
+}
+
+export function createMatchStateBudget(maximum: number): MatchStateBudget {
+  return { maximum, actual: 0 }
+}
+
+export function consumeMatchStates(budget: MatchStateBudget, count: number): void {
+  let actual = budget.actual + count
+  if (!Number.isSafeInteger(actual)) actual = Number.MAX_SAFE_INTEGER
+  checkMatcherLimit('maxActiveStates', budget.maximum, actual)
+  budget.actual = actual
 }
 
 export function resolveMatcherLimits(limits?: Partial<MatcherLimits>): MatcherLimits {

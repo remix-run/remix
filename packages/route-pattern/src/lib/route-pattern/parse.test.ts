@@ -289,6 +289,13 @@ describe('RoutePattern', () => {
     )
   })
 
+  it('rejects params followed by non-delimiter text after a nested optional', () => {
+    assert.throws(
+      () => parsePattern('/:id((/details)-suffix)'),
+      new ParseError('invalid param delimiter', '/:id((/details)-suffix)', 15),
+    )
+  })
+
   it('rejects empty optional groups', () => {
     assert.throws(
       () => RoutePattern.parse('/users()'),

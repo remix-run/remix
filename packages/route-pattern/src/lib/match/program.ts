@@ -1,6 +1,6 @@
 import type { PartPattern, PartPatternToken } from '../route-pattern.ts'
 import type { MatchParamMeta } from './types.ts'
-import { checkMatcherLimit } from './limits.ts'
+import { consumeMatchStates, type MatchStateBudget } from './limits.ts'
 
 type Unit = {
   readonly value: string
@@ -24,22 +24,26 @@ export type PartProgram = {
   readonly tokens: ReadonlyArray<CompiledToken>
   readonly optionals: ReadonlyMap<number, number>
   readonly captureNames: ReadonlySet<string>
-  readonly isStatic: boolean
+  readonly matchKind: 'static' | 'linear' | 'state'
   readonly staticPrefix: ReadonlyArray<Unit>
   readonly staticSuffix: ReadonlyArray<Unit>
   readonly staticAnchor: ReadonlyArray<Unit>
 }
 
-type Capture = {
+type CaptureNode = {
   readonly type: ':' | '*'
   readonly name: string
   readonly begin: number
   readonly end: number
+  readonly next: CaptureNode | null
 }
 
 type Solution = {
-  readonly captures: ReadonlyArray<Capture>
+  readonly captures: CaptureNode | null
+  readonly captureCount: number
 }
+
+const emptySolution: Solution = { captures: null, captureCount: 0 }
 
 export function compilePart(part: PartPattern, options?: { ignoreCase?: boolean }): PartProgram {
   let tokens: Array<CompiledToken> = []
@@ -115,33 +119,57 @@ export function compilePart(part: PartPattern, options?: { ignoreCase?: boolean 
     tokens,
     optionals,
     captureNames,
-    isStatic: tokens.every((token) => token.type === 'text' || token.type === 'separator'),
+    matchKind: getMatchKind(tokens),
     staticPrefix,
     staticSuffix,
     staticAnchor,
   }
 }
 
-export function hasStaticSuffix(program: PartProgram, input: CanonicalText): boolean {
+function getMatchKind(tokens: ReadonlyArray<CompiledToken>): PartProgram['matchKind'] {
+  let result: PartProgram['matchKind'] = 'static'
+  for (let token of tokens) {
+    if (token.type === '*' || token.type === '(' || token.type === ')') return 'state'
+    if (token.type === ':') result = 'linear'
+  }
+  return result
+}
+
+export function hasStaticSuffix(
+  program: PartProgram,
+  input: CanonicalText,
+  budget: MatchStateBudget,
+): boolean {
   let offset = input.units.length - program.staticSuffix.length
   if (offset < 0) return false
+  consumeMatchStates(budget, program.staticSuffix.length)
   for (let i = 0; i < program.staticSuffix.length; i++) {
     if (!unitsEqual(input.units[offset + i], program.staticSuffix[i])) return false
   }
   return true
 }
 
-export function hasStaticPrefix(program: PartProgram, input: CanonicalText): boolean {
+export function hasStaticPrefix(
+  program: PartProgram,
+  input: CanonicalText,
+  budget: MatchStateBudget,
+): boolean {
   if (program.staticPrefix.length > input.units.length) return false
+  consumeMatchStates(budget, program.staticPrefix.length)
   for (let i = 0; i < program.staticPrefix.length; i++) {
     if (!unitsEqual(input.units[i], program.staticPrefix[i])) return false
   }
   return true
 }
 
-export function hasStaticAnchor(program: PartProgram, input: CanonicalText): boolean {
+export function hasStaticAnchor(
+  program: PartProgram,
+  input: CanonicalText,
+  budget: MatchStateBudget,
+): boolean {
   if (program.staticAnchor.length === 0) return true
   for (let position = 0; position + program.staticAnchor.length <= input.units.length; position++) {
+    consumeMatchStates(budget, program.staticAnchor.length)
     if (matchUnits(input.units, position, program.staticAnchor) !== null) return true
   }
   return false
@@ -150,9 +178,14 @@ export function hasStaticAnchor(program: PartProgram, input: CanonicalText): boo
 export function canonicalizeUrlPart(
   text: string,
   type: PartPattern['type'],
-  options?: { ignoreCase?: boolean },
+  options: { budget: MatchStateBudget; ignoreCase?: boolean },
 ): CanonicalText | null {
-  return canonicalizeText(text, type, { ...options, strict: true, pattern: false })
+  consumeMatchStates(options.budget, text.length)
+  return canonicalizeText(text, type, {
+    ignoreCase: options.ignoreCase,
+    strict: true,
+    pattern: false,
+  })
 }
 
 function canonicalizePatternText(
@@ -170,8 +203,6 @@ function canonicalizeText(
   type: PartPattern['type'],
   options: { ignoreCase?: boolean; strict: boolean; pattern: boolean },
 ): CanonicalText | null {
-  let structuralChars =
-    type === 'hostname' ? new Set(['.']) : options.pattern ? new Set(['.']) : new Set(['/', '.'])
   let units: Array<Unit> = []
   let offset = 0
   let chunk = ''
@@ -197,7 +228,8 @@ function canonicalizeText(
   }
 
   for (let char of text) {
-    if (!structuralChars.has(char)) {
+    let structural = char === '.' || (type === 'pathname' && !options.pattern && char === '/')
+    if (!structural) {
       chunk += char
       continue
     }
@@ -219,12 +251,12 @@ function encodeDataUnit(value: string, type: PartPattern['type']): string {
 export function matchPart(
   program: PartProgram,
   input: CanonicalText,
-  options: { maxActiveStates: number },
+  budget: MatchStateBudget,
 ): ReadonlyArray<MatchParamMeta> | null {
   let stateCount = program.tokens.length + 1
   let inputLength = input.units.length
-  checkMatcherLimit('maxActiveStates', options.maxActiveStates, stateCount * (inputLength + 1))
-  if (program.isStatic) {
+  if (program.matchKind === 'static') {
+    consumeMatchStates(budget, stateCount + inputLength)
     if (program.tokens.length !== inputLength) return null
     for (let position = 0; position < inputLength; position++) {
       let token = program.tokens[position]
@@ -237,12 +269,18 @@ export function matchPart(
     }
     return []
   }
+  if (program.matchKind === 'linear') {
+    consumeMatchStates(budget, stateCount + inputLength)
+    return matchLinearPart(program, input)
+  }
+  consumeMatchStates(budget, stateCount * (inputLength + 1))
+  let hostnameOrder = program.type === 'hostname' ? hostnamePositions(input.units) : null
   let solutions: Array<Array<Solution | null>> = Array.from({ length: stateCount }, () =>
     Array.from({ length: inputLength + 1 }, () => null),
   )
 
   for (let position = inputLength; position >= 0; position--) {
-    solutions[program.tokens.length][position] = position === inputLength ? { captures: [] } : null
+    solutions[program.tokens.length][position] = position === inputLength ? emptySolution : null
 
     for (let state = program.tokens.length - 1; state >= 0; state--) {
       let token = program.tokens[state]
@@ -257,7 +295,7 @@ export function matchPart(
         if (end === undefined) throw new Error('missing optional end')
         let omitted = solutions[end + 1][position]
         let included = solutions[state + 1][position]
-        solutions[state][position] = betterSolution(program.type, input, omitted, included)
+        solutions[state][position] = betterSolution(inputLength, hostnameOrder, omitted, included)
         continue
       }
 
@@ -297,11 +335,14 @@ export function matchPart(
       if (position < inputLength) {
         let next = solutions[state][position + 1]
         if (next !== null) {
-          let [capture, ...rest] = next.captures
-          if (capture === undefined || capture.type !== '*' || capture.name !== token.name) {
+          let capture = next.captures
+          if (capture === null || capture.type !== '*' || capture.name !== token.name) {
             throw new Error('invalid wildcard continuation')
           }
-          consumed = { captures: [{ ...capture, begin: position }, ...rest] }
+          consumed = {
+            captures: { ...capture, begin: position },
+            captureCount: next.captureCount,
+          }
         }
       }
       let exited = prependCapture(solutions[state + 1][position], {
@@ -310,22 +351,64 @@ export function matchPart(
         begin: position,
         end: position,
       })
-      solutions[state][position] = betterSolution(program.type, input, consumed, exited)
+      solutions[state][position] = betterSolution(inputLength, hostnameOrder, consumed, exited)
     }
   }
 
   let solution = solutions[0][0]
   if (solution === null) return null
-  return solution.captures.map((capture) => ({
+  let result: Array<MatchParamMeta> = []
+  for (let capture = solution.captures; capture !== null; capture = capture.next) {
+    result.push(toMatchParamMeta(input, capture))
+  }
+  return result
+}
+
+function matchLinearPart(
+  program: PartProgram,
+  input: CanonicalText,
+): ReadonlyArray<MatchParamMeta> | null {
+  let captures: Array<MatchParamMeta> = []
+  let position = 0
+
+  for (let token of program.tokens) {
+    if (token.type === 'text' || token.type === 'separator') {
+      let unit = input.units[position]
+      if (unit === undefined || !unitsEqual(unit, token.unit)) return null
+      position += 1
+      continue
+    }
+    if (token.type !== ':') throw new Error(`unexpected linear token: ${token.type}`)
+
+    let begin = position
+    while (position < input.units.length && !input.units[position].structural) position += 1
+    if (position === begin) return null
+    captures.push(
+      toMatchParamMeta(input, {
+        type: token.type,
+        name: token.name,
+        begin,
+        end: position,
+        next: null,
+      }),
+    )
+  }
+
+  return position === input.units.length ? captures : null
+}
+
+function toMatchParamMeta(input: CanonicalText, capture: CaptureNode): MatchParamMeta {
+  let value = ''
+  for (let position = capture.begin; position < capture.end; position++) {
+    value += input.units[position].value
+  }
+  return {
     type: capture.type,
     name: capture.name,
-    value: input.units
-      .slice(capture.begin, capture.end)
-      .map((unit) => unit.value)
-      .join(''),
+    value,
     begin: offsetAt(input, capture.begin),
     end: offsetAt(input, capture.end),
-  }))
+  }
 }
 
 function matchUnits(
@@ -344,44 +427,68 @@ function unitsEqual(a: Unit, b: Unit): boolean {
   return a.value === b.value && a.structural === b.structural
 }
 
-function prependCapture(solution: Solution | null, capture: Capture): Solution | null {
-  return solution === null ? null : { captures: [capture, ...solution.captures] }
+function prependCapture(
+  solution: Solution | null,
+  capture: Omit<CaptureNode, 'next'>,
+): Solution | null {
+  return solution === null
+    ? null
+    : {
+        captures: { ...capture, next: solution.captures },
+        captureCount: solution.captureCount + 1,
+      }
 }
 
 function betterSolution(
-  type: PartPattern['type'],
-  input: CanonicalText,
+  inputLength: number,
+  hostnameOrder: ReadonlyArray<number> | null,
   preferred: Solution | null,
   alternative: Solution | null,
 ): Solution | null {
   if (preferred === null) return alternative
   if (alternative === null) return preferred
-  let comparison = compareSolutions(type, input.units, preferred, alternative)
+  let comparison = compareSolutions(inputLength, hostnameOrder, preferred, alternative)
   return comparison >= 0 ? preferred : alternative
 }
 
 function compareSolutions(
-  type: PartPattern['type'],
-  input: ReadonlyArray<Unit>,
+  inputLength: number,
+  hostnameOrder: ReadonlyArray<number> | null,
   a: Solution,
   b: Solution,
 ): -1 | 0 | 1 {
-  let aEncoding = encodeSpecificity(input.length, a.captures)
-  let bEncoding = encodeSpecificity(input.length, b.captures)
-  let positions = type === 'hostname' ? hostnamePositions(input) : input.map((_, index) => index)
-
-  for (let position of positions) {
-    if (aEncoding[position] < bEncoding[position]) return 1
-    if (aEncoding[position] > bEncoding[position]) return -1
+  if (hostnameOrder === null) {
+    let aCapture = a.captures
+    let bCapture = b.captures
+    for (let position = 0; position < inputLength; position++) {
+      while (aCapture !== null && aCapture.end <= position) aCapture = aCapture.next
+      while (bCapture !== null && bCapture.end <= position) bCapture = bCapture.next
+      let aSpecificity = captureSpecificityAt(aCapture, position)
+      let bSpecificity = captureSpecificityAt(bCapture, position)
+      if (aSpecificity < bSpecificity) return 1
+      if (aSpecificity > bSpecificity) return -1
+    }
+  } else {
+    let aEncoding = encodeSpecificity(inputLength, a.captures)
+    let bEncoding = encodeSpecificity(inputLength, b.captures)
+    for (let position of hostnameOrder) {
+      if (aEncoding[position] < bEncoding[position]) return 1
+      if (aEncoding[position] > bEncoding[position]) return -1
+    }
   }
-  if (a.captures.length < b.captures.length) return 1
-  if (a.captures.length > b.captures.length) return -1
+  if (a.captureCount < b.captureCount) return 1
+  if (a.captureCount > b.captureCount) return -1
   return 0
 }
 
-function encodeSpecificity(length: number, captures: ReadonlyArray<Capture>): Uint8Array {
+function captureSpecificityAt(capture: CaptureNode | null, position: number): 0 | 1 | 2 {
+  if (capture === null || capture.begin > position) return 0
+  return capture.type === ':' ? 1 : 2
+}
+
+function encodeSpecificity(length: number, captures: CaptureNode | null): Uint8Array {
   let encoding = new Uint8Array(length)
-  for (let capture of captures) {
+  for (let capture = captures; capture !== null; capture = capture.next) {
     encoding.fill(capture.type === ':' ? 1 : 2, capture.begin, capture.end)
   }
   return encoding
