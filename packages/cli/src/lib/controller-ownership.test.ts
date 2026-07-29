@@ -172,6 +172,27 @@ describe('controller ownership', () => {
     assert.deepEqual(ownership.orphanRouteDirectoryPaths, ['app/actions/unused'])
   })
 
+  it('does not treat colocated browser source directories as route directories', async () => {
+    let routeManifest = await loadRouteManifest(getFixturePath('doctor-clean'))
+    let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
+
+    assert.deepEqual(ownership.orphanRouteDirectoryPaths, [])
+    assert.ok(!ownership.scan.routeDirectoryPaths.has('app/actions/public'))
+    assert.ok(!ownership.scan.routeDirectoryPaths.has('app/actions/contact/public'))
+    assert.ok(!ownership.scan.routeDirectoryPaths.has('app/actions/contact/public/widgets'))
+  })
+
+  it('claims files inside browser source directories as route-owned content', async () => {
+    let routeManifest = await loadRouteManifest(getFixturePath('doctor-clean'))
+    let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
+    let contact = ownership.subtrees.find((subtree) => subtree.routeName === 'contact')
+
+    assert.ok(contact)
+    assert.deepEqual(contact.claimedRouteLocalFilePaths, [
+      'app/actions/contact/public/widgets/field.tsx',
+    ])
+  })
+
   it('tracks extraneous root directories from the route-map shape', async () => {
     let routeManifest = await loadRouteManifest(getFixturePath('doctor-generic-buckets'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
