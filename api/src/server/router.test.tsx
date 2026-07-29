@@ -35,8 +35,8 @@ describe('createRouter()', () => {
     assert.equal(html.includes('href="/assets/client/entry.tsx"'), true)
     assert.equal(html.includes('href="/assets/client/table-of-contents.browser.tsx"'), true)
     assert.equal(html.includes('href="/assets/client/table-of-contents-active.browser.ts"'), true)
-    assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), false)
-    assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), false)
+    assert.equal(html.includes('src="/v1%2E2%2E3/assets/client/entry.tsx"'), false)
+    assert.equal(html.includes('href="/v1%2E2%2E3/assets/client/entry.tsx"'), false)
   })
 
   it('loads docs styles after Pagefind styles so theme overrides win', async (t) => {
@@ -67,18 +67,18 @@ describe('createRouter()', () => {
       versions: ['v1.2.3'],
     })
 
-    let response = await router.fetch(new Request('http://localhost/v1.2.3/'))
+    let response = await router.fetch(new Request('http://localhost/v1%2E2%2E3/'))
     assert.equal(response.status, 200)
     let html = await response.text()
     let assetUrls = getLoadedAssetUrls(html).filter((url) => shouldVersionAssetUrl(url))
 
-    assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), true)
-    assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('src="/v1%2E2%2E3/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('href="/v1%2E2%2E3/assets/client/entry.tsx"'), true)
     assert.equal(html.includes('src="/assets/client/entry.tsx"'), false)
     assert.equal(html.includes('href="/assets/client/entry.tsx"'), false)
     assert.equal(assetUrls.length > 0, true)
     assert.deepEqual(
-      assetUrls.filter((url) => !url.startsWith('/v1.2.3/')),
+      assetUrls.filter((url) => !url.startsWith('/v1%2E2%2E3/')),
       [],
     )
   })
@@ -92,7 +92,7 @@ describe('createRouter()', () => {
     })
 
     let versionedResponse = await router.fetch(
-      new Request('http://localhost/v1.2.3/assets/client/entry.tsx'),
+      new Request('http://localhost/v1%2E2%2E3/assets/client/entry.tsx'),
     )
     assert.equal(versionedResponse.status, 200)
 
@@ -151,17 +151,17 @@ async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServ
 }
 
 describe('getVersionedLookupHref()', () => {
-  it('preserves versioned markdown lookup targets', () => {
+  it('encodes dots in versioned markdown lookup targets', () => {
     assert.equal(
       getVersionedLookupHref('/api/remix/headers/accept/class/Accept.md', 'v1.2.3'),
-      '/v1.2.3/api/remix/headers/accept/class/Accept.md',
+      '/v1%2E2%2E3/api/remix/headers/accept/class/Accept.md',
     )
   })
 
   it('uses docs routes for HTML lookup targets', () => {
     assert.equal(
       getVersionedLookupHref('/api/remix/headers/accept/class/Accept', 'v1.2.3'),
-      '/v1.2.3/api/remix/headers/accept/class/Accept/',
+      '/v1%2E2%2E3/api/remix/headers/accept/class/Accept/',
     )
   })
 
@@ -171,7 +171,7 @@ describe('getVersionedLookupHref()', () => {
         '/api/remix/headers/accept/class/Accept.md?tab=docs#example',
         'v1.2.3',
       ),
-      '/v1.2.3/api/remix/headers/accept/class/Accept.md?tab=docs#example',
+      '/v1%2E2%2E3/api/remix/headers/accept/class/Accept.md?tab=docs#example',
     )
   })
 

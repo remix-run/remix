@@ -1,5 +1,5 @@
 import type { Assert, IsEqual } from './utils.ts'
-import type { Parse } from './parse.ts'
+import type { Parse, Token } from './parse.ts'
 
 export type Tests = [
   // empty string
@@ -337,18 +337,7 @@ export type Tests = [
       }
     >
   >,
-  Assert<
-    IsEqual<
-      Parse<':protocol\\:'>,
-      {
-        protocol: undefined
-        hostname: undefined
-        port: undefined
-        pathname: [{ type: 'variable'; name: 'protocol' }, { type: 'text'; value: ':' }]
-        search: undefined
-      }
-    >
-  >,
+  Assert<IsEqual<Parse<':protocol\\:'>, never>>,
   Assert<
     IsEqual<
       Parse<'://example.com'>,
@@ -653,6 +642,24 @@ export type Tests = [
           ]
           search: undefined
         }
+    >
+  >,
+  Assert<IsEqual<Parse<'*left*right'>, never>>,
+  Assert<IsEqual<Parse<'*left(/middle)*right'>, never>>,
+  Assert<IsEqual<Parse<':year-:month'>, never>>,
+  Assert<IsEqual<Parse<':id(/details)-suffix'>, never>>,
+  Assert<IsEqual<Parse<'()'>, never>>,
+  Assert<IsEqual<Parse<'users(/:id)(/:slug)'>, never>>,
+  Assert<
+    IsEqual<
+      Parse<'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'>,
+      {
+        protocol: undefined
+        hostname: undefined
+        port: undefined
+        pathname: Token[]
+        search: undefined
+      }
     >
   >,
 ]

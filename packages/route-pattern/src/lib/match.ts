@@ -3,6 +3,9 @@ import { parsePattern } from './route-pattern/parse.ts'
 
 import { Trie } from './match/trie.ts'
 import type { Match } from './match/types.ts'
+import type { MatcherLimits } from './match/limits.ts'
+export { MatcherResourceError } from './match/limits.ts'
+export type { MatcherLimits, MatcherResourceErrorDetails } from './match/limits.ts'
 import * as Specificity from './specificity.ts'
 
 /** Options that control route pattern matching. */
@@ -12,6 +15,9 @@ export type MatcherOptions = {
    * case-insensitive; search remains case-sensitive. Defaults to `false`.
    */
   ignoreCase?: boolean
+
+  /** Resource limits for pattern compilation and URL matching. */
+  limits?: Partial<MatcherLimits>
 }
 
 /** Matcher for a single route pattern. */
@@ -73,7 +79,7 @@ class TrieMatcher<data = unknown> implements MultiMatcher<data> {
 
   constructor(options?: MatcherOptions) {
     this.ignoreCase = options?.ignoreCase ?? false
-    this.#trie = new Trie<data>({ ignoreCase: this.ignoreCase })
+    this.#trie = new Trie<data>(options)
   }
 
   add(pattern: string | RoutePattern, data: data): void {

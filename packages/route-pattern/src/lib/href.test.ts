@@ -220,6 +220,14 @@ describe('createHref', () => {
       )
     })
 
+    it('encodes dots in variables so they remain capture data', () => {
+      assert.equal(createHref('/users/:id', { id: 'a.b' }), '/users/a%2Eb')
+    })
+
+    it('uses one value for every repeated capture name', () => {
+      assert.equal(createHref('/:id/:id', { id: 'same' }), '/same/same')
+    })
+
     it('encodes structural URL chars including `/` for variables', () => {
       assert.equal(
         createHref('/posts/:slug', { slug: 'hello/world?draft=true#preview' }),
@@ -345,26 +353,29 @@ describe('createHref', () => {
     describe('with multiple optionals', () => {
       it('includes both when both provided', () => {
         assert.equal(
-          createHref('/posts(/:id)(/:action)', { id: '123', action: 'edit' }),
-          '/posts/123/edit',
+          createHref('/posts(/id/:id)(/action/:action)', { id: '123', action: 'edit' }),
+          '/posts/id/123/action/edit',
         )
       })
 
       it('includes only first when second omitted', () => {
-        assert.equal(createHref('/posts(/:id)(/:action)', { id: '123' }), '/posts/123')
+        assert.equal(createHref('/posts(/id/:id)(/action/:action)', { id: '123' }), '/posts/id/123')
       })
 
       it('includes only second when first omitted', () => {
-        assert.equal(createHref('/posts(/:id)(/:action)', { action: 'edit' }), '/posts/edit')
+        assert.equal(
+          createHref('/posts(/id/:id)(/action/:action)', { action: 'edit' }),
+          '/posts/action/edit',
+        )
       })
 
       it('omits both when neither provided', () => {
-        assert.equal(createHref('/posts(/:id)(/:action)'), '/posts')
+        assert.equal(createHref('/posts(/id/:id)(/action/:action)'), '/posts')
       })
     })
 
     it('normalizes to slash when entire pattern is omitted optional', () => {
-      assert.equal(createHref('(/:locale)(/:page)'), '/')
+      assert.equal(createHref('(/locale/:locale)(/page/:page)'), '/')
     })
   })
 

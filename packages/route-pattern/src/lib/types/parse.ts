@@ -43,7 +43,9 @@ type ParseParts<S extends SplitPattern, protocol extends Token[] | undefined> =
 
 // oxfmt-ignore
 type ParseMaybePart<T, Sep extends string> =
-  T extends string ? ParsePart<T, Sep> : undefined
+  T extends string ?
+    ParsePart<T, Sep> extends infer tokens extends Token[] ? ValidatePart<tokens> : never :
+  undefined
 
 type Parsed<
   S extends SplitPattern,
@@ -84,31 +86,120 @@ type ParsePart<T extends string, Sep extends string = ''> = _ParsePart<
     optionals: []
     rest: T
   },
-  Sep
+  Sep,
+  []
 >
 
 // oxfmt-ignore
-type _ParsePart<S extends ParsePartState, Sep extends string = ''> =
+type _ParsePart<S extends ParsePartState, Sep extends string = '', depth extends unknown[] = []> =
+  depth['length'] extends 64 ? Token[] :
   S extends { rest: `${infer Head}${infer Tail}` } ?
-    Head extends Sep ? _ParsePart<AppendToken<S, { type: 'separator' }, Tail>, Sep> :
+    Head extends Sep ? _ParsePart<AppendToken<S, { type: 'separator' }, Tail>, Sep, [...depth, unknown]> :
     Head extends ':' ?
       IdentifierParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
-        (name extends '' ? never : _ParsePart<AppendToken<S, { type: 'variable', name: name }, rest>, Sep>) :
+        (name extends '' ? never : _ParsePart<AppendToken<S, { type: 'variable', name: name }, rest>, Sep, [...depth, unknown]>) :
       never :
     Head extends '*' ?
       IdentifierParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
-        _ParsePart<AppendToken<S, (name extends '' ? { type: 'wildcard' } : { type: 'wildcard', name: name }), rest>, Sep> :
+        _ParsePart<AppendToken<S, (name extends '' ? { type: 'wildcard' } : { type: 'wildcard', name: name }), rest>, Sep, [...depth, unknown]> :
       never :
-    Head extends '(' ? _ParsePart<PushOptional<S, Tail>, Sep> :
+    Head extends '(' ? _ParsePart<PushOptional<S, Tail>, Sep, [...depth, unknown]> :
     Head extends ')' ?
-      PopOptional<S, Tail> extends infer next extends ParsePartState ? _ParsePart<next, Sep> :
+      PopOptional<S, Tail> extends infer next extends ParsePartState ? _ParsePart<next, Sep, [...depth, unknown]> :
       never :
     Head extends '\\' ?
-      Tail extends `${infer L}${infer R}` ? _ParsePart<AppendText<S, L, R>, Sep> :
+      Tail extends `${infer L}${infer R}` ? _ParsePart<AppendText<S, L, R>, Sep, [...depth, unknown]> :
       never :
-    _ParsePart<AppendText<S, Head, Tail>, Sep> :
+    _ParsePart<AppendText<S, Head, Tail>, Sep, [...depth, unknown]> :
   S['optionals'] extends [] ? S['tokens'] :
   never
+
+// oxfmt-ignore
+type ValidatePart<tokens extends Token[]> =
+  Token[] extends tokens ? tokens :
+  ValidateTokens<tokens> extends true ? tokens :
+  never
+
+// oxfmt-ignore
+type ValidateTokens<tokens extends Token[]> =
+  tokens extends [infer token extends Token, ...infer rest extends Token[]] ?
+    token extends { type: 'optional', tokens: infer optional extends Token[] } ?
+      optional extends [] ? false :
+      ValidateTokens<optional> extends false ? false :
+      HasAdjacentOptionalAmbiguity<optional, rest> extends true ? false :
+      CanEndWithWildcard<optional> extends true ?
+        CanStartWithWildcard<rest> extends true ? false : ValidateTokens<rest> :
+      ValidateTokens<rest> :
+    token extends { type: 'variable' } ?
+      ValidAfterParam<rest> extends true ? ValidateTokens<rest> : false :
+    token extends { type: 'wildcard' } ?
+      CanStartWithWildcard<rest> extends true ? false : ValidateTokens<rest> :
+    ValidateTokens<rest> :
+  true
+
+// oxfmt-ignore
+type ValidAfterParam<tokens extends Token[]> =
+  tokens extends [] ? true :
+  tokens extends [{ type: 'separator' } | { type: 'wildcard' }, ...Token[]] ? true :
+  tokens extends [{ type: 'text', value: `.${string}` }, ...Token[]] ? true :
+  tokens extends [{ type: 'optional', tokens: infer optional extends Token[] }, ...infer rest extends Token[]] ?
+    StartsWithParamDelimiter<optional> extends true ? ValidAfterParam<rest> : false :
+  false
+
+// oxfmt-ignore
+type StartsWithParamDelimiter<tokens extends Token[]> =
+  tokens extends [{ type: 'separator' } | { type: 'wildcard' }, ...Token[]] ? true :
+  tokens extends [{ type: 'text', value: `.${string}` }, ...Token[]] ? true :
+  tokens extends [{ type: 'optional', tokens: infer optional extends Token[] }, ...Token[]] ?
+    StartsWithParamDelimiter<optional> :
+  false
+
+// oxfmt-ignore
+type CanStartWithWildcard<tokens extends Token[]> =
+  tokens extends [{ type: 'wildcard' }, ...Token[]] ? true :
+  tokens extends [{ type: 'optional', tokens: infer optional extends Token[] }, ...infer rest extends Token[]] ?
+    CanStartWithWildcard<optional> extends true ? true : CanStartWithWildcard<rest> :
+  false
+
+// oxfmt-ignore
+type CanEndWithWildcard<tokens extends Token[]> =
+  tokens extends [...Token[], { type: 'wildcard' }] ? true :
+  tokens extends [...infer rest extends Token[], { type: 'optional', tokens: infer optional extends Token[] }] ?
+    CanEndWithWildcard<optional> extends true ? true : CanEndWithWildcard<rest> :
+  false
+
+// oxfmt-ignore
+type HasAdjacentOptionalAmbiguity<optional extends Token[], rest extends Token[]> =
+  rest extends [{ type: 'optional', tokens: infer next extends Token[] }, ...Token[]] ?
+    TokenStructure<optional> extends TokenStructure<next> ?
+      TokenStructure<next> extends TokenStructure<optional> ?
+        CaptureSchema<optional> extends CaptureSchema<next> ? false : true :
+      false :
+    false :
+  false
+
+// oxfmt-ignore
+type TokenStructure<tokens extends Token[], result extends string = ''> =
+  tokens extends [infer token extends Token, ...infer rest extends Token[]] ?
+    token extends { type: 'variable' } ? TokenStructure<rest, `${result}:|`> :
+    token extends { type: 'wildcard' } ? TokenStructure<rest, `${result}*|`> :
+    token extends { type: 'separator' } ? TokenStructure<rest, `${result}/|`> :
+    token extends { type: 'text', value: infer value extends string } ? TokenStructure<rest, `${result}t:${value}|`> :
+    token extends { type: 'optional', tokens: infer optional extends Token[] } ?
+      TokenStructure<rest, `${result}(${TokenStructure<optional>})|`> :
+    never :
+  result
+
+// oxfmt-ignore
+type CaptureSchema<tokens extends Token[], result extends string = ''> =
+  tokens extends [infer token extends Token, ...infer rest extends Token[]] ?
+    token extends { type: 'variable', name: infer name extends string } ? CaptureSchema<rest, `${result}::${name}|`> :
+    token extends { type: 'wildcard', name: infer name extends string } ? CaptureSchema<rest, `${result}*:${name}|`> :
+    token extends { type: 'wildcard' } ? CaptureSchema<rest, `${result}*:*|`> :
+    token extends { type: 'optional', tokens: infer optional extends Token[] } ?
+      CaptureSchema<rest, `${result}(${CaptureSchema<optional>})|`> :
+    CaptureSchema<rest, result> :
+  result
 
 // oxfmt-ignore
 type AppendToken<S extends ParsePartState, token extends Token, rest extends string> =
