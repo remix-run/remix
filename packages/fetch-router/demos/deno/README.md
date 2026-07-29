@@ -13,7 +13,7 @@ deno task dev
 
 The application will be available at `http://localhost:44100`.
 
-Use `deno task start` to run without file watching, and `deno task typecheck` to type check the demo.
+Use `deno task start` to run without file watching, and `deno task typecheck` to type check every module in the demo.
 
 ## What This Demonstrates
 
