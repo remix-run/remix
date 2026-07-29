@@ -15,10 +15,10 @@ import {
 import type { Match, MatchParamMeta } from './types.ts'
 import {
   checkMatcherLimit,
-  consumeMatchStates,
-  createMatchStateBudget,
+  consumeMatchWork,
+  createMatchWorkBudget,
   resolveMatcherLimits,
-  type MatchStateBudget,
+  type MatchWorkBudget,
   type MatcherLimits,
 } from './limits.ts'
 
@@ -45,9 +45,7 @@ export class Trie<data = unknown> {
   #pathnameAnchorIndex = createPathnameIndexNode<data>()
   #insertion = 0
   readonly #limits: MatcherLimits
-  #sourceBytes = 0
-  #compiledStates = 0
-  #captureMetadata = 0
+  #size = 0
 
   constructor(options?: { ignoreCase?: boolean; limits?: Partial<MatcherLimits> }) {
     this.ignoreCase = options?.ignoreCase ?? false
@@ -55,14 +53,14 @@ export class Trie<data = unknown> {
   }
 
   insert(pattern: string | RoutePattern, data: data): void {
-    let sourceBytes: number
+    let patternSize: number
     if (typeof pattern === 'string') {
       let source = pattern
-      sourceBytes = this.#checkSourceLimits(source)
+      patternSize = this.#checkSizeLimits(source)
       pattern = parsePattern(pattern)
-      if (pattern.source !== source) sourceBytes = this.#checkSourceLimits(pattern.source)
+      if (pattern.source !== source) patternSize = this.#checkSizeLimits(pattern.source)
     } else {
-      sourceBytes = this.#checkSourceLimits(pattern.source)
+      patternSize = this.#checkSizeLimits(pattern.source)
     }
     let patternParts = pattern._parts
 
@@ -70,20 +68,6 @@ export class Trie<data = unknown> {
       ? compilePart(patternParts.hostname, { ignoreCase: true })
       : null
     let pathname = compilePart(patternParts.pathname, { ignoreCase: this.ignoreCase })
-    let compiledStates =
-      (hostname === null ? 0 : hostname.tokens.length + 1) + pathname.tokens.length + 1
-    let captureMetadata = countCaptures(patternParts)
-
-    checkMatcherLimit(
-      'maxCompiledStates',
-      this.#limits.maxCompiledStates,
-      this.#compiledStates + compiledStates,
-    )
-    checkMatcherLimit(
-      'maxCaptureMetadata',
-      this.#limits.maxCaptureMetadata,
-      this.#captureMetadata + captureMetadata,
-    )
     let entry: Entry<data> = {
       pattern,
       patternParts,
@@ -128,20 +112,14 @@ export class Trie<data = unknown> {
       node = next
     }
     node.entries.push(entry)
-    this.#sourceBytes += sourceBytes
-    this.#compiledStates += compiledStates
-    this.#captureMetadata += captureMetadata
+    this.#size += patternSize
   }
 
-  #checkSourceLimits(source: string): number {
-    let sourceBytes = utf8ByteLength(source)
-    checkMatcherLimit('maxPatternSourceBytes', this.#limits.maxPatternSourceBytes, sourceBytes)
-    checkMatcherLimit(
-      'maxMatcherSourceBytes',
-      this.#limits.maxMatcherSourceBytes,
-      this.#sourceBytes + sourceBytes,
-    )
-    return sourceBytes
+  #checkSizeLimits(source: string): number {
+    let size = utf8Size(source)
+    checkMatcherLimit('maxPatternSize', this.#limits.maxPatternSize, size)
+    checkMatcherLimit('maxMatcherSize', this.#limits.maxMatcherSize, this.#size + size)
+    return size
   }
 
   search(url: URL): Array<Match<string, data>> {
@@ -149,20 +127,20 @@ export class Trie<data = unknown> {
     if (protocol !== 'http' && protocol !== 'https') return []
     if (this.#insertion === 0) return []
 
-    let matchStateBudget = createMatchStateBudget(this.#limits.maxActiveStates)
+    let matchWorkBudget = createMatchWorkBudget(this.#limits.maxMatchWork)
     let pathname = canonicalizeUrlPart(url.pathname.slice(1), 'pathname', {
-      budget: matchStateBudget,
+      budget: matchWorkBudget,
       ignoreCase: this.ignoreCase,
     })
     if (pathname === null) return []
 
     let candidates: Array<Entry<data>> = []
     let needsHostnameProgram = false
-    for (let entry of this.#findCandidates(pathname, matchStateBudget)) {
-      consumeMatchStates(matchStateBudget, 1)
+    for (let entry of this.#findCandidates(pathname, matchWorkBudget)) {
+      consumeMatchWork(matchWorkBudget, 1)
       if (!matchesProtocol(entry.patternParts.protocol, protocol)) continue
       if (!matchesPort(entry.patternParts, protocol, url.port)) continue
-      if (!matchSearch(url.searchParams, entry.patternParts.search, matchStateBudget)) continue
+      if (!matchSearch(url.searchParams, entry.patternParts.search, matchWorkBudget)) continue
       candidates.push(entry)
       if (entry.hostname !== null) needsHostnameProgram = true
     }
@@ -173,7 +151,7 @@ export class Trie<data = unknown> {
     let hostname: CanonicalText | undefined
     if (needsHostnameProgram) {
       let canonicalHostname = canonicalizeUrlPart(decodedHostname, 'hostname', {
-        budget: matchStateBudget,
+        budget: matchWorkBudget,
         ignoreCase: true,
       })
       if (canonicalHostname === null) return []
@@ -195,12 +173,12 @@ export class Trie<data = unknown> {
         ]
       } else {
         if (hostname === undefined) throw new Error('missing canonical hostname')
-        let match = matchPart(entry.hostname, hostname, matchStateBudget)
+        let match = matchPart(entry.hostname, hostname, matchWorkBudget)
         if (match === null) continue
         hostnameMatch = match
       }
 
-      let pathnameMatch = matchPart(entry.pathname, pathname, matchStateBudget)
+      let pathnameMatch = matchPart(entry.pathname, pathname, matchWorkBudget)
       if (pathnameMatch === null) continue
 
       let params: Record<string, string | undefined> = {}
@@ -227,7 +205,7 @@ export class Trie<data = unknown> {
     return results
   }
 
-  #findCandidates(pathname: CanonicalText, budget: MatchStateBudget): Array<Entry<data>> {
+  #findCandidates(pathname: CanonicalText, budget: MatchWorkBudget): Array<Entry<data>> {
     let result = collectCandidates(this.#pathnamePrefixIndex, pathname.units, budget)
     if (result.length > maxCandidatesBeforeSecondaryIndex) {
       let suffix = collectCandidates(this.#pathnameSuffixIndex, pathname.units.toReversed(), budget)
@@ -248,7 +226,7 @@ export class Trie<data = unknown> {
   }
 }
 
-function utf8ByteLength(value: string): number {
+function utf8Size(value: string): number {
   let result = 0
   for (let char of value) {
     let code = char.charCodeAt(0)
@@ -260,14 +238,14 @@ function utf8ByteLength(value: string): number {
 function collectCandidates<data>(
   index: PathnameIndexNode<data>,
   units: CanonicalText['units'],
-  budget: MatchStateBudget,
+  budget: MatchWorkBudget,
 ): Array<Entry<data>> {
   let result: Array<Entry<data>> = []
   let node: PathnameIndexNode<data> | undefined = index
   appendEntries(result, node.entries, budget)
 
   for (let unit of units) {
-    consumeMatchStates(budget, 1)
+    consumeMatchWork(budget, 1)
     node = node.static.get(unitKey(unit))
     if (node === undefined) break
     appendEntries(result, node.entries, budget)
@@ -278,14 +256,14 @@ function collectCandidates<data>(
 function collectAnchorCandidates<data>(
   index: PathnameIndexNode<data>,
   units: CanonicalText['units'],
-  budget: MatchStateBudget,
+  budget: MatchWorkBudget,
 ): Array<Entry<data>> {
   let result = new Set<Entry<data>>()
   addEntries(result, index.entries, budget)
   for (let position = 0; position < units.length; position++) {
     let node: PathnameIndexNode<data> | undefined = index
     for (let i = position; i < units.length; i++) {
-      consumeMatchStates(budget, 1)
+      consumeMatchWork(budget, 1)
       node = node.static.get(unitKey(units[i]))
       if (node === undefined) break
       addEntries(result, node.entries, budget)
@@ -297,18 +275,18 @@ function collectAnchorCandidates<data>(
 function appendEntries<data>(
   target: Array<Entry<data>>,
   entries: ReadonlyArray<Entry<data>>,
-  budget: MatchStateBudget,
+  budget: MatchWorkBudget,
 ): void {
-  consumeMatchStates(budget, entries.length)
+  consumeMatchWork(budget, entries.length)
   for (let entry of entries) target.push(entry)
 }
 
 function addEntries<data>(
   target: Set<Entry<data>>,
   entries: ReadonlyArray<Entry<data>>,
-  budget: MatchStateBudget,
+  budget: MatchWorkBudget,
 ): void {
-  consumeMatchStates(budget, entries.length)
+  consumeMatchWork(budget, entries.length)
   for (let entry of entries) target.add(entry)
 }
 
@@ -335,10 +313,10 @@ function matchesPort(
 function matchSearch(
   params: URLSearchParams,
   constraints: ReadonlyMap<string, ReadonlySet<string>>,
-  budget: MatchStateBudget,
+  budget: MatchWorkBudget,
 ): boolean {
   for (let [name, requiredValues] of constraints) {
-    consumeMatchStates(budget, params.size + requiredValues.size + 1)
+    consumeMatchWork(budget, params.size + requiredValues.size + 1)
     if (requiredValues.size === 0) {
       if (!params.has(name)) return false
       continue
@@ -353,15 +331,4 @@ function matchSearch(
 
 function createPathnameIndexNode<data>(): PathnameIndexNode<data> {
   return { static: new Map(), entries: [] }
-}
-
-function countCaptures(pattern: RoutePatternParts): number {
-  let result = 0
-  for (let token of pattern.hostname?.tokens ?? []) {
-    if (token.type === ':' || token.type === '*') result += 1
-  }
-  for (let token of pattern.pathname.tokens) {
-    if (token.type === ':' || token.type === '*') result += 1
-  }
-  return result
 }

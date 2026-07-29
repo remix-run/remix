@@ -1,19 +1,13 @@
 /** Resource limits applied while compiling and matching route patterns. */
 export interface MatcherLimits {
-  /** Maximum UTF-8 byte length of one pattern source. Defaults to 65,536. */
-  maxPatternSourceBytes: number
+  /** Maximum size of one pattern, measured in UTF-8 bytes. Defaults to 65,536. */
+  maxPatternSize: number
 
-  /** Maximum combined UTF-8 byte length of all patterns in one matcher. Defaults to 16,777,216. */
-  maxMatcherSourceBytes: number
+  /** Maximum combined size of all patterns, measured in UTF-8 bytes. Defaults to 16,777,216. */
+  maxMatcherSize: number
 
-  /** Maximum combined compiled states in one matcher. Defaults to 1,000,000. */
-  maxCompiledStates: number
-
-  /** Maximum aggregate active-state work evaluated by one URL match. Defaults to 1,000,000. */
-  maxActiveStates: number
-
-  /** Maximum combined capture declarations in one matcher. Defaults to 100,000. */
-  maxCaptureMetadata: number
+  /** Maximum aggregate work performed by one URL match. Defaults to 1,000,000. */
+  maxMatchWork: number
 }
 
 /** Structured details describing a matcher resource-limit failure. */
@@ -46,26 +40,24 @@ export class MatcherResourceError extends Error {
 }
 
 const defaultMatcherLimits: MatcherLimits = {
-  maxPatternSourceBytes: 64 * 1024,
-  maxMatcherSourceBytes: 16 * 1024 * 1024,
-  maxCompiledStates: 1_000_000,
-  maxActiveStates: 1_000_000,
-  maxCaptureMetadata: 100_000,
+  maxPatternSize: 64 * 1024,
+  maxMatcherSize: 16 * 1024 * 1024,
+  maxMatchWork: 1_000_000,
 }
 
-export type MatchStateBudget = {
+export type MatchWorkBudget = {
   readonly maximum: number
   actual: number
 }
 
-export function createMatchStateBudget(maximum: number): MatchStateBudget {
+export function createMatchWorkBudget(maximum: number): MatchWorkBudget {
   return { maximum, actual: 0 }
 }
 
-export function consumeMatchStates(budget: MatchStateBudget, count: number): void {
+export function consumeMatchWork(budget: MatchWorkBudget, count: number): void {
   let actual = budget.actual + count
   if (!Number.isSafeInteger(actual)) actual = Number.MAX_SAFE_INTEGER
-  checkMatcherLimit('maxActiveStates', budget.maximum, actual)
+  checkMatcherLimit('maxMatchWork', budget.maximum, actual)
   budget.actual = actual
 }
 

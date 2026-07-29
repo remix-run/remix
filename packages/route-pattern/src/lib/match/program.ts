@@ -1,6 +1,6 @@
 import type { PartPattern, PartPatternToken } from '../route-pattern.ts'
 import type { MatchParamMeta } from './types.ts'
-import { consumeMatchStates, type MatchStateBudget } from './limits.ts'
+import { consumeMatchWork, type MatchWorkBudget } from './limits.ts'
 
 type Unit = {
   readonly value: string
@@ -138,11 +138,11 @@ function getMatchKind(tokens: ReadonlyArray<CompiledToken>): PartProgram['matchK
 export function hasStaticSuffix(
   program: PartProgram,
   input: CanonicalText,
-  budget: MatchStateBudget,
+  budget: MatchWorkBudget,
 ): boolean {
   let offset = input.units.length - program.staticSuffix.length
   if (offset < 0) return false
-  consumeMatchStates(budget, program.staticSuffix.length)
+  consumeMatchWork(budget, program.staticSuffix.length)
   for (let i = 0; i < program.staticSuffix.length; i++) {
     if (!unitsEqual(input.units[offset + i], program.staticSuffix[i])) return false
   }
@@ -152,10 +152,10 @@ export function hasStaticSuffix(
 export function hasStaticPrefix(
   program: PartProgram,
   input: CanonicalText,
-  budget: MatchStateBudget,
+  budget: MatchWorkBudget,
 ): boolean {
   if (program.staticPrefix.length > input.units.length) return false
-  consumeMatchStates(budget, program.staticPrefix.length)
+  consumeMatchWork(budget, program.staticPrefix.length)
   for (let i = 0; i < program.staticPrefix.length; i++) {
     if (!unitsEqual(input.units[i], program.staticPrefix[i])) return false
   }
@@ -165,11 +165,11 @@ export function hasStaticPrefix(
 export function hasStaticAnchor(
   program: PartProgram,
   input: CanonicalText,
-  budget: MatchStateBudget,
+  budget: MatchWorkBudget,
 ): boolean {
   if (program.staticAnchor.length === 0) return true
   for (let position = 0; position + program.staticAnchor.length <= input.units.length; position++) {
-    consumeMatchStates(budget, program.staticAnchor.length)
+    consumeMatchWork(budget, program.staticAnchor.length)
     if (matchUnits(input.units, position, program.staticAnchor) !== null) return true
   }
   return false
@@ -178,9 +178,9 @@ export function hasStaticAnchor(
 export function canonicalizeUrlPart(
   text: string,
   type: PartPattern['type'],
-  options: { budget: MatchStateBudget; ignoreCase?: boolean },
+  options: { budget: MatchWorkBudget; ignoreCase?: boolean },
 ): CanonicalText | null {
-  consumeMatchStates(options.budget, text.length)
+  consumeMatchWork(options.budget, text.length)
   return canonicalizeText(text, type, {
     ignoreCase: options.ignoreCase,
     strict: true,
@@ -251,12 +251,12 @@ function encodeDataUnit(value: string, type: PartPattern['type']): string {
 export function matchPart(
   program: PartProgram,
   input: CanonicalText,
-  budget: MatchStateBudget,
+  budget: MatchWorkBudget,
 ): ReadonlyArray<MatchParamMeta> | null {
   let stateCount = program.tokens.length + 1
   let inputLength = input.units.length
   if (program.matchKind === 'static') {
-    consumeMatchStates(budget, stateCount + inputLength)
+    consumeMatchWork(budget, stateCount + inputLength)
     if (program.tokens.length !== inputLength) return null
     for (let position = 0; position < inputLength; position++) {
       let token = program.tokens[position]
@@ -270,10 +270,10 @@ export function matchPart(
     return []
   }
   if (program.matchKind === 'linear') {
-    consumeMatchStates(budget, stateCount + inputLength)
+    consumeMatchWork(budget, stateCount + inputLength)
     return matchLinearPart(program, input)
   }
-  consumeMatchStates(budget, stateCount * (inputLength + 1))
+  consumeMatchWork(budget, stateCount * (inputLength + 1))
   let hostnameOrder = program.type === 'hostname' ? hostnamePositions(input.units) : null
   let solutions: Array<Array<Solution | null>> = Array.from({ length: stateCount }, () =>
     Array.from({ length: inputLength + 1 }, () => null),
