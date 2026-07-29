@@ -1512,15 +1512,9 @@ function getFrameId(start: Comment): string {
   return trimmed.slice('rmx:f:'.length)
 }
 
-// Finds the index of a marker range's end node so callers can skip its interior.
-// The node list is a snapshot, so it can go stale while frames render or
-// dispose: the matching end marker may be detached, or may live outside the
-// snapshot when a region was truncated. `indexOf` returns `-1` in those cases,
-// which would rewind the caller's loop and spin forever, so fall back to the
-// current index and let the loop move forward.
 function findMarkerRangeEndIndex(nodes: Node[], end: Comment, startIndex: number): number {
-  let endIndex = nodes.indexOf(end)
-  return endIndex > startIndex ? endIndex : startIndex
+  // The snapshot may not contain an end marker moved by a DOM update.
+  return Math.max(startIndex, nodes.indexOf(end))
 }
 
 function findEndMarker(

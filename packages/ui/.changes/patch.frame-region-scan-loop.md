@@ -1,3 +1,1 @@
-Fix a browser hang when navigating or reloading pages that render a `Frame`. When a frame region was replaced while a nested frame's markers were still being moved, the runtime's region scans could look up an end marker that was no longer inside the scanned node list, rewind their loop index to the start, and spin forever with an unresponsive page. Region scans now always move forward.
-
-Fix `renderToStream` turning an aborted request into an unhandled rejection when a page renders more than one blocking frame. Blocking frames all start resolving together but are awaited one at a time, so aborting the request (for example by reloading or navigating mid-stream) rejected the frames that were never awaited and could crash a Node server.
+Prevent navigation and reloads from hanging when a nested `Frame` marker moves outside a frame region while the DOM is being updated.
