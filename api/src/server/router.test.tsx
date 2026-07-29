@@ -35,8 +35,8 @@ describe('createRouter()', () => {
     assert.equal(html.includes('href="/assets/client/entry.tsx"'), true)
     assert.equal(html.includes('href="/assets/client/table-of-contents.browser.tsx"'), true)
     assert.equal(html.includes('href="/assets/client/table-of-contents-active.browser.ts"'), true)
-    assert.equal(html.includes('src="/v1%2E2%2E3/assets/client/entry.tsx"'), false)
-    assert.equal(html.includes('href="/v1%2E2%2E3/assets/client/entry.tsx"'), false)
+    assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), false)
+    assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), false)
   })
 
   it('loads docs styles after Pagefind styles so theme overrides win', async (t) => {
@@ -67,20 +67,39 @@ describe('createRouter()', () => {
       versions: ['v1.2.3'],
     })
 
-    let response = await router.fetch(new Request('http://localhost/v1%2E2%2E3/'))
+    let response = await router.fetch(new Request('http://localhost/v1.2.3/'))
     assert.equal(response.status, 200)
     let html = await response.text()
     let assetUrls = getLoadedAssetUrls(html).filter((url) => shouldVersionAssetUrl(url))
 
-    assert.equal(html.includes('src="/v1%2E2%2E3/assets/client/entry.tsx"'), true)
-    assert.equal(html.includes('href="/v1%2E2%2E3/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), true)
     assert.equal(html.includes('src="/assets/client/entry.tsx"'), false)
     assert.equal(html.includes('href="/assets/client/entry.tsx"'), false)
     assert.equal(assetUrls.length > 0, true)
     assert.deepEqual(
-      assetUrls.filter((url) => !url.startsWith('/v1%2E2%2E3/')),
+      assetUrls.filter((url) => !url.startsWith('/v1.2.3/')),
       [],
     )
+  })
+
+  it('serves dotted version routes only for configured versions', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let router = createRouter({
+      assetServer,
+      docsContext: await getTestDocsContext(assetServer),
+      versions: ['v1.2.3'],
+    })
+
+    let configured = await router.fetch(new Request('http://localhost/v1.2.3/'))
+    assert.equal(configured.status, 200)
+
+    let encoded = await router.fetch(new Request('http://localhost/v1%2E2%2E3/'))
+    assert.equal(encoded.status, 404)
+
+    let unknown = await router.fetch(new Request('http://localhost/v9.9.9/'))
+    assert.equal(unknown.status, 404)
   })
 
   it('serves only the configured asset URL space', async (t) => {
@@ -92,7 +111,7 @@ describe('createRouter()', () => {
     })
 
     let versionedResponse = await router.fetch(
-      new Request('http://localhost/v1%2E2%2E3/assets/client/entry.tsx'),
+      new Request('http://localhost/v1.2.3/assets/client/entry.tsx'),
     )
     assert.equal(versionedResponse.status, 200)
 
@@ -151,17 +170,17 @@ async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServ
 }
 
 describe('getVersionedLookupHref()', () => {
-  it('encodes dots in versioned markdown lookup targets', () => {
+  it('preserves dots in versioned markdown lookup targets', () => {
     assert.equal(
       getVersionedLookupHref('/api/remix/headers/accept/class/Accept.md', 'v1.2.3'),
-      '/v1%2E2%2E3/api/remix/headers/accept/class/Accept.md',
+      '/v1.2.3/api/remix/headers/accept/class/Accept.md',
     )
   })
 
   it('uses docs routes for HTML lookup targets', () => {
     assert.equal(
       getVersionedLookupHref('/api/remix/headers/accept/class/Accept', 'v1.2.3'),
-      '/v1%2E2%2E3/api/remix/headers/accept/class/Accept/',
+      '/v1.2.3/api/remix/headers/accept/class/Accept/',
     )
   })
 
@@ -171,7 +190,7 @@ describe('getVersionedLookupHref()', () => {
         '/api/remix/headers/accept/class/Accept.md?tab=docs#example',
         'v1.2.3',
       ),
-      '/v1%2E2%2E3/api/remix/headers/accept/class/Accept.md?tab=docs#example',
+      '/v1.2.3/api/remix/headers/accept/class/Accept.md?tab=docs#example',
     )
   })
 

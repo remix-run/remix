@@ -4,7 +4,7 @@ import * as path from 'node:path'
 import * as util from 'node:util'
 import { createAssetServer } from '../server/asset-server.ts'
 import { createRouter, getDefaultVersions } from '../server/router.tsx'
-import { routes } from '../server/routes.ts'
+import { routes, withVersion } from '../server/routes.ts'
 import { crawl } from './crawl.ts'
 import { getVersionsForPicker } from './versions.ts'
 import { writeResult } from './utils.ts'
@@ -42,8 +42,8 @@ const router = createRouter({ assetServer, versions })
 await fs.cp(publicDir, outputDir, { recursive: true })
 
 // Spider the site
-const homePath = routes.home.href({ version: buildVersion })
-const paths = [homePath, routes.lookup.href({ version: buildVersion })]
+const homePath = withVersion(routes.home.href(), buildVersion)
+const paths = [homePath, withVersion(routes.lookup.href(), buildVersion)]
 
 for await (let { pathname, filepath, response } of crawl(router, {
   paths,

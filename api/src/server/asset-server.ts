@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 import { createAssetServer as createRemixAssetServer } from 'remix/assets'
 import type { AssetServer } from 'remix/assets'
-import { createHref } from 'remix/route-pattern/href'
+import { getVersionPathname } from './routes.ts'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..')
@@ -18,7 +18,7 @@ export type DocsAssetServer = AssetServer
 export function createAssetServer(version?: string): DocsAssetServer {
   return createRemixAssetServer({
     rootDir: REPO_DIR,
-    basePath: version ? createHref('/:version/assets', { version }) : '/assets',
+    basePath: version ? `${getVersionPathname(version)}/assets` : '/assets',
     fileMap: {
       '/demos/*path': 'api/build/demos/*path',
       '/pkg/:pkg/src/*path': 'packages/:pkg/src/*path',
