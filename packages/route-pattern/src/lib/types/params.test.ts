@@ -121,6 +121,11 @@ export type Tests = [
     { sub: string; id: string; ext: string | undefined }
   >>,
 
+  Assert<IsEqual<
+    MatchParams<'https://:id.example.com/:id/:id'>,
+    { id: string }
+  >>,
+
   // Nested optionals: variables
   Assert<IsEqual<
     MatchParams<'api(/:major(/:minor))'>,

@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "bench": "vitest bench --run",
-    "bench:types": "node src/types/href.ts && node src/types/join.ts && node src/types/match.ts && node src/types/new.ts && node src/types/params.ts"
+    "bench:memory": "node --expose-gc src/match/memory.ts",
+    "bench:types": "node src/types/grammar.ts && node src/types/href.ts && node src/types/join.ts && node src/types/match.ts && node src/types/new.ts && node src/types/params.ts"
   },
   "dependencies": {
     "@remix-run/route-pattern": "workspace:^",

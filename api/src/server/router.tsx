@@ -4,7 +4,7 @@ import { openLazyFile } from 'remix/fs'
 import { staticFiles } from 'remix/middleware/static'
 import { createFileResponse } from 'remix/response/file'
 import { createHtmlResponse } from 'remix/response/html'
-import { createRouter as _createRouter, type Router } from 'remix/router'
+import { createController, createRouter as _createRouter, type Router } from 'remix/router'
 import { clientEntry, type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
 import {
@@ -20,7 +20,7 @@ import {
   type DocFile as MarkdownDocFile,
 } from './markdown.ts'
 import { buildRegistry, type DocFile, type DocsRegistry } from './registry.ts'
-import { routes } from './routes.ts'
+import { getVersionPathname, routes } from './routes.ts'
 import { DemoContent, Document, Home, MarkdownContent, NotFound, type Versions } from './view.tsx'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
@@ -75,126 +75,141 @@ export function createRouter(options: DocsRouterOptions): Router {
     },
   }
 
-  router.map(routes, {
-    actions: {
-      assets: async ({ request, params }) => {
-        // Serve versioned pagefind assets manually
-        if (params.asset.startsWith('pagefind/')) {
-          let assetPath = path.resolve(ASSETS_DIR, params.asset)
+  function createDocsController(version?: string) {
+    return createController(routes, {
+      actions: {
+        assets: async ({ request, params }) => {
+          // Serve versioned pagefind assets manually
+          if (params.asset.startsWith('pagefind/')) {
+            let assetPath = path.resolve(ASSETS_DIR, params.asset)
 
-          try {
-            let stats = await fs.promises.stat(assetPath)
-            if (stats.isFile()) {
-              return respond.file(request, assetPath)
+            try {
+              let stats = await fs.promises.stat(assetPath)
+              if (stats.isFile()) {
+                return respond.file(request, assetPath)
+              }
+            } catch {}
+
+            console.warn(`[WARN] Pagefind asset not found: ${new URL(request.url).pathname}`)
+            return new Response(null, { status: 204 })
+          }
+
+          let response = await assetServer.fetch(request)
+          return response ?? new Response('Not Found', { status: 404 })
+        },
+        async api({ request, params }) {
+          let docsContext = await getDocsContext()
+          let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
+          let docProps = {
+            registry: docsContext.getRegistry(version),
+            versions: versions,
+            slug: params.slug,
+            activeVersion: version,
+            entryHref: docsContext.entryHref,
+            entryPreloads: docsContext.entryPreloads,
+            tableOfContentsEntryHref: docsContext.tableOfContentsEntryHref,
+          }
+
+          if (docFile) {
+            if (docFile.kind === 'demo') {
+              let ExampleComponent = clientEntry(
+                `${docFile.assetHref}#default`,
+                await loadDemoComponent(docFile),
+              )
+              let sourceHtml = await renderDemoSource(docFile.source)
+              return await respond.document(
+                request,
+                <Document {...docProps} sourceUrl={docFile.sourceUrl}>
+                  <DemoContent demo={docFile} sourceHtml={sourceHtml}>
+                    <ExampleComponent key={docFile.slug} />
+                  </DemoContent>
+                </Document>,
+              )
             }
-          } catch {}
 
-          console.warn(`[WARN] Pagefind asset not found: ${new URL(request.url).pathname}`)
-          return new Response(null, { status: 204 })
-        }
-
-        let response = await assetServer.fetch(request)
-        return response ?? new Response('Not Found', { status: 404 })
-      },
-      async api({ request, params }) {
-        let docsContext = await getDocsContext()
-        let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
-        let docProps = {
-          registry: docsContext.getRegistry(params.version),
-          versions: versions,
-          slug: params.slug,
-          activeVersion: params.version,
-          entryHref: docsContext.entryHref,
-          entryPreloads: docsContext.entryPreloads,
-          tableOfContentsEntryHref: docsContext.tableOfContentsEntryHref,
-        }
-
-        if (docFile) {
-          if (docFile.kind === 'demo') {
-            let ExampleComponent = clientEntry(
-              `${docFile.assetHref}#default`,
-              await loadDemoComponent(docFile),
+            let { html, headings, source } = await renderMarkdownFile(
+              docFile.path,
+              docsContext.docFilesLookup,
+              version,
+              // Don't auto-link code symbols in README - too many false positives.
+              docFile.kind !== 'package',
             )
-            let sourceHtml = await renderDemoSource(docFile.source)
             return await respond.document(
               request,
-              <Document {...docProps} sourceUrl={docFile.sourceUrl}>
-                <DemoContent demo={docFile} sourceHtml={sourceHtml}>
-                  <ExampleComponent key={docFile.slug} />
-                </DemoContent>
+              <Document {...docProps} sourceUrl={source} headings={headings}>
+                <MarkdownContent html={html} />
               </Document>,
             )
           }
 
-          let { html, headings, source } = await renderMarkdownFile(
-            docFile.path,
-            docsContext.docFilesLookup,
-            params.version,
-            // Don't auto-link code symbols in README - too many false positives.
-            docFile.kind !== 'package',
-          )
           return await respond.document(
             request,
-            <Document {...docProps} sourceUrl={source} headings={headings}>
-              <MarkdownContent html={html} />
+            <Document {...docProps}>
+              <NotFound slug={params.slug} />
+            </Document>,
+            { status: 404 },
+          )
+        },
+        async home({ request }) {
+          let docsContext = await getDocsContext()
+          return respond.document(
+            request,
+            <Document
+              registry={docsContext.getRegistry(version)}
+              versions={versions}
+              activeVersion={version}
+              entryHref={docsContext.entryHref}
+              entryPreloads={docsContext.entryPreloads}
+              tableOfContentsEntryHref={docsContext.tableOfContentsEntryHref}
+            >
+              <Home />
             </Document>,
           )
-        }
+        },
+        async lookup({ request }) {
+          let jsonPath = path.join(MD_DIR, 'api.json')
+          if (!version) {
+            return respond.file(request, jsonPath)
+          }
 
-        return await respond.document(
-          request,
-          <Document {...docProps}>
-            <NotFound slug={params.slug} />
-          </Document>,
-          { status: 404 },
-        )
-      },
-      async home({ request, params }) {
-        let docsContext = await getDocsContext()
-        return respond.document(
-          request,
-          <Document
-            registry={docsContext.getRegistry(params.version)}
-            versions={versions}
-            activeVersion={params.version}
-            entryHref={docsContext.entryHref}
-            entryPreloads={docsContext.entryPreloads}
-            tableOfContentsEntryHref={docsContext.tableOfContentsEntryHref}
-          >
-            <Home />
-          </Document>,
-        )
-      },
-      async lookup({ request, params }) {
-        let jsonPath = path.join(MD_DIR, 'api.json')
-        if (!params.version) {
-          return respond.file(request, jsonPath)
-        }
+          let content = JSON.parse(await fs.promises.readFile(jsonPath, 'utf-8'))
+          for (let key in content) {
+            content[key] = getVersionedLookupHref(content[key], version)
+          }
+          return Response.json(content)
+        },
+        async markdown({ request, params }) {
+          let docsContext = await getDocsContext()
+          let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
+          if (!docFile) {
+            return new Response('Not Found', { status: 404 })
+          }
 
-        let content = JSON.parse(await fs.promises.readFile(jsonPath, 'utf-8'))
-        for (let key in content) {
-          content[key] = getVersionedLookupHref(content[key], params.version)
-        }
-        return Response.json(content)
-      },
-      async markdown({ request, params }) {
-        let docsContext = await getDocsContext()
-        let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
-        if (!docFile) {
-          return new Response('Not Found', { status: 404 })
-        }
+          if (docFile.kind === 'demo') {
+            let md = `# ${docFile.name}\n\n${docFile.description}\n\n\`\`\`tsx\n${docFile.source}\n\`\`\`\n`
+            return new Response(md, {
+              headers: { 'content-type': 'text/markdown; charset=utf-8' },
+            })
+          }
 
-        if (docFile.kind === 'demo') {
-          let md = `# ${docFile.name}\n\n${docFile.description}\n\n\`\`\`tsx\n${docFile.source}\n\`\`\`\n`
-          return new Response(md, {
-            headers: { 'content-type': 'text/markdown; charset=utf-8' },
-          })
-        }
-
-        return respond.file(request, docFile.path)
+          return respond.file(request, docFile.path)
+        },
       },
-    },
-  })
+    })
+  }
+
+  router.map(routes, createDocsController())
+  for (let version of new Set(versions)) {
+    let versionPathname = getVersionPathname(version)
+    let controller = createDocsController(version)
+    router.map(`${versionPathname}/`, controller.actions.home)
+    router.mount(versionPathname, (versionRouter) => {
+      versionRouter.map(routes.assets, controller.actions.assets)
+      versionRouter.map(routes.api, controller.actions.api)
+      versionRouter.map(routes.lookup, controller.actions.lookup)
+      versionRouter.map(routes.markdown, controller.actions.markdown)
+    })
+  }
 
   return router
 }

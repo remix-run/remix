@@ -281,11 +281,11 @@ function encodePathnameVariableParam(pattern: RoutePattern, paramName: string, v
       value: serialized,
     })
   }
-  return encodePathnameSegment(serialized)
+  return encodePathnameVariableSegment(serialized)
 }
 
 export function encodePathnameVariable(value: unknown) {
-  return encodePathnameSegment(String(value))
+  return encodePathnameVariableSegment(String(value))
 }
 
 export function encodePathnameWildcard(value: unknown) {
@@ -294,6 +294,10 @@ export function encodePathnameWildcard(value: unknown) {
 
 function encodePathnameSegment(value: string): string {
   return encodeURIComponent(value)
+}
+
+function encodePathnameVariableSegment(value: string): string {
+  return encodePathnameSegment(value).replaceAll('.', '%2E')
 }
 
 /**
