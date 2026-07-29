@@ -1,0 +1,1 @@
+Stop reporting colocated `public/` directories under `app/actions` as orphan route directories in `remix doctor`. Browser source is an asset server boundary rather than route-map structure, so those directories are no longer expected to mirror a route key path, while the files inside them still count as route-owned content.
