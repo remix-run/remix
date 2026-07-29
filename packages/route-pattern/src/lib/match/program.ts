@@ -89,11 +89,12 @@ export function compilePart(part: PartPattern, options?: { ignoreCase?: boolean 
   for (let i = tokens.length - 1; i >= 0; i--) {
     let token = tokens[i]
     if (token.type === 'text' || token.type === 'separator') {
-      staticSuffix.unshift(token.unit)
+      staticSuffix.push(token.unit)
     } else {
       break
     }
   }
+  staticSuffix.reverse()
 
   let staticAnchor: Array<Unit> = []
   let staticRun: Array<Unit> = []

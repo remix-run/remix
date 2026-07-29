@@ -1038,6 +1038,14 @@ describe('Matcher', () => {
           let match = matcher.match('http://example.com/search?q=hello%20world')
           assert.ok(match)
         })
+
+        it('matches required values regardless of order or duplicate URL values', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/search?tag=featured&tag=popular', null)
+
+          assert.ok(matcher.match('http://example.com/search?tag=popular&tag=popular&tag=featured'))
+          assert.equal(matcher.match('http://example.com/search?tag=featured'), null)
+        })
       })
     })
 

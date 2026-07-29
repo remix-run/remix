@@ -321,9 +321,9 @@ function matchSearch(
       if (!params.has(name)) return false
       continue
     }
-    let values = params.getAll(name)
+    let values = new Set(params.getAll(name))
     for (let requiredValue of requiredValues) {
-      if (!values.includes(requiredValue)) return false
+      if (!values.has(requiredValue)) return false
     }
   }
   return true
