@@ -1,0 +1,1 @@
+BREAKING CHANGE: Href generation through `remix/route-pattern/href` and `remix/fetch-router/routes` now takes search parameters inside a `searchParams` options property. These APIs also support `baseURL` for relative URL matching and same-origin href generation, and `searchParams` accepts `URLSearchParams`.

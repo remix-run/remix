@@ -17,10 +17,16 @@ export interface MatcherOptions {
   limits?: Partial<MatcherLimits>
 }
 
+/** Options that control how a URL string is resolved before matching. */
+export interface MatchOptions {
+  /** Absolute URL used to resolve relative URL strings with platform `URL` semantics. */
+  baseURL?: string | URL
+}
+
 /** Matcher for a single route pattern. */
 export type Matcher<source extends string = string> = {
   /** Most specific match for `url`, or `null` when the URL does not match this pattern. */
-  match(url: string | URL): Match<source, undefined> | null
+  match(url: string | URL, options?: MatchOptions): Match<source, undefined> | null
 }
 
 /**
@@ -38,8 +44,8 @@ export function createMatcher<source extends string>(
   matcher.add(pattern, undefined)
 
   return {
-    match(url: string | URL): Match<source, undefined> | null {
-      return matcher.match(url) as Match<source, undefined> | null
+    match(url: string | URL, options?: MatchOptions): Match<source, undefined> | null {
+      return matcher.match(url, options) as Match<source, undefined> | null
     },
   }
 }
@@ -53,10 +59,10 @@ export type MultiMatcher<data = unknown> = {
   add(pattern: string | RoutePattern, data: data): void
 
   /** Most specific match for `url`, or `null` when nothing matches. */
-  match(url: string | URL): Match<string, data> | null
+  match(url: string | URL, options?: MatchOptions): Match<string, data> | null
 
   /** Every match for `url`, sorted from most to least specific. */
-  matchAll(url: string | URL): Array<Match<string, data>>
+  matchAll(url: string | URL, options?: MatchOptions): Array<Match<string, data>>
 }
 
 /**
@@ -82,8 +88,8 @@ class TrieMatcher<data = unknown> implements MultiMatcher<data> {
     this.#trie.insert(pattern, data)
   }
 
-  match(url: string | URL): Match<string, data> | null {
-    let parsedUrl = typeof url === 'string' ? new URL(url) : url
+  match(url: string | URL, options?: MatchOptions): Match<string, data> | null {
+    let parsedUrl = resolveURL(url, options)
     let best: Match<string, data> | null = null
     for (let match of this.#trie.search(parsedUrl)) {
       if (best === null || Specificity.greaterThan(match, best)) {
@@ -93,12 +99,17 @@ class TrieMatcher<data = unknown> implements MultiMatcher<data> {
     return best
   }
 
-  matchAll(url: string | URL): Array<Match<string, data>> {
-    let parsedUrl = typeof url === 'string' ? new URL(url) : url
+  matchAll(url: string | URL, options?: MatchOptions): Array<Match<string, data>> {
+    let parsedUrl = resolveURL(url, options)
     let matches: Array<Match<string, data>> = []
     for (let match of this.#trie.search(parsedUrl)) {
       matches.push(match)
     }
     return matches.sort(Specificity.descending)
   }
+}
+
+function resolveURL(url: string | URL, options?: MatchOptions): URL {
+  let baseURL = options?.baseURL === undefined ? undefined : new URL(options.baseURL)
+  return typeof url === 'string' ? new URL(url, baseURL) : url
 }

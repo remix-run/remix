@@ -18,7 +18,21 @@ type _OptionalHrefArgs = [
   AcceptsCreateHrefArgs<'/posts(/:id)', [null]>,
   AcceptsCreateHrefArgs<'/posts(/:id)', [{ id: null }]>,
   AcceptsCreateHrefArgs<'/posts(/:id)', [{ id: 123 }]>,
+  AcceptsCreateHrefArgs<
+    '/posts(/:id)',
+    [undefined, { baseURL: URL; searchParams: URLSearchParams }]
+  >,
+  AcceptsCreateHrefArgs<
+    '/posts(/:id)',
+    [undefined, { searchParams: { page: number; tags: Array<string | null> } }]
+  >,
 ]
+
+type _InvalidSearchParamValue = AcceptsCreateHrefArgs<
+  '/posts',
+  // @ts-expect-error - object search param values must be serializable primitives or arrays
+  [undefined, { searchParams: { published: true } }]
+>
 
 // @ts-expect-error - explicit protocol without hostname cannot generate an href
 type _ProtocolWithoutHostnameHrefArgs = AcceptsCreateHrefArgs<'http:///posts/:id', [{ id: '123' }]>

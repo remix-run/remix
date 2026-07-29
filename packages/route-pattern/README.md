@@ -173,7 +173,21 @@ docsMatcher.match(url)?.params
 // Type safe params     ^? { tenant: string | undefined, path: string, ext: string } | undefined
 ```
 
-Matchers accept absolute URL strings or `URL` objects. Relative strings such as `/blog/v3` are not accepted because matching uses the platform `URL` parser; wrap relative paths with a known origin before matching them.
+Matchers accept absolute URL strings or `URL` objects. To match a relative URL reference, pass an absolute `baseURL`; the input is resolved with the same semantics as `new URL(input, baseURL)`, and the resolved URL is returned on the match.
+
+```ts
+let match = blogMatcher.match('../blog/v3', {
+  baseURL: 'https://example.com/admin/settings',
+})
+
+match?.params
+// { slug: 'v3' }
+
+match?.url.href
+// 'https://example.com/blog/v3'
+```
+
+This works for root-relative, path-relative, query-relative, and network-path references. Without `baseURL`, string inputs must still be absolute.
 
 ### Match against multiple patterns
 
@@ -277,11 +291,41 @@ createHref('http(s)://:region.cdn.com/assets/*file.:ext', {
 })
 // 'https://us-west.cdn.com/assets/images/logo.png'
 
-createHref('blog/:slug?ref=docs', { slug: 'v3' }, { utm_source: 'newsletter' })
+createHref(
+  'blog/:slug?ref=docs',
+  { slug: 'v3' },
+  {
+    searchParams: { utm_source: 'newsletter' },
+  },
+)
 // '/blog/v3?utm_source=newsletter&ref=docs'
 
 createHref('users/:id', { id: 'a.b' })
 // '/users/a%2Eb' (the encoded dot remains variable data when matched)
+```
+
+Pass `baseURL` to generate a path-relative reference to a same-origin route. Patterns with a different origin remain absolute.
+
+```ts
+let baseURL = new URL('https://example.com/admin/settings')
+
+createHref('users/:id', { id: '123' }, { baseURL })
+// '../users/123'
+
+createHref('https://cdn.example.com/assets/*path', { path: 'logo.svg' }, { baseURL })
+// 'https://cdn.example.com/assets/logo.svg'
+```
+
+The `searchParams` option accepts a plain object or `URLSearchParams`. Use `URLSearchParams` when duplicate keys or their order matter:
+
+```ts
+let searchParams = new URLSearchParams([
+  ['tag', 'featured'],
+  ['tag', 'popular'],
+])
+
+createHref('search', undefined, { searchParams })
+// '/search?tag=featured&tag=popular'
 ```
 
 `createHref()` throws `CreateHrefError` when it cannot safely generate an href. The error exposes stable structured details on `error.details`; the string message is for humans.
@@ -333,7 +377,9 @@ The public support types are:
 - `RoutePatternCapture` from `remix/route-pattern`
 - `RoutePatternJSON` from `remix/route-pattern`
 - `CreateHrefErrorDetails` from `remix/route-pattern/href`
+- `CreateHrefOptions` and `CreateHrefSearchParams` from `remix/route-pattern/href`
 - `MatchParamMeta` from `remix/route-pattern/match`
+- `MatchOptions` from `remix/route-pattern/match`
 - `MatcherLimits` from `remix/route-pattern/match`
 - `MatcherResourceError` and `MatcherResourceErrorDetails` from `remix/route-pattern/match`
 
