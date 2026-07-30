@@ -6,6 +6,7 @@ import { getVersionedLookupHref } from './lookup.ts'
 import { buildRegistry } from './registry.ts'
 import { createRouter } from './router.tsx'
 import { getApiRouteHref } from './routes.ts'
+import { shouldLoadPagefind } from './view.tsx'
 
 describe('createRouter()', () => {
   it('does not load generated docs output while creating the router', (t) => {
@@ -170,6 +171,16 @@ async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServ
     },
   }
 }
+
+describe('shouldLoadPagefind()', () => {
+  it('loads Pagefind outside development before its generated module exists', () => {
+    assert.equal(shouldLoadPagefind(`${import.meta.filename}.missing`, 'production'), true)
+  })
+
+  it('omits Pagefind in development when its generated module is missing', () => {
+    assert.equal(shouldLoadPagefind(`${import.meta.filename}.missing`, 'development'), false)
+  })
+})
 
 describe('getVersionedLookupHref()', () => {
   it('preserves dots in versioned markdown lookup targets', () => {

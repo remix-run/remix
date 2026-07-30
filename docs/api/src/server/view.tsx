@@ -1,3 +1,6 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+
 import type { Handle, RemixNode } from 'remix/ui'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
@@ -11,7 +14,19 @@ import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './regi
 import { routes, withVersion } from './routes.ts'
 import { TableOfContents } from './table-of-contents.tsx'
 
+const pagefindModulePath = path.resolve(
+  import.meta.dirname,
+  '../../build/site/assets/pagefind/pagefind-component-ui.js',
+)
+
 export type Versions = string[]
+
+export function shouldLoadPagefind(
+  modulePath = pagefindModulePath,
+  nodeEnv = process.env.NODE_ENV,
+): boolean {
+  return nodeEnv !== 'development' || fs.existsSync(modulePath)
+}
 
 export function Document(
   handle: Handle<{
@@ -40,6 +55,7 @@ export function Document(
       entryPreloads,
       tableOfContentsEntryHref,
     } = handle.props
+    let pagefindAvailable = shouldLoadPagefind()
     let page = slug
       ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
       : getHomePage(registry)
@@ -65,6 +81,7 @@ export function Document(
                 brandLabel="Remix API Documentation"
                 navigationLinks={[...navigationLinks.values()]}
                 compactSearch
+                searchEnabled={pagefindAvailable}
               />
             }
             navigation={
@@ -90,11 +107,15 @@ export function Document(
               {children}
             </MainContent>
           </DocsShell>
-          <pagefind-config
-            base-url={withVersion(routes.home.href(), activeVersion)}
-            bundle-path={withVersion(routes.assets.href({ asset: 'pagefind/' }), activeVersion)}
-          ></pagefind-config>
-          <pagefind-modal data-key="pagefind-modal" rmx-preserve-dom reset-on-close />
+          {pagefindAvailable ? (
+            <>
+              <pagefind-config
+                base-url={withVersion(routes.home.href(), activeVersion)}
+                bundle-path={withVersion(routes.assets.href({ asset: 'pagefind/' }), activeVersion)}
+              ></pagefind-config>
+              <pagefind-modal data-key="pagefind-modal" rmx-preserve-dom reset-on-close />
+            </>
+          ) : null}
         </body>
       </html>
     )
@@ -111,6 +132,7 @@ function Head(
 ) {
   return () => {
     let { page, activeVersion, entryHref, entryPreloads } = handle.props
+    let pagefindAvailable = shouldLoadPagefind()
     let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
 
     return (
@@ -121,13 +143,15 @@ function Head(
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         {/* Keep Pagefind first so the docs theme can override its component defaults. */}
-        <link
-          href={withVersion(
-            routes.assets.href({ asset: 'pagefind/pagefind-component-ui.css' }),
-            activeVersion,
-          )}
-          rel="stylesheet"
-        />
+        {pagefindAvailable ? (
+          <link
+            href={withVersion(
+              routes.assets.href({ asset: 'pagefind/pagefind-component-ui.css' }),
+              activeVersion,
+            )}
+            rel="stylesheet"
+          />
+        ) : null}
         <link rel="stylesheet" href="/docs.css" />
         {activeVersion != null ? (
           <>
@@ -157,13 +181,15 @@ function Head(
           <link key={href} rel="modulepreload" href={href} />
         ))}
         <script type="module" src={entryHref} />
-        <script
-          src={withVersion(
-            routes.assets.href({ asset: 'pagefind/pagefind-component-ui.js' }),
-            activeVersion,
-          )}
-          type="module"
-        />
+        {pagefindAvailable ? (
+          <script
+            src={withVersion(
+              routes.assets.href({ asset: 'pagefind/pagefind-component-ui.js' }),
+              activeVersion,
+            )}
+            type="module"
+          />
+        ) : null}
       </head>
     )
   }

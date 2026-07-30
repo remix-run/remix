@@ -25,6 +25,7 @@ export interface DocsHeaderProps {
   brandLabel: string
   navigationLinks: readonly DocsNavigationLink[]
   compactSearch?: boolean
+  searchEnabled?: boolean
 }
 
 export function DocsHeader(handle: Handle<DocsHeaderProps>) {
@@ -47,7 +48,7 @@ export function DocsHeader(handle: Handle<DocsHeaderProps>) {
         />
       </a>
 
-      {handle.props.compactSearch ? (
+      {handle.props.searchEnabled !== false && handle.props.compactSearch ? (
         <button
           id="docs-search-compact"
           class="docs-search-compact"
@@ -88,25 +89,27 @@ export function DocsHeader(handle: Handle<DocsHeaderProps>) {
         <PrimaryNavigationLinks links={handle.props.navigationLinks} />
       </nav>
 
-      <button
-        id="docs-search-button"
-        class="docs-search-button"
-        type="button"
-        aria-label="Search"
-        aria-haspopup="dialog"
-        aria-expanded="false"
-        aria-keyshortcuts="Meta+K Control+K"
-        data-docs-expanded-only={handle.props.compactSearch || undefined}
-      >
-        <span class="docs-search-button__label">
-          <Icon name="search" />
-          <span>Search</span>
-        </span>
-        <span class="docs-search-button__shortcut" aria-hidden="true">
-          <kbd>⌘</kbd>
-          <kbd>K</kbd>
-        </span>
-      </button>
+      {handle.props.searchEnabled !== false ? (
+        <button
+          id="docs-search-button"
+          class="docs-search-button"
+          type="button"
+          aria-label="Search"
+          aria-haspopup="dialog"
+          aria-expanded="false"
+          aria-keyshortcuts="Meta+K Control+K"
+          data-docs-expanded-only={handle.props.compactSearch || undefined}
+        >
+          <span class="docs-search-button__label">
+            <Icon name="search" />
+            <span>Search</span>
+          </span>
+          <span class="docs-search-button__shortcut" aria-hidden="true">
+            <kbd>⌘</kbd>
+            <kbd>K</kbd>
+          </span>
+        </button>
+      ) : null}
     </header>
   )
 }

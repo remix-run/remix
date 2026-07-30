@@ -49,12 +49,14 @@ document.addEventListener('keydown', (event) => {
     return
   }
 
-  event.preventDefault()
   let trigger =
     document.documentElement.hasAttribute('data-docs-nav-collapsed') &&
     window.matchMedia('(width >= 900px)').matches
       ? document.getElementById('docs-search-compact')
       : document.getElementById('docs-search-button')
+  if (!trigger) return
+
+  event.preventDefault()
   void openPagefindSearch(trigger)
 })
 

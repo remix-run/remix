@@ -4,7 +4,7 @@ import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs
 import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
 
 import { routes } from '../../routes.ts'
-import { Document } from '../../ui/document.tsx'
+import { Document, shouldLoadPagefind } from '../../ui/document.tsx'
 import { ChapterNavigationContent } from './chapter-navigation.tsx'
 import { CodeBlockCopyButtons } from './code-block-copy.browser.tsx'
 import type { DocsNavigationItem } from './markdown-chapters.tsx'
@@ -50,12 +50,17 @@ export function DocsDocument(handle: Handle<DocsDocumentProps>) {
   return () => {
     let title =
       handle.props.title === 'Remix Docs' ? 'Remix Docs' : `${handle.props.title} | Remix Docs`
+    let pagefindAvailable = shouldLoadPagefind()
 
     return (
       <Document title={title} description={handle.props.description}>
         <DocsShell
           header={
-            <DocsHeader brandLabel="Remix Docs" navigationLinks={[...navigationLinks.values()]} />
+            <DocsHeader
+              brandLabel="Remix Docs"
+              navigationLinks={[...navigationLinks.values()]}
+              searchEnabled={pagefindAvailable}
+            />
           }
           navigation={
             <ChapterNavigationContent

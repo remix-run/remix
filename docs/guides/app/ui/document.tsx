@@ -1,3 +1,6 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+
 import type { Handle, RemixNode } from 'remix/ui'
 
 import { getAssetEntry } from '../middleware/asset-entry.ts'
@@ -10,12 +13,24 @@ export interface DocumentProps {
 }
 
 const DEFAULT_TITLE = 'Remix Docs'
+const pagefindModulePath = path.resolve(
+  import.meta.dirname,
+  '../../build/site/assets/pagefind/pagefind-component-ui.js',
+)
+
+export function shouldLoadPagefind(
+  modulePath = pagefindModulePath,
+  nodeEnv = process.env.NODE_ENV,
+): boolean {
+  return nodeEnv !== 'development' || fs.existsSync(modulePath)
+}
 
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { children, head, title = DEFAULT_TITLE, description } = handle.props
     let { scriptSrc, scriptPreloads, stylesheetHref, stylesheetPreloads, devRefreshScriptSrc } =
       getAssetEntry()
+    let pagefindAvailable = shouldLoadPagefind()
 
     return (
       <html lang="en">
@@ -24,7 +39,9 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           {description ? <meta name="description" content={description} /> : null}
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-          <link rel="stylesheet" href="/assets/pagefind/pagefind-component-ui.css" />
+          {pagefindAvailable ? (
+            <link rel="stylesheet" href="/assets/pagefind/pagefind-component-ui.css" />
+          ) : null}
           <link rel="stylesheet" href={stylesheetHref} />
           {scriptPreloads.map((href) => (
             <link key={href} rel="modulepreload" href={href} />
@@ -33,17 +50,23 @@ export function Document(handle: Handle<DocumentProps>) {
             <link key={href} rel="preload" href={href} as="style" />
           ))}
           <title>{title}</title>
-          <script type="module" src="/assets/pagefind/pagefind-component-ui.js"></script>
+          {pagefindAvailable ? (
+            <script type="module" src="/assets/pagefind/pagefind-component-ui.js"></script>
+          ) : null}
           {head}
         </head>
         <body>
           {children}
-          <pagefind-config base-url="/" bundle-path="/assets/pagefind/"></pagefind-config>
-          <pagefind-modal
-            data-key="pagefind-modal"
-            rmx-preserve-dom
-            reset-on-close
-          ></pagefind-modal>
+          {pagefindAvailable ? (
+            <>
+              <pagefind-config base-url="/" bundle-path="/assets/pagefind/"></pagefind-config>
+              <pagefind-modal
+                data-key="pagefind-modal"
+                rmx-preserve-dom
+                reset-on-close
+              ></pagefind-modal>
+            </>
+          ) : null}
           {devRefreshScriptSrc ? <script type="module" src={devRefreshScriptSrc}></script> : null}
           <script type="module" src={scriptSrc}></script>
         </body>

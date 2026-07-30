@@ -94,4 +94,18 @@ describe('DocsHeader', () => {
     assert.match(html, /id="docs-search-compact"[^>]*data-docs-collapsed-only/)
     assert.match(html, /id="docs-search-button"[^>]*data-docs-expanded-only/)
   })
+
+  it('omits search triggers when search is disabled', async () => {
+    let html = await renderToString(
+      <DocsHeader
+        brandLabel="Remix API Documentation"
+        navigationLinks={navigationLinks}
+        compactSearch
+        searchEnabled={false}
+      />,
+    )
+
+    assert.doesNotMatch(html, /id="docs-search-compact"/)
+    assert.doesNotMatch(html, /id="docs-search-button"/)
+  })
 })
