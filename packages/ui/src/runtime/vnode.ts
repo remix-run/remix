@@ -1,7 +1,13 @@
-import type { ComponentHandle, Component } from './component.ts'
-import { Fragment, Frame } from './component.ts'
+import type { ComponentHandle, Fragment, Frame, FrameHandle, FrameProps } from './component.ts'
 import { isRemixElement } from './core/vnode.ts'
-import type { ElementProps, RemixNode } from './jsx.ts'
+import type { Frame as FrameInstance } from './frame.ts'
+import type { RemixNode } from './jsx.ts'
+import type { ElementFunction } from './element-function.ts'
+import type { Key } from './key.ts'
+import type { MixinRuntimeState } from './mixins/mixin.ts'
+import type { OnMixinDescriptor } from './mixins/on-mixin.ts'
+import type { Scheduler } from './scheduler.ts'
+import type { StyleManager } from '../style/index.ts'
 
 export { isRemixElement }
 
@@ -9,138 +15,227 @@ export const TEXT_NODE = Symbol('TEXT_NODE')
 export const NON_RENDER_NODE = Symbol('NON_RENDER_NODE')
 export const ROOT_VNODE = Symbol('ROOT_VNODE')
 
-export type VNodeType =
-  | typeof ROOT_VNODE
-  | string // host element
-  | Function // component
-  | typeof TEXT_NODE
-  | typeof NON_RENDER_NODE
-  | typeof Fragment
-  | typeof Frame
+export type VNodeKind = 'root' | 'empty' | 'text' | 'fragment' | 'host' | 'component' | 'frame'
 
-export type VNode<T extends VNodeType = VNodeType> = {
-  type: T
-  props?: ElementProps
-  _mixedProps?: ElementProps
-  key?: string
-
-  // _prefixes assigned during reconciliation
-  _parent?: VNode
-  _children?: VNode[]
-  _dom?: unknown
-  _mixState?: unknown
-  _directEventDescriptors?: unknown
-  _directEventState?: unknown
-  _controlledState?: unknown
-  _svg?: boolean
-  // Range roots render between comment boundary markers
-  _rangeStart?: Node
-  _rangeEnd?: Node
-  _pendingHydrationComponentId?: string
-  _frameInstance?: unknown
-  _frameFallbackRoot?: { render: (element: RemixNode) => void; dispose: () => void }
-  _frameResolveToken?: number
-  _frameResolveController?: AbortController
-  _frameResolved?: boolean
-
-  // TEXT_NODE
-  _text?: string
-
-  // Component
-  _handle?: ComponentHandle
-  _id?: string
-  _content?: VNode
-
-  // Mixin-persisted node removal state
-  _persistedByMixins?: boolean
-  _persistedParentByMixins?: ParentNode
-  _persistedRemovalToken?: number
+export type RuntimeElementProps = {
+  children?: RemixNode
+  innerHTML?: string
+  mix?: unknown
+  [name: string]: unknown
 }
 
-export type FragmentNode = VNode & {
-  type: typeof Fragment
-  _children: VNode[]
+type InputNodeBase<kind extends VNodeKind, type> = {
+  kind: kind
+  type: type
+  key?: Key
 }
 
-export type TextNode = VNode & {
-  type: typeof TEXT_NODE
+export type NonRenderNode = InputNodeBase<'empty', typeof NON_RENDER_NODE>
+
+export type TextNode = InputNodeBase<'text', typeof TEXT_NODE> & {
   _text: string
 }
 
-export type NonRenderNode = VNode & {
-  type: typeof NON_RENDER_NODE
+export type FragmentNode = InputNodeBase<'fragment', typeof Fragment> & {
+  _children: VNodeInput[]
 }
 
-export type CommittedTextNode = TextNode & {
-  _dom: Text
+export type HostNode = InputNodeBase<'host', string> & {
+  props: RuntimeElementProps
+  _children: VNodeInput[]
 }
 
-export type HostNode = VNode & {
+export type ComponentNode = InputNodeBase<'component', ElementFunction> & {
+  props: RuntimeElementProps
+}
+
+export type FrameNode = InputNodeBase<'frame', typeof Frame> & {
+  props: RuntimeElementProps & FrameProps
+}
+
+export type VNodeInput =
+  | NonRenderNode
+  | TextNode
+  | FragmentNode
+  | HostNode
+  | ComponentNode
+  | FrameNode
+
+type MountedNodeBase = {
+  _parent: VNodeParent
+  _svg: boolean
+}
+
+export type CommittedNonRenderNode = NonRenderNode & MountedNodeBase
+
+export type CommittedTextNode = TextNode &
+  MountedNodeBase & {
+    _dom: Text
+  }
+
+export type ControlledReflectionState = {
+  disposed: boolean
+  listenersAttached: boolean
+  pendingRestoreVersion: number
+  managesValue: boolean
+  managesChecked: boolean
+  hasControlledValue: boolean
+  controlledValue: unknown
+  hasControlledChecked: boolean
+  controlledChecked: unknown
+  onInput(): void
+  onChange(): void
+}
+
+export type DirectEventBinding = {
   type: string
-  props: ElementProps
-  _children: VNode[]
+  handler: (event: Event, signal: AbortSignal) => void | Promise<void>
+  capture: boolean
+  stableHandler: ((event: Event) => void) | null
+  reentry: AbortController | null
 }
 
-export type CommittedHostNode = HostNode & {
-  _dom: Element
+export type DirectEventState = {
+  bindings: DirectEventBinding[]
 }
 
-export type ComponentNode = VNode & {
-  type: Function
-  props: ElementProps
-  _handle: ComponentHandle
+export type HostPersistenceState = {
+  parent: ParentNode
+  token: number
 }
 
-export type CommittedComponentNode = VNode & {
-  type: Function
-  props: ElementProps
-  _content: VNode
-  _handle: ComponentHandle
+export type CommittedHostNode = Omit<HostNode, '_children'> &
+  MountedNodeBase & {
+    _children: CommittedVNode[]
+    _dom: Element
+    _mixedProps: RuntimeElementProps
+    _mixState?: MixinRuntimeState
+    _directEventDescriptors?: OnMixinDescriptor[]
+    _directEventState?: DirectEventState
+    _controlledState?: ControlledReflectionState
+    _persistence?: HostPersistenceState
+  }
+
+export type CommittedFragmentNode = Omit<FragmentNode, '_children'> &
+  MountedNodeBase & {
+    _children: CommittedVNode[]
+  }
+
+export type MountingComponentNode = ComponentNode &
+  MountedNodeBase & {
+    _handle: ComponentHandle
+    _context: ReconcileContext
+  }
+
+export type CommittedComponentNode = MountingComponentNode & {
+  _content: CommittedVNode
 }
 
-export function isFragmentNode(node: VNode): node is FragmentNode {
-  return node.type === Fragment
+export interface FrameFallbackRoot {
+  render(element: RemixNode): void
+  dispose(): void
 }
 
-export function isTextNode(node: VNode): node is TextNode {
-  return node.type === TEXT_NODE
+export type CommittedFrameNode = FrameNode &
+  MountedNodeBase & {
+    _rangeStart: Comment
+    _rangeEnd: Comment
+    _frameInstance: FrameInstance
+    _frameFallbackRoot?: FrameFallbackRoot
+    _frameResolveToken: number
+    _frameResolveController?: AbortController
+    _frameResolved: boolean
+  }
+
+export type CommittedVNode =
+  | CommittedNonRenderNode
+  | CommittedTextNode
+  | CommittedFragmentNode
+  | CommittedHostNode
+  | CommittedComponentNode
+  | CommittedFrameNode
+
+export type RootVNode = {
+  kind: 'root'
+  type: typeof ROOT_VNODE
+  _children: CommittedVNode[]
+  _svg: boolean
+  _rangeStart?: Node
+  _rangeEnd?: Node
+  _pendingHydrationComponentId?: string
 }
 
-export function isNonRenderNode(node: VNode): node is NonRenderNode {
-  return node.type === NON_RENDER_NODE
+export interface ReconcileContext {
+  frame: FrameHandle
+  scheduler: Scheduler
+  styles: StyleManager
+  rootTarget: EventTarget
+}
+
+export type VNodeParent =
+  | RootVNode
+  | CommittedFragmentNode
+  | CommittedHostNode
+  | MountingComponentNode
+  | CommittedComponentNode
+
+export type VNode = VNodeInput | CommittedVNode | RootVNode | MountingComponentNode
+
+export function isFragmentNode(node: VNode): node is FragmentNode | CommittedFragmentNode {
+  return node.kind === 'fragment'
+}
+
+export function isTextNode(node: VNode): node is TextNode | CommittedTextNode {
+  return node.kind === 'text'
+}
+
+export function isNonRenderNode(node: VNode): node is NonRenderNode | CommittedNonRenderNode {
+  return node.kind === 'empty'
 }
 
 export function isCommittedTextNode(node: VNode): node is CommittedTextNode {
-  // _dom on a text node is only ever assigned a Text, so a null check avoids
-  // the cost of instanceof on a DOM wrapper in hot reconciliation walks.
-  return isTextNode(node) && node._dom != null
+  return node.kind === 'text' && '_dom' in node
 }
 
-export function isHostNode(node: VNode): node is HostNode {
-  return typeof node.type === 'string'
+export function isHostNode(node: VNode): node is HostNode | CommittedHostNode {
+  return node.kind === 'host'
 }
 
-export function isCommittedHostNode(node: VNode): node is CommittedHostNode {
-  // _dom on a host node is only ever assigned an Element (see setupHostNode),
-  // so a null check avoids instanceof cost in hot reconciliation walks.
-  return isHostNode(node) && node._dom != null
+export function isCommittedHostNode(node: unknown): node is CommittedHostNode {
+  return (
+    typeof node === 'object' &&
+    node !== null &&
+    'kind' in node &&
+    node.kind === 'host' &&
+    '_dom' in node
+  )
 }
 
-export function isComponentNode(node: VNode): node is ComponentNode {
-  return typeof node.type === 'function' && node.type !== Frame
+export function isComponentNode(
+  node: VNode,
+): node is ComponentNode | MountingComponentNode | CommittedComponentNode {
+  return node.kind === 'component'
 }
 
 export function isCommittedComponentNode(node: VNode): node is CommittedComponentNode {
-  return isComponentNode(node) && node._content !== undefined
+  return node.kind === 'component' && '_content' in node
 }
 
-export function findContextFromAncestry(node: VNode, type: Component): unknown {
-  let current: VNode | undefined = node
+export function isFrameNode(node: VNode): node is FrameNode | CommittedFrameNode {
+  return node.kind === 'frame'
+}
+
+export function isCommittedFrameNode(node: VNode): node is CommittedFrameNode {
+  return node.kind === 'frame' && '_frameInstance' in node
+}
+
+export function findContextFromAncestry(node: VNodeParent, type: ElementFunction): unknown {
+  let current: VNodeParent | undefined = node
   while (current) {
-    if (current.type === type && isComponentNode(current)) {
+    if (current.kind === 'component' && current.type === type) {
       return current._handle.getContextValue()
     }
-    current = current._parent
+    current = '_parent' in current ? current._parent : undefined
   }
   return undefined
 }

@@ -1,9 +1,10 @@
 import type { ElementProps, ElementType, RemixElement, RemixNode } from '../jsx.ts'
+import type { Key } from '../key.ts'
 
 export function createRemixElement(
   type: ElementType,
   props: ElementProps | null | undefined,
-  key?: string,
+  key?: Key,
 ): RemixElement {
   return {
     $rmx: true,

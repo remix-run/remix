@@ -12,7 +12,7 @@ export function isPrimitiveChild(value: RemixNode): value is PrimitiveChild {
   return type === 'string' || type === 'number' || type === 'bigint'
 }
 
-export function normalizeChildren(children: readonly RemixNode[]): RemixNode[] {
+export function normalizeChildren(children: readonly unknown[]): RemixNode[] {
   for (let i = 0; i < children.length; i++) {
     if (Array.isArray(children[i])) {
       return (children as unknown[]).flat(Infinity) as RemixNode[]

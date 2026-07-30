@@ -3,6 +3,7 @@ import { Frame, createFrameHandle, type FrameContent } from './component.ts'
 import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
+import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle } from './component.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
@@ -99,6 +100,7 @@ function syncElementAttributes(target: Element, source: Element) {
 }
 
 export type FrameRuntime = {
+  canResolveFrames?: boolean
   topFrame?: FrameHandle
   errorTarget: EventTarget
   loadModule: LoadModule
@@ -107,11 +109,15 @@ export type FrameRuntime = {
   scheduler: Scheduler
   styleManager: StyleManager
   data: RmxData
-  moduleCache: Map<string, Function>
-  moduleLoads: Map<string, Promise<Function | undefined>>
+  moduleCache: Map<string, ElementFunction>
+  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
   serverFrameReload: { signal: AbortSignal } | undefined
+}
+
+function isFrameRuntime(value: unknown): value is FrameRuntime {
+  return isRecord(value) && typeof value.resolveFrame === 'function'
 }
 
 export type FrameContext = {
@@ -124,8 +130,8 @@ export type FrameContext = {
   frame: FrameHandle
   styleManager: StyleManager
   data: RmxData
-  moduleCache: Map<string, Function>
-  moduleLoads: Map<string, Promise<Function | undefined>>
+  moduleCache: Map<string, ElementFunction>
+  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
   regionTailRef?: ChildNode | null
@@ -145,8 +151,8 @@ type FrameInit = {
   styleManager?: StyleManager
   marker?: FrameMarkerData
   data: RmxData
-  moduleCache: Map<string, Function>
-  moduleLoads: Map<string, Promise<Function | undefined>>
+  moduleCache: Map<string, ElementFunction>
+  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
 }
@@ -707,8 +713,8 @@ export function createFrameRuntime(init: {
   scheduler: Scheduler
   styleManager: StyleManager
   data: RmxData
-  moduleCache: Map<string, Function>
-  moduleLoads: Map<string, Promise<Function | undefined>>
+  moduleCache: Map<string, ElementFunction>
+  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
 }): FrameRuntime {
@@ -891,7 +897,7 @@ function scheduleHydrationMarker(
   let done = initialHydrationTracker?.track()
   let key = `${entry.moduleUrl}#${entry.exportName}`
 
-  let hydrateWithComponent = (component: Function) => {
+  let hydrateWithComponent = (component: ElementFunction) => {
     if (signal?.aborted) return
     if (!isHydrationMarkerLive(marker, context)) return
     let vElement = createElement(component, entry.props)
@@ -922,14 +928,14 @@ function getOrStartModuleLoad(
   entry: HydrationData,
   markerId: string,
   context: FrameContext,
-): Promise<Function | undefined> {
+): Promise<ElementFunction | undefined> {
   let inFlight = context.moduleLoads.get(key)
   if (inFlight) return inFlight
 
   let loadPromise = (async () => {
     try {
       let mod = await context.loadModule(entry.moduleUrl, entry.exportName)
-      if (typeof mod !== 'function') {
+      if (!isElementFunction(mod)) {
         throw new Error(`Export "${entry.exportName}" from "${entry.moduleUrl}" is not a function`)
       }
       context.moduleCache.set(key, mod)
@@ -946,9 +952,14 @@ function getOrStartModuleLoad(
   return loadPromise
 }
 
-function createElement(component: Function, props: Record<string, unknown>): RemixElement {
+function createElement(component: ElementFunction, props: Record<string, unknown>): RemixElement {
   let revivedProps = reviveSerializedValue(props)
-  return jsx(component, revivedProps as any)
+  invariant(isRecord(revivedProps), 'Expected revived component props to be an object')
+  return jsx(component, revivedProps)
+}
+
+function isElementFunction(value: unknown): value is ElementFunction {
+  return typeof value === 'function'
 }
 
 function reviveSerializedValue(value: unknown): unknown {
@@ -959,18 +970,19 @@ function reviveSerializedValue(value: unknown): unknown {
     return value.map((item) => reviveSerializedValue(item))
   }
 
-  let record = value as Record<string, unknown>
+  if (!isRecord(value)) return value
+  let record = value
 
   if (record.$rmxFrame === true) {
     let props = reviveSerializedObject(record.props)
     let key = reviveSerializedValue(record.key)
-    return jsx(Frame as any, props as any, key as any)
+    return jsx(Frame, props, key)
   }
 
   if (record.$rmx === true && typeof record.type === 'string') {
     let props = reviveSerializedObject(record.props)
     let key = reviveSerializedValue(record.key)
-    return jsx(record.type as any, props as any, key as any)
+    return jsx(record.type, props, key)
   }
 
   let revived: Record<string, unknown> = {}
@@ -984,7 +996,11 @@ function reviveSerializedObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
   let revived = reviveSerializedValue(value)
   if (!revived || typeof revived !== 'object' || Array.isArray(revived)) return {}
-  return revived as Record<string, unknown>
+  return isRecord(revived) ? revived : {}
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function hydrateRegion(
@@ -1007,8 +1023,11 @@ function hydrateRegion(
       return
     }
 
-    let frameRuntime = context.frame.$runtime as FrameRuntime | undefined
-    invariant(frameRuntime, 'Expected frame runtime while rendering a preserved client entry')
+    let frameRuntime = context.frame.$runtime
+    invariant(
+      isFrameRuntime(frameRuntime),
+      'Expected frame runtime while rendering a preserved client entry',
+    )
 
     let previousServerFrameReload = frameRuntime.serverFrameReload
 
@@ -1212,7 +1231,9 @@ export function publishFrameTemplate(id: string, fragment: DocumentFragment): vo
   }
 
   for (let listener of listeners) {
-    listener(fragment.cloneNode(true) as DocumentFragment)
+    let clone = fragment.cloneNode(true)
+    invariant(clone instanceof DocumentFragment, 'Expected cloned frame template fragment')
+    listener(clone)
   }
 }
 
@@ -1479,7 +1500,7 @@ function walkCommentsInNodes(nodes: Node[], cb: (comment: Comment) => void): voi
       continue
     }
 
-    if (node.nodeType === Node.COMMENT_NODE) cb(node as Comment)
+    if (node instanceof Comment) cb(node)
     if (node.childNodes && node.childNodes.length > 0) {
       walkCommentsInNodes(Array.from(node.childNodes), cb)
     }
@@ -1521,8 +1542,8 @@ function findEndMarker(
   let depth = 1
 
   while (node) {
-    if (node.nodeType === Node.COMMENT_NODE) {
-      let comment = node as Comment
+    if (node instanceof Comment) {
+      let comment = node
       if (isStart(comment)) depth++
       else if (isEnd(comment)) {
         depth--
