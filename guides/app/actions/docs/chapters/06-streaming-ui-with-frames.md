@@ -283,9 +283,9 @@ import { on } from "remix/ui";
 This keeps the mutation in its existing action and the recommendations HTML in its existing `GET`
 action. The browser component coordinates the two requests without duplicating either server path.
 
-Use a normal navigation when the whole page should change. Use a browser-side model and JSON when
-the client owns a document-shaped draft. A frame is useful when the server already owns the HTML for
-one region and that region needs an independent request.
+Use a normal navigation when the response should replace the whole page. Fetch JSON when a browser
+component will render the returned data itself. Reload a frame when an existing `GET` action renders
+the HTML for one region and only that region needs to update.
 
 ## Target a frame from a link
 
