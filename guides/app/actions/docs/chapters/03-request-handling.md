@@ -302,7 +302,7 @@ Global middleware is convenient when most routes use it. If only one action acce
 
 Method override is an exception because it must change `context.method` before route matching. When forms use `_method` to reach `PUT`, `PATCH`, or `DELETE` routes, put both `formData()` and `methodOverride()` in the router middleware stack.
 
-`staticFiles()` serves files exactly as they exist under `public/`. Browser modules compiled from `.browser.ts` and `.browser.tsx` source use `remix/assets` instead; [Files and Assets](/files-and-assets/) covers that pipeline. The next chapter, [Rendering UI](/rendering-ui/), builds the app's `render()` middleware with `renderWith(...)` and `renderToStream(...)`.
+`staticFiles()` serves files exactly as they exist under `public/`. Browser modules compiled from `.browser.ts` and `.browser.tsx` source use `remix/assets` instead; [Files and Assets](/files-and-assets/) covers that pipeline. The next chapter, [Rendering UI](/rendering-ui/), uses the app's `render()` middleware to build component pages. [Streaming UI with Frames](/streaming-ui-with-frames/) covers its `renderToStream(...)` setup.
 
 ## Custom middleware {#custom-middleware}
 
@@ -354,4 +354,4 @@ function requireJson(): Middleware {
 }
 ```
 
-Keep custom middleware focused on one request-lifecycle concern. Route-specific data loading or validation usually belongs in the action, while behavior shared across many routes—request IDs, sessions, authentication, security headers, and database access—fits the middleware pipeline. The next chapter, [Rendering UI](/rendering-ui/), follows the `render()` middleware from this pipeline into the app's document and component tree.
+Keep custom middleware focused on one request-lifecycle concern. Route-specific data loading or validation usually belongs in the action, while behavior shared across many routes—request IDs, sessions, authentication, security headers, and database access—fits the middleware pipeline. The next chapter, [Rendering UI](/rendering-ui/), uses `context.render(...)` to build the app's document and component tree.

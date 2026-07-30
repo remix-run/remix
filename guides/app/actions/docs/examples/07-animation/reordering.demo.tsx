@@ -10,7 +10,6 @@ export function ReorderingDemo(handle: Handle) {
       if (signal.aborted) return;
       order = shuffle(order);
       let nextSignal = await handle.update();
-      if (nextSignal.aborted) return;
       scheduleNextShuffle(nextSignal);
     }, 1000);
 

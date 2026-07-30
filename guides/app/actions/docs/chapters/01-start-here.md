@@ -5,9 +5,11 @@ description: A high-level introduction to Remix and the mental model behind a Re
 
 ## What is Remix?
 
-Remix is a TypeScript framework built around the web's request and response model. A server receives a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request), Remix matches it to a typed route, a controller handles the request, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
+Remix is a full-stack TypeScript framework for building web applications. It provides typed routing and middleware, a UI component model with server rendering and browser hydration, navigation, styling and event primitives, data validation and persistence, authentication and sessions, asset compilation, and testing. For most web apps, `remix` can be the only runtime dependency in `package.json`.
 
-The `remix` package includes the server, router, middleware, UI, data, auth, asset, and testing packages used throughout an application. Each package is also useful on its own, so an app can use the complete request path or only the layers it needs.
+Web APIs connect these parts. A route receives a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and returns a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response). That response can contain HTML rendered from Remix components, and components can hydrate in the browser when they need to handle interaction. The same typed route definitions match incoming requests and generate URLs for links, redirects, and forms.
+
+These APIs ship together through focused subpath imports from the `remix` package. Their underlying packages can also be used independently.
 
 The design of Remix comes from six core principles:
 
@@ -18,7 +20,7 @@ The design of Remix comes from six core principles:
 5. **Demand Composition.** Remix packages are single-purpose, replaceable, and useful on their own. You can add or remove pieces as an app changes, while tightly coupled modules belong together.
 6. **Distribute Cohesively.** Remix keeps the ecosystem easy to learn and use by distributing the composable pieces through one `remix` package and one documentation path.
 
-The fastest way to understand Remix is to build the request path once: create a server, define routes, connect a router, and return a response.
+The fastest way to understand Remix is to build one feature across the stack: define a route, return a server-rendered page, handle a form submission, and hydrate one component for browser interaction.
 
 ## Quickstart: create and run a Remix app {#quickstart}
 
@@ -231,7 +233,7 @@ export function AlbumPage(handle: Handle<{ id: string }>) {
 }
 ```
 
-To use this component we need to render and return the response in our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. The render middleware is app code, and the [Rendering UI](/rendering-ui/) chapter shows where it comes from.
+To use this component we need to render and return the response in our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. [Rendering UI](/rendering-ui/) covers the component model, and [Streaming UI with Frames](/streaming-ui-with-frames/) covers the render middleware behind `context.render(...)`.
 
 ```tsx filename=app/actions/albums/controller.tsx lines=[4,9]
 import { createController } from "remix/router";

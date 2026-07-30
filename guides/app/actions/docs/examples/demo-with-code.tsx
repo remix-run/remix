@@ -10,7 +10,7 @@ import { shikiThemes } from "../markdown/code-blocks.ts";
 type DemoComponent = (handle: Handle) => () => RemixNode;
 
 export type DemoProps = {
-  sourceHtml: string;
+  sourceHtml?: string;
   children: RemixNode;
 };
 
@@ -33,7 +33,9 @@ export function Demo(handle: Handle<DemoProps>) {
       <div data-demo-preview mix={previewStyles}>
         {handle.props.children}
       </div>
-      <div data-demo-source mix={sourceCodeStyles} innerHTML={handle.props.sourceHtml} />
+      {handle.props.sourceHtml ? (
+        <div data-demo-source mix={sourceCodeStyles} innerHTML={handle.props.sourceHtml} />
+      ) : null}
     </section>
   );
 }
@@ -54,6 +56,22 @@ export function demoWithCode(
 
     return context.render(
       <Demo sourceHtml={sourceHtml}>
+        <DemoComponent />
+      </Demo>,
+    );
+  };
+}
+
+// Renders only the live preview when the chapter already includes the source.
+export function demoPreview(
+  demoModuleUrl: URL,
+  component: DemoComponent,
+): (context: AppContext) => Response {
+  return function handler(context) {
+    let DemoComponent = clientEntry(demoModuleUrl.href, component);
+
+    return context.render(
+      <Demo>
         <DemoComponent />
       </Demo>,
     );
