@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createHref } from './href.ts'
-import { createMultiMatcher } from './match.ts'
+import { createMatcher, createMultiMatcher } from './match.ts'
 
 describe('Matcher', () => {
   describe('match', () => {
@@ -51,6 +51,73 @@ describe('Matcher', () => {
 
         let match = matcher.match('https://example.com/users')
         assert.equal(match, null)
+      })
+    })
+
+    describe('relative URL references', () => {
+      it('requires an absolute base URL', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('/users/:id', null)
+
+        assert.throws(() => matcher.match('/users/123'))
+        assert.throws(() => matcher.match('/users/123', { baseURL: '/admin/settings' }))
+      })
+
+      it('resolves root-relative strings against a URL base', () => {
+        let matcher = createMatcher('/users/:id')
+
+        let match = matcher.match('/users/123', {
+          baseURL: new URL('https://example.com/admin/settings'),
+        })
+
+        assert.deepEqual(match?.params, { id: '123' })
+        assert.equal(match?.url.href, 'https://example.com/users/123')
+      })
+
+      it('resolves path- and query-relative strings with standard URL semantics', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('/users/:id?tab=profile', null)
+
+        assert.deepEqual(
+          matcher.match('../users/123?tab=profile', {
+            baseURL: 'https://example.com/admin/settings',
+          })?.params,
+          { id: '123' },
+        )
+        assert.deepEqual(
+          matcher.match('?tab=profile', {
+            baseURL: 'https://example.com/users/123',
+          })?.params,
+          { id: '123' },
+        )
+      })
+
+      it('resolves network-path references against the base protocol', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('https://cdn.example.com/assets/*path', null)
+
+        let match = matcher.match('//cdn.example.com/assets/logo.svg', {
+          baseURL: 'https://example.com/docs/',
+        })
+
+        assert.deepEqual(match?.params, { path: 'logo.svg' })
+        assert.equal(match?.url.href, 'https://cdn.example.com/assets/logo.svg')
+      })
+
+      it('supports the same base URL options in matchAll', () => {
+        let matcher = createMultiMatcher<string>()
+        matcher.add('/users/:id', 'variable')
+        matcher.add('/users/new', 'static')
+
+        let matches = matcher.matchAll('../users/new', {
+          baseURL: 'https://example.com/admin/settings',
+        })
+
+        assert.deepEqual(
+          matches.map((match) => match.data),
+          ['static', 'variable'],
+        )
+        assert.equal(matches[0].url.href, 'https://example.com/users/new')
       })
     })
 
