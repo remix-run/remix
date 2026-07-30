@@ -11,7 +11,7 @@ export function ChapterNavigation(handle: Handle<ChapterNavigationProps>) {
   return () => (
     <nav id="docs-chapters-navigation" class="docs-chapters-nav" aria-label="Guide chapters">
       <div class="docs-chapters-nav__heading">Guide chapters</div>
-      <ol class="docs-chapters-nav__list">
+      <ol class="docs-chapters-nav__list docs-selection-list">
         {handle.props.chapters.map((chapter) => (
           <li key={chapter.slug}>
             <a
