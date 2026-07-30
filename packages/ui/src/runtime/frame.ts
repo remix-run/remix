@@ -99,7 +99,10 @@ function syncElementAttributes(target: Element, source: Element) {
   }
 }
 
+const FRAME_RUNTIME = Symbol('FrameRuntime')
+
 export type FrameRuntime = {
+  [FRAME_RUNTIME]: true
   canResolveFrames?: boolean
   topFrame?: FrameHandle
   errorTarget: EventTarget
@@ -116,8 +119,8 @@ export type FrameRuntime = {
   serverFrameReload: { signal: AbortSignal } | undefined
 }
 
-function isFrameRuntime(value: unknown): value is FrameRuntime {
-  return isRecord(value) && typeof value.resolveFrame === 'function'
+export function isFrameRuntime(value: unknown): value is FrameRuntime {
+  return isRecord(value) && Reflect.get(value, FRAME_RUNTIME) === true
 }
 
 export type FrameContext = {
@@ -719,6 +722,7 @@ export function createFrameRuntime(init: {
   namedFrames: Map<string, FrameHandle>
 }): FrameRuntime {
   return {
+    [FRAME_RUNTIME]: true,
     topFrame: init.topFrame,
     errorTarget: init.errorTarget,
     loadModule: init.loadModule,
@@ -831,7 +835,7 @@ function collectOwnedServerStyleTags(nodes: Node[], styles: HTMLStyleElement[]):
       continue
     }
 
-    if (node instanceof Element || node instanceof Document || node instanceof DocumentFragment) {
+    if (node.childNodes.length > 0) {
       collectOwnedServerStyleTags(Array.from(node.childNodes), styles)
     }
   }
@@ -1232,7 +1236,7 @@ export function publishFrameTemplate(id: string, fragment: DocumentFragment): vo
 
   for (let listener of listeners) {
     let clone = fragment.cloneNode(true)
-    invariant(clone instanceof DocumentFragment, 'Expected cloned frame template fragment')
+    invariant(isDocumentFragmentNode(clone), 'Expected cloned frame template fragment')
     listener(clone)
   }
 }
@@ -1458,7 +1462,7 @@ function createFragmentFromString(doc: Document, content: string): DocumentFragm
 function isRemixNodeFrameContent(content: InternalFrameContent): content is RemixNode {
   return !(
     content instanceof ReadableStream ||
-    content instanceof DocumentFragment ||
+    isDocumentFragmentNode(content) ||
     typeof content === 'string'
   )
 }
@@ -1500,7 +1504,7 @@ function walkCommentsInNodes(nodes: Node[], cb: (comment: Comment) => void): voi
       continue
     }
 
-    if (node instanceof Comment) cb(node)
+    if (isCommentNode(node)) cb(node)
     if (node.childNodes && node.childNodes.length > 0) {
       walkCommentsInNodes(Array.from(node.childNodes), cb)
     }
@@ -1516,11 +1520,11 @@ function isHydrationEnd(node: Comment): boolean {
 }
 
 function isHydratedVirtualRootMarker(node: Node): node is VirtualRootMarker {
-  return node instanceof Comment && '$rmx' in node
+  return isCommentNode(node) && '$rmx' in node
 }
 
 function isFrameStart(node: Node): node is Comment {
-  return node instanceof Comment && node.data.trim().startsWith('rmx:f:')
+  return isCommentNode(node) && node.data.trim().startsWith('rmx:f:')
 }
 
 function isFrameEnd(node: Comment): boolean {
@@ -1542,7 +1546,7 @@ function findEndMarker(
   let depth = 1
 
   while (node) {
-    if (node instanceof Comment) {
+    if (isCommentNode(node)) {
       let comment = node
       if (isStart(comment)) depth++
       else if (isEnd(comment)) {
@@ -1554,4 +1558,16 @@ function findEndMarker(
   }
 
   throw new Error('End marker not found')
+}
+
+function isCommentNode(node: Node | null | undefined): node is Comment {
+  return node?.nodeType === Node.COMMENT_NODE
+}
+
+function isDocumentFragmentNode(value: unknown): value is DocumentFragment {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Reflect.get(value, 'nodeType') === Node.DOCUMENT_FRAGMENT_NODE
+  )
 }

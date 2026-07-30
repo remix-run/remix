@@ -296,7 +296,8 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
     let renderFn = this.#renderFn
 
     if (renderFn === undefined) {
-      let result = Reflect.apply(this.#config.type, undefined, [this.#handle])
+      let initialize = this.#config.type as unknown as (handle: Handle<ElementProps, C>) => unknown
+      let result = initialize(this.#handle)
 
       if (!isRenderFn(result)) {
         let name = this.#config.type.name || 'Anonymous'

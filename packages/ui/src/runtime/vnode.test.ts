@@ -34,13 +34,17 @@ describe('VNode lifecycle types', () => {
     expectType<Equal<HostNode['props']['innerHTML'], string | undefined>>()
     expectType<Equal<HasKey<HostNode, '_dom'>, false>>()
     expectType<Equal<HasKey<ComponentNode, '_handle'>, false>>()
-    expectType<Equal<HasKey<FrameNode, '_frameInstance'>, false>>()
+    expectType<Equal<HasKey<FrameNode, '_state'>, false>>()
     expectType<Equal<HasKey<CommittedHostNode, '_content'>, false>>()
     expectType<Equal<HasKey<CommittedComponentNode, '_dom'>, false>>()
     expectType<Equal<HasKey<CommittedFrameNode, '_children'>, false>>()
     expectType<
       Equal<CommittedVNode extends { _parent: VNodeParent; _svg: boolean } ? true : false, true>
     >()
+    expectType<Equal<CommittedVNode extends VNodeInput ? true : false, false>>()
+    expectType<Equal<CommittedHostNode extends HostNode ? true : false, false>>()
+    expectType<Equal<CommittedComponentNode extends ComponentNode ? true : false, false>>()
+    expectType<Equal<CommittedFrameNode extends FrameNode ? true : false, false>>()
   })
 
   it('converts elements into complete unmounted variants', () => {
@@ -59,5 +63,10 @@ describe('VNode lifecycle types', () => {
     assert.equal(vnode._children[0].kind, 'text')
     assert.equal(vnode._children[1].kind, 'host')
     assert.equal('_dom' in vnode, false)
+  })
+
+  it('validates framework props at the element boundary', () => {
+    assert.throws(() => toVNode(jsx('div', { innerHTML: 42 })), /Invalid innerHTML prop/)
+    assert.throws(() => toVNode(jsx('div', { mix: {} })), /Invalid mix prop/)
   })
 })

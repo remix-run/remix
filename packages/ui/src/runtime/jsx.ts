@@ -1,7 +1,6 @@
 import type * as dom from './dom.d.ts'
 import type { Handle, RenderFn } from './component.ts'
 import { createRemixElement } from './core/vnode.ts'
-import type { Key } from './key.ts'
 
 /**
  * Any valid element type accepted by JSX or {@link import('./create-element.ts').createElement}.
@@ -27,7 +26,7 @@ export interface RemixElement {
   /** Normalized props for the element. */
   props: ElementProps
   /** Optional reconciliation key. */
-  key?: Key
+  key?: any
   /** Internal brand used to distinguish Remix elements at runtime. */
   $rmx: true
 }
@@ -98,8 +97,8 @@ export type Props<T extends keyof JSX.IntrinsicElements> = NormalizeMixProp<
  * @param key Optional reconciliation key.
  * @returns A Remix virtual element.
  */
-export function jsx(type: ElementType, props: ElementProps, key?: Key): RemixElement
-export function jsx(type: ElementType, props: ElementProps, key?: Key): RemixElement {
+export function jsx(type: ElementType, props: ElementProps, key?: any): RemixElement
+export function jsx(type: ElementType, props: ElementProps, key?: any): RemixElement {
   return createRemixElement(type, props, key)
 }
 
@@ -108,7 +107,7 @@ export { jsx as jsxDEV, jsx as jsxs }
 declare global {
   namespace JSX {
     export interface IntrinsicAttributes {
-      key?: Key
+      key?: any
     }
 
     type Element = RemixElement

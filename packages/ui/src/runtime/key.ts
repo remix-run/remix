@@ -1,1 +1,1 @@
-export type Key = any
+export type Key = string | number | bigint

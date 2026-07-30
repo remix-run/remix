@@ -1,7 +1,7 @@
 import type { Component, ComponentHandle, FrameContent, FrameHandle } from './component.ts'
 import { createComponent } from './component.ts'
 import type { FrameRuntime } from './frame.ts'
-import { createFrame } from './frame.ts'
+import { createFrame, isFrameRuntime } from './frame.ts'
 import { createRangeRoot } from './vdom.ts'
 import type {
   CommittedFragmentNode,
@@ -18,7 +18,7 @@ import type {
   HostNode,
   MountingComponentNode,
   ReconcileContext,
-  RuntimeElementProps,
+  RuntimeHostProps,
   TextNode,
   VNodeInput,
   VNodeParent,
@@ -76,7 +76,7 @@ function getSvgContext(vParent: VNodeParent, node: VNodeInput): boolean {
   return vParent._svg
 }
 
-function getHostProps(node: HostNode | CommittedHostNode): RuntimeElementProps {
+function getHostProps(node: HostNode | CommittedHostNode): RuntimeHostProps {
   return '_mixedProps' in node ? node._mixedProps : node.props
 }
 
@@ -161,7 +161,7 @@ function ensureControlledReflection(
   return state
 }
 
-function syncControlledReflection(node: CommittedHostNode, props: RuntimeElementProps): void {
+function syncControlledReflection(node: CommittedHostNode, props: RuntimeHostProps): void {
   let state = node._controlledState
   if (!state || state.disposed) return
 
@@ -174,7 +174,7 @@ function syncControlledReflection(node: CommittedHostNode, props: RuntimeElement
   state.pendingRestoreVersion++
 }
 
-function shouldTrackControlledReflection(props: RuntimeElementProps): boolean {
+function shouldTrackControlledReflection(props: RuntimeHostProps): boolean {
   return hasControlledValueProp(props) || hasControlledCheckedProp(props)
 }
 
@@ -230,11 +230,11 @@ function canManageValue(type: string, element: Element): boolean {
   return canReflectProperty(element, 'value')
 }
 
-function hasControlledValueProp(props: RuntimeElementProps): boolean {
+function hasControlledValueProp(props: RuntimeHostProps): boolean {
   return 'value' in props && props.value !== undefined
 }
 
-function hasControlledCheckedProp(props: RuntimeElementProps): boolean {
+function hasControlledCheckedProp(props: RuntimeHostProps): boolean {
   return 'checked' in props && props.checked !== undefined
 }
 
@@ -256,7 +256,7 @@ function setPropertyReflection(element: Element, key: string, value: unknown): v
 }
 
 type ResolvedHostProps = {
-  props: RuntimeElementProps
+  props: RuntimeHostProps
   mixState?: MixinRuntimeState
   directEventDescriptors?: OnMixinDescriptor[]
 }
@@ -302,9 +302,7 @@ function applyResolvedHostProps(node: CommittedHostNode, resolved: ResolvedHostP
   node._directEventDescriptors = resolved.directEventDescriptors
 }
 
-function resolveDirectEventDescriptors(
-  mix: RuntimeElementProps['mix'],
-): OnMixinDescriptor[] | null {
+function resolveDirectEventDescriptors(mix: RuntimeHostProps['mix']): OnMixinDescriptor[] | null {
   if (!mix) return EMPTY_DIRECT_EVENT_DESCRIPTORS
   if (!Array.isArray(mix)) {
     return isOnMixinDescriptor(mix) ? [mix] : null
@@ -321,10 +319,9 @@ function areOnMixinDescriptors(descriptors: unknown[]): descriptors is OnMixinDe
 }
 
 function enqueueMixinBindingUpdate(
-  this: MixinRuntimeBinding,
+  this: MixinRuntimeBinding<CommittedHostNode>,
   done: (signal: AbortSignal) => void,
 ): void {
-  invariant(isCommittedHostNode(this.target), 'Expected mixin target to be a mounted host node')
   let node = this.target
   let state = node._mixState
   this.scheduler.enqueueWork([
@@ -374,7 +371,7 @@ function bindNodeMixRuntime(
   )
 }
 
-function isHeadHostNode(node: HostNode): boolean {
+function isHeadHostNode(node: HostNode | CommittedHostNode): boolean {
   if (node.type === 'head') return true
   if (node.type.length !== 4) return false
   return node.type.toLowerCase() === 'head'
@@ -401,7 +398,7 @@ function commitNonRenderNode(
   parent: VNodeParent,
   svg: boolean,
 ): CommittedNonRenderNode {
-  let committed = node as CommittedNonRenderNode
+  let committed = node as unknown as CommittedNonRenderNode
   committed._parent = parent
   committed._svg = svg
   return committed
@@ -413,7 +410,7 @@ function commitTextNode(
   svg: boolean,
   dom: Text,
 ): CommittedTextNode {
-  let committed = node as CommittedTextNode
+  let committed = node as unknown as CommittedTextNode
   committed._parent = parent
   committed._svg = svg
   committed._dom = dom
@@ -425,7 +422,7 @@ function beginFragmentNode(
   parent: VNodeParent,
   svg: boolean,
 ): CommittedFragmentNode {
-  let committed = node as CommittedFragmentNode
+  let committed = node as unknown as CommittedFragmentNode
   committed._parent = parent
   committed._svg = svg
   committed._children = EMPTY_COMMITTED_CHILDREN
@@ -440,7 +437,7 @@ function commitHostNode(
   resolved: ResolvedHostProps,
   children: CommittedVNode[] = EMPTY_COMMITTED_CHILDREN,
 ): CommittedHostNode {
-  let committed = node as CommittedHostNode
+  let committed = node as unknown as CommittedHostNode
   committed._parent = parent
   committed._svg = svg
   committed._dom = dom
@@ -458,7 +455,7 @@ function beginComponentNode(
   handle: ComponentHandle,
   context: ReconcileContext,
 ): MountingComponentNode {
-  let mounting = node as MountingComponentNode
+  let mounting = node as unknown as MountingComponentNode
   mounting._parent = parent
   mounting._svg = svg
   mounting._handle = handle
@@ -475,10 +472,6 @@ function commitComponentNode(
   return committed
 }
 
-function commitChildren(children: VNodeInput[]): CommittedVNode[] {
-  return children as CommittedVNode[]
-}
-
 export function diffVNodes(
   curr: CommittedVNode | null,
   next: VNodeInput,
@@ -488,8 +481,6 @@ export function diffVNodes(
   anchor?: Node,
   cursor?: HydrationCursor,
 ): CommittedVNode {
-  let svg = getSvgContext(vParent, next)
-
   if (curr === null) {
     return insert(next, domParent, vParent, context, anchor, cursor)
   }
@@ -500,23 +491,19 @@ export function diffVNodes(
 
   switch (next.kind) {
     case 'host': {
-      invariant(curr.kind === 'host', 'Expected matching host node')
-      return diffHost(curr, next, vParent, context)
+      return diffHost(curr as CommittedHostNode, next, vParent, context)
     }
     case 'text': {
-      invariant(curr.kind === 'text', 'Expected matching text node')
-      return diffText(curr, next, vParent, svg)
+      return diffText(curr as CommittedTextNode, next, vParent, getSvgContext(vParent, next))
     }
     case 'empty': {
-      invariant(curr.kind === 'empty', 'Expected matching empty node')
-      return commitNonRenderNode(next, vParent, svg)
+      return commitNonRenderNode(next, vParent, getSvgContext(vParent, next))
     }
     case 'fragment': {
-      invariant(curr.kind === 'fragment', 'Expected matching fragment node')
       let childInputs = next._children
-      let committed = beginFragmentNode(next, vParent, svg)
+      let committed = beginFragmentNode(next, vParent, getSvgContext(vParent, next))
       committed._children = diffChildren(
-        curr._children,
+        (curr as CommittedFragmentNode)._children,
         childInputs,
         domParent,
         committed,
@@ -527,12 +514,27 @@ export function diffVNodes(
       return committed
     }
     case 'frame': {
-      invariant(curr.kind === 'frame', 'Expected matching frame node')
-      return diffFrame(curr, next, domParent, vParent, context, anchor)
+      return diffFrame(
+        curr as CommittedFrameNode,
+        next,
+        domParent,
+        vParent,
+        context,
+        getSvgContext(vParent, next),
+        anchor,
+      )
     }
     case 'component': {
-      invariant(curr.kind === 'component', 'Expected matching component node')
-      return diffComponent(curr, next, domParent, vParent, context, anchor, cursor)
+      return diffComponent(
+        curr as CommittedComponentNode,
+        next,
+        domParent,
+        vParent,
+        context,
+        getSvgContext(vParent, next),
+        anchor,
+        cursor,
+      )
     }
   }
 }
@@ -963,20 +965,21 @@ function insert(
   if (node.kind === 'fragment') {
     let childInputs = node._children
     let committed = beginFragmentNode(node, vParent, svg)
+    let children: Array<VNodeInput | CommittedVNode> = childInputs
     // Insert fragment children in order before the same anchor
     for (let i = 0; i < childInputs.length; i++) {
-      childInputs[i] = insert(childInputs[i], domParent, committed, context, anchor, cursor)
+      children[i] = insert(childInputs[i], domParent, committed, context, anchor, cursor)
     }
-    committed._children = commitChildren(childInputs)
+    committed._children = children as CommittedVNode[]
     return committed
   }
 
   if (node.kind === 'component') {
-    return diffComponent(null, node, domParent, vParent, context, anchor, cursor)
+    return diffComponent(null, node, domParent, vParent, context, svg, anchor, cursor)
   }
 
   if (node.kind === 'frame') {
-    return insertFrame(node, domParent, vParent, context, anchor, cursor)
+    return insertFrame(node, domParent, vParent, context, svg, anchor, cursor)
   }
 
   invariant(false, 'Unexpected node type')
@@ -988,6 +991,7 @@ function diffFrame(
   domParent: ParentNode,
   vParent: VNodeParent,
   context: ReconcileContext,
+  svg: boolean,
   anchor?: Node,
 ): CommittedFrameNode {
   let { frame } = context
@@ -999,31 +1003,28 @@ function diffFrame(
   if (currName !== nextName) {
     let replaceAnchor = curr._rangeEnd.nextSibling ?? anchor
     remove(curr, domParent, context)
-    return insertFrame(next, domParent, vParent, context, replaceAnchor)
+    return insertFrame(next, domParent, vParent, context, svg, replaceAnchor)
   }
 
   // If the frame hasn't resolved yet, preserve existing cancel/remount behavior
   // so pending streams from the old src cannot take over the new src.
-  if (currSrc !== nextSrc && !curr._frameResolved) {
+  if (currSrc !== nextSrc && !curr._state.resolved) {
     let replaceAnchor = curr._rangeEnd.nextSibling ?? anchor
     remove(curr, domParent, context)
-    return insertFrame(next, domParent, vParent, context, replaceAnchor)
+    return insertFrame(next, domParent, vParent, context, svg, replaceAnchor)
   }
 
-  let committed = Object.assign(next, {
+  let committed = next as unknown as CommittedFrameNode
+  Object.assign(committed, {
     _rangeStart: curr._rangeStart,
     _rangeEnd: curr._rangeEnd,
-    _frameInstance: curr._frameInstance,
-    _frameFallbackRoot: curr._frameFallbackRoot,
-    _frameResolveToken: curr._frameResolveToken,
-    _frameResolveController: curr._frameResolveController,
-    _frameResolved: curr._frameResolved,
+    _state: curr._state,
     _parent: vParent,
-    _svg: getSvgContext(vParent, next),
+    _svg: svg,
   })
 
   let frameRuntime = getFrameRuntime(frame)
-  let frameInstance = committed._frameInstance
+  let frameInstance = committed._state.instance
   let serverFrameReload = frameRuntime?.serverFrameReload
 
   if (currSrc !== nextSrc) {
@@ -1039,8 +1040,8 @@ function diffFrame(
     resolveClientFrame(committed, frameRuntime, serverFrameReload)
   }
 
-  if (!committed._frameResolved && committed._frameFallbackRoot) {
-    committed._frameFallbackRoot.render(committed.props.fallback ?? null)
+  if (!committed._state.resolved && committed._state.fallbackRoot) {
+    committed._state.fallbackRoot.render(committed.props.fallback ?? null)
   }
   return committed
 }
@@ -1050,6 +1051,7 @@ function insertFrame(
   domParent: ParentNode,
   vParent: VNodeParent,
   context: ReconcileContext,
+  svg: boolean,
   anchor?: Node,
   cursor?: HydrationCursor,
 ): CommittedFrameNode {
@@ -1092,16 +1094,18 @@ function insertFrame(
       }
 
       cursor.current = end.nextSibling
-      return Object.assign(node, {
+      return Object.assign(node as unknown as CommittedFrameNode, {
         _rangeStart: start,
         _rangeEnd: end,
         _parent: vParent,
-        _svg: getSvgContext(vParent, node),
-        _frameResolveToken: 0,
-        _frameResolveController: undefined,
-        _frameFallbackRoot: undefined,
-        _frameResolved: true,
-        _frameInstance: instance,
+        _svg: svg,
+        _state: {
+          instance,
+          resolveToken: 0,
+          resolveController: undefined,
+          fallbackRoot: undefined,
+          resolved: true,
+        },
       })
     }
   }
@@ -1138,16 +1142,18 @@ function insertFrame(
   })
   runtime.frameInstances.set(start, instance)
 
-  let committed = Object.assign(node, {
+  let committed = Object.assign(node as unknown as CommittedFrameNode, {
     _rangeStart: start,
     _rangeEnd: end,
     _parent: vParent,
-    _svg: getSvgContext(vParent, node),
-    _frameFallbackRoot: fallbackRoot,
-    _frameResolved: false,
-    _frameResolveToken: 0,
-    _frameResolveController: undefined,
-    _frameInstance: instance,
+    _svg: svg,
+    _state: {
+      instance,
+      fallbackRoot,
+      resolved: false,
+      resolveToken: 0,
+      resolveController: undefined,
+    },
   })
   resolveClientFrame(committed, runtime)
 
@@ -1160,11 +1166,12 @@ function resolveClientFrame(
   serverFrameReload?: { signal: AbortSignal },
 ): void {
   let frameSrc = getFrameSrc(node)
-  let instance = node._frameInstance
+  let state = node._state
+  let instance = state.instance
 
-  let token = node._frameResolveToken + 1
-  node._frameResolveToken = token
-  node._frameResolveController?.abort()
+  let token = state.resolveToken + 1
+  state.resolveToken = token
+  state.resolveController?.abort()
   let reload = serverFrameReload
     ? instance.beginClientFrameReloadForAncestorReload(serverFrameReload.signal)
     : undefined
@@ -1172,40 +1179,41 @@ function resolveClientFrame(
     instance.cancelReload()
   }
   let resolveController = reload?.controller ?? new AbortController()
-  node._frameResolveController = resolveController
+  state.resolveController = resolveController
 
   Promise.resolve()
     .then(() => runtime.resolveFrame(frameSrc, resolveController.signal, getFrameName(node)))
     .then(async (content) => {
-      if (node._frameResolveToken !== token || resolveController.signal.aborted) return
-      node._frameFallbackRoot?.dispose()
-      node._frameFallbackRoot = undefined
+      if (state.resolveToken !== token || resolveController.signal.aborted) return
+      state.fallbackRoot?.dispose()
+      state.fallbackRoot = undefined
       let nextContent = asAbortableFrameContent(content, resolveController.signal)
       await instance.render(nextContent, { signal: resolveController.signal })
-      if (node._frameResolveToken !== token || resolveController.signal.aborted) return
-      node._frameResolved = true
+      if (state.resolveToken !== token || resolveController.signal.aborted) return
+      state.resolved = true
     })
     .catch((error) => {
-      if (reload && node._frameResolveToken === token && !resolveController.signal.aborted) {
+      if (reload && state.resolveToken === token && !resolveController.signal.aborted) {
         runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       }
     })
     .finally(() => {
       reload?.complete()
-      if (node._frameResolveController === resolveController) {
-        node._frameResolveController = undefined
+      if (state.resolveController === resolveController) {
+        state.resolveController = undefined
       }
     })
 }
 
 function disposeFrameResources(node: CommittedFrameNode): void {
-  node._frameResolveToken++
-  node._frameResolveController?.abort()
-  node._frameResolveController = undefined
-  node._frameFallbackRoot?.dispose()
-  node._frameFallbackRoot = undefined
+  let state = node._state
+  state.resolveToken++
+  state.resolveController?.abort()
+  state.resolveController = undefined
+  state.fallbackRoot?.dispose()
+  state.fallbackRoot = undefined
 
-  node._frameInstance.dispose()
+  state.instance.dispose()
 }
 
 function asAbortableFrameContent(content: FrameContent, signal: AbortSignal): FrameContent {
@@ -1283,10 +1291,6 @@ function getFrameRuntime(frame: FrameHandle): FrameRuntime | undefined {
   return isFrameRuntime(runtime) ? runtime : undefined
 }
 
-function isFrameRuntime(value: unknown): value is FrameRuntime {
-  return typeof value === 'object' && value !== null && 'resolveFrame' in value
-}
-
 function getFrameSrc(node: FrameNode | CommittedFrameNode): string {
   return node.props.src
 }
@@ -1309,11 +1313,15 @@ function skipCommentsExceptFrameStart(cursor: Node | null): Node | null {
 }
 
 function isFrameStartComment(node: Node | null | undefined): node is Comment {
-  return node instanceof Comment && node.data.trim().startsWith('rmx:f:')
+  return isCommentNode(node) && node.data.trim().startsWith('rmx:f:')
 }
 
 function isFrameEndComment(node: Node | null | undefined): node is Comment {
-  return node instanceof Comment && node.data.trim() === '/rmx:f'
+  return isCommentNode(node) && node.data.trim() === '/rmx:f'
+}
+
+function isCommentNode(node: Node | null | undefined): node is Comment {
+  return node?.nodeType === Node.COMMENT_NODE
 }
 
 function getFrameIdFromComment(comment: Comment): string | undefined {
@@ -1369,6 +1377,7 @@ function diffComponent(
   domParent: ParentNode,
   vParent: VNodeParent,
   context: ReconcileContext,
+  svg: boolean,
   anchor?: Node,
   cursor?: HydrationCursor,
 ): CommittedComponentNode {
@@ -1394,17 +1403,11 @@ function diffComponent(
         return runtime?.topFrame
       },
     })
-    let mounting = beginComponentNode(next, vParent, getSvgContext(vParent, next), handle, context)
+    let mounting = beginComponentNode(next, vParent, svg, handle, context)
 
     return renderComponent(null, mounting, domParent, context, anchor, cursor)
   }
-  let mounting = beginComponentNode(
-    next,
-    vParent,
-    getSvgContext(vParent, next),
-    curr._handle,
-    context,
-  )
+  let mounting = beginComponentNode(next, vParent, svg, curr._handle, context)
   return renderComponent(curr._content, mounting, domParent, context, anchor, cursor)
 }
 
@@ -1543,15 +1546,16 @@ function diffChildren(
   anchor?: Node,
 ): CommittedVNode[] {
   let hasKeys = hasKeyedChildren(next)
+  let committed: Array<VNodeInput | CommittedVNode> = next
 
   if (curr === null) {
     if (hasKeys) {
       warnDuplicateKeys(next)
     }
     for (let i = 0; i < next.length; i++) {
-      next[i] = insert(next[i], domParent, vParent, context, anchor, cursor)
+      committed[i] = insert(next[i], domParent, vParent, context, anchor, cursor)
     }
-    return commitChildren(next)
+    return committed as CommittedVNode[]
   }
 
   if (
@@ -1570,7 +1574,7 @@ function diffChildren(
   if (!hasKeys) {
     for (let i = 0; i < next.length; i++) {
       let currentNode = i < curr.length ? curr[i] : null
-      next[i] = diffVNodes(currentNode, next[i], domParent, vParent, context, anchor, cursor)
+      committed[i] = diffVNodes(currentNode, next[i], domParent, vParent, context, anchor, cursor)
     }
 
     if (curr.length > next.length) {
@@ -1580,7 +1584,7 @@ function diffChildren(
       }
     }
 
-    return commitChildren(next)
+    return committed as CommittedVNode[]
   }
 
   return patchKeyedChildren(curr, next, domParent, vParent, context, cursor, anchor)
@@ -1668,6 +1672,7 @@ function patchKeyedChildren(
     warnDuplicateKeys(next)
     matches = matchKeyedChildren(curr, next)
   }
+  let committed: Array<VNodeInput | CommittedVNode> = next
 
   let matchAnalysis = analyzeKeyedChildMatches(curr.length, matches)
   if (matchAnalysis.hasRemovals) {
@@ -1691,12 +1696,12 @@ function patchKeyedChildren(
     let oldIndex = matches[index]
     let oldNode = oldIndex >= 0 ? curr[oldIndex] : null
 
-    next[index] = diffVNodes(oldNode, next[index], domParent, vParent, context, anchor, cursor)
+    committed[index] = diffVNodes(oldNode, next[index], domParent, vParent, context, anchor, cursor)
   }
-  let committed = commitChildren(next)
+  let committedChildren = committed as CommittedVNode[]
 
   if (matchAnalysis.canSkipPlacement) {
-    return committed
+    return committedChildren
   }
 
   let stableIndexes = lisMatches(matches)
@@ -1704,7 +1709,7 @@ function patchKeyedChildren(
   let placementAnchor: Node | null = anchor ?? null
 
   for (let index = next.length - 1; index >= 0; index--) {
-    let nextNode = committed[index]
+    let nextNode = committedChildren[index]
     let isStable = stableIndexes[stableCursor] === index
 
     if (isStable) {
@@ -1715,7 +1720,7 @@ function patchKeyedChildren(
 
     placementAnchor = findFirstDomAnchor(nextNode) ?? placementAnchor
   }
-  return committed
+  return committedChildren
 }
 
 // Keyed child matches are arrays of old indexes (-1 = no match / new node),
@@ -2029,7 +2034,7 @@ export function findNextSiblingDomAnchor(
     return null
   }
 
-  let idx = children.findIndex((child) => child === curr)
+  let idx = children.indexOf(curr as CommittedVNode)
   if (idx === -1) return null
   for (let i = idx + 1; i < children.length; i++) {
     let dom = findFirstDomAnchor(children[i])

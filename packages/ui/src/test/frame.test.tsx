@@ -5913,6 +5913,39 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('keeps resolved client frame content after rerendering while resolution is pending', async () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+    let [contentPromise, resolveContent] = withResolvers<string>()
+
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        resolveFrame() {
+          return contentPromise
+        },
+      },
+    })
+
+    root.render(<Frame src="/pending" fallback={<p id="fallback">Loading first…</p>} />)
+    root.flush()
+    root.render(<Frame src="/pending" fallback={<p id="fallback">Loading second…</p>} />)
+    root.flush()
+
+    resolveContent('<p id="result">Resolved content</p>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#result')?.textContent).toBe('Resolved content')
+    expect(rootContainer.querySelector('#fallback')).toBe(null)
+
+    root.render(<Frame src="/pending" fallback={<p id="fallback">Loading third…</p>} />)
+    root.flush()
+
+    expect(rootContainer.querySelector('#result')?.textContent).toBe('Resolved content')
+    expect(rootContainer.querySelector('#fallback')).toBe(null)
+    root.dispose()
+  })
+
   it('loads new client-created frame src values during server-driven entry rerenders', async () => {
     let reloadTop: undefined | (() => Promise<AbortSignal>)
     let frameSrc = '/entry-frame-a'

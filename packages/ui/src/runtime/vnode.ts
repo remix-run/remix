@@ -4,7 +4,7 @@ import type { Frame as FrameInstance } from './frame.ts'
 import type { RemixNode } from './jsx.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
-import type { MixinRuntimeState } from './mixins/mixin.ts'
+import type { MixinRuntimeState, MixinRuntimeValue } from './mixins/mixin.ts'
 import type { OnMixinDescriptor } from './mixins/on-mixin.ts'
 import type { Scheduler } from './scheduler.ts'
 import type { StyleManager } from '../style/index.ts'
@@ -18,16 +18,20 @@ export const ROOT_VNODE = Symbol('ROOT_VNODE')
 export type VNodeKind = 'root' | 'empty' | 'text' | 'fragment' | 'host' | 'component' | 'frame'
 
 export type RuntimeElementProps = {
+  [name: string]: unknown
+}
+
+export type RuntimeHostProps = RuntimeElementProps & {
   children?: RemixNode
   innerHTML?: string
-  mix?: unknown
-  [name: string]: unknown
+  mix?: MixinRuntimeValue
 }
 
 type InputNodeBase<kind extends VNodeKind, type> = {
   kind: kind
   type: type
   key?: Key
+  _parent?: never
 }
 
 export type NonRenderNode = InputNodeBase<'empty', typeof NON_RENDER_NODE>
@@ -41,7 +45,7 @@ export type FragmentNode = InputNodeBase<'fragment', typeof Fragment> & {
 }
 
 export type HostNode = InputNodeBase<'host', string> & {
-  props: RuntimeElementProps
+  props: RuntimeHostProps
   _children: VNodeInput[]
 }
 
@@ -66,12 +70,18 @@ type MountedNodeBase = {
   _svg: boolean
 }
 
-export type CommittedNonRenderNode = NonRenderNode & MountedNodeBase
+type CommittedNodeBase<kind extends VNodeKind, type> = {
+  kind: kind
+  type: type
+  key?: Key
+} & MountedNodeBase
 
-export type CommittedTextNode = TextNode &
-  MountedNodeBase & {
-    _dom: Text
-  }
+export type CommittedNonRenderNode = CommittedNodeBase<'empty', typeof NON_RENDER_NODE>
+
+export type CommittedTextNode = CommittedNodeBase<'text', typeof TEXT_NODE> & {
+  _text: string
+  _dom: Text
+}
 
 export type ControlledReflectionState = {
   disposed: boolean
@@ -104,28 +114,27 @@ export type HostPersistenceState = {
   token: number
 }
 
-export type CommittedHostNode = Omit<HostNode, '_children'> &
-  MountedNodeBase & {
-    _children: CommittedVNode[]
-    _dom: Element
-    _mixedProps: RuntimeElementProps
-    _mixState?: MixinRuntimeState
-    _directEventDescriptors?: OnMixinDescriptor[]
-    _directEventState?: DirectEventState
-    _controlledState?: ControlledReflectionState
-    _persistence?: HostPersistenceState
-  }
+export type CommittedHostNode = CommittedNodeBase<'host', string> & {
+  props: RuntimeHostProps
+  _children: CommittedVNode[]
+  _dom: Element
+  _mixedProps: RuntimeHostProps
+  _mixState?: MixinRuntimeState
+  _directEventDescriptors?: OnMixinDescriptor[]
+  _directEventState?: DirectEventState
+  _controlledState?: ControlledReflectionState
+  _persistence?: HostPersistenceState
+}
 
-export type CommittedFragmentNode = Omit<FragmentNode, '_children'> &
-  MountedNodeBase & {
-    _children: CommittedVNode[]
-  }
+export type CommittedFragmentNode = CommittedNodeBase<'fragment', typeof Fragment> & {
+  _children: CommittedVNode[]
+}
 
-export type MountingComponentNode = ComponentNode &
-  MountedNodeBase & {
-    _handle: ComponentHandle
-    _context: ReconcileContext
-  }
+export type MountingComponentNode = CommittedNodeBase<'component', ElementFunction> & {
+  props: RuntimeElementProps
+  _handle: ComponentHandle
+  _context: ReconcileContext
+}
 
 export type CommittedComponentNode = MountingComponentNode & {
   _content: CommittedVNode
@@ -136,16 +145,20 @@ export interface FrameFallbackRoot {
   dispose(): void
 }
 
-export type CommittedFrameNode = FrameNode &
-  MountedNodeBase & {
-    _rangeStart: Comment
-    _rangeEnd: Comment
-    _frameInstance: FrameInstance
-    _frameFallbackRoot?: FrameFallbackRoot
-    _frameResolveToken: number
-    _frameResolveController?: AbortController
-    _frameResolved: boolean
-  }
+export type FrameMountState = {
+  instance: FrameInstance
+  fallbackRoot?: FrameFallbackRoot
+  resolveToken: number
+  resolveController?: AbortController
+  resolved: boolean
+}
+
+export type CommittedFrameNode = CommittedNodeBase<'frame', typeof Frame> & {
+  props: RuntimeElementProps & FrameProps
+  _rangeStart: Comment
+  _rangeEnd: Comment
+  _state: FrameMountState
+}
 
 export type CommittedVNode =
   | CommittedNonRenderNode
@@ -193,22 +206,16 @@ export function isNonRenderNode(node: VNode): node is NonRenderNode | CommittedN
   return node.kind === 'empty'
 }
 
-export function isCommittedTextNode(node: VNode): node is CommittedTextNode {
-  return node.kind === 'text' && '_dom' in node
+export function isCommittedTextNode(node: CommittedVNode): node is CommittedTextNode {
+  return node.kind === 'text'
 }
 
 export function isHostNode(node: VNode): node is HostNode | CommittedHostNode {
   return node.kind === 'host'
 }
 
-export function isCommittedHostNode(node: unknown): node is CommittedHostNode {
-  return (
-    typeof node === 'object' &&
-    node !== null &&
-    'kind' in node &&
-    node.kind === 'host' &&
-    '_dom' in node
-  )
+export function isCommittedHostNode(node: CommittedVNode): node is CommittedHostNode {
+  return node.kind === 'host'
 }
 
 export function isComponentNode(
@@ -225,8 +232,8 @@ export function isFrameNode(node: VNode): node is FrameNode | CommittedFrameNode
   return node.kind === 'frame'
 }
 
-export function isCommittedFrameNode(node: VNode): node is CommittedFrameNode {
-  return node.kind === 'frame' && '_frameInstance' in node
+export function isCommittedFrameNode(node: CommittedVNode): node is CommittedFrameNode {
+  return node.kind === 'frame'
 }
 
 export function findContextFromAncestry(node: VNodeParent, type: ElementFunction): unknown {

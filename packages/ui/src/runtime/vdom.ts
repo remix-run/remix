@@ -2,7 +2,7 @@ import type { FrameContent, FrameHandle } from './component.ts'
 import { createFrameHandle } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './jsx.ts'
-import type { FrameRuntime } from './frame.ts'
+import { createFrameRuntime } from './frame.ts'
 import {
   createComponentErrorEvent,
   getComponentError,
@@ -275,8 +275,7 @@ function createRootFrameHandle(init: {
       )
     })
 
-  let runtime: FrameRuntime = {
-    canResolveFrames: !!init.resolveFrame,
+  let runtime = createFrameRuntime({
     topFrame: undefined,
     loadModule:
       init.loadModule ??
@@ -293,8 +292,8 @@ function createRootFrameHandle(init: {
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
     namedFrames: new Map(),
-    serverFrameReload: undefined,
-  }
+  })
+  runtime.canResolveFrames = !!init.resolveFrame
   let frame = createFrameHandle({ src: init.src ?? '/', $runtime: runtime })
   runtime.topFrame = frame
   return frame

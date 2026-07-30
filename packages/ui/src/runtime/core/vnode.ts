@@ -1,10 +1,9 @@
-import type { ElementProps, ElementType, RemixElement, RemixNode } from '../jsx.ts'
-import type { Key } from '../key.ts'
+import type { ElementProps, ElementType, RemixElement } from '../jsx.ts'
 
 export function createRemixElement(
   type: ElementType,
   props: ElementProps | null | undefined,
-  key?: Key,
+  key?: any,
 ): RemixElement {
   return {
     $rmx: true,
@@ -14,8 +13,16 @@ export function createRemixElement(
   }
 }
 
-export function isRemixElement(node: RemixNode): node is RemixElement {
-  return typeof node === 'object' && node !== null && '$rmx' in node
+export function isRemixElement(node: unknown): node is RemixElement {
+  if (typeof node !== 'object' || node === null) return false
+  let type = Reflect.get(node, 'type')
+  let props = Reflect.get(node, 'props')
+  return (
+    Reflect.get(node, '$rmx') === true &&
+    (typeof type === 'string' || typeof type === 'function') &&
+    typeof props === 'object' &&
+    props !== null
+  )
 }
 
 function normalizeElementProps(props: ElementProps | null | undefined): ElementProps {

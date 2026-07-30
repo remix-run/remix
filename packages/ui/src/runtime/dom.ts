@@ -1,6 +1,5 @@
 import type { StyleProps } from '../style/style.ts'
 import type { RemixNode } from './jsx.ts'
-import type { Key } from './key.ts'
 import type { MixInput } from './mixins/mixin.ts'
 
 /**
@@ -30,7 +29,7 @@ export interface LayoutAnimationConfig {
  */
 export interface HostProps<eventTarget extends EventTarget> {
   /** The reconciliation key for the element. */
-  key?: Key
+  key?: any
   /** Child nodes to render inside the element. */
   children?: RemixNode
   /** Mixins to apply to the element. */
