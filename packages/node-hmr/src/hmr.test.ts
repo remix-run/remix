@@ -1985,15 +1985,23 @@ async function stopProcess(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) return
 
   await new Promise<void>((resolve) => {
+    // The HMR runner gives its child five seconds to exit before force-killing it.
+    // Keep the fixture parent alive long enough to reap that child first.
     let timeout = setTimeout(() => {
       child.kill('SIGKILL')
-      resolve()
-    }, 5_000)
+    }, 10_000)
 
-    child.once('exit', () => {
+    let complete = () => {
       clearTimeout(timeout)
       resolve()
-    })
+    }
+
+    child.once('exit', complete)
+
+    if (child.exitCode !== null || child.signalCode !== null) {
+      complete()
+      return
+    }
 
     child.kill('SIGTERM')
   })
