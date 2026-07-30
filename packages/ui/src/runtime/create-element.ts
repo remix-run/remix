@@ -1,6 +1,6 @@
 import { jsx } from './jsx.ts'
-import type { ElementType, RemixElement } from './jsx.ts'
-import { normalizeChildren } from './core/children.ts'
+import type { ElementProps, ElementType, RemixElement } from './jsx.ts'
+import { assertRemixNodes, normalizeChildren } from './core/children.ts'
 
 /**
  * Creates a Remix virtual element from a JSX-like call signature.
@@ -12,8 +12,8 @@ import { normalizeChildren } from './core/children.ts'
  */
 export function createElement(
   type: ElementType,
-  props?: Record<string, any>,
-  ...children: any[]
+  props?: ElementProps,
+  ...children: unknown[]
 ): RemixElement {
   let nextProps = { ...(props ?? {}) }
   if (isMixinElementType(type)) {
@@ -21,6 +21,7 @@ export function createElement(
       console.error(new Error('mixin elements must not receive children'))
     }
   } else {
+    assertRemixNodes(children)
     nextProps.children = normalizeChildren(children)
   }
 
@@ -34,6 +35,6 @@ export function createElement(
 
 function isMixinElementType(
   type: ElementType,
-): type is ((...args: unknown[]) => unknown) & { __rmxMixinElementType: string } {
+): type is ElementType & { __rmxMixinElementType: string } {
   return typeof type === 'function' && '__rmxMixinElementType' in type
 }

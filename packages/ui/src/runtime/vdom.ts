@@ -2,6 +2,7 @@ import type { FrameContent, FrameHandle } from './component.ts'
 import { createFrameHandle } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './jsx.ts'
+import { createFrameRuntime } from './frame.ts'
 import {
   createComponentErrorEvent,
   getComponentError,
@@ -11,7 +12,7 @@ import { createScheduler, type Scheduler } from './scheduler.ts'
 import { diffVNodes, remove as removeVNode } from './reconcile.ts'
 import { toVNode } from './to-vnode.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
-import { ROOT_VNODE, type VNode } from './vnode.ts'
+import { ROOT_VNODE, type CommittedVNode, type ReconcileContext, type RootVNode } from './vnode.ts'
 import { resetStyleState, defaultStyleManager } from './diff-props.ts'
 import type { StyleManager } from '../style/index.ts'
 
@@ -73,7 +74,7 @@ export function createRangeRoot(
   options: VirtualRootOptions = {},
 ): VirtualRoot {
   let [start, end] = boundaries
-  let vroot: VNode | null = null
+  let vroot: CommittedVNode | null = null
   let styles = options.styleManager ?? defaultStyleManager
 
   let container = end.parentNode
@@ -96,6 +97,12 @@ export function createRangeRoot(
       scheduler,
       styleManager: styles,
     })
+  let context: ReconcileContext = {
+    frame: frameStub,
+    scheduler,
+    styles,
+    rootTarget: eventTarget,
+  }
 
   let isErrorForwardingAttached = false
   function forwardDomError(event: Event) {
@@ -118,8 +125,10 @@ export function createRangeRoot(
       attachDomErrorForwarding()
 
       let vnode = toVNode(element)
-      let vParent: VNode = {
+      let vParent: RootVNode = {
+        kind: 'root',
         type: ROOT_VNODE,
+        _children: [],
         _svg: false,
         _rangeStart: start,
         _rangeEnd: end,
@@ -127,19 +136,10 @@ export function createRangeRoot(
       }
       scheduler.enqueueWork([
         () => {
-          diffVNodes(
-            vroot,
-            vnode,
-            parent,
-            frameStub,
-            scheduler,
-            styles,
-            vParent,
-            eventTarget,
-            end,
-            hydrationCursor,
-          )
-          vroot = vnode
+          let cursor = hydrationCursor === null ? undefined : { current: hydrationCursor }
+          let committed = diffVNodes(vroot, vnode, parent, vParent, context, end, cursor)
+          vParent._children = [committed]
+          vroot = committed
           hydrationCursor = null
         },
       ])
@@ -152,7 +152,7 @@ export function createRangeRoot(
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueWork([() => removeVNode(current, parent, scheduler, styles)])
+      scheduler.enqueueWork([() => removeVNode(current, parent, context)])
       scheduler.dequeue()
     },
 
@@ -170,7 +170,7 @@ export function createRangeRoot(
  * @returns A virtual root controller.
  */
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
-  let vroot: VNode | null = null
+  let vroot: CommittedVNode | null = null
   let styles = options.styleManager ?? defaultStyleManager
   if (container.innerHTML.trim() !== '') {
     // Adopt additively: multiple roots hydrating separate islands may share
@@ -193,6 +193,12 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       scheduler,
       styleManager: styles,
     })
+  let context: ReconcileContext = {
+    frame: frameStub,
+    scheduler,
+    styles,
+    rootTarget: eventTarget,
+  }
 
   let isErrorForwardingAttached = false
   function forwardDomError(event: Event) {
@@ -215,22 +221,18 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       attachDomErrorForwarding()
 
       let vnode = toVNode(element)
-      let vParent: VNode = { type: ROOT_VNODE, _svg: false }
+      let vParent: RootVNode = {
+        kind: 'root',
+        type: ROOT_VNODE,
+        _children: [],
+        _svg: false,
+      }
       scheduler.enqueueWork([
         () => {
-          diffVNodes(
-            vroot,
-            vnode,
-            container,
-            frameStub,
-            scheduler,
-            styles,
-            vParent,
-            eventTarget,
-            undefined,
-            hydrationCursor,
-          )
-          vroot = vnode
+          let cursor = hydrationCursor === undefined ? undefined : { current: hydrationCursor }
+          let committed = diffVNodes(vroot, vnode, container, vParent, context, undefined, cursor)
+          vParent._children = [committed]
+          vroot = committed
           hydrationCursor = undefined
         },
       ])
@@ -243,7 +245,7 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueWork([() => removeVNode(current, container, scheduler, styles)])
+      scheduler.enqueueWork([() => removeVNode(current, container, context)])
       scheduler.dequeue()
     },
 
@@ -273,29 +275,26 @@ function createRootFrameHandle(init: {
       )
     })
 
-  let frame = createFrameHandle({
-    src: init.src ?? '/',
-    $runtime: {
-      canResolveFrames: !!init.resolveFrame,
-      topFrame: undefined,
-      loadModule:
-        init.loadModule ??
-        (() => {
-          throw new Error('loadModule is required to hydrate client entries inside <Frame />')
-        }),
-      resolveFrame,
-      errorTarget: init.errorTarget,
-      pendingClientEntries: new Map(),
-      scheduler: init.scheduler,
-      styleManager: init.styleManager,
-      data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new Map(),
-    },
+  let runtime = createFrameRuntime({
+    topFrame: undefined,
+    loadModule:
+      init.loadModule ??
+      (() => {
+        throw new Error('loadModule is required to hydrate client entries inside <Frame />')
+      }),
+    resolveFrame,
+    errorTarget: init.errorTarget,
+    pendingClientEntries: new Map(),
+    scheduler: init.scheduler,
+    styleManager: init.styleManager,
+    data: {},
+    moduleCache: new Map(),
+    moduleLoads: new Map(),
+    frameInstances: new WeakMap(),
+    namedFrames: new Map(),
   })
-  let runtime = frame.$runtime as { topFrame?: FrameHandle } | undefined
-  if (runtime) runtime.topFrame = frame
+  runtime.canResolveFrames = !!init.resolveFrame
+  let frame = createFrameHandle({ src: init.src ?? '/', $runtime: runtime })
+  runtime.topFrame = frame
   return frame
 }
