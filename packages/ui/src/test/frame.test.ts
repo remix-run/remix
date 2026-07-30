@@ -8,7 +8,7 @@ import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
 import { createStyleManager } from '../style/index.ts'
 
-describe('frame reloads', () => {
+describe('frames', () => {
   afterEach(() => {
     document.documentElement.innerHTML = '<head></head><body></body>'
   })
@@ -89,7 +89,62 @@ describe('frame reloads', () => {
       frame.dispose()
     }
   })
+
+  it('does not loop when a nested frame range escapes its region', async () => {
+    let outerStart = document.createComment(' rmx:f:outer ')
+    let innerStart = document.createComment(' rmx:f:inner ')
+    let innerEnd = document.createComment(' /rmx:f ')
+    let outerEnd = document.createComment(' /rmx:f ')
+    document.body.append(outerStart, innerStart, innerEnd, outerEnd)
+
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let frame = createFrame([outerStart, outerEnd], {
+      src: 'https://example.com/outer',
+      errorTarget,
+      loadModule: () => () => null,
+      resolveFrame: () => '',
+      pendingClientEntries: new Map(),
+      scheduler,
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    await frame.ready()
+
+    // Simulate the outer region being truncated during a DOM update.
+    outerEnd.after(innerEnd)
+    let scans = countMarkerScans(innerStart, 100)
+    frame.dispose()
+
+    expect(scans.count).toBeLessThan(100)
+  })
 })
+
+function countMarkerScans(marker: Comment, limit: number): { count: number } {
+  let data = marker.data
+  let scans = { count: 0 }
+
+  Object.defineProperty(marker, 'data', {
+    get() {
+      scans.count++
+      if (scans.count > limit) {
+        throw new Error(`Marker read ${limit} times; the frame region scan is looping`)
+      }
+      return data
+    },
+    set(next: string) {
+      data = next
+    },
+  })
+
+  return scans
+}
 
 function rmxDataScript(label: string): string {
   let data = {

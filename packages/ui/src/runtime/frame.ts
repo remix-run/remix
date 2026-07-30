@@ -634,7 +634,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (isFrameStart(node)) {
         let end = findEndMarker(node, isFrameStart, isFrameEnd)
         context.frameInstances.get(node)?.startInheritedReload(signal)
-        i = nodes.indexOf(end)
+        i = findMarkerRangeEndIndex(nodes, end, i)
         continue
       }
 
@@ -826,7 +826,7 @@ function collectOwnedServerStyleTags(nodes: Node[], styles: HTMLStyleElement[]):
 
     if (isFrameStart(node)) {
       let end = findEndMarker(node, isFrameStart, isFrameEnd)
-      i = nodes.indexOf(end)
+      i = findMarkerRangeEndIndex(nodes, end, i)
       continue
     }
 
@@ -1106,7 +1106,7 @@ async function createSubFrames(
         }
       }
 
-      i = nodes.indexOf(end)
+      i = findMarkerRangeEndIndex(nodes, end, i)
       continue
     }
 
@@ -1147,7 +1147,7 @@ function removeVirtualRoots(nodes: Node[]): void {
     if (isHydratedVirtualRootMarker(node)) {
       node.$rmx.dispose()
       let end = findEndMarker(node, isHydrationStart, isHydrationEnd)
-      i = nodes.indexOf(end)
+      i = findMarkerRangeEndIndex(nodes, end, i)
       continue
     }
 
@@ -1168,7 +1168,7 @@ function disposeSubFrames(nodes: Node[], context: FrameContext): void {
         subFrame.dispose()
         context.frameInstances.delete(node)
       }
-      i = nodes.indexOf(end)
+      i = findMarkerRangeEndIndex(nodes, end, i)
       continue
     }
 
@@ -1500,7 +1500,7 @@ function walkCommentsInNodes(nodes: Node[], cb: (comment: Comment) => void): voi
     // are discovered and hydrated by the nested frame instance only.
     if (isFrameStart(node)) {
       let end = findEndMarker(node, isFrameStart, isFrameEnd)
-      i = nodes.indexOf(end)
+      i = findMarkerRangeEndIndex(nodes, end, i)
       continue
     }
 
@@ -1535,6 +1535,11 @@ function getFrameId(start: Comment): string {
   let trimmed = start.data.trim()
   invariant(trimmed.startsWith('rmx:f:'), 'Invalid frame start marker')
   return trimmed.slice('rmx:f:'.length)
+}
+
+function findMarkerRangeEndIndex(nodes: Node[], end: Comment, startIndex: number): number {
+  // The snapshot may not contain an end marker moved by a DOM update.
+  return Math.max(startIndex, nodes.indexOf(end))
 }
 
 function findEndMarker(
