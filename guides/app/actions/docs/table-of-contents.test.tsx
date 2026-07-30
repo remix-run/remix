@@ -5,7 +5,7 @@ import { renderToString } from 'remix/ui/server'
 import { DocsTableOfContents } from './table-of-contents.tsx'
 
 describe('DocsTableOfContents', () => {
-  it('indents h3 links under h2 links', async () => {
+  it('renders the first heading as current and indents h3 links', async () => {
     let html = await renderToString(
       <DocsTableOfContents
         headings={[
@@ -15,7 +15,7 @@ describe('DocsTableOfContents', () => {
       />,
     )
 
-    assert.match(html, /<li><a href="#section">Section<\/a><\/li>/)
+    assert.match(html, /<li><a href="#section" aria-current="location">Section<\/a><\/li>/)
     assert.match(html, /<li class="docs-toc__item--nested"><a href="#detail">Detail<\/a><\/li>/)
   })
 })

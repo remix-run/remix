@@ -33,6 +33,7 @@ export function startTableOfContentsBehavior(list: HTMLOListElement, signal: Abo
   )
   if (entries.length === 0) return
 
+  let initialCurrentLink = entries.find(({ link }) => link.hasAttribute('aria-current'))?.link
   let animationFrame: number | undefined
 
   update()
@@ -50,7 +51,11 @@ export function startTableOfContentsBehavior(list: HTMLOListElement, signal: Abo
     }
 
     for (let { link } of entries) {
-      link.removeAttribute('aria-current')
+      if (link === initialCurrentLink) {
+        link.setAttribute('aria-current', 'location')
+      } else {
+        link.removeAttribute('aria-current')
+      }
     }
     clearSelectionIndicator(list)
   })
