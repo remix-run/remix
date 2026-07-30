@@ -1,3 +1,6 @@
+import { clientEntry } from 'remix/ui'
+import type { Handle } from 'remix/ui'
+
 import {
   clearSelectionIndicator,
   positionSelectionIndicator,
@@ -15,6 +18,22 @@ type PendingChapterTransition = {
 }
 
 let pendingTransition: PendingChapterTransition | undefined
+
+export const ChapterNavigationIndicator = clientEntry(
+  import.meta.url,
+  function ChapterNavigationIndicator(handle: Handle<{ listId: string }>) {
+    return () => {
+      let listId = handle.props.listId
+      handle.queueTask((signal) => {
+        let list = document.getElementById(listId)
+        if (list instanceof HTMLOListElement) {
+          startChapterNavigationIndicator(list, signal)
+        }
+      })
+      return null
+    }
+  },
+)
 
 export function startChapterNavigationIndicator(
   list: HTMLOListElement,
