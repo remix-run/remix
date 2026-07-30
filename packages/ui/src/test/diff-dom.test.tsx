@@ -117,16 +117,18 @@ describe('diffNodes', () => {
       expect((start as Comment).data.trim()).toBe('rmx:h:new')
     })
 
-    it('does not match frame end markers with frame start markers', () => {
+    it('does not match a shifted frame start with the current frame end', () => {
       let container = document.createElement('div')
-      container.innerHTML = '<div><i></i><!-- rmx:f:old --><b></b><!-- /rmx:f --></div>'
+      container.innerHTML = '<div><i></i><!-- rmx:f:f00000000 --><b></b><!-- /rmx:f --></div>'
 
       let root = container.firstElementChild
       invariant(root)
       let currentFrameEnd = root.childNodes.item(3)
       invariant(currentFrameEnd instanceof Comment)
 
-      let next = '<div><i></i><u></u><b></b><!-- rmx:f:new --><b></b><!-- /rmx:f --></div>'
+      let next = '<div><i></i><u></u><b></b><!-- rmx:f:f11111111 --><b></b><!-- /rmx:f --></div>'
+
+      // The inserted siblings shift the incoming frame start to the current frame end's index.
       diffDom(container, next)
 
       expect(root.childNodes.item(3)).not.toBe(currentFrameEnd)
