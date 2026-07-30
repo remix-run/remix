@@ -26,7 +26,7 @@ export type CreateHrefSearchParams =
 
 /** Options for href generation. */
 export interface CreateHrefOptions {
-  /** Absolute hierarchical URL used to generate a path-relative href for same-origin targets. */
+  /** Absolute URL used to generate a path-relative href for same-origin targets. */
   baseURL?: string | URL
 
   /** Search parameters to include before applying constraints from the route pattern. */
@@ -61,7 +61,7 @@ type Optionalize<record extends Record<string, string | undefined>> =
  * @returns The generated href string.
  * @throws {CreateHrefError} When the pattern requires a hostname, contains a nameless wildcard,
  * is missing required params, or receives invalid params.
- * @throws {TypeError} When `baseURL` is not an absolute hierarchical URL.
+ * @throws {TypeError} When `baseURL` is not absolute or cannot resolve a same-origin target.
  */
 export function createHref<source extends string>(
   pattern: source | RoutePattern<source>,
@@ -102,9 +102,11 @@ export function createHref<source extends string>(
 
   if (options?.baseURL !== undefined) {
     let baseURL = new URL(options.baseURL)
-    let baseOrigin = new URL('/', baseURL).origin
+    let baseOrigin = baseURL.origin
     let targetURLOrigin = targetOrigin === undefined ? baseOrigin : new URL(targetOrigin).origin
     if (targetURLOrigin === baseOrigin) {
+      // Absolute URLs such as `mailto:` cannot resolve relative references.
+      new URL('/', baseURL)
       return relativeHref(pathname, searchSuffix, baseURL)
     }
   }
@@ -138,7 +140,7 @@ function relativeHref(pathname: string, search: string, baseURL: URL): string {
   let result = relativeSegments.join('/')
   if (targetIsDirectory) result = result === '' ? './' : `${result}/`
   if (result === '') result = './'
-  if (/^[^/]*:/.test(result)) result = `./${result}`
+  if (/^[\\/]/.test(result) || /^[^/]*:/.test(result)) result = `./${result}`
   return result + search
 }
 

@@ -34,6 +34,12 @@ type _InvalidSearchParamValue = AcceptsCreateHrefArgs<
   [undefined, { searchParams: { published: true } }]
 >
 
+type _LegacySearchParams = AcceptsCreateHrefArgs<
+  '/posts',
+  // @ts-expect-error - search params must be nested under the searchParams option
+  [undefined, { page: 2 }]
+>
+
 // @ts-expect-error - explicit protocol without hostname cannot generate an href
 type _ProtocolWithoutHostnameHrefArgs = AcceptsCreateHrefArgs<'http:///posts/:id', [{ id: '123' }]>
 

@@ -494,9 +494,15 @@ describe('createHref', () => {
   })
 
   describe('base URL', () => {
-    it('requires an absolute hierarchical base URL', () => {
+    it('requires a base URL that can resolve same-origin targets', () => {
       assert.throws(() => createHref('/users', undefined, { baseURL: '/admin/settings' }))
       assert.throws(() => createHref('/users', undefined, { baseURL: 'mailto:user@example.com' }))
+      assert.equal(
+        createHref('https://example.com/users', undefined, {
+          baseURL: 'mailto:user@example.com',
+        }),
+        'https://example.com/users',
+      )
     })
 
     it('returns path-relative hrefs for same-origin targets', () => {
@@ -560,6 +566,17 @@ describe('createHref', () => {
         }),
         './docs:latest',
       )
+    })
+
+    it('uses ./ when leading separators could be parsed as an authority', () => {
+      let baseURL = 'https://example.com/current'
+      let slashHref = createHref('/*path', { path: '//files' }, { baseURL })
+      let backslashHref = createHref('/\\\\\\\\host/path', undefined, { baseURL })
+
+      assert.equal(slashHref, './//files')
+      assert.equal(new URL(slashHref, baseURL).href, 'https://example.com///files')
+      assert.equal(backslashHref, './\\\\host/path')
+      assert.equal(new URL(backslashHref, baseURL).href, 'https://example.com///host/path')
     })
 
     it('round trips params, search constraints, encoded delimiters, and trailing slashes', () => {
