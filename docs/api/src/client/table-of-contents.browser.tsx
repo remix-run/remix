@@ -1,5 +1,9 @@
 import type { Handle } from 'remix/ui'
 
+import {
+  clearSelectionIndicator,
+  positionSelectionIndicator,
+} from './selection-indicator.browser.ts'
 import { getActiveHeadingIndex } from './table-of-contents-active.browser.ts'
 
 export function TableOfContentsBehavior(handle: Handle<{ listId: string }>) {
@@ -25,6 +29,7 @@ export function startTableOfContentsBehavior(list: HTMLOListElement, signal: Abo
   )
   if (entries.length === 0) return
 
+  let initialCurrentLink = entries.find(({ link }) => link.hasAttribute('aria-current'))?.link
   let animationFrame: number | undefined
 
   update()
@@ -42,11 +47,13 @@ export function startTableOfContentsBehavior(list: HTMLOListElement, signal: Abo
     }
 
     for (let { link } of entries) {
-      link.removeAttribute('aria-current')
+      if (link === initialCurrentLink) {
+        link.setAttribute('aria-current', 'location')
+      } else {
+        link.removeAttribute('aria-current')
+      }
     }
-    list.removeAttribute('data-has-current')
-    list.style.removeProperty('--docs-toc-indicator-y')
-    list.style.removeProperty('--docs-toc-indicator-height')
+    clearSelectionIndicator(list)
   })
 
   function scheduleUpdate() {
@@ -78,8 +85,6 @@ export function startTableOfContentsBehavior(list: HTMLOListElement, signal: Abo
       }
     }
 
-    list.style.setProperty('--docs-toc-indicator-y', `${activeEntry.link.offsetTop}px`)
-    list.style.setProperty('--docs-toc-indicator-height', `${activeEntry.link.offsetHeight}px`)
-    list.toggleAttribute('data-has-current', true)
+    positionSelectionIndicator(list, activeEntry.link)
   }
 }

@@ -182,7 +182,7 @@ function MainContent(
     let headings = handle.props.headings ?? []
 
     return (
-      <div class="docs-layout">
+      <div class="docs-layout" data-key={`api-page-${handle.props.page.path}`}>
         <article class="docs-article">
           <div
             class="api-page-content rmx-page-body"

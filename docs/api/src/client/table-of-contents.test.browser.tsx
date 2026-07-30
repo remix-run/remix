@@ -6,17 +6,33 @@ import {
   startTableOfContentsBehavior,
   TableOfContentsBehavior,
 } from './table-of-contents.browser.tsx'
+import { initializeTableOfContentsScript } from '../server/table-of-contents.tsx'
+
+describe('initial table of contents selection', () => {
+  it('uses the restored viewport position before hydration', (t) => {
+    let fixture = createTableOfContentsFixture({ startBehavior: false })
+    t.after(fixture.cleanup)
+
+    fixture.setHeadingTops([-200, 80, 360])
+    let script = document.createElement('script')
+    script.text = initializeTableOfContentsScript
+    fixture.list.after(script)
+
+    assert.equal(fixture.firstLink.hasAttribute('aria-current'), false)
+    assert.equal(fixture.secondLink.getAttribute('aria-current'), 'location')
+  })
+})
 
 describe('startTableOfContentsBehavior', () => {
-  it('synchronizes the current link and indicator after scrolling', async (t) => {
+  it('synchronizes the current link after scrolling', async (t) => {
     let fixture = createTableOfContentsFixture()
     t.after(fixture.cleanup)
 
     assert.equal(fixture.firstLink.getAttribute('aria-current'), 'location')
     assert.equal(fixture.secondLink.hasAttribute('aria-current'), false)
     assert.equal(fixture.list.getAttribute('data-has-current'), '')
-    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-y'), '0px')
-    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-height'), '32px')
+    assert.equal(fixture.list.style.getPropertyValue('--docs-selection-indicator-y'), '0px')
+    assert.equal(fixture.list.style.getPropertyValue('--docs-selection-indicator-height'), '32px')
 
     fixture.setHeadingTops([-200, 80, 360])
     window.dispatchEvent(new Event('scroll'))
@@ -25,7 +41,27 @@ describe('startTableOfContentsBehavior', () => {
 
     assert.equal(fixture.firstLink.hasAttribute('aria-current'), false)
     assert.equal(fixture.secondLink.getAttribute('aria-current'), 'location')
-    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-y'), '36px')
+    assert.equal(fixture.list.style.getPropertyValue('--docs-selection-indicator-y'), '36px')
+  })
+
+  it('preserves fractional indicator geometry', async (t) => {
+    let fixture = createTableOfContentsFixture()
+    t.after(fixture.cleanup)
+
+    fixture.setHeadingTops([-200, 80, 360])
+    fixture.setLinkRects([
+      { y: 0, height: 32 },
+      { y: 36.25, height: 49.59375 },
+      { y: 89.84375, height: 32 },
+    ])
+    window.dispatchEvent(new Event('scroll'))
+    await nextAnimationFrame()
+
+    assert.equal(fixture.list.style.getPropertyValue('--docs-selection-indicator-y'), '36.25px')
+    assert.equal(
+      fixture.list.style.getPropertyValue('--docs-selection-indicator-height'),
+      '49.59375px',
+    )
   })
 
   it('restarts when navigation re-renders the client entry', (t) => {
@@ -53,10 +89,10 @@ describe('startTableOfContentsBehavior', () => {
 
     fixture.cleanup()
 
-    assert.equal(fixture.firstLink.hasAttribute('aria-current'), false)
+    assert.equal(fixture.firstLink.getAttribute('aria-current'), 'location')
     assert.equal(fixture.list.hasAttribute('data-has-current'), false)
-    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-y'), '')
-    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-height'), '')
+    assert.equal(fixture.list.style.getPropertyValue('--docs-selection-indicator-y'), '')
+    assert.equal(fixture.list.style.getPropertyValue('--docs-selection-indicator-height'), '')
   })
 })
 
@@ -65,7 +101,7 @@ function createTableOfContentsFixture(options: { startBehavior?: boolean } = {})
   container.style.minHeight = '5000px'
   container.innerHTML = `
     <ol id="test-toc">
-      <li><a id="first-link" href="#first-heading">First</a></li>
+      <li><a id="first-link" href="#first-heading" aria-current="location">First</a></li>
       <li><a id="second-link" href="#second-heading">Second</a></li>
       <li><a id="third-link" href="#third-heading">Third</a></li>
     </ol>
@@ -82,18 +118,21 @@ function createTableOfContentsFixture(options: { startBehavior?: boolean } = {})
     getElement('third-heading'),
   ]
   let links = [getLink('first-link'), getLink('second-link'), getLink('third-link')]
+  let linkRects = [
+    { y: 0, height: 32 },
+    { y: 36, height: 32 },
+    { y: 72, height: 32 },
+  ]
 
   for (let [index, heading] of headings.entries()) {
     heading.getBoundingClientRect = () => DOMRect.fromRect({ y: headingTops[index] })
   }
   for (let [index, link] of links.entries()) {
-    Object.defineProperties(link, {
-      offsetTop: { configurable: true, value: index * 36 },
-      offsetHeight: { configurable: true, value: 32 },
-    })
+    link.getBoundingClientRect = () => DOMRect.fromRect(linkRects[index])
   }
 
   let list = getList('test-toc')
+  list.getBoundingClientRect = () => DOMRect.fromRect()
   let controller = new AbortController()
   if (options.startBehavior !== false) {
     startTableOfContentsBehavior(list, controller.signal)
@@ -105,6 +144,9 @@ function createTableOfContentsFixture(options: { startBehavior?: boolean } = {})
     secondLink: links[1],
     setHeadingTops(tops: number[]) {
       headingTops = tops
+    },
+    setLinkRects(rects: Array<{ y: number; height: number }>) {
+      linkRects = rects
     },
     cleanup() {
       controller.abort()

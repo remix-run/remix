@@ -40,7 +40,7 @@ pre code {
   white-space: normal;
 }
 
-[data-code-block] .line {
+:is([data-code-block], [data-demo-source]) .line {
   position: relative;
   display: block;
   min-height: 1lh;
