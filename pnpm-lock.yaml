@@ -1640,6 +1640,10 @@ importers:
         version: 4.1.6(@types/node@24.10.4)(vite@7.3.3(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/session:
+    dependencies:
+      '@remix-run/data-schema':
+        specifier: workspace:^
+        version: link:../data-schema
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*

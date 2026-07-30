@@ -46,6 +46,9 @@
       "./package.json": "./package.json"
     }
   },
+  "dependencies": {
+    "@remix-run/data-schema": "workspace:^"
+  },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
     "@remix-run/test": "workspace:*",
