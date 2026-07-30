@@ -39,9 +39,9 @@ export function AlbumHeading(handle: Handle<AlbumHeadingProps>) {
 }
 ```
 
-This is not a React component. There are no hooks, and calling the component as a plain function is
-not how you render it. Use JSX, such as `<AlbumHeading artist="..." title="..." />`, so the runtime can
-create the component, preserve its setup scope, and update it later.
+Render components with JSX, such as `<AlbumHeading artist="..." title="..." />`. The runtime creates
+the component instance, preserves its setup scope, and calls its render function again when the
+component updates.
 
 The render function returns a `RemixNode`. That includes host elements such as `<main>`, other Remix
 components, strings, numbers, booleans, `null`, `undefined`, and nested arrays of those values.
@@ -87,6 +87,7 @@ Local state is ordinary JavaScript declared in setup scope. Store values that af
 derive everything else inside render:
 
 ```tsx filename=app/ui/album-list.tsx
+import { on } from "remix/ui";
 import type { Handle } from "remix/ui";
 
 type Album = {
@@ -104,21 +105,30 @@ export function AlbumList(handle: Handle<{ albums: Album[] }>) {
     );
 
     return (
-      <ul>
-        {visibleAlbums.map((album) => (
-          <li key={album.id}>{album.title}</li>
-        ))}
-      </ul>
+      <div>
+        <input
+          aria-label="Filter albums"
+          mix={on("input", (event) => {
+            filter = event.currentTarget.value;
+            handle.update();
+          })}
+          type="search"
+        />
+        <ul>
+          {visibleAlbums.map((album) => (
+            <li key={album.id}>{album.title}</li>
+          ))}
+        </ul>
+      </div>
     );
   };
 }
 ```
 
-In the browser, an input handler can change `filter` and call `handle.update()`. Updates are explicit:
-changing a variable does not render anything until the component requests an update. Stable `key`
-values tell Remix which list items are the same across renders, preserving their DOM and component
-state if the list changes order. [Interactivity](/interactivity/) covers event handlers, updates, and
-hydration.
+The input handler changes `filter` and calls `handle.update()`. Updates are explicit: changing a
+variable does not render anything until the component requests an update. Stable `key` values tell
+Remix which list items are the same across renders, preserving their DOM and component state if the
+list changes order. [Interactivity](/interactivity/) covers event handlers, updates, and hydration.
 
 `handle.id` is a stable identifier for the component instance. It is useful when a reusable control
 needs to connect a label, input, description, or ARIA relationship without requiring an `id` prop:
@@ -247,9 +257,9 @@ export function Document(handle: Handle<DocumentProps>) {
 }
 ```
 
-Put `title`, `meta`, `link`, and `style` elements inside an explicit `<head>`. Remix does not move
-head-like elements there when a component renders them elsewhere. The document is also where an app
-adds global stylesheets, module preloads, icons, and the browser entry script.
+Put `title`, `meta`, `link`, and `style` elements inside the document's explicit `<head>`, along with
+global stylesheets, module preloads, and icons. Load the browser entry script from the document's
+`<body>`.
 
 The renderer passes this tree to `createHtmlResponse()`. That helper preserves an existing doctype or
 prepends `<!DOCTYPE html>`, sets `Content-Type: text/html; charset=UTF-8` unless the action supplied

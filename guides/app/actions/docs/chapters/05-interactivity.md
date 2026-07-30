@@ -65,7 +65,7 @@ it needs rather than moving the whole page into browser code.
 `clientEntry(...)` marks the smallest component that needs to run in the browser. The album edit page
 can remain server-only while its form hydrates:
 
-```tsx filename=app/actions/albums/edit/album-edit-form.browser.tsx lines=[1,6-10,13]
+```tsx filename=app/actions/albums/edit/album-edit-form.browser.tsx lines=[1,7-9]
 import { clientEntry } from "remix/ui";
 import type { Handle } from "remix/ui";
 
@@ -264,8 +264,9 @@ and component instances instead of pairing state with the wrong item.
 
 Setup-scope variables are a good home for UI state such as whether a menu is open, which field has
 focus, or whether a request is pending. Put business rules and shared application state in ordinary
-TypeScript outside the component, then call that code from event handlers. A later section shows the
-small amount of wiring needed to update a component when an application model changes.
+TypeScript outside the component, then call that code from event handlers.
+[Keep application logic outside components](#saving-a-client-owned-document) shows how to update a
+component when an application model changes.
 
 ## Events with on {#events-with-on}
 
@@ -683,6 +684,16 @@ needed, handles Enter and mouse or modifier-key activation, and reflects a disab
 `aria-disabled`. Prefer an anchor when its markup fits. Use the mixin when making another host act as
 a link is an intentional part of the UI.
 
+Native anchors can also control frame-aware navigation with attributes that correspond to the
+`link(...)` and `navigate(...)` options:
+
+- `rmx-target` names the frame to reload.
+- `rmx-src` provides the URL to fetch for that frame while `href` remains the browser's destination.
+- `rmx-reset-scroll="false"` preserves the current scroll position.
+- `rmx-document` opts out of interception and lets the browser perform a full-document navigation.
+
+[Streaming UI with Frames](/streaming-ui-with-frames/) shows these attributes with named frames.
+
 ## Enhancing forms with fetch and navigation
 
 Now we can enhance the album form without adding a second mutation API. The handler sends the form's
@@ -763,13 +774,81 @@ destructive operation, or can reject the request in ways the user must resolve f
 optimistic request fails, the model can restore its previous state or adopt the server response, and
 the component can render the resulting error or retry control.
 
-## When to create a custom mixin {#creating-custom-mixins}
+## When to create a custom event mixin {#creating-custom-mixins}
 
-Most application code should compose `on`, `ref`, `attrs`, `link`, `css`, and the first-party UI
-mixins. Use `createMixin()` when host-element behavior has its own state and insert/remove lifecycle,
-or when several components share it. Keep one-off behavior in the component with the built-in
-mixins. The [`remix/ui` API overview](https://api.remix.run/api/remix/ui/overview/) covers
-`createMixin()` when that reusable lifecycle is needed.
+Most application code should use `on(...)` with native events. Create an event mixin when several
+components need the same interaction built from multiple low-level events, such as a gesture with
+timing or pointer state. The mixin can keep that state in setup scope and dispatch one semantic,
+typed event for consumers.
+
+This `longPress()` mixin turns a held pointer into an `app:longpress` event:
+
+```tsx filename=app/ui/long-press.browser.tsx
+import { createMixin, on } from "remix/ui";
+
+export const longPressType = "app:longpress" as const;
+
+export class LongPressEvent extends Event {
+  constructor() {
+    super(longPressType, { bubbles: true });
+  }
+}
+
+declare global {
+  interface HTMLElementEventMap {
+    [longPressType]: LongPressEvent;
+  }
+}
+
+export const longPress = createMixin<HTMLElement>((handle) => {
+  let node: HTMLElement | undefined;
+  let timeout: number | undefined;
+
+  handle.addEventListener("insert", (event) => {
+    node = event.node;
+  });
+  handle.addEventListener("remove", cancel);
+
+  function cancel() {
+    window.clearTimeout(timeout);
+  }
+
+  return () => (
+    <handle.element
+      mix={[
+        on("pointerdown", () => {
+          cancel();
+          timeout = window.setTimeout(() => {
+            node?.dispatchEvent(new LongPressEvent());
+          }, 500);
+        }),
+        on("pointerup", cancel),
+        on("pointercancel", cancel),
+        on("pointerleave", cancel),
+      ]}
+    />
+  );
+});
+```
+
+Consume the semantic event with `on(...)` like any other DOM event:
+
+```tsx
+<button
+  mix={[
+    longPress(),
+    on(longPressType, () => {
+      console.log("Long press");
+    }),
+  ]}
+>
+  Hold for options
+</button>
+```
+
+Namespace custom event names to avoid collisions, and keep one-off behavior in the component that
+uses it. The [`remix/ui` API overview](https://api.remix.run/api/remix/ui/overview/) covers the full
+mixin API.
 
 The next chapter uses the same server renderer and browser runtime to stream and reload route-owned
 UI with `<Frame>`. [Animation](/animation/) then applies component state, `mix` composition, keys, and
