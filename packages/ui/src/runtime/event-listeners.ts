@@ -1,3 +1,5 @@
+import { isSsrSignal } from './ssr-signal.ts'
+
 /**
  * Event type with `currentTarget` narrowed to the dispatched target.
  */
@@ -139,6 +141,8 @@ export function addEventListeners<target extends EventTarget>(
   signal: AbortSignal,
   listeners: EventListeners<target>,
 ) {
+  if (isSsrSignal(signal)) return
+
   type AnyEvent = EnsureEvent<EventMap<target>[EventType<target>], target>
   type Listener = (event: AnyEvent, signal?: AbortSignal) => void
 
