@@ -1,0 +1,1 @@
+Cleaned up the `PromptButton` component in the default app template by removing its inert state class and keeping static styles in `css(...)` mixins while applying state-driven values through the `style` prop.

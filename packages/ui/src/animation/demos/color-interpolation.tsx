@@ -36,13 +36,11 @@ export function ColorInterpolation() {
         `}
       </style>
 
-      <div mix={[css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 })]}>
+      <div mix={colorColumnStyle}>
         <div
           mix={[
+            colorBoxStyle,
             css({
-              width: 100,
-              height: 100,
-              borderRadius: 8,
               backgroundColor: '#ff0088',
               '@keyframes srgb-color': {
                 '0%, 100%': { backgroundColor: '#ff0088' },
@@ -52,22 +50,24 @@ export function ColorInterpolation() {
             }),
           ]}
         />
-        <div mix={[css({ fontSize: 14, color: '#666' })]}>sRGB</div>
+        <div mix={colorLabelStyle}>sRGB</div>
       </div>
 
-      <div mix={[css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 })]}>
-        <div
-          className="oklch-box"
-          mix={[
-            css({
-              width: 100,
-              height: 100,
-              borderRadius: 8,
-            }),
-          ]}
-        />
-        <div mix={[css({ fontSize: 14, color: '#666' })]}>OKLCH</div>
+      <div mix={colorColumnStyle}>
+        <div class="oklch-box" mix={colorBoxStyle} />
+        <div mix={colorLabelStyle}>OKLCH</div>
       </div>
     </div>
   )
 }
+
+const colorColumnStyle = css({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 16,
+})
+
+const colorBoxStyle = css({ width: 100, height: 100, borderRadius: 8 })
+
+const colorLabelStyle = css({ fontSize: 14, color: '#666' })
