@@ -1,6 +1,6 @@
 import { createDocumentState } from './document-state.ts'
 import { createComponentErrorEvent } from './error-event.ts'
-import type { CommittedComponentNode, VNode } from './vnode.ts'
+import type { CommittedComponentNode, VNodeParent } from './vnode.ts'
 import { isCommittedComponentNode } from './vnode.ts'
 import {
   findNextSiblingDomAnchor,
@@ -87,11 +87,6 @@ export function createScheduler(
     }, 0)
   }
 
-  function getFrameStyleManager(vnode: CommittedComponentNode): StyleManager {
-    let runtime = vnode._handle?.frame.$runtime as { styleManager?: StyleManager } | undefined
-    return runtime?.styleManager ?? styles
-  }
-
   function flush() {
     if (flushing) return
     flushing = true
@@ -126,32 +121,18 @@ export function createScheduler(
 
         if (batch.size > 0) {
           let vnodes = Array.from(batch)
-          let noScheduledAncestor = new Set<VNode>()
+          let noScheduledAncestor = new Set<VNodeParent>()
 
           for (let [vnode, domParent] of vnodes) {
             if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
-            let handle = vnode._handle
             let curr = vnode._content
-            let vParent = vnode._parent!
             // Calculate anchor at render time from current vdom position (never stale).
             // Needed for fragment self-updates that add children - without this, new children
             // would be appended after siblings. The keyed diff has placement logic, but unkeyed
             // diff relies on anchor for correct positioning.
             let anchor = findNextSiblingDomAnchor(vnode) || undefined
             try {
-              let updateStyles = getFrameStyleManager(vnode)
-              renderComponent(
-                handle,
-                curr,
-                vnode,
-                domParent,
-                handle.frame,
-                scheduler,
-                updateStyles,
-                rootTarget,
-                vParent,
-                anchor,
-              )
+              renderComponent(curr, vnode, domParent, vnode._context, anchor)
             } catch (error) {
               dispatchError(error)
             }
@@ -177,8 +158,7 @@ export function createScheduler(
 
   function dispatchPhaseEvent(type: SchedulerPhaseType, parents: ParentNode[]) {
     if (phaseListenerCounts[type] === 0) return
-    let event = new Event(type) as SchedulerPhaseEvent
-    event.parents = parents
+    let event: SchedulerPhaseEvent = Object.assign(new Event(type), { parents })
     phaseEvents.dispatchEvent(event)
   }
 
@@ -201,12 +181,12 @@ export function createScheduler(
   }
 
   function ancestorIsScheduled(
-    vnode: VNode,
+    vnode: CommittedComponentNode,
     batch: Map<CommittedComponentNode, ParentNode>,
-    safe: Set<VNode>,
+    safe: Set<VNodeParent>,
   ): boolean {
-    let path: VNode[] = []
-    let current = vnode._parent
+    let path: VNodeParent[] = []
+    let current: VNodeParent | undefined = vnode._parent
 
     while (current) {
       // Already verified this node has no scheduled ancestor above it
@@ -221,7 +201,7 @@ export function createScheduler(
         return true
       }
 
-      current = current._parent
+      current = current.kind === 'root' ? undefined : current._parent
     }
 
     // Reached root - mark entire path as safe for future lookups

@@ -103,9 +103,9 @@ export function getPostAuthRedirect(url: URL, fallback = routes.account.href()):
   return getSafeReturnTo(url.searchParams.get('returnTo')) ?? fallback
 }
 
-export function getReturnToQuery(url: URL): { returnTo?: string } {
+export function getReturnToHrefOptions(url: URL): { searchParams: { returnTo?: string } } {
   let returnTo = getSafeReturnTo(url.searchParams.get('returnTo'))
-  return returnTo ? { returnTo } : {}
+  return { searchParams: returnTo ? { returnTo } : {} }
 }
 
 function getSafeReturnTo(returnTo: string | null): string | undefined {

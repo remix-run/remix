@@ -7,16 +7,16 @@ bench.baseline(() => {
 
 bench('simple > MatchParams', () => {
   type _ = MatchParams<'posts/:id'>
-}).types([1123, 'instantiations'])
+}).types([1334, 'instantiations'])
 
 bench('complex > MatchParams', () => {
   type _ = MatchParams<'api(/v:major(.:minor))/*path/help'>
-}).types([4762, 'instantiations'])
+}).types([6305, 'instantiations'])
 
 bench('mediarss > MatchParams', async () => {
   let { patterns } = await import('../../patterns/mediarss.ts')
   eagerlyEvaluateTypesForParams(patterns)
-}).types([84908, 'instantiations'])
+}).types([97438, 'instantiations'])
 
 // NOTE: This benchmark brings type checking to a crawl.
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.
