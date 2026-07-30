@@ -15,8 +15,8 @@ describe('startTableOfContentsBehavior', () => {
     assert.equal(fixture.firstLink.getAttribute('aria-current'), 'location')
     assert.equal(fixture.secondLink.hasAttribute('aria-current'), false)
     assert.equal(fixture.list.getAttribute('data-has-current'), '')
-    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-y'), '0px')
-    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-height'), '32px')
+    assert.equal(fixture.list.style.getPropertyValue('--docs-selection-indicator-y'), '0px')
+    assert.equal(fixture.list.style.getPropertyValue('--docs-selection-indicator-height'), '32px')
 
     fixture.setHeadingTops([-200, 80, 360])
     window.dispatchEvent(new Event('scroll'))
@@ -25,7 +25,7 @@ describe('startTableOfContentsBehavior', () => {
 
     assert.equal(fixture.firstLink.hasAttribute('aria-current'), false)
     assert.equal(fixture.secondLink.getAttribute('aria-current'), 'location')
-    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-y'), '36px')
+    assert.equal(fixture.list.style.getPropertyValue('--docs-selection-indicator-y'), '36px')
   })
 
   it('preserves fractional indicator geometry', async (t) => {
@@ -41,8 +41,11 @@ describe('startTableOfContentsBehavior', () => {
     window.dispatchEvent(new Event('scroll'))
     await nextAnimationFrame()
 
-    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-y'), '36.25px')
-    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-height'), '49.59375px')
+    assert.equal(fixture.list.style.getPropertyValue('--docs-selection-indicator-y'), '36.25px')
+    assert.equal(
+      fixture.list.style.getPropertyValue('--docs-selection-indicator-height'),
+      '49.59375px',
+    )
   })
 
   it('restarts when navigation re-renders the client entry', (t) => {
@@ -72,8 +75,8 @@ describe('startTableOfContentsBehavior', () => {
 
     assert.equal(fixture.firstLink.hasAttribute('aria-current'), false)
     assert.equal(fixture.list.hasAttribute('data-has-current'), false)
-    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-y'), '')
-    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-height'), '')
+    assert.equal(fixture.list.style.getPropertyValue('--docs-selection-indicator-y'), '')
+    assert.equal(fixture.list.style.getPropertyValue('--docs-selection-indicator-height'), '')
   })
 })
 
