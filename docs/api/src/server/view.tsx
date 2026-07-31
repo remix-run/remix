@@ -1,7 +1,7 @@
-import * as fs from 'node:fs'
 import * as path from 'node:path'
 
 import type { Handle, RemixNode } from 'remix/ui'
+import { PagefindElements, shouldLoadPagefind } from 'remix-docs-shared/search'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
@@ -20,13 +20,6 @@ const pagefindModulePath = path.resolve(
 )
 
 export type Versions = string[]
-
-export function shouldLoadPagefind(
-  modulePath = pagefindModulePath,
-  nodeEnv = process.env.NODE_ENV,
-): boolean {
-  return nodeEnv !== 'development' || fs.existsSync(modulePath)
-}
 
 export function Document(
   handle: Handle<{
@@ -55,7 +48,7 @@ export function Document(
       entryPreloads,
       tableOfContentsEntryHref,
     } = handle.props
-    let pagefindAvailable = shouldLoadPagefind()
+    let searchEnabled = shouldLoadPagefind(pagefindModulePath)
     let page = slug
       ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
       : getHomePage(registry)
@@ -73,6 +66,7 @@ export function Document(
           activeVersion={activeVersion}
           entryHref={entryHref}
           entryPreloads={entryPreloads}
+          searchEnabled={searchEnabled}
         />
         <body>
           <DocsShell
@@ -81,7 +75,7 @@ export function Document(
                 brandLabel="Remix API Documentation"
                 navigationLinks={[...navigationLinks.values()]}
                 compactSearch
-                searchEnabled={pagefindAvailable}
+                searchEnabled={searchEnabled}
               />
             }
             navigation={
@@ -107,14 +101,11 @@ export function Document(
               {children}
             </MainContent>
           </DocsShell>
-          {pagefindAvailable ? (
-            <>
-              <pagefind-config
-                base-url={withVersion(routes.home.href(), activeVersion)}
-                bundle-path={withVersion(routes.assets.href({ asset: 'pagefind/' }), activeVersion)}
-              ></pagefind-config>
-              <pagefind-modal data-key="pagefind-modal" rmx-preserve-dom reset-on-close />
-            </>
+          {searchEnabled ? (
+            <PagefindElements
+              baseUrl={withVersion(routes.home.href(), activeVersion)}
+              bundlePath={withVersion(routes.assets.href({ asset: 'pagefind/' }), activeVersion)}
+            />
           ) : null}
         </body>
       </html>
@@ -128,11 +119,11 @@ function Head(
     activeVersion?: string
     entryHref: string
     entryPreloads: readonly string[]
+    searchEnabled: boolean
   }>,
 ) {
   return () => {
-    let { page, activeVersion, entryHref, entryPreloads } = handle.props
-    let pagefindAvailable = shouldLoadPagefind()
+    let { page, activeVersion, entryHref, entryPreloads, searchEnabled } = handle.props
     let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
 
     return (
@@ -143,7 +134,7 @@ function Head(
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         {/* Keep Pagefind first so the docs theme can override its component defaults. */}
-        {pagefindAvailable ? (
+        {searchEnabled ? (
           <link
             href={withVersion(
               routes.assets.href({ asset: 'pagefind/pagefind-component-ui.css' }),
@@ -181,7 +172,7 @@ function Head(
           <link key={href} rel="modulepreload" href={href} />
         ))}
         <script type="module" src={entryHref} />
-        {pagefindAvailable ? (
+        {searchEnabled ? (
           <script
             src={withVersion(
               routes.assets.href({ asset: 'pagefind/pagefind-component-ui.js' }),

@@ -1,16 +1,23 @@
+import * as path from 'node:path'
+
 import type { Handle, RemixNode } from 'remix/ui'
+import { shouldLoadPagefind } from 'remix-docs-shared/search'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
 
 import { routes } from '../../routes.ts'
-import { Document, shouldLoadPagefind } from '../../ui/document.tsx'
+import { Document } from '../../ui/document.tsx'
 import { ChapterNavigationContent } from './chapter-navigation.tsx'
 import { CodeBlockCopyButtons } from './code-block-copy.browser.tsx'
 import type { DocsNavigationItem } from './markdown-chapters.tsx'
 import { DocsTableOfContents } from './table-of-contents.tsx'
 import type { DocsHeadingLink } from './table-of-contents.tsx'
 
+const pagefindModulePath = path.resolve(
+  import.meta.dirname,
+  '../../../build/site/assets/pagefind/pagefind-component-ui.js',
+)
 const navigationLinks = createDocsNavigationLinks()
 
 navigationLinks.set('guides', {
@@ -50,16 +57,16 @@ export function DocsDocument(handle: Handle<DocsDocumentProps>) {
   return () => {
     let title =
       handle.props.title === 'Remix Docs' ? 'Remix Docs' : `${handle.props.title} | Remix Docs`
-    let pagefindAvailable = shouldLoadPagefind()
+    let searchEnabled = shouldLoadPagefind(pagefindModulePath)
 
     return (
-      <Document title={title} description={handle.props.description}>
+      <Document title={title} description={handle.props.description} searchEnabled={searchEnabled}>
         <DocsShell
           header={
             <DocsHeader
               brandLabel="Remix Docs"
               navigationLinks={[...navigationLinks.values()]}
-              searchEnabled={pagefindAvailable}
+              searchEnabled={searchEnabled}
             />
           }
           navigation={

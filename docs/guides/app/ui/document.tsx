@@ -1,7 +1,5 @@
-import * as fs from 'node:fs'
-import * as path from 'node:path'
-
 import type { Handle, RemixNode } from 'remix/ui'
+import { PagefindElements } from 'remix-docs-shared/search'
 
 import { getAssetEntry } from '../middleware/asset-entry.ts'
 
@@ -10,27 +8,15 @@ export interface DocumentProps {
   head?: RemixNode
   title?: string
   description?: string
+  searchEnabled: boolean
 }
 
 const DEFAULT_TITLE = 'Remix Docs'
-const pagefindModulePath = path.resolve(
-  import.meta.dirname,
-  '../../build/site/assets/pagefind/pagefind-component-ui.js',
-)
-
-export function shouldLoadPagefind(
-  modulePath = pagefindModulePath,
-  nodeEnv = process.env.NODE_ENV,
-): boolean {
-  return nodeEnv !== 'development' || fs.existsSync(modulePath)
-}
-
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
-    let { children, head, title = DEFAULT_TITLE, description } = handle.props
+    let { children, head, title = DEFAULT_TITLE, description, searchEnabled } = handle.props
     let { scriptSrc, scriptPreloads, stylesheetHref, stylesheetPreloads, devRefreshScriptSrc } =
       getAssetEntry()
-    let pagefindAvailable = shouldLoadPagefind()
 
     return (
       <html lang="en">
@@ -39,7 +25,7 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           {description ? <meta name="description" content={description} /> : null}
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-          {pagefindAvailable ? (
+          {searchEnabled ? (
             <link rel="stylesheet" href="/assets/pagefind/pagefind-component-ui.css" />
           ) : null}
           <link rel="stylesheet" href={stylesheetHref} />
@@ -50,23 +36,14 @@ export function Document(handle: Handle<DocumentProps>) {
             <link key={href} rel="preload" href={href} as="style" />
           ))}
           <title>{title}</title>
-          {pagefindAvailable ? (
+          {searchEnabled ? (
             <script type="module" src="/assets/pagefind/pagefind-component-ui.js"></script>
           ) : null}
           {head}
         </head>
         <body>
           {children}
-          {pagefindAvailable ? (
-            <>
-              <pagefind-config base-url="/" bundle-path="/assets/pagefind/"></pagefind-config>
-              <pagefind-modal
-                data-key="pagefind-modal"
-                rmx-preserve-dom
-                reset-on-close
-              ></pagefind-modal>
-            </>
-          ) : null}
+          {searchEnabled ? <PagefindElements baseUrl="/" bundlePath="/assets/pagefind/" /> : null}
           {devRefreshScriptSrc ? <script type="module" src={devRefreshScriptSrc}></script> : null}
           <script type="module" src={scriptSrc}></script>
         </body>

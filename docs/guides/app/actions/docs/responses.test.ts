@@ -3,8 +3,6 @@ import { describe, it } from 'remix/test'
 
 import { createGuidesRouter } from '../../router.ts'
 import { routes } from '../../routes.ts'
-import { shouldLoadPagefind } from '../../ui/document.tsx'
-
 describe('docs responses', () => {
   it('renders no current chapter on the index', async () => {
     let router = createGuidesRouter()
@@ -60,16 +58,6 @@ describe('docs responses', () => {
     assert.equal(chapterNavigation.match(/aria-current="page"/g)?.length, 1)
     assert.match(chapterNavigation, /href="\/start-here\/" aria-current="page"/)
     assert.match(getOpeningTag(html, 'div', 'docs-layout'), /data-key="docs-chapter-start-here"/)
-  })
-})
-
-describe('shouldLoadPagefind()', () => {
-  it('loads Pagefind outside development before its generated module exists', () => {
-    assert.equal(shouldLoadPagefind(`${import.meta.filename}.missing`, 'production'), true)
-  })
-
-  it('omits Pagefind in development when its generated module is missing', () => {
-    assert.equal(shouldLoadPagefind(`${import.meta.filename}.missing`, 'development'), false)
   })
 })
 

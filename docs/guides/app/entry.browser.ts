@@ -1,5 +1,6 @@
 import type { FrameContent } from 'remix/ui'
 import { run } from 'remix/ui'
+import { closePagefindSearch, startPagefindSearch } from 'remix-docs-shared/search/browser'
 
 startNavigationGuard()
 startPagefindSearch()
@@ -69,75 +70,6 @@ function startNavigationGuard() {
     },
     { capture: true },
   )
-}
-
-function startPagefindSearch() {
-  document.addEventListener('click', (event) => {
-    if (!(event.target instanceof Element)) return
-
-    let trigger = event.target.closest('#docs-search-button')
-    if (trigger instanceof HTMLElement) void openPagefindSearch(trigger)
-  })
-
-  document.addEventListener('keydown', (event) => {
-    if (
-      event.defaultPrevented ||
-      event.key.toLowerCase() !== 'k' ||
-      (!event.metaKey && !event.ctrlKey) ||
-      event.altKey ||
-      event.shiftKey
-    ) {
-      return
-    }
-
-    let activeElement = document.activeElement
-    if (
-      activeElement instanceof HTMLElement &&
-      (activeElement.matches('input, textarea') || activeElement.isContentEditable)
-    ) {
-      return
-    }
-
-    let trigger = document.getElementById('docs-search-button')
-    if (!(trigger instanceof HTMLElement)) return
-
-    event.preventDefault()
-    void openPagefindSearch(trigger)
-  })
-}
-
-async function openPagefindSearch(trigger: HTMLElement) {
-  await customElements.whenDefined('pagefind-modal')
-
-  let modal = document.querySelector('pagefind-modal')
-  if (!(modal instanceof HTMLElement) || !trigger.isConnected) return
-
-  let open = Reflect.get(modal, 'open')
-  if (typeof open !== 'function') return
-
-  let dialog = modal.querySelector('dialog')
-  if (dialog?.open) return
-
-  if (dialog?.id) trigger.setAttribute('aria-controls', dialog.id)
-  trigger.setAttribute('aria-expanded', 'true')
-  dialog?.addEventListener(
-    'close',
-    () => {
-      trigger.setAttribute('aria-expanded', 'false')
-      if (trigger.isConnected) trigger.focus()
-    },
-    { once: true },
-  )
-  open.call(modal)
-}
-
-function closePagefindSearch() {
-  let modal = document.querySelector('pagefind-modal')
-  if (modal instanceof HTMLElement && 'close' in modal && typeof modal.close === 'function') {
-    modal.close()
-  }
-
-  document.getElementById('docs-search-button')?.blur()
 }
 
 function isSameDocumentHashUrl(href: string) {
