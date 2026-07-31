@@ -1,169 +1,99 @@
-# Docs De-duplication: Remaining Opportunities
+# Docs De-duplication Opportunities
 
-> **Workflow note:** Do not commit or push changes from this doc until they have been reviewed.
-> Leave changes in the working tree for review first.
+> Do not commit or push changes from this document until they have been reviewed. Leave changes in
+> the working tree first.
 
-Status of the `docs/` restructure after moving `api/`, `guides/`, and the new `shared/` workspace
-under `docs/`. The shell (`DocsShell`, `DocsHeader`, `DocsFooter`, `Icon`, markdown content mixin),
-the prerender crawler, the table-of-contents implementation, and the shared stylesheets already
-live in `docs/shared`. This doc lists what is still duplicated or divergent between the two sites,
-proposed tasks, and open questions.
+Remaining opportunities after moving the API docs, guides, and shared docs infrastructure under
+`docs/`. The sites deploy independently: `api/` to api.remix.run and `guides/` to guides.remix.run.
 
-**Completed:**
+## Recommended order
 
-- ✅ Task 1 (De-fork stylesheets) — shared CSS layers moved to `docs/shared/styles/`, served via
-  both sites' asset servers (option b). Api CSS moved from static `public/` to the asset server.
-- ✅ Task 2 (Share table of contents) — `DocsTableOfContents` + browser behavior + tests moved to
-  `docs/shared/ui/`. Api adopted `clientEntry(import.meta.url)`, dropping prop-drilling.
-- ✅ Task 3 (Shared prerender runner) — public-file copying, crawling, output writing, Pagefind, and
-  guaranteed asset-server cleanup moved to `docs/shared/prerender/run.ts`.
-- ✅ Open question 2 — versioned basePath works correctly with `clientEntry(import.meta.url)`;
-  the asset server's basePath is applied inside `getHref`.
-- ✅ Open question 3 — CSS delivery uses option b (asset server).
+1. Consolidate static assets.
+2. Align configuration, dependencies, and maintenance docs.
+3. Confirm the guides deployment model, then evaluate a shared server bootstrap.
+4. Decide whether the sites should share the remaining product features.
+5. Extract small markdown compatibility helpers.
+6. Re-evaluate a shared document component after the smaller extractions.
 
-Context: `api/` deploys to api.remix.run, `guides/` to guides.remix.run. Both are prerendered to
-static HTML via `remix-docs-shared/prerender/run` and indexed with Pagefind.
+## Consolidate static assets
 
-## Architecture snapshot
+The following files are byte-identical in both sites' `public/` directories:
 
-| Concern        | `docs/api`                                                          | `docs/guides`                                                            | `docs/shared`                                          |
-| -------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------ |
-| Content        | typedoc-generated markdown + demos, versioned                       | hand-authored chapters + examples                                        | —                                                      |
-| Markdown       | `marked` + custom extensions, `front-matter`                        | unified/remark/rehype, `gray-matter`                                     | —                                                      |
-| CSS delivery   | `src/styles/docs.css` through asset server, `@import` shared layers | `styles/docs.css` through asset server, fingerprinted + minified in prod | `docs/shared/styles/*.css` served via `/docs-shared/*` |
-| Client entries | `clientEntry(import.meta.url)` resolved by `resolveClientEntry`     | `clientEntry(import.meta.url)` resolved by `render()` middleware         | shared behaviors use `clientEntry(import.meta.url)`    |
-| Server         | `src/server/index.ts`, no compression/logger                        | `server.ts` + dev-refresh SSE, compression + logger middleware           | —                                                      |
-| Search         | Pagefind 1.5.2 (catalog), compact + full button                     | Pagefind 1.5.2 (catalog), full button only                               | `docs/shared/search/*`                                 |
+- `icons.svg`
+- `favicon.svg`
+- `remix-logo-light-mode.svg`
+- `remix-wordmark-light-mode.svg`
 
-## Tasks
+Move them to `docs/shared/assets/` and include that directory in each site's prerender `publicDirs`.
+These files are an implicit contract of the shared `Icon`, `DocsHeader`, and `DocsFooter`
+components, which reference them by absolute URL.
 
-### 1. ✅ De-fork the copied stylesheets (done)
+Keep API-only assets, such as `favicon.ico`, local. Confirm and delete the unreferenced API assets:
 
-Shared CSS layers (tokens, base, shell, search, article, markdown) moved to
-`docs/shared/styles/`, served through both sites' asset servers via the existing
-`/docs-shared/*path → docs/shared/*path` fileMap (option b). Each site keeps a small site-only
-layer (`docs/api/src/styles/api.css`; `docs/guides/app/styles/{index,chapters-nav}.css`). The
-`guides-` prefix is gone from all api CSS.
+- `remix-wordmark-dark-mode.svg`
+- `remix-wordmark-racing-darkmode.svg`
+- `remix-wordmark-racing-lightmode.svg`
 
-Api CSS delivery moved from static `public/*.css` to the asset server (`docs/api/src/styles/`),
-adding `stylesheetHref`/`stylesheetPreloads` to `DocsContext` → `Document` → `Head`. The preload
-links are required so the prerender crawl discovers and writes the `@import`ed shared CSS files.
-This also gives api CSS production fingerprinting and minification.
+Document the asset contract and required `/docs-shared/*` asset mapping in
+`docs/shared/README.md`.
 
-### 2. ✅ Share the table-of-contents implementation (done)
+## Align configuration, dependencies, and maintenance docs
 
-`DocsTableOfContents` (server component + `DocsHeadingLink` type), `TableOfContentsBehavior`
-(browser), `table-of-contents-active.browser.ts`, `selection-indicator.browser.ts`, and all tests
-moved to `docs/shared/ui/`. The shared component supports h2 + h3 nesting (`docs-toc__item--nested`).
+- Add `docs/tsconfig.base.json` and extend it from the API, guides, and shared configs. Resolve the
+  current drift: only guides includes `DOM.AsyncIterable`, API lacks `"types": ["node"]`, and API
+  and guides duplicate the `remix/ui` JSX-runtime paths.
+- Move independently pinned shared dependencies such as `shiki`, `github-slugger`, and
+  `@types/hast` to the pnpm catalog.
+- Align API frontmatter parsing on `gray-matter` when next touching its markdown pipeline; this
+  removes the untyped default-export cast required by `front-matter`.
+- Update `docs/guides/README.md`; its “Where things live” section still points to the old local
+  docs shell.
+- Add `docs/shared/README.md` covering ownership boundaries, asset mapping, and test commands.
+- Add a short `docs/api/README.md` matching the guides README structure.
 
-Api adopted `clientEntry(import.meta.url)`, dropping the `behaviorEntryHref`/
-`tableOfContentsEntryHref` prop-drilling. The api markdown pipeline now collects h3 headings with
-`depth: 2 | 3` for consistency with guides. Verified that versioned basePath prerendering resolves
-the module URL correctly (open question 2, resolved).
+## Confirm guides deployment, then evaluate a shared server bootstrap
 
-The guides `chapter-navigation-indicator.browser.ts` imports `selection-indicator.browser` from
-the shared package via a new `remix-docs-shared/ui/selection-indicator.browser` export.
+First determine where guides.remix.run deploys from and whether its Node server runs in
+production. This affects whether server middleware differences matter and where Pagefind is pinned.
 
-### 3. ✅ Share the prerender runner (done)
+The local servers still duplicate `http.createServer`, `createRequestListener`, error handling,
+port parsing, and graceful shutdown. If sharing remains useful, add a helper such as
+`startDocsServer(router, { assetServer, devRefresh })` under `docs/shared/`. Guides needs its
+refresh event stream in development; decide whether API should adopt that flow instead of relying
+on `node --watch` restarts and manual browser reloads.
 
-`prerender(router, options)` now lives in `docs/shared/prerender/run.ts` and owns public-directory
-copying, crawling, output writing, and Pagefind. Copying, crawling, and Pagefind run inside a single
-`try`/`finally`, so each site's asset server closes even when prerendering fails.
+## Decide feature parity
 
-The site scripts still own their CLI parsing and seeding: api keeps version handling,
-`ignorePageNofollow`, and its versioned Pagefind directory; guides keeps browser-entry discovery.
-The runner's `publicDirs` option provides the seam for moving shared static assets in task 5.
+- **Code-block copy buttons:** Guides has `code-block-copy.browser.tsx`; API code blocks have no
+  copy affordance. If API should have one, move the component to `docs/shared/ui/` and adopt it in
+  both sites.
+- **Sidebar navigation indicator:** Guides animates the active sidebar item across navigations.
+  API uses static active styles within grouped `<details>` sections. Decide whether this difference
+  is intentional before sharing the behavior.
 
-### 4. Shared server bootstrap
+## Extract markdown compatibility helpers
 
-`api/src/server/index.ts` and `guides/server.ts` duplicate: `http.createServer` +
-`createRequestListener`, error handling, port parsing, and graceful shutdown
-(`SIGINT`/`SIGTERM`, `closeAllConnections`, `assetServer.close`). Guides adds dev-refresh SSE.
+Do not unify the markdown pipelines wholesale: API uses `marked` with symbol-linking extensions,
+while guides uses unified/remark/rehype with directives and frames. The behavioral risk outweighs
+removing the structural duplication.
 
-Task: `docs/shared/server.ts` helper, e.g. `startDocsServer(router, { assetServer, devRefresh })`.
-Small, low-risk win. Consider giving api the dev-refresh flow too (it currently relies on
-`node --watch` restarts + manual browser reload).
+Explore sharing the smaller compatibility points instead:
 
-### 5. Single source for static assets
+- Shiki theme and configuration
+- Heading slug generation
+- Heading `titleHtml` conventions
 
-Byte-identical in both `public/` dirs: `icons.svg`, `favicon.svg`, `remix-logo-light-mode.svg`,
-`remix-wordmark-light-mode.svg`. These are an implicit contract of the shared `Icon`/`DocsHeader`
-components (they reference `/icons.svg`, `/remix-logo-light-mode.svg`, etc. by absolute path).
+These helpers would keep rendered HTML compatible with shared styles without coupling the two
+pipelines.
 
-Task: move them to `docs/shared/assets/` and copy into each site's output at build/prerender time;
-document the contract in a `docs/shared/README.md`.
+## Re-evaluate a shared document component
 
-Also: `api/public` ships `remix-wordmark-dark-mode.svg` and both `racing` wordmarks, but nothing
-references them (dark mode is a CSS `invert(1)` filter; the only grep hit is a router test).
-Confirm and delete.
+Both sites still hand-roll the same document skeleton: common metadata, favicon links, Pagefind
+assets, module preloads, title, body, modal, and entry script. Their differences require extension
+points:
 
-### 6. Unify the `Document` head (optional — discuss)
+- API: markdown alternate link, versioned-page robots directives, `favicon.ico`, and demo preloads
+- Guides: development refresh script and asset-entry middleware
 
-Both documents hand-roll the same skeleton: charset/viewport/description metas, favicon links,
-Pagefind CSS link ordered first, modulepreloads, title, Pagefind script, body + modal + entry
-script. Differences that would need slots: api's `text/markdown` alternate link, robots
-noindex/nofollow for versioned pages, `favicon.ico`, per-demo preloads; guides' dev-refresh script
-and asset-entry middleware.
-
-A shared `DocsDocument` with `head`/`bodyEnd` slots is doable, but may end up so slot-heavy it
-obscures more than it saves. Search is already extracted; recommend doing this _after_ task 2
-shrinks the remaining head/body surface, then re-evaluating.
-
-### 7. Feature-parity gaps (product decisions, flag for review)
-
-- **Code-block copy buttons**: guides has `code-block-copy.browser.tsx`; api code blocks have no
-  copy affordance. If desired on api, move the component to `docs/shared/ui` and adopt.
-- **Sidebar navigation indicator**: guides animates the sidebar highlight across navigations
-  (`chapter-navigation-indicator.browser.ts`); api's sidebar has static active styles only.
-  Possibly intentional — api's sidebar is grouped `<details>` sections — but decide explicitly.
-
-### 8. Config and dependency drift
-
-- Three near-identical `tsconfig.json`s with copy-paste drift: only guides has
-  `DOM.AsyncIterable`; api lacks `"types": ["node"]`; the `remix/ui` jsx-runtime `paths` block is
-  duplicated in api + guides. Task: `docs/tsconfig.base.json` + `extends`.
-- Version drift across the two `package.json`s: independently pinned `shiki`, `github-slugger`,
-  and `@types/hast`. Task: move shared deps to the pnpm catalog.
-- Frontmatter parsing uses different packages (`front-matter` vs `gray-matter`); the api one needs
-  an untyped-default-export cast. Cheap alignment on `gray-matter` when touching the markdown code.
-
-### 9. Docs about the docs
-
-- `guides/README.md` still points at `app/actions/docs/docs-shell.browser.tsx`, which moved to
-  `docs/shared/ui/`. Update the "Where things live" section.
-- `docs/shared` has no README. Add one covering: what belongs in shared vs a site, the static-asset
-  contract (task 5), the `/docs-shared/*` asset mapping both sites must provide, and how tests run.
-- `docs/api` has no README at all; a short one matching the guides README structure would help.
-
-## Deliberately not unified (for now)
-
-**Markdown pipelines.** api (`marked` + custom heading/link/symbol extensions) vs guides
-(unified/remark/rehype + directives/frames). Consolidating is a large project with real behavioral
-risk (auto-linked API symbols, `::frame` directives, demo embedding) and unclear payoff while the
-outputs already share `docsMarkdownContentCss` and CSS class conventions. Recommendation: keep
-both, but extract the small convergence points — Shiki theme/config, heading slug + `titleHtml`
-conventions — into shared helpers so the rendered HTML stays compatible with the shared styles.
-Revisit after the guides pipeline stabilizes.
-
-**Sidebars.** Chapter list vs versioned/grouped API registry are genuinely different products; the
-shell already treats them as a slot. No action.
-
-**Version switcher, routes, registries.** api-only concerns; leave in `docs/api`.
-
-## Open questions
-
-1. Where does guides.remix.run deploy from? api's publish flow dispatches to the external
-   `remix-run/remix-api-docs` repo — knowing the guides deploy path determines whether server-side
-   middleware (compression) matters at all, and where the Pagefind version is actually pinned.
-2. ~~Does prerendering api with a versioned `basePath` interact badly with
-   `clientEntry(import.meta.url)` resolution?~~ **Resolved:** works correctly — the versioned asset
-   server basePath is applied inside `getHref`.
-3. ~~CSS strategy decision (a/b/c).~~ **Resolved:** option b (asset server).
-
-## Suggested ordering
-
-1. ~~Task 2 (TOC)~~ — ✅ done.
-2. ~~Task 1 (CSS)~~ — ✅ done.
-3. ~~Task 3 (prerender runner)~~ — ✅ done.
-4. Task 5 (assets), then task 4 (server bootstrap) — mechanical.
-5. Tasks 7–9 as follow-ups; task 6 re-evaluated at the end.
+Consider a shared `DocsDocument` only if the remaining implementation is substantial after the
+other extractions. Avoid an abstraction dominated by `head` and `bodyEnd` slots.
