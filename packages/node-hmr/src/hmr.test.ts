@@ -953,7 +953,7 @@ describe('node-hmr', () => {
         () => server.output,
       )
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update greeting\.tsx/)
+      await waitForOutput(server, /hmr update greeting\.tsx/)
       assert.doesNotMatch(server.output, /restart/)
     } finally {
       await server.stop()
