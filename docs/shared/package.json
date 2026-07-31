@@ -4,6 +4,7 @@
   "type": "module",
   "exports": {
     "./prerender/crawl": "./prerender/crawl.ts",
+    "./prerender/run": "./prerender/run.ts",
     "./prerender/utils": "./prerender/utils.ts",
     "./search": "./search/index.ts",
     "./search/browser": "./search/pagefind-search.browser.ts",

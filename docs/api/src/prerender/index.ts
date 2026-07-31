@@ -1,15 +1,11 @@
-import * as cp from 'node:child_process'
-import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
+import { prerender } from 'remix-docs-shared/prerender/run'
+
 import { createAssetServer } from '../server/assets.ts'
 import { createRouter, getDefaultVersions } from '../server/router.tsx'
 import { routes, withVersion } from '../server/routes.ts'
 import { getVersionsForPicker } from './versions.ts'
-import { crawl } from 'remix-docs-shared/prerender/crawl'
-import { writeResult } from 'remix-docs-shared/prerender/utils'
-
-const execFile = util.promisify(cp.execFile)
 
 let { values: cliArgs } = util.parseArgs({
   options: {
@@ -39,36 +35,21 @@ console.log('Version picker options:\n', JSON.stringify(versions, null, 2))
 const assetServer = createAssetServer(buildVersion)
 const router = createRouter({ assetServer, versions })
 
-// Copy public files (favicons, wordmarks) to the output root. URLs are
-// unversioned so a single copy at the output root covers every version.
-await fs.cp(publicDir, outputDir, { recursive: true })
-
-// Spider the site
 const homePath = withVersion(routes.home.href(), buildVersion)
 const paths = [homePath, withVersion(routes.lookup.href(), buildVersion)]
+const pagefindSiteDir = buildVersion ? path.join(outputDir, buildVersion) : outputDir
 
-for await (let { pathname, filepath, response } of crawl(router, {
+await prerender(router, {
+  outputDir,
+  // Public URLs are unversioned, so a single copy at the output root covers every version.
+  publicDirs: [publicDir],
   paths,
-  // Versioned pages stay noindex,nofollow for public crawlers, but the
-  // prerender spider needs the versioned home page's sidebar links to seed
-  // the static docs graph.
-  ignorePageNofollow: buildVersion ? (pathname) => pathname === homePath : undefined,
-})) {
-  await writeResult(outputDir, pathname, filepath, response)
-}
-
-// Run pagefind to generate the search index and assets
-let versionedDir = buildVersion ? path.join(outputDir, buildVersion) : outputDir
-let pagefindArgs = [
-  'exec',
-  'pagefind',
-  '--site',
-  versionedDir,
-  '--output-subdir',
-  path.join(versionedDir, 'assets', 'pagefind'),
-]
-console.log(`Running Pagefind:\n  pnpm ${pagefindArgs.join(' ')}`)
-await execFile('pnpm', pagefindArgs)
-
-// Release asset server resources so the process can exit cleanly.
-await assetServer.close()
+  crawlOptions: {
+    // Versioned pages stay noindex,nofollow for public crawlers, but the
+    // prerender spider needs the versioned home page's sidebar links to seed
+    // the static docs graph.
+    ignorePageNofollow: buildVersion ? (pathname) => pathname === homePath : undefined,
+  },
+  pagefindSiteDir,
+  onFinally: () => assetServer.close(),
+})

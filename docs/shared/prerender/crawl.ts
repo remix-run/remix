@@ -10,7 +10,7 @@ interface CrawlResult {
   response: Response
 }
 
-interface CrawlOptions {
+export interface CrawlOptions {
   paths?: string[]
   spider?: boolean
   concurrency?: number

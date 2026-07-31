@@ -1,15 +1,12 @@
-import * as cp from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
+import { prerender } from 'remix-docs-shared/prerender/run'
 
 import { router } from '../app/router.ts'
 import { routes } from '../app/routes.ts'
 import { assetServer } from '../app/utils/assets.ts'
-import { crawl } from 'remix-docs-shared/prerender/crawl'
-import { writeResult } from 'remix-docs-shared/prerender/utils'
 
-const execFile = util.promisify(cp.execFile)
 const guidesDir = path.resolve(import.meta.dirname, '..')
 const publicDir = path.join(guidesDir, 'public')
 const defaultOutputDir = path.join(guidesDir, 'build', 'site')
@@ -30,33 +27,16 @@ const { values: cliArgs } = util.parseArgs({
 
 const outputDir = path.resolve(guidesDir, cliArgs.dir)
 
-// Copy public files (favicons, wordmarks) to the output root
-await fs.cp(publicDir, outputDir, { recursive: true })
-
 const browserHrefs = await discoverBrowserEntries()
 const paths = [routes.docs.index.href(), ...browserHrefs]
 
-try {
-  // Spider the site
-  for await (let { pathname, filepath, response } of crawl(router, { paths })) {
-    await writeResult(outputDir, pathname, filepath, response)
-  }
-} finally {
-  // Release asset server resources so the process can exit cleanly.
-  await assetServer.close()
-}
-
-// Run pagefind to generate the search index and assets
-const pagefindArgs = [
-  'exec',
-  'pagefind',
-  '--site',
+await prerender(router, {
   outputDir,
-  '--output-subdir',
-  path.join(outputDir, 'assets', 'pagefind'),
-]
-console.log(`Running Pagefind:\n  pnpm ${pagefindArgs.join(' ')}`)
-await execFile('pnpm', pagefindArgs)
+  publicDirs: [publicDir],
+  paths,
+  pagefindSiteDir: outputDir,
+  onFinally: () => assetServer.close(),
+})
 
 async function discoverBrowserEntries(): Promise<string[]> {
   let hrefs = new Set<string>()
