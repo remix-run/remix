@@ -221,52 +221,6 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node ./scripts/detect-changed-packages.ts "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
-      - name: Dump Windows network diagnostics
-        if: failure()
-        shell: pwsh
-        run: |
-          Write-Host 'Dynamic TCP port ranges:'
-          netsh int ipv4 show dynamicport tcp
-          netsh int ipv6 show dynamicport tcp
-
-          $connections = @(Get-NetTCPConnection -ErrorAction SilentlyContinue)
-
-          Write-Host 'TCP connections by state:'
-          $connections |
-            Group-Object State |
-            Sort-Object Count -Descending |
-            Format-Table Count, Name
-
-          Write-Host 'Loopback TCP connections:'
-          $connections |
-            Where-Object {
-              $_.LocalAddress -in @('127.0.0.1', '::1') -or
-              $_.RemoteAddress -in @('127.0.0.1', '::1')
-            } |
-            Sort-Object State, LocalPort |
-            Format-Table State, LocalAddress, LocalPort, RemoteAddress, RemotePort, OwningProcess
-
-          Write-Host 'Node and Chromium process tree:'
-          Get-CimInstance Win32_Process |
-            Where-Object { $_.Name -match '^(node|chrome|chromium)\.exe$' } |
-            Sort-Object ParentProcessId, ProcessId |
-            Select-Object ProcessId, ParentProcessId, Name, CommandLine |
-            Format-List
-
-          Write-Host 'Node and Chromium process resources:'
-          Get-Process -ErrorAction SilentlyContinue |
-            Where-Object { $_.ProcessName -match '^(node|chrome|chromium)$' } |
-            Sort-Object ProcessName, Id |
-            Select-Object Id, ProcessName, HandleCount, `
-              @{ Name = 'ThreadCount'; Expression = { $_.Threads.Count } }, `
-              WorkingSet64, PrivateMemorySize64 |
-            Format-Table
-
-          Write-Host 'System memory:'
-          Get-CimInstance Win32_OperatingSystem |
-            Select-Object TotalVisibleMemorySize, FreePhysicalMemory, FreeVirtualMemory |
-            Format-List
-
   lint:
     name: Lint
     runs-on: ubuntu-latest
