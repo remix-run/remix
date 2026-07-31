@@ -1,4 +1,4 @@
-import { clientEntry, type Handle } from 'remix/ui'
+import type { Handle } from 'remix/ui'
 
 import { TableOfContentsBehavior } from '../client/table-of-contents.browser.tsx'
 import type { MarkdownHeading } from './markdown.ts'
@@ -31,14 +31,7 @@ export const initializeTableOfContentsScript = `
 }
 `
 
-export function TableOfContents(
-  handle: Handle<{ behaviorEntryHref: string; headings: MarkdownHeading[] }>,
-) {
-  let Behavior = clientEntry(
-    `${handle.props.behaviorEntryHref}#TableOfContentsBehavior`,
-    TableOfContentsBehavior,
-  )
-
+export function TableOfContents(handle: Handle<{ headings: MarkdownHeading[] }>) {
   return () => {
     let listId = `${handle.id}-list`
 
@@ -56,7 +49,7 @@ export function TableOfContents(
           ))}
         </ol>
         <script innerHTML={initializeTableOfContentsScript} />
-        <Behavior listId={listId} />
+        <TableOfContentsBehavior listId={listId} />
       </>
     )
   }

@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/ui'
+import { clientEntry, type Handle } from 'remix/ui'
 
 import {
   clearSelectionIndicator,
@@ -6,18 +6,21 @@ import {
 } from './selection-indicator.browser.ts'
 import { getActiveHeadingIndex } from './table-of-contents-active.browser.ts'
 
-export function TableOfContentsBehavior(handle: Handle<{ listId: string }>) {
-  return () => {
-    let listId = handle.props.listId
-    handle.queueTask((signal) => {
-      let list = document.getElementById(listId)
-      if (list instanceof HTMLOListElement) {
-        startTableOfContentsBehavior(list, signal)
-      }
-    })
-    return null
-  }
-}
+export const TableOfContentsBehavior = clientEntry(
+  import.meta.url,
+  function TableOfContentsBehavior(handle: Handle<{ listId: string }>) {
+    return () => {
+      let listId = handle.props.listId
+      handle.queueTask((signal) => {
+        let list = document.getElementById(listId)
+        if (list instanceof HTMLOListElement) {
+          startTableOfContentsBehavior(list, signal)
+        }
+      })
+      return null
+    }
+  },
+)
 
 export function startTableOfContentsBehavior(list: HTMLOListElement, signal: AbortSignal) {
   let entries = Array.from(list.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')).flatMap(

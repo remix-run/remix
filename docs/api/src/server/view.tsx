@@ -32,7 +32,6 @@ export function Document(
     headings?: MarkdownHeading[]
     entryHref: string
     entryPreloads: readonly string[]
-    tableOfContentsEntryHref: string
   }>,
 ) {
   return () => {
@@ -46,7 +45,6 @@ export function Document(
       children,
       entryHref,
       entryPreloads,
-      tableOfContentsEntryHref,
     } = handle.props
     let searchEnabled = shouldLoadPagefind(pagefindModulePath)
     let page = slug
@@ -95,7 +93,6 @@ export function Document(
             <MainContent
               page={page}
               headings={headings}
-              tableOfContentsEntryHref={tableOfContentsEntryHref}
               header={<PageHeader page={page} sourceUrl={sourceUrl} />}
             >
               {children}
@@ -190,7 +187,6 @@ function MainContent(
   handle: Handle<{
     page: PageDefinition
     headings?: MarkdownHeading[]
-    tableOfContentsEntryHref: string
     header?: RemixNode
     children: RemixNode | RemixNode[]
   }>,
@@ -212,10 +208,7 @@ function MainContent(
         {headings.length > 0 ? (
           <DocsSecondaryNavigation>
             <h2 class="docs-toc__heading">On this page</h2>
-            <TableOfContents
-              headings={headings}
-              behaviorEntryHref={handle.props.tableOfContentsEntryHref}
-            />
+            <TableOfContents headings={headings} />
           </DocsSecondaryNavigation>
         ) : null}
       </div>
