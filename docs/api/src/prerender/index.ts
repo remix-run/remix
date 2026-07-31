@@ -9,6 +9,8 @@ import { getVersionsForPicker } from './versions.ts'
 import { crawl } from 'remix-docs-shared/prerender/crawl'
 import { writeResult } from 'remix-docs-shared/prerender/utils'
 
+const execFile = util.promisify(cp.execFile)
+
 let { values: cliArgs } = util.parseArgs({
   options: {
     dir: {
@@ -57,9 +59,16 @@ for await (let { pathname, filepath, response } of crawl(router, {
 
 // Run pagefind to generate the search index and assets
 let versionedDir = buildVersion ? path.join(outputDir, buildVersion) : outputDir
-let cmd = `pnpm exec pagefind --site ${versionedDir} --output-subdir ${versionedDir}/assets/pagefind`
-console.log(`Running Pagefind:\n  ${cmd}`)
-await cp.execSync(cmd)
+let pagefindArgs = [
+  'exec',
+  'pagefind',
+  '--site',
+  versionedDir,
+  '--output-subdir',
+  path.join(versionedDir, 'assets', 'pagefind'),
+]
+console.log(`Running Pagefind:\n  pnpm ${pagefindArgs.join(' ')}`)
+await execFile('pnpm', pagefindArgs)
 
 // Release asset server resources so the process can exit cleanly.
 await assetServer.close()

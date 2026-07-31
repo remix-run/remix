@@ -8,6 +8,8 @@ import { routes } from '../app/routes.ts'
 import { assetServer } from '../app/utils/assets.ts'
 import { crawl } from 'remix-docs-shared/prerender/crawl'
 import { writeResult } from 'remix-docs-shared/prerender/utils'
+
+const execFile = util.promisify(cp.execFile)
 const guidesDir = path.resolve(import.meta.dirname, '..')
 const publicDir = path.join(guidesDir, 'public')
 const defaultOutputDir = path.join(guidesDir, 'build', 'site')
@@ -45,9 +47,16 @@ try {
 }
 
 // Run pagefind to generate the search index and assets
-const cmd = `pnpm exec pagefind --site ${outputDir} --output-subdir ${outputDir}/assets/pagefind`
-console.log(`Running Pagefind:\n  ${cmd}`)
-await cp.execSync(cmd)
+const pagefindArgs = [
+  'exec',
+  'pagefind',
+  '--site',
+  outputDir,
+  '--output-subdir',
+  path.join(outputDir, 'assets', 'pagefind'),
+]
+console.log(`Running Pagefind:\n  pnpm ${pagefindArgs.join(' ')}`)
+await execFile('pnpm', pagefindArgs)
 
 async function discoverBrowserEntries(): Promise<string[]> {
   let hrefs = new Set<string>()
