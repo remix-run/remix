@@ -9,6 +9,7 @@ import { clientEntry, type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
 import {
   CLIENT_ENTRY_PATH,
+  STYLESHEET_PATH,
   type DocsAssetServer,
 } from './asset-server.ts'
 import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
@@ -35,6 +36,8 @@ type DocsContext = {
   docFilesLookup: Map<string, MarkdownDocFile>
   entryHref: string
   entryPreloads: readonly string[]
+  stylesheetHref: string
+  stylesheetPreloads: readonly string[]
   getRegistry(version?: string): DocsRegistry
 }
 
@@ -105,6 +108,8 @@ export function createRouter(options: DocsRouterOptions): Router {
             activeVersion: version,
             entryHref: docsContext.entryHref,
             entryPreloads: docsContext.entryPreloads,
+            stylesheetHref: docsContext.stylesheetHref,
+            stylesheetPreloads: docsContext.stylesheetPreloads,
           }
 
           if (docFile) {
@@ -157,6 +162,8 @@ export function createRouter(options: DocsRouterOptions): Router {
               activeVersion={version}
               entryHref={docsContext.entryHref}
               entryPreloads={docsContext.entryPreloads}
+              stylesheetHref={docsContext.stylesheetHref}
+              stylesheetPreloads={docsContext.stylesheetPreloads}
             >
               <Home />
             </Document>,
@@ -216,9 +223,11 @@ async function loadDocsContext(assetServer: DocsAssetServer): Promise<DocsContex
   let { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
   let demoFiles = await discoverDemoFiles(assetServer)
   let docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
-  let [entryHref, entryPreloads] = await Promise.all([
+  let [entryHref, entryPreloads, stylesheetHref, stylesheetPreloads] = await Promise.all([
     assetServer.getHref(CLIENT_ENTRY_PATH),
     assetServer.getPreloads(CLIENT_ENTRY_PATH),
+    assetServer.getHref(STYLESHEET_PATH),
+    assetServer.getPreloads(STYLESHEET_PATH),
   ])
 
   let registryByVersion = new Map<string | undefined, DocsRegistry>()
@@ -229,6 +238,8 @@ async function loadDocsContext(assetServer: DocsAssetServer): Promise<DocsContex
     docFilesLookup,
     entryHref,
     entryPreloads,
+    stylesheetHref,
+    stylesheetPreloads,
     getRegistry(version?: string): DocsRegistry {
       let registry = registryByVersion.get(version)
       if (!registry) {

@@ -23,6 +23,7 @@ export const assetServer = createAssetServer({
     'docs/guides/app/**/*.demo.ts?(x)',
     'docs/guides/app/styles/**/*.css',
     'docs/shared/**/*.browser.ts?(x)',
+    'docs/shared/**/*.css',
   ],
   allowPackages: ['remix'],
   sourceMaps: isDevelopment ? 'external' : undefined,

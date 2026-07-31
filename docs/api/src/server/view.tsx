@@ -32,6 +32,8 @@ export function Document(
     headings?: MarkdownHeading[]
     entryHref: string
     entryPreloads: readonly string[]
+    stylesheetHref: string
+    stylesheetPreloads: readonly string[]
   }>,
 ) {
   return () => {
@@ -45,6 +47,8 @@ export function Document(
       children,
       entryHref,
       entryPreloads,
+      stylesheetHref,
+      stylesheetPreloads,
     } = handle.props
     let searchEnabled = shouldLoadPagefind(pagefindModulePath)
     let page = slug
@@ -64,6 +68,8 @@ export function Document(
           activeVersion={activeVersion}
           entryHref={entryHref}
           entryPreloads={entryPreloads}
+          stylesheetHref={stylesheetHref}
+          stylesheetPreloads={stylesheetPreloads}
           searchEnabled={searchEnabled}
         />
         <body>
@@ -116,11 +122,14 @@ function Head(
     activeVersion?: string
     entryHref: string
     entryPreloads: readonly string[]
+    stylesheetHref: string
+    stylesheetPreloads: readonly string[]
     searchEnabled: boolean
   }>,
 ) {
   return () => {
-    let { page, activeVersion, entryHref, entryPreloads, searchEnabled } = handle.props
+    let { page, activeVersion, entryHref, entryPreloads, stylesheetHref, stylesheetPreloads, searchEnabled } =
+      handle.props
     let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
 
     return (
@@ -140,7 +149,10 @@ function Head(
             rel="stylesheet"
           />
         ) : null}
-        <link rel="stylesheet" href="/docs.css" />
+        <link rel="stylesheet" href={stylesheetHref} />
+        {stylesheetPreloads.map((href) => (
+          <link key={href} rel="preload" href={href} as="style" />
+        ))}
         {activeVersion != null ? (
           <>
             <meta name="robots" content="noindex,nofollow" />

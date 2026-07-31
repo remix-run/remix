@@ -32,6 +32,7 @@ describe('createRouter()', () => {
 
     assert.equal(html.includes('src="/assets/client/entry.tsx"'), true)
     assert.equal(html.includes('href="/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('href="/assets/styles/docs.css"'), true)
     assert.equal(html.includes('/assets/docs-shared/ui/docs-shell.browser.tsx'), true)
     assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), false)
     assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), false)
@@ -50,7 +51,7 @@ describe('createRouter()', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
     let pagefindStylesIndex = html.indexOf('href="/assets/pagefind/pagefind-component-ui.css"')
-    let docsStylesIndex = html.indexOf('href="/docs.css"')
+    let docsStylesIndex = html.indexOf('href="/assets/styles/docs.css"')
 
     assert.equal(pagefindStylesIndex >= 0, true)
     assert.equal(docsStylesIndex > pagefindStylesIndex, true)
@@ -135,7 +136,6 @@ function getLoadedAssetUrls(html: string): string[] {
 function shouldVersionAssetUrl(url: string): boolean {
   if (!url.startsWith('/')) return false
   if (
-    url === '/docs.css' ||
     url === '/favicon.ico' ||
     url === '/favicon.svg' ||
     url === '/remix-logo-light-mode.svg' ||
@@ -148,9 +148,11 @@ function shouldVersionAssetUrl(url: string): boolean {
 }
 
 async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServer>) {
-  let [entryHref, entryPreloads] = await Promise.all([
+  let [entryHref, entryPreloads, stylesheetHref, stylesheetPreloads] = await Promise.all([
     assetServer.getHref('docs/api/src/client/entry.tsx'),
     assetServer.getPreloads('docs/api/src/client/entry.tsx'),
+    assetServer.getHref('docs/api/src/styles/docs.css'),
+    assetServer.getPreloads('docs/api/src/styles/docs.css'),
   ])
 
   return {
@@ -158,6 +160,8 @@ async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServ
     docFilesLookup: new Map(),
     entryHref,
     entryPreloads,
+    stylesheetHref,
+    stylesheetPreloads,
     getRegistry() {
       return buildRegistry([])
     },
