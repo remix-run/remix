@@ -128,8 +128,15 @@ function Head(
   }>,
 ) {
   return () => {
-    let { page, activeVersion, entryHref, entryPreloads, stylesheetHref, stylesheetPreloads, searchEnabled } =
-      handle.props
+    let {
+      page,
+      activeVersion,
+      entryHref,
+      entryPreloads,
+      stylesheetHref,
+      stylesheetPreloads,
+      searchEnabled,
+    } = handle.props
     let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
 
     return (
@@ -139,17 +146,6 @@ function Head(
         {page.description ? <meta name="description" content={page.description} /> : null}
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
-        {/* Keep Pagefind first so the docs theme can override its component defaults. */}
-        {searchEnabled ? (
-          <link
-            href={withVersion(
-              routes.assets.href({ asset: 'pagefind/pagefind-component-ui.css' }),
-              activeVersion,
-            )}
-            rel="stylesheet"
-          />
-        ) : null}
-        <link rel="stylesheet" href={stylesheetHref} />
         {stylesheetPreloads.map((href) => (
           <link key={href} rel="preload" href={href} as="style" />
         ))}
@@ -180,9 +176,22 @@ function Head(
         ].map((href) => (
           <link key={href} rel="modulepreload" href={href} />
         ))}
-        <script type="module" src={entryHref} />
+        {/* Keep styles after variable head content so frame diffs do not reload them. */}
+        {searchEnabled ? (
+          <link
+            data-key="docs-pagefind-stylesheet"
+            href={withVersion(
+              routes.assets.href({ asset: 'pagefind/pagefind-component-ui.css' }),
+              activeVersion,
+            )}
+            rel="stylesheet"
+          />
+        ) : null}
+        <link data-key="docs-stylesheet" rel="stylesheet" href={stylesheetHref} />
+        <script data-key="docs-client-entry" type="module" src={entryHref} />
         {searchEnabled ? (
           <script
+            data-key="docs-pagefind-client-entry"
             src={withVersion(
               routes.assets.href({ asset: 'pagefind/pagefind-component-ui.js' }),
               activeVersion,

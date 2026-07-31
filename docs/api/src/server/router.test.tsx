@@ -38,7 +38,7 @@ describe('createRouter()', () => {
     assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), false)
   })
 
-  it('loads docs styles after Pagefind styles so theme overrides win', async (t) => {
+  it('keeps persistent stylesheets after variable head content', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
     let router = createRouter({
@@ -50,11 +50,24 @@ describe('createRouter()', () => {
     let response = await router.fetch(new Request('http://localhost/'))
     assert.equal(response.status, 200)
     let html = await response.text()
-    let pagefindStylesIndex = html.indexOf('href="/assets/pagefind/pagefind-component-ui.css"')
-    let docsStylesIndex = html.indexOf('href="/assets/styles/docs.css"')
+    let entryPreloadIndex = html.indexOf('rel="modulepreload" href="/assets/client/entry.tsx"')
+    let pagefindStylesIndex = html.indexOf(
+      'data-key="docs-pagefind-stylesheet" href="/assets/pagefind/pagefind-component-ui.css"',
+    )
+    let docsStylesIndex = html.indexOf(
+      'data-key="docs-stylesheet" rel="stylesheet" href="/assets/styles/docs.css"',
+    )
 
-    assert.equal(pagefindStylesIndex >= 0, true)
+    let entryScriptIndex = html.indexOf(
+      'data-key="docs-client-entry" type="module" src="/assets/client/entry.tsx"',
+    )
+    let pagefindScriptIndex = html.indexOf('data-key="docs-pagefind-client-entry"')
+
+    assert.equal(entryPreloadIndex >= 0, true)
+    assert.equal(pagefindStylesIndex > entryPreloadIndex, true)
     assert.equal(docsStylesIndex > pagefindStylesIndex, true)
+    assert.equal(entryScriptIndex > docsStylesIndex, true)
+    assert.equal(pagefindScriptIndex > entryScriptIndex, true)
   })
 
   it('uses versioned asset URLs when an asset version is configured', async (t) => {
