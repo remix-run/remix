@@ -6,7 +6,7 @@ import { codeToHtml } from 'shiki'
 import ts from 'typescript'
 import { hasRemixPackage, mapToRemixPackage } from '../generate/manifest.ts'
 import { formatWithOxfmt } from '../shared/format.ts'
-import type { DocsAssetServer } from './asset-server.ts'
+import type { DocsAssetServer } from './assets.ts'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const DEMO_BUILD_DIR = path.join(DOCS_DIR, 'build', 'demos')

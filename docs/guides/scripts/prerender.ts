@@ -40,7 +40,7 @@ try {
     await writeResult(outputDir, pathname, filepath, response)
   }
 } finally {
-  // Release the asset server's file watcher so the process can exit cleanly.
+  // Release asset server resources so the process can exit cleanly.
   await assetServer.close()
 }
 

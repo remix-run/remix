@@ -2,7 +2,7 @@ import * as cp from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
-import { createAssetServer } from '../server/asset-server.ts'
+import { createAssetServer } from '../server/assets.ts'
 import { createRouter, getDefaultVersions } from '../server/router.tsx'
 import { routes, withVersion } from '../server/routes.ts'
 import { getVersionsForPicker } from './versions.ts'
@@ -61,5 +61,5 @@ let cmd = `pnpm exec pagefind --site ${versionedDir} --output-subdir ${versioned
 console.log(`Running Pagefind:\n  ${cmd}`)
 await cp.execSync(cmd)
 
-// Release the asset server's file watcher so the process can exit cleanly.
+// Release asset server resources so the process can exit cleanly.
 await assetServer.close()

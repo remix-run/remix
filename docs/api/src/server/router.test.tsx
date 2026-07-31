@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { createAssetServer } from './asset-server.ts'
+import { createAssetServer } from './assets.ts'
 import { getVersionedLookupHref } from './lookup.ts'
 import { buildRegistry } from './registry.ts'
 import { createRouter } from './router.tsx'

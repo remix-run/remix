@@ -1,6 +1,6 @@
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
-import { createAssetServer } from './asset-server.ts'
+import { createAssetServer } from './assets.ts'
 import { createRouter, getDefaultVersions } from './router.tsx'
 
 let assetServer = createAssetServer()

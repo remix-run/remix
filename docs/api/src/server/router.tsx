@@ -7,11 +7,7 @@ import { createHtmlResponse } from 'remix/response/html'
 import { createController, createRouter as _createRouter, type Router } from 'remix/router'
 import { clientEntry, type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
-import {
-  CLIENT_ENTRY_PATH,
-  STYLESHEET_PATH,
-  type DocsAssetServer,
-} from './asset-server.ts'
+import { CLIENT_ENTRY_PATH, STYLESHEET_PATH, type DocsAssetServer } from './assets.ts'
 import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
 import { getVersionedLookupHref } from './lookup.ts'
 import {
