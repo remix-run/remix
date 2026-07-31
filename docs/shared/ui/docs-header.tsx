@@ -51,13 +51,13 @@ export function DocsHeader(handle: Handle<DocsHeaderProps>) {
       {handle.props.searchEnabled !== false && handle.props.compactSearch ? (
         <button
           id="docs-search-compact"
-          class="docs-search-compact"
           type="button"
           aria-label="Search"
           aria-hidden="true"
           aria-haspopup="dialog"
           aria-expanded="false"
           data-docs-collapsed-only
+          mix={compactSearchButtonCss}
         >
           <Icon name="search" />
         </button>
@@ -92,21 +92,46 @@ export function DocsHeader(handle: Handle<DocsHeaderProps>) {
       {handle.props.searchEnabled !== false ? (
         <button
           id="docs-search-button"
-          class="docs-search-button"
           type="button"
           aria-label="Search"
           aria-haspopup="dialog"
           aria-expanded="false"
           aria-keyshortcuts="Meta+K Control+K"
           data-docs-expanded-only={handle.props.compactSearch || undefined}
+          mix={
+            handle.props.compactSearch
+              ? [searchButtonCss, expandedOnlySearchButtonCss]
+              : [searchButtonCss, collapsibleSearchButtonCss]
+          }
         >
-          <span class="docs-search-button__label">
+          <span
+            mix={
+              handle.props.compactSearch
+                ? searchButtonLabelCss
+                : [searchButtonLabelCss, collapsibleSearchButtonLabelCss]
+            }
+          >
             <Icon name="search" />
-            <span>Search</span>
+            <span
+              mix={
+                handle.props.compactSearch
+                  ? searchButtonTextCss
+                  : [searchButtonTextCss, collapsedSearchContentCss]
+              }
+            >
+              Search
+            </span>
           </span>
-          <span class="docs-search-button__shortcut" aria-hidden="true">
-            <kbd>⌘</kbd>
-            <kbd>K</kbd>
+          <span
+            aria-hidden="true"
+            mix={
+              handle.props.compactSearch
+                ? searchButtonShortcutCss
+                : [searchButtonShortcutCss, collapsedSearchContentCss]
+            }
+          >
+            <kbd mix={searchShortcutKeyCss}>⌘</kbd>
+            <kbd mix={searchShortcutKeyCss}>K</kbd>
           </span>
         </button>
       ) : null}
@@ -127,6 +152,160 @@ const docsHeaderCss = css({
     position: 'relative',
     borderBottom: 'var(--rmx-space-px) solid var(--rmx-color-border-subtle)',
   },
+})
+
+const compactSearchButtonCss = css({
+  position: 'fixed',
+  top: '16px',
+  left: '121px',
+  zIndex: 51,
+  display: 'grid',
+  width: '32px',
+  height: '32px',
+  padding: '8px',
+  visibility: 'hidden',
+  placeItems: 'center',
+  border: 0,
+  borderRadius: '8px',
+  color: 'var(--rmx-color-text-secondary)',
+  background: 'transparent',
+  cursor: 'pointer',
+  opacity: 0,
+  pointerEvents: 'none',
+  '&:hover, &:focus-visible': {
+    background: 'var(--docs-nav-hover-background)',
+  },
+  '& svg': {
+    display: 'block',
+    width: '16px',
+    height: '16px',
+  },
+  ':root[data-docs-nav-collapsed] &': {
+    visibility: 'visible',
+    opacity: 1,
+    pointerEvents: 'auto',
+  },
+  '@media (width < 900px)': {
+    display: 'none',
+  },
+})
+
+const searchButtonCss = css({
+  position: 'fixed',
+  top: '64px',
+  left: '24px',
+  zIndex: 40,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  width: '240px',
+  height: '32px',
+  padding: '8px',
+  border: '1px solid var(--docs-nav-control-border)',
+  borderRadius: '8px',
+  color: 'var(--rmx-color-text-secondary)',
+  background: 'transparent',
+  fontSize: '14px',
+  opacity: 1,
+  cursor: 'pointer',
+  '&:hover, &:focus-visible': {
+    background: 'var(--docs-nav-hover-background)',
+  },
+  '& svg': {
+    display: 'block',
+    width: '16px',
+    height: '16px',
+  },
+  '@media (width < 900px)': {
+    '&, :root[data-docs-nav-collapsed] &': {
+      position: 'absolute',
+      top: '16px',
+      left: 'min(211px, calc(100% - 125px))',
+      justifyContent: 'center',
+      width: '32px',
+      padding: '8px',
+      border: 0,
+      visibility: 'visible',
+      opacity: 1,
+      transform: 'none',
+      pointerEvents: 'auto',
+    },
+  },
+})
+
+const expandedOnlySearchButtonCss = css({
+  '@media (width >= 900px)': {
+    ':root[data-docs-nav-collapsed] &': {
+      visibility: 'hidden',
+      opacity: 0,
+      transform: 'translateX(calc(-1 * var(--docs-sidebar-offset)))',
+      pointerEvents: 'none',
+    },
+  },
+})
+
+const collapsibleSearchButtonCss = css({
+  '@media (width >= 900px)': {
+    ':root[data-docs-nav-collapsed] &': {
+      top: '16px',
+      left: '121px',
+      justifyContent: 'center',
+      width: '32px',
+      padding: '8px',
+      border: 0,
+    },
+  },
+})
+
+const searchButtonLabelCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  '@media (width < 900px)': {
+    gap: 0,
+  },
+})
+
+const collapsibleSearchButtonLabelCss = css({
+  ':root[data-docs-nav-collapsed] &': {
+    gap: 0,
+  },
+})
+
+const searchButtonTextCss = css({
+  '@media (width < 900px)': {
+    display: 'none',
+  },
+})
+
+const searchButtonShortcutCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+  '@media (width < 900px)': {
+    display: 'none',
+  },
+})
+
+const collapsedSearchContentCss = css({
+  ':root[data-docs-nav-collapsed] &': {
+    display: 'none',
+  },
+})
+
+const searchShortcutKeyCss = css({
+  display: 'grid',
+  width: '16px',
+  height: '16px',
+  padding: 0,
+  placeItems: 'center',
+  border: '1px solid rgb(0 0 0 / 2%)',
+  borderRadius: '4px',
+  color: '#9ca3b0',
+  background: 'var(--rmx-surface-lvl0)',
+  fontFamily: 'var(--rmx-font-family-mono)',
+  fontSize: '12px',
+  lineHeight: 1,
 })
 
 const brandCss = css({

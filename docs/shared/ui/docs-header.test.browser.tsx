@@ -5,6 +5,28 @@ import { render } from 'remix/ui/test'
 import { DocsHeader } from './docs-header.tsx'
 
 describe('DocsHeader mobile menu', () => {
+  it('keeps search in the top header on mobile', (t) => {
+    assert.equal(window.matchMedia('(width < 900px)').matches, true)
+    let result = render(<DocsHeader brandLabel="Remix Docs" navigationLinks={[]} compactSearch />)
+    t.after(result.cleanup)
+
+    let searchButton = result.container.querySelector('#docs-search-button')
+    let compactSearchButton = result.container.querySelector('#docs-search-compact')
+    if (!(searchButton instanceof HTMLButtonElement)) throw new Error('Missing search button')
+    if (!(compactSearchButton instanceof HTMLButtonElement)) {
+      throw new Error('Missing compact search button')
+    }
+
+    let style = getComputedStyle(searchButton)
+    assert.equal(style.position, 'absolute')
+    assert.equal(style.top, '16px')
+    assert.equal(style.transform, 'none')
+    assert.equal(style.transitionDuration, '0s')
+    let compactStyle = getComputedStyle(compactSearchButton)
+    assert.equal(compactStyle.display, 'none')
+    assert.equal(compactStyle.transitionDuration, '0s')
+  })
+
   it('opens and closes without application JavaScript', async (t) => {
     let result = render(
       <DocsHeader

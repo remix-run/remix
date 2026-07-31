@@ -79,7 +79,7 @@ describe('DocsHeader', () => {
     assert.match(html, /id="docs-search-button"[^>]*aria-expanded="false"/)
     assert.match(html, /id="docs-search-button"[^>]*aria-keyshortcuts="Meta\+K Control\+K"/)
     assert.match(html, /href="\/icons\.svg#search"/)
-    assert.match(html, /<kbd>⌘<\/kbd><kbd>K<\/kbd>/)
+    assert.match(html, /<kbd[^>]*>⌘<\/kbd><kbd[^>]*>K<\/kbd>/)
   })
 
   it('renders the compact search trigger when enabled', async () => {

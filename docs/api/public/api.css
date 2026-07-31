@@ -202,10 +202,6 @@ html {
 }
 
 @media (width < 900px) {
-  :root {
-    --docs-header-brand-inline-start: 16px;
-  }
-
   .api-page-content > h1:first-child,
   .api-page-content > div > h1:first-child {
     margin-bottom: var(--rmx-space-xxl);
