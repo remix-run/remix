@@ -112,24 +112,9 @@ export function DocsHeader(handle: Handle<DocsHeaderProps>) {
             }
           >
             <Icon name="search" />
-            <span
-              mix={
-                handle.props.compactSearch
-                  ? searchButtonTextCss
-                  : [searchButtonTextCss, collapsedSearchContentCss]
-              }
-            >
-              Search
-            </span>
+            <span mix={searchButtonTextCss}>Search</span>
           </span>
-          <span
-            aria-hidden="true"
-            mix={
-              handle.props.compactSearch
-                ? searchButtonShortcutCss
-                : [searchButtonShortcutCss, collapsedSearchContentCss]
-            }
-          >
+          <span aria-hidden="true" mix={searchButtonShortcutCss}>
             <kbd mix={searchShortcutKeyCss}>⌘</kbd>
             <kbd mix={searchShortcutKeyCss}>K</kbd>
           </span>
@@ -273,6 +258,9 @@ const collapsibleSearchButtonLabelCss = css({
 })
 
 const searchButtonTextCss = css({
+  ':root[data-docs-nav-collapsed] &': {
+    display: 'none',
+  },
   '@media (width < 900px)': {
     display: 'none',
   },
@@ -282,13 +270,10 @@ const searchButtonShortcutCss = css({
   display: 'flex',
   alignItems: 'center',
   gap: '4px',
-  '@media (width < 900px)': {
+  ':root[data-docs-nav-collapsed] &': {
     display: 'none',
   },
-})
-
-const collapsedSearchContentCss = css({
-  ':root[data-docs-nav-collapsed] &': {
+  '@media (width < 900px)': {
     display: 'none',
   },
 })
