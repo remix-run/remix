@@ -4,7 +4,7 @@ import type { Handle } from 'remix/ui'
 import {
   clearSelectionIndicator,
   positionSelectionIndicator,
-} from './selection-indicator.browser.ts'
+} from 'remix-docs-shared/ui/selection-indicator.browser'
 
 type NavigationEvent = Event & {
   destination?: {

@@ -7,7 +7,7 @@ import { describe, it, type TestContext } from 'remix/test'
 import { renderMarkdownFile } from './markdown.ts'
 
 describe('renderMarkdownFile()', () => {
-  it('adds linked heading IDs and collects h2 headings for the table of contents', async (t) => {
+  it('adds linked heading IDs and collects h2 and h3 headings for the table of contents', async (t) => {
     let result = await renderMarkdown(
       t,
       '# API Name\n\n## Summary\n\n### Detail\n\n## Summary\n\n## `Code` and *emphasis*\n',
@@ -15,15 +15,23 @@ describe('renderMarkdownFile()', () => {
 
     assert.equal(result.html.includes('<h1 id="api-name">'), true)
     assert.equal(result.html.includes('class="docs-heading-link" href="#summary"'), true)
-    assert.equal(result.headings.length, 3)
+    assert.equal(result.headings.length, 4)
     assert.deepEqual(result.headings[0], {
       id: 'summary',
+      depth: 2,
       title: 'Summary',
       titleHtml: 'Summary',
     })
-    assert.equal(result.headings[1].id, 'summary-1')
-    assert.deepEqual(result.headings[2], {
+    assert.deepEqual(result.headings[1], {
+      id: 'detail',
+      depth: 3,
+      title: 'Detail',
+      titleHtml: 'Detail',
+    })
+    assert.equal(result.headings[2].id, 'summary-1')
+    assert.deepEqual(result.headings[3], {
       id: 'code-and-emphasis',
+      depth: 2,
       title: 'Code and emphasis',
       titleHtml: '<code>Code</code> and <em>emphasis</em>',
     })
@@ -35,6 +43,7 @@ describe('renderMarkdownFile()', () => {
     assert.deepEqual(result.headings, [
       {
         id: 'custom-id',
+        depth: 2,
         title: 'Custom title',
         titleHtml: 'Custom title',
       },

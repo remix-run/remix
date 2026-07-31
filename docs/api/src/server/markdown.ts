@@ -39,6 +39,7 @@ export type DocFile = ApiDocFile | PackageDocFile
 
 export type MarkdownHeading = {
   id: string
+  depth: 2 | 3
   title: string
   titleHtml: string
 }
@@ -154,8 +155,8 @@ function getHeadingExtension(headings: MarkdownHeading[]): MarkedExtension {
         let titleHtml = this.parser.parseInline(token.tokens)
         let escapedId = escapeHtml(id)
 
-        if (token.depth === 2) {
-          headings.push({ id, title, titleHtml })
+        if (token.depth === 2 || token.depth === 3) {
+          headings.push({ id, depth: token.depth, title, titleHtml })
         }
 
         return `<h${token.depth} id="${escapedId}"><a class="docs-heading-link" href="#${escapedId}">${titleHtml}</a></h${token.depth}>\n`

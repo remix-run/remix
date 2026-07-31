@@ -5,14 +5,14 @@ import { shouldLoadPagefind } from 'remix-docs-shared/search'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
+import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
+import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
 
 import { routes } from '../../routes.ts'
 import { Document } from '../../ui/document.tsx'
 import { ChapterNavigationContent } from './chapter-navigation.tsx'
 import { CodeBlockCopyButtons } from './code-block-copy.browser.tsx'
 import type { DocsNavigationItem } from './markdown-chapters.tsx'
-import { DocsTableOfContents } from './table-of-contents.tsx'
-import type { DocsHeadingLink } from './table-of-contents.tsx'
 
 const pagefindModulePath = path.resolve(
   import.meta.dirname,
