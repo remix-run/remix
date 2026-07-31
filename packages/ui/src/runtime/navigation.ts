@@ -34,6 +34,7 @@ export async function navigate(href: string, options?: NavigationOptions) {
     resetScroll: options?.resetScroll !== false,
     $rmx: true,
   } satisfies NavigationState
+  if (!window.navigation) { window.location.assign(href); return }
   let transition = window.navigation.navigate(href, { state, history: options?.history })
   await transition.finished
 }
@@ -57,6 +58,7 @@ export function startNavigationListenerImpl(
   },
 ) {
   let navigation = window.navigation
+  if (!navigation) return
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, resetScroll: true, $rmx: true },
@@ -128,6 +130,7 @@ function getTraverseNavigationState(event: NavigateEvent): NavigationState | und
   // Safari returns `null` for destination.getState(), even though its in the
   // navigation.entries(), so we do its job for it and look it up.
   let navigation = window.navigation
+  if (!navigation) return undefined
   let matchingEntry = navigation.entries().find((entry) => entry.key === event.destination.key)
   if (matchingEntry) {
     let state = matchingEntry.getState()
