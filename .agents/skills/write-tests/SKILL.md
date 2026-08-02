@@ -40,7 +40,7 @@ import { describe, it } from 'node:test'
 Remix test package script:
 
 ```json
-"test": "remix-test"
+"test": "remix test"
 ```
 
 Remix test imports:

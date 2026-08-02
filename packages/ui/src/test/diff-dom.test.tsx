@@ -8,6 +8,7 @@ function diffDom(container: HTMLElement, next: string) {
   template.innerHTML = next
 
   diffNodes(Array.from(container.childNodes), Array.from(template.content.childNodes), {
+    frameInstances: new WeakMap(),
     pendingClientEntries: new Map(),
   } as any)
 }
@@ -114,6 +115,25 @@ describe('diffNodes', () => {
       let start = container.firstChild
       invariant(start && start.nodeType === Node.COMMENT_NODE)
       expect((start as Comment).data.trim()).toBe('rmx:h:new')
+    })
+
+    it('does not match a shifted frame start with the current frame end', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<div><i></i><!-- rmx:f:f00000000 --><b></b><!-- /rmx:f --></div>'
+
+      let root = container.firstElementChild
+      invariant(root)
+      let currentFrameEnd = root.childNodes.item(3)
+      invariant(currentFrameEnd instanceof Comment)
+
+      let next = '<div><i></i><u></u><b></b><!-- rmx:f:f11111111 --><b></b><!-- /rmx:f --></div>'
+
+      // The inserted siblings shift the incoming frame start to the current frame end's index.
+      diffDom(container, next)
+
+      expect(root.childNodes.item(3)).not.toBe(currentFrameEnd)
+      expect(currentFrameEnd.parentNode).toBe(root)
+      expect(root.outerHTML).toBe(next)
     })
   })
 

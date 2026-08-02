@@ -1,0 +1,1 @@
+BREAKING CHANGE: Run tests through `remix test` instead of the removed `remix-test` executable. The `remix/test/cli` `runRemixTest()` API now accepts typed test-runner options instead of raw command-line arguments (see #11623).

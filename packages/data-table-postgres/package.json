@@ -56,9 +56,9 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test",
-    "test:bun": "bun x --bun remix-test",
-    "test:coverage": "remix-test --coverage",
+    "test": "remix test",
+    "test:bun": "bun x --bun remix test",
+    "test:coverage": "remix test --coverage",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

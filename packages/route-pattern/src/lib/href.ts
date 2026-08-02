@@ -12,19 +12,28 @@ export type CreateHrefArgs<source extends string> =
       : _CreateHrefArgs<params>
     : never
 
-// prettier-ignore
+// oxfmt-ignore
 type _CreateHrefArgs<params> =
   {} extends params ?
-    [params?: Simplify<params & Record<string, unknown>> | null | undefined, searchParams?: SearchParams]
+    [params?: Simplify<params & Record<string, unknown>> | null | undefined, options?: CreateHrefOptions]
   :
-  [params: Simplify<params & Record<string, unknown>>, searchParams?: SearchParams]
+  [params: Simplify<params & Record<string, unknown>>, options?: CreateHrefOptions]
 
-type SearchParams = Record<
-  string,
-  string | number | null | undefined | Array<string | number | null | undefined>
->
+/** Search parameters accepted by {@link createHref}. */
+export type CreateHrefSearchParams =
+  | URLSearchParams
+  | Record<string, string | number | null | undefined | Array<string | number | null | undefined>>
 
-// prettier-ignore
+/** Options for href generation. */
+export interface CreateHrefOptions {
+  /** Absolute URL used to generate a path-relative href for same-origin targets. */
+  baseURL?: string | URL
+
+  /** Search parameters to include before applying constraints from the route pattern. */
+  searchParams?: CreateHrefSearchParams
+}
+
+// oxfmt-ignore
 type ParseHrefParams<source extends string> =
   Split<source> extends infer split ?
     split extends never ? never :
@@ -39,7 +48,7 @@ type ParseHrefParams<source extends string> =
   :
   never
 
-// prettier-ignore
+// oxfmt-ignore
 type Optionalize<record extends Record<string, string | undefined>> =
   & { [key in keyof record as undefined extends record[key] ? never : key]: string | number }
   & { [key in keyof record as undefined extends record[key] ? key : never]?: string | number | null | undefined }
@@ -48,10 +57,11 @@ type Optionalize<record extends Record<string, string | undefined>> =
  * Generate an href from a route pattern and the supplied params.
  *
  * @param pattern The parsed route pattern.
- * @param args Path params and optional search params.
+ * @param args Path params and href options.
  * @returns The generated href string.
  * @throws {CreateHrefError} When the pattern requires a hostname, contains a nameless wildcard,
  * is missing required params, or receives invalid params.
+ * @throws {TypeError} When `baseURL` is not absolute or cannot resolve a same-origin target.
  */
 export function createHref<source extends string>(
   pattern: source | RoutePattern<source>,
@@ -59,12 +69,12 @@ export function createHref<source extends string>(
 ): string {
   pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
   let patternParts = pattern._parts
-  let [params, searchParams] = args
-  searchParams ??= {}
+  let [params, options] = args
 
   let hasOrigin =
     patternParts.protocol !== null || patternParts.hostname !== null || patternParts.port !== null
   let result = ''
+  let targetOrigin: string | undefined
 
   if (hasOrigin) {
     let protocol =
@@ -78,16 +88,66 @@ export function createHref<source extends string>(
     let hostname = hrefPart(pattern, patternParts.hostname, params ?? {})
 
     let port = patternParts.port === null ? '' : `:${patternParts.port}`
-    result += `${protocol}://${hostname}${port}`
+    targetOrigin = `${protocol}://${hostname}${port}`
+    result += targetOrigin
   }
 
   let pathname = hrefPart(pattern, patternParts.pathname, params ?? {})
-  result += '/' + pathname
+  pathname = '/' + pathname
+  result += pathname
 
-  let search = hrefSearch(patternParts.search, searchParams)
-  if (search) result += `?${search}`
+  let search = hrefSearch(patternParts.search, options?.searchParams)
+  let searchSuffix = search === undefined ? '' : `?${search}`
+  result += searchSuffix
+
+  if (options?.baseURL !== undefined) {
+    let baseURL = new URL(options.baseURL)
+    let baseOrigin = baseURL.origin
+    let targetURLOrigin = targetOrigin === undefined ? baseOrigin : new URL(targetOrigin).origin
+    if (targetURLOrigin === baseOrigin) {
+      // Absolute URLs such as `mailto:` cannot resolve relative references.
+      new URL('/', baseURL)
+      return relativeHref(pathname, searchSuffix, baseURL)
+    }
+  }
 
   return result
+}
+
+function relativeHref(pathname: string, search: string, baseURL: URL): string {
+  let baseSegments = pathnameSegments(baseURL.pathname)
+  if (!baseURL.pathname.endsWith('/')) baseSegments.pop()
+
+  let targetSegments = pathnameSegments(pathname)
+  let targetIsDirectory = pathname.endsWith('/')
+  let targetFile = targetIsDirectory ? undefined : targetSegments.pop()
+
+  let common = 0
+  while (
+    common < baseSegments.length &&
+    common < targetSegments.length &&
+    baseSegments[common] === targetSegments[common]
+  ) {
+    common += 1
+  }
+
+  let relativeSegments = [
+    ...Array.from({ length: baseSegments.length - common }, () => '..'),
+    ...targetSegments.slice(common),
+  ]
+  if (targetFile !== undefined) relativeSegments.push(targetFile)
+
+  let result = relativeSegments.join('/')
+  if (targetIsDirectory) result = result === '' ? './' : `${result}/`
+  if (result === '') result = './'
+  if (/^[\\/]/.test(result) || /^[^/]*:/.test(result)) result = `./${result}`
+  return result + search
+}
+
+function pathnameSegments(pathname: string): Array<string> {
+  let segments = pathname.slice(1).split('/')
+  if (pathname.endsWith('/')) segments.pop()
+  return segments
 }
 
 function hrefPart(
@@ -144,7 +204,7 @@ function hrefPart(
         }
         continue
       }
-      // prettier-ignore
+      // oxfmt-ignore
       stack[stack.length - 1].href +=
         part.type === 'pathname' && token.type === ':' ? encodePathnameVariableParam(pattern, token.name, value) :
         part.type === 'pathname' && token.type === '*' ? encodePathnameWildcard(value) :
@@ -170,21 +230,22 @@ function hrefPart(
 
 function hrefSearch(
   constraints: RoutePatternParts['search'],
-  searchParams: SearchParams,
+  searchParams?: CreateHrefSearchParams,
 ): string | undefined {
-  if (constraints.size === 0 && Object.keys(searchParams).length === 0) {
-    return undefined
-  }
+  let urlSearchParams =
+    searchParams instanceof URLSearchParams
+      ? new URLSearchParams(searchParams)
+      : new URLSearchParams()
 
-  let urlSearchParams = new URLSearchParams()
-
-  for (let [key, value] of Object.entries(searchParams)) {
-    if (Array.isArray(value)) {
-      for (let v of value) {
-        if (v != null) urlSearchParams.append(key, String(v))
+  if (searchParams !== undefined && !(searchParams instanceof URLSearchParams)) {
+    for (let [key, value] of Object.entries(searchParams)) {
+      if (Array.isArray(value)) {
+        for (let v of value) {
+          if (v != null) urlSearchParams.append(key, String(v))
+        }
+      } else if (value != null) {
+        urlSearchParams.append(key, String(value))
       }
-    } else if (value != null) {
-      urlSearchParams.append(key, String(value))
     }
   }
 
@@ -281,11 +342,11 @@ function encodePathnameVariableParam(pattern: RoutePattern, paramName: string, v
       value: serialized,
     })
   }
-  return encodePathnameSegment(serialized)
+  return encodePathnameVariableSegment(serialized)
 }
 
 export function encodePathnameVariable(value: unknown) {
-  return encodePathnameSegment(String(value))
+  return encodePathnameVariableSegment(String(value))
 }
 
 export function encodePathnameWildcard(value: unknown) {
@@ -294,6 +355,10 @@ export function encodePathnameWildcard(value: unknown) {
 
 function encodePathnameSegment(value: string): string {
   return encodeURIComponent(value)
+}
+
+function encodePathnameVariableSegment(value: string): string {
+  return encodePathnameSegment(value).replaceAll('.', '%2E')
 }
 
 /**

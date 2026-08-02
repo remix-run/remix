@@ -1,0 +1,17 @@
+{
+  "name": "api-prerender-bench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench:concurrency": "node src/crawl-concurrency.ts",
+    "bench:throughput": "node src/crawl-throughput.ts",
+    "bench:parse-html": "vitest bench --run"
+  },
+  "dependencies": {
+    "remix": "workspace:^",
+    "node-html-parser": "^7.1.0"
+  },
+  "devDependencies": {
+    "vitest": "4.0.15"
+  }
+}

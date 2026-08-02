@@ -1,10 +1,9 @@
 import { clientEntry, Frame, css, on, ref, type Handle } from 'remix/ui'
 import { routes } from '../routes.ts'
 
-const moduleUrl = '/assets/state-search-page.js#StateSearchPage'
 export const StateSearchPage = clientEntry(
-  moduleUrl,
-  (handle: Handle<{ initialQuery?: string }>) => {
+  import.meta.url,
+  function StateSearchPage(handle: Handle<{ initialQuery?: string }>) {
     let query = handle.props.initialQuery || ''
     let input: HTMLInputElement
 
@@ -65,7 +64,9 @@ export const StateSearchPage = clientEntry(
             })}
           >
             <Frame
-              src={routes.frames.stateSearchResults.href(undefined, { query })}
+              src={routes.frames.stateSearchResults.href(undefined, {
+                searchParams: { query },
+              })}
               fallback={<div mix={css({ color: '#9aa8e8' })}>Searching states…</div>}
             />
           </div>

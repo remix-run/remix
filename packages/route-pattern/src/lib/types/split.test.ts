@@ -1,7 +1,7 @@
 import type { Assert, IsEqual } from './utils.ts'
 import type { Split } from './split.ts'
 
-// prettier-ignore
+// oxfmt-ignore
 export type Tests = [
   // empty string
   Assert<IsEqual<

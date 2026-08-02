@@ -3,14 +3,16 @@ import { addEventListeners, clientEntry, css, type Handle } from 'remix/ui'
 import { routes } from '../routes.ts'
 
 export const MessageStream = clientEntry(
-  `${routes.assets.href({ path: 'message-stream.js' })}#MessageStream`,
+  import.meta.url,
   function MessageStream(handle: Handle<{ limit: number | null }>) {
     let { limit } = handle.props
     let messages: Array<{ count: number; message: string }> = []
     let connected = false
 
     handle.queueTask(() => {
-      let eventSource = new EventSource(routes.messages.href(null, limit ? { limit } : {}))
+      let eventSource = new EventSource(
+        routes.messages.href(null, limit ? { searchParams: { limit } } : undefined),
+      )
 
       addEventListeners(eventSource, handle.signal, {
         open: () => {

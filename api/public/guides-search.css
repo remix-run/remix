@@ -1,0 +1,132 @@
+/* Pagefind owns the search behavior; these overrides align its modal with the guide shell. */
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal {
+  --pf-icon-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M11.285 11.36L13.6004 13.6M12.8537 7.62669C12.8537 10.5133 10.5137 12.8534 7.62706 12.8534C4.74045 12.8534 2.40039 10.5133 2.40039 7.62669C2.40039 4.74008 4.74045 2.40002 7.62706 2.40002C10.5137 2.40002 12.8537 4.74008 12.8537 7.62669Z' stroke='black' stroke-linecap='round'/%3E%3C/svg%3E");
+  --pf-outline-focus: var(--rmx-color-focus-ring);
+  --pf-outline-width: 1px;
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal dialog.pf-modal {
+  border: 1px solid var(--rmx-color-border-subtle);
+  border-radius: var(--rmx-radius-xl);
+  background: var(--rmx-surface-lvl0);
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal dialog.pf-modal::backdrop {
+  backdrop-filter: blur(2px);
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-modal-header {
+  gap: var(--rmx-space-md);
+  padding: var(--rmx-space-md) var(--rmx-space-lg);
+  background: var(--rmx-surface-lvl1);
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-modal-header .pf-input {
+  color: var(--rmx-color-text-primary);
+  font-weight: var(--rmx-font-weight-medium);
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-modal-body {
+  padding: var(--rmx-space-md) var(--rmx-space-lg) var(--rmx-space-lg);
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-modal-body .pf-summary {
+  margin: 0 var(--rmx-space-xs) var(--rmx-space-sm);
+  font-family: var(--rmx-font-family-mono);
+  font-weight: var(--rmx-font-weight-medium);
+  letter-spacing: var(--rmx-letter-spacing-meta);
+  text-transform: uppercase;
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-result-card {
+  padding: var(--rmx-space-md) var(--rmx-space-lg);
+  border-color: transparent;
+  border-radius: var(--rmx-radius-lg);
+  background: var(--rmx-surface-lvl2);
+  transition:
+    color 150ms ease-in-out,
+    background-color 150ms ease-in-out;
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-result-card:hover {
+  border-color: transparent;
+  background: var(--docs-chapter-card-hover-background);
+  box-shadow: none;
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-result-card:has([data-pf-selected]) {
+  border-color: transparent;
+  background: var(--docs-nav-selected-background);
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-heading-chip {
+  border-color: transparent;
+  border-radius: var(--rmx-radius-md);
+  background: var(--rmx-surface-lvl1);
+  transition:
+    color 150ms ease-in-out,
+    background-color 150ms ease-in-out;
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-heading-chip:hover {
+  border-color: transparent;
+  background: var(--docs-nav-hover-background);
+  box-shadow: none;
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-heading-chip:has([data-pf-selected]) {
+  border-color: transparent;
+  background: var(--docs-nav-selected-background);
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-heading-link:hover {
+  color: var(--docs-nav-link);
+  text-decoration: none;
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-result-title {
+  font-weight: var(--rmx-font-weight-semibold);
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-result-link {
+  color: var(--docs-nav-link);
+  text-decoration: none;
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-result-link:hover {
+  color: var(--docs-nav-link-hover);
+  text-decoration: none;
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-modal-footer {
+  padding: var(--rmx-space-sm) var(--rmx-space-lg);
+  border-color: var(--rmx-color-border-subtle);
+  background: var(--rmx-surface-lvl2);
+}
+
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-modal-footer-key,
+:is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-keyboard-key {
+  min-width: 16px;
+  height: 16px;
+  padding-inline: 3px;
+  border: 1px solid rgb(0 0 0 / 2%);
+  border-radius: var(--rmx-radius-sm);
+  color: #9ca3b0;
+  background: var(--rmx-surface-lvl0);
+  box-shadow: none;
+  font-family: var(--rmx-font-family-mono);
+  font-size: 12px;
+  font-weight: var(--rmx-font-weight-normal);
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  :is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal dialog.pf-modal {
+    border: 0;
+    border-radius: 0;
+  }
+
+  :is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-modal-header {
+    padding-top: max(var(--rmx-space-lg), env(safe-area-inset-top));
+  }
+}

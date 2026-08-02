@@ -1,7 +1,7 @@
 import { clientEntry, css, on, type Handle } from 'remix/ui'
 
 export const Counter = clientEntry(
-  '/assets/counter.js#Counter',
+  import.meta.url,
   function Counter(handle: Handle<{ initialCount: number; label: string }>) {
     let count = handle.props.initialCount
 

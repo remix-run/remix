@@ -1,4 +1,6 @@
 import type { RemixNode } from '../jsx.ts'
+import { invariant } from '../invariant.ts'
+import { isRemixElement } from './vnode.ts'
 
 export type EmptyChild = boolean | null | undefined
 export type PrimitiveChild = string | number | bigint
@@ -13,13 +15,33 @@ export function isPrimitiveChild(value: RemixNode): value is PrimitiveChild {
 }
 
 export function normalizeChildren(children: readonly RemixNode[]): RemixNode[] {
-  for (let child of children) {
-    if (Array.isArray(child)) {
+  for (let i = 0; i < children.length; i++) {
+    if (Array.isArray(children[i])) {
       return (children as unknown[]).flat(Infinity) as RemixNode[]
     }
   }
 
   return children as RemixNode[]
+}
+
+export function assertRemixNodes(values: readonly unknown[]): asserts values is RemixNode[] {
+  for (let value of values) {
+    invariant(isRemixNode(value), 'Invalid child node')
+  }
+}
+
+export function isRemixNode(value: unknown): value is RemixNode {
+  if (value == null) return true
+  let type = typeof value
+  if (type === 'string' || type === 'number' || type === 'bigint' || type === 'boolean') {
+    return true
+  }
+  if (isRemixElement(value)) return true
+  if (!Array.isArray(value)) return false
+  for (let child of value) {
+    if (!isRemixNode(child)) return false
+  }
+  return true
 }
 
 export function packChildren(children: readonly RemixNode[]): RemixNode | undefined {

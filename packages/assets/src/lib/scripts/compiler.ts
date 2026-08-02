@@ -262,7 +262,8 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
     if (!resolvedOptions.isAllowed(resolvedModule.identityPath)) {
       throw createAssetServerCompilationError(
-        `File is not allowed: ${resolvedModule.identityPath}`,
+        `File "${resolvedModule.identityPath}" is not allowed by the asset server access configuration. ` +
+          `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles rule.`,
         {
           code: 'FILE_NOT_ALLOWED',
         },

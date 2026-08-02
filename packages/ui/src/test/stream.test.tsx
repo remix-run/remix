@@ -834,7 +834,12 @@ describe('stream', () => {
       expect(spanMatches?.[0]).not.toBe(spanMatches?.[2])
     })
 
-    it('deduplicates selector-addressed styles across streamed frame templates', async () => {
+    it('repeats selector-addressed styles in each frame template that uses them', async () => {
+      // Each frame owns its style rules independently on the client (per-frame
+      // refcounted adoption), so every frame template must carry the full set
+      // of style tags its content references. Deduping across templates would
+      // hand rule ownership to one frame, and the rule would vanish for the
+      // other frame when the owner reloads away from it.
       async function resolveFrame(src: string): Promise<string> {
         if (src === '/outer') {
           return await drain(
@@ -857,7 +862,10 @@ describe('stream', () => {
       let html = await drain(renderToStream(<Frame src="/outer" />, { resolveFrame }))
 
       expect(html).toContain('<template')
-      expect(html.match(/data-rmx="[^"]+"/g) ?? []).toHaveLength(1)
+      // One tag in the outer frame's template, one in the inner frame's.
+      let tags = html.match(/data-rmx="[^"]+"/g) ?? []
+      expect(tags).toHaveLength(2)
+      expect(new Set(tags).size).toBe(1)
     })
 
     it('places styles in head when html root exists', async () => {
