@@ -31,6 +31,7 @@ const outputDir = path.resolve(guidesDir, cliArgs.dir)
 const browserHrefs = await discoverBrowserEntries()
 const paths = [routes.docs.index.href(), ...browserHrefs]
 
+await fs.rm(outputDir, { recursive: true, force: true })
 await prerender(router, {
   outputDir,
   publicDirs: [sharedAssetsDir, publicDir],

@@ -7,9 +7,6 @@ import * as fs from 'node:fs'
  * before the index exists on disk. In development, only load when the
  * generated module is present (typically after a prerender).
  */
-export function shouldLoadPagefind(
-  modulePath: string,
-  nodeEnv = process.env.NODE_ENV,
-): boolean {
+export function shouldLoadPagefind(modulePath: string, nodeEnv = process.env.NODE_ENV): boolean {
   return nodeEnv !== 'development' || fs.existsSync(modulePath)
 }

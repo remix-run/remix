@@ -8,21 +8,18 @@ Remaining opportunities after moving the API docs, guides, and shared docs infra
 
 ## Recommended order
 
-1. Confirm the guides deployment model, then evaluate a shared server bootstrap.
+1. Update the guides deployment repository after this restructure lands.
 2. Decide whether the sites should share the remaining product features.
 3. Extract small markdown compatibility helpers.
 4. Re-evaluate a shared document component after the smaller extractions.
 
-## Confirm guides deployment, then evaluate a shared server bootstrap
+## Update the guides deployment repository
 
-First determine where guides.remix.run deploys from and whether its Node server runs in
-production. This affects whether server middleware differences matter and where Pagefind is pinned.
-
-The local servers still duplicate `http.createServer`, `createRequestListener`, error handling,
-port parsing, and graceful shutdown. If sharing remains useful, add a helper such as
-`startDocsServer(router, { assetServer, devRefresh })` under `docs/shared/`. Guides needs its
-refresh event stream in development; decide whether API should adopt that flow instead of relying
-on `node --watch` restarts and manual browser reloads.
+[`remix-run/remix-guides-docs`](https://github.com/remix-run/remix-guides-docs) prerenders the
+guides and deploys the static output to GitHub Pages; the Node server does not run in production.
+Its workflow still uploads `remix/guides/build/site`, and its README still links to `guides/` in
+this repository. Update both paths to `docs/guides/` after this restructure lands. Pagefind is
+installed from the catalog in this repository and runs during prerendering.
 
 ## Decide feature parity
 

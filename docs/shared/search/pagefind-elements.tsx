@@ -19,11 +19,7 @@ export function PagefindElements(handle: Handle<PagefindElementsProps>) {
         base-url={handle.props.baseUrl}
         bundle-path={handle.props.bundlePath}
       ></pagefind-config>
-      <pagefind-modal
-        data-key="pagefind-modal"
-        rmx-preserve-dom
-        reset-on-close
-      ></pagefind-modal>
+      <pagefind-modal data-key="pagefind-modal" rmx-preserve-dom reset-on-close></pagefind-modal>
     </>
   )
 }

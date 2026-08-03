@@ -7,6 +7,7 @@
 - `assets/` — static files required by the shared UI.
 - `prerender/` — crawling and static-output helpers.
 - `search/` — Pagefind elements and browser behavior.
+- `server.ts` — local Node server startup, request adaptation, errors, and graceful shutdown.
 - `styles/` — shared tokens and docs-shell stylesheets.
 - `ui/` — shared server-rendered components and browser behaviors.
 

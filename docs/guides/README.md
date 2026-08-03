@@ -150,6 +150,8 @@ The dev server listens on http://localhost:44100 by default. Set `PORT` to overr
 
 `pnpm --filter remix-guides run prerender` renders the docs index, every chapter, referenced frame examples, browser modules, styles, and public files into `docs/guides/build/site/`, then builds the Pagefind search index. The output uses directory `index.html` files for clean URLs and can be served directly by GitHub Pages or another static host.
 
+Production deployment is owned by the [`remix-run/remix-guides-docs`](https://github.com/remix-run/remix-guides-docs) GitHub Pages workflow. It checks out this repository, runs the prerender command, and uploads the static output; `server.ts` and its middleware run locally only. The Pagefind version is pinned in this repository's pnpm catalog.
+
 The development server serves an existing search index from `docs/guides/build/site/assets/pagefind/`. Run prerender once to enable search during development, and rerun it when the guide content changes to refresh the index.
 
 Pass `--dir` to write into another directory:
