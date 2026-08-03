@@ -12,9 +12,6 @@ catalogs:
     '@types/node':
       specifier: ^24.6.0
       version: 24.10.4
-    '@typescript/native-preview':
-      specifier: 7.0.0-dev.20251125.1
-      version: 7.0.0-dev.20251125.1
     github-slugger:
       specifier: 2.0.0
       version: 2.0.0
@@ -31,11 +28,12 @@ catalogs:
       specifier: 4.4.1
       version: 4.4.1
     typescript:
-      specifier: ^5.9.3
-      version: 5.9.3
-    typescript-language-server:
-      specifier: ^5.1.3
-      version: 5.1.3
+      specifier: ^7.0.2
+      version: 7.0.2
+  legacy-typescript:
+    typescript:
+      specifier: ^6.0.3
+      version: 6.0.3
 
 importers:
 
@@ -44,9 +42,6 @@ importers:
       '@oxlint/plugins':
         specifier: ^1.57.0
         version: 1.57.0
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       oxc-parser:
         specifier: ^0.121.0
         version: 0.121.0
@@ -64,10 +59,7 @@ importers:
         version: link:packages/remix
       typescript:
         specifier: 'catalog:'
-        version: 5.9.3
-      typescript-language-server:
-        specifier: 'catalog:'
-        version: 5.1.3
+        version: 7.0.2
 
   demos/assets:
     dependencies:
@@ -81,9 +73,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   demos/bookstore:
     dependencies:
@@ -97,12 +89,12 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       playwright:
         specifier: 'catalog:'
         version: 1.60.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   demos/frame-navigation:
     dependencies:
@@ -116,9 +108,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   demos/frames:
     dependencies:
@@ -132,9 +124,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   demos/social-auth:
     dependencies:
@@ -145,9 +137,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   demos/sse:
     dependencies:
@@ -161,9 +153,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   demos/timeboxer:
     dependencies:
@@ -174,9 +166,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   demos/unpkg:
     dependencies:
@@ -193,9 +185,9 @@ importers:
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   docs/api:
     dependencies:
@@ -232,10 +224,10 @@ importers:
         version: 4.4.1
       typedoc:
         specifier: 0.28.19
-        version: 0.28.19(typescript@5.9.3)
+        version: 0.28.19(typescript@6.0.3)
       typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
+        specifier: catalog:legacy-typescript
+        version: 6.0.3
 
   docs/guides:
     dependencies:
@@ -265,8 +257,8 @@ importers:
         specifier: 'catalog:'
         version: 1.5.2
       typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
+        specifier: catalog:legacy-typescript
+        version: 6.0.3
 
   docs/shared:
     dependencies:
@@ -321,7 +313,7 @@ importers:
         version: 24.10.4
       typescript:
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 7.0.2
 
   docs/shared/prerender/bench:
     dependencies:
@@ -341,9 +333,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/assets:
     dependencies:
@@ -408,9 +400,9 @@ importers:
       '@types/picomatch':
         specifier: ^4.0.3
         version: 4.0.3
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/assets/bench:
     dependencies:
@@ -429,7 +421,7 @@ importers:
         version: 24.10.4
       typescript:
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 7.0.2
 
   packages/async-context-middleware:
     dependencies:
@@ -446,9 +438,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/auth:
     dependencies:
@@ -483,9 +475,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/auth-middleware:
     dependencies:
@@ -511,9 +503,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/cli:
     dependencies:
@@ -545,9 +537,9 @@ importers:
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/cli/test/fixtures/doctor-camel-case-keys:
     dependencies:
@@ -662,9 +654,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/cookie:
     dependencies:
@@ -681,9 +673,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/cop-middleware:
     dependencies:
@@ -700,9 +692,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/cors-middleware:
     dependencies:
@@ -722,9 +714,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/csrf-middleware:
     dependencies:
@@ -753,9 +745,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/data-schema:
     dependencies:
@@ -772,9 +764,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/data-table:
     devDependencies:
@@ -787,9 +779,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/data-table-mysql:
     dependencies:
@@ -806,12 +798,12 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       mysql2:
         specifier: ^3.15.3
         version: 3.16.3
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   packages/data-table-postgres:
     dependencies:
@@ -831,12 +823,12 @@ importers:
       '@types/pg':
         specifier: ^8.15.6
         version: 8.16.0
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       pg:
         specifier: ^8.16.3
         version: 8.18.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   packages/data-table-sqlite:
     dependencies:
@@ -853,9 +845,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/fetch-proxy:
     dependencies:
@@ -875,9 +867,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
       undici:
         specifier: ^7.24.8
         version: 7.24.8
@@ -897,9 +889,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/fetch-router/demos/bun:
     dependencies:
@@ -934,9 +926,9 @@ importers:
       '@types/bun':
         specifier: ^1.1.8
         version: 1.1.8
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/fetch-router/demos/cf-workers:
     dependencies:
@@ -971,9 +963,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
       wrangler:
         specifier: ^4.90.1
         version: 4.90.1(@cloudflare/workers-types@4.20260511.1)
@@ -1014,9 +1006,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/file-storage:
     dependencies:
@@ -1039,9 +1031,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/file-storage-s3:
     dependencies:
@@ -1061,9 +1053,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/form-data-middleware:
     dependencies:
@@ -1083,9 +1075,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/form-data-parser:
     dependencies:
@@ -1105,9 +1097,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/form-data-parser/demos/node:
     dependencies:
@@ -1127,9 +1119,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/fs:
     dependencies:
@@ -1149,9 +1141,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/headers:
     devDependencies:
@@ -1164,9 +1156,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/html-template:
     devDependencies:
@@ -1179,9 +1171,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/lazy-file:
     dependencies:
@@ -1198,9 +1190,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/logger-middleware:
     dependencies:
@@ -1220,9 +1212,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/method-override-middleware:
     dependencies:
@@ -1242,9 +1234,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/mime:
     devDependencies:
@@ -1257,12 +1249,12 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       mime-db:
         specifier: ^1.53.0
         version: 1.54.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   packages/multipart-parser:
     dependencies:
@@ -1279,9 +1271,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/multipart-parser/bench:
     dependencies:
@@ -1320,9 +1312,9 @@ importers:
       '@types/tmp':
         specifier: ^0.2.6
         version: 0.2.6
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/multipart-parser/demos/cf-workers:
     dependencies:
@@ -1336,9 +1328,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
       wrangler:
         specifier: ^4.90.1
         version: 4.90.1(@cloudflare/workers-types@4.20260511.1)
@@ -1371,18 +1363,18 @@ importers:
       '@types/tmp':
         specifier: ^0.2.6
         version: 0.2.6
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/node-fetch-server:
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/node-fetch-server/bench:
     dependencies:
@@ -1406,9 +1398,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/node-tsx:
     dependencies:
@@ -1422,9 +1414,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/remix:
     dependencies:
@@ -1581,7 +1573,7 @@ importers:
         version: 24.10.4
       typescript:
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 7.0.2
 
   packages/render-middleware:
     dependencies:
@@ -1598,9 +1590,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/response:
     dependencies:
@@ -1626,9 +1618,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/route-pattern:
     devDependencies:
@@ -1641,12 +1633,12 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       dedent:
         specifier: ^1.7.1
         version: 1.7.1
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   packages/route-pattern/bench:
     dependencies:
@@ -1662,7 +1654,10 @@ importers:
     devDependencies:
       '@ark/attest':
         specifier: ^0.56.0
-        version: 0.56.0(typescript@5.9.3)
+        version: 0.56.0(typescript@6.0.3)
+      typescript:
+        specifier: catalog:legacy-typescript
+        version: 6.0.3
       vite:
         specifier: 7.3.3
         version: 7.3.3(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
@@ -1681,9 +1676,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/session-middleware:
     dependencies:
@@ -1709,9 +1704,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/session-storage-memcache:
     dependencies:
@@ -1728,9 +1723,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/session-storage-redis:
     dependencies:
@@ -1747,12 +1742,12 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       redis:
         specifier: ^5.10.0
         version: 5.11.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   packages/static-middleware:
     dependencies:
@@ -1787,9 +1782,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/static-middleware/demos/list-files:
     dependencies:
@@ -1806,9 +1801,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/tar-parser:
     devDependencies:
@@ -1824,9 +1819,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/tar-parser/bench:
     dependencies:
@@ -1861,9 +1856,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/test:
     dependencies:
@@ -1925,9 +1920,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       clsx:
         specifier: 2.1.1
         version: 2.1.1
@@ -1937,6 +1929,9 @@ importers:
       playwright:
         specifier: 'catalog:'
         version: 1.60.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   packages/ui:
     dependencies:
@@ -1953,15 +1948,12 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       playwright:
         specifier: 'catalog:'
         version: 1.60.0
       typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
+        specifier: 'catalog:'
+        version: 7.0.2
 
   packages/ui/bench:
     dependencies:
@@ -2065,15 +2057,15 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       esbuild:
         specifier: ^0.25.10
         version: 0.25.12
       node-html-parser:
         specifier: ^7.0.2
         version: 7.1.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   scripts:
     dependencies:
@@ -2092,12 +2084,12 @@ importers:
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       semver:
         specifier: ^7.6.3
         version: 7.6.3
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
@@ -2113,7 +2105,7 @@ importers:
         version: 24.10.4
       typescript:
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 7.0.2
 
 packages:
 
@@ -4329,44 +4321,125 @@ packages:
     resolution: {integrity: sha512-RnlSOPh14QbopGCApgkSx5UBgGda5MX1cHqp2fsqfiDyCwGL/m1jaeB9fzu7didVS81LQqGZZuxFBcg8YU8EVw==}
     hasBin: true
 
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20251125.1':
-    resolution: {integrity: sha512-8fkL3vtHtrKoj8LGrsEfvZDNLd47ScCVOVyC+vn4t3SNGo6eLvHqaBUd5WlBEVLHAO6o71BDS4hHDNGiMc0hEA==}
+  '@typescript/typescript-aix-ppc64@7.0.2':
+    resolution: {integrity: sha512-MTKKkWB7p/0E9xi1d1tHtZ5PiLkGEMIq88pK2CubZjOsLtYTLqhgIgi6zepFa+9GHZ6h05NMCkQxGKiPXMxXtQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [ppc64]
+    os: [aix]
+
+  '@typescript/typescript-darwin-arm64@7.0.2':
+    resolution: {integrity: sha512-gowzar9MwS/aRWp6f3a4KUqzRjAZjOsmGNCM6LcTgXum+dBfgsBVMN+AgvOCCbguXyick6LJhpBszxMebJ8syA==}
+    engines: {node: '>=16.20.0'}
     cpu: [arm64]
     os: [darwin]
 
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20251125.1':
-    resolution: {integrity: sha512-Odq4ZtNOzlpTbjRpdP5AaCfVRVx0L05F7cI3UpPQgXjxJejKin14z6r+k2qlo77pwnpaviM2fou+hbNX5cj1oQ==}
+  '@typescript/typescript-darwin-x64@7.0.2':
+    resolution: {integrity: sha512-SZ9xZInqApNlNGc9s0W1VSsktYSOe9cFqNOIqmN1Gs8SmkjKZYFt017G4VwPxASInODuAdbTW7sXiFUf893RgA==}
+    engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [darwin]
 
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20251125.1':
-    resolution: {integrity: sha512-YiM49tIFLfq0LHfPVhSufBABsyS79OqurRZwznkFUiv4HHFWuZ66Ne1w2eXzv3BeZkDOnPtrkmZ+ZSAeYtoEhw==}
+  '@typescript/typescript-freebsd-arm64@7.0.2':
+    resolution: {integrity: sha512-W5NH4y/J0plIIS5b2xvTEkU7JFxyqdMAOgf+Ilhl0vHQXKO5dZoxd+C/jEtq56c4F3wk71RB4BMRQ2XdI+bwYQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [freebsd]
+
+  '@typescript/typescript-freebsd-x64@7.0.2':
+    resolution: {integrity: sha512-UMGDx5sTpzNw3WiPebH7l90IWfJggEd+egHt/q6p7/Cm3zqoV7VxkGXt+3DxPIw8CcmvAB0j3sVVfbhX+M4Tpw==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@typescript/typescript-linux-arm64@7.0.2':
+    resolution: {integrity: sha512-Qh4eU4/y3yDjnfjjyPYihMj5/ODIlmt+Bzu17OI+fiSRDW57QmU5SiN63exPRNJPKUzcc1INa1NXdrJ+MqHjUQ==}
+    engines: {node: '>=16.20.0'}
     cpu: [arm64]
     os: [linux]
 
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20251125.1':
-    resolution: {integrity: sha512-abP56lp5GIDizVjQ3/36mryOawUTY+ODtw/rUJ+XMnH/zy6OSNS4g8z8XsmTnizsLLaWrrAYD3+PCdi0c6ra8w==}
+  '@typescript/typescript-linux-arm@7.0.2':
+    resolution: {integrity: sha512-gffT3xPz9sR7j/YJExkyPntrI0P2EP9XbOyWzth2/Gs0RstK+90RBcO0ncXoXy/beYll1SXw846Nf2zdnEz0QQ==}
+    engines: {node: '>=16.20.0'}
     cpu: [arm]
     os: [linux]
 
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20251125.1':
-    resolution: {integrity: sha512-nl0itKQowgb4snWPH4LjkdSzMIalG+qDoheAqadMEDUekKexNTmUAqbK0+qje0jsW9Jc/1+MCQHIcDr20abkzA==}
+  '@typescript/typescript-linux-loong64@7.0.2':
+    resolution: {integrity: sha512-uEHck9i8hoAzXPiYRib1O7miOnz23SxIeVl6F4LXox+qov1K35jHcEW6VHKvZI+pyvl7fZEP4MCU5LYvIq1GuQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [loong64]
+    os: [linux]
+
+  '@typescript/typescript-linux-mips64el@7.0.2':
+    resolution: {integrity: sha512-R4KvAMnE43W5Qeqb0Ly56O3mWMWIAgsMyz36DCaycd5nbg/9kzm0liw3JocfRqyJY0KPmzFjbswozXyW0DnIYA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [mips64el]
+    os: [linux]
+
+  '@typescript/typescript-linux-ppc64@7.0.2':
+    resolution: {integrity: sha512-DORx5b3sd/4S7eayxm4FQv+A7CrkUIGRaHiwI8oiHTAI1fAPWhF4J0vAlkC8biAlHSVVwxMQ3tjZ2/DVbnQiiA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [ppc64]
+    os: [linux]
+
+  '@typescript/typescript-linux-riscv64@7.0.2':
+    resolution: {integrity: sha512-wf0jqEDOjrPRnKwYRyyJDRo11KMbvMFrU+q4zqKyChODBzvlkbhNQfKvLxQCcwTpdDaXSHZTVuh0JoCrKCUMHQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [riscv64]
+    os: [linux]
+
+  '@typescript/typescript-linux-s390x@7.0.2':
+    resolution: {integrity: sha512-IkwJc3L7yhytWd/ewjyxNDfOmswCm9GWMJT/ue/dU4aZNbwZeYAetq42VyLmsmSjvoX7z74X6ZaYCtzAr0EuGw==}
+    engines: {node: '>=16.20.0'}
+    cpu: [s390x]
+    os: [linux]
+
+  '@typescript/typescript-linux-x64@7.0.2':
+    resolution: {integrity: sha512-EYdf2cNg7rgCWJnxCdJ+F3V39O8ihb37eHAu1LK8oAFizgTQbPOK7zHHXbPt8rX24COqODXeI3sIf0fCXG7H/A==}
+    engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [linux]
 
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20251125.1':
-    resolution: {integrity: sha512-99AZ4Lv0Ez/RqtCszFDWCE+8Qrzjjw1Bsq2DYRnszeTIbwvr3I6x3edk2gr8/EuulrQLv7fzcintyp3EQgeZlQ==}
+  '@typescript/typescript-netbsd-arm64@7.0.2':
+    resolution: {integrity: sha512-+polYF4MF04aPpO5FTkHran9yUQDSXqy5GiSDKpsll5jy3l3+g9QLhpf39T+ePtefhXLOGrLl0QIjkQP6VnelA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [netbsd]
+
+  '@typescript/typescript-netbsd-x64@7.0.2':
+    resolution: {integrity: sha512-8YIT0EHM/3dq10ZOVF/A7pc/YSMtbcecct4rWtexrnSCHOPcpC2KTLXfTCR6vDpnSiY12heNb1GiN/wu+T/FyA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [netbsd]
+
+  '@typescript/typescript-openbsd-arm64@7.0.2':
+    resolution: {integrity: sha512-APT8+ClYnuYm1u9+kgGXoMj2VzWzcymwh2gNSQVySHfkRDGOTVkoWLjCmOQSaO+PoqQ57B0flRp9SA+7GnnkzQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [openbsd]
+
+  '@typescript/typescript-openbsd-x64@7.0.2':
+    resolution: {integrity: sha512-yX7s+Q0Dln0Dt9tEzZsAjXXR/+ytBM7AlglaqyeMPxQszJ1JhlJdZ6jLA+IzldHtflX81em7lDao1xXu+aRRkg==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [openbsd]
+
+  '@typescript/typescript-sunos-x64@7.0.2':
+    resolution: {integrity: sha512-dLJDGaLZ1D4HPQn62u1n8mBDkJREwMsAkCdkwd4Ieqw+x3TUyTsqY0YiBCtE6H6OzzgGk3iuZ3vFWRS+E8/d1g==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [sunos]
+
+  '@typescript/typescript-win32-arm64@7.0.2':
+    resolution: {integrity: sha512-Gyl1Vy6OsWesLzmq+EP0Fb7b4Nid5232AvcA2SFcdYreldpNtYFFofPjnt62y9hQy7VTaZp65ICJjuAQRaVcIQ==}
+    engines: {node: '>=16.20.0'}
     cpu: [arm64]
     os: [win32]
 
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20251125.1':
-    resolution: {integrity: sha512-f483lMqW97udDCG0Deotbcmr+khmvcr9U0i5DB6z1ePjIVk8HkvdoFDnKuzSdtov0KvqPGkyRui0Vdqy/IwYJQ==}
+  '@typescript/typescript-win32-x64@7.0.2':
+    resolution: {integrity: sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g==}
+    engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [win32]
-
-  '@typescript/native-preview@7.0.0-dev.20251125.1':
-    resolution: {integrity: sha512-E1EboijTfMS99duAYDzPiIHzJDXA1xEj4UHvpjarlniYYmCFO/Rla4boiRBMns4eXNNkyEkvU4WSkjpOl0fzTg==}
-    hasBin: true
 
   '@typescript/vfs@1.6.1':
     resolution: {integrity: sha512-JwoxboBh7Oz1v38tPbkrZ62ZXNHAk9bJ7c9x0eI5zBfBnBYGhURdbnh7Z4smN/MV48Y5OCcZb58n972UtbazsA==}
@@ -5898,14 +5971,14 @@ packages:
     peerDependencies:
       typescript: 5.0.x || 5.1.x || 5.2.x || 5.3.x || 5.4.x || 5.5.x || 5.6.x || 5.7.x || 5.8.x || 5.9.x || 6.0.x
 
-  typescript-language-server@5.1.3:
-    resolution: {integrity: sha512-r+pAcYtWdN8tKlYZPwiiHNA2QPjXnI02NrW5Sf2cVM3TRtuQ3V9EKKwOxqwaQ0krsaEXk/CbN90I5erBuf84Vg==}
-    engines: {node: '>=20'}
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
+    engines: {node: '>=14.17'}
     hasBin: true
 
-  typescript@5.9.3:
-    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
-    engines: {node: '>=14.17'}
+  typescript@7.0.2:
+    resolution: {integrity: sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==}
+    engines: {node: '>=16.20.0'}
     hasBin: true
 
   uc.micro@2.1.0:
@@ -6087,20 +6160,6 @@ packages:
       jsdom:
         optional: true
 
-  vscode-jsonrpc@5.0.1:
-    resolution: {integrity: sha512-JvONPptw3GAQGXlVV2utDcHx0BiY34FupW/kI6mZ5x06ER5DdPG/tXWMVHjTNULF5uKPOUUD0SaXg5QaubJL0A==}
-    engines: {node: '>=8.0.0 || >=10.0.0'}
-
-  vscode-jsonrpc@8.2.0:
-    resolution: {integrity: sha512-C+r0eKJUIfiDIfwJhria30+TYWPtuHJXHtI7J0YlOmKAo7ogxP20T0zxB7HZQIFhIyvoBPwWskjxrvAtfjyZfA==}
-    engines: {node: '>=14.0.0'}
-
-  vscode-languageserver-protocol@3.17.5:
-    resolution: {integrity: sha512-mb1bvRJN8SVznADSGWM9u/b07H7Ecg0I3OgXDuLdn307rl/J3A9YD6/eYOssqhecL27hK1IPZAsaqh00i/Jljg==}
-
-  vscode-languageserver-types@3.17.5:
-    resolution: {integrity: sha512-Ld1VelNuX9pdF39h2Hgaeb5hEZM2Z3jUrrMgWQAu82jMtZp7p3vJT3BzToKtZI7NgQssZje5o0zryOrhQvzQAg==}
-
   why-is-node-running@2.3.0:
     resolution: {integrity: sha512-hUrmaWBdVDcxvYqnyh09zunKzROWjbZTiNy8dBEjkS7ehEDQibXJ7XvlmtbwuTclUiIyN+CyXQD4Vmko8fNm8w==}
     engines: {node: '>=8'}
@@ -6183,16 +6242,16 @@ packages:
 
 snapshots:
 
-  '@ark/attest@0.56.0(typescript@5.9.3)':
+  '@ark/attest@0.56.0(typescript@6.0.3)':
     dependencies:
       '@ark/fs': 0.56.0
       '@ark/util': 0.56.0
       '@prettier/sync': 0.6.1(prettier@3.6.2)
       '@typescript/analyze-trace': 0.10.1
-      '@typescript/vfs': 1.6.1(typescript@5.9.3)
+      '@typescript/vfs': 1.6.1(typescript@6.0.3)
       arktype: 2.1.28
       prettier: 3.6.2
-      typescript: 5.9.3
+      typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
@@ -7655,41 +7714,70 @@ snapshots:
       treeify: 1.1.0
       yargs: 16.2.0
 
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20251125.1':
+  '@typescript/typescript-aix-ppc64@7.0.2':
     optional: true
 
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20251125.1':
+  '@typescript/typescript-darwin-arm64@7.0.2':
     optional: true
 
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20251125.1':
+  '@typescript/typescript-darwin-x64@7.0.2':
     optional: true
 
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20251125.1':
+  '@typescript/typescript-freebsd-arm64@7.0.2':
     optional: true
 
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20251125.1':
+  '@typescript/typescript-freebsd-x64@7.0.2':
     optional: true
 
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20251125.1':
+  '@typescript/typescript-linux-arm64@7.0.2':
     optional: true
 
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20251125.1':
+  '@typescript/typescript-linux-arm@7.0.2':
     optional: true
 
-  '@typescript/native-preview@7.0.0-dev.20251125.1':
-    optionalDependencies:
-      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20251125.1
-      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20251125.1
-      '@typescript/native-preview-linux-arm': 7.0.0-dev.20251125.1
-      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20251125.1
-      '@typescript/native-preview-linux-x64': 7.0.0-dev.20251125.1
-      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20251125.1
-      '@typescript/native-preview-win32-x64': 7.0.0-dev.20251125.1
+  '@typescript/typescript-linux-loong64@7.0.2':
+    optional: true
 
-  '@typescript/vfs@1.6.1(typescript@5.9.3)':
+  '@typescript/typescript-linux-mips64el@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-ppc64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-riscv64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-s390x@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-netbsd-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-netbsd-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-openbsd-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-openbsd-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-sunos-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-win32-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-win32-x64@7.0.2':
+    optional: true
+
+  '@typescript/vfs@1.6.1(typescript@6.0.3)':
     dependencies:
       debug: 4.4.3
-      typescript: 5.9.3
+      typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
@@ -9694,21 +9782,39 @@ snapshots:
       media-typer: 1.1.0
       mime-types: 3.0.2
 
-  typedoc@0.28.19(typescript@5.9.3):
+  typedoc@0.28.19(typescript@6.0.3):
     dependencies:
       '@gerrit0/mini-shiki': 3.23.0
       lunr: 2.3.9
       markdown-it: 14.1.1
       minimatch: 10.2.5
-      typescript: 5.9.3
+      typescript: 6.0.3
       yaml: 2.9.0
 
-  typescript-language-server@5.1.3:
-    dependencies:
-      vscode-jsonrpc: 5.0.1
-      vscode-languageserver-protocol: 3.17.5
+  typescript@6.0.3: {}
 
-  typescript@5.9.3: {}
+  typescript@7.0.2:
+    optionalDependencies:
+      '@typescript/typescript-aix-ppc64': 7.0.2
+      '@typescript/typescript-darwin-arm64': 7.0.2
+      '@typescript/typescript-darwin-x64': 7.0.2
+      '@typescript/typescript-freebsd-arm64': 7.0.2
+      '@typescript/typescript-freebsd-x64': 7.0.2
+      '@typescript/typescript-linux-arm': 7.0.2
+      '@typescript/typescript-linux-arm64': 7.0.2
+      '@typescript/typescript-linux-loong64': 7.0.2
+      '@typescript/typescript-linux-mips64el': 7.0.2
+      '@typescript/typescript-linux-ppc64': 7.0.2
+      '@typescript/typescript-linux-riscv64': 7.0.2
+      '@typescript/typescript-linux-s390x': 7.0.2
+      '@typescript/typescript-linux-x64': 7.0.2
+      '@typescript/typescript-netbsd-arm64': 7.0.2
+      '@typescript/typescript-netbsd-x64': 7.0.2
+      '@typescript/typescript-openbsd-arm64': 7.0.2
+      '@typescript/typescript-openbsd-x64': 7.0.2
+      '@typescript/typescript-sunos-x64': 7.0.2
+      '@typescript/typescript-win32-arm64': 7.0.2
+      '@typescript/typescript-win32-x64': 7.0.2
 
   uc.micro@2.1.0: {}
 
@@ -9863,17 +9969,6 @@ snapshots:
       '@types/node': 24.10.4
     transitivePeerDependencies:
       - msw
-
-  vscode-jsonrpc@5.0.1: {}
-
-  vscode-jsonrpc@8.2.0: {}
-
-  vscode-languageserver-protocol@3.17.5:
-    dependencies:
-      vscode-jsonrpc: 8.2.0
-      vscode-languageserver-types: 3.17.5
-
-  vscode-languageserver-types@3.17.5: {}
 
   why-is-node-running@2.3.0:
     dependencies:

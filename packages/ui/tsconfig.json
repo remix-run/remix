@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "types": ["node", "dom-navigation"],
     "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
     "module": "NodeNext",

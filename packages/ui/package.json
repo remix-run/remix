@@ -242,9 +242,8 @@
     "@remix-run/assert": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
     "playwright": "catalog:",
-    "typescript": "^5.9.3"
+    "typescript": "catalog:"
   },
   "dependencies": {
     "@types/dom-navigation": "^1.0.7"

@@ -8,7 +8,7 @@
     "prerender:serve": "npx http-server -p 44100 build/site",
     "start": "node --import remix/node-tsx server.ts",
     "test": "NODE_ENV=test remix test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "pnpm -w exec tsc --noEmit -p docs/guides/tsconfig.json",
     "validate": "node --import remix/node-tsx scripts/validate-docs.ts"
   },
   "engines": {
@@ -25,6 +25,6 @@
     "@types/mdast": "4.0.4",
     "@types/node": "catalog:",
     "pagefind": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:legacy-typescript"
   }
 }

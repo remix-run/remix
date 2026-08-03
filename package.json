@@ -5,14 +5,12 @@
   "packageManager": "pnpm@10.34.2",
   "dependencies": {
     "@oxlint/plugins": "^1.57.0",
-    "@typescript/native-preview": "catalog:",
     "oxc-parser": "^0.121.0",
     "oxfmt": "catalog:",
     "oxlint": "^1.57.0",
     "oxlint-tsgolint": "^0.17.4",
     "remix": "workspace:^",
-    "typescript": "catalog:",
-    "typescript-language-server": "catalog:"
+    "typescript": "catalog:"
   },
   "engines": {
     "node": ">=24.3.0"
