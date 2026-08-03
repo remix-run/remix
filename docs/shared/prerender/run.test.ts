@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as assert from 'remix/assert'
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 import { describe, it } from 'remix/test'
 
 import { prerender } from './run.ts'
