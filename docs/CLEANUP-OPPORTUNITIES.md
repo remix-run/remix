@@ -8,24 +8,10 @@ Remaining opportunities after moving the API docs, guides, and shared docs infra
 
 ## Recommended order
 
-1. Align configuration, dependencies, and maintenance docs.
-2. Confirm the guides deployment model, then evaluate a shared server bootstrap.
-3. Decide whether the sites should share the remaining product features.
-4. Extract small markdown compatibility helpers.
-5. Re-evaluate a shared document component after the smaller extractions.
-
-## Align configuration, dependencies, and maintenance docs
-
-- Add `docs/tsconfig.base.json` and extend it from the API, guides, and shared configs. Resolve the
-  current drift: only guides includes `DOM.AsyncIterable`, API lacks `"types": ["node"]`, and API
-  and guides duplicate the `remix/ui` JSX-runtime paths.
-- Move independently pinned shared dependencies such as `shiki`, `github-slugger`, and
-  `@types/hast` to the pnpm catalog.
-- Align API frontmatter parsing on `gray-matter` when next touching its markdown pipeline; this
-  removes the untyped default-export cast required by `front-matter`.
-- Update `docs/guides/README.md`; its “Where things live” section still points to the old local
-  docs shell.
-- Add a short `docs/api/README.md` matching the guides README structure.
+1. Confirm the guides deployment model, then evaluate a shared server bootstrap.
+2. Decide whether the sites should share the remaining product features.
+3. Extract small markdown compatibility helpers.
+4. Re-evaluate a shared document component after the smaller extractions.
 
 ## Confirm guides deployment, then evaluate a shared server bootstrap
 
@@ -51,7 +37,8 @@ on `node --watch` restarts and manual browser reloads.
 
 Do not unify the markdown pipelines wholesale: API uses `marked` with symbol-linking extensions,
 while guides uses unified/remark/rehype with directives and frames. The behavioral risk outweighs
-removing the structural duplication.
+removing the structural duplication. When next touching the API pipeline, replace `front-matter`
+with `gray-matter` to remove its untyped default-export cast.
 
 Explore sharing the smaller compatibility points instead:
 

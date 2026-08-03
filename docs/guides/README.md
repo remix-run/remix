@@ -10,11 +10,11 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/actions/docs/chapters/*.md` — guide chapters.
 - `app/actions/docs/markdown/render.tsx` — unified/remark Markdown rendering, Shiki syntax highlighting, heading IDs, and `::frame` parsing.
 - `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, summaries, and mtime-based render caches.
-- `app/actions/docs/layout.tsx` and `chapter-navigation.tsx` — the guides-specific server-rendered docs shell; shared header and footer UI lives in `../shared/ui/`.
-- `app/actions/docs/docs-shell.browser.tsx` and `table-of-contents.browser.tsx` — the small client behaviors for transient navigation state and active-section tracking.
+- `app/actions/docs/layout.tsx` and `chapter-navigation.tsx` — guides-specific content and navigation rendered inside the shell from `../shared/ui/`.
+- `app/actions/docs/chapter-navigation-indicator.browser.ts` — the guides-specific active-chapter animation. Shared shell and table-of-contents behaviors live in `../shared/ui/`.
 - `app/actions/docs/examples/` — frame-backed examples used by chapters. Browser-hydrated demo modules use the `.demo.tsx` suffix, and browser-only helpers use `.browser.ts?(x)` so the asset boundary is visible from filenames instead of `public/` directories.
 - `app/entry.browser.ts` and `app/dev-refresh.browser.ts` — browser entrypoints served by the asset server.
-- `app/styles/docs.css` — the stylesheet entrypoint. It imports the single token set, base rules, shell, search, index, article, and Markdown styles from focused sibling files.
+- `app/styles/docs.css` — the stylesheet entrypoint. It imports shared tokens, shell, search, article, and Markdown layers from `../shared/styles/` plus the guides-only index and chapter-navigation styles.
 - `app/middleware/asset-entry.ts` — source-served browser module hrefs and preloads.
 - `app/middleware/render.ts` — the request-scoped `render()` helper and frame resolver.
 - `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.

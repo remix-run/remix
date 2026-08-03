@@ -4,7 +4,7 @@
   "type": "module",
   "dependencies": {
     "front-matter": "^4.0.2",
-    "github-slugger": "^2.0.0",
+    "github-slugger": "catalog:",
     "marked": "^17.0.1",
     "oxfmt": "catalog:",
     "remix": "workspace:*",
@@ -13,11 +13,11 @@
   },
   "devDependencies": {
     "@types/dom-navigation": "^1.0.6",
-    "@types/hast": "^3.0.4",
+    "@types/hast": "catalog:",
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
     "pagefind": "catalog:",
-    "shiki": "^3.22.0",
+    "shiki": "catalog:",
     "typedoc": "^0.28.19",
     "typescript": "catalog:"
   },

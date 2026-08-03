@@ -15,7 +15,7 @@
     "node": ">=24.3.0"
   },
   "dependencies": {
-    "github-slugger": "^2.0.0",
+    "github-slugger": "catalog:",
     "gray-matter": "^4.0.3",
     "hast-util-to-html": "^9.0.5",
     "mdast-util-directive": "^3.1.0",
@@ -27,12 +27,12 @@
     "remark-rehype": "^11.1.2",
     "remix": "workspace:^",
     "remix-docs-shared": "workspace:*",
-    "shiki": "^3.22.0",
+    "shiki": "catalog:",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.1.0"
   },
   "devDependencies": {
-    "@types/hast": "^3.0.4",
+    "@types/hast": "catalog:",
     "@types/mdast": "^4.0.4",
     "@types/node": "catalog:",
     "pagefind": "catalog:",
