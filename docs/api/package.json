@@ -1,0 +1,34 @@
+{
+  "name": "remix-api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "oxfmt": "catalog:",
+    "remix": "workspace:*",
+    "remix-docs-shared": "workspace:*",
+    "semver": "7.7.4"
+  },
+  "devDependencies": {
+    "@types/dom-navigation": "1.0.7",
+    "@types/hast": "catalog:",
+    "@types/node": "catalog:",
+    "@types/semver": "7.5.8",
+    "pagefind": "catalog:",
+    "shiki": "catalog:",
+    "typedoc": "0.28.19",
+    "typescript": "catalog:"
+  },
+  "scripts": {
+    "build": "pnpm run --filter \".\" --parallel \"/^build:/\"",
+    "build:demos": "node --import remix/node-tsx scripts/build-demos.ts",
+    "predev": "pnpm run build",
+    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "docs": "node scripts/generate/index.ts",
+    "docs:debug": "DEBUG=1 node scripts/generate/index.ts",
+    "prerender": "NODE_ENV=production node --import remix/node-tsx scripts/prerender.ts",
+    "prerender:serve": "npx http-server -p 44100 build/site",
+    "start": "node --import remix/node-tsx server.ts",
+    "test": "remix test",
+    "typecheck": "tsc --noEmit"
+  }
+}
