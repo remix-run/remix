@@ -2,7 +2,7 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
 import { crawl } from './crawl.ts'
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 
 function html(content: string): Response {
   return new Response(content, { headers: { 'Content-Type': 'text/html' } })

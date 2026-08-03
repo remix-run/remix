@@ -9,7 +9,7 @@
  */
 
 import { crawl } from '../../crawl.ts'
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 
 // Build a site graph with the given number of pages and latency per request.
 // The root page links to all other pages; each other page links back to root.

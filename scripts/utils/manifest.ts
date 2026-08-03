@@ -5,14 +5,7 @@ import * as path from 'node:path'
  * Builds a reverse lookup from npm specifier to canonical `remix/*` path.
  * Reads the explicit manifest and inverts it.
  *
- * When multiple `remix/*` paths map to the same specifier (e.g. `remix/router`
- * and `remix/fetch-router` both map to `@remix-run/fetch-router`), the
- * non-1:1 mapping is preferred as canonical. A 1:1 mapping is one where the
- * `remix/` path suffix exactly matches the `@remix-run/` specifier suffix
- * (e.g. `remix/fetch-router` → `@remix-run/fetch-router`).
- *
- * If 3+ remix paths map to the same specifier, an error is thrown — the
- * manifest has an ambiguity that must be resolved explicitly.
+ * Each npm specifier must map to exactly one canonical `remix/*` path.
  */
 export function buildSpecifierToRemixPath(packagesDir: string): Map<string, string> {
   let manifest: Record<string, string> = JSON.parse(
@@ -29,22 +22,14 @@ export function buildSpecifierToRemixPath(packagesDir: string): Map<string, stri
 
   let result = new Map<string, string>()
   for (let [specifier, remixPaths] of specifierToPaths) {
-    if (remixPaths.length === 1) {
-      result.set(specifier, remixPaths[0])
-      continue
-    }
-
-    if (remixPaths.length > 2) {
+    if (remixPaths.length > 1) {
       throw new Error(
         `manifest.json: specifier "${specifier}" is mapped by ${remixPaths.length} remix paths ` +
-          `(${remixPaths.join(', ')}). At most 2 are allowed (one canonical, one legacy alias).`,
+          `(${remixPaths.join(', ')}). Expected exactly one canonical remix path.`,
       )
     }
 
-    // Exactly 2: prefer the non-1:1 (canonical) mapping.
-    let shortSpecifier = specifier.replace('@remix-run/', '')
-    let canonical = remixPaths.find((rp) => rp.replace('remix/', '') !== shortSpecifier)
-    result.set(specifier, canonical ?? remixPaths[0])
+    result.set(specifier, remixPaths[0])
   }
 
   return result
