@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "remix": "workspace:^",
-    "node-html-parser": "^7.1.0"
+    "node-html-parser": "7.1.0"
   },
   "devDependencies": {
     "vitest": "4.0.15"

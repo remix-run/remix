@@ -1,27 +1,14 @@
-import matter from 'gray-matter'
-import type { Element, Root as HastRoot } from 'hast'
-import rehypeStringify from 'rehype-stringify'
-import remarkRehype from 'remark-rehype'
-import { unified } from 'unified'
-import { visit } from 'unist-util-visit'
+import type { Root } from 'mdast'
 import { Frame } from 'remix/ui'
 import type { Handle, RemixNode } from 'remix/ui'
+import { addHeadingIds, readMarkdownHeadingsFromRoot } from 'remix-docs-shared/markdown/headings'
+import { parseMarkdownDocument } from 'remix-docs-shared/markdown/parser'
+import { renderMarkdownHtml } from 'remix-docs-shared/markdown/render'
 import { docsMarkdownContentCss } from 'remix-docs-shared/ui/markdown-content'
 
-import { rehypeHighlightCode } from './code-blocks.ts'
-import { escapeMarkdownHtml } from './html-escape.ts'
-import { addHeadingIds, readMarkdownSectionsFromRoot } from './headings.ts'
-import { parseMarkdownRoot } from './parser.ts'
 import { readChapterMetadata } from './frontmatter.ts'
 import { splitMarkdownRoot } from './frames.ts'
-import type { Root } from 'mdast'
 import type { MarkdownChapter, MarkdownChapterSummary, MarkdownOptions } from './types.ts'
-
-const markdownHtmlProcessor = unified()
-  .use(remarkRehype)
-  .use(rehypeLinkHeadings)
-  .use(rehypeHighlightCode)
-  .use(rehypeStringify)
 
 export async function renderMarkdownChapter(
   source: string,
@@ -31,7 +18,7 @@ export async function renderMarkdownChapter(
 
   return {
     ...readChapterMetadata(attributes, options),
-    sections: readMarkdownSectionsFromRoot(root),
+    sections: readMarkdownHeadingsFromRoot(root),
     content: await renderMarkdownRoot(root),
   }
 }
@@ -44,7 +31,7 @@ export function readMarkdownChapterSummary(
 
   return {
     ...readChapterMetadata(attributes, options),
-    sections: readMarkdownSectionsFromRoot(root),
+    sections: readMarkdownHeadingsFromRoot(root),
   }
 }
 
@@ -52,13 +39,10 @@ function readMarkdownDocument(source: string): {
   attributes: Record<string, unknown>
   root: Root
 } {
-  let parsed = matter(source)
-  let root = parseMarkdownRoot(parsed.content)
-
-  escapeMarkdownHtml(root)
+  let { attributes, root } = parseMarkdownDocument(source)
   addHeadingIds(root)
 
-  return { attributes: parsed.data, root }
+  return { attributes, root }
 }
 
 async function renderMarkdownRoot(root: Root): Promise<RemixNode[]> {
@@ -77,12 +61,10 @@ async function renderMarkdownRoot(root: Root): Promise<RemixNode[]> {
       type: 'root',
       children: [...definitions, ...segment.children],
     }
-    let hast = await markdownHtmlProcessor.run(segmentRoot)
-
     nodes.push(
       <MarkdownHtml
         key={`markdown-${segment.lineNumber}-${nodes.length}`}
-        html={markdownHtmlProcessor.stringify(hast)}
+        html={await renderMarkdownHtml(segmentRoot)}
       />,
     )
   }
@@ -94,49 +76,4 @@ function MarkdownHtml(handle: Handle<{ html: string }>) {
   return () => (
     <div class="rmx-page-body" mix={docsMarkdownContentCss} innerHTML={handle.props.html} />
   )
-}
-
-function rehypeLinkHeadings() {
-  return function transform(tree: HastRoot): void {
-    visit(tree, 'element', (node) => {
-      if (!/^h[1-6]$/.test(node.tagName)) {
-        return
-      }
-
-      let id = node.properties.id
-      if (typeof id !== 'string' || id.trim() === '') {
-        return
-      }
-
-      if (hasAnchorDescendant(node)) {
-        return
-      }
-
-      node.children = [
-        {
-          type: 'element',
-          tagName: 'a',
-          properties: {
-            class: 'docs-heading-link',
-            href: `#${id}`,
-          },
-          children: node.children,
-        },
-      ]
-    })
-  }
-}
-
-function hasAnchorDescendant(node: Element): boolean {
-  for (let child of node.children) {
-    if (child.type !== 'element') {
-      continue
-    }
-
-    if (child.tagName === 'a' || hasAnchorDescendant(child)) {
-      return true
-    }
-  }
-
-  return false
 }

@@ -7,7 +7,7 @@ The hand-authored guides live in [`../guides`](../guides). Shared docs UI, style
 ## Where things live
 
 - `src/generate/` — TypeDoc loading, API filtering, package overview discovery, and Markdown generation.
-- `src/server/markdown.ts` — `marked` rendering, Shiki syntax highlighting, heading IDs, and API symbol links.
+- `src/server/markdown.ts` — API Markdown discovery, metadata, versioned links, and symbol-link transforms built on the shared unified/remark/rehype pipeline.
 - `src/server/registry.ts` and `routes.ts` — generated document lookup, navigation, and route definitions.
 - `src/server/view.tsx` — API-specific document metadata and content rendered with the shared docs shell.
 - `src/server/demos.tsx` and `src/generate/build-demos.ts` — API examples discovered from package source and copied into `build/demos/`.

@@ -3,9 +3,9 @@ import { readFile } from "node:fs/promises";
 import { codeToHtml } from "shiki";
 import { clientEntry, css } from "remix/ui";
 import type { Handle, RemixNode } from "remix/ui";
+import { shikiThemes } from "remix-docs-shared/markdown/code-blocks";
 
 import type { AppContext } from "../../../router.ts";
-import { shikiThemes } from "../markdown/code-blocks.ts";
 
 type DemoComponent = (handle: Handle) => () => RemixNode;
 

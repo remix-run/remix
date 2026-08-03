@@ -9,8 +9,7 @@ Remaining opportunities after moving the API docs, guides, and shared docs infra
 ## Recommended order
 
 1. Update the guides deployment repository after this restructure lands.
-2. Extract small markdown compatibility helpers.
-3. Re-evaluate a shared document component after the smaller extractions.
+2. Re-evaluate a shared document component.
 
 ## Update the guides deployment repository
 
@@ -19,22 +18,6 @@ guides and deploys the static output to GitHub Pages; the Node server does not r
 Its workflow still uploads `remix/guides/build/site`, and its README still links to `guides/` in
 this repository. Update both paths to `docs/guides/` after this restructure lands. Pagefind is
 installed from the catalog in this repository and runs during prerendering.
-
-## Extract markdown compatibility helpers
-
-Do not unify the markdown pipelines wholesale: API uses `marked` with symbol-linking extensions,
-while guides uses unified/remark/rehype with directives and frames. The behavioral risk outweighs
-removing the structural duplication. When next touching the API pipeline, replace `front-matter`
-with `gray-matter` to remove its untyped default-export cast.
-
-Explore sharing the smaller compatibility points instead:
-
-- Shiki theme and configuration
-- Heading slug generation
-- Heading `titleHtml` conventions
-
-These helpers would keep rendered HTML compatible with shared styles without coupling the two
-pipelines.
 
 ## Re-evaluate a shared document component
 

@@ -6,11 +6,11 @@ import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy.brows
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
+import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
 import { docsMarkdownContentCss } from 'remix-docs-shared/ui/markdown-content'
 import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 
 import type { DemoDocFile } from './demos.tsx'
-import type { MarkdownHeading } from './markdown.ts'
 import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
 import { routes, withVersion } from './routes.ts'

@@ -1,16 +1,16 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { addHeadingIds, readMarkdownSectionsFromRoot } from './headings.ts'
+import { addHeadingIds, readMarkdownHeadingsFromRoot } from './headings.ts'
 import { parseMarkdownRoot } from './parser.ts'
 
 function sectionsFrom(source: string) {
   let root = parseMarkdownRoot(source)
   addHeadingIds(root)
-  return readMarkdownSectionsFromRoot(root)
+  return readMarkdownHeadingsFromRoot(root)
 }
 
-describe('addHeadingIds / readMarkdownSectionsFromRoot', () => {
+describe('addHeadingIds / readMarkdownHeadingsFromRoot', () => {
   it('collects h2 and h3 headings with their depth', () => {
     let sections = sectionsFrom('# H1\n\n## H2 one\n\n### H3\n\n#### H4\n\n## H2 two\n')
     assert.deepEqual(
@@ -48,6 +48,11 @@ describe('addHeadingIds / readMarkdownSectionsFromRoot', () => {
 
   it('falls back to the section id for an empty heading', () => {
     let sections = sectionsFrom('## \n')
+    assert.equal(sections[0].id, 'section')
+  })
+
+  it('falls back to the section id when the title has no slug characters', () => {
+    let sections = sectionsFrom('## $\n')
     assert.equal(sections[0].id, 'section')
   })
 

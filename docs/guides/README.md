@@ -8,7 +8,7 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 
 - `app/actions/controller.tsx` — top-level asset route handling.
 - `app/actions/docs/chapters/*.md` — guide chapters.
-- `app/actions/docs/markdown/render.tsx` — unified/remark Markdown rendering, Shiki syntax highlighting, heading IDs, and `::frame` parsing.
+- `app/actions/docs/markdown/render.tsx` — chapter metadata and `::frame` rendering built on the shared unified/remark/rehype pipeline.
 - `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, summaries, and mtime-based render caches.
 - `app/actions/docs/layout.tsx` and `chapter-navigation.tsx` — guides-specific content and navigation rendered inside the shell from `../shared/ui/`.
 - `app/actions/docs/chapter-navigation-indicator.browser.ts` — the guides-specific active-chapter animation. Shared shell and table-of-contents behaviors live in `../shared/ui/`.

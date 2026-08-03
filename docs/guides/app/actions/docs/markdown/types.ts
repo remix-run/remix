@@ -1,24 +1,18 @@
 import type { RootContent } from 'mdast'
 
 import type { RemixNode } from 'remix/ui'
+import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
 
 export type MarkdownOptions = {
   chapter: string
   filePath?: string
 }
 
-export type MarkdownChapterSection = {
-  id: string
-  depth: 2 | 3
-  title: string
-  titleHtml: string
-}
-
 export type MarkdownChapter = {
   chapter: string
   title: string
   description: string
-  sections: MarkdownChapterSection[]
+  sections: MarkdownHeading[]
   content: RemixNode
 }
 
@@ -42,15 +36,3 @@ export type MarkdownSegment =
       src: string
       lineNumber: number
     }
-
-export type CodeBlock = {
-  source: string
-  language?: string
-  meta?: string
-}
-
-export type CodeBlockInfo = {
-  language: string
-  filename?: string
-  highlightedLines: Set<number>
-}

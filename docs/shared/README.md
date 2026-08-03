@@ -11,9 +11,15 @@
 - `styles/` — shared tokens and docs-shell stylesheets.
 - `ui/` — shared server-rendered components and browser behaviors.
 
-Site-specific routes, document shells, content pipelines, styles, and static files stay in the owning site. For example, the API's `favicon.ico` remains in `docs/api/public/`. Repository README artwork lives in `.github/assets/` rather than either site's public directory.
+Site-specific routes, document shells, Markdown transforms, styles, and static files stay in the owning site. For example, the API's `favicon.ico` remains in `docs/api/public/`. Repository README artwork lives in `.github/assets/` rather than either site's public directory.
 
 Navigation behavior also stays site-owned: Guides animates selection in its flat chapter list, while the API uses static active styles within grouped disclosure sections.
+
+## Markdown contract
+
+Both sites use the shared unified/remark/rehype pipeline under `markdown/`. It preserves raw HTML, defaults unlabeled code fences to TypeScript, generates linked heading IDs, and renders shared Shiki code-block chrome.
+
+Site-specific transforms remain with their owners. Guides handles frame directives and chapter metadata; API handles versioned links, source metadata, and symbol links inside highlighted code.
 
 ## Asset contract
 

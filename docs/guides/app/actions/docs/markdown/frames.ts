@@ -1,8 +1,8 @@
 import type { ContainerDirective, LeafDirective } from 'mdast-util-directive'
 import type { Nodes, Root, RootContent } from 'mdast'
 import { visit } from 'unist-util-visit'
+import { parseMarkdownRoot } from 'remix-docs-shared/markdown/parser'
 
-import { parseMarkdownRoot } from './parser.ts'
 import type { MarkdownFrameReference, MarkdownSegment } from './types.ts'
 
 type FrameDirective = LeafDirective | ContainerDirective

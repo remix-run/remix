@@ -150,12 +150,12 @@ describe('addLineNumbers', () => {
 })
 
 describe('readCodeBlockInfo', () => {
-  it('defaults a missing language to plaintext', () => {
-    assert.equal(readCodeBlockInfo(undefined, undefined).language, 'plaintext')
+  it('defaults a missing language to TypeScript', () => {
+    assert.equal(readCodeBlockInfo(undefined, undefined).language, 'typescript')
   })
 
-  it('defaults an empty language to plaintext', () => {
-    assert.equal(readCodeBlockInfo('', '').language, 'plaintext')
+  it('defaults an empty language to TypeScript', () => {
+    assert.equal(readCodeBlockInfo('', '').language, 'typescript')
   })
 
   it('keeps a real language name', () => {
@@ -166,7 +166,7 @@ describe('readCodeBlockInfo', () => {
     // remark assigns the info string to `language` when there is no meta; the reader
     // should detect that `[1-3]` is meta and move it over so the lines get parsed.
     let info = readCodeBlockInfo('[1-3]', undefined)
-    assert.equal(info.language, 'plaintext')
+    assert.equal(info.language, 'typescript')
     assert.deepEqual(
       [...info.highlightedLines].sort((a, b) => a - b),
       [1, 2, 3],

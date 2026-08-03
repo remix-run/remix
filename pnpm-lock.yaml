@@ -199,15 +199,6 @@ importers:
 
   docs/api:
     dependencies:
-      front-matter:
-        specifier: ^4.0.2
-        version: 4.0.2
-      github-slugger:
-        specifier: 'catalog:'
-        version: 2.0.0
-      marked:
-        specifier: ^17.0.1
-        version: 17.0.6
       oxfmt:
         specifier: 'catalog:'
         version: 0.51.0
@@ -218,11 +209,11 @@ importers:
         specifier: workspace:*
         version: link:../shared
       semver:
-        specifier: ^7.7.3
+        specifier: 7.7.4
         version: 7.7.4
     devDependencies:
       '@types/dom-navigation':
-        specifier: ^1.0.6
+        specifier: 1.0.7
         version: 1.0.7
       '@types/hast':
         specifier: 'catalog:'
@@ -231,7 +222,7 @@ importers:
         specifier: 'catalog:'
         version: 24.10.4
       '@types/semver':
-        specifier: ^7.5.8
+        specifier: 7.5.8
         version: 7.5.8
       pagefind:
         specifier: 'catalog:'
@@ -240,7 +231,7 @@ importers:
         specifier: 'catalog:'
         version: 4.4.1
       typedoc:
-        specifier: ^0.28.19
+        specifier: 0.28.19
         version: 0.28.19(typescript@5.9.3)
       typescript:
         specifier: 'catalog:'
@@ -248,36 +239,9 @@ importers:
 
   docs/guides:
     dependencies:
-      github-slugger:
-        specifier: 'catalog:'
-        version: 2.0.0
-      gray-matter:
-        specifier: ^4.0.3
-        version: 4.0.3
-      hast-util-to-html:
-        specifier: ^9.0.5
-        version: 9.0.5
       mdast-util-directive:
-        specifier: ^3.1.0
+        specifier: 3.1.0
         version: 3.1.0
-      mdast-util-to-string:
-        specifier: ^4.0.0
-        version: 4.0.0
-      rehype-stringify:
-        specifier: ^10.0.1
-        version: 10.0.1
-      remark-directive:
-        specifier: ^4.0.0
-        version: 4.0.0
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1
-      remark-parse:
-        specifier: ^11.0.0
-        version: 11.0.0
-      remark-rehype:
-        specifier: ^11.1.2
-        version: 11.1.2
       remix:
         specifier: workspace:^
         version: link:../../packages/remix
@@ -287,18 +251,12 @@ importers:
       shiki:
         specifier: 'catalog:'
         version: 4.4.1
-      unified:
-        specifier: ^11.0.5
-        version: 11.0.5
       unist-util-visit:
-        specifier: ^5.1.0
+        specifier: 5.1.0
         version: 5.1.0
     devDependencies:
-      '@types/hast':
-        specifier: 'catalog:'
-        version: 3.0.5
       '@types/mdast':
-        specifier: ^4.0.4
+        specifier: 4.0.4
         version: 4.0.4
       '@types/node':
         specifier: 'catalog:'
@@ -312,10 +270,52 @@ importers:
 
   docs/shared:
     dependencies:
+      github-slugger:
+        specifier: 'catalog:'
+        version: 2.0.0
+      gray-matter:
+        specifier: 4.0.3
+        version: 4.0.3
+      hast-util-to-html:
+        specifier: 9.0.5
+        version: 9.0.5
+      mdast-util-to-string:
+        specifier: 4.0.0
+        version: 4.0.0
+      rehype-stringify:
+        specifier: 10.0.1
+        version: 10.0.1
+      remark-directive:
+        specifier: 4.0.0
+        version: 4.0.0
+      remark-gfm:
+        specifier: 4.0.1
+        version: 4.0.1
+      remark-parse:
+        specifier: 11.0.0
+        version: 11.0.0
+      remark-rehype:
+        specifier: 11.1.2
+        version: 11.1.2
       remix:
         specifier: workspace:^
         version: link:../../packages/remix
+      shiki:
+        specifier: 'catalog:'
+        version: 4.4.1
+      unified:
+        specifier: 11.0.5
+        version: 11.0.5
+      unist-util-visit:
+        specifier: 5.1.0
+        version: 5.1.0
     devDependencies:
+      '@types/hast':
+        specifier: 'catalog:'
+        version: 3.0.5
+      '@types/mdast':
+        specifier: 4.0.4
+        version: 4.0.4
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -326,7 +326,7 @@ importers:
   docs/shared/prerender/bench:
     dependencies:
       node-html-parser:
-        specifier: ^7.1.0
+        specifier: 7.1.0
         version: 7.1.0
       remix:
         specifier: workspace:^
@@ -4871,9 +4871,6 @@ packages:
     resolution: {integrity: sha512-Rx/WycZ60HOaqLKAi6cHRKKI7zxWbJ31MhntmtwMoaTeF7XFH9hhBp8vITaMidfljRQ6eYWCKkaTK+ykVJHP2A==}
     engines: {node: '>= 0.8'}
 
-  front-matter@4.0.2:
-    resolution: {integrity: sha512-I8ZuJ/qG92NWX8i5x1Y8qyj3vizhXS31OxjKDu3LKP+7/qBgfIKValiZIEwoVoJKUHlhWtYrktkxV1XsX+pPlg==}
-
   fsevents@2.3.2:
     resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -5172,11 +5169,6 @@ packages:
 
   markdown-table@3.0.4:
     resolution: {integrity: sha512-wiYz4+JrLyb/DqW2hkFJxP7Vd7JuTDm77fvbM8VfEQdmSMqcImWeeRbHwZjBjIFki/VaMK2BhFi7oUUZeM5bqw==}
-
-  marked@17.0.6:
-    resolution: {integrity: sha512-gB0gkNafnonOw0obSTEGZTT86IuhILt2Wfx0mWH/1Au83kybTayroZ/V6nS25mN7u8ASy+5fMhgB3XPNrOZdmA==}
-    engines: {node: '>= 20'}
-    hasBin: true
 
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
@@ -8292,10 +8284,6 @@ snapshots:
 
   fresh@2.0.0: {}
 
-  front-matter@4.0.2:
-    dependencies:
-      js-yaml: 3.14.2
-
   fsevents@2.3.2:
     optional: true
 
@@ -8561,8 +8549,6 @@ snapshots:
       uc.micro: 2.1.0
 
   markdown-table@3.0.4: {}
-
-  marked@17.0.6: {}
 
   math-intrinsics@1.1.0: {}
 

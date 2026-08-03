@@ -1,7 +1,8 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { parseMarkdownRoot } from './parser.ts'
+import { parseMarkdownRoot } from 'remix-docs-shared/markdown/parser'
+
 import { readMarkdownFrameReferences, splitMarkdownRoot } from './frames.ts'
 
 describe('readMarkdownFrameReferences', () => {

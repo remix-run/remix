@@ -1,3 +1,4 @@
+import matter from 'gray-matter'
 import type { Root } from 'mdast'
 import remarkDirective from 'remark-directive'
 import remarkGfm from 'remark-gfm'
@@ -6,6 +7,31 @@ import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
 
 const markdownParser = unified().use(remarkParse).use(remarkGfm).use(remarkDirective)
+
+export function parseMarkdownFrontmatter(source: string): {
+  attributes: Record<string, unknown>
+  body: string
+} {
+  let parsed = matter(source)
+  let attributes: unknown = parsed.data
+
+  return {
+    attributes: isRecord(attributes) ? attributes : {},
+    body: parsed.content,
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+export function parseMarkdownDocument(source: string): {
+  attributes: Record<string, unknown>
+  root: Root
+} {
+  let { attributes, body } = parseMarkdownFrontmatter(source)
+  return { attributes, root: parseMarkdownRoot(body) }
+}
 
 export function parseMarkdownRoot(source: string): Root {
   source = source.replace(/\r\n?/g, '\n')

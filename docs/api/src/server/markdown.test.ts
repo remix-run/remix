@@ -4,7 +4,7 @@ import * as path from 'node:path'
 import * as assert from 'remix/assert'
 import { describe, it, type TestContext } from 'remix/test'
 
-import { renderMarkdownFile } from './markdown.ts'
+import { renderMarkdownFile, type DocFile } from './markdown.ts'
 
 describe('renderMarkdownFile()', () => {
   it('adds linked heading IDs and collects h2 and h3 headings for the table of contents', async (t) => {
@@ -40,7 +40,7 @@ describe('renderMarkdownFile()', () => {
   it('renders highlighted code blocks with the shared copy contract', async (t) => {
     let result = await renderMarkdown(t, '```ts\nlet count = 1\n```\n')
 
-    assert.match(result.html, /<div class="docs-code-block" data-code-block>/)
+    assert.match(result.html, /<div class="docs-code-block" data-code-block="">/)
     assert.match(result.html, /<pre class="shiki shiki-themes github-light github-dark"/)
     assert.match(result.html, /<button[^>]*data-code-block-copy/)
     assert.match(result.html, /aria-label="Copy code to clipboard"/)
@@ -60,13 +60,63 @@ describe('renderMarkdownFile()', () => {
     assert.equal(result.html.includes('<h2 id="custom-id">'), true)
     assert.equal(result.html.includes('{#custom-id}'), false)
   })
+
+  it('preserves raw HTML', async (t) => {
+    let result = await renderMarkdown(t, '<aside data-api-note>Rendered HTML</aside>\n')
+
+    assert.match(result.html, /<aside data-api-note>Rendered HTML<\/aside>/)
+  })
+
+  it('rewrites API links for the active version', async (t) => {
+    let result = await renderMarkdown(
+      t,
+      '[Route docs](/api/remix/router/type/Route.md?raw=true#details)\n',
+      { version: '1.2.3' },
+    )
+
+    assert.match(
+      result.html,
+      /href="\/1.2.3\/api\/remix\/router\/type\/Route.md\?raw=true#details"/,
+    )
+  })
+
+  it('links API symbols inside highlighted code', async (t) => {
+    let routeDoc: DocFile = {
+      kind: 'api',
+      path: '/tmp/Route.md',
+      type: 'type',
+      name: 'Route',
+      package: 'remix/router',
+      urlPath: 'remix/router/type/Route',
+    }
+    let result = await renderMarkdown(t, '```ts\nlet route: Route\n```\n', {
+      addCodeLinks: true,
+      docFilesLookup: new Map([['Route', routeDoc]]),
+      version: '1.2.3',
+    })
+
+    assert.match(result.html, /href="\/1.2.3\/api\/remix\/router\/type\/Route\/"/)
+  })
 })
 
-async function renderMarkdown(t: TestContext, source: string) {
+async function renderMarkdown(
+  t: TestContext,
+  source: string,
+  options: {
+    addCodeLinks?: boolean
+    docFilesLookup?: Map<string, DocFile>
+    version?: string
+  } = {},
+) {
   let directory = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-docs-markdown-'))
   let file = path.join(directory, 'page.md')
   fs.writeFileSync(file, source)
   t.after(() => fs.rmSync(directory, { recursive: true }))
 
-  return renderMarkdownFile(file, new Map(), undefined, false)
+  return renderMarkdownFile(
+    file,
+    options.docFilesLookup ?? new Map(),
+    options.version,
+    options.addCodeLinks ?? false,
+  )
 }

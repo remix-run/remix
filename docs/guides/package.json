@@ -15,25 +15,14 @@
     "node": ">=24.3.0"
   },
   "dependencies": {
-    "github-slugger": "catalog:",
-    "gray-matter": "^4.0.3",
-    "hast-util-to-html": "^9.0.5",
-    "mdast-util-directive": "^3.1.0",
-    "mdast-util-to-string": "^4.0.0",
-    "rehype-stringify": "^10.0.1",
-    "remark-directive": "^4.0.0",
-    "remark-gfm": "^4.0.1",
-    "remark-parse": "^11.0.0",
-    "remark-rehype": "^11.1.2",
+    "mdast-util-directive": "3.1.0",
     "remix": "workspace:^",
     "remix-docs-shared": "workspace:*",
     "shiki": "catalog:",
-    "unified": "^11.0.5",
-    "unist-util-visit": "^5.1.0"
+    "unist-util-visit": "5.1.0"
   },
   "devDependencies": {
-    "@types/hast": "catalog:",
-    "@types/mdast": "^4.0.4",
+    "@types/mdast": "4.0.4",
     "@types/node": "catalog:",
     "pagefind": "catalog:",
     "typescript": "catalog:"

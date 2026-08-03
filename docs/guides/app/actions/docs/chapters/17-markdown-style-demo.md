@@ -9,12 +9,6 @@ This page is a rendering fixture, not product documentation. Use it to review ho
 
 A paragraph can mix **strong text**, _emphasis_, `inline code`, and [links to another chapter](/routing-and-controllers/). Inline code should stay compact enough to read in a sentence without looking like a full code block.
 
-Raw HTML is escaped instead of rendered:
-
-<section data-demo="escaped-html">
-  <p>This should appear as text, not as a real section.</p>
-</section>
-
 ## Headings below the page title {#headings-below-the-page-title}
 
 The page title is the level-one heading. Chapter bodies should usually start at level two, but lower heading levels are available when a section needs more structure.

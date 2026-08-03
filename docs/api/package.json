@@ -3,22 +3,19 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "front-matter": "^4.0.2",
-    "github-slugger": "catalog:",
-    "marked": "^17.0.1",
     "oxfmt": "catalog:",
     "remix": "workspace:*",
     "remix-docs-shared": "workspace:*",
-    "semver": "^7.7.3"
+    "semver": "7.7.4"
   },
   "devDependencies": {
-    "@types/dom-navigation": "^1.0.6",
+    "@types/dom-navigation": "1.0.7",
     "@types/hast": "catalog:",
     "@types/node": "catalog:",
-    "@types/semver": "^7.5.8",
+    "@types/semver": "7.5.8",
     "pagefind": "catalog:",
     "shiki": "catalog:",
-    "typedoc": "^0.28.19",
+    "typedoc": "0.28.19",
     "typescript": "catalog:"
   },
   "scripts": {

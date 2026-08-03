@@ -1,18 +1,15 @@
-import * as frontmatter from 'front-matter'
-import GithubSlugger from 'github-slugger'
-import type { Element } from 'hast'
-import { Marked, type MarkedExtension, type Token } from 'marked'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { codeToHtml } from 'shiki'
+
+import type { Element } from 'hast'
+import type { ShikiTransformer } from 'shiki'
+import { addHeadingIds, readMarkdownHeadingsFromRoot } from 'remix-docs-shared/markdown/headings'
+import { parseMarkdownDocument, parseMarkdownFrontmatter } from 'remix-docs-shared/markdown/parser'
+import { renderMarkdownHtml } from 'remix-docs-shared/markdown/render'
+import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
+
 import { IGNORE_SYMBOLS, MDN_SYMBOLS } from '../generate/symbols.ts'
 import { getApiRouteHref, routes, withVersion } from './routes.ts'
-
-// No types exist for the `frontmatter` package
-const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
-  attributes: Record<string, any>
-  body: string
-}
 
 const apiTypeKinds = ['type', 'interface', 'class', 'function', 'mixin', 'variable'] as const
 export type ApiTypeKind = (typeof apiTypeKinds)[number]
@@ -36,13 +33,6 @@ export type PackageDocFile = {
 }
 
 export type DocFile = ApiDocFile | PackageDocFile
-
-export type MarkdownHeading = {
-  id: string
-  depth: 2 | 3
-  title: string
-  titleHtml: string
-}
 
 export async function discoverMarkdownFiles(
   baseDir: string,
@@ -77,7 +67,7 @@ function getDocFile(baseDir: string, fullPath: string): DocFile {
   let name = path.basename(fullPath, '.md')
 
   let markdown = fs.readFileSync(fullPath, 'utf-8')
-  let { attributes } = parseFrontmatter(markdown)
+  let { attributes } = parseMarkdownFrontmatter(markdown)
 
   if (attributes.type === 'package') {
     let packageName = parts.slice(0, -1).join('/')
@@ -103,8 +93,15 @@ function getDocFile(baseDir: string, fullPath: string): DocFile {
 }
 
 function getApiTypeKind(value: string | undefined): ApiTypeKind {
-  if (apiTypeKinds.includes(value as ApiTypeKind)) {
-    return value as ApiTypeKind
+  if (
+    value === 'type' ||
+    value === 'interface' ||
+    value === 'class' ||
+    value === 'function' ||
+    value === 'mixin' ||
+    value === 'variable'
+  ) {
+    return value
   }
   throw new Error(`Invalid API docs type: ${value ?? '<missing>'}`)
 }
@@ -114,23 +111,35 @@ export async function renderMarkdownFile(
   docFilesLookup: Map<string, DocFile>,
   version: string | undefined,
   addCodeLinks: boolean,
-): Promise<{ html: string; headings: MarkdownHeading[]; source?: string }> {
-  let headings: MarkdownHeading[] = []
-
+): Promise<{
+  html: string
+  headings: MarkdownHeading[]
+  source?: string
+}> {
   try {
     let markdown = fs.readFileSync(filePath, 'utf-8')
-    let { attributes, body } = parseFrontmatter(markdown)
-    let marked = new Marked(
-      getHeadingExtension(headings),
-      getShikiExtension(attributes.title || '', docFilesLookup, version, addCodeLinks),
-    )
-    let html = await marked.parse(body)
+    let { attributes, root } = parseMarkdownDocument(markdown)
+    let title = typeof attributes.title === 'string' ? attributes.title : ''
+    let transformers = addCodeLinks
+      ? [createApiCodeLinkTransformer(title, docFilesLookup, version)]
+      : []
+
+    addHeadingIds(root)
+
     return {
-      html,
-      headings,
+      html: await renderMarkdownHtml(root, {
+        highlightCode: {
+          includeExplanation: addCodeLinks,
+          transformers,
+        },
+        transformLink(href) {
+          return getApiRouteHref(href, version)
+        },
+      }),
+      headings: readMarkdownHeadingsFromRoot(root),
       source: typeof attributes.source === 'string' ? attributes.source : undefined,
     }
-  } catch (error) {
+  } catch {
     return {
       html: `
       <div class="error">
@@ -143,182 +152,80 @@ export async function renderMarkdownFile(
   }
 }
 
-function getHeadingExtension(headings: MarkdownHeading[]): MarkedExtension {
-  let slugger = new GithubSlugger()
-
-  return {
-    renderer: {
-      heading(token) {
-        let explicitId = stripExplicitHeadingId(token.tokens)
-        let title = readTokenText(token.tokens).trim()
-        let id = explicitId ?? slugger.slug(title || 'section')
-        let titleHtml = this.parser.parseInline(token.tokens)
-        let escapedId = escapeHtml(id)
-
-        if (token.depth === 2 || token.depth === 3) {
-          headings.push({ id, depth: token.depth, title, titleHtml })
-        }
-
-        return `<h${token.depth} id="${escapedId}"><a class="docs-heading-link" href="#${escapedId}">${titleHtml}</a></h${token.depth}>\n`
-      },
-    },
-  }
-}
-
-function stripExplicitHeadingId(tokens: Token[]): string | undefined {
-  let lastToken = tokens.at(-1)
-  if (lastToken?.type !== 'text') return undefined
-
-  let idMatch = /\s+\{#([^}\s]+)\}\s*$/.exec(lastToken.text)
-  if (!idMatch) return undefined
-
-  lastToken.text = lastToken.text.slice(0, idMatch.index)
-  if (lastToken.text === '') tokens.pop()
-  return idMatch[1]
-}
-
-function readTokenText(tokens: Token[]): string {
-  return tokens
-    .map((token) => {
-      if ('tokens' in token && token.tokens) return readTokenText(token.tokens)
-      if ('text' in token && typeof token.text === 'string') return token.text
-      return ''
-    })
-    .join('')
-}
-
-function getShikiExtension(
+function createApiCodeLinkTransformer(
   apiName: string,
   docFilesLookup: Map<string, DocFile>,
   version: string | undefined,
-  addCodeLinks: boolean,
-): MarkedExtension {
+): ShikiTransformer {
   return {
-    async: true,
-    async walkTokens(token) {
-      if (token.type === 'code') {
-        try {
-          token.text = await codeToHtml(token.text, {
-            lang: token.lang || 'typescript',
-            themes: {
-              light: 'github-light',
-              // See Shiki styles for activation
-              dark: 'github-dark',
-            },
-            includeExplanation: true,
-            transformers: [
-              // Insert cross-links to known APIs
-              {
-                span(node, line, col) {
-                  if (!addCodeLinks) {
-                    return
-                  }
+    name: 'remix-api-code-links',
+    span(node, line, column) {
+      // Only enhance single-symbol spans of word characters, skipping spans for
+      // punctuation, braces, and other syntax.
+      if (
+        node.children.length !== 1 ||
+        !('value' in node.children[0]) ||
+        !/^[\w ]+$/i.test(node.children[0].value)
+      ) {
+        return
+      }
 
-                  // We only enhance single-symbol spans of word characters,
-                  // skipping spans for parens, braces, etc
-                  if (
-                    node.children.length !== 1 ||
-                    !('value' in node.children[0]) ||
-                    !/^[\w ]+$/i.test(node.children[0].value)
-                  ) {
-                    return
-                  }
+      let symbol = node.children[0].value
+      let leadingSpaces = symbol.length - symbol.trimStart().length
+      let trailingSpaces = symbol.length - symbol.trimEnd().length
+      symbol = symbol.trim()
 
-                  let symbol = node.children[0].value
+      if (symbol === apiName || IGNORE_SYMBOLS.has(symbol)) {
+        return
+      }
 
-                  // Capture leading/trailing spaces for later
-                  let leadingSpaces = symbol.length - symbol.trimStart().length
-                  let trailingSpaces = symbol.length - symbol.trimEnd().length
-                  symbol = symbol?.trim()
+      // Type annotations generally have no explanation. This keeps parameter and
+      // function names from becoming false-positive API links.
+      if (this.tokens[line]?.[column]?.explanation != null) {
+        return
+      }
 
-                  // Don't link to the current page
-                  if (symbol === apiName) return
-                  // Don't link to anything in the ignore list
-                  if (IGNORE_SYMBOLS.has(symbol)) return
+      let linkElement: Element | undefined
+      let docFile = docFilesLookup.get(symbol)
+      if (docFile !== undefined) {
+        linkElement = createLink(symbol, {
+          href: withVersion(routes.api.href({ slug: docFile.urlPath }), version),
+        })
+      } else if (Object.hasOwn(MDN_SYMBOLS, symbol)) {
+        linkElement = createLink(symbol, {
+          href: MDN_SYMBOLS[symbol as keyof typeof MDN_SYMBOLS],
+          target: '_blank',
+        })
+      }
 
-                  // We don't want to auto link parameter names, function names, etc.
-                  // The things we do want to link (mostly type annotations) don't seem
-                  // to have an explanation so we use that to decide when to link
-                  if (this.tokens[line]?.[col]?.explanation != null) return
-
-                  let linkEl: Element | undefined
-                  if (docFilesLookup.has(symbol)) {
-                    linkEl = link(symbol, {
-                      href: withVersion(
-                        routes.api.href({ slug: docFilesLookup.get(symbol)!.urlPath }),
-                        version,
-                      ),
-                    })
-                  } else if (MDN_SYMBOLS.hasOwnProperty(symbol)) {
-                    linkEl = link(symbol, {
-                      href: MDN_SYMBOLS[symbol as keyof typeof MDN_SYMBOLS],
-                      target: '_blank',
-                    })
-                  }
-
-                  if (linkEl) {
-                    node.children = [
-                      ...(leadingSpaces ? spacer(leadingSpaces) : []),
-                      linkEl,
-                      ...(trailingSpaces ? spacer(trailingSpaces) : []),
-                    ]
-                  }
-                },
-              },
-            ],
-          })
-        } catch (error) {
-          console.error(`Shiki highlighting failed for token: ${JSON.stringify(token)}`)
-          console.error(error)
-        }
+      if (linkElement !== undefined) {
+        node.children = [
+          ...(leadingSpaces > 0 ? createSpacer(leadingSpaces) : []),
+          linkElement,
+          ...(trailingSpaces > 0 ? createSpacer(trailingSpaces) : []),
+        ]
       }
     },
-    renderer: {
-      code(code) {
-        return renderCodeBlock(code.text)
-      },
-      link(token) {
-        let href = getApiRouteHref(token.href, version)
-        if (!href) return false
-
-        let title = token.title ? ` title="${escapeHtml(token.title)}"` : ''
-        return `<a href="${escapeHtml(href)}"${title}>${this.parser.parseInline(token.tokens)}</a>`
-      },
-    },
-  }
-
-  function renderCodeBlock(preHtml: string): string {
-    return `<div class="docs-code-block" data-code-block>${preHtml}<button class="docs-code-block__copy" type="button" data-code-block-copy aria-label="Copy code to clipboard"><span class="docs-code-block__copy-label">Copy code to clipboard</span></button></div>`
-  }
-
-  // Spacer elements to preserve whitespace outside the inserted <a> elements
-  function spacer(num: number) {
-    return [
-      {
-        type: 'text',
-        value: ' '.repeat(num),
-      } as const,
-    ]
-  }
-
-  function link(
-    text: string,
-    attrs: { href: HTMLAnchorElement['href']; target?: HTMLAnchorElement['target'] },
-  ): Element {
-    return {
-      type: 'element',
-      tagName: 'a',
-      properties: attrs,
-      children: [
-        {
-          type: 'text',
-          value: text,
-        },
-      ],
-    }
   }
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"]/g, (char) => `&#${char.charCodeAt(0)};`)
+function createSpacer(length: number) {
+  return [
+    {
+      type: 'text',
+      value: ' '.repeat(length),
+    } as const,
+  ]
+}
+
+function createLink(
+  text: string,
+  properties: { href: HTMLAnchorElement['href']; target?: HTMLAnchorElement['target'] },
+): Element {
+  return {
+    type: 'element',
+    tagName: 'a',
+    properties,
+    children: [{ type: 'text', value: text }],
+  }
 }

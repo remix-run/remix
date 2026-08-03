@@ -7,14 +7,14 @@ import type {
 import { codeToHast, type ShikiTransformer } from 'shiki'
 import { visit } from 'unist-util-visit'
 
-import type { CodeBlock, CodeBlockInfo } from './types.ts'
+import type { CodeBlock, CodeBlockInfo, HighlightCodeOptions } from './types.ts'
 
 export const shikiThemes = {
   light: 'github-light',
   dark: 'github-dark',
 } as const
 
-export function rehypeHighlightCode() {
+export function rehypeHighlightCode(options: HighlightCodeOptions = {}) {
   return async function transform(tree: HastRoot): Promise<void> {
     let codeBlocks: {
       parent: HastRoot | Element
@@ -34,7 +34,10 @@ export function rehypeHighlightCode() {
     })
 
     for (let target of codeBlocks) {
-      target.parent.children[target.index] = await renderHighlightedCodeBlock(target.codeBlock)
+      target.parent.children[target.index] = await renderHighlightedCodeBlock(
+        target.codeBlock,
+        options,
+      )
     }
   }
 }
@@ -83,7 +86,10 @@ function readHastText(node: HastRootContent): string {
   return ''
 }
 
-export async function renderHighlightedCodeBlock(codeBlock: CodeBlock): Promise<Element> {
+export async function renderHighlightedCodeBlock(
+  codeBlock: CodeBlock,
+  options: HighlightCodeOptions = {},
+): Promise<Element> {
   let info = readCodeBlockInfo(codeBlock.language, codeBlock.meta)
   let pre: Element
 
@@ -91,7 +97,8 @@ export async function renderHighlightedCodeBlock(codeBlock: CodeBlock): Promise<
     let highlighted = await codeToHast(codeBlock.source, {
       lang: info.language,
       themes: shikiThemes,
-      transformers: [codeBlockTransformer(info.highlightedLines)],
+      includeExplanation: options.includeExplanation,
+      transformers: [...(options.transformers ?? []), codeBlockTransformer(info.highlightedLines)],
     })
 
     pre =
@@ -122,7 +129,7 @@ export function readCodeBlockInfo(
   )?.trim()
 
   let info: CodeBlockInfo = {
-    language: language && language !== '' ? language : 'plaintext',
+    language: language && language !== '' ? language : 'typescript',
     highlightedLines: readHighlightedLines(meta),
   }
   if (filename && filename !== '') {
