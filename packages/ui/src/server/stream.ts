@@ -1,5 +1,6 @@
 import type { ComponentHandle, FrameHandle, Key, RemixNode } from '../runtime/component.ts'
 import type { ElementType, ElementProps, RemixElement } from '../runtime/jsx.ts'
+import type { ElementFunction } from '../runtime/element-function.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
@@ -89,7 +90,6 @@ interface RenderContext {
   onError: (error: unknown) => void
   parentVNode?: VNode
   styleCache: Map<string, { selector: string; css: string }>
-  emittedStyles: Set<string>
   resolveFrame: (
     src: string,
     target?: string,
@@ -203,7 +203,6 @@ export function renderToStream(
     onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
     styleCache: new Map(),
-    emittedStyles: new Set(),
     pendingFrames: [],
     hydrationData: new Map(),
     unresolvedHydrationData: new Map(),
@@ -436,7 +435,7 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
       return buildElementSegment(tag, props, context, frameState)
     }
 
-    if (typeof type === 'function') {
+    if (isElementFunction(type)) {
       if (type === Frame) {
         return buildFrameSegment(node, context, frameState)
       }
@@ -788,8 +787,8 @@ function sanitizeReturnedSsrMixinProps(props: ElementProps): ElementProps {
 
 function resolveReturnedSsrMixDescriptors(
   value: unknown,
-): Array<{ type: Function; args: unknown[] }> | null {
-  let descriptors: Array<{ type: Function; args: unknown[] }> = []
+): Array<{ type: ElementFunction; args: unknown[] }> | null {
+  let descriptors: Array<{ type: ElementFunction; args: unknown[] }> = []
   if (!collectReturnedSsrMixDescriptors(value, descriptors)) {
     return null
   }
@@ -799,7 +798,7 @@ function resolveReturnedSsrMixDescriptors(
 
 function collectReturnedSsrMixDescriptors(
   value: unknown,
-  output: Array<{ type: Function; args: unknown[] }>,
+  output: Array<{ type: ElementFunction; args: unknown[] }>,
 ): boolean {
   if (!value) {
     return true
@@ -829,7 +828,11 @@ function isSsrMixinElement(
   return '__rmxMixinElementType' in value
 }
 
-function isSsrMixinDescriptor(value: unknown): value is { type: Function; args: unknown[] } {
+function isElementFunction(value: unknown): value is ElementFunction {
+  return typeof value === 'function'
+}
+
+function isSsrMixinDescriptor(value: unknown): value is { type: ElementFunction; args: unknown[] } {
   if (!value || typeof value !== 'object' || isRemixElement(value)) {
     return false
   }
@@ -839,7 +842,7 @@ function isSsrMixinDescriptor(value: unknown): value is { type: Function; args: 
 }
 
 function buildComponentSegment(
-  type: Function,
+  type: ElementFunction,
   props: any,
   context: RenderContext,
   componentId: string,
@@ -923,7 +926,7 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
     }
 
     // Component function: render synchronously, then unwrap its result
-    if (typeof type === 'function') {
+    if (isElementFunction(type)) {
       let vnode = createVNode(type, props)
       if (context.parentVNode) {
         vnode._parent = context.parentVNode
@@ -1180,8 +1183,6 @@ function finalizeHtml(html: string, context: RenderContext): string {
     }
   }
 
-  html = dedupeServerStyleTagsInHtml(html, context.emittedStyles)
-
   // Append aggregated hydration/frame data script at the end
   let rmxData = buildRmxDataScript(context)
   if (rmxData) {
@@ -1255,23 +1256,6 @@ function renderStyleTag(
   return `<style data-rmx="${escapeHtml(selector)}">${wrappedCss}</style>`
 }
 
-function readStyleTagAttribute(attrs: string, name: string): string | null {
-  let match = attrs.match(new RegExp(`\\b${name}=(?:"([^"]*)"|'([^']*)')`))
-  if (!match) return null
-  return match[1] ?? match[2] ?? null
-}
-
-function dedupeServerStyleTagsInHtml(html: string, seenStyles: Set<string>): string {
-  return html.replace(/<style\b([^>]*)>[\s\S]*?<\/style>/gi, (match, attrs) => {
-    let selector = readStyleTagAttribute(attrs, 'data-rmx')
-    if (!selector) return match
-
-    if (seenStyles.has(selector)) return ''
-    seenStyles.add(selector)
-    return match
-  })
-}
-
 function buildRmxDataScript(context: RenderContext): string {
   if (context.hydrationData.size === 0 && context.frameData.size === 0) {
     return ''
@@ -1303,6 +1287,12 @@ function escapeScriptJson(json: string): string {
 // the handler's `finalizeHtml` emits selector-addressed `<style>` tags in its HTML, and on the client,
 // the `adoptServerStyleTag` MutationObserver (stylesheet.ts) picks it up anywhere in the
 // document and adopts the CSS into an adopted stylesheet.
+//
+// Style tags are intentionally NOT deduped across frame boundaries: each frame
+// owns its style rules independently on the client (per-frame refcounted
+// adoption), so every frame's HTML must carry the full set of style tags its
+// content references — even when a sibling frame or the enclosing document
+// already emitted the same selector.
 async function streamPendingFrames(
   context: RenderContext,
   controller: ReadableStreamDefaultController,
@@ -1323,7 +1313,6 @@ async function streamPendingFrames(
         try {
           let { html, tail } = await promise
           if (context.signal.aborted) return
-          html = dedupeServerStyleTagsInHtml(html, context.emittedStyles)
 
           // Stream as a template element (first chunk only)
           let templateHtml = `<template id="${frameId}">${escapeTemplateContent(html)}</template>`

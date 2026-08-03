@@ -64,7 +64,9 @@ export const StateSearchPage = clientEntry(
             })}
           >
             <Frame
-              src={routes.frames.stateSearchResults.href(undefined, { query })}
+              src={routes.frames.stateSearchResults.href(undefined, {
+                searchParams: { query },
+              })}
               fallback={<div mix={css({ color: '#9aa8e8' })}>Searching states…</div>}
             />
           </div>

@@ -47,6 +47,9 @@ importers:
       oxlint-tsgolint:
         specifier: ^0.17.4
         version: 0.17.4
+      remix:
+        specifier: workspace:^
+        version: link:packages/remix
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -483,12 +486,21 @@ importers:
 
   packages/cli:
     dependencies:
+      '@remix-run/data-table':
+        specifier: workspace:^
+        version: link:../data-table
+      '@remix-run/node-tsx':
+        specifier: workspace:^
+        version: link:../node-tsx
       '@remix-run/terminal':
         specifier: workspace:^
         version: link:../terminal
       '@remix-run/test':
         specifier: workspace:^
         version: link:../test
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
       semver:
         specifier: ^7.7.4
         version: 7.7.4
@@ -4978,6 +4990,9 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
 
+  jsonc-parser@3.3.1:
+    resolution: {integrity: sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==}
+
   jsonparse@1.3.1:
     resolution: {integrity: sha512-POQXvpdL69+CluYsillJ7SUhKvytYjW9vG/GKpnf+xP8UWgYEM/RaMzHHofbALDiKbbP1W8UEYmgGl39WkPZsg==}
     engines: {'0': node >= 0.2.0}
@@ -8368,6 +8383,8 @@ snapshots:
   jsesc@3.1.0: {}
 
   json5@2.2.3: {}
+
+  jsonc-parser@3.3.1: {}
 
   jsonparse@1.3.1: {}
 

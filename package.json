@@ -10,6 +10,7 @@
     "oxfmt": "catalog:",
     "oxlint": "^1.57.0",
     "oxlint-tsgolint": "^0.17.4",
+    "remix": "workspace:^",
     "typescript": "catalog:",
     "typescript-language-server": "catalog:"
   },

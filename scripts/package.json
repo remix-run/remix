@@ -13,7 +13,7 @@
     "yaml": "^2.9.0"
   },
   "scripts": {
-    "test": "remix-test",
+    "test": "remix test",
     "typecheck": "tsgo --noEmit"
   }
 }

@@ -4,7 +4,7 @@ PostgreSQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/t
 
 ## Features
 
-- **Native `pg` Integration**: Works with `pg` `Pool` and `PoolClient` instances
+- **Native `pg` Integration**: Creates a pool from `pg` configuration or uses an existing pool or client
 - **Full `data-table` API Support**: Queries, relations, writes, and transactions
 - **Adapter-Owned Compiler**: SQL compilation lives in this adapter, with optional shared pure helpers from `data-table`
 - **Multi-Statement Migrations**: `executeScript()` runs `up.sql` / `down.sql` files natively via `pg`
@@ -24,18 +24,21 @@ npm i remix pg
 ## Usage
 
 ```ts
-import { Pool } from 'pg'
 import { createDatabase } from 'remix/data-table'
 import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
 
-let pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-})
-
-let db = createDatabase(createPostgresDatabaseAdapter(pool))
+let db = createDatabase(
+  createPostgresDatabaseAdapter({
+    connectionString: process.env.DATABASE_URL,
+  }),
+)
 ```
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `pg`.
+
+Config-backed adapters support `db.wipe()` and `db.reset()`. You may continue passing an existing `pg` pool or client when your application owns the driver lifecycle, but destructive lifecycle methods are unavailable in that mode. `db.wipe()` requires a database name resolvable from the connection config (`database`, the path of `connectionString`, or the `PGDATABASE` environment variable) and throws when none is present.
+
+Migration runs reserve one connection for the PostgreSQL advisory lock, migration SQL, and journal updates. Lock acquisition waits up to 60 seconds (via `lock_timeout`) and fails with an error instead of blocking forever. After a successful run the connection is unlocked and returned to the pool; if the migration or unlock fails, the reserved connection is destroyed instead of being reused, so a dirty session can never leak back into the pool. Calling `withMigrationLock()` from inside a migration callback throws instead of deadlocking.
 
 ## Adapter Capabilities
 

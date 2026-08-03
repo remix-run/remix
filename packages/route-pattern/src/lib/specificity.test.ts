@@ -61,10 +61,6 @@ describe('specificity', () => {
         assertCompare(['https://a.*b-c.d', 'https://a.b-*c.d'], 'https://a.b-xxx.yyy-c.d', 1)
       })
 
-      it('ranks back-to-back variables with static content higher', () => {
-        assertCompare(['https://:a-:b.com', 'https://:sub.com'], 'https://ab-cd.com', 1)
-      })
-
       it('ranks back-to-back wildcards with static content higher', () => {
         assertCompare(['https://*-*.com', 'https://*.com'], 'https://ab-cd.com', 1)
       })

@@ -8,7 +8,10 @@ import type {
   TransactionOptions,
   TransactionToken,
 } from '@remix-run/data-table'
+import { AsyncLocalStorage } from 'node:async_hooks'
+
 import { getTablePrimaryKey } from '@remix-run/data-table'
+import pg from 'pg'
 import type {
   Client as PostgresClient,
   Pool as PostgresPool,
@@ -20,6 +23,17 @@ import { compilePostgresOperation } from './sql-compiler.ts'
 type TransactionState = {
   client: PostgresClient | PostgresPoolClient
   releaseOnClose: boolean
+}
+
+type PostgresPoolConfig = ConstructorParameters<typeof pg.Pool>[0]
+type PostgresClientConfig = ConstructorParameters<typeof pg.Client>[0]
+
+/** Database recreation options for a config-backed PostgreSQL adapter. */
+export interface PostgresDatabaseAdapterOptions {
+  /** Database used while dropping and recreating the configured database (`postgres` by default). */
+  maintenanceDatabase?: string
+  /** Template used to recreate the configured database (`template0` by default). */
+  template?: string
 }
 
 type PostgresQueryable = PostgresClient | PostgresPool | PostgresPoolClient
@@ -38,12 +52,28 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
    */
   capabilities
 
+  #config?: PostgresPoolConfig
   #client: PostgresQueryable
+  #maintenanceDatabase: string
+  #template: string
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
+  #migrationLockQueue = Promise.resolve()
+  #migrationLockStore = new AsyncLocalStorage<boolean>()
 
-  constructor(client: PostgresQueryable) {
-    this.#client = client
+  constructor(
+    config: PostgresPoolConfig | PostgresQueryable,
+    options: PostgresDatabaseAdapterOptions = {},
+  ) {
+    if (isPostgresQueryable(config)) {
+      this.#client = config
+    } else {
+      this.#config = config
+      this.#client = new pg.Pool(config)
+    }
+
+    this.#maintenanceDatabase = options.maintenanceDatabase ?? 'postgres'
+    this.#template = options.template ?? 'template0'
     this.capabilities = {
       returning: true,
       savepoints: true,
@@ -256,19 +286,149 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   }
 
   /**
-   * Acquires the postgres migration lock.
-   * @returns A promise that resolves when the lock is acquired.
+   * Destructively recreates the configured PostgreSQL database.
+   * @returns A promise that resolves when the database is ready for use.
    */
-  async acquireMigrationLock(): Promise<void> {
-    await this.#client.query('select pg_advisory_lock(hashtext($1))', ['data_table_migrations'])
+  async wipe(): Promise<void> {
+    let config = this.#configOrThrow('wipe')
+    this.#assertNoOpenTransactions('wipe')
+    let database = resolvePostgresDatabaseName(config)
+    // Resolve the maintenance config before closing the pool so a config
+    // error cannot leave the adapter without a usable pool.
+    let maintenanceConfig = this.#maintenanceConfig(database)
+    await this.#closePool()
+    let maintenance: PostgresClient | undefined
+
+    try {
+      maintenance = new pg.Client(maintenanceConfig)
+      await maintenance.connect()
+      await maintenance.query(
+        'select pg_terminate_backend(pid) from pg_stat_activity where datname = $1 and pid <> pg_backend_pid()',
+        [database],
+      )
+      await maintenance.query('drop database if exists ' + quoteIdentifier(database))
+      await maintenance.query(
+        'create database ' +
+          quoteIdentifier(database) +
+          ' template ' +
+          quoteIdentifier(this.#template),
+      )
+    } finally {
+      try {
+        await maintenance?.end()
+      } finally {
+        await this.#replacePool()
+      }
+    }
   }
 
   /**
-   * Releases the postgres migration lock.
-   * @returns A promise that resolves when the lock is released.
+   * Runs migration work on the postgres connection that owns the advisory lock.
+   *
+   * Lock acquisition waits up to 60 seconds and throws when the lock cannot
+   * be acquired. Re-entering this method from inside `run` throws instead of
+   * deadlocking, and a failed run destroys the reserved connection instead of
+   * returning it to the pool.
+   * @param name Logical migration lock name.
+   * @param run Migration work to run with a connection-bound adapter.
+   * @returns The callback result.
    */
-  async releaseMigrationLock(): Promise<void> {
-    await this.#client.query('select pg_advisory_unlock(hashtext($1))', ['data_table_migrations'])
+  async withMigrationLock<result>(
+    name: string,
+    run: (adapter: DatabaseAdapter) => Promise<result>,
+  ): Promise<result> {
+    if (this.#migrationLockStore.getStore()) {
+      throw new Error('Postgres migration lock is already held by this adapter')
+    }
+
+    let waitForPreviousLock = this.#migrationLockQueue
+    let releaseQueue: () => void = () => undefined
+    this.#migrationLockQueue = new Promise((resolve) => {
+      releaseQueue = resolve
+    })
+
+    await waitForPreviousLock
+
+    try {
+      let releaseOnClose = false
+      let client: PostgresClient | PostgresPoolClient
+
+      if (isPostgresPool(this.#client)) {
+        client = await this.#client.connect()
+        releaseOnClose = true
+      } else {
+        client = this.#client
+      }
+
+      let adapter = releaseOnClose ? new PostgresDatabaseAdapter(client) : this
+
+      try {
+        let value = await this.#migrationLockStore.run(true, () =>
+          runWithPostgresMigrationLock(client, name, adapter, run),
+        )
+
+        if (releaseOnClose) {
+          releasePostgresClient(client)
+        }
+
+        return value
+      } catch (error) {
+        // A failed run can leave the reserved session dirty (aborted
+        // transaction, still-held advisory lock), so destroy the connection
+        // instead of returning it to the pool.
+        if (releaseOnClose) {
+          destroyPostgresClient(client, error)
+        }
+
+        throw error
+      }
+    } finally {
+      releaseQueue()
+    }
+  }
+
+  async #closePool(): Promise<void> {
+    this.#transactions.clear()
+    if (isPostgresPool(this.#client)) {
+      await this.#client.end()
+    }
+  }
+
+  #configOrThrow(method: string): PostgresPoolConfig {
+    if (!this.#config) {
+      throw new Error('Postgres adapter ' + method + '() requires config-based construction')
+    }
+
+    return this.#config
+  }
+
+  #assertNoOpenTransactions(method: string): void {
+    if (this.#transactions.size > 0) {
+      throw new Error('Postgres adapter cannot ' + method + ' while transactions are open')
+    }
+  }
+
+  #maintenanceConfig(targetDatabase: string): PostgresClientConfig {
+    let maintenanceDatabase = this.#maintenanceDatabase
+
+    if (maintenanceDatabase === targetDatabase) {
+      maintenanceDatabase = targetDatabase === 'postgres' ? 'template1' : 'postgres'
+    }
+
+    let config = this.#configOrThrow('maintenance')
+    let connectionString = replaceDatabaseInConnectionString(
+      config?.connectionString,
+      maintenanceDatabase,
+    )
+
+    return { ...config, connectionString, database: maintenanceDatabase }
+  }
+
+  async #replacePool(): Promise<void> {
+    await this.#closePool().catch(() => undefined)
+    if (this.#config) {
+      this.#client = new pg.Pool(this.#config)
+    }
   }
 
   #resolveClient(token: TransactionToken | undefined): PostgresQueryable {
@@ -292,31 +452,158 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
 
 /**
  * Creates a postgres `DatabaseAdapter`.
- * @param client `pg` pool or pool client.
- * @param options Optional adapter capability overrides.
+ * @param input Postgres pool configuration, pool, or client.
+ * @param options Database recreation options used by `wipe()`.
  * @returns A configured postgres adapter.
  * @example
  * ```ts
- * import { Pool } from 'pg'
  * import { createDatabase } from 'remix/data-table'
  * import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
  *
- * let pool = new Pool({ connectionString: process.env.DATABASE_URL })
- * let adapter = createPostgresDatabaseAdapter(pool)
+ * let adapter = createPostgresDatabaseAdapter({ connectionString: process.env.DATABASE_URL })
  * let db = createDatabase(adapter)
  * ```
  */
-export function createPostgresDatabaseAdapter(client: PostgresQueryable): PostgresDatabaseAdapter {
-  return new PostgresDatabaseAdapter(client)
+export function createPostgresDatabaseAdapter(
+  input: PostgresPoolConfig | PostgresQueryable,
+  options?: PostgresDatabaseAdapterOptions,
+): PostgresDatabaseAdapter {
+  return new PostgresDatabaseAdapter(input, options)
+}
+
+function isPostgresQueryable(value: unknown): value is PostgresQueryable {
+  return typeof value === 'object' && value !== null && 'query' in value
 }
 
 function isPostgresPool(client: PostgresQueryable): client is PostgresPool {
-  return 'connect' in client && typeof client.connect === 'function'
+  if (client instanceof pg.Client) {
+    return false
+  }
+
+  return 'connect' in client && typeof client.connect === 'function' && !('release' in client)
+}
+
+function resolvePostgresDatabaseName(config: PostgresPoolConfig): string {
+  let database =
+    resolveDatabaseNameFromConnectionString(config?.connectionString) ??
+    config?.database ??
+    process.env.PGDATABASE
+
+  if (!database) {
+    throw new Error('Postgres database config requires a database name')
+  }
+
+  return database
+}
+
+function replaceDatabaseInConnectionString(
+  connectionString: string | undefined,
+  database: string,
+): string | undefined {
+  if (!connectionString) {
+    return undefined
+  }
+
+  let url: URL
+
+  try {
+    url = new URL(connectionString)
+  } catch (cause) {
+    throw new Error(
+      'Postgres connection string must be a valid URL to resolve the maintenance database',
+      { cause },
+    )
+  }
+
+  url.pathname = '/' + encodeURIComponent(database)
+  return url.toString()
+}
+
+function resolveDatabaseNameFromConnectionString(
+  connectionString: string | undefined,
+): string | undefined {
+  if (!connectionString) {
+    return undefined
+  }
+
+  try {
+    let url = new URL(connectionString)
+    let database = decodeURIComponent(url.pathname.replace(/^\//, ''))
+    return database || undefined
+  } catch {
+    return undefined
+  }
 }
 
 function releasePostgresClient(client: PostgresClient | PostgresPoolClient): void {
   let release = (client as { release?: () => void }).release
   release?.()
+}
+
+function destroyPostgresClient(client: PostgresClient | PostgresPoolClient, error: unknown): void {
+  let release = (client as { release?: (destroy?: Error | boolean) => void }).release
+
+  if (typeof release === 'function') {
+    // A truthy argument tells pg to destroy the client instead of pooling it.
+    release.call(client, error instanceof Error ? error : true)
+    return
+  }
+
+  void (client as PostgresClient).end().catch(() => undefined)
+}
+
+// Matches the 60 second wait bound used by the MySQL adapter's get_lock().
+const MIGRATION_LOCK_TIMEOUT_MS = 60_000
+
+async function runWithPostgresMigrationLock<result>(
+  client: PostgresClient | PostgresPoolClient,
+  name: string,
+  adapter: DatabaseAdapter,
+  run: (adapter: DatabaseAdapter) => Promise<result>,
+): Promise<result> {
+  await client.query('set lock_timeout to ' + String(MIGRATION_LOCK_TIMEOUT_MS))
+
+  try {
+    await client.query('select pg_advisory_lock(hashtext($1))', [name])
+  } catch (cause) {
+    await client.query('set lock_timeout to default').catch(() => undefined)
+    throw new Error('Postgres migration lock could not be acquired', { cause })
+  }
+
+  await client.query('set lock_timeout to default')
+
+  let outcome: { status: 'success'; value: result } | { status: 'failure'; error: unknown }
+
+  try {
+    outcome = { status: 'success', value: await run(adapter) }
+  } catch (error) {
+    outcome = { status: 'failure', error }
+  }
+
+  let unlockFailed = false
+  let unlockError: unknown
+
+  try {
+    let result = await client.query('select pg_advisory_unlock(hashtext($1)) as "released"', [name])
+    let row = result.rows[0] as Record<string, unknown> | undefined
+
+    if (!toBooleanExists(row?.released)) {
+      throw new Error('Postgres migration lock was not held by the reserved connection')
+    }
+  } catch (error) {
+    unlockFailed = true
+    unlockError = error
+  }
+
+  if (outcome.status === 'failure') {
+    throw outcome.error
+  }
+
+  if (unlockFailed) {
+    throw unlockError
+  }
+
+  return outcome.value
 }
 
 function buildSetTransactionStatement(options: TransactionOptions): string {

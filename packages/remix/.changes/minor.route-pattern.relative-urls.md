@@ -1,0 +1,1 @@
+BREAKING CHANGE: Href generation through `remix/route-pattern/href` and `remix/routes` now takes search parameters inside a `searchParams` options property. `remix/route-pattern/match` also accepts `baseURL` for relative URL matching, while href generation uses it for same-origin relative references. The `searchParams` option accepts `URLSearchParams`.

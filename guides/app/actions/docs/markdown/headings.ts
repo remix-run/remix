@@ -44,13 +44,14 @@ export function readMarkdownSectionsFromRoot(root: Root): MarkdownChapterSection
   let sections: MarkdownChapterSection[] = []
 
   visit(root, 'heading', (node) => {
-    if (node.depth !== 2) {
+    if (node.depth !== 2 && node.depth !== 3) {
       return
     }
 
     let id = node.data?.hProperties?.id
     sections.push({
       id: typeof id === 'string' && id.trim() !== '' ? id : 'section',
+      depth: node.depth,
       title: mdastToString(node).trim(),
       titleHtml: renderInlineHtml(node.children),
     })

@@ -72,7 +72,6 @@ const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
 export interface AssetServerOptions<transforms extends AssetRequestTransformMap = {}> {
   /** Public mount path for this asset server, e.g. `'/assets'`. */
   basePath: string
-  /** File patterns keyed by public URL patterns relative to `basePath`. */
   /** File patterns keyed by public URL patterns. */
   fileMap: Readonly<Record<string, string>>
   /**
@@ -82,11 +81,16 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
   /**
    * Glob patterns or file paths that are allowed to be served. Relative values are resolved from `rootDir`.
    */
-  allow: readonly string[]
+  allowFiles: readonly string[]
+  /**
+   * Exact package names whose files are allowed to be served. Dependencies and installed optional
+   * dependencies are allowed automatically. Package files must still match `fileMap`.
+   */
+  allowPackages?: readonly string[]
   /**
    * Glob patterns or file paths that are denied from being served. Relative values are resolved from `rootDir`.
    */
-  deny?: readonly string[]
+  denyFiles?: readonly string[]
   /**
    * Controls optional source-based URL fingerprinting for rewritten asset URLs.
    *
@@ -178,11 +182,12 @@ export interface AssetServer<transforms extends AssetRequestTransformMap = {}> {
 }
 
 type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
-  allow: readonly string[]
+  allowFiles: readonly string[]
+  allowPackages?: readonly string[]
   basePath: string
   buildId?: string
   define?: Record<string, string>
-  deny?: readonly string[]
+  denyFiles?: readonly string[]
   external: string[]
   files: ResolvedAssetServerFilesOptions
   fingerprintAssets: boolean
@@ -228,7 +233,7 @@ export function getInternalWatchTargets<transforms extends AssetRequestTransform
  *   fileMap: {
  *     '/app/*path': 'app/*path',
  *   },
- *   allow: ['app/**'],
+ *   allowFiles: ['app/**'],
  * })
  *
  * route('/assets/*path', ({ request }) => assetServer.fetch(request))
@@ -239,8 +244,12 @@ export function createAssetServer<const transforms extends AssetRequestTransform
 ): AssetServer<transforms> {
   let resolvedOptions = resolveAssetServerOptions(options)
   let accessPolicy = createAccessPolicy({
-    allow: resolvedOptions.allow,
-    deny: resolvedOptions.deny,
+    allowFiles: resolvedOptions.allowFiles,
+    allowPackages: resolvedOptions.allowPackages,
+    denyFiles: resolvedOptions.denyFiles,
+    packageSearchRoots: hasPackages(resolvedOptions.allowPackages)
+      ? getPackageSearchRoots(options.fileMap, resolvedOptions.rootDir)
+      : undefined,
     rootDir: resolvedOptions.rootDir,
   })
   let watcher: AssetServerWatcher | null = null
@@ -320,6 +329,10 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       onFileEvent: handleWatchEvent,
       rootDir: resolvedOptions.rootDir,
     })
+    watcher.updateWatchedDirectories(
+      { add: accessPolicy.getPackageWatchDirectories(), remove: [] },
+      { includeAncestors: false },
+    )
   }
 
   async function responseForError(error: unknown): Promise<Response> {
@@ -334,6 +347,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   async function handleWatchEvent(filePath: string, event: 'add' | 'change' | 'unlink') {
     try {
       let normalizedFilePath = normalizeFilePath(filePath)
+      accessPolicy.handleFileEvent(normalizedFilePath)
       await scriptCompiler.handleFileEvent(normalizedFilePath, event)
       await styleCompiler.handleFileEvent(normalizedFilePath, event)
       await fileCompiler?.handleFileEvent(normalizedFilePath, event)
@@ -453,7 +467,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
           method: request.method,
         })
       } catch (error) {
-        // A direct request can race with the filesystem or fail a deeper allow check while
+        // A direct request can race with the filesystem or fail a deeper allowFiles check while
         // compiling imports. In this fetch context, both cases should fall through as "not
         // handled here" so the outer router can continue to its own 404 behavior.
         if (
@@ -680,11 +694,12 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
   })
 
   return {
-    allow: options.allow,
+    allowFiles: options.allowFiles,
+    allowPackages: options.allowPackages,
     basePath,
     buildId: fingerprintOptions.buildId,
     define: scriptOptions.define,
-    deny: options.deny,
+    denyFiles: options.denyFiles,
     external: scriptOptions.external ?? [],
     files: normalizeFilesOptions(options.files),
     fingerprintAssets: fingerprintOptions.enabled,
@@ -756,6 +771,26 @@ function normalizeWatchOptions(
   if (options === false) return null
   if (options == null || options === true) return {}
   return options
+}
+
+function hasPackages(packages: readonly string[] | undefined): boolean {
+  return packages !== undefined && packages.length > 0
+}
+
+function getPackageSearchRoots(
+  fileMap: AssetServerOptions['fileMap'],
+  rootDir: string,
+): readonly string[] {
+  return Object.values(fileMap).map((filePattern) =>
+    path.resolve(rootDir, getStaticFilePatternPrefix(filePattern)),
+  )
+}
+
+function getStaticFilePatternPrefix(filePattern: string): string {
+  let firstDynamicIndex = filePattern.search(/[*:]/)
+  let staticPrefix =
+    firstDynamicIndex === -1 ? filePattern : filePattern.slice(0, firstDynamicIndex)
+  return staticPrefix.replace(/[/\\]*$/, '')
 }
 
 function parseAssetRequestPathname(

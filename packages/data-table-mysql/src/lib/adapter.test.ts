@@ -1,8 +1,9 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { column, createDatabase, table, eq, ilike, inList } from '@remix-run/data-table'
+import mysql from 'mysql2/promise'
 
-import { createMysqlDatabaseAdapter } from './adapter.ts'
+import { createMysqlDatabaseAdapter, MysqlDatabaseAdapter } from './adapter.ts'
 
 const accounts = table({
   name: 'accounts',
@@ -40,6 +41,383 @@ const accountProjects = table({
 })
 
 describe('mysql adapter', () => {
+  it('runs migration work on the pool connection that owns the lock', async () => {
+    let statements: string[] = []
+    let releaseCalls = 0
+    let destroyCalls = 0
+    let connection = {
+      async query(text: string) {
+        statements.push(text)
+
+        if (text.includes('get_lock')) {
+          return [[{ acquired: 1, lock_name: 'hashed-lock-name' }], []]
+        }
+
+        if (text.includes('release_lock')) {
+          return [[{ released: 1 }], []]
+        }
+
+        return [[], []]
+      },
+      async beginTransaction() {
+        statements.push('begin')
+      },
+      async commit() {
+        statements.push('commit')
+      },
+      async rollback() {
+        statements.push('rollback')
+      },
+      release() {
+        releaseCalls += 1
+      },
+      destroy() {
+        destroyCalls += 1
+      },
+    }
+    let pool = {
+      async query() {
+        throw new Error('migration work must not use the pool')
+      },
+      async getConnection() {
+        return connection
+      },
+      async end() {},
+    }
+    let adapter = createMysqlDatabaseAdapter(pool as never)
+
+    let result = await adapter.withMigrationLock('app_migrations', async (lockedAdapter) => {
+      assert.notEqual(lockedAdapter, adapter)
+      await lockedAdapter.executeScript('create table users (id integer)')
+      let transaction = await lockedAdapter.beginTransaction()
+      await lockedAdapter.executeScript('insert into users values (1)', transaction)
+      await lockedAdapter.commitTransaction(transaction)
+      return 'done'
+    })
+
+    assert.equal(result, 'done')
+    assert.equal(statements.length, 6)
+    assert.match(statements[0], /get_lock/)
+    assert.equal(statements[1], 'create table users (id integer)')
+    assert.equal(statements[2], 'begin')
+    assert.equal(statements[3], 'insert into users values (1)')
+    assert.equal(statements[4], 'commit')
+    assert.match(statements[5], /release_lock/)
+    assert.equal(releaseCalls, 1)
+    assert.equal(destroyCalls, 0)
+  })
+
+  it('rejects a failed migration lock acquisition and destroys the pooled connection', async () => {
+    let releaseCalls = 0
+    let destroyCalls = 0
+    let callbackCalls = 0
+    let connection = {
+      async query() {
+        return [[{ acquired: 0, lock_name: 'hashed-lock-name' }], []]
+      },
+      release() {
+        releaseCalls += 1
+      },
+      destroy() {
+        destroyCalls += 1
+      },
+    }
+    let pool = {
+      async query() {
+        throw new Error('not used')
+      },
+      async getConnection() {
+        return connection
+      },
+      async end() {},
+    }
+    let adapter = createMysqlDatabaseAdapter(pool as never)
+
+    await assert.rejects(
+      () =>
+        adapter.withMigrationLock('app_migrations', async () => {
+          callbackCalls += 1
+        }),
+      /migration lock could not be acquired/,
+    )
+    assert.equal(callbackCalls, 0)
+    assert.equal(releaseCalls, 0)
+    assert.equal(destroyCalls, 1)
+  })
+
+  it('destroys the reserved connection when migration work fails', async () => {
+    let releaseCalls = 0
+    let destroyCalls = 0
+    let connection = {
+      async query(text: string) {
+        if (text.includes('get_lock')) {
+          return [[{ acquired: 1, lock_name: 'hashed-lock-name' }], []]
+        }
+
+        return [[{ released: 1 }], []]
+      },
+      release() {
+        releaseCalls += 1
+      },
+      destroy() {
+        destroyCalls += 1
+      },
+    }
+    let pool = {
+      async query() {
+        throw new Error('not used')
+      },
+      async getConnection() {
+        return connection
+      },
+      async end() {},
+    }
+    let adapter = createMysqlDatabaseAdapter(pool as never)
+
+    await assert.rejects(
+      () =>
+        adapter.withMigrationLock('app_migrations', async () => {
+          throw new Error('migration failed')
+        }),
+      /migration failed/,
+    )
+    assert.equal(releaseCalls, 0)
+    assert.equal(destroyCalls, 1)
+  })
+
+  it('throws instead of deadlocking when migration work re-enters the lock', async () => {
+    let connection = {
+      async query(text: string) {
+        if (text.includes('get_lock')) {
+          return [[{ acquired: 1, lock_name: 'hashed-lock-name' }], []]
+        }
+
+        return [[{ released: 1 }], []]
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    await assert.rejects(
+      () =>
+        adapter.withMigrationLock('app_migrations', () =>
+          adapter.withMigrationLock('app_migrations', async () => undefined),
+        ),
+      /migration lock is already held by this adapter/,
+    )
+  })
+
+  it('runs migration work directly on client-backed connections', async () => {
+    let statements: string[] = []
+    let connection = {
+      async query(text: string) {
+        statements.push(text)
+
+        if (text.includes('get_lock')) {
+          return [[{ acquired: true, lock_name: 'hashed-lock-name' }], []]
+        }
+
+        return [[{ released: 'true' }], []]
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    let result = await adapter.withMigrationLock('app_migrations', async (lockedAdapter) => {
+      assert.equal(lockedAdapter, adapter)
+      return 'done'
+    })
+
+    assert.equal(result, 'done')
+    assert.equal(statements.length, 2)
+    assert.match(statements[0], /get_lock/)
+    assert.match(statements[1], /release_lock/)
+  })
+
+  it('serializes migration locks on the same adapter', async () => {
+    let lifecycle: string[] = []
+    let signalFirstMigrationStarted: () => void = () => undefined
+    let firstMigrationStarted = new Promise<void>((resolve) => {
+      signalFirstMigrationStarted = resolve
+    })
+    let releaseFirstMigration: () => void = () => undefined
+    let firstMigrationCanFinish = new Promise<void>((resolve) => {
+      releaseFirstMigration = resolve
+    })
+    let connection = {
+      async query(text: string) {
+        lifecycle.push(text.includes('get_lock') ? 'lock' : 'unlock')
+        return text.includes('get_lock')
+          ? [[{ acquired: 1n, lock_name: 'hashed-lock-name' }], []]
+          : [[{ released: 1 }], []]
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    let firstMigration = adapter.withMigrationLock('app_migrations', async () => {
+      lifecycle.push('first:start')
+      signalFirstMigrationStarted()
+      await firstMigrationCanFinish
+      lifecycle.push('first:end')
+    })
+    let secondMigration = adapter.withMigrationLock('app_migrations', async () => {
+      lifecycle.push('second')
+    })
+
+    await firstMigrationStarted
+    assert.deepEqual(lifecycle, ['lock', 'first:start'])
+
+    releaseFirstMigration()
+    await Promise.all([firstMigration, secondMigration])
+
+    assert.deepEqual(lifecycle, [
+      'lock',
+      'first:start',
+      'first:end',
+      'unlock',
+      'lock',
+      'second',
+      'unlock',
+    ])
+  })
+
+  it('preserves migration errors when releasing the lock also fails', async () => {
+    let migrationError = new Error('migration failed')
+    let connection = {
+      async query(text: string) {
+        if (text.includes('get_lock')) {
+          return [[{ acquired: '1', lock_name: 'hashed-lock-name' }], []]
+        }
+
+        throw new Error('lock cleanup failed')
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    await assert.rejects(
+      () =>
+        adapter.withMigrationLock('app_migrations', async () => {
+          throw migrationError
+        }),
+      (error: unknown) => error === migrationError,
+    )
+  })
+
+  it('reports lock release failures after successful migration work', async () => {
+    let connection = {
+      async query(text: string) {
+        return text.includes('get_lock')
+          ? [[{ acquired: 1, lock_name: 'hashed-lock-name' }], []]
+          : [{ released: 1 }, []]
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    await assert.rejects(
+      () => adapter.withMigrationLock('app_migrations', async () => 'done'),
+      /migration lock was not held by the reserved connection/,
+    )
+  })
+
+  it('rejects malformed migration lock results', async () => {
+    let connection = {
+      async query() {
+        return [[{ acquired: null, lock_name: 'hashed-lock-name' }], []]
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    await assert.rejects(
+      () => adapter.withMigrationLock('app_migrations', async () => undefined),
+      /migration lock could not be acquired/,
+    )
+  })
+
+  it('wipes URI-configured databases through a server connection', async (t) => {
+    let maintenanceConfig: unknown
+    let statements: string[] = []
+    let maintenanceConnection = {
+      async query(statement: string) {
+        statements.push(statement)
+        return [[], []]
+      },
+      async end() {},
+    }
+
+    t.mock.method(
+      mysql,
+      'createConnection',
+      async (config: Parameters<typeof mysql.createConnection>[0]) => {
+        maintenanceConfig = config
+        return maintenanceConnection as never
+      },
+    )
+
+    let adapter = createMysqlDatabaseAdapter(
+      {
+        uri: 'mysql://user:password@localhost/app?ssl=false',
+        connectionLimit: 5,
+        maxIdle: 5,
+        idleTimeout: 1000,
+        queueLimit: 10,
+        waitForConnections: true,
+      },
+      {
+        characterSet: 'utf8mb4',
+        collation: 'utf8mb4_unicode_ci',
+      },
+    )
+
+    await adapter.wipe()
+
+    assert.ok(typeof maintenanceConfig === 'object' && maintenanceConfig !== null)
+    assert.ok('uri' in maintenanceConfig && typeof maintenanceConfig.uri === 'string')
+    assert.equal(new URL(maintenanceConfig.uri).pathname, '/')
+    assert.equal('connectionLimit' in maintenanceConfig, false)
+    assert.equal('maxIdle' in maintenanceConfig, false)
+    assert.equal('idleTimeout' in maintenanceConfig, false)
+    assert.equal('queueLimit' in maintenanceConfig, false)
+    assert.equal('waitForConnections' in maintenanceConfig, false)
+    assert.deepEqual(statements, [
+      'drop database if exists `app`',
+      'create database `app` character set `utf8mb4` collate `utf8mb4_unicode_ci`',
+    ])
+  })
+
+  it('requires a database name for wipe() even when MYSQL_DATABASE is set', async () => {
+    let previousEnv = process.env.MYSQL_DATABASE
+    process.env.MYSQL_DATABASE = 'env_db'
+
+    try {
+      let adapter = createMysqlDatabaseAdapter({ host: 'localhost', user: 'root' })
+
+      await assert.rejects(() => adapter.wipe(), /MySQL database config requires a database name/)
+    } finally {
+      if (previousEnv === undefined) {
+        delete process.env.MYSQL_DATABASE
+      } else {
+        process.env.MYSQL_DATABASE = previousEnv
+      }
+    }
+  })
+
+  it('preserves client-backed connections when wipe is unavailable', async () => {
+    let endCalls = 0
+    let connection = {
+      async query() {
+        return [[], []]
+      },
+      async end() {
+        endCalls += 1
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    await assert.rejects(
+      () => adapter.wipe(),
+      /MySQL adapter wipe\(\) requires config-based construction/,
+    )
+    assert.equal(endCalls, 0)
+  })
+
   it('checks table and column existence through adapter introspection hooks', async () => {
     let statements: Array<{ text: string; values: unknown[] | undefined }> = []
 
@@ -53,7 +431,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let adapter = createMysqlDatabaseAdapter(connection as never)
+    let adapter = new MysqlDatabaseAdapter(connection as never)
     let hasTable = await adapter.hasTable({ schema: 'app', name: 'users' })
     let hasColumn = await adapter.hasColumn({ name: 'users' }, 'email')
 
@@ -102,7 +480,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let adapter = createMysqlDatabaseAdapter(pool as never)
+    let adapter = new MysqlDatabaseAdapter(pool as never)
     let token = await adapter.beginTransaction()
 
     await adapter.hasTable({ name: 'users' }, token)
@@ -131,7 +509,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let adapter = createMysqlDatabaseAdapter(connection as never)
+    let adapter = new MysqlDatabaseAdapter(connection as never)
 
     let result = await adapter.execute({
       operation: {
@@ -165,7 +543,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
 
     let count = await db.query(accounts).where(ilike('email', '%EXAMPLE%')).count()
 
@@ -205,7 +583,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(pool as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(pool as never))
 
     await db.transaction(async (transactionDatabase) => {
       await transactionDatabase.query(accounts).insert({ id: 1, email: 'a@example.com' })
@@ -242,7 +620,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(pool as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(pool as never))
 
     await db.transaction(async (transactionDatabase) => {
       await transactionDatabase.query(accounts).insert({ id: 1, email: 'a@example.com' })
@@ -270,7 +648,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
 
     await db.transaction(async () => undefined, {
       isolationLevel: 'serializable',
@@ -304,7 +682,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
 
     await db.transaction(async () => undefined, { readOnly: false })
 
@@ -342,7 +720,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(pool as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(pool as never))
 
     await assert.rejects(
       () =>
@@ -383,7 +761,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(pool as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(pool as never))
 
     await assert.rejects(
       () =>
@@ -409,7 +787,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let adapter = createMysqlDatabaseAdapter(connection as never)
+    let adapter = new MysqlDatabaseAdapter(connection as never)
     let token = await adapter.beginTransaction()
 
     await adapter.createSavepoint(token, 'sp`0')
@@ -434,7 +812,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let adapter = createMysqlDatabaseAdapter(connection as never)
+    let adapter = new MysqlDatabaseAdapter(connection as never)
 
     await assert.rejects(
       () => adapter.commitTransaction({ id: 'tx_missing' }),
@@ -463,7 +841,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
 
     await db
       .query(accounts)
@@ -489,7 +867,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
 
     await db.query(invoices).join(accounts, eq(accounts.id, invoices.account_id)).count()
 
@@ -511,7 +889,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
 
     await db.query(accounts).select({ 'account.email': accounts.email }).all()
 
@@ -531,7 +909,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
 
     await db
       .query(accounts)
@@ -566,7 +944,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
 
     let created = await db.create(
       accounts,
@@ -595,7 +973,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
     let count = await db.query(accounts).count()
 
     assert.equal(count, 5)
@@ -611,7 +989,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
     let result = await db.query(accounts).insert({ id: 1, email: 'a@example.com' })
 
     assert.equal(result.affectedRows, 0)
@@ -628,7 +1006,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
     let result = await db.query(accountProjects).insert({
       account_id: 1,
       project_id: 2,
@@ -649,7 +1027,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
     let count = await db.query(accounts).count()
 
     assert.equal(count, 7)
@@ -665,7 +1043,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+    let db = createDatabase(new MysqlDatabaseAdapter(connection as never))
     let result = await db.updateMany(
       accounts,
       { email: 'updated@example.com' },
@@ -674,6 +1052,32 @@ describe('mysql adapter', () => {
 
     assert.equal(result.affectedRows, 1)
     assert.equal(result.insertId, undefined)
+  })
+
+  it('createMysqlDatabaseAdapter creates an adapter from a queryable connection', async () => {
+    let calls: Array<{ text: string; values: unknown[] | undefined }> = []
+    let connection = {
+      async query(text: string, values?: unknown[]) {
+        calls.push({ text, values })
+        return [[], []]
+      },
+    }
+
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    assert.equal(adapter.dialect, 'mysql')
+    await adapter.executeScript('select 1')
+    assert.deepEqual(calls, [{ text: 'select 1', values: undefined }])
+  })
+
+  it('createMysqlDatabaseAdapter creates an adapter from pool configuration', () => {
+    let adapter = createMysqlDatabaseAdapter({
+      database: 'app',
+      host: 'localhost',
+      user: 'root',
+    })
+
+    assert.equal(adapter.dialect, 'mysql')
   })
 
   it('executeScript forwards the script through query()', async () => {
@@ -685,7 +1089,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let adapter = createMysqlDatabaseAdapter(connection as never)
+    let adapter = new MysqlDatabaseAdapter(connection as never)
     await adapter.executeScript('create table widgets (id int); insert into widgets values (1);')
 
     assert.equal(calls.length, 1)

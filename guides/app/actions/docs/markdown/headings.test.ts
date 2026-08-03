@@ -11,11 +11,16 @@ function sectionsFrom(source: string) {
 }
 
 describe('addHeadingIds / readMarkdownSectionsFromRoot', () => {
-  it('only collects h2 headings as sections', () => {
-    let sections = sectionsFrom('# H1\n\n## H2 one\n\n### H3\n\n## H2 two\n')
-    assert.equal(sections.length, 2)
-    assert.equal(sections[0].title, 'H2 one')
-    assert.equal(sections[1].title, 'H2 two')
+  it('collects h2 and h3 headings with their depth', () => {
+    let sections = sectionsFrom('# H1\n\n## H2 one\n\n### H3\n\n#### H4\n\n## H2 two\n')
+    assert.deepEqual(
+      sections.map(({ title, depth }) => ({ title, depth })),
+      [
+        { title: 'H2 one', depth: 2 },
+        { title: 'H3', depth: 3 },
+        { title: 'H2 two', depth: 2 },
+      ],
+    )
   })
 
   it('slugifies section ids from heading text', () => {

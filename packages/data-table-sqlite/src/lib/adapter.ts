@@ -1,3 +1,7 @@
+import { dirname } from 'node:path'
+import { mkdir, rm } from 'node:fs/promises'
+import { setTimeout } from 'node:timers/promises'
+
 import type {
   DataManipulationRequest,
   DataManipulationResult,
@@ -21,6 +25,64 @@ import { compileSqliteOperation } from './sql-compiler.ts'
 export interface SqliteDatabase {
   prepare(sql: string): SqliteStatement
   exec(sql: string): unknown
+  close?: () => void
+}
+
+type SqliteDatabaseConstructor = {
+  new (path: string): SqliteDatabase
+}
+
+type SqliteDriverModule = {
+  Database?: SqliteDatabaseConstructor
+  DatabaseSync?: SqliteDatabaseConstructor
+}
+
+let loadedDriverConstructor: SqliteDatabaseConstructor | undefined
+
+// The runtime driver loads lazily on config-backed construction so client-backed adapters
+// keep working in environments that cannot resolve node:sqlite or bun:sqlite at import time,
+// and so bundlers never try to resolve those specifiers statically.
+function loadSqliteDatabaseConstructor(): SqliteDatabaseConstructor {
+  if (!loadedDriverConstructor) {
+    if ('Bun' in globalThis) {
+      // import.meta.require is Bun's synchronous require for ES modules; Bun does not
+      // implement process.getBuiltinModule
+      let importMeta = import.meta as ImportMeta & { require?: (id: string) => unknown }
+      let driver = importMeta.require?.('bun:sqlite') as SqliteDriverModule | undefined
+      loadedDriverConstructor = driver?.Database
+    } else {
+      // process.getBuiltinModule loads node:sqlite synchronously (Node.js 22.3+)
+      let driver = globalThis.process?.getBuiltinModule?.('node:sqlite') as
+        | SqliteDriverModule
+        | undefined
+      loadedDriverConstructor = driver?.DatabaseSync
+    }
+
+    if (!loadedDriverConstructor) {
+      throw new Error(
+        'SQLite adapter config-based construction requires node:sqlite (Node.js 22.5+) or bun:sqlite; pass a SQLite database client instead',
+      )
+    }
+  }
+
+  return loadedDriverConstructor
+}
+
+/** Configuration for an adapter-owned SQLite database. */
+export interface SqliteDatabaseAdapterConfig {
+  /** SQLite database filename or `:memory:` for an in-memory database. */
+  filename: string
+  /**
+   * Enables SQLite foreign key enforcement whenever the adapter opens the database.
+   * Defaults to `false` (enforcement off) on every runtime, including Node.js where
+   * `node:sqlite` would otherwise enable it by default.
+   */
+  foreignKeys?: boolean
+  /**
+   * SQLite `busy_timeout` in milliseconds, applied whenever the adapter opens the database.
+   * Defaults to `5000`. Set `0` to fail immediately when another process holds a write lock.
+   */
+  busyTimeout?: number
 }
 
 /**
@@ -57,12 +119,19 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    */
   capabilities
 
+  #config?: SqliteDatabaseAdapterConfig
   #database: SqliteDatabase
+  #databaseOpen = true
   #transactions = new Set<string>()
   #transactionCounter = 0
 
-  constructor(database: SqliteDatabase) {
-    this.#database = database
+  constructor(input: SqliteDatabase | SqliteDatabaseAdapterConfig) {
+    if (isSqliteDatabase(input)) {
+      this.#database = input
+    } else {
+      this.#config = input
+      this.#database = openSqliteDatabase(input)
+    }
     this.capabilities = {
       returning: true,
       savepoints: true,
@@ -157,8 +226,9 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     let statement = this.#database.prepare(
       'select 1 from ' + masterTable + ' where type = ? and name = ? limit 1',
     )
+    // node:sqlite returns `undefined` for a missing row while bun:sqlite returns `null`
     let row = statement.get('table', table.name)
-    return row !== undefined
+    return row != null
   }
 
   /**
@@ -184,6 +254,44 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     let rows = statement.all() as Array<Record<string, unknown>>
 
     return rows.some((row) => row.name === column)
+  }
+
+  /**
+   * Destructively recreates the configured SQLite database.
+   * @returns A promise that resolves when the database is ready for use.
+   */
+  async wipe(): Promise<void> {
+    let config = this.#configOrThrow('wipe')
+    this.#assertNoOpenTransactions('wipe')
+    this.#closeDatabase()
+
+    if (config.filename === ':memory:') {
+      this.#replaceDatabase()
+      return
+    }
+
+    try {
+      await mkdir(dirname(config.filename), { recursive: true })
+      await removeDatabaseFile(config.filename)
+      // SQLite associates a database file with -wal/-shm/-journal sidecars by path, so
+      // stale sidecars left next to a freshly created database are a corruption vector
+      await removeDatabaseFile(config.filename + '-wal')
+      await removeDatabaseFile(config.filename + '-shm')
+      await removeDatabaseFile(config.filename + '-journal')
+    } finally {
+      this.#replaceDatabase()
+    }
+  }
+
+  /**
+   * Closes the underlying database connection and releases its file handle.
+   *
+   * Config-backed adapters keep an open handle that locks the database file on
+   * Windows until it is closed, so callers that need to move or delete the file
+   * should close the adapter first. Safe to call more than once.
+   */
+  close(): void {
+    this.#closeDatabase()
   }
 
   /**
@@ -260,6 +368,34 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     this.#database.exec('release savepoint ' + quoteIdentifier(name))
   }
 
+  #replaceDatabase(): void {
+    if (this.#config) {
+      this.#database = openSqliteDatabase(this.#config)
+      this.#databaseOpen = true
+    }
+  }
+
+  #closeDatabase(): void {
+    if (this.#databaseOpen) {
+      this.#database.close?.()
+      this.#databaseOpen = false
+    }
+  }
+
+  #configOrThrow(method: string): SqliteDatabaseAdapterConfig {
+    if (!this.#config) {
+      throw new Error('SQLite adapter ' + method + '() requires config-based construction')
+    }
+
+    return this.#config
+  }
+
+  #assertNoOpenTransactions(method: string): void {
+    if (this.#transactions.size > 0) {
+      throw new Error('SQLite adapter cannot ' + method + ' while transactions are open')
+    }
+  }
+
   #assertTransaction(token: TransactionToken): void {
     if (!this.#transactions.has(token.id)) {
       throw new Error('Unknown transaction token: ' + token.id)
@@ -267,23 +403,73 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
   }
 }
 
+const REMOVE_RETRIES = 10
+const REMOVE_RETRY_DELAY_MS = 100
+
+async function removeDatabaseFile(filename: string): Promise<void> {
+  // Windows keeps a just-closed database file locked for a short window (deferred handle
+  // release, antivirus scans), so removal is retried with a linear backoff
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await rm(filename, { force: true })
+      return
+    } catch (error) {
+      if (attempt >= REMOVE_RETRIES || !isRetryableRemoveError(error)) {
+        throw error
+      }
+    }
+
+    await setTimeout(REMOVE_RETRY_DELAY_MS * (attempt + 1))
+  }
+}
+
+function isRetryableRemoveError(error: unknown): boolean {
+  let code = (error as NodeJS.ErrnoException | null)?.code
+  return code === 'EBUSY' || code === 'EPERM' || code === 'EMFILE' || code === 'ENFILE'
+}
+
+function openSqliteDatabase(config: SqliteDatabaseAdapterConfig): SqliteDatabase {
+  let SqliteDatabaseConstructor = loadSqliteDatabaseConstructor()
+  let database = new SqliteDatabaseConstructor(config.filename)
+
+  // node:sqlite enables foreign keys by default while bun:sqlite follows SQLite's default
+  // (off), so set the pragma explicitly to make the option authoritative on both runtimes
+  database.exec('pragma foreign_keys = ' + (config.foreignKeys ? 'on' : 'off'))
+  // node:sqlite defaults to busy_timeout 0, which fails immediately with SQLITE_BUSY when
+  // another process holds a write lock
+  database.exec('pragma busy_timeout = ' + String(config.busyTimeout ?? 5000))
+
+  return database
+}
+
 /**
  * Creates a sqlite `DatabaseAdapter`.
- * @param database Synchronous SQLite database client.
+ * @param input SQLite adapter configuration or synchronous database client.
  * @returns A configured sqlite adapter.
  * @example
  * ```ts
- * import { DatabaseSync } from 'node:sqlite'
  * import { createDatabase } from 'remix/data-table'
  * import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
  *
- * let sqlite = new DatabaseSync('./data/app.db')
- * let adapter = createSqliteDatabaseAdapter(sqlite)
+ * let adapter = createSqliteDatabaseAdapter({ filename: './data/app.db' })
  * let db = createDatabase(adapter)
  * ```
  */
-export function createSqliteDatabaseAdapter(database: SqliteDatabase): SqliteDatabaseAdapter {
-  return new SqliteDatabaseAdapter(database)
+export function createSqliteDatabaseAdapter(
+  input: SqliteDatabase | SqliteDatabaseAdapterConfig,
+): SqliteDatabaseAdapter {
+  return new SqliteDatabaseAdapter(input)
+}
+
+function isSqliteDatabase(
+  input: SqliteDatabase | SqliteDatabaseAdapterConfig,
+): input is SqliteDatabase {
+  return (
+    'prepare' in input &&
+    typeof input.prepare === 'function' &&
+    'exec' in input &&
+    typeof input.exec === 'function'
+  )
 }
 
 function normalizeRows(rows: unknown[]): Record<string, unknown>[] {

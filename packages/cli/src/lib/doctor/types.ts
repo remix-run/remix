@@ -70,6 +70,10 @@ export interface DoctorReport {
   suites: DoctorSuiteResult[]
 }
 
+export function hasWarningFindings(findings: DoctorFinding[]): boolean {
+  return findings.some((finding) => finding.severity === 'warn')
+}
+
 export function createDoctorSuite(
   name: DoctorSuiteName,
   findings: DoctorFinding[],
@@ -77,7 +81,7 @@ export function createDoctorSuite(
   return {
     findings,
     name,
-    status: findings.some((finding) => finding.severity === 'warn') ? 'issues' : 'ok',
+    status: hasWarningFindings(findings) ? 'issues' : 'ok',
   }
 }
 

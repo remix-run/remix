@@ -163,9 +163,13 @@ export function resolveServedStyleOrThrow(
   }
 
   if (!args.isAllowed(identityPath)) {
-    throw createAssetServerCompilationError(`File is not allowed: ${identityPath}`, {
-      code: 'FILE_NOT_ALLOWED',
-    })
+    throw createAssetServerCompilationError(
+      `File "${identityPath}" is not allowed by the asset server access configuration. ` +
+        `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles rule.`,
+      {
+        code: 'FILE_NOT_ALLOWED',
+      },
+    )
   }
 
   let stableUrlPathname = args.routes.toUrlPathname(identityPath)
@@ -218,8 +222,8 @@ function resolveImportDependency(
 
   if (!args.isAllowed(identityPath)) {
     throw createAssetServerCompilationError(
-      `Import "${url}" in ${importerPath}, resolved to "${identityPath}", is not allowed by the asset server allow/deny configuration. ` +
-        `Add a matching allow rule for this file path, remove a conflicting deny rule for this file path, or mark this import as external.`,
+      `Import "${url}" in ${importerPath}, resolved to "${identityPath}", is not allowed by the asset server access configuration. ` +
+        `Add a matching allowFiles or allowPackages rule, remove a conflicting denyFiles rule, or mark this import as external.`,
       {
         code: 'IMPORT_NOT_ALLOWED',
       },
@@ -288,8 +292,8 @@ function resolveUrlDependency(
 
   if (!args.isAllowed(identityPath)) {
     throw createAssetServerCompilationError(
-      `URL "${url}" in ${importerPath}, resolved to "${identityPath}", is not allowed by the asset server allow/deny configuration. ` +
-        `Add a matching allow rule for this file path or remove a conflicting deny rule for this file path.`,
+      `URL "${url}" in ${importerPath}, resolved to "${identityPath}", is not allowed by the asset server access configuration. ` +
+        `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles rule.`,
       {
         code: 'URL_NOT_ALLOWED',
       },

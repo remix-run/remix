@@ -10,7 +10,7 @@ bench.baseline(() => {
 bench('join', () => {
   let pattern = RoutePattern.parse('/posts/:id')
   joinPatterns(pattern, '/comments/:commentId')
-}).types([2651, 'instantiations'])
+}).types([2956, 'instantiations'])
 
 bench('join > mediarss', async () => {
   let { patterns } = await import('../../patterns/mediarss.ts')

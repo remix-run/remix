@@ -57,6 +57,7 @@ describe('docs responses', () => {
     let chapterNavigation = getChapterNavigationHtml(html)
     assert.equal(chapterNavigation.match(/aria-current="page"/g)?.length, 1)
     assert.match(chapterNavigation, /href="\/start-here\/" aria-current="page"/)
+    assert.match(getOpeningTag(html, 'div', 'docs-layout'), /data-key="docs-chapter-start-here"/)
   })
 })
 

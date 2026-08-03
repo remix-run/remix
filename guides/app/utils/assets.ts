@@ -16,13 +16,13 @@ export const assetServer = createAssetServer({
     '/app/*path': 'guides/app/*path',
     '/packages/*path': 'packages/*path',
   },
-  allow: [
+  allowFiles: [
     'guides/app/routes.ts',
     'guides/app/**/*.browser.ts?(x)',
     'guides/app/**/*.demo.ts?(x)',
     'guides/app/styles/**/*.css',
-    'packages/*/src/**',
   ],
+  allowPackages: ['remix'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: isProduction,
   fingerprint: isProduction ? { buildId: process.env.GITHUB_SHA || String(Date.now()) } : undefined,

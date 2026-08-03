@@ -1,6 +1,8 @@
 import { clientEntry } from 'remix/ui'
 import type { Handle } from 'remix/ui'
 
+import { startChapterNavigationIndicator } from './chapter-navigation-indicator.browser.ts'
+
 export const DocsShellBehavior = clientEntry(
   import.meta.url,
   function DocsShellBehavior(handle: Handle) {
@@ -14,9 +16,14 @@ export const DocsShellBehavior = clientEntry(
 export function startDocsShellBehavior(signal: AbortSignal) {
   let root = document.documentElement
   let chapterNavigation = document.getElementById('docs-chapters-navigation')
+  let chapterList = chapterNavigation?.querySelector('.docs-chapters-nav__list')
   let navToggle = document.getElementById('docs-nav-toggle')
 
   let navCollapsed = false
+
+  if (chapterList instanceof HTMLOListElement) {
+    startChapterNavigationIndicator(chapterList, signal)
+  }
 
   setChapterNavigationCollapsed(false)
   updateScrollableNavigation()

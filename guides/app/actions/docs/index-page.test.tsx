@@ -15,6 +15,7 @@ const chapter: DocsChapterSummary = {
   sections: [
     {
       id: 'route-contract',
+      depth: 2,
       title: 'Routes as the URL contract',
       titleHtml: 'Routes as the URL contract',
     },

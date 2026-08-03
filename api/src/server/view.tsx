@@ -4,7 +4,7 @@ import type { DemoDocFile } from './demos.tsx'
 import type { MarkdownHeading } from './markdown.ts'
 import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
-import { routes } from './routes.ts'
+import { routes, withVersion } from './routes.ts'
 import { TableOfContents } from './table-of-contents.tsx'
 
 export type Versions = string[]
@@ -69,8 +69,8 @@ export function Document(
           </MainContent>
           <SiteFooter />
           <pagefind-config
-            base-url={routes.home.href({ version: activeVersion })}
-            bundle-path={routes.assets.href({ version: activeVersion, asset: 'pagefind/' })}
+            base-url={withVersion(routes.home.href(), activeVersion)}
+            bundle-path={withVersion(routes.assets.href({ asset: 'pagefind/' }), activeVersion)}
           ></pagefind-config>
           <pagefind-modal data-key="pagefind-modal" rmx-preserve-dom reset-on-close />
         </body>
@@ -100,10 +100,10 @@ function Head(
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         {/* Keep Pagefind first so the docs theme can override its component defaults. */}
         <link
-          href={routes.assets.href({
-            version: activeVersion,
-            asset: 'pagefind/pagefind-component-ui.css',
-          })}
+          href={withVersion(
+            routes.assets.href({ asset: 'pagefind/pagefind-component-ui.css' }),
+            activeVersion,
+          )}
           rel="stylesheet"
         />
         <link rel="stylesheet" href="/docs.css" />
@@ -122,7 +122,7 @@ function Head(
           <link
             rel="alternate"
             type="text/markdown"
-            href={routes.markdown.href({ version: activeVersion, slug: page.docFile.urlPath })}
+            href={withVersion(routes.markdown.href({ slug: page.docFile.urlPath }), activeVersion)}
             title={`Markdown docs for ${page.docFile.name ?? page.title}`}
           />
         ) : null}
@@ -136,10 +136,10 @@ function Head(
         ))}
         <script type="module" src={entryHref} />
         <script
-          src={routes.assets.href({
-            version: activeVersion,
-            asset: 'pagefind/pagefind-component-ui.js',
-          })}
+          src={withVersion(
+            routes.assets.href({ asset: 'pagefind/pagefind-component-ui.js' }),
+            activeVersion,
+          )}
           type="module"
         />
       </head>
@@ -242,7 +242,7 @@ function PrimaryNavigationLinks(handle: Handle<{ activeVersion?: string }>) {
   return () => (
     <>
       <a href="https://guides.remix.run/">Guides</a>
-      <a href={routes.home.href({ version: handle.props.activeVersion })} aria-current="page">
+      <a href={withVersion(routes.home.href(), handle.props.activeVersion)} aria-current="page">
         API
       </a>
       <a href="https://remix.run/blog">Blog</a>
@@ -481,7 +481,7 @@ function VersionSwitcher(handle: Handle<{ versions: Versions; activeVersion?: st
             {navVersions.map((version) => {
               let latest = (versions.length === 0 || version === versions[0]) && !activeVersion
               let active = version === activeVersion || latest
-              let href = routes.home.href({ version: !latest ? version : undefined })
+              let href = withVersion(routes.home.href(), !latest ? version : undefined)
 
               return (
                 <a

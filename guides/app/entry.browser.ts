@@ -32,9 +32,11 @@ const app = run({
   },
 })
 
-app.ready().catch((error: unknown) => {
-  console.error('Remix UI failed to start:', error)
+app.addEventListener('error', (event) => {
+  console.error('Remix UI runtime error:', event.error)
 })
+
+app.ready().catch(() => {})
 
 // HACK: `remix/ui` currently intercepts reloads and same-document hash
 // navigations because the current Navigation API entry has Remix runtime state.

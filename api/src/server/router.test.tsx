@@ -83,6 +83,25 @@ describe('createRouter()', () => {
     )
   })
 
+  it('serves dotted version routes only for configured versions', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let router = createRouter({
+      assetServer,
+      docsContext: await getTestDocsContext(assetServer),
+      versions: ['v1.2.3'],
+    })
+
+    let configured = await router.fetch(new Request('http://localhost/v1.2.3/'))
+    assert.equal(configured.status, 200)
+
+    let encoded = await router.fetch(new Request('http://localhost/v1%2E2%2E3/'))
+    assert.equal(encoded.status, 404)
+
+    let unknown = await router.fetch(new Request('http://localhost/v9.9.9/'))
+    assert.equal(unknown.status, 404)
+  })
+
   it('serves only the configured asset URL space', async (t) => {
     let assetServer = createAssetServer('v1.2.3')
     t.after(() => assetServer.close())
@@ -151,7 +170,7 @@ async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServ
 }
 
 describe('getVersionedLookupHref()', () => {
-  it('preserves versioned markdown lookup targets', () => {
+  it('preserves dots in versioned markdown lookup targets', () => {
     assert.equal(
       getVersionedLookupHref('/api/remix/headers/accept/class/Accept.md', 'v1.2.3'),
       '/v1.2.3/api/remix/headers/accept/class/Accept.md',

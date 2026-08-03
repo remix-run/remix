@@ -1,362 +1,334 @@
 import type { RoutePatternParts, RoutePattern } from '../route-pattern.ts'
+import { parsePattern } from '../route-pattern/parse.ts'
 import { decodeHostname } from './decode.ts'
-import { generateVariants, type Param } from './variant.ts'
-import { unreachable } from '../unreachable.ts'
-
+import {
+  canonicalizeUrlPart,
+  compilePart,
+  hasStaticAnchor,
+  hasStaticPrefix,
+  hasStaticSuffix,
+  matchPart,
+  unitKey,
+  type CanonicalText,
+  type PartProgram,
+} from './program.ts'
 import type { Match, MatchParamMeta } from './types.ts'
+import {
+  checkMatcherLimit,
+  consumeMatchWork,
+  createMatchWorkBudget,
+  resolveMatcherLimits,
+  type MatchWorkBudget,
+  type MatcherLimits,
+} from './limits.ts'
+
+type Entry<data> = {
+  readonly pattern: RoutePattern
+  readonly patternParts: RoutePatternParts
+  readonly data: data
+  readonly hostname: PartProgram | null
+  readonly pathname: PartProgram
+  readonly insertion: number
+}
+
+type PathnameIndexNode<data> = {
+  readonly static: Map<string, PathnameIndexNode<data>>
+  readonly entries: Array<Entry<data>>
+}
+
+const maxCandidatesBeforeSecondaryIndex = 32
 
 export class Trie<data = unknown> {
   readonly ignoreCase: boolean
-  #root: ProtocolNode<data>
+  #pathnamePrefixIndex = createPathnameIndexNode<data>()
+  #pathnameSuffixIndex = createPathnameIndexNode<data>()
+  #pathnameAnchorIndex = createPathnameIndexNode<data>()
+  #insertion = 0
+  readonly #limits: MatcherLimits
+  #size = 0
 
-  constructor(options?: { ignoreCase?: boolean }) {
+  constructor(options?: { ignoreCase?: boolean; limits?: Partial<MatcherLimits> }) {
     this.ignoreCase = options?.ignoreCase ?? false
-    this.#root = {
-      http: createHostnameNode(),
-      https: createHostnameNode(),
-    }
+    this.#limits = resolveMatcherLimits(options?.limits)
   }
 
-  insert(pattern: RoutePattern, data: data): void {
+  insert(pattern: string | RoutePattern, data: data): void {
+    let patternSize: number
+    if (typeof pattern === 'string') {
+      let source = pattern
+      patternSize = this.#checkSizeLimits(source)
+      pattern = parsePattern(pattern)
+      if (pattern.source !== source) patternSize = this.#checkSizeLimits(pattern.source)
+    } else {
+      patternSize = this.#checkSizeLimits(pattern.source)
+    }
     let patternParts = pattern._parts
 
-    for (let variant of generateVariants(pattern, { ignoreCase: this.ignoreCase })) {
-      let hostnameNode = this.#root[variant.protocol]
-
-      let portNode: PortNode<data>
-      if (variant.hostname.type === 'any') {
-        portNode = hostnameNode.any
-      } else if (variant.hostname.type === 'static') {
-        let key = variant.hostname.value.toLowerCase()
-        let existing = hostnameNode.static.get(key)
-        if (existing === undefined) {
-          existing = new Map()
-          hostnameNode.static.set(key, existing)
-        }
-        portNode = existing
-      } else {
-        portNode = new Map()
-        hostnameNode.dynamic.push({
-          regexp: variant.hostname.regexp,
-          params: variant.hostname.params,
-          portNode,
-        })
-      }
-
-      let pathnameRoot = portNode.get(variant.port)
-      if (pathnameRoot === undefined) {
-        pathnameRoot = createPathnameNode()
-        portNode.set(variant.port, pathnameRoot)
-      }
-
-      let pathnameNode = pathnameRoot
-      for (let segment of variant.pathname) {
-        if (segment.type === 'static') {
-          let key = this.ignoreCase ? segment.key.toLowerCase() : segment.key
-          let next = pathnameNode.static.get(key)
-          if (next === undefined) {
-            next = createPathnameNode()
-            pathnameNode.static.set(key, next)
-          }
-          pathnameNode = next
-          continue
-        }
-        if (segment.type === 'variable') {
-          let next = pathnameNode.variable.get(segment.key)
-          if (next === undefined) {
-            next = { regexp: segment.regexp, pathnameNode: createPathnameNode() }
-            pathnameNode.variable.set(segment.key, next)
-          }
-          pathnameNode = next.pathnameNode
-          continue
-        }
-        if (segment.type === 'wildcard') {
-          let next = pathnameNode.wildcard.get(segment.key)
-          if (next === undefined) {
-            next = { regexp: segment.regexp, pathnameNode: createPathnameNode() }
-            pathnameNode.wildcard.set(segment.key, next)
-          }
-          pathnameNode = next.pathnameNode
-          continue
-        }
-        unreachable(segment)
-      }
-
-      let requiredParams: Array<Param> = []
-      for (let segment of variant.pathname) {
-        if (segment.type === 'variable' || segment.type === 'wildcard') {
-          for (let param of segment.params) requiredParams.push(param)
-        }
-      }
-      pathnameNode.values.push({ pattern, patternParts, data, requiredParams })
+    let hostname = patternParts.hostname
+      ? compilePart(patternParts.hostname, { ignoreCase: true })
+      : null
+    let pathname = compilePart(patternParts.pathname, { ignoreCase: this.ignoreCase })
+    let entry: Entry<data> = {
+      pattern,
+      patternParts,
+      data,
+      hostname,
+      pathname,
+      insertion: this.#insertion++,
     }
+
+    let node = this.#pathnamePrefixIndex
+    for (let unit of pathname.staticPrefix) {
+      let key = unitKey(unit)
+      let next = node.static.get(key)
+      if (next === undefined) {
+        next = createPathnameIndexNode()
+        node.static.set(key, next)
+      }
+      node = next
+    }
+    node.entries.push(entry)
+
+    node = this.#pathnameAnchorIndex
+    for (let unit of pathname.staticAnchor) {
+      let key = unitKey(unit)
+      let next = node.static.get(key)
+      if (next === undefined) {
+        next = createPathnameIndexNode()
+        node.static.set(key, next)
+      }
+      node = next
+    }
+    node.entries.push(entry)
+
+    node = this.#pathnameSuffixIndex
+    for (let i = pathname.staticSuffix.length - 1; i >= 0; i--) {
+      let key = unitKey(pathname.staticSuffix[i])
+      let next = node.static.get(key)
+      if (next === undefined) {
+        next = createPathnameIndexNode()
+        node.static.set(key, next)
+      }
+      node = next
+    }
+    node.entries.push(entry)
+    this.#size += patternSize
+  }
+
+  #checkSizeLimits(source: string): number {
+    let size = utf8Size(source)
+    checkMatcherLimit('maxPatternSize', this.#limits.maxPatternSize, size)
+    checkMatcherLimit('maxMatcherSize', this.#limits.maxMatcherSize, this.#size + size)
+    return size
   }
 
   search(url: URL): Array<Match<string, data>> {
     let protocol = url.protocol.slice(0, -1)
     if (protocol !== 'http' && protocol !== 'https') return []
+    if (this.#insertion === 0) return []
 
-    let hostnameNode = this.#root[protocol]
+    let matchWorkBudget = createMatchWorkBudget(this.#limits.maxMatchWork)
+    let pathname = canonicalizeUrlPart(url.pathname.slice(1), 'pathname', {
+      budget: matchWorkBudget,
+      ignoreCase: this.ignoreCase,
+    })
+    if (pathname === null) return []
+
+    let candidates: Array<Entry<data>> = []
+    let needsHostnameProgram = false
+    for (let entry of this.#findCandidates(pathname, matchWorkBudget)) {
+      consumeMatchWork(matchWorkBudget, 1)
+      if (!matchesProtocol(entry.patternParts.protocol, protocol)) continue
+      if (!matchesPort(entry.patternParts, protocol, url.port)) continue
+      if (!matchSearch(url.searchParams, entry.patternParts.search, matchWorkBudget)) continue
+      candidates.push(entry)
+      if (entry.hostname !== null) needsHostnameProgram = true
+    }
+    if (candidates.length === 0) return []
+    candidates.sort((a, b) => a.insertion - b.insertion)
+
     let decodedHostname = decodeHostname(url.hostname)
-
-    let origins: Array<{ hostnameMatch: Array<MatchParamMeta>; pathnameNode: PathnameNode<data> }> =
-      []
-
-    // any hostname (no port allowed -- empty-port key)
-    let anyPathname = hostnameNode.any.get('')
-    if (anyPathname) {
-      origins.push({
-        hostnameMatch: [
-          { type: '*', name: '*', value: decodedHostname, begin: 0, end: decodedHostname.length },
-        ],
-        pathnameNode: anyPathname,
+    let hostname: CanonicalText | undefined
+    if (needsHostnameProgram) {
+      let canonicalHostname = canonicalizeUrlPart(decodedHostname, 'hostname', {
+        budget: matchWorkBudget,
+        ignoreCase: true,
       })
-    }
-
-    // static hostname
-    let staticPort = hostnameNode.static.get(decodedHostname.toLowerCase())
-    if (staticPort) {
-      let next = staticPort.get(url.port)
-      if (next) origins.push({ hostnameMatch: [], pathnameNode: next })
-    }
-
-    // dynamic hostnames
-    for (let entry of hostnameNode.dynamic) {
-      let m = entry.regexp.exec(decodedHostname)
-      if (!m) continue
-      let next = entry.portNode.get(url.port)
-      if (!next) continue
-      let hostnameMatch: Array<MatchParamMeta> = []
-      for (let i = 0; i < entry.params.length; i++) {
-        let param = entry.params[i]
-        let span = m.indices?.[i + 1]
-        if (span === undefined) continue
-        hostnameMatch.push({
-          type: param.type,
-          name: param.name,
-          value: m[i + 1],
-          begin: span[0],
-          end: span[1],
-        })
-      }
-      origins.push({ hostnameMatch, pathnameNode: next })
+      if (canonicalHostname === null) return []
+      hostname = canonicalHostname
     }
 
     let results: Array<Match<string, data>> = []
-    let urlSegments = normalizePathname(url.pathname, { ignoreCase: this.ignoreCase })
-    if (urlSegments === null) return results
-
-    for (let origin of origins) {
-      let stack: Array<{
-        segmentIndex: number
-        pathnameNode: PathnameNode<data>
-        charOffset: number
-        captures: Array<{ value: string; begin: number; end: number }>
-      }> = [{ segmentIndex: 0, pathnameNode: origin.pathnameNode, charOffset: 0, captures: [] }]
-
-      while (stack.length > 0) {
-        let current = stack.pop()!
-
-        if (current.segmentIndex === urlSegments.length) {
-          for (let value of current.pathnameNode.values) {
-            if (!matchSearch(url.searchParams, value.patternParts.search)) continue
-
-            let pathnameMatch: Array<MatchParamMeta> = []
-            for (let i = 0; i < value.requiredParams.length; i++) {
-              let param = value.requiredParams[i]
-              let cap = current.captures[i]
-              pathnameMatch.push({
-                type: param.type,
-                name: param.name,
-                value: fastDecodeURIComponent(cap.value),
-                begin: cap.begin,
-                end: cap.end,
-              })
-            }
-
-            let params: Record<string, string | undefined> = {}
-            for (let token of value.patternParts.hostname?.tokens ?? []) {
-              if ((token.type === ':' || token.type === '*') && token.name !== '*') {
-                params[token.name] = undefined
-              }
-            }
-            for (let token of value.patternParts.pathname.tokens) {
-              if ((token.type === ':' || token.type === '*') && token.name !== '*') {
-                params[token.name] = undefined
-              }
-            }
-            for (let p of origin.hostnameMatch) {
-              if (p.name === '*') continue
-              params[p.name] = p.value
-            }
-            for (let p of pathnameMatch) {
-              if (p.name === '*') continue
-              params[p.name] = p.value
-            }
-
-            results.push({
-              url,
-              pattern: value.pattern,
-              data: value.data,
-              params,
-              paramsMeta: { hostname: origin.hostnameMatch, pathname: pathnameMatch },
-            })
-          }
-          continue
-        }
-
-        let urlSegment = urlSegments[current.segmentIndex]
-        let staticKey = this.ignoreCase ? urlSegment.toLowerCase() : urlSegment
-        let nextStatic = current.pathnameNode.static.get(staticKey)
-        if (nextStatic) {
-          stack.push({
-            segmentIndex: current.segmentIndex + 1,
-            pathnameNode: nextStatic,
-            charOffset: current.charOffset + urlSegment.length + 1,
-            captures: current.captures,
-          })
-        }
-
-        for (let { regexp, pathnameNode } of current.pathnameNode.variable.values()) {
-          let m = regexp.exec(urlSegment)
-          if (!m) continue
-          let captures = current.captures.slice()
-          for (let i = 1; i < m.indices!.length; i++) {
-            let span = m.indices![i]
-            if (span === undefined) unreachable()
-            captures.push({
-              value: m[i],
-              begin: current.charOffset + span[0],
-              end: current.charOffset + span[1],
-            })
-          }
-          stack.push({
-            segmentIndex: current.segmentIndex + 1,
-            pathnameNode,
-            charOffset: current.charOffset + m.index + m[0].length + 1,
-            captures,
-          })
-        }
-
-        for (let { regexp, pathnameNode } of current.pathnameNode.wildcard.values()) {
-          let remaining = urlSegments.slice(current.segmentIndex).join('/')
-          let m = regexp.exec(remaining)
-          if (!m) continue
-          let captures = current.captures.slice()
-          for (let i = 1; i < m.indices!.length; i++) {
-            let span = m.indices![i]
-            if (span === undefined) continue
-            captures.push({
-              value: m[i],
-              begin: current.charOffset + span[0],
-              end: current.charOffset + span[1],
-            })
-          }
-          stack.push({
-            segmentIndex: urlSegments.length,
-            pathnameNode,
-            charOffset: current.charOffset + remaining.length,
-            captures,
-          })
-        }
+    for (let entry of candidates) {
+      let hostnameMatch: ReadonlyArray<MatchParamMeta>
+      if (entry.hostname === null) {
+        hostnameMatch = [
+          {
+            type: '*',
+            name: '*',
+            value: decodedHostname,
+            begin: 0,
+            end: decodedHostname.length,
+          },
+        ]
+      } else {
+        if (hostname === undefined) throw new Error('missing canonical hostname')
+        let match = matchPart(entry.hostname, hostname, matchWorkBudget)
+        if (match === null) continue
+        hostnameMatch = match
       }
-    }
 
+      let pathnameMatch = matchPart(entry.pathname, pathname, matchWorkBudget)
+      if (pathnameMatch === null) continue
+
+      let params: Record<string, string | undefined> = {}
+      for (let name of entry.hostname?.captureNames ?? []) params[name] = undefined
+      for (let name of entry.pathname.captureNames) params[name] = undefined
+      for (let capture of hostnameMatch) {
+        if (capture.name !== '*') params[capture.name] = capture.value
+      }
+      for (let capture of pathnameMatch) {
+        if (capture.name !== '*') params[capture.name] = capture.value
+      }
+
+      results.push({
+        url,
+        pattern: entry.pattern,
+        data: entry.data,
+        params,
+        paramsMeta: {
+          hostname: hostnameMatch.slice(),
+          pathname: pathnameMatch.slice(),
+        },
+      })
+    }
     return results
   }
-}
 
-// Pathname codec ----------------------------------------------------------------------------------
-
-// Pathname matching uses canonical percent-encoded text. URL pathnames are split on structural
-// "/" before normalization so encoded slashes like "%2F" remain data within a segment instead of
-// becoming separators. Pattern static text is encoded the same way when variants are generated.
-function normalizePathname(pathname: string, options?: { ignoreCase?: boolean }): string[] | null {
-  let segments: string[] = []
-
-  for (let segment of pathname.slice(1).split('/')) {
-    let normalized = normalizePathnameText(segment, options)
-    if (normalized === null) return null
-    segments.push(normalized)
-  }
-
-  return segments
-}
-
-function normalizePathnameText(text: string, options?: { ignoreCase?: boolean }): string | null {
-  let decoded = safeDecodeURIComponent(text)
-  if (decoded === null) return null
-  if (options?.ignoreCase) decoded = decoded.toLowerCase()
-  return encodeURIComponent(decoded)
-}
-
-function fastDecodeURIComponent(text: string): string {
-  return text.includes('%') ? decodeURIComponent(text) : text
-}
-
-function safeDecodeURIComponent(text: string): string | null {
-  try {
-    return fastDecodeURIComponent(text)
-  } catch (error) {
-    if (error instanceof URIError) return null
-    throw error
+  #findCandidates(pathname: CanonicalText, budget: MatchWorkBudget): Array<Entry<data>> {
+    let result = collectCandidates(this.#pathnamePrefixIndex, pathname.units, budget)
+    if (result.length > maxCandidatesBeforeSecondaryIndex) {
+      let suffix = collectCandidates(this.#pathnameSuffixIndex, pathname.units.toReversed(), budget)
+      if (suffix.length < result.length) result = suffix
+    }
+    if (result.length > maxCandidatesBeforeSecondaryIndex) {
+      let anchor = collectAnchorCandidates(this.#pathnameAnchorIndex, pathname.units, budget)
+      if (anchor.length < result.length) result = anchor
+    }
+    let filtered: Array<Entry<data>> = []
+    for (let entry of result) {
+      if (!hasStaticPrefix(entry.pathname, pathname, budget)) continue
+      if (!hasStaticSuffix(entry.pathname, pathname, budget)) continue
+      if (!hasStaticAnchor(entry.pathname, pathname, budget)) continue
+      filtered.push(entry)
+    }
+    return filtered
   }
 }
 
-// Search ------------------------------------------------------------------------------------------
+function utf8Size(value: string): number {
+  let result = 0
+  for (let char of value) {
+    let code = char.charCodeAt(0)
+    result += char.length === 2 ? 4 : code <= 0x7f ? 1 : code <= 0x7ff ? 2 : 3
+  }
+  return result
+}
+
+function collectCandidates<data>(
+  index: PathnameIndexNode<data>,
+  units: CanonicalText['units'],
+  budget: MatchWorkBudget,
+): Array<Entry<data>> {
+  let result: Array<Entry<data>> = []
+  let node: PathnameIndexNode<data> | undefined = index
+  appendEntries(result, node.entries, budget)
+
+  for (let unit of units) {
+    consumeMatchWork(budget, 1)
+    node = node.static.get(unitKey(unit))
+    if (node === undefined) break
+    appendEntries(result, node.entries, budget)
+  }
+  return result
+}
+
+function collectAnchorCandidates<data>(
+  index: PathnameIndexNode<data>,
+  units: CanonicalText['units'],
+  budget: MatchWorkBudget,
+): Array<Entry<data>> {
+  let result = new Set<Entry<data>>()
+  addEntries(result, index.entries, budget)
+  for (let position = 0; position < units.length; position++) {
+    let node: PathnameIndexNode<data> | undefined = index
+    for (let i = position; i < units.length; i++) {
+      consumeMatchWork(budget, 1)
+      node = node.static.get(unitKey(units[i]))
+      if (node === undefined) break
+      addEntries(result, node.entries, budget)
+    }
+  }
+  return Array.from(result)
+}
+
+function appendEntries<data>(
+  target: Array<Entry<data>>,
+  entries: ReadonlyArray<Entry<data>>,
+  budget: MatchWorkBudget,
+): void {
+  consumeMatchWork(budget, entries.length)
+  for (let entry of entries) target.push(entry)
+}
+
+function addEntries<data>(
+  target: Set<Entry<data>>,
+  entries: ReadonlyArray<Entry<data>>,
+  budget: MatchWorkBudget,
+): void {
+  consumeMatchWork(budget, entries.length)
+  for (let entry of entries) target.add(entry)
+}
+
+function matchesProtocol(
+  expected: RoutePatternParts['protocol'],
+  actual: 'http' | 'https',
+): boolean {
+  return expected === null || expected === 'http(s)' || expected === actual
+}
+
+function matchesPort(
+  pattern: RoutePatternParts,
+  protocol: 'http' | 'https',
+  actual: string,
+): boolean {
+  if (pattern.port === null) return pattern.hostname === null || actual === ''
+  let expected = pattern.port
+  if ((protocol === 'http' && expected === '80') || (protocol === 'https' && expected === '443')) {
+    expected = ''
+  }
+  return expected === actual
+}
 
 function matchSearch(
   params: URLSearchParams,
   constraints: ReadonlyMap<string, ReadonlySet<string>>,
+  budget: MatchWorkBudget,
 ): boolean {
   for (let [name, requiredValues] of constraints) {
+    consumeMatchWork(budget, params.size + requiredValues.size + 1)
     if (requiredValues.size === 0) {
       if (!params.has(name)) return false
       continue
     }
-    let values = params.getAll(name)
+    let values = new Set(params.getAll(name))
     for (let requiredValue of requiredValues) {
-      if (!values.includes(requiredValue)) return false
+      if (!values.has(requiredValue)) return false
     }
   }
   return true
 }
 
-// Trie nodes --------------------------------------------------------------------------------------
-
-type ProtocolNode<data> = {
-  http: HostnameNode<data>
-  https: HostnameNode<data>
-}
-
-type HostnameNode<data> = {
-  static: Map<string, PortNode<data>>
-  dynamic: Array<{
-    regexp: RegExp
-    params: ReadonlyArray<Param>
-    portNode: PortNode<data>
-  }>
-  any: PortNode<data>
-}
-
-type PortNode<data> = Map<string, PathnameNode<data>>
-
-type PathnameNode<data> = {
-  static: Map<string, PathnameNode<data>>
-  variable: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
-  wildcard: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
-  values: Array<{
-    pattern: RoutePattern
-    patternParts: RoutePatternParts
-    data: data
-    requiredParams: Array<Param>
-  }>
-}
-
-function createHostnameNode<data>(): HostnameNode<data> {
-  return { static: new Map(), dynamic: [], any: new Map() }
-}
-
-function createPathnameNode<data>(): PathnameNode<data> {
-  return { static: new Map(), variable: new Map(), wildcard: new Map(), values: [] }
+function createPathnameIndexNode<data>(): PathnameIndexNode<data> {
+  return { static: new Map(), entries: [] }
 }

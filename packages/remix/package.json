@@ -32,6 +32,7 @@
     "./data-schema/form-data": "./src/data-schema/form-data.ts",
     "./data-schema/lazy": "./src/data-schema/lazy.ts",
     "./data-table": "./src/data-table.ts",
+    "./data-table/cli": "./src/data-table/cli.ts",
     "./data-table/migrations": "./src/data-table/migrations.ts",
     "./data-table/migrations/node": "./src/data-table/migrations/node.ts",
     "./data-table/mysql": "./src/data-table-mysql.ts",
@@ -177,6 +178,10 @@
       "./data-table": {
         "types": "./dist/data-table.d.ts",
         "default": "./dist/data-table.js"
+      },
+      "./data-table/cli": {
+        "types": "./dist/data-table/cli.d.ts",
+        "default": "./dist/data-table/cli.js"
       },
       "./data-table/migrations": {
         "types": "./dist/data-table/migrations.d.ts",
@@ -634,7 +639,7 @@
     "prepack": "pnpm run sync-readmes",
     "prepublishOnly": "pnpm run build",
     "sync-readmes": "node ../../scripts/sync-remix-readmes.ts",
-    "test": "remix-test",
+    "test": "remix test",
     "typecheck": "tsc --noEmit"
   },
   "bin": {

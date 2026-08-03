@@ -25,6 +25,8 @@ remix new my-remix-app
 remix completion bash >> ~/.bashrc
 remix doctor
 remix doctor --fix
+remix db migrate
+remix db status
 remix routes
 remix routes --table
 remix routes --table --no-headers
@@ -42,6 +44,8 @@ await runRemix(['new', 'my-remix-app'])
 await runRemix(['completion', 'bash'])
 await runRemix(['doctor'])
 await runRemix(['doctor', '--fix'])
+await runRemix(['db', 'migrate'])
+await runRemix(['db', 'status'])
 await runRemix(['routes'])
 await runRemix(['routes', '--table'])
 await runRemix(['routes', '--table', '--no-headers'])

@@ -326,7 +326,7 @@ export const patterns = [
   '(:locale)/investors/committee-composition',
   '(:locale)/investors/board-of-directors',
   '(:locale)/investors/analyst-coverage',
-  '(:locale)/investors/:fallback-redirect',
+  '(:locale)/investors/:fallbackRedirect',
   '(:locale)/investors/sitemap.xml',
   '(:locale)/investors/governance-documents',
   '(:locale)/investors/press-releases/:article',

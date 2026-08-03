@@ -1020,6 +1020,30 @@ describe('writes and validation', () => {
 })
 
 describe('transactions and raw sql', () => {
+  it('rejects database lifecycle operations from transaction callbacks', async () => {
+    let recording = createRecordingAdapter()
+    let db = createTestDatabase(recording.adapter)
+
+    await db.transaction(async (transactionDatabase) => {
+      await assert.rejects(
+        () => transactionDatabase.wipe(),
+        /Cannot call wipe\(\) from a transaction-scoped database/,
+      )
+      await assert.rejects(
+        () => transactionDatabase.migrate([]),
+        /Cannot call migrate\(\) from a transaction-scoped database/,
+      )
+      await assert.rejects(
+        () => transactionDatabase.migrationStatus([]),
+        /Cannot call migrationStatus\(\) from a transaction-scoped database/,
+      )
+      await assert.rejects(
+        () => transactionDatabase.reset({ migrations: [] }),
+        /Cannot call reset\(\) from a transaction-scoped database/,
+      )
+    })
+  })
+
   it('treats transaction options as best-effort adapter hints', async () => {
     let recording = createRecordingAdapter({
       async execute() {

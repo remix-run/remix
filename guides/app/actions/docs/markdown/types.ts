@@ -9,6 +9,7 @@ export type MarkdownOptions = {
 
 export type MarkdownChapterSection = {
   id: string
+  depth: 2 | 3
   title: string
   titleHtml: string
 }
