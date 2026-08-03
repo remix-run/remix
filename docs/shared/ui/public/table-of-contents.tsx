@@ -1,10 +1,7 @@
 import { clientEntry, type Handle } from 'remix/ui'
 
-import {
-  clearSelectionIndicator,
-  positionSelectionIndicator,
-} from './selection-indicator.browser.ts'
-import { getActiveHeadingIndex } from './table-of-contents-active.browser.ts'
+import { clearSelectionIndicator, positionSelectionIndicator } from './selection-indicator.ts'
+import { getActiveHeadingIndex } from './table-of-contents-active.ts'
 
 export const TableOfContentsBehavior = clientEntry(
   import.meta.url,

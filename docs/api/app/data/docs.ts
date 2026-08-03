@@ -4,7 +4,7 @@ import * as path from 'node:path'
 import { discoverDemoFiles } from './demos.tsx'
 import { discoverMarkdownFiles, type DocFile as MarkdownDocFile } from './markdown.ts'
 import { buildRegistry, type DocFile, type DocsRegistry } from './registry.ts'
-import type { DocsAssetServer } from '../utils/assets.ts'
+import type { DocsAssetServer } from '../assets.ts'
 
 const apiDir = path.resolve(import.meta.dirname, '..', '..')
 const repoDir = path.resolve(apiDir, '..', '..')

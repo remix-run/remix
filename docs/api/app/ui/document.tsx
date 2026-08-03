@@ -2,7 +2,7 @@ import * as path from 'node:path'
 
 import type { Handle, RemixNode } from 'remix/ui'
 import { PagefindElements, shouldLoadPagefind } from 'remix-docs-shared/search'
-import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy.browser'
+import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'

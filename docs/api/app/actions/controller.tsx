@@ -7,7 +7,7 @@ import type { DocsContext, Versions } from '../data/docs.ts'
 import { getVersionedLookupHref } from '../data/lookup.ts'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
-import type { DocsAssetServer } from '../utils/assets.ts'
+import type { DocsAssetServer } from '../assets.ts'
 import { fileResponse } from './file-response.ts'
 import { Home } from './home.tsx'
 

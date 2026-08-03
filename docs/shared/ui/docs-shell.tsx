@@ -1,7 +1,7 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import button from 'remix/ui/button'
 
-import { DocsShellBehavior } from './docs-shell.browser.tsx'
+import { DocsShellBehavior } from './public/docs-shell.tsx'
 import {
   mobileNavigationBackdropCss,
   mobileNavigationBarCss,

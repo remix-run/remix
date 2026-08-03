@@ -4,7 +4,7 @@ import * as url from 'node:url'
 import type { RemixNode } from 'remix/ui'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
-import type { DocsAssetServer } from '../utils/assets.ts'
+import type { DocsAssetServer } from '../assets.ts'
 import { formatWithOxfmt } from '../utils/format.ts'
 import { hasRemixPackage, mapToRemixPackage } from '../utils/package-manifest.ts'
 

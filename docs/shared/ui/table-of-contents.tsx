@@ -1,6 +1,6 @@
 import type { Handle } from 'remix/ui'
 
-import { TableOfContentsBehavior } from './table-of-contents.browser.tsx'
+import { TableOfContentsBehavior } from './public/table-of-contents.tsx'
 
 export type DocsHeadingLink = {
   id: string

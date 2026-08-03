@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { closePagefindSearch, startPagefindSearch } from './pagefind-search.browser.ts'
+import { closePagefindSearch, startPagefindSearch } from './public/pagefind-search.ts'
 
 describe('Pagefind search behavior', () => {
   it('opens search from either trigger and restores focus when the modal closes', async (t) => {

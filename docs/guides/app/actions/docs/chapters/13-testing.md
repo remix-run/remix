@@ -218,7 +218,7 @@ npx playwright install
 
 Consider a small client component that tracks whether an album is a favorite:
 
-```tsx filename=app/actions/albums/favorite-button.browser.tsx
+```tsx filename=app/actions/albums/public/favorite-button.tsx
 import { clientEntry, on } from "remix/ui";
 import type { Handle } from "remix/ui";
 
@@ -254,7 +254,7 @@ import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { render } from "remix/ui/test";
 
-import { FavoriteButton } from "./favorite-button.browser.tsx";
+import { FavoriteButton } from "./public/favorite-button.tsx";
 
 describe("FavoriteButton", () => {
   it("toggles an album as a favorite", async (t) => {

@@ -9,13 +9,10 @@ import { createRouter, type MiddlewareContext } from 'remix/router'
 import { createRootController } from './actions/controller.tsx'
 import docsController from './actions/docs/controller.tsx'
 import docsExamplesController from './actions/docs/examples/controller.tsx'
-import { loadAssetEntry } from './middleware/asset-entry.ts'
 import { render } from './middleware/render.ts'
 import { routes } from './routes.ts'
 
-export type AppContext = MiddlewareContext<
-  [ReturnType<typeof loadAssetEntry>, ReturnType<typeof render>]
->
+export type AppContext = MiddlewareContext<[ReturnType<typeof render>]>
 
 declare module 'remix/router' {
   interface RouterTypes {
@@ -34,7 +31,6 @@ export function createGuidesRouter(options: { pagefindAssetsDir?: string } = {})
       staticFiles(publicDir, { index: false }),
       staticFiles(sharedAssetsDir, { index: false }),
       asyncContext(),
-      loadAssetEntry(),
       render(),
     ],
   })

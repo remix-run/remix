@@ -11,15 +11,13 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/actions/docs/markdown/render.tsx` — chapter metadata and `::frame` rendering built on the shared unified/remark/rehype pipeline.
 - `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, summaries, and mtime-based render caches.
 - `app/actions/docs/layout.tsx` and `chapter-navigation.tsx` — guides-specific content and navigation rendered inside the shell from `../shared/ui/`.
-- `app/actions/docs/chapter-navigation-indicator.browser.ts` — the guides-specific active-chapter animation. Shared shell and table-of-contents behaviors live in `../shared/ui/`.
-- `app/actions/docs/examples/` — frame-backed examples used by chapters. Browser-hydrated demo modules use the `.demo.tsx` suffix, and browser-only helpers use `.browser.ts?(x)` so the asset boundary is visible from filenames instead of `public/` directories.
-- `app/entry.browser.ts` and `app/dev-refresh.browser.ts` — browser entrypoints served by the asset server.
-- `app/styles/docs.css` — the stylesheet entrypoint. It imports shared tokens, shell, search, article, and Markdown layers from `../shared/styles/` plus the guides-only index and chapter-navigation styles.
-- `app/middleware/asset-entry.ts` — source-served browser module hrefs and preloads.
+- `app/actions/docs/public/` — browser behavior owned by the Guides route, including its active-chapter animation.
+- `app/actions/docs/examples/` — frame handlers used by chapters. Each chapter group's `public/` directory contains its browser-hydrated demo modules and their local dependencies.
+- `app/actions/public/` — root-owned browser entrypoint, development refresh module, and stylesheets.
+- `app/assets.ts` — the source asset server and root entry hrefs/preloads, configured around colocated `public/` directories.
 - `app/middleware/render.ts` — the request-scoped `render()` helper and frame resolver.
 - `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.
 - `app/ui/` — shared UI used across routes.
-- `app/utils/assets.ts` — the source asset server configuration, shaped around app browser modules plus the Remix browser packages needed by those modules.
 - `public/` — guides-only static files served as-is by the static middleware. Shared docs assets live in `../shared/assets/`.
 
 ## How chapters work
@@ -78,10 +76,10 @@ At render time, `markdown.tsx` turns the directive into `<Frame src="..." />`. T
 
 A "demo with code" shows a live, hydrated component next to its own highlighted source. It takes three co-located files:
 
-1. **The demo code** — a `.demo.tsx` module that exports the component as a named export whose name matches the function name:
+1. **The demo code** — a `.demo.tsx` module inside the frame handler's `public/` directory that exports the component as a named export whose name matches the function name:
 
    ```txt
-   app/actions/docs/examples/17-markdown-style-demo/counter.demo.tsx
+   app/actions/docs/examples/17-markdown-style-demo/public/counter.demo.tsx
    ```
 
    ```tsx
@@ -116,9 +114,9 @@ A "demo with code" shows a live, hydrated component next to its own highlighted 
 
    ```tsx
    import { demoWithCode } from '../demo-with-code.tsx'
-   import { Counter } from './counter.demo.tsx'
+   import { Counter } from './public/counter.demo.tsx'
 
-   let demoUrl = new URL('./counter.demo.tsx', import.meta.url)
+   let demoUrl = new URL('./public/counter.demo.tsx', import.meta.url)
 
    export const handler = demoWithCode(demoUrl, Counter)
    ```

@@ -147,7 +147,7 @@ The `::frame` directive is docs-specific Markdown. Inside a code fence it stays 
 ````md filename=chapter.md
 ::frame{src="/examples/17-markdown-style-demo/callout/"}
 
-```tsx filename=app/actions/docs/examples/17-markdown-style-demo/callout.demo.tsx
+```tsx filename=app/actions/docs/examples/17-markdown-style-demo/public/callout.demo.tsx
 export function CalloutDemo() {
   return () => <p>Hello from a frame.</p>;
 }

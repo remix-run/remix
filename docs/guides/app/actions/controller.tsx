@@ -6,7 +6,7 @@ import { createFileResponse } from 'remix/response/file'
 import { createController } from 'remix/router'
 
 import { routes } from '../routes.ts'
-import { assetServer } from '../utils/assets.ts'
+import { assetServer } from '../assets.ts'
 
 const defaultPagefindAssetsDir = path.resolve(
   import.meta.dirname,

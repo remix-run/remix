@@ -5,7 +5,7 @@ import { getVersionedLookupHref } from './data/lookup.ts'
 import { buildRegistry } from './data/registry.ts'
 import { createApiRouter } from './router.ts'
 import { getApiRouteHref } from './routes.ts'
-import { createAssetServer } from './utils/assets.ts'
+import { createAssetServer } from './assets.ts'
 describe('createApiRouter()', () => {
   it('does not load generated docs output while creating the router', (t) => {
     let assetServer = createAssetServer()
@@ -30,13 +30,13 @@ describe('createApiRouter()', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
 
-    assert.equal(html.includes('src="/assets/app/assets/entry.tsx"'), true)
-    assert.equal(html.includes('href="/assets/app/assets/entry.tsx"'), true)
-    assert.equal(html.includes('href="/assets/app/assets/docs.css"'), true)
-    assert.equal(html.includes('/assets/docs-shared/ui/docs-shell.browser.tsx'), true)
-    assert.equal(html.includes('/assets/docs-shared/ui/code-block-copy.browser.tsx'), true)
-    assert.equal(html.includes('src="/v1.2.3/assets/app/assets/entry.tsx"'), false)
-    assert.equal(html.includes('href="/v1.2.3/assets/app/assets/entry.tsx"'), false)
+    assert.equal(html.includes('src="/assets/app/actions/public/entry.tsx"'), true)
+    assert.equal(html.includes('href="/assets/app/actions/public/entry.tsx"'), true)
+    assert.equal(html.includes('href="/assets/app/actions/public/docs.css"'), true)
+    assert.equal(html.includes('/assets/docs-shared/ui/public/docs-shell.tsx'), true)
+    assert.equal(html.includes('/assets/docs-shared/ui/public/code-block-copy.tsx'), true)
+    assert.equal(html.includes('src="/v1.2.3/assets/app/actions/public/entry.tsx"'), false)
+    assert.equal(html.includes('href="/v1.2.3/assets/app/actions/public/entry.tsx"'), false)
   })
 
   it('keeps persistent stylesheets after variable head content', async (t) => {
@@ -51,16 +51,18 @@ describe('createApiRouter()', () => {
     let response = await router.fetch(new Request('http://localhost/'))
     assert.equal(response.status, 200)
     let html = await response.text()
-    let entryPreloadIndex = html.indexOf('rel="modulepreload" href="/assets/app/assets/entry.tsx"')
+    let entryPreloadIndex = html.indexOf(
+      'rel="modulepreload" href="/assets/app/actions/public/entry.tsx"',
+    )
     let pagefindStylesIndex = html.indexOf(
       'data-key="docs-pagefind-stylesheet" href="/assets/pagefind/pagefind-component-ui.css"',
     )
     let docsStylesIndex = html.indexOf(
-      'data-key="docs-stylesheet" rel="stylesheet" href="/assets/app/assets/docs.css"',
+      'data-key="docs-stylesheet" rel="stylesheet" href="/assets/app/actions/public/docs.css"',
     )
 
     let entryScriptIndex = html.indexOf(
-      'data-key="docs-client-entry" type="module" src="/assets/app/assets/entry.tsx"',
+      'data-key="docs-client-entry" type="module" src="/assets/app/actions/public/entry.tsx"',
     )
     let pagefindScriptIndex = html.indexOf('data-key="docs-pagefind-client-entry"')
 
@@ -85,12 +87,12 @@ describe('createApiRouter()', () => {
     let html = await response.text()
     let assetUrls = getLoadedAssetUrls(html).filter((url) => shouldVersionAssetUrl(url))
 
-    assert.equal(html.includes('src="/v1.2.3/assets/app/assets/entry.tsx"'), true)
-    assert.equal(html.includes('href="/v1.2.3/assets/app/assets/entry.tsx"'), true)
-    assert.equal(html.includes('/v1.2.3/assets/docs-shared/ui/docs-shell.browser.tsx'), true)
-    assert.equal(html.includes('/v1.2.3/assets/docs-shared/ui/code-block-copy.browser.tsx'), true)
-    assert.equal(html.includes('src="/assets/app/assets/entry.tsx"'), false)
-    assert.equal(html.includes('href="/assets/app/assets/entry.tsx"'), false)
+    assert.equal(html.includes('src="/v1.2.3/assets/app/actions/public/entry.tsx"'), true)
+    assert.equal(html.includes('href="/v1.2.3/assets/app/actions/public/entry.tsx"'), true)
+    assert.equal(html.includes('/v1.2.3/assets/docs-shared/ui/public/docs-shell.tsx'), true)
+    assert.equal(html.includes('/v1.2.3/assets/docs-shared/ui/public/code-block-copy.tsx'), true)
+    assert.equal(html.includes('src="/assets/app/actions/public/entry.tsx"'), false)
+    assert.equal(html.includes('href="/assets/app/actions/public/entry.tsx"'), false)
     assert.equal(assetUrls.length > 0, true)
     assert.deepEqual(
       assetUrls.filter((url) => !url.startsWith('/v1.2.3/')),
@@ -166,14 +168,16 @@ describe('createApiRouter()', () => {
     })
 
     let versionedResponse = await router.fetch(
-      new Request('http://localhost/v1.2.3/assets/app/assets/entry.tsx'),
+      new Request('http://localhost/v1.2.3/assets/app/actions/public/entry.tsx'),
     )
     assert.equal(versionedResponse.status, 200)
 
-    let rootResponse = await router.fetch(
-      new Request('http://localhost/assets/app/assets/entry.tsx'),
-    )
+    let [rootResponse, privateResponse] = await Promise.all([
+      router.fetch(new Request('http://localhost/assets/app/actions/public/entry.tsx')),
+      router.fetch(new Request('http://localhost/v1.2.3/assets/app/actions/controller.tsx')),
+    ])
     assert.equal(rootResponse.status, 404)
+    assert.equal(privateResponse.status, 404)
   })
 })
 

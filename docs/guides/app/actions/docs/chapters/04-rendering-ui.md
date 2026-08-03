@@ -221,12 +221,12 @@ optional `<Frame>` API for pages that load route-owned regions independently.
 ## Document shells, head content, and HTML responses {#document-shells-and-head-content}
 
 Pages should render a complete document through one shared component. The default app keeps it in
-`app/ui/document.tsx`:
+`app/actions/document.tsx`:
 
-```tsx filename=app/ui/document.tsx
+```tsx filename=app/actions/document.tsx
 import type { Handle, RemixNode } from "remix/ui";
 
-import { routes } from "../routes.ts";
+import { entryHref, entryPreloads } from "../assets.ts";
 
 export interface DocumentProps {
   children?: RemixNode;
@@ -246,11 +246,12 @@ export function Document(handle: Handle<DocumentProps>) {
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <title>{title}</title>
           {head}
+          {entryPreloads.map((href) => (
+            <link key={href} rel="modulepreload" href={href} />
+          ))}
+          <script type="module" src={entryHref}></script>
         </head>
-        <body>
-          {children}
-          <script type="module" src={routes.assets.href({ path: "app/assets/entry.ts" })}></script>
-        </body>
+        <body>{children}</body>
       </html>
     );
   };
@@ -258,8 +259,8 @@ export function Document(handle: Handle<DocumentProps>) {
 ```
 
 Put `title`, `meta`, `link`, and `style` elements inside the document's explicit `<head>`, along with
-global stylesheets, module preloads, and icons. Load the browser entry script from the document's
-`<body>`.
+global stylesheets, module preloads, icons, and the browser entry script. Resolve the entry href and
+its module graph once in `app/assets.ts` instead of constructing an asset URL in the component.
 
 The renderer passes this tree to `createHtmlResponse()`. That helper preserves an existing doctype or
 prepends `<!DOCTYPE html>`, sets `Content-Type: text/html; charset=UTF-8` unless the action supplied
@@ -315,7 +316,7 @@ JavaScript to receive its component styles.
 Generated `css(...)` rules, including styles from first-party UI components, live in the native
 `rmx` cascade layer. If your app uses its own layers, declare the complete order once:
 
-```css filename=app/styles/app.css
+```css filename=app/actions/public/app.css
 @layer base, rmx, app;
 
 @layer base {

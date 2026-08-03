@@ -19,6 +19,26 @@ describe('root controller assets', () => {
     assert.match(await response.text(), /<svg width="144"/)
   })
 
+  it('serves source only from colocated public directories', async () => {
+    let router = createGuidesRouter()
+
+    let [publicResponse, privateResponse] = await Promise.all([
+      router.fetch(
+        new Request(
+          new URL(routes.assets.href({ path: 'app/actions/public/entry.ts' }), 'http://localhost'),
+        ),
+      ),
+      router.fetch(
+        new Request(
+          new URL(routes.assets.href({ path: 'app/actions/controller.tsx' }), 'http://localhost'),
+        ),
+      ),
+    ])
+
+    assert.equal(publicResponse.status, 200)
+    assert.equal(privateResponse.status, 404)
+  })
+
   it('serves an existing prerendered Pagefind asset in development', async (t) => {
     let pagefindAssetsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-guides-pagefind-'))
     t.after(() => fs.rm(pagefindAssetsDir, { recursive: true, force: true }))

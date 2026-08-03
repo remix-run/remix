@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { startChapterNavigationIndicator } from './chapter-navigation-indicator.browser.ts'
+import { startChapterNavigationIndicator } from './public/chapter-navigation-indicator.ts'
 
 describe('startChapterNavigationIndicator', () => {
   it('moves the indicator from the previous to the destination chapter', async (t) => {

@@ -7,19 +7,48 @@ Remix has separate paths for files that already exist in public form, browser so
 
 ## Static files and source-served assets {#static-files-vs-source-served-assets}
 
-Use `staticFiles()` for files served from disk as-is. Use `createAssetServer()` for TypeScript, JavaScript, CSS, images, or fonts that need import rewriting, compilation, transforms, preloads, or fingerprinted URLs.
+Use `staticFiles()` for files served from the root `public/` directory as-is. Use `createAssetServer()` for TypeScript, JavaScript, CSS, images, or fonts that need import rewriting, compilation, transforms, preloads, or fingerprinted URLs. Source assets live in separate, colocated `public/` directories under `app/`; the shared name communicates browser reachability, while the serving mechanism remains different.
 
 ## Configure the asset server boundary {#remix-s-unbundled-asset-server}
 
-Define `rootDir`, the public `basePath`, and a `fileMap` from URL patterns to root-relative source patterns. Use `allowFiles` for app-owned source, `allowPackages` for dependencies that should be served by package name, and `denyFiles` for server-only modules that need to override an allow rule, then map the asset namespace to a controller action that calls `assetServer.fetch(request)`.
+Define `rootDir`, the public `basePath`, and a `fileMap` from URL patterns to root-relative source patterns. Allow `app/routes.ts` for type-safe hrefs and `app/**/public/**` for browser source, then deny test files so they can remain beside the modules they exercise:
+
+```ts filename=app/assets.ts
+import { createAssetServer } from "remix/assets";
+
+export const assetServer = createAssetServer({
+  basePath: "/assets",
+  rootDir: process.cwd(),
+  fileMap: {
+    "app/*path": "app/*path",
+    "node_modules/*path": "node_modules/*path",
+  },
+  allowFiles: ["app/routes.ts", "app/**/public/**"],
+  allowPackages: ["remix"],
+  denyFiles: ["app/**/*.test.*"],
+});
+```
+
+Map the asset namespace to a controller action that calls `assetServer.fetch(request)`. Treat `allowFiles`, `allowPackages`, and `denyFiles` as a security boundary, not merely compilation configuration.
 
 ## Browser modules, CSS, and file assets {#browser-modules-asset-roots-and-package-mounts}
 
-Explain on-demand TypeScript/JavaScript compilation, rewritten imports, CSS `@import` and `url()` references, package mounts, and configured leaf-file extensions. Keep browser-owned code in an allowed app directory rather than exposing the full source tree.
+Put browser source beside its narrowest owner, such as `app/actions/cart/public/` or `app/ui/public/`. Every local dependency in that browser module graph must also match `allowFiles`, so keep the graph inside the colocated `public/` directory. Package dependencies are allowed separately with `allowPackages`.
+
+The asset server compiles TypeScript and JavaScript on demand, rewrites imports, follows CSS `@import` and `url()` references, and can serve explicitly configured leaf-file extensions. This keeps the whole browser graph visible without exposing the rest of the app.
 
 ## Asset hrefs, client entries, and preloads {#client-entry-hrefs-and-module-preloads}
 
-Use `getHref()` for scripts, styles, and files, and `getPreloads()` for entry dependencies. Resolve `clientEntry(import.meta.url, ...)` IDs through the asset server in the shared renderer instead of hard-coding deployment URLs in components.
+Use `getHref()` for scripts, styles, and files, and `getPreloads()` for entry dependencies. Resolve stable root entry metadata once in `app/assets.ts`:
+
+```ts filename=app/assets.ts
+const entry = "app/actions/public/entry.ts";
+
+export const entryHref = await assetServer.getHref(entry);
+export const entryPreloads = await assetServer.getPreloads(entry);
+```
+
+Render those preloads and the entry script from the document head. Resolve `clientEntry(import.meta.url, ...)` IDs through the asset server in the shared renderer instead of hard-coding deployment URLs in components.
 
 ## File transforms and transformed-output caches {#asset-file-transforms}
 

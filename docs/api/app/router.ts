@@ -17,7 +17,7 @@ import {
 import { loadAssetEntry } from './middleware/asset-entry.ts'
 import { render } from './middleware/render.ts'
 import { getVersionPathname, routes } from './routes.ts'
-import type { DocsAssetServer } from './utils/assets.ts'
+import type { DocsAssetServer } from './assets.ts'
 
 export { getDefaultVersions } from './data/docs.ts'
 

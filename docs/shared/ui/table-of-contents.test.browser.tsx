@@ -5,7 +5,7 @@ import { createRoot } from 'remix/ui'
 import {
   startTableOfContentsBehavior,
   TableOfContentsBehavior,
-} from './table-of-contents.browser.tsx'
+} from './public/table-of-contents.tsx'
 import { initializeTableOfContentsScript } from './table-of-contents.tsx'
 
 describe('initial table of contents selection', () => {

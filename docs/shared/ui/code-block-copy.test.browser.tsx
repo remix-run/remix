@@ -2,7 +2,7 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import { createRoot } from 'remix/ui'
 
-import { CodeBlockCopyButtons } from './code-block-copy.browser.tsx'
+import { CodeBlockCopyButtons } from './public/code-block-copy.tsx'
 
 describe('CodeBlockCopyButtons', () => {
   it('restarts after navigation and cancels stale clipboard work', async (t) => {

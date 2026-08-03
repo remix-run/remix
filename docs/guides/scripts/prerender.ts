@@ -1,12 +1,12 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
-import { discoverBrowserAssetHrefs } from 'remix-docs-shared/prerender/browser-assets'
+import { discoverPublicModuleHrefs } from 'remix-docs-shared/prerender/public-modules'
 import { prerender } from 'remix-docs-shared/prerender/run'
 
+import { assetServer } from '../app/assets.ts'
 import { router } from '../app/router.ts'
 import { routes } from '../app/routes.ts'
-import { assetServer } from '../app/utils/assets.ts'
 
 const guidesDir = path.resolve(import.meta.dirname, '..')
 const sharedDir = path.join(guidesDir, '..', 'shared')
@@ -30,22 +30,11 @@ const { values: cliArgs } = util.parseArgs({
 
 const outputDir = path.resolve(guidesDir, cliArgs.dir)
 
-const browserHrefs = await discoverBrowserAssetHrefs(assetServer, [
-  {
-    rootDir: guidesDir,
-    patterns: [
-      'app/**/*.browser.ts',
-      'app/**/*.browser.tsx',
-      'app/**/*.demo.ts',
-      'app/**/*.demo.tsx',
-    ],
-  },
-  {
-    rootDir: sharedDir,
-    patterns: ['**/*.browser.ts', '**/*.browser.tsx'],
-  },
+const publicModuleHrefs = await discoverPublicModuleHrefs(assetServer, [
+  path.join(guidesDir, 'app'),
+  sharedDir,
 ])
-const paths = [routes.docs.index.href(), ...browserHrefs]
+const paths = [routes.docs.index.href(), ...publicModuleHrefs]
 
 await fs.rm(outputDir, { recursive: true, force: true })
 await prerender(router, {

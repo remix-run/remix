@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { getActiveHeadingIndex } from './table-of-contents-active.browser.ts'
+import { getActiveHeadingIndex } from './public/table-of-contents-active.ts'
 
 describe('getActiveHeadingIndex', () => {
   it('selects the first heading before any heading crosses the activation line', () => {

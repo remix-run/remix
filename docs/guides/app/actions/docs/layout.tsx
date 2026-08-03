@@ -5,7 +5,7 @@ import { shouldLoadPagefind } from 'remix-docs-shared/search'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
-import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy.browser'
+import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy'
 import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
 

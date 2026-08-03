@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { startDocsShellBehavior } from './docs-shell.browser.tsx'
+import { startDocsShellBehavior } from './public/docs-shell.tsx'
 
 describe('startDocsShellBehavior', () => {
   it('synchronizes collapsed shell accessibility state', (t) => {

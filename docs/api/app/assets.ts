@@ -1,9 +1,9 @@
 import * as path from 'node:path'
 import { createAssetServer as createRemixAssetServer } from 'remix/assets'
 import type { AssetServer } from 'remix/assets'
-import { getVersionPathname } from '../routes.ts'
 
-const docsDir = path.resolve(import.meta.dirname, '..', '..')
+import { getVersionPathname } from './routes.ts'
+
 const nodeEnv = process.env.NODE_ENV ?? 'production'
 const isDevelopment = nodeEnv === 'development'
 const isProduction = nodeEnv === 'production'
@@ -13,9 +13,15 @@ export type DocsAssetServer = AssetServer
 export function createAssetServer(version?: string): DocsAssetServer {
   return createRemixAssetServer({
     basePath: version ? `${getVersionPathname(version)}/assets` : '/assets',
-    rootDir: path.resolve(docsDir, '..', '..'),
-    allowFiles: ['docs/api/build/demos/**', 'docs/api/app/assets/**', 'docs/shared/**'],
+    rootDir: path.resolve(import.meta.dirname, '../../..'),
+    allowFiles: [
+      'docs/api/build/demos/**',
+      'docs/api/app/routes.ts',
+      'docs/api/app/**/public/**',
+      'docs/shared/**/public/**',
+    ],
     allowPackages: ['remix'],
+    denyFiles: ['**/*.test.*'],
     fileMap: {
       '/demos/*path': 'docs/api/build/demos/*path',
       '/pkg/:pkg/src/*path': 'packages/:pkg/src/*path',

@@ -48,7 +48,7 @@ Use Remix animation helpers when the motion depends on rendering state: a node e
 
 `animateEntrance(...)` runs when a host node is inserted. `animateExit(...)` lets a removed node stay in the DOM until its exit animation finishes.
 
-```tsx filename=app/ui/notice.browser.tsx
+```tsx filename=app/ui/public/notice.tsx
 import { clientEntry, css, on } from "remix/ui";
 import { animateEntrance, animateExit, spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
@@ -111,7 +111,7 @@ Pass `true` for the default opacity animation or `false` to disable a mixin with
 
 `animateLayout(...)` measures a host node before and after a render, then animates the visual delta. This is the right tool for sorted lists, expanding cards, and elements that move because layout changed.
 
-```tsx filename=app/ui/reorder-list.browser.tsx
+```tsx filename=app/ui/public/reorder-list.tsx
 import { clientEntry, css, on } from "remix/ui";
 import { animateLayout, spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
@@ -169,7 +169,7 @@ Layout animation includes size projection by default. Pass `size: false` when on
 
 `spring()` returns an iterator decorated for CSS transitions and Web Animations. Stringify it in CSS, spread it into animation options, or iterate it for custom JavaScript animation.
 
-```tsx filename=app/assets/bouncy-switch.tsx
+```tsx filename=app/ui/public/bouncy-switch.tsx
 import { clientEntry, css, on } from "remix/ui";
 import { spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
@@ -220,7 +220,7 @@ const thumbStyle = css({
 
 Use `tween(...)` when you need a time-based value loop rather than CSS or WAAPI timing.
 
-```ts filename=app/ui/count-up.browser.ts
+```ts filename=app/ui/public/count-up.ts
 import { easings, tween } from "remix/ui/animation";
 
 export function countUp(from: number, to: number, onValue: (value: number) => void) {
@@ -256,7 +256,7 @@ Event handlers receive abort signals, and animation mixins cancel or replace in-
 
 For custom imperative animations, keep the current animation in setup scope and cancel it before starting the next one:
 
-```tsx filename=app/ui/ripple-button.browser.tsx
+```tsx filename=app/ui/public/ripple-button.tsx
 import { clientEntry, css, on, ref } from "remix/ui";
 import { spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
@@ -324,7 +324,7 @@ const panelStyle = css({
 
 For JavaScript-driven motion, check the same media query before starting work:
 
-```ts filename=app/ui/motion.browser.ts
+```ts filename=app/ui/public/motion.ts
 export function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }

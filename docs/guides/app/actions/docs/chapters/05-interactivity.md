@@ -17,11 +17,17 @@ TypeScript models and keep their own state focused on the UI.
 Begin with links and forms that already describe the request the server should receive. Our album
 form has a real action and method:
 
-```tsx filename=app/actions/albums/edit/album-edit-form.browser.tsx
+```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx
 import type { Handle } from "remix/ui";
 
-import { routes } from "../../../routes.ts";
-import type { Album } from "../data.ts";
+import { routes } from "../../../../routes.ts";
+
+interface Album {
+  artist: string;
+  id: string;
+  title: string;
+  year: number;
+}
 
 export function AlbumEditForm(handle: Handle<{ album: Album }>) {
   return () => {
@@ -65,12 +71,18 @@ it needs rather than moving the whole page into browser code.
 `clientEntry(...)` marks the smallest component that needs to run in the browser. The album edit page
 can remain server-only while its form hydrates:
 
-```tsx filename=app/actions/albums/edit/album-edit-form.browser.tsx lines=[1,7-9]
+```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx lines=[1,13-15]
 import { clientEntry } from "remix/ui";
 import type { Handle } from "remix/ui";
 
-import { routes } from "../../../routes.ts";
-import type { Album } from "../data.ts";
+import { routes } from "../../../../routes.ts";
+
+interface Album {
+  artist: string;
+  id: string;
+  title: string;
+  year: number;
+}
 
 export const AlbumEditForm = clientEntry(
   import.meta.url,
@@ -103,9 +115,9 @@ browser-safe values it needs to handle its part of the page.
 
 ## Booting the browser runtime with run {#browser-entry-with-run}
 
-The document shell loads `app/assets/entry.ts`. That module calls `run()` once:
+The document shell loads `app/actions/public/entry.ts`. That module calls `run()` once:
 
-```ts filename=app/assets/entry.ts
+```ts filename=app/actions/public/entry.ts
 import { run } from "remix/ui";
 
 let app = run({
@@ -142,7 +154,7 @@ the app needs route-owned regions that load or reload independently.
 Use `createRoot(container)` when there is no server-rendered component to hydrate: for example, an
 imperative widget mounted into a container created by another application.
 
-```tsx filename=app/assets/support-widget.tsx
+```tsx filename=app/actions/public/support-widget.tsx
 import { createRoot } from "remix/ui";
 import type { Handle } from "remix/ui";
 
@@ -311,7 +323,7 @@ An uncontrolled input keeps its current value in the DOM, and `defaultValue` giv
 value. A controlled input gets its current value from component state instead. Its input handler
 copies the DOM value into that state and updates the component:
 
-```tsx filename=app/ui/title-inputs.browser.tsx
+```tsx filename=app/ui/public/title-inputs.tsx
 import { on } from "remix/ui";
 import type { Handle } from "remix/ui";
 
@@ -485,7 +497,7 @@ Pass the narrowest signal into `fetch()` and check it after any awaited operatio
 the signal. In this example, the server passes `routes.albums.search.href()` as `searchHref`, and the
 route returns a short text result. The browser component does not hard-code the endpoint:
 
-```tsx filename=app/ui/album-search.browser.tsx
+```tsx filename=app/ui/public/album-search.tsx
 import { clientEntry, on } from "remix/ui";
 import type { Handle } from "remix/ui";
 
@@ -549,7 +561,7 @@ operations in ordinary TypeScript that the component calls.
 
 A small model makes that boundary concrete. This cart owns its items and quantity changes:
 
-```ts filename=app/ui/cart-model.ts
+```ts filename=app/ui/public/cart-model.ts
 import { TypedEventTarget } from "remix/ui";
 
 export interface CartItem {
@@ -586,7 +598,7 @@ export class CartModel extends TypedEventTarget<{ change: Event }> {
 The component creates the model from serializable props, listens for changes, and keeps only the
 open state for its details panel:
 
-```tsx filename=app/ui/cart.browser.tsx
+```tsx filename=app/ui/public/cart.tsx
 import { addEventListeners, clientEntry, on } from "remix/ui";
 import type { Handle } from "remix/ui";
 
@@ -783,7 +795,7 @@ typed event for consumers.
 
 This `longPress()` mixin turns a held pointer into an `app:longpress` event:
 
-```tsx filename=app/ui/long-press.browser.tsx
+```tsx filename=app/ui/public/long-press.tsx
 import { createMixin, on } from "remix/ui";
 
 export const longPressType = "app:longpress" as const;

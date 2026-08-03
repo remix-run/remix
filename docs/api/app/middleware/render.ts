@@ -4,7 +4,7 @@ import { createHtmlResponse } from 'remix/response/html'
 import type { RemixNode } from 'remix/ui'
 import { renderToStream, type ResolveFrameContext } from 'remix/ui/server'
 
-import type { DocsAssetServer } from '../utils/assets.ts'
+import type { DocsAssetServer } from '../assets.ts'
 
 export function render(assetServer: DocsAssetServer) {
   return renderWith(

@@ -72,7 +72,7 @@ import { Frame } from "remix/ui";
 import type { Handle } from "remix/ui";
 
 import { routes } from "../../routes.ts";
-import { Document } from "../../ui/document.tsx";
+import { Document } from "../document.tsx";
 import type { Album } from "./data.ts";
 
 export function AlbumPage(handle: Handle<{ album: Album }>) {
@@ -184,7 +184,7 @@ A blocking frame resolves before the browser receives the page. A frame with a f
 be pending, and any frame can reload later. Add `resolveFrame` to the browser's `run()` options for
 those requests:
 
-```ts filename=app/assets/entry.ts
+```ts filename=app/actions/public/entry.ts
 import { run } from "remix/ui";
 
 let app = run({
