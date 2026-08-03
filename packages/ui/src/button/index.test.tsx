@@ -53,9 +53,7 @@ describe('button', () => {
     expect(html).toMatch(/:focus-visible/)
     expect(html).toMatch(/outline: 0/)
     expect(html).toMatch(/box-shadow: var\(--rmx-button-focus-shadow\)/)
-    expect(html).toMatch(
-      /0 0 0 1px light-dark\(#3573F6, #6eaaff\), var\(--rmx-button-shadow\)/,
-    )
+    expect(html).toMatch(/0 0 0 1px light-dark\(#3573F6, #6eaaff\), var\(--rmx-button-shadow\)/)
     expect(html).toMatch(/0 0 0 1px light-dark\(#3573F6, #6eaaff\)/)
     expect(html).toMatch(
       /0 0 0 4px light-dark\(rgba\(53, 115, 246, 0\.1\), rgba\(110, 170, 255, 0\.18\)\)/,

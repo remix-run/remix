@@ -83,7 +83,8 @@ const baseStyles = {
     opacity: 0.55,
   },
   [checkedSelector]: {
-    background: 'linear-gradient(180deg, light-dark(#70C754, #8ee572) 0%, light-dark(#70C754, #8ee572) 100%)',
+    background:
+      'linear-gradient(180deg, light-dark(#70C754, #8ee572) 0%, light-dark(#70C754, #8ee572) 100%)',
     boxShadow:
       '0 1px 0 rgba(255, 255, 255, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.4), 0 -4px 8px 2px light-dark(#FFFFFF, rgba(255, 255, 255, 0.18)), 0 4px 8px 2px rgba(0, 0, 0, 0.05), 0 0 12px 1px rgba(112, 199, 84, 0.25), inset 0 0 4px 1px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(0, 0, 0, 0.1), inset 0 2px 2px rgba(0, 0, 0, 0.1)',
   },
