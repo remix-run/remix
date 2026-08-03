@@ -1,16 +1,16 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { createAssetServer } from './assets.ts'
-import { getVersionedLookupHref } from './lookup.ts'
-import { buildRegistry } from './registry.ts'
-import { createRouter } from './router.tsx'
+import { getVersionedLookupHref } from './data/lookup.ts'
+import { buildRegistry } from './data/registry.ts'
+import { createApiRouter } from './router.ts'
 import { getApiRouteHref } from './routes.ts'
-describe('createRouter()', () => {
+import { createAssetServer } from './utils/assets.ts'
+describe('createApiRouter()', () => {
   it('does not load generated docs output while creating the router', (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
-    let router = createRouter({
+    let router = createApiRouter({
       assetServer,
       versions: ['v1.2.3'],
     })
@@ -20,9 +20,9 @@ describe('createRouter()', () => {
   it('uses root asset URLs when no asset version is configured', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
-    let router = createRouter({
+    let router = createApiRouter({
       assetServer,
-      docsContext: await getTestDocsContext(assetServer),
+      docsContext: await getTestDocsContext(),
       versions: ['v1.2.3'],
     })
 
@@ -30,37 +30,37 @@ describe('createRouter()', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
 
-    assert.equal(html.includes('src="/assets/client/entry.tsx"'), true)
-    assert.equal(html.includes('href="/assets/client/entry.tsx"'), true)
-    assert.equal(html.includes('href="/assets/styles/docs.css"'), true)
+    assert.equal(html.includes('src="/assets/app/assets/entry.tsx"'), true)
+    assert.equal(html.includes('href="/assets/app/assets/entry.tsx"'), true)
+    assert.equal(html.includes('href="/assets/app/assets/docs.css"'), true)
     assert.equal(html.includes('/assets/docs-shared/ui/docs-shell.browser.tsx'), true)
     assert.equal(html.includes('/assets/docs-shared/ui/code-block-copy.browser.tsx'), true)
-    assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), false)
-    assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), false)
+    assert.equal(html.includes('src="/v1.2.3/assets/app/assets/entry.tsx"'), false)
+    assert.equal(html.includes('href="/v1.2.3/assets/app/assets/entry.tsx"'), false)
   })
 
   it('keeps persistent stylesheets after variable head content', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
-    let router = createRouter({
+    let router = createApiRouter({
       assetServer,
-      docsContext: await getTestDocsContext(assetServer),
+      docsContext: await getTestDocsContext(),
       versions: ['v1.2.3'],
     })
 
     let response = await router.fetch(new Request('http://localhost/'))
     assert.equal(response.status, 200)
     let html = await response.text()
-    let entryPreloadIndex = html.indexOf('rel="modulepreload" href="/assets/client/entry.tsx"')
+    let entryPreloadIndex = html.indexOf('rel="modulepreload" href="/assets/app/assets/entry.tsx"')
     let pagefindStylesIndex = html.indexOf(
       'data-key="docs-pagefind-stylesheet" href="/assets/pagefind/pagefind-component-ui.css"',
     )
     let docsStylesIndex = html.indexOf(
-      'data-key="docs-stylesheet" rel="stylesheet" href="/assets/styles/docs.css"',
+      'data-key="docs-stylesheet" rel="stylesheet" href="/assets/app/assets/docs.css"',
     )
 
     let entryScriptIndex = html.indexOf(
-      'data-key="docs-client-entry" type="module" src="/assets/client/entry.tsx"',
+      'data-key="docs-client-entry" type="module" src="/assets/app/assets/entry.tsx"',
     )
     let pagefindScriptIndex = html.indexOf('data-key="docs-pagefind-client-entry"')
 
@@ -74,9 +74,9 @@ describe('createRouter()', () => {
   it('uses versioned asset URLs when an asset version is configured', async (t) => {
     let assetServer = createAssetServer('v1.2.3')
     t.after(() => assetServer.close())
-    let router = createRouter({
+    let router = createApiRouter({
       assetServer,
-      docsContext: await getTestDocsContext(assetServer),
+      docsContext: await getTestDocsContext(),
       versions: ['v1.2.3'],
     })
 
@@ -85,12 +85,12 @@ describe('createRouter()', () => {
     let html = await response.text()
     let assetUrls = getLoadedAssetUrls(html).filter((url) => shouldVersionAssetUrl(url))
 
-    assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), true)
-    assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('src="/v1.2.3/assets/app/assets/entry.tsx"'), true)
+    assert.equal(html.includes('href="/v1.2.3/assets/app/assets/entry.tsx"'), true)
     assert.equal(html.includes('/v1.2.3/assets/docs-shared/ui/docs-shell.browser.tsx'), true)
     assert.equal(html.includes('/v1.2.3/assets/docs-shared/ui/code-block-copy.browser.tsx'), true)
-    assert.equal(html.includes('src="/assets/client/entry.tsx"'), false)
-    assert.equal(html.includes('href="/assets/client/entry.tsx"'), false)
+    assert.equal(html.includes('src="/assets/app/assets/entry.tsx"'), false)
+    assert.equal(html.includes('href="/assets/app/assets/entry.tsx"'), false)
     assert.equal(assetUrls.length > 0, true)
     assert.deepEqual(
       assetUrls.filter((url) => !url.startsWith('/v1.2.3/')),
@@ -101,7 +101,7 @@ describe('createRouter()', () => {
   it('serves site-specific and shared static assets at root URLs', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
-    let router = createRouter({
+    let router = createApiRouter({
       assetServer,
       versions: ['v1.2.3'],
     })
@@ -121,9 +121,9 @@ describe('createRouter()', () => {
   it('serves dotted version routes only for configured versions', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
-    let router = createRouter({
+    let router = createApiRouter({
       assetServer,
-      docsContext: await getTestDocsContext(assetServer),
+      docsContext: await getTestDocsContext(),
       versions: ['v1.2.3'],
     })
 
@@ -137,20 +137,42 @@ describe('createRouter()', () => {
     assert.equal(unknown.status, 404)
   })
 
+  it('maps API document actions at root and versioned paths', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let router = createApiRouter({
+      assetServer,
+      docsContext: await getTestDocsContext(),
+      versions: ['v1.2.3'],
+    })
+
+    let [rootResponse, versionedResponse] = await Promise.all([
+      router.fetch(new Request('http://localhost/api/missing/')),
+      router.fetch(new Request('http://localhost/v1.2.3/api/missing/')),
+    ])
+
+    assert.equal(rootResponse.status, 404)
+    assert.match(await rootResponse.text(), /Could not find a document at:/)
+    assert.equal(versionedResponse.status, 404)
+    assert.match(await versionedResponse.text(), /Could not find a document at:/)
+  })
+
   it('serves only the configured asset URL space', async (t) => {
     let assetServer = createAssetServer('v1.2.3')
     t.after(() => assetServer.close())
-    let router = createRouter({
+    let router = createApiRouter({
       assetServer,
       versions: ['v1.2.3'],
     })
 
     let versionedResponse = await router.fetch(
-      new Request('http://localhost/v1.2.3/assets/client/entry.tsx'),
+      new Request('http://localhost/v1.2.3/assets/app/assets/entry.tsx'),
     )
     assert.equal(versionedResponse.status, 200)
 
-    let rootResponse = await router.fetch(new Request('http://localhost/assets/client/entry.tsx'))
+    let rootResponse = await router.fetch(
+      new Request('http://localhost/assets/app/assets/entry.tsx'),
+    )
     assert.equal(rootResponse.status, 404)
   })
 })
@@ -181,21 +203,10 @@ function shouldVersionAssetUrl(url: string): boolean {
   return true
 }
 
-async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServer>) {
-  let [entryHref, entryPreloads, stylesheetHref, stylesheetPreloads] = await Promise.all([
-    assetServer.getHref('docs/api/src/client/entry.tsx'),
-    assetServer.getPreloads('docs/api/src/client/entry.tsx'),
-    assetServer.getHref('docs/api/src/styles/docs.css'),
-    assetServer.getPreloads('docs/api/src/styles/docs.css'),
-  ])
-
+async function getTestDocsContext() {
   return {
     docFiles: [],
     docFilesLookup: new Map(),
-    entryHref,
-    entryPreloads,
-    stylesheetHref,
-    stylesheetPreloads,
     getRegistry() {
       return buildRegistry([])
     },

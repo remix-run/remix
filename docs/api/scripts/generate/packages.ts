@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as s from 'remix/data-schema'
-import { hasRemixPackage, mapToRemixPackage } from './manifest.ts'
+import { hasRemixPackage, mapToRemixPackage } from '../../app/utils/package-manifest.ts'
 import { info, invariant, warn } from './utils.ts'
 
 type PackageOverview = {

@@ -11,8 +11,8 @@ import {
   type DocumentedVariableFunction,
   type ParameterOrProperty,
 } from './documented-api.ts'
+import { formatWithOxfmt } from '../../app/utils/format.ts'
 import { debug, info, verbose, warn } from './utils.ts'
-import { formatWithOxfmt } from '../shared/format.ts'
 
 export async function writeMarkdownFiles(comments: DocumentedAPI[], docsDir: string) {
   for (let comment of comments) {

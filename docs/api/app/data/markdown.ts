@@ -8,8 +8,8 @@ import { parseMarkdownDocument, parseMarkdownFrontmatter } from 'remix-docs-shar
 import { renderMarkdownHtml } from 'remix-docs-shared/markdown/render'
 import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
 
-import { IGNORE_SYMBOLS, MDN_SYMBOLS } from '../generate/symbols.ts'
-import { getApiRouteHref, routes, withVersion } from './routes.ts'
+import { getApiRouteHref, routes, withVersion } from '../routes.ts'
+import { IGNORE_SYMBOLS, MDN_SYMBOLS } from '../utils/symbols.ts'
 
 const apiTypeKinds = ['type', 'interface', 'class', 'function', 'mixin', 'variable'] as const
 export type ApiTypeKind = (typeof apiTypeKinds)[number]
@@ -189,7 +189,7 @@ function createApiCodeLinkTransformer(
       let docFile = docFilesLookup.get(symbol)
       if (docFile !== undefined) {
         linkElement = createLink(symbol, {
-          href: withVersion(routes.api.href({ slug: docFile.urlPath }), version),
+          href: withVersion(routes.api.document.href({ slug: docFile.urlPath }), version),
         })
       } else if (Object.hasOwn(MDN_SYMBOLS, symbol)) {
         linkElement = createLink(symbol, {

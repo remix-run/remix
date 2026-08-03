@@ -2,9 +2,9 @@ import * as path from 'node:path'
 import * as util from 'node:util'
 import { prerender } from 'remix-docs-shared/prerender/run'
 
-import { createAssetServer } from '../server/assets.ts'
-import { createRouter, getDefaultVersions } from '../server/router.tsx'
-import { routes, withVersion } from '../server/routes.ts'
+import { createApiRouter, getDefaultVersions } from '../app/router.ts'
+import { routes, withVersion } from '../app/routes.ts'
+import { createAssetServer } from '../app/utils/assets.ts'
 import { getVersionsForPicker } from './versions.ts'
 
 let { values: cliArgs } = util.parseArgs({
@@ -26,7 +26,7 @@ if (buildVersion != null && (buildVersion.length === 0 || buildVersion.includes(
 }
 
 const publicDir = path.join(process.cwd(), 'public')
-const sharedAssetsDir = path.resolve(import.meta.dirname, '..', '..', '..', 'shared', 'assets')
+const sharedAssetsDir = path.resolve(import.meta.dirname, '..', '..', 'shared', 'assets')
 const outputDir = path.join(process.cwd(), cliArgs.dir)
 
 const versions = getVersionsForPicker(buildVersion, getDefaultVersions())
@@ -34,7 +34,7 @@ console.log(`Prerendering ${buildVersion ? buildVersion : 'root'} docs`)
 console.log('Version picker options:\n', JSON.stringify(versions, null, 2))
 
 const assetServer = createAssetServer(buildVersion)
-const router = createRouter({ assetServer, versions })
+const router = createApiRouter({ assetServer, versions })
 
 const homePath = withVersion(routes.home.href(), buildVersion)
 const paths = [homePath, withVersion(routes.lookup.href(), buildVersion)]

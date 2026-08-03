@@ -2,10 +2,12 @@ import { route } from 'remix/routes'
 
 export const routes = route({
   assets: '/assets/*asset',
-  api: '/api/*slug/',
   home: '/',
   lookup: '/api.json',
-  markdown: '/api/*slug.md',
+  api: route('api', {
+    document: '*slug/',
+    markdown: '*slug.md',
+  }),
 })
 
 export function getVersionPathname(version: string): string {
@@ -25,9 +27,9 @@ export function getApiRouteHref(href: string, version: string | undefined): stri
 
   let routeHref: string
   if (slug.endsWith('.md')) {
-    routeHref = routes.markdown.href({ slug: slug.slice(0, -'.md'.length) })
+    routeHref = routes.api.markdown.href({ slug: slug.slice(0, -'.md'.length) })
   } else {
-    routeHref = routes.api.href({ slug: slug.replace(/\/$/, '') })
+    routeHref = routes.api.document.href({ slug: slug.replace(/\/$/, '') })
   }
 
   return `${withVersion(routeHref, version)}${url.search}${url.hash}`

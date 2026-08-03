@@ -4,9 +4,9 @@ import * as url from 'node:url'
 import type { RemixNode } from 'remix/ui'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
-import { hasRemixPackage, mapToRemixPackage } from '../generate/manifest.ts'
-import { formatWithOxfmt } from '../shared/format.ts'
-import type { DocsAssetServer } from './assets.ts'
+import type { DocsAssetServer } from '../utils/assets.ts'
+import { formatWithOxfmt } from '../utils/format.ts'
+import { hasRemixPackage, mapToRemixPackage } from '../utils/package-manifest.ts'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const DEMO_BUILD_DIR = path.join(DOCS_DIR, 'build', 'demos')

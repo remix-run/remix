@@ -6,14 +6,18 @@ The hand-authored guides live in [`../guides`](../guides). Shared docs UI, style
 
 ## Where things live
 
-- `src/generate/` — TypeDoc loading, API filtering, package overview discovery, and Markdown generation.
-- `src/server/markdown.ts` — API Markdown discovery, metadata, versioned links, and symbol-link transforms built on the shared unified/remark/rehype pipeline.
-- `src/server/registry.ts` and `routes.ts` — generated document lookup, navigation, and route definitions.
-- `src/server/view.tsx` — API-specific document metadata and content rendered with the shared docs shell.
-- `src/server/demos.tsx` and `src/generate/build-demos.ts` — API examples discovered from package source and copied into `build/demos/`.
-- `src/client/entry.tsx` — browser entrypoint served by the asset server.
-- `src/styles/docs.css` — stylesheet entrypoint for shared layers and the API-specific `api.css` layer.
-- `src/prerender/` — static-site entrypoint and version-picker data.
+- `app/actions/controller.tsx` — root asset, home, and API lookup actions.
+- `app/actions/api/controller.tsx` — generated document and Markdown response actions.
+- `app/data/` — generated-document discovery, Markdown rendering, demos, and navigation registry data.
+- `app/middleware/asset-entry.ts` and `render.ts` — request-scoped browser assets and HTML rendering.
+- `app/ui/document.tsx` — API-specific document metadata and content rendered with the shared docs shell.
+- `app/assets/` — browser entrypoint and stylesheet sources served by the asset server.
+- `app/routes.ts` and `app/router.ts` — typed route contract, middleware stack, controller wiring, and versioned route mounts.
+- `app/utils/` — asset server configuration and focused helpers shared with generation scripts.
+- `scripts/generate/` — TypeDoc loading, API filtering, package overview discovery, and Markdown generation.
+- `scripts/build-demos.ts` — discovers API examples and copies them into `build/demos/`.
+- `scripts/prerender.ts` — static-site entrypoint and version-picker integration.
+- `server.ts` — local API docs server entrypoint.
 - `public/` — API-only static files. Shared docs assets live in `../shared/assets/`.
 
 Generated Markdown and demo files are written beneath `build/` and are not committed.
@@ -44,7 +48,7 @@ Run from the repository root or from `docs/api/`:
 
 ```sh
 pnpm --filter remix-api run dev             # build demos, then watch and serve
-pnpm --filter remix-api run serve           # serve once
+pnpm --filter remix-api run start           # serve once
 pnpm --filter remix-api run prerender       # write build/site and build its Pagefind index
 pnpm --filter remix-api run prerender:serve # serve the static output
 pnpm --filter remix-api run test

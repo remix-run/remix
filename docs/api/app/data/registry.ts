@@ -2,7 +2,7 @@ import { css } from 'remix/ui'
 import { theme } from './design.ts'
 import type { DemoDocFile } from './demos.tsx'
 import type { ApiDocFile, ApiTypeKind, PackageDocFile } from './markdown.ts'
-import { routes, withVersion } from './routes.ts'
+import { routes, withVersion } from '../routes.ts'
 
 export type DocFile = ApiDocFile | PackageDocFile | DemoDocFile
 
@@ -106,7 +106,7 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
         description: '',
         eyebrow: 'Package',
         navLabel: 'Overview',
-        path: withVersion(routes.api.href({ slug: overview.urlPath }), version),
+        path: withVersion(routes.api.document.href({ slug: overview.urlPath }), version),
         sectionId: pkg,
         title: pkg,
         docFile: overview,
@@ -126,7 +126,7 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
           description: '',
           eyebrow: `${pkg} · Demo`,
           navLabel: file.name,
-          path: withVersion(routes.api.href({ slug: file.urlPath }), version),
+          path: withVersion(routes.api.document.href({ slug: file.urlPath }), version),
           sectionId: pkg,
           title: file.name,
           docFile: file,
@@ -149,7 +149,7 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
           description: '',
           eyebrow: `${pkg} · ${TYPE_EYEBROW[kind]}`,
           navLabel: file.name,
-          path: withVersion(routes.api.href({ slug: file.urlPath }), version),
+          path: withVersion(routes.api.document.href({ slug: file.urlPath }), version),
           sectionId: pkg,
           title: file.name,
           docFile: file,
@@ -181,7 +181,7 @@ export function buildNotFoundPage(slug: string, version?: string): PageDefinitio
     description: `The requested document was not found: ${slug}`,
     eyebrow: 'Not Found',
     navLabel: 'Not Found',
-    path: withVersion(routes.api.href({ slug }), version),
+    path: withVersion(routes.api.document.href({ slug }), version),
     sectionId: 'start',
     title: 'Page not found',
   }

@@ -1,7 +1,7 @@
 import * as typedoc from 'typedoc'
-import { hasRemixPackage, mapToRemixPackage } from './manifest.ts'
+import { hasRemixPackage, mapToRemixPackage } from '../../app/utils/package-manifest.ts'
+import { MDN_SYMBOLS } from '../../app/utils/symbols.ts'
 import { getApiNameFromFullName, invariant, unimplemented, warn } from './utils.ts'
-import { MDN_SYMBOLS } from './symbols.ts'
 
 export type DocumentedAPI =
   | DocumentedFunction

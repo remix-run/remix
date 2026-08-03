@@ -1,6 +1,6 @@
 import * as cp from 'node:child_process'
 import * as semver from 'semver'
-import type { Versions } from '../server/view.tsx'
+import type { Versions } from '../app/data/docs.ts'
 
 export function getVersionsForPicker(
   activeVersion: string | undefined,
