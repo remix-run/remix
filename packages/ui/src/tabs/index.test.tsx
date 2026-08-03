@@ -132,7 +132,9 @@ describe('tabs style exports', () => {
     expect(html).toContain('min-height: var(--rmx-tabs-height)')
     expect(html).toContain('display: inline-flex')
     expect(html).toContain('gap: 2px')
-    expect(html).toContain('background: linear-gradient(180deg, rgba(0, 0, 0, 0.06)')
+    expect(html).toContain(
+      'background: linear-gradient(180deg, light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.08))',
+    )
     expect(html).toContain('inset 0 0 4px 1px rgba(0, 0, 0, 0.08)')
     expect(html).toContain(
       'height: calc(var(--rmx-tabs-height) - (var(--rmx-tabs-track-padding) * 2))',
@@ -140,11 +142,13 @@ describe('tabs style exports', () => {
     expect(html).toContain('font-size: var(--rmx-tabs-tab-font-size)')
     expect(html).toContain('line-height: var(--rmx-tabs-tab-line-height)')
     expect(html).toContain(
-      'background: linear-gradient(180deg, rgba(0, 0, 0, 0) 33%, rgba(0, 0, 0, 0.04) 100%), #FFFFFF',
+      'background: linear-gradient(180deg, rgba(0, 0, 0, 0) 33%, light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.08)) 100%), light-dark(#FFFFFF, #1a1a1a)',
     )
-    expect(html).toContain('0 0 0 0.5px rgba(0, 0, 0, 0.06)')
+    expect(html).toContain(
+      '0 0 0 0.5px light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.12))',
+    )
     expect(html).toContain('0 4px 4px -2px rgba(0, 0, 0, 0.12)')
-    expect(html).toContain('0 0 0 1px #3573F6')
+    expect(html).toContain('0 0 0 1px light-dark(#3573F6, #6eaaff)')
     expect(html).toContain('&[data-state="active"]')
     expect(html).not.toContain('data-rmx-tabs-indicator')
   })

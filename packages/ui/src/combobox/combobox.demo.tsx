@@ -183,13 +183,13 @@ const labelCss = css({
   margin: 0,
   fontSize: '12px',
   fontWeight: '600',
-  color: '#151515',
+  color: 'light-dark(#151515, #ececec)',
 })
 
 const helpCss = css({
   fontSize: '12px',
   lineHeight: '1.65',
-  color: '#4f4f4f',
+  color: 'light-dark(#4f4f4f, #b3b3b3)',
 })
 
 const valueCss = css({
@@ -197,5 +197,5 @@ const valueCss = css({
   fontFamily:
     'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
   fontSize: '12px',
-  color: '#4f4f4f',
+  color: 'light-dark(#4f4f4f, #b3b3b3)',
 })

@@ -17,13 +17,13 @@ const checkedSelector = '&:checked, &[aria-checked="true"], &[data-state="checke
 const checkedThumbSelector =
   '&:checked::before, &[aria-checked="true"]::before, &[data-state="checked"]::before'
 const uncheckedThumbBackground =
-  'linear-gradient(180deg, rgba(0, 0, 0, 0) 33%, rgba(0, 0, 0, 0.04) 100%), #FFFFFF'
+  'linear-gradient(180deg, rgba(0, 0, 0, 0) 33%, light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.08)) 100%), light-dark(#FFFFFF, #1a1a1a)'
 const uncheckedThumbShadow =
-  '0 0 0 0.5px rgba(0, 0, 0, 0.06), 0 1px 1px -0.5px rgba(0, 0, 0, 0.12), 0 2px 2px -1px rgba(0, 0, 0, 0.12), 0 4px 4px -2px rgba(0, 0, 0, 0.12), inset 0 0 2px 1px #FFFFFF'
+  '0 0 0 0.5px light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.12)), 0 1px 1px -0.5px rgba(0, 0, 0, 0.12), 0 2px 2px -1px rgba(0, 0, 0, 0.12), 0 4px 4px -2px rgba(0, 0, 0, 0.12), inset 0 0 2px 1px light-dark(#FFFFFF, rgba(255, 255, 255, 0.08))'
 const checkedThumbBackground =
-  'linear-gradient(180deg, rgba(112, 199, 84, 0) 25%, rgba(112, 199, 84, 0.25) 100%), #FFFFFF'
+  'linear-gradient(180deg, rgba(112, 199, 84, 0) 25%, rgba(112, 199, 84, 0.25) 100%), light-dark(#FFFFFF, #f5fff0)'
 const checkedThumbShadow =
-  '0 1px 2px -0.5px rgba(66, 134, 44, 0.6), 0 2px 4px -1px rgba(66, 134, 44, 0.6), 0 4px 6px -2px rgba(66, 134, 44, 0.6), 0 0 0 0.5px rgba(0, 0, 0, 0.28), inset 0 0 2px 1px #FFFFFF'
+  '0 1px 2px -0.5px rgba(66, 134, 44, 0.6), 0 2px 4px -1px rgba(66, 134, 44, 0.6), 0 4px 6px -2px rgba(66, 134, 44, 0.6), 0 0 0 0.5px light-dark(rgba(0, 0, 0, 0.28), rgba(255, 255, 255, 0.28)), inset 0 0 2px 1px light-dark(#FFFFFF, rgba(255, 255, 255, 0.5))'
 
 const toggleDefaultAttrs = createMixin<Element, [], ElementProps>((handle, hostType) => (props) => {
   if (hostType !== 'input') {
@@ -59,7 +59,8 @@ const baseStyles = {
   padding: 0,
   border: 0,
   borderRadius: '9999px',
-  background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.06) 0%, rgba(0, 0, 0, 0) 100%), #EBEBEB',
+  background:
+    'linear-gradient(180deg, light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.08)) 0%, rgba(0, 0, 0, 0) 100%), light-dark(#EBEBEB, #2c2c2c)',
   boxShadow:
     'inset 0 0 4px 1px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(0, 0, 0, 0.02), inset 0 2px 2px rgba(0, 0, 0, 0.02)',
   verticalAlign: 'middle',
@@ -82,9 +83,9 @@ const baseStyles = {
     opacity: 0.55,
   },
   [checkedSelector]: {
-    background: 'linear-gradient(180deg, #70C754 0%, #70C754 100%)',
+    background: 'linear-gradient(180deg, light-dark(#70C754, #8ee572) 0%, light-dark(#70C754, #8ee572) 100%)',
     boxShadow:
-      '0 1px 0 rgba(255, 255, 255, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.4), 0 -4px 8px 2px #FFFFFF, 0 4px 8px 2px rgba(0, 0, 0, 0.05), 0 0 12px 1px rgba(112, 199, 84, 0.25), inset 0 0 4px 1px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(0, 0, 0, 0.1), inset 0 2px 2px rgba(0, 0, 0, 0.1)',
+      '0 1px 0 rgba(255, 255, 255, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.4), 0 -4px 8px 2px light-dark(#FFFFFF, rgba(255, 255, 255, 0.18)), 0 4px 8px 2px rgba(0, 0, 0, 0.05), 0 0 12px 1px rgba(112, 199, 84, 0.25), inset 0 0 4px 1px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(0, 0, 0, 0.1), inset 0 2px 2px rgba(0, 0, 0, 0.1)',
   },
   [checkedThumbSelector]: {
     background: checkedThumbBackground,

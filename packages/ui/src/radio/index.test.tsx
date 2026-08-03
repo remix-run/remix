@@ -11,9 +11,11 @@ describe('radio', () => {
     expect(html).toMatch(/type="radio"/)
     expect(html).toMatch(/--rmx-radio-size: 16px/)
     expect(html).toMatch(/--rmx-radio-mark-size: 8px/)
-    expect(html).toMatch(/border: 1px solid rgba\(0, 0, 0, 0\.12\)/)
+    expect(html).toMatch(
+      /border: 1px solid light-dark\(rgba\(0, 0, 0, 0\.12\), rgba\(255, 255, 255, 0\.2\)\)/,
+    )
     expect(html).toMatch(/border-radius: 9999px/)
-    expect(html).toMatch(/background: #FFFFFF/)
+    expect(html).toMatch(/background: light-dark\(#FFFFFF, #1a1a1a\)/)
     expect(html).toMatch(/inset 0 1px 1px rgba\(0, 0, 0, 0\.06\)/)
   })
 
@@ -36,7 +38,7 @@ describe('radio', () => {
     expect(html).toMatch(/:checked/)
     expect(html).toMatch(/\[aria-checked="true"\]/)
     expect(html).toMatch(/\[data-state="checked"\]/)
-    expect(html).toMatch(/#3573F6/)
+    expect(html).toMatch(/light-dark\(#3573F6, #6eaaff\)/)
     expect(html).toMatch(/background-blend-mode: overlay, normal/)
     expect(html).toMatch(/0 0 16px rgba\(53, 115, 246, 0\.25\)/)
     expect(html).toMatch(/0 4px 4px -2px #0944BE/)
@@ -52,7 +54,7 @@ describe('radio', () => {
 
     expect(html).toMatch(/:focus-visible/)
     expect(html).toMatch(/outline: 0/)
-    expect(html).toMatch(/0 0 0 1px #3573F6/)
+    expect(html).toMatch(/0 0 0 1px light-dark\(#3573F6, #6eaaff\)/)
     expect(html).not.toMatch(/outline: 2px solid #1A72FF/)
     expect(html).toMatch(/&:disabled, &\[aria-disabled="true"\]/)
     expect(html).toMatch(/opacity: 0\.55/)

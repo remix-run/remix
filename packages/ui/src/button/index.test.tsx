@@ -10,9 +10,9 @@ describe('button', () => {
 
     expect(html).toMatch(/type="button"/)
     expect(html).toMatch(/height: 26px/)
-    expect(html).toMatch(/background: #FCFCFC/)
+    expect(html).toMatch(/background: light-dark\(#FCFCFC, #232323\)/)
     expect(html).toMatch(/font-size: 12px/)
-    expect(html).toMatch(/text-shadow: 0 1px 0 #FFFFFF/)
+    expect(html).toMatch(/text-shadow: 0 1px 0 light-dark\(#FFFFFF, rgb\(0 0 0 \/ 0\.35\)\)/)
   })
 
   it('supports primary and large variants', async () => {
@@ -22,8 +22,10 @@ describe('button', () => {
 
     expect(html).toMatch(/height: 30px/)
     expect(html).toMatch(/font-size: 13px/)
-    expect(html).toMatch(/#101010/)
-    expect(html).toMatch(/text-shadow: 0 1px 1px #000000/)
+    expect(html).toMatch(/light-dark\(#101010, #ececec\)/)
+    expect(html).toMatch(
+      /text-shadow: 0 1px 1px light-dark\(#000000, rgb\(255 255 255 \/ 0\.45\)\)/,
+    )
   })
 
   it('supports ghost styling', async () => {
@@ -32,7 +34,9 @@ describe('button', () => {
     expect(html).toMatch(/background: transparent/)
     expect(html).toMatch(/border: 1px solid transparent/)
     expect(html).toMatch(/--rmx-button-shadow: 0 0 0 0 rgba\(0, 0, 0, 0\)/)
-    expect(html).toMatch(/background: rgba\(16, 16, 16, 0\.05\)/)
+    expect(html).toMatch(
+      /background: light-dark\(rgba\(16, 16, 16, 0\.05\), rgba\(236, 236, 236, 0\.1\)\)/,
+    )
   })
 
   it('includes hover, focus, active, and pressed states without transitions', async () => {
@@ -49,10 +53,16 @@ describe('button', () => {
     expect(html).toMatch(/:focus-visible/)
     expect(html).toMatch(/outline: 0/)
     expect(html).toMatch(/box-shadow: var\(--rmx-button-focus-shadow\)/)
-    expect(html).toMatch(/0 0 0 1px #3573F6, var\(--rmx-button-shadow\)/)
-    expect(html).toMatch(/0 0 0 1px #3573F6/)
-    expect(html).toMatch(/0 0 0 4px rgba\(53, 115, 246, 0\.1\)/)
-    expect(html).toMatch(/inset 0 0 8px 1px rgba\(53, 115, 246, 0\.05\)/)
+    expect(html).toMatch(
+      /0 0 0 1px light-dark\(#3573F6, #6eaaff\), var\(--rmx-button-shadow\)/,
+    )
+    expect(html).toMatch(/0 0 0 1px light-dark\(#3573F6, #6eaaff\)/)
+    expect(html).toMatch(
+      /0 0 0 4px light-dark\(rgba\(53, 115, 246, 0\.1\), rgba\(110, 170, 255, 0\.18\)\)/,
+    )
+    expect(html).toMatch(
+      /inset 0 0 8px 1px light-dark\(rgba\(53, 115, 246, 0\.05\), rgba\(110, 170, 255, 0\.1\)\)/,
+    )
     expect(html).toMatch(/:active:not\(:disabled\):not\(\[aria-disabled="true"\]\)/)
     expect(html).toMatch(/transform: translateY\(1px\)/)
     expect(html).toMatch(/\[aria-pressed="true"\]:not\(:disabled\)/)
