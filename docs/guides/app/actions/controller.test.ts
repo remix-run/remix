@@ -9,6 +9,16 @@ import { createGuidesRouter } from '../router.ts'
 import { routes } from '../routes.ts'
 
 describe('root controller assets', () => {
+  it('serves shared static assets at root URLs', async () => {
+    let router = createGuidesRouter()
+
+    let response = await router.fetch(new Request('http://localhost/favicon.svg'))
+
+    assert.equal(response.status, 200)
+    assert.match(response.headers.get('Content-Type') ?? '', /image\/svg\+xml/)
+    assert.match(await response.text(), /<svg width="144"/)
+  })
+
   it('serves an existing prerendered Pagefind asset in development', async (t) => {
     let pagefindAssetsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-guides-pagefind-'))
     t.after(() => fs.rm(pagefindAssetsDir, { recursive: true, force: true }))

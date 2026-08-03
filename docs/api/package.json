@@ -24,7 +24,6 @@
   "scripts": {
     "build": "pnpm run --filter \".\" --parallel \"/^build:/\"",
     "build:demos": "node --import remix/node-tsx src/generate/build-demos.ts",
-    "build:public": "mkdir -p build/public && cp public/* build/public",
     "predev": "pnpm run build",
     "dev:server": "node --watch --import remix/node-tsx src/server/index.ts",
     "dev": "NODE_ENV=development pnpm run dev:server",

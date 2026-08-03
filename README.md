@@ -3,8 +3,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/api/public/remix-wordmark-racing-darkmode.svg">
-    <img alt="Remix" src="docs/api/public/remix-wordmark-racing-lightmode.svg" width="400">
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/remix-wordmark-racing-darkmode.svg">
+    <img alt="Remix" src=".github/assets/remix-wordmark-racing-lightmode.svg" width="400">
   </picture>
 </p>
 

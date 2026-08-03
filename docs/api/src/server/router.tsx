@@ -23,7 +23,8 @@ const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..', '..')
 const BUILD_DIR = path.join(DOCS_DIR, 'build')
 const MD_DIR = path.join(BUILD_DIR, 'md')
-const PUBLIC_DIR = path.join(BUILD_DIR, 'public')
+const PUBLIC_DIR = path.join(DOCS_DIR, 'public')
+const SHARED_ASSETS_DIR = path.join(DOCS_DIR, '..', 'shared', 'assets')
 const ASSETS_DIR = path.join(BUILD_DIR, 'site', 'assets')
 const REMIX_PKG_JSON = path.join(REPO_DIR, 'packages', 'remix', 'package.json')
 
@@ -54,7 +55,9 @@ export function createRouter(options: DocsRouterOptions): Router {
     ? Promise.resolve(docsContext)
     : undefined
 
-  const router = _createRouter({ middleware: [staticFiles(PUBLIC_DIR)] })
+  const router = _createRouter({
+    middleware: [staticFiles(PUBLIC_DIR), staticFiles(SHARED_ASSETS_DIR)],
+  })
 
   function getDocsContext(): Promise<DocsContext> {
     docsContextPromise ??= loadDocsContext(assetServer)

@@ -96,6 +96,26 @@ describe('createRouter()', () => {
     )
   })
 
+  it('serves site-specific and shared static assets at root URLs', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let router = createRouter({
+      assetServer,
+      versions: ['v1.2.3'],
+    })
+
+    let [siteResponse, sharedResponse] = await Promise.all([
+      router.fetch(new Request('http://localhost/favicon.ico')),
+      router.fetch(new Request('http://localhost/favicon.svg')),
+    ])
+
+    assert.equal(siteResponse.status, 200)
+    assert.equal((await siteResponse.arrayBuffer()).byteLength > 0, true)
+    assert.equal(sharedResponse.status, 200)
+    assert.match(sharedResponse.headers.get('Content-Type') ?? '', /image\/svg\+xml/)
+    assert.match(await sharedResponse.text(), /<svg width="144"/)
+  })
+
   it('serves dotted version routes only for configured versions', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
@@ -152,8 +172,7 @@ function shouldVersionAssetUrl(url: string): boolean {
     url === '/favicon.ico' ||
     url === '/favicon.svg' ||
     url === '/remix-logo-light-mode.svg' ||
-    url === '/remix-wordmark-light-mode.svg' ||
-    url === '/remix-wordmark-dark-mode.svg'
+    url === '/remix-wordmark-light-mode.svg'
   ) {
     return false
   }

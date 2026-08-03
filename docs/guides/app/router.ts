@@ -24,6 +24,7 @@ declare module 'remix/router' {
 }
 
 const publicDir = path.resolve(import.meta.dirname, '../public')
+const sharedAssetsDir = path.resolve(import.meta.dirname, '../../shared/assets')
 
 export function createGuidesRouter(options: { pagefindAssetsDir?: string } = {}) {
   let router = createRouter<AppContext>({
@@ -31,6 +32,7 @@ export function createGuidesRouter(options: { pagefindAssetsDir?: string } = {})
       ...(process.env.NODE_ENV === 'development' ? [logger()] : []),
       compression(),
       staticFiles(publicDir, { index: false }),
+      staticFiles(sharedAssetsDir, { index: false }),
       asyncContext(),
       loadAssetEntry(),
       render(),

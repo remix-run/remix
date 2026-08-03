@@ -8,34 +8,11 @@ Remaining opportunities after moving the API docs, guides, and shared docs infra
 
 ## Recommended order
 
-1. Consolidate static assets.
-2. Align configuration, dependencies, and maintenance docs.
-3. Confirm the guides deployment model, then evaluate a shared server bootstrap.
-4. Decide whether the sites should share the remaining product features.
-5. Extract small markdown compatibility helpers.
-6. Re-evaluate a shared document component after the smaller extractions.
-
-## Consolidate static assets
-
-The following files are byte-identical in both sites' `public/` directories:
-
-- `icons.svg`
-- `favicon.svg`
-- `remix-logo-light-mode.svg`
-- `remix-wordmark-light-mode.svg`
-
-Move them to `docs/shared/assets/` and include that directory in each site's prerender `publicDirs`.
-These files are an implicit contract of the shared `Icon`, `DocsHeader`, and `DocsFooter`
-components, which reference them by absolute URL.
-
-Keep API-only assets, such as `favicon.ico`, local. Confirm and delete the unreferenced API assets:
-
-- `remix-wordmark-dark-mode.svg`
-- `remix-wordmark-racing-darkmode.svg`
-- `remix-wordmark-racing-lightmode.svg`
-
-Document the asset contract and required `/docs-shared/*` asset mapping in
-`docs/shared/README.md`.
+1. Align configuration, dependencies, and maintenance docs.
+2. Confirm the guides deployment model, then evaluate a shared server bootstrap.
+3. Decide whether the sites should share the remaining product features.
+4. Extract small markdown compatibility helpers.
+5. Re-evaluate a shared document component after the smaller extractions.
 
 ## Align configuration, dependencies, and maintenance docs
 
@@ -48,7 +25,6 @@ Document the asset contract and required `/docs-shared/*` asset mapping in
   removes the untyped default-export cast required by `front-matter`.
 - Update `docs/guides/README.md`; its “Where things live” section still points to the old local
   docs shell.
-- Add `docs/shared/README.md` covering ownership boundaries, asset mapping, and test commands.
 - Add a short `docs/api/README.md` matching the guides README structure.
 
 ## Confirm guides deployment, then evaluate a shared server bootstrap

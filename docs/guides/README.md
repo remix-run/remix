@@ -20,7 +20,7 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.
 - `app/ui/` — shared UI used across routes.
 - `app/utils/assets.ts` — the source asset server configuration, shaped around app browser modules plus the Remix browser packages needed by those modules.
-- `public/` — static files served as-is by the static middleware (e.g. `favicon.svg`, images).
+- `public/` — guides-only static files served as-is by the static middleware. Shared docs assets live in `../shared/assets/`.
 
 ## How chapters work
 

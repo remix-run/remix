@@ -9,6 +9,7 @@ import { assetServer } from '../app/utils/assets.ts'
 
 const guidesDir = path.resolve(import.meta.dirname, '..')
 const publicDir = path.join(guidesDir, 'public')
+const sharedAssetsDir = path.join(guidesDir, '..', 'shared', 'assets')
 const defaultOutputDir = path.join(guidesDir, 'build', 'site')
 
 const { values: cliArgs } = util.parseArgs({
@@ -32,7 +33,7 @@ const paths = [routes.docs.index.href(), ...browserHrefs]
 
 await prerender(router, {
   outputDir,
-  publicDirs: [publicDir],
+  publicDirs: [sharedAssetsDir, publicDir],
   paths,
   pagefindSiteDir: outputDir,
   onFinally: () => assetServer.close(),
