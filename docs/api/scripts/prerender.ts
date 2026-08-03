@@ -1,5 +1,6 @@
 import * as path from 'node:path'
 import * as util from 'node:util'
+import { discoverBrowserAssetHrefs } from 'remix-docs-shared/prerender/browser-assets'
 import { prerender } from 'remix-docs-shared/prerender/run'
 
 import { createApiRouter, getDefaultVersions } from '../app/router.ts'
@@ -25,9 +26,11 @@ if (buildVersion != null && (buildVersion.length === 0 || buildVersion.includes(
   throw new Error(`Invalid --version value: ${buildVersion}`)
 }
 
-const publicDir = path.join(process.cwd(), 'public')
-const sharedAssetsDir = path.resolve(import.meta.dirname, '..', '..', 'shared', 'assets')
-const outputDir = path.join(process.cwd(), cliArgs.dir)
+const apiDir = path.resolve(import.meta.dirname, '..')
+const sharedDir = path.join(apiDir, '..', 'shared')
+const publicDir = path.join(apiDir, 'public')
+const sharedAssetsDir = path.join(sharedDir, 'assets')
+const outputDir = path.resolve(apiDir, cliArgs.dir)
 
 const versions = getVersionsForPicker(buildVersion, getDefaultVersions())
 console.log(`Prerendering ${buildVersion ? buildVersion : 'root'} docs`)
@@ -36,8 +39,18 @@ console.log('Version picker options:\n', JSON.stringify(versions, null, 2))
 const assetServer = createAssetServer(buildVersion)
 const router = createApiRouter({ assetServer, versions })
 
+const browserHrefs = await discoverBrowserAssetHrefs(assetServer, [
+  {
+    rootDir: path.join(apiDir, 'app'),
+    patterns: ['**/*.browser.ts', '**/*.browser.tsx'],
+  },
+  {
+    rootDir: sharedDir,
+    patterns: ['**/*.browser.ts', '**/*.browser.tsx'],
+  },
+])
 const homePath = withVersion(routes.home.href(), buildVersion)
-const paths = [homePath, withVersion(routes.lookup.href(), buildVersion)]
+const paths = [homePath, withVersion(routes.lookup.href(), buildVersion), ...browserHrefs]
 const pagefindSiteDir = buildVersion ? path.join(outputDir, buildVersion) : outputDir
 
 await prerender(router, {

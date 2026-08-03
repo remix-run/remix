@@ -8,6 +8,7 @@
     "./markdown/parser": "./markdown/parser.ts",
     "./markdown/render": "./markdown/render.ts",
     "./markdown/types": "./markdown/types.ts",
+    "./prerender/browser-assets": "./prerender/browser-assets.ts",
     "./prerender/crawl": "./prerender/crawl.ts",
     "./prerender/run": "./prerender/run.ts",
     "./prerender/utils": "./prerender/utils.ts",
