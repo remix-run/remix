@@ -2,6 +2,7 @@ import * as path from 'node:path'
 
 import type { Handle, RemixNode } from 'remix/ui'
 import { PagefindElements, shouldLoadPagefind } from 'remix-docs-shared/search'
+import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy.browser'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
@@ -214,17 +215,20 @@ function MainContent(
 ) {
   return () => {
     let headings = handle.props.headings ?? []
+    let contentId = `${handle.id}-content`
 
     return (
       <div class="docs-layout" data-key={`api-page-${handle.props.page.path}`}>
         <article class="docs-article">
           <div
+            id={contentId}
             class="api-page-content rmx-page-body"
             mix={[docsMarkdownContentCss, handle.props.page.css]}
           >
             {handle.props.header}
             {handle.props.children}
           </div>
+          <CodeBlockCopyButtons rootId={contentId} />
         </article>
         {headings.length > 0 ? (
           <DocsSecondaryNavigation>

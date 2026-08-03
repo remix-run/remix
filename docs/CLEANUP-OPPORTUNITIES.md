@@ -9,9 +9,8 @@ Remaining opportunities after moving the API docs, guides, and shared docs infra
 ## Recommended order
 
 1. Update the guides deployment repository after this restructure lands.
-2. Decide whether the sites should share the remaining product features.
-3. Extract small markdown compatibility helpers.
-4. Re-evaluate a shared document component after the smaller extractions.
+2. Extract small markdown compatibility helpers.
+3. Re-evaluate a shared document component after the smaller extractions.
 
 ## Update the guides deployment repository
 
@@ -20,15 +19,6 @@ guides and deploys the static output to GitHub Pages; the Node server does not r
 Its workflow still uploads `remix/guides/build/site`, and its README still links to `guides/` in
 this repository. Update both paths to `docs/guides/` after this restructure lands. Pagefind is
 installed from the catalog in this repository and runs during prerendering.
-
-## Decide feature parity
-
-- **Code-block copy buttons:** Guides has `code-block-copy.browser.tsx`; API code blocks have no
-  copy affordance. If API should have one, move the component to `docs/shared/ui/` and adopt it in
-  both sites.
-- **Sidebar navigation indicator:** Guides animates the active sidebar item across navigations.
-  API uses static active styles within grouped `<details>` sections. Decide whether this difference
-  is intentional before sharing the behavior.
 
 ## Extract markdown compatibility helpers
 

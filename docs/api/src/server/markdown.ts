@@ -275,7 +275,7 @@ function getShikiExtension(
     },
     renderer: {
       code(code) {
-        return code.text
+        return renderCodeBlock(code.text)
       },
       link(token) {
         let href = getApiRouteHref(token.href, version)
@@ -285,6 +285,10 @@ function getShikiExtension(
         return `<a href="${escapeHtml(href)}"${title}>${this.parser.parseInline(token.tokens)}</a>`
       },
     },
+  }
+
+  function renderCodeBlock(preHtml: string): string {
+    return `<div class="docs-code-block" data-code-block>${preHtml}<button class="docs-code-block__copy" type="button" data-code-block-copy aria-label="Copy code to clipboard"><span class="docs-code-block__copy-label">Copy code to clipboard</span></button></div>`
   }
 
   // Spacer elements to preserve whitespace outside the inserted <a> elements

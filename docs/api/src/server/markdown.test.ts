@@ -37,6 +37,15 @@ describe('renderMarkdownFile()', () => {
     })
   })
 
+  it('renders highlighted code blocks with the shared copy contract', async (t) => {
+    let result = await renderMarkdown(t, '```ts\nlet count = 1\n```\n')
+
+    assert.match(result.html, /<div class="docs-code-block" data-code-block>/)
+    assert.match(result.html, /<pre class="shiki shiki-themes github-light github-dark"/)
+    assert.match(result.html, /<button[^>]*data-code-block-copy/)
+    assert.match(result.html, /aria-label="Copy code to clipboard"/)
+  })
+
   it('uses and removes explicit heading IDs', async (t) => {
     let result = await renderMarkdown(t, '## Custom title {#custom-id}\n')
 

@@ -13,6 +13,8 @@
 
 Site-specific routes, document shells, content pipelines, styles, and static files stay in the owning site. For example, the API's `favicon.ico` remains in `docs/api/public/`. Repository README artwork lives in `.github/assets/` rather than either site's public directory.
 
+Navigation behavior also stays site-owned: Guides animates selection in its flat chapter list, while the API uses static active styles within grouped disclosure sections.
+
 ## Asset contract
 
 `Icon`, `DocsHeader`, and `DocsFooter` load the following root-relative URLs:

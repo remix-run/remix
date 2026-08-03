@@ -58,6 +58,7 @@ describe('docs responses', () => {
     assert.equal(chapterNavigation.match(/aria-current="page"/g)?.length, 1)
     assert.match(chapterNavigation, /href="\/start-here\/" aria-current="page"/)
     assert.match(getOpeningTag(html, 'div', 'docs-layout'), /data-key="docs-chapter-start-here"/)
+    assert.match(html, /\/assets\/docs-shared\/ui\/code-block-copy\.browser\.tsx/)
   })
 })
 
