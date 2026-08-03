@@ -33,6 +33,7 @@ export function startDocsShellBehavior(
   options: DocsShellBehaviorOptions,
 ): void {
   let root = document.documentElement
+  let siteNavigation = document.getElementById('site-primary-navigation')
   let navigation = document.getElementById('docs-navigation')
   let navigationToggle = document.getElementById('docs-navigation-toggle')
   let mobileNavigationToggle = document.getElementById('docs-mobile-navigation-toggle')
@@ -138,6 +139,7 @@ export function startDocsShellBehavior(
   }
 
   function closeMobileNavigationAfterNavigation() {
+    siteNavigation?.hidePopover()
     setMobilePanel(null)
   }
 
