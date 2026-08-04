@@ -35,9 +35,6 @@ concurrency:
 
 jobs:
   preview:
-    permissions:
-      contents: write
-      issues: write
     # Don't run on PRs from forked repos
     if: github.repository == 'remix-run/remix' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest

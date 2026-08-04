@@ -10,10 +10,11 @@ and publishing procedures.
 ## Reporting Bugs
 
 [GitHub Issues](https://github.com/remix-run/remix/issues) are reserved for demonstrable,
-reproducible bugs in Remix. Issues are not used for troubleshooting, Q&A, or Feature Requests.
+reproducible bugs in Remix. Feature Requests/troubleshooting/Q&A/etc. should use
+[GitHub Discussions](https://github.com/remix-run/remix/discussions).
 
-Before opening an issue, make sure the behavior is caused by Remix
-and is not a usage question or feature request.
+Before opening an issue, make sure the behavior is caused by Remix and is not a usage question
+or feature request.
 
 Every bug report must include a **minimal**, **runnable** reproduction:
 
@@ -64,7 +65,7 @@ Before opening a pull request:
 - Add a [change file](#adding-a-change-file) when the change affects published behavior.
 - Run the relevant [local validation](#local-validation).
 
-Pull requests for new features must also link to the Proposal discussion where a repository
+Pull requests for new features should also link to the Proposal discussion where a repository
 maintainer requested the implementation.
 
 ## Setting Up Your Environment
@@ -117,7 +118,7 @@ pnpm test src/lib/accept.test.ts
 
 ### Building
 
-Packages are built using a combination of TypeScript and esbuild.
+Packages are built using TypeScript.
 
 ```sh
 # Build all packages
@@ -142,14 +143,8 @@ changes.
 
 ### Adding a Change File
 
-When making user-facing changes to a package, run the interactive change-file generator:
-
-```sh
-pnpm changes:add
-```
-
-Select the affected packages and change type, then enter a description. The generator creates a
-Markdown file in the `.changes/` directory using this naming convention:
+When making user-facing changes to a package, create a Markdown file in the package's `.changes/`
+directory using this naming convention:
 
 ```text
 [major|minor|patch].short-description.md
