@@ -11,11 +11,11 @@ describe('input', () => {
     expect(html).toMatch(/padding-block: var\(--rmx-input-padding-block\)/)
     expect(html).toMatch(/padding-inline: var\(--rmx-input-padding-inline\)/)
     expect(html).toMatch(/border-radius: 8px/)
-    expect(html).toMatch(/background: #FFFFFF/)
+    expect(html).toMatch(/background: light-dark\(#FFFFFF, #1a1a1a\)/)
     expect(html).toMatch(/font-weight: 400/)
     expect(html).toMatch(/font-size: 13px/)
     expect(html).toMatch(/line-height: 20px/)
-    expect(html).toMatch(/color: #B0B0B0/)
+    expect(html).toMatch(/color: light-dark\(#B0B0B0, #777777\)/)
   })
 
   it('supports large raw input styling', async () => {
@@ -56,7 +56,7 @@ describe('input', () => {
 
     expect(html).toMatch(/:focus-visible/)
     expect(html).toMatch(/:focus-within/)
-    expect(html).toMatch(/0 0 0 1px #3573F6/)
+    expect(html).toMatch(/0 0 0 1px light-dark\(#3573F6, #6eaaff\)/)
     expect(html).toMatch(/&:disabled, &\[aria-disabled="true"\]/)
     expect(html).toMatch(/:has\(input:disabled\)/)
     expect(html).toMatch(/opacity: 0\.55/)

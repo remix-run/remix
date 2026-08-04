@@ -1,6 +1,0 @@
-import { demoWithCode } from "../demo-with-code.tsx";
-import { MenuContextTrigger } from "./menu-context-trigger.demo.tsx";
-
-let demoUrl = new URL("./menu-context-trigger.demo.tsx", import.meta.url);
-
-export const handler = demoWithCode(demoUrl, MenuContextTrigger);

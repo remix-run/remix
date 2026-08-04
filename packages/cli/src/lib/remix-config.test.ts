@@ -249,7 +249,7 @@ describe('loadRemixConfig', () => {
       'utf8',
     )
     let websiteSchema = await fs.readFile(
-      path.join(ROOT_DIR, 'guides', 'public', 'schemas', 'remix.json'),
+      path.join(ROOT_DIR, 'docs', 'guides', 'public', 'schemas', 'remix.json'),
       'utf8',
     )
 
