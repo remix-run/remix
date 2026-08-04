@@ -687,7 +687,7 @@
     "@remix-run/ui-hmr": "workspace:^"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
     "clean": "git clean -fdX",
     "postpack": "pnpm run sync-readmes -- --clean",
     "prepack": "pnpm run sync-readmes",
