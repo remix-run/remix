@@ -765,9 +765,20 @@ function createHmrImplementationBody(
   source: string,
   moduleUrl: string,
 ): { body: string; sourceMapHints: SourceMapHint[] } {
-  let stateNames = getSetupStateNames(match.setupStatements)
-  let setupSource = createSetupSource(match.setupStatements, stateNames, source)
-  let renderSource = rewriteReferences(match.renderArgument, stateNames, source)
+  let setupStateNames = getSetupStateNames(match.setupStatements)
+  let renderReferencedDeclarationNames = getRenderReferencedSetupDeclarationNames(
+    match.renderArgument,
+    match.setupStatements,
+  )
+  let renderStateNames = new Set(setupStateNames)
+  for (let name of renderReferencedDeclarationNames) renderStateNames.add(name)
+  let setupSource = createSetupSource(
+    match.setupStatements,
+    setupStateNames,
+    renderReferencedDeclarationNames,
+    source,
+  )
+  let renderSource = rewriteReferences(match.renderArgument, renderStateNames, source)
 
   return {
     body: [
@@ -803,20 +814,30 @@ function createHmrImplementationBody(
 
 function createSetupSource(
   statements: readonly AstNode[],
-  stateNames: ReadonlySet<string>,
+  setupStateNames: ReadonlySet<string>,
+  renderReferencedDeclarationNames: ReadonlySet<string>,
   source: string,
 ): string {
   let lines: string[] = []
   let initializedStateNames = new Set<string>()
 
   for (let statement of statements) {
+    if (isSetupRuntimeDeclaration(statement)) {
+      let name = getIdentifierName(getNode(statement, 'id'))
+      if (name && renderReferencedDeclarationNames.has(name)) {
+        lines.push(rewriteReferences(statement, setupStateNames, source))
+        lines.push(`__s__.${name} = ${name};`)
+        continue
+      }
+    }
+
     if (statement.type === 'VariableDeclaration') {
       for (let declaration of getNodeArray(statement, 'declarations')) {
         let pattern = getNode(declaration, 'id')
         if (!pattern) continue
 
         let names = getBindingNames(pattern)
-        names = names.filter((name) => stateNames.has(name))
+        names = names.filter((name) => setupStateNames.has(name))
         if (names.length === 0) continue
 
         let init = getNode(declaration, 'init')
@@ -862,7 +883,7 @@ function rewriteReferences(root: AstNode, stateNames: ReadonlySet<string>, sourc
   let rewrittenRanges = new Set<string>()
 
   visitWithScope(root, null, new Set(), (node, parent, shadowedNames) => {
-    if (node.type !== 'Identifier') return
+    if (node.type !== 'Identifier' && node.type !== 'JSXIdentifier') return
     let name = getIdentifierName(node)
     if (!name || !stateNames.has(name)) return
     if (shadowedNames.has(name)) return
@@ -946,6 +967,12 @@ function visitBindingPattern(pattern: AstNode, onExpression: (node: AstNode) => 
 
 function shouldRewriteIdentifier(node: AstNode, parent: AstNode | null): boolean {
   if (!parent) return true
+  if (node.type === 'JSXIdentifier') {
+    if (parent.type === 'JSXAttribute' && getNode(parent, 'name') === node) return false
+    if (parent.type === 'JSXNamespacedName') return false
+    if (parent.type === 'JSXMemberExpression' && getNode(parent, 'property') === node) return false
+    return true
+  }
   if (parent.type === 'VariableDeclarator' && getNode(parent, 'id') === node) return false
   if (parent.type === 'FunctionDeclaration' && getNode(parent, 'id') === node) return false
   if (parent.type === 'FunctionExpression' && getNode(parent, 'id') === node) return false
@@ -997,6 +1024,44 @@ function getSetupStateNames(statements: readonly AstNode[]): Set<string> {
   return names
 }
 
+function getRenderReferencedSetupDeclarationNames(
+  renderArgument: AstNode,
+  setupStatements: readonly AstNode[],
+): Set<string> {
+  let declarationNames = new Set<string>()
+
+  for (let statement of setupStatements) {
+    if (!isSetupRuntimeDeclaration(statement)) continue
+    let name = getIdentifierName(getNode(statement, 'id'))
+    if (name) declarationNames.add(name)
+  }
+
+  return getReferencedNames(renderArgument, declarationNames)
+}
+
+function isSetupRuntimeDeclaration(node: AstNode): boolean {
+  return (
+    node.type === 'FunctionDeclaration' ||
+    node.type === 'ClassDeclaration' ||
+    node.type === 'TSEnumDeclaration'
+  )
+}
+
+function getReferencedNames(root: AstNode, names: ReadonlySet<string>): Set<string> {
+  let referencedNames = new Set<string>()
+
+  visitWithScope(root, null, new Set(), (node, parent, shadowedNames) => {
+    if (node.type !== 'Identifier' && node.type !== 'JSXIdentifier') return
+    let name = getIdentifierName(node)
+    if (!name || !names.has(name)) return
+    if (shadowedNames.has(name)) return
+    if (!shouldRewriteIdentifier(node, parent)) return
+    referencedNames.add(name)
+  })
+
+  return referencedNames
+}
+
 function getShadowedNames(node: AstNode, inherited: ReadonlySet<string>): ReadonlySet<string> {
   let bindings = getScopeBindings(node)
   if (bindings.length === 0) return inherited
@@ -1031,6 +1096,11 @@ function getScopeBindings(node: AstNode): string[] {
       }
 
       if (statement.type === 'FunctionDeclaration') {
+        let name = getIdentifierName(getNode(statement, 'id'))
+        if (name) bindings.push(name)
+      }
+
+      if (statement.type === 'ClassDeclaration' || statement.type === 'TSEnumDeclaration') {
         let name = getIdentifierName(getNode(statement, 'id'))
         if (name) bindings.push(name)
       }
@@ -1265,7 +1335,7 @@ function isNamedCallExpression(node: AstNode | null, name: string): node is AstN
 }
 
 function getIdentifierName(node: AstNode | null): string | null {
-  if (!node || node.type !== 'Identifier') return null
+  if (!node || (node.type !== 'Identifier' && node.type !== 'JSXIdentifier')) return null
   return typeof node.name === 'string' ? node.name : null
 }
 

@@ -370,6 +370,34 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     await waitForText(page, '[data-testid="count-second"]', 'Updated: 3')
   })
 
+  it('hydrates and preserves a setup function callback after an HMR update', async (t) => {
+    let fixture = await createServerFrameHmrFixture()
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+    let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
+
+    await page.goto('/')
+    await connected
+    await hydrated
+    await waitForText(page, '[data-testid="callback-button"]', 'Run callback before HMR')
+
+    await page.locator('[data-testid="callback-button"]').click()
+    await waitForText(page, '[data-testid="callback-output"]', 'Run callback before HMR')
+
+    let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
+    let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
+    await fs.writeFile(
+      clientFieldPath,
+      clientFieldSource.replace('Run callback before HMR', 'Run callback after HMR'),
+    )
+
+    await waitForText(page, '[data-testid="callback-button"]', 'Run callback after HMR')
+    await page.locator('[data-testid="callback-button"]').click()
+    await waitForText(page, '[data-testid="callback-output"]', 'Run callback after HMR')
+  })
+
   it('updates a client entry after a failed HMR transform is fixed', async (t) => {
     let fixture = await createServerFrameHmrFixture()
     t.after(fixture.close)
@@ -1330,14 +1358,23 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
     rootDir,
     'app/ClientField.tsx',
     [
-      "import { type Handle, clientEntry } from '@remix-run/ui'",
+      "import { type Handle, clientEntry, on } from '@remix-run/ui'",
       '',
       'export const ClientField = clientEntry(import.meta.url, function ClientField(handle: Handle) {',
       '  void handle',
+      '  function reportButtonLabel() {',
+      '    let button = document.querySelector(\'[data-testid="callback-button"]\')',
+      '    let output = document.querySelector(\'[data-testid="callback-output"]\')',
+      '    if (button && output) output.textContent = button.textContent',
+      '  }',
       '  return () => (',
       '    <>',
       '      <input data-testid="server-client-field" />',
       '      <span data-testid="server-client-label">{\'Client: before\'}</span>',
+      '      <button data-testid="callback-button" mix={on(\'click\', reportButtonLabel)}>',
+      '        Run callback before HMR',
+      '      </button>',
+      '      <output data-testid="callback-output" />',
       '    </>',
       '  )',
       '})',
@@ -1376,9 +1413,10 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
       '  import.meta.hot.on("server:update", reloadTopFrame)',
       '}',
       '',
-      'app.ready().catch((error: unknown) => {',
-      '  console.error("Frame adoption failed:", error)',
-      '})',
+      'app.ready().then(',
+      '  () => console.info("Frame adoption complete"),',
+      '  (error: unknown) => console.error("Frame adoption failed:", error),',
+      ')',
       '',
     ].join('\n'),
   )
@@ -1395,6 +1433,8 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
             <>
               <input data-testid="server-client-field" />
               <span data-testid="server-client-label">Client: before</span>
+              <button data-testid="callback-button">Run callback before HMR</button>
+              <output data-testid="callback-output" />
             </>
           )
         },

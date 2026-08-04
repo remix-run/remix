@@ -163,6 +163,132 @@ import * as __remixUIRefresh__ from "@acme/remix/ui/dev/refresh";`,
     )
   })
 
+  it('preserves a setup function declaration passed as a JSX prop', () => {
+    let result = transformComponentsForBrowser(
+      `export function LandingEnhancements() {
+  let preset = 0
+  function jumpToPreset(index) {
+    preset = index
+  }
+  return () => <LandingNav onJump={jumpToPreset} />
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/LandingEnhancements.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'LandingEnhancements')
+    assert.match(
+      implementation,
+      /function jumpToPreset\(index\) \{[\s\S]*__s__\.preset = index[\s\S]*__s__\.jumpToPreset = jumpToPreset;/,
+    )
+    assert.match(implementation, /<LandingNav onJump=\{__s__\.jumpToPreset\} \/>/)
+  })
+
+  it('preserves a setup function declaration invoked by render', () => {
+    let result = transformComponentsForBrowser(
+      `export function Counter() {
+  let count = 1
+  function getLabel() {
+    return \`Count: \${count}\`
+  }
+  return () => <p>{getLabel()}</p>
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'Counter')
+    assert.match(
+      implementation,
+      /function getLabel\(\) \{[\s\S]*return `Count: \$\{__s__\.count\}`[\s\S]*__s__\.getLabel = getLabel;/,
+    )
+    assert.match(implementation, /<p>\{__s__\.getLabel\(\)\}<\/p>/)
+  })
+
+  it('preserves multiple setup function declarations referenced by render', () => {
+    let result = transformComponentsForBrowser(
+      `export function Greeting() {
+  function getGreeting() {
+    return 'Hello'
+  }
+  function getName() {
+    return 'Ada'
+  }
+  return () => <p>{getGreeting()}, {getName()}</p>
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Greeting.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'Greeting')
+    assert.match(implementation, /__s__\.getGreeting = getGreeting;/)
+    assert.match(implementation, /__s__\.getName = getName;/)
+    assert.match(implementation, /<p>\{__s__\.getGreeting\(\)\}, \{__s__\.getName\(\)\}<\/p>/)
+  })
+
+  it('does not preserve setup function declarations that render does not reference', () => {
+    let result = transformComponentsForBrowser(
+      `export function Counter() {
+  let count = 0
+  function initialize() {
+    count = 1
+  }
+  initialize()
+  return () => <p>{count}</p>
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'Counter')
+    assert.match(implementation, /function initialize\(\)/)
+    assert.doesNotMatch(implementation, /__s__\.initialize =/)
+    assert.match(implementation, /initialize\(\)/)
+  })
+
+  it('rewrites setup variables used as JSX element names', () => {
+    let result = transformComponentsForBrowser(
+      `export function Parent() {
+  let Child = () => <span>Child</span>
+  return () => <Child />
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Parent.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'Parent')
+    assert.match(implementation, /__s__\.Child = \(\) => <span>Child<\/span>;/)
+    assert.match(implementation, /\(\) => <__s__\.Child \/>/)
+  })
+
+  it('preserves setup runtime declarations used as JSX element names or render values', () => {
+    let result = transformComponentsForBrowser(
+      `export function Parent() {
+  function Child() {
+    return () => <span>Child</span>
+  }
+  class Model {
+    label = 'Ready'
+  }
+  enum Status {
+    Ready = 'ready',
+  }
+  return () => <Child title={new Model().label + Status.Ready} />
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Parent.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'Parent')
+    assert.match(implementation, /__s__\.Child = Child;/)
+    assert.match(implementation, /__s__\.Model = Model;/)
+    assert.match(implementation, /__s__\.Status = Status;/)
+    assert.match(
+      implementation,
+      /<__s__\.Child title=\{new __s__\.Model\(\)\.label \+ __s__\.Status\.Ready\} \/>/,
+    )
+  })
+
   it('hoists destructured setup variables into persistent HMR state', () => {
     let result = transformComponentsForBrowser(
       `export function Counter() {
@@ -361,6 +487,27 @@ import * as __remixUIRefresh__ from "@acme/remix/ui/dev/refresh";`,
   };
 }`,
     )
+  })
+
+  it('does not rewrite render class declarations that shadow setup variables', () => {
+    let result = transformComponentsForBrowser(
+      `export function Parent() {
+  let Child = () => <span>Setup child</span>
+  return () => {
+    class Child {
+      static label = 'Render child'
+    }
+    return <p>{Child.label}</p>
+  }
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Parent.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'Parent')
+    assert.match(implementation, /class Child/)
+    assert.match(implementation, /<p>\{Child\.label\}<\/p>/)
+    assert.doesNotMatch(implementation, /<p>\{__s__\.Child\.label\}<\/p>/)
   })
 
   it('rewrites PascalCase function components with separate named exports', () => {
