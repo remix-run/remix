@@ -1,4 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import { createServer, type Server, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import process from 'node:process'
@@ -212,6 +214,8 @@ export function createWatchedProcessController(options: {
   let stopping = false
   let waitingForFileChangeAfterExit = false
   let pendingServerUpdateEvent = false
+  let changedFileContentSignatures = new Map<string, string>()
+  let changedFileSignatureQueue = Promise.resolve()
 
   function setReadyGeneration(generation: number): void {
     readyGeneration = generation
@@ -567,6 +571,7 @@ export function createWatchedProcessController(options: {
     try {
       let changedPaths = [...pendingChangedPaths]
       pendingChangedPaths = new Set()
+      changedPaths = await filterChangedPathsByContent(changedPaths)
 
       let restartPathEvents = new Map(pendingRestartPathEvents)
       let restartPaths = [...restartPathEvents.keys()]
@@ -671,6 +676,33 @@ export function createWatchedProcessController(options: {
       activeWatchEventFlushCount -= 1
       resolveReadyWaiters()
     }
+  }
+
+  function filterChangedPathsByContent(changedPaths: string[]): Promise<string[]> {
+    let result = changedFileSignatureQueue.then(async () => {
+      let filteredPaths: string[] = []
+
+      for (let filePath of changedPaths) {
+        try {
+          let content = await readFile(filePath)
+          let signature = createHash('sha256').update(content).digest('base64')
+          if (changedFileContentSignatures.get(filePath) === signature) continue
+          changedFileContentSignatures.set(filePath, signature)
+        } catch {
+          changedFileContentSignatures.delete(filePath)
+        }
+
+        filteredPaths.push(filePath)
+      }
+
+      return filteredPaths
+    })
+
+    changedFileSignatureQueue = result.then(
+      () => undefined,
+      () => undefined,
+    )
+    return result
   }
 
   function flushPendingServerUpdateEvent(): void {

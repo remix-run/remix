@@ -77,17 +77,20 @@ class NodeHotContext implements ImportMetaHot {
   #invalidated = false
   #invalidationMessage: string | undefined
   #isUpdating = false
+  #disposeSelf: () => Promise<void>
   #disposeDependency: (url: string) => Promise<void>
   #resolveDependency: (specifier: string) => string
 
   constructor(
     url: string,
     data: Record<string, unknown>,
+    disposeSelf: () => Promise<void>,
     disposeDependency: (url: string) => Promise<void>,
     resolveDependency: (specifier: string) => string,
   ) {
     this.data = data
     this.url = url
+    this.#disposeSelf = disposeSelf
     this.#disposeDependency = disposeDependency
     this.#resolveDependency = resolveDependency
   }
@@ -169,7 +172,7 @@ class NodeHotContext implements ImportMetaHot {
       return 'restart-requested'
     }
 
-    await this.disposeAll()
+    await this.#disposeSelf()
 
     this.#isUpdating = true
     try {
@@ -247,7 +250,8 @@ export function installNodeHmrRuntime(
   if (runtimeGlobal.__remixNodeHmr) return runtimeGlobal.__remixNodeHmr
 
   let dataByUrl = new Map<string, Record<string, unknown>>()
-  let contextsByUrl = new Map<string, NodeHotContext>()
+  let updateContextsByUrl = new Map<string, NodeHotContext>()
+  let latestContextsByUrl = new Map<string, NodeHotContext>()
   let browserEventUrl = options.browserEventUrl
   let browserHmrChannelId = 0
   let browserHmrChannelRequestId = 0
@@ -351,12 +355,18 @@ export function installNodeHmrRuntime(
       let context = new NodeHotContext(
         url,
         data,
+        async () => {
+          await latestContextsByUrl.get(url)?.disposeAll()
+        },
         async (dependencyUrl) => {
-          await contextsByUrl.get(dependencyUrl)?.disposeAll()
+          await latestContextsByUrl.get(dependencyUrl)?.disposeAll()
         },
         resolveDependency,
       )
-      contextsByUrl.set(url, context)
+      if (!updateContextsByUrl.has(url)) {
+        updateContextsByUrl.set(url, context)
+      }
+      latestContextsByUrl.set(url, context)
       return context
     },
 
@@ -404,15 +414,16 @@ export function installNodeHmrRuntime(
     },
 
     async disposeAll() {
-      for (let context of contextsByUrl.values()) {
+      for (let context of latestContextsByUrl.values()) {
         await context.disposeAll()
       }
 
-      contextsByUrl.clear()
+      updateContextsByUrl.clear()
+      latestContextsByUrl.clear()
     },
 
     async update(url, timestamp, acceptedUrl = url) {
-      let context = contextsByUrl.get(url)
+      let context = updateContextsByUrl.get(url)
       if (context === undefined) {
         requestRestart(`No HMR context found for ${url}`)
         return

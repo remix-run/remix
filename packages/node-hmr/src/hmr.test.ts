@@ -794,6 +794,50 @@ describe('node-hmr', () => {
     }
   })
 
+  it('keeps active server exports current while ignoring repeated change events', async () => {
+    let initialSource = getGenericGreetingSource({ message: 'initial' })
+    let updatedSource = getGenericGreetingSource({ message: 'updated' })
+    await using fixture = await createFixture({
+      'server.ts': getEventChannelGreetingServerSource(),
+      'greeting.tsx': initialSource,
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let hmrUrl = await server.waitForHmrUrl(0)
+      let events = await connectHmrEvents(hmrUrl.url)
+      try {
+        let ready = await server.waitForReady(0)
+        assert.equal(await fetchText(ready.port), `${ready.pid}:initial`)
+
+        await fs.writeFile(path.join(fixture.path, 'greeting.tsx'), updatedSource)
+        await waitForResponse(ready.port, `${ready.pid}:updated`, () => server.output)
+        assert.deepEqual(await events.read(), { type: 'server:update' })
+
+        let duplicateEvents = await connectHmrEvents(hmrUrl.url)
+        try {
+          await fs.writeFile(path.join(fixture.path, 'greeting.tsx'), updatedSource)
+          await new Promise((resolve) => setTimeout(resolve, 250))
+
+          assert.equal(await fetchText(ready.port), `${ready.pid}:updated`)
+          assert.equal(server.output.match(/hmr update greeting\.tsx/g)?.length, 1)
+          await assertNoHmrEvent(duplicateEvents)
+        } finally {
+          await duplicateEvents.close()
+        }
+
+        await fs.writeFile(path.join(fixture.path, 'greeting.tsx'), initialSource)
+        await waitForResponse(ready.port, `${ready.pid}:initial`, () => server.output)
+        assert.deepEqual(await events.read(), { type: 'server:update' })
+        assert.equal(server.output.match(/hmr update greeting\.tsx/g)?.length, 2)
+      } finally {
+        await events.close()
+      }
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('restarts once when an accepted module export is added', async () => {
     await using fixture = await createFixture({
       'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
