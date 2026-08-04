@@ -97,7 +97,7 @@ Use `run` to start the client runtime. It scans the document for client entry ma
 ```tsx
 import { run } from 'remix/ui'
 
-let app = run({
+const app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
     return mod[exportName]
@@ -132,41 +132,7 @@ await app.ready()
 
 ## Browser HMR Updates
 
-When a browser entry accepts HMR updates, put `run(...)` behind a small start function so the old runtime can be disposed before the new one starts:
-
-```tsx
-import { run } from 'remix/ui'
-import type { AppRuntime } from 'remix/ui'
-
-let app = start()
-
-export function start(): AppRuntime {
-  return run({
-    async loadModule(moduleUrl, exportName) {
-      let mod = await import(moduleUrl)
-      return mod[exportName]
-    },
-  })
-}
-
-if (import.meta.hot) {
-  import.meta.hot.accept((module) => {
-    if (typeof module.start !== 'function') {
-      import.meta.hot?.invalidate('Updated entry module did not export start()')
-      return
-    }
-
-    app.dispose()
-    app = module.start()
-  })
-
-  import.meta.hot.dispose(() => {
-    app.dispose()
-  })
-}
-```
-
-When `remix/node-hmr` coordinates server and browser HMR, browser modules can listen for `server:update`. Prefer reloading the top frame when the document is frame-rendered and can recover from fresh server HTML:
+When `remix/node-hmr` reports a server update, reload the top frame to apply the latest server-rendered document while preserving browser state:
 
 ```tsx
 if (import.meta.hot) {

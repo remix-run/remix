@@ -559,6 +559,80 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     }
   })
 
+  it('reloads the page when the browser entry updates', async (t) => {
+    let fixture = await createNodeHmrFixture()
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await serveNodeHmrFixture(t, server)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-message"]', 'Server: before')
+      await page.locator('[data-testid="document-field"]').fill('state before entry update')
+
+      let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
+      let entrySource = await fs.readFile(entryPath, 'utf-8')
+      let reloaded = waitForNavigation(page)
+      await fs.writeFile(
+        entryPath,
+        entrySource.replace('Frame adoption failed:', 'Updated frame adoption failed:'),
+      )
+      await reloaded
+      await waitForText(page, '[data-testid="server-message"]', 'Server: before')
+      assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      assert.equal(server.readyCount, 1)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
+  it('commits a server update from a transitive server module', async (t) => {
+    let fixture = await createNodeHmrFixture()
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await serveNodeHmrFixture(t, server)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-message"]', 'Server: before')
+      await page.locator('[data-testid="document-field"]').fill('preserved browser state')
+
+      let frameResponsePromise = page.waitForResponse((response) => {
+        let url = new URL(response.url())
+        return url.pathname === '/' && response.request().headers().accept === 'text/html'
+      })
+      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete')
+      await write(
+        fixture.rootDir,
+        'server-message.ts',
+        `export const serverMessage = 'Server: after server update'\n`,
+      )
+
+      let frameResponse = await frameResponsePromise
+      assert.equal(frameResponse.status(), 200)
+      assert.match(frameResponse.headers()['content-type'] ?? '', /^text\/html\b/)
+      assert.match(await frameResponse.text(), /Server: after server update/)
+
+      await serverFrameReloaded
+      await waitForText(page, '[data-testid="server-message"]', 'Server: after server update')
+      assert.equal(
+        await page.locator('[data-testid="document-field"]').inputValue(),
+        'preserved browser state',
+      )
+      assert.equal(server.readyCount, 2)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
   it('reloads the page after a node-hmr client entry export is added', async (t) => {
     let fixture = await createNodeHmrFixture()
     let server: NodeHmrTestServer | undefined
@@ -1519,7 +1593,7 @@ async function createNodeHmrFixture(
     [
       "import { run } from '@remix-run/ui'",
       '',
-      'let app = run({',
+      'const app = run({',
       '  async loadModule(moduleUrl: string, exportName: string) {',
       '    let mod = (await import(moduleUrl)) as Record<string, unknown>',
       '    let Component = mod[exportName]',
@@ -1536,7 +1610,6 @@ async function createNodeHmrFixture(
       '})',
       '',
       'if (import.meta.hot) {',
-      '  import.meta.hot.accept()',
       '  async function reloadTopFrame() {',
       '    await app.ready()',
       '    await app.frames.top.reload()',
