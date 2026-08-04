@@ -14,10 +14,6 @@ catalog:
   shiki: 4.4.1
   typescript: ^7.0.2
 
-catalogs:
-  legacy-typescript:
-    typescript: ^6.0.3
-
 packages:
   - demos/*
   - docs/api

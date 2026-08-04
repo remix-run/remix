@@ -16,7 +16,7 @@
     "pagefind": "catalog:",
     "shiki": "catalog:",
     "typedoc": "0.28.19",
-    "typescript": "catalog:legacy-typescript"
+    "typescript": "6.0.3"
   },
   "scripts": {
     "build": "pnpm run --filter \".\" --parallel \"/^build:/\"",

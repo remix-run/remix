@@ -25,6 +25,6 @@
     "@types/mdast": "4.0.4",
     "@types/node": "catalog:",
     "pagefind": "catalog:",
-    "typescript": "catalog:legacy-typescript"
+    "typescript": "6.0.3"
   }
 }
