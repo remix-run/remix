@@ -1,4 +1,4 @@
-import { createFrame, type Frame } from './frame.ts'
+import { createFrame, installStreamResolution, type Frame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
 import type { FrameHandle } from './component.ts'
@@ -99,6 +99,7 @@ export function run(init: RunInit): AppRuntime {
   })
 
   let appController = new AbortController()
+  let disposeStreamResolution = installStreamResolution(document)
   startNavigationListener(appController.signal)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
@@ -110,6 +111,7 @@ export function run(init: RunInit): AppRuntime {
     flush: () => topFrame.flush(),
     dispose: () => {
       appController.abort()
+      disposeStreamResolution()
       topFrame.dispose()
       styleManager.dispose()
     },
