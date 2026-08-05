@@ -1183,7 +1183,12 @@ function resolveClientFrame(
   state.resolveController = resolveController
 
   Promise.resolve()
-    .then(() => runtime.resolveFrame(frameSrc, resolveController.signal, getFrameName(node)))
+    .then(() =>
+      runtime.resolveFrame(frameSrc, {
+        signal: resolveController.signal,
+        target: getFrameName(node),
+      }),
+    )
     .then(async (resolution) => {
       if (state.resolveToken !== token || resolveController.signal.aborted) return
       let { content, redirectedTo } = await unwrapFrameResolution(resolution)

@@ -1,5 +1,11 @@
 import { jsx } from './jsx.ts'
-import { Frame, createFrameHandle, type FrameContent, type FrameResolution } from './component.ts'
+import {
+  Frame,
+  createFrameHandle,
+  type FrameContent,
+  type FrameResolution,
+  type FrameReloadOptions,
+} from './component.ts'
 import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
@@ -64,15 +70,21 @@ export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Func
  * Resolves content for a browser-loaded frame.
  *
  * @param src Source string from the `<Frame src>` prop.
- * @param signal Abort signal for the active frame load or reload.
- * @param target Optional name of the frame being reloaded.
+ * @param options Information about the active frame load or form submission.
  * @returns Frame content or a response whose body should be rendered into the frame.
  */
 export type ResolveFrame = (
   src: string,
-  signal?: AbortSignal,
-  target?: string,
+  options?: ResolveFrameOptions,
 ) => Promise<FrameResolution> | FrameResolution
+
+/**
+ * Information available while resolving browser-loaded frame content.
+ */
+export interface ResolveFrameOptions extends FrameReloadOptions {
+  /** Optional name of the frame being loaded or reloaded. */
+  target?: string
+}
 
 type InternalFrameContent = FrameContent | DocumentFragment
 
@@ -216,7 +228,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let frame = createFrameHandle({
     src: init.src,
     $runtime: runtime,
-    reload: () => reload(),
+    reload: (options) => reload(options),
     replace: async (content: FrameContent) => {
       await render(content)
     },
@@ -507,13 +519,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     }
   }
 
-  async function reload(): Promise<AbortSignal> {
-    let controller = startReload()
-    return await resolveAndRenderReload(controller)
+  async function reload(options?: FrameReloadOptions): Promise<AbortSignal> {
+    let controller = startReload(options?.signal)
+    return await resolveAndRenderReload(controller, options)
   }
 
-  function startReload(): AbortController {
-    let controller = replaceReloadController()
+  function startReload(signal?: AbortSignal): AbortController {
+    let controller = replaceReloadController(signal)
     reloadKind = 'direct'
     frame.dispatchEvent(new Event('reloadStart'))
     startSubFrameInheritedReloads(getContentNodes(), controller.signal)
@@ -568,9 +580,16 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     return controller
   }
 
-  async function resolveAndRenderReload(controller: AbortController): Promise<AbortSignal> {
+  async function resolveAndRenderReload(
+    controller: AbortController,
+    options?: FrameReloadOptions,
+  ): Promise<AbortSignal> {
     try {
-      let resolution = await init.resolveFrame(frame.src, controller.signal, frameName)
+      let resolution = await init.resolveFrame(frame.src, {
+        ...options,
+        signal: controller.signal,
+        target: frameName,
+      })
       if (reloadController !== controller || controller.signal.aborted) return controller.signal
       let { content, redirectedTo } = await unwrapFrameResolution(resolution)
       if (reloadController !== controller || controller.signal.aborted) return controller.signal
