@@ -255,7 +255,7 @@ In the child `server.ts`, report readiness after the server is listening:
 
 ```typescript
 server.listen(port, () => {
-  if (process.env.NODE_ENV === 'development' && process.env.NODE_HMR) {
+  if (process.env.NODE_ENV === 'development' && process.env.REMIX_NODE_HMR) {
     import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
   }
 })
@@ -263,7 +263,7 @@ server.listen(port, () => {
 
 Rules:
 
-- Guard `remix/node-hmr/runtime` imports with `process.env.NODE_HMR`.
+- Guard `remix/node-hmr/runtime` imports with `process.env.REMIX_NODE_HMR`.
 - Use `--import remix/ui-hmr/node` only when server-rendered Remix UI component modules should hot update.
 - Keep production startup independent from `dev.ts`.
 - Close the public server and `hmrRunner` during `SIGINT` and `SIGTERM` shutdown.

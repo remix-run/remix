@@ -100,7 +100,7 @@ const browserHmrEventFlushDelayMs = 75
 const browserHmrRequestTimeoutMs = 1_000
 const shutdownTimeoutMs = 5_000
 const nodeHmrCondition = 'node-hmr'
-const nodeHmrEnvVar = 'NODE_HMR'
+const nodeHmrEnvVar = 'REMIX_NODE_HMR'
 const styles = createStyles()
 const windowsDriveLetterRE = /^[A-Za-z]:\//
 

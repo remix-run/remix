@@ -77,9 +77,9 @@ describe('buildChildProcessArgs', () => {
 
 describe('buildChildProcessEnv', () => {
   it('marks the child process as running inside node-hmr', () => {
-    assert.deepEqual(buildChildProcessEnv({ NODE_HMR: '0', NODE_ENV: 'development' }), {
+    assert.deepEqual(buildChildProcessEnv({ NODE_ENV: 'development', REMIX_NODE_HMR: '0' }), {
       NODE_ENV: 'development',
-      NODE_HMR: '1',
+      REMIX_NODE_HMR: '1',
     })
   })
 })

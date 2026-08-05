@@ -117,11 +117,11 @@ let assetServer = createAssetServer({
   fileMap: { '/app/*path': 'app/*path' },
   allowFiles: ['app/assets/**'],
   hmr:
-    isDevelopment && process.env.NODE_HMR
+    isDevelopment && process.env.REMIX_NODE_HMR
       ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
       : undefined,
   scripts: {
-    moduleHooks: isDevelopment && process.env.NODE_HMR ? [uiHmr()] : undefined,
+    moduleHooks: isDevelopment && process.env.REMIX_NODE_HMR ? [uiHmr()] : undefined,
   },
   watch: isDevelopment,
 })
@@ -129,7 +129,7 @@ let assetServer = createAssetServer({
 
 Rules:
 
-- Guard `remix/node-hmr/runtime` imports with `process.env.NODE_HMR`; that runtime API is only available inside the supervised child process.
+- Guard `remix/node-hmr/runtime` imports with `process.env.REMIX_NODE_HMR`; that runtime API is only available inside the supervised child process.
 - Keep browser HMR and browser module hooks development-only.
 - Add `remix/assets/types/hmr` to `compilerOptions.types` only when browser source modules use `import.meta.hot` directly.
 - Write HMR accept calls directly as `import.meta.hot.accept(...)` with literal dependency specifiers.

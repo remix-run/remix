@@ -100,10 +100,10 @@ import { createBrowserHmrChannel } from 'remix/node-hmr/runtime'
 let browserHmrChannel = await createBrowserHmrChannel()
 ```
 
-The `remix/node-hmr/runtime` API is only available inside a child process supervised by `node-hmr`. Importing it outside `node-hmr` throws. When code may also run outside `node-hmr`, you can check `process.env.NODE_HMR` before dynamically importing the runtime API:
+The `remix/node-hmr/runtime` API is only available inside a child process supervised by `node-hmr`. Importing it outside `node-hmr` throws. Supervised child processes automatically receive the `REMIX_NODE_HMR` environment variable which you can check before dynamically importing the runtime API:
 
 ```ts
-if (process.env.NODE_HMR) {
+if (process.env.REMIX_NODE_HMR) {
   let { createBrowserHmrChannel } = await import('remix/node-hmr/runtime')
   let browserHmrChannel = await createBrowserHmrChannel()
 }
@@ -120,7 +120,7 @@ let assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
   allowFiles: ['app/assets/**'],
-  hmr: process.env.NODE_HMR
+  hmr: process.env.REMIX_NODE_HMR
     ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
     : undefined,
   watch: true,
@@ -133,7 +133,7 @@ Call `emitServerReady()` when your app server is ready to receive requests. This
 
 ```ts
 server.listen(port, () => {
-  if (process.env.NODE_HMR) {
+  if (process.env.REMIX_NODE_HMR) {
     import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
   }
 })
