@@ -1,4 +1,9 @@
 import { getTopFrame, getNamedFrame } from './run.ts'
+import {
+  createFormNavigationResolver,
+  interceptFormNavigation,
+  type FormSubmission,
+} from './form-navigation.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -11,10 +16,23 @@ type SourceElementNavigateEvent = NavigateEvent & {
   sourceElement?: Element | null
 }
 
+type RuntimeNavigation = {
+  state: NavigationState
+  getSubmission?: () => Promise<FormSubmission>
+  replaceHistory?: boolean
+}
+
+interface FormSubmissionNavigationInfo {
+  type: typeof formSubmissionNavigationInfoType
+  state: NavigationState
+  getSubmission(): Promise<FormSubmission>
+}
+
 interface FrameRedirectNavigationInfo {
   type: typeof frameRedirectNavigationInfoType
 }
 
+const formSubmissionNavigationInfoType = 'frame-form-submission'
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
 /**
@@ -48,9 +66,11 @@ export async function navigate(href: string, options?: NavigationOptions) {
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.
+ * @param canResolveFrames Whether the runtime has a resolver that can handle intercepted navigations.
  * @returns void
  */
-export function startNavigationListener(signal: AbortSignal) {
+export function startNavigationListener(signal: AbortSignal, canResolveFrames = true) {
+  if (!canResolveFrames) return
   return startNavigationListenerImpl(signal, { getTopFrame, getNamedFrame })
 }
 
@@ -63,6 +83,7 @@ export function startNavigationListenerImpl(
   },
 ) {
   let navigation = window.navigation
+  let resolveFormNavigation = createFormNavigationResolver(signal)
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, resetScroll: true, $rmx: true },
@@ -82,40 +103,68 @@ export function startNavigationListenerImpl(
         return
       }
 
-      let state = getRuntimeNavigationState(event)
-      if (!state) return
+      let replayedSubmission = isFormSubmissionNavigationInfo(event.info) ? event.info : undefined
+      let runtimeNavigation = replayedSubmission
+        ? {
+            state: replayedSubmission.state,
+            getSubmission: replayedSubmission.getSubmission,
+          }
+        : getRuntimeNavigation(event, resolveFormNavigation)
+      if (!runtimeNavigation) return
+      let { state } = runtimeNavigation
 
       let topFrame = options.getTopFrame()
       let namedFrame = state.target ? options.getNamedFrame(state.target) : undefined
       let frame = namedFrame ?? topFrame
 
-      event.intercept({
-        async handler() {
-          if (event.navigationType !== 'traverse') {
-            navigation.updateCurrentEntry({ state })
-          }
+      let handler = async () => {
+        let submission = await runtimeNavigation.getSubmission?.()
+        if (event.signal.aborted) return
 
-          let requestedFrameSrc = frame === topFrame ? event.destination.url : state.src
-          frame.src = requestedFrameSrc
-          await frame.reload()
+        if (event.navigationType !== 'traverse') {
+          navigation.updateCurrentEntry({ state })
+        }
 
-          if (frame.src !== requestedFrameSrc) {
-            let redirectedSrc = frame.src
-            let redirectedState = { ...state, src: redirectedSrc }
-            // Start the successor navigation without awaiting it: this handler must settle before
-            // the replacement navigation can finish.
-            navigation.navigate(redirectedSrc, {
-              history: 'replace',
-              state: redirectedState,
-              info: { type: frameRedirectNavigationInfoType } satisfies FrameRedirectNavigationInfo,
-            })
-          }
+        let requestedFrameSrc = frame === topFrame ? event.destination.url : state.src
+        frame.src = requestedFrameSrc
+        await frame.reload({
+          ...submission,
+          signal: event.signal,
+        })
 
-          let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
-          if (state.resetScroll && isNewEntry) {
-            window.scrollTo(0, 0)
-          }
-        },
+        if (frame.src !== requestedFrameSrc) {
+          let redirectedSrc = frame.src
+          let redirectedState = { ...state, src: redirectedSrc }
+          // Start the successor navigation without awaiting it: this handler must settle before the
+          // replacement navigation can finish.
+          navigation.navigate(redirectedSrc, {
+            history: 'replace',
+            state: redirectedState,
+            info: { type: frameRedirectNavigationInfoType } satisfies FrameRedirectNavigationInfo,
+          })
+        }
+
+        let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
+        if (state.resetScroll && isNewEntry) {
+          window.scrollTo(0, 0)
+        }
+      }
+
+      interceptFormNavigation(event, {
+        handler,
+        replacement:
+          runtimeNavigation.replaceHistory &&
+          replayedSubmission == null &&
+          runtimeNavigation.getSubmission
+            ? {
+                state,
+                info: {
+                  type: formSubmissionNavigationInfoType,
+                  state,
+                  getSubmission: runtimeNavigation.getSubmission,
+                } satisfies FormSubmissionNavigationInfo,
+              }
+            : undefined,
       })
     },
     { signal },
@@ -124,6 +173,19 @@ export function startNavigationListenerImpl(
 
 function isRuntimeNavigation(info: unknown): info is NavigationState {
   return typeof info === 'object' && info != null && '$rmx' in info
+}
+
+function isFormSubmissionNavigationInfo(value: unknown): value is FormSubmissionNavigationInfo {
+  return (
+    typeof value === 'object' &&
+    value != null &&
+    'type' in value &&
+    value.type === formSubmissionNavigationInfoType &&
+    'state' in value &&
+    isRuntimeNavigation(value.state) &&
+    'getSubmission' in value &&
+    typeof value.getSubmission === 'function'
+  )
 }
 
 function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNavigationInfo {
@@ -140,16 +202,20 @@ function isCrossOriginDestination(event: NavigateEvent): boolean {
   return destination.origin !== window.location.origin
 }
 
-function getRuntimeNavigationState(event: NavigateEvent): NavigationState | undefined {
+function getRuntimeNavigation(
+  event: NavigateEvent,
+  resolveFormNavigation: ReturnType<typeof createFormNavigationResolver>,
+): RuntimeNavigation | undefined {
   if (event.navigationType === 'traverse') {
-    return getTraverseNavigationState(event)
+    let state = getTraverseNavigationState(event)
+    return state ? { state } : undefined
   }
 
-  let sourceState = getSourceElementNavigationState(event)
-  if (sourceState) return sourceState
+  let sourceNavigation = getSourceElementNavigation(event, resolveFormNavigation)
+  if (sourceNavigation) return sourceNavigation
 
   let destinationState = event.destination.getState()
-  if (isRuntimeNavigation(destinationState)) return destinationState
+  if (isRuntimeNavigation(destinationState)) return { state: destinationState }
 }
 
 function getTraverseNavigationState(event: NavigateEvent): NavigationState | undefined {
@@ -172,19 +238,42 @@ function getTraverseNavigationState(event: NavigateEvent): NavigationState | und
   return undefined
 }
 
-function getSourceElementNavigationState(event: NavigateEvent): NavigationState | undefined {
+function getSourceElementNavigation(
+  event: NavigateEvent,
+  resolveFormNavigation: ReturnType<typeof createFormNavigationResolver>,
+): RuntimeNavigation | undefined {
   let sourceEvent = event as SourceElementNavigateEvent
   let sourceElement = sourceEvent.sourceElement
   if (!(sourceElement instanceof Element)) return
+
   let linkElement = sourceElement.closest('a, area')
-  if (!(linkElement instanceof Element)) return
-  if (linkElement.hasAttribute('rmx-document')) return
-  if (linkElement.hasAttribute('download')) return
+  if (linkElement instanceof Element) {
+    if (linkElement.hasAttribute('rmx-document')) return
+    if (linkElement.hasAttribute('download')) return
+
+    return {
+      state: {
+        target: linkElement.getAttribute('rmx-target') ?? undefined,
+        src: linkElement.getAttribute('rmx-src') ?? event.destination.url,
+        resetScroll: linkElement.getAttribute('rmx-reset-scroll') !== 'false',
+        $rmx: true,
+      },
+    }
+  }
+
+  let formNavigation = resolveFormNavigation(event)
+  if (!formNavigation || formNavigation.hasAttribute('rmx-document')) return
 
   return {
-    target: linkElement.getAttribute('rmx-target') ?? undefined,
-    src: linkElement.getAttribute('rmx-src') ?? event.destination.url,
-    resetScroll: linkElement.getAttribute('rmx-reset-scroll') !== 'false',
-    $rmx: true,
-  } satisfies NavigationState
+    state: {
+      target: formNavigation.getAttribute('rmx-target') ?? undefined,
+      src: formNavigation.getAttribute('rmx-src') ?? event.destination.url,
+      resetScroll: formNavigation.getAttribute('rmx-reset-scroll') !== 'false',
+      $rmx: true,
+    },
+    replaceHistory:
+      formNavigation.getSubmission !== undefined &&
+      event.destination.url === window.navigation.currentEntry?.url,
+    getSubmission: formNavigation.getSubmission,
+  }
 }

@@ -149,6 +149,20 @@ export type FrameContent = ReadableStream<Uint8Array> | string | RemixNode
 export type FrameResolution = FrameContent | Response
 
 /**
+ * Options forwarded when a frame reload represents a form submission.
+ */
+export interface FrameReloadOptions {
+  /** Form values submitted to the frame source for a non-GET submission. */
+  formData?: FormData
+  /** HTTP method selected by the form and its submitter. */
+  method?: string
+  /** Form encoding selected by the form and its submitter. */
+  encType?: string
+  /** Aborts the reload when the navigation that started it is cancelled. */
+  signal?: AbortSignal
+}
+
+/**
  * Events emitted by frame handles during reloads.
  */
 export type FrameHandleEventMap = {
@@ -161,7 +175,13 @@ export type FrameHandleEventMap = {
  */
 export type FrameHandle = TypedEventTarget<FrameHandleEventMap> & {
   src: string
-  reload(): Promise<AbortSignal>
+  /**
+   * Reloads the frame from its current source.
+   *
+   * @param options Optional form submission metadata and cancellation signal.
+   * @returns The signal for the completed or cancelled reload.
+   */
+  reload(options?: FrameReloadOptions): Promise<AbortSignal>
   replace(content: FrameContent): Promise<void>
   // Internal runtime context used by client-rendered Frame reconciliation.
   $runtime?: unknown
