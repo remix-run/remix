@@ -1,6 +1,6 @@
 import * as process from 'node:process'
 import { parseArgs } from 'node:util'
-import type { RemixTestPool } from '@remix-run/test/cli'
+import type { RemixTestConfig, RemixTestPool } from '@remix-run/test/cli'
 
 import type { CliContext } from '../cli-context.ts'
 import {
@@ -11,17 +11,20 @@ import {
   unknownArgument,
 } from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
+import type { RemixTestCommandConfig } from '../remix-config.ts'
 
 const testCommandOptions = {
   'browser.echo': { type: 'boolean' },
+  'no-browser.echo': { type: 'boolean' },
   'browser.open': { type: 'boolean' },
+  'no-browser.open': { type: 'boolean' },
   'glob.browser': { type: 'string', multiple: true },
   'glob.e2e': { type: 'string', multiple: true },
   'glob.exclude': { type: 'string', multiple: true },
   'glob.test': { type: 'string', multiple: true },
   concurrency: { type: 'string', short: 'c' },
-  config: { type: 'string' },
   coverage: { type: 'boolean' },
+  'no-coverage': { type: 'boolean' },
   'coverage.dir': { type: 'string' },
   'coverage.include': { type: 'string', multiple: true },
   'coverage.exclude': { type: 'string', multiple: true },
@@ -34,10 +37,12 @@ const testCommandOptions = {
   project: { type: 'string', short: 'p', multiple: true },
   pool: { type: 'string' },
   quiet: { type: 'boolean', short: 'q' },
+  'no-quiet': { type: 'boolean' },
   only: { type: 'string', multiple: true },
   reporter: { type: 'string', short: 'r' },
   type: { type: 'string', short: 't', multiple: true },
   watch: { type: 'boolean', short: 'w' },
+  'no-watch': { type: 'boolean' },
 } as const
 
 interface TestFlagMeta {
@@ -55,7 +60,9 @@ interface TestFlagMeta {
 // or removing a flag without updating its metadata is a compile error.
 const testCommandFlagMeta: Record<keyof typeof testCommandOptions, TestFlagMeta> = {
   'browser.echo': { description: 'Echo browser console output' },
+  'no-browser.echo': { description: 'Do not echo browser console output' },
   'browser.open': { description: 'Open the browser after tests finish' },
+  'no-browser.open': { description: 'Do not open the browser after tests finish' },
   'glob.browser': {
     description: 'Glob pattern for browser test files',
     valueHint: 'glob',
@@ -78,13 +85,8 @@ const testCommandFlagMeta: Record<keyof typeof testCommandOptions, TestFlagMeta>
     valueHint: 'count',
     default: 'os.availableParallelism()',
   },
-  config: {
-    description: 'Path to a test config file',
-    valueHint: 'path',
-    files: true,
-    default: 'remix-test.config.ts',
-  },
   coverage: { description: 'Collect test coverage', default: 'false' },
+  'no-coverage': { description: 'Do not collect test coverage' },
   'coverage.dir': {
     description: 'Coverage report output directory',
     valueHint: 'path',
@@ -111,6 +113,7 @@ const testCommandFlagMeta: Record<keyof typeof testCommandOptions, TestFlagMeta>
   project: { description: 'Playwright project name', valueHint: 'name' },
   pool: { description: 'Worker pool: forks or threads', valueHint: 'pool', default: 'forks' },
   quiet: { description: 'Do not print skipped tests' },
+  'no-quiet': { description: 'Print skipped tests' },
   only: { description: 'Test name pattern', valueHint: 'pattern' },
   reporter: {
     description: 'Reporter: spec, files, tap, or dot',
@@ -123,6 +126,7 @@ const testCommandFlagMeta: Record<keyof typeof testCommandOptions, TestFlagMeta>
     default: 'server, browser, e2e',
   },
   watch: { description: 'Re-run tests when files change' },
+  'no-watch': { description: 'Do not re-run tests when files change' },
 }
 
 /**
@@ -162,7 +166,8 @@ export async function runTestCommand(argv: string[], context: CliContext): Promi
 
   try {
     let { remixTestPools, runRemixTest } = await import('@remix-run/test/cli')
-    let options = parseTestCommandArgs(argv, remixTestPools)
+    let config = await context.loadConfig()
+    let options = resolveTestCommandOptions(argv, config.test, remixTestPools)
     return await runRemixTest({ ...options, cwd: context.cwd })
   } catch (error) {
     process.stderr.write(
@@ -172,6 +177,16 @@ export async function runTestCommand(argv: string[], context: CliContext): Promi
     )
     return 1
   }
+}
+
+export function resolveTestCommandOptions(
+  argv: string[],
+  config: RemixTestCommandConfig | undefined,
+  pools: readonly RemixTestPool[],
+): RemixTestConfig {
+  let cliOptions = parseTestCommandArgs(argv, pools)
+  let configOptions = createTestOptionsFromConfig(config)
+  return mergeTestOptions(configOptions, cliOptions)
 }
 
 export function getTestCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
@@ -198,6 +213,7 @@ export function getTestCommandHelpText(target: NodeJS.WriteStream = process.stdo
             label: `${short}--${name}${value}`,
           }
         }),
+        { description: 'Use a custom Remix config file', label: '--config <path>' },
         { description: 'Show help', label: '-h, --help' },
         { description: 'Disable ANSI color output', label: '--no-color' },
       ],
@@ -223,8 +239,8 @@ function parseTestCommandArgs(argv: string[], pools: readonly RemixTestPool[]) {
     throw toTestCommandUsageError(error)
   }
 
-  let { positionals, values } = parsed
-  let coverage = createCoverageOptions(values)
+  let { positionals, tokens, values } = parsed
+  let coverage = createCoverageOptions(values, tokens)
   let glob = compactObject({
     browser: values['glob.browser'],
     e2e: values['glob.e2e'],
@@ -234,26 +250,28 @@ function parseTestCommandArgs(argv: string[], pools: readonly RemixTestPool[]) {
 
   return compactObject({
     browser: compactObject({
-      echo: values['browser.echo'] || undefined,
-      open: values['browser.open'] || undefined,
+      echo: resolveBooleanOption(tokens, 'browser.echo', 'no-browser.echo'),
+      open: resolveBooleanOption(tokens, 'browser.open', 'no-browser.open'),
     }),
     concurrency: optionalPositiveInteger(values.concurrency, '--concurrency'),
-    config: values.config,
     coverage,
     glob,
     only: values.only,
     playwrightConfig: values.playwrightConfig,
     pool: parsePool(values.pool, pools),
     project: values.project,
-    quiet: values.quiet || undefined,
+    quiet: resolveBooleanOption(tokens, 'quiet', 'no-quiet'),
     reporter: values.reporter,
     setup: values.setup,
     type: values.type,
-    watch: values.watch || undefined,
+    watch: resolveBooleanOption(tokens, 'watch', 'no-watch'),
   })
 }
 
-function createCoverageOptions(values: ReturnType<typeof parseTestCommandArgsRaw>['values']) {
+function createCoverageOptions(
+  values: ReturnType<typeof parseTestCommandArgsRaw>['values'],
+  tokens: ReturnType<typeof parseTestCommandArgsRaw>['tokens'],
+) {
   let options = compactObject({
     branches: optionalNumber(values['coverage.branches'], '--coverage.branches'),
     dir: values['coverage.dir'],
@@ -264,8 +282,13 @@ function createCoverageOptions(values: ReturnType<typeof parseTestCommandArgsRaw
     statements: optionalNumber(values['coverage.statements'], '--coverage.statements'),
   })
 
-  if (values.coverage) {
+  let enabled = resolveBooleanOption(tokens, 'coverage', 'no-coverage')
+  if (enabled === true) {
     return options ?? true
+  }
+
+  if (enabled === false) {
+    return false
   }
 
   // Coverage settings without --coverage refine the config file's coverage
@@ -278,7 +301,103 @@ function parseTestCommandArgsRaw(argv: string[]) {
     allowPositionals: true,
     args: argv,
     options: testCommandOptions,
+    tokens: true,
   })
+}
+
+function resolveBooleanOption(
+  tokens: ReturnType<typeof parseTestCommandArgsRaw>['tokens'],
+  enabledName: string,
+  disabledName: string,
+): boolean | undefined {
+  let value: boolean | undefined
+
+  for (let token of tokens) {
+    if (token.kind !== 'option') continue
+    if (token.name === enabledName) value = true
+    if (token.name === disabledName) value = false
+  }
+
+  return value
+}
+
+function createTestOptionsFromConfig(config: RemixTestCommandConfig | undefined): RemixTestConfig {
+  if (config === undefined) return {}
+
+  return {
+    browser:
+      config.playwright === undefined
+        ? undefined
+        : {
+            echo: config.playwright.echo,
+            open: config.playwright.open,
+          },
+    concurrency: config.concurrency,
+    coverage: config.coverage,
+    glob: {
+      browser: config.browserFiles,
+      e2e: config.e2eFiles,
+      exclude: config.exclude,
+      test: config.files,
+    },
+    only: config.only,
+    playwrightConfig: config.playwright?.configFile,
+    pool: config.pool,
+    project: config.playwright?.projects,
+    quiet: config.quiet,
+    reporter: config.reporter,
+    setup: config.setup,
+    type: config.type,
+    watch: config.watch,
+  }
+}
+
+function mergeTestOptions(
+  config: RemixTestConfig,
+  cli: RemixTestConfig | undefined,
+): RemixTestConfig {
+  if (cli === undefined) return config
+
+  // CLI options are compacted (no undefined values), so spreading them over
+  // the config gives CLI input precedence; nested objects merge by field.
+  return {
+    ...config,
+    ...cli,
+    browser: mergeObject(config.browser, cli.browser),
+    coverage: mergeCoverage(config.coverage, cli.coverage),
+    glob: mergeObject(config.glob, cli.glob),
+  }
+}
+
+function mergeObject<value extends object>(
+  config: value | undefined,
+  cli: value | undefined,
+): value | undefined {
+  if (config === undefined) return cli
+  if (cli === undefined) return config
+  return { ...config, ...cli }
+}
+
+function mergeCoverage(
+  config: RemixTestConfig['coverage'],
+  cli: RemixTestConfig['coverage'],
+): RemixTestConfig['coverage'] {
+  if (cli === undefined) return config
+  if (cli === false) return false
+
+  let configOptions = typeof config === 'object' && config !== null ? config : {}
+  if (cli === true) return { ...configOptions, enabled: true }
+
+  let enabled =
+    cli.enabled === 'inherit'
+      ? typeof config === 'boolean'
+        ? config
+        : config === undefined
+          ? false
+          : (config.enabled ?? true)
+      : cli.enabled
+
+  return { ...configOptions, ...cli, enabled }
 }
 
 function optionalNumber(value: string | undefined, flag: string): number | undefined {
@@ -316,8 +435,12 @@ function parsePool(
   )
 }
 
-function compactObject<shape extends object>(value: shape): shape | undefined {
-  return Object.values(value).every((entry) => entry === undefined) ? undefined : value
+function compactObject<shape extends Record<string, unknown>>(value: shape): shape | undefined {
+  for (let key in value) {
+    if (value[key] === undefined) delete value[key]
+  }
+
+  return Object.keys(value).length === 0 ? undefined : value
 }
 
 function toTestCommandUsageError(error: unknown): unknown {

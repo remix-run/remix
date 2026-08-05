@@ -5,6 +5,8 @@ import path from 'node:path'
 import { describe, it } from '@remix-run/test'
 
 import { loadMigrations } from './migrations-node.ts'
+import { createMigrationRunner } from './migrations/runner.ts'
+import { MemoryMigrationAdapter } from '../../test/memory-migration-adapter.ts'
 
 async function makeMigration(
   parent: string,
@@ -100,6 +102,32 @@ describe('migration node loader', () => {
       await makeMigration(directory, '20260101000000_add_users_index', { up: 'select 1' })
 
       await assert.rejects(() => loadMigrations(directory), /Duplicate migration id/)
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('targets loaded migrations by their full directory name', async () => {
+    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
+
+    try {
+      await makeMigration(directory, '20260101000000_create_users', {
+        up: 'create table users (id integer)',
+      })
+      await makeMigration(directory, '20260102000000_add_posts', {
+        up: 'create table posts (id integer)',
+      })
+
+      let migrations = await loadMigrations(directory)
+      let adapter = new MemoryMigrationAdapter()
+      let runner = createMigrationRunner(adapter, migrations)
+
+      await runner.up({ to: '20260101000000_create_users' })
+
+      assert.deepEqual(
+        adapter.journalRows.map((row) => row.id),
+        ['20260101000000'],
+      )
     } finally {
       await rm(directory, { recursive: true, force: true })
     }

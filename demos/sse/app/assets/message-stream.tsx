@@ -10,7 +10,9 @@ export const MessageStream = clientEntry(
     let connected = false
 
     handle.queueTask(() => {
-      let eventSource = new EventSource(routes.messages.href(null, limit ? { limit } : {}))
+      let eventSource = new EventSource(
+        routes.messages.href(null, limit ? { searchParams: { limit } } : undefined),
+      )
 
       addEventListeners(eventSource, handle.signal, {
         open: () => {

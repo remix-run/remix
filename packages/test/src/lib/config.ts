@@ -1,9 +1,7 @@
-import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { PlaywrightTestConfig } from 'playwright/test'
-import { importModule } from './import-module.ts'
 
 export const IS_RUNNING_FROM_SRC = path.extname(new URL(import.meta.url).pathname) === '.ts'
 
@@ -82,8 +80,7 @@ export type RemixTestOnlyPattern = string | RegExp
 
 /**
  * User-facing configuration for the Remix test runner. Every field is optional, and unset fields
- * fall back to runner defaults. This shape may be exported from a `remix-test.config.ts` file or
- * passed to `runRemixTest()`.
+ * fall back to runner defaults. Pass this shape to `runRemixTest()`.
  */
 export interface RemixTestConfig {
   /**
@@ -124,8 +121,7 @@ export interface RemixTestConfig {
     | {
         /**
          * Enables or disables coverage when specified. A coverage object enables coverage by
-         * default. Invocation options may pass `'inherit'` to apply the object's settings while
-         * deferring enablement to the config file (used by CLI flags like `--coverage.dir`).
+         * default. `'inherit'` applies settings without enabling coverage.
          */
         enabled?: boolean | 'inherit'
         /** Directory where coverage reports are written. */
@@ -162,7 +158,7 @@ export interface RemixTestConfig {
    * Regular expression pattern(s) to focus tests by their full name (--only).
    * Matching suite names focus the whole suite, while matching test names focus
    * the individual test. Plain string patterns are case-insensitive. Use a
-   * slash-delimited pattern or a `RegExp` in the config file to control flags
+   * slash-delimited pattern or a `RegExp` in programmatic options to control flags
    * explicitly. `--only` may be repeated on the CLI.
    */
   only?: RemixTestOnlyPattern | RemixTestOnlyPattern[]
@@ -218,13 +214,46 @@ export interface ResolvedRemixTestConfig {
   watch: boolean
 }
 
-export async function loadConfig(
-  invocationConfig: RemixTestConfig = {},
-  configPath?: string,
-  cwd = process.cwd(),
-): Promise<ResolvedRemixTestConfig> {
-  let fileConfig = await loadConfigFile(configPath, cwd)
-  return resolveConfig(fileConfig, invocationConfig)
+export function resolveConfig(config: RemixTestConfig = {}): ResolvedRemixTestConfig {
+  let coverageOptions = typeof config.coverage === 'boolean' ? {} : config.coverage || {}
+  let coverageEnabled = isCoverageEnabled(config.coverage)
+
+  return {
+    glob: {
+      test: toArray(config.glob?.test ?? defaultValues.glob.test),
+      browser: toArray(config.glob?.browser ?? defaultValues.glob.browser),
+      e2e: toArray(config.glob?.e2e ?? defaultValues.glob.e2e),
+      exclude: toArray(config.glob?.exclude ?? defaultValues.glob.exclude),
+    },
+    browser: {
+      echo: config.browser?.echo ?? defaultValues.browser.echo,
+      open: config.browser?.open ?? defaultValues.browser.open,
+    },
+    concurrency: resolveConcurrency(config.concurrency ?? defaultValues.concurrency),
+    coverage: coverageEnabled
+      ? {
+          dir: coverageOptions.dir ?? defaultValues.coverage!.dir,
+          include: optionalArray(coverageOptions.include ?? defaultValues.coverage!.include),
+          exclude: optionalArray(coverageOptions.exclude ?? defaultValues.coverage!.exclude),
+          statements: optionalNumber(coverageOptions.statements, 'coverage.statements'),
+          lines: optionalNumber(coverageOptions.lines, 'coverage.lines'),
+          branches: optionalNumber(coverageOptions.branches, 'coverage.branches'),
+          functions: optionalNumber(coverageOptions.functions, 'coverage.functions'),
+        }
+      : undefined,
+    setup: config.setup ?? defaultValues.setup,
+    playwrightConfig: config.playwrightConfig ?? defaultValues.playwrightConfig,
+    pool: resolvePool(config.pool ?? defaultValues.pool),
+    only: resolveOnlyPatterns(config.only),
+    project: (() => {
+      let raw = config.project ?? defaultValues.project
+      return raw === undefined ? undefined : toCommaSeparatedArray(raw)
+    })(),
+    quiet: config.quiet ?? defaultValues.quiet,
+    reporter: config.reporter ?? defaultValues.reporter,
+    type: toCommaSeparatedArray(config.type ?? defaultValues.type),
+    watch: config.watch ?? defaultValues.watch,
+  }
 }
 
 function toArray<T>(value: T | readonly T[]): T[] {
@@ -238,79 +267,6 @@ function toCommaSeparatedArray(value: string | readonly string[]): string[] {
       .map((part) => part.trim())
       .filter(Boolean),
   )
-}
-
-function resolveConfig(
-  fileConfig: RemixTestConfig,
-  invocationConfig: RemixTestConfig,
-): ResolvedRemixTestConfig {
-  let fileCoverage = typeof fileConfig.coverage === 'boolean' ? {} : fileConfig.coverage || {}
-  let invocationCoverage =
-    typeof invocationConfig.coverage === 'boolean' ? {} : invocationConfig.coverage || {}
-  let coverageEnabled = isCoverageEnabled(invocationConfig.coverage, fileConfig.coverage)
-
-  return {
-    glob: {
-      test: toArray(
-        invocationConfig.glob?.test ?? fileConfig.glob?.test ?? defaultValues.glob.test,
-      ),
-      browser: toArray(
-        invocationConfig.glob?.browser ?? fileConfig.glob?.browser ?? defaultValues.glob.browser,
-      ),
-      e2e: toArray(invocationConfig.glob?.e2e ?? fileConfig.glob?.e2e ?? defaultValues.glob.e2e),
-      exclude: toArray(
-        invocationConfig.glob?.exclude ?? fileConfig.glob?.exclude ?? defaultValues.glob.exclude,
-      ),
-    },
-    browser: {
-      echo:
-        invocationConfig.browser?.echo ?? fileConfig.browser?.echo ?? defaultValues.browser.echo,
-      open:
-        invocationConfig.browser?.open ?? fileConfig.browser?.open ?? defaultValues.browser.open,
-    },
-    concurrency: resolveConcurrency(
-      invocationConfig.concurrency ?? fileConfig.concurrency ?? defaultValues.concurrency,
-    ),
-    coverage: coverageEnabled
-      ? {
-          dir: invocationCoverage.dir ?? fileCoverage.dir ?? defaultValues.coverage!.dir,
-          include: optionalArray(
-            invocationCoverage.include ?? fileCoverage.include ?? defaultValues.coverage!.include,
-          ),
-          exclude: optionalArray(
-            invocationCoverage.exclude ?? fileCoverage.exclude ?? defaultValues.coverage!.exclude,
-          ),
-          statements: optionalNumber(
-            invocationCoverage.statements ?? fileCoverage.statements,
-            'coverage.statements',
-          ),
-          lines: optionalNumber(invocationCoverage.lines ?? fileCoverage.lines, 'coverage.lines'),
-          branches: optionalNumber(
-            invocationCoverage.branches ?? fileCoverage.branches,
-            'coverage.branches',
-          ),
-          functions: optionalNumber(
-            invocationCoverage.functions ?? fileCoverage.functions,
-            'coverage.functions',
-          ),
-        }
-      : undefined,
-    setup: invocationConfig.setup ?? fileConfig.setup ?? defaultValues.setup,
-    playwrightConfig:
-      invocationConfig.playwrightConfig ??
-      fileConfig.playwrightConfig ??
-      defaultValues.playwrightConfig,
-    pool: resolvePool(invocationConfig.pool ?? fileConfig.pool ?? defaultValues.pool),
-    only: resolveOnlyPatterns(invocationConfig.only ?? fileConfig.only),
-    project: (() => {
-      let raw = invocationConfig.project ?? fileConfig.project ?? defaultValues.project
-      return raw === undefined ? undefined : toCommaSeparatedArray(raw)
-    })(),
-    quiet: invocationConfig.quiet ?? fileConfig.quiet ?? defaultValues.quiet,
-    reporter: invocationConfig.reporter ?? fileConfig.reporter ?? defaultValues.reporter,
-    type: toCommaSeparatedArray(invocationConfig.type ?? fileConfig.type ?? defaultValues.type),
-    watch: invocationConfig.watch ?? fileConfig.watch ?? defaultValues.watch,
-  }
 }
 
 function optionalArray<value>(input: value | readonly value[] | undefined): value[] | undefined {
@@ -337,19 +293,9 @@ function resolveConcurrency(value: number | string): number {
   return concurrency
 }
 
-function isCoverageEnabled(
-  invocationCoverage: RemixTestConfig['coverage'],
-  fileCoverage: RemixTestConfig['coverage'],
-): boolean {
-  if (typeof invocationCoverage === 'boolean') return invocationCoverage
-  if (invocationCoverage == null) return isFileCoverageEnabled(fileCoverage)
-  if (invocationCoverage.enabled === 'inherit') return isFileCoverageEnabled(fileCoverage)
-  return invocationCoverage.enabled !== false
-}
-
-function isFileCoverageEnabled(coverage: RemixTestConfig['coverage']): boolean {
+function isCoverageEnabled(coverage: RemixTestConfig['coverage']): boolean {
   if (typeof coverage === 'boolean') return coverage
-  return coverage != null && coverage.enabled !== false
+  return coverage != null && coverage.enabled !== false && coverage.enabled !== 'inherit'
 }
 
 function resolvePool(value: string): RemixTestPool {
@@ -393,43 +339,24 @@ function resolveOnlyPatterns(
 function parseRegexLiteral(pattern: string): SerializedOnlyPattern | undefined {
   if (!pattern.startsWith('/') || pattern.length < 2) return undefined
 
+  // The closing delimiter is the last unescaped slash; escape state must be
+  // tracked left-to-right since it depends on the preceding backslashes.
+  let closingIndex = -1
   let escaped = false
-  for (let index = pattern.length - 1; index > 0; index--) {
-    let char = pattern[index]
-    if (char === '/' && !escaped) {
-      return {
-        source: pattern.slice(1, index),
-        flags: pattern.slice(index + 1),
-      }
+  for (let index = 1; index < pattern.length; index++) {
+    if (escaped) {
+      escaped = false
+    } else if (pattern[index] === '\\') {
+      escaped = true
+    } else if (pattern[index] === '/') {
+      closingIndex = index
     }
-    escaped = char === '\\' && !escaped
   }
 
-  return undefined
-}
+  if (closingIndex === -1) return undefined
 
-async function loadConfigFile(
-  configPath: string | undefined,
-  cwd: string,
-): Promise<RemixTestConfig> {
-  let candidates = configPath
-    ? [path.resolve(cwd, configPath)]
-    : [path.join(cwd, 'remix-test.config.ts'), path.join(cwd, 'remix-test.config.js')]
-
-  for (let candidate of candidates) {
-    try {
-      await fsp.access(candidate)
-    } catch {
-      // not found — try the next candidate
-      continue
-    }
-    // The file exists; let import errors propagate rather than silently
-    // falling through to defaults — that masking is what hid "Windows
-    // absolute paths aren't valid ESM specifiers" by classifying every
-    // browser test as a server test.
-    let mod = await importModule(candidate, import.meta)
-    return mod.default ?? mod
+  return {
+    source: pattern.slice(1, closingIndex),
+    flags: pattern.slice(closingIndex + 1),
   }
-
-  return {}
 }

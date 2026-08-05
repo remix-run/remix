@@ -28,6 +28,16 @@ export const CLI_ERROR_DEFINITIONS = {
     title: 'Could not determine an app name',
     fix: 'Pass --app-name or choose a target directory name that can become an app name.',
   },
+  dbFileNotFound: {
+    code: 'RMX_DB_FILE_NOT_FOUND',
+    title: 'Could not find app/db.ts',
+    fix: 'Run this command inside a Remix app that has an app/db.ts file.',
+  },
+  dbForceRequired: {
+    code: 'RMX_DB_FORCE_REQUIRED',
+    title: 'Destructive database command requires --force',
+    fix: 'Re-run with --force to confirm.',
+  },
   remixVersionUnavailable: {
     code: 'RMX_REMIX_VERSION_UNAVAILABLE',
     title: 'Could not determine the Remix version',
@@ -60,6 +70,11 @@ export const CLI_ERROR_DEFINITIONS = {
     title: 'Invalid option value',
     fix: 'Check the command help for the supported option syntax.',
   },
+  invalidRemixConfig: {
+    code: 'RMX_INVALID_CONFIG',
+    title: 'Invalid Remix configuration',
+    fix: 'Correct the configuration file and try again.',
+  },
   missingOptionValue: {
     code: 'RMX_MISSING_OPTION_VALUE',
     title: 'Missing option value',
@@ -74,6 +89,11 @@ export const CLI_ERROR_DEFINITIONS = {
     code: 'RMX_PROJECT_ROOT_NOT_FOUND',
     title: 'Could not find a project root',
     fix: 'Run this command inside a Remix project.',
+  },
+  remixConfigNotFound: {
+    code: 'RMX_CONFIG_NOT_FOUND',
+    title: 'Remix configuration not found',
+    fix: 'Check the --config path and try again.',
   },
   remoteSkillDataMissing: {
     code: 'RMX_REMOTE_SKILL_DATA_MISSING',
@@ -174,6 +194,20 @@ export function appNameUnavailable(targetDir?: string): UsageError {
   })
 }
 
+export function dbFileNotFound(startDir?: string): CliError {
+  return createCliError(CLI_ERROR_DEFINITIONS.dbFileNotFound, {
+    context: startDir == null ? undefined : { startDir },
+    message: 'Could not find app/db.ts. Run this command inside a Remix app.',
+  })
+}
+
+export function dbForceRequired(command: string): UsageError {
+  return createUsageError(CLI_ERROR_DEFINITIONS.dbForceRequired, {
+    context: { command },
+    message: `\`remix db ${command}\` destroys data in the current app database.`,
+  })
+}
+
 export function remixVersionUnavailable(): CliError {
   return createCliError(CLI_ERROR_DEFINITIONS.remixVersionUnavailable, {
     message: 'Could not determine the current Remix version.',
@@ -213,6 +247,18 @@ export function invalidOptionValue(details: string): UsageError {
   })
 }
 
+export function invalidRemixConfig(
+  filePath: string,
+  details: string,
+  line: number,
+  column: number,
+): CliError {
+  return createCliError(CLI_ERROR_DEFINITIONS.invalidRemixConfig, {
+    context: { column, filePath, line },
+    message: `${filePath}:${line}:${column}: ${details}`,
+  })
+}
+
 export function missingOptionValue(option: string): UsageError {
   return createUsageError(CLI_ERROR_DEFINITIONS.missingOptionValue, {
     context: { option },
@@ -230,6 +276,13 @@ export function projectRootNotFound(startDir?: string): CliError {
   return createCliError(CLI_ERROR_DEFINITIONS.projectRootNotFound, {
     context: startDir == null ? undefined : { startDir },
     message: 'Could not find a project root. Run this command inside a Remix project.',
+  })
+}
+
+export function remixConfigNotFound(filePath: string): CliError {
+  return createCliError(CLI_ERROR_DEFINITIONS.remixConfigNotFound, {
+    context: { filePath },
+    message: `Could not find Remix configuration file: ${filePath}`,
   })
 }
 

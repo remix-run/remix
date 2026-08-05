@@ -12,7 +12,7 @@ A test framework for JavaScript and TypeScript projects.
 - Per-test and hook timeouts with `t.signal` abort support
 - Unified code coverage reporting across unit and E2E tests
 - Watch mode
-- Config file support (`remix-test.config.ts`)
+- Static CLI configuration through `remix.json`
 
 ## Installation
 
@@ -42,111 +42,90 @@ Run tests with the CLI:
 remix test
 ```
 
-By default, `remix test` discovers all files matching `**/*.test{,.e2e}.{ts,tsx}`. Pass one or more globs as positional arguments to override:
+By default, `remix test` discovers all files matching `**/*.test{,.browser,.e2e}.{ts,tsx}`. Pass one or more globs as positional arguments to override:
 
 ```sh
 remix test "src/**/*.test.ts"
 remix test "src/**/*.test.ts" "tests/**/*.test.tsx"
 ```
 
-Or, you may control via the `glob.test` config field/CLI arg. Each `glob.*` field accepts a single string or an array of patterns, and `--glob.*` flags can be repeated on the CLI.
+You may also repeat the `--glob.*` flags. Positional globs take precedence over `--glob.test`.
 
 ### Config File
 
-Create a `remix-test.config.ts` (or `.js`) file at the root of your project (shown with default values):
+Create an optional `remix.json` at the root of your project. It is parsed as JSONC, so comments and
+trailing commas are allowed:
 
-```ts
-import type { RemixTestConfig } from 'remix/test'
+```jsonc
+{
+  "$schema": "https://remix.run/schemas/remix.json",
+  "test": {
+    "files": ["**/*.test{,.browser,.e2e}.{ts,tsx}"],
+    "browserFiles": ["**/*.test.browser.{ts,tsx}"],
+    "e2eFiles": ["**/*.test.e2e.{ts,tsx}"],
+    "exclude": ["node_modules/**", "dist/**"],
+    "type": ["server", "browser", "e2e"],
+    "only": ["/checkout/i"],
 
-export default {
-  // Browser options for E2E tests
-  browser: {
-    // Echo browser console output to the terminal
-    echo: false,
-    // Open browser (via playwright `headless:false`) and keep it open after tests
-    // complete (useful for debugging)
-    open: false,
-  },
+    "concurrency": 2,
+    "pool": "forks",
+    "setup": "./test/setup.ts",
+    "watch": false,
 
-  // Max number of concurrent test workers (default `os.availableParallelism()`)
-  concurrency: 2,
+    "playwright": {
+      "echo": false,
+      "open": false,
+      "configFile": "./playwright.config.ts",
+      "projects": ["chromium", "firefox"],
+    },
 
-  // Pool for server and E2E test files ("forks", "threads")
-  pool: 'forks',
+    "reporter": "spec",
+    "quiet": false,
 
-  // Code coverage options
-  coverage: {
-    // Output directory (default: ".coverage")
-    dir: '.coverage',
-    // Glob pattern(s) to include/exclude
-    include: 'src/**',
-    exclude: 'src/**/*.test.ts',
-    // Minimum thresholds (%)
-    statements: 80,
-    lines: 80,
-    branches: 80,
-    functions: 80,
-  },
-
-  // Glob pattern(s) identifying test files
-  glob: {
-    // All test files (default: "**/*.test{,.browser,.e2e}.{ts,tsx}").
-    test: '**/*.test{,.browser,.e2e}.ts',
-    // Browser test files (default: "**/*.test.browser.{ts,tsx}")
-    browser: '**/*.test.browser.ts',
-    // E2E test files (default: "**/*.test.e2e.{ts,tsx}")
-    e2e: '**/*.test.e2e.ts',
-  },
-
-  // Playwright configuration for E2E tests, or string path to an existing
-  // config file on disk
-  playwrightConfig: {
-    projects: [
-      { name: 'chromium', use: { browserName: 'chromium' } },
-      { name: 'firefox', use: { browserName: 'firefox' } },
-    ],
-    use: {
-      navigationTimeout: 5_000,
-      actionTimeout: 5_000,
+    "coverage": {
+      "enabled": true,
+      "dir": ".coverage",
+      "include": ["src/**"],
+      "exclude": ["src/**/*.test.ts"],
+      "statements": 80,
+      "lines": 80,
+      "branches": 80,
+      "functions": 80,
     },
   },
-
-  // Playwright project(s) to run E2E tests for
-  project: 'chromium',
-
-  // Test reporter ("spec", "files", "tap", "dot")
-  reporter: 'spec',
-
-  // Do not print skipped tests in reporter output
-  quiet: false,
-
-  // Path to a setup module (see Setup section below)
-  setup: './test/setup.ts',
-
-  // Test type(s) to run ("server", "browser", "e2e")
-  type: ['server', 'browser', 'e2e'],
-
-  // Watch for file changes and re-run
-  watch: false,
-} satisfies RemixTestConfig
+}
 ```
+
+Every field is optional. Relative paths and globs resolve from the directory containing the config
+file. Explicit CLI flags and positional globs take precedence. Repeatable flags replace configured
+arrays, and nested Playwright and coverage values merge by field.
+
+`remix-test.config.ts` and `remix-test.config.js` are no longer discovered. Move their static values
+under `remix.json#test`. Move inline Playwright configuration into `playwright.config.ts` and point
+`playwright.configFile` at it. Use slash-delimited strings for regular expressions, and use CLI flags
+or package scripts for environment-specific overrides.
 
 ### CLI Options
 
-You can point to a different config file location with the `--config` flag:
+Use the global `--config` flag to select another Remix config file. The flag path resolves from the
+current working directory:
 
 ```sh
-remix test --config ./tests/config.ts
+remix test --config ./config/remix.ci.json
 ```
 
-You may also specify any config field as a CLI flag which will take precedence over config file values:
+You may specify any test setting as a CLI flag. Boolean settings have negative forms so configured
+`true` values can be disabled explicitly:
 
 | Flag                        | Short |
 | --------------------------- | ----- |
 | `--browser.echo`            |       |
+| `--no-browser.echo`         |       |
 | `--browser.open`            |       |
+| `--no-browser.open`         |       |
 | `--concurrency <n>`         | `-c`  |
 | `--coverage`                |       |
+| `--no-coverage`             |       |
 | `--coverage.dir <path>`     |       |
 | `--coverage.include`        |       |
 | `--coverage.exclude`        |       |
@@ -163,10 +142,12 @@ You may also specify any config field as a CLI flag which will take precedence o
 | `--pool <forks\|threads>`   |       |
 | `--project <name>`          | `-p`  |
 | `--quiet`                   | `-q`  |
+| `--no-quiet`                |       |
 | `--reporter <name>`         | `-r`  |
 | `--setup <path>`            | `-s`  |
 | `--type <name>`             | `-t`  |
 | `--watch`                   | `-w`  |
+| `--no-watch`                |       |
 
 The standalone `remix-test` executable is no longer installed. Update scripts to use the main Remix CLI:
 
@@ -197,7 +178,7 @@ remix test --only 'Checkout routes > redirects anonymous users'
 remix test --only '/anonymous users$/'
 ```
 
-Slash-delimited CLI patterns preserve their flags, so `/pattern/` is case-sensitive and `/pattern/i` is case-insensitive. Plain string patterns in `remix-test.config.ts` are also case-insensitive; slash-delimited strings and `RegExp` values preserve their flags.
+Slash-delimited CLI and `remix.json` patterns preserve their flags, so `/pattern/` is case-sensitive and `/pattern/i` is case-insensitive. Plain string patterns are case-insensitive. Programmatic callers may also pass `RegExp` values.
 
 Full test names join nested `describe` names and the test name with `>`. For example, `describe('Cart routes', () => describe('loader', () => it('loads cart items', ...)))` has the full test name `Cart routes > loader > loads cart items`.
 
@@ -265,7 +246,10 @@ let exitCode = await runRemixTest({
 })
 ```
 
-Invocation options override values from `remix-test.config.ts`. You may select another config file with the `config` option, and programmatic callers may pass richer values such as an inline Playwright config or `RegExp` test-name filters.
+The programmatic runner accepts structured options only; it does not discover or load configuration
+files. Programmatic callers may pass richer values such as an inline Playwright config or `RegExp`
+test-name filters. The main Remix CLI owns `remix.json` loading and passes the resolved options to the
+runner.
 
 `runRemixTest()` does not read `process.argv` or terminate the process; it returns the runner exit code. The main `remix` executable owns argument parsing and passes the final code to `process.exit()` so open workers, browsers, or project handles cannot keep the CLI alive. `@remix-run/test` does not install a standalone executable.
 
@@ -467,28 +451,39 @@ describe('checkout', () => {
 })
 ```
 
-Configure Playwright (browsers, timeouts, viewport, etc.) via `playwrightConfig` in your config file:
+Configure Playwright's browsers, timeouts, viewport, and other executable settings in
+`playwright.config.ts`:
 
 ```ts
-export default {
-  playwrightConfig: {
-    projects: [
-      { name: 'chromium', use: { browserName: 'chromium' } },
-      { name: 'firefox', use: { browserName: 'firefox' } },
-      { name: 'webkit', use: { browserName: 'webkit' } },
-    ],
-    use: {
-      navigationTimeout: 5_000,
-      actionTimeout: 5_000,
-    },
-  },
+import { defineConfig } from 'playwright/test'
 
-  // Or, point to an existing playwright config file
-  // playwrightConfig: './playwright.config.ts'
-} satisfies RemixTestConfig
+export default defineConfig({
+  projects: [
+    { name: 'chromium', use: { browserName: 'chromium' } },
+    { name: 'firefox', use: { browserName: 'firefox' } },
+    { name: 'webkit', use: { browserName: 'webkit' } },
+  ],
+  use: {
+    navigationTimeout: 5_000,
+    actionTimeout: 5_000,
+  },
+})
 ```
 
-Set `browser.open: true` to keep the browser open after tests finish — useful for debugging failures.
+Reference it from `remix.json` when it is not at the default location:
+
+```jsonc
+{
+  "test": {
+    "playwright": {
+      "configFile": "./playwright.config.ts",
+    },
+  },
+}
+```
+
+Set `test.playwright.open` to `true`, or pass `--browser.open`, to keep the browser open after tests
+finish—useful for debugging failures.
 
 ## Related Packages
 

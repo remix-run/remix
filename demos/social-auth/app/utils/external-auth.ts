@@ -90,7 +90,7 @@ export function getExternalProviderStatus(
 }
 
 export function readExternalProviderLinks(
-  returnToQuery: { returnTo?: string },
+  returnToHrefOptions: { searchParams: { returnTo?: string } },
   registry: ExternalProviderRegistry = externalProviderRegistry,
   env: ExternalProviderEnvironment = process.env,
 ): ExternalProviderLink[] {
@@ -99,7 +99,9 @@ export function readExternalProviderLinks(
 
     return {
       name,
-      href: status.enabled ? routes.auth[name].login.href(undefined, returnToQuery) : undefined,
+      href: status.enabled
+        ? routes.auth[name].login.href(undefined, returnToHrefOptions)
+        : undefined,
       disabledReason: status.enabled ? undefined : createDisabledReason(name, status),
     }
   })

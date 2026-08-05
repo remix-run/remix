@@ -86,12 +86,10 @@ Generated `css(...)` rules are emitted in native CSS cascade layers under the st
 
 Unlayered author CSS outranks normal layered CSS. That means global styles can override generated component styles even when Remix UI inserts its rules later.
 
-The built-in theme reset is emitted in `rmx-reset` and ordered before `rmx`. No extra layer setup is needed unless the app adds layers that should sit before or after Remix UI.
-
-Put layers that should lose to Remix UI before `rmx-reset` and `rmx`. The layer can use any app-owned name; `base` is a common choice for defaults:
+No extra layer setup is needed unless the app adds layers that should sit before or after Remix UI. Put layers that should provide defaults before `rmx`. The layer can use any app-owned name; `base` is a common choice:
 
 ```css
-@layer base, rmx-reset, rmx;
+@layer base, rmx;
 
 @layer base {
   h1,
@@ -123,7 +121,7 @@ Put layers that should lose to Remix UI before `rmx-reset` and `rmx`. The layer 
 Put layers that should override Remix UI after `rmx`:
 
 ```css
-@layer base, rmx-reset, rmx, app;
+@layer base, rmx, app;
 
 @layer app {
   .marketing-heading {
@@ -135,7 +133,7 @@ Put layers that should override Remix UI after `rmx`:
 For imported styles, use an import layer when your build supports it:
 
 ```css
-@layer base, rmx-reset, rmx;
+@layer base, rmx;
 @import './base.css' layer(base);
 ```
 

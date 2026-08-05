@@ -11,8 +11,10 @@ describe('checkbox', () => {
     expect(html).toMatch(/type="checkbox"/)
     expect(html).toMatch(/--rmx-checkbox-size: 16px/)
     expect(html).toMatch(/border-radius: var\(--rmx-checkbox-radius\)/)
-    expect(html).toMatch(/background: #FFFFFF/)
-    expect(html).toMatch(/0 0 0 1px rgba\(0, 0, 0, 0\.12\)/)
+    expect(html).toMatch(/background: light-dark\(#FFFFFF, #1a1a1a\)/)
+    expect(html).toMatch(
+      /0 0 0 1px light-dark\(rgba\(0, 0, 0, 0\.12\), rgba\(255, 255, 255, 0\.2\)\)/,
+    )
   })
 
   it('supports large sizing', async () => {
@@ -41,8 +43,11 @@ describe('checkbox', () => {
     expect(html).toMatch(/data-state="checked"/)
     expect(html).toMatch(/:indeterminate/)
     expect(html).toMatch(/\[aria-checked="mixed"\]/)
-    expect(html).toMatch(/#3573F6/)
+    expect(html).toMatch(/light-dark\(#3573F6, #6eaaff\)/)
+    expect(html).toMatch(/background: currentColor/)
+    expect(html).toMatch(/mask: url\("data:image\/svg\+xml/)
     expect(html).toMatch(/M2\.75 5\.76562L5\.10156 8\.25L9\.23438 1\.75/)
+    expect(html).not.toMatch(/stroke='white'/)
     expect(html).toMatch(/drop-shadow\(0 1px 2px rgba\(0, 0, 0, 0\.4\)\)/)
   })
 
@@ -57,7 +62,7 @@ describe('checkbox', () => {
 
     expect(html).toMatch(/:focus-visible/)
     expect(html).toMatch(/outline: 0/)
-    expect(html).toMatch(/0 0 0 1px #3573F6/)
+    expect(html).toMatch(/0 0 0 1px light-dark\(#3573F6, #6eaaff\)/)
     expect(html).not.toMatch(/outline: 2px solid #1A72FF/)
     expect(html).toMatch(/:active:not\(:disabled\):not\(\[aria-disabled="true"\]\)/)
     expect(html).toMatch(/0 6px 8px -4px rgba\(9, 68, 190, 0\.1\)/)

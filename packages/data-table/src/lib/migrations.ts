@@ -1,3 +1,5 @@
+import type { Database } from './database.ts'
+
 /**
  * Controls how each migration is wrapped in transactions.
  *
@@ -45,9 +47,14 @@ export type MigrationJournalRow = {
 }
 
 /**
- * Effective status for a known migration.
+ * Effective migration status.
+ *
+ * - `applied`: the current migration matches its journal entry.
+ * - `pending`: the current migration has not been applied.
+ * - `drifted`: the current migration differs from its journal entry.
+ * - `missing`: an applied journal entry has no migration in the current set.
  */
-export type MigrationStatus = 'applied' | 'pending' | 'drifted'
+export type MigrationStatus = 'applied' | 'pending' | 'drifted' | 'missing'
 
 /**
  * Status row returned by `runner.status()` and `runner.up/down(...)`.
@@ -64,6 +71,9 @@ export type MigrationStatusEntry = {
 /**
  * Common options for `runner.up(...)` and `runner.down(...)`.
  * `to` and `step` are mutually exclusive.
+ *
+ * `to` accepts a bare migration id (`20260301113000`) or the full `id_name`
+ * directory form (`20260301113000_add_user_status`).
  */
 export type MigrateOptions =
   | {
@@ -101,6 +111,21 @@ export type MigrationRegistry = {
   register(migration: MigrationDescriptor): void
   list(): MigrationDescriptor[]
 }
+
+/**
+ * Migration collection accepted by `db.migrate(...)` and `db.migrationStatus(...)`.
+ */
+export type Migrations = MigrationDescriptor[] | MigrationRegistry
+
+/**
+ * Lazy migration loader exported by app database modules.
+ */
+export type GetMigrations = () => Migrations | Promise<Migrations>
+
+/**
+ * Database seed function exported by app database modules.
+ */
+export type Seed = (db: Database) => void | Promise<void>
 
 /**
  * Options for creating a migration runner.

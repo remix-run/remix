@@ -30,21 +30,24 @@ const ROOT_HELP_TEXT = [
   '  completion      Print shell completion scripts for Remix',
   '  help [command]  Show help for Remix commands',
   '  new <name>      Create a new Remix project',
+  '  db <command>    Manage the current app database',
   '  doctor          Check project health for the current project',
   '  routes          Show the route tree for the current project',
   '  test [glob]     Run tests for the current project',
   '  version         Show the current Remix version',
   '',
   'Options:',
-  '  -h, --help     Show help',
-  '  --no-color     Disable ANSI color output',
-  '  -v, --version  Show version',
+  '  --config <path>  Use a custom Remix config file',
+  '  -h, --help       Show help',
+  '  --no-color       Disable ANSI color output',
+  '  -v, --version    Show version',
   '',
   'Examples:',
   '  remix completion bash',
   '  remix help',
   '  remix help completion',
   '  remix help doctor',
+  '  remix db status',
   '  remix doctor',
   '  remix new my-remix-app',
   '  remix new my-remix-app --app-name "My Remix App"',
@@ -73,9 +76,10 @@ const DOCTOR_COMMAND_HELP_TEXT = [
   'Check project environment and Remix app conventions for the current project.',
   '',
   'Options:',
-  '  --json    Print doctor findings as JSON',
-  '  --strict  Exit with status 1 when warning-level findings are present',
-  '  --fix     Apply low-risk project and action fixes',
+  '  --json       Print doctor findings as JSON',
+  '  --strict     Exit with status 1 when warning-level findings are present',
+  '  --no-strict  Do not exit with status 1 when warning-level findings are present',
+  '  --fix        Apply low-risk project and action fixes',
   '',
   'Examples:',
   '  remix doctor',
@@ -94,6 +98,7 @@ const HELP_COMMAND_HELP_TEXT = [
   'Examples:',
   '  remix help',
   '  remix help completion',
+  '  remix help db',
   '  remix help doctor',
   '  remix help new',
   '  remix help routes',
@@ -393,6 +398,43 @@ describe('run', () => {
     assert.equal(result.exitCode, 0)
     assert.equal(result.stdout, '9.9.9\n')
     assert.equal(result.stderr, '')
+  })
+
+  it('runs commands that do not read the config despite an invalid remix.json', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-broken-config-'))
+
+    try {
+      await fs.writeFile(path.join(projectDir, 'remix.json'), '{ "test": nope }', 'utf8')
+
+      let help = await captureOutput(() => run(['--help'], { cwd: projectDir }))
+      let version = await captureOutput(() =>
+        run(['version'], { cwd: projectDir, remixVersion: '9.9.9' }),
+      )
+
+      assert.equal(help.exitCode, 0)
+      assert.equal(help.stdout, ROOT_HELP_TEXT)
+      assert.equal(version.exitCode, 0)
+      assert.equal(version.stdout, '9.9.9\n')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('validates an explicitly selected config for every command', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-explicit-config-'))
+
+    try {
+      await fs.writeFile(path.join(projectDir, 'remix.json'), '{ "test": nope }', 'utf8')
+
+      let result = await captureOutput(() =>
+        run(['--config', 'remix.json', 'version'], { cwd: projectDir, remixVersion: '9.9.9' }),
+      )
+
+      assert.equal(result.exitCode, 1)
+      assert.match(result.stderr, /Error \[RMX_INVALID_CONFIG\]/)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
   })
 
   it('fails for unknown commands', async () => {

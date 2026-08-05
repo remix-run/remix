@@ -1,0 +1,3 @@
+BREAKING CHANGE: `createHref(pattern, params, searchParams)` now accepts an options object as its third argument. Move existing search parameters to `createHref(pattern, params, { searchParams })`.
+
+Matchers now accept relative URL strings when an absolute `baseURL` is provided to `match()` or `matchAll()`. `createHref()` accepts the same `baseURL` option and returns path-relative references for same-origin targets while leaving cross-origin targets absolute. The `searchParams` option accepts both typed plain objects and `URLSearchParams`; repeated `URLSearchParams` entries retain their order.

@@ -8,11 +8,15 @@ import type {
   TransactionOptions,
   TransactionToken,
 } from '@remix-run/data-table'
+import { AsyncLocalStorage } from 'node:async_hooks'
+
 import { getTablePrimaryKey } from '@remix-run/data-table'
+import mysql from 'mysql2/promise'
 import type {
   Connection as MysqlConnection,
   Pool as MysqlPool,
   PoolConnection as MysqlPoolConnection,
+  PoolOptions as MysqlPoolOptions,
   ResultSetHeader,
   RowDataPacket,
 } from 'mysql2/promise'
@@ -32,6 +36,14 @@ type MysqlQueryResultHeader = {
 type MysqlTransactionConnection = MysqlConnection | MysqlPoolConnection
 type MysqlQueryable = MysqlPool | MysqlTransactionConnection
 
+/** Database creation options used when wiping a config-backed MySQL adapter. */
+export interface MysqlDatabaseAdapterOptions {
+  /** Character set assigned to the recreated database. */
+  characterSet?: string
+  /** Collation assigned to the recreated database. */
+  collation?: string
+}
+
 /**
  * `DatabaseAdapter` implementation for mysql-compatible clients.
  */
@@ -46,12 +58,28 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
    */
   capabilities
 
+  #config?: string | MysqlPoolOptions
   #client: MysqlQueryable
+  #characterSet?: string
+  #collation?: string
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
+  #migrationLockQueue = Promise.resolve()
+  #migrationLockStore = new AsyncLocalStorage<boolean>()
 
-  constructor(client: MysqlQueryable) {
-    this.#client = client
+  constructor(
+    config: string | MysqlPoolOptions | MysqlQueryable,
+    options: MysqlDatabaseAdapterOptions = {},
+  ) {
+    if (isMysqlQueryable(config)) {
+      this.#client = config
+    } else {
+      this.#config = config
+      this.#client = createMysqlPool(config)
+    }
+
+    this.#characterSet = options.characterSet
+    this.#collation = options.collation
     this.capabilities = {
       returning: false,
       savepoints: true,
@@ -290,19 +318,132 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
   }
 
   /**
-   * Acquires the mysql migration lock.
-   * @returns A promise that resolves when the lock is acquired.
+   * Destructively recreates the configured MySQL database.
+   * @returns A promise that resolves when the database is ready for use.
    */
-  async acquireMigrationLock(): Promise<void> {
-    await this.#client.query('select get_lock(?, 60)', ['data_table_migrations'])
+  async wipe(): Promise<void> {
+    let config = this.#configOrThrow('wipe')
+    this.#assertNoOpenTransactions('wipe')
+    let database = resolveMysqlDatabaseName(config)
+    await this.#closePool()
+    let connection: MysqlConnection | undefined
+
+    try {
+      connection = await createMysqlConnection(toMysqlServerConfig(config))
+      await connection.query('drop database if exists ' + quoteIdentifier(database))
+
+      let sql = 'create database ' + quoteIdentifier(database)
+
+      if (this.#characterSet) {
+        sql += ' character set ' + quoteIdentifier(this.#characterSet)
+      }
+
+      if (this.#collation) {
+        sql += ' collate ' + quoteIdentifier(this.#collation)
+      }
+
+      await connection.query(sql)
+    } finally {
+      try {
+        await connection?.end()
+      } finally {
+        await this.#replacePool()
+      }
+    }
   }
 
   /**
-   * Releases the mysql migration lock.
-   * @returns A promise that resolves when the lock is released.
+   * Runs migration work on the mysql connection that owns the named lock.
+   *
+   * Lock acquisition waits up to 60 seconds and throws when the lock cannot
+   * be acquired. Re-entering this method from inside `run` throws instead of
+   * deadlocking, and a failed run destroys the reserved connection instead of
+   * returning it to the pool.
+   * @param name Logical migration lock name.
+   * @param run Migration work to run with a connection-bound adapter.
+   * @returns The callback result.
    */
-  async releaseMigrationLock(): Promise<void> {
-    await this.#client.query('select release_lock(?)', ['data_table_migrations'])
+  async withMigrationLock<result>(
+    name: string,
+    run: (adapter: DatabaseAdapter) => Promise<result>,
+  ): Promise<result> {
+    if (this.#migrationLockStore.getStore()) {
+      throw new Error('MySQL migration lock is already held by this adapter')
+    }
+
+    let waitForPreviousLock = this.#migrationLockQueue
+    let releaseQueue: () => void = () => undefined
+    this.#migrationLockQueue = new Promise((resolve) => {
+      releaseQueue = resolve
+    })
+
+    await waitForPreviousLock
+
+    try {
+      let releaseOnClose = false
+      let connection: MysqlTransactionConnection
+
+      if (isMysqlPool(this.#client)) {
+        connection = await this.#client.getConnection()
+        releaseOnClose = true
+      } else {
+        connection = this.#client
+      }
+
+      let adapter = releaseOnClose ? new MysqlDatabaseAdapter(connection) : this
+
+      try {
+        let value = await this.#migrationLockStore.run(true, () =>
+          runWithMysqlMigrationLock(connection, name, adapter, run),
+        )
+
+        if (releaseOnClose && isMysqlPoolConnection(connection)) {
+          connection.release()
+        }
+
+        return value
+      } catch (error) {
+        // A failed run can leave the reserved connection dirty (open
+        // transaction, still-held named lock), so destroy the connection
+        // instead of returning it to the pool.
+        if (releaseOnClose) {
+          destroyMysqlConnection(connection)
+        }
+
+        throw error
+      }
+    } finally {
+      releaseQueue()
+    }
+  }
+
+  async #closePool(): Promise<void> {
+    this.#transactions.clear()
+    if (isMysqlPool(this.#client)) {
+      await this.#client.end()
+    }
+  }
+
+  async #replacePool(): Promise<void> {
+    await this.#closePool().catch(() => undefined)
+
+    if (this.#config) {
+      this.#client = createMysqlPool(this.#config)
+    }
+  }
+
+  #configOrThrow(method: string): string | MysqlPoolOptions {
+    if (!this.#config) {
+      throw new Error('MySQL adapter ' + method + '() requires config-based construction')
+    }
+
+    return this.#config
+  }
+
+  #assertNoOpenTransactions(method: string): void {
+    if (this.#transactions.size > 0) {
+      throw new Error('MySQL adapter cannot ' + method + ' while transactions are open')
+    }
   }
 
   #resolveClient(token: TransactionToken | undefined): MysqlQueryable {
@@ -326,32 +467,176 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
 
 /**
  * Creates a mysql `DatabaseAdapter`.
- * @param client Mysql pool or connection.
- * @param options Optional adapter capability overrides.
+ * @param input Mysql connection string, pool options, pool, or connection.
+ * @param options Database creation options used by `wipe()`.
  * @returns A configured mysql adapter.
  * @example
  * ```ts
- * import { createPool } from 'mysql2/promise'
  * import { createDatabase } from 'remix/data-table'
  * import { createMysqlDatabaseAdapter } from 'remix/data-table/mysql'
  *
- * let pool = createPool({ uri: process.env.DATABASE_URL })
- * let adapter = createMysqlDatabaseAdapter(pool)
+ * let adapter = createMysqlDatabaseAdapter(process.env.DATABASE_URL!)
  * let db = createDatabase(adapter)
  * ```
  */
-export function createMysqlDatabaseAdapter(client: MysqlQueryable): MysqlDatabaseAdapter {
-  return new MysqlDatabaseAdapter(client)
+export function createMysqlDatabaseAdapter(
+  input: string | MysqlPoolOptions | MysqlQueryable,
+  options?: MysqlDatabaseAdapterOptions,
+): MysqlDatabaseAdapter {
+  return new MysqlDatabaseAdapter(input, options)
+}
+
+function isMysqlQueryable(value: unknown): value is MysqlQueryable {
+  return typeof value === 'object' && value !== null && 'query' in value
+}
+
+function createMysqlPool(config: string | MysqlPoolOptions): MysqlPool {
+  return typeof config === 'string' ? mysql.createPool(config) : mysql.createPool(config)
+}
+
+function createMysqlConnection(config: string | MysqlPoolOptions): Promise<MysqlConnection> {
+  return typeof config === 'string'
+    ? mysql.createConnection(config)
+    : mysql.createConnection(config)
 }
 
 function isMysqlPool(client: MysqlQueryable): client is MysqlPool {
   return 'getConnection' in client && typeof client.getConnection === 'function'
 }
 
+function resolveMysqlDatabaseName(config: string | MysqlPoolOptions): string {
+  let database =
+    typeof config === 'string'
+      ? resolveDatabaseNameFromUrl(config)
+      : (config.database ?? resolveDatabaseNameFromUrl(config.uri ?? ''))
+
+  if (!database) {
+    throw new Error('MySQL database config requires a database name')
+  }
+
+  return database
+}
+
+function resolveDatabaseNameFromUrl(value: string): string | undefined {
+  try {
+    let url = new URL(value)
+    let database = decodeURIComponent(url.pathname.replace(/^\//, ''))
+    return database || undefined
+  } catch {
+    return undefined
+  }
+}
+
+function toMysqlServerConfig(config: string | MysqlPoolOptions): string | MysqlPoolOptions {
+  if (typeof config === 'string') {
+    try {
+      let url = new URL(config)
+      url.pathname = '/'
+      return url.toString()
+    } catch {
+      return config
+    }
+  }
+
+  // Pool-only options make mysql2's createConnection() log "Ignoring invalid
+  // configuration option" warnings, so strip them from the maintenance
+  // connection config.
+  let {
+    database: _database,
+    uri,
+    connectionLimit: _connectionLimit,
+    maxIdle: _maxIdle,
+    idleTimeout: _idleTimeout,
+    queueLimit: _queueLimit,
+    waitForConnections: _waitForConnections,
+    ...serverConfig
+  } = config
+
+  if (uri === undefined) {
+    return serverConfig
+  }
+
+  return { ...serverConfig, uri: removeDatabaseFromUrl(uri) }
+}
+
+function removeDatabaseFromUrl(value: string): string {
+  try {
+    let url = new URL(value)
+    url.pathname = '/'
+    return url.toString()
+  } catch {
+    return value
+  }
+}
+
 function isMysqlPoolConnection(
   connection: MysqlTransactionConnection,
 ): connection is MysqlPoolConnection {
   return 'release' in connection && typeof connection.release === 'function'
+}
+
+function destroyMysqlConnection(connection: MysqlTransactionConnection): void {
+  let destroy = (connection as { destroy?: () => void }).destroy
+
+  if (typeof destroy === 'function') {
+    destroy.call(connection)
+    return
+  }
+
+  void connection.end().catch(() => undefined)
+}
+
+async function runWithMysqlMigrationLock<result>(
+  connection: MysqlTransactionConnection,
+  name: string,
+  adapter: DatabaseAdapter,
+  run: (adapter: DatabaseAdapter) => Promise<result>,
+): Promise<result> {
+  // sha2(..., 256) yields 64 hex characters, exactly GET_LOCK's 64-character
+  // lock name limit, so any additional prefix must go inside the hash input.
+  let [lockRows] = await connection.query(
+    "select lock_name, get_lock(lock_name, 60) as `acquired` from (select sha2(concat(coalesce(database(), ''), ':', ?), 256) as lock_name) as migration_lock",
+    [name],
+  )
+
+  let lockRow = isRowsResult(lockRows) ? lockRows[0] : undefined
+  let lockName = lockRow?.lock_name
+
+  if (typeof lockName !== 'string' || !toBooleanExists(lockRow?.acquired)) {
+    throw new Error('MySQL migration lock could not be acquired')
+  }
+
+  let outcome: { status: 'success'; value: result } | { status: 'failure'; error: unknown }
+
+  try {
+    outcome = { status: 'success', value: await run(adapter) }
+  } catch (error) {
+    outcome = { status: 'failure', error }
+  }
+
+  let unlockFailed = false
+  let unlockError: unknown
+
+  try {
+    let [unlockRows] = await connection.query('select release_lock(?) as `released`', [lockName])
+
+    if (!isRowsResult(unlockRows) || !toBooleanExists(unlockRows[0]?.released)) {
+      throw new Error('MySQL migration lock was not held by the reserved connection')
+    }
+  } catch (error) {
+    unlockFailed = true
+    unlockError = error
+  }
+
+  if (outcome.status === 'failure') {
+    throw outcome.error
+  }
+
+  if (unlockFailed) {
+    throw unlockError
+  }
+
+  return outcome.value
 }
 
 function isRowsResult(result: unknown): result is MysqlQueryRows {

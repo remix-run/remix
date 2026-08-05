@@ -1,0 +1,14 @@
+{
+  "$schema": "https://remix.run/schemas/remix.json",
+  "test": {
+    "type": ["server"],
+    "coverage": {
+      "enabled": false,
+      "include": ["src/**/*.ts"],
+      "lines": 90,
+      "branches": 90,
+      "functions": 90,
+      "statements": 90
+    }
+  }
+}
