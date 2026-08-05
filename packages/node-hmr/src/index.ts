@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import process from 'node:process'
 
-import { createWatchedProcessController } from './lib/runner.ts'
+import { createHmrSupervisor } from './lib/runner.ts'
 
 export type { ImportMetaHot } from './lib/runtime.ts'
 
@@ -166,7 +166,7 @@ export function createHmrReadyFetch(
  * @returns A runner handle for the supervised process.
  */
 export function run(entry: string, options: RunOptions = {}): NodeHmrRunner {
-  let controller = createWatchedProcessController({
+  let supervisor = createHmrSupervisor({
     browserHmrChannel: normalizeBrowserHmrChannelOptions(options.browserHmrChannel),
     cwd: options.cwd ?? process.cwd(),
     entry,
@@ -177,22 +177,22 @@ export function run(entry: string, options: RunOptions = {}): NodeHmrRunner {
     watch: options.watch,
   })
 
-  let closed = controller.start()
+  let closed = supervisor.start()
   closed.catch((error: unknown) => {
     console.error(error)
   })
 
   return {
     close() {
-      return controller.stop()
+      return supervisor.stop()
     },
 
     get generation() {
-      return controller.generation
+      return supervisor.generation
     },
 
     ready() {
-      return controller.ready()
+      return supervisor.ready()
     },
   }
 }

@@ -7,6 +7,7 @@ import { describe, it } from '@remix-run/test'
 import {
   buildChildProcessEnv,
   buildChildProcessArgs,
+  createFileChangeEventDeduper,
   getBrowserHmrFileEventsForWatchedFiles,
   getWatchedDirectoriesForFiles,
   normalizeBrowserHmrFilePath,
@@ -120,6 +121,32 @@ describe('resolveChokidarWatchOptions', () => {
         usePolling: true,
       },
     )
+  })
+})
+
+describe('createFileChangeEventDeduper', () => {
+  it('suppresses same-path events until the file metadata changes', () => {
+    let isDuplicate = createFileChangeEventDeduper()
+    let stats = {
+      birthtimeMs: 1,
+      ctimeMs: 2,
+      ino: 3,
+      mtimeMs: 4,
+      size: 5,
+    }
+
+    assert.equal(isDuplicate('/app/server.ts', stats), false)
+    assert.equal(isDuplicate('/app/server.ts', stats), true)
+    assert.equal(isDuplicate('/app/other.ts', stats), false)
+    assert.equal(isDuplicate('/app/server.ts', { ...stats, mtimeMs: 5 }), false)
+    assert.equal(isDuplicate('/app/server.ts', { ...stats, mtimeMs: 5 }), true)
+  })
+
+  it('does not suppress events without file metadata', () => {
+    let isDuplicate = createFileChangeEventDeduper()
+
+    assert.equal(isDuplicate('/app/server.ts', undefined), false)
+    assert.equal(isDuplicate('/app/server.ts', undefined), false)
   })
 })
 

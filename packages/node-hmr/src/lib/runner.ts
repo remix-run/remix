@@ -1,6 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process'
-import { createHash } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
+import type { Stats } from 'node:fs'
 import { createServer, type Server, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import process from 'node:process'
@@ -133,6 +132,46 @@ export function getWatchedDirectoriesForFiles(filePaths: Iterable<string>): Set<
   return watchedDirectories
 }
 
+type FileChangeStats = Pick<Stats, 'birthtimeMs' | 'ctimeMs' | 'ino' | 'mtimeMs' | 'size'>
+
+export function createFileChangeEventDeduper(): (
+  filePath: string,
+  stats: FileChangeStats | undefined,
+) => boolean {
+  let previousStatsByFilePath = new Map<string, FileChangeStats>()
+
+  return (filePath, stats) => {
+    if (stats === undefined) return false
+
+    let previousStats = previousStatsByFilePath.get(filePath)
+    let currentStats: FileChangeStats = {
+      birthtimeMs: stats.birthtimeMs,
+      ctimeMs: stats.ctimeMs,
+      ino: stats.ino,
+      mtimeMs: stats.mtimeMs,
+      size: stats.size,
+    }
+    previousStatsByFilePath.set(filePath, currentStats)
+
+    return (
+      previousStats !== undefined &&
+      previousStats.birthtimeMs === currentStats.birthtimeMs &&
+      previousStats.ctimeMs === currentStats.ctimeMs &&
+      previousStats.ino === currentStats.ino &&
+      previousStats.mtimeMs === currentStats.mtimeMs &&
+      previousStats.size === currentStats.size
+    )
+  }
+}
+
+const chokidarWatcherBySupervisor = new WeakMap<object, ReturnType<typeof watch>>()
+
+export function getSupervisorChokidarWatcher(
+  supervisor: object,
+): ReturnType<typeof watch> | undefined {
+  return chokidarWatcherBySupervisor.get(supervisor)
+}
+
 interface BrowserHmrChannelOptions {
   host?: string
   port?: number
@@ -158,7 +197,7 @@ interface ResolvedChokidarWatchOptions {
   usePolling: boolean
 }
 
-export function createWatchedProcessController(options: {
+export function createHmrSupervisor(options: {
   browserHmrChannel: BrowserHmrChannelOptions | null
   cwd: string
   entry: string
@@ -214,8 +253,7 @@ export function createWatchedProcessController(options: {
   let stopping = false
   let waitingForFileChangeAfterExit = false
   let pendingServerUpdateEvent = false
-  let changedFileContentSignatures = new Map<string, string>()
-  let changedFileSignatureQueue = Promise.resolve()
+  let isDuplicateFileChangeEvent = createFileChangeEventDeduper()
 
   function setReadyGeneration(generation: number): void {
     readyGeneration = generation
@@ -546,8 +584,17 @@ export function createWatchedProcessController(options: {
     browserWatchedFilePaths = nextBrowserWatchedFilePaths
   }
 
-  function handleWatchEvent(event: string, changedPath: string) {
+  function handleWatchEvent(event: string, changedPath: string, stats?: Stats) {
     let filePath = resolve(options.cwd, changedPath)
+
+    if (event === 'change') {
+      let normalizedFilePath = normalizeBrowserHmrFilePath(filePath)
+      let isRelevantFile =
+        waitingForFileChangeAfterExit ||
+        watchedFilePaths.has(filePath) ||
+        browserWatchedFilePaths.has(normalizedFilePath)
+      if (!isRelevantFile || isDuplicateFileChangeEvent(normalizedFilePath, stats)) return
+    }
 
     if (restartTimer !== undefined) {
       clearTimeout(restartTimer)
@@ -571,7 +618,6 @@ export function createWatchedProcessController(options: {
     try {
       let changedPaths = [...pendingChangedPaths]
       pendingChangedPaths = new Set()
-      changedPaths = await filterChangedPathsByContent(changedPaths)
 
       let restartPathEvents = new Map(pendingRestartPathEvents)
       let restartPaths = [...restartPathEvents.keys()]
@@ -676,33 +722,6 @@ export function createWatchedProcessController(options: {
       activeWatchEventFlushCount -= 1
       resolveReadyWaiters()
     }
-  }
-
-  function filterChangedPathsByContent(changedPaths: string[]): Promise<string[]> {
-    let result = changedFileSignatureQueue.then(async () => {
-      let filteredPaths: string[] = []
-
-      for (let filePath of changedPaths) {
-        try {
-          let content = await readFile(filePath)
-          let signature = createHash('sha256').update(content).digest('base64')
-          if (changedFileContentSignatures.get(filePath) === signature) continue
-          changedFileContentSignatures.set(filePath, signature)
-        } catch {
-          changedFileContentSignatures.delete(filePath)
-        }
-
-        filteredPaths.push(filePath)
-      }
-
-      return filteredPaths
-    })
-
-    changedFileSignatureQueue = result.then(
-      () => undefined,
-      () => undefined,
-    )
-    return result
   }
 
   function flushPendingServerUpdateEvent(): void {
@@ -1103,7 +1122,7 @@ export function createWatchedProcessController(options: {
     await stopPromise
   }
 
-  return {
+  let supervisor = {
     get generation() {
       return serverGeneration
     },
@@ -1130,6 +1149,8 @@ export function createWatchedProcessController(options: {
 
     stop,
   }
+  chokidarWatcherBySupervisor.set(supervisor, watcher)
+  return supervisor
 }
 
 interface BrowserHmrEventChannel {

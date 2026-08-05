@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createWatchedProcessController } from './lib/runner.ts'
+import { createHmrSupervisor, getSupervisorChokidarWatcher } from './lib/runner.ts'
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url))
 const nodeTsxImportUrl = import.meta.resolve('@remix-run/node-tsx')
@@ -181,6 +181,44 @@ describe('node-hmr', () => {
     }
   })
 
+  it('ignores a repeated entry change event after the first restart completes', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getIdleHmrServerSource(),
+    })
+    let supervisor = createHmrSupervisor({
+      browserHmrChannel: null,
+      cwd: fixture.path,
+      entry: 'server.ts',
+      entryArgs: [],
+      env: process.env,
+      nodeArgs: ['--import', nodeTsxImportUrl],
+      registerPath: path.join(packageRoot, 'src/register.ts'),
+    })
+    let closed = supervisor.start()
+
+    try {
+      await supervisor.ready()
+      let watcher = getSupervisorChokidarWatcher(supervisor)
+      assert.ok(watcher)
+
+      let entryPath = path.join(fixture.path, 'server.ts')
+      let entryStats = await fs.stat(entryPath)
+      watcher.emit('all', 'change', 'server.ts', entryStats)
+
+      await supervisor.ready()
+      assert.equal(supervisor.generation, 1)
+
+      await new Promise((resolve) => setTimeout(resolve, 250))
+      watcher.emit('all', 'change', 'server.ts', entryStats)
+
+      await supervisor.ready()
+      assert.equal(supervisor.generation, 1)
+    } finally {
+      await supervisor.stop()
+      await closed
+    }
+  })
+
   it('proxies requests through the ready child server generation', async () => {
     await using fixture = await createHmrProxyFixture({
       'server.ts': getHmrProxyChildServerSource('one'),
@@ -241,7 +279,7 @@ describe('node-hmr', () => {
     let releaseFileA = path.join(fixture.path, 'signals/a-release')
     let releaseFileB = path.join(fixture.path, 'signals/b-release')
     let hmrUrlFile = path.join(fixture.path, 'signals/hmr-url')
-    let runner = createWatchedProcessController({
+    let supervisor = createHmrSupervisor({
       browserHmrChannel: { port: 0 },
       cwd: fixture.path,
       entry: 'server.ts',
@@ -260,11 +298,11 @@ describe('node-hmr', () => {
       registerPath: path.join(packageRoot, 'src/register.ts'),
       watch: { poll: true, pollInterval: 10 },
     })
-    let closed = runner.start()
+    let closed = supervisor.start()
     let events: Awaited<ReturnType<typeof connectHmrEvents>> | undefined
 
     try {
-      await runner.ready()
+      await supervisor.ready()
       events = await connectHmrEvents(await fs.readFile(hmrUrlFile, 'utf-8'))
 
       await fs.writeFile(watchFileA, 'two')
@@ -273,7 +311,7 @@ describe('node-hmr', () => {
       await waitForFile(startedFileB)
 
       let readyResolved = false
-      let ready = runner.ready().then(() => {
+      let ready = supervisor.ready().then(() => {
         readyResolved = true
       })
 
@@ -291,7 +329,59 @@ describe('node-hmr', () => {
     } finally {
       await Promise.all([fs.writeFile(releaseFileA, ''), fs.writeFile(releaseFileB, '')])
       await events?.close()
-      await runner.stop()
+      await supervisor.stop()
+      await closed
+    }
+  })
+
+  it('ignores a repeated browser change event after the first update completes', async () => {
+    await using fixture = await createFixture({
+      'browser/entry.ts': 'one',
+      'server.ts': getBrowserHmrServerSource(),
+      'signals/.gitkeep': '',
+    })
+    let watchFile = path.join(fixture.path, 'browser/entry.ts')
+    let hmrUrlFile = path.join(fixture.path, 'signals/hmr-url')
+    let supervisor = createHmrSupervisor({
+      browserHmrChannel: { port: 0 },
+      cwd: fixture.path,
+      entry: 'server.ts',
+      entryArgs: [],
+      env: {
+        ...process.env,
+        HMR_URL_FILE: hmrUrlFile,
+        WATCH_FILE: watchFile,
+      },
+      nodeArgs: ['--import', nodeTsxImportUrl],
+      registerPath: path.join(packageRoot, 'src/register.ts'),
+      watch: { poll: true, pollInterval: 10 },
+    })
+    let closed = supervisor.start()
+    let events: Awaited<ReturnType<typeof connectHmrEvents>> | undefined
+
+    try {
+      await supervisor.ready()
+      events = await connectHmrEvents(await fs.readFile(hmrUrlFile, 'utf-8'))
+      let watcher = getSupervisorChokidarWatcher(supervisor)
+      assert.ok(watcher)
+
+      let watchFileStats = await fs.stat(watchFile)
+      watcher.emit('all', 'change', 'browser/entry.ts', watchFileStats)
+
+      assert.deepEqual(await events.read(), {
+        timestamp: 1,
+        type: 'browser:update',
+        updates: [{ path: '/entry.ts', type: 'js' }],
+      })
+
+      await new Promise((resolve) => setTimeout(resolve, 250))
+      watcher.emit('all', 'change', 'browser/entry.ts', watchFileStats)
+
+      await supervisor.ready()
+      await assertNoHmrEvent(events)
+    } finally {
+      await events?.close()
+      await supervisor.stop()
       await closed
     }
   })
@@ -794,7 +884,7 @@ describe('node-hmr', () => {
     }
   })
 
-  it('keeps active server exports current while ignoring repeated change events', async () => {
+  it('keeps active server exports current across repeated updates', async () => {
     let initialSource = getGenericGreetingSource({ message: 'initial' })
     let updatedSource = getGenericGreetingSource({ message: 'updated' })
     await using fixture = await createFixture({
@@ -814,22 +904,15 @@ describe('node-hmr', () => {
         await waitForResponse(ready.port, `${ready.pid}:updated`, () => server.output)
         assert.deepEqual(await events.read(), { type: 'server:update' })
 
-        let duplicateEvents = await connectHmrEvents(hmrUrl.url)
-        try {
-          await fs.writeFile(path.join(fixture.path, 'greeting.tsx'), updatedSource)
-          await new Promise((resolve) => setTimeout(resolve, 250))
-
-          assert.equal(await fetchText(ready.port), `${ready.pid}:updated`)
-          assert.equal(server.output.match(/hmr update greeting\.tsx/g)?.length, 1)
-          await assertNoHmrEvent(duplicateEvents)
-        } finally {
-          await duplicateEvents.close()
-        }
+        await fs.writeFile(path.join(fixture.path, 'greeting.tsx'), updatedSource)
+        assert.deepEqual(await events.read(), { type: 'server:update' })
+        assert.equal(await fetchText(ready.port), `${ready.pid}:updated`)
+        assert.equal(server.output.match(/hmr update greeting\.tsx/g)?.length, 2)
 
         await fs.writeFile(path.join(fixture.path, 'greeting.tsx'), initialSource)
         await waitForResponse(ready.port, `${ready.pid}:initial`, () => server.output)
         assert.deepEqual(await events.read(), { type: 'server:update' })
-        assert.equal(server.output.match(/hmr update greeting\.tsx/g)?.length, 2)
+        assert.equal(server.output.match(/hmr update greeting\.tsx/g)?.length, 3)
       } finally {
         await events.close()
       }
@@ -1452,6 +1535,36 @@ function getOverlappingBrowserHmrServerSource(): string {
     `  }]`,
     `})`,
     `await fs.writeFile(process.env.HMR_URL_FILE, channel.url)`,
+    `emitServerReady()`,
+    `setInterval(() => {}, 1_000)`,
+  ].join('\n')
+}
+
+function getBrowserHmrServerSource(): string {
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
+
+  return [
+    `import * as fs from 'node:fs/promises'`,
+    `import { createBrowserHmrChannel, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    ``,
+    `let channel = await createBrowserHmrChannel()`,
+    `channel.updateWatchedFiles({ add: [process.env.WATCH_FILE], remove: [] })`,
+    `channel.onFileEvents(() => [{`,
+    `  timestamp: 1,`,
+    `  type: 'update',`,
+    `  updates: [{ path: '/entry.ts', type: 'js' }],`,
+    `}])`,
+    `await fs.writeFile(process.env.HMR_URL_FILE, channel.url)`,
+    `emitServerReady()`,
+    `setInterval(() => {}, 1_000)`,
+  ].join('\n')
+}
+
+function getIdleHmrServerSource(): string {
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
+
+  return [
+    `import { emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
     `emitServerReady()`,
     `setInterval(() => {}, 1_000)`,
   ].join('\n')
