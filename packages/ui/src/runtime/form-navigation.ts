@@ -15,15 +15,6 @@ type PendingFormSubmission = {
   removeFormDataListener(): void
 }
 
-interface NavigationPrecommitControllerLike {
-  redirect(url: string, options: { history: 'replace' }): void
-}
-
-interface NavigationInterceptOptionsWithPrecommit extends NavigationInterceptOptions {
-  handler(): Promise<void>
-  precommitHandler(controller: NavigationPrecommitControllerLike): void
-}
-
 /** Browser-provided data for an intercepted form submission. */
 export interface FormSubmission {
   /** Submitted form entries for non-GET submissions, when available. */
@@ -42,14 +33,6 @@ export interface FormNavigation {
   getAttribute(name: string, submitterName?: string): string | null
   /** Resolves browser-generated data for a non-GET submission. */
   getSubmission: (() => Promise<FormSubmission>) | undefined
-}
-
-interface FormNavigationInterceptOptions {
-  handler(): Promise<void>
-  replacement?: {
-    info: unknown
-    state?: unknown
-  }
 }
 
 const PENDING_FORM_SUBMISSION_TIMEOUT = 1000
@@ -162,43 +145,6 @@ export function createFormNavigationResolver(
       getSubmission,
     }
   }
-}
-
-/**
- * Intercepts a form navigation and optionally replaces its pending history entry.
- *
- * @param event Navigation event to intercept.
- * @param options Navigation handler and optional fallback replay data.
- */
-export function interceptFormNavigation(
-  event: NavigateEvent,
-  options: FormNavigationInterceptOptions,
-): void {
-  if (options.replacement) {
-    let supportsPrecommit =
-      typeof Reflect.get(window, 'NavigationPrecommitController') === 'function'
-    if (supportsPrecommit) {
-      let interceptOptions: NavigationInterceptOptionsWithPrecommit = {
-        handler: options.handler,
-        precommitHandler(controller) {
-          controller.redirect(event.destination.url, { history: 'replace' })
-        },
-      }
-      event.intercept(interceptOptions)
-      return
-    }
-
-    if (event.cancelable) {
-      event.preventDefault()
-      window.navigation.navigate(event.destination.url, {
-        history: 'replace',
-        ...options.replacement,
-      })
-      return
-    }
-  }
-
-  event.intercept({ handler: options.handler })
 }
 
 function getSourceForm(sourceElement: Element): HTMLFormElement | undefined {
