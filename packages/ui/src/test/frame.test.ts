@@ -90,6 +90,45 @@ describe('frames', () => {
     }
   })
 
+  it('renders a response and updates the frame source after a followed redirect', async () => {
+    let redirectedUrl = 'https://example.com/settings/overview'
+    let response = new Response('<main id="result">Settings overview</main>')
+    Object.defineProperties(response, {
+      redirected: { value: true },
+      url: { value: redirectedUrl },
+    })
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let frame = createFrame(root, {
+      src: 'https://example.com/settings',
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return response
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(document.getElementById('result')?.textContent).toBe('Settings overview')
+      expect(frame.handle.src).toBe(redirectedUrl)
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('does not loop when a nested frame range escapes its region', async () => {
     let outerStart = document.createComment(' rmx:f:outer ')
     let innerStart = document.createComment(' rmx:f:inner ')

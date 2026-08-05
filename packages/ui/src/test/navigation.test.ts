@@ -213,4 +213,60 @@ describe('navigate', () => {
 
     controller.abort()
   })
+
+  it('replaces the navigation URL when a frame reload follows a redirect', async () => {
+    let originalUrl = window.location.href
+    let requestedUrl = new URL(originalUrl)
+    requestedUrl.searchParams.set('frame-navigation', 'requested')
+    let redirectedUrl = new URL(originalUrl)
+    redirectedUrl.searchParams.set('frame-navigation', 'redirected')
+    let topFrame = { src: '' } as FrameHandle
+    let shouldRedirect = true
+    let reload = mock.fn(async () => {
+      if (shouldRedirect) {
+        shouldRedirect = false
+        topFrame.src = redirectedUrl.href
+      }
+      return new AbortController().signal
+    })
+    topFrame.reload = reload
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+    })
+
+    let entryCountBeforeNavigation = window.navigation.entries().length
+    try {
+      let redirected = waitForNavigationUrl(redirectedUrl.href)
+      void navigate(requestedUrl.href).catch(() => {})
+      await redirected
+
+      expect(reload).toHaveBeenCalledTimes(1)
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation + 1)
+      expect(window.navigation.currentEntry?.url).toBe(redirectedUrl.href)
+      expect(window.navigation.currentEntry?.getState()).toEqual({
+        target: undefined,
+        src: redirectedUrl.href,
+        resetScroll: true,
+        $rmx: true,
+      })
+    } finally {
+      if (window.location.href !== originalUrl) {
+        await navigate(originalUrl, { history: 'replace' })
+      }
+      controller.abort()
+    }
+  })
 })
+
+function waitForNavigationUrl(url: string): Promise<void> {
+  return new Promise((resolve) => {
+    let onNavigateSuccess = () => {
+      if (window.navigation.currentEntry?.url !== url) return
+      window.navigation.removeEventListener('navigatesuccess', onNavigateSuccess)
+      resolve()
+    }
+    window.navigation.addEventListener('navigatesuccess', onNavigateSuccess)
+  })
+}
