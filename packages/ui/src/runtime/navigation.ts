@@ -1,9 +1,14 @@
 import { getTopFrame, getNamedFrame } from './run.ts'
-import {
-  createFormNavigationResolver,
-  interceptFormNavigation,
-  type FormSubmission,
-} from './form-navigation.ts'
+import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
+
+interface NavigationPrecommitControllerLike {
+  redirect(url: string, options: { history: 'replace' }): void
+}
+
+interface NavigationInterceptOptionsWithPrecommit extends NavigationInterceptOptions {
+  handler(): Promise<void>
+  precommitHandler(controller: NavigationPrecommitControllerLike): void
+}
 
 type NavigationState = {
   target: string | undefined
@@ -150,22 +155,45 @@ export function startNavigationListenerImpl(
         }
       }
 
-      interceptFormNavigation(event, {
-        handler,
-        replacement:
-          runtimeNavigation.replaceHistory &&
-          replayedSubmission == null &&
-          runtimeNavigation.getSubmission
-            ? {
+      if (runtimeNavigation.getSubmission) {
+        // <form method="post"> navigations
+        if (runtimeNavigation.replaceHistory && replayedSubmission == null) {
+          let supportsPrecommit =
+            typeof Reflect.get(window, 'NavigationPrecommitController') === 'function'
+
+          // Modern browsers allow you to update the in-flight navigation entry before it's committed
+          if (supportsPrecommit) {
+            let interceptOptions: NavigationInterceptOptionsWithPrecommit = {
+              handler,
+              precommitHandler(controller) {
+                controller.redirect(event.destination.url, { history: 'replace' })
+              },
+            }
+            event.intercept(interceptOptions)
+            return
+          }
+
+          // Safari doesn't support precommit as of Aug 2026, so we do a full replacement navigation
+          if (event.cancelable) {
+            event.preventDefault()
+            window.navigation.navigate(event.destination.url, {
+              history: 'replace',
+              state,
+              info: {
+                type: formSubmissionNavigationInfoType,
                 state,
-                info: {
-                  type: formSubmissionNavigationInfoType,
-                  state,
-                  getSubmission: runtimeNavigation.getSubmission,
-                } satisfies FormSubmissionNavigationInfo,
-              }
-            : undefined,
-      })
+                getSubmission: runtimeNavigation.getSubmission,
+              } satisfies FormSubmissionNavigationInfo,
+            })
+            return
+          }
+        }
+
+        event.intercept({ handler })
+      } else {
+        // <a>/<form method="get"> navigations
+        event.intercept({ handler })
+      }
     },
     { signal },
   )
