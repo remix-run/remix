@@ -20,6 +20,7 @@ export const routes = {
   }),
   settings: route('settings', {
     index: get('/'),
+    overview: get('overview'),
     profile: get('profile'),
     notifications: get('notifications'),
     privacy: get('privacy'),

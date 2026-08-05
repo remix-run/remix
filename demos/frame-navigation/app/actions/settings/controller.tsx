@@ -1,6 +1,7 @@
 import { createController } from 'remix/router'
 import type { Handle, RemixNode } from 'remix/ui'
 import { Frame } from 'remix/ui'
+import { redirect } from 'remix/response/redirect'
 
 import { requireAuth } from '../../middleware/auth.ts'
 import { frames, routes } from '../../routes.ts'
@@ -17,7 +18,10 @@ import { Profile } from './profile-page.tsx'
 export default createController(routes.settings, {
   middleware: [requireAuth],
   actions: {
-    index({ render, request }) {
+    index() {
+      return redirect(routes.settings.overview.href(), 303)
+    },
+    overview({ render, request }) {
       return render(
         <SettingsPage activeItem="overview" {...getSettingsFrameProps(request)}>
           <Index />

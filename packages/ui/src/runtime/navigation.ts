@@ -1,4 +1,5 @@
 import { getTopFrame, getNamedFrame } from './run.ts'
+import { reloadFrameForNavigation } from './frame.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -10,6 +11,12 @@ type NavigationState = {
 type SourceElementNavigateEvent = NavigateEvent & {
   sourceElement?: Element | null
 }
+
+interface FrameRedirectNavigationInfo {
+  type: typeof frameRedirectNavigationInfoType
+}
+
+const frameRedirectNavigationInfoType = 'frame-redirect'
 
 /**
  * Options for client-side frame-aware navigation.
@@ -45,7 +52,11 @@ export async function navigate(href: string, options?: NavigationOptions) {
  * @returns void
  */
 export function startNavigationListener(signal: AbortSignal) {
-  return startNavigationListenerImpl(signal, { getTopFrame, getNamedFrame })
+  return startNavigationListenerImpl(signal, {
+    getTopFrame,
+    getNamedFrame,
+    reloadFrame: reloadFrameForNavigation,
+  })
 }
 
 // Internal version used by unit tests so we can inject stub frames
@@ -54,6 +65,7 @@ export function startNavigationListenerImpl(
   options: {
     getTopFrame: typeof getTopFrame
     getNamedFrame: typeof getNamedFrame
+    reloadFrame: typeof reloadFrameForNavigation
   },
 ) {
   let navigation = window.navigation
@@ -71,6 +83,11 @@ export function startNavigationListenerImpl(
       // https://html.spec.whatwg.org/multipage/nav-history-apis.html#can-have-its-url-rewritten
       if (!event.canIntercept || isCrossOriginDestination(event)) return
 
+      if (isFrameRedirectNavigationInfo(event.info)) {
+        event.intercept({ async handler() {} })
+        return
+      }
+
       let state = getRuntimeNavigationState(event)
       if (!state) return
 
@@ -86,7 +103,20 @@ export function startNavigationListenerImpl(
 
           topFrame.src = event.destination.url
           if (frame !== topFrame) frame.src = state.src
-          await frame.reload()
+          let { redirectedTo } = await options.reloadFrame(frame)
+
+          if (redirectedTo && frame === topFrame) {
+            frame.src = redirectedTo
+            // Start the successor navigation without awaiting it: this handler must settle before
+            // the replacement navigation can finish.
+            navigation.navigate(redirectedTo, {
+              history: 'replace',
+              state: { ...state, src: redirectedTo },
+              info: {
+                type: frameRedirectNavigationInfoType,
+              } satisfies FrameRedirectNavigationInfo,
+            })
+          }
 
           let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
           if (state.resetScroll && isNewEntry) {
@@ -101,6 +131,15 @@ export function startNavigationListenerImpl(
 
 function isRuntimeNavigation(info: unknown): info is NavigationState {
   return typeof info === 'object' && info != null && '$rmx' in info
+}
+
+function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNavigationInfo {
+  return (
+    typeof value === 'object' &&
+    value != null &&
+    'type' in value &&
+    value.type === frameRedirectNavigationInfoType
+  )
 }
 
 function isCrossOriginDestination(event: NavigateEvent): boolean {

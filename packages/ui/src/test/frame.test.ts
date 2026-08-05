@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 
 import type { Handle } from '../runtime/component.ts'
-import { createFrame, type LoadModule } from '../runtime/frame.ts'
+import { createFrame, reloadFrameForNavigation, type LoadModule } from '../runtime/frame.ts'
 import { jsx } from '../runtime/jsx.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
@@ -85,6 +85,49 @@ describe('frames', () => {
       expect(document.querySelector('[data-entry]')?.textContent).toBe('next')
       expect(setupCount).toBe(setupCountBeforeReload)
       expect(disconnectCount).toBe(disconnectCountBeforeReload)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('renders a redirected response without changing the frame source', async () => {
+    let redirectedUrl = 'https://example.com/settings/overview'
+    let frameSrc = 'https://example.com/settings'
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let frame = createFrame(root, {
+      src: frameSrc,
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        let response = new Response('<main id="result">Settings overview</main>')
+        Object.defineProperties(response, {
+          redirected: { value: true },
+          url: { value: redirectedUrl },
+        })
+        return response
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      let signal = await frame.handle.reload()
+      let navigationResult = await reloadFrameForNavigation(frame.handle)
+
+      expect(document.getElementById('result')?.textContent).toBe('Settings overview')
+      expect(frame.handle.src).toBe(frameSrc)
+      expect(signal).toBeInstanceOf(AbortSignal)
+      expect(navigationResult.redirectedTo).toBe(redirectedUrl)
     } finally {
       frame.dispose()
     }

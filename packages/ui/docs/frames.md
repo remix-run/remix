@@ -186,13 +186,12 @@ let app = run({
   async resolveFrame(src, signal, target) {
     let headers = new Headers({ Accept: 'text/html' })
     if (target) headers.set('X-Remix-Target', target)
-    let response = await fetch(src, { headers, signal })
-    return response.body ?? (await response.text())
+    return fetch(src, { headers, signal })
   },
 })
 ```
 
-This is used both for initial hydration of pending frames and for `handle.frame.reload()` calls. If omitted, frames resolve to `<p>resolve frame unimplemented</p>`. Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
+This is used both for initial hydration of pending frames and for `handle.frame.reload()` calls. A client resolver may return frame content directly or return the fetched `Response`. Returning the response lets Remix stream its body. When `fetch()` followed a redirect during a top-frame navigation, the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`; other frames render the response without changing either URL. If omitted, frames resolve to `<p>resolve frame unimplemented</p>`. Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
 
 ## Frame lifecycle
 

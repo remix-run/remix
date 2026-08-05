@@ -1,4 +1,4 @@
-import type { FrameContent, Handle, RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
 import { createRoot, css, on, run } from 'remix/ui'
 
 import { animateEntrance, spring } from 'remix/ui/animation'
@@ -23,7 +23,7 @@ async function resolveFrameResponse(
   url: URL,
   signal?: AbortSignal,
   target?: string,
-): Promise<FrameContent> {
+) {
   let headers = new Headers()
   headers.set('Accept', 'text/html')
   headers.set('X-Remix-Frame', 'true')
@@ -36,7 +36,7 @@ async function resolveFrameResponse(
 
   if (res.status === 401) {
     window.location.assign(routes.auth.login.index.href())
-    return new Promise(() => {})
+    return new Promise<never>(() => {})
   }
 
   if (!res.ok) {
@@ -54,8 +54,7 @@ async function resolveFrameResponse(
     )
   }
 
-  if (res.body) return res.body
-  return await res.text()
+  return res
 }
 
 app.addEventListener('error', async (event) => {
