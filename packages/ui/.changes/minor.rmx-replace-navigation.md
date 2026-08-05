@@ -1,0 +1,1 @@
+Add an `rmx-replace` attribute for anchors and forms that overrides the history behavior of enhanced frame navigations. An empty attribute replaces the current entry, while `rmx-replace="false"` pushes a new entry even when a same-location non-GET form would replace by default. Native anchors using `link(href, { history: 'replace' })` now emit the attribute automatically.

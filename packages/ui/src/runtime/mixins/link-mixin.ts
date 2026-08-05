@@ -36,6 +36,7 @@ export const link: MixinFactory<
           href,
           ...(options?.target == null ? {} : { 'rmx-target': options.target }),
           ...(options?.src == null ? {} : { 'rmx-src': options.src }),
+          ...(options?.history === 'replace' ? { 'rmx-replace': '' } : {}),
           ...(options?.resetScroll === false ? { 'rmx-reset-scroll': 'false' } : {}),
         })
       }

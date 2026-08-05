@@ -26,7 +26,14 @@ describe('link mixin', () => {
 
   it('adds href and runtime attributes to anchors', () => {
     let { container } = render(
-      <a mix={link('/login', { src: '/partials/login', target: 'auth', resetScroll: false })}>
+      <a
+        mix={link('/login', {
+          src: '/partials/login',
+          target: 'auth',
+          history: 'replace',
+          resetScroll: false,
+        })}
+      >
         Login
       </a>,
     )
@@ -36,6 +43,7 @@ describe('link mixin', () => {
     expect(anchor.getAttribute('href')).toBe('/login')
     expect(anchor.getAttribute('rmx-target')).toBe('auth')
     expect(anchor.getAttribute('rmx-src')).toBe('/partials/login')
+    expect(anchor.getAttribute('rmx-replace')).toBe('')
     expect(anchor.getAttribute('rmx-reset-scroll')).toBe('false')
     expect(anchor.getAttribute('role')).toBeNull()
   })
@@ -67,6 +75,7 @@ describe('link mixin', () => {
     expect(anchor.getAttribute('href')).toBe('/docs')
     expect(anchor.getAttribute('rmx-target')).toBeNull()
     expect(anchor.getAttribute('rmx-src')).toBeNull()
+    expect(anchor.getAttribute('rmx-replace')).toBeNull()
   })
 
   it('navigates on plain click for non-anchor hosts', (t) => {
