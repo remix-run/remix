@@ -11,6 +11,12 @@ type SourceElementNavigateEvent = NavigateEvent & {
   sourceElement?: Element | null
 }
 
+interface FrameRedirectNavigationInfo {
+  type: typeof frameRedirectNavigationInfoType
+}
+
+const frameRedirectNavigationInfoType = 'frame-redirect'
+
 /**
  * Options for client-side frame-aware navigation.
  */
@@ -71,6 +77,11 @@ export function startNavigationListenerImpl(
       // https://html.spec.whatwg.org/multipage/nav-history-apis.html#can-have-its-url-rewritten
       if (!event.canIntercept || isCrossOriginDestination(event)) return
 
+      if (isFrameRedirectNavigationInfo(event.info)) {
+        event.intercept({ async handler() {} })
+        return
+      }
+
       let state = getRuntimeNavigationState(event)
       if (!state) return
 
@@ -84,8 +95,21 @@ export function startNavigationListenerImpl(
             navigation.updateCurrentEntry({ state })
           }
 
-          frame.src = frame === topFrame ? event.destination.url : state.src
+          let requestedFrameSrc = frame === topFrame ? event.destination.url : state.src
+          frame.src = requestedFrameSrc
           await frame.reload()
+
+          if (frame.src !== requestedFrameSrc) {
+            let redirectedSrc = frame.src
+            let redirectedState = { ...state, src: redirectedSrc }
+            // Start the successor navigation without awaiting it: this handler must settle before
+            // the replacement navigation can finish.
+            navigation.navigate(redirectedSrc, {
+              history: 'replace',
+              state: redirectedState,
+              info: { type: frameRedirectNavigationInfoType } satisfies FrameRedirectNavigationInfo,
+            })
+          }
 
           let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
           if (state.resetScroll && isNewEntry) {
@@ -100,6 +124,15 @@ export function startNavigationListenerImpl(
 
 function isRuntimeNavigation(info: unknown): info is NavigationState {
   return typeof info === 'object' && info != null && '$rmx' in info
+}
+
+function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNavigationInfo {
+  return (
+    typeof value === 'object' &&
+    value != null &&
+    'type' in value &&
+    value.type === frameRedirectNavigationInfoType
+  )
 }
 
 function isCrossOriginDestination(event: NavigateEvent): boolean {

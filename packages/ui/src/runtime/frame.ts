@@ -1,5 +1,5 @@
 import { jsx } from './jsx.ts'
-import { Frame, createFrameHandle, type FrameContent } from './component.ts'
+import { Frame, createFrameHandle, type FrameContent, type FrameResolution } from './component.ts'
 import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
@@ -10,6 +10,7 @@ import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
 import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
+import { unwrapFrameResolution } from './frame-resolution.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -65,13 +66,13 @@ export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Func
  * @param src Source string from the `<Frame src>` prop.
  * @param signal Abort signal for the active frame load or reload.
  * @param target Optional name of the frame being reloaded.
- * @returns HTML, a stream of HTML bytes, or Remix node content to render into the frame.
+ * @returns Frame content or a response whose body should be rendered into the frame.
  */
 export type ResolveFrame = (
   src: string,
   signal?: AbortSignal,
   target?: string,
-) => Promise<FrameContent> | FrameContent
+) => Promise<FrameResolution> | FrameResolution
 
 type InternalFrameContent = FrameContent | DocumentFragment
 
@@ -569,9 +570,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   async function resolveAndRenderReload(controller: AbortController): Promise<AbortSignal> {
     try {
-      let content = await init.resolveFrame(frame.src, controller.signal, frameName)
+      let resolution = await init.resolveFrame(frame.src, controller.signal, frameName)
+      if (reloadController !== controller || controller.signal.aborted) return controller.signal
+      let { content, redirectedTo } = await unwrapFrameResolution(resolution)
       if (reloadController !== controller || controller.signal.aborted) return controller.signal
       await render(content, { signal: controller.signal })
+      if (redirectedTo && reloadController === controller && !controller.signal.aborted) {
+        frame.src = redirectedTo
+      }
       return controller.signal
     } catch (error) {
       if (reloadController !== controller || controller.signal.aborted) return controller.signal

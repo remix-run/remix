@@ -1,0 +1,1 @@
+Browser frame resolvers may now return a `Response`. Its body is streamed into the frame, and when the response followed a redirect, the final response URL replaces the current navigation entry without loading the frame a second time.

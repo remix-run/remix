@@ -1,8 +1,8 @@
-import type { FrameContent, FrameHandle } from './component.ts'
+import type { FrameHandle } from './component.ts'
 import { createFrameHandle } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './jsx.ts'
-import { createFrameRuntime } from './frame.ts'
+import { createFrameRuntime, type ResolveFrame } from './frame.ts'
 import {
   createComponentErrorEvent,
   getComponentError,
@@ -41,11 +41,7 @@ export type VirtualRootOptions = {
   styleManager?: StyleManager
   frameInit?: {
     src?: string
-    resolveFrame: (
-      src: string,
-      signal?: AbortSignal,
-      target?: string,
-    ) => Promise<FrameContent> | FrameContent
+    resolveFrame: ResolveFrame
     loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
   }
 }
@@ -257,11 +253,7 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
 
 function createRootFrameHandle(init: {
   src?: string
-  resolveFrame?: (
-    src: string,
-    signal?: AbortSignal,
-    target?: string,
-  ) => Promise<FrameContent> | FrameContent
+  resolveFrame?: ResolveFrame
   loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
   errorTarget: EventTarget
   scheduler: Scheduler
