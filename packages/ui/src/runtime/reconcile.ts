@@ -815,6 +815,25 @@ function insert(
           if (cursor) cursor.current = remainder
           return commitTextNode(node, vParent, svg, hydrationNode)
         }
+        if (node._text.startsWith(cursor.data) && cursor.data.length < node._text.length) {
+          // Parser-split case: one vnode text spread across several DOM Text nodes
+          // (browser parsed a >64K text node into multiple chunks)
+          let remainder = node._text.slice(cursor.data.length)
+          let sibling = cursor.nextSibling
+          while (
+            remainder.length > 0 &&
+            sibling instanceof Text &&
+            remainder.startsWith(sibling.data)
+          ) {
+            remainder = remainder.slice(sibling.data.length)
+            let next = sibling.nextSibling
+            sibling.remove()
+            sibling = next
+          }
+          cursor.data = node._text
+          node._dom = cursor
+          return sibling
+        }
         // Genuine mismatch - correct it
         logHydrationMismatch('text mismatch', hydrationNode.data, node._text)
         hydrationNode.data = node._text
