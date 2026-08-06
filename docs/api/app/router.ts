@@ -73,8 +73,12 @@ export function createApiRouter(options: ApiRouterOptions) {
     let versionApiController = createApiController(versionControllerOptions)
 
     // A mounted route builder does not match its own root path, so map the
-    // versioned home action on the parent router.
-    router.map(`${versionPathname}/`, versionRootController.actions.home)
+    // versioned home action on the parent router. Wrap the route-specific action so TypeScript 7
+    // can infer context for dynamic version paths.
+    let homeAction = versionRootController.actions.home
+    router.map(`${versionPathname}/`, (context) =>
+      typeof homeAction === 'function' ? homeAction(context) : homeAction.handler(context),
+    )
     router.mount(versionPathname, (versionRouter) => {
       versionRouter.map(routes.assets, versionRootController.actions.assets)
       versionRouter.map(routes.lookup, versionRootController.actions.lookup)

@@ -8,12 +8,12 @@
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
-    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:",
     "semver": "^7.6.3",
     "yaml": "^2.9.0"
   },
   "scripts": {
     "test": "remix test",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   }
 }

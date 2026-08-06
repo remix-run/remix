@@ -16,7 +16,7 @@
     "pagefind": "catalog:",
     "shiki": "catalog:",
     "typedoc": "0.28.19",
-    "typescript": "catalog:"
+    "typescript": "6.0.3"
   },
   "scripts": {
     "build": "pnpm run --filter \".\" --parallel \"/^build:/\"",
@@ -29,6 +29,6 @@
     "prerender:serve": "npx http-server -p 44100 build/site",
     "start": "node --import remix/node-tsx server.ts",
     "test": "remix test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm -w exec tsc --noEmit -p docs/api/tsconfig.json"
   }
 }
