@@ -1,4 +1,4 @@
-export { ansi, stripAnsi } from './lib/ansi.ts'
+export { ansi, stripAnsi, truncateMiddle } from './lib/ansi.ts'
 export type {
   Ansi,
   AnsiStyleCodes,
