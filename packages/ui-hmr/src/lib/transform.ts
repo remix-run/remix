@@ -29,7 +29,7 @@ export type UiHmrImportSource = 'remix' | '@remix-run' | (string & {})
  * Options for rewriting browser component modules.
  */
 export interface BrowserComponentsHmrTransformOptions {
-  /** Import namespace used to generate runtime imports such as `remix/ui-hmr/browser-runtime`. */
+  /** Import namespace used to generate runtime imports such as `remix/ui-hmr/runtime/browser`. */
   importSource: UiHmrImportSource
   /** Stable public module URL used as the component HMR identity. */
   moduleUrl: string
@@ -41,7 +41,7 @@ export interface BrowserComponentsHmrTransformOptions {
  * Options for rewriting server component modules.
  */
 export interface ServerComponentsHmrTransformOptions {
-  /** Import namespace used to generate runtime imports such as `remix/ui-hmr/server-runtime`. */
+  /** Import namespace used to generate runtime imports such as `remix/ui-hmr/runtime/server`. */
   importSource: UiHmrImportSource
   /** Stable module URL used as the component HMR identity. */
   moduleUrl: string
@@ -370,9 +370,9 @@ function getUiHmrImportSpecifiers(importSource: UiHmrImportSource): {
   serverRuntimeSpecifier: string
 } {
   return {
-    browserRuntimeSpecifier: `${importSource}/ui-hmr/browser-runtime`,
+    browserRuntimeSpecifier: `${importSource}/ui-hmr/runtime/browser`,
     refreshSpecifier: `${importSource}/ui/dev/refresh`,
-    serverRuntimeSpecifier: `${importSource}/ui-hmr/server-runtime`,
+    serverRuntimeSpecifier: `${importSource}/ui-hmr/runtime/server`,
   }
 }
 

@@ -251,7 +251,7 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/ui/server` — server rendering: `renderToStream`, `renderToString`. Use in the `app/actions/render.tsx` helper that returns HTML responses
 - `remix/ui-hmr` — direct Remix UI component HMR transforms. Use only when writing a custom module hook or build integration
 - `remix/ui-hmr/node` — Node import hook for Remix UI component HMR. Use with `--import remix/ui-hmr/node` in development servers that run through `remix/node-hmr`
-- `remix/ui-hmr/browser-module-hooks` — browser module hook for Remix UI component HMR. Use `uiHmr()` in `createAssetServer({ scripts: { moduleHooks } })` during development
+- `remix/ui-hmr/assets/module-hooks` — `remix/assets` module hooks for Remix UI component HMR. Use `uiHmr()` in `createAssetServer({ scripts: { moduleHooks } })` during development
 - `remix/ui/dev/refresh` — development refresh support used by HMR tooling, not normal application code
 - `remix/ui/animation` — animation APIs: `animateEntrance`, `animateExit`, `animateLayout`, `spring`, `tween`, and `easings`
 - `remix/ui/<primitive>` — UI primitives, mixins, and component helpers. Current subpaths include `remix/ui/accordion`, `remix/ui/anchor`, `remix/ui/button`, `remix/ui/checkbox`, `remix/ui/combobox`, `remix/ui/input`, `remix/ui/listbox`, `remix/ui/menu`, `remix/ui/popover`, and `remix/ui/select`

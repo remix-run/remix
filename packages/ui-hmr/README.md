@@ -25,11 +25,11 @@ Use `remix/ui-hmr/node` as a Node import hook for server modules:
 node --import remix/node-tsx --import remix/ui-hmr/node ./server.ts
 ```
 
-Use `uiHmr()` from `remix/ui-hmr/browser-module-hooks` with `remix/assets` for browser modules:
+Use `uiHmr()` from `remix/ui-hmr/assets/module-hooks` with `remix/assets` for browser modules:
 
 ```ts
 import { createAssetServer } from 'remix/assets'
-import { uiHmr } from 'remix/ui-hmr/browser-module-hooks'
+import { uiHmr } from 'remix/ui-hmr/assets/module-hooks'
 
 let isDevelopment = process.env.NODE_ENV === 'development'
 

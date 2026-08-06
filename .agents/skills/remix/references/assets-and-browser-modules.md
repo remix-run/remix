@@ -108,7 +108,7 @@ Use browser HMR when source-served browser modules should update without a full 
 
 ```typescript
 import { createAssetServer } from 'remix/assets'
-import { uiHmr } from 'remix/ui-hmr/browser-module-hooks'
+import { uiHmr } from 'remix/ui-hmr/assets/module-hooks'
 
 let isDevelopment = process.env.NODE_ENV === 'development'
 

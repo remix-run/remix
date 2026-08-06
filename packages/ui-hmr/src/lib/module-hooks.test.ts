@@ -5,7 +5,7 @@ import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { describe, it } from 'node:test'
 
-import { createBrowserUiHmrModuleHooks, createServerUiHmrModuleHooks } from './module-hooks.ts'
+import { createAssetsUiHmrModuleHooks, createServerUiHmrModuleHooks } from './module-hooks.ts'
 
 describe('ui-hmr module hooks', () => {
   it('transforms browser modules with load hooks only', async () => {
@@ -13,17 +13,17 @@ describe('ui-hmr module hooks', () => {
       'node_modules/remix/package.json': JSON.stringify({
         exports: {
           './ui/dev/refresh': './ui/dev/refresh.js',
-          './ui-hmr/browser-runtime': './ui-hmr/browser-runtime.js',
+          './ui-hmr/runtime/browser': './ui-hmr/runtime/browser.js',
         },
         name: 'remix',
         type: 'module',
       }),
       'node_modules/remix/ui/dev/refresh.js': 'export {}',
-      'node_modules/remix/ui-hmr/browser-runtime.js': 'export {}',
+      'node_modules/remix/ui-hmr/runtime/browser.js': 'export {}',
     })
 
     try {
-      let hooks = createBrowserUiHmrModuleHooks()
+      let hooks = createAssetsUiHmrModuleHooks()
       assert.equal(Object.hasOwn(hooks, 'resolve'), false)
 
       let result = hooks.load?.(
@@ -42,7 +42,7 @@ describe('ui-hmr module hooks', () => {
 
       assert.equal(result?.format, 'module')
       let source = getStringSource(result)
-      assert.match(source, /from "remix\/ui-hmr\/browser-runtime"/)
+      assert.match(source, /from "remix\/ui-hmr\/runtime\/browser"/)
       assert.match(source, /from "remix\/ui\/dev\/refresh"/)
     } finally {
       await fixture.close()
@@ -68,16 +68,16 @@ describe('ui-hmr module hooks', () => {
       'node_modules/@remix-run/ui/dev/refresh.js': 'export {}',
       'node_modules/@remix-run/ui-hmr/package.json': JSON.stringify({
         exports: {
-          './browser-runtime': './browser-runtime.js',
+          './runtime/browser': './runtime/browser.js',
         },
         name: '@remix-run/ui-hmr',
         type: 'module',
       }),
-      'node_modules/@remix-run/ui-hmr/browser-runtime.js': 'export {}',
+      'node_modules/@remix-run/ui-hmr/runtime/browser.js': 'export {}',
     })
 
     try {
-      let hooks = createBrowserUiHmrModuleHooks()
+      let hooks = createAssetsUiHmrModuleHooks()
       let result = hooks.load?.(
         pathToFileURL(fixture.entryPath).href,
         {
@@ -93,7 +93,7 @@ describe('ui-hmr module hooks', () => {
       )
 
       let source = getStringSource(result)
-      assert.match(source, /from "@remix-run\/ui-hmr\/browser-runtime"/)
+      assert.match(source, /from "@remix-run\/ui-hmr\/runtime\/browser"/)
       assert.match(source, /from "@remix-run\/ui\/dev\/refresh"/)
     } finally {
       await fixture.close()
@@ -104,12 +104,12 @@ describe('ui-hmr module hooks', () => {
     let fixture = await createFixture({
       'node_modules/remix/package.json': JSON.stringify({
         exports: {
-          './ui-hmr/server-runtime': './ui-hmr/server-runtime.js',
+          './ui-hmr/runtime/server': './ui-hmr/runtime/server.js',
         },
         name: 'remix',
         type: 'module',
       }),
-      'node_modules/remix/ui-hmr/server-runtime.js': 'export {}',
+      'node_modules/remix/ui-hmr/runtime/server.js': 'export {}',
     })
 
     try {
@@ -130,7 +130,7 @@ describe('ui-hmr module hooks', () => {
       )
 
       let source = getStringSource(result)
-      assert.match(source, /from "remix\/ui-hmr\/server-runtime"/)
+      assert.match(source, /from "remix\/ui-hmr\/runtime\/server"/)
     } finally {
       await fixture.close()
     }
@@ -144,12 +144,12 @@ describe('ui-hmr module hooks', () => {
         'package.json': JSON.stringify({
           exports: {
             './package.json': './package.json',
-            './ui-hmr/server-runtime': './ui-hmr/server-runtime.js',
+            './ui-hmr/runtime/server': './ui-hmr/runtime/server.js',
           },
           name: 'remix',
           type: 'module',
         }),
-        'ui-hmr/server-runtime.js': 'export {}',
+        'ui-hmr/runtime/server.js': 'export {}',
       })
 
       let hooks = createServerUiHmrModuleHooks()
@@ -167,7 +167,7 @@ describe('ui-hmr module hooks', () => {
       )
 
       let source = getStringSource(result)
-      assert.match(source, /from "remix\/ui-hmr\/server-runtime"/)
+      assert.match(source, /from "remix\/ui-hmr\/runtime\/server"/)
     } finally {
       await fixture.close()
     }

@@ -58,16 +58,16 @@ type Runtime = 'browser' | 'server'
 
 const importPresets = [
   {
-    browserRuntimeSpecifier: 'remix/ui-hmr/browser-runtime',
+    browserRuntimeSpecifier: 'remix/ui-hmr/runtime/browser',
     importSource: 'remix',
     refreshSpecifier: 'remix/ui/dev/refresh',
-    serverRuntimeSpecifier: 'remix/ui-hmr/server-runtime',
+    serverRuntimeSpecifier: 'remix/ui-hmr/runtime/server',
   },
   {
-    browserRuntimeSpecifier: '@remix-run/ui-hmr/browser-runtime',
+    browserRuntimeSpecifier: '@remix-run/ui-hmr/runtime/browser',
     importSource: '@remix-run',
     refreshSpecifier: '@remix-run/ui/dev/refresh',
-    serverRuntimeSpecifier: '@remix-run/ui-hmr/server-runtime',
+    serverRuntimeSpecifier: '@remix-run/ui-hmr/runtime/server',
   },
 ] as const satisfies ReadonlyArray<{
   browserRuntimeSpecifier: string
@@ -76,7 +76,7 @@ const importPresets = [
   serverRuntimeSpecifier: string
 }>
 
-export function createBrowserUiHmrModuleHooks(): BrowserModuleHooks {
+export function createAssetsUiHmrModuleHooks(): BrowserModuleHooks {
   return {
     load(url, context, nextLoad) {
       let result = nextLoad(url, context)

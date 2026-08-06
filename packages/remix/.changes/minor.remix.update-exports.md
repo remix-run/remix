@@ -5,9 +5,9 @@ Added `package.json` `exports`:
 - `remix/node-hmr/runtime` to re-export APIs from `@remix-run/node-hmr/runtime`
 - `remix/node-hmr/types` to re-export APIs from `@remix-run/node-hmr/types`
 - `remix/ui-hmr` to re-export APIs from `@remix-run/ui-hmr`
-- `remix/ui-hmr/browser-module-hooks` to re-export APIs from `@remix-run/ui-hmr/browser-module-hooks`
-- `remix/ui-hmr/browser-runtime` to re-export APIs from `@remix-run/ui-hmr/browser-runtime`
+- `remix/ui-hmr/assets/module-hooks` to re-export APIs from `@remix-run/ui-hmr/assets/module-hooks`
 - `remix/ui-hmr/node` to re-export APIs from `@remix-run/ui-hmr/node`
-- `remix/ui-hmr/server-runtime` to re-export APIs from `@remix-run/ui-hmr/server-runtime`
+- `remix/ui-hmr/runtime/browser` to re-export APIs from `@remix-run/ui-hmr/runtime/browser`
+- `remix/ui-hmr/runtime/server` to re-export APIs from `@remix-run/ui-hmr/runtime/server`
 - `remix/ui/dev/refresh` to re-export APIs from `@remix-run/ui/dev/refresh`
 - `remix/data-table/cli` to expose the typed data-table command invocation API

@@ -55,7 +55,7 @@ describe('transformComponentsForBrowser', () => {
     )
     assert.equal(
       getGeneratedImports(result.code),
-      `import { __uiHmrBrowserRuntime__ as __remixUiHmr__ } from "@remix-run/ui-hmr/browser-runtime";
+      `import { __uiHmrBrowserRuntime__ as __remixUiHmr__ } from "@remix-run/ui-hmr/runtime/browser";
 import * as __remixUIRefresh__ from "@remix-run/ui/dev/refresh";`,
     )
     assert.equal(
@@ -97,7 +97,7 @@ import * as __remixUIRefresh__ from "@remix-run/ui/dev/refresh";`,
     assert.equal(result.transformed, true)
     assert.equal(
       getGeneratedImports(result.code),
-      `import { __uiHmrBrowserRuntime__ as __remixUiHmr__ } from "remix/ui-hmr/browser-runtime";
+      `import { __uiHmrBrowserRuntime__ as __remixUiHmr__ } from "remix/ui-hmr/runtime/browser";
 import * as __remixUIRefresh__ from "remix/ui/dev/refresh";`,
     )
   })
@@ -114,7 +114,7 @@ import * as __remixUIRefresh__ from "remix/ui/dev/refresh";`,
     assert.equal(result.transformed, true)
     assert.equal(
       getGeneratedImports(result.code),
-      `import { __uiHmrBrowserRuntime__ as __remixUiHmr__ } from "@acme/remix/ui-hmr/browser-runtime";
+      `import { __uiHmrBrowserRuntime__ as __remixUiHmr__ } from "@acme/remix/ui-hmr/runtime/browser";
 import * as __remixUIRefresh__ from "@acme/remix/ui/dev/refresh";`,
     )
   })
@@ -873,7 +873,7 @@ describe('transformComponentsForServer', () => {
     )
     assert.equal(
       getGeneratedImports(result.code),
-      `import { __uiHmrServerRuntime__ as __remixUiHmr__ } from "@remix-run/ui-hmr/server-runtime";`,
+      `import { __uiHmrServerRuntime__ as __remixUiHmr__ } from "@remix-run/ui-hmr/runtime/server";`,
     )
     assert.equal(
       getGeneratedPublicWrapper(result.code, 'Counter'),
@@ -914,7 +914,7 @@ describe('transformComponentsForServer', () => {
     assert.equal(result.transformed, true)
     assert.equal(
       getGeneratedImports(result.code),
-      `import { __uiHmrServerRuntime__ as __remixUiHmr__ } from "remix/ui-hmr/server-runtime";`,
+      `import { __uiHmrServerRuntime__ as __remixUiHmr__ } from "remix/ui-hmr/runtime/server";`,
     )
   })
 
@@ -930,7 +930,7 @@ describe('transformComponentsForServer', () => {
     assert.equal(result.transformed, true)
     assert.equal(
       getGeneratedImports(result.code),
-      `import { __uiHmrServerRuntime__ as __remixUiHmr__ } from "@acme/remix/ui-hmr/server-runtime";`,
+      `import { __uiHmrServerRuntime__ as __remixUiHmr__ } from "@acme/remix/ui-hmr/runtime/server";`,
     )
   })
 

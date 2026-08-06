@@ -20,10 +20,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./browser-module-hooks": "./src/browser-module-hooks.ts",
-    "./browser-runtime": "./src/browser-runtime.ts",
+    "./assets/module-hooks": "./src/assets/module-hooks.ts",
     "./node": "./src/node.ts",
-    "./server-runtime": "./src/server-runtime.ts",
+    "./runtime/browser": "./src/runtime/browser.ts",
+    "./runtime/server": "./src/runtime/server.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -32,21 +32,21 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./browser-module-hooks": {
-        "types": "./dist/browser-module-hooks.d.ts",
-        "default": "./dist/browser-module-hooks.js"
-      },
-      "./browser-runtime": {
-        "types": "./dist/browser-runtime.d.ts",
-        "default": "./dist/browser-runtime.js"
+      "./assets/module-hooks": {
+        "types": "./dist/assets/module-hooks.d.ts",
+        "default": "./dist/assets/module-hooks.js"
       },
       "./node": {
         "types": "./dist/node.d.ts",
         "default": "./dist/node.js"
       },
-      "./server-runtime": {
-        "types": "./dist/server-runtime.d.ts",
-        "default": "./dist/server-runtime.js"
+      "./runtime/browser": {
+        "types": "./dist/runtime/browser.d.ts",
+        "default": "./dist/runtime/browser.js"
+      },
+      "./runtime/server": {
+        "types": "./dist/runtime/server.d.ts",
+        "default": "./dist/runtime/server.js"
       },
       "./package.json": "./package.json"
     }

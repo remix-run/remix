@@ -115,10 +115,10 @@
     "./test/cli": "./src/test/cli.ts",
     "./ui": "./src/ui.ts",
     "./ui-hmr": "./src/ui-hmr.ts",
-    "./ui-hmr/browser-module-hooks": "./src/ui-hmr/browser-module-hooks.ts",
-    "./ui-hmr/browser-runtime": "./src/ui-hmr/browser-runtime.ts",
+    "./ui-hmr/assets/module-hooks": "./src/ui-hmr/assets/module-hooks.ts",
     "./ui-hmr/node": "./src/ui-hmr/node.ts",
-    "./ui-hmr/server-runtime": "./src/ui-hmr/server-runtime.ts",
+    "./ui-hmr/runtime/browser": "./src/ui-hmr/runtime/browser.ts",
+    "./ui-hmr/runtime/server": "./src/ui-hmr/runtime/server.ts",
     "./ui/accordion": "./src/ui/accordion.ts",
     "./ui/accordion/primitives": "./src/ui/accordion/primitives.ts",
     "./ui/anchor": "./src/ui/anchor.ts",
@@ -507,21 +507,21 @@
         "types": "./dist/ui-hmr.d.ts",
         "default": "./dist/ui-hmr.js"
       },
-      "./ui-hmr/browser-module-hooks": {
-        "types": "./dist/ui-hmr/browser-module-hooks.d.ts",
-        "default": "./dist/ui-hmr/browser-module-hooks.js"
-      },
-      "./ui-hmr/browser-runtime": {
-        "types": "./dist/ui-hmr/browser-runtime.d.ts",
-        "default": "./dist/ui-hmr/browser-runtime.js"
+      "./ui-hmr/assets/module-hooks": {
+        "types": "./dist/ui-hmr/assets/module-hooks.d.ts",
+        "default": "./dist/ui-hmr/assets/module-hooks.js"
       },
       "./ui-hmr/node": {
         "types": "./dist/ui-hmr/node.d.ts",
         "default": "./dist/ui-hmr/node.js"
       },
-      "./ui-hmr/server-runtime": {
-        "types": "./dist/ui-hmr/server-runtime.d.ts",
-        "default": "./dist/ui-hmr/server-runtime.js"
+      "./ui-hmr/runtime/browser": {
+        "types": "./dist/ui-hmr/runtime/browser.d.ts",
+        "default": "./dist/ui-hmr/runtime/browser.js"
+      },
+      "./ui-hmr/runtime/server": {
+        "types": "./dist/ui-hmr/runtime/server.d.ts",
+        "default": "./dist/ui-hmr/runtime/server.js"
       },
       "./ui/accordion": {
         "types": "./dist/ui/accordion.d.ts",

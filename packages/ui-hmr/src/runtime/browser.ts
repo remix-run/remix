@@ -9,7 +9,7 @@ import {
   registerComponentRenderForHmr,
   setupComponentForHmr,
   updateComponentModuleForHmr,
-} from './lib/browser-runtime.ts'
+} from '../lib/browser-runtime.ts'
 
 export const __uiHmrBrowserRuntime__ = {
   callComponentRenderForHmr,

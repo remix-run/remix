@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { watch, type FSWatcher } from 'chokidar'
 import { createAssetServer, type AssetServer } from '@remix-run/assets'
 import type { HmrPayload } from '@remix-run/assets/types/hmr'
-import { uiHmr } from '../src/browser-module-hooks.ts'
+import { uiHmr } from '../src/assets/module-hooks.ts'
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const workspaceDir = path.resolve(packageDir, '../..')
@@ -1746,7 +1746,7 @@ function getNodeHmrServerSource(
   return [
     "import { createServer } from 'node:http'",
     "import { createAssetServer } from '@remix-run/assets'",
-    "import { uiHmr } from '@remix-run/ui-hmr/browser-module-hooks'",
+    "import { uiHmr } from '@remix-run/ui-hmr/assets/module-hooks'",
     "import { createBrowserHmrChannel, emitServerReady } from '@remix-run/node-hmr/runtime'",
     "import { renderToStream } from '@remix-run/ui/server'",
     "import { serverMessage } from './server-message.ts'",

@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
-import { uiHmr } from 'remix/ui-hmr/browser-module-hooks'
+import { uiHmr } from 'remix/ui-hmr/assets/module-hooks'
 import { assetsBase } from '../routes.ts'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
