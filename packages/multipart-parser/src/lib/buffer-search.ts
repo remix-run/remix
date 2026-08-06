@@ -23,10 +23,8 @@ export function createSearch(pattern: string): SearchFunction {
     search = (haystack, start = 0) => BufferClass.prototype.indexOf.call(haystack, needle, start)
   } else {
     let needleEnd = needle.length - 1
-    // Uint32Array, not Uint8Array: for a needle of 256+ bytes the fill value would wrap a
-    // Uint8Array element to 0, making the default skip 0 so the loop below never advances
-    // (infinite loop). needle.length is bounded by the pattern string length, well under
-    // 2^32, so a Uint32 skip can never wrap.
+    // Uint32Array instead of Uint8Array to keep skip distances for long needles from wrapping
+    // back to 0 and stalling the search.
     let skipTable = new Uint32Array(256).fill(needle.length)
     for (let i = 0; i < needleEnd; ++i) {
       skipTable[needle[i]] = needleEnd - i

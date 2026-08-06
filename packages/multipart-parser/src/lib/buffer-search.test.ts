@@ -18,9 +18,7 @@ describe('createSearch', () => {
     assert.equal(search(buf('hello worl')), -1)
   })
 
-  // Regression: a 256-byte needle wrapped the Uint8Array skip table default to 0, so the
-  // search never advanced and looped forever on the JS search path (Bun/Deno/browsers).
-  it('terminates on a pattern whose length would wrap a byte-sized skip table', () => {
+  it('handles long patterns whose length would wrap a byte-sized skip table', () => {
     let search = createSearch('x'.repeat(256))
     assert.equal(search(buf('a'.repeat(512))), -1)
   })
