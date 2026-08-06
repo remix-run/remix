@@ -3,8 +3,6 @@ import process from 'node:process'
 
 import { createHmrSupervisor } from './lib/runner.ts'
 
-export type { ImportMetaHot } from './lib/runtime.ts'
-
 /**
  * Options for running a Node.js entry module with HMR supervision.
  */

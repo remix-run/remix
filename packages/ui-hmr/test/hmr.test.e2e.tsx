@@ -9,7 +9,6 @@ import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { watch, type FSWatcher } from 'chokidar'
 import { createAssetServer, type AssetServer } from '@remix-run/assets'
-import type { HmrPayload } from '@remix-run/assets/types/hmr'
 import { uiHmr } from '../src/assets/module-hooks.ts'
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -1200,12 +1199,36 @@ type BrowserHmrFileEvent = {
   filePath: string
 }
 
+type HmrPayload =
+  | {
+      type: 'server:update'
+    }
+  | {
+      timestamp: number
+      type: 'browser:update'
+      updates: BrowserHmrUpdate[]
+    }
+  | {
+      type: 'browser:reload'
+    }
+
+type BrowserHmrUpdate =
+  | {
+      acceptedPath?: string
+      path: string
+      type: 'js'
+    }
+  | {
+      path: string
+      type: 'css'
+    }
+
 type BrowserHmrEvent =
   | {
       files?: string[]
       timestamp: number
       type: 'update'
-      updates: Extract<HmrPayload, { type: 'browser:update' }>['updates']
+      updates: BrowserHmrUpdate[]
     }
   | {
       files?: string[]

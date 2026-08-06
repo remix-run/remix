@@ -1,9 +1,9 @@
 Added `package.json` `exports`:
 
-- `remix/assets/types/hmr` to re-export APIs from `@remix-run/assets/types/hmr`
+- `remix/assets/types/hmr` to add the global `import.meta.hot` types from `@remix-run/assets`
 - `remix/node-hmr` to re-export APIs from `@remix-run/node-hmr`
 - `remix/node-hmr/runtime` to re-export APIs from `@remix-run/node-hmr/runtime`
-- `remix/node-hmr/types` to re-export APIs from `@remix-run/node-hmr/types`
+- `remix/node-hmr/types` to add the global `import.meta.hot` types from `@remix-run/node-hmr`
 - `remix/ui-hmr` to re-export APIs from `@remix-run/ui-hmr`
 - `remix/ui-hmr/assets/module-hooks` to re-export APIs from `@remix-run/ui-hmr/assets/module-hooks`
 - `remix/ui-hmr/node` to re-export APIs from `@remix-run/ui-hmr/node`

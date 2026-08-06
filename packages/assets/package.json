@@ -42,7 +42,6 @@
     "@remix-run/file-storage": "workspace:^",
     "@remix-run/headers": "workspace:^",
     "@remix-run/mime": "workspace:^",
-    "@remix-run/node-hmr": "workspace:^",
     "@remix-run/route-pattern": "workspace:^",
     "chokidar": "^5.0.0",
     "es-module-lexer": "^2.0.0",
@@ -58,6 +57,7 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@remix-run/node-hmr": "workspace:^",
     "@remix-run/node-tsx": "workspace:^",
     "@remix-run/test": "workspace:*",
     "@remix-run/ui": "workspace:*",
