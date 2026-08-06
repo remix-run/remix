@@ -26,7 +26,3 @@ if (import.meta.hot) {
     }
   })
 }
-
-app.ready().catch((error: unknown) => {
-  console.error('Frame adoption failed:', error)
-})

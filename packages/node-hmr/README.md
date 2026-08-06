@@ -56,24 +56,24 @@ import { createFetchProxy } from 'remix/fetch-proxy'
 import { run, createHmrReadyFetch } from 'remix/node-hmr'
 import { createRequestListener } from 'remix/node-fetch-server'
 
-const publicPort = 44100
-const childPort = 44101
+const hmrProxyPort = 44100
+const appPort = 44101
 
 const hmrRunner = run('./server.ts', {
   env: {
     ...process.env,
-    PORT: String(childPort),
+    PORT: String(appPort),
   },
   nodeArgs: ['--import', 'remix/node-tsx'],
 })
 
-const proxyFetch = createFetchProxy(`http://127.0.0.1:${childPort}`, {
+const proxyFetch = createFetchProxy(`http://127.0.0.1:${appPort}`, {
   xForwardedHeaders: true,
 })
 
 const server = http.createServer(createRequestListener(createHmrReadyFetch(hmrRunner, proxyFetch)))
 
-server.listen(publicPort)
+server.listen(hmrProxyPort)
 ```
 
 By default, `createHmrReadyFetch()` retries `GET` and `HEAD` requests when the wrapped fetch handler throws or returns a `502`, `503`, or `504` response, but only if the server updated or restarted while the request was in flight. You can customize this policy with `shouldRetry`:
@@ -116,14 +116,17 @@ Browser asset servers can use this API to co-ordinate browser HMR with the serve
 ```ts
 import { createAssetServer } from 'remix/assets'
 
+let isDevelopment = process.env.NODE_ENV === 'development'
+
 let assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
   allowFiles: ['app/assets/**'],
-  hmr: process.env.REMIX_NODE_HMR
-    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
-    : undefined,
-  watch: true,
+  hmr:
+    isDevelopment && process.env.REMIX_NODE_HMR
+      ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+      : undefined,
+  watch: isDevelopment,
 })
 ```
 

@@ -21,8 +21,9 @@ export const assetServer = createAssetServer({
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
   watch: isDevelopment,
-  ...(process.env.REMIX_NODE_HMR && {
-    hmr: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
-    scripts: { moduleHooks: [uiHmr()] },
-  }),
+  ...(isDevelopment &&
+    process.env.REMIX_NODE_HMR && {
+      hmr: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
+      scripts: { moduleHooks: [uiHmr()] },
+    }),
 })

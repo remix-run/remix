@@ -232,26 +232,30 @@ import { createFetchProxy } from 'remix/fetch-proxy'
 import { createHmrReadyFetch, run } from 'remix/node-hmr'
 import { createRequestListener } from 'remix/node-fetch-server'
 
-const publicPort = 44100
-const childPort = 44101
+const hmrProxyPort = 44100
+const hmrEventPort = 44101
+const appPort = 44102
 
 const hmrRunner = run('./server.ts', {
   env: {
     ...process.env,
-    ORIGIN_PORT: String(publicPort),
-    PORT: String(childPort),
+    PORT: String(appPort),
+    HMR_PROXY_PORT: String(hmrProxyPort),
   },
   nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
+  browserHmrChannel: { port: hmrEventPort },
 })
 
-let proxyFetch = createFetchProxy(`http://127.0.0.1:${childPort}`, {
+let proxyFetch = createFetchProxy(`http://127.0.0.1:${appPort}`, {
   xForwardedHeaders: true,
 })
 
 let server = http.createServer(createRequestListener(createHmrReadyFetch(hmrRunner, proxyFetch)))
 
-server.listen(publicPort, '127.0.0.1')
+server.listen(hmrProxyPort, '127.0.0.1')
 ```
+
+Keep `browserHmrChannel.port` stable so browser HMR clients can reconnect to the same event channel if the dev server is manually restarted.
 
 Use a stable public proxy when browser requests may happen while the child server is restarting. `createHmrReadyFetch()` waits for the active child generation before forwarding requests and retries safe unavailable responses when the child changes during a request.
 
@@ -259,7 +263,7 @@ In the child `server.ts`, report readiness after the server is listening:
 
 ```typescript
 server.listen(port, () => {
-  if (process.env.NODE_ENV === 'development' && process.env.REMIX_NODE_HMR) {
+  if (process.env.REMIX_NODE_HMR) {
     import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
   }
 })
