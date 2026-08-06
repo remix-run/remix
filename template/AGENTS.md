@@ -6,6 +6,8 @@ This app was scaffolded with `remix new`. Use these conventions when continuing 
 
 ```sh
 npm i
+npm run dev
+npm run hmr
 npm run start
 npm test
 npm run typecheck

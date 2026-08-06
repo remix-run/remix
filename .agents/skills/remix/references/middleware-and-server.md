@@ -81,7 +81,7 @@ let router = createRouter({ middleware })
 - **Session-backed HTML app** -> `compression()`, `staticFiles()`, optional `cop()`, `formData()`, `methodOverride()`, `session()`, optional `csrf()`, `asyncContext()`, `auth({ schemes })`
 - **Cross-origin API** -> `compression()`, `cors()`, optional `asyncContext()`, optional `auth({ schemes })`
 - **Upload flow** -> `compression()`, `staticFiles()`, `formData({ uploadHandler })`, then sessions, auth, and data-loading middleware as needed
-- **Development HMR** -> keep `server.ts` as the child app server, add `dev.ts` for `remix/node-hmr`, and proxy public requests through `createHmrReadyFetch()`
+- **Optional development HMR** -> keep `server.ts` as the child app server, add `hmr.ts` for `remix/node-hmr`, and proxy public requests through `createHmrReadyFetch()`
 
 ### Middleware with options
 
@@ -219,9 +219,13 @@ Use `remix/node-fetch-server` when you want to keep owning a standard Node `http
 
 ## Development HMR
 
-Keep HMR supervision out of normal app code. Put the real app server in `server.ts`, then add a development-only `dev.ts` that runs it under `remix/node-hmr`.
+Treat HMR as an optional mode for rapid UI edits. Keep HMR supervision out of normal app code:
+put the real app server in `server.ts`, keep the `dev` script running it directly (usually with
+Node's watch mode), then add a development-only `hmr.ts` behind an `hmr` script when the project
+benefits from HMR.
 
 ```typescript
+// hmr.ts
 import * as http from 'node:http'
 
 import { createFetchProxy } from 'remix/fetch-proxy'
@@ -265,5 +269,5 @@ Rules:
 
 - Guard `remix/node-hmr/runtime` imports with `process.env.REMIX_NODE_HMR`.
 - Use `--import remix/ui-hmr/node` only when server-rendered Remix UI component modules should hot update.
-- Keep production startup independent from `dev.ts`.
+- Keep the default development and production startup paths independent from `hmr.ts`.
 - Close the public server and `hmrRunner` during `SIGINT` and `SIGTERM` shutdown.

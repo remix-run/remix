@@ -7,10 +7,12 @@ A full-featured e-commerce bookstore that demonstrates Remix application structu
 ```bash
 cd demos/bookstore
 pnpm install
-pnpm start
+pnpm dev
 ```
 
 Then visit http://localhost:44100
+
+For rapid UI edits, run `pnpm hmr` instead. This uses the `hmr.ts` runner to keep a stable public server while applying server and browser updates through HMR.
 
 ### Demo Accounts
 

@@ -21,7 +21,7 @@ npm i remix
 Create a development script that starts your app server with HMR enabled, along with any additional Node args, such as the `--import` flag to provide [Node module customization hooks](https://nodejs.org/api/module.html#customization-hooks) for [JSX syntax support](https://github.com/remix-run/remix/tree/main/packages/node-tsx) and [Remix component HMR](https://github.com/remix-run/remix/tree/main/packages/ui-hmr):
 
 ```ts
-// dev.ts
+// hmr.ts
 import { run } from 'remix/node-hmr'
 
 run('./server.ts', {
@@ -37,7 +37,7 @@ Then run the script with Node:
 ```json
 {
   "scripts": {
-    "dev": "NODE_ENV=development node dev.ts"
+    "hmr": "NODE_ENV=development node hmr.ts"
   }
 }
 ```
@@ -49,7 +49,7 @@ During development, server updates can briefly leave your app unable to handle r
 A stable proxy server can avoid this by continuing to listen on the public port while `node-hmr` updates the child server behind it. `createHmrReadyFetch()` works with any fetch handler, so you can compose it with `createFetchProxy()` from [`remix/fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) to forward requests to the child server while delaying or retrying requests during updates.
 
 ```ts
-// dev.ts
+// hmr.ts
 import * as http from 'node:http'
 
 import { createFetchProxy } from 'remix/fetch-proxy'
