@@ -1,5 +1,12 @@
-import { createSession, type SessionData } from '../session.ts'
+import * as s from '@remix-run/data-schema'
+
+import { createSession } from '../session.ts'
 import type { SessionStorage } from '../session-storage.ts'
+
+const cookieSessionSchema = s.object({
+  i: s.string(),
+  d: s.tuple([s.record(s.string(), s.any()), s.record(s.string(), s.any())]),
+})
 
 /**
  * Creates a session storage that stores all session data in the session cookie itself.
@@ -14,8 +21,10 @@ export function createCookieSessionStorage(): SessionStorage {
     async read(cookie) {
       if (cookie) {
         try {
-          let parsed = JSON.parse(cookie) as { i: string; d: SessionData }
-          return createSession(parsed.i, parsed.d)
+          let result = s.parseSafe(cookieSessionSchema, JSON.parse(cookie))
+          if (result.success) {
+            return createSession(result.value.i, [result.value.d[0], result.value.d[1]])
+          }
         } catch {
           // Invalid JSON, fall through to create new session
         }

@@ -76,6 +76,18 @@ describe('cookie session storage', () => {
     assert.equal(response.cookie, null)
   })
 
+  it('creates a new session when cookie data has an invalid shape', async () => {
+    let storage = createCookieSessionStorage()
+
+    let invalidId = await storage.read(JSON.stringify({ i: 123, d: [{ count: 1 }, {}] }))
+    assert.equal(typeof invalidId.id, 'string')
+    assert.equal(invalidId.size, 0)
+
+    let invalidData = await storage.read(JSON.stringify({ i: 'old-id', d: [{ count: 1 }] }))
+    assert.notEqual(invalidData.id, 'old-id')
+    assert.equal(invalidData.size, 0)
+  })
+
   it('makes flash data available only on the next request', async () => {
     let storage = createCookieSessionStorage()
 
