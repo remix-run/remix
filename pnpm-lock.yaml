@@ -351,19 +351,19 @@ importers:
         specifier: ^0.121.0
         version: 0.121.0
       '@remix-run/file-storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../file-storage
       '@remix-run/headers':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../headers
       '@remix-run/mime':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../mime
       '@remix-run/node-hmr':
         specifier: workspace:^
         version: link:../node-hmr
       '@remix-run/route-pattern':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../route-pattern
       chokidar:
         specifier: ^5.0.0
