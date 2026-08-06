@@ -1256,14 +1256,14 @@ function createAbortableReadableStream(
         signal.addEventListener('abort', onAbortRead, { once: true })
       })
 
-      let { done, value } = await Promise.race([reader.read(), abortRead])
+      let result = await Promise.race([reader.read(), abortRead])
       removeAbortReadListener?.()
 
-      if (done) {
+      if (result.done) {
         controller.close()
         return
       }
-      controller.enqueue(value)
+      controller.enqueue(result.value)
     },
     cancel(reason) {
       signal.removeEventListener('abort', onAbort)
