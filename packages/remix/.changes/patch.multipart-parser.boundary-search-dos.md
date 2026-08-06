@@ -1,1 +1,0 @@
-Fixed an infinite loop (denial of service) in `remix/multipart-parser`'s boundary search on Bun, Deno, and browsers, where a multipart boundary of 252 or more characters could hang the process. The search skip table now uses `Uint32Array` so its length can never wrap. See GHSA-hpwp-7w8r-373j.
