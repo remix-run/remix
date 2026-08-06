@@ -84,7 +84,8 @@ export function startNavigationListenerImpl(
             navigation.updateCurrentEntry({ state })
           }
 
-          frame.src = frame === topFrame ? event.destination.url : state.src
+          topFrame.src = event.destination.url
+          if (frame !== topFrame) frame.src = state.src
           await frame.reload()
 
           let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
