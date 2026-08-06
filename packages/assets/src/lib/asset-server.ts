@@ -48,22 +48,28 @@ interface AssetServerWatchOptions {
 }
 
 /**
- * Browser HMR channel used by the asset server to coordinate browser updates.
+ * Bridge used by an asset server to watch browser source files and publish update events through a
+ * server-level HMR runtime.
+ *
+ * The asset server registers its file handler, keeps the channel's watched-file set in sync with
+ * compiled assets, injects `url` into its browser HMR client, and closes the channel when the asset
+ * server closes.
  */
 export interface BrowserHmrChannel {
-  /** EventSource URL for browser HMR clients. */
+  /** Absolute EventSource URL that receives the browser HMR events produced by this channel. */
   readonly url: string
-  /** Closes the channel and clears watched files. */
+  /** Releases the channel and all file-watching resources it owns. */
   close(): void
   /**
-   * Registers a file event handler.
+   * Registers the asset server's handler for file changes reported by the channel's watcher.
    *
-   * @param handler Callback that maps file events to browser HMR events.
-   * @returns A cleanup function that unregisters the handler.
+   * @param handler Callback that converts a batch of file changes into browser update or reload
+   * events.
+   * @returns A cleanup function that stops forwarding file changes to this handler.
    */
   onFileEvents(handler: BrowserHmrFileEventHandler): () => void
   /**
-   * Updates the files watched on behalf of this channel.
+   * Applies additions and removals to the channel's set of watched absolute file paths.
    *
    * @param delta Files to add and remove from the watcher.
    */
@@ -71,7 +77,12 @@ export interface BrowserHmrChannel {
 }
 
 /**
- * Creates a browser HMR channel for an asset server instance.
+ * Creates the browser HMR channel owned by an asset server instance.
+ *
+ * Returning `undefined` leaves browser HMR inactive. The asset server invokes this factory once,
+ * after construction, and closes a returned channel from `assetServer.close()`.
+ *
+ * @returns A channel, no channel, or a promise for either result.
  */
 export type BrowserHmrChannelFactory = () =>
   | BrowserHmrChannel
@@ -79,7 +90,10 @@ export type BrowserHmrChannelFactory = () =>
   | Promise<BrowserHmrChannel | undefined>
 
 /**
- * Handles changed files and returns browser HMR events to emit.
+ * Converts a watcher batch into ordered browser update or reload events.
+ *
+ * @param events File additions, changes, and removals reported together by the watcher.
+ * @returns Browser events to publish in their returned order.
  */
 export type BrowserHmrFileEventHandler = (
   events: readonly BrowserHmrFileEvent[],
@@ -89,9 +103,9 @@ export type BrowserHmrFileEventHandler = (
  * Watched file delta for a browser HMR channel.
  */
 export interface BrowserHmrWatchedFileDelta {
-  /** Absolute file paths to start watching. */
+  /** Absolute source file paths newly required by the asset server's compiled module graph. */
   add: readonly string[]
-  /** Absolute file paths to stop watching. */
+  /** Absolute source file paths no longer required by the asset server's compiled module graph. */
   remove: readonly string[]
 }
 
@@ -99,9 +113,9 @@ export interface BrowserHmrWatchedFileDelta {
  * File watcher event reported to a browser HMR channel.
  */
 export type BrowserHmrFileEvent = {
-  /** File watcher event type. */
+  /** Filesystem operation observed by the channel's watcher. */
   event: 'add' | 'change' | 'unlink'
-  /** Absolute file path that changed. */
+  /** Absolute path of the source file that changed. */
   filePath: string
 }
 
@@ -110,17 +124,17 @@ export type BrowserHmrFileEvent = {
  */
 export type BrowserHmrEvent =
   | {
-      /** Source files that triggered this update. */
+      /** Absolute source file paths that triggered this update. */
       files?: string[]
-      /** Update timestamp used to bust browser caches. */
+      /** Update time used to bypass browser module and stylesheet caches. */
       timestamp: number
       /** Browser update event. */
       type: 'update'
-      /** JavaScript and CSS updates for the browser to apply. */
+      /** Accepted JavaScript and CSS module updates for the browser to apply in place. */
       updates: Extract<HmrPayload, { type: 'browser:update' }>['updates']
     }
   | {
-      /** Source files that triggered this reload. */
+      /** Absolute source file paths that could not be handled in place. */
       files?: string[]
       /** Browser reload event. */
       type: 'reload'
@@ -146,7 +160,13 @@ interface AssetServerScriptOptions {
   /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
   external?: string[]
   /**
-   * Node's synchronous module hooks API for script modules. Only `format: 'module'` is supported.
+   * Synchronous, Node-compatible hooks that resolve imports and post-process compiled JavaScript.
+   *
+   * Later hooks wrap earlier hooks: for `[first, second]`, `second` is entered first and delegates
+   * through `first` to the default behavior. As a result, load-hook transformations performed after
+   * `nextLoad()` are applied in array order. Each hook must delegate or return `shortCircuit: true`.
+   * Load hooks run after TypeScript/JavaScript transformation and before HMR analysis and
+   * minification. Only `format: 'module'` is supported, and import attributes are unsupported.
    */
   moduleHooks?: readonly ModuleHooks[]
 }
@@ -217,11 +237,10 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
    */
   files?: AssetServerFilesOptions<transforms>
   /**
-   * Enable HMR via the import.meta.hot API using a browser HMR channel factory.
-   * Browser HMR channels are designed to integrate with a server-level HMR
-   * runtime so server and browser updates can be coordinated. HMR requires
-   * `watch` to be enabled. The asset server creates one channel for this
-   * server instance and closes it when `assetServer.close()` is called.
+   * Enables `import.meta.hot` and coordinates browser updates through a server-level HMR runtime.
+   *
+   * HMR requires `watch` to be enabled. The factory is called once for this asset server. Returning
+   * `undefined` leaves HMR inactive; a returned channel is closed by `assetServer.close()`.
    */
   hmr?: BrowserHmrChannelFactory
   /**
@@ -271,7 +290,9 @@ export interface AssetServer<transforms extends AssetRequestTransformMap = {}> {
    */
   getPreloads(filePath: string | readonly string[]): Promise<string[]>
   /**
-   * Closes any watcher resources owned by this server instance.
+   * Closes this server's filesystem watcher and browser HMR channel.
+   *
+   * @returns A promise that resolves after owned development resources have been released.
    */
   close(): Promise<void>
 }

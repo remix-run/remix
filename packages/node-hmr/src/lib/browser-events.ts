@@ -13,14 +13,20 @@ export interface HmrEventPayload {
   [key: string]: unknown
 }
 
+/** JavaScript or CSS module update sent to a browser HMR client. */
 export type HmrBrowserUpdate =
   | {
+      /** Importing module whose dependency-accept handler accepts this update. */
       acceptedPath?: string
+      /** Public URL of the changed JavaScript module. */
       path: string
+      /** Identifies a JavaScript module update. */
       type: 'js'
     }
   | {
+      /** Public URL of the changed stylesheet. */
       path: string
+      /** Identifies a stylesheet update. */
       type: 'css'
     }
 
@@ -29,7 +35,7 @@ export type HmrBrowserUpdate =
  */
 export type BrowserHmrEvent =
   | {
-      /** Source files that triggered this update. */
+      /** Absolute source file paths that triggered this update. */
       files?: string[]
       /** Update timestamp used to bust module and stylesheet caches. */
       timestamp: number
@@ -39,7 +45,7 @@ export type BrowserHmrEvent =
       updates: HmrBrowserUpdate[]
     }
   | {
-      /** Source files that triggered this reload. */
+      /** Absolute source file paths that could not be handled in place. */
       files?: string[]
       /** Browser reload event. */
       type: 'reload'
@@ -49,14 +55,17 @@ export type BrowserHmrEvent =
  * File watcher event reported to a browser HMR channel.
  */
 export type BrowserHmrFileEvent = {
-  /** File watcher event type. */
+  /** Filesystem operation observed by the parent watcher. */
   event: 'add' | 'change' | 'unlink'
-  /** Absolute file path that changed. */
+  /** Absolute path of the source file that changed. */
   filePath: string
 }
 
 /**
  * Handles file events and returns browser HMR events to emit.
+ *
+ * @param events File additions, changes, and removals reported together by the parent watcher.
+ * @returns Browser events to publish in their returned order.
  */
 export type BrowserHmrFileEventHandler = (
   events: readonly BrowserHmrFileEvent[],
@@ -66,29 +75,38 @@ export type BrowserHmrFileEventHandler = (
  * Watched file delta for a browser HMR channel.
  */
 export interface BrowserHmrWatchedFileDelta {
-  /** Absolute file paths to start watching. */
+  /** Absolute source file paths newly required by this channel. */
   add: readonly string[]
-  /** Absolute file paths to stop watching. */
+  /** Absolute source file paths no longer required by this channel. */
   remove: readonly string[]
 }
 
 /**
- * Channel used by asset tooling to coordinate browser HMR through `node-hmr`.
+ * Child-process bridge between browser asset tooling and the parent `node-hmr` runtime.
+ *
+ * The channel contributes files to the parent's shared watcher and converts matching file changes
+ * into browser update or reload events. Close it when its owning asset server shuts down.
  */
 export interface BrowserHmrChannel {
-  /** EventSource URL for browser HMR clients. */
+  /** Absolute URL of the parent-owned EventSource endpoint for browser HMR clients. */
   readonly url: string
-  /** Closes the channel and removes all watched files. */
+  /** Closes this channel, unregisters its handlers, and removes its files from the parent watcher. */
   close(): void
   /**
-   * Registers a file event handler.
+   * Registers a handler that converts matching watcher events into events for browser clients.
    *
-   * @param handler Callback that maps file events to browser HMR events.
-   * @returns A cleanup function that unregisters the handler.
+   * Multiple handlers may be registered; their returned browser events are concatenated. Calling
+   * the returned cleanup function stops invoking this handler without closing the channel.
+   *
+   * @param handler Callback that maps a batch of file changes to browser HMR events.
+   * @returns A cleanup function that unregisters only this handler.
    */
   onFileEvents(handler: BrowserHmrFileEventHandler): () => void
   /**
-   * Updates the files watched on behalf of this channel.
+   * Adds and removes absolute file paths from the parent process's watcher for this channel.
+   *
+   * Paths remain watched until removed by a later delta or until the channel is closed. Repeated
+   * additions and removals are idempotent.
    *
    * @param delta Files to add and remove from the watcher.
    */

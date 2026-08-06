@@ -9,13 +9,16 @@ export type { ImportMetaHot } from './lib/runtime.ts'
  * Options for running a Node.js entry module with HMR supervision.
  */
 export interface RunOptions {
-  /** Browser HMR channel configuration, or `false` to disable browser coordination. */
+  /**
+   * Configures the parent-owned EventSource server used to coordinate browser HMR, or disables it
+   * with `false`. Enabled with default options when omitted or set to `true`.
+   */
   browserHmrChannel?: boolean | BrowserHmrChannelOptions
-  /** Working directory used to resolve the entry path and relative watch options. */
+  /** Working directory used to resolve the entry path and relative watch options. (`process.cwd()`) */
   cwd?: string
   /** Arguments passed to the entry module after the entry path. */
   entryArgs?: readonly string[]
-  /** Environment variables passed to the child process. */
+  /** Complete environment for the child process. (`process.env`) */
   env?: NodeJS.ProcessEnv
   /** Node.js arguments passed before the entry path. */
   nodeArgs?: readonly string[]
@@ -27,11 +30,11 @@ export interface RunOptions {
  * Browser HMR event stream options hosted by the parent process.
  */
 export interface BrowserHmrChannelOptions {
-  /** Hostname for the browser HMR event server. */
+  /** Hostname for the browser HMR event server. (`'127.0.0.1'`) */
   host?: string
-  /** Port for the browser HMR event server. */
+  /** Port for the browser HMR event server. Uses an available ephemeral port when omitted. */
   port?: number
-  /** URL pathname for the browser HMR event stream. */
+  /** URL pathname for the browser HMR event stream. (`'/hmr'`) */
   pathname?: string
 }
 
@@ -66,13 +69,15 @@ export interface NodeHmrRunner {
    */
   close(): Promise<void>
   /**
-   * Current child process lifecycle generation.
+   * Current server generation, incremented after every accepted hot update or process restart.
    */
   readonly generation: number
   /**
-   * Waits until the current child process is ready.
+   * Waits until the latest update or restart has settled and the current child process is ready.
    *
-   * @returns A promise that resolves when the current generation is ready.
+   * If the app uses `emitServerReady()`, restart readiness also waits for that signal.
+   *
+   * @returns A promise that resolves when the latest requested generation is ready.
    */
   ready(): Promise<void>
 }
@@ -159,9 +164,13 @@ export function createHmrReadyFetch(
 }
 
 /**
- * Starts a Node.js entry module under HMR supervision.
+ * Starts a Node.js entry module in a supervised child process and watches its loaded module graph.
  *
- * @param entry Entry module path to run.
+ * Accepted module changes are applied in place; unaccepted changes restart the child. The returned
+ * handle exposes readiness across both paths and closes the watcher, child process, and browser HMR
+ * event server when stopped.
+ *
+ * @param entry Entry module path, resolved from `options.cwd`.
  * @param options Runner options.
  * @returns A runner handle for the supervised process.
  */
