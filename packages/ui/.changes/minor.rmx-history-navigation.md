@@ -1,0 +1,1 @@
+Add an `rmx-history="push|replace"` attribute for anchors and forms that overrides the history behavior of enhanced frame navigations. Native anchors using `link(href, { history })` emit the corresponding attribute value automatically.

@@ -192,7 +192,12 @@ export function startNavigationListenerImpl(
         event.intercept({ handler })
       } else {
         // <a>/<form method="get"> navigations
-        event.intercept({ handler })
+        if (runtimeNavigation.replaceHistory && event.cancelable) {
+          event.preventDefault()
+          navigation.navigate(event.destination.url, { history: 'replace', state })
+        } else {
+          event.intercept({ handler })
+        }
       }
     },
     { signal },
@@ -286,11 +291,16 @@ function getSourceElementNavigation(
         resetScroll: linkElement.getAttribute('rmx-reset-scroll') !== 'false',
         $rmx: true,
       },
+      replaceHistory: getReplaceHistory(linkElement.getAttribute('rmx-history'), false),
     }
   }
 
   let formNavigation = resolveFormNavigation(event)
   if (!formNavigation || formNavigation.hasAttribute('rmx-document')) return
+
+  let replaceHistoryByDefault =
+    formNavigation.getSubmission !== undefined &&
+    event.destination.url === window.navigation.currentEntry?.url
 
   return {
     state: {
@@ -299,9 +309,16 @@ function getSourceElementNavigation(
       resetScroll: formNavigation.getAttribute('rmx-reset-scroll') !== 'false',
       $rmx: true,
     },
-    replaceHistory:
-      formNavigation.getSubmission !== undefined &&
-      event.destination.url === window.navigation.currentEntry?.url,
+    replaceHistory: getReplaceHistory(
+      formNavigation.getAttribute('rmx-history'),
+      replaceHistoryByDefault,
+    ),
     getSubmission: formNavigation.getSubmission,
   }
+}
+
+function getReplaceHistory(value: string | null, defaultValue: boolean): boolean {
+  if (value === 'replace') return true
+  if (value === 'push') return false
+  return defaultValue
 }

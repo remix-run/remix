@@ -200,11 +200,12 @@ When `run({ resolveFrame })` is active, eligible same-origin forms progressively
 - Forms target `handle.frames.top` by default.
 - `rmx-target` selects a named frame.
 - `rmx-src` selects a different frame request URL while preserving the form action as the navigation destination.
+- `rmx-history="push|replace"` overrides how the navigation updates history.
 - `rmx-reset-scroll="false"` preserves scroll position.
 - `rmx-document` opts back into a document submission.
 - Cross-origin forms, `method="dialog"`, and `target="_blank"` remain browser-owned.
 
-GET controls are already encoded in `src`, so GET forms reach the resolver like links. Non-GET forms provide their native `FormData`, effective method, and encoding. The resolver owns body encoding and method-override conventions. Non-GET submissions to the current URL replace its history entry; GET submissions and submissions to a different URL push one.
+GET controls are already encoded in `src`, so GET forms reach the resolver like links. Non-GET forms provide their native `FormData`, effective method, and encoding. The resolver owns body encoding and method-override conventions. Non-GET submissions to the current URL replace its history entry; GET submissions and submissions to a different URL push one. The `rmx-history` attribute overrides those defaults.
 
 ### Nested frames
 
@@ -269,7 +270,7 @@ navigate('/dashboard', { history: 'replace' })
 
 Options: `src`, `target`, `history` (`'push' | 'replace'`), `resetScroll`.
 
-Attributes understood by the runtime: `rmx-target`, `rmx-src`, `rmx-reset-scroll`, `rmx-document`.
+Attributes understood by the runtime: `rmx-target`, `rmx-src`, `rmx-history`, `rmx-reset-scroll`, `rmx-document`.
 
 ## Head Management
 
