@@ -1,0 +1,21 @@
+{
+  "name": "remix-template",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "start": "NODE_ENV=production node --import remix/node-tsx server.ts",
+    "test": "NODE_ENV=test node --import remix/node-tsx --test",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "remix": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}
