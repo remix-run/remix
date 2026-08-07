@@ -291,7 +291,7 @@ function getSourceElementNavigation(
         resetScroll: linkElement.getAttribute('rmx-reset-scroll') !== 'false',
         $rmx: true,
       },
-      replaceHistory: getReplaceHistory(linkElement.getAttribute('rmx-replace'), false),
+      replaceHistory: getReplaceHistory(linkElement.getAttribute('rmx-history'), false),
     }
   }
 
@@ -310,7 +310,7 @@ function getSourceElementNavigation(
       $rmx: true,
     },
     replaceHistory: getReplaceHistory(
-      formNavigation.getAttribute('rmx-replace'),
+      formNavigation.getAttribute('rmx-history'),
       replaceHistoryByDefault,
     ),
     getSubmission: formNavigation.getSubmission,
@@ -318,5 +318,7 @@ function getSourceElementNavigation(
 }
 
 function getReplaceHistory(value: string | null, defaultValue: boolean): boolean {
-  return value == null ? defaultValue : value !== 'false'
+  if (value === 'replace') return true
+  if (value === 'push') return false
+  return defaultValue
 }

@@ -138,7 +138,7 @@ function AccountPage() {
 
 Native constraint validation and submitter overrides still apply. GET form values arrive in `src`; non-GET forms provide `formData`, `method`, and `encType` to the resolver. See [Frames](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#form-navigation) for targeting, history behavior, request encoding, opt-outs, and server response guidance.
 
-Use `rmx-replace` on an enhanced anchor or form to replace the current history entry. Forms may use `rmx-replace="false"` to force a push instead, overriding the automatic replacement used for non-GET submissions to the current URL.
+Use `rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 
 ## Preserving Client-Owned DOM
 

@@ -43,9 +43,17 @@ describe('link mixin', () => {
     expect(anchor.getAttribute('href')).toBe('/login')
     expect(anchor.getAttribute('rmx-target')).toBe('auth')
     expect(anchor.getAttribute('rmx-src')).toBe('/partials/login')
-    expect(anchor.getAttribute('rmx-replace')).toBe('')
+    expect(anchor.getAttribute('rmx-history')).toBe('replace')
     expect(anchor.getAttribute('rmx-reset-scroll')).toBe('false')
     expect(anchor.getAttribute('role')).toBeNull()
+  })
+
+  it('adds push history to anchors', () => {
+    let { container } = render(<a mix={link('/login', { history: 'push' })}>Login</a>)
+
+    let anchor = container.querySelector('a')
+    invariant(anchor)
+    expect(anchor.getAttribute('rmx-history')).toBe('push')
   })
 
   it('adds link semantics to buttons', () => {
@@ -75,7 +83,7 @@ describe('link mixin', () => {
     expect(anchor.getAttribute('href')).toBe('/docs')
     expect(anchor.getAttribute('rmx-target')).toBeNull()
     expect(anchor.getAttribute('rmx-src')).toBeNull()
-    expect(anchor.getAttribute('rmx-replace')).toBeNull()
+    expect(anchor.getAttribute('rmx-history')).toBeNull()
   })
 
   it('navigates on plain click for non-anchor hosts', (t) => {

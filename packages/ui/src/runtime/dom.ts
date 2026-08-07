@@ -1790,8 +1790,8 @@ export interface PartialAnchorHTMLProps<
   'rmx-target'?: Trackable<string | undefined>
   /** The `rmx-src` HTML attribute. */
   'rmx-src'?: Trackable<string | undefined>
-  /** Controls whether activating this anchor replaces the current history entry. */
-  'rmx-replace'?: Trackable<boolean | '' | 'false' | undefined>
+  /** Controls how activating this anchor updates the current history entry. */
+  'rmx-history'?: Trackable<'push' | 'replace' | undefined>
   /** The `rmx-reset-scroll` HTML attribute. */
   'rmx-reset-scroll'?: Trackable<string | undefined>
 }
@@ -2297,8 +2297,8 @@ export interface FormHTMLProps<
   target?: Trackable<string | undefined>
 
   // Non-standard Attributes
-  /** Overrides whether submitting this form replaces the current history entry. */
-  'rmx-replace'?: Trackable<boolean | '' | 'false' | undefined>
+  /** Overrides how submitting this form updates the current history entry. */
+  'rmx-history'?: Trackable<'push' | 'replace' | undefined>
 }
 
 /**

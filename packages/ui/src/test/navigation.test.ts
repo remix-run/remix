@@ -234,7 +234,7 @@ describe('navigate', () => {
 
     let anchor = document.createElement('a')
     anchor.href = destination.href
-    anchor.setAttribute('rmx-replace', '')
+    anchor.setAttribute('rmx-history', 'replace')
     document.body.append(anchor)
 
     let entryCountBeforeNavigation = window.navigation.entries().length
@@ -377,7 +377,7 @@ describe('form navigation', () => {
     controller.abort()
   })
 
-  it('pushes same-location POST history when rmx-replace is false', async () => {
+  it('pushes same-location POST history when rmx-history is push', async () => {
     let reload = mock.fn(async (_options?: FrameReloadOptions) => new AbortController().signal)
     let topFrame = { src: '', reload } as unknown as FrameHandle
     let controller = new AbortController()
@@ -389,7 +389,7 @@ describe('form navigation', () => {
     let form = document.createElement('form')
     form.action = window.location.href
     form.method = 'post'
-    form.setAttribute('rmx-replace', 'false')
+    form.setAttribute('rmx-history', 'push')
     document.body.append(form)
 
     let entryBeforeSubmission = getCurrentNavigationEntry()
@@ -564,7 +564,7 @@ describe('form navigation', () => {
     let form = document.createElement('form')
     form.action = originalUrl
     form.method = 'get'
-    form.setAttribute('rmx-replace', '')
+    form.setAttribute('rmx-history', 'replace')
     let input = document.createElement('input')
     input.name = 'query'
     input.value = 'replace-frames'

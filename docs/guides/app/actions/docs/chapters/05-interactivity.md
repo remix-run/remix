@@ -701,7 +701,7 @@ the `link(...)` and `navigate(...)` options:
 
 - `rmx-target` names the frame to reload.
 - `rmx-src` provides the URL to fetch for that frame while `href` remains the browser's destination.
-- `rmx-replace` replaces the current history entry; `rmx-replace="false"` forces a push, including when a form would replace by default.
+- `rmx-history="push|replace"` controls how the navigation updates history, including overriding a form's default.
 - `rmx-reset-scroll="false"` preserves the current scroll position.
 - `rmx-document` opts out of interception and lets the browser perform a full-document navigation.
 

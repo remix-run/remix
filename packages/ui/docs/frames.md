@@ -222,11 +222,11 @@ When `run({ resolveFrame })` is active, eligible same-origin anchor navigations 
 
 - `rmx-target="name"` reloads a named frame.
 - `rmx-src="/frame"` overrides the URL resolved into that frame while `href` remains the navigation destination.
-- `rmx-replace` replaces the current history entry instead of pushing a new one.
+- `rmx-history="push|replace"` controls how the navigation updates history.
 - `rmx-reset-scroll="false"` preserves the current scroll position.
 - `rmx-document` leaves the link as a normal document navigation.
 
-The `link(href, { history: 'replace' })` mixin adds `rmx-replace` when its host is a native anchor. Download links, cross-origin links, and links marked with `rmx-document` are left to the browser.
+The `link(href, { history })` mixin adds the corresponding `rmx-history` value when its host is a native anchor. Download links, cross-origin links, and links marked with `rmx-document` are left to the browser.
 
 ## Form navigation
 
@@ -235,7 +235,7 @@ When `run({ resolveFrame })` is active, eligible same-origin form submissions us
 - Submissions reload `handle.frames.top` by default.
 - `rmx-target="name"` reloads a named frame.
 - `rmx-src="/frame"` overrides the URL resolved into that frame while the form action remains the navigation destination.
-- `rmx-replace` replaces the current history entry, while `rmx-replace="false"` pushes a new one.
+- `rmx-history="push|replace"` overrides how the navigation updates history.
 - `rmx-reset-scroll="false"` preserves the current scroll position.
 - `rmx-document` leaves the submission as a normal document navigation.
 - Submitter overrides such as `formmethod`, `formenctype`, and `formtarget` take precedence over the form attributes.
@@ -257,9 +257,9 @@ For example, this form works as a normal document POST without JavaScript and re
 
 The action should return HTML suitable for the targeted frame when the resolver identifies a frame request, while retaining its normal document response or redirect for unenhanced submissions. The resolver above forwards app-defined `X-Remix-Frame` and `X-Remix-Target` headers for that distinction.
 
-Enhanced non-GET submissions to the current URL replace its navigation history entry instead of pushing a duplicate. Submissions to a different URL push a new entry, as do GET submissions whose values are represented in the destination URL. The `rmx-replace` attribute overrides that default: use the empty attribute to force replacement or `rmx-replace="false"` to force a push. Non-GET `FormData` is used only for the active frame reload and is not retained in history.
+Enhanced non-GET submissions to the current URL replace its navigation history entry instead of pushing a duplicate. Submissions to a different URL push a new entry, as do GET submissions whose values are represented in the destination URL. The `rmx-history` attribute overrides that default: use `rmx-history="replace"` to force replacement or `rmx-history="push"` to force a push. Non-GET `FormData` is used only for the active frame reload and is not retained in history.
 
-Forms work as normal document submissions before the client runtime loads and whenever they use `rmx-document`, so this behavior remains progressively enhanced. Browsers ignore `rmx-replace` without the client runtime and use their normal document history behavior.
+Forms work as normal document submissions before the client runtime loads and whenever they use `rmx-document`, so this behavior remains progressively enhanced. Browsers ignore `rmx-history` without the client runtime and use their normal document history behavior.
 
 ## Frame lifecycle
 

@@ -281,14 +281,14 @@ handler:
 The form remains a normal document navigation before the runtime starts. Native constraint
 validation and the form's `submit` event run before Remix intercepts it. `rmx-target` chooses a named
 frame, `rmx-src` can provide a different frame request URL, `rmx-reset-scroll="false"` preserves the
-current scroll position, and `rmx-document` opts out of interception. `rmx-replace` replaces the
-current history entry, while `rmx-replace="false"` forces a push.
+current scroll position, and `rmx-document` opts out of interception. `rmx-history="push|replace"`
+controls how the navigation updates history.
 
 GET controls are already encoded in the destination URL. For non-GET forms, `resolveFrame` receives
 `formData`, `method`, and `encType`. The action should return HTML for the targeted frame when it
 receives a frame request, while keeping its normal document response or redirect for unenhanced
 submissions. Non-GET submissions to the current URL replace that history entry; GET submissions and
-submissions to a different URL push one. The `rmx-replace` attribute overrides those defaults.
+submissions to a different URL push one. The `rmx-history` attribute overrides those defaults.
 
 ## Coordinate a mutation and a separate frame reload {#coordinating-forms-fetches-frame-reloads-and-navigation}
 
@@ -354,7 +354,7 @@ A link can keep its public destination in `href` while loading a smaller route i
 ```
 
 `rmx-target` chooses the frame, while `rmx-src` chooses the request used to fill it. The address bar
-still moves to `href`. Add `rmx-replace` when it should replace the current history entry. Use
+still moves to `href`. Add `rmx-history="replace"` when it should replace the current history entry. Use
 `rmx-document` when a same-origin link must perform an ordinary document navigation instead.
 
 ## Handle failures and cancellation
