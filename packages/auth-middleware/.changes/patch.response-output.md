@@ -1,0 +1,1 @@
+Keep `auth()` compatible with custom router outputs while declaring `requireAuth()` as Response-only middleware. `requireAuth()` now throws a clear `TypeError` if a downstream handler returns a non-`Response` value.

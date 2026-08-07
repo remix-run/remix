@@ -9,12 +9,15 @@ import {
 import { type AnyMiddleware, type MiddlewareContext, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
 import {
+  type ContextWithOutput,
   type ContextWithParams,
   RequestContext,
   type requestContextTypes,
 } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import { type RouteMap, Route } from './route-map.ts'
+import type { DefaultOutput } from './router-types.ts'
+import type { Defined } from './type-utils.ts'
 import {
   type RequestHandler,
   type Action,
@@ -24,7 +27,7 @@ import {
   isController,
 } from './controller.ts'
 
-type AnyContext = RequestContext<any, any>
+type AnyContext = RequestContext<any, any, any>
 
 type RouteTarget<
   pattern extends string = string,
@@ -44,7 +47,7 @@ type ContextProvides<provided extends AnyContext, required extends AnyContext> =
 type ContextCompatibility<
   providedContext extends AnyContext,
   requiredContext extends AnyContext,
-  middleware extends readonly AnyMiddleware[],
+  middleware extends readonly AnyMiddleware<any>[],
 > = [providedContext] extends [requiredContext]
   ? unknown
   : ContextProvides<providedContext, requiredContext> extends true
@@ -53,14 +56,14 @@ type ContextCompatibility<
       ? unknown
       : never
 
-type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
+type VerbMethod<method extends RequestMethod, context extends AnyContext, output> = {
   <
     pattern extends string,
     actionContext extends AnyContext = context,
-    const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+    const middleware extends readonly AnyMiddleware<output>[] = readonly AnyMiddleware<output>[],
   >(
     route: RouteTarget<pattern, method>,
-    action: Action<RouteTarget<pattern, method>, actionContext, middleware> &
+    action: Action<RouteTarget<pattern, method>, actionContext, middleware, output> &
       ContextCompatibility<context, actionContext, middleware>,
   ): void
 }
@@ -68,7 +71,7 @@ type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
 /**
  * The normalized route entry stored in the router matcher.
  */
-export interface RouteEntry {
+export interface RouteEntry<output = DefaultOutput> {
   /**
    * The URL pattern used to match this route.
    */
@@ -76,7 +79,7 @@ export interface RouteEntry {
   /**
    * The handler that runs when this route matches.
    */
-  handler: RequestHandler<any>
+  handler: RequestHandler<any, output>
   /**
    * The request method this route handles, or `ANY` for method-agnostic routes.
    */
@@ -84,14 +87,14 @@ export interface RouteEntry {
   /**
    * Action middleware that runs before the handler.
    */
-  middleware: AnyMiddleware[] | undefined
+  middleware: AnyMiddleware<output>[] | undefined
 }
 
-export type MatchData = RouteEntry
+export type MatchData<output = DefaultOutput> = RouteEntry<output>
 
-type NormalizedAction = {
-  handler: RequestHandler<any>
-  middleware: AnyMiddleware[] | undefined
+type NormalizedAction<output> = {
+  handler: RequestHandler<any, output>
+  middleware: AnyMiddleware<output>[] | undefined
 }
 
 type MapTarget = RouteTarget | RouteMap
@@ -103,15 +106,17 @@ type MapTarget = RouteTarget | RouteMap
 export type MapHandler<
   target extends MapTarget,
   context extends AnyContext = RequestContext,
-  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  output = DefaultOutput,
+  middleware extends readonly AnyMiddleware<output>[] = readonly AnyMiddleware<output>[],
 > =
-  target extends string ? Action<target, context, middleware> :
-  target extends RoutePattern<infer pattern extends string> ? Action<RoutePattern<pattern>, context, middleware> :
-  target extends Route<any, any> ? Action<target, context, middleware> :
-  target extends RouteMap ? Controller<target, context, middleware> :
+  target extends string ? Action<target, context, middleware, output> :
+  target extends RoutePattern<infer pattern extends string> ? Action<RoutePattern<pattern>, context, middleware, output> :
+  target extends Route<any, any> ? Action<target, context, middleware, output> :
+  target extends RouteMap ? Controller<target, context, middleware, output> :
   never
 
 declare const routeBuilderContext: unique symbol
+declare const routeBuilderOutput: unique symbol
 
 /**
  * A route builder registers routes into a router.
@@ -119,8 +124,9 @@ declare const routeBuilderContext: unique symbol
  * Route builders are useful for composing route groups with {@link RouteInstaller}. Unlike a
  * {@link Router}, a route builder cannot dispatch requests.
  */
-export interface RouteBuilder<context extends AnyContext = RequestContext> {
+export interface RouteBuilder<context extends AnyContext = RequestContext, output = DefaultOutput> {
   readonly [routeBuilderContext]?: context
+  readonly [routeBuilderOutput]?: output
   /**
    * Registers a handler for a specific request method and route target.
    *
@@ -130,11 +136,11 @@ export interface RouteBuilder<context extends AnyContext = RequestContext> {
     method extends RequestMethod | 'ANY',
     pattern extends string,
     actionContext extends AnyContext = context,
-    const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+    const middleware extends readonly AnyMiddleware<output>[] = readonly AnyMiddleware<output>[],
   >(
     method: method,
     pattern: RouteTarget<pattern, method>,
-    action: Action<RouteTarget<pattern, method>, actionContext, middleware> &
+    action: Action<RouteTarget<pattern, method>, actionContext, middleware, output> &
       ContextCompatibility<context, actionContext, middleware>,
   ): void
   /**
@@ -143,10 +149,10 @@ export interface RouteBuilder<context extends AnyContext = RequestContext> {
   map<
     target extends MapTarget,
     handlerContext extends AnyContext = context,
-    const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+    const middleware extends readonly AnyMiddleware<output>[] = readonly AnyMiddleware<output>[],
   >(
     target: target,
-    handler: MapHandler<target, handlerContext, middleware> &
+    handler: MapHandler<target, handlerContext, output, middleware> &
       ContextCompatibility<context, handlerContext, middleware>,
   ): void
   /**
@@ -154,43 +160,46 @@ export interface RouteBuilder<context extends AnyContext = RequestContext> {
    */
   mount<pattern extends string>(
     prefix: pattern | RoutePattern<pattern>,
-    installer: RouteInstaller<RouteContext<context, pattern>>,
+    installer: RouteInstaller<RouteContext<context, pattern>, output>,
   ): void
   /**
    * Shorthand for registering a `GET` route.
    */
-  get: VerbMethod<'GET', context>
+  get: VerbMethod<'GET', context, output>
   /**
    * Shorthand for registering a `HEAD` route.
    */
-  head: VerbMethod<'HEAD', context>
+  head: VerbMethod<'HEAD', context, output>
   /**
    * Shorthand for registering a `POST` route.
    */
-  post: VerbMethod<'POST', context>
+  post: VerbMethod<'POST', context, output>
   /**
    * Shorthand for registering a `PUT` route.
    */
-  put: VerbMethod<'PUT', context>
+  put: VerbMethod<'PUT', context, output>
   /**
    * Shorthand for registering a `PATCH` route.
    */
-  patch: VerbMethod<'PATCH', context>
+  patch: VerbMethod<'PATCH', context, output>
   /**
    * Shorthand for registering a `DELETE` route.
    */
-  delete: VerbMethod<'DELETE', context>
+  delete: VerbMethod<'DELETE', context, output>
   /**
    * Shorthand for registering an `OPTIONS` route.
    */
-  options: VerbMethod<'OPTIONS', context>
+  options: VerbMethod<'OPTIONS', context, output>
 }
 
 /**
  * A function that registers a route group into a route builder.
  */
-export interface RouteInstaller<context extends AnyContext = RequestContext> {
-  (router: RouteBuilder<context>): void
+export interface RouteInstaller<
+  context extends AnyContext = RequestContext,
+  output = DefaultOutput,
+> {
+  (router: RouteBuilder<context, output>): void
 }
 
 /**
@@ -199,27 +208,41 @@ export interface RouteInstaller<context extends AnyContext = RequestContext> {
  * This is useful when you want to configure `RouterTypes.context` from a router that uses inline
  * middleware arrays.
  */
-export type RouterContext<router extends RouteBuilder<any>> =
-  router extends RouteBuilder<infer context> ? context : never
+export type RouterContext<router> = router extends {
+  readonly [routeBuilderContext]?: infer context
+}
+  ? context
+  : never
+
+/**
+ * Extracts the output type returned by a router or route builder.
+ */
+export type RouterOutput<router> = router extends { readonly [routeBuilderOutput]?: infer output }
+  ? Defined<output>
+  : never
 
 /**
  * Options for creating a router.
  */
 export interface RouterOptions<
   context extends AnyContext = RequestContext,
-  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  output = DefaultOutput,
+  middleware extends readonly AnyMiddleware<output>[] = readonly AnyMiddleware<output>[],
 > {
   /**
    * The default request handler that runs when no route matches.
-   * Defaults to a 404 `Not Found` response.
+   * Response routers default to a 404 `Not Found` response. Routers with a custom output must
+   * provide this handler.
    */
-  defaultHandler?: RequestHandler<MiddlewareContext<middleware, context>>
+  defaultHandler?: NoInfer<
+    RequestHandler<MiddlewareContext<middleware, ContextWithOutput<context, output>>, output>
+  >
   /**
    * The matcher to use for matching routes.
    *
    * @default `createMultiMatcher()`
    */
-  matcher?: MultiMatcher<MatchData>
+  matcher?: NoInfer<MultiMatcher<MatchData<output>>>
   /**
    * Middleware to run for every request handled by this router.
    *
@@ -230,30 +253,33 @@ export interface RouterOptions<
 }
 
 /**
- * A router maps incoming requests to request handlers.
+ * A router maps incoming requests to request handlers and returns their output.
  */
-export interface Router<context extends AnyContext = RequestContext> extends RouteBuilder<context> {
+export interface Router<
+  context extends AnyContext = RequestContext,
+  output = DefaultOutput,
+> extends RouteBuilder<context, output> {
   /**
-   * Fetch a response from the router.
+   * Fetch an output from the router.
    *
    * @param input The request input to fetch
    * @param init The request init options
-   * @returns The response from the route that matched the request
+   * @returns The output from the route that matched the request
    */
-  fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>
+  fetch(input: string | URL | Request, init?: RequestInit): Promise<Defined<output>>
 }
 
 function noMatchHandler({ url }: RequestContext): Response {
   return new Response(`Not Found: ${url.pathname}`, { status: 404 })
 }
 
-function normalizeMiddleware(
-  middleware: readonly AnyMiddleware[] | undefined,
-): AnyMiddleware[] | undefined {
+function normalizeMiddleware<output>(
+  middleware: readonly AnyMiddleware<output>[] | undefined,
+): AnyMiddleware<output>[] | undefined {
   return middleware == null || middleware.length === 0 ? undefined : [...middleware]
 }
 
-function normalizeAction(action: unknown): NormalizedAction {
+function normalizeAction<output>(action: unknown): NormalizedAction<output> {
   if (isRequestHandler(action)) {
     return {
       handler: action,
@@ -273,10 +299,10 @@ function normalizeAction(action: unknown): NormalizedAction {
   }
 }
 
-function mergeMiddleware(
-  upstream: AnyMiddleware[] | undefined,
-  downstream: AnyMiddleware[] | undefined,
-): AnyMiddleware[] | undefined {
+function mergeMiddleware<output>(
+  upstream: AnyMiddleware<output>[] | undefined,
+  downstream: AnyMiddleware<output>[] | undefined,
+): AnyMiddleware<output>[] | undefined {
   if (!upstream || upstream.length === 0) {
     return downstream
   }
@@ -292,14 +318,17 @@ function isRouteTarget(target: MapTarget): target is RouteTarget {
   return typeof target === 'string' || target instanceof Route || target instanceof RoutePattern
 }
 
-function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
+function createRequestContext<output>(
+  input: string | URL | Request,
+  init?: RequestInit,
+): RequestContext<{}, [], output> {
   let request = input instanceof Request && init == null ? input : new Request(input, init)
 
   if (request.signal.aborted) {
     throw request.signal.reason
   }
 
-  return new RequestContext(request)
+  return new RequestContext<{}, [], output>(request)
 }
 
 function getRoutePattern(target: RouteTarget): RoutePattern {
@@ -333,17 +362,45 @@ function getPrefixedRoutePattern(target: RouteTarget, state: BuilderState): Rout
  * @param options Options to configure the router
  * @returns The new router
  */
+type CreateRouterArgs<
+  context extends AnyContext,
+  output,
+  middleware extends readonly AnyMiddleware<output>[],
+> = [Defined<output>] extends [Response]
+  ? [options?: RouterOptions<context, output, middleware>]
+  : [
+      options: RouterOptions<context, output, middleware> & {
+        defaultHandler: NoInfer<
+          RequestHandler<MiddlewareContext<middleware, ContextWithOutput<context, output>>, output>
+        >
+      },
+    ]
+
 export function createRouter<
   context extends AnyContext = RequestContext,
-  const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
->(options?: RouterOptions<context, middleware>): Router<MiddlewareContext<middleware, context>> {
-  type RouterContext = MiddlewareContext<middleware, context>
+  output = DefaultOutput,
+  const middleware extends readonly AnyMiddleware<output>[] = readonly AnyMiddleware<output>[],
+>(
+  ...args: CreateRouterArgs<context, output, middleware>
+): Router<MiddlewareContext<middleware, ContextWithOutput<context, output>>, output>
+export function createRouter(): Router
+export function createRouter<
+  context extends AnyContext = RequestContext,
+  output = DefaultOutput,
+  const middleware extends readonly AnyMiddleware<output>[] = readonly AnyMiddleware<output>[],
+>(
+  ...args: CreateRouterArgs<context, output, middleware>
+): Router<MiddlewareContext<middleware, ContextWithOutput<context, output>>, output> {
+  type RouterContext = MiddlewareContext<middleware, ContextWithOutput<context, output>>
 
-  let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any>
-  let matcher = options?.matcher ?? createMultiMatcher<MatchData>()
+  let options = args[0]
+  let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any, output>
+  let matcher = options?.matcher ?? createMultiMatcher<MatchData<output>>()
   let routerMiddleware = normalizeMiddleware(options?.middleware)
 
-  async function dispatchRouter(context: RequestContext): Promise<Response> {
+  async function dispatchRouter(
+    context: RequestContext<any, any, output>,
+  ): Promise<Defined<output>> {
     let dispatch = () => dispatchMatches(context)
 
     if (routerMiddleware) {
@@ -353,7 +410,9 @@ export function createRouter<
     return dispatch()
   }
 
-  async function dispatchMatches(context: RequestContext): Promise<Response> {
+  async function dispatchMatches(
+    context: RequestContext<any, any, output>,
+  ): Promise<Defined<output>> {
     for (let match of matcher.matchAll(context.url)) {
       let route = match.data
 
@@ -376,11 +435,11 @@ export function createRouter<
   function registerRoute(
     method: RequestMethod | 'ANY',
     route: RouteTarget,
-    action: NormalizedAction,
+    action: NormalizedAction<output>,
     state: BuilderState,
   ): void {
     let pattern = getPrefixedRoutePattern(route, state)
-    let entry: RouteEntry = {
+    let entry: RouteEntry<output> = {
       pattern,
       handler: action.handler,
       method,
@@ -396,7 +455,7 @@ export function createRouter<
     action: unknown,
     state: BuilderState,
   ): void {
-    registerRoute(method, route, normalizeAction(action), state)
+    registerRoute(method, route, normalizeAction<output>(action), state)
   }
 
   function mapRoutes(target: MapTarget, handler: unknown, state: BuilderState): void {
@@ -413,13 +472,13 @@ export function createRouter<
   }
 
   function mapSingleRoute(target: RouteTarget, handler: unknown, state: BuilderState): void {
-    registerRoute(getMappedRouteMethod(target), target, normalizeAction(handler), state)
+    registerRoute(getMappedRouteMethod(target), target, normalizeAction<output>(handler), state)
   }
 
   function mapController(
     routes: RouteMap,
     controller: {
-      middleware?: readonly AnyMiddleware[] | undefined
+      middleware?: readonly AnyMiddleware<output>[] | undefined
       actions: Record<string, unknown>
     },
     state: BuilderState,
@@ -446,7 +505,7 @@ export function createRouter<
           throw new TypeError(`Missing action \`${key}\` in controller`)
         }
 
-        let action = normalizeAction(controller.actions[key])
+        let action = normalizeAction<output>(controller.actions[key])
         registerRoute(
           route.method,
           route,
@@ -462,15 +521,16 @@ export function createRouter<
 
   function createRouteBuilder<builderContext extends AnyContext>(
     state: BuilderState,
-  ): RouteBuilder<builderContext> {
+  ): RouteBuilder<builderContext, output> {
     function createVerbMethod<method extends RequestMethod>(method: method) {
       return <
         pattern extends string,
         actionContext extends AnyContext = builderContext,
-        const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+        const middleware extends readonly AnyMiddleware<output>[] =
+          readonly AnyMiddleware<output>[],
       >(
         route: RouteTarget<pattern, method>,
-        action: Action<RouteTarget<pattern, method>, actionContext, middleware> &
+        action: Action<RouteTarget<pattern, method>, actionContext, middleware, output> &
           ContextCompatibility<builderContext, actionContext, middleware>,
       ): void => {
         addRoute(method, route, action, state)
@@ -482,11 +542,12 @@ export function createRouter<
         method extends RequestMethod | 'ANY',
         pattern extends string,
         actionContext extends AnyContext = builderContext,
-        const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+        const middleware extends readonly AnyMiddleware<output>[] =
+          readonly AnyMiddleware<output>[],
       >(
         method: method,
         route: RouteTarget<pattern, method>,
-        action: Action<RouteTarget<pattern, method>, actionContext, middleware> &
+        action: Action<RouteTarget<pattern, method>, actionContext, middleware, output> &
           ContextCompatibility<builderContext, actionContext, middleware>,
       ): void {
         addRoute(method, route, action, state)
@@ -496,7 +557,7 @@ export function createRouter<
       },
       mount<pattern extends string>(
         prefix: pattern | RoutePattern<pattern>,
-        installer: RouteInstaller<RouteContext<builderContext, pattern>>,
+        installer: RouteInstaller<RouteContext<builderContext, pattern>, output>,
       ): void {
         let mountPrefix = typeof prefix === 'string' ? RoutePattern.parse(prefix) : prefix
         let childPrefix = state.prefix ? joinPatterns(state.prefix, mountPrefix) : mountPrefix
@@ -516,10 +577,10 @@ export function createRouter<
 
   let rootBuilder = createRouteBuilder<RouterContext>({ prefix: undefined })
 
-  let router: Router<RouterContext> = {
+  let router: Router<RouterContext, output> = {
     ...rootBuilder,
-    fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-      let context = createRequestContext(input, init)
+    fetch(input: string | URL | Request, init?: RequestInit): Promise<Defined<output>> {
+      let context = createRequestContext<output>(input, init)
       context.router = router
 
       return dispatchRouter(context)
