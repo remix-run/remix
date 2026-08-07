@@ -1,1 +1,0 @@
-Added `close()` to the SQLite adapter to release the underlying database connection and its file handle. Config-backed adapters keep the database file locked on Windows until closed, so callers that need to move or delete the file should close the adapter first.

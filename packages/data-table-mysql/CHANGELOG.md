@@ -2,6 +2,21 @@
 
 This is the changelog for [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- Added config-backed MySQL adapter construction, connection-scoped migration locking, and database wiping for `remix db`. Existing `mysql2` pools and connections remain supported for applications that own the driver lifecycle, but wiping requires config-backed construction (see #11608).
+
+  `wipe()` throws when no database name can be resolved from the connection config instead of guessing one. Failed migration runs destroy the reserved connection instead of returning a dirty session to the pool, and re-entering `withMigrationLock()` from a migration callback throws instead of deadlocking.
+
+### Patch Changes
+
+- Use bound parameters for compiled `limit` and `offset` clauses.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.4.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.4.0)
+
 ## v0.4.0
 
 ### Minor Changes
