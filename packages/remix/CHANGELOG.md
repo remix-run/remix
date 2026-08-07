@@ -2,6 +2,107 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.6
+
+### Pre-release Changes
+
+- BREAKING CHANGE: Remove legacy package-aligned `remix/*` aliases that duplicated canonical entrypoints. Update imports to use the canonical paths:
+  - `remix/async-context-middleware` → `remix/middleware/async-context`
+  - `remix/auth-middleware` → `remix/middleware/auth`
+  - `remix/compression-middleware` → `remix/middleware/compression`
+  - `remix/cop-middleware` → `remix/middleware/cop`
+  - `remix/cors-middleware` → `remix/middleware/cors`
+  - `remix/csrf-middleware` → `remix/middleware/csrf`
+  - `remix/data-table-mysql` → `remix/data-table/mysql`
+  - `remix/data-table-postgres` → `remix/data-table/postgres`
+  - `remix/data-table-sqlite` → `remix/data-table/sqlite`
+  - `remix/fetch-router` → `remix/router`
+  - `remix/fetch-router/routes` → `remix/routes`
+  - `remix/file-storage-s3` → `remix/file-storage/s3`
+  - `remix/form-data-middleware` → `remix/middleware/form-data`
+  - `remix/logger-middleware` → `remix/middleware/logger`
+  - `remix/method-override-middleware` → `remix/middleware/method-override`
+  - `remix/render-middleware` → `remix/middleware/render`
+  - `remix/session-middleware` → `remix/middleware/session`
+  - `remix/session-storage-memcache` → `remix/session-storage/memcache`
+  - `remix/session-storage-redis` → `remix/session-storage/redis`
+  - `remix/session/cookie-storage` → `remix/session-storage/cookie`
+  - `remix/session/fs-storage` → `remix/session-storage/fs`
+  - `remix/session/memory-storage` → `remix/session-storage/memory`
+  - `remix/static-middleware` → `remix/middleware/static`
+
+- BREAKING CHANGE: `createAssetServer()` from `remix/assets` now uses `allowFiles` and `denyFiles` instead of `allow` and `deny` for file path access rules.
+
+  ```ts
+  import { createAssetServer } from 'remix/assets'
+
+  // Before:
+  export const assetServer = createAssetServer({
+    allow: ['app/assets/**'],
+    deny: ['app/**/*.server.*'],
+    /* ... */
+  })
+
+  // After:
+  export const assetServer = createAssetServer({
+    allowFiles: ['app/assets/**'],
+    denyFiles: ['app/**/*.server.*'],
+    /* ... */
+  })
+  ```
+
+- BREAKING CHANGE: Added static JSONC configuration through `remix.json` and the global `remix --config <path>` option for `remix test` settings and `remix doctor` strict mode. Executable `remix-test.config.ts` and `.js` files are no longer discovered; move test settings under `remix.json#test` (see #11628, #11638).
+
+- BREAKING CHANGE: `remix/cookie` now treats custom `encode` and `decode` functions as the full cookie value codec. Custom encoded values are signed and serialized as-is instead of being wrapped in the default base64 encoding. The default codec still uses the existing base64-safe representation.
+
+- BREAKING CHANGE: The `remix/route-pattern/*` APIs now use delimiter-bounded params and bounded state matching. Hyphens remain param data, raw `/` and `.` delimit params, ambiguous route patterns are rejected, repeated capture names use last-participating-capture precedence, and pattern-size, matcher-size, and match-work limits are configurable through `remix/route-pattern/match` (see #11651).
+
+- BREAKING CHANGE: Href generation through `remix/route-pattern/href` and `remix/routes` now takes search parameters inside a `searchParams` options property. `remix/route-pattern/match` also accepts `baseURL` for relative URL matching, while href generation uses it for same-origin relative references. The `searchParams` option accepts `URLSearchParams`.
+
+- BREAKING CHANGE: `remix/middleware/session` now makes session cookies HTTP-only by default when `httpOnly` is omitted, and `Cookie.httpOnly` from `remix/cookie` now returns `boolean | undefined` so omitted and explicitly disabled settings can be distinguished.
+
+- BREAKING CHANGE: Run tests through `remix test` instead of the removed `remix-test` executable. The `remix/test/cli` `runRemixTest()` API now accepts typed test-runner options instead of raw command-line arguments (see #11623).
+
+- Add an `allowPackages` option to `createAssetServer()` from `remix/assets` for package-level access control, allowing packages and their dependencies to be served, e.g. `allowPackages: ['remix']`
+
+- Added `remix db` commands for running the database lifecycle exported by `app/db.ts` (see #11608).
+
+- Added database wipe, migration, status, seed, and reset APIs through `remix/data-table` and `remix/data-table/cli`. Migration status reports applied migrations whose files are missing, and migration runs stop before executing SQL when an applied migration is absent from the current set (see #11608).
+
+- Added `package.json` `exports`:
+  - `remix/data-table/cli` to expose the typed data-table command invocation API
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.5.0`](https://github.com/remix-run/remix/releases/tag/assets@0.5.0)
+  - [`async-context-middleware@0.3.5`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.3.5)
+  - [`auth@0.2.7`](https://github.com/remix-run/remix/releases/tag/auth@0.2.7)
+  - [`auth-middleware@0.2.5`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.2.5)
+  - [`cli@0.4.0`](https://github.com/remix-run/remix/releases/tag/cli@0.4.0)
+  - [`compression-middleware@0.1.13`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.13)
+  - [`cookie@0.6.0`](https://github.com/remix-run/remix/releases/tag/cookie@0.6.0)
+  - [`cop-middleware@0.1.8`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.8)
+  - [`cors-middleware@0.1.8`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.1.8)
+  - [`csrf-middleware@0.1.8`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.8)
+  - [`data-table@0.4.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.4.0)
+  - [`data-table-mysql@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.0)
+  - [`data-table-postgres@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.0)
+  - [`data-table-sqlite@0.6.0`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.0)
+  - [`fetch-proxy@0.8.5`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@0.8.5)
+  - [`fetch-router@0.21.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.21.0)
+  - [`form-data-middleware@0.3.5`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.3.5)
+  - [`form-data-parser@0.17.5`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.5)
+  - [`logger-middleware@0.3.5`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.3.5)
+  - [`method-override-middleware@0.1.13`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.13)
+  - [`multipart-parser@0.16.4`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.4)
+  - [`node-fetch-server@0.14.1`](https://github.com/remix-run/remix/releases/tag/node-fetch-server@0.14.1)
+  - [`render-middleware@0.1.5`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.1.5)
+  - [`response@0.3.8`](https://github.com/remix-run/remix/releases/tag/response@0.3.8)
+  - [`route-pattern@0.24.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.24.0)
+  - [`session-middleware@0.4.0`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.4.0)
+  - [`static-middleware@0.4.14`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.14)
+  - [`test@0.6.0`](https://github.com/remix-run/remix/releases/tag/test@0.6.0)
+  - [`ui@0.5.0`](https://github.com/remix-run/remix/releases/tag/ui@0.5.0)
+
 ## v3.0.0-beta.5
 
 ### Pre-release Changes

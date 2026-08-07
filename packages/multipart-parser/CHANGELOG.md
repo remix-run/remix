@@ -2,6 +2,12 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
+## v0.16.4
+
+### Patch Changes
+
+- Limit boundaries to the 70-character maximum defined by RFC 2046, and update the non-Node runtime buffer search to handle longer patterns without stalling.
+
 ## v0.16.3
 
 ### Patch Changes

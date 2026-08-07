@@ -2,6 +2,30 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- Add an `rmx-preserve-dom` attribute that tells the DOM reconciler to preserve a matching element's current attributes and children during reloads, allowing client-owned subtrees such as custom elements to manage their own DOM.
+
+### Patch Changes
+
+- Allow element-wide mixins such as `css()` to be used on subtype hosts like `<select>` without TypeScript assignability errors.
+
+- Built-in styled components now use adaptive `light-dark(...)` colors for their internal surfaces, text, borders, focus rings, and control states so they render correctly in dark color schemes.
+
+- Escape less-than characters in server-rendered `css()` output so style values cannot terminate the generated `<style>` element.
+
+- Fix hydrated component updates that could lose content when adding elements before existing content in a fragment
+
+- Prevent navigation and reloads from hanging when a nested `Frame` marker moves outside a frame region while the DOM is being updated.
+
+- Prevent client-side document navigation and `Frame` updates from stalling after navigating between pages with different `Frame` layouts. A frame's end marker could be reused as the start marker of an incoming frame, which left the frame's region bounds and instance pointing at the wrong nodes.
+
+- Preserve resolved client-created frame content when its parent rerenders while the frame is still pending (see #11659).
+
+- Reload frames rendered within preserved client entries during ancestor frame reloads
+
 ## v0.4.0
 
 ### Minor Changes

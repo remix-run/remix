@@ -1,1 +1,0 @@
-Fixed `.only` filtering so focused tests and suites apply across the entire test module instead of only within the nearest `describe` block. When `describe.only` and `it.only` are both present, the runner now executes the union of focused suites and focused tests.
