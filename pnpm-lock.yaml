@@ -1434,9 +1434,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 7.0.2
 
   packages/node-tsx:
     dependencies:
@@ -2039,12 +2039,12 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   packages/ui/bench:
     dependencies:

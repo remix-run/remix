@@ -60,14 +60,14 @@
     "@remix-run/node-tsx": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
+    "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix test",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "remix",
