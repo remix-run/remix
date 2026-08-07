@@ -32,6 +32,7 @@ export type {
   Context,
   FrameHandleEventMap,
   FrameContent,
+  FrameResolution,
   FrameHandle,
   FrameProps,
 } from './runtime/component.ts'

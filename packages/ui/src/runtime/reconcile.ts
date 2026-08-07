@@ -2,6 +2,7 @@ import type { Component, ComponentHandle, FrameContent, FrameHandle } from './co
 import { createComponent } from './component.ts'
 import type { FrameRuntime } from './frame.ts'
 import { createFrame, isFrameRuntime } from './frame.ts'
+import { unwrapFrameResolution } from './frame-resolution.ts'
 import { createRangeRoot } from './vdom.ts'
 import type {
   CommittedFragmentNode,
@@ -1183,13 +1184,16 @@ function resolveClientFrame(
 
   Promise.resolve()
     .then(() => runtime.resolveFrame(frameSrc, resolveController.signal, getFrameName(node)))
-    .then(async (content) => {
+    .then(async (resolution) => {
+      if (state.resolveToken !== token || resolveController.signal.aborted) return
+      let { content, redirectedTo } = await unwrapFrameResolution(resolution)
       if (state.resolveToken !== token || resolveController.signal.aborted) return
       state.fallbackRoot?.dispose()
       state.fallbackRoot = undefined
       let nextContent = asAbortableFrameContent(content, resolveController.signal)
       await instance.render(nextContent, { signal: resolveController.signal })
       if (state.resolveToken !== token || resolveController.signal.aborted) return
+      if (redirectedTo) instance.handle.src = redirectedTo
       state.resolved = true
     })
     .catch((error) => {
