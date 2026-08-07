@@ -339,16 +339,16 @@ importers:
         specifier: ^0.121.0
         version: 0.121.0
       '@remix-run/file-storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../file-storage
       '@remix-run/headers':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../headers
       '@remix-run/mime':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../mime
       '@remix-run/route-pattern':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../route-pattern
       chokidar:
         specifier: ^5.0.0
@@ -387,9 +387,18 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/node-hmr':
+        specifier: workspace:^
+        version: link:../node-hmr
+      '@remix-run/node-tsx':
+        specifier: workspace:^
+        version: link:../node-tsx
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
+      '@remix-run/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1398,6 +1407,37 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
+  packages/node-hmr:
+    dependencies:
+      '@remix-run/terminal':
+        specifier: workspace:^
+        version: link:../terminal
+      chokidar:
+        specifier: ^5.0.0
+        version: 5.0.0
+      oxc-parser:
+        specifier: ^0.121.0
+        version: 0.121.0
+      source-map-js:
+        specifier: ^1.2.1
+        version: 1.2.1
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@remix-run/node-tsx':
+        specifier: workspace:^
+        version: link:../node-tsx
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
   packages/node-tsx:
     dependencies:
       get-tsconfig:
@@ -1509,6 +1549,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:../node-fetch-server
+      '@remix-run/node-hmr':
+        specifier: workspace:^
+        version: link:../node-hmr
       '@remix-run/node-tsx':
         specifier: workspace:^
         version: link:../node-tsx
@@ -1548,6 +1591,9 @@ importers:
       '@remix-run/ui':
         specifier: workspace:^
         version: link:../ui
+      '@remix-run/ui-hmr':
+        specifier: workspace:^
+        version: link:../ui-hmr
       mysql2:
         specifier: ^3.15.3
         version: 3.16.3
@@ -1947,6 +1993,55 @@ importers:
       playwright:
         specifier: 'catalog:'
         version: 1.60.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  packages/ui-hmr:
+    dependencies:
+      magic-string:
+        specifier: ^0.30.21
+        version: 0.30.21
+      oxc-parser:
+        specifier: ^0.121.0
+        version: 0.121.0
+      source-map-js:
+        specifier: ^1.2.1
+        version: 1.2.1
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/assets':
+        specifier: workspace:^
+        version: link:../assets
+      '@remix-run/fetch-proxy':
+        specifier: workspace:*
+        version: link:../fetch-proxy
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../node-fetch-server
+      '@remix-run/node-hmr':
+        specifier: workspace:^
+        version: link:../node-hmr
+      '@remix-run/node-tsx':
+        specifier: workspace:^
+        version: link:../node-tsx
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
+      '@remix-run/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      chokidar:
+        specifier: ^5.0.0
+        version: 5.0.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2

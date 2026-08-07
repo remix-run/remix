@@ -54,6 +54,7 @@ import {
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { createComponentErrorEvent } from './error-event.ts'
+import { componentStalenessCheck } from './refresh.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -483,6 +484,15 @@ export function diffVNodes(
 ): CommittedVNode {
   if (curr === null) {
     return insert(next, domParent, vParent, context, anchor, cursor)
+  }
+
+  if (
+    componentStalenessCheck !== null &&
+    curr.kind === 'component' &&
+    next.kind === 'component' &&
+    componentStalenessCheck(curr.type) === true
+  ) {
+    return replace(curr, next, domParent, vParent, context, anchor)
   }
 
   if (curr.kind !== next.kind || curr.type !== next.type) {
