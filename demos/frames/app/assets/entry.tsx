@@ -9,11 +9,13 @@ const app = run({
     }
     return exp
   },
-  async resolveFrame(src, signal) {
+  async resolveFrame(src, options) {
     let res = await fetch(src, {
       cache: 'no-store',
       headers: { Accept: 'text/html' },
-      signal,
+      method: options?.method,
+      body: options?.method?.toLowerCase() === 'get' ? undefined : options?.formData,
+      signal: options?.signal,
     })
     if (!res.ok) {
       return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`

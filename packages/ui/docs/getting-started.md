@@ -114,6 +114,7 @@ return new Response(stream, {
 
 ```tsx
 // assets/entry.tsx
+import type { ResolveFrameOptions } from 'remix/ui'
 import { run } from 'remix/ui'
 
 let app = run({
@@ -121,11 +122,28 @@ let app = run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, signal) {
-    let res = await fetch(src, { headers: { Accept: 'text/html' }, signal })
+  async resolveFrame(src, options) {
+    let res = await fetch(src, {
+      headers: { Accept: 'text/html', 'X-Remix-Frame': 'true' },
+      method: options?.method,
+      body: getRequestBody(options),
+      signal: options?.signal,
+    })
     return res.body ?? (await res.text())
   },
 })
+
+function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+  let formData = options?.formData
+  if (!formData) return
+  if (options.encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
+}
 
 await app.ready()
 ```

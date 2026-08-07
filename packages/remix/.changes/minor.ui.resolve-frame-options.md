@@ -1,0 +1,1 @@
+BREAKING CHANGE: Update `remix/ui` client frame resolvers from positional `resolveFrame(src, signal, target)` arguments to `resolveFrame(src, options)`, reading the existing values from `options?.signal` and `options?.target`.

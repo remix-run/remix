@@ -2194,15 +2194,15 @@ describe('run', () => {
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
       },
-      resolveFrame(src: string, signal?: AbortSignal) {
+      resolveFrame(src: string, options) {
         if (src !== '/reload-abort') throw new Error(`Unexpected frame src: ${src}`)
         callCount++
         if (callCount === 1) {
-          firstSignal = signal
+          firstSignal = options?.signal
           return firstReloadContent
         }
         if (callCount === 2) {
-          secondSignal = signal
+          secondSignal = options?.signal
           return secondReloadContent
         }
         throw new Error(`Unexpected reload call count: ${callCount}`)
@@ -3163,8 +3163,8 @@ describe('run', () => {
     document.body.innerHTML = pageHtml
 
     let resolveTargets: Array<string | undefined> = []
-    let resolveFrame = mock.fn(async (_src: string, _signal?: AbortSignal, target?: string) => {
-      resolveTargets.push(target)
+    let resolveFrame = mock.fn(async (_src: string, options) => {
+      resolveTargets.push(options?.target)
       return '<p id="named-frame-loaded">Loaded</p>'
     })
 
@@ -4523,11 +4523,11 @@ describe('run', () => {
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
       },
-      resolveFrame(src: string, _signal?: AbortSignal, target?: string) {
+      resolveFrame(src: string, options) {
         if (src === '/detail') return renderParentFrame()
         if (src.startsWith('/comments')) {
           // The client re-resolve of the nested clientEntry frame on ancestor reload.
-          islandClientTargets.push(target)
+          islandClientTargets.push(options?.target)
           return `<p id="island-content" data-client-issue="${issue}">island ${issue} (client)</p>`
         }
         throw new Error(`Unexpected frame src: ${src}`)
@@ -5493,7 +5493,8 @@ describe('run', () => {
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
       },
-      async resolveFrame(src: string, signal?: AbortSignal) {
+      async resolveFrame(src: string, options) {
+        let signal = options?.signal
         if (src === document.location.href) {
           return streamFromChunks([await renderPageWithProtocol('Reloaded entry')])
         }
@@ -5603,7 +5604,8 @@ describe('run', () => {
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
       },
-      async resolveFrame(src: string, signal?: AbortSignal) {
+      async resolveFrame(src: string, options) {
+        let signal = options?.signal
         if (src === document.location.href) {
           return streamFromChunks([
             await renderPageWithProtocol('Reloaded entry', 'Unused streamed entry frame'),
@@ -5711,7 +5713,8 @@ describe('run', () => {
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
       },
-      async resolveFrame(src: string, signal?: AbortSignal) {
+      async resolveFrame(src: string, options) {
+        let signal = options?.signal
         if (src === document.location.href) {
           topReloadCount++
           if (topReloadCount === 1) {

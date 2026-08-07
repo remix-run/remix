@@ -696,15 +696,16 @@ needed, handles Enter and mouse or modifier-key activation, and reflects a disab
 `aria-disabled`. Prefer an anchor when its markup fits. Use the mixin when making another host act as
 a link is an intentional part of the UI.
 
-Native anchors can also control frame-aware navigation with attributes that correspond to the
-`link(...)` and `navigate(...)` options:
+Native anchors and forms can also control frame-aware navigation with attributes that correspond to
+the `link(...)` and `navigate(...)` options:
 
 - `rmx-target` names the frame to reload.
 - `rmx-src` provides the URL to fetch for that frame while `href` remains the browser's destination.
 - `rmx-reset-scroll="false"` preserves the current scroll position.
 - `rmx-document` opts out of interception and lets the browser perform a full-document navigation.
 
-[Streaming UI with Frames](/streaming-ui-with-frames/) shows these attributes with named frames.
+[Streaming UI with Frames](/streaming-ui-with-frames/) shows these attributes with named frames and
+explains when a form can submit directly through the frame resolver.
 
 ## Enhancing forms with fetch and navigation
 
