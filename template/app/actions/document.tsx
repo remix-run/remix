@@ -1,7 +1,7 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 
-import { routes } from '../routes.ts'
+import { entryHref, entryPreloads } from '../assets.ts'
 
 export interface DocumentProps {
   children?: RemixNode
@@ -20,14 +20,16 @@ export function Document(handle: Handle<DocumentProps>) {
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <meta name="color-scheme" content="light dark" />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <title>{title}</title>
           {head}
+          {entryPreloads.map((href) => (
+            <link key={href} rel="modulepreload" href={href} />
+          ))}
+          <script type="module" src={entryHref}></script>
         </head>
-        <body mix={css({ margin: 0 })}>
-          {children}
-          <script type="module" src={routes.assets.href({ path: 'app/assets/entry.ts' })}></script>
-        </body>
+        <body mix={css({ margin: 0 })}>{children}</body>
       </html>
     )
   }

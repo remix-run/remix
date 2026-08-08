@@ -14,10 +14,15 @@ export const assetServer = createAssetServer({
     'packages/*path': '../packages/*path',
     /* remix-template:remove-end */
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
-  denyFiles: ['app/**/*.server.*'],
+  denyFiles: ['app/**/*.test.*'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
   watch: false,
 })
+
+const entry = 'app/actions/public/entry.ts'
+
+export const entryHref = await assetServer.getHref(entry)
+export const entryPreloads = await assetServer.getPreloads(entry)

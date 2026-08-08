@@ -13,6 +13,11 @@ import type { RouteTreeNodeKind } from './route-map.ts'
 
 const ACTIONS_PATH_PREFIX = 'app/actions/'
 
+// Browser-reachable source is colocated in `public/` directories throughout `app/`, matching the
+// `app/**/public/**` convention the asset server allows. Those directories are an asset boundary
+// rather than route-map structure, so they are never expected to mirror a route key path.
+const BROWSER_SOURCE_DIRECTORY_NAME = 'public'
+
 export const ROOT_ROUTE_NAME = '<root>'
 
 export interface OwnershipRouteNode {
@@ -144,7 +149,11 @@ async function scanControllersDirectory(appRoot: string): Promise<ControllerDire
   let routeDirectoryPaths = new Set<string>()
   let routeLocalFilePaths = new Set<string>()
 
-  async function walk(currentDir: string, isRoot: boolean): Promise<void> {
+  async function walk(
+    currentDir: string,
+    isRoot: boolean,
+    isBrowserSource: boolean,
+  ): Promise<void> {
     let entries
     try {
       entries = await fs.readdir(currentDir, { withFileTypes: true })
@@ -162,8 +171,15 @@ async function scanControllersDirectory(appRoot: string): Promise<ControllerDire
       let relativePath = normalizeRelativePath(path.relative(appRoot, entryPath))
 
       if (entry.isDirectory()) {
-        routeDirectoryPaths.add(relativePath)
-        await walk(entryPath, false)
+        let entryIsBrowserSource = isBrowserSource || entry.name === BROWSER_SOURCE_DIRECTORY_NAME
+
+        // Still walk browser source so its files count as route-owned content, but never treat
+        // those directories, or anything below them, as route-map structure.
+        if (!entryIsBrowserSource) {
+          routeDirectoryPaths.add(relativePath)
+        }
+
+        await walk(entryPath, false, entryIsBrowserSource)
         continue
       }
 
@@ -182,7 +198,7 @@ async function scanControllersDirectory(appRoot: string): Promise<ControllerDire
     }
   }
 
-  await walk(actionsDir, true)
+  await walk(actionsDir, true, false)
 
   return {
     controllerEntryPaths,
