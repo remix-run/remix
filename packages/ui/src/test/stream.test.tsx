@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { Handle, RemixNode } from '../runtime/component.ts'
-import { createMixin, css, on } from '../index.ts'
+import { addEventListeners, createMixin, css, on } from '../index.ts'
 import { createElement } from '../runtime/create-element.ts'
 
 import { renderToStream, renderToString } from '../server/stream.ts'
@@ -648,6 +648,31 @@ describe('stream', () => {
       expect(componentSignal?.onabort).toBe(null)
       expect(updateError).toBeInstanceOf(Error)
       expect((updateError as Error).message).toBe('handle.update() is not available during SSR.')
+    })
+
+    it('does not attach event listeners during SSR', async () => {
+      let listenerRegistrations = 0
+      let target: EventTarget = {
+        addEventListener() {
+          listenerRegistrations++
+        },
+        removeEventListener() {},
+        dispatchEvent() {
+          return true
+        },
+      }
+
+      function App(handle: Handle) {
+        addEventListeners(target, handle.signal, {
+          ping() {},
+        })
+        return () => <div>App</div>
+      }
+
+      let html = await drain(renderToStream(<App />))
+
+      expect(html).toBe('<div>App</div>')
+      expect(listenerRegistrations).toBe(0)
     })
 
     it('serializes css mixin styles into style tags and class names', async () => {

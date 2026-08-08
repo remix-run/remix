@@ -11,6 +11,7 @@ import {
   shouldStringifyBooleanAttribute,
 } from '../runtime/core/attributes.ts'
 import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
+import { ssrSignal } from '../runtime/ssr-signal.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 
 interface VNode {
@@ -152,33 +153,6 @@ function getStyleLayerName(selector: string, layer: string = REMIX_UI_STYLE_LAYE
 }
 
 const SSR_OMITTED_PROPS = RUNTIME_FRAMEWORK_PROPS
-
-const ssrSignal = Object.freeze({
-  get aborted() {
-    return false
-  },
-  get reason() {
-    return undefined
-  },
-  get onabort() {
-    return null
-  },
-  set onabort(_: AbortSignal['onabort']) {},
-  addEventListener(
-    _type: string,
-    _listener: EventListenerOrEventListenerObject | null,
-    _options?: AddEventListenerOptions | boolean,
-  ) {},
-  removeEventListener(
-    _type: string,
-    _listener: EventListenerOrEventListenerObject | null,
-    _options?: EventListenerOptions | boolean,
-  ) {},
-  dispatchEvent(_event: Event) {
-    return true
-  },
-  throwIfAborted() {},
-}) as AbortSignal
 
 /**
  * Renders a node tree to a streaming HTML response body.
