@@ -107,6 +107,7 @@ Fingerprinting assumes files on disk are stable and requires `watch: false`.
 - `target` as an object for shared browser targets and script-only ECMAScript output, such as `{ es: '2020', chrome: '109', safari: '16.4' }`
 - `scripts.define` to replace globals such as `process.env.NODE_ENV`
 - `scripts.external` to leave specific script imports untouched
+- `scripts.transforms` to run ordered application-source transforms before Remix lowers TypeScript and JSX; return `watchFiles` for additional development invalidation and opt into dependency modules per transform with `includeDependencies: true`
 
 Do not nest shared compiler options under `scripts`. Use top-level `minify`, `sourceMaps`, `sourceMapSourcePaths`, and `target` so they apply to styles as well as scripts.
 
