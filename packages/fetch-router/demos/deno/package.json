@@ -1,0 +1,24 @@
+{
+  "name": "fetch-router-deno-demo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@remix-run/cookie": "workspace:*",
+    "@remix-run/data-schema": "workspace:*",
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/form-data-middleware": "workspace:*",
+    "@remix-run/html-template": "workspace:*",
+    "@remix-run/logger-middleware": "workspace:*",
+    "@remix-run/response": "workspace:*",
+    "@remix-run/session": "workspace:*",
+    "@remix-run/session-middleware": "workspace:*",
+    "@remix-run/static-middleware": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  },
+  "scripts": {
+    "dev": "deno task dev",
+    "start": "deno task start"
+  }
+}
