@@ -39,6 +39,7 @@ import type { EmittedModule } from './emit.ts'
 import type { ResolvedScriptTarget } from '../target.ts'
 import type { ResolvedModule } from './resolve.ts'
 import { scriptModuleHookConditions } from './conditions.ts'
+import { isBrowserExternalModuleUrl } from './urls.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -808,7 +809,7 @@ async function getUnresolvedImportsFromLexer(rawCode: string): Promise<Unresolve
 
   for (let imported of imports) {
     let specifier = getStaticImportSpecifier(rawCode, imported)
-    if (specifier == null || shouldSkipImportSpecifier(specifier)) continue
+    if (specifier == null || isBrowserExternalModuleUrl(specifier)) continue
     unresolvedImports.push({
       specifier,
       start: imported.s,
@@ -935,14 +936,6 @@ function getStaticImportSpecifier(
 
 function isStaticTemplateLiteral(specifier: string): boolean {
   return specifier.startsWith('`') && specifier.endsWith('`') && !specifier.includes('${')
-}
-
-function shouldSkipImportSpecifier(specifier: string): boolean {
-  return (
-    specifier.startsWith('data:') ||
-    specifier.startsWith('http://') ||
-    specifier.startsWith('https://')
-  )
 }
 
 function getImportQuote(source: string, start: number): '"' | "'" | '`' | undefined {

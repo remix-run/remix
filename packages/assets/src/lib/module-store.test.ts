@@ -53,6 +53,7 @@ function createResolvedModule(
     fingerprint: null,
     hmr: {
       acceptedDeps: (options.acceptedDeps ?? []).map((depPath, index) => ({
+        type: 'file',
         depPath,
         end: index,
         start: index,
@@ -68,6 +69,12 @@ function createResolvedModule(
     sourceMap: null,
     stableUrlPathname: `/assets${identityPath}`,
   }
+}
+
+function getAcceptedDependencyPaths(resolved: ResolvedModule): string[] {
+  return resolved.hmr.acceptedDeps.flatMap((acceptedDep) =>
+    acceptedDep.type === 'file' ? [acceptedDep.depPath] : [],
+  )
 }
 
 function createModuleSnapshot(): ModuleSnapshot {
@@ -191,7 +198,7 @@ describe('createModuleStore', () => {
   it('retains stale resolved modules and links when a candidate file is added', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       getAcceptedDependencies(resolved) {
-        return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+        return getAcceptedDependencyPaths(resolved)
       },
       getDependencies(resolved) {
         return resolved.deps
@@ -224,7 +231,7 @@ describe('createModuleStore', () => {
   it('retains the last resolved module and links across content invalidations', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       getAcceptedDependencies(resolved) {
-        return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+        return getAcceptedDependencyPaths(resolved)
       },
       getDependencies(resolved) {
         return resolved.deps
@@ -322,7 +329,7 @@ describe('createModuleStore', () => {
   it('indexes accepted importers from resolved module dependencies', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       getAcceptedDependencies(resolved) {
-        return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+        return getAcceptedDependencyPaths(resolved)
       },
     })
     let resolved = createResolvedModule({
@@ -338,7 +345,7 @@ describe('createModuleStore', () => {
   it('replaces links and importer indexes when a module resolves again', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       getAcceptedDependencies(resolved) {
-        return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+        return getAcceptedDependencyPaths(resolved)
       },
       getDependencies(resolved) {
         return resolved.deps
@@ -370,7 +377,7 @@ describe('createModuleStore', () => {
   it('retains stale resolved modules and links across graph invalidations', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       getAcceptedDependencies(resolved) {
-        return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+        return getAcceptedDependencyPaths(resolved)
       },
       getDependencies(resolved) {
         return resolved.deps
@@ -407,7 +414,7 @@ describe('createModuleStore', () => {
   it('retains stale resolved modules and links when all records are invalidated', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       getAcceptedDependencies(resolved) {
-        return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+        return getAcceptedDependencyPaths(resolved)
       },
       getDependencies(resolved) {
         return resolved.deps

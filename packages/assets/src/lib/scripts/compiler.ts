@@ -147,7 +147,9 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     EmittedModule
   >({
     getAcceptedDependencies(resolvedModule) {
-      return resolvedModule.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+      return resolvedModule.hmr.acceptedDeps.flatMap((acceptedDep) =>
+        acceptedDep.type === 'file' ? [acceptedDep.depPath] : [],
+      )
     },
     getDependencies(resolvedModule) {
       return resolvedModule.deps

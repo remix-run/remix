@@ -59,7 +59,12 @@ export interface ModuleResolveResult {
   importAttributes?: Record<string, string | undefined>
   /** Whether this result intentionally ends the hook chain without calling `nextResolve`. */
   shortCircuit?: boolean
-  /** Resolved module URL. Only `file:` URLs are compiled; other URLs remain external. */
+  /**
+   * Resolved module URL.
+   *
+   * `file:` URLs are compiled and must identify an allowed script in the configured file map.
+   * Browser-loadable `data:`, `http:`, and `https:` URLs remain external.
+   */
   url: string
 }
 

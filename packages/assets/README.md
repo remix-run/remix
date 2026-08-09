@@ -374,7 +374,7 @@ import { createAssetServer } from 'remix/assets'
 let assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  allowFiles: ['app/assets/**'],
   scripts: {
     moduleHooks: [
       {
@@ -389,6 +389,8 @@ let assetServer = createAssetServer({
   },
 })
 ```
+
+Resolve hooks must return an absolute URL string. A `file:` URL must resolve to an existing supported script that passes the asset server's access rules and is reachable through `fileMap`. Browser-loadable `data:`, `http:`, and `https:` URLs remain external; other URL formats fail resolution. Files resolved through hooks participate in the normal preload graph and file watching.
 
 Load hooks must return `format: 'module'`, and import attributes are not currently supported.
 
@@ -649,7 +651,7 @@ let isDevelopment = process.env.NODE_ENV === 'development'
 let assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  allowFiles: ['app/assets/**'],
   hmr: isDevelopment
     ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
     : undefined,

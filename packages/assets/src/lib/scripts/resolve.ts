@@ -20,6 +20,7 @@ import type { CompiledRoutes } from '../routes.ts'
 import type { ResolveModuleResult, TransformedModule } from './transform.ts'
 import type { EmittedModule } from './emit.ts'
 import { scriptModuleHookConditions } from './conditions.ts'
+import { isBrowserExternalModuleUrl } from './urls.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -33,12 +34,23 @@ export const resolverExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs']
 export const supportedScriptExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs']
 const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
 
-type ResolvedImport = {
-  depPath: string
+type ImportLocation = {
   end: number
   quote?: '"' | "'" | '`'
   start: number
 }
+
+type ResolvedImport = ImportLocation &
+  (
+    | {
+        type: 'external'
+        url: string
+      }
+    | {
+        type: 'file'
+        depPath: string
+      }
+  )
 
 type ResolvedHmrAcceptedDependency = ResolvedImport
 
@@ -90,11 +102,18 @@ export type ResolveArgs = {
   routes: CompiledRoutes
 }
 
-type ResolvedSpec = {
-  absolutePath: string | null
-  packageJsonPath: string | null
-  specifier: string
-}
+type ResolvedSpec =
+  | {
+      type: 'external'
+      specifier: string
+      url: string
+    }
+  | {
+      type: 'file'
+      absolutePath: string
+      packageJsonPath: string | null
+      specifier: string
+    }
 
 type NormalizedSpecifierResolution = {
   importerPath: string
@@ -140,11 +159,37 @@ export async function resolveModule(
     )
 
     let resolvedSpec = resolvedImports.get(unresolved.specifier)
-    if (!resolvedSpec?.absolutePath) {
+    if (!resolvedSpec) {
       return failResolve(
         createAssetServerCompilationError(
           `Failed to resolve import "${displaySpecifier}" in ${transformed.resolvedPath}. ` +
             `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
+          {
+            code: 'IMPORT_RESOLUTION_FAILED',
+          },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
+      )
+    }
+
+    if (resolvedSpec.type === 'external') {
+      importsWithPaths.push({
+        type: 'external',
+        url: resolvedSpec.url,
+        end: unresolved.end,
+        quote: unresolved.quote,
+        start: unresolved.start,
+      })
+      continue
+    }
+
+    if (!fs.existsSync(resolvedSpec.absolutePath)) {
+      return failResolve(
+        createAssetServerCompilationError(
+          `Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedSpec.absolutePath}", which does not exist.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
           },
@@ -224,6 +269,7 @@ export async function resolveModule(
     }
 
     importsWithPaths.push({
+      type: 'file',
       depPath: resolvedImport.identityPath,
       end: unresolved.end,
       quote: unresolved.quote,
@@ -257,11 +303,37 @@ export async function resolveModule(
       }
     }
 
-    if (!resolvedSpec?.absolutePath) {
+    if (!resolvedSpec) {
       return failResolve(
         createAssetServerCompilationError(
           `Failed to resolve accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}. ` +
             `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
+          {
+            code: 'IMPORT_RESOLUTION_FAILED',
+          },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
+      )
+    }
+
+    if (resolvedSpec.type === 'external') {
+      acceptedDepsWithPaths.push({
+        type: 'external',
+        url: resolvedSpec.url,
+        end: unresolved.end,
+        quote: unresolved.quote,
+        start: unresolved.start,
+      })
+      continue
+    }
+
+    if (!fs.existsSync(resolvedSpec.absolutePath)) {
+      return failResolve(
+        createAssetServerCompilationError(
+          `Accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedSpec.absolutePath}", which does not exist.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
           },
@@ -331,6 +403,7 @@ export async function resolveModule(
     }
 
     acceptedDepsWithPaths.push({
+      type: 'file',
       depPath: resolvedImport.identityPath,
       end: unresolved.end,
       quote: unresolved.quote,
@@ -506,13 +579,13 @@ async function resolveSpecifierWithResolver(
     normalizedResolution.importerPath,
     normalizedResolution.specifier,
   )
-  if (resolutionResult.error) return null
+  if (resolutionResult.error || !resolutionResult.path || !path.isAbsolute(resolutionResult.path)) {
+    return null
+  }
 
   return {
-    absolutePath:
-      resolutionResult.path && path.isAbsolute(resolutionResult.path)
-        ? normalizeFilePath(resolutionResult.path)
-        : null,
+    type: 'file',
+    absolutePath: normalizeFilePath(resolutionResult.path),
     packageJsonPath: resolutionResult.packageJsonPath
       ? normalizeFilePath(resolutionResult.packageJsonPath)
       : null,
@@ -615,15 +688,17 @@ function resolveResultToResolvedSpec(
 
   try {
     let url = new URL(result.url)
-    if (url.protocol !== 'file:') {
+    if (isBrowserExternalModuleUrl(url.href)) {
       return {
-        absolutePath: null,
-        packageJsonPath: null,
+        type: 'external',
         specifier,
+        url: url.href,
       }
     }
+    if (url.protocol !== 'file:') return null
 
     return {
+      type: 'file',
       absolutePath: normalizeFilePath(fileURLToPath(url)),
       packageJsonPath: null,
       specifier,
