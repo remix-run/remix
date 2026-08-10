@@ -34,9 +34,7 @@ import type {
 import { createTsconfigTransformOptionsResolver, transformModule } from './transform.ts'
 import type { ResolveModuleResult, TransformArgs, TransformedModule } from './transform.ts'
 import { ResolverFactory } from 'oxc-resolver'
-import type { NapiResolveOptions } from 'oxc-resolver'
 import type { EmittedAsset, EmittedModule } from './emit.ts'
-import { scriptLoaderConditions } from './conditions.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 type ScriptStore = ModuleStore<TransformedModule, ResolvedModule, EmittedModule>
@@ -124,14 +122,6 @@ type ScriptHmrBoundary = {
 
 const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
 const preloadConcurrency = Math.max(1, Math.min(8, os.availableParallelism() - 1))
-const scriptResolverOptions = {
-  aliasFields: [['browser']],
-  conditionNames: [...scriptLoaderConditions],
-  extensionAlias: resolverExtensionAlias,
-  extensions: resolverExtensions,
-  mainFields: ['browser', 'module', 'main'],
-  tsconfig: 'auto',
-} satisfies NapiResolveOptions
 
 export function createScriptCompiler(options: ScriptCompilerOptions): ScriptCompiler {
   let resolvedOptions = {
@@ -147,9 +137,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     EmittedModule
   >({
     getAcceptedDependencies(resolvedModule) {
-      return resolvedModule.hmr.acceptedDeps.flatMap((acceptedDep) =>
-        acceptedDep.type === 'file' ? [acceptedDep.depPath] : [],
-      )
+      return resolvedModule.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
     },
     getDependencies(resolvedModule) {
       return resolvedModule.deps
@@ -158,7 +146,14 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     onWatchFilesChange: options.onWatchFilesChange,
   })
   let tsconfigTransformOptionsResolver = createTsconfigTransformOptionsResolver()
-  let resolverFactory = new ResolverFactory(scriptResolverOptions)
+  let resolverFactory = new ResolverFactory({
+    aliasFields: [['browser']],
+    conditionNames: ['browser', 'import', 'module', 'default'],
+    extensionAlias: resolverExtensionAlias,
+    extensions: resolverExtensions,
+    mainFields: ['browser', 'module', 'main'],
+    tsconfig: 'auto',
+  })
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedModule>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedModule>>()
 
@@ -166,12 +161,10 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     buildId: resolvedOptions.buildId ?? null,
     define: resolvedOptions.define ?? null,
     externalSet: resolvedOptions.externalSet,
-    isAllowed: resolvedOptions.isAllowed,
     isWatchIgnored,
     minify: resolvedOptions.minify,
     loaders: resolvedOptions.loaders,
     resolveActualPath,
-    resolverFactory,
     routes: resolvedOptions.routes,
     sourceMapSourcePaths: resolvedOptions.sourceMapSourcePaths,
     sourceMaps: resolvedOptions.sourceMaps ?? null,

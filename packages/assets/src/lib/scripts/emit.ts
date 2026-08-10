@@ -89,7 +89,11 @@ async function rewriteImports(
   let rewrittenSource = new MagicString(resolvedModule.rawCode)
 
   for (let imported of resolvedModule.imports) {
-    let url = await getImportUrl(imported, options)
+    let url = await options.getServedUrl(imported.depPath)
+    let hmrImportTimestamp = options.getHmrImportTimestamp(imported.depPath)
+    if (hmrImportTimestamp !== null) {
+      url = addTimestampQuery(url, hmrImportTimestamp)
+    }
     rewrittenSource.overwrite(
       imported.start,
       imported.end,
@@ -98,7 +102,7 @@ async function rewriteImports(
   }
 
   for (let acceptedDep of resolvedModule.hmr.acceptedDeps) {
-    let url = getAcceptedDependencyUrl(acceptedDep, options)
+    let url = options.getStableUrl(acceptedDep.depPath)
     rewrittenSource.overwrite(
       acceptedDep.start,
       acceptedDep.end,
@@ -117,41 +121,6 @@ async function rewriteImports(
       : resolvedModule.sourceMap
 
   return { code, sourceMap }
-}
-
-async function getImportUrl(
-  imported: ResolvedModule['imports'][number],
-  options: RewriteImportsOptions,
-): Promise<string> {
-  switch (imported.type) {
-    case 'external':
-      return imported.url
-    case 'file': {
-      let url = await options.getServedUrl(imported.depPath)
-      let hmrImportTimestamp = options.getHmrImportTimestamp(imported.depPath)
-      return hmrImportTimestamp === null ? url : addTimestampQuery(url, hmrImportTimestamp)
-    }
-    default:
-      return unreachable(imported)
-  }
-}
-
-function getAcceptedDependencyUrl(
-  acceptedDep: ResolvedModule['hmr']['acceptedDeps'][number],
-  options: RewriteImportsOptions,
-): string {
-  switch (acceptedDep.type) {
-    case 'external':
-      return acceptedDep.url
-    case 'file':
-      return options.getStableUrl(acceptedDep.depPath)
-    default:
-      return unreachable(acceptedDep)
-  }
-}
-
-function unreachable(_value: never): never {
-  throw new TypeError('Unexpected resolved import type')
 }
 
 function addTimestampQuery(pathname: string, timestamp: number): string {

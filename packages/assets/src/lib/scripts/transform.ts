@@ -10,7 +10,6 @@ import { transform as oxcTransform } from 'oxc-transform'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
 import type { Cache, TsConfigJsonResolved } from 'get-tsconfig'
 import type { Node, Program } from 'oxc-parser'
-import type { ResolverFactory } from 'oxc-resolver'
 import type { TransformOptions as OxcTransformOptions } from 'oxc-transform'
 
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
@@ -125,12 +124,10 @@ export type TransformArgs = {
   buildId: string | null
   define: Record<string, string> | null
   externalSet: ReadonlySet<string>
-  isAllowed(absolutePath: string): boolean
   isWatchIgnored(filePath: string): boolean
   minify: boolean
   loaders: readonly ModuleLoader[]
   resolveActualPath(identityPath: string): string | null
-  resolverFactory: ResolverFactory
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps: 'external' | 'inline' | null

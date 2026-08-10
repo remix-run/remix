@@ -53,7 +53,6 @@ function createResolvedModule(
     fingerprint: null,
     hmr: {
       acceptedDeps: (options.acceptedDeps ?? []).map((depPath, index) => ({
-        type: 'file',
         depPath,
         end: index,
         start: index,
@@ -72,9 +71,7 @@ function createResolvedModule(
 }
 
 function getAcceptedDependencyPaths(resolved: ResolvedModule): string[] {
-  return resolved.hmr.acceptedDeps.flatMap((acceptedDep) =>
-    acceptedDep.type === 'file' ? [acceptedDep.depPath] : [],
-  )
+  return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
 }
 
 function createModuleSnapshot(): ModuleSnapshot {
