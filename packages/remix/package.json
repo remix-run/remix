@@ -115,7 +115,7 @@
     "./test/cli": "./src/test/cli.ts",
     "./ui": "./src/ui.ts",
     "./ui-hmr": "./src/ui-hmr.ts",
-    "./ui-hmr/assets/module-hooks": "./src/ui-hmr/assets/module-hooks.ts",
+    "./ui-hmr/assets": "./src/ui-hmr/assets.ts",
     "./ui-hmr/node": "./src/ui-hmr/node.ts",
     "./ui-hmr/runtime/browser": "./src/ui-hmr/runtime/browser.ts",
     "./ui-hmr/runtime/server": "./src/ui-hmr/runtime/server.ts",
@@ -507,9 +507,9 @@
         "types": "./dist/ui-hmr.d.ts",
         "default": "./dist/ui-hmr.js"
       },
-      "./ui-hmr/assets/module-hooks": {
-        "types": "./dist/ui-hmr/assets/module-hooks.d.ts",
-        "default": "./dist/ui-hmr/assets/module-hooks.js"
+      "./ui-hmr/assets": {
+        "types": "./dist/ui-hmr/assets.d.ts",
+        "default": "./dist/ui-hmr/assets.js"
       },
       "./ui-hmr/node": {
         "types": "./dist/ui-hmr/node.d.ts",

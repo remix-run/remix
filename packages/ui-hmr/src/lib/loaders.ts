@@ -5,32 +5,28 @@ import { fileURLToPath } from 'node:url'
 import { transformComponentsForBrowser, transformComponentsForServer } from './transform.ts'
 import type { UiHmrImportSource } from './transform.ts'
 
-interface ModuleHooks {
-  load?: ModuleLoadHook
+interface ServerModuleHooks {
+  load: ServerModuleLoadHook
 }
 
-interface BrowserModuleHooks {
-  load?: BrowserModuleLoadHook
-}
-
-type ModuleLoadHook = (
+type ServerModuleLoadHook = (
   url: string,
   context: ModuleLoadContext,
-  nextLoad: ModuleLoadHookNext,
+  nextLoad: NextServerModuleLoader,
 ) => ModuleLoadResult
 
-type ModuleLoadHookNext = (
+type NextServerModuleLoader = (
   url: string,
   context?: Partial<ModuleLoadContext>,
 ) => ModuleLoadNextResult
 
-type BrowserModuleLoadHook = (
+type BrowserModuleLoader = (
   url: string,
   context: ModuleLoadContext,
-  nextLoad: BrowserModuleLoadHookNext,
+  nextLoad: NextBrowserModuleLoader,
 ) => ModuleLoadResult
 
-type BrowserModuleLoadHookNext = (
+type NextBrowserModuleLoader = (
   url: string,
   context?: Partial<ModuleLoadContext>,
 ) => ModuleLoadNextResult
@@ -42,16 +38,38 @@ interface ModuleLoadContext {
   moduleUrl?: string
 }
 
+type ModuleFloat16Array = typeof globalThis extends {
+  Float16Array: { prototype: infer array }
+}
+  ? array
+  : never
+
+type ModuleTypedArray =
+  | Uint8Array
+  | Uint8ClampedArray
+  | Uint16Array
+  | Uint32Array
+  | Int8Array
+  | Int16Array
+  | Int32Array
+  | BigUint64Array
+  | BigInt64Array
+  | ModuleFloat16Array
+  | Float32Array
+  | Float64Array
+
+type ModuleLoadSource = string | ArrayBuffer | ModuleTypedArray
+
 interface ModuleLoadResult {
   format: string | null | undefined
   shortCircuit?: boolean
-  source?: string | ArrayBuffer | NodeJS.TypedArray
+  source?: ModuleLoadSource
 }
 
 interface ModuleLoadNextResult {
   format: string | null | undefined
   shortCircuit?: boolean
-  source?: string | ArrayBuffer | NodeJS.TypedArray
+  source?: ModuleLoadSource
 }
 
 type Runtime = 'browser' | 'server'
@@ -76,16 +94,14 @@ const importPresets = [
   serverRuntimeSpecifier: string
 }>
 
-export function createAssetsUiHmrModuleHooks(): BrowserModuleHooks {
-  return {
-    load(url, context, nextLoad) {
-      let result = nextLoad(url, context)
-      return transformLoadResult(url, context, result, 'browser')
-    },
+export function createAssetsUiHmrLoader(): BrowserModuleLoader {
+  return (url, context, nextLoad) => {
+    let result = nextLoad(url, context)
+    return transformLoadResult(url, context, result, 'browser')
   }
 }
 
-export function createServerUiHmrModuleHooks(): ModuleHooks {
+export function createServerUiHmrModuleHooks(): ServerModuleHooks {
   return {
     load(url, context, nextLoad) {
       let result = nextLoad(url, context)
@@ -131,9 +147,7 @@ function transformLoadResult(
 function shouldTransformModule(
   url: string,
   result: ModuleLoadNextResult,
-): result is ModuleLoadNextResult & {
-  source: string | ArrayBuffer | NodeJS.TypedArray
-} {
+): result is ModuleLoadNextResult & { source: ModuleLoadSource } {
   if (!url.startsWith('file:')) return false
   if (url.includes('/node_modules/')) return false
   if (result.format !== undefined && result.format !== null && result.format !== 'module') {
@@ -142,7 +156,7 @@ function shouldTransformModule(
   return result.source !== undefined && result.source !== null
 }
 
-function moduleLoadSourceToString(source: string | ArrayBuffer | NodeJS.TypedArray): string {
+function moduleLoadSourceToString(source: ModuleLoadSource): string {
   if (typeof source === 'string') return source
   return new TextDecoder().decode(source)
 }

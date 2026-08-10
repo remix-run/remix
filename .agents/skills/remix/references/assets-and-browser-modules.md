@@ -92,7 +92,7 @@ In development:
 - Prefer stable URLs with normal revalidation
 - Enable source maps when debugging browser code
 - Use `hmr` only when the app is running under `remix/node-hmr`
-- Use `scripts.moduleHooks` for development-only browser transforms such as `uiHmr()`
+- Use `scripts.loaders` for development-only browser transforms such as `uiHmr()`
 
 In deployment:
 
@@ -108,29 +108,29 @@ Use browser HMR when source-served browser modules should update without a full 
 
 ```typescript
 import { createAssetServer } from 'remix/assets'
-import { uiHmr } from 'remix/ui-hmr/assets/module-hooks'
+import { uiHmr } from 'remix/ui-hmr/assets'
 
-let isDevelopment = process.env.NODE_ENV === 'development'
+const isDevelopment = process.env.NODE_ENV === 'development'
+const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
 
-let assetServer = createAssetServer({
+const assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
   allowFiles: ['app/assets/**'],
-  hmr:
-    isDevelopment && process.env.REMIX_NODE_HMR
-      ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
-      : undefined,
-  scripts: {
-    moduleHooks: isDevelopment && process.env.REMIX_NODE_HMR ? [uiHmr()] : undefined,
-  },
   watch: isDevelopment,
+  hmr: isHmr
+    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+    : undefined,
+  scripts: {
+    loaders: isHmr ? [uiHmr()] : undefined,
+  },
 })
 ```
 
 Rules:
 
 - Guard `remix/node-hmr/runtime` imports with `process.env.REMIX_NODE_HMR`; that runtime API is only available inside the supervised child process.
-- Keep browser HMR and browser module hooks development-only.
+- Keep browser HMR and loaders development-only.
 - Add `remix/assets/types/hmr` to `compilerOptions.types` only when browser source modules use `import.meta.hot` directly.
 - Write HMR accept calls directly as `import.meta.hot.accept(...)` with literal dependency specifiers.
 
@@ -142,7 +142,7 @@ Rules:
 - `target` as an object for shared browser targets and script-only ECMAScript output, such as `{ es: '2020', chrome: '109', safari: '16.4' }`
 - `scripts.define` to replace globals such as `process.env.NODE_ENV`
 - `scripts.external` to leave specific script imports untouched
-- `scripts.moduleHooks` to transform browser modules during compilation
+- `scripts.loaders` to transform browser modules during compilation
 
 Do not nest shared compiler options under `scripts`. Use top-level `minify`, `sourceMaps`, `sourceMapSourcePaths`, and `target` so they apply to styles as well as scripts.
 

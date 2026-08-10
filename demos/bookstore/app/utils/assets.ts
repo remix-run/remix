@@ -1,9 +1,10 @@
 import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
-import { uiHmr } from 'remix/ui-hmr/assets/module-hooks'
+import { uiHmr } from 'remix/ui-hmr/assets'
 import { assetsBase } from '../routes.ts'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
+const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
 
 export const assetServer = createAssetServer({
   basePath: assetsBase,
@@ -14,17 +15,16 @@ export const assetServer = createAssetServer({
     '/app/*path': 'demos/bookstore/app/*path',
     '/packages/*path': 'packages/*path',
   },
-  ...(isDevelopment
-    ? {
-        sourceMaps: 'external',
-        ...(process.env.REMIX_NODE_HMR && {
-          hmr: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
-          scripts: { moduleHooks: [uiHmr()] },
-        }),
-      }
-    : {
-        minify: true,
-        fingerprint: { buildId: process.env.GITHUB_SHA || String(Date.now()) },
-        watch: false,
-      }),
+  sourceMaps: isDevelopment ? 'external' : undefined,
+  minify: !isDevelopment,
+  fingerprint: isDevelopment
+    ? undefined
+    : { buildId: process.env.GITHUB_SHA || String(Date.now()) },
+  watch: isDevelopment,
+  hmr: isHmr
+    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+    : undefined,
+  scripts: {
+    loaders: isHmr ? [uiHmr()] : undefined,
+  },
 })

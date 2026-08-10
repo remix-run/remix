@@ -27,23 +27,23 @@ import {
 } from '../injected-packages.ts'
 import type { ModuleRecord, ModuleTracking } from '../module-store.ts'
 import type {
-  ModuleHooks,
   ModuleLoadContext,
-  ModuleLoadHookNext,
+  ModuleLoader,
   ModuleLoadResult,
-} from '../module-hooks.ts'
+  NextModuleLoader,
+} from '../loaders.ts'
 import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import { composeSourceMaps, rewriteSourceMapSources, stringifySourceMap } from '../source-maps.ts'
 import type { EmittedModule } from './emit.ts'
 import type { ResolvedScriptTarget } from '../target.ts'
 import type { ResolvedModule } from './resolve.ts'
-import { scriptModuleHookConditions } from './conditions.ts'
-import { isBrowserExternalModuleUrl } from './urls.ts'
+import { scriptLoaderConditions } from './conditions.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
 type SourceLanguage = 'js' | 'jsx' | 'ts' | 'tsx'
+type ModuleLoadSource = NonNullable<ModuleLoadResult['source']>
 
 const scriptModuleTypes = [
   { extension: '.js', lang: 'js' },
@@ -128,7 +128,7 @@ export type TransformArgs = {
   isAllowed(absolutePath: string): boolean
   isWatchIgnored(filePath: string): boolean
   minify: boolean
-  moduleHooks: readonly ModuleHooks[]
+  loaders: readonly ModuleLoader[]
   resolveActualPath(identityPath: string): string | null
   resolverFactory: ResolverFactory
   routes: CompiledRoutes
@@ -238,7 +238,7 @@ export async function transformModule(
     let analysis = await analyzeModuleSource(sourceText, resolvedPath, transformOptions, {
       define: args.define ?? undefined,
       minify: args.minify,
-      moduleHooks: args.moduleHooks,
+      loaders: args.loaders,
       moduleUrl: stableUrlPathname,
       sourceMaps: args.sourceMaps ?? undefined,
       target: args.target ?? undefined,
@@ -456,7 +456,7 @@ async function analyzeModuleSource(
   options: {
     define?: Record<string, string>
     minify: boolean
-    moduleHooks: readonly ModuleHooks[]
+    loaders: readonly ModuleLoader[]
     moduleUrl: string
     sourceMaps?: 'external' | 'inline'
     target?: ResolvedScriptTarget
@@ -485,24 +485,36 @@ async function analyzeModuleSource(
   let rawCode = transformResult.code.trimEnd()
   let sourceMap = stringifySourceMap(transformResult.map)
 
-  if (options.moduleHooks.length > 0) {
-    let hookUrl = pathToFileURL(resolvedPath).href
-    let hookInputSource = sourceMap ? appendInlineSourceMap(rawCode, sourceMap) : rawCode
-    let hookResult = runModuleLoadHooks(hookUrl, {
-      format: 'module',
-      hooks: options.moduleHooks,
-      moduleUrl: options.moduleUrl,
-      source: hookInputSource,
-    })
-    let hookOutputSource = moduleLoadSourceToString(getModuleLoadSource(hookUrl, hookResult))
-    if (hookOutputSource !== hookInputSource) {
-      let hookOutput = extractInlineSourceMap(hookOutputSource)
-      rawCode = hookOutput.code.trimEnd()
+  if (options.loaders.length > 0) {
+    let loaderUrl = pathToFileURL(resolvedPath).href
+    let loaderInputSource = sourceMap ? appendInlineSourceMap(rawCode, sourceMap) : rawCode
+    let loaderOutputSource: string
+    try {
+      let loaderResult = runModuleLoaders(loaderUrl, {
+        format: 'module',
+        loaders: options.loaders,
+        moduleUrl: options.moduleUrl,
+        source: loaderInputSource,
+      })
+      loaderOutputSource = moduleLoadSourceToString(getModuleLoadSource(loaderUrl, loaderResult))
+    } catch (error) {
+      if (isAssetServerCompilationError(error)) throw error
+      throw createAssetServerCompilationError(
+        `Module loader failed for ${loaderUrl}. ${formatUnknownError(error)}`,
+        {
+          cause: error,
+          code: 'LOADER_FAILED',
+        },
+      )
+    }
+    if (loaderOutputSource !== loaderInputSource) {
+      let loaderOutput = extractInlineSourceMap(loaderOutputSource)
+      rawCode = loaderOutput.code.trimEnd()
       sourceMap =
-        hookOutput.sourceMap && hookOutput.sourceMap !== sourceMap
+        loaderOutput.sourceMap && loaderOutput.sourceMap !== sourceMap
           ? sourceMap
-            ? composeSourceMaps(hookOutput.sourceMap, sourceMap)
-            : hookOutput.sourceMap
+            ? composeSourceMaps(loaderOutput.sourceMap, sourceMap)
+            : loaderOutput.sourceMap
           : null
     }
   }
@@ -526,38 +538,44 @@ async function analyzeModuleSource(
   }
 }
 
-function runModuleLoadHooks(
+function runModuleLoaders(
   url: string,
   options: {
     format: string
-    hooks: readonly ModuleHooks[]
+    loaders: readonly ModuleLoader[]
     moduleUrl: string
     source: string
   },
 ): ModuleLoadResult {
-  let loadHooks = options.hooks.map((hook) => hook.load).filter((load) => load !== undefined)
-
   let loadContext: ModuleLoadContext = {
-    conditions: [...scriptModuleHookConditions],
+    conditions: [...scriptLoaderConditions],
     format: options.format,
     importAttributes: {},
     moduleUrl: options.moduleUrl,
   }
 
-  let load: ModuleLoadHookNext = (_url, context) => ({
+  let load: NextModuleLoader = (_url, context) => ({
     format: context?.format ?? options.format,
     source: options.source,
   })
 
-  for (let hook of loadHooks) {
+  for (let loader of options.loaders) {
     let nextLoad = load
     load = (nextUrl, nextContext) => {
       let nextLoadCalled = false
-      let wrappedNextLoad: ModuleLoadHookNext = (wrappedUrl, wrappedContext) => {
+      let wrappedNextLoad: NextModuleLoader = (wrappedUrl, wrappedContext) => {
+        if (wrappedUrl !== nextUrl) {
+          throw createAssetServerCompilationError(
+            `Module loader for ${nextUrl} attempted to change the module URL to ${wrappedUrl}. Loaders cannot change module URLs.`,
+            {
+              code: 'LOADER_FAILED',
+            },
+          )
+        }
         nextLoadCalled = true
         return nextLoad(wrappedUrl, wrappedContext)
       }
-      let result = hook(
+      let result = loader(
         nextUrl,
         {
           conditions: nextContext?.conditions ?? loadContext.conditions,
@@ -569,9 +587,9 @@ function runModuleLoadHooks(
       )
       if (!nextLoadCalled && result.shortCircuit !== true) {
         throw createAssetServerCompilationError(
-          `Module load hook for ${nextUrl} returned without calling nextLoad or setting shortCircuit: true.`,
+          `Module loader for ${nextUrl} returned without calling nextLoad or setting shortCircuit: true.`,
           {
-            code: 'TRANSFORM_FAILED',
+            code: 'LOADER_FAILED',
           },
         )
       }
@@ -582,27 +600,24 @@ function runModuleLoadHooks(
   return load(url, loadContext)
 }
 
-function getModuleLoadSource(
-  url: string,
-  result: ModuleLoadResult,
-): string | ArrayBuffer | NodeJS.TypedArray {
+function getModuleLoadSource(url: string, result: ModuleLoadResult): ModuleLoadSource {
   if (result.format !== 'module') {
     throw createAssetServerCompilationError(
-      `Module load hook for ${url} returned unsupported format ${JSON.stringify(result.format)}. Only "module" is supported.`,
+      `Module loader for ${url} returned unsupported format ${JSON.stringify(result.format)}. Only "module" is supported.`,
       {
-        code: 'TRANSFORM_FAILED',
+        code: 'LOADER_FAILED',
       },
     )
   }
 
   if (result.source !== undefined && result.source !== null) return result.source
 
-  throw createAssetServerCompilationError(`Module load hook for ${url} did not return source.`, {
-    code: 'TRANSFORM_FAILED',
+  throw createAssetServerCompilationError(`Module loader for ${url} did not return source.`, {
+    code: 'LOADER_FAILED',
   })
 }
 
-function moduleLoadSourceToString(source: string | ArrayBuffer | NodeJS.TypedArray): string {
+function moduleLoadSourceToString(source: ModuleLoadSource): string {
   if (typeof source === 'string') return source
   return new TextDecoder().decode(source)
 }
@@ -823,6 +838,10 @@ async function getUnresolvedImportsFromLexer(rawCode: string): Promise<Unresolve
 
 function getDisplayImportSpecifier(specifier: string): string {
   return restoreAuthoredInjectedPackageSpecifier(specifier) ?? specifier
+}
+
+function isBrowserExternalModuleUrl(url: string): boolean {
+  return url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')
 }
 
 function maskAuthoredInjectedPackageImports(sourceText: string, resolvedPath: string): string {

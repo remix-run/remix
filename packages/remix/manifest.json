@@ -89,7 +89,7 @@
   "remix/test/cli": "@remix-run/test/cli",
   "remix/ui": "@remix-run/ui",
   "remix/ui-hmr": "@remix-run/ui-hmr",
-  "remix/ui-hmr/assets/module-hooks": "@remix-run/ui-hmr/assets/module-hooks",
+  "remix/ui-hmr/assets": "@remix-run/ui-hmr/assets",
   "remix/ui-hmr/node": "@remix-run/ui-hmr/node",
   "remix/ui-hmr/runtime/browser": "@remix-run/ui-hmr/runtime/browser",
   "remix/ui-hmr/runtime/server": "@remix-run/ui-hmr/runtime/server",

@@ -1,6 +1,6 @@
 # ui-hmr
 
-Hot module replacement module hooks for Remix UI components.
+Hot module replacement transforms for Remix UI components, with integrations for Node and `remix/assets`.
 
 `ui-hmr` rewrites supported Remix UI component modules so they can use the standard `import.meta.hot` APIs provided by packages like [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) and [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr).
 
@@ -8,8 +8,8 @@ Hot module replacement module hooks for Remix UI components.
 
 - **Stable Components** - Keep component identity stable while swapping implementations
 - **Remount Fallbacks** - Mark components stale when their setup scope changes
-- **Node Module Hooks** - Transform server component modules through Node's module hook API
-- **Browser Module Hooks** - Transform browser component modules through `remix/assets`
+- **Node Module Hooks** - Transform server component modules through Node's module customization hooks API
+- **Assets Loader** - Transform component modules for the browser through `remix/assets`
 
 ## Installation
 
@@ -25,11 +25,11 @@ Use `remix/ui-hmr/node` as a Node import hook for server modules:
 node --import remix/node-tsx --import remix/ui-hmr/node ./server.ts
 ```
 
-Use `uiHmr()` from `remix/ui-hmr/assets/module-hooks` with `remix/assets` for browser modules:
+Use `uiHmr()` from `remix/ui-hmr/assets` with `remix/assets` for browser modules:
 
 ```ts
 import { createAssetServer } from 'remix/assets'
-import { uiHmr } from 'remix/ui-hmr/assets/module-hooks'
+import { uiHmr } from 'remix/ui-hmr/assets'
 
 let isDevelopment = process.env.NODE_ENV === 'development'
 
@@ -41,7 +41,7 @@ let assetServer = createAssetServer({
     ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
     : undefined,
   scripts: {
-    moduleHooks: isDevelopment ? [uiHmr()] : undefined,
+    loaders: isDevelopment ? [uiHmr()] : undefined,
   },
   watch: isDevelopment,
 })
@@ -49,7 +49,7 @@ let assetServer = createAssetServer({
 
 ## Direct Transforms
 
-Use the direct transform APIs when you are writing your own module hooks or build integration.
+Use the direct transform APIs when you are writing your own loader, Node module hooks, or build integration.
 
 ```ts
 import { transformComponentsForBrowser } from 'remix/ui-hmr'
@@ -108,7 +108,7 @@ transformComponentsForServer(source, {
 
 ## Related Packages
 
-- [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Runs browser module hooks while compiling assets
+- [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Runs loaders while compiling assets
 - [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) - Provides the server-side `import.meta.hot` runtime
 - [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Component APIs transformed by `ui-hmr`
 

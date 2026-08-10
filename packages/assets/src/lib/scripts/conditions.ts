@@ -1,1 +1,1 @@
-export const scriptModuleHookConditions = ['browser', 'import', 'module', 'default'] as const
+export const scriptLoaderConditions = ['browser', 'import', 'module', 'default'] as const

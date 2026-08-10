@@ -20,7 +20,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./assets/module-hooks": "./src/assets/module-hooks.ts",
+    "./assets": "./src/assets.ts",
     "./node": "./src/node.ts",
     "./runtime/browser": "./src/runtime/browser.ts",
     "./runtime/server": "./src/runtime/server.ts",
@@ -32,9 +32,9 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./assets/module-hooks": {
-        "types": "./dist/assets/module-hooks.d.ts",
-        "default": "./dist/assets/module-hooks.js"
+      "./assets": {
+        "types": "./dist/assets.d.ts",
+        "default": "./dist/assets.js"
       },
       "./node": {
         "types": "./dist/node.d.ts",

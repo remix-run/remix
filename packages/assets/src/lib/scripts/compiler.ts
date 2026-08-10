@@ -23,7 +23,7 @@ import type { ResolveArgs, ResolvedModule } from './resolve.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ResolvedScriptTarget } from '../target.ts'
 import { createModuleStore } from '../module-store.ts'
-import type { ModuleHooks } from '../module-hooks.ts'
+import type { ModuleLoader } from '../loaders.ts'
 import type {
   FileSnapshot,
   ModuleRecord,
@@ -36,7 +36,7 @@ import type { ResolveModuleResult, TransformArgs, TransformedModule } from './tr
 import { ResolverFactory } from 'oxc-resolver'
 import type { NapiResolveOptions } from 'oxc-resolver'
 import type { EmittedAsset, EmittedModule } from './emit.ts'
-import { scriptModuleHookConditions } from './conditions.ts'
+import { scriptLoaderConditions } from './conditions.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 type ScriptStore = ModuleStore<TransformedModule, ResolvedModule, EmittedModule>
@@ -74,7 +74,7 @@ type ScriptCompilerOptions = {
   }
   isAllowed(absolutePath: string): boolean
   minify: boolean
-  moduleHooks: readonly ModuleHooks[]
+  loaders: readonly ModuleLoader[]
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
   onWatchFilesChange?: (delta: { add: string[]; remove: string[] }) => void
   rootDir: string
@@ -126,7 +126,7 @@ const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
 const preloadConcurrency = Math.max(1, Math.min(8, os.availableParallelism() - 1))
 const scriptResolverOptions = {
   aliasFields: [['browser']],
-  conditionNames: [...scriptModuleHookConditions],
+  conditionNames: [...scriptLoaderConditions],
   extensionAlias: resolverExtensionAlias,
   extensions: resolverExtensions,
   mainFields: ['browser', 'module', 'main'],
@@ -159,7 +159,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   })
   let tsconfigTransformOptionsResolver = createTsconfigTransformOptionsResolver()
   let resolverFactory = new ResolverFactory(scriptResolverOptions)
-  let resolverFactoryByConditions = new Map<string, ResolverFactory>()
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedModule>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedModule>>()
 
@@ -170,7 +169,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     isAllowed: resolvedOptions.isAllowed,
     isWatchIgnored,
     minify: resolvedOptions.minify,
-    moduleHooks: resolvedOptions.moduleHooks,
+    loaders: resolvedOptions.loaders,
     resolveActualPath,
     resolverFactory,
     routes: resolvedOptions.routes,
@@ -182,8 +181,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   let resolveArgs: ResolveArgs = {
     isAllowed: resolvedOptions.isAllowed,
     isWatchIgnored,
-    moduleHooks: resolvedOptions.moduleHooks,
-    getResolverFactory,
     resolveModulePath,
     resolverFactory,
     routes: resolvedOptions.routes,
@@ -308,26 +305,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     }
 
     return resolveFilePath(resolvedOptions.rootDir, filePath)
-  }
-
-  function getResolverFactory(conditions: readonly string[]): ResolverFactory {
-    if (conditions.length === scriptModuleHookConditions.length) {
-      let isDefault = conditions.every(
-        (condition, index) => condition === scriptModuleHookConditions[index],
-      )
-      if (isDefault) return resolverFactory
-    }
-
-    let cacheKey = JSON.stringify(conditions)
-    let cached = resolverFactoryByConditions.get(cacheKey)
-    if (cached) return cached
-
-    let clonedResolverFactory = resolverFactory.cloneWithOptions({
-      ...scriptResolverOptions,
-      conditionNames: [...conditions],
-    })
-    resolverFactoryByConditions.set(cacheKey, clonedResolverFactory)
-    return clonedResolverFactory
   }
 
   function invalidateScriptFileEvent(normalizedFilePath: string, event: ModuleWatchEvent): void {

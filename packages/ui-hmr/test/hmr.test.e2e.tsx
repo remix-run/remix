@@ -9,7 +9,7 @@ import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { watch, type FSWatcher } from 'chokidar'
 import { createAssetServer, type AssetServer } from '@remix-run/assets'
-import { uiHmr } from '../src/assets/module-hooks.ts'
+import { uiHmr } from '../src/assets.ts'
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const workspaceDir = path.resolve(packageDir, '../..')
@@ -1769,7 +1769,7 @@ function getNodeHmrServerSource(
   return [
     "import { createServer } from 'node:http'",
     "import { createAssetServer } from '@remix-run/assets'",
-    "import { uiHmr } from '@remix-run/ui-hmr/assets/module-hooks'",
+    "import { uiHmr } from '@remix-run/ui-hmr/assets'",
     "import { createBrowserHmrChannel, emitServerReady } from '@remix-run/node-hmr/runtime'",
     "import { renderToStream } from '@remix-run/ui/server'",
     "import { serverMessage } from './server-message.ts'",
@@ -1796,7 +1796,7 @@ function getNodeHmrServerSource(
     '  },',
     `  rootDir: ${JSON.stringify(workspaceDir)},`,
     '  scripts: {',
-    '    moduleHooks: [uiHmr()],',
+    '    loaders: [uiHmr()],',
     '  },',
     '  watch: {',
     '    poll: true,',
@@ -1995,7 +1995,7 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
       onError() {},
       rootDir: workspaceDir,
       scripts: {
-        moduleHooks: [uiHmr()],
+        loaders: [uiHmr()],
       },
       watch: {
         poll: true,

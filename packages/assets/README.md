@@ -13,7 +13,7 @@ Fetch-based server for compiling browser assets on demand.
 - **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
 - **Source Maps** - Serve inline or external sourcemaps
 - **Hot Module Reloading** - Handle live code updates in development
-- **Script Module Hooks** - Customize script resolution and loading with Node's module hooks API
+- **Script Loaders** - Post-process compiled JavaScript with Node-compatible loaders
 
 ## Installation
 
@@ -364,9 +364,9 @@ let assetServer = createAssetServer({
 })
 ```
 
-### Module Hooks
+### Loaders
 
-Use `scripts.moduleHooks` to customize script resolution and loading with [Node's module API](https://nodejs.org/api/module.html#customization-hooks), provided as an array of objects with optional `resolve` and `load` hooks.
+Use `scripts.loaders` to post-process compiled JavaScript. Loaders use the same function signature and chaining behavior as synchronous [`load` hooks in Node's module API](https://nodejs.org/api/module.html#customization-hooks).
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -376,23 +376,20 @@ let assetServer = createAssetServer({
   fileMap: { '/app/*path': 'app/*path' },
   allowFiles: ['app/assets/**'],
   scripts: {
-    moduleHooks: [
-      {
-        resolve(specifier, context, nextResolve) {
-          /* ... */
-        },
-        load(url, context, nextLoad) {
-          /* ... */
-        },
+    loaders: [
+      (url, context, nextLoad) => {
+        let result = nextLoad(url, context)
+        return {
+          ...result,
+          source: `${result.source}\nconsole.log('loaded')`,
+        }
       },
     ],
   },
 })
 ```
 
-Resolve hooks must return an absolute URL string. A `file:` URL must resolve to an existing supported script that passes the asset server's access rules and is reachable through `fileMap`. Browser-loadable `data:`, `http:`, and `https:` URLs remain external; other URL formats fail resolution. Files resolved through hooks participate in the normal preload graph and file watching.
-
-Load hooks must return `format: 'module'`, and import attributes are not currently supported.
+Loaders receive JavaScript after the asset server transforms TypeScript and JavaScript, and run before HMR analysis and minification. They must return `format: 'module'`. Import attributes are not supported.
 
 ## File Options
 
@@ -795,7 +792,7 @@ if (import.meta.hot) {
 
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - A Fetch-based router that pairs naturally with `assets`
 - [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) - Provides the server-side `import.meta.hot` runtime and browser HMR channel used by `hmr`
-- [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) - Provides Remix UI component HMR transforms that can run through `scripts.moduleHooks`
+- [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) - Provides a Remix UI component HMR loader for `scripts.loaders`
 - [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) - Route-pattern syntax for URL and route file matching
 
 ## License

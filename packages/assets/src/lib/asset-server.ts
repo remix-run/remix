@@ -18,7 +18,7 @@ import { getFingerprintRequestCacheControl, parseFingerprintSuffix } from './fin
 import { createHmrClientSource } from './hmr.ts'
 import type { HmrPayload } from './hmr.ts'
 import { getInjectedPackageRouteConfigs } from './injected-packages.ts'
-import type { ModuleHooks } from './module-hooks.ts'
+import type { ModuleLoader } from './loaders.ts'
 import { normalizeFilePath, normalizePathname } from './paths.ts'
 import { compileRoutes } from './routes.ts'
 import type { CompiledRoutes } from './routes.ts'
@@ -160,15 +160,15 @@ interface AssetServerScriptOptions {
   /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
   external?: string[]
   /**
-   * Synchronous, Node-compatible hooks that resolve imports and post-process compiled JavaScript.
+   * Synchronous loaders that post-process compiled JavaScript.
    *
-   * Later hooks wrap earlier hooks: for `[first, second]`, `second` is entered first and delegates
-   * through `first` to the default behavior. As a result, load-hook transformations performed after
-   * `nextLoad()` are applied in array order. Each hook must delegate or return `shortCircuit: true`.
-   * Load hooks run after TypeScript/JavaScript transformation and before HMR analysis and
-   * minification. Only `format: 'module'` is supported, and import attributes are unsupported.
+   * Loaders use Node's synchronous `load` hook signature. Later loaders wrap earlier loaders: for
+   * `[first, second]`, `second` is entered first and delegates through `first` to the default
+   * behavior. As a result, transformations performed after `nextLoad()` are applied in array order.
+   * Loaders run after TypeScript/JavaScript transformation and before HMR analysis and minification.
+   * Only `format: 'module'` is supported, and import attributes are unsupported.
    */
-  moduleHooks?: readonly ModuleHooks[]
+  loaders?: readonly ModuleLoader[]
 }
 
 const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
@@ -309,7 +309,7 @@ type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
   fingerprintAssets: boolean
   hmr: BrowserHmrChannelFactory | null
   minify: boolean
-  moduleHooks: readonly ModuleHooks[]
+  loaders: readonly ModuleLoader[]
   onError: NonNullable<AssetServerOptions['onError']>
   rootDir: string
   routes: CompiledRoutes
@@ -395,7 +395,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     define: resolvedOptions.define,
     external: resolvedOptions.external,
     fingerprintAssets: resolvedOptions.fingerprintAssets,
-    moduleHooks: resolvedOptions.moduleHooks,
+    loaders: resolvedOptions.loaders,
     hmr: sendHmrPayload
       ? {
           clientPathname: hmrPathnames.client,
@@ -1020,7 +1020,7 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
     fingerprintAssets: fingerprintOptions.enabled,
     hmr: hmrFactory,
     minify: options.minify ?? false,
-    moduleHooks: scriptOptions.moduleHooks ?? [],
+    loaders: scriptOptions.loaders ?? [],
     onError: options.onError ?? defaultErrorHandler,
     rootDir,
     routes: compileRoutes(basePath, [

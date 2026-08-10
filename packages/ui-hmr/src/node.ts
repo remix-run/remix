@@ -1,5 +1,5 @@
 import { registerHooks } from 'node:module'
 
-import { createServerUiHmrModuleHooks } from './lib/module-hooks.ts'
+import { createServerUiHmrModuleHooks } from './lib/loaders.ts'
 
 registerHooks(createServerUiHmrModuleHooks())

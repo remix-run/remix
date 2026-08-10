@@ -5,10 +5,10 @@ import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { describe, it } from 'node:test'
 
-import { createAssetsUiHmrModuleHooks, createServerUiHmrModuleHooks } from './module-hooks.ts'
+import { createAssetsUiHmrLoader, createServerUiHmrModuleHooks } from './loaders.ts'
 
-describe('ui-hmr module hooks', () => {
-  it('transforms browser modules with load hooks only', async () => {
+describe('ui-hmr module loading', () => {
+  it('transforms browser modules with an asset loader', async () => {
     let fixture = await createFixture({
       'node_modules/remix/package.json': JSON.stringify({
         exports: {
@@ -23,10 +23,8 @@ describe('ui-hmr module hooks', () => {
     })
 
     try {
-      let hooks = createAssetsUiHmrModuleHooks()
-      assert.equal(Object.hasOwn(hooks, 'resolve'), false)
-
-      let result = hooks.load?.(
+      let loader = createAssetsUiHmrLoader()
+      let result = loader(
         pathToFileURL(fixture.entryPath).href,
         {
           conditions: ['browser', 'import', 'module', 'default'],
@@ -40,7 +38,7 @@ describe('ui-hmr module hooks', () => {
         }),
       )
 
-      assert.equal(result?.format, 'module')
+      assert.equal(result.format, 'module')
       let source = getStringSource(result)
       assert.match(source, /from "remix\/ui-hmr\/runtime\/browser"/)
       assert.match(source, /from "remix\/ui\/dev\/refresh"/)
@@ -77,8 +75,8 @@ describe('ui-hmr module hooks', () => {
     })
 
     try {
-      let hooks = createAssetsUiHmrModuleHooks()
-      let result = hooks.load?.(
+      let loader = createAssetsUiHmrLoader()
+      let result = loader(
         pathToFileURL(fixture.entryPath).href,
         {
           conditions: ['browser', 'import', 'module', 'default'],
@@ -100,7 +98,7 @@ describe('ui-hmr module hooks', () => {
     }
   })
 
-  it('transforms server modules with load hooks only', async () => {
+  it('transforms server modules', async () => {
     let fixture = await createFixture({
       'node_modules/remix/package.json': JSON.stringify({
         exports: {
@@ -114,9 +112,7 @@ describe('ui-hmr module hooks', () => {
 
     try {
       let hooks = createServerUiHmrModuleHooks()
-      assert.equal(Object.hasOwn(hooks, 'resolve'), false)
-
-      let result = hooks.load?.(
+      let result = hooks.load(
         pathToFileURL(fixture.entryPath).href,
         {
           conditions: ['node', 'import', 'module', 'default'],
@@ -153,7 +149,7 @@ describe('ui-hmr module hooks', () => {
       })
 
       let hooks = createServerUiHmrModuleHooks()
-      let result = hooks.load?.(
+      let result = hooks.load(
         pathToFileURL(fixture.entryPath).href,
         {
           conditions: ['node', 'import', 'module', 'default'],
@@ -184,7 +180,7 @@ async function createFixture(files: Record<string, string>): Promise<{
   entryPath: string
   rootDir: string
 }> {
-  let rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ui-hmr-module-hooks-'))
+  let rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ui-hmr-loaders-'))
   let entryPath = path.join(rootDir, 'app/Counter.tsx')
   await write(path.dirname(entryPath), path.basename(entryPath), componentSource)
 

@@ -4,13 +4,11 @@ import * as nodeFs from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { pathToFileURL } from 'node:url'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
 import MagicString from 'magic-string'
 import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
-import type { registerHooks } from 'node:module'
 import { isAssetServerCompilationError } from './compilation-error.ts'
 import { normalizeWindowsPath } from './paths.ts'
 import {
@@ -21,25 +19,11 @@ import {
 import type { AssetServer, AssetServerOptions, BrowserHmrChannel } from './asset-server.ts'
 import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
-import type { ModuleHooks } from './module-hooks.ts'
+import type { ModuleLoader } from './loaders.ts'
 
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
-type NodeModuleHooks = Parameters<typeof registerHooks>[0]
 
 const packageRoot = path.resolve(import.meta.dirname, '../..')
-
-const nodeTypedModuleHooks = {
-  load(url, context, nextLoad) {
-    return nextLoad(url, context)
-  },
-  resolve(specifier, context, nextResolve) {
-    return nextResolve(specifier, context)
-  },
-} satisfies NodeModuleHooks
-
-const assetTypedModuleHooks: ModuleHooks = nodeTypedModuleHooks
-const nodeCompatibleModuleHooks: NodeModuleHooks = assetTypedModuleHooks
-void nodeCompatibleModuleHooks
 
 function createAssetServerForTest(
   options: Omit<AssetServerOptions<AssetRequestTransformMap>, 'basePath'> & {
@@ -273,22 +257,20 @@ function decodeInlineSourceMap(source: string): { sources?: string[] } {
   return JSON.parse(decoded) as { sources?: string[] }
 }
 
-function createPrependModuleHook(prefix: string): ModuleHooks {
-  return {
-    load(_url, _context, nextLoad) {
-      let result = nextLoad(_url, _context)
-      if (typeof result.source !== 'string') {
-        throw new TypeError('Expected module hook source to be a string')
-      }
-      let source = stripInlineSourceMap(result.source)
-      let rewritten = new MagicString(source)
-      rewritten.prepend(prefix)
-      let map = rewritten.generateMap({ hires: true }).toString()
-      return {
-        ...result,
-        source: `${rewritten.toString()}\n//# sourceMappingURL=data:application/json;base64,${Buffer.from(map).toString('base64')}`,
-      }
-    },
+function createPrependModuleLoader(prefix: string): ModuleLoader {
+  return (_url, _context, nextLoad) => {
+    let result = nextLoad(_url, _context)
+    if (typeof result.source !== 'string') {
+      throw new TypeError('Expected module loader source to be a string')
+    }
+    let source = stripInlineSourceMap(result.source)
+    let rewritten = new MagicString(source)
+    rewritten.prepend(prefix)
+    let map = rewritten.generateMap({ hires: true }).toString()
+    return {
+      ...result,
+      source: `${rewritten.toString()}\n//# sourceMappingURL=data:application/json;base64,${Buffer.from(map).toString('base64')}`,
+    }
   }
 }
 
@@ -2288,12 +2270,12 @@ describe('asset-server', () => {
     assert.equal(depMap.status, 200)
   })
 
-  it('supports external source maps after module hooks transform scripts', async () => {
+  it('supports external source maps after module loaders transform scripts', async () => {
     let source = 'let value: number = 1\nconsole.log(value)\n'
     await write(dir, 'app/entry.ts', source)
     let assetServer = createTestServer(dir, {
       scripts: {
-        moduleHooks: [createPrependModuleHook('console.debug("hook")\n')],
+        loaders: [createPrependModuleLoader('console.debug("loader")\n')],
       },
       sourceMaps: 'external',
     })
@@ -2341,12 +2323,12 @@ describe('asset-server', () => {
     assert.deepEqual(sourceMap.sources, [expectedSource])
   })
 
-  it('supports inline source maps after module hooks transform scripts', async () => {
+  it('supports inline source maps after module loaders transform scripts', async () => {
     let source = 'let value: number = 1\nconsole.log(value)\n'
     await write(dir, 'app/entry.ts', source)
     let assetServer = createTestServer(dir, {
       scripts: {
-        moduleHooks: [createPrependModuleHook('console.debug("hook")\n')],
+        loaders: [createPrependModuleLoader('console.debug("loader")\n')],
       },
       sourceMaps: 'inline',
     })
@@ -3316,22 +3298,20 @@ describe('asset-server', () => {
     }
   })
 
-  it('runs script module hooks before HMR analysis', async () => {
+  it('runs script module loaders before HMR analysis', async () => {
     let caseDir = await makeTmpDir()
     try {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
       let assetServer = createWatchedTestServer(caseDir, {
         hmr: createTestBrowserHmrChannel,
         scripts: {
-          moduleHooks: [
-            {
-              load(url, context, nextLoad) {
-                let result = nextLoad(url, context)
-                return {
-                  ...result,
-                  source: `${result.source}\nif (import.meta.hot) import.meta.hot.accept()`,
-                }
-              },
+          loaders: [
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: `${result.source}\nif (import.meta.hot) import.meta.hot.accept()`,
+              }
             },
           ],
         },
@@ -3356,30 +3336,26 @@ describe('asset-server', () => {
     }
   })
 
-  it('runs script module hooks in configured order', async () => {
+  it('runs script module loaders in configured order', async () => {
     let caseDir = await makeTmpDir()
     try {
       await write(caseDir, 'app/entry.ts', 'export const values = []')
       let assetServer = createWatchedTestServer(caseDir, {
         scripts: {
-          moduleHooks: [
-            {
-              load(url, context, nextLoad) {
-                let result = nextLoad(url, context)
-                return {
-                  ...result,
-                  source: `${result.source}\nvalues.push('first')`,
-                }
-              },
+          loaders: [
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: `${result.source}\nvalues.push('first')`,
+              }
             },
-            {
-              load(url, context, nextLoad) {
-                let result = nextLoad(url, context)
-                return {
-                  ...result,
-                  source: `${result.source}\nvalues.push('second')`,
-                }
-              },
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: `${result.source}\nvalues.push('second')`,
+              }
             },
           ],
         },
@@ -3400,29 +3376,18 @@ describe('asset-server', () => {
     }
   })
 
-  it('passes Node-shaped context to script module hooks', async () => {
+  it('passes Node-shaped context to script module loaders', async () => {
     let caseDir = await makeTmpDir()
     try {
       await write(caseDir, 'app/dep.ts', 'export const dep = 1')
-      let entryPath = await write(
-        caseDir,
-        'app/entry.ts',
-        "import { dep } from './dep.ts'\nexport { dep }",
-      )
-      let seenResolveContext: unknown
+      await write(caseDir, 'app/entry.ts', "import { dep } from './dep.ts'\nexport { dep }")
       let seenLoadContext: unknown
       let assetServer = createTestServer(caseDir, {
         scripts: {
-          moduleHooks: [
-            {
-              resolve(specifier, context, nextResolve) {
-                seenResolveContext = context
-                return nextResolve(specifier, context)
-              },
-              load(url, context, nextLoad) {
-                seenLoadContext = context
-                return nextLoad(url, context)
-              },
+          loaders: [
+            (url, context, nextLoad) => {
+              seenLoadContext = context
+              return nextLoad(url, context)
             },
           ],
         },
@@ -3444,16 +3409,6 @@ describe('asset-server', () => {
         assert.equal(loadContext.format, 'module')
         assert.deepEqual(loadContext.importAttributes, {})
         assert.equal(typeof loadContext.moduleUrl, 'string')
-
-        assert.ok(seenResolveContext !== null && typeof seenResolveContext === 'object')
-        let resolveContext = seenResolveContext as {
-          conditions?: unknown
-          importAttributes?: unknown
-          parentURL?: unknown
-        }
-        assert.deepEqual(resolveContext.conditions, ['browser', 'import', 'module', 'default'])
-        assert.deepEqual(resolveContext.importAttributes, {})
-        assert.equal(resolveContext.parentURL, pathToFileURL(nodeFs.realpathSync(entryPath)).href)
       } finally {
         await assetServer.close()
       }
@@ -3462,431 +3417,19 @@ describe('asset-server', () => {
     }
   })
 
-  it('resolves script imports through module hooks', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      let aliasedPath = await write(caseDir, 'app/aliased.ts', 'export const value = 42')
-      await write(caseDir, 'app/entry.ts', "import { value } from '#aliased'\nexport { value }")
-      let assetServer = createTestServer(caseDir, {
-        scripts: {
-          moduleHooks: [
-            {
-              resolve(specifier, context, nextResolve) {
-                if (specifier === '#aliased') {
-                  return {
-                    format: 'module',
-                    shortCircuit: true,
-                    url: pathToFileURL(aliasedPath).href,
-                  }
-                }
-
-                return nextResolve(specifier, context)
-              },
-            },
-          ],
-        },
-      })
-
-      try {
-        let response = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(response)
-        assert.equal(response.status, 200)
-        let body = await response.text()
-
-        assert.match(body, /from "\/assets\/app\/aliased\.ts"/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('watches files resolved through script module hooks', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      let aliasedPath = await write(caseDir, 'app/aliased.ts', 'export const value = 1')
-      await write(caseDir, 'app/entry.ts', "import { value } from '#aliased'\nexport { value }")
-      let assetServer = createWatchedTestServer(caseDir, {
-        scripts: {
-          moduleHooks: [
-            {
-              resolve(specifier, context, nextResolve) {
-                if (specifier === '#aliased') {
-                  return {
-                    format: 'module',
-                    shortCircuit: true,
-                    url: pathToFileURL(aliasedPath).href,
-                  }
-                }
-
-                return nextResolve(specifier, context)
-              },
-            },
-          ],
-        },
-      })
-
-      try {
-        await assetServer.getPreloads('app/entry.ts')
-
-        let before = await getByFile(assetServer, aliasedPath)
-        assert.ok(before)
-        assert.match(await before.text(), /value = 1/)
-
-        await write(caseDir, 'app/aliased.ts', 'export const value = 2')
-        await emitWatchEvent(assetServer, aliasedPath, 'change')
-
-        let after = await getByFile(assetServer, aliasedPath)
-        assert.ok(after)
-        assert.match(await after.text(), /value = 2/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('keeps browser URLs returned by script module hooks external', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await write(
-        caseDir,
-        'app/entry.ts',
-        [
-          "import dataValue from '#data'",
-          "import httpValue from '#http'",
-          'export { dataValue, httpValue }',
-        ].join('\n'),
-      )
-      let assetServer = createTestServer(caseDir, {
-        scripts: {
-          moduleHooks: [
-            {
-              resolve(specifier, context, nextResolve) {
-                if (specifier === '#data') {
-                  return {
-                    shortCircuit: true,
-                    url: 'data:text/javascript,export default 1',
-                  }
-                }
-                if (specifier === '#http') {
-                  return {
-                    shortCircuit: true,
-                    url: 'https://cdn.example.com/value.js',
-                  }
-                }
-
-                return nextResolve(specifier, context)
-              },
-            },
-          ],
-        },
-      })
-
-      try {
-        let response = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(response)
-        assert.equal(response.status, 200)
-        let body = await response.text()
-
-        assert.match(body, /from "data:text\/javascript,export default 1"/)
-        assert.match(body, /from "https:\/\/cdn\.example\.com\/value\.js"/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('rejects relative URLs returned by script module hooks', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await write(caseDir, 'app/entry.ts', "import '#dep'")
-      let errors: unknown[] = []
-      let assetServer = createTestServer(caseDir, {
-        onError(error) {
-          errors.push(error)
-        },
-        scripts: {
-          moduleHooks: [
-            {
-              resolve() {
-                return {
-                  shortCircuit: true,
-                  url: './dep.ts',
-                }
-              },
-            },
-          ],
-        },
-      })
-
-      try {
-        let response = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(response)
-        assert.equal(response.status, 500)
-
-        let error = errors.at(-1)
-        assert.ok(isAssetServerCompilationError(error))
-        assert.equal(error.code, 'IMPORT_RESOLUTION_FAILED')
-        assert.match(error.message, /Failed to resolve import "#dep"/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('rejects non-browser URLs returned by script module hooks', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await write(caseDir, 'app/entry.ts', "import '#dep'")
-      let errors: unknown[] = []
-      let assetServer = createTestServer(caseDir, {
-        onError(error) {
-          errors.push(error)
-        },
-        scripts: {
-          moduleHooks: [
-            {
-              resolve() {
-                return {
-                  shortCircuit: true,
-                  url: 'node:fs',
-                }
-              },
-            },
-          ],
-        },
-      })
-
-      try {
-        let response = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(response)
-        assert.equal(response.status, 500)
-
-        let error = errors.at(-1)
-        assert.ok(isAssetServerCompilationError(error))
-        assert.equal(error.code, 'IMPORT_RESOLUTION_FAILED')
-        assert.match(error.message, /Failed to resolve import "#dep"/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('rejects missing files returned by script module hooks', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await write(caseDir, 'app/entry.ts', "import '#dep'")
-      let errors: unknown[] = []
-      let assetServer = createTestServer(caseDir, {
-        onError(error) {
-          errors.push(error)
-        },
-        scripts: {
-          moduleHooks: [
-            {
-              resolve() {
-                return {
-                  shortCircuit: true,
-                  url: pathToFileURL(path.join(caseDir, 'app/missing.ts')).href,
-                }
-              },
-            },
-          ],
-        },
-      })
-
-      try {
-        let response = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(response)
-        assert.equal(response.status, 500)
-
-        let error = errors.at(-1)
-        assert.ok(isAssetServerCompilationError(error))
-        assert.equal(error.code, 'IMPORT_RESOLUTION_FAILED')
-        assert.match(error.message, /resolved to .*missing\.ts.*, which does not exist/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('applies allow and deny rules to script imports resolved through module hooks', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      let secretPath = await write(caseDir, 'secret.ts', 'export const secret = true')
-      await write(caseDir, 'app/entry.ts', "import { secret } from '#secret'\nexport { secret }")
-      let errors: unknown[] = []
-      let assetServer = createTestServer(caseDir, {
-        onError(error) {
-          errors.push(error)
-        },
-        scripts: {
-          moduleHooks: [
-            {
-              resolve(specifier, context, nextResolve) {
-                if (specifier === '#secret') {
-                  return {
-                    format: 'module',
-                    shortCircuit: true,
-                    url: pathToFileURL(secretPath).href,
-                  }
-                }
-
-                return nextResolve(specifier, context)
-              },
-            },
-          ],
-        },
-      })
-
-      try {
-        let response = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(response)
-        assert.equal(response.status, 500)
-        assert.equal(await response.text(), 'Internal Server Error')
-
-        let error = errors.at(-1)
-        assert.ok(isAssetServerCompilationError(error))
-        assert.equal(error.code, 'IMPORT_NOT_ALLOWED')
-        assert.match(error.message, /not allowed by the asset server access configuration/)
-        assert.match(error.message, /"#secret"/)
-        assert.match(normalizeWindowsPath(error.message), /secret\.ts/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('resolves package exports with conditions provided by module hooks', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await write(caseDir, 'app/entry.ts', "import { value } from 'conditioned'\nexport { value }")
-      await write(
-        caseDir,
-        'app/node_modules/conditioned/browser.ts',
-        'export const value = "browser"',
-      )
-      await write(
-        caseDir,
-        'app/node_modules/conditioned/development.ts',
-        'export const value = "development"',
-      )
-      await write(
-        caseDir,
-        'app/node_modules/conditioned/default.ts',
-        'export const value = "default"',
-      )
-      await writeJson(caseDir, 'app/node_modules/conditioned/package.json', {
-        exports: {
-          '.': {
-            development: './development.ts',
-            browser: './browser.ts',
-            default: './default.ts',
-          },
-        },
-      })
-      let assetServer = createTestServer(caseDir, {
-        scripts: {
-          moduleHooks: [
-            {
-              resolve(specifier, context, nextResolve) {
-                if (specifier === 'conditioned') {
-                  return nextResolve(specifier, {
-                    ...context,
-                    conditions: ['development', ...context.conditions],
-                  })
-                }
-
-                return nextResolve(specifier, context)
-              },
-            },
-          ],
-        },
-      })
-
-      try {
-        let response = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(response)
-        assert.equal(response.status, 200)
-        let body = await response.text()
-
-        assert.match(body, /from "\/assets\/app\/node_modules\/conditioned\/development\.ts"/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('fails when script module resolve hooks do not call nextResolve or short circuit', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await write(caseDir, 'app/entry.ts', "import { value } from '#aliased'\nexport { value }")
-      let errors: unknown[] = []
-      let assetServer = createTestServer(caseDir, {
-        onError(error) {
-          errors.push(error)
-        },
-        scripts: {
-          moduleHooks: [
-            {
-              resolve(specifier) {
-                return {
-                  url: pathToFileURL(path.join(caseDir, 'app/aliased.ts')).href,
-                }
-              },
-            },
-          ],
-        },
-      })
-
-      try {
-        let response = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(response)
-        assert.equal(response.status, 500)
-        assert.equal(await response.text(), 'Internal Server Error')
-
-        let error = errors.at(-1)
-        assert.ok(isAssetServerCompilationError(error))
-        assert.equal(error.code, 'IMPORT_RESOLUTION_FAILED')
-        assert.match(error.message, /without calling nextResolve or setting shortCircuit: true/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('loads script source through module hooks', async () => {
+  it('loads script source through module loaders', async () => {
     let caseDir = await makeTmpDir()
     try {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
       let assetServer = createTestServer(caseDir, {
         scripts: {
-          moduleHooks: [
-            {
-              load(url, context, nextLoad) {
-                let result = nextLoad(url, context)
-                return {
-                  ...result,
-                  source: new TextEncoder().encode(`${result.source}\nexport const extra = 2`),
-                }
-              },
+          loaders: [
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: new TextEncoder().encode(`${result.source}\nexport const extra = 2`),
+              }
             },
           ],
         },
@@ -3907,7 +3450,7 @@ describe('asset-server', () => {
     }
   })
 
-  it('fails when script module load hooks do not return source', async () => {
+  it('fails when script module loaders do not return source', async () => {
     let caseDir = await makeTmpDir()
     try {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
@@ -3917,15 +3460,11 @@ describe('asset-server', () => {
           errors.push(error)
         },
         scripts: {
-          moduleHooks: [
-            {
-              load() {
-                return {
-                  format: 'module',
-                  shortCircuit: true,
-                }
-              },
-            },
+          loaders: [
+            () => ({
+              format: 'module',
+              shortCircuit: true,
+            }),
           ],
         },
       })
@@ -3938,7 +3477,7 @@ describe('asset-server', () => {
 
         let error = errors.at(-1)
         assert.ok(isAssetServerCompilationError(error))
-        assert.equal(error.code, 'TRANSFORM_FAILED')
+        assert.equal(error.code, 'LOADER_FAILED')
         assert.match(error.message, /did not return source/)
       } finally {
         await assetServer.close()
@@ -3948,7 +3487,7 @@ describe('asset-server', () => {
     }
   })
 
-  it('fails when script module load hooks do not call nextLoad or short circuit', async () => {
+  it('fails when script module loaders do not call nextLoad or short circuit', async () => {
     let caseDir = await makeTmpDir()
     try {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
@@ -3958,15 +3497,11 @@ describe('asset-server', () => {
           errors.push(error)
         },
         scripts: {
-          moduleHooks: [
-            {
-              load() {
-                return {
-                  format: 'module',
-                  source: 'export const value = 2',
-                }
-              },
-            },
+          loaders: [
+            () => ({
+              format: 'module',
+              source: 'export const value = 2',
+            }),
           ],
         },
       })
@@ -3979,7 +3514,7 @@ describe('asset-server', () => {
 
         let error = errors.at(-1)
         assert.ok(isAssetServerCompilationError(error))
-        assert.equal(error.code, 'TRANSFORM_FAILED')
+        assert.equal(error.code, 'LOADER_FAILED')
         assert.match(error.message, /without calling nextLoad or setting shortCircuit: true/)
       } finally {
         await assetServer.close()
@@ -3989,7 +3524,7 @@ describe('asset-server', () => {
     }
   })
 
-  it('fails when script module load hooks return unsupported formats', async () => {
+  it('fails when script module loaders change the URL passed to nextLoad', async () => {
     let caseDir = await makeTmpDir()
     try {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
@@ -3999,15 +3534,43 @@ describe('asset-server', () => {
           errors.push(error)
         },
         scripts: {
-          moduleHooks: [
-            {
-              load(url, context, nextLoad) {
-                let result = nextLoad(url, context)
-                return {
-                  ...result,
-                  format: 'commonjs',
-                }
-              },
+          loaders: [(url, context, nextLoad) => nextLoad(new URL('./other.ts', url).href, context)],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'LOADER_FAILED')
+        assert.match(error.message, /attempted to change the module URL/)
+        assert.match(error.message, /Loaders cannot change module URLs/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('reports exceptions thrown by script module loaders as loader failures', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let loaderError = new Error('Loader exploded')
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          loaders: [
+            () => {
+              throw loaderError
             },
           ],
         },
@@ -4021,7 +3584,48 @@ describe('asset-server', () => {
 
         let error = errors.at(-1)
         assert.ok(isAssetServerCompilationError(error))
-        assert.equal(error.code, 'TRANSFORM_FAILED')
+        assert.equal(error.code, 'LOADER_FAILED')
+        assert.equal(error.cause, loaderError)
+        assert.match(error.message, /Loader exploded/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module loaders return unsupported formats', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          loaders: [
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                format: 'commonjs',
+              }
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'LOADER_FAILED')
         assert.match(error.message, /unsupported format "commonjs"/)
         assert.match(error.message, /Only "module" is supported/)
       } finally {
