@@ -1253,7 +1253,12 @@ function renderStyleTag(
 ): string {
   let wrappedCss = wrapStyleForLayer(selector, css, layer)
   if (!wrappedCss) return ''
-  return `<style data-rmx="${escapeHtml(selector)}">${wrappedCss}</style>`
+  return `<style data-rmx="${escapeHtml(selector)}">${escapeStyleText(wrappedCss)}</style>`
+}
+
+function escapeStyleText(css: string): string {
+  // A literal "</style" closes an HTML style element even when it appears inside a CSS string.
+  return css.replace(/</g, '\\3C ')
 }
 
 function buildRmxDataScript(context: RenderContext): string {
