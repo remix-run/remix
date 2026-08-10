@@ -7,11 +7,12 @@ How server-rendered UI becomes interactive in the browser, and how the page upda
 - Marking a component for client-side hydration with `clientEntry`
 - Booting the client runtime with `run`
 - Streaming server content into a region of the page with `<Frame>` and reloading those regions
+- Handling browser HMR updates for hydrated entries
 - Triggering Navigation API transitions with `navigate(...)` or `link(...)`
 - Server rendering with `renderToStream` or `renderToString`
 - Managing the document `<head>`
 
-For component-local state and updates, see `component-model.md`. For host-element behavior and events, see `mixins-styling-events.md`.
+For component-local state and updates, see `component-model.md`. For host-element behavior and events, see `mixins-styling-events.md`. For browser asset HMR setup, see `assets-and-browser-modules.md`.
 
 ## Server First, Then Hydrate
 
@@ -96,7 +97,7 @@ Use `run` to start the client runtime. It scans the document for client entry ma
 ```tsx
 import { run } from 'remix/ui'
 
-let app = run({
+const app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
     return mod[exportName]
@@ -128,6 +129,19 @@ await app.ready()
 - **`app.dispose()`** — tears down all hydrated components
 
 `app` is an `EventTarget` that emits `error` events from any hydrated component.
+
+## Browser HMR Updates
+
+When `remix/node-hmr` reports a server update, reload the top frame to apply the latest server-rendered document while preserving browser state:
+
+```tsx
+if (import.meta.hot) {
+  import.meta.hot.on('server:update', async () => {
+    await app.ready()
+    await app.frames.top.reload()
+  })
+}
+```
 
 ## Frames
 

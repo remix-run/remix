@@ -1,6 +1,6 @@
 ---
 name: remix
-description: Build and review Remix 3 applications using the `remix` npm package and subpath imports. Use when working on Remix app structure, routes, controllers, middleware, validation, data access, auth, sessions, file uploads, server setup, UI components, hydration, navigation, or tests.
+description: Build and review Remix 3 applications using the `remix` npm package and subpath imports. Use when working on Remix app structure, routes, controllers, middleware, validation, data access, auth, sessions, file uploads, server setup, UI components, hydration, HMR, navigation, or tests.
 ---
 
 # Build a Remix App
@@ -42,19 +42,19 @@ Classify the task first, then load the smallest useful reference set. Each refer
 
 Use the table below to find candidates. Loading more than two or three files at once is usually a sign that the task hasn't been narrowed enough yet.
 
-| Task involves...                                                              | Start with                                  |
-| ----------------------------------------------------------------------------- | ------------------------------------------- |
-| Defining URLs, writing controllers and actions, returning responses           | `references/routing-and-controllers.md`     |
-| Composing the request lifecycle, ordering middleware, bridging to a server    | `references/middleware-and-server.md`       |
-| Compiling and serving browser modules, asset URL namespaces, preloads         | `references/assets-and-browser-modules.md`  |
-| Parsing input, validating with schemas, defining tables, querying, migrations | `references/data-and-validation.md`         |
-| Per-browser state, login flows, route protection, identity                    | `references/auth-and-sessions.md`           |
-| Component setup, state, lifecycle, updates, `queueTask`, context              | `references/component-model.md`             |
-| Event handlers, styles, refs, click/key behavior, simple animations           | `references/mixins-styling-events.md`       |
-| `clientEntry`, `run`, `<Frame>`, navigation, `<head>`                         | `references/hydration-frames-navigation.md` |
-| Router tests, component tests, test isolation                                 | `references/testing-patterns.md`            |
-| Spring physics, tweens, layout transitions                                    | `references/animate-elements.md`            |
-| Authoring custom reusable mixins                                              | `references/create-mixins.md`               |
+| Task involves...                                                                            | Start with                                  |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Defining URLs, writing controllers and actions, returning responses                         | `references/routing-and-controllers.md`     |
+| Composing the request lifecycle, ordering middleware, bridging to a server, development HMR | `references/middleware-and-server.md`       |
+| Compiling and serving browser modules, asset URL namespaces, preloads, browser HMR          | `references/assets-and-browser-modules.md`  |
+| Parsing input, validating with schemas, defining tables, querying, migrations               | `references/data-and-validation.md`         |
+| Per-browser state, login flows, route protection, identity                                  | `references/auth-and-sessions.md`           |
+| Component setup, state, lifecycle, updates, `queueTask`, context                            | `references/component-model.md`             |
+| Event handlers, styles, refs, click/key behavior, simple animations                         | `references/mixins-styling-events.md`       |
+| `clientEntry`, `run`, `<Frame>`, navigation, browser HMR update handling, `<head>`          | `references/hydration-frames-navigation.md` |
+| Router tests, component tests, test isolation                                               | `references/testing-patterns.md`            |
+| Spring physics, tweens, layout transitions                                                  | `references/animate-elements.md`            |
+| Authoring custom reusable mixins                                                            | `references/create-mixins.md`               |
 
 Common bundles:
 
@@ -62,6 +62,7 @@ Common bundles:
 - **Protected area** -> auth and sessions, routing, testing
 - **Interactive widget** -> component model, mixins and styling; add hydration only if it runs in the browser
 - **Browser asset pipeline** -> assets and browser modules, hydration, middleware and server
+- **Development HMR** -> middleware and server, assets and browser modules, hydration
 - **File upload** -> middleware and server, data and validation, testing
 - **Navigation or frames** -> hydration, frames, navigation
 
@@ -205,7 +206,11 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/router` — the router itself. Use for `createRouter`, controllers, middleware types, and registering routes
 - `remix/routes` — declarative route builders. Use for `route`, `get`, `post`, `put`, `del`, `form`, `resources` when defining `app/routes.ts`
 - `remix/node-fetch-server` — default Node adapter for new apps. Use `createRequestListener` with `node:http`, `node:https`, or `node:http2` in `server.ts` when booting the template-style app
-- `remix/assets` — browser asset server. Use for `createAssetServer` when serving compiled scripts and styles, getting public hrefs, and emitting preloads. Configure a `basePath`, keep `fileMap` URL patterns relative to it, use `allowFiles`/`denyFiles` for path and glob rules, and use exact package names in `allowPackages` for package-level access. Shared compiler options such as `target`, `sourceMaps`, `sourceMapSourcePaths`, and `minify` live at the top level
+- `remix/node-hmr` — optional development Node HMR runner for rapid UI edits. Use `run` in `hmr.ts` to supervise `server.ts` behind an `hmr` script, and use `createHmrReadyFetch` when a stable public proxy should wait for child server readiness during updates
+- `remix/node-hmr/runtime` — child-process runtime API for code running under `remix/node-hmr`. Use to create browser HMR channels for asset servers and to emit server readiness after the child server starts listening
+- `remix/node-hmr/types` — type-only entry for `import.meta.hot` in Node modules
+- `remix/assets` — browser asset server. Use for `createAssetServer` when serving compiled scripts and styles, getting public hrefs, emitting preloads, and wiring browser HMR. Configure a `basePath`, keep `fileMap` URL patterns relative to it, use `allowFiles`/`denyFiles` for path and glob rules, and use exact package names in `allowPackages` for package-level access. Shared compiler options such as `target`, `sourceMaps`, `sourceMapSourcePaths`, and `minify` live at the top level
+- `remix/assets/types/hmr` — type-only entry for `import.meta.hot` in browser modules compiled by `remix/assets`
 - `remix/headers` — `SuperHeaders` plus typed header parsers and builders. Use the default export when you want a `Headers` subclass with typed accessors like `headers.contentType`, `headers.cacheControl`, and `headers.setCookie`; use named classes such as `CacheControl`, `ContentDisposition`, and `Vary` when working with individual header values
 - `remix/response/redirect` — `redirect(href, status?)`. Use for the canonical "POST then redirect" pattern and other location changes
 - `remix/response/html` — `createHtmlResponse`. Use when you need an HTML `Response` from a string or stream without rendering through `remix/ui`
@@ -244,6 +249,10 @@ Use this map to find the right package quickly. Each entry says what the package
 
 - `remix/ui` — the component runtime: components, core mixins, `clientEntry`, `run`, `<Frame>`, navigation helpers, and `createRoot`. Use for app UI behavior
 - `remix/ui/server` — server rendering: `renderToStream`, `renderToString`. Use in the `app/actions/render.tsx` helper that returns HTML responses
+- `remix/ui-hmr` — direct Remix UI component HMR transforms. Use only when writing a custom module hook or build integration
+- `remix/ui-hmr/node` — Node import hook for Remix UI component HMR. Use with `--import remix/ui-hmr/node` in development servers that run through `remix/node-hmr`
+- `remix/ui-hmr/assets` — `remix/assets` loader for Remix UI component HMR. Use `uiHmr()` in `createAssetServer({ scripts: { loaders } })` during development
+- `remix/ui/dev/refresh` — development refresh support used by HMR tooling, not normal application code
 - `remix/ui/animation` — animation APIs: `animateEntrance`, `animateExit`, `animateLayout`, `spring`, `tween`, and `easings`
 - `remix/ui/<primitive>` — UI primitives, mixins, and component helpers. Current subpaths include `remix/ui/accordion`, `remix/ui/anchor`, `remix/ui/button`, `remix/ui/checkbox`, `remix/ui/combobox`, `remix/ui/input`, `remix/ui/listbox`, `remix/ui/menu`, `remix/ui/popover`, and `remix/ui/select`
 - `remix/ui/test` — component test rendering helpers such as `render`

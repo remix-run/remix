@@ -136,11 +136,12 @@ describe('manifest', () => {
   })
 
   it('every remix package export references a generated source file', () => {
-    let packageJson: { exports: Record<string, string> } = JSON.parse(
+    let packageJson: { exports: Record<string, string | { types: string }> } = JSON.parse(
       fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'),
     )
 
-    for (let [exportPath, sourcePath] of Object.entries(packageJson.exports)) {
+    for (let [exportPath, exportConfig] of Object.entries(packageJson.exports)) {
+      let sourcePath = typeof exportConfig === 'string' ? exportConfig : exportConfig.types
       assert.ok(
         fs.existsSync(path.join(__dirname, sourcePath)),
         `Package export "${exportPath}" references missing source file "${sourcePath}"`,

@@ -80,6 +80,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [mime](packages/mime): Utilities for working with MIME types
 - [multipart-parser](packages/multipart-parser): A fast, efficient parser for multipart streams in any JavaScript environment
 - [node-fetch-server](packages/node-fetch-server): Build servers for Node.js using the web fetch API
+- [node-hmr](packages/node-hmr): Run Node.js applications with hot module reloading
 - [node-tsx](packages/node-tsx): Run Node.js with TypeScript and JSX syntax support
 - [remix](packages/remix): The Remix web framework
 - [response](packages/response): Response helpers for the web Fetch API
@@ -93,6 +94,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [terminal](packages/terminal): Terminal output utilities for JavaScript libraries and CLIs
 - [test](packages/test): A test framework for JavaScript and TypeScript projects
 - [ui](packages/ui): View layer with reconciler, component model, and first-party UI components
+- [ui-hmr](packages/ui-hmr): Hot module replacement runtime and transforms for Remix UI components
 
 ## Installation
 

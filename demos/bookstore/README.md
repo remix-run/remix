@@ -12,6 +12,8 @@ pnpm start
 
 Then visit http://localhost:44100
 
+For development mode, run `pnpm dev`, or run `pnpm hmr` to enable HMR.
+
 ### Demo Accounts
 
 - **Admin**: admin@bookstore.com / admin123
