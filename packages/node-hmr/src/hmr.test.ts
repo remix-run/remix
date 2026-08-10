@@ -12,6 +12,8 @@ import { createHmrSupervisor, getSupervisorChokidarWatcher } from './lib/runner.
 const packageRoot = fileURLToPath(new URL('../', import.meta.url))
 const nodeTsxImportUrl = import.meta.resolve('@remix-run/node-tsx')
 const isWindows = process.platform === 'win32'
+const waitForTimeout = 5_000
+const fixtureServerReadyTimeout = isWindows ? 15_000 : waitForTimeout
 
 describe('node-hmr', () => {
   it('hot updates self-accepting modules without restarting the server', async () => {
@@ -1364,10 +1366,8 @@ describe('node-hmr', () => {
     try {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'ok')
-
-      await server.stop()
-      await fs.rm(fixture.path, { force: true, recursive: true })
     } finally {
+      await server.stop()
       await removeFixture(fixture.path)
     }
   })
@@ -1953,6 +1953,7 @@ function startFixtureServer(cwd: string) {
             : ''
           return `Timed out waiting for fixture server.${exitText}\n${processOutput}`
         },
+        fixtureServerReadyTimeout,
       )
       return readyEvents[index]
     },
@@ -2077,10 +2078,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 async function waitFor(
   check: () => boolean | Promise<boolean>,
   getTimeoutMessage: () => string = () => 'Timed out waiting for condition',
+  timeoutMs = waitForTimeout,
 ): Promise<void> {
   let start = Date.now()
 
-  while (Date.now() - start < 5_000) {
+  while (Date.now() - start < timeoutMs) {
     if (await check()) return
     await new Promise((resolve) => setTimeout(resolve, 25))
   }
