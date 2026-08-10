@@ -24,9 +24,6 @@ const nodeFetchServerImportUrl = pathToFileURL(
 const nodeTsxImportUrl = pathToFileURL(
   path.resolve(workspaceDir, 'packages/node-tsx/src/index.ts'),
 ).href
-const isBun = 'Bun' in globalThis
-const skipNodeHmr = isBun && 'node-hmr requires Node.js'
-
 describe('asset server HMR', () => {
   it('updates accepted browser module output without losing page state', async (t) => {
     let fixture = await createHmrFixture()
@@ -340,43 +337,39 @@ describe('asset server HMR', () => {
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(0, 128, 0)')
   })
 
-  it(
-    'does not refresh stylesheets after server updates from node-hmr',
-    { skip: skipNodeHmr },
-    async (t) => {
-      let fixture = await createNodeHmrFixture()
-      let server: NodeHmrTestServer | undefined
+  it('does not refresh stylesheets after server updates from node-hmr', async (t) => {
+    let fixture = await createNodeHmrFixture()
+    let server: NodeHmrTestServer | undefined
 
-      try {
-        server = await startNodeHmrFixtureServer(fixture)
-        let page = await serveNodeHmrFixture(t, server)
-        let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await serveNodeHmrFixture(t, server)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
-        await page.goto('/')
-        await connected
-        await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(255, 0, 0)')
+      await page.goto('/')
+      await connected
+      await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(255, 0, 0)')
 
-        let unexpectedStyleRequest = waitForStylesheetResponse(page, 200, { timeout: 250 }).then(
-          () => true,
-          () => false,
-        )
-        await write(
-          fixture.rootDir,
-          'server-side-effect.ts',
-          `export const sideEffect = 'style-test'\n`,
-        )
-        await waitForConsoleMessage(page, 'Server frame reload complete')
+      let unexpectedStyleRequest = waitForStylesheetResponse(page, 200, { timeout: 250 }).then(
+        () => true,
+        () => false,
+      )
+      await write(
+        fixture.rootDir,
+        'server-side-effect.ts',
+        `export const sideEffect = 'style-test'\n`,
+      )
+      await waitForConsoleMessage(page, 'Server frame reload complete')
 
-        assert.equal(await unexpectedStyleRequest, false)
-        await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
-        await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(255, 0, 0)')
-        assert.equal(server.readyCount, 2)
-      } finally {
-        await server?.close()
-        await fixture.close()
-      }
-    },
-  )
+      assert.equal(await unexpectedStyleRequest, false)
+      await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
+      await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(255, 0, 0)')
+      assert.equal(server.readyCount, 2)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
 
   it('recovers failed stylesheet updates after the HMR event stream reconnects', async (t) => {
     let fixture = await createHmrFixture()
@@ -419,195 +412,179 @@ describe('asset server HMR', () => {
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(0, 0, 255)')
   })
 
-  it(
-    'handles browser module, stylesheet, and server updates through node-hmr',
-    { skip: skipNodeHmr },
-    async (t) => {
-      let fixture = await createNodeHmrFixture()
-      let server: NodeHmrTestServer | undefined
+  it('handles browser module, stylesheet, and server updates through node-hmr', async (t) => {
+    let fixture = await createNodeHmrFixture()
+    let server: NodeHmrTestServer | undefined
 
-      try {
-        server = await startNodeHmrFixtureServer(fixture)
-        let page = await serveNodeHmrFixture(t, server)
-        let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await serveNodeHmrFixture(t, server)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
-        await page.goto('/')
-        await connected
-        await waitForText(page, '[data-testid="server-message"]', 'Server: before')
-        await waitForText(page, '[data-testid="client-label"]', 'Client: before')
-        await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(255, 0, 0)')
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-message"]', 'Server: before')
+      await waitForText(page, '[data-testid="client-label"]', 'Client: before')
+      await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(255, 0, 0)')
 
-        await write(
-          fixture.rootDir,
-          'app/client-message.ts',
-          getClientMessageSource('Client: browser update'),
-        )
-        await waitForText(page, '[data-testid="client-label"]', 'Client: browser update')
-        assert.equal(server.readyCount, 1)
+      await write(
+        fixture.rootDir,
+        'app/client-message.ts',
+        getClientMessageSource('Client: browser update'),
+      )
+      await waitForText(page, '[data-testid="client-label"]', 'Client: browser update')
+      assert.equal(server.readyCount, 1)
 
-        let styleRequest = waitForStylesheetResponse(page, 200)
-        await write(
-          fixture.rootDir,
-          'app/styles.css',
-          '[data-testid="client-label"] { color: blue; }\n',
-        )
-        await styleRequest
-        await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(0, 0, 255)')
-        assert.equal(server.readyCount, 1)
+      let styleRequest = waitForStylesheetResponse(page, 200)
+      await write(
+        fixture.rootDir,
+        'app/styles.css',
+        '[data-testid="client-label"] { color: blue; }\n',
+      )
+      await styleRequest
+      await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(0, 0, 255)')
+      assert.equal(server.readyCount, 1)
 
-        await write(fixture.rootDir, 'server-side-effect.ts', `export const sideEffect = 'mixed'\n`)
-        await waitForConsoleMessage(page, 'Server frame reload complete')
-        assert.equal(server.readyCount, 2)
-      } finally {
-        await server?.close()
-        await fixture.close()
-      }
-    },
-  )
+      await write(fixture.rootDir, 'server-side-effect.ts', `export const sideEffect = 'mixed'\n`)
+      await waitForConsoleMessage(page, 'Server frame reload complete')
+      assert.equal(server.readyCount, 2)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
 
-  it(
-    'reloads server-rendered content after a node-hmr server update',
-    { skip: skipNodeHmr },
-    async (t) => {
-      let fixture = await createNodeHmrFixture()
-      let server: NodeHmrTestServer | undefined
+  it('reloads server-rendered content after a node-hmr server update', async (t) => {
+    let fixture = await createNodeHmrFixture()
+    let server: NodeHmrTestServer | undefined
 
-      try {
-        server = await startNodeHmrFixtureServer(fixture)
-        let page = await serveNodeHmrFixture(t, server)
-        let ready = await server.waitForReady(0)
-        let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await serveNodeHmrFixture(t, server)
+      let ready = await server.waitForReady(0)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
-        await page.goto('/')
-        await connected
-        await waitForText(page, '[data-testid="server-message"]', 'Server: before')
-        await page.locator('[data-testid="client-field"]').fill('typed before reload')
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-message"]', 'Server: before')
+      await page.locator('[data-testid="client-field"]').fill('typed before reload')
 
-        let serverReload = waitForConsoleMessage(page, 'Server frame reload complete')
-        await write(
-          fixture.rootDir,
-          'server-message.ts',
-          `export const serverMessage = 'Server: after restart'\n`,
-        )
+      let serverReload = waitForConsoleMessage(page, 'Server frame reload complete')
+      await write(
+        fixture.rootDir,
+        'server-message.ts',
+        `export const serverMessage = 'Server: after restart'\n`,
+      )
 
-        let restarted = await server.waitForReady(1)
-        assert.equal(restarted.pid, ready.pid)
-        await serverReload
-        await waitForText(page, '[data-testid="server-message"]', 'Server: after restart')
-        assert.equal(
-          await page.locator('[data-testid="client-field"]').inputValue(),
-          'typed before reload',
-        )
-        assert.equal(server.readyCount, 2)
-      } finally {
-        await server?.close()
-        await fixture.close()
-      }
-    },
-  )
+      let restarted = await server.waitForReady(1)
+      assert.equal(restarted.pid, ready.pid)
+      await serverReload
+      await waitForText(page, '[data-testid="server-message"]', 'Server: after restart')
+      assert.equal(
+        await page.locator('[data-testid="client-field"]').inputValue(),
+        'typed before reload',
+      )
+      assert.equal(server.readyCount, 2)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
 
-  it(
-    'recovers page reload requests after a failed node-hmr restart is fixed',
-    { skip: skipNodeHmr },
-    async (t) => {
-      let fixture = await createNodeHmrFixture({ devProxy: true })
-      let server: NodeHmrTestServer | undefined
+  it('recovers page reload requests after a failed node-hmr restart is fixed', async (t) => {
+    let fixture = await createNodeHmrFixture({ devProxy: true })
+    let server: NodeHmrTestServer | undefined
 
-      try {
-        server = await startNodeHmrFixtureServer(fixture)
-        let page = await serveNodeHmrFixture(t, server)
-        let requestFailures = monitorLocalRequestFailures(page, server.baseUrl)
-        let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await serveNodeHmrFixture(t, server)
+      let requestFailures = monitorLocalRequestFailures(page, server.baseUrl)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
-        await page.goto('/')
-        await connected
-        await waitForText(page, '[data-testid="server-message"]', 'Server: before')
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-message"]', 'Server: before')
 
-        await write(fixture.rootDir, 'server-message.ts', `export const serverMessage = \n`)
-        await waitFor(
-          () => /Failed running server\.tsx\. Waiting for file changes/.test(server?.output ?? ''),
-          () => server?.output ?? 'Timed out waiting for failed server restart',
-        )
+      await write(fixture.rootDir, 'server-message.ts', `export const serverMessage = \n`)
+      await waitFor(
+        () => /Failed running server\.tsx\. Waiting for file changes/.test(server?.output ?? ''),
+        () => server?.output ?? 'Timed out waiting for failed server restart',
+      )
 
-        let reloadWhileBroken = page.goto('/')
+      let reloadWhileBroken = page.goto('/')
 
-        await write(
-          fixture.rootDir,
-          'server-message.ts',
-          `export const serverMessage = 'Server: after fix'\n`,
-        )
+      await write(
+        fixture.rootDir,
+        'server-message.ts',
+        `export const serverMessage = 'Server: after fix'\n`,
+      )
 
-        await ignoreAbortedNavigation(reloadWhileBroken)
-        await waitForText(page, '[data-testid="server-message"]', 'Server: after fix')
-        await requestFailures.assertNone(server.output)
-        assert.ok(server.readyCount > 1)
-      } finally {
-        await server?.close()
-        await fixture.close()
-      }
-    },
-  )
+      await ignoreAbortedNavigation(reloadWhileBroken)
+      await waitForText(page, '[data-testid="server-message"]', 'Server: after fix')
+      await requestFailures.assertNone(server.output)
+      assert.ok(server.readyCount > 1)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
 
-  it(
-    'keeps page reload requests successful during rapid node-hmr restarts',
-    { skip: skipNodeHmr },
-    async (t) => {
-      let fixture = await createNodeHmrFixture({
-        devProxy: true,
-        slowAssetMs: 75,
-        slowDisposeMs: 400,
-        slowDocumentMs: 150,
-      })
-      let server: NodeHmrTestServer | undefined
+  it('keeps page reload requests successful during rapid node-hmr restarts', async (t) => {
+    let fixture = await createNodeHmrFixture({
+      devProxy: true,
+      slowAssetMs: 75,
+      slowDisposeMs: 400,
+      slowDocumentMs: 150,
+    })
+    let server: NodeHmrTestServer | undefined
 
-      try {
-        server = await startNodeHmrFixtureServer(fixture)
-        let page = await serveNodeHmrFixture(t, server)
-        let requestFailures = monitorLocalRequestFailures(page, server.baseUrl)
-        let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await serveNodeHmrFixture(t, server)
+      let requestFailures = monitorLocalRequestFailures(page, server.baseUrl)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
-        await page.goto('/')
-        await connected
-        await waitForText(page, '[data-testid="server-message"]', 'Server: before')
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-message"]', 'Server: before')
 
-        let serverMessagePath = path.join(fixture.rootDir, 'server-message.ts')
-        let initialSource = await fs.readFile(serverMessagePath, 'utf-8')
+      let serverMessagePath = path.join(fixture.rootDir, 'server-message.ts')
+      let initialSource = await fs.readFile(serverMessagePath, 'utf-8')
 
+      await fs.writeFile(
+        serverMessagePath,
+        `export const serverMessage = 'Server: during restart'\n`,
+      )
+      await page.waitForTimeout(250)
+      let reloadDuringRestart = page.goto('/')
+
+      for (let index = 0; index < 6; index++) {
         await fs.writeFile(
           serverMessagePath,
-          `export const serverMessage = 'Server: during restart'\n`,
+          index % 2 === 0
+            ? `export const serverMessage = 'Server: during restart'\n`
+            : initialSource,
         )
-        await page.waitForTimeout(250)
-        let reloadDuringRestart = page.goto('/')
-
-        for (let index = 0; index < 6; index++) {
-          await fs.writeFile(
-            serverMessagePath,
-            index % 2 === 0
-              ? `export const serverMessage = 'Server: during restart'\n`
-              : initialSource,
-          )
-          await page.waitForTimeout(25)
-        }
-
-        await ignoreAbortedNavigation(reloadDuringRestart)
-
-        await fs.writeFile(
-          serverMessagePath,
-          `export const serverMessage = 'Server: after rapid restarts'\n`,
-        )
-        await page.waitForTimeout(250)
-        await ignoreAbortedNavigation(page.goto('/'))
-
-        await waitForText(page, '[data-testid="server-message"]', 'Server: after rapid restarts')
-        await requestFailures.assertNone(server.output)
-        assert.ok(server.readyCount > 1)
-      } finally {
-        await server?.close()
-        await fixture.close()
+        await page.waitForTimeout(25)
       }
-    },
-  )
+
+      await ignoreAbortedNavigation(reloadDuringRestart)
+
+      await fs.writeFile(
+        serverMessagePath,
+        `export const serverMessage = 'Server: after rapid restarts'\n`,
+      )
+      await page.waitForTimeout(250)
+      await ignoreAbortedNavigation(page.goto('/'))
+
+      await waitForText(page, '[data-testid="server-message"]', 'Server: after rapid restarts')
+      await requestFailures.assertNone(server.output)
+      assert.ok(server.readyCount > 1)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
 })
 
 type HmrFixture = {
