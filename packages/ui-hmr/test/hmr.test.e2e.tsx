@@ -27,6 +27,8 @@ const nodeTsxImportUrl = pathToFileURL(
 ).href
 const uiHmrNodeImportUrl = pathToFileURL(path.resolve(packageDir, 'src/node.ts')).href
 const isBun = 'Bun' in globalThis
+const consoleMessageTimeout = 5000
+const hmrConnectionTimeout = process.platform === 'win32' ? 15_000 : consoleMessageTimeout
 
 declare global {
   var __counterInitialValue: number
@@ -2367,6 +2369,7 @@ function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
   return new Promise((resolve, reject) => {
     let consoleMessages: string[] = []
     let pageErrors: string[] = []
+    let timeoutMs = text === '[remix] HMR connected' ? hmrConnectionTimeout : consoleMessageTimeout
     let timeout = setTimeout(() => {
       reject(
         new Error(
@@ -2378,7 +2381,7 @@ function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
           ].join('\n'),
         ),
       )
-    }, 5000)
+    }, timeoutMs)
 
     page.on('console', handleConsole)
     page.on('pageerror', handlePageError)
