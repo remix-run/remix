@@ -24,6 +24,9 @@ const nodeFetchServerImportUrl = pathToFileURL(
 const nodeTsxImportUrl = pathToFileURL(
   path.resolve(workspaceDir, 'packages/node-tsx/src/index.ts'),
 ).href
+const consoleMessageTimeout = 5000
+const hmrConnectionTimeout = process.platform === 'win32' ? 15_000 : consoleMessageTimeout
+
 describe('asset server HMR', () => {
   it('updates accepted browser module output without losing page state', async (t) => {
     let fixture = await createHmrFixture()
@@ -1675,6 +1678,7 @@ function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
   return new Promise((resolve, reject) => {
     let consoleMessages: string[] = []
     let pageErrors: string[] = []
+    let timeoutMs = text === '[remix] HMR connected' ? hmrConnectionTimeout : consoleMessageTimeout
     let timeout = setTimeout(() => {
       reject(
         new Error(
@@ -1686,7 +1690,7 @@ function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
           ].join('\n'),
         ),
       )
-    }, 5000)
+    }, timeoutMs)
 
     page.on('console', handleConsole)
     page.on('pageerror', handlePageError)
