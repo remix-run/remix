@@ -33,6 +33,8 @@ A good demo should:
 - When demos use `remix/ui`, prefer idiomatic Remix component patterns. Use normal JSX composition and built-in styling/mixin props such as `css={...}` or `mix={css(...)}` and `mix={[...]}` instead of dropping down to manual DOM mutation or ad hoc class management.
 - When a demo uses `remix/ui` JSX, configure that demo's `tsconfig.json` with `jsx: "react-jsx"` and `jsxImportSource: "remix/ui"`. Do not set `preserveSymlinks` or add `paths` entries that point back into `packages/remix/src`. The goal is for TypeScript to resolve `remix` through the demo's own package dependency under pnpm's default symlink behavior.
 - For demos that run through `remix/node-tsx`, do not enable `erasableSyntaxOnly`; the runtime intentionally supports TypeScript syntax that needs transformation.
+- Treat development HMR as an optional mode for rapid UI edits. Keep `server.ts` as the real app server, keep `pnpm dev` running it directly, and put `remix/node-hmr` supervision in `hmr.ts` behind a `pnpm hmr` script. Use a stable public proxy with `createHmrReadyFetch()` when browser requests can race child server restarts.
+- For demos that combine HMR with `remix/ui`, use `--import remix/ui-hmr/node` for the child server and add `uiHmr()` to the asset server's loaders. Keep all HMR wiring development-only.
 - For HTML responses rendered with `remix/ui`, prefer a local `app/middleware/render.tsx` middleware that uses `renderWith(...)`, calls `renderToStream(...)`, wraps it with `createHtmlResponse(...)` from `remix/response/html`, and lets actions render with `context.get(Renderer)(...)`.
 - Prefer direct use of Remix and package APIs in demo code. Do not add custom wrappers around simple calls like `session.get()`, `session.set()`, `session.flash()`, `session.unset()`, `redirect()`, or `context.get(...)` unless the wrapper adds real domain logic, reusable policy, or a genuinely clearer abstraction.
 - Demo code must have good hygiene. Use clear names, small focused modules, explicit control flow, and accessible markup. Avoid hacks, dead code, unexplained shortcuts, or patterns that would be poor examples for users to copy.
@@ -47,6 +49,7 @@ Use only the files the scenario needs, but prefer this shape:
 - `demos/<name>/package.json`
 - `demos/<name>/tsconfig.json` when the demo has TypeScript or JSX source
 - `demos/<name>/server.ts`
+- `demos/<name>/hmr.ts` when the demo offers an optional development HMR runner
 - `demos/<name>/README.md`
 - `demos/<name>/app/`
 - `demos/<name>/public/` when serving built assets or other static files
@@ -164,4 +167,5 @@ demos/<name>/
 - Run `pnpm -C demos/<name> typecheck` when the demo defines a typecheck script.
 - Run `pnpm -C demos/<name> test` when the demo defines tests.
 - Smoke-test the demo server locally when behavior depends on live requests or browser interaction.
+- Smoke-test HMR demos through their `hmr` script when the change depends on live server or browser updates.
 - Run `pnpm run lint` before finishing.

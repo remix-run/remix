@@ -48,16 +48,16 @@
     "@remix-run/assert": "workspace:^",
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "postpack": "node ../../scripts/sync-cli-template.ts --clean",
     "prepack": "node ../../scripts/sync-cli-template.ts",
     "prepublishOnly": "pnpm run build",
     "test": "remix test --concurrency 1",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "remix",

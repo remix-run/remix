@@ -54,6 +54,7 @@ import {
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { createComponentErrorEvent } from './error-event.ts'
+import { componentStalenessCheck } from './refresh.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -483,6 +484,15 @@ export function diffVNodes(
 ): CommittedVNode {
   if (curr === null) {
     return insert(next, domParent, vParent, context, anchor, cursor)
+  }
+
+  if (
+    componentStalenessCheck !== null &&
+    curr.kind === 'component' &&
+    next.kind === 'component' &&
+    componentStalenessCheck(curr.type) === true
+  ) {
+    return replace(curr, next, domParent, vParent, context, anchor)
   }
 
   if (curr.kind !== next.kind || curr.type !== next.type) {
@@ -1256,14 +1266,14 @@ function createAbortableReadableStream(
         signal.addEventListener('abort', onAbortRead, { once: true })
       })
 
-      let { done, value } = await Promise.race([reader.read(), abortRead])
+      let result = await Promise.race([reader.read(), abortRead])
       removeAbortReadListener?.()
 
-      if (done) {
+      if (result.done) {
         controller.close()
         return
       }
-      controller.enqueue(value)
+      controller.enqueue(result.value)
     },
     cancel(reason) {
       signal.removeEventListener('abort', onAbort)

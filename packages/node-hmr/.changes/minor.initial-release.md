@@ -1,0 +1,1 @@
+Added the initial `@remix-run/node-hmr` package for supervising Node.js applications in development with an `import.meta.hot` API and optional parent-owned browser HMR coordination through `browserHmrChannel`.

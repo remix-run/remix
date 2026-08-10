@@ -1,6 +1,7 @@
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { getTsconfig } from 'get-tsconfig'
 import MagicString from 'magic-string'
 import { minify } from 'oxc-minify'
@@ -24,16 +25,24 @@ import {
   restoreAuthoredInjectedPackageSpecifier,
 } from '../injected-packages.ts'
 import type { ModuleRecord, ModuleTracking } from '../module-store.ts'
+import type {
+  ModuleLoadContext,
+  ModuleLoader,
+  ModuleLoadResult,
+  NextModuleLoader,
+} from '../loaders.ts'
 import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import { composeSourceMaps, rewriteSourceMapSources, stringifySourceMap } from '../source-maps.ts'
 import type { EmittedModule } from './emit.ts'
 import type { ResolvedScriptTarget } from '../target.ts'
 import type { ResolvedModule } from './resolve.ts'
+import { scriptLoaderConditions } from './conditions.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
 type SourceLanguage = 'js' | 'jsx' | 'ts' | 'tsx'
+type ModuleLoadSource = NonNullable<ModuleLoadResult['source']>
 
 const scriptModuleTypes = [
   { extension: '.js', lang: 'js' },
@@ -71,8 +80,15 @@ type UnresolvedImport = {
   start: number
 }
 
+type HmrAcceptedDependency = UnresolvedImport
+
 export type TransformedModule = {
   fingerprint: string | null
+  hmr: {
+    acceptedDeps: HmrAcceptedDependency[]
+    selfAccepting: boolean
+    usesImportMetaHot: boolean
+  }
   identityPath: string
   importerDir: string
   packageSpecifiers: string[]
@@ -110,6 +126,7 @@ export type TransformArgs = {
   externalSet: ReadonlySet<string>
   isWatchIgnored(filePath: string): boolean
   minify: boolean
+  loaders: readonly ModuleLoader[]
   resolveActualPath(identityPath: string): string | null
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
@@ -205,9 +222,21 @@ export async function transformModule(
   }
 
   try {
+    let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
+    if (!stableUrlPathname) {
+      throw createAssetServerCompilationError(
+        `File ${record.identityPath} is outside all configured fileMap entries.`,
+        {
+          code: 'FILE_OUTSIDE_FILE_MAP',
+        },
+      )
+    }
+
     let analysis = await analyzeModuleSource(sourceText, resolvedPath, transformOptions, {
       define: args.define ?? undefined,
       minify: args.minify,
+      loaders: args.loaders,
+      moduleUrl: stableUrlPathname,
       sourceMaps: args.sourceMaps ?? undefined,
       target: args.target ?? undefined,
     })
@@ -223,16 +252,6 @@ export async function transformModule(
           `Please use an ESM-compatible module.`,
         {
           code: 'COMMONJS_NOT_SUPPORTED',
-        },
-      )
-    }
-
-    let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
-    if (!stableUrlPathname) {
-      throw createAssetServerCompilationError(
-        `File ${record.identityPath} is outside all configured fileMap entries.`,
-        {
-          code: 'FILE_OUTSIDE_FILE_MAP',
         },
       )
     }
@@ -260,6 +279,7 @@ export async function transformModule(
                 buildId: args.buildId,
                 content: sourceText,
               }),
+        hmr: getHmrAnalysis(analysis.rawCode),
         identityPath: record.identityPath,
         importerDir: path.dirname(resolvedPath),
         packageSpecifiers: analysis.unresolvedImports
@@ -282,6 +302,121 @@ export async function transformModule(
       },
     }
   }
+}
+
+export function getHmrAnalysis(rawCode: string): TransformedModule['hmr'] {
+  let mayUseImportMetaHot = rawCode.includes('import.meta.hot')
+  let usesImportMetaHot = false
+  let acceptedDeps: HmrAcceptedDependency[] = []
+  let selfAccepting = false
+
+  if (mayUseImportMetaHot) {
+    try {
+      let parseResult = parseSync('hmr-analysis.js', rawCode, {
+        lang: 'js',
+        sourceType: 'module',
+      })
+
+      if (parseResult.errors.length > 0) {
+        throw createAssetServerCompilationError(
+          `Failed to analyze HMR usage in transformed script. ${parseResult.errors[0]?.message ?? 'Unknown parse error'}`,
+          {
+            code: 'TRANSFORM_FAILED',
+          },
+        )
+      }
+
+      walkAst(parseResult.program, (node) => {
+        if (isImportMetaHotNode(node)) {
+          usesImportMetaHot = true
+        }
+
+        if (node.type !== 'CallExpression') return
+        if (!isImportMetaHotAcceptCallee(node.callee)) return
+
+        let [firstArgument] = node.arguments
+        if (firstArgument === undefined || !isAcceptedDependencyArgument(firstArgument)) {
+          selfAccepting = true
+          return
+        }
+
+        acceptedDeps.push(...getAcceptedDependencies(firstArgument, rawCode))
+      })
+    } catch (error) {
+      if (isAssetServerCompilationError(error)) throw error
+      throw createAssetServerCompilationError(
+        `Failed to analyze HMR usage in transformed script.`,
+        {
+          cause: error,
+          code: 'TRANSFORM_FAILED',
+        },
+      )
+    }
+  }
+
+  return {
+    acceptedDeps,
+    selfAccepting,
+    usesImportMetaHot,
+  }
+}
+
+function isImportMetaHotAcceptCallee(node: Node): boolean {
+  let callee = unwrapChainExpression(node)
+  if (callee.type !== 'MemberExpression') return false
+  if (callee.computed || !isIdentifierNode(callee.property, 'accept')) return false
+
+  return isImportMetaHotNode(callee.object)
+}
+
+function isImportMetaHotNode(node: Node): boolean {
+  let hot = unwrapChainExpression(node)
+  if (hot.type !== 'MemberExpression') return false
+  if (hot.computed || !isIdentifierNode(hot.property, 'hot')) return false
+
+  let meta = unwrapChainExpression(hot.object)
+  return (
+    meta.type === 'MetaProperty' &&
+    isIdentifierNode(meta.meta, 'import') &&
+    isIdentifierNode(meta.property, 'meta')
+  )
+}
+
+function unwrapChainExpression(node: Node): Node {
+  return node.type === 'ChainExpression' ? node.expression : node
+}
+
+function isIdentifierNode(node: Node, name: string): boolean {
+  return node.type === 'Identifier' && node.name === name
+}
+
+function isAcceptedDependencyArgument(node: Node): boolean {
+  return isStringLiteralNode(node) || node.type === 'ArrayExpression'
+}
+
+function getAcceptedDependencies(node: Node, source: string): HmrAcceptedDependency[] {
+  if (isStringLiteralNode(node)) {
+    return [
+      {
+        end: node.end - 1,
+        specifier: node.value,
+        start: node.start + 1,
+      },
+    ]
+  }
+
+  if (node.type !== 'ArrayExpression') return []
+
+  let deps: HmrAcceptedDependency[] = []
+  for (let element of node.elements) {
+    if (!isStringLiteralNode(element)) continue
+    deps.push({
+      end: element.end - 1,
+      specifier: element.value,
+      start: element.start + 1,
+    })
+  }
+  return deps
 }
 
 function findNearestTsconfigPath(directory: string): string | null {
@@ -318,6 +453,8 @@ async function analyzeModuleSource(
   options: {
     define?: Record<string, string>
     minify: boolean
+    loaders: readonly ModuleLoader[]
+    moduleUrl: string
     sourceMaps?: 'external' | 'inline'
     target?: ResolvedScriptTarget
   },
@@ -345,6 +482,40 @@ async function analyzeModuleSource(
   let rawCode = transformResult.code.trimEnd()
   let sourceMap = stringifySourceMap(transformResult.map)
 
+  if (options.loaders.length > 0) {
+    let loaderUrl = pathToFileURL(resolvedPath).href
+    let loaderInputSource = sourceMap ? appendInlineSourceMap(rawCode, sourceMap) : rawCode
+    let loaderOutputSource: string
+    try {
+      let loaderResult = runModuleLoaders(loaderUrl, {
+        format: 'module',
+        loaders: options.loaders,
+        moduleUrl: options.moduleUrl,
+        source: loaderInputSource,
+      })
+      loaderOutputSource = moduleLoadSourceToString(getModuleLoadSource(loaderUrl, loaderResult))
+    } catch (error) {
+      if (isAssetServerCompilationError(error)) throw error
+      throw createAssetServerCompilationError(
+        `Module loader failed for ${loaderUrl}. ${formatUnknownError(error)}`,
+        {
+          cause: error,
+          code: 'LOADER_FAILED',
+        },
+      )
+    }
+    if (loaderOutputSource !== loaderInputSource) {
+      let loaderOutput = extractInlineSourceMap(loaderOutputSource)
+      rawCode = loaderOutput.code.trimEnd()
+      sourceMap =
+        loaderOutput.sourceMap && loaderOutput.sourceMap !== sourceMap
+          ? sourceMap
+            ? composeSourceMaps(loaderOutput.sourceMap, sourceMap)
+            : loaderOutput.sourceMap
+          : null
+    }
+  }
+
   if (options.minify) {
     let minifyResult = await minifyModule(rawCode, resolvedPath, options.target, options.sourceMaps)
     rawCode = minifyResult.code.trimEnd()
@@ -362,6 +533,110 @@ async function analyzeModuleSource(
     sourceMap,
     unresolvedImports: await getUnresolvedImportsFromLexer(rawCode),
   }
+}
+
+function runModuleLoaders(
+  url: string,
+  options: {
+    format: string
+    loaders: readonly ModuleLoader[]
+    moduleUrl: string
+    source: string
+  },
+): ModuleLoadResult {
+  let loadContext: ModuleLoadContext = {
+    conditions: [...scriptLoaderConditions],
+    format: options.format,
+    importAttributes: {},
+    moduleUrl: options.moduleUrl,
+  }
+
+  let load: NextModuleLoader = (_url, context) => ({
+    format: context?.format ?? options.format,
+    source: options.source,
+  })
+
+  for (let loader of options.loaders) {
+    let nextLoad = load
+    load = (nextUrl, nextContext) => {
+      let nextLoadCalled = false
+      let wrappedNextLoad: NextModuleLoader = (wrappedUrl, wrappedContext) => {
+        if (wrappedUrl !== nextUrl) {
+          throw createAssetServerCompilationError(
+            `Module loader for ${nextUrl} attempted to change the module URL to ${wrappedUrl}. Loaders cannot change module URLs.`,
+            {
+              code: 'LOADER_FAILED',
+            },
+          )
+        }
+        nextLoadCalled = true
+        return nextLoad(wrappedUrl, wrappedContext)
+      }
+      let result = loader(
+        nextUrl,
+        {
+          conditions: nextContext?.conditions ?? loadContext.conditions,
+          format: nextContext?.format ?? loadContext.format,
+          importAttributes: nextContext?.importAttributes ?? loadContext.importAttributes,
+          moduleUrl: nextContext?.moduleUrl ?? loadContext.moduleUrl,
+        },
+        wrappedNextLoad,
+      )
+      if (!nextLoadCalled && result.shortCircuit !== true) {
+        throw createAssetServerCompilationError(
+          `Module loader for ${nextUrl} returned without calling nextLoad or setting shortCircuit: true.`,
+          {
+            code: 'LOADER_FAILED',
+          },
+        )
+      }
+      return result
+    }
+  }
+
+  return load(url, loadContext)
+}
+
+function getModuleLoadSource(url: string, result: ModuleLoadResult): ModuleLoadSource {
+  if (result.format !== 'module') {
+    throw createAssetServerCompilationError(
+      `Module loader for ${url} returned unsupported format ${JSON.stringify(result.format)}. Only "module" is supported.`,
+      {
+        code: 'LOADER_FAILED',
+      },
+    )
+  }
+
+  if (result.source !== undefined && result.source !== null) return result.source
+
+  throw createAssetServerCompilationError(`Module loader for ${url} did not return source.`, {
+    code: 'LOADER_FAILED',
+  })
+}
+
+function moduleLoadSourceToString(source: ModuleLoadSource): string {
+  if (typeof source === 'string') return source
+  return new TextDecoder().decode(source)
+}
+
+function appendInlineSourceMap(source: string, sourceMap: string): string {
+  let encoded = Buffer.from(sourceMap).toString('base64')
+  return `${source}\n//# sourceMappingURL=data:application/json;base64,${encoded}`
+}
+
+function extractInlineSourceMap(source: string): {
+  code: string
+  sourceMap: string | null
+} {
+  let sourceMapPattern =
+    /(?:\/\/# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)|\/\*# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+) \*\/)\s*$/g
+  let sourceMap: string | null = null
+  let code = source.replace(sourceMapPattern, (_match, lineComment, blockComment) => {
+    sourceMap = Buffer.from(lineComment ?? blockComment, 'base64').toString('utf-8')
+    return ''
+  })
+
+  return { code, sourceMap }
 }
 
 async function minifyModule(
@@ -546,7 +821,7 @@ async function getUnresolvedImportsFromLexer(rawCode: string): Promise<Unresolve
 
   for (let imported of imports) {
     let specifier = getStaticImportSpecifier(rawCode, imported)
-    if (specifier == null || shouldSkipImportSpecifier(specifier)) continue
+    if (specifier == null || isBrowserExternalModuleUrl(specifier)) continue
     unresolvedImports.push({
       specifier,
       start: imported.s,
@@ -560,6 +835,10 @@ async function getUnresolvedImportsFromLexer(rawCode: string): Promise<Unresolve
 
 function getDisplayImportSpecifier(specifier: string): string {
   return restoreAuthoredInjectedPackageSpecifier(specifier) ?? specifier
+}
+
+function isBrowserExternalModuleUrl(url: string): boolean {
+  return url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')
 }
 
 function maskAuthoredInjectedPackageImports(sourceText: string, resolvedPath: string): string {
@@ -673,14 +952,6 @@ function getStaticImportSpecifier(
 
 function isStaticTemplateLiteral(specifier: string): boolean {
   return specifier.startsWith('`') && specifier.endsWith('`') && !specifier.includes('${')
-}
-
-function shouldSkipImportSpecifier(specifier: string): boolean {
-  return (
-    specifier.startsWith('data:') ||
-    specifier.startsWith('http://') ||
-    specifier.startsWith('https://')
-  )
 }
 
 function getImportQuote(source: string, start: number): '"' | "'" | '`' | undefined {

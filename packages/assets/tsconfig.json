@@ -10,7 +10,9 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@remix-run/ui"
   },
   "exclude": ["bench/fixtures", "dist"]
 }

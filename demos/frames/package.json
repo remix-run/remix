@@ -11,7 +11,7 @@
   "devDependencies": {
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
     "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",

@@ -9,11 +9,11 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   }
 }
