@@ -143,8 +143,6 @@ if (import.meta.hot) {
 }
 ```
 
-Use `window.location.reload()` only when frame reload cannot safely recover the page.
-
 ## Frames
 
 A `<Frame>` renders server content into the page. Frames stream after the initial HTML, nest inside other frames, contain client entries, and can be reloaded without full page navigation.
