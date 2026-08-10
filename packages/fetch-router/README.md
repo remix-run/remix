@@ -299,22 +299,23 @@ router.mount('/orgs/:orgId', (org) => {
 
 When a mount prefix and child route use the same param name, the right-most route param wins, matching `route-pattern` behavior.
 
-Middleware stays on routers, controllers, and actions. If an entire route group needs auth or another boundary, put that middleware on the controllers or actions owned by the installer:
+Pass mount middleware when an entire route group shares an auth, data-loading, or other request boundary. It applies to every route registered by the installer, including routes in nested mounts and controllers. Values provided by mount middleware are inferred in descendant actions and controller actions:
 
 ```ts
-function installAdminRoutes<context extends AppContext>(router: RouteBuilder<context>) {
-  router.map(adminRouteGroup, {
-    middleware: [requireAdmin()],
+router.mount('/admin', { middleware: [requireAdmin()] }, (admin) => {
+  admin.map(adminRouteGroup, {
     actions: {
-      index({ admin }) {
-        return new Response(admin.id)
+      index() {
+        return new Response('Admin')
       },
     },
   })
-}
+
+  admin.map(adminRouteGroup.users, usersController)
+})
 ```
 
-Unknown paths below a mounted prefix fall through to the parent router's default handler. If a route group needs its own catch-all response, register one explicitly inside the installer.
+Middleware runs in router, outer mount, inner mount, controller, then action order. Mount middleware only runs after a descendant route matches. Unknown paths below a mounted prefix fall through to the parent router's default handler without running mount middleware. If a route group needs its own catch-all response, register one explicitly inside the installer.
 
 ### Declaring Routes
 
@@ -662,21 +663,19 @@ router.get('/books', async (context) => {
 
 Use `context.db` (or `context.get(Database)`). If two values use the same property name, the router throws.
 
-Middleware has three API-owned forms: router middleware, controller middleware, and action middleware.
+Middleware has four API-owned forms: router middleware, mount middleware, controller middleware, and action middleware.
 
 Router middleware is added to the router when it is created using the `createRouter({ middleware })` option. This middleware runs before any routes are matched and is useful for doing things like logging, serving static files, profiling, and a variety of other things. Router middleware runs on every request, so it's important to keep it lightweight and fast.
 
-Controller middleware runs for every direct action in a controller. Action middleware runs only for one action, whether that action is created with `createAction()`, registered in a controller, or registered directly with `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. The object form for actions is `{ handler, middleware? }`, so you can omit `middleware` entirely when you do not need it.
+Mount middleware runs for every route registered by a mounted route installer. Controller middleware runs for every direct action in a controller. Action middleware runs only for one action, whether that action is created with `createAction()`, registered in a controller, or registered directly with `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. The object form for actions is `{ handler, middleware? }`, so you can omit `middleware` entirely when you do not need it.
 
-A controller's `middleware` applies only to the direct route actions in that controller, and its `actions` object may not include nested route-map keys. This is the router's scoped middleware model: map nested route maps explicitly so each controller owns the direct route actions for one route map, and share middleware arrays between controllers that need the same boundary.
+A controller's `middleware` applies only to the direct route actions in that controller, and its `actions` object may not include nested route-map keys. Use mount middleware when one boundary should apply across multiple controllers in a route group.
 
 ```tsx
-let routes = route({
-  home: '/',
-  admin: {
-    dashboard: '/admin/dashboard',
-    settings: '/admin/settings',
-  },
+let routes = route({ home: '/' })
+let adminRoutes = route({
+  dashboard: '/dashboard',
+  settings: '/settings',
 })
 
 let router = createRouter({
@@ -686,22 +685,29 @@ let router = createRouter({
 
 router.map(routes.home, () => new Response('Home'))
 
-router.map(routes.admin, {
-  // Controller middleware applies to all direct actions in this controller.
-  middleware: [auth({ token: 'secret' })],
-  actions: {
-    dashboard() {
-      return new Response('Dashboard')
-    },
-    settings: {
-      // Action middleware applies only to this action.
-      middleware: [requireAdmin()],
-      handler() {
-        return new Response('Settings')
-      },
-    },
+router.mount(
+  '/admin',
+  {
+    // Mount middleware applies to every route registered in this group.
+    middleware: [auth({ token: 'secret' })],
   },
-})
+  (admin) => {
+    admin.map(adminRoutes, {
+      actions: {
+        dashboard() {
+          return new Response('Dashboard')
+        },
+        settings: {
+          // Action middleware applies only to this action.
+          middleware: [requireAdmin()],
+          handler() {
+            return new Response('Settings')
+          },
+        },
+      },
+    })
+  },
+)
 ```
 
 ### Request Context

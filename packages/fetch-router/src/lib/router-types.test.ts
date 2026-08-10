@@ -705,6 +705,63 @@ describe('router type inference', () => {
     assert.equal(await optionalChildResponse.text(), 'child')
   })
 
+  it('infers mount middleware context in descendant actions and controllers', async () => {
+    let projectRoutes = route({
+      index: '/',
+      activity: {
+        show: '/activity/:activityId',
+      },
+    })
+    let router = createAppRouter()
+
+    router.mount(
+      '/orgs/:orgId/projects/:projectId',
+      { middleware: [setRole('admin')] },
+      (project) => {
+        project.map(projectRoutes, {
+          actions: {
+            index(context) {
+              let orgId: string = context.params.orgId
+              let projectId: string = context.params.projectId
+              let role = context.get(CurrentRole)
+
+              expectTypeEquality<IsEqual<typeof role, 'admin'>>()
+              expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
+
+              return new Response(`${orgId}:${projectId}:${role}`)
+            },
+          },
+        })
+
+        project.map(projectRoutes.activity, {
+          middleware: [setFormData()],
+          actions: {
+            show(context) {
+              let orgId: string = context.params.orgId
+              let projectId: string = context.params.projectId
+              let activityId: string = context.params.activityId
+              let role = context.get(CurrentRole)
+              let formData = context.get(FormData)
+
+              expectTypeEquality<IsEqual<typeof role, 'admin'>>()
+              expectTypeEquality<IsEqual<typeof formData, FormData>>()
+
+              return new Response(`${orgId}:${projectId}:${activityId}:${role}`)
+            },
+          },
+        })
+      },
+    )
+
+    let indexResponse = await router.fetch('https://remix.run/orgs/acme/projects/p123')
+    assert.equal(await indexResponse.text(), 'acme:p123:admin')
+
+    let activityResponse = await router.fetch(
+      'https://remix.run/orgs/acme/projects/p123/activity/a456',
+    )
+    assert.equal(await activityResponse.text(), 'acme:p123:a456:admin')
+  })
+
   it('rejects installers that require context the parent router does not provide', () => {
     function installAccountRoutes<context extends AppContext>(router: RouteBuilder<context>) {
       router.get('/', (context) => new Response(context.currentUser.id))

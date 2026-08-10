@@ -179,7 +179,7 @@ export function getCurrentUserSafely() {
 
 ## Middleware Types
 
-Middleware has three API-owned forms:
+Middleware has four API-owned forms:
 
 1. **Router middleware** — runs for every request:
 
@@ -187,7 +187,18 @@ Middleware has three API-owned forms:
    let router = createRouter({ middleware: [logger(), session(cookie, storage)] })
    ```
 
-2. **Controller middleware** — runs for the direct actions in one controller:
+2. **Mount middleware** — runs for every matched route registered by a route installer, including nested mounts and controllers:
+
+   ```typescript
+   router.mount('/account', { middleware: [requireAuth()] }, (account) => {
+     account.map(accountRoutes, accountController)
+     account.map(accountSettingsRoutes, accountSettingsController)
+   })
+   ```
+
+   Mount middleware context is inferred by descendant action and inline controller handlers. It runs after router middleware and only when a registered descendant route matches.
+
+3. **Controller middleware** — runs for the direct actions in one controller:
 
    ```typescript
    export default createController(routes.account, {
@@ -198,7 +209,7 @@ Middleware has three API-owned forms:
 
    Controller middleware does not flow into other controllers. Add the middleware to each controller that needs it.
 
-3. **Action middleware** — runs for a single action:
+4. **Action middleware** — runs for a single action:
 
    ```typescript
    router.get(routes.account.index, {

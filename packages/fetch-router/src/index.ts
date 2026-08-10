@@ -25,6 +25,7 @@ export type { RequestMethod } from './lib/request-methods.ts'
 export { createRouter } from './lib/router.ts'
 export type {
   MatchData,
+  MountOptions,
   RouteEntry,
   RouteBuilder,
   RouteInstaller,

@@ -1242,34 +1242,47 @@ describe('router.mount()', () => {
       ],
     })
 
-    router.mount('/admin', (admin) => {
-      admin.map(routes, {
+    router.mount(
+      '/admin',
+      {
         middleware: [
           async (_, next) => {
-            events.push('controller before')
+            events.push('mount before')
             let response = await next()
-            events.push('controller after')
+            events.push('mount after')
             return response
           },
         ],
-        actions: {
-          update: {
-            middleware: [
-              async (_, next) => {
-                events.push('action before')
-                let response = await next()
-                events.push('action after')
-                return response
+      },
+      (admin) => {
+        admin.map(routes, {
+          middleware: [
+            async (_, next) => {
+              events.push('controller before')
+              let response = await next()
+              events.push('controller after')
+              return response
+            },
+          ],
+          actions: {
+            update: {
+              middleware: [
+                async (_, next) => {
+                  events.push('action before')
+                  let response = await next()
+                  events.push('action after')
+                  return response
+                },
+              ],
+              handler() {
+                events.push('handler')
+                return new Response('Updated')
               },
-            ],
-            handler() {
-              events.push('handler')
-              return new Response('Updated')
             },
           },
-        },
-      })
-    })
+        })
+      },
+    )
 
     let response = await router.fetch('https://remix.run/admin/update', { method: 'POST' })
 
@@ -1277,13 +1290,84 @@ describe('router.mount()', () => {
     assert.equal(await response.text(), 'Updated')
     assert.deepEqual(events, [
       'router before',
+      'mount before',
       'controller before',
       'action before',
       'handler',
       'action after',
       'controller after',
+      'mount after',
       'router after',
     ])
+  })
+
+  it('composes middleware from nested mounts without affecting sibling routes', async () => {
+    let events: string[] = []
+    let router = createRouter()
+
+    router.mount(
+      '/projects',
+      {
+        middleware: [
+          async (_, next) => {
+            events.push('projects')
+            return next()
+          },
+        ],
+      },
+      (projects) => {
+        projects.get('/', () => new Response('Projects'))
+        projects.mount(
+          '/:projectId',
+          {
+            middleware: [
+              async (_, next) => {
+                events.push('project')
+                return next()
+              },
+            ],
+          },
+          (project) => {
+            project.get('/activity', ({ params }) => new Response(params.projectId))
+          },
+        )
+      },
+    )
+    router.get('/health', () => new Response('ok'))
+
+    let activityResponse = await router.fetch('https://remix.run/projects/123/activity')
+    assert.equal(await activityResponse.text(), '123')
+    assert.deepEqual(events, ['projects', 'project'])
+
+    events.length = 0
+    let healthResponse = await router.fetch('https://remix.run/health')
+    assert.equal(await healthResponse.text(), 'ok')
+    assert.deepEqual(events, [])
+
+    let notFoundResponse = await router.fetch('https://remix.run/projects/unknown')
+    assert.equal(notFoundResponse.status, 404)
+    assert.deepEqual(events, [])
+  })
+
+  it('lets mount middleware short-circuit descendant handlers', async () => {
+    let router = createRouter()
+    let handled = false
+
+    router.mount(
+      '/admin',
+      { middleware: [() => new Response('Unauthorized', { status: 401 })] },
+      (admin) => {
+        admin.get('/dashboard', () => {
+          handled = true
+          return new Response('Dashboard')
+        })
+      },
+    )
+
+    let response = await router.fetch('https://remix.run/admin/dashboard')
+    assert.equal(response.status, 401)
+    assert.equal(await response.text(), 'Unauthorized')
+    assert.equal(handled, false)
   })
 
   it('lets existing controller middleware short-circuit mounted handlers', async () => {

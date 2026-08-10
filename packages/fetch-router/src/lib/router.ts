@@ -151,10 +151,25 @@ export interface RouteBuilder<context extends AnyContext = RequestContext> {
   ): void
   /**
    * Mounts a route installer at a route pattern prefix.
+   *
+   * @param prefix The route pattern prepended to routes registered by the installer.
+   * @param installer A function that registers routes under the mount prefix.
    */
   mount<pattern extends string>(
     prefix: pattern | RoutePattern<pattern>,
     installer: RouteInstaller<RouteContext<context, pattern>>,
+  ): void
+  /**
+   * Mounts a route installer with middleware at a route pattern prefix.
+   *
+   * @param prefix The route pattern prepended to routes registered by the installer.
+   * @param options Options for middleware shared by the mounted route group.
+   * @param installer A function that registers routes under the mount prefix.
+   */
+  mount<pattern extends string, const middleware extends readonly AnyMiddleware[]>(
+    prefix: pattern | RoutePattern<pattern>,
+    options: MountOptions<middleware>,
+    installer: RouteInstaller<MiddlewareContext<middleware, RouteContext<context, pattern>>>,
   ): void
   /**
    * Shorthand for registering a `GET` route.
@@ -191,6 +206,18 @@ export interface RouteBuilder<context extends AnyContext = RequestContext> {
  */
 export interface RouteInstaller<context extends AnyContext = RequestContext> {
   (router: RouteBuilder<context>): void
+}
+
+/**
+ * Options for mounting a route installer.
+ */
+export interface MountOptions<
+  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+> {
+  /**
+   * Middleware that runs for every route registered by the mounted route installer.
+   */
+  middleware: readonly [...middleware]
 }
 
 /**
@@ -320,6 +347,7 @@ function getMappedRouteMethod(target: RouteTarget): RequestMethod | 'ANY' {
 
 type BuilderState = {
   prefix: RoutePattern<string> | undefined
+  middleware: AnyMiddleware[] | undefined
 }
 
 function getPrefixedRoutePattern(target: RouteTarget, state: BuilderState): RoutePattern {
@@ -384,7 +412,7 @@ export function createRouter<
       pattern,
       handler: action.handler,
       method,
-      middleware: action.middleware,
+      middleware: mergeMiddleware(state.middleware, action.middleware),
     }
 
     matcher.add(pattern, entry)
@@ -477,6 +505,41 @@ export function createRouter<
       }
     }
 
+    function mount<pattern extends string>(
+      prefix: pattern | RoutePattern<pattern>,
+      installer: RouteInstaller<RouteContext<builderContext, pattern>>,
+    ): void
+    function mount<pattern extends string, const middleware extends readonly AnyMiddleware[]>(
+      prefix: pattern | RoutePattern<pattern>,
+      options: MountOptions<middleware>,
+      installer: RouteInstaller<
+        MiddlewareContext<middleware, RouteContext<builderContext, pattern>>
+      >,
+    ): void
+    function mount(
+      prefix: string | RoutePattern<string>,
+      optionsOrInstaller: MountOptions<readonly AnyMiddleware[]> | RouteInstaller<never>,
+      installer?: RouteInstaller<never>,
+    ): void {
+      let mountPrefix = typeof prefix === 'string' ? RoutePattern.parse(prefix) : prefix
+      let childPrefix = state.prefix ? joinPatterns(state.prefix, mountPrefix) : mountPrefix
+      let mountOptions = typeof optionsOrInstaller === 'function' ? undefined : optionsOrInstaller
+      let routeInstaller = typeof optionsOrInstaller === 'function' ? optionsOrInstaller : installer
+
+      if (!routeInstaller) throw new TypeError('Expected a route installer function')
+
+      // The overloads own the installer's contextual type; at runtime every builder has the same shape.
+      routeInstaller(
+        createRouteBuilder<never>({
+          prefix: childPrefix,
+          middleware: mergeMiddleware(
+            state.middleware,
+            normalizeMiddleware(mountOptions?.middleware),
+          ),
+        }),
+      )
+    }
+
     return {
       route<
         method extends RequestMethod | 'ANY',
@@ -494,16 +557,7 @@ export function createRouter<
       map(target: MapTarget, handler: unknown): void {
         mapRoutes(target, handler, state)
       },
-      mount<pattern extends string>(
-        prefix: pattern | RoutePattern<pattern>,
-        installer: RouteInstaller<RouteContext<builderContext, pattern>>,
-      ): void {
-        let mountPrefix = typeof prefix === 'string' ? RoutePattern.parse(prefix) : prefix
-        let childPrefix = state.prefix ? joinPatterns(state.prefix, mountPrefix) : mountPrefix
-        installer(
-          createRouteBuilder<RouteContext<builderContext, pattern>>({ prefix: childPrefix }),
-        )
-      },
+      mount,
       get: createVerbMethod('GET'),
       head: createVerbMethod('HEAD'),
       post: createVerbMethod('POST'),
@@ -514,7 +568,10 @@ export function createRouter<
     }
   }
 
-  let rootBuilder = createRouteBuilder<RouterContext>({ prefix: undefined })
+  let rootBuilder = createRouteBuilder<RouterContext>({
+    prefix: undefined,
+    middleware: undefined,
+  })
 
   let router: Router<RouterContext> = {
     ...rootBuilder,

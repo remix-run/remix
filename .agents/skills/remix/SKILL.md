@@ -136,7 +136,7 @@ When code could live in multiple places:
 - Do not create standalone root action files; put root route actions in `app/actions/controller.tsx`
 - Do not put nested route-map keys in a controller's `actions`
 - Do not register normal app leaf routes directly in `app/router.ts` when they belong in a controller
-- Do not rely on controller middleware from one controller to protect another controller; add controller middleware explicitly in each controller that needs it
+- Do not rely on controller middleware from one controller to protect another controller; use mount middleware for a shared route-group boundary or add controller middleware explicitly to each controller
 - Do not put middleware or persistence helpers in `app/utils/` when they have a clearer home
 
 ## Core Remix Rules
@@ -194,7 +194,7 @@ When code could live in multiple places:
 - Recreating the old `app/controllers` or standalone root action file layout instead of using controllers under `app/actions`
 - Putting nested route-map keys inside a controller `actions` object. Map nested route maps explicitly in `app/router.ts`
 - Treating direct `router.get(...)`/`router.post(...)` registrations as the default app structure instead of using controllers
-- Assuming controller middleware applies to controllers registered for nested route maps
+- Assuming controller middleware applies to controllers registered for nested route maps; use mount middleware when the boundary should span the route group
 - Writing only component tests for a feature whose main behavior is really an HTTP route concern
 
 ## Package Map
