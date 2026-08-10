@@ -83,10 +83,10 @@ class RemixHmrContext {
   invalidate(message) {
     this.invalidated = true
     if (this.updating) {
-      if (message) console.warn(message)
+      if (message) console.debug(message)
       return
     }
-    if (message) console.warn(message)
+    if (message) console.debug(message)
     reloadPage()
   }
 
@@ -115,9 +115,10 @@ let stylesheetUpdatePromise = Promise.resolve()
 let events = new EventSource(${JSON.stringify(options.eventPathname)})
 
 events.onopen = () => {
-  console.info('[remix] HMR connected')
+  console.debug('[remix] HMR connected')
   if (reconnectPending) {
     reconnectPending = false
+    console.log('[remix] HMR reconnected')
     handleReconnect().catch((error) => {
       console.error('[remix] HMR reconnect recovery failed', error)
       reloadPage()
@@ -127,8 +128,10 @@ events.onopen = () => {
 }
 
 events.onerror = () => {
-  if (connected) reconnectPending = true
-  console.warn('[remix] HMR connection lost, retrying...')
+  if (!connected) return
+  connected = false
+  reconnectPending = true
+  console.log('[remix] HMR connection lost, retrying...')
 }
 
 events.onmessage = (event) => {
@@ -142,10 +145,7 @@ events.onmessage = (event) => {
 }
 
 async function handlePayload(payload) {
-  console.info('[remix] HMR payload', payload)
-
   if (payload.type === 'browser:reload') {
-    console.info('[remix] HMR reloading page')
     reloadPage()
     return
   }
@@ -159,7 +159,7 @@ async function handlePayload(payload) {
   if (payload.type === 'browser:update') {
     for (let update of payload.updates) {
       if (update.type === 'css') {
-        console.info('[remix] HMR updating stylesheet', update.path)
+        console.debug('[remix] HMR updating stylesheet', update.path)
         await queueStylesheetUpdate(update.path, payload.timestamp)
         continue
       }
@@ -171,7 +171,7 @@ async function handlePayload(payload) {
         failedJavaScriptUpdates.set(update.path, update.acceptedPath ?? update.path)
         throw error
       }
-      console.info('[remix] HMR accepted update', update.path)
+      console.debug('[remix] HMR accepted update', update.path)
     }
   }
 }
@@ -190,7 +190,7 @@ async function retryFailedJavaScriptUpdates(data) {
     try {
       await updateJavaScriptModule(path, acceptedPath, timestamp)
       failedJavaScriptUpdates.delete(path)
-      console.info('[remix] HMR recovered update', path)
+      console.debug('[remix] HMR recovered update', path)
     } catch (error) {
       console.error('[remix] HMR recovery update failed', error)
     }
@@ -233,7 +233,7 @@ async function updateJavaScriptModule(path, acceptedPath, timestamp) {
       ? previousContext.acceptCallbacks.length === 0
       : dependencyCallbacks.length === 0)
   ) {
-    console.info('[remix] HMR no accept handler, reloading page', path)
+    console.log('[remix] HMR no accept handler, reloading page', path)
     reloadPage()
     return
   }
@@ -387,6 +387,7 @@ function withTimestamp(path, timestamp) {
 function reloadPage() {
   if (pageReloadTimer) clearTimeout(pageReloadTimer)
   pageReloadTimer = setTimeout(() => {
+    console.debug('[remix] HMR reloading page')
     window.location.href = window.location.href
   }, 20)
 }
