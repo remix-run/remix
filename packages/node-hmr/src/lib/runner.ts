@@ -15,16 +15,7 @@ import {
   type BrowserHmrEvent,
   type HmrEventPayload,
 } from './browser-events.ts'
-
-interface NodeHmrModuleInfo {
-  filePath: string
-  hmr: {
-    acceptedDeps: string[]
-    selfAccepting: boolean
-    usesImportMetaHot: boolean
-  }
-  url: string
-}
+import { createModuleStore, type ModuleRecord } from './module-store.ts'
 
 interface NodeHmrUpdate {
   acceptedUrl: string
@@ -72,7 +63,7 @@ type ChildMessage =
   | {
       type: 'node-hmr:child:module-analyzed'
       filePath: string
-      hmr: NodeHmrModuleInfo['hmr']
+      hmr: ModuleRecord['hmr']
       url: string
     }
   | {
@@ -217,9 +208,7 @@ export function createHmrSupervisor(options: {
   let child: ChildProcess | undefined
   let restartTimer: NodeJS.Timeout | undefined
   let resolveRun: (() => void) | undefined
-  let moduleInfoByFilePath = new Map<string, NodeHmrModuleInfo[]>()
-  let moduleInfoByUrl = new Map<string, NodeHmrModuleInfo>()
-  let moduleDepsByUrl = new Map<string, Set<string>>()
+  let moduleStore = createModuleStore()
   let watchedFilePaths = new Set<string>()
   let watchedDirectoryRefCounts = new Map<string, number>()
   let browserWatchedFileRefCountsByRuntime = new Map<number, Map<string, number>>()
@@ -290,9 +279,7 @@ export function createHmrSupervisor(options: {
 
   function start() {
     setReadyGeneration(-1)
-    moduleInfoByFilePath = new Map()
-    moduleInfoByUrl = new Map()
-    moduleDepsByUrl = new Map()
+    moduleStore.reset()
     browserWatchedFileRefCountsByRuntime = new Map()
     browserWatchedFilePaths = new Set()
     unwatchKnownModuleFiles()
@@ -435,39 +422,20 @@ export function createHmrSupervisor(options: {
     }
 
     if (message.type === 'node-hmr:child:module-imported') {
-      let deps = moduleDepsByUrl.get(message.importerUrl)
-      if (!deps) {
-        deps = new Set()
-        moduleDepsByUrl.set(message.importerUrl, deps)
-      }
-      deps.add(message.depUrl)
+      moduleStore.addDependency(message.importerUrl, message.depUrl)
       return
     }
 
     if (message.type === 'node-hmr:child:accepted-deps-resolved') {
-      let moduleInfo = moduleInfoByUrl.get(message.url)
-      if (moduleInfo !== undefined) {
-        moduleInfo.hmr.acceptedDeps = message.acceptedDeps
-      }
+      moduleStore.setAcceptedDependencies(message.url, message.acceptedDeps)
       return
     }
 
-    let existingModules = moduleInfoByFilePath.get(message.filePath) ?? []
-    let nextInfo: NodeHmrModuleInfo = {
+    moduleStore.setModule({
       filePath: message.filePath,
       hmr: message.hmr,
       url: message.url,
-    }
-    let moduleIndex = existingModules.findIndex((info) => info.url === message.url)
-    moduleDepsByUrl.set(message.url, new Set())
-
-    if (moduleIndex === -1) {
-      moduleInfoByFilePath.set(message.filePath, [...existingModules, nextInfo])
-    } else {
-      existingModules[moduleIndex] = nextInfo
-      moduleInfoByFilePath.set(message.filePath, existingModules)
-    }
-    moduleInfoByUrl.set(message.url, nextInfo)
+    })
     syncWatchedModuleFiles()
   }
 
@@ -478,11 +446,9 @@ export function createHmrSupervisor(options: {
   function syncWatchedModuleFiles(requiredFilePaths: Set<string> = new Set()): void {
     let nextWatchedFilePaths = new Set(requiredFilePaths)
 
-    for (let url of getReachableModuleUrls()) {
-      let moduleInfo = moduleInfoByUrl.get(url)
-      if (moduleInfo !== undefined) {
-        nextWatchedFilePaths.add(moduleInfo.filePath)
-      }
+    let entryUrl = pathToFileURL(getEntryPath()).href
+    for (let filePath of moduleStore.getReachableFilePaths(entryUrl)) {
+      nextWatchedFilePaths.add(filePath)
     }
 
     let nextWatchedDirectoryRefCounts = new Map<string, number>()
@@ -497,23 +463,6 @@ export function createHmrSupervisor(options: {
     watchedFilePaths = nextWatchedFilePaths
     watchedDirectoryRefCounts = nextWatchedDirectoryRefCounts
     syncWatchedDirectories()
-  }
-
-  function getReachableModuleUrls(): Set<string> {
-    let entryUrl = pathToFileURL(getEntryPath()).href
-    let reachable = new Set<string>()
-    visit(entryUrl)
-    return reachable
-
-    function visit(url: string): void {
-      if (reachable.has(url)) return
-      if (!moduleInfoByUrl.has(url)) return
-
-      reachable.add(url)
-      for (let depUrl of moduleDepsByUrl.get(url) ?? []) {
-        visit(depUrl)
-      }
-    }
   }
 
   function unwatchKnownModuleFiles(): void {
@@ -654,8 +603,8 @@ export function createHmrSupervisor(options: {
         if (!watchedFilePaths.has(changedPath)) continue
         checkedChangedPaths.push(changedPath)
 
-        let modules = moduleInfoByFilePath.get(changedPath)
-        if (modules === undefined || modules.length === 0) {
+        let modules = moduleStore.getModulesForFile(changedPath)
+        if (modules.length === 0) {
           markBrowserHmrEventServerPathsChecked(checkedChangedPaths)
           forceBrowserFullReloadIfBrowserWorkPending()
           logRestart(formatChangedPath(changedPath, options.cwd))
@@ -665,18 +614,8 @@ export function createHmrSupervisor(options: {
         }
 
         for (let moduleInfo of modules) {
-          if (moduleInfo.hmr.selfAccepting) {
-            hotUpdates.push({
-              acceptedUrl: moduleInfo.url,
-              filePath: moduleInfo.filePath,
-              invalidatedUrls: getInvalidatedUrls([moduleInfo.url], Date.now()),
-              url: moduleInfo.url,
-            })
-            continue
-          }
-
-          let propagation = findHmrPropagation(moduleInfo.url, Date.now())
-          if (!propagation) {
+          let hotUpdateBoundaries = moduleStore.findHotUpdateBoundaries(moduleInfo.url, Date.now())
+          if (!hotUpdateBoundaries) {
             markBrowserHmrEventServerPathsChecked(checkedChangedPaths)
             forceBrowserFullReloadIfBrowserWorkPending()
             logRestart(formatChangedPath(changedPath, options.cwd))
@@ -686,7 +625,12 @@ export function createHmrSupervisor(options: {
           }
 
           hotUpdates.push(
-            ...propagation.map((update) => ({ ...update, filePath: moduleInfo.filePath })),
+            ...hotUpdateBoundaries.map((boundary) => ({
+              acceptedUrl: boundary.acceptedDependencyUrl,
+              filePath: moduleInfo.filePath,
+              invalidatedUrls: boundary.invalidatedUrls,
+              url: boundary.updateHandlerUrl,
+            })),
           )
         }
       }
@@ -759,9 +703,9 @@ export function createHmrSupervisor(options: {
     timestamp: number,
     message: string | undefined,
   ): Promise<void> {
-    let moduleInfo = moduleInfoByUrl.get(url)
-    let propagation = findHmrPropagationFromImporters(url, timestamp)
-    if (!propagation || propagation.length === 0) {
+    let moduleInfo = moduleStore.getModule(url)
+    let hotUpdateBoundaries = moduleStore.findHotUpdateBoundariesFromImporters(url, timestamp)
+    if (!hotUpdateBoundaries || hotUpdateBoundaries.length === 0) {
       clearPendingHotUpdates()
       forceBrowserFullReloadIfBrowserWorkPending()
       logRestart(
@@ -772,11 +716,18 @@ export function createHmrSupervisor(options: {
       return
     }
 
-    pendingHotUpdateCount = Math.max(0, pendingHotUpdateCount - 1) + propagation.length
+    pendingHotUpdateCount = Math.max(0, pendingHotUpdateCount - 1) + hotUpdateBoundaries.length
 
-    for (let update of propagation) {
-      let filePath = moduleInfo?.filePath ?? update.acceptedUrl
-      if (!sendHotUpdate({ ...update, filePath })) {
+    for (let boundary of hotUpdateBoundaries) {
+      let filePath = moduleInfo?.filePath ?? boundary.acceptedDependencyUrl
+      if (
+        !sendHotUpdate({
+          acceptedUrl: boundary.acceptedDependencyUrl,
+          filePath,
+          invalidatedUrls: boundary.invalidatedUrls,
+          url: boundary.updateHandlerUrl,
+        })
+      ) {
         clearPendingHotUpdates()
         forceBrowserFullReloadIfBrowserWorkPending()
         logRestart(moduleInfo ? formatChangedPath(moduleInfo.filePath, options.cwd) : url)
@@ -955,96 +906,6 @@ export function createHmrSupervisor(options: {
     for (let filePath of filePaths) {
       pendingBrowserHmrEventServerPaths.delete(filePath)
     }
-  }
-
-  function findHmrPropagation(
-    url: string,
-    timestamp: number,
-    traversed: Set<string> = new Set(),
-    invalidatedUrls: string[] = [url],
-  ): Array<Omit<NodeHmrUpdate, 'filePath'>> | null {
-    if (traversed.has(url)) return []
-    traversed.add(url)
-
-    let moduleInfo = moduleInfoByUrl.get(url)
-    if (moduleInfo === undefined) return null
-
-    if (moduleInfo.hmr.selfAccepting) {
-      return [
-        {
-          acceptedUrl: url,
-          invalidatedUrls: getInvalidatedUrls(invalidatedUrls, timestamp),
-          url,
-        },
-      ]
-    }
-
-    let importers = [...moduleInfoByUrl.values()].filter(
-      (moduleInfo) => moduleDepsByUrl.get(moduleInfo.url)?.has(url) === true,
-    )
-    if (importers.length === 0) return null
-
-    let updates: Array<Omit<NodeHmrUpdate, 'filePath'>> = []
-    for (let moduleInfo of importers) {
-      if (moduleInfo.hmr.acceptedDeps.includes(url)) {
-        updates.push({
-          acceptedUrl: url,
-          invalidatedUrls: getInvalidatedUrls(invalidatedUrls, timestamp),
-          url: moduleInfo.url,
-        })
-        continue
-      }
-
-      let importerUpdates = findHmrPropagation(moduleInfo.url, timestamp, traversed, [
-        ...invalidatedUrls,
-        moduleInfo.url,
-      ])
-      if (!importerUpdates) return null
-      updates.push(...importerUpdates)
-    }
-
-    return dedupeNodeHmrUpdates(updates)
-  }
-
-  function findHmrPropagationFromImporters(
-    url: string,
-    timestamp: number,
-    traversed: Set<string> = new Set([url]),
-    invalidatedUrls: string[] = [url],
-  ): Array<Omit<NodeHmrUpdate, 'filePath'>> | null {
-    let importers = [...moduleInfoByUrl.values()].filter(
-      (moduleInfo) => moduleDepsByUrl.get(moduleInfo.url)?.has(url) === true,
-    )
-    if (importers.length === 0) return null
-
-    let updates: Array<Omit<NodeHmrUpdate, 'filePath'>> = []
-    for (let moduleInfo of importers) {
-      if (moduleInfo.hmr.acceptedDeps.includes(url)) {
-        updates.push({
-          acceptedUrl: url,
-          invalidatedUrls: getInvalidatedUrls(invalidatedUrls, timestamp),
-          url: moduleInfo.url,
-        })
-        continue
-      }
-
-      let importerUpdates = findHmrPropagation(moduleInfo.url, timestamp, traversed, [
-        ...invalidatedUrls,
-        moduleInfo.url,
-      ])
-      if (!importerUpdates) return null
-      updates.push(...importerUpdates)
-    }
-
-    return dedupeNodeHmrUpdates(updates)
-  }
-
-  function getInvalidatedUrls(urls: readonly string[], timestamp: number): Record<string, number> {
-    let invalidatedUrls: Record<string, number> = {}
-    for (let url of urls) {
-      invalidatedUrls[url] = timestamp
-    }
-    return invalidatedUrls
   }
 
   function sendHotUpdate(moduleInfo: NodeHmrUpdate): boolean {
@@ -1363,22 +1224,6 @@ function formatChangedPath(path: string, cwd: string): string {
   return (relative(cwd, path) || path).replace(/\\/g, '/')
 }
 
-function dedupeNodeHmrUpdates(
-  updates: Array<Omit<NodeHmrUpdate, 'filePath'>>,
-): Array<Omit<NodeHmrUpdate, 'filePath'>> {
-  let seen = new Set<string>()
-  let result: Array<Omit<NodeHmrUpdate, 'filePath'>> = []
-
-  for (let update of updates) {
-    let key = `${update.url}\0${update.acceptedUrl}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    result.push(update)
-  }
-
-  return result
-}
-
 async function stopChild(
   child: ChildProcess | undefined,
   options: { force: boolean; signal: NodeJS.Signals },
@@ -1555,7 +1400,7 @@ function isWatchFileDelta(value: unknown): value is { add: string[]; remove: str
   )
 }
 
-function isHmrInfo(value: unknown): value is NodeHmrModuleInfo['hmr'] {
+function isHmrInfo(value: unknown): value is ModuleRecord['hmr'] {
   return (
     typeof value === 'object' &&
     value !== null &&
