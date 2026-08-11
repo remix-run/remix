@@ -2388,19 +2388,19 @@ describe('run', () => {
     expect(secondSignal?.aborted).toBe(false)
 
     resolveFirstReloadContent('<section><p id="reload-value">Stale</p></section>')
-    let firstReturnedSignal = await firstReloadPromise
+    let firstReloadSignal = await firstReloadPromise
     await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(firstReturnedSignal).toBe(firstSignal)
-    expect(firstReturnedSignal.aborted).toBe(true)
+    expect(firstReloadSignal).toBe(firstSignal)
+    expect(firstReloadSignal.aborted).toBe(true)
 
     // First reload should be ignored because it was superseded.
     expect(document.getElementById('reload-value')?.textContent).toBe('Initial')
 
     resolveSecondReloadContent('<section><p id="reload-value">Fresh</p></section>')
-    let secondReturnedSignal = await secondReloadPromise
+    let secondReloadSignal = await secondReloadPromise
     await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(secondReturnedSignal).toBe(secondSignal)
-    expect(secondReturnedSignal.aborted).toBe(false)
+    expect(secondReloadSignal).toBe(secondSignal)
+    expect(secondReloadSignal.aborted).toBe(false)
 
     expect(document.getElementById('reload-value')?.textContent).toBe('Fresh')
     clientFrame.dispose()
