@@ -26,12 +26,7 @@ export function AccountEditor(handle: Handle<AccountEditorProps>) {
           resets when the demo server restarts.
         </p>
 
-        <form
-          method="POST"
-          action={routes.main.account.edit.action.href()}
-          rmx-target={frames.account}
-          mix={formStyle}
-        >
+        <form method="POST" action={routes.main.account.edit.action.href()} mix={formStyle}>
           <FormField
             label="Display name"
             name="displayName"

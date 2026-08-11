@@ -104,6 +104,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
+      playwright:
+        specifier: 'catalog:'
+        version: 1.60.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2

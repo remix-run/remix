@@ -34,6 +34,7 @@ export function MainCoursesPage(handle: Handle<MainCoursesPageProps>) {
           method="GET"
           action={routes.main.courses.href()}
           rmx-target={frames.courses}
+          rmx-history="replace"
           mix={filterFormStyle}
         >
           <label for="course-filter" mix={filterLabelStyle}>

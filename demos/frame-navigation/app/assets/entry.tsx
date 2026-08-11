@@ -38,8 +38,10 @@ async function resolveFrameResponse(
     signal: options?.signal,
   })
 
-  if (res.status === 401) {
-    window.location.assign(routes.auth.login.index.href())
+  // A redirected response may contain document UI that is not valid for the requested subframe.
+  // The destination opts into subframe rendering by returning the matching target header.
+  if (res.redirected && options?.target) {
+    window.location.assign(res.url)
     return new Promise<never>(() => {})
   }
 
