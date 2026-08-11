@@ -1486,8 +1486,8 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
   return {
     baseUrl: `http://127.0.0.1:${port}`,
     async close() {
-      closePromise ??= stopProcess(child)
-      await closePromise
+      closePromise ??= closeFixtureProcesses()
+      return closePromise
     },
     get output() {
       return processOutput
@@ -1512,6 +1512,16 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     let event = readyEvents[index]
     assert.ok(event)
     return event
+  }
+
+  async function closeFixtureProcesses(): Promise<void> {
+    await stopProcess(child)
+
+    for (let pid of new Set(readyEvents.map((event) => event.pid))) {
+      console.log(
+        `[assets-hmr] child process ${pid} alive after fixture process ${child.pid} exit: ${isProcessAlive(pid)}`,
+      )
+    }
   }
 }
 
@@ -1965,33 +1975,35 @@ async function stopProcess(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) return
 
   await new Promise<void>((resolve) => {
-    let start = Date.now()
-    let forceKilled = false
     let timeout = setTimeout(() => {
-      forceKilled = true
       console.log(`[assets-hmr] force-killing fixture process ${child.pid}`)
       child.kill('SIGKILL')
     }, 5_000)
 
-    function complete(code: number | null, signal: NodeJS.Signals | null) {
+    function complete() {
       clearTimeout(timeout)
       child.off('exit', complete)
-      console.log(
-        `[assets-hmr] fixture process ${child.pid} exited after ${Date.now() - start}ms ` +
-          `(code=${code}, signal=${signal}, forceKilled=${forceKilled})`,
-      )
       resolve()
     }
 
     child.once('exit', complete)
 
     if (child.exitCode !== null || child.signalCode !== null) {
-      complete(child.exitCode, child.signalCode)
+      complete()
       return
     }
 
     child.kill('SIGTERM')
   })
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
 }
 
 async function write(rootDir: string, rel: string, content: string): Promise<void> {
