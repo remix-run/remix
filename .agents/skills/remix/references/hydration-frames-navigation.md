@@ -95,6 +95,7 @@ Client entry props must be serializable: strings, numbers, booleans, `null`, `un
 Use `run` to start the client runtime. It scans the document for client entry markers, loads modules, and hydrates each one:
 
 ```tsx
+import type { ResolveFrameOptions } from 'remix/ui'
 import { run } from 'remix/ui'
 
 const app = run({
@@ -102,13 +103,30 @@ const app = run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, signal, target) {
-    let headers = new Headers({ accept: 'text/html' })
-    if (target) headers.set('x-remix-target', target)
-    let response = await fetch(src, { headers, signal })
+  async resolveFrame(src, options) {
+    let headers = new Headers({ accept: 'text/html', 'x-remix-frame': 'true' })
+    if (options?.target) headers.set('x-remix-target', options.target)
+    let response = await fetch(src, {
+      body: getRequestBody(options),
+      headers,
+      method: options?.method,
+      signal: options?.signal,
+    })
     return response.body ?? (await response.text())
   },
 })
+
+function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+  let formData = options?.formData
+  if (!formData) return
+  if (options.encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
+}
 
 app.addEventListener('error', (event) => {
   console.error('Component error:', event.error)
@@ -120,7 +138,7 @@ await app.ready()
 ### `run` options
 
 - **`loadModule(moduleUrl, exportName)`** (required) — return the component function for each client entry. Typically uses dynamic `import()`.
-- **`resolveFrame(src, signal, target)`** (optional) — called when a `<Frame>` loads or reloads content. `target` is available when frame targeting matters.
+- **`resolveFrame(src, options)`** (optional) — called when a `<Frame>` loads or reloads content and for intercepted link and form navigations. `options` may contain `signal` and `target`; non-GET forms also provide `formData`, `method`, and `encType`.
 
 ### `app` methods
 
@@ -189,6 +207,19 @@ handle.frames.top.reload()
 
 When a frame reloads, matching DOM nodes are updated in place. Client entries receive updated props while preserving their local component state.
 
+### Form navigation
+
+When `run({ resolveFrame })` is active, eligible same-origin forms progressively enhance into frame navigations. Native validation and the form's `submit` event still run first.
+
+- Forms target `handle.frames.top` by default.
+- `rmx-target` selects a named frame.
+- `rmx-src` selects a different frame request URL while preserving the form action as the navigation destination.
+- `rmx-reset-scroll="false"` preserves scroll position.
+- `rmx-document` opts back into a document submission.
+- Cross-origin forms, `method="dialog"`, and `target="_blank"` remain browser-owned.
+
+GET controls are already encoded in `src`, so GET forms reach the resolver like links. Non-GET forms provide their native `FormData`, effective method, and encoding. The resolver owns body encoding and method-override conventions. Non-GET submissions to the current URL replace its history entry; GET submissions and submissions to a different URL push one.
+
 ### Nested frames
 
 Frames can nest. Each frame owns its own DOM region and hydrates client entries independently. During SSR, `handle.frame.src` points at the frame being rendered, while `handle.frames.top.src` stays fixed at the outer document URL.
@@ -252,7 +283,7 @@ navigate('/dashboard', { history: 'replace' })
 
 Options: `src`, `target`, `history` (`'push' | 'replace'`), `resetScroll`.
 
-Attributes understood by the runtime: `rmx-target`, `rmx-src`, `rmx-document`.
+Attributes understood by the runtime: `rmx-target`, `rmx-src`, `rmx-reset-scroll`, `rmx-document`.
 
 ## Head Management
 

@@ -1,0 +1,1 @@
+Form submissions can now progressively enhance into `remix/ui` frame navigations, with non-GET submission metadata available to the resolver and `rmx-document` available as an opt-out. Non-GET submissions to the current URL replace its history entry without retaining their `FormData`; submissions to a different URL and GET submissions push a new entry.
