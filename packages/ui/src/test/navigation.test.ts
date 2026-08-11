@@ -220,6 +220,45 @@ describe('navigate', () => {
     controller.abort()
   })
 
+  it('replaces marked anchor history without precommit support', async (t) => {
+    stubGlobalField(t, 'NavigationPrecommitController', undefined)
+
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'replace-link')
+    let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
+    let topFrame = { src: '' } as FrameHandle
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame: async (_frame, options) => ({ signal: await reload(options) }),
+    })
+
+    let anchor = document.createElement('a')
+    anchor.href = destination.href
+    anchor.setAttribute('rmx-history', 'replace')
+    document.body.append(anchor)
+
+    let entryCountBeforeNavigation = window.navigation.entries().length
+    let didNavigate = false
+    try {
+      let navigationSucceeded = waitForNavigationSuccess()
+      anchor.click()
+      await navigationSucceeded
+      didNavigate = true
+
+      let entryAfterNavigation = getCurrentNavigationEntry()
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation)
+      expect(entryAfterNavigation.url).toBe(destination.href)
+      expect(topFrame.src).toBe(destination.href)
+      expect(reload).toHaveBeenCalledTimes(1)
+    } finally {
+      if (didNavigate) await navigate(originalUrl, { history: 'replace' })
+      controller.abort()
+    }
+  })
+
   it('replaces the navigation URL when the top frame reload follows a redirect', async () => {
     let originalUrl = window.location.href
     let requestedUrl = new URL(originalUrl)
@@ -405,6 +444,40 @@ describe('form navigation', () => {
     controller.abort()
   })
 
+  it('pushes same-location POST history when rmx-history is push', async () => {
+    let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
+    let topFrame = { src: '' } as FrameHandle
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame: async (_frame, options) => ({ signal: await reload(options) }),
+    })
+
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'post'
+    form.setAttribute('rmx-history', 'push')
+    document.body.append(form)
+
+    let entryBeforeSubmission = getCurrentNavigationEntry()
+    let didNavigate = false
+    try {
+      let navigationSucceeded = waitForNavigationSuccess()
+      form.requestSubmit()
+      await navigationSucceeded
+      didNavigate = true
+
+      let entryAfterSubmission = getCurrentNavigationEntry()
+      expect(entryAfterSubmission.index).toBe(entryBeforeSubmission.index + 1)
+      expect(entryAfterSubmission.url).toBe(entryBeforeSubmission.url)
+      expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
+    } finally {
+      if (didNavigate) await window.navigation.back().finished
+      controller.abort()
+    }
+  })
+
   it('pushes POST submission history for a different location', async () => {
     let reload = mock.fn(async (_options?: ResolveFrameOptions) => ({
       signal: new AbortController().signal,
@@ -540,6 +613,63 @@ describe('form navigation', () => {
       expect(options && Reflect.has(options, 'formData')).toBe(false)
     } finally {
       if (didNavigate) await window.navigation.back().finished
+      controller.abort()
+    }
+  })
+
+  it('replaces marked GET form history across frame redirects without submission metadata', async () => {
+    expect(typeof Reflect.get(window, 'NavigationPrecommitController')).toBe('function')
+
+    let originalUrl = window.location.href
+    let redirectedUrl = new URL(originalUrl)
+    redirectedUrl.searchParams.set('query', 'redirected-frames')
+    let topFrame = { src: '' } as FrameHandle
+    let shouldRedirect = true
+    let reload = mock.fn(async (_options?: ResolveFrameOptions) => {
+      if (shouldRedirect) {
+        shouldRedirect = false
+        return {
+          signal: new AbortController().signal,
+          redirectedTo: redirectedUrl.href,
+        }
+      }
+      return { signal: new AbortController().signal }
+    })
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame: (_frame, options) => reload(options),
+    })
+
+    let form = document.createElement('form')
+    form.action = originalUrl
+    form.method = 'get'
+    form.setAttribute('rmx-history', 'replace')
+    let input = document.createElement('input')
+    input.name = 'query'
+    input.value = 'replace-frames'
+    form.append(input)
+    document.body.append(form)
+
+    let entryCountBeforeSubmission = window.navigation.entries().length
+    let didNavigate = false
+    try {
+      let redirected = waitForNavigationUrl(redirectedUrl.href)
+      form.requestSubmit()
+      await redirected
+      didNavigate = true
+
+      let entryAfterSubmission = getCurrentNavigationEntry()
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeSubmission)
+      expect(entryAfterSubmission.url).toBe(redirectedUrl.href)
+      expect(reload).toHaveBeenCalledTimes(1)
+      let options = reload.mock.calls[0]?.arguments[0]
+      expect(options && Reflect.has(options, 'method')).toBe(false)
+      expect(options && Reflect.has(options, 'encType')).toBe(false)
+      expect(options && Reflect.has(options, 'formData')).toBe(false)
+    } finally {
+      if (didNavigate) await navigate(originalUrl, { history: 'replace' })
       controller.abort()
     }
   })
