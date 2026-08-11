@@ -1965,15 +1965,30 @@ async function stopProcess(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) return
 
   await new Promise<void>((resolve) => {
+    let start = Date.now()
+    let forceKilled = false
     let timeout = setTimeout(() => {
+      forceKilled = true
+      console.log(`[assets-hmr] force-killing fixture process ${child.pid}`)
       child.kill('SIGKILL')
-      resolve()
     }, 5_000)
 
-    child.once('exit', () => {
+    function complete(code: number | null, signal: NodeJS.Signals | null) {
       clearTimeout(timeout)
+      child.off('exit', complete)
+      console.log(
+        `[assets-hmr] fixture process ${child.pid} exited after ${Date.now() - start}ms ` +
+          `(code=${code}, signal=${signal}, forceKilled=${forceKilled})`,
+      )
       resolve()
-    })
+    }
+
+    child.once('exit', complete)
+
+    if (child.exitCode !== null || child.signalCode !== null) {
+      complete(child.exitCode, child.signalCode)
+      return
+    }
 
     child.kill('SIGTERM')
   })
