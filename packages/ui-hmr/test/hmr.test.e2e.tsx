@@ -461,8 +461,9 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
   it('recovers failed client entry updates after a server update from node-hmr', async (t) => {
     let traceStart = Date.now()
+    let traceMessages: string[] = []
     let trace = (message: string) => {
-      console.log(`[ui-hmr-recovery +${Date.now() - traceStart}ms] ${message}`)
+      traceMessages.push(`[ui-hmr-recovery +${Date.now() - traceStart}ms] ${message}`)
     }
     let fixture = await createNodeHmrFixture()
     let server: NodeHmrTestServer | undefined
@@ -536,6 +537,9 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
         'Client: after server update!!!!!',
       )
       assert.equal(server.readyCount, 2)
+    } catch (error) {
+      let message = error instanceof Error ? error.message : String(error)
+      throw new Error(`${message}\ntrace:\n${traceMessages.join('\n')}`, { cause: error })
     } finally {
       trace('closing fixture')
       await server?.close()
