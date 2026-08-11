@@ -19,10 +19,7 @@ const app = run({
   },
 })
 
-async function resolveFrameResponse(
-  url: URL,
-  options?: ResolveFrameOptions,
-) {
+async function resolveFrameResponse(url: URL, options?: ResolveFrameOptions) {
   let headers = new Headers()
   headers.set('Accept', 'text/html')
   headers.set('X-Remix-Frame', 'true')

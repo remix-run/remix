@@ -529,8 +529,7 @@ describe('form navigation', () => {
         expect(name).toBe('account')
         return namedFrame
       },
-      reloadFrame: (frame, options) =>
-        frame === namedFrame ? namedReload(options) : topReload(),
+      reloadFrame: (frame, options) => (frame === namedFrame ? namedReload(options) : topReload()),
     })
 
     let destinationUrl = window.location.href
