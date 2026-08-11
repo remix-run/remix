@@ -718,7 +718,7 @@ describe('node-hmr', () => {
 
       await waitForResponse(ready.port, 'two', () => server.output)
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update message\.ts/)
+      await waitForOutput(server, /hmr update message\.ts/)
 
       await fs.writeFile(path.join(fixture.path, 'value.ts'), `export const message = 'stale'`)
 
@@ -831,7 +831,7 @@ describe('node-hmr', () => {
 
       await waitForResponse(ready.port, 'two')
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update value\.ts/)
+      await waitForOutput(server, /hmr update value\.ts/)
     } finally {
       await server.stop()
     }
