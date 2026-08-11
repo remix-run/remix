@@ -800,7 +800,7 @@ async function createHmrFixture(
   return {
     rootDir,
     async close() {
-      await fs.rm(rootDir, { force: true, recursive: true })
+      await removeFixtureDir(rootDir)
     },
   }
 }
@@ -1052,9 +1052,18 @@ async function createNodeHmrFixture(
     devProxy: options.devProxy === true,
     rootDir,
     async close() {
-      await fs.rm(rootDir, { force: true, recursive: true })
+      await removeFixtureDir(rootDir)
     },
   }
+}
+
+async function removeFixtureDir(fixturePath: string): Promise<void> {
+  await fs.rm(fixturePath, {
+    force: true,
+    maxRetries: process.platform === 'win32' ? 5 : 0,
+    recursive: true,
+    retryDelay: 100,
+  })
 }
 
 function getClientMessageSource(message: string): string {
@@ -1486,8 +1495,8 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
   return {
     baseUrl: `http://127.0.0.1:${port}`,
     async close() {
-      closePromise ??= closeFixtureProcesses()
-      return closePromise
+      closePromise ??= stopProcess(child)
+      await closePromise
     },
     get output() {
       return processOutput
@@ -1512,16 +1521,6 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     let event = readyEvents[index]
     assert.ok(event)
     return event
-  }
-
-  async function closeFixtureProcesses(): Promise<void> {
-    await stopProcess(child)
-
-    for (let pid of new Set(readyEvents.map((event) => event.pid))) {
-      console.log(
-        `[assets-hmr] child process ${pid} alive after fixture process ${child.pid} exit: ${isProcessAlive(pid)}`,
-      )
-    }
   }
 }
 
@@ -1976,34 +1975,17 @@ async function stopProcess(child: ChildProcess): Promise<void> {
 
   await new Promise<void>((resolve) => {
     let timeout = setTimeout(() => {
-      console.log(`[assets-hmr] force-killing fixture process ${child.pid}`)
       child.kill('SIGKILL')
+      resolve()
     }, 5_000)
 
-    function complete() {
+    child.once('exit', () => {
       clearTimeout(timeout)
-      child.off('exit', complete)
       resolve()
-    }
-
-    child.once('exit', complete)
-
-    if (child.exitCode !== null || child.signalCode !== null) {
-      complete()
-      return
-    }
+    })
 
     child.kill('SIGTERM')
   })
-}
-
-function isProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch {
-    return false
-  }
 }
 
 async function write(rootDir: string, rel: string, content: string): Promise<void> {
