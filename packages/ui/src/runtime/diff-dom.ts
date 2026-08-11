@@ -76,6 +76,20 @@ export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
         continue
       }
 
+      // An obsolete hydration root owns its entire marker-bounded range. Remove
+      // that range atomically so disposal cannot detach nodes that a later
+      // incoming sibling would otherwise match.
+      if (isVirtualRootStartMarker(c)) {
+        let currentEndIndex = findHydrationEndIndex(curr, currentIndex)
+        parent.insertBefore(n, c)
+        for (let i = currentIndex; i <= currentEndIndex; i++) {
+          removeNode(curr[i], parent, context)
+        }
+        currentIndex = currentEndIndex + 1
+        nextIndex++
+        continue
+      }
+
       let cursor = diffNode(c, n, context)
       if (cursor) {
         let nextEndIndex = next.indexOf(cursor)
@@ -289,10 +303,12 @@ function isPopoverOpen(element: Element): boolean {
 function diffElementChildren(current: Element, next: Element, context: FrameContext): void {
   let currentChildren = Array.from(current.childNodes)
   let nextChildren = Array.from(next.childNodes)
+  let ownedByHydrationRange = findNodesOwnedByHydrationRanges(currentChildren)
 
   // Keyed map by data-key for current children
   let keyToIndex = new Map<string, number>()
   for (let i = 0; i < currentChildren.length; i++) {
+    if (ownedByHydrationRange[i]) continue
     let node = currentChildren[i]
     if (isElement(node)) {
       let key = node.getAttribute('data-key')
@@ -309,7 +325,7 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
 
     if (isFrameEndMarker(nextChild)) {
       for (let j = 0; j < currentChildren.length; j++) {
-        if (!used[j] && isFrameEndMarker(currentChildren[j])) {
+        if (!ownedByHydrationRange[j] && !used[j] && isFrameEndMarker(currentChildren[j])) {
           matchIndex = j
           break
         }
@@ -326,6 +342,7 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
       let candidateIndex = i
       if (
         candidateIndex < currentChildren.length &&
+        !ownedByHydrationRange[candidateIndex] &&
         !used[candidateIndex] &&
         nodeTypesComparable(currentChildren[candidateIndex], nextChild)
       ) {
@@ -458,6 +475,29 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
   }
 }
 
+function findNodesOwnedByHydrationRanges(nodes: Node[]): Uint8Array {
+  let owned = new Uint8Array(nodes.length)
+
+  for (let startIndex = 0; startIndex < nodes.length; startIndex++) {
+    let start = nodes[startIndex]
+    let endIndex = isVirtualRootStartMarker(start)
+      ? findHydrationEndIndex(nodes, startIndex)
+      : startIndex
+
+    if (endIndex === startIndex) continue
+
+    // A hydration root owns its interior DOM even if reconciliation moves that
+    // DOM outside the marker comments. Keep those nodes out of ordinary matching
+    // so disposing the obsolete root cannot remove a newly committed sibling.
+    for (let i = startIndex + 1; i <= endIndex; i++) {
+      owned[i] = 1
+    }
+    startIndex = endIndex
+  }
+
+  return owned
+}
+
 function isPreservedDomElement(node: Node): node is Element {
   return isElement(node) && node.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)
 }
@@ -505,8 +545,15 @@ function findHydrationEndMarker(start: Comment): Comment {
 }
 
 function findHydrationEndIndex(nodes: Node[], startIdx: number): number {
+  let depth = 1
+
   for (let j = startIdx + 1; j < nodes.length; j++) {
-    if (isHydrationEndComment(nodes[j])) return j
+    let node = nodes[j]
+    if (isVirtualRootStartMarker(node)) depth++
+    if (isHydrationEndComment(node)) {
+      depth--
+      if (depth === 0) return j
+    }
   }
   return startIdx
 }

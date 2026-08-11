@@ -3,14 +3,17 @@ import { describe, it } from '@remix-run/test'
 import { invariant } from '../runtime/invariant.ts'
 import { diffNodes } from '../runtime/diff-dom.ts'
 
-function diffDom(container: HTMLElement, next: string) {
-  let template = document.createElement('template')
-  template.innerHTML = next
-
-  diffNodes(Array.from(container.childNodes), Array.from(template.content.childNodes), {
+function diffDomNodes(current: Node[], next: Node[]) {
+  diffNodes(current, next, {
     frameInstances: new WeakMap(),
     pendingClientEntries: new Map(),
   } as any)
+}
+
+function diffDom(container: HTMLElement, next: string) {
+  let template = document.createElement('template')
+  template.innerHTML = next
+  diffDomNodes(Array.from(container.childNodes), Array.from(template.content.childNodes))
 }
 
 describe('diffNodes', () => {
@@ -115,6 +118,90 @@ describe('diffNodes', () => {
       let start = container.firstChild
       invariant(start && start.nodeType === Node.COMMENT_NODE)
       expect((start as Comment).data.trim()).toBe('rmx:h:new')
+    })
+
+    it('does not match keyed elements owned by nested hydration ranges', () => {
+      let container = document.createElement('div')
+      let current = document.createElement('div')
+      container.appendChild(current)
+
+      let outerStart = document.createComment('rmx:h:outer')
+      let innerStart = document.createComment('rmx:h:inner')
+      let innerContent = document.createElement('span')
+      let innerEnd = document.createComment('/rmx:h')
+      let owned = document.createElement('section')
+      let outerEnd = document.createComment('/rmx:h')
+      let dataKey = 'data-key'
+      owned.setAttribute(dataKey, 'entry')
+      current.append(outerStart, innerStart, innerContent, innerEnd, owned, outerEnd)
+
+      let disposeCount = 0
+      Object.assign(outerStart, {
+        $rmx: {
+          dispose() {
+            disposeCount++
+            owned.remove()
+          },
+        },
+      })
+
+      let next = document.createElement('div')
+      let replacement = document.createElement('section')
+      replacement.id = 'replacement'
+      replacement.setAttribute(dataKey, 'entry')
+      next.appendChild(replacement)
+
+      diffDomNodes([current], [next])
+
+      expect(current.childNodes).toHaveLength(1)
+      expect(current.firstChild).toBe(replacement)
+      expect(disposeCount).toBe(1)
+    })
+
+    it('does not match frame end markers owned by hydration ranges', () => {
+      let container = document.createElement('div')
+      let current = document.createElement('div')
+      container.appendChild(current)
+
+      let hydrationStart = document.createComment('rmx:h:entry')
+      let currentFrameStart = document.createComment('rmx:f:current')
+      let currentFrameContent = document.createElement('p')
+      let currentFrameEnd = document.createComment('/rmx:f')
+      let hydrationEnd = document.createComment('/rmx:h')
+      current.append(
+        hydrationStart,
+        currentFrameStart,
+        currentFrameContent,
+        currentFrameEnd,
+        hydrationEnd,
+      )
+
+      let disposeCount = 0
+      Object.assign(hydrationStart, {
+        $rmx: {
+          dispose() {
+            disposeCount++
+            let range = document.createRange()
+            range.setStartBefore(currentFrameStart)
+            range.setEndAfter(currentFrameEnd)
+            range.deleteContents()
+          },
+        },
+      })
+
+      let next = document.createElement('div')
+      let nextFrameStart = document.createComment('rmx:f:next')
+      let nextFrameContent = document.createElement('section')
+      let nextFrameEnd = document.createComment('/rmx:f')
+      next.append(nextFrameStart, nextFrameContent, nextFrameEnd)
+
+      diffDomNodes([current], [next])
+
+      expect(current.childNodes).toHaveLength(3)
+      expect(current.childNodes.item(0)).toBe(nextFrameStart)
+      expect(current.childNodes.item(1)).toBe(nextFrameContent)
+      expect(current.childNodes.item(2)).toBe(nextFrameEnd)
+      expect(disposeCount).toBe(1)
     })
 
     it('does not match a shifted frame start with the current frame end', () => {
