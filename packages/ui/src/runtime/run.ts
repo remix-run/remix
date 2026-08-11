@@ -107,7 +107,7 @@ export function run(init: RunInit): AppRuntime {
       return namedFrames.get(name)
     },
   }
-  startNavigationListener(appController.signal)
+  startNavigationListener(appController.signal, init.resolveFrame !== undefined)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
     throw error
