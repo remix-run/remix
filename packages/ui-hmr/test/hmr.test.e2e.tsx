@@ -1714,20 +1714,26 @@ function getClientFieldSource(
 function getNodeHmrProxyDevSource(): string {
   return [
     "import { createServer } from 'node:http'",
+    "import { readFile } from 'node:fs/promises'",
     `import { createFetchProxy } from ${JSON.stringify(fetchProxyImportUrl)}`,
     `import { createHmrReadyFetch, run } from ${JSON.stringify(nodeHmrImportUrl)}`,
     `import { createRequestListener } from ${JSON.stringify(nodeFetchServerImportUrl)}`,
     '',
     'let originPort = Number(process.env.TEST_SERVER_PORT ?? 0)',
-    'let childPort = Number(process.env.TEST_CHILD_SERVER_PORT ?? 0)',
     '',
     "let app = run('server.tsx', {",
     '  env: process.env,',
     `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}, '--import', ${JSON.stringify(uiHmrNodeImportUrl)}],`,
     '})',
     '',
-    'let proxyFetch = createFetchProxy(`http://127.0.0.1:${childPort}`, {',
+    'let proxyFetch = createFetchProxy("http://127.0.0.1:0", {',
     '  xForwardedHeaders: true,',
+    '  async fetch(input, init) {',
+    '    let childPort = await waitForPort(process.env.CHILD_PORT_FILE)',
+    '    let url = new URL(String(input))',
+    '    url.port = String(childPort)',
+    '    return await fetch(url, init)',
+    '  },',
     '})',
     '',
     'let server = createServer(',
@@ -1742,7 +1748,22 @@ function getNodeHmrProxyDevSource(): string {
     '  }),',
     ')',
     '',
-    'server.listen(originPort, "127.0.0.1")',
+    'server.listen(originPort, "127.0.0.1", () => {',
+    '  let address = server.address()',
+    '  if (address && typeof address === "object") {',
+    '    console.log(JSON.stringify({ type: "proxy-ready", port: address.port, pid: process.pid }))',
+    '  }',
+    '})',
+    '',
+    'async function waitForPort(filePath) {',
+    '  while (true) {',
+    '    try {',
+    '      let port = Number(await readFile(filePath, "utf8"))',
+    '      if (port > 0) return port',
+    '    } catch {}',
+    '    await new Promise((resolve) => setTimeout(resolve, 25))',
+    '  }',
+    '}',
     '',
     'function formatError(error) {',
     '  if (!(error instanceof Error)) return String(error)',
@@ -1775,6 +1796,7 @@ function getNodeHmrServerSource(
 
   return [
     "import { createServer } from 'node:http'",
+    "import { readFile, writeFile } from 'node:fs/promises'",
     "import { createAssetServer } from '@remix-run/assets'",
     "import { uiHmr } from '@remix-run/ui-hmr/assets'",
     "import { createBrowserHmrChannel, emitServerReady } from '@remix-run/node-hmr/runtime'",
@@ -1897,18 +1919,36 @@ function getNodeHmrServerSource(
     "    response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })",
     "    response.end('Not Found')",
     '  } catch (error) {',
+    '    if (response.headersSent) {',
+    '      response.destroy()',
+    '      return',
+    '    }',
     "    response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })",
     '    response.end(error instanceof Error ? error.stack : String(error))',
     '  }',
     '})',
     '',
-    'server.listen(Number(process.env.TEST_CHILD_SERVER_PORT ?? process.env.TEST_SERVER_PORT ?? 0), "127.0.0.1", () => {',
+    'let serverPortFile = process.env.TEST_CHILD_SERVER_PORT ? undefined : process.env.TEST_SERVER_PORT_FILE',
+    'let serverPort = await getServerPort()',
+    'server.listen(serverPort, "127.0.0.1", async () => {',
     '  let address = server.address()',
     "  if (address && typeof address === 'object') {",
+    '    if (process.env.CHILD_PORT_FILE) await writeFile(process.env.CHILD_PORT_FILE, String(address.port))',
+    '    if (serverPortFile) await writeFile(serverPortFile, String(address.port))',
     '    emitServerReady()',
     "    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))",
     '  }',
     '})',
+    '',
+    'async function getServerPort() {',
+    '  if (serverPortFile) {',
+    '    try {',
+    "      let port = Number(await readFile(serverPortFile, 'utf8'))",
+    '      if (port > 0) return port',
+    '    } catch {}',
+    '  }',
+    '  return Number(process.env.TEST_CHILD_SERVER_PORT ?? process.env.TEST_SERVER_PORT ?? 0)',
+    '}',
     '',
     'if (import.meta.hot) {',
     '  import.meta.hot.accept()',
@@ -2136,20 +2176,22 @@ function isNoEntityError(error: unknown): error is NodeJS.ErrnoException {
 
 async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeHmrTestServer> {
   let { NODE_PATH: _nodePath, ...env } = process.env
-  let port = await getAvailablePort()
-  let childPort = fixture.devProxy ? await getAvailablePort() : undefined
+  let childPortFile = path.join(fixture.rootDir, 'child-port.txt')
   let child = spawn(process.execPath, ['dev.ts'], {
     cwd: fixture.rootDir,
     env: {
       ...env,
       NODE_ENV: 'development',
-      ...(childPort === undefined ? {} : { TEST_CHILD_SERVER_PORT: String(childPort) }),
-      TEST_SERVER_PORT: String(port),
+      ...(fixture.devProxy ? { CHILD_PORT_FILE: childPortFile, TEST_CHILD_SERVER_PORT: '0' } : {}),
+      TEST_SERVER_PORT: '0',
+      TEST_SERVER_PORT_FILE: path.join(fixture.rootDir, 'server-port.txt'),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
   let readyEvents: Array<{ pid: number; port: number }> = []
   let readyWaiters: Array<() => void> = []
+  let proxyReadyEvents: Array<{ pid: number; port: number }> = []
+  let proxyReadyWaiters: Array<() => void> = []
   let lineBuffer = ''
   let processOutput = ''
   let exit: { code: number | null; signal: NodeJS.Signals | null } | null = null
@@ -2165,11 +2207,19 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
 
     for (let line of lines) {
       let event = parseReadyEvent(line)
-      if (event === null) continue
+      if (event !== null) {
+        readyEvents.push(event)
+        for (let waiter of readyWaiters) waiter()
+        readyWaiters = []
+        continue
+      }
 
-      readyEvents.push(event)
-      for (let waiter of readyWaiters) waiter()
-      readyWaiters = []
+      let proxyEvent = parseProxyReadyEvent(line)
+      if (proxyEvent !== null) {
+        proxyReadyEvents.push(proxyEvent)
+        for (let waiter of proxyReadyWaiters) waiter()
+        proxyReadyWaiters = []
+      }
     }
   })
 
@@ -2182,10 +2232,10 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     exit = { code, signal }
   })
 
-  await waitForReadyEvent(0)
+  let ready = fixture.devProxy ? await waitForProxyReady() : await waitForReadyEvent(0)
 
   return {
-    baseUrl: `http://127.0.0.1:${port}`,
+    baseUrl: `http://127.0.0.1:${ready.port}`,
     async close() {
       closePromise ??= stopProcess(child)
       await closePromise
@@ -2214,27 +2264,14 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     assert.ok(event)
     return event
   }
-}
 
-async function getAvailablePort(): Promise<number> {
-  let server = http.createServer()
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject)
-    server.listen(0, '127.0.0.1', () => {
-      server.off('error', reject)
-      resolve()
-    })
-  })
-  let address = server.address()
-  assert.ok(address && typeof address === 'object')
-  let port = address.port
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => {
-      if (error) reject(error)
-      else resolve()
-    })
-  })
-  return port
+  async function waitForProxyReady(): Promise<{ pid: number; port: number }> {
+    await waitFor(
+      () => proxyReadyEvents[0] !== undefined,
+      () => `Timed out waiting for node-hmr proxy server.\n${processOutput}`,
+    )
+    return proxyReadyEvents[0]!
+  }
 }
 
 async function handleRequest(
@@ -2598,6 +2635,28 @@ function parseReadyEvent(line: string): { pid: number; port: number } | null {
         pid: event.pid,
         port: event.port,
       }
+    }
+  } catch {
+    // Ignore non-JSON process output.
+  }
+
+  return null
+}
+
+function parseProxyReadyEvent(line: string): { pid: number; port: number } | null {
+  try {
+    let event: unknown = JSON.parse(line)
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'proxy-ready' &&
+      'port' in event &&
+      typeof event.port === 'number' &&
+      'pid' in event &&
+      typeof event.pid === 'number'
+    ) {
+      return { pid: event.pid, port: event.port }
     }
   } catch {
     // Ignore non-JSON process output.
