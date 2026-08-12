@@ -1080,22 +1080,19 @@ function insertFrame(
     let start = cursor.current
     let end = findFrameEndComment(start)
     if (end) {
-      let frameId = getFrameIdFromComment(start)
-      let marker = frameId ? runtime.data.f?.[frameId] : undefined
-      let src = marker?.src ?? getFrameSrc(node)
       let instance = runtime.frameInstances.get(start)
+      let src = instance?.handle.src ?? getFrameSrc(node)
       if (!instance) {
         instance = createFrame([start, end], {
           name: getFrameName(node),
           src,
-          marker: frameId && marker ? { ...marker, id: frameId } : undefined,
           errorTarget: runtime.errorTarget,
           loadModule: runtime.loadModule,
           resolveFrame: runtime.resolveFrame,
           pendingClientEntries: runtime.pendingClientEntries,
           scheduler: runtime.scheduler,
           styleManager: runtime.styleManager,
-          data: runtime.data,
+          data: {},
           moduleCache: runtime.moduleCache,
           moduleLoads: runtime.moduleLoads,
           frameInstances: runtime.frameInstances,
@@ -1145,7 +1142,7 @@ function insertFrame(
     pendingClientEntries: runtime.pendingClientEntries,
     scheduler: runtime.scheduler,
     styleManager: runtime.styleManager,
-    data: runtime.data,
+    data: {},
     moduleCache: runtime.moduleCache,
     moduleLoads: runtime.moduleLoads,
     frameInstances: runtime.frameInstances,
@@ -1340,12 +1337,6 @@ function isFrameEndComment(node: Node | null | undefined): node is Comment {
 
 function isCommentNode(node: Node | null | undefined): node is Comment {
   return node?.nodeType === Node.COMMENT_NODE
-}
-
-function getFrameIdFromComment(comment: Comment): string | undefined {
-  let text = comment.data.trim()
-  if (!text.startsWith('rmx:f:')) return undefined
-  return text.slice('rmx:f:'.length)
 }
 
 function findFrameEndComment(start: Comment): Comment | null {

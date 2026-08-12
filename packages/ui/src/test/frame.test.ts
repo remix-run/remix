@@ -12,6 +12,7 @@ import { jsx } from '../runtime/jsx.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
 import { createStyleManager } from '../style/index.ts'
+import { withResolvers } from './utils.ts'
 
 describe('frames', () => {
   afterEach(() => {
@@ -51,6 +52,7 @@ describe('frames', () => {
       expect(exportName).toBe('StreamingEntry')
       return StreamingEntry
     }) satisfies LoadModule
+    let data = {}
 
     let frame = createFrame(document, {
       src: 'https://example.com/initial',
@@ -72,7 +74,7 @@ describe('frames', () => {
       pendingClientEntries: new Map(),
       scheduler,
       styleManager,
-      data: {},
+      data,
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
@@ -81,6 +83,7 @@ describe('frames', () => {
 
     try {
       await frame.ready()
+      expect(data).toEqual({})
       expect(document.querySelector('[data-entry]')?.textContent).toBe('initial')
       let setupCountBeforeReload = setupCount
       let disconnectCountBeforeReload = disconnectCount
@@ -93,6 +96,43 @@ describe('frames', () => {
     } finally {
       frame.dispose()
     }
+  })
+
+  it('releases pending hydration metadata when its frame is disposed', async () => {
+    document.body.innerHTML = [
+      '<!-- rmx:h:h1 -->',
+      '<section data-entry="">initial</section>',
+      '<!-- /rmx:h -->',
+      rmxDataScript('initial'),
+    ].join('')
+
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let data = {}
+    let frame = createFrame(document, {
+      src: 'https://example.com/initial',
+      errorTarget: new EventTarget(),
+      loadModule: () => modulePromise,
+      resolveFrame: () => '',
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data,
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(data).not.toEqual({})
+
+    frame.dispose()
+    await frame.ready()
+
+    expect(data).toEqual({})
+
+    resolveModule(() => () => jsx('section', { children: 'late' }))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(document.querySelector('[data-entry]')?.textContent).toBe('initial')
   })
 
   it('renders a redirected response without changing the frame source', async () => {
@@ -217,6 +257,48 @@ describe('frames', () => {
 
       expect(result.signal.aborted).toBe(true)
       expect(resolverSignal?.aborted).toBe(true)
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('stops reading the active response stream when the reload signal is aborted', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let [streamRead, markStreamRead] = withResolvers<void>()
+    let frame = createFrame(root, {
+      src: 'https://example.com/account',
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return new ReadableStream<Uint8Array>({
+          pull() {
+            markStreamRead()
+          },
+        })
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+    let controller = new AbortController()
+
+    try {
+      await frame.ready()
+      let reload = reloadFrameForNavigation(frame.handle, { signal: controller.signal })
+      await streamRead
+      controller.abort()
+      let result = await reload
+
+      expect(result.signal.aborted).toBe(true)
       expect(document.getElementById('initial')?.textContent).toBe('Initial')
     } finally {
       frame.dispose()

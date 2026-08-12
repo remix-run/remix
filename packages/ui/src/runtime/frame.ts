@@ -11,6 +11,12 @@ import { diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
 import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
 import { unwrapFrameResolution } from './frame-resolution.ts'
+import {
+  disposeClientEntryBoundary,
+  getClientEntryBoundaryOwner,
+  setClientEntryBoundaryOwner,
+  type ClientEntryIdentity,
+} from './client-entry-boundary.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -133,7 +139,6 @@ export type FrameRuntime = {
   pendingClientEntries: PendingClientEntries
   scheduler: Scheduler
   styleManager: StyleManager
-  data: RmxData
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
@@ -178,6 +183,7 @@ export type FrameContext = {
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
+  lifecycleSignal: AbortSignal
   regionTailRef?: ChildNode | null
   regionParent?: ParentNode | null
   signal?: AbortSignal
@@ -219,6 +225,7 @@ export type Frame = {
     content: InternalFrameContent,
     options?: RenderOptions,
   ) => Promise<void>
+  matchesIdentity: (src: string, name: string | undefined) => boolean
   dispose: () => void
   handle: FrameHandle
 }
@@ -228,6 +235,7 @@ type RenderOptions = {
   initialHydrationTracker?: InitialHydrationTracker
   signal?: AbortSignal
   contentStatus?: 'pending' | 'resolved'
+  data?: RmxData
 }
 
 export function createFrame(root: FrameRoot, init: FrameInit): Frame {
@@ -247,6 +255,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let pendingTemplateUnsubscribe: (() => void) | undefined
   let inheritedReloadPending = false
   let inheritedReloadAbortUnsubscribe: (() => void) | undefined
+  let disposed = false
+  let lifecycleController = new AbortController()
 
   // Merge any rmx-data found in the current document once at startup.
   mergeRmxDataFromDocument(init.data, container.doc)
@@ -282,18 +292,38 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     moduleLoads: init.moduleLoads,
     frameInstances: init.frameInstances,
     namedFrames: init.namedFrames,
+    lifecycleSignal: lifecycleController.signal,
     regionTailRef: container.regionTailRef,
     regionParent: container.regionParent,
   }
 
   async function render(content: InternalFrameContent, options?: RenderOptions): Promise<void> {
+    let ownsData = options?.data === undefined
+    let renderOptions = { ...options, data: options?.data ?? {} }
+
+    try {
+      await renderContent(content, renderOptions)
+    } finally {
+      if (ownsData) clearRmxData(renderOptions.data)
+    }
+  }
+
+  async function renderContent(
+    content: InternalFrameContent,
+    options: RenderOptions & { data: RmxData },
+  ): Promise<void> {
     if (options?.signal?.aborted) return
 
     if (content instanceof ReadableStream) {
-      await renderFrameStream(content, container.doc, async (html, flushKind) => {
-        if (options?.signal?.aborted) return
-        await render(html, { ...options, flushKind })
-      })
+      await renderFrameStream(
+        content,
+        container.doc,
+        async (html, flushKind) => {
+          if (options.signal?.aborted) return
+          await render(html, { ...options, flushKind })
+        },
+        options.signal,
+      )
       return
     }
 
@@ -338,7 +368,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
-      mergeRmxDataFromDocument(context.data, parsed)
+      let responseData = options.data
+      mergeRmxDataFromDocument(responseData, parsed)
+      let responseContext = { ...context, data: responseData }
       context.styleManager.adoptServerStyles(
         collectFrameServerStyleTags(createElementContainer(parsed)),
       )
@@ -346,13 +378,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       syncElementAttributes(container.doc.documentElement, parsed.documentElement)
 
       diffNodes([container.doc.head], [parsed.head], {
-        ...context,
+        ...responseContext,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
         signal: options?.signal,
       })
       diffNodes([container.doc.body], [parsed.body], {
-        ...context,
+        ...responseContext,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
         signal: options?.signal,
@@ -362,11 +394,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (options?.signal?.aborted) return
       scheduleHydrationInContainer(
         bodyContainer,
-        context,
+        responseContext,
         options?.initialHydrationTracker,
         options?.signal,
       )
-      await createSubFrames(bodyContainer.childNodes, context, options)
+      await createSubFrames(bodyContainer.childNodes, responseContext, options)
       displayedContentStatus = options?.contentStatus ?? 'resolved'
       return
     }
@@ -377,14 +409,16 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       collectFrameServerStyleTags(createElementContainer(fragment)),
     )
     removeEmptyHeads(fragment)
-    mergeRmxDataFromFragment(context.data, fragment)
+    let responseData = options.data
+    mergeRmxDataFromFragment(responseData, fragment)
+    let responseContext = { ...context, data: responseData }
 
     let nextContainer = createContainer(fragment)
 
     if (options?.signal?.aborted) return
 
     diffNodes(container.childNodes, Array.from(nextContainer.childNodes), {
-      ...context,
+      ...responseContext,
       regionTailRef: container.regionTailRef,
       regionParent: container.regionParent,
       signal: options?.signal,
@@ -393,11 +427,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (options?.signal?.aborted) return
     scheduleHydrationInContainer(
       container,
-      context,
+      responseContext,
       options?.initialHydrationTracker,
       options?.signal,
     )
-    await createSubFrames(container.childNodes, context, options)
+    await createSubFrames(container.childNodes, responseContext, options)
     displayedContentStatus = options?.contentStatus ?? 'resolved'
   }
 
@@ -442,18 +476,28 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let initialHydrationTracker = createInitialHydrationTracker()
 
     context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
-    await createSubFrames(container.childNodes, context)
+    let subFramesReady = createSubFrames(container.childNodes, context)
     scheduleHydrationInContainer(container, context, initialHydrationTracker)
 
-    if (currentMarker?.status === 'pending') {
-      await watchPendingFrameTemplate(currentMarker, initialHydrationTracker)
-    }
+    try {
+      await subFramesReady
 
-    initialHydrationTracker.finalize()
-    await initialHydrationTracker.ready()
+      if (currentMarker?.status === 'pending') {
+        await watchPendingFrameTemplate(currentMarker, initialHydrationTracker)
+      }
+
+      initialHydrationTracker.finalize()
+      await initialHydrationTracker.ready()
+    } finally {
+      clearRmxData(context.data)
+    }
   }
 
   function dispose(): void {
+    if (disposed) return
+    disposed = true
+    lifecycleController.abort()
+    clearRmxData(context.data)
     reloadController?.abort()
     reloadController = undefined
     reloadAbortUnsubscribe?.()
@@ -492,6 +536,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     startInheritedReload,
     updateMarker,
     renderMarkerContent,
+    matchesIdentity: (src, name) => !disposed && frame.src === src && frameName === name,
     dispose,
     handle: frame,
   }
@@ -775,7 +820,6 @@ export function createFrameRuntime(init: {
   pendingClientEntries: PendingClientEntries
   scheduler: Scheduler
   styleManager: StyleManager
-  data: RmxData
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
@@ -791,7 +835,6 @@ export function createFrameRuntime(init: {
     pendingClientEntries: init.pendingClientEntries,
     scheduler: init.scheduler,
     styleManager: init.styleManager,
-    data: init.data,
     moduleCache: init.moduleCache,
     moduleLoads: init.moduleLoads,
     frameInstances: init.frameInstances,
@@ -860,6 +903,11 @@ function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): vo
     mergeRmxData(into, parseRmxDataScript(script))
     script.remove()
   }
+}
+
+function clearRmxData(data: RmxData): void {
+  delete data.h
+  delete data.f
 }
 
 function removeEmptyHeads(fragment: DocumentFragment): void {
@@ -958,40 +1006,59 @@ function scheduleHydrationMarker(
   initialHydrationTracker?: InitialHydrationTracker,
   signal?: AbortSignal,
 ): void {
-  if (signal?.aborted) return
+  if (signal?.aborted || context.lifecycleSignal.aborted) return
 
   let done = initialHydrationTracker?.track()
   let key = `${entry.moduleUrl}#${entry.exportName}`
+  let identity: ClientEntryIdentity = {
+    moduleUrl: entry.moduleUrl,
+    exportName: entry.exportName,
+  }
+  let props: Record<string, unknown> | undefined = entry.props
+  let completed = false
+
+  let complete = () => {
+    if (completed) return
+    completed = true
+    props = undefined
+    signal?.removeEventListener('abort', complete)
+    context.lifecycleSignal.removeEventListener('abort', complete)
+    done?.()
+  }
+
+  signal?.addEventListener('abort', complete, { once: true })
+  context.lifecycleSignal.addEventListener('abort', complete, { once: true })
 
   let hydrateWithComponent = (component: ElementFunction) => {
-    if (signal?.aborted) return
+    if (signal?.aborted || context.lifecycleSignal.aborted) return
     if (!isHydrationMarkerLive(marker, context)) return
-    let vElement = createElement(component, entry.props)
+    if (!props) return
+    let vElement = createElement(component, props)
     context.pendingClientEntries.set(marker.start, [marker.end, vElement])
-    hydrateRegion(vElement, marker.start, marker.end, context, signal)
+    hydrateRegion(vElement, marker.start, marker.end, identity, context, signal)
   }
 
   let cached = context.moduleCache.get(key)
   if (cached) {
     hydrateWithComponent(cached)
-    done?.()
+    complete()
     return
   }
 
-  getOrStartModuleLoad(key, entry, marker.id, context)
+  getOrStartModuleLoad(key, identity, marker.id, context)
     .then((component) => {
       if (component) {
         hydrateWithComponent(component)
       }
     })
     .finally(() => {
-      done?.()
+      complete()
     })
 }
 
 function getOrStartModuleLoad(
   key: string,
-  entry: HydrationData,
+  identity: ClientEntryIdentity,
   markerId: string,
   context: FrameContext,
 ): Promise<ElementFunction | undefined> {
@@ -1000,9 +1067,11 @@ function getOrStartModuleLoad(
 
   let loadPromise = (async () => {
     try {
-      let mod = await context.loadModule(entry.moduleUrl, entry.exportName)
+      let mod = await context.loadModule(identity.moduleUrl, identity.exportName)
       if (!isElementFunction(mod)) {
-        throw new Error(`Export "${entry.exportName}" from "${entry.moduleUrl}" is not a function`)
+        throw new Error(
+          `Export "${identity.exportName}" from "${identity.moduleUrl}" is not a function`,
+        )
       }
       context.moduleCache.set(key, mod)
       return mod
@@ -1073,6 +1142,7 @@ function hydrateRegion(
   vElement: RemixElement,
   start: Comment,
   end: Comment,
+  identity: ClientEntryIdentity,
   context: FrameContext,
   signal?: AbortSignal,
 ): void {
@@ -1083,9 +1153,10 @@ function hydrateRegion(
   // The same marker can be discovered by overlapping hydration passes
   // (for example, document root + nested frame root). Reuse the existing
   // virtual root instead of redefining the marker property.
-  if (isHydratedVirtualRootMarker(start)) {
+  let owner = getClientEntryBoundaryOwner(start)
+  if (owner) {
     if (!signal) {
-      start.$rmx.render(vElement)
+      owner.root.render(vElement)
       return
     }
 
@@ -1099,7 +1170,7 @@ function hydrateRegion(
 
     frameRuntime.serverFrameReload = { signal }
     try {
-      start.$rmx.render(vElement)
+      owner.root.render(vElement)
     } finally {
       frameRuntime.serverFrameReload = previousServerFrameReload
     }
@@ -1116,7 +1187,7 @@ function hydrateRegion(
     context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   })
 
-  Object.defineProperty(start, '$rmx', { value: root, enumerable: false })
+  setClientEntryBoundaryOwner(start, identity, root)
   root.render(vElement)
 }
 
@@ -1206,8 +1277,7 @@ function removeVirtualRoots(nodes: Node[]): void {
   for (let i = 0; i < nodes.length; i++) {
     let node = nodes[i]
 
-    if (isHydratedVirtualRootMarker(node)) {
-      node.$rmx.dispose()
+    if (isCommentNode(node) && isHydrationStart(node) && disposeClientEntryBoundary(node)) {
       let end = findEndMarker(node, isHydrationStart, isHydrationEnd)
       i = findMarkerRangeEndIndex(nodes, end, i)
       continue
@@ -1398,12 +1468,22 @@ async function renderFrameStream(
   stream: ReadableStream<Uint8Array>,
   doc: Document,
   applyHtml: (html: string, flushKind: FlushKind) => Promise<void>,
+  signal?: AbortSignal,
 ): Promise<void> {
   let reader = stream.getReader()
   let decoder = new TextDecoder()
   let buffer = ''
   let html = ''
   let appliedOnce = false
+  let abort = () => {
+    void reader.cancel().catch(() => {})
+  }
+  if (signal?.aborted) {
+    await reader.cancel()
+    reader.releaseLock()
+    return
+  }
+  signal?.addEventListener('abort', abort, { once: true })
 
   try {
     while (true) {
@@ -1442,6 +1522,7 @@ async function renderFrameStream(
       await applyHtml('', 'fragment')
     }
   } finally {
+    signal?.removeEventListener('abort', abort)
     reader.releaseLock()
   }
 }
@@ -1579,10 +1660,6 @@ function isHydrationStart(node: Comment): boolean {
 
 function isHydrationEnd(node: Comment): boolean {
   return node.data.trim() === '/rmx:h'
-}
-
-function isHydratedVirtualRootMarker(node: Node): node is VirtualRootMarker {
-  return isCommentNode(node) && '$rmx' in node
 }
 
 function isFrameStart(node: Node): node is Comment {
