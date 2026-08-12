@@ -195,7 +195,7 @@ jobs:
         run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
       - name: Run tests
-        run: pnpm --parallel --filter "!remix-the-web" run test
+        run: pnpm test
 
   lint:
     name: Lint
