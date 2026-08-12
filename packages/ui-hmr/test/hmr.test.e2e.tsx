@@ -460,76 +460,40 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
   })
 
   it('recovers failed client entry updates after a server update from node-hmr', async (t) => {
-    let traceStart = Date.now()
-    let traceMessages: string[] = []
-    let trace = (message: string) => {
-      traceMessages.push(`[ui-hmr-recovery +${Date.now() - traceStart}ms] ${message}`)
-    }
     let fixture = await createNodeHmrFixture()
     let server: NodeHmrTestServer | undefined
 
     try {
-      trace('starting fixture server')
-      server = await startNodeHmrFixtureServer(fixture, trace)
-      trace('fixture server ready')
+      server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
-      page.on('console', (message) => {
-        trace(`browser console ${message.type()}: ${message.text()}`)
-      })
-      page.on('request', (request) => {
-        if (isUiHmrRecoveryRequest(request.url())) {
-          trace(`browser request ${request.method()} ${request.url()}`)
-        }
-      })
-      page.on('response', (response) => {
-        if (isUiHmrRecoveryRequest(response.url())) {
-          trace(`browser response ${response.status()} ${response.url()}`)
-        }
-      })
-      page.on('requestfailed', (request) => {
-        if (isUiHmrRecoveryRequest(request.url())) {
-          trace(`browser request failed ${request.url()} (${request.failure()?.errorText})`)
-        }
-      })
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
-      trace('navigating to fixture')
       await page.goto('/')
       await connected
-      trace('browser HMR connected')
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
-      trace('initial client entry rendered')
 
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
 
       let failedUpdate = waitForConsoleMessage(page, '[remix] HMR update failed')
-      trace('writing invalid client entry')
       await fs.writeFile(
         clientFieldPath,
         clientFieldSource.replace('<ClientMessage />', '<ClientMessage'),
       )
-      trace('invalid client entry written')
       await failedUpdate
-      trace('browser reported failed HMR update')
 
-      trace('writing recovered client entry')
       await fs.writeFile(
         clientFieldPath,
         clientFieldSource.replace('<ClientMessage />', 'Client: after server update!!!!!'),
       )
-      trace('recovered client entry written')
 
       let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete')
-      trace('writing server-side update')
       await write(
         fixture.rootDir,
         'server-side-effect.ts',
         `export const sideEffect = 'recovery'\n`,
       )
-      trace('server-side update written')
       await serverFrameReloaded
-      trace('server frame reload complete')
 
       await waitForText(
         page,
@@ -537,14 +501,9 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
         'Client: after server update!!!!!',
       )
       assert.equal(server.readyCount, 2)
-    } catch (error) {
-      let message = error instanceof Error ? error.message : String(error)
-      throw new Error(`${message}\ntrace:\n${traceMessages.join('\n')}`, { cause: error })
     } finally {
-      trace('closing fixture')
       await server?.close()
       await fixture.close()
-      trace('fixture closed')
     }
   })
 
@@ -1307,11 +1266,6 @@ async function serveNodeHmrFixture(t: TestContext, server: NodeHmrTestServer): P
   let page = await t.serve(server)
   attachPageDiagnostics(page, () => server.output)
   return page
-}
-
-function isUiHmrRecoveryRequest(requestUrl: string): boolean {
-  let pathname = new URL(requestUrl).pathname
-  return pathname === '/hmr' || pathname === '/assets/app/ClientField.tsx'
 }
 
 function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): PageDiagnostics {
@@ -2210,10 +2164,7 @@ function isNoEntityError(error: unknown): error is NodeJS.ErrnoException {
   )
 }
 
-async function startNodeHmrFixtureServer(
-  fixture: NodeHmrFixture,
-  trace?: (message: string) => void,
-): Promise<NodeHmrTestServer> {
+async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeHmrTestServer> {
   let { NODE_PATH: _nodePath, ...env } = process.env
   let childPortFile = path.join(fixture.rootDir, 'child-port.txt')
   let child = spawn(process.execPath, ['dev.ts'], {
@@ -2245,7 +2196,6 @@ async function startNodeHmrFixtureServer(
     lineBuffer = lines.pop() ?? ''
 
     for (let line of lines) {
-      trace?.(`server stdout: ${line}`)
       let event = parseReadyEvent(line)
       if (event !== null) {
         readyEvents.push(event)
@@ -2266,14 +2216,10 @@ async function startNodeHmrFixtureServer(
   child.stderr?.setEncoding('utf-8')
   child.stderr?.on('data', (chunk: string) => {
     processOutput += chunk
-    for (let line of chunk.trimEnd().split(/\r?\n/)) {
-      trace?.(`server stderr: ${line}`)
-    }
   })
 
   child.once('exit', (code, signal) => {
     exit = { code, signal }
-    trace?.(`fixture process exited (code=${code}, signal=${signal})`)
   })
 
   let ready = fixture.devProxy ? await waitForProxyReady() : await waitForReadyEvent(0)
