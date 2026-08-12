@@ -79,7 +79,7 @@ const DOCTOR_COMMAND_HELP_TEXT = [
   '  --json       Print doctor findings as JSON',
   '  --strict     Exit with status 1 when warning-level findings are present',
   '  --no-strict  Do not exit with status 1 when warning-level findings are present',
-  '  --fix        Apply low-risk project and action fixes',
+  '  --fix        Apply available low-risk fixes',
   '',
   'Examples:',
   '  remix doctor',
