@@ -41,47 +41,44 @@ export const ReloadScope = clientEntry(import.meta.url, function ReloadScope(han
   )
 })
 
-export const ReloadTopFrame = clientEntry(
-  '/assets/reload-scope.js#ReloadTopFrame',
-  function ReloadTopFrame(handle: Handle) {
-    let pending = false
+export const ReloadTopFrame = clientEntry(import.meta.url, function ReloadTopFrame(handle: Handle) {
+  let pending = false
 
-    handle.frames.top.addEventListener(
-      'reloadStart',
-      () => {
-        pending = true
-        handle.update()
-      },
-      { signal: handle.signal },
-    )
+  handle.frames.top.addEventListener(
+    'reloadStart',
+    () => {
+      pending = true
+      handle.update()
+    },
+    { signal: handle.signal },
+  )
 
-    handle.frames.top.addEventListener(
-      'reloadComplete',
-      () => {
-        pending = false
-        handle.update()
-      },
-      { signal: handle.signal },
-    )
+  handle.frames.top.addEventListener(
+    'reloadComplete',
+    () => {
+      pending = false
+      handle.update()
+    },
+    { signal: handle.signal },
+  )
 
-    return () => (
-      <button
-        type="button"
-        mix={[
-          reloadButtonStyle(pending),
-          on('click', () => {
-            void handle.frames.top.reload()
-          }),
-        ]}
-        style={{
-          '--frame-bg': pending ? undefined : 'rgba(255,255,255,0.10)',
-        }}
-      >
-        {pending ? 'Reloading page…' : 'Reload top frame'}
-      </button>
-    )
-  },
-)
+  return () => (
+    <button
+      type="button"
+      mix={[
+        reloadButtonStyle(pending),
+        on('click', () => {
+          void handle.frames.top.reload()
+        }),
+      ]}
+      style={{
+        '--frame-bg': pending ? undefined : 'rgba(255,255,255,0.10)',
+      }}
+    >
+      {pending ? 'Reloading page…' : 'Reload top frame'}
+    </button>
+  )
+})
 
 function reloadButtonStyle(pending: boolean) {
   return css({

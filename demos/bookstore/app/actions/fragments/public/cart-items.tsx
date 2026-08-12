@@ -1,7 +1,7 @@
 import type { Handle } from 'remix/ui'
 import { css, clientEntry, on } from 'remix/ui'
 
-import { routes } from '../routes.ts'
+import { routes } from '../../../routes.ts'
 
 type CartItem = {
   bookId: number

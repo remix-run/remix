@@ -9,7 +9,7 @@ import {
 } from 'remix/ui'
 import { animateLayout, spring } from 'remix/ui/animation'
 import button from 'remix/ui/button'
-import { theme } from './design.ts'
+import { theme } from '../../../ui/public/design.ts'
 
 import {
   previewCopyBlockAcrossDays,

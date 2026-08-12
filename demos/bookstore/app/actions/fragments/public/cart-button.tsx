@@ -1,6 +1,6 @@
 import { type Handle, clientEntry, on } from 'remix/ui'
 
-import { routes } from '../routes.ts'
+import { routes } from '../../../routes.ts'
 
 export const CartButton = clientEntry(
   import.meta.url,

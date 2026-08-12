@@ -5,7 +5,7 @@ import {
   PersistentRootReloadEntry,
   RemovableRootReloadEntry,
   RootReloadControls,
-} from '../assets/root-reload-client-entries.tsx'
+} from './public/root-reload-client-entries.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 

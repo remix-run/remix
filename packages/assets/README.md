@@ -377,7 +377,8 @@ import { createAssetServer } from 'remix/assets'
 let assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  denyFiles: ['app/**/*.test.*'],
   scripts: {
     loaders: [
       (url, context, nextLoad) => {
@@ -651,7 +652,8 @@ let isDevelopment = process.env.NODE_ENV === 'development'
 let assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  denyFiles: ['app/**/*.test.*'],
   hmr: isDevelopment
     ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
     : undefined,

@@ -3938,11 +3938,11 @@ describe('asset-server', () => {
       await write(
         caseDir,
         'app/styles/app.css',
-        'body { background-image: url("../assets/images/logo.svg"); }\n',
+        'body { background-image: url("../public/images/logo.svg"); }\n',
       )
       let logoPath = await write(
         caseDir,
-        'app/assets/images/logo.svg',
+        'app/public/images/logo.svg',
         '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n',
       )
       let logoWatchPath = nodeFs.realpathSync(logoPath)
@@ -3962,9 +3962,9 @@ describe('asset-server', () => {
         let before = await get(assetServer, '/assets/app/styles/app.css')
         assert.ok(before)
         assert.equal(before.status, 200)
-        assert.match(await before.text(), /url\("\/assets\/app\/assets\/images\/logo\.svg"\)/)
+        assert.match(await before.text(), /url\("\/assets\/app\/public\/images\/logo\.svg"\)/)
 
-        await fs.rm(path.join(caseDir, 'app/assets'), { recursive: true })
+        await fs.rm(path.join(caseDir, 'app/public'), { recursive: true })
         let chokidarWatcher = getInternalChokidarWatcher(assetServer)
         assert.ok(chokidarWatcher)
         chokidarWatcher.emit('unlink', logoWatchPath)

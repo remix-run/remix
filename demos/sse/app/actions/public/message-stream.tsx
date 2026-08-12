@@ -1,6 +1,6 @@
 import { addEventListeners, clientEntry, css, type Handle } from 'remix/ui'
 
-import { routes } from '../routes.ts'
+import { routes } from '../../routes.ts'
 
 export const MessageStream = clientEntry(
   import.meta.url,

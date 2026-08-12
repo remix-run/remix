@@ -3,7 +3,7 @@ import { createRoot, css, on, run } from 'remix/ui'
 
 import { animateEntrance, spring } from 'remix/ui/animation'
 
-import { routes } from '../routes.ts'
+import { routes } from '../../routes.ts'
 
 const app = run({
   async loadModule(moduleUrl, exportName) {

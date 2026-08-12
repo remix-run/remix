@@ -1,6 +1,6 @@
 import { Frame, clientEntry, css, on, type Handle } from 'remix/ui'
 
-import { routes } from '../routes.ts'
+import { routes } from '../../routes.ts'
 
 type RootReloadControlsProps = {
   includeRemoved: boolean

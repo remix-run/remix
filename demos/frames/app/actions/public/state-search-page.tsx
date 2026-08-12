@@ -1,5 +1,5 @@
 import { clientEntry, Frame, css, on, ref, type Handle } from 'remix/ui'
-import { routes } from '../routes.ts'
+import { routes } from '../../routes.ts'
 
 export const StateSearchPage = clientEntry(
   import.meta.url,
