@@ -2,18 +2,20 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { invariant } from '../runtime/invariant.ts'
 import { diffNodes } from '../runtime/diff-dom.ts'
+import type { FrameContext } from '../runtime/frame.ts'
 
-function diffDomNodes(current: Node[], next: Node[]) {
+function diffDomNodes(current: Node[], next: Node[], data: FrameContext['data'] = {}) {
   diffNodes(current, next, {
     frameInstances: new WeakMap(),
     pendingClientEntries: new Map(),
+    data,
   } as any)
 }
 
-function diffDom(container: HTMLElement, next: string) {
+function diffDom(container: HTMLElement, next: string, data?: FrameContext['data']) {
   let template = document.createElement('template')
   template.innerHTML = next
-  diffDomNodes(Array.from(container.childNodes), Array.from(template.content.childNodes))
+  diffDomNodes(Array.from(container.childNodes), Array.from(template.content.childNodes), data)
 }
 
 describe('diffNodes', () => {
@@ -113,11 +115,32 @@ describe('diffNodes', () => {
       let container = document.createElement('div')
       container.innerHTML = '<!-- rmx:h:old --><button>Old</button><!-- /rmx:h -->'
 
-      diffDom(container, '<!-- rmx:h:new --><button>Old</button><!-- /rmx:h -->')
+      diffDom(container, '<!-- rmx:h:new --><button>Old</button><!-- /rmx:h -->', {
+        h: {
+          old: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} },
+          new: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} },
+        },
+      })
 
       let start = container.firstChild
       invariant(start && start.nodeType === Node.COMMENT_NODE)
       expect((start as Comment).data.trim()).toBe('rmx:h:new')
+    })
+
+    it('replaces hydration ranges with different client entry identities', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!-- rmx:h:old --><button>Old</button><!-- /rmx:h -->'
+      let oldStart = container.firstChild
+
+      diffDom(container, '<!-- rmx:h:new --><button>New</button><!-- /rmx:h -->', {
+        h: {
+          old: { moduleUrl: '/old.js', exportName: 'Old', props: {} },
+          new: { moduleUrl: '/new.js', exportName: 'New', props: {} },
+        },
+      })
+
+      expect(container.firstChild).not.toBe(oldStart)
+      expect(container.querySelector('button')?.textContent).toBe('New')
     })
 
     it('does not match keyed elements owned by nested hydration ranges', () => {

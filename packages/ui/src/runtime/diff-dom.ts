@@ -627,6 +627,24 @@ function shouldPreserveFrameStartMarker(
   )
 }
 
+function shouldPreserveHydrationStartMarker(
+  current: Comment,
+  next: Comment,
+  context: FrameContext,
+): boolean {
+  if (!isVirtualRootStartMarker(next)) return false
+
+  let currentData = getHydrationMarkerData(current, context)
+  let nextData = getHydrationMarkerData(next, context)
+
+  return (
+    currentData !== undefined &&
+    nextData !== undefined &&
+    currentData.moduleUrl === nextData.moduleUrl &&
+    currentData.exportName === nextData.exportName
+  )
+}
+
 function getCommentMarkerRangeReplacement(
   current: Node,
   next: Node,
@@ -651,6 +669,30 @@ function getCommentMarkerRangeReplacement(
       nextEndIndex: findFrameEndIndex(nextNodes, nextIndex),
     }
   }
+
+  if (
+    isVirtualRootStartMarker(current) &&
+    isVirtualRootStartMarker(next) &&
+    !shouldPreserveHydrationStartMarker(current, next, context)
+  ) {
+    return {
+      currentStart: current,
+      nextStart: next,
+      currentEndIndex: findHydrationEndIndex(currentNodes, currentIndex),
+      nextEndIndex: findHydrationEndIndex(nextNodes, nextIndex),
+    }
+  }
+}
+
+function getHydrationMarkerData(marker: Comment, context: FrameContext) {
+  let id = getHydrationId(marker)
+  return context.data.h?.[id]
+}
+
+function getHydrationId(marker: Comment): string {
+  let trimmed = marker.data.trim()
+  invariant(trimmed.startsWith('rmx:h:'), 'Invalid hydration start marker')
+  return trimmed.slice('rmx:h:'.length)
 }
 
 function getFrameMarkerData(marker: Comment, context: FrameContext) {
@@ -669,8 +711,8 @@ function replaceCommentMarkerRange(
   parent: ParentNode,
   context: FrameContext,
 ): void {
-  let currentEnd = findFrameEndMarker(replacement.currentStart)
-  let nextEnd = findFrameEndMarker(replacement.nextStart)
+  let currentEnd = findCommentMarkerRangeEnd(replacement.currentStart)
+  let nextEnd = findCommentMarkerRangeEnd(replacement.nextStart)
   let nextNodes = collectNodeRange(replacement.nextStart, nextEnd)
   let currentNodes = collectNodeRange(replacement.currentStart, currentEnd)
 
@@ -681,6 +723,12 @@ function replaceCommentMarkerRange(
   for (let node of currentNodes) {
     removeNode(node, parent, context)
   }
+}
+
+function findCommentMarkerRangeEnd(start: Comment): Comment {
+  if (isFrameStartMarker(start)) return findFrameEndMarker(start)
+  if (isVirtualRootStartMarker(start)) return findHydrationEndMarker(start)
+  throw new Error('Comment marker range start not found')
 }
 
 function collectNodeRange(start: Node, end: Node): Node[] {
