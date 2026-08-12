@@ -8,13 +8,13 @@ How to serve browser scripts and styles from source. Read this when the task inv
 - Choosing between `staticFiles()` for already-built files and `createAssetServer()` for source assets that need import rewriting, preloads, or fingerprinted URLs
 - Generating script URLs or `<link rel="modulepreload">` tags for a client entry
 - Enabling browser HMR for source-served modules
-- Keeping server-only files out of the browser via `denyFiles` rules
+- Keeping files such as tests out of the browser via `denyFiles` rules
 
 For routing the URL namespace itself, see `routing-and-controllers.md`. For client entry hydration and browser update handling, see `hydration-frames-navigation.md`. For the Node HMR runner and browser HMR channel, see `middleware-and-server.md`.
 
 ## When To Reach For It
 
-Use `remix/assets` when the app serves browser JavaScript, TypeScript, or CSS from source files. This is the right tool for client entrypoints, browser-only helpers, styles under `app/assets/`, and monorepo code that should be compiled and served under a public URL namespace.
+Use `remix/assets` when the app serves browser JavaScript, TypeScript, or CSS from source files. This is the right tool for client entrypoints, browser-only helpers, styles, and monorepo code that should be compiled and served under a public URL namespace.
 
 Use `staticFiles()` for files that already exist on disk exactly as they should be served. Use `createAssetServer()` for source scripts or styles that need rewriting, dependency scanning, preloads, sourcemaps, or fingerprinted URLs.
 
@@ -36,9 +36,9 @@ let assetServer = createAssetServer({
     'app/*path': 'app/*path',
     'node_modules/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
-  denyFiles: ['app/**/*.server.*'],
+  denyFiles: ['app/**/*.test.*'],
   target: { es: '2020', chrome: '109', safari: '16.4' },
   sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
   minify: process.env.NODE_ENV === 'production',
@@ -61,10 +61,12 @@ export default createController(routes, {
 ## Rules
 
 - Treat `allowFiles`/`allowPackages` and `denyFiles` as the security boundary for browser-reachable source files.
+- Put browser-reachable app source in a `public/` directory inside `app/`, beside its narrowest owner, such as `app/ui/public/` or `app/actions/cart/public/`.
+- Every local dependency in a browser module graph must match `allowFiles`, so keep the whole graph inside those `public/` directories. `app/routes.ts` is allowed separately so browser modules can build type-safe links with `routes.*.href(...)`.
+- Deny test modules with `denyFiles` so tests can be colocated inside a `public/` directory without becoming browser-reachable.
 - Use `allowFiles` and `denyFiles` for file paths and globs. Relative values resolve from `rootDir`.
 - Use `allowPackages` for exact package names, not globs or subpaths. Packages allowed by `allowPackages` also allow their installed `dependencies` and `optionalDependencies`; peer dependencies must be listed explicitly if they should be browser-reachable.
 - `denyFiles` takes precedence over both file and package allow rules.
-- Add `denyFiles` rules for server-only modules such as `*.server.*`, private config, or other files that should never be exposed.
 - Set `rootDir` explicitly in monorepos so relative paths resolve from the intended project root.
 - `basePath` is the public URL namespace handled by the asset server.
 - `fileMap` keys are URL patterns relative to `basePath`, and values are root-relative file path patterns. They use `route-pattern` syntax on both sides.
@@ -76,8 +78,8 @@ export default createController(routes, {
 Use `getHref()` when you need the public URL for one module, and `getPreloads()` when you want `<link rel="modulepreload">` tags or `Link` headers for one or more entrypoints and their dependencies.
 
 ```typescript
-let entryHref = await assetServer.getHref('app/assets/entry.ts')
-let preloads = await assetServer.getPreloads(['app/assets/entry.ts'])
+let entryHref = await assetServer.getHref('app/actions/public/entry.ts')
+let entryPreloads = await assetServer.getPreloads('app/actions/public/entry.ts')
 ```
 
 Use this when rendering documents or layouts that boot browser behavior with a known client entry.
@@ -116,7 +118,8 @@ const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
 const assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  denyFiles: ['app/**/*.test.*'],
   watch: isDevelopment,
   hmr: isHmr
     ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()

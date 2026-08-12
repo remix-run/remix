@@ -1,4 +1,4 @@
-import { ClientMountedPageExample } from '../assets/client-mounted-page-example.tsx'
+import { ClientMountedPageExample } from './public/client-mounted-page-example.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 

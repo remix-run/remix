@@ -5,15 +5,15 @@ import { createAssetServer } from 'remix/assets'
 
 // Before:
 export const assetServer = createAssetServer({
-  allow: ['app/assets/**'],
-  deny: ['app/**/*.server.*'],
+  allow: ['app/routes.ts', 'app/**/public/**'],
+  deny: ['app/**/*.test.*'],
   /* ... */
 })
 
 // After:
 export const assetServer = createAssetServer({
-  allowFiles: ['app/assets/**'],
-  denyFiles: ['app/**/*.server.*'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  denyFiles: ['app/**/*.test.*'],
   /* ... */
 })
 ```

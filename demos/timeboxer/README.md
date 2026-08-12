@@ -22,6 +22,7 @@ Then visit [http://localhost:44100](http://localhost:44100).
 
 - [`app/routes.ts`](app/routes.ts) defines the route contract for auth, schedules, assets, and the home redirect.
 - [`app/router.ts`](app/router.ts) composes sessions, form parsing, CSRF protection, database loading, and auth identity before mapping controllers.
-- [`app/actions/auth/controller.tsx`](app/actions/auth/controller.tsx) owns signup, login, logout, and account routes.
+- [`app/actions/auth/controller.tsx`](app/actions/auth/controller.tsx), [`app/actions/auth/login/controller.tsx`](app/actions/auth/login/controller.tsx), and [`app/actions/auth/signup/controller.tsx`](app/actions/auth/signup/controller.tsx) mirror the nested auth route maps.
 - [`app/actions/schedules/controller.tsx`](app/actions/schedules/controller.tsx) owns schedule CRUD, optimistic revision checks, and calendar export.
-- [`app/ui/schedule-layout.ts`](app/ui/schedule-layout.ts), [`app/ui/schedule-grid.tsx`](app/ui/schedule-grid.tsx), and [`app/ui/schedule-sidebar.tsx`](app/ui/schedule-sidebar.tsx) show hydrated schedule editing on top of server-rendered pages.
+- [`app/actions/public/entry.ts`](app/actions/public/entry.ts) boots the browser runtime, while the asset controller exposes only `app/routes.ts` and source under colocated `public/` directories.
+- [`app/actions/schedules/public/schedule-layout.ts`](app/actions/schedules/public/schedule-layout.ts), [`app/actions/schedules/public/schedule-grid.tsx`](app/actions/schedules/public/schedule-grid.tsx), and [`app/actions/schedules/public/schedule-sidebar.tsx`](app/actions/schedules/public/schedule-sidebar.tsx) show hydrated schedule editing on top of server-rendered pages.

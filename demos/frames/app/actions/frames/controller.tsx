@@ -1,9 +1,9 @@
 import { createController, type RouterTypes } from 'remix/router'
 import { Frame, type RemixNode } from 'remix/ui'
 
-import { Counter } from '../../assets/counter.tsx'
-import { ReloadScope } from '../../assets/reload-scope.tsx'
-import { ReloadTime } from '../../assets/reload-time.tsx'
+import { Counter } from '../../ui/public/counter.tsx'
+import { ReloadScope } from '../../ui/public/reload-scope.tsx'
+import { ReloadTime } from './public/reload-time.tsx'
 import { routes } from '../../routes.ts'
 import { searchUnitedStates } from '../../utils/us-states.ts'
 
