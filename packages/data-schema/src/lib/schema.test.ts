@@ -15,6 +15,7 @@ import {
   number,
   object,
   optional,
+  createSchema,
   record,
   nullable,
   set,
@@ -179,6 +180,15 @@ describe('array', () => {
     assert.deepEqual(result.value, [1, 2, 3])
   })
 
+  it('preserves explicit undefined elements for sparse inputs', () => {
+    let schema = array(optional(string()))
+    let result = schema['~standard'].validate(new Array(1))
+
+    assertSuccess(result)
+    assert.ok(0 in result.value)
+    assert.equal(result.value[0], undefined)
+  })
+
   it('rejects non-array values', () => {
     let schema = array(string())
     let result = schema['~standard'].validate({ 0: 'a', length: 1 })
@@ -208,6 +218,32 @@ describe('array', () => {
 })
 
 describe('object', () => {
+  it('preserves paths passed to custom child schemas', () => {
+    let capturedPath: Issue['path']
+    let custom = createSchema<unknown, string>(function validate(value, context) {
+      capturedPath = context.path
+      return typeof value === 'string' ? { value } : { issues: [{ message: 'Expected string' }] }
+    })
+    let schema = object({ name: custom })
+
+    let result = schema['~standard'].validate({ name: 'Ada' })
+
+    assertSuccess(result)
+    assert.deepEqual(capturedPath, ['name'])
+  })
+
+  it('preserves issue paths returned by custom child schemas', () => {
+    let custom = createSchema<unknown, never>(function validate(_value, context) {
+      return { issues: [{ message: 'Invalid', path: context.path }] }
+    })
+    let schema = object({ name: custom })
+
+    let result = schema['~standard'].validate({ name: 'Ada' })
+
+    assertFailure(result)
+    assert.deepEqual(result.issues[0].path, ['name'])
+  })
+
   it('strips unknown keys by default', () => {
     let schema = object({ name: string() })
     let result = schema['~standard'].validate({ name: 'Ada', extra: 'x' })
