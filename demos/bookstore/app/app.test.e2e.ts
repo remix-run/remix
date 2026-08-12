@@ -12,6 +12,43 @@ const router = createBookstoreRouter()
 await db.reset({ migrations: await getMigrations(), seed })
 
 describe('e2e', () => {
+  it('preloads modules for client entries rendered by documents and frames', async () => {
+    let book = await db.findOne(books, { where: { in_stock: true } })
+    if (!book) throw new Error('Expected an in-stock book')
+
+    for (let href of [
+      routes.books.show.href({ slug: book.slug }),
+      routes.fragments.cartButton.href({ bookId: book.id }),
+    ]) {
+      let response = await router.fetch(new Request(`http://bookstore.test${href}`))
+      let html = await response.text()
+      let payloads = [...html.matchAll(/<script[^>]*id="rmx-data"[^>]*>([\s\S]*?)<\/script>/g)]
+      let moduleUrls = payloads.flatMap(([, payload]) => {
+        let data = JSON.parse(payload ?? '{}') as { h?: Record<string, { moduleUrl: string }> }
+        return Object.values(data.h ?? {}).map(({ moduleUrl }) => moduleUrl)
+      })
+
+      assert.ok(moduleUrls.length > 0)
+      for (let moduleUrl of moduleUrls) {
+        assert.match(html, new RegExp(`rel="modulepreload" href="${escapeRegExp(moduleUrl)}"`))
+      }
+    }
+  })
+
+  it('deduplicates module preloads shared by client entries', async () => {
+    let response = await router.fetch(new Request('http://bookstore.test/'))
+    let html = await response.text()
+    let head = html.match(/<head>(.*?)<\/head>/s)?.[1]
+    if (!head) throw new Error('Expected a document head')
+
+    let hrefs = [...head.matchAll(/<link data-rmx rel="modulepreload" href="([^"]+)"/g)]
+      .map((match) => match[1])
+      .filter((href): href is string => href !== undefined)
+
+    assert.ok(hrefs.length > 0)
+    assert.equal(new Set(hrefs).size, hrefs.length)
+  })
+
   it('adds to cart', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
 
@@ -33,6 +70,10 @@ describe('e2e', () => {
     assert.equal(await cartRow.getByRole('spinbutton').inputValue(), '1')
   })
 })
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
 async function clickCartButton(page: Page, button: Locator): Promise<void> {
   let cartTogglePath = routes.api.cartToggle.href()

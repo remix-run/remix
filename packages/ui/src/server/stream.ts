@@ -77,6 +77,8 @@ interface UnresolvedHydrationData {
 interface ResolvedClientEntry {
   href: string
   exportName: string
+  /** Browser module hrefs to begin preloading before hydrating this entry. */
+  preloads?: readonly string[]
 }
 
 interface FrameData {
@@ -99,6 +101,7 @@ interface RenderContext {
   hydrationData: Map<string, HydrationData>
   unresolvedHydrationData: Map<string, UnresolvedHydrationData>
   frameData: Map<string, FrameData>
+  modulePreloadTags: Set<string>
   blockingFrameTails: ReadableStream<Uint8Array>[]
   signal: AbortSignal
   flushKind: FlushKind
@@ -207,6 +210,7 @@ export function renderToStream(
     hydrationData: new Map(),
     unresolvedHydrationData: new Map(),
     frameData: new Map(),
+    modulePreloadTags: new Set(),
     blockingFrameTails: [],
     signal: renderAbortController.signal,
     flushKind: 'fragment',
@@ -492,6 +496,7 @@ function buildFrameSegment(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
     ).then(async (resolved) => {
       let { html, tail } = await resolveFrameHtml(resolved)
+      html = hoistModulePreloadsFromFrameHead(html, context)
       seg.content = staticSeg(html)
       if (tail) {
         context.blockingFrameTails.push(tail)
@@ -1073,6 +1078,10 @@ async function resolveClientEntries(
       moduleUrl: resolvedEntry.href,
       props,
     })
+
+    for (let preload of resolvedEntry.preloads ?? []) {
+      context.modulePreloadTags.add(createModulePreloadTag(preload))
+    }
   }
 
   context.unresolvedHydrationData.clear()
@@ -1094,6 +1103,19 @@ function validateResolvedClientEntry(
 
   if (!resolvedEntry.exportName) {
     throw new Error(`resolveClientEntry must return a non-empty exportName. Received "${entryId}".`)
+  }
+
+  if (resolvedEntry.preloads !== undefined) {
+    if (!Array.isArray(resolvedEntry.preloads)) {
+      throw new Error(`resolveClientEntry preloads must be an array. Received "${entryId}".`)
+    }
+    for (let preload of resolvedEntry.preloads) {
+      if (typeof preload !== 'string' || preload.length === 0) {
+        throw new Error(
+          `resolveClientEntry preloads must contain non-empty strings. Received "${entryId}".`,
+        )
+      }
+    }
   }
 }
 
@@ -1159,9 +1181,10 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 function finalizeHtml(html: string, context: RenderContext): string {
   let hasHtmlRoot = context.flushKind === 'document'
 
+  let preloads = collectModulePreloadTags(context)
   let styles = collectStyleTags(context)
-  if (styles) {
-    let headContent = styles
+  if (preloads || styles) {
+    let headContent = preloads + styles
     if (hasHtmlRoot) {
       // For HTML root, inject into existing head or create one
       let headCloseIndex = html.indexOf('</head>')
@@ -1178,7 +1201,8 @@ function finalizeHtml(html: string, context: RenderContext): string {
         }
       }
     } else {
-      // No HTML root, prepend head
+      // Framework-owned head content is transported at the start of fragments
+      // so it can be consumed before the remaining frame content is rendered.
       html = `<head>${headContent}</head>${html}`
     }
   }
@@ -1205,6 +1229,52 @@ function finalizeHtml(html: string, context: RenderContext): string {
   }
 
   return html
+}
+
+const FRAME_HEAD_OPEN_TAG = '<head>'
+const FRAME_HEAD_CLOSE_TAG = '</head>'
+const MARKED_MODULE_PRELOAD_START = '<link data-rmx rel="modulepreload" href="'
+const MODULE_PRELOAD_END = '" />'
+
+function createModulePreloadTag(href: string): string {
+  return `${MARKED_MODULE_PRELOAD_START}${escapeHtml(href)}${MODULE_PRELOAD_END}`
+}
+
+function collectModulePreloadTags(context: RenderContext): string {
+  return Array.from(context.modulePreloadTags).join('')
+}
+
+function hoistModulePreloadsFromFrameHead(html: string, context: RenderContext): string {
+  if (!html.startsWith(FRAME_HEAD_OPEN_TAG)) return html
+
+  let tags: string[] = []
+  let remainingHeadStart = FRAME_HEAD_OPEN_TAG.length
+  while (html.startsWith(MARKED_MODULE_PRELOAD_START, remainingHeadStart)) {
+    let tagEnd = html.indexOf(
+      MODULE_PRELOAD_END,
+      remainingHeadStart + MARKED_MODULE_PRELOAD_START.length,
+    )
+    if (tagEnd === -1) return html
+
+    tagEnd += MODULE_PRELOAD_END.length
+    tags.push(html.slice(remainingHeadStart, tagEnd))
+    remainingHeadStart = tagEnd
+  }
+
+  if (tags.length === 0) return html
+
+  let headClose = html.indexOf(FRAME_HEAD_CLOSE_TAG, remainingHeadStart)
+  if (headClose === -1) return html
+
+  for (let tag of tags) {
+    context.modulePreloadTags.add(tag)
+  }
+
+  if (remainingHeadStart === headClose) {
+    return html.slice(headClose + FRAME_HEAD_CLOSE_TAG.length)
+  }
+
+  return FRAME_HEAD_OPEN_TAG + html.slice(remainingHeadStart)
 }
 
 function processStyleProps(props: any): any {

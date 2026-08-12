@@ -76,13 +76,21 @@ let stream = renderToStream(<App />, {
       throw new Error(`Unable to resolve client entry export for ${entryId}`)
     }
 
+    let [href, preloads] = await Promise.all([
+      assetServer.getHref(entryId),
+      assetServer.getPreloads(entryId),
+    ])
+
     return {
-      href: await assetServer.getHref(entryId),
+      href,
       exportName,
+      preloads,
     }
   },
 })
 ```
+
+`preloads` contains browser module hrefs. During SSR, Remix emits them as `<link rel="modulepreload">` tags, including preloads discovered in blocking frames. When a later frame response introduces a client entry, its preloads start before hydration imports the entry module.
 
 If the module export name differs from the component function name, include `#ExportName` in the entry ID or return the exact export name from `resolveClientEntry`. A render helper that only supports source-owned entries can also fail fast when `entryId` is not a `file://` URL.
 

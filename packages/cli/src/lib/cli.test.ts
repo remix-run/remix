@@ -548,6 +548,7 @@ describe('run', () => {
       assert.match(entry, /server:update/)
       assert.doesNotMatch(entry, /X-Remix-Frame/)
       assert.match(renderMiddleware, /resolveClientEntry/)
+      assert.match(renderMiddleware, /getPreloads/)
       assert.match(renderMiddleware, /resolveFrame/)
       assert.doesNotMatch(renderMiddleware, /Accept-Encoding/)
       assert.doesNotMatch(renderMiddleware, /X-Remix-Frame/)
