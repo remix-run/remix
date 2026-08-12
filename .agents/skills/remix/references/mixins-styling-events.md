@@ -115,6 +115,8 @@ Adds client-side navigation behavior to any element. Makes non-anchor elements b
 
 Options match `NavigationOptions`: `src`, `target`, `history` (`'push' | 'replace'`), `resetScroll`.
 
+On a native anchor, the `history` option renders the corresponding `rmx-history="push|replace"` attribute so the enhanced navigation uses the same history behavior.
+
 ## Native press and keyboard interactions
 
 Use native DOM events directly with `on(...)`. For buttons and links, `click` already includes keyboard activation when the element has the right semantics:

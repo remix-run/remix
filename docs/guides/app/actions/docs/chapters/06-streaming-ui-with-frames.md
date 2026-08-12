@@ -185,6 +185,7 @@ be pending, and any frame can reload later. Add `resolveFrame` to the browser's 
 those requests:
 
 ```ts filename=app/actions/public/entry.ts
+import type { ResolveFrameOptions } from "remix/ui";
 import { run } from "remix/ui";
 
 let app = run({
@@ -192,14 +193,16 @@ let app = run({
     let module = await import(moduleUrl);
     return module[exportName];
   },
-  async resolveFrame(src, signal, target) {
-    let headers = new Headers({ Accept: "text/html" });
-    if (target) headers.set("X-Remix-Target", target);
+  async resolveFrame(src, options) {
+    let headers = new Headers({ Accept: "text/html", "X-Remix-Frame": "true" });
+    if (options?.target) headers.set("X-Remix-Target", options.target);
 
     let response = await fetch(src, {
+      body: getRequestBody(options),
       credentials: "same-origin",
       headers,
-      signal,
+      method: options?.method,
+      signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -210,14 +213,28 @@ let app = run({
   },
 });
 
+function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+  let formData = options?.formData;
+  if (!formData) return;
+  if (options.encType !== "application/x-www-form-urlencoded") return formData;
+
+  let body = new URLSearchParams();
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === "string" ? value : value.name);
+  }
+  return body;
+}
+
 app.addEventListener("error", (event) => {
   console.error(event.error);
 });
 ```
 
-Only return trusted HTML from `resolveFrame`. Same-origin route URLs are the normal choice. The
-resolver receives an abort signal, so pass it to `fetch()` instead of letting a removed or superseded
-frame request continue.
+Only return trusted HTML from `resolveFrame`. Same-origin route URLs are the normal choice. Pass
+`options.signal` to `fetch()` instead of letting a removed or superseded frame request continue.
+GET forms already include their values in `src`. For non-GET forms, the resolver receives the
+browser's `FormData`, method, and encoding. This example preserves URL-encoded and multipart form
+bodies; the resolver remains the place to apply other encoding or `_method` conventions.
 
 ## Name and reload frames {#frames-and-partial-server-rendered-ui}
 
@@ -245,10 +262,38 @@ await handle.frames.get("album-recommendations")?.reload();
 updates the region with the route's current HTML. Client entries inside matching content keep their
 setup state and receive current server props.
 
-## Reload a frame after a form submission {#coordinating-forms-fetches-frame-reloads-and-navigation}
+## Navigate a frame with a form
+
+Once `run({ resolveFrame })` starts, an eligible same-origin form follows the same frame navigation
+path as a link. This GET form reloads the recommendations frame without a client entry or submit
+handler:
+
+```tsx
+<form
+  action={routes.albums.recommendations.href({ albumId: album.id })}
+  method="get"
+  rmx-target="album-recommendations"
+>
+  <button type="submit">Refresh recommendations</button>
+</form>
+```
+
+The form remains a normal document navigation before the runtime starts. Native constraint
+validation and the form's `submit` event run before Remix intercepts it. `rmx-target` chooses a named
+frame, `rmx-src` can provide a different frame request URL, `rmx-reset-scroll="false"` preserves the
+current scroll position, and `rmx-document` opts out of interception. `rmx-history="push|replace"`
+controls how the navigation updates history.
+
+GET controls are already encoded in the destination URL. For non-GET forms, `resolveFrame` receives
+`formData`, `method`, and `encType`. The action should return HTML for the targeted frame when it
+receives a frame request, while keeping its normal document response or redirect for unenhanced
+submissions. Non-GET submissions to the current URL replace that history entry; GET submissions and
+submissions to a different URL push one. The `rmx-history` attribute overrides those defaults.
+
+## Coordinate a mutation and a separate frame reload {#coordinating-forms-fetches-frame-reloads-and-navigation}
 
 Start with a form whose action works without browser JavaScript. A client entry can intercept that
-same submission, send its `FormData`, and reload a related frame after the action succeeds:
+same submission, send its `FormData`, and reload a different route after the action succeeds:
 
 ```tsx
 import { on } from "remix/ui";
@@ -280,8 +325,13 @@ import { on } from "remix/ui";
 </form>;
 ```
 
-This keeps the mutation in its existing action and the recommendations HTML in its existing `GET`
-action. The browser component coordinates the two requests without duplicating either server path.
+This custom handler is useful because the mutation response and recommendations frame are two
+different requests. When the form action itself returns the HTML that belongs in the target frame,
+prefer `rmx-target` and let the runtime submit it through `resolveFrame`.
+
+The handler above keeps the mutation in its existing action and the recommendations HTML in its
+existing `GET` action. The browser component coordinates the two requests without duplicating either
+server path.
 
 Use a normal navigation when the response should replace the whole page. Fetch JSON when a browser
 component will render the returned data itself. Reload a frame when an existing `GET` action renders
@@ -304,8 +354,8 @@ A link can keep its public destination in `href` while loading a smaller route i
 ```
 
 `rmx-target` chooses the frame, while `rmx-src` chooses the request used to fill it. The address bar
-still moves to `href`. Use `rmx-document` when a same-origin link must perform an ordinary document
-navigation instead.
+still moves to `href`. Add `rmx-history="replace"` when it should replace the current history entry. Use
+`rmx-document` when a same-origin link must perform an ordinary document navigation instead.
 
 ## Handle failures and cancellation
 

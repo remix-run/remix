@@ -1,5 +1,5 @@
 import { jsx } from './jsx.ts'
-import { Frame, createFrameHandle, type FrameContent } from './component.ts'
+import { Frame, createFrameHandle, type FrameContent, type FrameResolution } from './component.ts'
 import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
@@ -11,6 +11,7 @@ import { diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
 import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader } from './module-preloader.ts'
+import { unwrapFrameResolution } from './frame-resolution.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -64,17 +65,38 @@ export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Func
  * Resolves content for a browser-loaded frame.
  *
  * @param src Source string from the `<Frame src>` prop.
- * @param signal Abort signal for the active frame load or reload.
- * @param target Optional name of the frame being reloaded.
- * @returns HTML, a stream of HTML bytes, or Remix node content to render into the frame.
+ * @param options Information about the active frame load or form submission.
+ * @returns Frame content or a response whose body should be rendered into the frame.
  */
 export type ResolveFrame = (
   src: string,
-  signal?: AbortSignal,
-  target?: string,
-) => Promise<FrameContent> | FrameContent
+  options?: ResolveFrameOptions,
+) => Promise<FrameResolution> | FrameResolution
+
+/**
+ * Information available while resolving browser-loaded frame content.
+ */
+export interface ResolveFrameOptions {
+  /** Optional name of the frame being loaded or reloaded. */
+  target?: string
+  /** Form values submitted to the frame source for a non-GET submission. */
+  formData?: FormData
+  /** HTTP method selected by the form and its submitter. */
+  method?: string
+  /** Form encoding selected by the form and its submitter. */
+  encType?: string
+  /** Aborts the reload when the navigation that started it is cancelled. */
+  signal?: AbortSignal
+}
 
 type InternalFrameContent = FrameContent | DocumentFragment
+
+type FrameReloadOptions = Omit<ResolveFrameOptions, 'target'>
+
+type FrameReloadResult = {
+  signal: AbortSignal
+  redirectedTo?: string
+}
 
 type FrameTemplateListener = (fragment: DocumentFragment) => void
 
@@ -118,10 +140,29 @@ export type FrameRuntime = {
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
   serverFrameReload: { signal: AbortSignal } | undefined
+  reloadForNavigation?: (options?: FrameReloadOptions) => Promise<FrameReloadResult>
 }
 
 export function isFrameRuntime(value: unknown): value is FrameRuntime {
   return isRecord(value) && Reflect.get(value, FRAME_RUNTIME) === true
+}
+
+/**
+ * Reloads a frame and returns response metadata used by the navigation runtime.
+ *
+ * @param frame Frame handle to reload.
+ * @param options Form submission metadata and cancellation signal.
+ * @returns The reload signal and final response URL, when redirected.
+ */
+export function reloadFrameForNavigation(
+  frame: FrameHandle,
+  options?: FrameReloadOptions,
+): Promise<FrameReloadResult> {
+  let runtime = frame.$runtime
+  invariant(isFrameRuntime(runtime), 'Expected a frame runtime')
+  let reload = runtime.reloadForNavigation
+  invariant(reload, 'Expected frame runtime to support navigation reloads')
+  return reload(options)
 }
 
 export type FrameContext = {
@@ -219,12 +260,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   // Merge any rmx-data found in the current document once at startup.
   mergeRmxDataFromDocument(init.data, container.doc)
 
-  let runtime = createFrameRuntime({ ...init, styleManager })
+  let runtime = createFrameRuntime({ ...init, styleManager, reloadForNavigation: reload })
 
   let frame = createFrameHandle({
     src: init.src,
     $runtime: runtime,
-    reload: () => reload(),
+    reload: async () => (await reload()).signal,
     replace: async (content: FrameContent) => {
       await render(content)
     },
@@ -520,13 +561,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     }
   }
 
-  async function reload(): Promise<AbortSignal> {
-    let controller = startReload()
-    return await resolveAndRenderReload(controller)
+  async function reload(options?: FrameReloadOptions): Promise<FrameReloadResult> {
+    let controller = startReload(options?.signal)
+    return await resolveAndRenderReload(controller, options)
   }
 
-  function startReload(): AbortController {
-    let controller = replaceReloadController()
+  function startReload(signal?: AbortSignal): AbortController {
+    let controller = replaceReloadController(signal)
     reloadKind = 'direct'
     frame.dispatchEvent(new Event('reloadStart'))
     startSubFrameInheritedReloads(getContentNodes(), controller.signal)
@@ -581,14 +622,33 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     return controller
   }
 
-  async function resolveAndRenderReload(controller: AbortController): Promise<AbortSignal> {
+  async function resolveAndRenderReload(
+    controller: AbortController,
+    options?: FrameReloadOptions,
+  ): Promise<FrameReloadResult> {
     try {
-      let content = await init.resolveFrame(frame.src, controller.signal, frameName)
-      if (reloadController !== controller || controller.signal.aborted) return controller.signal
+      let resolution = await init.resolveFrame(frame.src, {
+        ...options,
+        signal: controller.signal,
+        target: frameName,
+      })
+      if (reloadController !== controller || controller.signal.aborted) {
+        return { signal: controller.signal }
+      }
+      let { content, redirectedTo } = await unwrapFrameResolution(resolution)
+      if (reloadController !== controller || controller.signal.aborted) {
+        return { signal: controller.signal }
+      }
       await render(content, { signal: controller.signal })
-      return controller.signal
+      return {
+        signal: controller.signal,
+        redirectedTo:
+          reloadController === controller && !controller.signal.aborted ? redirectedTo : undefined,
+      }
     } catch (error) {
-      if (reloadController !== controller || controller.signal.aborted) return controller.signal
+      if (reloadController !== controller || controller.signal.aborted) {
+        return { signal: controller.signal }
+      }
       init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       throw error
     } finally {
@@ -734,6 +794,7 @@ export function createFrameRuntime(init: {
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
+  reloadForNavigation?: (options?: FrameReloadOptions) => Promise<FrameReloadResult>
 }): FrameRuntime {
   return {
     [FRAME_RUNTIME]: true,
@@ -750,6 +811,7 @@ export function createFrameRuntime(init: {
     frameInstances: init.frameInstances,
     namedFrames: init.namedFrames,
     serverFrameReload: undefined,
+    reloadForNavigation: init.reloadForNavigation,
   }
 }
 

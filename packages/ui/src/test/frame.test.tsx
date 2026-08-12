@@ -1,13 +1,13 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
+import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 import { Frame } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
-import { run } from '../runtime/run.ts'
+import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { renderToStream } from '../server/stream.ts'
-import { css, on } from '../index.ts'
+import { css, navigate, on } from '../index.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 
 function getCommentMarkerId(html: string, prefix: 'rmx:f:' | 'rmx:h:'): string {
@@ -47,6 +47,84 @@ async function waitForTransitionWindow(): Promise<void> {
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
   await new Promise<void>((resolve) => setTimeout(resolve, 120))
+}
+
+async function setupFrameNavigationTest(t: TestContext) {
+  let initialUrl = window.location.href
+  let initialEntryKey = window.navigation.currentEntry?.key
+  let baseUrl = new URL('/', initialUrl).href
+  window.history.replaceState(null, '', baseUrl)
+
+  function renderPage() {
+    return renderToStream(
+      <html>
+        <head />
+        <body>
+          <Frame name="target" src="/frame" />
+        </body>
+      </html>,
+      {
+        resolveFrame(src, target) {
+          expect(src).toBe('/frame')
+          expect(target).toBe('target')
+          return '<p id="frame-content">Frame</p>'
+        },
+      },
+    )
+  }
+
+  let initialDocument = new DOMParser().parseFromString(await drain(renderPage()), 'text/html')
+  document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+  let requests: Array<{ src: string; target: string | undefined }> = []
+  let app = run({
+    loadModule: mock.fn(),
+    async resolveFrame(src, options) {
+      let target = options?.target
+      requests.push({ src, target })
+      if (target === 'target') return '<p id="frame-content">Targeted frame</p>'
+      return renderPage()
+    },
+  })
+
+  t.after(async () => {
+    if (initialEntryKey && window.navigation.currentEntry?.key !== initialEntryKey) {
+      await window.navigation.traverseTo(initialEntryKey).finished
+    }
+    app.dispose()
+    window.history.replaceState(null, '', initialUrl)
+  })
+
+  await app.ready()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  return {
+    baseUrl,
+    requests,
+    frames() {
+      return {
+        top: getTopFrame(),
+        target: getNamedFrame('target'),
+      }
+    },
+  }
+}
+
+async function navigateWithLink(
+  href: string,
+  options: { target: string; src?: string },
+): Promise<void> {
+  let link = document.createElement('a')
+  link.href = href
+  link.setAttribute('rmx-target', options.target)
+  if (options.src !== undefined) link.setAttribute('rmx-src', options.src)
+  document.body.append(link)
+
+  link.click()
+  let transition = window.navigation.transition
+  invariant(transition, 'Expected link click to start a navigation transition')
+  await transition.finished
+  link.remove()
 }
 
 describe('run', () => {
@@ -1603,6 +1681,93 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('updates and reloads the top frame for ordinary navigation', async (t) => {
+    let fixture = await setupFrameNavigationTest(t)
+    let destinationUrl = new URL('/next', window.location.href).href
+
+    await navigate(destinationUrl, {
+      history: 'replace',
+      resetScroll: false,
+    })
+
+    expect(window.location.href).toBe(destinationUrl)
+    expect(fixture.frames().top.src).toBe(window.location.href)
+    expect(fixture.requests).toEqual([{ src: destinationUrl, target: undefined }])
+  })
+
+  it('reloads only the target frame using the public destination without rmx-src', async (t) => {
+    let fixture = await setupFrameNavigationTest(t)
+    let destinationUrl = new URL('/destination', window.location.href).href
+
+    await navigateWithLink(destinationUrl, { target: 'target' })
+
+    let frames = fixture.frames()
+    expect(window.location.href).toBe(destinationUrl)
+    expect(frames.top.src).toBe(window.location.href)
+    expect(frames.target.src).toBe(destinationUrl)
+    expect(fixture.requests).toEqual([{ src: destinationUrl, target: 'target' }])
+  })
+
+  it('preserves a targeted src while later top frame reloads use the public destination', async (t) => {
+    let fixture = await setupFrameNavigationTest(t)
+    let destinationUrl = new URL('/destination', window.location.href).href
+    let targetSrc = '/target-frame'
+
+    await navigateWithLink(destinationUrl, { target: 'target', src: targetSrc })
+
+    let frames = fixture.frames()
+    expect(window.location.href).toBe(destinationUrl)
+    expect(frames.top.src).toBe(window.location.href)
+    expect(frames.target.src).toBe(targetSrc)
+    expect(fixture.requests).toEqual([{ src: targetSrc, target: 'target' }])
+
+    await frames.top.reload()
+    expect(fixture.requests).toEqual([
+      { src: targetSrc, target: 'target' },
+      { src: destinationUrl, target: undefined },
+    ])
+  })
+
+  it('restores top and targeted frame sources during back and forward traversal', async (t) => {
+    let fixture = await setupFrameNavigationTest(t)
+    let firstDestinationUrl = new URL('/first', window.location.href).href
+    let secondDestinationUrl = new URL('/second', window.location.href).href
+    let firstTargetSrc = '/first-frame'
+    let secondTargetSrc = '/second-frame'
+
+    await navigate(firstDestinationUrl, {
+      target: 'target',
+      src: firstTargetSrc,
+      resetScroll: false,
+    })
+    await navigate(secondDestinationUrl, {
+      target: 'target',
+      src: secondTargetSrc,
+      resetScroll: false,
+    })
+    await window.navigation.back().finished
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let frames = fixture.frames()
+    expect(window.location.href).toBe(firstDestinationUrl)
+    expect(frames.top.src).toBe(window.location.href)
+    expect(frames.target.src).toBe(firstTargetSrc)
+
+    await window.navigation.forward().finished
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    frames = fixture.frames()
+    expect(window.location.href).toBe(secondDestinationUrl)
+    expect(frames.top.src).toBe(window.location.href)
+    expect(frames.target.src).toBe(secondTargetSrc)
+    expect(fixture.requests).toEqual([
+      { src: firstTargetSrc, target: 'target' },
+      { src: secondTargetSrc, target: 'target' },
+      { src: firstTargetSrc, target: 'target' },
+      { src: secondTargetSrc, target: 'target' },
+    ])
+  })
+
   it('dispatches reloadStart and reloadComplete events for handle.frame and handle.frames.get(name)', async () => {
     let summaryReloadStartEvents = 0
     let rowReloadStartEvents = 0
@@ -2194,15 +2359,15 @@ describe('run', () => {
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
       },
-      resolveFrame(src: string, signal?: AbortSignal) {
+      resolveFrame(src: string, options) {
         if (src !== '/reload-abort') throw new Error(`Unexpected frame src: ${src}`)
         callCount++
         if (callCount === 1) {
-          firstSignal = signal
+          firstSignal = options?.signal
           return firstReloadContent
         }
         if (callCount === 2) {
-          secondSignal = signal
+          secondSignal = options?.signal
           return secondReloadContent
         }
         throw new Error(`Unexpected reload call count: ${callCount}`)
@@ -2224,19 +2389,19 @@ describe('run', () => {
     expect(secondSignal?.aborted).toBe(false)
 
     resolveFirstReloadContent('<section><p id="reload-value">Stale</p></section>')
-    let firstReturnedSignal = await firstReloadPromise
+    let firstReloadSignal = await firstReloadPromise
     await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(firstReturnedSignal).toBe(firstSignal)
-    expect(firstReturnedSignal.aborted).toBe(true)
+    expect(firstReloadSignal).toBe(firstSignal)
+    expect(firstReloadSignal.aborted).toBe(true)
 
     // First reload should be ignored because it was superseded.
     expect(document.getElementById('reload-value')?.textContent).toBe('Initial')
 
     resolveSecondReloadContent('<section><p id="reload-value">Fresh</p></section>')
-    let secondReturnedSignal = await secondReloadPromise
+    let secondReloadSignal = await secondReloadPromise
     await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(secondReturnedSignal).toBe(secondSignal)
-    expect(secondReturnedSignal.aborted).toBe(false)
+    expect(secondReloadSignal).toBe(secondSignal)
+    expect(secondReloadSignal.aborted).toBe(false)
 
     expect(document.getElementById('reload-value')?.textContent).toBe('Fresh')
     clientFrame.dispose()
@@ -3163,8 +3328,8 @@ describe('run', () => {
     document.body.innerHTML = pageHtml
 
     let resolveTargets: Array<string | undefined> = []
-    let resolveFrame = mock.fn(async (_src: string, _signal?: AbortSignal, target?: string) => {
-      resolveTargets.push(target)
+    let resolveFrame = mock.fn(async (_src: string, options) => {
+      resolveTargets.push(options?.target)
       return '<p id="named-frame-loaded">Loaded</p>'
     })
 
@@ -4523,11 +4688,11 @@ describe('run', () => {
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
       },
-      resolveFrame(src: string, _signal?: AbortSignal, target?: string) {
+      resolveFrame(src: string, options) {
         if (src === '/detail') return renderParentFrame()
         if (src.startsWith('/comments')) {
           // The client re-resolve of the nested clientEntry frame on ancestor reload.
-          islandClientTargets.push(target)
+          islandClientTargets.push(options?.target)
           return `<p id="island-content" data-client-issue="${issue}">island ${issue} (client)</p>`
         }
         throw new Error(`Unexpected frame src: ${src}`)
@@ -5493,7 +5658,8 @@ describe('run', () => {
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
       },
-      async resolveFrame(src: string, signal?: AbortSignal) {
+      async resolveFrame(src: string, options) {
+        let signal = options?.signal
         if (src === document.location.href) {
           return streamFromChunks([await renderPageWithProtocol('Reloaded entry')])
         }
@@ -5603,7 +5769,8 @@ describe('run', () => {
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
       },
-      async resolveFrame(src: string, signal?: AbortSignal) {
+      async resolveFrame(src: string, options) {
+        let signal = options?.signal
         if (src === document.location.href) {
           return streamFromChunks([
             await renderPageWithProtocol('Reloaded entry', 'Unused streamed entry frame'),
@@ -5711,7 +5878,8 @@ describe('run', () => {
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
       },
-      async resolveFrame(src: string, signal?: AbortSignal) {
+      async resolveFrame(src: string, options) {
+        let signal = options?.signal
         if (src === document.location.href) {
           topReloadCount++
           if (topReloadCount === 1) {
