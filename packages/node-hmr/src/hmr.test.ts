@@ -443,7 +443,7 @@ describe('node-hmr', () => {
 
       await waitForResponse(ready.port, 'two')
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update value\.ts/)
+      await waitForOutput(server, /hmr update value\.ts/)
     } finally {
       await server.stop()
     }
@@ -493,7 +493,7 @@ describe('node-hmr', () => {
         () => server.output,
       )
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update value\.ts/)
+      await waitForOutput(server, /hmr update value\.ts/)
     } finally {
       await server.stop()
     }
@@ -557,7 +557,7 @@ describe('node-hmr', () => {
       await waitForResponse(ready.port, 'two', () => server.output)
       assert.equal(server.readyCount, 1)
       assert.match(server.output, /message boundary declined update/)
-      assert.match(server.output, /hmr update message\.ts/)
+      await waitForOutput(server, /hmr update message\.ts/)
       assert.doesNotMatch(server.output, /restart message boundary declined update/)
     } finally {
       await server.stop()
@@ -660,7 +660,7 @@ describe('node-hmr', () => {
 
       await waitForResponse(ready.port, 'two')
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update packages\/fixture-message\/index\.ts/)
+      await waitForOutput(server, /hmr update packages\/fixture-message\/index\.ts/)
     } finally {
       await server.stop()
     }
@@ -880,7 +880,7 @@ describe('node-hmr', () => {
 
       await waitForResponse(ready.port, 'Updated from generic boundary', () => server.output)
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update greeting\.tsx/)
+      await waitForOutput(server, /hmr update greeting\.tsx/)
     } finally {
       await server.stop()
     }
