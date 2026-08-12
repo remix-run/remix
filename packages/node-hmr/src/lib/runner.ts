@@ -285,6 +285,7 @@ export function createHmrSupervisor(options: {
     unwatchKnownModuleFiles()
     watchKnownModuleFile(getEntryPath())
     waitingForFileChangeAfterExit = false
+    let childRestartGeneration = restartGeneration
 
     let entry = getEntryPath()
     let nextChild = spawn(
@@ -308,7 +309,7 @@ export function createHmrSupervisor(options: {
 
     nextChild.on('message', (message: unknown) => {
       if (child !== nextChild) return
-      handleChildMessage(message)
+      handleChildMessage(message, childRestartGeneration)
     })
 
     nextChild.once('exit', (code, signal) => {
@@ -346,7 +347,7 @@ export function createHmrSupervisor(options: {
     }, restartSettleDelayMs)
   }
 
-  function handleChildMessage(message: unknown) {
+  function handleChildMessage(message: unknown, childRestartGeneration: number) {
     if (!isChildMessage(message)) return
 
     if (message.type === 'node-hmr:child:browser-event-emitted') {
@@ -400,9 +401,10 @@ export function createHmrSupervisor(options: {
     }
 
     if (message.type === 'node-hmr:child:server-ready') {
+      if (childRestartGeneration !== pendingRestartGeneration) return
       serverReadyCount += 1
       waitingForEntryServerReady = false
-      setReadyGeneration(restartGeneration)
+      setReadyGeneration(childRestartGeneration)
       resolveReadyWaiters()
       flushPendingServerUpdateEvent()
       flushAcceptedHotUpdateBrowserEvent()

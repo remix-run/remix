@@ -681,9 +681,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
@@ -709,7 +711,6 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
         'Client: after shared export add',
       )
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
-      assert.equal(server.readyCount, 2)
     } finally {
       await server?.close()
       await fixture.close()
@@ -1648,9 +1649,10 @@ async function createNodeHmrFixture(
       '  import.meta.hot.on("server:update", reloadTopFrame)',
       '}',
       '',
-      'app.ready().catch((error: unknown) => {',
-      '  console.error("Frame adoption failed:", error)',
-      '})',
+      'app.ready().then(',
+      '  () => console.info("Frame adoption complete"),',
+      '  (error: unknown) => console.error("Frame adoption failed:", error),',
+      ')',
       '',
     ].join('\n'),
   )

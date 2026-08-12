@@ -1,6 +1,6 @@
 import type { Handle } from 'remix/ui'
 
-import { StateSearchPage } from '../assets/state-search-page.tsx'
+import { StateSearchPage } from './public/state-search-page.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 

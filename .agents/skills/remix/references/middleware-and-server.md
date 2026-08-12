@@ -65,8 +65,9 @@ let router = createRouter({ middleware })
 
 ### Static files vs browser modules
 
-- Use `staticFiles()` for files that should be served directly from disk, such as images, fonts, or already-built assets in `public/`
+- Use `staticFiles()` for files that should be served directly from disk, such as images, fonts, or already-built assets in the root `public/` directory
 - Use `remix/assets` when browser modules should be compiled and served from source files with import rewriting, preloads, or fingerprinted URLs
+- `public/` directories inside `app/` hold browser-reachable source for the asset server
 
 ### Ordering notes
 

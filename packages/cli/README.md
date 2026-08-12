@@ -7,7 +7,7 @@ Command-line interface for creating and managing Remix projects.
 - Create new Remix projects with `npx remix@next new` or installed `remix new`
 - Print shell completion scripts with `remix completion`
 - Check project environment and Remix app conventions with `remix doctor`
-- Create low-risk project and controller files with `remix doctor --fix`
+- Apply available low-risk project fixes with `remix doctor --fix`
 - Manage the current app database with `remix db`
 - Inspect the current app route tree with `remix routes`
 - Run project tests with `remix test`

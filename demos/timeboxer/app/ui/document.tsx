@@ -25,7 +25,7 @@ export function Document(handle: Handle<DocumentProps>) {
           {children}
           <script
             type="module"
-            src={routes.assets.index.href({ path: 'app/assets/entry.ts' })}
+            src={routes.assets.index.href({ path: 'app/actions/public/entry.ts' })}
           ></script>
         </body>
       </html>
