@@ -142,25 +142,26 @@ Use `rmx-history="push|replace"` on an enhanced anchor or form to control how th
 
 ## Single-page Applications
 
-Use `runSPA` when every route runs in the browser and returns a Remix UI tree instead of an HTTP
-response body. `nodeResponse` keeps the router's standard `Request` to `Response` contract while
-associating the response with a node for the top frame to render:
+Use `run` from `remix/ui/spa` when every route runs in the browser and returns a Remix UI tree
+instead of an HTTP response body. `nodeResponse` keeps the router's standard `Request` to
+`Response` contract while associating the response with a node for the top frame to render:
 
 ```tsx
 import { createRouter } from 'remix/router'
-import { nodeResponse, runSPA } from 'remix/ui/spa'
+import { nodeResponse, run } from 'remix/ui/spa'
 
 let router = createRouter()
 
 router.get('/', () => nodeResponse(<h1>Home</h1>))
 router.get('/about', () => nodeResponse(<h1>About</h1>))
 
-let app = runSPA({ router })
+let app = run(router)
 await app.ready()
 ```
 
-The runtime dispatches the initial URL through the router, then reuses frame navigation for
-same-origin links, forms, history traversal, redirects, cancellation, and `rmx-target`.
+`app.ready()` resolves after the initial URL has rendered through the router. The runtime then
+reuses frame navigation for same-origin links, forms, history traversal, redirects, cancellation,
+and `rmx-target`.
 
 ## Preserving Client-Owned DOM
 

@@ -1,6 +1,6 @@
 import { createRouter } from 'remix/router'
 import { css, type Handle, type RemixNode } from 'remix/ui'
-import { nodeResponse, runSPA } from 'remix/ui/spa'
+import { nodeResponse, run } from 'remix/ui/spa'
 
 const routes = {
   home: '/',
@@ -315,7 +315,7 @@ const buttonStyle = css({
 })
 const loadingStyle = css({ color: '#6a48d7', fontSize: '1.125rem' })
 
-const app = runSPA({ router })
+const app = run(router)
 app.addEventListener('error', (event) => {
   console.error('Remix SPA failed:', event.error)
 })

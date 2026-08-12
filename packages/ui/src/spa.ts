@@ -1,12 +1,12 @@
 import type { AppRuntime } from './runtime/run.ts'
-import { run } from './runtime/run.ts'
+import { run as runRuntime } from './runtime/run.ts'
 import type { ResolveFrameOptions } from './runtime/frame.ts'
 import { nodeFromResponse, nodeResponse, setNodeResponseRedirect } from './runtime/node-response.ts'
 
 export { nodeFromResponse, nodeResponse }
 
 /**
- * Minimal router contract used by {@link runSPA}.
+ * Minimal router contract used by {@link run}.
  *
  * Fetch routers satisfy this interface without coupling the UI runtime to a specific router
  * implementation.
@@ -15,16 +15,11 @@ export interface SPARouter {
   fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>
 }
 
-/**
- * Options for starting a client-rendered single-page application.
- */
-export interface SPAInit {
-  /** Router that resolves browser requests to responses created by {@link nodeResponse}. */
-  router: SPARouter
+/** Client runtime returned by {@link run}. */
+export type SPARuntime = Omit<AppRuntime, 'ready'> & {
+  /** Resolves after the client runtime starts and the initial route renders. */
+  ready(): Promise<void>
 }
-
-/** Client runtime returned by {@link runSPA}. */
-export type SPARuntime = AppRuntime
 
 const redirectStatuses = new Set([301, 302, 303, 307, 308])
 const maxRedirects = 20
@@ -36,59 +31,25 @@ const maxRedirects = 20
  * handlers return bodyless responses created with {@link nodeResponse}; their associated nodes are
  * rendered into the document's top frame.
  *
- * @param init SPA router configuration.
+ * @param router Router that resolves browser requests to responses created by
+ * {@link nodeResponse}.
  * @returns The running application runtime.
  */
-export function runSPA(init: SPAInit): SPARuntime {
-  let app = run({
+export function run(router: SPARouter): SPARuntime {
+  let app = runRuntime({
     loadModule() {
       throw new Error('SPA node responses cannot hydrate client entries')
     },
-    resolveFrame: (src, options) => resolveSPARoute(init.router, src, options),
+    resolveFrame: (src, options) => resolveSPARoute(router, src, options),
   })
-  let initialNavigation = startInitialNavigation()
-  let readyPromise = Promise.all([app.ready(), initialNavigation]).then(() => undefined)
+  let readyPromise = app
+    .ready()
+    .then(() => app.frames.top.reload())
+    .then(() => undefined)
 
   return Object.assign(app, {
     ready: () => readyPromise,
   })
-}
-
-async function startInitialNavigation(): Promise<void> {
-  let state = {
-    target: undefined,
-    src: window.location.href,
-    resetScroll: false,
-    $rmx: true,
-  }
-  let transition = window.navigation.navigate(window.location.href, {
-    history: 'replace',
-    state,
-  })
-
-  await ignoreSupersededNavigation(transition.finished)
-  await waitForActiveNavigation()
-}
-
-async function ignoreSupersededNavigation(navigation: Promise<unknown> | undefined): Promise<void> {
-  if (!navigation) return
-  try {
-    await navigation
-  } catch (error) {
-    if (!isAbortError(error)) throw error
-  }
-}
-
-async function waitForActiveNavigation(): Promise<void> {
-  let transition = window.navigation.transition
-  while (transition) {
-    await ignoreSupersededNavigation(transition.finished)
-    transition = window.navigation.transition
-  }
-}
-
-function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === 'AbortError'
 }
 
 async function resolveSPARoute(

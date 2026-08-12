@@ -1,8 +1,8 @@
 # SPA Demo
 
 This Vite app uses Remix as a client-only router while preserving the fetch router's normal
-`Request` to `Response` contract. Each route returns `nodeResponse(node)`, and `runSPA({ router })`
-uses the existing top-frame navigation runtime to render the associated node.
+`Request` to `Response` contract. Each route returns `nodeResponse(node)`, and `run(router)` from
+`remix/ui/spa` uses the existing top-frame navigation runtime to render the associated node.
 
 The demo keeps the entire application in `app/main.tsx` so the setup is easy to see. It covers a
 direct deep link, client-side links, aborting delayed routes, POST form data, and push/replace

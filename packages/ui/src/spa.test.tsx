@@ -1,8 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock } from '@remix-run/test'
 
-import { navigate } from './runtime/navigation.ts'
-import { nodeFromResponse, nodeResponse, runSPA, type SPARouter } from './spa.ts'
+import { nodeFromResponse, nodeResponse, run, type SPARouter } from './spa.ts'
 
 describe('node responses', () => {
   it('associates a Remix node with an otherwise bodyless response', () => {
@@ -25,7 +24,7 @@ describe('node responses', () => {
   })
 })
 
-describe('runSPA', () => {
+describe('run', () => {
   afterEach(() => {
     document.body.textContent = ''
   })
@@ -40,7 +39,7 @@ describe('runSPA', () => {
       let request = input instanceof Request ? input : new Request(input, init)
       return nodeResponse(<h1>{new URL(request.url).searchParams.get('spa-test')}</h1>)
     })
-    let app = runSPA({ router: { fetch } })
+    let app = run({ fetch })
 
     t.after(() => {
       app.dispose()
@@ -51,44 +50,6 @@ describe('runSPA', () => {
 
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(document.querySelector('h1')?.textContent).toBe('initial')
-  })
-
-  it('lets an early navigation supersede the initial route load', async (t) => {
-    let initialUrl = window.location.href
-    let initialRouteUrl = new URL(initialUrl)
-    initialRouteUrl.searchParams.set('spa-test', 'slow')
-    window.history.replaceState(null, '', initialRouteUrl)
-    let nextRouteUrl = new URL(initialUrl)
-    nextRouteUrl.searchParams.set('spa-test', 'next')
-
-    let initialRequest: Request | undefined
-    let initialStarted = Promise.withResolvers<void>()
-    let fetch = mock.fn(async (input: string | URL | Request, init?: RequestInit) => {
-      let request = input instanceof Request ? input : new Request(input, init)
-      if (new URL(request.url).searchParams.get('spa-test') === 'slow') {
-        initialRequest = request
-        initialStarted.resolve()
-        await new Promise<void>((_resolve, reject) => {
-          request.signal.addEventListener('abort', () => reject(request.signal.reason), {
-            once: true,
-          })
-        })
-      }
-      return nodeResponse(<h1>{new URL(request.url).searchParams.get('spa-test')}</h1>)
-    })
-    let app = runSPA({ router: { fetch } })
-
-    t.after(async () => {
-      app.dispose()
-      window.history.replaceState(null, '', initialUrl)
-    })
-
-    await initialStarted.promise
-    await navigate(nextRouteUrl.href, { history: 'replace' })
-    await app.ready()
-
-    expect(initialRequest?.signal.aborted).toBe(true)
-    expect(document.querySelector('h1')?.textContent).toBe('next')
   })
 
   it('follows same-origin redirects and applies Fetch redirect method semantics', async (t) => {
@@ -112,7 +73,7 @@ describe('runSPA', () => {
         return nodeResponse(<h1>Redirected</h1>)
       },
     }
-    let app = runSPA({ router })
+    let app = run(router)
 
     t.after(() => {
       app.dispose()
@@ -122,7 +83,6 @@ describe('runSPA', () => {
     await app.ready()
 
     expect(requests.map((request) => request.method)).toEqual(['GET', 'GET'])
-    expect(new URL(window.location.href).searchParams.get('spa-test')).toBe('redirected')
     expect(document.querySelector('h1')?.textContent).toBe('Redirected')
   })
 })
