@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A client-only Remix router demo." />
+    <link rel="icon" href="data:," />
+    <title>Remix SPA Demo</title>
+    <style>
+      html {
+        color: #202124;
+        background: #f7f5ff;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+      }
+      #boot-status {
+        width: min(100% - 2rem, 48rem);
+        margin: 8rem auto;
+        color: #6a48d7;
+        font-size: 1.125rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="boot-status" role="status">Loading…</div>
+    <script type="module" src="/app/main.tsx"></script>
+  </body>
+</html>
