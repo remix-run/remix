@@ -1,4 +1,4 @@
-import type { JoinClause, JoinType, SelectColumn } from './adapter.ts'
+import type { JoinClause, JoinType, SelectColumn } from './driver.ts'
 import { DataTableQueryError, DataTableValidationError } from './errors.ts'
 import type {
   MergeColumnTypeMaps,

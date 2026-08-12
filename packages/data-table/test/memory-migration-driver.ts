@@ -4,7 +4,7 @@ import type {
   DatabaseDriver,
   TableRef,
   TransactionToken,
-} from '../src/lib/adapter.ts'
+} from '../src/lib/driver.ts'
 
 export type JournalRow = {
   id: string
@@ -14,7 +14,7 @@ export type JournalRow = {
   applied_at: string
 }
 
-export class MemoryMigrationAdapter implements DatabaseDriver {
+export class MemoryMigrationDriver implements DatabaseDriver {
   dialect = 'memory'
   capabilities = {
     returning: true,
@@ -42,7 +42,7 @@ export class MemoryMigrationAdapter implements DatabaseDriver {
     }
 
     if (request.operation.kind !== 'raw') {
-      throw new Error('MemoryMigrationAdapter only supports raw execute operations')
+      throw new Error('MemoryMigrationDriver only supports raw execute operations')
     }
 
     let statement = request.operation.sql
@@ -171,7 +171,7 @@ export class MemoryMigrationAdapter implements DatabaseDriver {
 
   async withMigrationLock<result>(
     _name: string,
-    run: (adapter: DatabaseDriver) => Promise<result>,
+    run: (driver: DatabaseDriver) => Promise<result>,
   ): Promise<result> {
     this.lockAcquireCount += 1
     try {

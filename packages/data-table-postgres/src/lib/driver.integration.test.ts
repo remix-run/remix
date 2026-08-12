@@ -3,38 +3,38 @@ import { after, before, describe, it } from '@remix-run/test'
 import { Pool } from 'pg'
 
 import {
-  resetAdapterIntegrationSchema,
-  setupAdapterIntegrationSchema,
-  teardownAdapterIntegrationSchema,
-} from '../../../data-table/test/adapter-integration-schema.ts'
-import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
+  resetDriverIntegrationSchema,
+  setupDriverIntegrationSchema,
+  teardownDriverIntegrationSchema,
+} from '../../../data-table/test/driver-integration-schema.ts'
+import { runDriverIntegrationContract } from '../../../data-table/test/driver-integration-contract.ts'
 
 import { createPostgresDatabase } from './database.ts'
 
 const DATABASE_URL = process.env.REMIX_DATA_TABLE_POSTGRES_TEST_URL
 const WIPE_DATABASE = 'data_table_wipe_test'
 
-describe('postgres adapter integration', { skip: typeof DATABASE_URL !== 'string' }, () => {
+describe('postgres driver integration', { skip: typeof DATABASE_URL !== 'string' }, () => {
   let pool: Pool
 
   before(async () => {
     pool = new Pool({ connectionString: DATABASE_URL! })
-    await setupAdapterIntegrationSchema(async (statement) => {
+    await setupDriverIntegrationSchema(async (statement) => {
       await pool.query(statement)
     }, 'postgres')
   })
 
   after(async () => {
-    await teardownAdapterIntegrationSchema(async (statement) => {
+    await teardownDriverIntegrationSchema(async (statement) => {
       await pool.query(statement)
     }, 'postgres')
     await pool.end()
   })
 
-  runAdapterIntegrationContract({
+  runDriverIntegrationContract({
     createDatabase: () => createPostgresDatabase({ connectionString: DATABASE_URL! }),
     resetDatabase: async () => {
-      await resetAdapterIntegrationSchema(async (statement) => {
+      await resetDriverIntegrationSchema(async (statement) => {
         await pool.query(statement)
       }, 'postgres')
     },

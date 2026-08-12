@@ -20,7 +20,7 @@ import {
 } from '@remix-run/data-table'
 import { type DataManipulationOperation } from '@remix-run/data-table'
 
-import { createRecordingAdapter, TestDatabase } from '../../../data-table/test/recording-adapter.ts'
+import { createRecordingDriver, TestDatabase } from '../../../data-table/test/recording-driver.ts'
 import { compileMysqlOperation } from './sql-compiler.ts'
 
 const accounts = table({
@@ -44,7 +44,7 @@ const tasks = table({
 
 let statements: DataManipulationOperation[] = []
 
-const recording = createRecordingAdapter({
+const recording = createRecordingDriver({
   capabilities: {
     upsert: true,
     returning: false,
@@ -55,7 +55,7 @@ const recording = createRecordingAdapter({
   },
 })
 
-const db = new TestDatabase(recording.adapter)
+const db = new TestDatabase(recording.driver)
 
 describe('mysql sql-compiler', () => {
   beforeEach(() => {

@@ -563,11 +563,86 @@ let result = await db.exec(sql`
 ## Custom Database Drivers
 
 Applications normally use one of the concrete SQLite, PostgreSQL, or MySQL factories. Integration
-packages can add another dialect by implementing `DatabaseDriver` and extending `Database`:
+packages can add another dialect by implementing `DatabaseDriver` and extending `Database`. This
+complete skeleton assumes the underlying client exposes the operations needed by the driver:
 
 ```ts
-import { Database, type DatabaseOptions } from 'remix/data-table'
-import { AcmeDriver } from './driver.ts'
+import {
+  Database,
+  type DatabaseDriver,
+  type DataManipulationRequest,
+  type DataManipulationResult,
+  type DatabaseOptions,
+  type TableRef,
+  type TransactionOptions,
+  type TransactionToken,
+} from 'remix/data-table'
+import type { AcmeClient } from 'acme-database'
+
+class AcmeDriver implements DatabaseDriver<'acme'> {
+  readonly dialect = 'acme'
+  readonly capabilities = {
+    returning: true,
+    savepoints: true,
+    upsert: true,
+    transactionalDdl: true,
+    migrationLock: false,
+  } as const
+
+  #client: AcmeClient
+
+  constructor(client: AcmeClient) {
+    this.#client = client
+  }
+
+  execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
+    return this.#client.execute(request)
+  }
+
+  executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
+    return this.#client.executeScript(sql, transaction)
+  }
+
+  beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
+    return this.#client.beginTransaction(options)
+  }
+
+  commitTransaction(transaction: TransactionToken): Promise<void> {
+    return this.#client.commitTransaction(transaction)
+  }
+
+  rollbackTransaction(transaction: TransactionToken): Promise<void> {
+    return this.#client.rollbackTransaction(transaction)
+  }
+
+  hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
+    return this.#client.hasTable(table, transaction)
+  }
+
+  hasColumn(table: TableRef, column: string, transaction?: TransactionToken): Promise<boolean> {
+    return this.#client.hasColumn(table, column, transaction)
+  }
+
+  createSavepoint(transaction: TransactionToken, name: string): Promise<void> {
+    return this.#client.createSavepoint(transaction, name)
+  }
+
+  rollbackToSavepoint(transaction: TransactionToken, name: string): Promise<void> {
+    return this.#client.rollbackToSavepoint(transaction, name)
+  }
+
+  releaseSavepoint(transaction: TransactionToken, name: string): Promise<void> {
+    return this.#client.releaseSavepoint(transaction, name)
+  }
+
+  wipe(): Promise<void> {
+    return this.#client.wipe()
+  }
+
+  close(): void | Promise<void> {
+    return this.#client.close()
+  }
+}
 
 export class AcmeDatabase extends Database<'acme'> {
   constructor(client: AcmeClient, options?: DatabaseOptions) {
@@ -594,9 +669,9 @@ subclass methods are intentionally unavailable inside the callback.
 ## Related Packages
 
 - [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Optional schema parsing you can use inside table-level `validate(...)` hooks
-- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database driver
-- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database driver
-- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database driver
+- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database integration
+- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database integration
+- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database integration
 
 ## License
 

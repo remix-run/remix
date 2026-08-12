@@ -3,7 +3,7 @@ import { describe, it } from '@remix-run/test'
 import { column, Database, table, eq, ilike, inList } from '@remix-run/data-table'
 import mysql from 'mysql2/promise'
 
-import { MysqlDatabaseDriver } from './adapter.ts'
+import { MysqlDatabaseDriver } from './driver.ts'
 
 function createMysqlTestDatabase(
   ...args: ConstructorParameters<typeof MysqlDatabaseDriver>
@@ -11,8 +11,8 @@ function createMysqlTestDatabase(
   return new MysqlDatabaseDriver(...args)
 }
 
-function createDatabase(adapter: MysqlDatabaseDriver): Database {
-  return new Database(adapter)
+function createDatabase(driver: MysqlDatabaseDriver): Database {
+  return new Database(driver)
 }
 
 const accounts = table({
@@ -50,7 +50,7 @@ const accountProjects = table({
   primaryKey: ['account_id', 'project_id'],
 })
 
-describe('mysql adapter', () => {
+describe('mysql driver', () => {
   it('runs migration work on the pool connection that owns the lock', async () => {
     let statements: string[] = []
     let releaseCalls = 0
@@ -94,14 +94,14 @@ describe('mysql adapter', () => {
       },
       async end() {},
     }
-    let adapter = createMysqlTestDatabase(pool as never)
+    let driver = createMysqlTestDatabase(pool as never)
 
-    let result = await adapter.withMigrationLock('app_migrations', async (lockedAdapter) => {
-      assert.notEqual(lockedAdapter, adapter)
-      await lockedAdapter.executeScript('create table users (id integer)')
-      let transaction = await lockedAdapter.beginTransaction()
-      await lockedAdapter.executeScript('insert into users values (1)', transaction)
-      await lockedAdapter.commitTransaction(transaction)
+    let result = await driver.withMigrationLock('app_migrations', async (lockedDriver) => {
+      assert.notEqual(lockedDriver, driver)
+      await lockedDriver.executeScript('create table users (id integer)')
+      let transaction = await lockedDriver.beginTransaction()
+      await lockedDriver.executeScript('insert into users values (1)', transaction)
+      await lockedDriver.commitTransaction(transaction)
       return 'done'
     })
 
@@ -141,11 +141,11 @@ describe('mysql adapter', () => {
       },
       async end() {},
     }
-    let adapter = createMysqlTestDatabase(pool as never)
+    let driver = createMysqlTestDatabase(pool as never)
 
     await assert.rejects(
       () =>
-        adapter.withMigrationLock('app_migrations', async () => {
+        driver.withMigrationLock('app_migrations', async () => {
           callbackCalls += 1
         }),
       /migration lock could not be acquired/,
@@ -182,11 +182,11 @@ describe('mysql adapter', () => {
       },
       async end() {},
     }
-    let adapter = createMysqlTestDatabase(pool as never)
+    let driver = createMysqlTestDatabase(pool as never)
 
     await assert.rejects(
       () =>
-        adapter.withMigrationLock('app_migrations', async () => {
+        driver.withMigrationLock('app_migrations', async () => {
           throw new Error('migration failed')
         }),
       /migration failed/,
@@ -205,12 +205,12 @@ describe('mysql adapter', () => {
         return [[{ released: 1 }], []]
       },
     }
-    let adapter = createMysqlTestDatabase(connection as never)
+    let driver = createMysqlTestDatabase(connection as never)
 
     await assert.rejects(
       () =>
-        adapter.withMigrationLock('app_migrations', () =>
-          adapter.withMigrationLock('app_migrations', async () => undefined),
+        driver.withMigrationLock('app_migrations', () =>
+          driver.withMigrationLock('app_migrations', async () => undefined),
         ),
       /migration lock is already held by this database/,
     )
@@ -229,10 +229,10 @@ describe('mysql adapter', () => {
         return [[{ released: 'true' }], []]
       },
     }
-    let adapter = createMysqlTestDatabase(connection as never)
+    let driver = createMysqlTestDatabase(connection as never)
 
-    let result = await adapter.withMigrationLock('app_migrations', async (lockedAdapter) => {
-      assert.equal(lockedAdapter, adapter)
+    let result = await driver.withMigrationLock('app_migrations', async (lockedDriver) => {
+      assert.equal(lockedDriver, driver)
       return 'done'
     })
 
@@ -242,7 +242,7 @@ describe('mysql adapter', () => {
     assert.match(statements[1], /release_lock/)
   })
 
-  it('serializes migration locks on the same adapter', async () => {
+  it('serializes migration locks on the same driver', async () => {
     let lifecycle: string[] = []
     let signalFirstMigrationStarted: () => void = () => undefined
     let firstMigrationStarted = new Promise<void>((resolve) => {
@@ -260,15 +260,15 @@ describe('mysql adapter', () => {
           : [[{ released: 1 }], []]
       },
     }
-    let adapter = createMysqlTestDatabase(connection as never)
+    let driver = createMysqlTestDatabase(connection as never)
 
-    let firstMigration = adapter.withMigrationLock('app_migrations', async () => {
+    let firstMigration = driver.withMigrationLock('app_migrations', async () => {
       lifecycle.push('first:start')
       signalFirstMigrationStarted()
       await firstMigrationCanFinish
       lifecycle.push('first:end')
     })
-    let secondMigration = adapter.withMigrationLock('app_migrations', async () => {
+    let secondMigration = driver.withMigrationLock('app_migrations', async () => {
       lifecycle.push('second')
     })
 
@@ -300,11 +300,11 @@ describe('mysql adapter', () => {
         throw new Error('lock cleanup failed')
       },
     }
-    let adapter = createMysqlTestDatabase(connection as never)
+    let driver = createMysqlTestDatabase(connection as never)
 
     await assert.rejects(
       () =>
-        adapter.withMigrationLock('app_migrations', async () => {
+        driver.withMigrationLock('app_migrations', async () => {
           throw migrationError
         }),
       (error: unknown) => error === migrationError,
@@ -319,10 +319,10 @@ describe('mysql adapter', () => {
           : [{ released: 1 }, []]
       },
     }
-    let adapter = createMysqlTestDatabase(connection as never)
+    let driver = createMysqlTestDatabase(connection as never)
 
     await assert.rejects(
-      () => adapter.withMigrationLock('app_migrations', async () => 'done'),
+      () => driver.withMigrationLock('app_migrations', async () => 'done'),
       /migration lock was not held by the reserved connection/,
     )
   })
@@ -333,10 +333,10 @@ describe('mysql adapter', () => {
         return [[{ acquired: null, lock_name: 'hashed-lock-name' }], []]
       },
     }
-    let adapter = createMysqlTestDatabase(connection as never)
+    let driver = createMysqlTestDatabase(connection as never)
 
     await assert.rejects(
-      () => adapter.withMigrationLock('app_migrations', async () => undefined),
+      () => driver.withMigrationLock('app_migrations', async () => undefined),
       /migration lock could not be acquired/,
     )
   })
@@ -361,7 +361,7 @@ describe('mysql adapter', () => {
       },
     )
 
-    let adapter = createMysqlTestDatabase(
+    let driver = createMysqlTestDatabase(
       {
         uri: 'mysql://user:password@localhost/app?ssl=false',
         connectionLimit: 5,
@@ -376,7 +376,7 @@ describe('mysql adapter', () => {
       },
     )
 
-    await adapter.wipe()
+    await driver.wipe()
 
     assert.ok(typeof maintenanceConfig === 'object' && maintenanceConfig !== null)
     assert.ok('uri' in maintenanceConfig && typeof maintenanceConfig.uri === 'string')
@@ -397,9 +397,9 @@ describe('mysql adapter', () => {
     process.env.MYSQL_DATABASE = 'env_db'
 
     try {
-      let adapter = createMysqlTestDatabase({ host: 'localhost', user: 'root' })
+      let driver = createMysqlTestDatabase({ host: 'localhost', user: 'root' })
 
-      await assert.rejects(() => adapter.wipe(), /MySQL database config requires a database name/)
+      await assert.rejects(() => driver.wipe(), /MySQL database config requires a database name/)
     } finally {
       if (previousEnv === undefined) {
         delete process.env.MYSQL_DATABASE
@@ -419,16 +419,16 @@ describe('mysql adapter', () => {
         endCalls += 1
       },
     }
-    let adapter = createMysqlTestDatabase(connection as never)
+    let driver = createMysqlTestDatabase(connection as never)
 
     await assert.rejects(
-      () => adapter.wipe(),
+      () => driver.wipe(),
       /MySQL database wipe\(\) requires config-based construction/,
     )
     assert.equal(endCalls, 0)
   })
 
-  it('checks table and column existence through adapter introspection hooks', async () => {
+  it('checks table and column existence through driver introspection hooks', async () => {
     let statements: Array<{ text: string; values: unknown[] | undefined }> = []
 
     let connection = {
@@ -441,9 +441,9 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let adapter = new MysqlDatabaseDriver(connection as never)
-    let hasTable = await adapter.hasTable({ schema: 'app', name: 'users' })
-    let hasColumn = await adapter.hasColumn({ name: 'users' }, 'email')
+    let driver = new MysqlDatabaseDriver(connection as never)
+    let hasTable = await driver.hasTable({ schema: 'app', name: 'users' })
+    let hasColumn = await driver.hasColumn({ name: 'users' }, 'email')
 
     assert.equal(hasTable, true)
     assert.equal(hasColumn, true)
@@ -490,12 +490,12 @@ describe('mysql adapter', () => {
       },
     }
 
-    let adapter = new MysqlDatabaseDriver(pool as never)
-    let token = await adapter.beginTransaction()
+    let driver = new MysqlDatabaseDriver(pool as never)
+    let token = await driver.beginTransaction()
 
-    await adapter.hasTable({ name: 'users' }, token)
-    await adapter.hasColumn({ name: 'users' }, 'email', token)
-    await adapter.commitTransaction(token)
+    await driver.hasTable({ name: 'users' }, token)
+    await driver.hasColumn({ name: 'users' }, 'email', token)
+    await driver.commitTransaction(token)
 
     assert.equal(rootQueries, 0)
     assert.deepEqual(connectionStatements, [
@@ -519,9 +519,9 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let adapter = new MysqlDatabaseDriver(connection as never)
+    let driver = new MysqlDatabaseDriver(connection as never)
 
-    let result = await adapter.execute({
+    let result = await driver.execute({
       operation: {
         kind: 'insertMany',
         table: accounts,
@@ -622,9 +622,9 @@ describe('mysql adapter', () => {
         return poolConnection
       },
     }
-    let adapter = new MysqlDatabaseDriver(pool as never)
+    let driver = new MysqlDatabaseDriver(pool as never)
 
-    await assert.rejects(() => adapter.beginTransaction(), /begin failed/)
+    await assert.rejects(() => driver.beginTransaction(), /begin failed/)
     assert.deepEqual(lifecycle, ['getConnection', 'destroy'])
   })
 
@@ -883,13 +883,13 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let adapter = new MysqlDatabaseDriver(connection as never)
-    let token = await adapter.beginTransaction()
+    let driver = new MysqlDatabaseDriver(connection as never)
+    let token = await driver.beginTransaction()
 
-    await adapter.createSavepoint(token, 'sp`0')
-    await adapter.rollbackToSavepoint(token, 'sp`0')
-    await adapter.releaseSavepoint(token, 'sp`0')
-    await adapter.commitTransaction(token)
+    await driver.createSavepoint(token, 'sp`0')
+    await driver.rollbackToSavepoint(token, 'sp`0')
+    await driver.releaseSavepoint(token, 'sp`0')
+    await driver.commitTransaction(token)
 
     assert.deepEqual(statements, [
       'savepoint `sp``0`',
@@ -908,18 +908,18 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let adapter = new MysqlDatabaseDriver(connection as never)
+    let driver = new MysqlDatabaseDriver(connection as never)
 
     await assert.rejects(
-      () => adapter.commitTransaction({ id: 'tx_missing' }),
+      () => driver.commitTransaction({ id: 'tx_missing' }),
       /Unknown transaction token: tx_missing/,
     )
     await assert.rejects(
-      () => adapter.rollbackTransaction({ id: 'tx_missing' }),
+      () => driver.rollbackTransaction({ id: 'tx_missing' }),
       /Unknown transaction token: tx_missing/,
     )
     await assert.rejects(
-      () => adapter.createSavepoint({ id: 'tx_missing' }, 'sp'),
+      () => driver.createSavepoint({ id: 'tx_missing' }, 'sp'),
       /Unknown transaction token: tx_missing/,
     )
   })
@@ -1159,8 +1159,8 @@ describe('mysql adapter', () => {
       },
     }
 
-    let adapter = new MysqlDatabaseDriver(connection as never)
-    await adapter.executeScript('create table widgets (id int); insert into widgets values (1);')
+    let driver = new MysqlDatabaseDriver(connection as never)
+    await driver.executeScript('create table widgets (id int); insert into widgets values (1);')
 
     assert.equal(calls.length, 1)
     assert.equal(calls[0].text, 'create table widgets (id int); insert into widgets values (1);')

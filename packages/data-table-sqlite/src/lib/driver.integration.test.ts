@@ -1,39 +1,39 @@
 import { after, before, describe } from '@remix-run/test'
 
 import {
-  resetAdapterIntegrationSchema,
-  setupAdapterIntegrationSchema,
-  teardownAdapterIntegrationSchema,
-} from '../../../data-table/test/adapter-integration-schema.ts'
-import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
+  resetDriverIntegrationSchema,
+  setupDriverIntegrationSchema,
+  teardownDriverIntegrationSchema,
+} from '../../../data-table/test/driver-integration-schema.ts'
+import { runDriverIntegrationContract } from '../../../data-table/test/driver-integration-contract.ts'
 import { createNativeSqliteDatabase, type NativeSqliteDatabase } from '../../test/native-sqlite.ts'
 
 import { createSqliteDatabase } from './database.ts'
 
 describe(
-  'sqlite adapter integration',
+  'sqlite driver integration',
   { skip: process.env.REMIX_DATA_TABLE_SQLITE_TEST !== '1' },
   () => {
     let sqlite: NativeSqliteDatabase
 
     before(async () => {
       sqlite = createNativeSqliteDatabase()
-      await setupAdapterIntegrationSchema(async (statement) => {
+      await setupDriverIntegrationSchema(async (statement) => {
         sqlite.exec(statement)
       }, 'sqlite')
     })
 
     after(async () => {
-      await teardownAdapterIntegrationSchema(async (statement) => {
+      await teardownDriverIntegrationSchema(async (statement) => {
         sqlite.exec(statement)
       }, 'sqlite')
       sqlite.close()
     })
 
-    runAdapterIntegrationContract({
+    runDriverIntegrationContract({
       createDatabase: () => createSqliteDatabase(sqlite),
       resetDatabase: async () => {
-        await resetAdapterIntegrationSchema(async (statement) => {
+        await resetDriverIntegrationSchema(async (statement) => {
           sqlite.exec(statement)
         }, 'sqlite')
       },

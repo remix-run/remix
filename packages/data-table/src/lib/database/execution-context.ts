@@ -3,13 +3,12 @@ import type {
   DataManipulationOperation,
   DataManipulationResult,
   TransactionOptions,
-} from '../adapter.ts'
-import type { Database } from '../database.ts'
+} from '../driver.ts'
 
 export const executeOperation = Symbol('executeOperation')
 export const runInTransaction = Symbol('runInTransaction')
 
-export type QueryExecutionContext<dialect extends string = string> = Database<dialect> & {
+export type QueryExecutionContext<dialect extends string = string> = {
   capabilities: DatabaseCapabilities
   now(): unknown
   [executeOperation](operation: DataManipulationOperation): Promise<DataManipulationResult>

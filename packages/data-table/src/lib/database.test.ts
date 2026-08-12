@@ -1,13 +1,13 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type { DatabaseDriver } from './adapter.ts'
+import type { DatabaseDriver } from './driver.ts'
 import { column } from './column.ts'
 import { Database } from './database.ts'
 import { DataTableDatabaseError, DataTableQueryError, DataTableValidationError } from './errors.ts'
 import { table, hasMany, timestamps } from './table.ts'
 import { eq } from './operators.ts'
-import { createRecordingAdapter, TestDatabase } from '../../test/recording-adapter.ts'
+import { createRecordingDriver, TestDatabase } from '../../test/recording-driver.ts'
 
 const accounts = table({
   name: 'accounts',
@@ -59,33 +59,33 @@ const accountProjects = hasMany(accounts, projects)
 
 describe('queries', () => {
   it('exposes database metadata and schema introspection directly', async () => {
-    let recording = createRecordingAdapter({ dialect: 'test' })
-    let db = new TestDatabase(recording.adapter)
+    let recording = createRecordingDriver({ dialect: 'test' })
+    let db = new TestDatabase(recording.driver)
 
     assert.equal(db.dialect, 'test')
     assert.equal(db.capabilities.returning, true)
     assert.equal(await db.hasTable({ name: 'accounts' }), true)
     assert.equal(await db.hasColumn({ name: 'accounts' }, 'email'), true)
-    assert.equal('adapter' in db, false)
+    assert.equal('driver' in db, false)
   })
 
   it('supports database construction options', async () => {
-    let firstAdapter = createRecordingAdapter({
+    let firstDriver = createRecordingDriver({
       async execute() {
         return { rows: [{ id: 1, email: 'amy@studio.test', status: 'active' }] }
       },
     })
-    let secondAdapter = createRecordingAdapter({
+    let secondDriver = createRecordingDriver({
       async execute() {
         return { rows: [{ id: 2, email: 'brad@studio.test', status: 'inactive' }] }
       },
     })
-    let direct = new TestDatabase(firstAdapter.adapter, {
+    let direct = new TestDatabase(firstDriver.driver, {
       now() {
         return '2026-01-01T00:00:00.000Z'
       },
     })
-    let wrapped = new TestDatabase(secondAdapter.adapter, {
+    let wrapped = new TestDatabase(secondDriver.driver, {
       now() {
         return '2026-01-01T00:00:00.000Z'
       },
@@ -99,11 +99,11 @@ describe('queries', () => {
     assert.equal(direct.now(), '2026-01-01T00:00:00.000Z')
     assert.equal(wrapped.now(), '2026-01-01T00:00:00.000Z')
     assert.deepEqual(
-      firstAdapter.requests.map((request) => request.operation.kind),
+      firstDriver.requests.map((request) => request.operation.kind),
       ['select'],
     )
     assert.deepEqual(
-      secondAdapter.requests.map((request) => request.operation.kind),
+      secondDriver.requests.map((request) => request.operation.kind),
       ['select'],
     )
     assert.equal(directRows.length, 1)
@@ -111,8 +111,8 @@ describe('queries', () => {
   })
 
   it('returns null from database-level find helper for nullish primary keys', async () => {
-    let recording = createRecordingAdapter()
-    let db = createTestDatabase(recording.adapter)
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
     let nullResult = await db.find(accounts, null as never)
     let undefinedResult = await db.find(accounts, undefined as never)
 
@@ -121,7 +121,7 @@ describe('queries', () => {
   })
 
   it('throws from database-level update helper when row is missing', async () => {
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       async execute(request) {
         if (request.operation.kind === 'update') {
           return { affectedRows: 0 }
@@ -130,7 +130,7 @@ describe('queries', () => {
         return { rows: [] }
       },
     })
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async function () {
@@ -146,7 +146,7 @@ describe('queries', () => {
   })
 
   it('does not pre-read when update helper uses RETURNING', async () => {
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       async execute(request) {
         if (request.operation.kind === 'update') {
           return {
@@ -165,7 +165,7 @@ describe('queries', () => {
       },
     })
 
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
     let updated = await db.update(accounts, 1, { status: 'inactive' })
 
     assert.equal(updated.id, 1)
@@ -175,8 +175,8 @@ describe('queries', () => {
     )
   })
 
-  it('does not throw on no-op updates for non-RETURNING adapters when row still exists', async () => {
-    let recording = createRecordingAdapter({
+  it('does not throw on no-op updates for non-RETURNING drivers when row still exists', async () => {
+    let recording = createRecordingDriver({
       capabilities: { returning: false },
       async execute(request) {
         if (request.operation.kind === 'update') {
@@ -201,7 +201,7 @@ describe('queries', () => {
       },
     })
 
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
     let updated = await db.update(accounts, 1, { status: 'active' })
 
     assert.equal(updated.id, 1)
@@ -213,8 +213,8 @@ describe('queries', () => {
   })
 
   it('throws for createMany() batches with only empty rows', async () => {
-    let recording = createRecordingAdapter()
-    let db = createTestDatabase(recording.adapter)
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async function () {
@@ -230,8 +230,8 @@ describe('queries', () => {
   })
 
   it('throws for insertMany() batches with only empty rows', async () => {
-    let recording = createRecordingAdapter()
-    let db = createTestDatabase(recording.adapter)
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async function () {
@@ -247,7 +247,7 @@ describe('queries', () => {
   })
 
   it('supports insertMany() batches that include at least one explicit value', async () => {
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       async execute(request) {
         if (request.operation.kind === 'insertMany') {
           return {
@@ -259,7 +259,7 @@ describe('queries', () => {
       },
     })
 
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
     let result = await db.query(tasks).insertMany([{}, { title: 'hello world' }])
 
     assert.equal(result.affectedRows, 2)
@@ -267,9 +267,9 @@ describe('queries', () => {
     assert.equal(recording.requests[0].operation.kind, 'insertMany')
   })
 
-  it('throws for createMany({ returnRows: true }) when adapter has no RETURNING support', async () => {
-    let recording = createRecordingAdapter({ capabilities: { returning: false } })
-    let db = createTestDatabase(recording.adapter)
+  it('throws for createMany({ returnRows: true }) when driver has no RETURNING support', async () => {
+    let recording = createRecordingDriver({ capabilities: { returning: false } })
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async function () {
@@ -290,7 +290,7 @@ describe('queries', () => {
 describe('writes and validation', () => {
   it('validates values and applies timestamps', async () => {
     let createdAt = '2026-01-15T10:00:00.000Z'
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       async execute(request) {
         if (request.operation.kind === 'insert') {
           return {
@@ -302,7 +302,7 @@ describe('writes and validation', () => {
         return {}
       },
     })
-    let db = new TestDatabase(recording.adapter, {
+    let db = new TestDatabase(recording.driver, {
       now() {
         return createdAt
       },
@@ -363,7 +363,7 @@ describe('writes and validation', () => {
       },
     })
 
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       async execute(request) {
         if (request.operation.kind === 'select' || request.operation.kind === 'update') {
           return { rows: [{ id: 1, email: 'a@studio.test', status: 'inactive' }], affectedRows: 1 }
@@ -372,7 +372,7 @@ describe('writes and validation', () => {
         return { affectedRows: 1 }
       },
     })
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
 
     await db.create(validatedAccounts, { id: 2, email: 'b@studio.test', status: 'active' })
     await db.createMany(validatedAccounts, [{ id: 3, email: 'c@studio.test', status: 'active' }])
@@ -403,14 +403,14 @@ describe('writes and validation', () => {
       },
     })
 
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       capabilities: { returning: false },
       async execute() {
         return { affectedRows: 1 }
       },
     })
 
-    let db = new TestDatabase(recording.adapter)
+    let db = new TestDatabase(recording.driver)
     await db
       .query(validatedAccounts)
       .upsert(
@@ -440,8 +440,8 @@ describe('writes and validation', () => {
         }
       },
     })
-    let recording = createRecordingAdapter()
-    let db = createTestDatabase(recording.adapter)
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async () => {
@@ -501,7 +501,7 @@ describe('writes and validation', () => {
       },
     })
 
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       async execute(request) {
         if (request.operation.kind === 'insert') {
           return { rows: [request.operation.values], affectedRows: 1 }
@@ -510,7 +510,7 @@ describe('writes and validation', () => {
         return {}
       },
     })
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
 
     await db.create(writeTrackedAccounts, {
       id: 1,
@@ -548,7 +548,7 @@ describe('writes and validation', () => {
       },
     })
 
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       async execute(request) {
         if (request.operation.kind === 'select') {
           return { rows: [{ id: 1, email: 'amy@studio.test', status: 'active' }] }
@@ -561,7 +561,7 @@ describe('writes and validation', () => {
         return {}
       },
     })
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
 
     await db
       .query(deleteTrackedAccounts)
@@ -601,8 +601,8 @@ describe('writes and validation', () => {
       },
     })
 
-    let recording = createRecordingAdapter()
-    let db = createTestDatabase(recording.adapter)
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async () => {
@@ -631,12 +631,12 @@ describe('writes and validation', () => {
       },
     })
 
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       async execute() {
         return { rows: [{ id: 1, email: 'amy@studio.test', status: 'active' }] }
       },
     })
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async () => {
@@ -665,12 +665,12 @@ describe('writes and validation', () => {
       },
     })
 
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       async execute() {
         return { rows: [{ id: 1 }] }
       },
     })
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
 
     let rows = await db.query(projectedAccounts).select({ id: projectedAccounts.id }).all()
 
@@ -696,7 +696,7 @@ describe('writes and validation', () => {
         }
       },
     })
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       async execute(request) {
         if (request.operation.kind === 'insert') {
           return { rows: [request.operation.values], affectedRows: 1 }
@@ -705,7 +705,7 @@ describe('writes and validation', () => {
         return { rows: [{ id: 1, email: 'amy@studio.test', status: 'active' }] }
       },
     })
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
 
     let rows = await db.query(readableAccounts).all()
     assert.equal(rows[0].email, 'AMY@STUDIO.TEST')
@@ -745,12 +745,12 @@ describe('writes and validation', () => {
       },
     })
 
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       async execute() {
         return { rows: [{ id: 1, email: 'amy@studio.test', status: 'active' }] }
       },
     })
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async () => {
@@ -785,8 +785,8 @@ describe('writes and validation', () => {
         return { value: { allowed: false } } as never
       },
     })
-    let recording = createRecordingAdapter()
-    let db = createTestDatabase(recording.adapter)
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async () => {
@@ -799,9 +799,9 @@ describe('writes and validation', () => {
     )
   })
 
-  it('throws for update returning when adapter has no RETURNING support', async () => {
-    let recording = createRecordingAdapter({ capabilities: { returning: false } })
-    let db = createTestDatabase(recording.adapter)
+  it('throws for update returning when driver has no RETURNING support', async () => {
+    let recording = createRecordingDriver({ capabilities: { returning: false } })
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async () => {
@@ -818,9 +818,9 @@ describe('writes and validation', () => {
     )
   })
 
-  it('throws for delete returning when adapter has no RETURNING support', async () => {
-    let recording = createRecordingAdapter({ capabilities: { returning: false } })
-    let db = createTestDatabase(recording.adapter)
+  it('throws for delete returning when driver has no RETURNING support', async () => {
+    let recording = createRecordingDriver({ capabilities: { returning: false } })
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async () => {
@@ -837,9 +837,9 @@ describe('writes and validation', () => {
     )
   })
 
-  it('throws for write returning when adapter has no RETURNING support', async () => {
-    let recording = createRecordingAdapter({ capabilities: { returning: false } })
-    let db = createTestDatabase(recording.adapter)
+  it('throws for write returning when driver has no RETURNING support', async () => {
+    let recording = createRecordingDriver({ capabilities: { returning: false } })
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async () => {
@@ -890,8 +890,8 @@ describe('writes and validation', () => {
   })
 
   it('throws for upsert() when the database does not support it', async () => {
-    let recording = createRecordingAdapter({ capabilities: { upsert: false } })
-    let db = createTestDatabase(recording.adapter)
+    let recording = createRecordingDriver({ capabilities: { upsert: false } })
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async function () {
@@ -906,8 +906,8 @@ describe('writes and validation', () => {
   })
 
   it('throws when read-only query modifiers are used with write terminals', async () => {
-    let recording = createRecordingAdapter()
-    let db = createTestDatabase(recording.adapter)
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async function () {
@@ -953,8 +953,8 @@ describe('writes and validation', () => {
   })
 
   it('throws when scoped query modifiers are used with insert-like terminals', async () => {
-    let recording = createRecordingAdapter()
-    let db = createTestDatabase(recording.adapter)
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async function () {
@@ -1005,12 +1005,12 @@ describe('writes and validation', () => {
   })
 
   it('does not validate filter values at runtime', async () => {
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       async execute() {
         return { affectedRows: 1 }
       },
     })
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
 
     await db
       .query(accounts)
@@ -1032,8 +1032,8 @@ describe('writes and validation', () => {
 
 describe('transactions and raw sql', () => {
   it('rejects database lifecycle operations from transaction callbacks', async () => {
-    let recording = createRecordingAdapter()
-    let db = createTestDatabase(recording.adapter)
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
 
     await db.transaction(async (transactionDatabase) => {
       await assert.rejects(
@@ -1059,13 +1059,13 @@ describe('transactions and raw sql', () => {
     })
   })
 
-  it('treats transaction options as best-effort adapter hints', async () => {
-    let recording = createRecordingAdapter({
+  it('treats transaction options as best-effort driver hints', async () => {
+    let recording = createRecordingDriver({
       async execute() {
         return { affectedRows: 1 }
       },
     })
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
 
     await db.transaction(
       async (transactionDatabase) => {
@@ -1090,15 +1090,15 @@ describe('transactions and raw sql', () => {
   })
 
   it('preserves commit failures without attempting an invalid rollback', async () => {
-    let recording = createRecordingAdapter()
-    let adapter: DatabaseDriver = {
-      ...recording.adapter,
+    let recording = createRecordingDriver()
+    let driver: DatabaseDriver = {
+      ...recording.driver,
       async commitTransaction(token) {
-        await recording.adapter.commitTransaction(token)
+        await recording.driver.commitTransaction(token)
         throw new Error('commit failed')
       },
     }
-    let db = createTestDatabase(adapter)
+    let db = createTestDatabase(driver)
 
     await assert.rejects(() => db.transaction(async () => 'done'), /commit failed/)
     assert.deepEqual(
@@ -1108,16 +1108,16 @@ describe('transactions and raw sql', () => {
   })
 
   it('preserves callback and rollback failures', async () => {
-    let recording = createRecordingAdapter()
+    let recording = createRecordingDriver()
     let callbackError = new Error('callback failed')
     let rollbackError = new Error('rollback failed')
-    let adapter: DatabaseDriver = {
-      ...recording.adapter,
+    let driver: DatabaseDriver = {
+      ...recording.driver,
       async rollbackTransaction() {
         throw rollbackError
       },
     }
-    let db = createTestDatabase(adapter)
+    let db = createTestDatabase(driver)
 
     await assert.rejects(
       () =>
@@ -1133,8 +1133,8 @@ describe('transactions and raw sql', () => {
   })
 
   it('throws for nested transactions without savepoints', async () => {
-    let recording = createRecordingAdapter({ capabilities: { savepoints: false } })
-    let db = createTestDatabase(recording.adapter)
+    let recording = createRecordingDriver({ capabilities: { savepoints: false } })
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async function () {
@@ -1151,14 +1151,14 @@ describe('transactions and raw sql', () => {
 
 describe('database errors', () => {
   it('wraps execution failures in DataTableDatabaseError', async () => {
-    let recording = createRecordingAdapter({
+    let recording = createRecordingDriver({
       dialect: 'failing',
       async execute() {
         throw new Error('boom')
       },
     })
 
-    let db = createTestDatabase(recording.adapter)
+    let db = createTestDatabase(recording.driver)
 
     await assert.rejects(
       async function () {
@@ -1180,8 +1180,8 @@ describe('database errors', () => {
   })
 })
 
-function createTestDatabase(adapter: DatabaseDriver) {
-  return new TestDatabase(adapter, {
+function createTestDatabase(driver: DatabaseDriver) {
+  return new TestDatabase(driver, {
     now() {
       return '2026-01-01T00:00:00.000Z'
     },

@@ -1,14 +1,14 @@
-export type AdapterIntegrationDialect = 'mysql' | 'postgres' | 'sqlite'
+export type DriverIntegrationDialect = 'mysql' | 'postgres' | 'sqlite'
 
-export type AdapterIntegrationStatementRunner = (statement: string) => Promise<void>
+export type DriverIntegrationStatementRunner = (statement: string) => Promise<void>
 
-type AdapterIntegrationSchemaStatements = {
+type DriverIntegrationSchemaStatements = {
   drop: string[]
   create: string[]
   reset: string[]
 }
 
-const mysqlSchemaStatements: AdapterIntegrationSchemaStatements = {
+const mysqlSchemaStatements: DriverIntegrationSchemaStatements = {
   drop: [
     'drop table if exists tasks',
     'drop table if exists projects',
@@ -43,7 +43,7 @@ const mysqlSchemaStatements: AdapterIntegrationSchemaStatements = {
   reset: ['delete from tasks', 'delete from projects', 'delete from accounts'],
 }
 
-const postgresSchemaStatements: AdapterIntegrationSchemaStatements = {
+const postgresSchemaStatements: DriverIntegrationSchemaStatements = {
   drop: [
     'drop table if exists tasks',
     'drop table if exists projects',
@@ -78,7 +78,7 @@ const postgresSchemaStatements: AdapterIntegrationSchemaStatements = {
   reset: ['delete from tasks', 'delete from projects', 'delete from accounts'],
 }
 
-const sqliteSchemaStatements: AdapterIntegrationSchemaStatements = {
+const sqliteSchemaStatements: DriverIntegrationSchemaStatements = {
   drop: [
     'drop table if exists tasks',
     'drop table if exists projects',
@@ -113,33 +113,33 @@ const sqliteSchemaStatements: AdapterIntegrationSchemaStatements = {
   reset: ['delete from tasks', 'delete from projects', 'delete from accounts'],
 }
 
-export async function setupAdapterIntegrationSchema(
-  runStatement: AdapterIntegrationStatementRunner,
-  dialect: AdapterIntegrationDialect,
+export async function setupDriverIntegrationSchema(
+  runStatement: DriverIntegrationStatementRunner,
+  dialect: DriverIntegrationDialect,
 ): Promise<void> {
-  let statements = getAdapterIntegrationSchemaStatements(dialect)
+  let statements = getDriverIntegrationSchemaStatements(dialect)
   await runStatements(runStatement, [...statements.drop, ...statements.create])
 }
 
-export async function teardownAdapterIntegrationSchema(
-  runStatement: AdapterIntegrationStatementRunner,
-  dialect: AdapterIntegrationDialect,
+export async function teardownDriverIntegrationSchema(
+  runStatement: DriverIntegrationStatementRunner,
+  dialect: DriverIntegrationDialect,
 ): Promise<void> {
-  let statements = getAdapterIntegrationSchemaStatements(dialect)
+  let statements = getDriverIntegrationSchemaStatements(dialect)
   await runStatements(runStatement, statements.drop)
 }
 
-export async function resetAdapterIntegrationSchema(
-  runStatement: AdapterIntegrationStatementRunner,
-  dialect: AdapterIntegrationDialect,
+export async function resetDriverIntegrationSchema(
+  runStatement: DriverIntegrationStatementRunner,
+  dialect: DriverIntegrationDialect,
 ): Promise<void> {
-  let statements = getAdapterIntegrationSchemaStatements(dialect)
+  let statements = getDriverIntegrationSchemaStatements(dialect)
   await runStatements(runStatement, statements.reset)
 }
 
-function getAdapterIntegrationSchemaStatements(
-  dialect: AdapterIntegrationDialect,
-): AdapterIntegrationSchemaStatements {
+function getDriverIntegrationSchemaStatements(
+  dialect: DriverIntegrationDialect,
+): DriverIntegrationSchemaStatements {
   if (dialect === 'mysql') {
     return mysqlSchemaStatements
   }
@@ -152,7 +152,7 @@ function getAdapterIntegrationSchemaStatements(
 }
 
 async function runStatements(
-  runStatement: AdapterIntegrationStatementRunner,
+  runStatement: DriverIntegrationStatementRunner,
   statements: string[],
 ): Promise<void> {
   for (let statement of statements) {

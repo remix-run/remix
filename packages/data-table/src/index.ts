@@ -14,7 +14,7 @@ export type {
   TableRef,
   TransactionOptions,
   TransactionToken,
-} from './lib/adapter.ts'
+} from './lib/driver.ts'
 
 export {
   DataTableDatabaseError,

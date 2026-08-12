@@ -1,4 +1,4 @@
-import type { DatabaseDriver, TransactionToken } from '../adapter.ts'
+import type { DatabaseDriver, TransactionToken } from '../driver.ts'
 import type {
   MigrationOperationOptions,
   MigrateResult,

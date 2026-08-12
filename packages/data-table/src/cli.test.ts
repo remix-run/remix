@@ -12,7 +12,7 @@ import type {
   MigrationStatusEntry,
   Seed,
 } from './lib/migrations.ts'
-import { createRecordingAdapter, TestDatabase } from '../test/recording-adapter.ts'
+import { createRecordingDriver, TestDatabase } from '../test/recording-driver.ts'
 
 const migrations: Migrations = [
   {
@@ -31,7 +31,7 @@ class RecordingDatabase extends TestDatabase {
   statusOptions: DatabaseMigrationStatusOptions | undefined
 
   constructor() {
-    super(createRecordingAdapter().adapter)
+    super(createRecordingDriver().driver)
   }
 
   override async wipe(): Promise<void> {

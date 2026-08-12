@@ -7,7 +7,7 @@ import type {
   TableRef,
   TransactionOptions,
   TransactionToken,
-} from './adapter.ts'
+} from './driver.ts'
 import type { ColumnBuilder } from './column.ts'
 import { DataTableDatabaseError, DataTableQueryError } from './errors.ts'
 import {
@@ -360,8 +360,9 @@ type DatabaseInternalState = {
  * The driver owns SQL execution, transactions, and connection lifecycle while this class provides
  * the shared query, persistence, and migration APIs.
  */
-export class Database<dialect extends string = string> implements QueryExecutionContext<dialect> {
+export class Database<dialect extends string = string> {
   #driver: DatabaseDriver<dialect>
+  #executionContext: QueryExecutionContext<dialect>
   #token?: TransactionToken
   #now: () => unknown
   #savepointCounter: SavepointCounter
@@ -375,6 +376,25 @@ export class Database<dialect extends string = string> implements QueryExecution
     this.#driver = driver
     this.#now = options?.now ?? defaultNow
     this.#savepointCounter = { value: 0 }
+
+    let database = this
+    this.#executionContext = {
+      get capabilities() {
+        return database.capabilities
+      },
+      now() {
+        return database.now()
+      },
+      [executeOperation](operation) {
+        return database.#executeOperation(operation)
+      },
+      [runInTransaction](callback, transactionOptions) {
+        return database.#runInTransaction(
+          (transactionDatabase) => callback(transactionDatabase.#executionContext),
+          transactionOptions,
+        )
+      },
+    }
   }
 
   static #createInternalDatabase<dialect extends string>(
@@ -855,24 +875,24 @@ export class Database<dialect extends string = string> implements QueryExecution
         ? statementOrInput
         : rawSql(statementOrInput, values)
 
-      return this[executeOperation]({
+      return this.#executeOperation({
         kind: 'raw',
         sql: sqlStatement,
       })
     }
 
-    return executeQuery(this, statementOrInput)
+    return executeQuery(this.#executionContext, statementOrInput)
   }
 
   async transaction<result>(
     callback: (database: Database<dialect>) => Promise<result>,
     options?: TransactionOptions,
   ): Promise<result> {
-    return this[runInTransaction](callback, options)
+    return this.#runInTransaction(callback, options)
   }
 
-  async [runInTransaction]<result>(
-    callback: (database: QueryExecutionContext<dialect>) => Promise<result>,
+  async #runInTransaction<result>(
+    callback: (database: Database<dialect>) => Promise<result>,
     options?: TransactionOptions,
   ): Promise<result> {
     if (!this.#token) {
@@ -940,7 +960,7 @@ export class Database<dialect extends string = string> implements QueryExecution
     return result
   }
 
-  async [executeOperation](operation: DataManipulationOperation): Promise<DataManipulationResult> {
+  async #executeOperation(operation: DataManipulationOperation): Promise<DataManipulationResult> {
     try {
       return await this.#driver.execute({
         operation,

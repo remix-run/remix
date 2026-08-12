@@ -48,7 +48,7 @@ export type IntegrationContractOptions = {
   supportsReturning?: boolean
 }
 
-export function runAdapterIntegrationContract(options: IntegrationContractOptions): void {
+export function runDriverIntegrationContract(options: IntegrationContractOptions): void {
   beforeEach(async () => {
     await options.resetDatabase()
   })
@@ -481,7 +481,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         down: 'drop table if exists lifecycle_accounts',
       },
     ]
-    let migrationOptions = { journalTable: 'adapter_contract_migrations' }
+    let migrationOptions = { journalTable: 'driver_contract_migrations' }
     await db.migrate(migrations, migrationOptions)
 
     let created = await db.create(

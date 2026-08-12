@@ -1,4 +1,4 @@
-import type { DatabaseDriver, TransactionToken } from '../adapter.ts'
+import type { DatabaseDriver, TransactionToken } from '../driver.ts'
 import { rawSql } from '../sql.ts'
 import type { MigrationDescriptor, MigrationJournalRow } from '../migrations.ts'
 

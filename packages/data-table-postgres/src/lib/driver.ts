@@ -49,7 +49,7 @@ const postgresCapabilities = Object.freeze({
 export type PostgresDatabaseInput = PostgresPoolConfig | PostgresQueryable
 
 /**
- * PostgreSQL database driver for postgres-compatible clients.
+ * PostgreSQL database driver backed by a postgres-compatible client.
  */
 export class PostgresDatabaseDriver implements DatabaseDriver<'postgres'> {
   /**

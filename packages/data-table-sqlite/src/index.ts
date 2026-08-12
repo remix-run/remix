@@ -4,4 +4,4 @@ export type {
   SqliteDatabaseConfig,
   SqliteRunResult,
   SqliteStatement,
-} from './lib/adapter.ts'
+} from './lib/driver.ts'

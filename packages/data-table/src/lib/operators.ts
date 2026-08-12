@@ -22,7 +22,7 @@ type PredicateColumn<input extends string | ColumnReferenceLike> = NormalizeColu
   string
 
 /**
- * Normalized predicate representation consumed by adapters.
+ * Normalized predicate representation consumed by drivers.
  */
 export type Predicate<column extends string = string> =
   | {

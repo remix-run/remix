@@ -4,7 +4,7 @@ import {
   SqliteDatabaseDriver,
   type SqliteDatabaseClient,
   type SqliteDatabaseConfig,
-} from './adapter.ts'
+} from './driver.ts'
 
 /** A {@link Database} backed by SQLite. */
 export class SqliteDatabase extends Database<'sqlite'> {

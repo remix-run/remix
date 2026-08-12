@@ -10,6 +10,7 @@ import type {
 } from './database.ts'
 import type { AnyQuery, Query } from './query.ts'
 import { query } from './query.ts'
+import type { executeOperation, runInTransaction } from './database/execution-context.ts'
 import {
   Database,
   type AnyQuery as PublicAnyQuery,
@@ -28,11 +29,41 @@ type Equal<left, right> =
 function expectType<condition extends true>(_value?: condition): void {}
 
 declare const db: Database
-declare const driver: DatabaseDriver<'custom'>
+
+const customDriver = {
+  dialect: 'custom',
+  capabilities: {
+    returning: true,
+    savepoints: true,
+    upsert: true,
+    transactionalDdl: true,
+    migrationLock: false,
+  } as const,
+  async execute() {
+    return {}
+  },
+  async executeScript() {},
+  async beginTransaction() {
+    return { id: 'custom' }
+  },
+  async commitTransaction() {},
+  async rollbackTransaction() {},
+  async hasTable() {
+    return false
+  },
+  async hasColumn() {
+    return false
+  },
+  async createSavepoint() {},
+  async rollbackToSavepoint() {},
+  async releaseSavepoint() {},
+  async wipe() {},
+  close() {},
+} satisfies DatabaseDriver<'custom'>
 
 class CustomDatabase extends Database<'custom'> {
   constructor() {
-    super(driver)
+    super(customDriver)
   }
 
   customMethod(): void {}
@@ -101,6 +132,8 @@ describe('type safety', () => {
     expectType<
       Equal<Extract<keyof Database, 'beginTransaction' | 'compileSql' | 'execute'>, never>
     >()
+    expectType<Equal<typeof executeOperation extends keyof Database ? true : false, false>>()
+    expectType<Equal<typeof runInTransaction extends keyof Database ? true : false, false>>()
 
     await customDatabase.transaction(async (transactionDatabase) => {
       expectType<Equal<typeof transactionDatabase, Database<'custom'>>>()

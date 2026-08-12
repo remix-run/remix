@@ -114,7 +114,7 @@ export interface SqliteRunResult {
 }
 
 /**
- * SQLite database driver for synchronous SQLite clients.
+ * SQLite database driver backed by a synchronous SQLite client.
  */
 export class SqliteDatabaseDriver implements DatabaseDriver<'sqlite'> {
   /**

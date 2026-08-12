@@ -3,7 +3,7 @@ import { describe, it } from '@remix-run/test'
 import { column, Database, table, eq, inList, sql } from '@remix-run/data-table'
 import pg from 'pg'
 
-import { PostgresDatabaseDriver } from './adapter.ts'
+import { PostgresDatabaseDriver } from './driver.ts'
 
 function createPostgresTestDatabase(
   ...args: ConstructorParameters<typeof PostgresDatabaseDriver>
@@ -11,8 +11,8 @@ function createPostgresTestDatabase(
   return new PostgresDatabaseDriver(...args)
 }
 
-function createDatabase(adapter: PostgresDatabaseDriver): Database {
-  return new Database(adapter)
+function createDatabase(driver: PostgresDatabaseDriver): Database {
+  return new Database(driver)
 }
 
 const accounts = table({
@@ -50,7 +50,7 @@ const accountProjects = table({
   primaryKey: ['account_id', 'project_id'],
 })
 
-describe('postgres adapter', () => {
+describe('postgres driver', () => {
   it('runs migration work on the pool connection that owns the lock', async () => {
     let statements: string[] = []
     let releaseArgs: unknown[][] = []
@@ -78,14 +78,14 @@ describe('postgres adapter', () => {
       },
       async end() {},
     }
-    let adapter = createPostgresTestDatabase(pool as never)
+    let driver = createPostgresTestDatabase(pool as never)
 
-    let result = await adapter.withMigrationLock('app_migrations', async (lockedAdapter) => {
-      assert.notEqual(lockedAdapter, adapter)
-      await lockedAdapter.executeScript('create table users (id integer)')
-      let transaction = await lockedAdapter.beginTransaction()
-      await lockedAdapter.executeScript('insert into users values (1)', transaction)
-      await lockedAdapter.commitTransaction(transaction)
+    let result = await driver.withMigrationLock('app_migrations', async (lockedDriver) => {
+      assert.notEqual(lockedDriver, driver)
+      await lockedDriver.executeScript('create table users (id integer)')
+      let transaction = await lockedDriver.beginTransaction()
+      await lockedDriver.executeScript('insert into users values (1)', transaction)
+      await lockedDriver.commitTransaction(transaction)
       return 'done'
     })
 
@@ -127,11 +127,11 @@ describe('postgres adapter', () => {
       },
       async end() {},
     }
-    let adapter = createPostgresTestDatabase(pool as never)
+    let driver = createPostgresTestDatabase(pool as never)
 
     await assert.rejects(
       () =>
-        adapter.withMigrationLock('app_migrations', async () => {
+        driver.withMigrationLock('app_migrations', async () => {
           callbackCalls += 1
         }),
       /Postgres migration lock could not be acquired/,
@@ -163,11 +163,11 @@ describe('postgres adapter', () => {
       },
       async end() {},
     }
-    let adapter = createPostgresTestDatabase(pool as never)
+    let driver = createPostgresTestDatabase(pool as never)
 
     await assert.rejects(
       () =>
-        adapter.withMigrationLock('app_migrations', async () => {
+        driver.withMigrationLock('app_migrations', async () => {
           throw new Error('migration failed')
         }),
       /migration failed/,
@@ -187,10 +187,10 @@ describe('postgres adapter', () => {
         }
       },
     }
-    let adapter = createPostgresTestDatabase(client as never)
+    let driver = createPostgresTestDatabase(client as never)
 
-    let result = await adapter.withMigrationLock('app_migrations', async (lockedAdapter) => {
-      assert.equal(lockedAdapter, adapter)
+    let result = await driver.withMigrationLock('app_migrations', async (lockedDriver) => {
+      assert.equal(lockedDriver, driver)
       return 'done'
     })
 
@@ -203,7 +203,7 @@ describe('postgres adapter', () => {
     ])
   })
 
-  it('serializes migration locks on the same adapter', async () => {
+  it('serializes migration locks on the same driver', async () => {
     let lifecycle: string[] = []
     let signalFirstMigrationStarted: () => void = () => undefined
     let firstMigrationStarted = new Promise<void>((resolve) => {
@@ -227,15 +227,15 @@ describe('postgres adapter', () => {
         return { rows: [], rowCount: 0 }
       },
     }
-    let adapter = createPostgresTestDatabase(client as never)
+    let driver = createPostgresTestDatabase(client as never)
 
-    let firstMigration = adapter.withMigrationLock('app_migrations', async () => {
+    let firstMigration = driver.withMigrationLock('app_migrations', async () => {
       lifecycle.push('first:start')
       signalFirstMigrationStarted()
       await firstMigrationCanFinish
       lifecycle.push('first:end')
     })
-    let secondMigration = adapter.withMigrationLock('app_migrations', async () => {
+    let secondMigration = driver.withMigrationLock('app_migrations', async () => {
       lifecycle.push('second')
     })
 
@@ -267,11 +267,11 @@ describe('postgres adapter', () => {
         return { rows: [], rowCount: 0 }
       },
     }
-    let adapter = createPostgresTestDatabase(client as never)
+    let driver = createPostgresTestDatabase(client as never)
 
     await assert.rejects(
       () =>
-        adapter.withMigrationLock('app_migrations', async () => {
+        driver.withMigrationLock('app_migrations', async () => {
           throw migrationError
         }),
       (error: unknown) => error === migrationError,
@@ -287,10 +287,10 @@ describe('postgres adapter', () => {
         }
       },
     }
-    let adapter = createPostgresTestDatabase(client as never)
+    let driver = createPostgresTestDatabase(client as never)
 
     await assert.rejects(
-      () => adapter.withMigrationLock('app_migrations', async () => 'done'),
+      () => driver.withMigrationLock('app_migrations', async () => 'done'),
       /migration lock was not held by the reserved connection/,
     )
   })
@@ -304,12 +304,12 @@ describe('postgres adapter', () => {
         }
       },
     }
-    let adapter = createPostgresTestDatabase(client as never)
+    let driver = createPostgresTestDatabase(client as never)
 
     await assert.rejects(
       () =>
-        adapter.withMigrationLock('app_migrations', () =>
-          adapter.withMigrationLock('app_migrations', async () => undefined),
+        driver.withMigrationLock('app_migrations', () =>
+          driver.withMigrationLock('app_migrations', async () => undefined),
         ),
       /migration lock is already held by this database/,
     )
@@ -328,10 +328,10 @@ describe('postgres adapter', () => {
         endCalls += 1
       },
     }
-    let adapter = createPostgresTestDatabase(pool as never)
+    let driver = createPostgresTestDatabase(pool as never)
 
     await assert.rejects(
-      () => adapter.wipe(),
+      () => driver.wipe(),
       /Postgres database wipe\(\) requires config-based construction/,
     )
     assert.equal(endCalls, 0)
@@ -365,11 +365,11 @@ describe('postgres adapter', () => {
       return maintenanceClient
     } as never)
 
-    let adapter = createPostgresTestDatabase({
+    let driver = createPostgresTestDatabase({
       connectionString: 'postgres://user:password@localhost/app',
     })
 
-    await adapter.wipe()
+    await driver.wipe()
 
     assert.ok(typeof maintenanceConfig === 'object' && maintenanceConfig !== null)
     assert.ok('database' in maintenanceConfig && maintenanceConfig.database === 'postgres')
@@ -406,12 +406,9 @@ describe('postgres adapter', () => {
     delete process.env.PGDATABASE
 
     try {
-      let adapter = createPostgresTestDatabase({ host: 'localhost', user: 'app' })
+      let driver = createPostgresTestDatabase({ host: 'localhost', user: 'app' })
 
-      await assert.rejects(
-        () => adapter.wipe(),
-        /Postgres database config requires a database name/,
-      )
+      await assert.rejects(() => driver.wipe(), /Postgres database config requires a database name/)
       assert.equal(poolEndCalls, 0)
     } finally {
       if (previousEnv === undefined) {
@@ -452,9 +449,9 @@ describe('postgres adapter', () => {
     process.env.PGDATABASE = 'env_db'
 
     try {
-      let adapter = createPostgresTestDatabase({ host: 'localhost', user: 'app' })
+      let driver = createPostgresTestDatabase({ host: 'localhost', user: 'app' })
 
-      await adapter.wipe()
+      await driver.wipe()
 
       assert.equal(statements[1], 'drop database if exists "env_db"')
       assert.equal(statements[2], 'create database "env_db" template "template0"')
@@ -486,22 +483,22 @@ describe('postgres adapter', () => {
       }
     } as never)
 
-    let adapter = createPostgresTestDatabase({
+    let driver = createPostgresTestDatabase({
       connectionString: 'not a valid url',
       database: 'app',
     })
 
     await assert.rejects(
-      () => adapter.wipe(),
+      () => driver.wipe(),
       /Postgres connection string must be a valid URL to resolve the maintenance database/,
     )
     assert.equal(poolEndCalls, 0)
 
-    await adapter.executeScript('select 1')
+    await driver.executeScript('select 1')
     assert.deepEqual(poolQueries, ['select 1'])
   })
 
-  it('checks table and column existence through adapter introspection hooks', async () => {
+  it('checks table and column existence through driver introspection hooks', async () => {
     let statements: Array<{ text: string; values: unknown[] | undefined }> = []
 
     let client = {
@@ -522,9 +519,9 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = new PostgresDatabaseDriver(client as never)
-    let hasTable = await adapter.hasTable({ schema: 'app', name: 'users' })
-    let hasColumn = await adapter.hasColumn({ schema: 'app', name: 'users' }, 'email')
+    let driver = new PostgresDatabaseDriver(client as never)
+    let hasTable = await driver.hasTable({ schema: 'app', name: 'users' })
+    let hasColumn = await driver.hasColumn({ schema: 'app', name: 'users' }, 'email')
 
     assert.equal(hasTable, true)
     assert.equal(hasColumn, true)
@@ -572,12 +569,12 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = new PostgresDatabaseDriver(pool as never)
-    let token = await adapter.beginTransaction()
+    let driver = new PostgresDatabaseDriver(pool as never)
+    let token = await driver.beginTransaction()
 
-    await adapter.hasTable({ name: 'users' }, token)
-    await adapter.hasColumn({ name: 'users' }, 'email', token)
-    await adapter.commitTransaction(token)
+    await driver.hasTable({ name: 'users' }, token)
+    await driver.hasColumn({ name: 'users' }, 'email', token)
+    await driver.commitTransaction(token)
 
     assert.equal(poolQueries, 0)
     assert.deepEqual(transactionStatements, [
@@ -604,8 +601,8 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = new PostgresDatabaseDriver(client as never)
-    let result = await adapter.execute({
+    let driver = new PostgresDatabaseDriver(client as never)
+    let result = await driver.execute({
       operation: {
         kind: 'insertMany',
         table: accounts,
@@ -805,9 +802,9 @@ describe('postgres adapter', () => {
         return transactionClient
       },
     }
-    let adapter = new PostgresDatabaseDriver(pool as never)
+    let driver = new PostgresDatabaseDriver(pool as never)
 
-    await assert.rejects(() => adapter.beginTransaction(), /begin failed/)
+    await assert.rejects(() => driver.beginTransaction(), /begin failed/)
     assert.deepEqual(lifecycle, ['connect', 'destroy'])
   })
 
@@ -997,13 +994,13 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = new PostgresDatabaseDriver(client as never)
-    let token = await adapter.beginTransaction()
+    let driver = new PostgresDatabaseDriver(client as never)
+    let token = await driver.beginTransaction()
 
-    await adapter.createSavepoint(token, 'sp"name')
-    await adapter.rollbackToSavepoint(token, 'sp"name')
-    await adapter.releaseSavepoint(token, 'sp"name')
-    await adapter.commitTransaction(token)
+    await driver.createSavepoint(token, 'sp"name')
+    await driver.rollbackToSavepoint(token, 'sp"name')
+    await driver.releaseSavepoint(token, 'sp"name')
+    await driver.commitTransaction(token)
 
     assert.deepEqual(statements, [
       'begin',
@@ -1027,18 +1024,18 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = new PostgresDatabaseDriver(client as never)
+    let driver = new PostgresDatabaseDriver(client as never)
 
     await assert.rejects(
-      () => adapter.commitTransaction({ id: 'tx_missing' }),
+      () => driver.commitTransaction({ id: 'tx_missing' }),
       /Unknown transaction token: tx_missing/,
     )
     await assert.rejects(
-      () => adapter.rollbackTransaction({ id: 'tx_missing' }),
+      () => driver.rollbackTransaction({ id: 'tx_missing' }),
       /Unknown transaction token: tx_missing/,
     )
     await assert.rejects(
-      () => adapter.createSavepoint({ id: 'tx_missing' }, 'sp'),
+      () => driver.createSavepoint({ id: 'tx_missing' }, 'sp'),
       /Unknown transaction token: tx_missing/,
     )
   })
@@ -1275,8 +1272,8 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = new PostgresDatabaseDriver(client as never)
-    await adapter.executeScript('create table widgets (id int); insert into widgets values (1);')
+    let driver = new PostgresDatabaseDriver(client as never)
+    await driver.executeScript('create table widgets (id int); insert into widgets values (1);')
 
     assert.equal(calls.length, 1)
     assert.equal(calls[0].text, 'create table widgets (id int); insert into widgets values (1);')

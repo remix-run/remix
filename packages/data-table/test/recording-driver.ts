@@ -5,17 +5,17 @@ import type {
   DatabaseDriver,
   TransactionOptions,
   TransactionToken,
-} from '../src/lib/adapter.ts'
+} from '../src/lib/driver.ts'
 import { Database, type DatabaseOptions } from '../src/lib/database.ts'
 
-export type RecordingAdapterOptions = {
+export type RecordingDriverOptions = {
   dialect?: string
   capabilities?: Partial<DatabaseCapabilities>
   execute?(request: DataManipulationRequest): Promise<DataManipulationResult>
 }
 
-export type RecordingAdapter = {
-  adapter: DatabaseDriver
+export type RecordingDriver = {
+  driver: DatabaseDriver
   requests: DataManipulationRequest[]
   transactions: Array<
     | { kind: 'begin'; options: TransactionOptions | undefined; token: TransactionToken }
@@ -41,12 +41,12 @@ export class TestDatabase extends Database {
   }
 }
 
-export function createRecordingAdapter(options: RecordingAdapterOptions = {}): RecordingAdapter {
+export function createRecordingDriver(options: RecordingDriverOptions = {}): RecordingDriver {
   let requests: DataManipulationRequest[] = []
-  let transactions: RecordingAdapter['transactions'] = []
+  let transactions: RecordingDriver['transactions'] = []
   let transactionId = 0
 
-  let adapter: DatabaseDriver = {
+  let driver: DatabaseDriver = {
     dialect: options.dialect ?? 'recording',
     capabilities: {
       ...defaultCapabilities,
@@ -92,5 +92,5 @@ export function createRecordingAdapter(options: RecordingAdapterOptions = {}): R
     close() {},
   }
 
-  return { adapter, requests, transactions }
+  return { driver, requests, transactions }
 }

@@ -9,7 +9,7 @@ import type {
   SelectOperation,
   UpdateOperation,
   UpsertOperation,
-} from '../adapter.ts'
+} from '../driver.ts'
 import { DataTableQueryError } from '../errors.ts'
 import type { ReturningInput, WriteResult, WriteRowResult, WriteRowsResult } from '../database.ts'
 import { normalizeWhereInput } from '../operators.ts'

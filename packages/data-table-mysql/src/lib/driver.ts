@@ -55,7 +55,7 @@ export interface MysqlDatabaseDriverOptions {
 }
 
 /**
- * MySQL database driver for mysql-compatible clients.
+ * MySQL database driver backed by a mysql-compatible client.
  */
 export class MysqlDatabaseDriver implements DatabaseDriver<'mysql'> {
   /**

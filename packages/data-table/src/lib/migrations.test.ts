@@ -1,18 +1,18 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type { DatabaseDriver, TransactionToken } from './adapter.ts'
+import type { DatabaseDriver, TransactionToken } from './driver.ts'
 import { parseTransactionDirective } from './migrations/directive.ts'
 import { parseMigrationDirectoryName } from './migrations/directory-name.ts'
 import { createMigrationRegistry } from './migrations/registry.ts'
 import { createMigrationRunner } from './migrations/runner.ts'
-import { MemoryMigrationAdapter } from '../../test/memory-migration-adapter.ts'
-import { createRecordingAdapter, TestDatabase } from '../../test/recording-adapter.ts'
+import { MemoryMigrationDriver } from '../../test/memory-migration-driver.ts'
+import { createRecordingDriver, TestDatabase } from '../../test/recording-driver.ts'
 
 describe('Database migrations', () => {
   it('applies and reverts migrations through Database.migrate()', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let db = new TestDatabase(adapter)
+    let driver = new MemoryMigrationDriver()
+    let db = new TestDatabase(driver)
     let migrations = [
       {
         id: '20260101000000',
@@ -33,24 +33,24 @@ describe('Database migrations', () => {
       reverted.reverted.map((entry) => entry.id),
       ['20260101000000'],
     )
-    assert.equal(adapter.journalRows.length, 0)
+    assert.equal(driver.journalRows.length, 0)
   })
 
   it('uses journal configuration for migrate and status', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    adapter.journalTableName = 'app_migrations'
-    let db = new TestDatabase(adapter)
+    let driver = new MemoryMigrationDriver()
+    driver.journalTableName = 'app_migrations'
+    let db = new TestDatabase(driver)
     let migrations = [{ id: '20260101000000', name: 'users', up: 'select 1' }]
 
     await db.migrate(migrations, { journalTable: 'app_migrations' })
     await db.migrationStatus(migrations, { journalTable: 'app_migrations' })
 
-    assert.equal(adapter.journalTableName, 'app_migrations')
+    assert.equal(driver.journalTableName, 'app_migrations')
   })
 
   it('supports targets, steps, and dry runs through Database.migrate()', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let db = new TestDatabase(adapter)
+    let driver = new MemoryMigrationDriver()
+    let db = new TestDatabase(driver)
     let migrations = [
       { id: '20260101000000', name: 'users', up: 'create table users (id integer)' },
       { id: '20260102000000', name: 'posts', up: 'create table posts (id integer)' },
@@ -58,18 +58,18 @@ describe('Database migrations', () => {
 
     let plan = await db.migrate(migrations, { dryRun: true, step: 1 })
     assert.deepEqual(plan.sql, ['create table users (id integer)'])
-    assert.equal(adapter.journalRows.length, 0)
+    assert.equal(driver.journalRows.length, 0)
 
     await db.migrate(migrations, { to: '20260101000000_users' })
     assert.deepEqual(
-      adapter.journalRows.map((row) => row.id),
+      driver.journalRows.map((row) => row.id),
       ['20260101000000'],
     )
   })
 
   it('reports pending migrations without creating a journal table', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let db = new TestDatabase(adapter)
+    let driver = new MemoryMigrationDriver()
+    let db = new TestDatabase(driver)
     let migrations = [{ id: '20260101000000', name: 'users', up: 'select 1' }]
 
     let status = await db.migrationStatus(migrations)
@@ -81,14 +81,14 @@ describe('Database migrations', () => {
         status: 'pending',
       },
     ])
-    assert.equal(adapter.journalTableCreated, false)
+    assert.equal(driver.journalTableCreated, false)
   })
 })
 
 describe('migration runner', () => {
   it('applies pending migrations and records them in the journal', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       {
         id: '20260101000000',
         name: 'create_users',
@@ -110,17 +110,17 @@ describe('migration runner', () => {
       ['20260101000000', '20260102000000'],
     )
     assert.deepEqual(
-      adapter.executedScripts.map((entry) => entry.sql),
+      driver.executedScripts.map((entry) => entry.sql),
       ['create table users (id integer)', 'create table posts (id integer)'],
     )
     assert.deepEqual(
-      adapter.journalRows.map((row) => row.id),
+      driver.journalRows.map((row) => row.id),
       ['20260101000000', '20260102000000'],
     )
   })
 
   it('reverts applied migrations using their down script', async () => {
-    let adapter = new MemoryMigrationAdapter()
+    let driver = new MemoryMigrationDriver()
     let migrations = [
       {
         id: '20260101000000',
@@ -135,29 +135,29 @@ describe('migration runner', () => {
         down: 'drop table posts',
       },
     ]
-    let runner = createMigrationRunner(adapter, migrations)
+    let runner = createMigrationRunner(driver, migrations)
 
     await runner.up()
-    adapter.executedScripts = []
+    driver.executedScripts = []
 
     await runner.down({ step: 1 })
 
     assert.deepEqual(
-      adapter.executedScripts.map((entry) => entry.sql),
+      driver.executedScripts.map((entry) => entry.sql),
       ['drop table posts'],
     )
     assert.deepEqual(
-      adapter.journalRows.map((row) => row.id),
+      driver.journalRows.map((row) => row.id),
       ['20260101000000'],
     )
 
     await runner.down({ to: '20260101000000' })
-    assert.deepEqual(adapter.journalRows, [])
+    assert.deepEqual(driver.journalRows, [])
   })
 
   it('throws when reverting a migration that has no down script', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       {
         id: '20260101000000',
         name: 'irreversible',
@@ -170,63 +170,63 @@ describe('migration runner', () => {
   })
 
   it('skips executing empty scripts but still updates the journal', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'noop', up: '   \n  ', down: '' },
     ])
 
     await runner.up()
 
-    assert.equal(adapter.executedScripts.length, 0)
-    assert.equal(adapter.journalRows.length, 1)
+    assert.equal(driver.executedScripts.length, 0)
+    assert.equal(driver.journalRows.length, 1)
 
     await runner.down()
-    assert.equal(adapter.executedScripts.length, 0)
-    assert.equal(adapter.journalRows.length, 0)
+    assert.equal(driver.executedScripts.length, 0)
+    assert.equal(driver.journalRows.length, 0)
   })
 
   it('supports dryRun without executing or journaling', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'create_users', up: 'create table users (id integer)' },
     ])
 
     let result = await runner.up({ dryRun: true })
 
     assert.deepEqual(result.sql, ['create table users (id integer)'])
-    assert.equal(adapter.executedScripts.length, 0)
-    assert.equal(adapter.journalRows.length, 0)
+    assert.equal(driver.executedScripts.length, 0)
+    assert.equal(driver.journalRows.length, 0)
   })
 
   it('respects target and step boundaries on up()', async () => {
-    let adapter = new MemoryMigrationAdapter()
+    let driver = new MemoryMigrationDriver()
     let migrations = [
       { id: '20260101000000', name: 'a', up: 'create table a (id integer)' },
       { id: '20260102000000', name: 'b', up: 'create table b (id integer)' },
     ]
 
-    let targetRunner = createMigrationRunner(adapter, migrations)
+    let targetRunner = createMigrationRunner(driver, migrations)
     await targetRunner.up({ to: '20260101000000' })
     assert.deepEqual(
-      adapter.journalRows.map((row) => row.id),
+      driver.journalRows.map((row) => row.id),
       ['20260101000000'],
     )
 
-    adapter.journalRows = []
-    adapter.journalTableCreated = false
-    adapter.executedScripts = []
+    driver.journalRows = []
+    driver.journalTableCreated = false
+    driver.executedScripts = []
 
-    let stepRunner = createMigrationRunner(adapter, migrations)
+    let stepRunner = createMigrationRunner(driver, migrations)
     await stepRunner.up({ step: 1 })
     assert.deepEqual(
-      adapter.journalRows.map((row) => row.id),
+      driver.journalRows.map((row) => row.id),
       ['20260101000000'],
     )
   })
 
   it('rejects invalid options', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'a', up: 'create table a (id integer)' },
     ])
 
@@ -240,7 +240,7 @@ describe('migration runner', () => {
   })
 
   it('resolves full id_name targets against bare migration ids', async () => {
-    let adapter = new MemoryMigrationAdapter()
+    let driver = new MemoryMigrationDriver()
     let migrations = [
       {
         id: '20260101000000',
@@ -255,25 +255,25 @@ describe('migration runner', () => {
         down: 'drop table posts',
       },
     ]
-    let runner = createMigrationRunner(adapter, migrations)
+    let runner = createMigrationRunner(driver, migrations)
 
     await runner.up({ to: '20260101000000_create_users' })
     assert.deepEqual(
-      adapter.journalRows.map((row) => row.id),
+      driver.journalRows.map((row) => row.id),
       ['20260101000000'],
     )
 
     await runner.up()
     await runner.down({ to: '20260102000000_create_posts' })
     assert.deepEqual(
-      adapter.journalRows.map((row) => row.id),
+      driver.journalRows.map((row) => row.id),
       ['20260101000000'],
     )
   })
 
   it('rejects ambiguous migration targets', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'a', up: 'select 1' },
       { id: '20260101000000_a', name: 'b', up: 'select 1' },
     ])
@@ -282,8 +282,8 @@ describe('migration runner', () => {
   })
 
   it('detects checksum drift from changed up.sql', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       {
         id: '20260101000000',
         name: 'users',
@@ -293,7 +293,7 @@ describe('migration runner', () => {
 
     await runner.up()
 
-    let driftedRunner = createMigrationRunner(adapter, [
+    let driftedRunner = createMigrationRunner(driver, [
       {
         id: '20260101000000',
         name: 'users',
@@ -307,8 +307,8 @@ describe('migration runner', () => {
   })
 
   it('rejects up() when an applied migration is missing but still allows down()', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       {
         id: '20260101000000',
         name: 'create_users',
@@ -324,9 +324,9 @@ describe('migration runner', () => {
     ])
 
     await runner.up()
-    adapter.executedScripts = []
+    driver.executedScripts = []
 
-    let orphanedRunner = createMigrationRunner(adapter, [
+    let orphanedRunner = createMigrationRunner(driver, [
       {
         id: '20260102000000',
         name: 'create_posts',
@@ -339,7 +339,7 @@ describe('migration runner', () => {
       () => orphanedRunner.up(),
       /Applied migration "20260101000000_create_users" is missing from current migrations/,
     )
-    assert.equal(adapter.executedScripts.length, 0)
+    assert.equal(driver.executedScripts.length, 0)
 
     let result = await orphanedRunner.down()
 
@@ -348,33 +348,33 @@ describe('migration runner', () => {
       ['20260102000000'],
     )
     assert.deepEqual(
-      adapter.executedScripts.map((entry) => entry.sql),
+      driver.executedScripts.map((entry) => entry.sql),
       ['drop table posts'],
     )
     assert.deepEqual(
-      adapter.journalRows.map((row) => row.id),
+      driver.journalRows.map((row) => row.id),
       ['20260101000000'],
     )
   })
 
   it('balances migration lock hooks when execution fails', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    adapter.scriptError = new Error('boom')
+    let driver = new MemoryMigrationDriver()
+    driver.scriptError = new Error('boom')
 
-    let runner = createMigrationRunner(adapter, [
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'broken', up: 'select 1' },
     ])
 
     await assert.rejects(() => runner.up(), /boom/)
-    assert.equal(adapter.lockAcquireCount, 1)
-    assert.equal(adapter.lockReleaseCount, 1)
-    assert.equal(adapter.rollbackTransactionCount, 1)
-    assert.equal(adapter.commitTransactionCount, 0)
+    assert.equal(driver.lockAcquireCount, 1)
+    assert.equal(driver.lockReleaseCount, 1)
+    assert.equal(driver.rollbackTransactionCount, 1)
+    assert.equal(driver.commitTransactionCount, 0)
   })
 
   it('requires drivers that report migration lock support to provide the lock hook', async () => {
-    let { adapter } = createRecordingAdapter({ capabilities: { migrationLock: true } })
-    let runner = createMigrationRunner(adapter, [
+    let { driver } = createRecordingDriver({ capabilities: { migrationLock: true } })
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'users', up: 'create table users (id integer)' },
     ])
 
@@ -385,28 +385,28 @@ describe('migration runner', () => {
   })
 
   it('preserves commit failures without attempting an invalid rollback', async () => {
-    class CommitFailingAdapter extends MemoryMigrationAdapter {
+    class CommitFailingDriver extends MemoryMigrationDriver {
       override async commitTransaction(token: { id: string }): Promise<void> {
         await super.commitTransaction(token)
         throw new Error('commit failed')
       }
     }
 
-    let adapter = new CommitFailingAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new CommitFailingDriver()
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'users', up: 'create table users (id integer)' },
     ])
 
     await assert.rejects(() => runner.up(), /commit failed/)
-    assert.equal(adapter.commitTransactionCount, 1)
-    assert.equal(adapter.rollbackTransactionCount, 0)
+    assert.equal(driver.commitTransactionCount, 1)
+    assert.equal(driver.rollbackTransactionCount, 0)
   })
 
   it('preserves migration and rollback failures', async () => {
     let migrationError = new Error('migration failed')
     let rollbackError = new Error('rollback failed')
 
-    class RollbackFailingAdapter extends MemoryMigrationAdapter {
+    class RollbackFailingDriver extends MemoryMigrationDriver {
       override async executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
         if (transaction) throw migrationError
         await super.executeScript(sql, transaction)
@@ -417,9 +417,9 @@ describe('migration runner', () => {
       }
     }
 
-    let adapter = new RollbackFailingAdapter()
-    adapter.journalTableCreated = true
-    let runner = createMigrationRunner(adapter, [
+    let driver = new RollbackFailingDriver()
+    driver.journalTableCreated = true
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'users', up: 'create table users (id integer)' },
     ])
 
@@ -433,61 +433,61 @@ describe('migration runner', () => {
     )
   })
 
-  it('runs journal reads/writes and scripts through the lock-owning adapter', async () => {
-    let lockAdapter = new MemoryMigrationAdapter()
+  it('runs journal reads/writes and scripts through the lock-owning driver', async () => {
+    let lockDriver = new MemoryMigrationDriver()
 
-    class LockDelegatingAdapter extends MemoryMigrationAdapter {
+    class LockDelegatingDriver extends MemoryMigrationDriver {
       override async withMigrationLock<result>(
         _name: string,
-        run: (adapter: DatabaseDriver) => Promise<result>,
+        run: (driver: DatabaseDriver) => Promise<result>,
       ): Promise<result> {
-        return run(lockAdapter)
+        return run(lockDriver)
       }
     }
 
-    let adapter = new LockDelegatingAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new LockDelegatingDriver()
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'create_users', up: 'create table users (id integer)' },
     ])
 
     await runner.up()
 
-    assert.equal(lockAdapter.journalTableCreated, true)
+    assert.equal(lockDriver.journalTableCreated, true)
     assert.deepEqual(
-      lockAdapter.executedScripts.map((entry) => entry.sql),
+      lockDriver.executedScripts.map((entry) => entry.sql),
       ['create table users (id integer)'],
     )
     assert.deepEqual(
-      lockAdapter.journalRows.map((row) => row.id),
+      lockDriver.journalRows.map((row) => row.id),
       ['20260101000000'],
     )
-    assert.equal(lockAdapter.beginTransactionCount, 1)
-    assert.equal(adapter.journalTableCreated, false)
-    assert.equal(adapter.executedScripts.length, 0)
-    assert.equal(adapter.journalRows.length, 0)
-    assert.equal(adapter.beginTransactionCount, 0)
+    assert.equal(lockDriver.beginTransactionCount, 1)
+    assert.equal(driver.journalTableCreated, false)
+    assert.equal(driver.executedScripts.length, 0)
+    assert.equal(driver.journalRows.length, 0)
+    assert.equal(driver.beginTransactionCount, 0)
   })
 
   it('wraps each migration in its own transaction by default', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'a', up: 'create table a (id integer)' },
       { id: '20260102000000', name: 'b', up: 'create table b (id integer)' },
     ])
 
     await runner.up()
 
-    assert.equal(adapter.beginTransactionCount, 2)
-    assert.equal(adapter.commitTransactionCount, 2)
-    let txIds = adapter.executedScripts.map((entry) => entry.transaction)
+    assert.equal(driver.beginTransactionCount, 2)
+    assert.equal(driver.commitTransactionCount, 2)
+    let txIds = driver.executedScripts.map((entry) => entry.transaction)
     assert.notEqual(txIds[0], undefined)
     assert.notEqual(txIds[1], undefined)
     assert.notEqual(txIds[0], txIds[1])
   })
 
   it('skips transactions when descriptor sets transaction: none', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       {
         id: '20260101000000',
         name: 'concurrent',
@@ -498,13 +498,13 @@ describe('migration runner', () => {
 
     await runner.up()
 
-    assert.equal(adapter.beginTransactionCount, 0)
-    assert.equal(adapter.executedScripts[0].transaction, undefined)
+    assert.equal(driver.beginTransactionCount, 0)
+    assert.equal(driver.executedScripts[0].transaction, undefined)
   })
 
   it('respects -- data-table/transaction directive when descriptor omits the field', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       {
         id: '20260101000000',
         name: 'concurrent',
@@ -514,14 +514,14 @@ describe('migration runner', () => {
 
     await runner.up()
 
-    assert.equal(adapter.beginTransactionCount, 0)
+    assert.equal(driver.beginTransactionCount, 0)
   })
 
-  it('throws when transaction: required but adapter lacks transactional DDL', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    adapter.capabilities.transactionalDdl = false
+  it('throws when transaction: required but driver lacks transactional DDL', async () => {
+    let driver = new MemoryMigrationDriver()
+    driver.capabilities.transactionalDdl = false
 
-    let runner = createMigrationRunner(adapter, [
+    let runner = createMigrationRunner(driver, [
       {
         id: '20260101000000',
         name: 'tx_required',
@@ -533,30 +533,30 @@ describe('migration runner', () => {
     await assert.rejects(() => runner.up(), /requires transactional DDL/)
   })
 
-  it('skips wrapping when adapter lacks transactional DDL and mode is auto', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    adapter.capabilities.transactionalDdl = false
+  it('skips wrapping when driver lacks transactional DDL and mode is auto', async () => {
+    let driver = new MemoryMigrationDriver()
+    driver.capabilities.transactionalDdl = false
 
-    let runner = createMigrationRunner(adapter, [
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'a', up: 'create table a (id integer)' },
     ])
 
     await runner.up()
 
-    assert.equal(adapter.beginTransactionCount, 0)
-    assert.equal(adapter.executedScripts.length, 1)
+    assert.equal(driver.beginTransactionCount, 0)
+    assert.equal(driver.executedScripts.length, 1)
   })
 
   it('reports drifted, applied, and pending statuses', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'a', up: 'create table a (id integer)' },
       { id: '20260102000000', name: 'b', up: 'create table b (id integer)' },
     ])
 
     await runner.up({ step: 1 })
 
-    let driftedRunner = createMigrationRunner(adapter, [
+    let driftedRunner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'a', up: 'create table a (id integer, email text)' },
       { id: '20260102000000', name: 'b', up: 'create table b (id integer)' },
     ])
@@ -572,14 +572,14 @@ describe('migration runner', () => {
   })
 
   it('reports applied journal entries missing from the current migrations', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
       { id: '20260101000000', name: 'create_users', up: 'create table users (id integer)' },
     ])
 
     await runner.up()
 
-    let statusRunner = createMigrationRunner(adapter, [
+    let statusRunner = createMigrationRunner(driver, [
       { id: '20260102000000', name: 'create_posts', up: 'create table posts (id integer)' },
     ])
     let statuses = await statusRunner.status()
@@ -620,7 +620,7 @@ describe('migration registry', () => {
   })
 
   it('runs migrations supplied via a registry', async () => {
-    let adapter = new MemoryMigrationAdapter()
+    let driver = new MemoryMigrationDriver()
     let registry = createMigrationRegistry()
 
     registry.register({
@@ -629,11 +629,11 @@ describe('migration registry', () => {
       up: 'create table users (id integer)',
     })
 
-    let runner = createMigrationRunner(adapter, registry)
+    let runner = createMigrationRunner(driver, registry)
     await runner.up()
 
     assert.deepEqual(
-      adapter.journalRows.map((row) => row.id),
+      driver.journalRows.map((row) => row.id),
       ['20260101000000'],
     )
   })

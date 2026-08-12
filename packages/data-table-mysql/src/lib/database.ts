@@ -1,6 +1,6 @@
 import { Database, type DatabaseOptions } from '@remix-run/data-table'
 
-import { MysqlDatabaseDriver, type MysqlDatabaseInput } from './adapter.ts'
+import { MysqlDatabaseDriver, type MysqlDatabaseInput } from './driver.ts'
 
 /** Options for creating a MySQL database. */
 export interface MysqlDatabaseOptions extends DatabaseOptions {

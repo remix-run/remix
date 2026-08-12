@@ -3,7 +3,7 @@ import type { Predicate } from './operators.ts'
 import type { SqlStatement } from './sql.ts'
 
 /**
- * Supported SQL join kinds.
+ * SQL join kinds supported by database drivers.
  */
 export type JoinType = 'inner' | 'left' | 'right'
 

@@ -1,4 +1,4 @@
-import type { DatabaseCapabilities, ReturningSelection } from '../adapter.ts'
+import type { DatabaseCapabilities, ReturningSelection } from '../driver.ts'
 import { DataTableQueryError, DataTableValidationError } from '../errors.ts'
 import type { ReturningInput } from '../database.ts'
 import type {

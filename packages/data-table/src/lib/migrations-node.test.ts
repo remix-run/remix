@@ -7,7 +7,7 @@ import { describe, it } from '@remix-run/test'
 import type { Database } from './database.ts'
 import { loadMigrations, loadSeed } from './migrations-node.ts'
 import { createMigrationRunner } from './migrations/runner.ts'
-import { MemoryMigrationAdapter } from '../../test/memory-migration-adapter.ts'
+import { MemoryMigrationDriver } from '../../test/memory-migration-driver.ts'
 
 async function makeMigration(
   parent: string,
@@ -120,13 +120,13 @@ describe('migration node loader', () => {
       })
 
       let migrations = await loadMigrations(directory)
-      let adapter = new MemoryMigrationAdapter()
-      let runner = createMigrationRunner(adapter, migrations)
+      let driver = new MemoryMigrationDriver()
+      let runner = createMigrationRunner(driver, migrations)
 
       await runner.up({ to: '20260101000000_create_users' })
 
       assert.deepEqual(
-        adapter.journalRows.map((row) => row.id),
+        driver.journalRows.map((row) => row.id),
         ['20260101000000'],
       )
     } finally {
