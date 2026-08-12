@@ -1880,6 +1880,7 @@ function startFixtureServer(cwd: string) {
   // pnpm's binary shims set NODE_PATH to the workspace virtual store, which lets
   // CJS resolution find workspace packages that the fixture app cannot import via ESM.
   let { NODE_PATH: _nodePath, ...env } = process.env
+  let traceStart = Date.now()
   let child = spawn(process.execPath, ['dev.ts'], {
     cwd,
     env: {
@@ -1894,10 +1895,20 @@ function startFixtureServer(cwd: string) {
   let hmrUrlWaiters: Array<() => void> = []
   let lineBuffer = ''
   let processOutput = ''
+  let processTrace = [`[+0ms] spawned fixture process (pid ${child.pid ?? 'unknown'})`]
   let exit: { code: number | null; signal: NodeJS.Signals | null } | null = null
+
+  function traceProcessOutput(kind: 'stderr' | 'stdout', chunk: string): void {
+    for (let line of chunk.trimEnd().split(/\r?\n/)) {
+      if (line.length > 0) {
+        processTrace.push(`[+${Date.now() - traceStart}ms] ${kind}: ${line}`)
+      }
+    }
+  }
 
   child.stdout?.setEncoding('utf-8')
   child.stdout?.on('data', (chunk: string) => {
+    traceProcessOutput('stdout', chunk)
     processOutput += chunk
     lineBuffer += chunk
 
@@ -1928,11 +1939,15 @@ function startFixtureServer(cwd: string) {
 
   child.stderr?.setEncoding('utf-8')
   child.stderr?.on('data', (chunk: string) => {
+    traceProcessOutput('stderr', chunk)
     processOutput += chunk
   })
 
   child.once('exit', (code, signal) => {
     exit = { code, signal }
+    processTrace.push(
+      `[+${Date.now() - traceStart}ms] process exited (code ${code}, signal ${signal})`,
+    )
   })
 
   return {
@@ -1951,7 +1966,11 @@ function startFixtureServer(cwd: string) {
           let exitText = exit
             ? ` Process exited with code ${exit.code} and signal ${exit.signal}.`
             : ''
-          return `Timed out waiting for fixture server.${exitText}\n${processOutput}`
+          return [
+            `Timed out waiting for fixture server.${exitText}`,
+            processOutput,
+            `Process trace:\n${processTrace.join('\n')}`,
+          ].join('\n')
         },
         fixtureServerReadyTimeout,
       )
