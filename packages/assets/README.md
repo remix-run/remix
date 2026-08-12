@@ -12,6 +12,8 @@ Fetch-based server for compiling browser assets on demand.
 - **Caching** - Conservative caching by default with stable URLs, ETags, and revalidation
 - **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
 - **Source Maps** - Serve inline or external sourcemaps
+- **Hot Module Reloading** - Handle live code updates in development
+- **Script Loaders** - Post-process compiled JavaScript with Node-compatible loaders
 
 ## Installation
 
@@ -33,7 +35,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
@@ -47,7 +49,7 @@ router.get('/assets/*', ({ request }) => {
 })
 ```
 
-This example gives you an `/assets/*` endpoint that serves compiled browser assets from `app/assets` and the `remix` package.
+This example gives you an `/assets/*` endpoint that serves compiled browser source from `public/` directories throughout `app/` and from the `remix` package.
 
 ## Root Directory
 
@@ -64,7 +66,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
 })
 ```
@@ -82,7 +84,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   denyFiles: ['app/**/*.server.*'],
 })
@@ -105,7 +107,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
 })
 ```
@@ -125,7 +127,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
 })
 ```
@@ -147,7 +149,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   watch: false,
 })
@@ -164,7 +166,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   watch: {
     ignore: ['**/node_modules/**'],
@@ -177,17 +179,17 @@ let assetServer = createAssetServer({
 Use `assetServer.getHref()` when you need the public URL for a served asset. You can provide a root-relative or absolute file path, or a `file://` URL.
 
 ```ts
-let src = await assetServer.getHref('app/assets/entry.tsx')
-// '/assets/app/assets/entry.tsx'
+let src = await assetServer.getHref('app/actions/public/entry.ts')
+// '/assets/app/actions/public/entry.ts'
 ```
 
 For configured `files` assets, you can also pass a `transform` pipeline to build a request URL with custom file transforms. Basic transforms are written as strings, while dynamic transforms use `[name, param]` tuples.
 
 ```ts
-let src = await assetServer.getHref('app/assets/image.png', {
+let src = await assetServer.getHref('app/media/public/image.png', {
   transform: [['resize', '100x100'], 'webp'],
 })
-// '/assets/app/assets/image.png?transform=resize%3A100x100&transform=webp'
+// '/assets/app/media/public/image.png?transform=resize%3A100x100&transform=webp'
 ```
 
 ## Preloads
@@ -195,11 +197,14 @@ let src = await assetServer.getHref('app/assets/image.png', {
 Use `assetServer.getPreloads()` when rendering HTML so you can turn the returned URLs into `<link rel="modulepreload">`, stylesheet preload tags, or `Link` headers for one or more assets and their dependencies. You can provide root-relative or absolute file paths, or `file://` URLs.
 
 ```ts
-let preloads = await assetServer.getPreloads(['app/assets/entry.tsx', 'app/assets/search.tsx'])
+let preloads = await assetServer.getPreloads([
+  'app/actions/public/entry.ts',
+  'app/search/public/search.tsx',
+])
 // [
-//   '/assets/app/assets/entry.tsx',
-//   '/assets/app/assets/search.tsx',
-//   '/assets/app/assets/utils.ts',
+//   '/assets/app/actions/public/entry.ts',
+//   '/assets/app/search/public/search.tsx',
+//   '/assets/app/search/public/utils.ts',
 //   '/assets/npm/remix/ui/index.js',
 //   ...etc
 // ]
@@ -220,7 +225,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   watch: false,
   fingerprint: {
@@ -246,7 +251,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   target: {
     chrome: '109',
@@ -271,7 +276,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   sourceMaps: 'external',
 })
@@ -288,7 +293,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   sourceMaps: 'inline',
   sourceMapSourcePaths: 'absolute',
@@ -308,7 +313,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   minify: true,
 })
@@ -329,7 +334,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   scripts: {
     define: {
@@ -354,13 +359,41 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   scripts: {
     external: ['my-external-import'],
   },
 })
 ```
+
+### Loaders
+
+Use `scripts.loaders` to post-process compiled JavaScript. Loaders use the same function signature and chaining behavior as synchronous [`load` hooks in Node's module API](https://nodejs.org/api/module.html#customization-hooks).
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  denyFiles: ['app/**/*.test.*'],
+  scripts: {
+    loaders: [
+      (url, context, nextLoad) => {
+        let result = nextLoad(url, context)
+        return {
+          ...result,
+          source: `${result.source}\nconsole.log('loaded')`,
+        }
+      },
+    ],
+  },
+})
+```
+
+Loaders receive JavaScript after the asset server transforms TypeScript and JavaScript, and run before HMR analysis and minification. They must return `format: 'module'`. Import attributes are not supported.
 
 ## File Options
 
@@ -375,7 +408,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
@@ -401,7 +434,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
@@ -419,7 +452,7 @@ let assetServer = createAssetServer({
   },
 })
 
-let imageUrl = await assetServer.getHref('app/assets/photo.jpg', {
+let imageUrl = await assetServer.getHref('app/media/public/photo.jpg', {
   transform: ['webp'],
 })
 ```
@@ -435,7 +468,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
@@ -456,7 +489,7 @@ let assetServer = createAssetServer({
   },
 })
 
-let imageUrl = await assetServer.getHref('app/assets/logo.svg', {
+let imageUrl = await assetServer.getHref('app/media/public/logo.svg', {
   transform: [['recolor', '0000ff']],
 })
 ```
@@ -465,7 +498,7 @@ Hand-authored URLs use repeated `transform` search params with `name` or `name:p
 
 ```css
 .selector {
-  background-image: url('/assets/app/assets/image.png?transform=resize:100x100&transform=webp');
+  background-image: url('/assets/app/media/public/image.png?transform=resize:100x100&transform=webp');
 }
 ```
 
@@ -483,7 +516,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
@@ -519,7 +552,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     cache: createFsFileStorage(path.resolve('.tmp/assets-cache')),
@@ -544,7 +577,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     maxRequestTransforms: 5,
@@ -595,7 +628,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   onError(error) {
     console.error('Failed to build client assets', error)
@@ -606,9 +639,165 @@ let assetServer = createAssetServer({
 
 If `onError` returns nothing, the asset server responds with the default `500 Internal Server Error` response.
 
+## Hot Module Reloading
+
+Use `hmr` with `watch` to enable the `import.meta.hot` API for browser modules. The `hmr` option is designed for integrating assets with a server-level HMR runtime such as [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) so server and browser updates can be coordinated.
+
+The `hmr` option accepts an async function that creates a `BrowserHmrChannel`, such as the `createBrowserHmrChannel` function from [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr):
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let isDevelopment = process.env.NODE_ENV === 'development'
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  denyFiles: ['app/**/*.test.*'],
+  hmr: isDevelopment
+    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+    : undefined,
+  watch: isDevelopment,
+})
+```
+
+### `import.meta.hot`
+
+The `import.meta.hot` API provided by `assets` is a small runtime contract for modules that can handle updates without reloading the page. It is primarily intended for browser modules compiled by `assets`, but it can also be used directly.
+
+To type `import.meta.hot`, add the HMR types to your TypeScript config:
+
+```json
+{
+  "compilerOptions": {
+    "types": ["remix/assets/types/hmr"]
+  }
+}
+```
+
+HMR accept calls are statically analyzed. Write them directly as `import.meta.hot.accept(...)`. Dependency accepts must use string literals or arrays of string literals; do not alias `import.meta.hot` or pass dynamically constructed dependency lists.
+
+```ts
+if (import.meta.hot) {
+  import.meta.hot.accept()
+}
+```
+
+### Accepting updates
+
+Calling `accept()` makes the current module an HMR boundary. When the module changes, `assets` evaluates the updated module and calls your callback with its exports.
+
+```ts
+export let value = 1
+
+if (import.meta.hot) {
+  import.meta.hot.accept((module) => {
+    if (typeof module.value !== 'number') {
+      import.meta.hot?.invalidate('Updated module no longer exports value')
+      return
+    }
+
+    value = module.value
+  })
+}
+```
+
+You can also accept updates from direct dependencies.
+
+```ts
+import { value } from './value.ts'
+
+let currentValue = value
+
+export function readValue() {
+  return currentValue
+}
+
+if (import.meta.hot) {
+  import.meta.hot.accept('./value.ts', (module) => {
+    if (typeof module.value !== 'number') {
+      import.meta.hot?.invalidate('Updated dependency no longer exports value')
+      return
+    }
+
+    currentValue = module.value
+  })
+}
+```
+
+Multiple dependencies can be accepted at once. The callback receives an array where only the changed dependency is defined.
+
+```ts
+if (import.meta.hot) {
+  import.meta.hot.accept(['./one.ts', './two.ts'], ([oneModule, twoModule]) => {
+    // oneModule is defined when ./one.ts changed.
+    // twoModule is defined when ./two.ts changed.
+  })
+}
+```
+
+### Cleaning up
+
+Register cleanup that should run before the module is replaced or disposed.
+
+```ts
+let interval = setInterval(refreshCache, 30_000)
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    clearInterval(interval)
+  })
+}
+```
+
+The `data` object is preserved across updates for the same module. Use it for small pieces of state.
+
+```ts
+let count = Number(import.meta.hot?.data.count ?? 0)
+
+export function increment() {
+  count++
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose((data) => {
+    data.count = count
+  })
+}
+```
+
+### Invalidating updates
+
+Call `invalidate()` inside an accept callback when the update cannot be applied safely. If no other boundary accepts the update, the browser reloads.
+
+```ts
+if (import.meta.hot) {
+  import.meta.hot.accept((module) => {
+    if (typeof module.value !== 'number') {
+      import.meta.hot?.invalidate('Updated module no longer exports value')
+      return
+    }
+  })
+}
+```
+
+### Server update events
+
+When the browser HMR channel comes from `remix/node-hmr/runtime`, server updates are sent to browser modules as `server:update` events.
+
+```ts
+if (import.meta.hot) {
+  import.meta.hot.on('server:update', () => {
+    window.location.reload()
+  })
+}
+```
+
 ## Related Packages
 
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - A Fetch-based router that pairs naturally with `assets`
+- [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) - Provides the server-side `import.meta.hot` runtime and browser HMR channel used by `hmr`
+- [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) - Provides a Remix UI component HMR loader for `scripts.loaders`
 - [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) - Route-pattern syntax for URL and route file matching
 
 ## License

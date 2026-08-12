@@ -10,7 +10,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
     "dev": "node --env-file-if-exists=.env --watch --import remix/node-tsx server.ts",

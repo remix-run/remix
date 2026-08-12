@@ -2,13 +2,18 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 
 import type { Handle } from '../runtime/component.ts'
-import { createFrame, type LoadModule } from '../runtime/frame.ts'
+import {
+  createFrame,
+  reloadFrameForNavigation,
+  type LoadModule,
+  type ResolveFrameOptions,
+} from '../runtime/frame.ts'
 import { jsx } from '../runtime/jsx.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
 import { createStyleManager } from '../style/index.ts'
 
-describe('frame reloads', () => {
+describe('frames', () => {
   afterEach(() => {
     document.documentElement.innerHTML = '<head></head><body></body>'
   })
@@ -89,7 +94,190 @@ describe('frame reloads', () => {
       frame.dispose()
     }
   })
+
+  it('renders a redirected response without changing the frame source', async () => {
+    let redirectedUrl = 'https://example.com/settings/overview'
+    let frameSrc = 'https://example.com/settings'
+    let response = new Response('<main id="result">Settings overview</main>')
+    Object.defineProperties(response, {
+      redirected: { value: true },
+      url: { value: redirectedUrl },
+    })
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let frame = createFrame(root, {
+      src: frameSrc,
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return response
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      let result = await reloadFrameForNavigation(frame.handle)
+
+      expect(document.getElementById('result')?.textContent).toBe('Settings overview')
+      expect(frame.handle.src).toBe(frameSrc)
+      expect(result.redirectedTo).toBe(redirectedUrl)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('passes form submission options to a streaming frame resolver', async () => {
+    let resolvedOptions: ResolveFrameOptions | undefined
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let frame = createFrame(root, {
+      src: 'https://example.com/account',
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame(_src, options) {
+        resolvedOptions = options
+        return htmlStream(['<main id="result">Saved</main>'])
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+    let formData = new FormData()
+    formData.set('displayName', 'Ada')
+
+    try {
+      await frame.ready()
+      await reloadFrameForNavigation(frame.handle, {
+        formData,
+        method: 'post',
+        encType: 'multipart/form-data',
+      })
+
+      expect(resolvedOptions?.formData).toBe(formData)
+      expect(resolvedOptions?.method).toBe('post')
+      expect(resolvedOptions?.encType).toBe('multipart/form-data')
+      expect(resolvedOptions?.signal).toBeInstanceOf(AbortSignal)
+      expect(document.getElementById('result')?.textContent).toBe('Saved')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('aborts the active resolver when the reload signal is aborted', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let resolverSignal: AbortSignal | undefined
+    let frame = createFrame(root, {
+      src: 'https://example.com/account',
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame(_src, options) {
+        resolverSignal = options?.signal
+        return new Promise<string>((resolve) => {
+          options?.signal?.addEventListener('abort', () => resolve('<p>Aborted</p>'), {
+            once: true,
+          })
+        })
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+    let controller = new AbortController()
+
+    try {
+      await frame.ready()
+      let reload = reloadFrameForNavigation(frame.handle, { signal: controller.signal })
+      controller.abort()
+      let result = await reload
+
+      expect(result.signal.aborted).toBe(true)
+      expect(resolverSignal?.aborted).toBe(true)
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('does not loop when a nested frame range escapes its region', async () => {
+    let outerStart = document.createComment(' rmx:f:outer ')
+    let innerStart = document.createComment(' rmx:f:inner ')
+    let innerEnd = document.createComment(' /rmx:f ')
+    let outerEnd = document.createComment(' /rmx:f ')
+    document.body.append(outerStart, innerStart, innerEnd, outerEnd)
+
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let frame = createFrame([outerStart, outerEnd], {
+      src: 'https://example.com/outer',
+      errorTarget,
+      loadModule: () => () => null,
+      resolveFrame: () => '',
+      pendingClientEntries: new Map(),
+      scheduler,
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    await frame.ready()
+
+    // Simulate the outer region being truncated during a DOM update.
+    outerEnd.after(innerEnd)
+    let scans = countMarkerScans(innerStart, 100)
+    frame.dispose()
+
+    expect(scans.count).toBeLessThan(100)
+  })
 })
+
+function countMarkerScans(marker: Comment, limit: number): { count: number } {
+  let data = marker.data
+  let scans = { count: 0 }
+
+  Object.defineProperty(marker, 'data', {
+    get() {
+      scans.count++
+      if (scans.count > limit) {
+        throw new Error(`Marker read ${limit} times; the frame region scan is looping`)
+      }
+      return data
+    },
+    set(next: string) {
+      data = next
+    },
+  })
+
+  return scans
+}
 
 function rmxDataScript(label: string): string {
   let data = {

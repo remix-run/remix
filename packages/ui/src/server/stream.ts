@@ -1,5 +1,6 @@
 import type { ComponentHandle, FrameHandle, Key, RemixNode } from '../runtime/component.ts'
 import type { ElementType, ElementProps, RemixElement } from '../runtime/jsx.ts'
+import type { ElementFunction } from '../runtime/element-function.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
@@ -434,7 +435,7 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
       return buildElementSegment(tag, props, context, frameState)
     }
 
-    if (typeof type === 'function') {
+    if (isElementFunction(type)) {
       if (type === Frame) {
         return buildFrameSegment(node, context, frameState)
       }
@@ -786,8 +787,8 @@ function sanitizeReturnedSsrMixinProps(props: ElementProps): ElementProps {
 
 function resolveReturnedSsrMixDescriptors(
   value: unknown,
-): Array<{ type: Function; args: unknown[] }> | null {
-  let descriptors: Array<{ type: Function; args: unknown[] }> = []
+): Array<{ type: ElementFunction; args: unknown[] }> | null {
+  let descriptors: Array<{ type: ElementFunction; args: unknown[] }> = []
   if (!collectReturnedSsrMixDescriptors(value, descriptors)) {
     return null
   }
@@ -797,7 +798,7 @@ function resolveReturnedSsrMixDescriptors(
 
 function collectReturnedSsrMixDescriptors(
   value: unknown,
-  output: Array<{ type: Function; args: unknown[] }>,
+  output: Array<{ type: ElementFunction; args: unknown[] }>,
 ): boolean {
   if (!value) {
     return true
@@ -827,7 +828,11 @@ function isSsrMixinElement(
   return '__rmxMixinElementType' in value
 }
 
-function isSsrMixinDescriptor(value: unknown): value is { type: Function; args: unknown[] } {
+function isElementFunction(value: unknown): value is ElementFunction {
+  return typeof value === 'function'
+}
+
+function isSsrMixinDescriptor(value: unknown): value is { type: ElementFunction; args: unknown[] } {
   if (!value || typeof value !== 'object' || isRemixElement(value)) {
     return false
   }
@@ -837,7 +842,7 @@ function isSsrMixinDescriptor(value: unknown): value is { type: Function; args: 
 }
 
 function buildComponentSegment(
-  type: Function,
+  type: ElementFunction,
   props: any,
   context: RenderContext,
   componentId: string,
@@ -921,7 +926,7 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
     }
 
     // Component function: render synchronously, then unwrap its result
-    if (typeof type === 'function') {
+    if (isElementFunction(type)) {
       let vnode = createVNode(type, props)
       if (context.parentVNode) {
         vnode._parent = context.parentVNode
@@ -1248,7 +1253,12 @@ function renderStyleTag(
 ): string {
   let wrappedCss = wrapStyleForLayer(selector, css, layer)
   if (!wrappedCss) return ''
-  return `<style data-rmx="${escapeHtml(selector)}">${wrappedCss}</style>`
+  return `<style data-rmx="${escapeHtml(selector)}">${escapeStyleText(wrappedCss)}</style>`
+}
+
+function escapeStyleText(css: string): string {
+  // A literal "</style" closes an HTML style element even when it appears inside a CSS string.
+  return css.replace(/</g, '\\3C ')
 }
 
 function buildRmxDataScript(context: RenderContext): string {

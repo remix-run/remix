@@ -7,6 +7,8 @@ type HydratedVirtualRootStartMarker = Comment & {
   }
 }
 
+type MarkerKind = 'frame-start' | 'frame-end' | 'virtual-root-start' | 'virtual-root-end'
+
 type CommentMarkerRangeReplacement = {
   currentStart: Comment
   nextStart: Comment
@@ -113,7 +115,7 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   }
 
   // Comment -> Comment
-  if (isCommentNode(current) && isCommentNode(next)) {
+  if (isCommentNode(current) && isCommentNode(next) && markerKindsMatch(current, next)) {
     let newData = next.data
     if (current.data !== newData) {
       let updated = false
@@ -415,12 +417,7 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
     // Existing comment markers delimit live ranges, so do not reorder them
     // independently from their contents. New markers still need to be inserted
     // before they can be used as anchors.
-    if (
-      isVirtualRootStartMarker(node) ||
-      isVirtualRootEndMarker(node) ||
-      isFrameStartMarker(node) ||
-      isFrameEndMarker(node)
-    ) {
+    if (getMarkerKind(node) !== undefined) {
       if (node.parentNode !== current) {
         current.insertBefore(node, ref)
       }
@@ -468,10 +465,21 @@ function isPreservedDomElement(node: Node): node is Element {
 function nodeTypesComparable(a: Node, b: Node): boolean {
   if (isTextNode(a) && isTextNode(b)) return true
   if (isElement(a) && isElement(b)) return a.tagName === b.tagName
-  if (isVirtualRootStartMarker(a) && isVirtualRootStartMarker(b)) return true
-  if (isVirtualRootEndMarker(a) && isVirtualRootEndMarker(b)) return true
-  if (isCommentNode(a) && isCommentNode(b)) return true
+  if (isCommentNode(a) && isCommentNode(b)) return markerKindsMatch(a, b)
   return false
+}
+
+function getMarkerKind(node: Node): MarkerKind | undefined {
+  if (!isCommentNode(node)) return undefined
+  if (isFrameStartMarker(node)) return 'frame-start'
+  if (isFrameEndMarker(node)) return 'frame-end'
+  if (isVirtualRootStartMarker(node)) return 'virtual-root-start'
+  if (isVirtualRootEndMarker(node)) return 'virtual-root-end'
+  return undefined
+}
+
+function markerKindsMatch(a: Node, b: Node): boolean {
+  return getMarkerKind(a) === getMarkerKind(b)
 }
 
 function isHydrationEndComment(node: Node): node is Comment {

@@ -80,9 +80,11 @@ export function requireAuth(options?: RequireAuthOptions) {
     onFailure(context) {
       return redirect(
         redirectTo.href(undefined, {
-          returnTo:
-            getSafeReturnTo(context.url.searchParams.get('returnTo')) ??
-            context.url.pathname + context.url.search,
+          searchParams: {
+            returnTo:
+              getSafeReturnTo(context.url.searchParams.get('returnTo')) ??
+              context.url.pathname + context.url.search,
+          },
         }),
       )
     },
@@ -98,7 +100,7 @@ export function getLoginRedirectURL(
   route: Route<any, any> = routes.auth.login.index,
 ): string {
   return route.href(undefined, {
-    returnTo: getSafeReturnTo(url.searchParams.get('returnTo')),
+    searchParams: { returnTo: getSafeReturnTo(url.searchParams.get('returnTo')) },
   })
 }
 

@@ -107,7 +107,7 @@ describe('controller ownership', () => {
     )
   })
 
-  it('tracks duplicate owner files for a single route subtree', async () => {
+  it('uses the first supported controller file without inspecting unrelated files', async () => {
     let routeManifest = await loadRouteManifest(getFixturePath('doctor-duplicate-owner'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
     let root = ownership.subtrees.find((subtree) => subtree.routeName === '<root>')
@@ -115,36 +115,41 @@ describe('controller ownership', () => {
 
     assert.ok(root)
     assert.ok(contact)
-    assert.deepEqual(root.actualEntryPaths, [
-      'app/actions/controller.ts',
-      'app/actions/controller.tsx',
-    ])
-    assert.deepEqual(contact.actualEntryPaths, [
-      'app/actions/contact/controller.ts',
-      'app/actions/contact/controller.jsx',
-    ])
+    assert.equal(root.actualEntryPath, 'app/actions/controller.ts')
+    assert.equal(contact.actualEntryPath, 'app/actions/contact/controller.ts')
   })
 
-  it('claims nested files for the deepest matching subtree', async () => {
+  it('checks expected nested directories and controller files', async () => {
     let routeManifest = await loadRouteManifest(getFixturePath('routes-tree'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
+    let admin = ownership.routeDirectories.find((directory) => directory.routeName === 'admin')
     let auth = ownership.subtrees.find((subtree) => subtree.routeName === 'auth')
     let authLogin = ownership.subtrees.find((subtree) => subtree.routeName === 'auth.login')
 
+    assert.ok(admin)
     assert.ok(auth)
     assert.ok(authLogin)
-    assert.deepEqual(auth.claimedFilePaths, ['app/actions/auth/controller.tsx'])
-    assert.deepEqual(authLogin.claimedFilePaths, ['app/actions/auth/login/controller.tsx'])
+    assert.equal(admin.directoryPath, 'app/actions/admin')
+    assert.equal(admin.exists, true)
+    assert.equal(auth.actualEntryPath, 'app/actions/auth/controller.tsx')
+    assert.equal(authLogin.actualEntryPath, 'app/actions/auth/login/controller.tsx')
   })
 
-  it('claims route-local files under the matching controller', async () => {
-    let routeManifest = await loadRouteManifest(getFixturePath('doctor-incomplete-controller'))
+  it('reports expected directories and controllers as absent without scanning their contents', async () => {
+    let routeManifest = await loadRouteManifest(getFixturePath('doctor-missing'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
+    let contactDirectory = ownership.routeDirectories.find(
+      (directory) => directory.routeName === 'contact',
+    )
+    let root = ownership.subtrees.find((subtree) => subtree.routeName === '<root>')
     let contact = ownership.subtrees.find((subtree) => subtree.routeName === 'contact')
 
+    assert.ok(contactDirectory)
+    assert.ok(root)
     assert.ok(contact)
+    assert.equal(contactDirectory.exists, false)
+    assert.equal(root.actualEntryPath, null)
     assert.equal(contact.actualEntryPath, null)
-    assert.deepEqual(contact.claimedRouteLocalFilePaths, ['app/actions/contact/page.tsx'])
   })
 
   it('normalizes camelCase route keys to kebab-case disk segments', async () => {
@@ -165,17 +170,14 @@ describe('controller ownership', () => {
     assert.equal(resetPassword.actualEntryPath, 'app/actions/auth/reset-password/controller.tsx')
   })
 
-  it('tracks extraneous root directories outside the route tree', async () => {
-    let routeManifest = await loadRouteManifest(getFixturePath('doctor-orphan-route-local-file'))
+  it('ignores unrelated directories and files under app/actions', async () => {
+    let routeManifest = await loadRouteManifest(getFixturePath('doctor-clean'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
+    let contact = ownership.routeDirectories.find((directory) => directory.routeName === 'contact')
 
-    assert.deepEqual(ownership.orphanRouteDirectoryPaths, ['app/actions/unused'])
-  })
-
-  it('tracks extraneous root directories from the route-map shape', async () => {
-    let routeManifest = await loadRouteManifest(getFixturePath('doctor-generic-buckets'))
-    let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
-
-    assert.deepEqual(ownership.orphanRouteDirectoryPaths, ['app/actions/components'])
+    assert.ok(contact)
+    assert.equal(contact.exists, true)
+    assert.equal(ownership.routeDirectories.length, 1)
+    assert.equal(ownership.subtrees.length, 2)
   })
 })

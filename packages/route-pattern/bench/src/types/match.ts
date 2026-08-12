@@ -10,17 +10,17 @@ bench('match > simple route', () => {
   let matcher = createMatcher('/posts/:id')
   let match = matcher.match('https://example.com/posts/123')
   match?.params.id
-}).types([921, 'instantiations'])
+}).types([1071, 'instantiations'])
 
 bench('match > complex route', () => {
   let matcher = createMatcher('/api(/v:major(.:minor))/*path/help')
   matcher.match('https://example.com/api/v1/users/123')?.params
-}).types([4542, 'instantiations'])
+}).types([6003, 'instantiations'])
 
 bench('match > mediarss', async () => {
   let { patterns } = await import('../../patterns/mediarss.ts')
   eagerlyEvaluateTypesForMatchParams(patterns)
-}).types([85052, 'instantiations'])
+}).types([97485, 'instantiations'])
 
 // NOTE: This benchmark brings type checking to a crawl.
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.

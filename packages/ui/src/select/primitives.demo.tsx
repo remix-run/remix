@@ -75,15 +75,15 @@ const triggerCss = css({
   alignItems: 'center',
   minWidth: '12rem',
   height: '32px',
-  border: '1px solid #cfcfcf',
+  border: '1px solid light-dark(#d1d1d1, #444444)',
   borderRadius: '6px',
-  background: '#ffffff',
-  color: '#101010',
+  background: 'light-dark(#ffffff, #1a1a1a)',
+  color: 'light-dark(#151515, #ececec)',
   font: '600 13px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
   letterSpacing: 0,
   padding: '0 10px',
   '&:focus-visible': {
-    outline: '2px solid #3573f6',
+    outline: '2px solid light-dark(#3573f6, #6eaaff)',
     outlineOffset: '2px',
   },
 })
@@ -91,9 +91,9 @@ const triggerCss = css({
 const surfaceCss = css({
   boxSizing: 'border-box',
   margin: 0,
-  border: '1px solid #cfcfcf',
+  border: '1px solid light-dark(#d1d1d1, #444444)',
   borderRadius: '6px',
-  background: '#ffffff',
+  background: 'light-dark(#ffffff, #1a1a1a)',
   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
   padding: '4px',
   '&:popover-open': {
@@ -111,19 +111,19 @@ const listCss = css({
 
 const optionCss = css({
   borderRadius: '4px',
-  color: '#101010',
+  color: 'light-dark(#151515, #ececec)',
   font: '500 13px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
   letterSpacing: 0,
   padding: '6px 8px',
   '&[data-highlighted="true"]': {
-    background: '#eeeeee',
+    background: 'light-dark(#eeeeee, #2c2c2c)',
   },
   '&[aria-selected="true"]': {
-    background: '#101010',
-    color: '#ffffff',
+    background: 'light-dark(#101010, #ececec)',
+    color: 'light-dark(#ffffff, #151515)',
   },
   '&[aria-disabled="true"]': {
-    color: '#9a9a9a',
+    color: 'light-dark(#9a9a9a, #666666)',
   },
 })
 
@@ -133,6 +133,6 @@ const hiddenInputCss = css({
 
 const valueCss = css({
   margin: 0,
-  color: '#666666',
+  color: 'light-dark(#6d6d6d, #b3b3b3)',
   font: '500 12px/16px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
 })

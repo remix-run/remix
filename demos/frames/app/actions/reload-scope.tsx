@@ -1,7 +1,7 @@
 import { Frame, type Handle } from 'remix/ui'
 
-import { Counter } from '../assets/counter.tsx'
-import { ReloadTopFrame } from '../assets/reload-scope.tsx'
+import { Counter } from '../ui/public/counter.tsx'
+import { ReloadTopFrame } from '../ui/public/reload-scope.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 

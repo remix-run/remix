@@ -5,7 +5,7 @@ import {
   PersistentRootReloadEntry,
   RemovableRootReloadEntry,
   RootReloadControls,
-} from '../assets/root-reload-client-entries.tsx'
+} from './public/root-reload-client-entries.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 
@@ -20,8 +20,12 @@ export const rootReloadClientEntriesAction = createAction(routes.rootReloadClien
       <RootReloadClientEntriesPage
         includeRemoved={includeRemoved}
         serverVersion={serverVersion}
-        withRemovedHref={routes.rootReloadClientEntries.href(undefined, { removed: '1' })}
-        withoutRemovedHref={routes.rootReloadClientEntries.href(undefined, { removed: '0' })}
+        withRemovedHref={routes.rootReloadClientEntries.href(undefined, {
+          searchParams: { removed: '1' },
+        })}
+        withoutRemovedHref={routes.rootReloadClientEntries.href(undefined, {
+          searchParams: { removed: '0' },
+        })}
       />,
     )
   },

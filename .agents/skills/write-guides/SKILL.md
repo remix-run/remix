@@ -1,13 +1,13 @@
 ---
 name: write-guides
-description: Write, rewrite, or audit Remix guide chapters in the voice of guides/app/actions/docs/chapters/01-start-here.md. Use when drafting app guides, revising generated-sounding prose, tightening guide examples, preserving doc anchors, or reviewing Markdown chapters under guides/app/actions/docs/chapters/.
+description: Write, rewrite, or audit Remix guide chapters in the voice of docs/guides/app/actions/docs/chapters/01-start-here.md. Use when drafting app guides, revising generated-sounding prose, tightening guide examples, preserving doc anchors, or reviewing Markdown chapters under docs/guides/app/actions/docs/chapters/.
 ---
 
 # Write Guides
 
 ## Overview
 
-Use this skill for Remix guide chapters, especially `guides/app/actions/docs/chapters/*.md`.
+Use this skill for Remix guide chapters, especially `docs/guides/app/actions/docs/chapters/*.md`.
 
 The goal is guide prose that sounds like a person walking through real Remix code: concrete, direct, slightly conversational, and careful with examples. Avoid polished filler, repeated takeaways, and abstract claims that could fit any framework.
 
@@ -15,7 +15,7 @@ The goal is guide prose that sounds like a person walking through real Remix cod
 
 Before editing a guide chapter:
 
-1. Read `guides/app/actions/docs/chapters/01-start-here.md` for voice and example style.
+1. Read `docs/guides/app/actions/docs/chapters/01-start-here.md` for voice and example style.
 2. Read the target chapter completely.
 3. Read adjacent chapters when the target chapter refers to earlier or later concepts.
 4. If the chapter explains Remix app code, load the `remix` skill or relevant Remix references before inventing patterns.
@@ -113,10 +113,10 @@ For concept chapters:
 
 ## Code Examples
 
-Examples in `guides/app/actions/docs/chapters/` should follow the local chapter formatting and teach the shape in the clearest order:
+Examples in `docs/guides/app/actions/docs/chapters/` should follow the local chapter formatting and teach the shape in the clearest order:
 
 - Import from `remix/...`, not `@remix-run/...`.
-- Let the local chapter Prettier config format code snippets. `guides/app/actions/docs/chapters/.prettierrc` intentionally uses default Prettier snippet style instead of the repo TypeScript style, so do not hand-edit snippets back to repo style.
+- Let the local chapter formatter config format code snippets. `docs/guides/app/actions/docs/chapters/.oxfmtrc.json` intentionally uses double quotes in snippets instead of the repo TypeScript style, so do not hand-edit snippets back to repo style.
 - Use TypeScript file extensions in relative imports.
 - Make snippets internally consistent: every used helper is imported, unused imports are removed, and names match the surrounding example.
 - Prefer the existing albums record-store example unless the chapter needs a different domain.

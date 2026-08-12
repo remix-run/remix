@@ -17,6 +17,17 @@ describe('createSearch', () => {
     let search = createSearch('world')
     assert.equal(search(buf('hello worl')), -1)
   })
+
+  it('handles long patterns whose length would wrap a byte-sized skip table', () => {
+    let search = createSearch('x'.repeat(256))
+    assert.equal(search(buf('a'.repeat(512))), -1)
+  })
+
+  it('finds a 256-byte pattern', () => {
+    let pattern = 'x'.repeat(256)
+    let search = createSearch(pattern)
+    assert.equal(search(buf('a'.repeat(10) + pattern)), 10)
+  })
 })
 
 describe('createPartialTailSearch', () => {

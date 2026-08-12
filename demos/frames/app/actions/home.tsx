@@ -1,7 +1,7 @@
 import { Frame } from 'remix/ui'
 
-import { ClientFrameExample } from '../assets/client-frame-example.tsx'
-import { Counter } from '../assets/counter.tsx'
+import { ClientFrameExample } from '../ui/public/client-frame-example.tsx'
+import { Counter } from '../ui/public/counter.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 

@@ -668,6 +668,16 @@ describe('stream', () => {
       expect(html).toMatch(/class="base rmxc-[a-z0-9]+ rmxc-[a-z0-9]+"/)
       expect(html).toContain('.rmxc-')
     })
+
+    it('prevents css mixin styles from breaking out of style tags', async () => {
+      let html = await renderToString(
+        <div mix={[css({ color: '</style><script>globalThis.__xss = true</script><style>' })]} />,
+      )
+
+      expect(html).not.toContain('</style><script>')
+      expect(html).not.toContain('<script>globalThis.__xss = true</script>')
+      expect(html).toContain('color: \\3C /style>\\3C script>globalThis.__xss = true\\3C /script>')
+    })
   })
 
   describe('svg', () => {

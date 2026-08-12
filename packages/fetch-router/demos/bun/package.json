@@ -16,11 +16,11 @@
   },
   "devDependencies": {
     "@types/bun": "^1.1.8",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
     "dev": "bun --watch index.ts",
     "start": "bun index.ts",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   }
 }
