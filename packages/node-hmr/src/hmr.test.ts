@@ -1161,6 +1161,50 @@ describe('node-hmr', () => {
     }
   })
 
+  it('waits for the replacement child before flushing browser reloads', async () => {
+    await using fixture = await createFixture(
+      {
+        'server.ts': getOverlappingServerUpdateSource(),
+        'rejecting.ts': getRejectingServerUpdateSource(),
+        'shared.ts': getSharedServerUpdateSource({ addedExport: false }),
+      },
+      { watch: { poll: true } },
+    )
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let hmrUrl = await server.waitForHmrUrl(0)
+      let events = await connectHmrEvents(hmrUrl.url)
+      try {
+        let ready = await server.waitForReady(0)
+        let browserEvent: HmrEventPayload | undefined
+        let browserEventPromise = events.read().then((event) => {
+          browserEvent = event
+        })
+
+        await fs.writeFile(
+          path.join(fixture.path, 'shared.ts'),
+          getSharedServerUpdateSource({ addedExport: true }),
+        )
+
+        let staleReady = await server.waitForReady(1)
+        assert.equal(staleReady.pid, ready.pid)
+        await waitForFile(path.join(fixture.path, 'replacement-started'))
+        assert.equal(browserEvent, undefined)
+
+        await fs.writeFile(path.join(fixture.path, 'release-replacement'), '')
+        let restarted = await server.waitForReady(2)
+        assert.notEqual(restarted.pid, ready.pid)
+        await browserEventPromise
+        assert.deepEqual(browserEvent, { type: 'browser:reload' })
+      } finally {
+        await events.close()
+      }
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('waits for file changes after the server throws during startup', async () => {
     await using fixture = await createFixture({
       'server.ts': [`console.log('booting broken server')`, `throw new Error('boom')`].join('\n'),
@@ -1501,6 +1545,103 @@ function getEventChannelGreetingServerSource(): string {
   ].join('\n')
 }
 
+function getOverlappingServerUpdateSource(): string {
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
+
+  return [
+    `import { createServer } from 'node:http'`,
+    `import { access, writeFile } from 'node:fs/promises'`,
+    `import { fileURLToPath } from 'node:url'`,
+    `import { createBrowserHmrChannel, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    `import './rejecting.ts'`,
+    `import * as shared from './shared.ts'`,
+    ``,
+    `let initialStartedFile = fileURLToPath(new URL('./initial-started', import.meta.url))`,
+    `let invalidationStartedFile = fileURLToPath(new URL('./invalidation-started', import.meta.url))`,
+    `let releaseReplacementFile = fileURLToPath(new URL('./release-replacement', import.meta.url))`,
+    `let replacementStartedFile = fileURLToPath(new URL('./replacement-started', import.meta.url))`,
+    `let watchFile = fileURLToPath(new URL('./shared.ts', import.meta.url))`,
+    ``,
+    `let isReplacement = await exists(initialStartedFile)`,
+    `if (isReplacement) {`,
+    `  await writeFile(replacementStartedFile, '')`,
+    `  while (!(await exists(releaseReplacementFile))) {`,
+    `    await new Promise((resolve) => setTimeout(resolve, 10))`,
+    `  }`,
+    `} else {`,
+    `  await writeFile(initialStartedFile, '')`,
+    `}`,
+    ``,
+    `let browserHmrChannel = await createBrowserHmrChannel()`,
+    `browserHmrChannel.updateWatchedFiles({ add: [watchFile], remove: [] })`,
+    `browserHmrChannel.onFileEvents(() => [{ type: 'reload' }])`,
+    `console.log(JSON.stringify({ type: 'hmr-url', url: browserHmrChannel.url, pid: process.pid }))`,
+    ``,
+    `let currentMessage = shared.message`,
+    `let server`,
+    `await listen()`,
+    ``,
+    `if (import.meta.hot) {`,
+    `  import.meta.hot.accept('./shared.ts', async (updatedModule) => {`,
+    `    while (!(await exists(invalidationStartedFile))) {`,
+    `      await new Promise((resolve) => setTimeout(resolve, 10))`,
+    `    }`,
+    `    if (updatedModule && typeof updatedModule.message === 'string') {`,
+    `      currentMessage = updatedModule.message`,
+    `    }`,
+    `    server.closeAllConnections()`,
+    `    await new Promise((resolve) => server.close(resolve))`,
+    `    await listen()`,
+    `  })`,
+    `}`,
+    ``,
+    `async function listen() {`,
+    `  server = createServer((_request, response) => {`,
+    `    response.end(currentMessage)`,
+    `  })`,
+    `  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))`,
+    `  let address = server.address()`,
+    `  if (address && typeof address === 'object') {`,
+    `    emitServerReady()`,
+    `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
+    `  }`,
+    `}`,
+    ``,
+    `async function exists(filePath) {`,
+    `  try {`,
+    `    await access(filePath)`,
+    `    return true`,
+    `  } catch {`,
+    `    return false`,
+    `  }`,
+    `}`,
+  ].join('\n')
+}
+
+function getRejectingServerUpdateSource(): string {
+  return [
+    `import { writeFile } from 'node:fs/promises'`,
+    `import { fileURLToPath } from 'node:url'`,
+    `import './shared.ts'`,
+    ``,
+    `let invalidationStartedFile = fileURLToPath(new URL('./invalidation-started', import.meta.url))`,
+    ``,
+    `if (import.meta.hot) {`,
+    `  import.meta.hot.accept('./shared.ts', async () => {`,
+    `    await writeFile(invalidationStartedFile, '')`,
+    `    import.meta.hot.invalidate('Rejected shared server update')`,
+    `  })`,
+    `}`,
+  ].join('\n')
+}
+
+function getSharedServerUpdateSource(options: { addedExport: boolean }): string {
+  return [
+    `export const message = 'hello'`,
+    ...(options.addedExport ? [`export const added = true`] : []),
+  ].join('\n')
+}
+
 function getOverlappingBrowserHmrServerSource(): string {
   let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
 
@@ -1688,7 +1829,7 @@ function getHmrProxyHotChildServerSource(
 
 async function createFixture(
   files: Record<string, string>,
-  options: { nodeArgs?: string[] } = {},
+  options: { nodeArgs?: string[]; watch?: { poll: boolean } } = {},
 ): Promise<AsyncDisposable & { entryPath: string; path: string }> {
   let fixtureRoot = path.join(packageRoot, '.tmp')
   await fs.mkdir(fixtureRoot, { recursive: true })
@@ -1703,6 +1844,7 @@ async function createFixture(
       ``,
       `run('server.ts', {`,
       `  nodeArgs: ${JSON.stringify(nodeArgs)},`,
+      ...(options.watch === undefined ? [] : [`  watch: ${JSON.stringify(options.watch)},`]),
       `})`,
     ].join('\n'),
   })
