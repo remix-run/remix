@@ -672,10 +672,12 @@ Mount middleware runs for every route registered by a mounted route installer. C
 A controller's `middleware` applies only to the direct route actions in that controller, and its `actions` object may not include nested route-map keys. Use mount middleware when one boundary should apply across multiple controllers in a route group.
 
 ```tsx
-let routes = route({ home: '/' })
-let adminRoutes = route({
-  dashboard: '/dashboard',
-  settings: '/settings',
+let routes = route({
+  home: '/',
+  admin: route({
+    dashboard: '/dashboard',
+    settings: '/settings',
+  }),
 })
 
 let router = createRouter({
@@ -692,7 +694,7 @@ router.mount(
     middleware: [auth({ token: 'secret' })],
   },
   (admin) => {
-    admin.map(adminRoutes, {
+    admin.map(routes.admin, {
       actions: {
         dashboard() {
           return new Response('Dashboard')
