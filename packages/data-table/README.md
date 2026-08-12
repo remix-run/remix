@@ -473,8 +473,8 @@ for (let script of plan.sql) console.log(script)
 
 `to` and `step` are mutually exclusive. Omit `journalTable` to use `data_table_migrations`.
 
-Database implementations with migration locking run the complete migration and journal lifecycle through the
-connection that owns the lock. This keeps advisory locks correctly paired when the implementation uses a
+Database drivers with migration locking run the complete migration and journal lifecycle through the
+connection that owns the lock. This keeps advisory locks correctly paired when the driver uses a
 connection pool, including pools configured with a single connection.
 
 Read status separately, or rebuild a database with migrations and an optional seed. A seed is a
@@ -560,39 +560,43 @@ let result = await db.exec(sql`
 
 `sql` keeps values parameterized for the database dialect, so you can avoid manual string concatenation.
 
-## Custom Database Implementations
+## Custom Database Drivers
 
-Applications normally use one of the concrete SQLite, PostgreSQL, or MySQL factories. Database
-integration packages can implement another dialect by extending `DatabaseImplementation` from
-`remix/data-table/database-implementation`. The resulting object is the database—do not construct
-or expose a separate adapter object.
+Applications normally use one of the concrete SQLite, PostgreSQL, or MySQL factories. Integration
+packages can add another dialect by implementing `DatabaseDriver` and extending `Database`:
 
-The base class supplies queries, CRUD helpers, relations, transactions, and migration methods.
-Implementations provide:
+```ts
+import { Database, type DatabaseOptions } from 'remix/data-table'
+import { AcmeDriver } from './driver.ts'
+
+export class AcmeDatabase extends Database<'acme'> {
+  constructor(client: AcmeClient, options?: DatabaseOptions) {
+    super(new AcmeDriver(client), options)
+  }
+}
+```
+
+`Database` supplies queries, CRUD helpers, relations, transactions, and migrations. The private
+driver owns SQL execution and connection lifecycle. A driver provides:
 
 - `dialect` and an immutable `capabilities` object
-- `compileSql()`, `execute()`, and `executeScript()`
+- `execute()` and `executeScript()`
 - `hasTable()`, `hasColumn()`, `wipe()`, and idempotent `close()`
 - transaction and savepoint lifecycle methods using opaque `TransactionToken` values
 
-Implementations whose capabilities report `migrationLock: true` also override
-`withMigrationLock()` and run its callback with a `MigrationLockContext` bound to the connection
-that owns the lock.
+Drivers whose capabilities report `migrationLock: true` also implement `withMigrationLock()` and
+run its callback with a `DatabaseDriver` bound to the connection that owns the lock.
 
-The implementation subpath exports `DatabaseImplementation`, `DatabaseOptions`,
-`DataManipulationOperation`, `DataManipulationRequest`, `MigrationLockContext`, and
-`TransactionToken`. Result, SQL, capability, table-reference, and transaction-option types remain
-owned by `remix/data-table`.
-
-Concrete factories should return a dialect-specific interface that extends the common `Database`
-type and narrows details such as the `dialect` value and `close()` return type.
+`Database`, `DatabaseDriver`, and the supporting driver protocol types are all exported directly
+from `remix/data-table`. Transaction callbacks receive a transaction-scoped `Database`, so custom
+subclass methods are intentionally unavailable inside the callback.
 
 ## Related Packages
 
 - [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Optional schema parsing you can use inside table-level `validate(...)` hooks
-- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database implementation
-- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database implementation
-- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database implementation
+- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database driver
+- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database driver
+- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database driver
 
 ## License
 

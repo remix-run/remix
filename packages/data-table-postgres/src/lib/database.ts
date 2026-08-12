@@ -1,6 +1,6 @@
-import type { Database, DatabaseOptions } from '@remix-run/data-table'
+import { Database, type DatabaseOptions } from '@remix-run/data-table'
 
-import { PostgresDatabaseImplementation, type PostgresDatabaseInput } from './adapter.ts'
+import { PostgresDatabaseDriver, type PostgresDatabaseInput } from './adapter.ts'
 
 /** Options for creating a PostgreSQL database. */
 export interface PostgresDatabaseOptions extends DatabaseOptions {
@@ -10,12 +10,16 @@ export interface PostgresDatabaseOptions extends DatabaseOptions {
   template?: string
 }
 
-/** A `Database` backed by PostgreSQL. */
-export interface PostgresDatabase extends Database {
-  /** PostgreSQL dialect identifier. */
-  readonly dialect: 'postgres'
-  /** Closes a pool created from configuration. Supplied clients remain caller-owned. */
-  close(): Promise<void>
+/** A {@link Database} backed by PostgreSQL. */
+export class PostgresDatabase extends Database<'postgres'> {
+  /**
+   * Creates a PostgreSQL-backed database.
+   * @param input PostgreSQL pool configuration, pool, or client.
+   * @param options Database runtime and recreation options.
+   */
+  constructor(input: PostgresDatabaseInput, options: PostgresDatabaseOptions = {}) {
+    super(new PostgresDatabaseDriver(input, options), options)
+  }
 }
 
 /**
@@ -37,5 +41,5 @@ export function createPostgresDatabase(
   input: PostgresDatabaseInput,
   options: PostgresDatabaseOptions = {},
 ): PostgresDatabase {
-  return new PostgresDatabaseImplementation(input, options)
+  return new PostgresDatabase(input, options)
 }

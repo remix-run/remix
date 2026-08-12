@@ -1,6 +1,6 @@
 # data-table-sqlite
 
-SQLite database implementation for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table), backed by a synchronous SQLite client.
+SQLite database driver for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table), backed by a synchronous SQLite client.
 
 ## Features
 
@@ -32,7 +32,7 @@ let db = createSqliteDatabase({
 })
 ```
 
-The config-backed database uses `node:sqlite` in Node.js and `bun:sqlite` in Bun. It supports `db.wipe()` and `db.reset()` because it can close and reopen the database file. Call `db.close()` during application shutdown to release the connection and its file handle.
+The config-backed database uses `node:sqlite` in Node.js and `bun:sqlite` in Bun. It supports `db.wipe()` and `db.reset()` because it can close and reopen the database file. Call `await db.close()` during application shutdown to release the connection and its file handle.
 
 Foreign key enforcement defaults to off on every runtime. When `foreignKeys` is enabled, the database restores foreign key enforcement each time it opens the connection, including after destructive lifecycle operations.
 
@@ -48,7 +48,7 @@ let sqlite = new Database('app.db')
 let db = createSqliteDatabase(sqlite)
 
 // Leaves the supplied client open.
-db.close()
+await db.close()
 
 // The application closes the client it owns.
 sqlite.close()
@@ -92,8 +92,8 @@ let db = createSqliteDatabase(sqlite)
 
 - [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) - Core query/relations API
 - [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Schema parsing and validation
-- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database implementation
-- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database implementation
+- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database driver
+- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database driver
 
 ## License
 

@@ -19,7 +19,7 @@ import {
   or,
   and,
 } from '@remix-run/data-table'
-import { type DataManipulationOperation } from '@remix-run/data-table/database-implementation'
+import { type DataManipulationOperation } from '@remix-run/data-table'
 import { createRecordingAdapter, TestDatabase } from '../../../data-table/test/recording-adapter.ts'
 import { compileSqliteOperation } from './sql-compiler.ts'
 

@@ -1,4 +1,4 @@
-import type { MigrationLockContext, TransactionToken } from '../adapter.ts'
+import type { DatabaseDriver, TransactionToken } from '../adapter.ts'
 import { rawSql } from '../sql.ts'
 import type { MigrationDescriptor, MigrationJournalRow } from '../migrations.ts'
 
@@ -18,10 +18,10 @@ function bytesToHex(bytes: Uint8Array): string {
 }
 
 export async function ensureMigrationJournal(
-  adapter: MigrationLockContext,
+  driver: DatabaseDriver,
   tableName: string,
 ): Promise<void> {
-  await adapter.executeScript(
+  await driver.executeScript(
     'create table if not exists ' +
       tableName +
       ' (' +
@@ -35,11 +35,11 @@ export async function ensureMigrationJournal(
 }
 
 export async function hasMigrationJournal(
-  adapter: MigrationLockContext,
+  driver: DatabaseDriver,
   tableName: string,
 ): Promise<boolean> {
   try {
-    await adapter.execute({
+    await driver.execute({
       operation: {
         kind: 'raw',
         sql: rawSql('select 1 from ' + tableName + ' limit 1'),
@@ -51,7 +51,7 @@ export async function hasMigrationJournal(
     // The probe fails both when the journal table is missing and when the
     // database itself is unreachable. Only the former means "no journal yet";
     // rethrow connection/auth failures via a table-independent query.
-    await adapter.execute({
+    await driver.execute({
       operation: {
         kind: 'raw',
         sql: rawSql('select 1'),
@@ -63,10 +63,10 @@ export async function hasMigrationJournal(
 }
 
 export async function loadJournalRows(
-  adapter: MigrationLockContext,
+  driver: DatabaseDriver,
   tableName: string,
 ): Promise<MigrationJournalRow[]> {
-  let result = await adapter.execute({
+  let result = await driver.execute({
     operation: {
       kind: 'raw',
       sql: rawSql(
@@ -87,7 +87,7 @@ export async function loadJournalRows(
 }
 
 export async function insertJournalRow(
-  adapter: MigrationLockContext,
+  driver: DatabaseDriver,
   tableName: string,
   row: {
     id: string
@@ -97,7 +97,7 @@ export async function insertJournalRow(
   },
   transaction?: TransactionToken,
 ): Promise<void> {
-  await adapter.execute({
+  await driver.execute({
     operation: {
       kind: 'raw',
       sql: rawSql('insert into ' + tableName + ' (id, name, checksum, batch) values (?, ?, ?, ?)', [
@@ -112,12 +112,12 @@ export async function insertJournalRow(
 }
 
 export async function deleteJournalRow(
-  adapter: MigrationLockContext,
+  driver: DatabaseDriver,
   tableName: string,
   id: string,
   transaction?: TransactionToken,
 ): Promise<void> {
-  await adapter.execute({
+  await driver.execute({
     operation: {
       kind: 'raw',
       sql: rawSql('delete from ' + tableName + ' where id = ?', [id]),

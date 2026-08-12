@@ -1,7 +1,7 @@
 import { describe, it } from '@remix-run/test'
 
 import { column } from './column.ts'
-import type { Database, WriteRowResult, WriteRowsResult } from './database.ts'
+import type { WriteRowResult, WriteRowsResult } from './database.ts'
 import type {
   QueryColumnTypesForTable,
   QueryForTable,
@@ -10,7 +10,12 @@ import type {
 } from './database.ts'
 import type { AnyQuery, Query } from './query.ts'
 import { query } from './query.ts'
-import type { AnyQuery as PublicAnyQuery } from '../index.ts'
+import {
+  Database,
+  type AnyQuery as PublicAnyQuery,
+  type DataManipulationRequest,
+  type DatabaseDriver,
+} from '../index.ts'
 import { table, hasMany } from './table.ts'
 import type { TableReference, TableRow } from './table.ts'
 import { eq } from './operators.ts'
@@ -23,6 +28,15 @@ type Equal<left, right> =
 function expectType<condition extends true>(_value?: condition): void {}
 
 declare const db: Database
+declare const driver: DatabaseDriver<'custom'>
+
+class CustomDatabase extends Database<'custom'> {
+  constructor() {
+    super(driver)
+  }
+
+  customMethod(): void {}
+}
 
 const accounts = table({
   name: 'accounts',
@@ -77,6 +91,28 @@ describe('type safety', () => {
     await db.transaction(async (transactionDatabase) => {
       expectType<Equal<typeof transactionDatabase, Database>>()
     })
+  })
+
+  it.skip('uses Database as both the public class and instance type', async () => {
+    let customDatabase = new CustomDatabase()
+
+    expectType<Equal<typeof customDatabase.dialect, 'custom'>>()
+    expectType<Equal<InstanceType<typeof CustomDatabase> extends Database ? true : false, true>>()
+    expectType<
+      Equal<Extract<keyof Database, 'beginTransaction' | 'compileSql' | 'execute'>, never>
+    >()
+
+    await customDatabase.transaction(async (transactionDatabase) => {
+      expectType<Equal<typeof transactionDatabase, Database<'custom'>>>()
+      expectType<
+        Equal<'customMethod' extends keyof typeof transactionDatabase ? true : false, false>
+      >()
+    })
+
+    let request: DataManipulationRequest = {
+      operation: { kind: 'raw', sql: { text: 'select 1', values: [] } },
+    }
+    void request
   })
 
   it.skip('exposes Query generics as column and row output maps', () => {

@@ -1,6 +1,6 @@
 # data-table-postgres
 
-PostgreSQL database implementation for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table), backed by `pg`.
+PostgreSQL database driver for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table), backed by `pg`.
 
 ## Features
 
@@ -90,8 +90,8 @@ podman rm -f postgres
 
 - [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) - Core query/relations API
 - [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Schema parsing and validation
-- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database implementation
-- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database implementation
+- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database driver
+- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database driver
 
 ## License
 

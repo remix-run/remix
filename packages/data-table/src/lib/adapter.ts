@@ -1,7 +1,6 @@
 import type { AnyTable, OrderByClause } from './table.ts'
 import type { Predicate } from './operators.ts'
 import type { SqlStatement } from './sql.ts'
-import type { Pretty } from './types.ts'
 
 /**
  * Supported SQL join kinds.
@@ -31,7 +30,7 @@ export type SelectColumn = {
 export type ReturningSelection = '*' | string[]
 
 /**
- * Canonical select statement shape consumed by adapters.
+ * Canonical select statement shape consumed by drivers.
  */
 export type SelectOperation<table extends AnyTable = AnyTable> = {
   kind: 'select'
@@ -48,7 +47,7 @@ export type SelectOperation<table extends AnyTable = AnyTable> = {
 }
 
 /**
- * Canonical count statement shape consumed by adapters.
+ * Canonical count statement shape consumed by drivers.
  */
 export type CountOperation<table extends AnyTable = AnyTable> = {
   kind: 'count'
@@ -60,7 +59,7 @@ export type CountOperation<table extends AnyTable = AnyTable> = {
 }
 
 /**
- * Canonical exists statement shape consumed by adapters.
+ * Canonical exists statement shape consumed by drivers.
  */
 export type ExistsOperation<table extends AnyTable = AnyTable> = {
   kind: 'exists'
@@ -72,7 +71,7 @@ export type ExistsOperation<table extends AnyTable = AnyTable> = {
 }
 
 /**
- * Canonical insert statement shape consumed by adapters.
+ * Canonical insert statement shape consumed by drivers.
  */
 export type InsertOperation<table extends AnyTable = AnyTable> = {
   kind: 'insert'
@@ -82,7 +81,7 @@ export type InsertOperation<table extends AnyTable = AnyTable> = {
 }
 
 /**
- * Canonical bulk-insert statement shape consumed by adapters.
+ * Canonical bulk-insert statement shape consumed by drivers.
  */
 export type InsertManyOperation<table extends AnyTable = AnyTable> = {
   kind: 'insertMany'
@@ -92,7 +91,7 @@ export type InsertManyOperation<table extends AnyTable = AnyTable> = {
 }
 
 /**
- * Canonical update statement shape consumed by adapters.
+ * Canonical update statement shape consumed by drivers.
  */
 export type UpdateOperation<table extends AnyTable = AnyTable> = {
   kind: 'update'
@@ -103,7 +102,7 @@ export type UpdateOperation<table extends AnyTable = AnyTable> = {
 }
 
 /**
- * Canonical delete statement shape consumed by adapters.
+ * Canonical delete statement shape consumed by drivers.
  */
 export type DeleteOperation<table extends AnyTable = AnyTable> = {
   kind: 'delete'
@@ -113,7 +112,7 @@ export type DeleteOperation<table extends AnyTable = AnyTable> = {
 }
 
 /**
- * Canonical upsert statement shape consumed by adapters.
+ * Canonical upsert statement shape consumed by drivers.
  */
 export type UpsertOperation<table extends AnyTable = AnyTable> = {
   kind: 'upsert'
@@ -243,7 +242,7 @@ export type ColumnDefinition = {
 }
 
 /**
- * Opaque transaction handle supplied by adapters.
+ * Opaque transaction handle supplied by database drivers.
  */
 export type TransactionToken = {
   id: string
@@ -251,7 +250,7 @@ export type TransactionToken = {
 }
 
 /**
- * Transaction hints that adapters may apply when supported by the dialect.
+ * Transaction hints that database drivers may apply when supported by the dialect.
  */
 export type TransactionOptions = {
   isolationLevel?: 'read uncommitted' | 'read committed' | 'repeatable read' | 'serializable'
@@ -259,7 +258,7 @@ export type TransactionOptions = {
 }
 
 /**
- * Adapter execution request payload.
+ * Database driver execution request payload.
  */
 export type DataManipulationRequest = {
   operation: DataManipulationOperation
@@ -286,10 +285,14 @@ export type DatabaseCapabilities = {
   readonly migrationLock: boolean
 }
 
-/** Database operations available while an implementation-specific migration lock is held. */
-export interface MigrationLockContext {
-  /** Feature flags used by migration execution. */
-  capabilities: DatabaseCapabilities
+/**
+ * Low-level contract that connects a `Database` to a database engine.
+ */
+export interface DatabaseDriver<dialect extends string = string> {
+  /** Stable identifier for the SQL dialect. */
+  readonly dialect: dialect
+  /** Immutable feature flags used by shared query and migration behavior. */
+  readonly capabilities: DatabaseCapabilities
   /** Executes a data-manipulation request. */
   execute(request: DataManipulationRequest): Promise<DataManipulationResult>
   /** Executes a raw SQL script that may contain multiple statements. */
@@ -300,16 +303,6 @@ export interface MigrationLockContext {
   commitTransaction(token: TransactionToken): Promise<void>
   /** Rolls back an open transaction. */
   rollbackTransaction(token: TransactionToken): Promise<void>
-}
-
-/**
- * Runtime contract implemented by concrete database adapters.
- */
-export interface DatabaseAdapter extends MigrationLockContext {
-  /** Database dialect name exposed by the adapter. */
-  dialect: string
-  /** Compiles a data-manipulation operation into executable SQL statements. */
-  compileSql(operation: DataManipulationOperation): SqlStatement[]
   /** Checks whether a table exists. */
   hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean>
   /** Checks whether a column exists on a table. */
@@ -320,19 +313,21 @@ export interface DatabaseAdapter extends MigrationLockContext {
   rollbackToSavepoint(token: TransactionToken, name: string): Promise<void>
   /** Releases a previously created savepoint. */
   releaseSavepoint(token: TransactionToken, name: string): Promise<void>
-  /** Destructively removes the configured database state when supported. */
-  wipe?(): Promise<void>
-  /** Releases connection handles owned by the implementation. */
-  close?(): void | Promise<void>
+  /** Destructively recreates the configured database. */
+  wipe(): Promise<void>
+  /** Releases connection handles owned by the driver. Must be safe to call repeatedly. */
+  close(): void | Promise<void>
   /**
-   * Runs migration work while holding an implementation-specific lock.
+   * Runs migration work while holding a driver-specific lock.
    *
-   * The callback receives a database bound to the connection that owns the lock.
-   * Implementations must release the lock when the callback rejects as well as
-   * when it resolves.
+   * The callback receives a driver bound to the connection that owns the lock. Drivers must
+   * release the lock when the callback rejects as well as when it resolves.
+   * @param name Logical migration lock name.
+   * @param run Migration work to run with the connection-bound driver.
+   * @returns The callback result.
    */
   withMigrationLock?<result>(
     name: string,
-    run: (database: MigrationLockContext) => Promise<result>,
+    run: (driver: DatabaseDriver<dialect>) => Promise<result>,
   ): Promise<result>
 }

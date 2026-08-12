@@ -1,13 +1,13 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type { DatabaseAdapter, MigrationLockContext, TransactionToken } from './adapter.ts'
+import type { DatabaseDriver, TransactionToken } from './adapter.ts'
 import { parseTransactionDirective } from './migrations/directive.ts'
 import { parseMigrationDirectoryName } from './migrations/directory-name.ts'
 import { createMigrationRegistry } from './migrations/registry.ts'
 import { createMigrationRunner } from './migrations/runner.ts'
 import { MemoryMigrationAdapter } from '../../test/memory-migration-adapter.ts'
-import { TestDatabase } from '../../test/recording-adapter.ts'
+import { createRecordingAdapter, TestDatabase } from '../../test/recording-adapter.ts'
 
 describe('Database migrations', () => {
   it('applies and reverts migrations through Database.migrate()', async () => {
@@ -372,6 +372,18 @@ describe('migration runner', () => {
     assert.equal(adapter.commitTransactionCount, 0)
   })
 
+  it('requires drivers that report migration lock support to provide the lock hook', async () => {
+    let { adapter } = createRecordingAdapter({ capabilities: { migrationLock: true } })
+    let runner = createMigrationRunner(adapter, [
+      { id: '20260101000000', name: 'users', up: 'create table users (id integer)' },
+    ])
+
+    await assert.rejects(
+      () => runner.up(),
+      /reports migration lock support but does not implement withMigrationLock/,
+    )
+  })
+
   it('preserves commit failures without attempting an invalid rollback', async () => {
     class CommitFailingAdapter extends MemoryMigrationAdapter {
       override async commitTransaction(token: { id: string }): Promise<void> {
@@ -427,7 +439,7 @@ describe('migration runner', () => {
     class LockDelegatingAdapter extends MemoryMigrationAdapter {
       override async withMigrationLock<result>(
         _name: string,
-        run: (adapter: MigrationLockContext) => Promise<result>,
+        run: (adapter: DatabaseDriver) => Promise<result>,
       ): Promise<result> {
         return run(lockAdapter)
       }

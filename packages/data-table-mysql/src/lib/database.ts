@@ -1,6 +1,6 @@
-import type { Database, DatabaseOptions } from '@remix-run/data-table'
+import { Database, type DatabaseOptions } from '@remix-run/data-table'
 
-import { MysqlDatabaseImplementation, type MysqlDatabaseInput } from './adapter.ts'
+import { MysqlDatabaseDriver, type MysqlDatabaseInput } from './adapter.ts'
 
 /** Options for creating a MySQL database. */
 export interface MysqlDatabaseOptions extends DatabaseOptions {
@@ -10,12 +10,16 @@ export interface MysqlDatabaseOptions extends DatabaseOptions {
   collation?: string
 }
 
-/** A `Database` backed by MySQL. */
-export interface MysqlDatabase extends Database {
-  /** MySQL dialect identifier. */
-  readonly dialect: 'mysql'
-  /** Closes a pool created from configuration. Supplied clients remain caller-owned. */
-  close(): Promise<void>
+/** A {@link Database} backed by MySQL. */
+export class MysqlDatabase extends Database<'mysql'> {
+  /**
+   * Creates a MySQL-backed database.
+   * @param input MySQL pool configuration, pool, connection, or URI.
+   * @param options Database runtime and recreation options.
+   */
+  constructor(input: MysqlDatabaseInput, options: MysqlDatabaseOptions = {}) {
+    super(new MysqlDatabaseDriver(input, options), options)
+  }
 }
 
 /**
@@ -38,5 +42,5 @@ export function createMysqlDatabase(
   input: MysqlDatabaseInput,
   options: MysqlDatabaseOptions = {},
 ): MysqlDatabase {
-  return new MysqlDatabaseImplementation(input, options)
+  return new MysqlDatabase(input, options)
 }

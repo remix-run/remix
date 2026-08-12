@@ -1,8 +1,7 @@
 import type {
   DataManipulationRequest,
   DataManipulationResult,
-  DatabaseAdapter,
-  MigrationLockContext,
+  DatabaseDriver,
   TableRef,
   TransactionToken,
 } from '../src/lib/adapter.ts'
@@ -15,7 +14,7 @@ export type JournalRow = {
   applied_at: string
 }
 
-export class MemoryMigrationAdapter implements DatabaseAdapter {
+export class MemoryMigrationAdapter implements DatabaseDriver {
   dialect = 'memory'
   capabilities = {
     returning: true,
@@ -36,10 +35,6 @@ export class MemoryMigrationAdapter implements DatabaseAdapter {
   rollbackTransactionCount = 0
   #transactionCounter = 0
   #tokens = new Set<string>()
-
-  compileSql() {
-    return [{ text: '', values: [] }]
-  }
 
   async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
     if (request.transaction) {
@@ -166,9 +161,17 @@ export class MemoryMigrationAdapter implements DatabaseAdapter {
     this.#assertToken(token)
   }
 
+  async wipe(): Promise<void> {
+    this.journalTableCreated = false
+    this.journalRows = []
+    this.executedScripts = []
+  }
+
+  close(): void {}
+
   async withMigrationLock<result>(
     _name: string,
-    run: (adapter: MigrationLockContext) => Promise<result>,
+    run: (adapter: DatabaseDriver) => Promise<result>,
   ): Promise<result> {
     this.lockAcquireCount += 1
     try {

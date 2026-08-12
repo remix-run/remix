@@ -1,18 +1,18 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { column, table, eq, ilike, inList, type Database } from '@remix-run/data-table'
+import { column, Database, table, eq, ilike, inList } from '@remix-run/data-table'
 import mysql from 'mysql2/promise'
 
-import { MysqlDatabaseImplementation } from './adapter.ts'
+import { MysqlDatabaseDriver } from './adapter.ts'
 
 function createMysqlTestDatabase(
-  ...args: ConstructorParameters<typeof MysqlDatabaseImplementation>
-): MysqlDatabaseImplementation {
-  return new MysqlDatabaseImplementation(...args)
+  ...args: ConstructorParameters<typeof MysqlDatabaseDriver>
+): MysqlDatabaseDriver {
+  return new MysqlDatabaseDriver(...args)
 }
 
-function createDatabase(adapter: MysqlDatabaseImplementation): Database {
-  return adapter
+function createDatabase(adapter: MysqlDatabaseDriver): Database {
+  return new Database(adapter)
 }
 
 const accounts = table({
@@ -441,7 +441,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let adapter = new MysqlDatabaseImplementation(connection as never)
+    let adapter = new MysqlDatabaseDriver(connection as never)
     let hasTable = await adapter.hasTable({ schema: 'app', name: 'users' })
     let hasColumn = await adapter.hasColumn({ name: 'users' }, 'email')
 
@@ -490,7 +490,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let adapter = new MysqlDatabaseImplementation(pool as never)
+    let adapter = new MysqlDatabaseDriver(pool as never)
     let token = await adapter.beginTransaction()
 
     await adapter.hasTable({ name: 'users' }, token)
@@ -519,7 +519,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let adapter = new MysqlDatabaseImplementation(connection as never)
+    let adapter = new MysqlDatabaseDriver(connection as never)
 
     let result = await adapter.execute({
       operation: {
@@ -553,7 +553,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
 
     let count = await db.query(accounts).where(ilike('email', '%EXAMPLE%')).count()
 
@@ -593,7 +593,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(pool as never))
+    let db = createDatabase(new MysqlDatabaseDriver(pool as never))
 
     await db.transaction(async (transactionDatabase) => {
       await transactionDatabase.query(accounts).insert({ id: 1, email: 'a@example.com' })
@@ -622,7 +622,7 @@ describe('mysql adapter', () => {
         return poolConnection
       },
     }
-    let adapter = new MysqlDatabaseImplementation(pool as never)
+    let adapter = new MysqlDatabaseDriver(pool as never)
 
     await assert.rejects(() => adapter.beginTransaction(), /begin failed/)
     assert.deepEqual(lifecycle, ['getConnection', 'destroy'])
@@ -651,7 +651,7 @@ describe('mysql adapter', () => {
         return poolConnection
       },
     }
-    let database = new MysqlDatabaseImplementation(pool as never)
+    let database = new MysqlDatabaseDriver(pool as never)
     let token = await database.beginTransaction()
 
     await assert.rejects(() => database.commitTransaction(token), /commit failed/)
@@ -681,7 +681,7 @@ describe('mysql adapter', () => {
         return poolConnection
       },
     }
-    let database = new MysqlDatabaseImplementation(pool as never)
+    let database = new MysqlDatabaseDriver(pool as never)
     let token = await database.beginTransaction()
 
     await assert.rejects(() => database.rollbackTransaction(token), /rollback failed/)
@@ -716,7 +716,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(pool as never))
+    let db = createDatabase(new MysqlDatabaseDriver(pool as never))
 
     await db.transaction(async (transactionDatabase) => {
       await transactionDatabase.query(accounts).insert({ id: 1, email: 'a@example.com' })
@@ -744,7 +744,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
 
     await db.transaction(async () => undefined, {
       isolationLevel: 'serializable',
@@ -778,7 +778,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
 
     await db.transaction(async () => undefined, { readOnly: false })
 
@@ -816,7 +816,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(pool as never))
+    let db = createDatabase(new MysqlDatabaseDriver(pool as never))
 
     await assert.rejects(
       () =>
@@ -857,7 +857,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(pool as never))
+    let db = createDatabase(new MysqlDatabaseDriver(pool as never))
 
     await assert.rejects(
       () =>
@@ -883,7 +883,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let adapter = new MysqlDatabaseImplementation(connection as never)
+    let adapter = new MysqlDatabaseDriver(connection as never)
     let token = await adapter.beginTransaction()
 
     await adapter.createSavepoint(token, 'sp`0')
@@ -908,7 +908,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let adapter = new MysqlDatabaseImplementation(connection as never)
+    let adapter = new MysqlDatabaseDriver(connection as never)
 
     await assert.rejects(
       () => adapter.commitTransaction({ id: 'tx_missing' }),
@@ -937,7 +937,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
 
     await db
       .query(accounts)
@@ -963,7 +963,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
 
     await db.query(invoices).join(accounts, eq(accounts.id, invoices.account_id)).count()
 
@@ -985,7 +985,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
 
     await db.query(accounts).select({ 'account.email': accounts.email }).all()
 
@@ -1005,7 +1005,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
 
     await db
       .query(accounts)
@@ -1040,7 +1040,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
 
     let created = await db.create(
       accounts,
@@ -1069,7 +1069,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
     let count = await db.query(accounts).count()
 
     assert.equal(count, 5)
@@ -1085,7 +1085,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
     let result = await db.query(accounts).insert({ id: 1, email: 'a@example.com' })
 
     assert.equal(result.affectedRows, 0)
@@ -1102,7 +1102,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
     let result = await db.query(accountProjects).insert({
       account_id: 1,
       project_id: 2,
@@ -1123,7 +1123,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
     let count = await db.query(accounts).count()
 
     assert.equal(count, 7)
@@ -1139,7 +1139,7 @@ describe('mysql adapter', () => {
       async rollback() {},
     }
 
-    let db = createDatabase(new MysqlDatabaseImplementation(connection as never))
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
     let result = await db.updateMany(
       accounts,
       { email: 'updated@example.com' },
@@ -1159,7 +1159,7 @@ describe('mysql adapter', () => {
       },
     }
 
-    let adapter = new MysqlDatabaseImplementation(connection as never)
+    let adapter = new MysqlDatabaseDriver(connection as never)
     await adapter.executeScript('create table widgets (id int); insert into widgets values (1);')
 
     assert.equal(calls.length, 1)

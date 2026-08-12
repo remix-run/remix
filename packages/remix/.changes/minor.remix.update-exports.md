@@ -11,4 +11,3 @@ Added `package.json` `exports`:
 - `remix/ui-hmr/runtime/server` to re-export APIs from `@remix-run/ui-hmr/runtime/server`
 - `remix/ui/dev/refresh` to re-export APIs from `@remix-run/ui/dev/refresh`
 - `remix/data-table/cli` to expose the typed data-table command invocation API
-- `remix/data-table/database-implementation` to re-export APIs from `@remix-run/data-table/database-implementation`

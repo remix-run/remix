@@ -1,5 +1,8 @@
 export type {
   DatabaseCapabilities,
+  DatabaseDriver,
+  DataManipulationOperation,
+  DataManipulationRequest,
   ColumnCheck,
   ColumnComputed,
   ColumnDefault,
@@ -10,6 +13,7 @@ export type {
   IdentityOptions,
   TableRef,
   TransactionOptions,
+  TransactionToken,
 } from './lib/adapter.ts'
 
 export {
@@ -143,7 +147,7 @@ export type {
   WriteRowResult,
   WriteRowsResult,
 } from './lib/database.ts'
-export type { Database } from './lib/database.ts'
+export { Database } from './lib/database.ts'
 export type {
   DatabaseMigrateOptions,
   DatabaseMigrationStatusOptions,

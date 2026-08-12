@@ -3,18 +3,15 @@ import { mkdir, rm } from 'node:fs/promises'
 import { setTimeout } from 'node:timers/promises'
 
 import type {
+  DataManipulationOperation,
+  DataManipulationRequest,
   DataManipulationResult,
+  DatabaseDriver,
   SqlStatement,
   TableRef,
   TransactionOptions,
+  TransactionToken,
 } from '@remix-run/data-table'
-import {
-  DatabaseImplementation,
-  type DataManipulationOperation,
-  type DataManipulationRequest,
-  type DatabaseOptions,
-  type TransactionToken,
-} from '@remix-run/data-table/database-implementation'
 import { getTablePrimaryKey } from '@remix-run/data-table'
 
 import { compileSqliteOperation } from './sql-compiler.ts'
@@ -117,20 +114,20 @@ export interface SqliteRunResult {
 }
 
 /**
- * SQLite database implementation for synchronous SQLite clients.
+ * SQLite database driver for synchronous SQLite clients.
  */
-export class SqliteDatabaseImplementation extends DatabaseImplementation {
+export class SqliteDatabaseDriver implements DatabaseDriver<'sqlite'> {
   /**
    * The SQL dialect identifier reported by this database.
    */
-  override get dialect(): 'sqlite' {
+  get dialect(): 'sqlite' {
     return 'sqlite'
   }
 
   /**
    * Feature flags describing the SQLite behaviors supported by this database.
    */
-  override get capabilities() {
+  get capabilities() {
     return sqliteCapabilities
   }
 
@@ -140,8 +137,7 @@ export class SqliteDatabaseImplementation extends DatabaseImplementation {
   #transactions = new Set<string>()
   #transactionCounter = 0
 
-  constructor(input: SqliteDatabaseClient | SqliteDatabaseConfig, options?: DatabaseOptions) {
-    super(options)
+  constructor(input: SqliteDatabaseClient | SqliteDatabaseConfig) {
     if (isSqliteDatabase(input)) {
       this.#database = input
     } else {

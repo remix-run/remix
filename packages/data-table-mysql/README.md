@@ -1,6 +1,6 @@
 # data-table-mysql
 
-MySQL database implementation for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table), backed by `mysql2`.
+MySQL database driver for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table), backed by `mysql2`.
 
 ## Features
 
@@ -112,8 +112,8 @@ podman rm -f mysql
 
 - [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) - Core query/relations API
 - [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Schema parsing and validation
-- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database implementation
-- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database implementation
+- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database driver
+- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database driver
 
 ## License
 

@@ -12,7 +12,6 @@
   "remix/data-schema/lazy": "@remix-run/data-schema/lazy",
   "remix/data-table": "@remix-run/data-table",
   "remix/data-table/cli": "@remix-run/data-table/cli",
-  "remix/data-table/database-implementation": "@remix-run/data-table/database-implementation",
   "remix/data-table/migrations": "@remix-run/data-table/migrations",
   "remix/data-table/migrations/node": "@remix-run/data-table/migrations/node",
   "remix/data-table/mysql": "@remix-run/data-table-mysql",

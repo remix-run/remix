@@ -1,4 +1,4 @@
-import type { DatabaseAdapter, MigrationLockContext, TransactionToken } from '../adapter.ts'
+import type { DatabaseDriver, TransactionToken } from '../adapter.ts'
 import type {
   MigrationOperationOptions,
   MigrateResult,
@@ -33,15 +33,10 @@ import {
 } from './journal-store.ts'
 import { resolveMigrations } from './registry.ts'
 
-type MigrationRunnerContext = MigrationLockContext & {
-  withMigrationLock?<result>(
-    name: string,
-    run: (database: MigrationLockContext) => Promise<result>,
-  ): Promise<result>
-}
+type MigrationRunnerContext = DatabaseDriver
 
 type RunMigrationsInput = {
-  adapter: MigrationRunnerContext
+  driver: MigrationRunnerContext
   migrations: MigrationDescriptor[]
   journalTable: string
   direction: MigrationDirection
@@ -147,9 +142,15 @@ function resolveTransactionMode(migration: MigrationDescriptor): MigrationTransa
 }
 
 async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> {
-  if (input.adapter.withMigrationLock) {
-    return input.adapter.withMigrationLock(input.journalTable, (adapter) =>
-      runMigrationsUnlocked({ ...input, adapter }),
+  if (input.driver.capabilities.migrationLock && !input.driver.withMigrationLock) {
+    throw new Error(
+      'Database driver reports migration lock support but does not implement withMigrationLock()',
+    )
+  }
+
+  if (input.driver.withMigrationLock) {
+    return input.driver.withMigrationLock(input.journalTable, (driver) =>
+      runMigrationsUnlocked({ ...input, driver }),
     )
   }
 
@@ -157,7 +158,7 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
 }
 
 async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<MigrateResult> {
-  let adapter = input.adapter
+  let driver = input.driver
   let migrations = input.migrations
   let journalTable = input.journalTable
   let dryRun = Boolean(input.options.dryRun)
@@ -173,14 +174,14 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
   let journal: MigrationJournalRow[] = []
 
   if (dryRun) {
-    let canReadJournal = await hasMigrationJournal(adapter, journalTable)
+    let canReadJournal = await hasMigrationJournal(driver, journalTable)
 
     if (canReadJournal) {
-      journal = await loadJournalRows(adapter, journalTable)
+      journal = await loadJournalRows(driver, journalTable)
     }
   } else {
-    await ensureMigrationJournal(adapter, journalTable)
-    journal = await loadJournalRows(adapter, journalTable)
+    await ensureMigrationJournal(driver, journalTable)
+    journal = await loadJournalRows(driver, journalTable)
   }
 
   let appliedMap = new Map(journal.map((row) => [row.id, row]))
@@ -227,7 +228,7 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
     let script = (input.direction === 'up' ? migration.up : migration.down) as string
     let mode = resolveTransactionMode(migration)
 
-    if (mode === 'required' && !adapter.capabilities.transactionalDdl) {
+    if (mode === 'required' && !driver.capabilities.transactionalDdl) {
       throw new Error(
         'Migration "' +
           migration.id +
@@ -235,11 +236,11 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
       )
     }
 
-    let shouldUseTransaction = !dryRun && mode !== 'none' && adapter.capabilities.transactionalDdl
+    let shouldUseTransaction = !dryRun && mode !== 'none' && driver.capabilities.transactionalDdl
     let token: TransactionToken | undefined
 
     if (shouldUseTransaction) {
-      token = await adapter.beginTransaction()
+      token = await driver.beginTransaction()
     }
 
     sql.push(script)
@@ -247,14 +248,14 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
     try {
       if (!dryRun) {
         if (script.trim().length > 0) {
-          await adapter.executeScript(script, token)
+          await driver.executeScript(script, token)
         }
       }
 
       if (input.direction === 'up') {
         if (!dryRun) {
           await insertJournalRow(
-            adapter,
+            driver,
             journalTable,
             {
               id: migration.id,
@@ -273,7 +274,7 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
         })
       } else {
         if (!dryRun) {
-          await deleteJournalRow(adapter, journalTable, migration.id, token)
+          await deleteJournalRow(driver, journalTable, migration.id, token)
         }
 
         reverted.push({
@@ -285,7 +286,7 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
     } catch (error) {
       if (token) {
         try {
-          await adapter.rollbackTransaction(token)
+          await driver.rollbackTransaction(token)
         } catch (rollbackError) {
           throw new AggregateError([error, rollbackError], 'Migration and rollback both failed', {
             cause: error,
@@ -297,7 +298,7 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
     }
 
     if (token) {
-      await adapter.commitTransaction(token)
+      await driver.commitTransaction(token)
     }
   }
 
@@ -309,7 +310,7 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
 }
 
 export function createMigrationRunner(
-  adapter: DatabaseAdapter,
+  driver: DatabaseDriver,
   migrations: MigrationDescriptor[] | MigrationRegistry,
   options: MigrationRunnerOptions = {},
 ): MigrationRunner {
@@ -318,7 +319,7 @@ export function createMigrationRunner(
   return {
     async up(runOptions: MigrationOperationOptions = {}): Promise<MigrateResult> {
       return runMigrations({
-        adapter,
+        driver,
         migrations: resolveMigrations(migrations),
         journalTable,
         direction: 'up',
@@ -327,7 +328,7 @@ export function createMigrationRunner(
     },
     async down(runOptions: MigrationOperationOptions = {}): Promise<MigrateResult> {
       return runMigrations({
-        adapter,
+        driver,
         migrations: resolveMigrations(migrations),
         journalTable,
         direction: 'down',
@@ -335,8 +336,8 @@ export function createMigrationRunner(
       })
     },
     async status(): Promise<MigrationStatusEntry[]> {
-      let journal = (await hasMigrationJournal(adapter, journalTable))
-        ? await loadJournalRows(adapter, journalTable)
+      let journal = (await hasMigrationJournal(driver, journalTable))
+        ? await loadJournalRows(driver, journalTable)
         : []
       let journalMap = new Map(journal.map((row) => [row.id, row]))
       let sortedMigrations = resolveMigrations(migrations)

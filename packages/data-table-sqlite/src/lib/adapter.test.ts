@@ -5,20 +5,20 @@ import { dirname, join } from 'node:path'
 
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { column, table, eq, type Database } from '@remix-run/data-table'
+import { column, Database, table, eq } from '@remix-run/data-table'
 
 import { createNativeSqliteDatabase } from '../../test/native-sqlite.ts'
 
-import { SqliteDatabaseImplementation, type SqliteDatabaseClient } from './adapter.ts'
+import { SqliteDatabaseDriver, type SqliteDatabaseClient } from './adapter.ts'
 
 function createSqliteTestDatabase(
-  ...args: ConstructorParameters<typeof SqliteDatabaseImplementation>
-): SqliteDatabaseImplementation {
-  return new SqliteDatabaseImplementation(...args)
+  ...args: ConstructorParameters<typeof SqliteDatabaseDriver>
+): SqliteDatabaseDriver {
+  return new SqliteDatabaseDriver(...args)
 }
 
-function createDatabase(adapter: SqliteDatabaseImplementation): Database {
-  return adapter
+function createDatabase(adapter: SqliteDatabaseDriver): Database {
+  return new Database(adapter)
 }
 
 const accounts = table({
@@ -50,7 +50,7 @@ const accountProjects = table({
 })
 
 async function readPragma(
-  adapter: SqliteDatabaseImplementation,
+  adapter: SqliteDatabaseDriver,
   pragma: string,
 ): Promise<Record<string, unknown> | undefined> {
   let result = await adapter.execute({
@@ -119,7 +119,7 @@ describe('sqlite adapter', () => {
 
   it('wipes file-backed databases together with their sidecar files', async () => {
     let dir = await mkdtemp(join(tmpdir(), 'data-table-sqlite-'))
-    let adapter: SqliteDatabaseImplementation | undefined
+    let adapter: SqliteDatabaseDriver | undefined
 
     try {
       let filename = join(dir, 'app.db')
@@ -154,7 +154,7 @@ describe('sqlite adapter', () => {
 
   it('recreates missing parent directories when wiping file-backed databases', async () => {
     let dir = await mkdtemp(join(tmpdir(), 'data-table-sqlite-'))
-    let adapter: SqliteDatabaseImplementation | undefined
+    let adapter: SqliteDatabaseDriver | undefined
 
     try {
       let filename = join(dir, 'nested', 'app.db')
@@ -332,7 +332,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let adapter = new SqliteDatabaseImplementation(sqlite as never)
+    let adapter = new SqliteDatabaseDriver(sqlite as never)
     let result = await adapter.execute({
       operation: {
         kind: 'insertMany',
@@ -388,7 +388,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let adapter = new SqliteDatabaseImplementation(sqlite as never)
+    let adapter = new SqliteDatabaseDriver(sqlite as never)
     let hasTable = await adapter.hasTable({ name: 'users' })
     let hasColumn = await adapter.hasColumn({ schema: 'app', name: 'users' }, 'email')
 
@@ -413,7 +413,7 @@ describe('sqlite adapter', () => {
       },
     }
 
-    let adapter = new SqliteDatabaseImplementation(sqlite as never)
+    let adapter = new SqliteDatabaseDriver(sqlite as never)
     let token = await adapter.beginTransaction({ isolationLevel: 'read uncommitted' })
     await adapter.commitTransaction(token)
 
@@ -433,7 +433,7 @@ describe('sqlite adapter', () => {
       },
     }
 
-    let adapter = new SqliteDatabaseImplementation(sqlite as never)
+    let adapter = new SqliteDatabaseDriver(sqlite as never)
     let token = await adapter.beginTransaction()
 
     await adapter.createSavepoint(token, 'sp"name')
@@ -459,7 +459,7 @@ describe('sqlite adapter', () => {
       exec() {},
     }
 
-    let adapter = new SqliteDatabaseImplementation(sqlite as never)
+    let adapter = new SqliteDatabaseDriver(sqlite as never)
 
     await assert.rejects(
       () => adapter.commitTransaction({ id: 'tx_missing' }),
@@ -516,7 +516,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let adapter = new SqliteDatabaseImplementation(sqlite as never)
+    let adapter = new SqliteDatabaseDriver(sqlite as never)
     let result = await adapter.execute({
       operation: {
         kind: 'count',
@@ -551,7 +551,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let adapter = new SqliteDatabaseImplementation(sqlite as never)
+    let adapter = new SqliteDatabaseDriver(sqlite as never)
     let result = await adapter.execute({
       operation: {
         kind: 'select',
@@ -590,7 +590,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let adapter = new SqliteDatabaseImplementation(sqlite as never)
+    let adapter = new SqliteDatabaseDriver(sqlite as never)
     let result = await adapter.execute({
       operation: {
         kind: 'insert',
@@ -625,7 +625,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let adapter = new SqliteDatabaseImplementation(sqlite as never)
+    let adapter = new SqliteDatabaseDriver(sqlite as never)
     let result = await adapter.execute({
       operation: {
         kind: 'insert',
@@ -661,7 +661,7 @@ describe('sqlite adapter', () => {
       pragma() {},
     }
 
-    let db = createDatabase(new SqliteDatabaseImplementation(sqlite as never))
+    let db = createDatabase(new SqliteDatabaseDriver(sqlite as never))
     let result = await db.updateMany(accounts, { status: 'inactive' }, { where: { id: 1 } })
 
     assert.equal(result.affectedRows, 1)
@@ -687,7 +687,7 @@ describe('sqlite adapter', () => {
       exec() {},
     } satisfies SqliteDatabaseClient
 
-    let db = createDatabase(new SqliteDatabaseImplementation(sqlite))
+    let db = createDatabase(new SqliteDatabaseDriver(sqlite))
     let result = await db.updateMany(accounts, { status: 'inactive' }, { where: { id: 1 } })
 
     assert.equal(result.affectedRows, 2)
@@ -716,7 +716,7 @@ describe('sqlite adapter', () => {
       exec() {},
     } satisfies SqliteDatabaseClient
 
-    let adapter = new SqliteDatabaseImplementation(sqlite)
+    let adapter = new SqliteDatabaseDriver(sqlite)
 
     await adapter.execute({
       operation: {
@@ -754,7 +754,7 @@ describe('sqlite adapter', () => {
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
 
-    let db = createDatabase(new SqliteDatabaseImplementation(sqlite))
+    let db = createDatabase(new SqliteDatabaseDriver(sqlite))
 
     await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
 
@@ -792,7 +792,7 @@ describe('sqlite adapter', () => {
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
 
-    let db = createDatabase(new SqliteDatabaseImplementation(sqlite))
+    let db = createDatabase(new SqliteDatabaseDriver(sqlite))
 
     await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
 
@@ -817,7 +817,7 @@ describe('sqlite adapter', () => {
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
 
-    let db = createDatabase(new SqliteDatabaseImplementation(sqlite))
+    let db = createDatabase(new SqliteDatabaseDriver(sqlite))
 
     await db.transaction(
       async (transactionDatabase) => {
@@ -847,7 +847,7 @@ describe('sqlite adapter', () => {
       'create table projects (id integer primary key, account_id integer not null, name text not null)',
     )
 
-    let db = createDatabase(new SqliteDatabaseImplementation(sqlite))
+    let db = createDatabase(new SqliteDatabaseDriver(sqlite))
 
     await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
     await db.query(projects).insert({ id: 10, account_id: 1, name: 'Alpha' })
@@ -869,7 +869,7 @@ describe('sqlite adapter', () => {
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
 
-    let db = createDatabase(new SqliteDatabaseImplementation(sqlite))
+    let db = createDatabase(new SqliteDatabaseDriver(sqlite))
 
     await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
 
@@ -882,7 +882,7 @@ describe('sqlite adapter', () => {
 
   it('executeScript runs multi-statement SQL natively', async () => {
     let sqlite = createNativeSqliteDatabase()
-    let adapter = new SqliteDatabaseImplementation(sqlite)
+    let adapter = new SqliteDatabaseDriver(sqlite)
 
     await adapter.executeScript(
       'create table widgets (id integer primary key); insert into widgets values (1); insert into widgets values (2);',

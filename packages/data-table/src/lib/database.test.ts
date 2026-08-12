@@ -1,9 +1,9 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type { DatabaseAdapter } from './adapter.ts'
+import type { DatabaseDriver } from './adapter.ts'
 import { column } from './column.ts'
-import { DatabaseImplementation } from './database.ts'
+import { Database } from './database.ts'
 import { DataTableDatabaseError, DataTableQueryError, DataTableValidationError } from './errors.ts'
 import { table, hasMany, timestamps } from './table.ts'
 import { eq } from './operators.ts'
@@ -94,8 +94,8 @@ describe('queries', () => {
     let directRows = await direct.query(accounts).all()
     let wrappedRows = await wrapped.query(accounts).all()
 
-    assert.equal(direct instanceof DatabaseImplementation, true)
-    assert.equal(wrapped instanceof DatabaseImplementation, true)
+    assert.equal(direct instanceof Database, true)
+    assert.equal(wrapped instanceof Database, true)
     assert.equal(direct.now(), '2026-01-01T00:00:00.000Z')
     assert.equal(wrapped.now(), '2026-01-01T00:00:00.000Z')
     assert.deepEqual(
@@ -1052,7 +1052,7 @@ describe('transactions and raw sql', () => {
         () => transactionDatabase.reset({ migrations: [] }),
         /Cannot call reset\(\) from a transaction-scoped database/,
       )
-      assert.throws(
+      await assert.rejects(
         () => transactionDatabase.close(),
         /Cannot call close\(\) from a transaction-scoped database/,
       )
@@ -1091,7 +1091,7 @@ describe('transactions and raw sql', () => {
 
   it('preserves commit failures without attempting an invalid rollback', async () => {
     let recording = createRecordingAdapter()
-    let adapter: DatabaseAdapter = {
+    let adapter: DatabaseDriver = {
       ...recording.adapter,
       async commitTransaction(token) {
         await recording.adapter.commitTransaction(token)
@@ -1111,7 +1111,7 @@ describe('transactions and raw sql', () => {
     let recording = createRecordingAdapter()
     let callbackError = new Error('callback failed')
     let rollbackError = new Error('rollback failed')
-    let adapter: DatabaseAdapter = {
+    let adapter: DatabaseDriver = {
       ...recording.adapter,
       async rollbackTransaction() {
         throw rollbackError
@@ -1180,7 +1180,7 @@ describe('database errors', () => {
   })
 })
 
-function createTestDatabase(adapter: DatabaseAdapter) {
+function createTestDatabase(adapter: DatabaseDriver) {
   return new TestDatabase(adapter, {
     now() {
       return '2026-01-01T00:00:00.000Z'

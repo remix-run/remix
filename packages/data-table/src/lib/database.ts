@@ -1,11 +1,9 @@
 import type {
   ColumnDefinition,
   DataManipulationOperation,
-  DataManipulationRequest,
   DataManipulationResult,
   DatabaseCapabilities,
-  DatabaseAdapter,
-  MigrationLockContext,
+  DatabaseDriver,
   TableRef,
   TransactionOptions,
   TransactionToken,
@@ -344,7 +342,7 @@ type SavepointCounter = {
   value: number
 }
 
-/** Options shared by concrete database implementations. */
+/** Options shared by database instances. */
 export interface DatabaseOptions {
   /** Clock function used for auto-managed timestamps. */
   now?: () => unknown
@@ -356,81 +354,94 @@ type DatabaseInternalState = {
 }
 
 /**
- * Base class for concrete database implementations.
+ * High-level database runtime used to query and manage a database.
  *
- * Subclasses implement the dialect-specific execution and transaction primitives while this
- * class provides the shared query, persistence, migration, and reset APIs.
+ * Database dialects extend this class and provide a {@link DatabaseDriver} to the constructor.
+ * The driver owns SQL execution, transactions, and connection lifecycle while this class provides
+ * the shared query, persistence, and migration APIs.
  */
-export abstract class DatabaseImplementation implements QueryExecutionContext {
+export class Database<dialect extends string = string> implements QueryExecutionContext<dialect> {
+  #driver: DatabaseDriver<dialect>
   #token?: TransactionToken
   #now: () => unknown
   #savepointCounter: SavepointCounter
 
-  protected constructor(options?: DatabaseOptions) {
+  /**
+   * Creates a database backed by a driver.
+   * @param driver Low-level database engine integration.
+   * @param options Database runtime options.
+   */
+  constructor(driver: DatabaseDriver<dialect>, options?: DatabaseOptions) {
+    this.#driver = driver
     this.#now = options?.now ?? defaultNow
     this.#savepointCounter = { value: 0 }
   }
 
-  static #createInternalDatabase(
-    adapter: DatabaseAdapter,
+  static #createInternalDatabase<dialect extends string>(
+    driver: DatabaseDriver<dialect>,
     options: DatabaseOptions | undefined,
     internal: DatabaseInternalState,
-  ): DatabaseImplementation {
-    let database = new TransactionDatabase(adapter, options, internal.token)
+  ): Database<dialect> {
+    let database = new Database(driver, options)
     database.#token = internal.token
     database.#savepointCounter = internal.savepointCounter
     return database
   }
 
   /** Stable identifier for the SQL dialect. */
-  abstract get dialect(): string
+  get dialect(): dialect {
+    return this.#driver.dialect
+  }
+
   /** Immutable feature flags used by shared query and migration behavior. */
-  abstract get capabilities(): DatabaseCapabilities
-  /** Compiles a structured operation into one or more dialect-specific SQL statements. */
-  abstract compileSql(operation: DataManipulationOperation): SqlStatement[]
-  /** Executes a structured operation, optionally in the transaction carried by the request. */
-  abstract execute(request: DataManipulationRequest): Promise<DataManipulationResult>
-  /** Executes a migration or raw multi-statement SQL script. */
-  abstract executeScript(sql: string, transaction?: TransactionToken): Promise<void>
-  /** Reports whether a table exists. */
-  abstract hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean>
-  /** Reports whether a column exists on a table. */
-  abstract hasColumn(
-    table: TableRef,
-    column: string,
-    transaction?: TransactionToken,
-  ): Promise<boolean>
-  /** Starts a transaction and returns an opaque token used by later operations. */
-  abstract beginTransaction(options?: TransactionOptions): Promise<TransactionToken>
-  /** Commits and releases the transaction represented by the token. */
-  abstract commitTransaction(token: TransactionToken): Promise<void>
-  /** Rolls back and releases the transaction represented by the token. */
-  abstract rollbackTransaction(token: TransactionToken): Promise<void>
-  /** Creates a nested-transaction savepoint. */
-  abstract createSavepoint(token: TransactionToken, name: string): Promise<void>
-  /** Rolls a transaction back to a savepoint. */
-  abstract rollbackToSavepoint(token: TransactionToken, name: string): Promise<void>
-  /** Releases a savepoint after success or rollback. */
-  abstract releaseSavepoint(token: TransactionToken, name: string): Promise<void>
-  /** Closes resources owned by this database. Implementations must be safe to close repeatedly. */
-  abstract close(): void | Promise<void>
-  /** Destructively recreates the configured database. */
-  abstract wipe(): Promise<void>
+  get capabilities(): DatabaseCapabilities {
+    return this.#driver.capabilities
+  }
+
   /**
-   * Runs migration work without additional locking by default.
-   *
-   * Implementations whose capabilities report `migrationLock: true` override this method and call
-   * the callback with a database bound to the connection that owns the lock.
-   * @param name Logical migration lock name.
-   * @param run Migration work to run while the lock is held.
-   * @returns The callback result.
+   * Executes a migration or raw multi-statement SQL script.
+   * @param sql SQL script to execute.
+   * @returns A promise that resolves when execution completes.
    */
-  async withMigrationLock<result>(
-    name: string,
-    run: (database: MigrationLockContext) => Promise<result>,
-  ): Promise<result> {
-    void name
-    return run(this)
+  executeScript(sql: string): Promise<void> {
+    return this.#driver.executeScript(sql, this.#token)
+  }
+
+  /**
+   * Reports whether a table exists.
+   * @param table Table to inspect.
+   * @returns A promise that resolves to `true` when the table exists.
+   */
+  hasTable(table: TableRef): Promise<boolean> {
+    return this.#driver.hasTable(table, this.#token)
+  }
+
+  /**
+   * Reports whether a column exists on a table.
+   * @param table Table to inspect.
+   * @param column Column name to inspect.
+   * @returns A promise that resolves to `true` when the column exists.
+   */
+  hasColumn(table: TableRef, column: string): Promise<boolean> {
+    return this.#driver.hasColumn(table, column, this.#token)
+  }
+
+  /**
+   * Closes resources owned by this database.
+   * @returns A promise that resolves when owned resources have been released.
+   */
+  async close(): Promise<void> {
+    this.#assertLifecycleOperationAllowed('close')
+    await this.#driver.close()
+  }
+
+  /**
+   * Destructively recreates the configured database.
+   * @returns A promise that resolves when the database is ready for use.
+   */
+  async wipe(): Promise<void> {
+    this.#assertLifecycleOperationAllowed('wipe')
+    await this.#driver.wipe()
   }
 
   /**
@@ -443,7 +454,7 @@ export abstract class DatabaseImplementation implements QueryExecutionContext {
   async migrate(migrations: Migrations, options?: DatabaseMigrateOptions): Promise<MigrateResult> {
     this.#assertLifecycleOperationAllowed('migrate')
     let { direction = 'up', journalTable, ...migrateOptions } = options ?? {}
-    let runner = createMigrationRunner(this, migrations, { journalTable })
+    let runner = createMigrationRunner(this.#driver, migrations, { journalTable })
     return direction === 'up' ? runner.up(migrateOptions) : runner.down(migrateOptions)
   }
 
@@ -459,7 +470,7 @@ export abstract class DatabaseImplementation implements QueryExecutionContext {
     options: DatabaseMigrationStatusOptions = {},
   ): Promise<MigrationStatusEntry[]> {
     this.#assertLifecycleOperationAllowed('migrationStatus')
-    let runner = createMigrationRunner(this, migrations, options)
+    let runner = createMigrationRunner(this.#driver, migrations, options)
     return runner.status()
   }
 
@@ -476,7 +487,9 @@ export abstract class DatabaseImplementation implements QueryExecutionContext {
     await options.seed?.(this)
   }
 
-  #assertLifecycleOperationAllowed(method: 'migrate' | 'migrationStatus' | 'reset'): void {
+  #assertLifecycleOperationAllowed(
+    method: 'close' | 'migrate' | 'migrationStatus' | 'reset' | 'wipe',
+  ): void {
     if (this.#token) {
       throw new DataTableQueryError(
         'Cannot call ' + method + '() from a transaction-scoped database',
@@ -852,20 +865,20 @@ export abstract class DatabaseImplementation implements QueryExecutionContext {
   }
 
   async transaction<result>(
-    callback: (database: Database) => Promise<result>,
+    callback: (database: Database<dialect>) => Promise<result>,
     options?: TransactionOptions,
   ): Promise<result> {
     return this[runInTransaction](callback, options)
   }
 
   async [runInTransaction]<result>(
-    callback: (database: QueryExecutionContext) => Promise<result>,
+    callback: (database: QueryExecutionContext<dialect>) => Promise<result>,
     options?: TransactionOptions,
   ): Promise<result> {
     if (!this.#token) {
-      let token = await this.beginTransaction(options)
-      let tx = DatabaseImplementation.#createInternalDatabase(
-        this,
+      let token = await this.#driver.beginTransaction(options)
+      let tx = Database.#createInternalDatabase(
+        this.#driver,
         { now: this.#now },
         {
           token,
@@ -878,7 +891,7 @@ export abstract class DatabaseImplementation implements QueryExecutionContext {
         result = await callback(tx)
       } catch (error) {
         try {
-          await this.rollbackTransaction(token)
+          await this.#driver.rollbackTransaction(token)
         } catch (rollbackError) {
           throw new AggregateError(
             [error, rollbackError],
@@ -889,7 +902,7 @@ export abstract class DatabaseImplementation implements QueryExecutionContext {
         throw error
       }
 
-      await this.commitTransaction(token)
+      await this.#driver.commitTransaction(token)
       return result
     }
 
@@ -900,7 +913,7 @@ export abstract class DatabaseImplementation implements QueryExecutionContext {
     let savepointName = 'sp_' + String(this.#savepointCounter.value)
     this.#savepointCounter.value += 1
 
-    await this.createSavepoint(this.#token, savepointName)
+    await this.#driver.createSavepoint(this.#token, savepointName)
 
     let result: result
     try {
@@ -908,12 +921,12 @@ export abstract class DatabaseImplementation implements QueryExecutionContext {
     } catch (error) {
       let failures: unknown[] = [error]
       try {
-        await this.rollbackToSavepoint(this.#token, savepointName)
+        await this.#driver.rollbackToSavepoint(this.#token, savepointName)
       } catch (rollbackError) {
         failures.push(rollbackError)
       }
       try {
-        await this.releaseSavepoint(this.#token, savepointName)
+        await this.#driver.releaseSavepoint(this.#token, savepointName)
       } catch (releaseError) {
         failures.push(releaseError)
       }
@@ -923,13 +936,13 @@ export abstract class DatabaseImplementation implements QueryExecutionContext {
       throw error
     }
 
-    await this.releaseSavepoint(this.#token, savepointName)
+    await this.#driver.releaseSavepoint(this.#token, savepointName)
     return result
   }
 
   async [executeOperation](operation: DataManipulationOperation): Promise<DataManipulationResult> {
     try {
-      return await this.execute({
+      return await this.#driver.execute({
         operation,
         transaction: this.#token,
       })
@@ -942,111 +955,6 @@ export abstract class DatabaseImplementation implements QueryExecutionContext {
         },
       })
     }
-  }
-}
-
-/** Common database API implemented by every supported database runtime. */
-export type Database = Pick<
-  DatabaseImplementation,
-  | 'migrate'
-  | 'migrationStatus'
-  | 'reset'
-  | 'now'
-  | 'query'
-  | 'create'
-  | 'createMany'
-  | 'find'
-  | 'findOne'
-  | 'findMany'
-  | 'count'
-  | 'update'
-  | 'updateMany'
-  | 'delete'
-  | 'deleteMany'
-  | 'exec'
-  | 'transaction'
-> & {
-  readonly dialect: string
-  readonly capabilities: DatabaseCapabilities
-  hasTable(table: TableRef): Promise<boolean>
-  hasColumn(table: TableRef, column: string): Promise<boolean>
-  executeScript(sql: string): Promise<void>
-  close(): void | Promise<void>
-  wipe(): Promise<void>
-}
-
-class TransactionDatabase extends DatabaseImplementation {
-  #driver: DatabaseAdapter
-  #transaction?: TransactionToken
-
-  constructor(
-    driver: DatabaseAdapter,
-    options: DatabaseOptions | undefined,
-    transaction: TransactionToken | undefined,
-  ) {
-    super(options)
-    this.#driver = driver
-    this.#transaction = transaction
-  }
-
-  get dialect(): string {
-    return this.#driver.dialect
-  }
-
-  get capabilities(): DatabaseCapabilities {
-    return this.#driver.capabilities
-  }
-
-  compileSql(operation: DataManipulationOperation): SqlStatement[] {
-    return this.#driver.compileSql(operation)
-  }
-
-  execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
-    return this.#driver.execute(request)
-  }
-
-  executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
-    return this.#driver.executeScript(sql, transaction ?? this.#transaction)
-  }
-
-  hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
-    return this.#driver.hasTable(table, transaction ?? this.#transaction)
-  }
-
-  hasColumn(table: TableRef, column: string, transaction?: TransactionToken): Promise<boolean> {
-    return this.#driver.hasColumn(table, column, transaction ?? this.#transaction)
-  }
-
-  beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
-    return this.#driver.beginTransaction(options)
-  }
-
-  commitTransaction(token: TransactionToken): Promise<void> {
-    return this.#driver.commitTransaction(token)
-  }
-
-  rollbackTransaction(token: TransactionToken): Promise<void> {
-    return this.#driver.rollbackTransaction(token)
-  }
-
-  createSavepoint(token: TransactionToken, name: string): Promise<void> {
-    return this.#driver.createSavepoint(token, name)
-  }
-
-  rollbackToSavepoint(token: TransactionToken, name: string): Promise<void> {
-    return this.#driver.rollbackToSavepoint(token, name)
-  }
-
-  releaseSavepoint(token: TransactionToken, name: string): Promise<void> {
-    return this.#driver.releaseSavepoint(token, name)
-  }
-
-  async wipe(): Promise<void> {
-    throw new DataTableQueryError('Cannot call wipe() from a transaction-scoped database')
-  }
-
-  close(): never {
-    throw new DataTableQueryError('Cannot call close() from a transaction-scoped database')
   }
 }
 

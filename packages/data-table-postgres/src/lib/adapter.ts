@@ -1,17 +1,13 @@
 import type {
+  DataManipulationOperation,
+  DataManipulationRequest,
   DataManipulationResult,
+  DatabaseDriver,
   SqlStatement,
   TableRef,
   TransactionOptions,
+  TransactionToken,
 } from '@remix-run/data-table'
-import {
-  DatabaseImplementation,
-  type DataManipulationOperation,
-  type DataManipulationRequest,
-  type DatabaseOptions,
-  type MigrationLockContext,
-  type TransactionToken,
-} from '@remix-run/data-table/database-implementation'
 import { AsyncLocalStorage } from 'node:async_hooks'
 
 import { getTablePrimaryKey } from '@remix-run/data-table'
@@ -32,8 +28,8 @@ type TransactionState = {
 type PostgresPoolConfig = ConstructorParameters<typeof pg.Pool>[0]
 type PostgresClientConfig = ConstructorParameters<typeof pg.Client>[0]
 
-/** Database recreation options for a config-backed PostgreSQL implementation. */
-export interface PostgresDatabaseImplementationOptions extends DatabaseOptions {
+/** Database recreation options for a config-backed PostgreSQL driver. */
+export interface PostgresDatabaseDriverOptions {
   /** Database used while dropping and recreating the configured database (`postgres` by default). */
   maintenanceDatabase?: string
   /** Template used to recreate the configured database (`template0` by default). */
@@ -53,20 +49,20 @@ const postgresCapabilities = Object.freeze({
 export type PostgresDatabaseInput = PostgresPoolConfig | PostgresQueryable
 
 /**
- * PostgreSQL database implementation for postgres-compatible clients.
+ * PostgreSQL database driver for postgres-compatible clients.
  */
-export class PostgresDatabaseImplementation extends DatabaseImplementation {
+export class PostgresDatabaseDriver implements DatabaseDriver<'postgres'> {
   /**
    * The SQL dialect identifier reported by this database.
    */
-  override get dialect(): 'postgres' {
+  get dialect(): 'postgres' {
     return 'postgres'
   }
 
   /**
    * Feature flags describing the PostgreSQL behaviors supported by this database.
    */
-  override get capabilities() {
+  get capabilities() {
     return postgresCapabilities
   }
 
@@ -80,8 +76,7 @@ export class PostgresDatabaseImplementation extends DatabaseImplementation {
   #migrationLockStore = new AsyncLocalStorage<boolean>()
   #poolClosed = false
 
-  constructor(config: PostgresDatabaseInput, options: PostgresDatabaseImplementationOptions = {}) {
-    super(options)
+  constructor(config: PostgresDatabaseInput, options: PostgresDatabaseDriverOptions = {}) {
     if (isPostgresQueryable(config)) {
       this.#client = config
     } else {
@@ -371,12 +366,12 @@ export class PostgresDatabaseImplementation extends DatabaseImplementation {
    * deadlocking, and a failed run destroys the reserved connection instead of
    * returning it to the pool.
    * @param name Logical migration lock name.
-   * @param run Migration work to run with a connection-bound adapter.
+   * @param run Migration work to run with a connection-bound driver.
    * @returns The callback result.
    */
   async withMigrationLock<result>(
     name: string,
-    run: (database: MigrationLockContext) => Promise<result>,
+    run: (driver: DatabaseDriver<'postgres'>) => Promise<result>,
   ): Promise<result> {
     if (this.#migrationLockStore.getStore()) {
       throw new Error('Postgres migration lock is already held by this database')
@@ -401,11 +396,11 @@ export class PostgresDatabaseImplementation extends DatabaseImplementation {
         client = this.#client
       }
 
-      let adapter = releaseOnClose ? new PostgresDatabaseImplementation(client) : this
+      let driver = releaseOnClose ? new PostgresDatabaseDriver(client) : this
 
       try {
         let value = await this.#migrationLockStore.run(true, () =>
-          runWithPostgresMigrationLock(client, name, adapter, run),
+          runWithPostgresMigrationLock(client, name, driver, run),
         )
 
         if (releaseOnClose) {
@@ -576,14 +571,14 @@ function destroyPostgresClient(client: PostgresClient | PostgresPoolClient, erro
   void (client as PostgresClient).end().catch(() => undefined)
 }
 
-// Matches the 60 second wait bound used by the MySQL adapter's get_lock().
+// Matches the 60 second wait bound used by the MySQL driver's get_lock().
 const MIGRATION_LOCK_TIMEOUT_MS = 60_000
 
 async function runWithPostgresMigrationLock<result>(
   client: PostgresClient | PostgresPoolClient,
   name: string,
-  adapter: PostgresDatabaseImplementation,
-  run: (database: MigrationLockContext) => Promise<result>,
+  driver: PostgresDatabaseDriver,
+  run: (driver: DatabaseDriver<'postgres'>) => Promise<result>,
 ): Promise<result> {
   await client.query('set lock_timeout to ' + String(MIGRATION_LOCK_TIMEOUT_MS))
 
@@ -599,7 +594,7 @@ async function runWithPostgresMigrationLock<result>(
   let outcome: { status: 'success'; value: result } | { status: 'failure'; error: unknown }
 
   try {
-    outcome = { status: 'success', value: await run(adapter) }
+    outcome = { status: 'success', value: await run(driver) }
   } catch (error) {
     outcome = { status: 'failure', error }
   }

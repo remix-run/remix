@@ -1,17 +1,13 @@
 import type {
+  DataManipulationOperation,
+  DataManipulationRequest,
   DataManipulationResult,
+  DatabaseDriver,
   SqlStatement,
   TableRef,
   TransactionOptions,
+  TransactionToken,
 } from '@remix-run/data-table'
-import {
-  DatabaseImplementation,
-  type DataManipulationOperation,
-  type DataManipulationRequest,
-  type DatabaseOptions,
-  type MigrationLockContext,
-  type TransactionToken,
-} from '@remix-run/data-table/database-implementation'
 import { AsyncLocalStorage } from 'node:async_hooks'
 
 import { getTablePrimaryKey } from '@remix-run/data-table'
@@ -50,8 +46,8 @@ const mysqlCapabilities = Object.freeze({
   migrationLock: true,
 })
 
-/** Database creation options used when wiping a config-backed MySQL implementation. */
-export interface MysqlDatabaseImplementationOptions extends DatabaseOptions {
+/** Database creation options used when wiping a config-backed MySQL driver. */
+export interface MysqlDatabaseDriverOptions {
   /** Character set assigned to the recreated database. */
   characterSet?: string
   /** Collation assigned to the recreated database. */
@@ -59,20 +55,20 @@ export interface MysqlDatabaseImplementationOptions extends DatabaseOptions {
 }
 
 /**
- * MySQL database implementation for mysql-compatible clients.
+ * MySQL database driver for mysql-compatible clients.
  */
-export class MysqlDatabaseImplementation extends DatabaseImplementation {
+export class MysqlDatabaseDriver implements DatabaseDriver<'mysql'> {
   /**
    * The SQL dialect identifier reported by this database.
    */
-  override get dialect(): 'mysql' {
+  get dialect(): 'mysql' {
     return 'mysql'
   }
 
   /**
    * Feature flags describing the MySQL behaviors supported by this database.
    */
-  override get capabilities() {
+  get capabilities() {
     return mysqlCapabilities
   }
 
@@ -86,8 +82,7 @@ export class MysqlDatabaseImplementation extends DatabaseImplementation {
   #migrationLockStore = new AsyncLocalStorage<boolean>()
   #poolClosed = false
 
-  constructor(config: MysqlDatabaseInput, options: MysqlDatabaseImplementationOptions = {}) {
-    super(options)
+  constructor(config: MysqlDatabaseInput, options: MysqlDatabaseDriverOptions = {}) {
     if (isMysqlQueryable(config)) {
       this.#client = config
     } else {
@@ -401,12 +396,12 @@ export class MysqlDatabaseImplementation extends DatabaseImplementation {
    * deadlocking, and a failed run destroys the reserved connection instead of
    * returning it to the pool.
    * @param name Logical migration lock name.
-   * @param run Migration work to run with a connection-bound adapter.
+   * @param run Migration work to run with a connection-bound driver.
    * @returns The callback result.
    */
   async withMigrationLock<result>(
     name: string,
-    run: (database: MigrationLockContext) => Promise<result>,
+    run: (driver: DatabaseDriver<'mysql'>) => Promise<result>,
   ): Promise<result> {
     if (this.#migrationLockStore.getStore()) {
       throw new Error('MySQL migration lock is already held by this database')
@@ -431,11 +426,11 @@ export class MysqlDatabaseImplementation extends DatabaseImplementation {
         connection = this.#client
       }
 
-      let adapter = releaseOnClose ? new MysqlDatabaseImplementation(connection) : this
+      let driver = releaseOnClose ? new MysqlDatabaseDriver(connection) : this
 
       try {
         let value = await this.#migrationLockStore.run(true, () =>
-          runWithMysqlMigrationLock(connection, name, adapter, run),
+          runWithMysqlMigrationLock(connection, name, driver, run),
         )
 
         if (releaseOnClose && isMysqlPoolConnection(connection)) {
@@ -613,8 +608,8 @@ function destroyMysqlConnection(connection: MysqlTransactionConnection): void {
 async function runWithMysqlMigrationLock<result>(
   connection: MysqlTransactionConnection,
   name: string,
-  adapter: MysqlDatabaseImplementation,
-  run: (database: MigrationLockContext) => Promise<result>,
+  driver: MysqlDatabaseDriver,
+  run: (driver: DatabaseDriver<'mysql'>) => Promise<result>,
 ): Promise<result> {
   // sha2(..., 256) yields 64 hex characters, exactly GET_LOCK's 64-character
   // lock name limit, so any additional prefix must go inside the hash input.
@@ -633,7 +628,7 @@ async function runWithMysqlMigrationLock<result>(
   let outcome: { status: 'success'; value: result } | { status: 'failure'; error: unknown }
 
   try {
-    outcome = { status: 'success', value: await run(adapter) }
+    outcome = { status: 'success', value: await run(driver) }
   } catch (error) {
     outcome = { status: 'failure', error }
   }

@@ -227,9 +227,8 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/data-schema/coerce` — coercion helpers for strings, numbers, booleans, dates, and ids. Use when input arrives as a string but should be a typed value
 - `remix/data-schema/form-data` — `f.object` and `f.field` for parsing `FormData` directly. Use in actions that read browser forms
 - `remix/data-schema/lazy` — recursive or mutually-referential schemas. Use when a schema needs to refer to itself or another schema that is declared later
-- `remix/data-table` — typed tables and the shared `Database` API. Use `table` and `column` when modeling persisted data, then create a concrete database from the matching dialect package
-- `remix/data-table/sqlite`, `remix/data-table/postgres`, `remix/data-table/mysql` — concrete database implementations. Use `createSqliteDatabase`, `createPostgresDatabase`, or `createMysqlDatabase`. SQLite accepts Node, Bun, and compatible synchronous clients with the shared `prepare`/`exec` surface
-- `remix/data-table/database-implementation` — low-level base class and operation types for integration packages that implement a new SQL dialect. Normal applications should use a concrete dialect factory instead
+- `remix/data-table` — typed tables and the shared `Database` API. Use `table` and `column` when modeling persisted data, then create a concrete database from the matching dialect package. Integration packages can implement `DatabaseDriver` and extend `Database` to add another SQL dialect
+- `remix/data-table/sqlite`, `remix/data-table/postgres`, `remix/data-table/mysql` — concrete database integrations. Use `createSqliteDatabase`, `createPostgresDatabase`, or `createMysqlDatabase`. SQLite accepts Node, Bun, and compatible synchronous clients with the shared `prepare`/`exec` surface
 - `remix/data-table/migrations` — migration authoring and registries. Use for `createMigration` and `createMigrationRegistry`; run migrations with `Database.migrate()`
 - `remix/data-table/migrations/node` — `loadMigrations` from disk. Use in startup scripts that apply migrations
 - `remix/data-table/operators` — query operators such as `inList(...)`. Use when `where` clauses need set or comparison logic
