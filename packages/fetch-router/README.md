@@ -299,23 +299,22 @@ router.mount('/orgs/:orgId', (org) => {
 
 When a mount prefix and child route use the same param name, the right-most route param wins, matching `route-pattern` behavior.
 
-Pass mount middleware when an entire route group shares an auth, data-loading, or other request boundary. It applies to every route registered by the installer, including routes in nested mounts and controllers. Values provided by mount middleware are inferred in descendant actions and controller actions:
+Middleware stays on routers, controllers, and actions. If an entire route group needs auth or another boundary, put that middleware on the controllers or actions owned by the installer:
 
 ```ts
-router.mount('/admin', { middleware: [requireAdmin()] }, (admin) => {
-  admin.map(adminRouteGroup, {
+function installAdminRoutes<context extends AppContext>(router: RouteBuilder<context>) {
+  router.map(adminRouteGroup, {
+    middleware: [requireAdmin()],
     actions: {
-      index() {
-        return new Response('Admin')
+      index({ admin }) {
+        return new Response(admin.id)
       },
     },
   })
-
-  admin.map(adminRouteGroup.users, usersController)
-})
+}
 ```
 
-Middleware runs in router, outer mount, inner mount, controller, then action order. Mount middleware only runs after a descendant route matches. Unknown paths below a mounted prefix fall through to the parent router's default handler without running mount middleware. If a route group needs its own catch-all response, register one explicitly inside the installer.
+Unknown paths below a mounted prefix fall through to the parent router's default handler. If a route group needs its own catch-all response, register one explicitly inside the installer.
 
 ### Declaring Routes
 
