@@ -90,13 +90,13 @@ let stream = renderToStream(<App />, {
 })
 ```
 
-`preloads` contains browser module hrefs. During SSR, Remix emits them as `<link rel="modulepreload">` tags, including preloads discovered in blocking frames. When a later frame response introduces a client entry, its preloads start before hydration imports the entry module.
-
 If the module export name differs from the component function name, include `#ExportName` in the entry ID or return the exact export name from `resolveClientEntry`. A render helper that only supports source-owned entries can also fail fast when `entryId` is not a `file://` URL.
 
 On the server, `clientEntry` components render like any other component. The server wraps their output in comment markers and serializes props into a `<script type="application/json">` tag.
 
 Client entry props must be serializable: strings, numbers, booleans, `null`, `undefined`, plain objects/arrays of the above, JSX elements, and `<Frame>` elements. Functions and class instances cannot be passed.
+
+The resolved `preloads` array contains browser module hrefs. During server rendering these are emitted as `<link rel="modulepreload">` tags, including preloads discovered in blocking frames. When a later frame response introduces a client entry, its preloads start before the entry module is loaded.
 
 ## Booting the Client
 
