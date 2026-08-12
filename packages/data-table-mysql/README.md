@@ -99,7 +99,7 @@ Then run:
 
 ```sh
 REMIX_DATA_TABLE_MYSQL_TEST_URL=mysql://root:root@127.0.0.1:3306/remix \
-pnpm test src/lib/adapter.integration.test.ts
+pnpm test src/lib/driver.integration.test.ts
 ```
 
 Remove the container when you are done:

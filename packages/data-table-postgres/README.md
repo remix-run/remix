@@ -77,7 +77,7 @@ Then run:
 
 ```sh
 REMIX_DATA_TABLE_POSTGRES_TEST_URL=postgres://postgres:postgres@127.0.0.1:5432/remix \
-pnpm test src/lib/adapter.integration.test.ts
+pnpm test src/lib/driver.integration.test.ts
 ```
 
 Remove the container when you are done:
