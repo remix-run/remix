@@ -71,17 +71,6 @@ describe(`SPA (${mode})`, () => {
     assert.equal(new URL(page.url()).pathname, '/')
   })
 
-  it('updates client-owned component state', async (t) => {
-    let page = await t.serve(await createViteTestServer())
-
-    await page.goto('/')
-    let counter = page.getByRole('button', { name: 'Count: 0' })
-    await counter.waitFor()
-    await counter.click()
-
-    await page.getByRole('button', { name: 'Count: 1' }).waitFor()
-  })
-
   it('pushes new form destinations and replaces submissions to the active URL', async (t) => {
     let page = await t.serve(await createViteTestServer())
 

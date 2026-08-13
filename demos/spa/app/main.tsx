@@ -1,5 +1,5 @@
 import { createRouter } from 'remix/router'
-import { css, on, type Handle, type RemixNode } from 'remix/ui'
+import { css, type Handle, type RemixNode } from 'remix/ui'
 import { nodeResponse, run } from 'remix/ui/spa'
 
 const routes = {
@@ -131,7 +131,6 @@ function HomePage() {
         The fetch router still maps a web <code>Request</code> to a <code>Response</code>. That
         bodyless response carries a Remix node for the top frame to render.
       </p>
-      <Counter />
       <form method="POST" action={routes.greet} mix={formStyle}>
         <label htmlFor="name" mix={labelStyle}>
           What should we call you?
@@ -144,25 +143,6 @@ function HomePage() {
         </div>
       </form>
     </article>
-  )
-}
-
-function Counter(handle: Handle) {
-  let count = 0
-
-  return () => (
-    <button
-      type="button"
-      mix={[
-        buttonStyle,
-        on('click', () => {
-          count++
-          void handle.update()
-        }),
-      ]}
-    >
-      Count: {count}
-    </button>
   )
 }
 
