@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@re
 import type { Handle, RemixNode } from '../runtime/component.ts'
 import { Frame } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
+import { reloadFrameForNavigation } from '../runtime/frame.ts'
 import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -176,6 +177,43 @@ describe('run', () => {
     document.body.innerHTML = ''
     for (let node of Array.from(document.head.childNodes)) {
       document.head.removeChild(node)
+    }
+  })
+
+  it('uses fetch to request HTML by default and posts form data', async (t) => {
+    let formData = new FormData()
+    formData.set('name', 'Ada')
+    let signal = new AbortController().signal
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="account">Ada</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        formData,
+        method: 'post',
+        signal,
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      let [src, init] = fetchMock.mock.calls[0]!.arguments
+      expect(src).toBe('/account')
+      expect(init?.body).toBe(formData)
+      expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
+      expect(init?.method).toBe('post')
+      expect(init?.signal).toBeInstanceOf(AbortSignal)
+      expect(document.getElementById('account')?.textContent).toBe('Ada')
+    } finally {
+      app.dispose()
     }
   })
 

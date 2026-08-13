@@ -4,7 +4,7 @@ import { createStyleManager } from '../style/index.ts'
 import type { FrameHandle, Handle } from './component.ts'
 import { createComponentErrorEvent } from './error-event.ts'
 import type { ComponentErrorEvent } from './error-event.ts'
-import type { LoadModule, ResolveFrame } from './frame.ts'
+import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame.ts'
 import { startNavigationListener } from './navigation.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 
@@ -23,8 +23,8 @@ export interface RunInit {
   /**
    * Resolves browser-loaded `<Frame>` content.
    *
-   * Omit this only when the runtime never needs to load or reload frames in the
-   * browser.
+   * Defaults to fetching the frame source as HTML with the submitted form data,
+   * method, and abort signal.
    */
   resolveFrame?: ResolveFrame
 }
@@ -72,10 +72,19 @@ export function getNamedFrame(name: string): FrameHandle {
   return namedFrames.get(name) ?? getTopFrame()
 }
 
+function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
+  return fetch(src, {
+    body: options?.formData,
+    headers: { Accept: 'text/html' },
+    method: options?.method,
+    signal: options?.signal,
+  })
+}
+
 /**
  * Starts the client-side Remix component runtime for the current document.
  *
- * @param init Runtime hooks for loading modules and resolving frames.
+ * @param init Runtime options for loading modules and customizing frame resolution.
  * @returns The running application runtime.
  */
 export function run(init: RunInit): AppRuntime {
@@ -83,7 +92,7 @@ export function run(init: RunInit): AppRuntime {
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
   let scheduler = createScheduler(document, errorTarget, styleManager)
 
-  let resolveFrame: ResolveFrame = init.resolveFrame ?? (() => '<p>resolve frame unimplemented</p>')
+  let resolveFrame = init.resolveFrame ?? defaultResolveFrame
 
   topFrame = createFrame(document, {
     src: document.location.href,
@@ -107,7 +116,7 @@ export function run(init: RunInit): AppRuntime {
       return namedFrames.get(name)
     },
   }
-  startNavigationListener(appController.signal, init.resolveFrame !== undefined)
+  startNavigationListener(appController.signal)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
     throw error

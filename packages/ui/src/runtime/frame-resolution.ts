@@ -5,6 +5,12 @@ export async function unwrapFrameResolution(
 ): Promise<{ content: FrameContent; redirectedTo?: string }> {
   if (!(resolution instanceof Response)) return { content: resolution }
 
+  if (!resolution.ok) {
+    throw new Error(
+      `Failed to resolve frame: ${resolution.status} ${resolution.statusText}`.trimEnd(),
+    )
+  }
+
   let content = resolution.body ?? (await resolution.text())
   return {
     content,

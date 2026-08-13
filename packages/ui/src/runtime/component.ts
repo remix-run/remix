@@ -143,8 +143,9 @@ export type FrameContent = ReadableStream<Uint8Array> | string | RemixNode
 /**
  * Value returned by a browser frame resolver.
  *
- * A response body is rendered as frame content. When `fetch()` followed a redirect, the response's
- * final URL updates the frame source and browser URL for a top-frame navigation.
+ * A successful response body is rendered as frame content. A non-OK response fails frame
+ * resolution. When `fetch()` followed a redirect, the response's final URL updates the frame source
+ * and browser URL for a top-frame navigation.
  */
 export type FrameResolution = FrameContent | Response
 

@@ -225,6 +225,53 @@ describe('frames', () => {
     }
   })
 
+  it('rejects non-OK responses without replacing the frame content', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let errorTarget = new EventTarget()
+    let reportedError: unknown
+    errorTarget.addEventListener('error', (event) => {
+      if (event instanceof ErrorEvent) reportedError = event.error
+    })
+    let frame = createFrame(root, {
+      src: 'https://example.com/account',
+      errorTarget,
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return new Response('<main id="error">Account unavailable</main>', {
+          status: 503,
+          statusText: 'Service Unavailable',
+        })
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, errorTarget, createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      await expect(frame.handle.reload()).rejects.toThrow(
+        'Failed to resolve frame: 503 Service Unavailable',
+      )
+
+      expect(reportedError).toBeInstanceOf(Error)
+      expect((reportedError as Error).message).toBe(
+        'Failed to resolve frame: 503 Service Unavailable',
+      )
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+      expect(document.getElementById('error')).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('passes form submission options to a streaming frame resolver', async () => {
     let resolvedOptions: ResolveFrameOptions | undefined
     let root = document.createElement('div')

@@ -81,10 +81,10 @@ function Actions() {
 
 ## Frame Navigation
 
-Configure `resolveFrame` once to progressively enhance same-origin links and forms. The resolver owns the fetch request and receives native submission metadata for non-GET forms:
+`run()` progressively enhances same-origin links and forms using a default `resolveFrame` that
+fetches the frame source:
 
 ```tsx
-import type { ResolveFrameOptions } from 'remix/ui'
 import { run } from 'remix/ui'
 
 let app = run({
@@ -92,30 +92,30 @@ let app = run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, options) {
-    return fetch(src, {
-      headers: { Accept: 'text/html', 'X-Remix-Frame': 'true' },
-      method: options?.method,
-      body: getRequestBody(options),
-      signal: options?.signal,
-    })
-  },
 })
-
-function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
-  let formData = options?.formData
-  if (!formData) return
-  if (options.encType !== 'application/x-www-form-urlencoded') return formData
-
-  let body = new URLSearchParams()
-  for (let [name, value] of formData) {
-    body.append(name, typeof value === 'string' ? value : value.name)
-  }
-  return body
-}
 
 await app.ready()
 ```
+
+The default resolver is equivalent to:
+
+```js
+function resolveFrame(src, options) {
+  return fetch(src, {
+    body: options?.formData,
+    headers: { Accept: 'text/html' },
+    method: options?.method,
+    signal: options?.signal,
+  })
+}
+```
+
+The default resolver requests HTML. GET form values are already encoded in `src`; non-GET
+submissions send a `FormData` body. Pass a custom `resolveFrame` when the server requires additional
+headers, different body encoding, or another response policy.
+
+When `resolveFrame` returns a `Response`, Remix UI renders its body only when `response.ok` is true.
+A non-OK response fails frame resolution with an error containing its status and status text.
 
 Forms remain ordinary HTML forms before the runtime starts. Add `rmx-target` to reload a named frame, or `rmx-document` to require a full-document submission:
 

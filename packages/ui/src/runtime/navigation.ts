@@ -72,11 +72,9 @@ export async function navigate(href: string, options?: NavigationOptions) {
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.
- * @param canResolveFrames Whether the runtime has a resolver that can handle intercepted navigations.
  * @returns void
  */
-export function startNavigationListener(signal: AbortSignal, canResolveFrames = true) {
-  if (!canResolveFrames) return
+export function startNavigationListener(signal: AbortSignal) {
   return startNavigationListenerImpl(signal, {
     getTopFrame,
     getNamedFrame,
