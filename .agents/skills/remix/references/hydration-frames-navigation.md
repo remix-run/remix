@@ -117,6 +117,9 @@ method and abort signal. GET form values are already encoded in `src`; non-GET s
 `resolveFrame` when an app needs additional headers, another body encoding, or a different response
 policy.
 
+Set `resolveFrame: false` to leave link and form navigations to the browser. Frame handles remain
+available, but calling `reload()` rejects because frame resolution is disabled.
+
 When `resolveFrame` returns a `Response`, the runtime renders its body for statuses below 500,
 including 4xx responses. A 5xx response fails frame resolution with an error containing its status
 and status text.
@@ -124,7 +127,7 @@ and status text.
 ### `run` options
 
 - **`loadModule(moduleUrl, exportName)`** (required) — return the component function for each client entry. Typically uses dynamic `import()`.
-- **`resolveFrame(src, options)`** (optional) — overrides the default `fetch()` resolver when a `<Frame>` loads or reloads content and for intercepted link and form navigations. `options` may contain `signal` and `target`; non-GET forms also provide `formData`, `method`, and `encType`.
+- **`resolveFrame(src, options)`** (optional) — overrides the default `fetch()` resolver when a `<Frame>` loads or reloads content and for intercepted link and form navigations. Set it to `false` to disable navigation interception and frame reloads. `options` may contain `signal` and `target`; non-GET forms also provide `formData`, `method`, and `encType`.
 
 ### `app` methods
 

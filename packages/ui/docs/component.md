@@ -115,7 +115,8 @@ await app.ready()
 
 `run()` fetches frame sources by default, including the submitted method, encoding, and `FormData`.
 Provide `resolveFrame` only when the app needs custom request headers, body encoding, or response
-policy.
+policy. Set `resolveFrame: false` to leave link and form navigations to the browser and make frame
+reloads reject.
 
 ### Frames
 
