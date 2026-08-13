@@ -24,29 +24,29 @@ const render = renderWith(
 
 const router = createRouter({
   middleware: [render],
-  defaultHandler(context) {
-    return context.render(<NotFoundPage />, { status: 404 })
+  defaultHandler({ render }) {
+    return render(<NotFoundPage />, { status: 404 })
   },
 })
 
-router.get(routes.home, async (context) => {
-  await sleep(700, context.request.signal)
-  return context.render(<HomePage />)
+router.get(routes.home, async ({ render, request }) => {
+  await sleep(700, request.signal)
+  return render(<HomePage />)
 })
 
-router.get(routes.about, async (context) => {
-  await sleep(700, context.request.signal)
-  return context.render(<AboutPage />)
+router.get(routes.about, async ({ render, request }) => {
+  await sleep(700, request.signal)
+  return render(<AboutPage />)
 })
 
-router.get(routes.greet, (context) => context.render(<GreetingPage name="friend" />))
+router.get(routes.greet, ({ render }) => render(<GreetingPage name="friend" />))
 
-router.post(routes.greet, async (context) => {
-  let formData = await context.request.formData()
+router.post(routes.greet, async ({ render, request }) => {
+  let formData = await request.formData()
   let value = formData.get('name')
   let name = typeof value === 'string' && value.trim() !== '' ? value.trim() : 'friend'
-  await sleep(700, context.request.signal)
-  return context.render(<GreetingPage isSubmission name={name} />)
+  await sleep(700, request.signal)
+  return render(<GreetingPage isSubmission name={name} />)
 })
 
 interface LayoutProps {
