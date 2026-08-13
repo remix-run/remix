@@ -155,11 +155,16 @@ let router = createRouter()
 router.get('/', () => nodeResponse(<h1>Home</h1>))
 router.get('/about', () => nodeResponse(<h1>About</h1>))
 
-let app = run(router)
+function LoadingPage() {
+  return () => <p role="status">Loading…</p>
+}
+
+let app = run(router, { fallback: <LoadingPage /> })
 await app.ready()
 ```
 
-`app.ready()` resolves after the initial URL has rendered through the router. The runtime then
+The optional `fallback` is a live Remix node displayed while the initial route loads.
+`app.ready()` resolves after the initial URL has replaced it with the routed node. The runtime then
 reuses frame navigation for same-origin links, forms, history traversal, redirects, cancellation,
 and `rmx-target`.
 

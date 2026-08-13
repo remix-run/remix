@@ -1,6 +1,7 @@
 import type { AppRuntime } from './runtime/run.ts'
 import { run as runRuntime } from './runtime/run.ts'
 import type { ResolveFrameOptions } from './runtime/frame.ts'
+import type { RemixNode } from './runtime/jsx.ts'
 import { nodeFromResponse, nodeResponse, setNodeResponseRedirect } from './runtime/node-response.ts'
 
 export { nodeFromResponse, nodeResponse }
@@ -21,6 +22,12 @@ export type SPARuntime = Omit<AppRuntime, 'ready'> & {
   ready(): Promise<void>
 }
 
+/** Options for starting a client-rendered Remix application. */
+export interface SPARunOptions {
+  /** Remix node to display while the initial route loads. */
+  fallback?: RemixNode
+}
+
 const redirectStatuses = new Set([301, 302, 303, 307, 308])
 const maxRedirects = 20
 
@@ -33,19 +40,22 @@ const maxRedirects = 20
  *
  * @param router Router that resolves browser requests to responses created by
  * {@link nodeResponse}.
+ * @param options Options for the initial render.
  * @returns The running application runtime.
  */
-export function run(router: SPARouter): SPARuntime {
+export function run(router: SPARouter, options: SPARunOptions = {}): SPARuntime {
   let app = runRuntime({
     loadModule() {
       throw new Error('SPA node responses cannot hydrate client entries')
     },
     resolveFrame: (src, options) => resolveSPARoute(router, src, options),
   })
-  let readyPromise = app
-    .ready()
-    .then(() => app.frames.top.reload())
-    .then(() => undefined)
+  let readyPromise = app.ready().then(async () => {
+    if (options.fallback !== undefined) {
+      await app.frames.top.replace(options.fallback)
+    }
+    await app.frames.top.reload()
+  })
 
   return Object.assign(app, {
     ready: () => readyPromise,

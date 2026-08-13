@@ -315,7 +315,7 @@ const buttonStyle = css({
 })
 const loadingStyle = css({ color: '#6a48d7', fontSize: '1.125rem' })
 
-const app = run(router)
+const app = run(router, { fallback: <LoadingPage /> })
 app.addEventListener('error', (event) => {
   console.error('Remix SPA failed:', event.error)
 })

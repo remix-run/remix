@@ -1,1 +1,1 @@
-Added `nodeResponse`, `nodeFromResponse`, and `run(router)` in `remix/ui/spa` for client-rendered applications that route browser `Request` objects to Remix UI nodes
+Added `nodeResponse`, `nodeFromResponse`, and `run(router, { fallback? })` in `remix/ui/spa` for client-rendered applications that route browser `Request` objects to Remix UI nodes. The optional fallback is a live Remix node displayed while the initial route loads.

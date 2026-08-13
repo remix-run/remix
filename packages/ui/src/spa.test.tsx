@@ -1,7 +1,10 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock } from '@remix-run/test'
 
+import { on } from './index.ts'
+import type { Handle } from './runtime/component.ts'
 import { nodeFromResponse, nodeResponse, run, type SPARouter } from './spa.ts'
+import { withResolvers } from './test/utils.ts'
 
 describe('node responses', () => {
   it('associates a Remix node with an otherwise bodyless response', () => {
@@ -50,6 +53,70 @@ describe('run', () => {
 
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(document.querySelector('h1')?.textContent).toBe('initial')
+  })
+
+  it('renders an interactive fallback while the initial route loads', async (t) => {
+    let [routeResponse, resolveRouteResponse] = withResolvers<Response>()
+    let [requestStarted, resolveRequestStarted] = withResolvers<void>()
+    let sawReloadStart = false
+    let fallbackAtRequest: string | undefined
+    let reloadStartedAtRequest = false
+    let ready = false
+
+    function Fallback(handle: Handle) {
+      let count = 0
+
+      handle.queueTask(() => {
+        handle.frame.addEventListener(
+          'reloadStart',
+          () => {
+            sawReloadStart = true
+          },
+          { signal: handle.signal },
+        )
+      })
+
+      return () => (
+        <button
+          mix={on('click', () => {
+            count++
+            void handle.update()
+          })}
+        >
+          Loading: {count}
+        </button>
+      )
+    }
+
+    let fetch = mock.fn(async () => {
+      fallbackAtRequest = document.querySelector('button')?.textContent ?? undefined
+      reloadStartedAtRequest = sawReloadStart
+      resolveRequestStarted()
+      return await routeResponse
+    })
+    let app = run({ fetch }, { fallback: <Fallback /> })
+
+    t.after(() => app.dispose())
+
+    let readyPromise = app.ready().then(() => {
+      ready = true
+    })
+    await requestStarted
+
+    expect(ready).toBe(false)
+    expect(fallbackAtRequest).toBe('Loading: 0')
+    expect(reloadStartedAtRequest).toBe(true)
+    let button = document.querySelector('button')
+    button?.click()
+    app.flush()
+    expect(button?.textContent).toBe('Loading: 1')
+
+    resolveRouteResponse(nodeResponse(<h1>Ready</h1>))
+    await readyPromise
+
+    expect(ready).toBe(true)
+    expect(document.querySelector('button')).toBeNull()
+    expect(document.querySelector('h1')?.textContent).toBe('Ready')
   })
 
   it('follows same-origin redirects and applies Fetch redirect method semantics', async (t) => {
