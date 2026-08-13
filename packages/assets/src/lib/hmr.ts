@@ -159,19 +159,23 @@ async function handlePayload(payload) {
   if (payload.type === 'browser:update') {
     for (let update of payload.updates) {
       if (update.type === 'css') {
-        console.debug('[remix] HMR updating stylesheet', update.path)
-        await queueStylesheetUpdate(update.path, payload.timestamp)
+        let updated = await queueStylesheetUpdate(update.path, payload.timestamp)
+        if (updated) console.debug('[remix] HMR updated stylesheet', update.path)
         continue
       }
 
       try {
-        await updateJavaScriptModule(update.path, update.acceptedPath ?? update.path, payload.timestamp)
+        let updated = await updateJavaScriptModule(
+          update.path,
+          update.acceptedPath ?? update.path,
+          payload.timestamp,
+        )
         failedJavaScriptUpdates.delete(update.path)
+        if (updated) console.debug('[remix] HMR accepted update', update.path)
       } catch (error) {
         failedJavaScriptUpdates.set(update.path, update.acceptedPath ?? update.path)
         throw error
       }
-      console.debug('[remix] HMR accepted update', update.path)
     }
   }
 }
@@ -188,9 +192,9 @@ async function retryFailedJavaScriptUpdates(data) {
   let timestamp = getTimestamp(data)
   for (let [path, acceptedPath] of Array.from(failedJavaScriptUpdates)) {
     try {
-      await updateJavaScriptModule(path, acceptedPath, timestamp)
+      let updated = await updateJavaScriptModule(path, acceptedPath, timestamp)
       failedJavaScriptUpdates.delete(path)
-      console.debug('[remix] HMR recovered update', path)
+      if (updated) console.debug('[remix] HMR recovered update', path)
     } catch (error) {
       console.error('[remix] HMR recovery update failed', error)
     }
@@ -222,20 +226,17 @@ function getTimestamp(data) {
 
 async function updateJavaScriptModule(path, acceptedPath, timestamp) {
   let previousContext = contexts.get(path)
+  if (!previousContext) return false
+
   let isSelfUpdate = path === acceptedPath
-  let dependencyCallbacks = previousContext
-    ? getAcceptDependencyCallbacks(previousContext, acceptedPath)
-    : []
+  let dependencyCallbacks = getAcceptDependencyCallbacks(previousContext, acceptedPath)
 
   if (
-    !previousContext ||
-    (isSelfUpdate
-      ? previousContext.acceptCallbacks.length === 0
-      : dependencyCallbacks.length === 0)
+    isSelfUpdate ? previousContext.acceptCallbacks.length === 0 : dependencyCallbacks.length === 0
   ) {
     console.log('[remix] HMR no accept handler, reloading page', path)
     reloadPage()
-    return
+    return false
   }
 
   if (isSelfUpdate) {
@@ -256,7 +257,7 @@ async function updateJavaScriptModule(path, acceptedPath, timestamp) {
     if (previousContext.invalidated) {
       await propagateInvalidatedJavaScriptModule(path, timestamp)
     }
-    return
+    return true
   }
 
   let acceptedContext = contexts.get(acceptedPath)
@@ -283,6 +284,7 @@ async function updateJavaScriptModule(path, acceptedPath, timestamp) {
   if (previousContext.invalidated) {
     await propagateInvalidatedJavaScriptModule(path, timestamp)
   }
+  return true
 }
 
 async function propagateInvalidatedJavaScriptModule(path, timestamp) {
@@ -350,7 +352,7 @@ async function reloadStylesheet(path, timestamp) {
     updates.push(loadStylesheet(link, path, timestamp))
   }
 
-  if (updates.length === 0) return true
+  if (updates.length === 0) return false
   return (await Promise.all(updates)).some(Boolean)
 }
 
