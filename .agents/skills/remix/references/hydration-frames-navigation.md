@@ -117,8 +117,9 @@ method and abort signal. GET form values are already encoded in `src`; non-GET s
 `resolveFrame` when an app needs additional headers, another body encoding, or a different response
 policy.
 
-When `resolveFrame` returns a `Response`, the runtime renders its body only when `response.ok` is
-true. A non-OK response fails frame resolution with an error containing its status and status text.
+When `resolveFrame` returns a `Response`, the runtime renders its body for statuses below 500,
+including 4xx responses. A 5xx response fails frame resolution with an error containing its status
+and status text.
 
 ### `run` options
 

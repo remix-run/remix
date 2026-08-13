@@ -5,7 +5,7 @@ export async function unwrapFrameResolution(
 ): Promise<{ content: FrameContent; redirectedTo?: string }> {
   if (!(resolution instanceof Response)) return { content: resolution }
 
-  if (!resolution.ok) {
+  if (resolution.status >= 500) {
     throw new Error(
       `Failed to resolve frame: ${resolution.status} ${resolution.statusText}`.trimEnd(),
     )

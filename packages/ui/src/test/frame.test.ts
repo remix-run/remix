@@ -225,7 +225,44 @@ describe('frames', () => {
     }
   })
 
-  it('rejects non-OK responses without replacing the frame content', async () => {
+  it('renders 4xx response bodies', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let errorTarget = new EventTarget()
+    let frame = createFrame(root, {
+      src: 'https://example.com/account',
+      errorTarget,
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return new Response('<main id="not-found">Account not found</main>', {
+          status: 404,
+          statusText: 'Not Found',
+        })
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, errorTarget, createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(document.getElementById('not-found')?.textContent).toBe('Account not found')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('rejects 5xx responses without replacing the frame content', async () => {
     let root = document.createElement('div')
     root.innerHTML = '<p id="initial">Initial</p>'
     document.body.append(root)
