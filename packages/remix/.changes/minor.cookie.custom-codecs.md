@@ -1,0 +1,1 @@
+BREAKING CHANGE: `remix/cookie` now treats custom `encode` and `decode` functions as the complete cookie value codec. Custom encoded values are signed and serialized as-is instead of being wrapped in Remix's default base64 encoding. The default codec keeps the existing base64-safe representation.

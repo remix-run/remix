@@ -1,0 +1,1 @@
+Added an optional JSONC `remix.json` file for shared `remix db`, `remix test`, and `remix doctor` settings. Relative paths and globs resolve from the configuration file, command-line options take precedence, and the global `remix --config <path>` option selects a different file (see #11628, #11638, #11639).
