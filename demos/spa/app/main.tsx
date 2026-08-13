@@ -70,26 +70,14 @@ interface LayoutProps {
   trace: string
 }
 
-interface PendingContext {
-  beginContextualPending(): void
-}
-
-function Layout(handle: Handle<LayoutProps, PendingContext>) {
-  let pending: 'idle' | 'page' | 'contextual' = 'idle'
-  let nextReloadIsContextual = false
-
-  handle.context.set({
-    beginContextualPending() {
-      nextReloadIsContextual = true
-    },
-  })
+function Layout(handle: Handle<LayoutProps>) {
+  let showLoading = false
 
   handle.queueTask(() => {
     handle.frame.addEventListener(
       'reloadStart',
       () => {
-        pending = nextReloadIsContextual ? 'contextual' : 'page'
-        nextReloadIsContextual = false
+        showLoading = new URL(handle.frame.src).pathname !== handle.props.pathname
         void handle.update()
       },
       { signal: handle.signal },
@@ -97,8 +85,8 @@ function Layout(handle: Handle<LayoutProps, PendingContext>) {
     handle.frame.addEventListener(
       'reloadComplete',
       () => {
-        if (pending === 'idle') return
-        pending = 'idle'
+        if (!showLoading) return
+        showLoading = false
         void handle.update()
       },
       { signal: handle.signal },
@@ -133,8 +121,8 @@ function Layout(handle: Handle<LayoutProps, PendingContext>) {
             </NavLink>
           </nav>
         </header>
-        <main aria-busy={pending === 'page'} mix={mainStyle}>
-          {pending === 'page' ? <LoadingPage /> : handle.props.children}
+        <main aria-busy={showLoading} mix={mainStyle}>
+          {showLoading ? <LoadingPage /> : handle.props.children}
         </main>
         <p aria-label="Latest route resolution" mix={traceStyle}>
           {handle.props.trace}
@@ -201,7 +189,6 @@ function AboutPage() {
 
 function GreetingPage(handle: Handle<{ isSubmission?: boolean; name: string }>) {
   let isPending = false
-  let pending = handle.context.get(Layout)
 
   handle.frame.addEventListener(
     'reloadComplete',
@@ -229,7 +216,6 @@ function GreetingPage(handle: Handle<{ isSubmission?: boolean; name: string }>) 
           formStyle,
           on('submit', () => {
             isPending = true
-            pending.beginContextualPending()
             void handle.update()
           }),
         ]}
