@@ -1,13 +1,15 @@
-import { createRouter } from 'remix/router'
+import { createController, createRouter, type MiddlewareContext } from 'remix/router'
 import { renderWith } from 'remix/middleware/render'
+import { get, post, route } from 'remix/routes'
 import { css, type Handle, type RemixNode } from 'remix/ui'
 import { nodeResponse, run } from 'remix/ui/spa'
 
-const routes = {
-  home: '/',
-  about: '/about',
-  greet: '/greet',
-}
+const routes = route({
+  home: get('/'),
+  about: get('/about'),
+  greet: get('/greet'),
+  submitGreet: post('/greet'),
+})
 
 const render = renderWith(
   ({ request }) =>
@@ -22,6 +24,37 @@ const render = renderWith(
     },
 )
 
+type AppContext = MiddlewareContext<[typeof render]>
+
+declare module 'remix/router' {
+  interface RouterTypes {
+    context: AppContext
+  }
+}
+
+const controller = createController(routes, {
+  actions: {
+    async home({ render, request }) {
+      await sleep(700, request.signal)
+      return render(<HomePage />)
+    },
+    async about({ render, request }) {
+      await sleep(700, request.signal)
+      return render(<AboutPage />)
+    },
+    greet({ render }) {
+      return render(<GreetingPage name="friend" />)
+    },
+    async submitGreet({ render, request }) {
+      let formData = await request.formData()
+      let value = formData.get('name')
+      let name = typeof value === 'string' && value.trim() !== '' ? value.trim() : 'friend'
+      await sleep(700, request.signal)
+      return render(<GreetingPage isSubmission name={name} />)
+    },
+  },
+})
+
 const router = createRouter({
   middleware: [render],
   defaultHandler({ render }) {
@@ -29,25 +62,7 @@ const router = createRouter({
   },
 })
 
-router.get(routes.home, async ({ render, request }) => {
-  await sleep(700, request.signal)
-  return render(<HomePage />)
-})
-
-router.get(routes.about, async ({ render, request }) => {
-  await sleep(700, request.signal)
-  return render(<AboutPage />)
-})
-
-router.get(routes.greet, ({ render }) => render(<GreetingPage name="friend" />))
-
-router.post(routes.greet, async ({ render, request }) => {
-  let formData = await request.formData()
-  let value = formData.get('name')
-  let name = typeof value === 'string' && value.trim() !== '' ? value.trim() : 'friend'
-  await sleep(700, request.signal)
-  return render(<GreetingPage isSubmission name={name} />)
-})
+router.map(routes, controller)
 
 interface LayoutProps {
   children?: RemixNode
@@ -83,17 +98,26 @@ function Layout(handle: Handle<LayoutProps>) {
     <div mix={appShellStyle}>
       <div mix={contentStyle}>
         <header mix={headerStyle}>
-          <a href={routes.home} mix={brandStyle}>
+          <a href={routes.home.href()} mix={brandStyle}>
             Remix SPA
           </a>
           <nav aria-label="Main navigation" mix={navStyle}>
-            <NavLink href={routes.home} current={handle.props.pathname === routes.home}>
+            <NavLink
+              href={routes.home.href()}
+              current={handle.props.pathname === routes.home.href()}
+            >
               Home
             </NavLink>
-            <NavLink href={routes.about} current={handle.props.pathname === routes.about}>
+            <NavLink
+              href={routes.about.href()}
+              current={handle.props.pathname === routes.about.href()}
+            >
               About
             </NavLink>
-            <NavLink href={routes.greet} current={handle.props.pathname === routes.greet}>
+            <NavLink
+              href={routes.greet.href()}
+              current={handle.props.pathname === routes.greet.href()}
+            >
               Greet
             </NavLink>
           </nav>
@@ -136,7 +160,7 @@ function HomePage() {
         The fetch router still maps a web <code>Request</code> to a <code>Response</code>. That
         bodyless response carries a Remix node for the top frame to render.
       </p>
-      <form method="POST" action={routes.greet} mix={formStyle}>
+      <form method="POST" action={routes.submitGreet.href()} mix={formStyle}>
         <label htmlFor="name" mix={labelStyle}>
           What should we call you?
         </label>
@@ -174,7 +198,7 @@ function GreetingPage(handle: Handle<{ isSubmission?: boolean; name: string }>) 
         and forward traversals revisit this URL with GET because history entries do not retain form
         data.
       </p>
-      <form method="POST" action={routes.greet} mix={formStyle}>
+      <form method="POST" action={routes.submitGreet.href()} mix={formStyle}>
         <label htmlFor="next-name" mix={labelStyle}>
           Try another name
         </label>
@@ -187,7 +211,7 @@ function GreetingPage(handle: Handle<{ isSubmission?: boolean; name: string }>) 
       </form>
       <p mix={bodyStyle}>
         This form targets the current URL, so it replaces the active history entry. The first
-        submission from <a href={routes.home}>home</a> pushes a new entry.
+        submission from <a href={routes.home.href()}>home</a> pushes a new entry.
       </p>
     </article>
   )
@@ -199,7 +223,7 @@ function NotFoundPage() {
       <p mix={eyebrowStyle}>404</p>
       <h1 mix={titleStyle}>Page not found</h1>
       <p mix={bodyStyle}>
-        Try going back to the <a href={routes.home}>home page</a>.
+        Try going back to the <a href={routes.home.href()}>home page</a>.
       </p>
     </article>
   )
