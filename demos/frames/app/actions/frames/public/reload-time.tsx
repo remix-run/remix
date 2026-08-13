@@ -1,4 +1,6 @@
-import { clientEntry, css, on, type Handle } from 'remix/ui'
+import { clientEntry, on, type Handle } from 'remix/ui'
+
+import { reloadButtonStyle } from '../../../ui/public/styles.ts'
 
 export const ReloadTime = clientEntry(import.meta.url, function ReloadTime(handle: Handle) {
   let pending = false
@@ -25,22 +27,12 @@ export const ReloadTime = clientEntry(import.meta.url, function ReloadTime(handl
     <button
       type="button"
       mix={[
-        css({
-          padding: '6px 10px',
-          borderRadius: 10,
-          border: '1px solid rgba(255,255,255,0.18)',
-          background: pending ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
-          color: '#e9eefc',
-          cursor: 'pointer',
-          '&:hover': { background: 'var(--bg)' },
-        }),
+        reloadButtonStyle,
         on('click', () => {
           void handle.frame.reload()
         }),
       ]}
-      style={{
-        '--bg': pending ? undefined : 'rgba(255,255,255,0.1)',
-      }}
+      style={pending ? { background: 'rgba(255,255,255,0.04)' } : undefined}
     >
       {pending ? 'Refreshing…' : 'Refresh'}
     </button>

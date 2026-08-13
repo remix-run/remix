@@ -1165,7 +1165,7 @@ function ResizeHandle(
   return () => (
     <div
       aria-label={`${handle.props.edge === 'start' ? 'Start' : 'End'} resize handle`}
-      className="resize-handle"
+      class="resize-handle"
       data-active-resize-handle={handle.props.isActive ? 'true' : undefined}
       mix={[
         resizeHandleStyle,
@@ -1195,7 +1195,7 @@ function HorizontalResizeHandle(
   return () => (
     <div
       aria-label={`${handle.props.edge === 'dayStart' ? 'First day' : 'Last day'} resize handle`}
-      className="resize-handle"
+      class="resize-handle"
       data-active-resize-handle={handle.props.isActive ? 'true' : undefined}
       mix={[
         horizontalResizeHandleStyle,

@@ -152,6 +152,7 @@ When code could live in multiple places:
 - Outside actions and controllers, only use `getContext()` when `asyncContext()` is in the middleware stack
 - Remix Component is not React: write `function Name(handle: Handle<Props>) { return () => ... }`, read props from `handle.props`, keep state in setup-scope variables, call `handle.update()` explicitly, and do DOM-sensitive work in event handlers or `queueTask(...)`, not in render
 - Prefer host-element mixins via `mix={mixin(...)}` for behavior and styling instead of inventing custom host prop conventions. Use `mix={[...]}` only when composing multiple mixins
+- Keep short, one-off static styles inline with `mix={css(...)}`. Extract a module-scoped style descriptor when it forms a reused visual recipe, has substantial selectors, media queries, or keyframes, or is large enough to obscure the component. Export a style descriptor only after multiple modules need the same visual recipe; otherwise keep it with its narrowest owner
 - Hydrated `clientEntry(...)` props must be serializable. Do not pass functions, class instances, or opaque runtime objects
 
 ## Security And Session Defaults
