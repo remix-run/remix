@@ -1,0 +1,1 @@
+{"version":3,"file":"error-event.js","sourceRoot":"","sources":["../../src/runtime/error-event.ts"],"names":[],"mappings":"AAOA;;;;;GAKG;AACH,MAAM,UAAU,yBAAyB,CAAC,KAAc;IACtD,OAAO,IAAI,UAAU,CAAC,OAAO,EAAE,EAAE,KAAK,EAAE,CAAwB,CAAA;AAClE,CAAC;AAED;;;;;GAKG;AACH,MAAM,UAAU,iBAAiB,CAAC,KAAY;IAC5C,OAAQ,KAA6B,CAAC,KAAK,CAAA;AAC7C,CAAC"}
