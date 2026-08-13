@@ -79,12 +79,21 @@ describe(`SPA (${mode})`, () => {
 
     await page.getByLabel('What should we call you?').fill('Ada')
     await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('status').waitFor()
     await page.getByRole('heading', { name: 'Hello, Ada!' }).waitFor()
     assert.equal(new URL(page.url()).pathname, '/greet')
 
     await page.getByLabel('Try another name').fill('Grace')
     await page.getByRole('button', { name: 'Submit again' }).click()
+    let pendingButton = page.getByRole('button', { name: 'Submitting…' })
+    await pendingButton.waitFor()
+    assert.equal(await pendingButton.getAttribute('disabled'), '')
+    assert.equal(await page.getByRole('status').count(), 0)
+    assert.equal(await page.getByRole('heading', { name: 'Hello, Ada!' }).count(), 1)
     await page.getByRole('heading', { name: 'Hello, Grace!' }).waitFor()
+    let readyButton = page.getByRole('button', { name: 'Submit again' })
+    await readyButton.waitFor()
+    assert.equal(await readyButton.getAttribute('disabled'), null)
 
     await page.goBack()
     await page.getByRole('heading', { name: 'A client-only Remix app' }).waitFor()

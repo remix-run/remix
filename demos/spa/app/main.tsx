@@ -1,7 +1,7 @@
 import { createController, createRouter, type MiddlewareContext } from 'remix/router'
 import { renderWith } from 'remix/middleware/render'
 import { get, post, route } from 'remix/routes'
-import { css, type Handle, type RemixNode } from 'remix/ui'
+import { css, on, type Handle, type RemixNode } from 'remix/ui'
 import { nodeResponse, run } from 'remix/ui/spa'
 
 const routes = route({
@@ -70,15 +70,26 @@ interface LayoutProps {
   trace: string
 }
 
-function Layout(handle: Handle<LayoutProps>) {
-  let isPending = false
+interface PendingContext {
+  beginContextualPending(): void
+}
+
+function Layout(handle: Handle<LayoutProps, PendingContext>) {
+  let pending: 'idle' | 'page' | 'contextual' = 'idle'
+  let nextReloadIsContextual = false
+
+  handle.context.set({
+    beginContextualPending() {
+      nextReloadIsContextual = true
+    },
+  })
 
   handle.queueTask(() => {
     handle.frame.addEventListener(
       'reloadStart',
       () => {
-        if (isPending) return
-        isPending = true
+        pending = nextReloadIsContextual ? 'contextual' : 'page'
+        nextReloadIsContextual = false
         void handle.update()
       },
       { signal: handle.signal },
@@ -86,8 +97,8 @@ function Layout(handle: Handle<LayoutProps>) {
     handle.frame.addEventListener(
       'reloadComplete',
       () => {
-        if (!isPending) return
-        isPending = false
+        if (pending === 'idle') return
+        pending = 'idle'
         void handle.update()
       },
       { signal: handle.signal },
@@ -122,8 +133,8 @@ function Layout(handle: Handle<LayoutProps>) {
             </NavLink>
           </nav>
         </header>
-        <main aria-busy={isPending} mix={mainStyle}>
-          {isPending ? <LoadingPage /> : handle.props.children}
+        <main aria-busy={pending === 'page'} mix={mainStyle}>
+          {pending === 'page' ? <LoadingPage /> : handle.props.children}
         </main>
         <p aria-label="Latest route resolution" mix={traceStyle}>
           {handle.props.trace}
@@ -189,6 +200,19 @@ function AboutPage() {
 }
 
 function GreetingPage(handle: Handle<{ isSubmission?: boolean; name: string }>) {
+  let isPending = false
+  let pending = handle.context.get(Layout)
+
+  handle.frame.addEventListener(
+    'reloadComplete',
+    () => {
+      if (!isPending) return
+      isPending = false
+      void handle.update()
+    },
+    { signal: handle.signal },
+  )
+
   return () => (
     <article>
       {handle.props.isSubmission ? <p mix={eyebrowStyle}>Form submitted</p> : null}
@@ -198,14 +222,25 @@ function GreetingPage(handle: Handle<{ isSubmission?: boolean; name: string }>) 
         and forward traversals revisit this URL with GET because history entries do not retain form
         data.
       </p>
-      <form method="POST" action={routes.submitGreet.href()} mix={formStyle}>
+      <form
+        method="POST"
+        action={routes.submitGreet.href()}
+        mix={[
+          formStyle,
+          on('submit', () => {
+            isPending = true
+            pending.beginContextualPending()
+            void handle.update()
+          }),
+        ]}
+      >
         <label htmlFor="next-name" mix={labelStyle}>
           Try another name
         </label>
         <div mix={formControlsStyle}>
           <input id="next-name" name="name" autoComplete="name" required mix={inputStyle} />
-          <button type="submit" mix={buttonStyle}>
-            Submit again
+          <button type="submit" disabled={isPending} aria-busy={isPending} mix={buttonStyle}>
+            {isPending ? 'Submitting…' : 'Submit again'}
           </button>
         </div>
       </form>
@@ -341,6 +376,7 @@ const buttonStyle = css({
   font: 'inherit',
   fontWeight: 700,
   cursor: 'pointer',
+  '&:disabled': { cursor: 'wait', opacity: 0.7 },
 })
 const loadingStyle = css({ color: '#6a48d7', fontSize: '1.125rem' })
 
