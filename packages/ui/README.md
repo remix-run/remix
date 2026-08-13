@@ -102,17 +102,30 @@ The default resolver is equivalent to:
 ```js
 function resolveFrame(src, options) {
   return fetch(src, {
-    body: options?.formData,
+    body: getRequestBody(options),
     headers: { Accept: 'text/html' },
     method: options?.method,
     signal: options?.signal,
   })
 }
+
+function getRequestBody(options) {
+  let formData = options?.formData
+  if (!formData || options?.method?.toLowerCase() === 'get') return
+  if (options?.encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
+}
 ```
 
-The default resolver requests HTML. GET form values are already encoded in `src`; non-GET
+The default resolver requests HTML. GET form values are already encoded in `src`;
+`application/x-www-form-urlencoded` submissions use `URLSearchParams`, and other non-GET
 submissions send a `FormData` body. Pass a custom `resolveFrame` when the server requires additional
-headers, different body encoding, or another response policy.
+headers, another body encoding, or a different response policy.
 
 When `resolveFrame` returns a `Response`, Remix UI renders its body only when `response.ok` is true.
 A non-OK response fails frame resolution with an error containing its status and status text.

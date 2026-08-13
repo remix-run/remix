@@ -113,8 +113,9 @@ let app = run({
 await app.ready()
 ```
 
-`run()` fetches frame sources by default, including the submitted method and `FormData`. Provide
-`resolveFrame` only when the app needs custom request headers, body encoding, or response policy.
+`run()` fetches frame sources by default, including the submitted method, encoding, and `FormData`.
+Provide `resolveFrame` only when the app needs custom request headers, body encoding, or response
+policy.
 
 ### Frames
 

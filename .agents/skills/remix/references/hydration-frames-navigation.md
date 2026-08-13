@@ -111,10 +111,11 @@ app.addEventListener('error', (event) => {
 await app.ready()
 ```
 
-By default, `run()` resolves frames with `fetch(src, { body: options?.formData, headers: { Accept:
-'text/html' }, method: options?.method, signal: options?.signal })`. GET form values are already
-encoded in `src`, and non-GET submissions send a `FormData` body. Provide `resolveFrame` when an app
-needs additional headers, different body encoding, or another response policy.
+By default, `run()` resolves frames with `fetch()`, requests `text/html`, and forwards the submitted
+method and abort signal. GET form values are already encoded in `src`; non-GET submissions use
+`URLSearchParams` for `application/x-www-form-urlencoded` and `FormData` otherwise. Provide
+`resolveFrame` when an app needs additional headers, another body encoding, or a different response
+policy.
 
 When `resolveFrame` returns a `Response`, the runtime renders its body only when `response.ok` is
 true. A non-OK response fails frame resolution with an error containing its status and status text.

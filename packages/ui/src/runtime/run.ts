@@ -24,7 +24,7 @@ export interface RunInit {
    * Resolves browser-loaded `<Frame>` content.
    *
    * Defaults to fetching the frame source as HTML with the submitted form data,
-   * method, and abort signal.
+   * method, encoding, and abort signal.
    */
   resolveFrame?: ResolveFrame
 }
@@ -72,9 +72,21 @@ export function getNamedFrame(name: string): FrameHandle {
   return namedFrames.get(name) ?? getTopFrame()
 }
 
+function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+  let formData = options?.formData
+  if (!formData || options?.method?.toLowerCase() === 'get') return
+  if (options?.encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
+}
+
 function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
   return fetch(src, {
-    body: options?.formData,
+    body: getRequestBody(options),
     headers: { Accept: 'text/html' },
     method: options?.method,
     signal: options?.signal,

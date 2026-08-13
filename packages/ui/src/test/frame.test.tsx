@@ -217,6 +217,39 @@ describe('run', () => {
     }
   })
 
+  it('encodes urlencoded form data with URLSearchParams by default', async (t) => {
+    let formData = new FormData()
+    formData.set('name', 'Ada Lovelace')
+    formData.set('avatar', new File([], 'avatar.png'))
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="account">Ada</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        encType: 'application/x-www-form-urlencoded',
+        formData,
+        method: 'post',
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      let [, init] = fetchMock.mock.calls[0]!.arguments
+      expect(init?.body).toBeInstanceOf(URLSearchParams)
+      expect(String(init?.body)).toBe('name=Ada+Lovelace&avatar=avatar.png')
+    } finally {
+      app.dispose()
+    }
+  })
+
   it('hydrates a single component', async () => {
     let Counter = clientEntry(
       '/js/counter.js#Counter',

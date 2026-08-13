@@ -183,20 +183,32 @@ On the client, `run` fetches frame sources by default. The built-in resolver is 
 ```js
 function resolveFrame(src, options) {
   return fetch(src, {
-    body: options?.formData,
+    body: getRequestBody(options),
     headers: { Accept: 'text/html' },
     method: options?.method,
     signal: options?.signal,
   })
 }
+
+function getRequestBody(options) {
+  let formData = options?.formData
+  if (!formData || options?.method?.toLowerCase() === 'get') return
+  if (options?.encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
+}
 ```
 
 This requests HTML and is used for initial hydration of pending frames, `handle.frame.reload()`
 calls, link navigations, and form navigations. GET form values are already encoded in `src`; non-GET
-submissions send a `FormData` body. Provide `resolveFrame` when an app needs additional headers, must preserve
-`application/x-www-form-urlencoded` encoding with `URLSearchParams`, or has another request or
-response policy. Custom resolvers receive `signal` and `target`; non-GET form submissions also
-provide `formData`, `method`, and `encType`.
+submissions use `URLSearchParams` for `application/x-www-form-urlencoded` and `FormData` otherwise.
+Provide `resolveFrame` when an app needs additional headers, another body encoding, or a different
+response policy. Custom resolvers receive `signal` and `target`; non-GET form submissions also provide
+`formData`, `method`, and `encType`.
 
 A client resolver may return frame content directly or return the fetched `Response`. Returning the response lets Remix stream its body. When `fetch()` followed a redirect during a top-frame navigation, the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`; other frames render the response without changing either URL.
 
@@ -227,7 +239,7 @@ When `run()` is active, eligible same-origin form submissions use the same frame
 - Submitter overrides such as `formmethod`, `formenctype`, and `formtarget` take precedence over the form attributes.
 - Cross-origin submissions, `method="dialog"`, and `target="_blank"` are left to the browser.
 
-GET forms behave like links: the browser includes their successful controls in the destination URL, and the resolver receives that URL as `src` without separate submission metadata. The default resolver sends non-GET `FormData` directly. A custom resolver may use `method` and `encType` to convert it to `URLSearchParams` for `application/x-www-form-urlencoded` or apply another encoding policy.
+GET forms behave like links: the browser includes their successful controls in the destination URL, and the resolver receives that URL as `src` without separate submission metadata. The default resolver converts `application/x-www-form-urlencoded` submissions to `URLSearchParams` and sends other non-GET submissions as `FormData`. A custom resolver may use `method` and `encType` to apply another encoding policy.
 
 For example, this form works as a normal document POST without JavaScript and reloads the named frame after `run()` starts:
 
