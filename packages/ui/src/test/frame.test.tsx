@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 import { Frame } from '../runtime/component.ts'
-import { clientEntry } from '../runtime/client-entries.ts'
+import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -41,6 +41,43 @@ async function drainWithProtocol(stream: ReadableStream<Uint8Array>): Promise<st
   }
 
   return html
+}
+
+async function renderDocumentContent(content: RemixNode): Promise<string> {
+  return await drainWithProtocol(
+    renderToStream(
+      <html>
+        <head />
+        <body>
+          <main>{content}</main>
+        </body>
+      </html>,
+    ),
+  )
+}
+
+async function renderFrameContent(content: RemixNode): Promise<string> {
+  return await drain(renderToStream(content))
+}
+
+function createDisposableEntry(id: string, onDispose: () => void) {
+  return clientEntry(id, function Entry(handle: Handle) {
+    handle.signal.addEventListener('abort', onDispose)
+    return () => <section>Entry</section>
+  })
+}
+
+function createObsoleteEntryContent(Entry: EntryComponent): RemixNode {
+  return <Entry />
+}
+
+function createReplacementContent(): RemixNode {
+  return (
+    <>
+      <section id="gallery">Gallery</section>
+      <section id="details">Details</section>
+    </>
+  )
 }
 
 async function waitForTransitionWindow(): Promise<void> {
@@ -486,6 +523,104 @@ describe('run', () => {
     expect(hydrationStarts).toBe(hydrationEnds)
 
     app.dispose()
+  })
+
+  it('keeps siblings inserted while obsolete client entries are disposed during document reloads', async () => {
+    let disposeCount = 0
+
+    let Entry = createDisposableEntry('/js/entry.js#Entry', () => {
+      disposeCount++
+    })
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderDocumentContent(createObsoleteEntryContent(Entry)),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/entry.js' && exportName === 'Entry') return Entry
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/destination') {
+          return await renderDocumentContent(createReplacementContent())
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    try {
+      await app.ready()
+
+      let topFrame = app.frames.top
+      topFrame.src = '/destination'
+      await topFrame.reload()
+
+      expect(document.querySelector('main')?.innerHTML).toBe(
+        '<section id="gallery">Gallery</section><section id="details">Details</section>',
+      )
+      expect(disposeCount).toBe(1)
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('keeps siblings inserted while obsolete client entries are disposed during frame reloads', async () => {
+    let disposeCount = 0
+
+    let Entry = createDisposableEntry('/js/frame-entry.js#FrameEntry', () => {
+      disposeCount++
+    })
+
+    let html = await drain(
+      renderToStream(<Frame name="target" src="/initial" />, {
+        resolveFrame(src) {
+          if (src === '/initial') {
+            return renderFrameContent(
+              <>
+                {createObsoleteEntryContent(Entry)}
+                <section id="trailing">Trailing</section>
+              </>,
+            )
+          }
+          throw new Error(`Unexpected server frame src: ${src}`)
+        },
+      }),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/frame-entry.js' && exportName === 'FrameEntry') return Entry
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src) {
+        if (src === '/destination') return renderFrameContent(createReplacementContent())
+        throw new Error(`Unexpected client frame src: ${src}`)
+      },
+    })
+
+    try {
+      await app.ready()
+
+      let trailingSibling = document.querySelector('#trailing')
+      invariant(trailingSibling)
+
+      let targetFrame = app.frames.get('target')
+      invariant(targetFrame)
+      targetFrame.src = '/destination'
+      await targetFrame.reload()
+
+      expect(document.body.innerHTML).toContain(
+        '<section id="gallery">Gallery</section><section id="details">Details</section>',
+      )
+      expect(document.querySelector('#details')).toBe(trailingSibling)
+      expect(disposeCount).toBe(1)
+    } finally {
+      app.dispose()
+    }
   })
 
   it('preserves hydrated client entries across full-document reloads', async () => {
