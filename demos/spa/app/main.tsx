@@ -4,26 +4,6 @@ import { get, post, route } from 'remix/routes'
 import { css, on, type Handle, type RemixNode } from 'remix/ui'
 import { nodeResponse, run } from 'remix/ui/spa'
 
-const routes = route({
-  home: get('/'),
-  about: get('/about'),
-  greet: get('/greet'),
-  submitGreet: post('/greet'),
-})
-
-const render = renderWith(
-  ({ request }) =>
-    function render(content: RemixNode, init?: ResponseInit) {
-      let url = new URL(request.url)
-      return nodeResponse(
-        <Layout pathname={url.pathname} trace={`${request.method} ${url.pathname} → nodeResponse`}>
-          {content}
-        </Layout>,
-        init,
-      )
-    },
-)
-
 type AppContext = MiddlewareContext<[typeof render]>
 
 declare module 'remix/router' {
@@ -31,6 +11,13 @@ declare module 'remix/router' {
     context: AppContext
   }
 }
+
+const routes = route({
+  home: get('/'),
+  about: get('/about'),
+  greet: get('/greet'),
+  submitGreet: post('/greet'),
+})
 
 const controller = createController(routes, {
   actions: {
@@ -54,6 +41,19 @@ const controller = createController(routes, {
     },
   },
 })
+
+const render = renderWith(
+  ({ request }) =>
+    function render(content: RemixNode, init?: ResponseInit) {
+      let url = new URL(request.url)
+      return nodeResponse(
+        <Layout pathname={url.pathname} trace={`${request.method} ${url.pathname} → nodeResponse`}>
+          {content}
+        </Layout>,
+        init,
+      )
+    },
+)
 
 const router = createRouter({
   middleware: [render],
