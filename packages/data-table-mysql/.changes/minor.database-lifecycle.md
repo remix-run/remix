@@ -2,4 +2,4 @@ Added `createMysqlDatabase()` with config-backed construction, connection-scoped
 
 `wipe()` throws when no database name can be resolved from the connection config instead of guessing one. Failed migration runs and failed transaction startup destroy the reserved connection instead of returning a dirty session to the pool, and nested lock acquisition throws instead of deadlocking.
 
-BREAKING CHANGE: Removed `MysqlDatabaseAdapter` and `createMysqlDatabaseAdapter()` from the public entry point. Use `createMysqlDatabase()` to get a complete MySQL-backed `Database`.
+BREAKING CHANGE: Removed `MysqlDatabaseAdapter` and `createMysqlDatabaseAdapter()` from the public entry point. Use `MysqlDatabase` and `createMysqlDatabase()` to get a complete MySQL-backed `Database`; `MysqlDatabaseAdapterOptions` was renamed to `MysqlDatabaseOptions`.
