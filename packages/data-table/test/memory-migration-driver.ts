@@ -1,10 +1,10 @@
 import type {
   DataManipulationRequest,
   DataManipulationResult,
-  DatabaseAdapter,
+  DatabaseDriver,
   TableRef,
   TransactionToken,
-} from '../src/lib/adapter.ts'
+} from '../src/lib/driver.ts'
 
 export type JournalRow = {
   id: string
@@ -14,7 +14,7 @@ export type JournalRow = {
   applied_at: string
 }
 
-export class MemoryMigrationAdapter implements DatabaseAdapter {
+export class MemoryMigrationDriver implements DatabaseDriver {
   dialect = 'memory'
   capabilities = {
     returning: true,
@@ -36,17 +36,13 @@ export class MemoryMigrationAdapter implements DatabaseAdapter {
   #transactionCounter = 0
   #tokens = new Set<string>()
 
-  compileSql() {
-    return [{ text: '', values: [] }]
-  }
-
   async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
     if (request.transaction) {
       this.#assertToken(request.transaction)
     }
 
     if (request.operation.kind !== 'raw') {
-      throw new Error('MemoryMigrationAdapter only supports raw execute operations')
+      throw new Error('MemoryMigrationDriver only supports raw execute operations')
     }
 
     let statement = request.operation.sql
@@ -165,9 +161,17 @@ export class MemoryMigrationAdapter implements DatabaseAdapter {
     this.#assertToken(token)
   }
 
+  async wipe(): Promise<void> {
+    this.journalTableCreated = false
+    this.journalRows = []
+    this.executedScripts = []
+  }
+
+  close(): void {}
+
   async withMigrationLock<result>(
     _name: string,
-    run: (adapter: DatabaseAdapter) => Promise<result>,
+    run: (driver: DatabaseDriver) => Promise<result>,
   ): Promise<result> {
     this.lockAcquireCount += 1
     try {

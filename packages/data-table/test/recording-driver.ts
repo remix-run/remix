@@ -1,21 +1,21 @@
 import type {
-  AdapterCapabilities,
+  DatabaseCapabilities,
   DataManipulationRequest,
   DataManipulationResult,
-  DatabaseAdapter,
+  DatabaseDriver,
   TransactionOptions,
   TransactionToken,
-} from '../src/lib/adapter.ts'
-import type { SqlStatement } from '../src/lib/sql.ts'
+} from '../src/lib/driver.ts'
+import { Database, type DatabaseOptions } from '../src/lib/database.ts'
 
-export type RecordingAdapterOptions = {
+export type RecordingDriverOptions = {
   dialect?: string
-  capabilities?: Partial<AdapterCapabilities>
+  capabilities?: Partial<DatabaseCapabilities>
   execute?(request: DataManipulationRequest): Promise<DataManipulationResult>
 }
 
-export type RecordingAdapter = {
-  adapter: DatabaseAdapter
+export type RecordingDriver = {
+  driver: DatabaseDriver
   requests: DataManipulationRequest[]
   transactions: Array<
     | { kind: 'begin'; options: TransactionOptions | undefined; token: TransactionToken }
@@ -27,7 +27,7 @@ export type RecordingAdapter = {
   >
 }
 
-const defaultCapabilities: AdapterCapabilities = {
+const defaultCapabilities: DatabaseCapabilities = {
   returning: true,
   savepoints: true,
   upsert: true,
@@ -35,19 +35,22 @@ const defaultCapabilities: AdapterCapabilities = {
   migrationLock: false,
 }
 
-export function createRecordingAdapter(options: RecordingAdapterOptions = {}): RecordingAdapter {
+export class TestDatabase extends Database {
+  constructor(driver: DatabaseDriver, options?: DatabaseOptions) {
+    super(driver, options)
+  }
+}
+
+export function createRecordingDriver(options: RecordingDriverOptions = {}): RecordingDriver {
   let requests: DataManipulationRequest[] = []
-  let transactions: RecordingAdapter['transactions'] = []
+  let transactions: RecordingDriver['transactions'] = []
   let transactionId = 0
 
-  let adapter: DatabaseAdapter = {
+  let driver: DatabaseDriver = {
     dialect: options.dialect ?? 'recording',
     capabilities: {
       ...defaultCapabilities,
       ...options.capabilities,
-    },
-    compileSql() {
-      return [] satisfies SqlStatement[]
     },
     async execute(request) {
       requests.push(request)
@@ -85,7 +88,9 @@ export function createRecordingAdapter(options: RecordingAdapterOptions = {}): R
     async releaseSavepoint(token, name) {
       transactions.push({ kind: 'releaseSavepoint', token, name })
     },
+    async wipe() {},
+    close() {},
   }
 
-  return { adapter, requests, transactions }
+  return { driver, requests, transactions }
 }

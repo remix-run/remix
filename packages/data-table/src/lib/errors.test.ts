@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import {
-  DataTableAdapterError,
+  DataTableDatabaseError,
   DataTableConstraintError,
   DataTableError,
   DataTableQueryError,
@@ -42,17 +42,17 @@ describe('data-table errors', () => {
     assert.deepEqual(error.metadata, { table: 'accounts' })
   })
 
-  it('constructs query, adapter, and constraint errors', () => {
+  it('constructs query, database, and constraint errors', () => {
     let queryError = new DataTableQueryError('bad query')
     assert.equal(queryError.name, 'DataTableQueryError')
     assert.equal(queryError.code, 'DATA_TABLE_QUERY_ERROR')
 
-    let adapterError = new DataTableAdapterError('adapter failed', {
-      metadata: { adapter: 'postgres' },
+    let databaseError = new DataTableDatabaseError('database failed', {
+      metadata: { dialect: 'postgres' },
     })
-    assert.equal(adapterError.name, 'DataTableAdapterError')
-    assert.equal(adapterError.code, 'DATA_TABLE_ADAPTER_ERROR')
-    assert.deepEqual(adapterError.metadata, { adapter: 'postgres' })
+    assert.equal(databaseError.name, 'DataTableDatabaseError')
+    assert.equal(databaseError.code, 'DATA_TABLE_DATABASE_ERROR')
+    assert.deepEqual(databaseError.metadata, { dialect: 'postgres' })
 
     let constraintError = new DataTableConstraintError('duplicate key', {
       metadata: { constraint: 'accounts_pkey' },

@@ -1,5 +1,4 @@
 import { completeAuth } from 'remix/auth'
-import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { maxLength, minLength } from 'remix/data-schema/checks'
@@ -10,6 +9,7 @@ import { redirect } from 'remix/response/redirect'
 
 import { hashPassword } from '../../../data/passwords.ts'
 import { userPasswords, users } from '../../../data/schema.ts'
+import { databaseContext } from '../../../middleware/database.ts'
 import { routes } from '../../../routes.ts'
 import { render } from '../../../utils/render.tsx'
 import { issuesToErrors } from '../form-errors.ts'
@@ -53,7 +53,7 @@ export const authSignup = createController(routes.auth.signup, {
       }
 
       let { username, password } = parsed.value
-      let db = context.get(Database)
+      let db = context.get(databaseContext)
       let existingUser = await db.findOne(users, { where: { username } })
 
       if (existingUser) {
