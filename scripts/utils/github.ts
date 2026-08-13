@@ -2,6 +2,7 @@ import { request } from '@octokit/request'
 
 import { getChangelogEntry } from './changes.ts'
 import { getGitTag, getPackageShortName } from './packages.ts'
+import { prerelease } from './semver.ts'
 
 const owner = 'remix-run'
 const repo = 'remix'
@@ -232,6 +233,7 @@ export async function createRelease(
         tag_name: tagName,
         name: releaseName,
         body,
+        prerelease: prerelease(version) !== null,
       })
 
       return { status: 'created', url: getReleaseInfo(response.data, tagName).url }

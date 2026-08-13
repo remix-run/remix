@@ -1,1 +1,0 @@
-Enhanced navigations through `remix/ui` now support `rmx-history="push|replace"` on anchors and forms to override how they update browser history. Native anchors using `link(href, { history })` emit the corresponding attribute value automatically.

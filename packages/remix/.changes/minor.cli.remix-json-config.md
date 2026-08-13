@@ -1,1 +1,0 @@
-BREAKING CHANGE: Added static JSONC configuration through `remix.json` and the global `remix --config <path>` option for `remix db`, `remix test`, and `remix doctor`. Executable `remix-test.config.ts` and `.js` files are no longer discovered; move test settings under `remix.json#test` (see #11628, #11638, #11639).
