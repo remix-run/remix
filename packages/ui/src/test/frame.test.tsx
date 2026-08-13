@@ -786,12 +786,126 @@ describe('run', () => {
     app.dispose()
   })
 
-  it('keeps the prior entry styled while its replacement module is loading', async () => {
-    // Regression test for the demo-to-demo navigation FOUC: when a full-document
-    // reload replaces one client entry with another, `diffNodes` preserves the
-    // old DOM inside the hydration markers until the new module finishes
-    // loading. Server-adopted rules are pinned in the style registry, so the
-    // old entry's css-mixin rule stays live while its DOM is still visible.
+  it('shows destination SSR while a different client entry module is loading', async () => {
+    let pageTitleDisposeCount = 0
+    let collectionGridDisposeCount = 0
+
+    let PageTitle = clientEntry('/js/page-title.js#PageTitle', function PageTitle(handle: Handle) {
+      handle.signal.addEventListener('abort', () => {
+        pageTitleDisposeCount++
+      })
+      return () => <h1 id="collection-title">All products</h1>
+    })
+
+    let CollectionGrid = clientEntry(
+      '/js/collection-grid.js#CollectionGrid',
+      function CollectionGrid(handle: Handle) {
+        handle.signal.addEventListener('abort', () => {
+          collectionGridDisposeCount++
+        })
+        return () => (
+          <section id="collection-grid">
+            <a href="/products/test-product">Test product</a>
+          </section>
+        )
+      },
+    )
+
+    let ProductDetails = clientEntry(
+      '/js/product-details.js#ProductDetails',
+      function ProductDetails(handle: Handle) {
+        let added = false
+        return () => (
+          <article id="product-details">
+            <h1>Test product</h1>
+            <button
+              type="button"
+              mix={on('click', () => {
+                added = true
+                handle.update()
+              })}
+            >
+              {added ? 'Added' : 'Add to cart'}
+            </button>
+          </article>
+        )
+      },
+    )
+
+    async function renderCollectionDocument() {
+      return await renderDocumentContent(
+        <>
+          <PageTitle />
+          <CollectionGrid />
+        </>,
+      )
+    }
+
+    async function renderProductDocument() {
+      return await renderDocumentContent(<ProductDetails />)
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderCollectionDocument(),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [productModuleRequested, markProductModuleRequested] = withResolvers<void>()
+    let [productModuleGate, allowProductModule] = withResolvers<void>()
+    let app = run({
+      async loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/page-title.js' && exportName === 'PageTitle') return PageTitle
+        if (moduleUrl === '/js/collection-grid.js' && exportName === 'CollectionGrid') {
+          return CollectionGrid
+        }
+        if (moduleUrl === '/js/product-details.js' && exportName === 'ProductDetails') {
+          markProductModuleRequested()
+          await productModuleGate
+          return ProductDetails
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/products/test-product') return await renderProductDocument()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    try {
+      await app.ready()
+      expect(document.getElementById('collection-title')).not.toBeNull()
+      expect(document.getElementById('collection-grid')).not.toBeNull()
+
+      let topFrame = app.frames.top
+      topFrame.src = '/products/test-product'
+      let reloadPromise = topFrame.reload()
+      await productModuleRequested
+
+      expect(document.getElementById('collection-title')).toBeNull()
+      expect(document.getElementById('collection-grid')).toBeNull()
+      expect(document.getElementById('product-details')).not.toBeNull()
+      expect(pageTitleDisposeCount).toBe(1)
+      expect(collectionGridDisposeCount).toBe(1)
+
+      allowProductModule()
+      await reloadPromise
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      let addButton = document.querySelector('#product-details button')
+      invariant(addButton instanceof HTMLButtonElement)
+      addButton.click()
+      app.flush()
+      expect(addButton.textContent).toBe('Added')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('shows the replacement entry styled while its module is loading', async () => {
+    // Regression test for the demo-to-demo navigation FOUC: a full-document
+    // reload commits a different client entry's server-rendered DOM before its
+    // module finishes loading, so its adopted server styles must already be live.
 
     function rulePresent(selector: string): boolean {
       return Array.from(document.adoptedStyleSheets).some((sheet) =>
@@ -873,8 +987,8 @@ describe('run', () => {
     await app.ready()
     expect(rulePresent(aSelector)).toBe(true)
 
-    // Begin the reload but hold EntryB's module load so the old DOM stays
-    // inside the hydration markers — this is the FOUC window in production.
+    // Begin the reload but hold EntryB's module load to inspect its server DOM
+    // before hydration makes it interactive.
     let topFrame = app.frames.top
     topFrame.src = '/b'
     await topFrame.reload()
@@ -886,14 +1000,11 @@ describe('run', () => {
     let bSelectorFromB = findClassByPrefix(bDoc, 'entry-b')
     invariant(bSelectorFromB, 'expected SSR markup to carry an rmxc-* class for entry-b')
 
-    // Old DOM is still visible (entry-a div still in the document).
-    expect(document.getElementById('entry-a')).not.toBeNull()
-    // Its rule must still be live — otherwise we'd flash unstyled.
-    expect(rulePresent(aSelector)).toBe(true)
-    // The new entry's rule is already adopted from the streamed style tags.
+    expect(document.getElementById('entry-a')).toBeNull()
+    expect(document.getElementById('entry-b')).not.toBeNull()
     expect(rulePresent(bSelectorFromB)).toBe(true)
 
-    // Allow the module load to finish and let hydration swap the DOM.
+    // Allow the module load to finish and hydrate the destination SSR.
     allowBModule()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
