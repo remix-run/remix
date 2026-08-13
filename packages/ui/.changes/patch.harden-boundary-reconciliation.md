@@ -1,0 +1,1 @@
+Preserve client entry and frame state only for live boundaries with matching semantic identities, while replacing pending client entry SSR during reloads and releasing temporary response metadata after hydration or cancellation.

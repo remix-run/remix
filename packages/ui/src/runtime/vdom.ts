@@ -305,7 +305,6 @@ function createRootFrameHandle(init: {
     pendingClientEntries: new Map(),
     scheduler: init.scheduler,
     styleManager: init.styleManager,
-    data: {},
     moduleCache: new Map(),
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),

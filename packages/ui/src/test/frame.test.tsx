@@ -1242,6 +1242,156 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('shows updated SSR when reloading an entry whose initial module is still loading', async () => {
+    let reloadPromise: Promise<AbortSignal> | undefined
+    let Fast = clientEntry('/js/partial-fast.js#Fast', function Fast(handle: Handle) {
+      return () => (
+        <button
+          id="partial-fast"
+          type="button"
+          mix={on('click', () => {
+            reloadPromise = handle.frame.reload()
+          })}
+        >
+          Reload
+        </button>
+      )
+    })
+
+    let Slow = clientEntry(
+      '/js/partial-slow.js#Slow',
+      function Slow(handle: Handle<{ label: string }>) {
+        return () => <p id="partial-slow">{handle.props.label}</p>
+      },
+    )
+
+    async function renderDocument(label: string) {
+      return await renderDocumentContent(
+        <>
+          <Fast />
+          <Slow label={label} />
+        </>,
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderDocument('Initial'),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [slowModulePromise, resolveSlowModule] = withResolvers<Function>()
+    let slowLoadCount = 0
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/partial-fast.js' && exportName === 'Fast') return Fast
+        if (moduleUrl === '/js/partial-slow.js' && exportName === 'Slow') {
+          slowLoadCount++
+          return slowModulePromise
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src) {
+        if (src === '/reloaded') return await renderDocument('Reloaded')
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      let fastButton = document.getElementById('partial-fast')
+      invariant(fastButton instanceof HTMLButtonElement)
+      let initialSlow = document.getElementById('partial-slow')
+      invariant(initialSlow instanceof HTMLParagraphElement)
+
+      app.frames.top.src = '/reloaded'
+      fastButton.click()
+      invariant(reloadPromise)
+      await reloadPromise
+
+      let reloadedSlow = document.getElementById('partial-slow')
+      invariant(reloadedSlow instanceof HTMLParagraphElement)
+      expect(reloadedSlow).not.toBe(initialSlow)
+      expect(reloadedSlow.textContent).toBe('Reloaded')
+      expect(slowLoadCount).toBe(1)
+
+      resolveSlowModule(Slow)
+      await app.ready()
+      expect(document.getElementById('partial-slow')?.textContent).toBe('Reloaded')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('shows updated SSR when reloading a named frame entry whose module is still loading', async () => {
+    let entrySetupCount = 0
+    let Slow = clientEntry(
+      '/js/named-partial-slow.js#Slow',
+      function Slow(handle: Handle<{ label: string }>) {
+        entrySetupCount++
+        return () => <p id="named-partial-slow">{handle.props.label}</p>
+      },
+    )
+
+    async function renderEntry(label: string) {
+      return await drain(renderToStream(<Slow label={label} />))
+    }
+
+    let initialHtml = await drain(
+      renderToStream(<Frame name="partial-target" src="/initial" />, {
+        resolveFrame: () => renderEntry('Initial'),
+      }),
+    )
+    document.body.innerHTML = initialHtml
+
+    let [slowModulePromise, resolveSlowModule] = withResolvers<Function>()
+    let [moduleRequested, markModuleRequested] = withResolvers<void>()
+    let slowLoadCount = 0
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/named-partial-slow.js' && exportName === 'Slow') {
+          slowLoadCount++
+          markModuleRequested()
+          return slowModulePromise
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src, options) {
+        expect(options?.target).toBe('partial-target')
+        if (src === '/reloaded') return await renderEntry('Reloaded')
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    try {
+      await moduleRequested
+
+      let initialSlow = document.getElementById('named-partial-slow')
+      invariant(initialSlow instanceof HTMLParagraphElement)
+      let targetFrame = app.frames.get('partial-target')
+      invariant(targetFrame)
+
+      targetFrame.src = '/reloaded'
+      await targetFrame.reload()
+
+      let reloadedSlow = document.getElementById('named-partial-slow')
+      invariant(reloadedSlow instanceof HTMLParagraphElement)
+      expect(reloadedSlow).not.toBe(initialSlow)
+      expect(reloadedSlow.textContent).toBe('Reloaded')
+      expect(slowLoadCount).toBe(1)
+
+      let setupCountBeforeHydration = entrySetupCount
+      resolveSlowModule(Slow)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('named-partial-slow')?.textContent).toBe('Reloaded')
+      expect(entrySetupCount).toBe(setupCountBeforeHydration + 1)
+    } finally {
+      app.dispose()
+    }
+  })
+
   it('handles complex props', async () => {
     let Card = clientEntry(
       '/js/card.js#Card',
