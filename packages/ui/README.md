@@ -142,18 +142,18 @@ Use `rmx-history="push|replace"` on an enhanced anchor or form to control how th
 
 ## Single-page Applications
 
-Use `run` from `remix/ui/spa` when every route runs in the browser and returns a Remix UI tree
-instead of an HTTP response body. `nodeResponse` keeps the router's standard `Request` to
-`Response` contract while associating the response with a node for the top frame to render:
+Use `render` and `run` from `remix/spa` when every route runs in the browser and returns a Remix UI
+tree instead of an HTTP response body. The render middleware keeps the router's standard `Request`
+to `Response` contract while associating the response with a node for the top frame to render:
 
 ```tsx
 import { createRouter } from 'remix/router'
-import { nodeResponse, run } from 'remix/ui/spa'
+import { render, run } from 'remix/spa'
 
-let router = createRouter()
+let router = createRouter({ middleware: [render()] })
 
-router.get('/', () => nodeResponse(<h1>Home</h1>))
-router.get('/about', () => nodeResponse(<h1>About</h1>))
+router.get('/', ({ render }) => render(<h1>Home</h1>))
+router.get('/about', ({ render }) => render(<h1>About</h1>))
 
 function LoadingPage() {
   return () => <p role="status">Loading…</p>
