@@ -2,6 +2,20 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.24.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Route matching now uses delimiter-bounded params and a bounded state compiler (see #11651). Pathname params possessively capture through hyphens but stop at raw `/` or `.`, so UUIDs remain intact and `createHref()` percent-encodes dots in param values for round-tripping. Patterns such as `/:year-:month` must migrate to one inseparable param such as `/:date`, or place captures in separate delimiter-bounded segments.
+
+  Patterns may contain any number of separated wildcards and optional groups without eagerly expanding variants or using backtracking regular expressions. Adjacent wildcards, empty optionals, params followed by non-delimiter text, and ambiguous adjacent optional capture schemas now throw `ParseError`. Repeated capture names remain valid: the last participating capture wins in `params`, while `paramsMeta` retains every capture in source order.
+
+  Static pattern text is decoded during matching, while raw and percent-encoded `/` and `.` retain distinct structural meaning. Matchers also accept configurable pattern-size, matcher-size, and match-work limits through `MatcherOptions.limits`; exceeding a limit throws `MatcherResourceError` with structured details.
+
+- BREAKING CHANGE: `createHref(pattern, params, searchParams)` now accepts an options object as its third argument. Move existing search parameters to `createHref(pattern, params, { searchParams })`.
+
+  Matchers now accept relative URL strings when an absolute `baseURL` is provided to `match()` or `matchAll()`. `createHref()` accepts the same `baseURL` option and returns path-relative references for same-origin targets while leaving cross-origin targets absolute. The `searchParams` option accepts both typed plain objects and `URLSearchParams`; repeated `URLSearchParams` entries retain their order.
+
 ## v0.23.0
 
 ### Minor Changes

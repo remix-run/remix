@@ -1,1 +1,0 @@
-Added complete `remix test` argument parsing, help, validation, and shell completion to the main Remix CLI. The command delegates typed runner options to `@remix-run/test/cli` while preserving positional globs, repeated flags, aliases, configuration precedence, coverage, filtering, and watch behavior (see #11623).

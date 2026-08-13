@@ -1,1 +1,0 @@
-Limit `remix doctor` action checks to the directory and controller paths required by `app/routes.ts`. Unrelated files and directories under `app/actions` are ignored, and `remix doctor --fix` no longer generates action controllers.

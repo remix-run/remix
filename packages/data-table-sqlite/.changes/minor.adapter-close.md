@@ -1,1 +1,0 @@
-Added `SqliteDatabase.close()` to release the connection and file handle owned by a config-backed database. Supplied clients remain caller-owned. Config-backed databases keep the database file locked on Windows until closed, so callers that need to move or delete the file should call `await db.close()` first.

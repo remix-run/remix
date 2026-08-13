@@ -1,1 +1,0 @@
-Prevent client-side document navigation and `Frame` updates from stalling after navigating between pages with different `Frame` layouts. A frame's end marker could be reused as the start marker of an incoming frame, which left the frame's region bounds and instance pointing at the wrong nodes.

@@ -1,1 +1,0 @@
-BREAKING CHANGE: `remix/middleware/session` now makes session cookies HTTP-only when `httpOnly` is omitted. Set `httpOnly: false` explicitly if client-side JavaScript must read the cookie. `Cookie.httpOnly` from `remix/cookie` now returns `boolean | undefined` so omitted and explicitly disabled settings can be distinguished.

@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/node-hmr",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Run Node.js applications with Hot Module Reloading",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

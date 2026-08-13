@@ -2,6 +2,12 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## v0.14.1
+
+### Patch Changes
+
+- Request handlers now receive native `Request` instances instead of lazy request objects that emulated native requests. This fixes compatibility with standard APIs like `new Request(request, init)` that rely on native `Request` internals.
+
 ## v0.14.0
 
 ### Minor Changes
