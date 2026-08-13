@@ -1,1 +1,0 @@
-Added `remix db` commands for wiping, migrating, inspecting, seeding, and resetting a database configured statically in `remix.json`. Built-in SQLite, PostgreSQL, and MySQL adapters are supported, and seeds are plain SQL files. Command flags override configured values, and destructive commands require `--force` (see #11608, #11639).
