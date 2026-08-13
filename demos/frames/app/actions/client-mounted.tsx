@@ -1,6 +1,6 @@
 import { ClientMountedPageExample } from './public/client-mounted-page-example.tsx'
 import { routes } from '../routes.ts'
-import { leadStyle, linkStyle, pageHeadingStyle } from '../ui/styles.ts'
+import { leadStyle, linkStyle, pageHeadingStyle } from '../ui/public/styles.ts'
 import { Document } from '../ui/document.tsx'
 
 export function ClientMountedPage() {

@@ -1,6 +1,6 @@
 import { clientEntry, on, type Handle } from 'remix/ui'
 
-import { reloadButtonStyle } from '../../public/reload-button-style.ts'
+import { reloadButtonStyle } from '../../../ui/public/styles.ts'
 
 export const ReloadTime = clientEntry(import.meta.url, function ReloadTime(handle: Handle) {
   let pending = false

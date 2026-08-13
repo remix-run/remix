@@ -14,7 +14,7 @@ import {
   mutedStyle,
   pageHeadingStyle,
   sectionHeadingStyle,
-} from '../ui/styles.ts'
+} from '../ui/public/styles.ts'
 
 export const rootReloadClientEntriesAction = createAction(routes.rootReloadClientEntries, {
   async handler({ render, url }) {

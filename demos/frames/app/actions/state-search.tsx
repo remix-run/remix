@@ -2,7 +2,7 @@ import type { Handle } from 'remix/ui'
 
 import { StateSearchPage } from './public/state-search-page.tsx'
 import { routes } from '../routes.ts'
-import { leadStyle, linkStyle, pageHeadingStyle } from '../ui/styles.ts'
+import { leadStyle, linkStyle, pageHeadingStyle } from '../ui/public/styles.ts'
 import { Document } from '../ui/document.tsx'
 
 export function StateSearchRoutePage(handle: Handle<{ initialQuery: string }>) {

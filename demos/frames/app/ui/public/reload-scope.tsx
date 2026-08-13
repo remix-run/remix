@@ -1,6 +1,6 @@
 import { clientEntry, css, on, type Handle } from 'remix/ui'
 
-import { reloadButtonStyle } from '../../actions/public/reload-button-style.ts'
+import { reloadButtonStyle } from './styles.ts'
 
 export const ReloadScope = clientEntry(import.meta.url, function ReloadScope(handle: Handle) {
   let framePending = false

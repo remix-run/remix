@@ -63,7 +63,12 @@ export const PromptButton = clientEntry(
             }),
           ]}
           style={
-            active ? { background: 'var(--surface-4)', color: 'var(--brand-blue)' } : undefined
+            active
+              ? {
+                  background: 'var(--surface-4)',
+                  color: 'var(--brand-blue)',
+                }
+              : undefined
           }
         >
           <span aria-hidden="true" mix={iconSlotStyle}>

@@ -12,7 +12,7 @@ import {
   pageHeadingStyle,
   panelStyle,
   sectionHeadingStyle,
-} from '../ui/styles.ts'
+} from '../ui/public/styles.ts'
 
 export function ReloadScopePage(handle: Handle<{ pageNow: Date }>) {
   return () => (

@@ -4,7 +4,7 @@ import { ClientFrameExample } from '../ui/public/client-frame-example.tsx'
 import { Counter } from '../ui/public/counter.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
-import { leadStyle, linkStyle, mutedStyle, panelStyle, sectionHeadingStyle } from '../ui/styles.ts'
+import { leadStyle, linkStyle, mutedStyle, panelStyle, sectionHeadingStyle } from '../ui/public/styles.ts'
 
 export function HomePage() {
   return () => (
