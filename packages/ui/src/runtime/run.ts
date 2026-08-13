@@ -72,6 +72,8 @@ export function getNamedFrame(name: string): FrameHandle {
   return namedFrames.get(name) ?? getTopFrame()
 }
 
+// Frame reloads can receive raw FormData without going through form navigation. Encode it here so
+// URL-encoded reloads use URLSearchParams instead of multipart bodies.
 function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
   let formData = options?.formData
   if (!formData || options?.method?.toLowerCase() === 'get') return
