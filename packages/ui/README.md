@@ -112,6 +112,17 @@ function resolveFrame(src, options) {
 function getRequestBody(options) {
   let formData = options?.formData
   if (!formData || options?.method?.toLowerCase() === 'get') return
+
+  if (options?.encType === 'text/plain') {
+    let body = ''
+    for (let [name, value] of formData) {
+      name = normalizeLineBreaks(name)
+      value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
+      body += `${name}=${value}\r\n`
+    }
+    return new Blob([body], { type: 'text/plain' })
+  }
+
   if (options?.encType !== 'application/x-www-form-urlencoded') return formData
 
   let body = new URLSearchParams()
@@ -120,12 +131,17 @@ function getRequestBody(options) {
   }
   return body
 }
+
+function normalizeLineBreaks(value) {
+  return value.replace(/\r\n|\r|\n/g, '\r\n')
+}
 ```
 
 The default resolver requests HTML. GET form values are already encoded in `src`;
-`application/x-www-form-urlencoded` submissions use `URLSearchParams`, and other non-GET
-submissions send a `FormData` body. Pass a custom `resolveFrame` when the server requires additional
-headers, another body encoding, or a different response policy.
+`application/x-www-form-urlencoded` submissions use `URLSearchParams`, `text/plain` submissions use
+CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass a custom
+`resolveFrame` when the server requires additional headers, another body encoding, or a different
+response policy.
 
 Set `resolveFrame: false` to leave link and form navigations to the browser. Frame handles remain
 available, but calling `reload()` rejects because frame resolution is disabled.

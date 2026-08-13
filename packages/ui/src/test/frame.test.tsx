@@ -250,6 +250,43 @@ describe('run', () => {
     }
   })
 
+  it('encodes text/plain form data with CRLF-delimited entries by default', async (t) => {
+    let formData = new FormData()
+    formData.set('name', 'Ada Lovelace')
+    formData.set('bio', 'First programmer\nMathematician')
+    formData.set('avatar', new File([], 'avatar.png'))
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="account">Ada</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        encType: 'text/plain',
+        formData,
+        method: 'post',
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      let [, init] = fetchMock.mock.calls[0]!.arguments
+      let request = new Request('https://example.com/account', init)
+      expect(request.headers.get('Content-Type')).toBe('text/plain')
+      expect(await request.text()).toBe(
+        'name=Ada Lovelace\r\nbio=First programmer\r\nMathematician\r\navatar=avatar.png\r\n',
+      )
+    } finally {
+      app.dispose()
+    }
+  })
+
   it('disables navigation interception and manual frame reloads when resolveFrame is false', async (t) => {
     let addNavigationListener = t.mock.method(window.navigation, 'addEventListener')
     let app = run({ loadModule: mock.fn(), resolveFrame: false })

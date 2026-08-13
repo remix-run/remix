@@ -113,9 +113,9 @@ await app.ready()
 
 By default, `run()` resolves frames with `fetch()`, requests `text/html`, and forwards the submitted
 method and abort signal. GET form values are already encoded in `src`; non-GET submissions use
-`URLSearchParams` for `application/x-www-form-urlencoded` and `FormData` otherwise. Provide
-`resolveFrame` when an app needs additional headers, another body encoding, or a different response
-policy.
+`URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for `text/plain`, and
+`FormData` for `multipart/form-data`. Provide `resolveFrame` when an app needs additional headers,
+another body encoding, or a different response policy.
 
 Set `resolveFrame: false` to leave link and form navigations to the browser. Frame handles remain
 available, but calling `reload()` rejects because frame resolution is disabled.

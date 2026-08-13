@@ -193,6 +193,17 @@ function resolveFrame(src, options) {
 function getRequestBody(options) {
   let formData = options?.formData
   if (!formData || options?.method?.toLowerCase() === 'get') return
+
+  if (options?.encType === 'text/plain') {
+    let body = ''
+    for (let [name, value] of formData) {
+      name = normalizeLineBreaks(name)
+      value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
+      body += `${name}=${value}\r\n`
+    }
+    return new Blob([body], { type: 'text/plain' })
+  }
+
   if (options?.encType !== 'application/x-www-form-urlencoded') return formData
 
   let body = new URLSearchParams()
@@ -201,14 +212,18 @@ function getRequestBody(options) {
   }
   return body
 }
+
+function normalizeLineBreaks(value) {
+  return value.replace(/\r\n|\r|\n/g, '\r\n')
+}
 ```
 
 This requests HTML and is used for initial hydration of pending frames, `handle.frame.reload()`
 calls, link navigations, and form navigations. GET form values are already encoded in `src`; non-GET
-submissions use `URLSearchParams` for `application/x-www-form-urlencoded` and `FormData` otherwise.
-Provide `resolveFrame` when an app needs additional headers, another body encoding, or a different
-response policy. Custom resolvers receive `signal` and `target`; non-GET form submissions also provide
-`formData`, `method`, and `encType`.
+submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for
+`text/plain`, and `FormData` for `multipart/form-data`. Provide `resolveFrame` when an app needs
+additional headers, another body encoding, or a different response policy. Custom resolvers receive
+`signal` and `target`; non-GET form submissions also provide `formData`, `method`, and `encType`.
 
 Set `resolveFrame: false` to leave link and form navigations to the browser. Frame handles remain
 available, but calling `reload()` rejects because frame resolution is disabled.
@@ -242,7 +257,7 @@ When frame resolution is enabled, eligible same-origin form submissions use the 
 - Submitter overrides such as `formmethod`, `formenctype`, and `formtarget` take precedence over the form attributes.
 - Cross-origin submissions, `method="dialog"`, and `target="_blank"` are left to the browser.
 
-GET forms behave like links: the browser includes their successful controls in the destination URL, and the resolver receives that URL as `src` without separate submission metadata. The default resolver converts `application/x-www-form-urlencoded` submissions to `URLSearchParams` and sends other non-GET submissions as `FormData`. A custom resolver may use `method` and `encType` to apply another encoding policy.
+GET forms behave like links: the browser includes their successful controls in the destination URL, and the resolver receives that URL as `src` without separate submission metadata. For non-GET submissions, the default resolver uses `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for `text/plain`, and `FormData` for `multipart/form-data`. A custom resolver may use `method` and `encType` to apply another encoding policy.
 
 For example, this form works as a normal document POST without JavaScript and reloads the named frame after `run()` starts:
 

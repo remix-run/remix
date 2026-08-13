@@ -74,10 +74,21 @@ export function getNamedFrame(name: string): FrameHandle {
 }
 
 // Frame reloads can receive raw FormData without going through form navigation. Encode it here so
-// URL-encoded reloads use URLSearchParams instead of multipart bodies.
+// manual reloads use the requested form encoding instead of always sending multipart bodies.
 function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
   let formData = options?.formData
   if (!formData || options?.method?.toLowerCase() === 'get') return
+
+  if (options?.encType === 'text/plain') {
+    let body = ''
+    for (let [name, value] of formData) {
+      name = normalizeLineBreaks(name)
+      value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
+      body += `${name}=${value}\r\n`
+    }
+    return new Blob([body], { type: 'text/plain' })
+  }
+
   if (options?.encType !== 'application/x-www-form-urlencoded') return formData
 
   let body = new URLSearchParams()
@@ -85,6 +96,10 @@ function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
     body.append(name, typeof value === 'string' ? value : value.name)
   }
   return body
+}
+
+function normalizeLineBreaks(value: string): string {
+  return value.replace(/\r\n|\r|\n/g, '\r\n')
 }
 
 function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
