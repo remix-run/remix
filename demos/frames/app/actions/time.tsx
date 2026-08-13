@@ -1,7 +1,13 @@
 import { Frame } from 'remix/ui'
 
 import { routes } from '../routes.ts'
-import { leadStyle, linkStyle, mutedStyle, pageHeadingStyle, panelStyle } from '../ui/public/styles.ts'
+import {
+  leadStyle,
+  linkStyle,
+  mutedStyle,
+  pageHeadingStyle,
+  panelStyle,
+} from '../ui/public/styles.ts'
 import { Document } from '../ui/document.tsx'
 
 export function TimePage() {
