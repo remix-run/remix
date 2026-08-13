@@ -66,43 +66,43 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   // Comment -> Comment
   if (isCommentNode(current) && isCommentNode(next) && markerKindsMatch(current, next)) {
     let newData = next.data
-    if (current.data !== newData) {
-      let updated = false
-      if (isFrameStartMarker(current)) {
-        if (shouldPreserveFrameStartMarker(current, next, context)) {
+    let updated = false
+    if (isFrameStartMarker(current)) {
+      if (shouldPreserveFrameStartMarker(current, next, context)) {
+        if (current.data !== newData) {
           current.data = newData
-          updated = true
-
-          let frame = context.frameInstances.get(current)
-          let nextMarkerData = getFrameMarkerData(next, context)
-          if (frame && nextMarkerData) {
-            if (nextMarkerData.status === 'resolved') {
-              let nextEnd = findFrameEndMarker(next)
-              let nextContent = collectFrameContentFragment(current.ownerDocument, next, nextEnd)
-              void frame.renderMarkerContent(
-                { ...nextMarkerData, id: getFrameId(next) },
-                nextContent,
-                {
-                  data: context.data,
-                  signal: context.signal,
-                },
-              )
-              return nextEnd
-            }
-
-            if (frame.isDisplayingResolvedContent()) {
-              return findFrameEndMarker(next)
-            }
-          }
-        } else {
-          disposeFrameStartMarker(current, context)
-          current.data = newData
-          updated = true
         }
-      }
-      if (!updated) {
+        updated = true
+
+        let frame = context.frameInstances.get(current)
+        let nextMarkerData = getFrameMarkerData(next, context)
+        if (frame && nextMarkerData) {
+          if (nextMarkerData.status === 'resolved') {
+            let nextEnd = findFrameEndMarker(next)
+            let nextContent = collectFrameContentFragment(current.ownerDocument, next, nextEnd)
+            void frame.renderMarkerContent(
+              { ...nextMarkerData, id: getFrameId(next) },
+              nextContent,
+              {
+                data: context.data,
+                signal: context.signal,
+              },
+            )
+            return nextEnd
+          }
+
+          if (frame.isDisplayingResolvedContent()) {
+            return findFrameEndMarker(next)
+          }
+        }
+      } else if (current.data !== newData) {
+        disposeFrameStartMarker(current, context)
         current.data = newData
+        updated = true
       }
+    }
+    if (!updated && current.data !== newData) {
+      current.data = newData
     }
     return
   }
@@ -261,6 +261,8 @@ function diffSiblingUnits(
   let used = new Array<boolean>(currentUnits.length).fill(false)
   let matchIndexForNext = new Array<number>(nextUnits.length).fill(-1)
 
+  // Reserve globally matched keyed elements and semantic boundaries before
+  // positionally pairing the remaining ordinary siblings.
   for (let i = 0; i < nextUnits.length; i++) {
     let nextUnit = nextUnits[i]
     let matchIndex = -1
@@ -291,18 +293,39 @@ function diffSiblingUnits(
       }
     }
 
-    if (
-      matchIndex === -1 &&
-      nextUnit.kind === 'node' &&
-      i < currentUnits.length &&
-      !used[i] &&
-      siblingUnitsComparable(currentUnits[i], nextUnit)
-    ) {
-      matchIndex = i
-    }
-
     if (matchIndex !== -1) used[matchIndex] = true
     matchIndexForNext[i] = matchIndex
+  }
+
+  let remainingCurrentIndexes: number[] = []
+  for (let i = 0; i < currentUnits.length; i++) {
+    if (!used[i]) remainingCurrentIndexes.push(i)
+  }
+
+  let remainingNextIndexes: number[] = []
+  for (let i = 0; i < nextUnits.length; i++) {
+    if (matchIndexForNext[i] === -1) remainingNextIndexes.push(i)
+  }
+
+  let remainingLength = Math.min(remainingCurrentIndexes.length, remainingNextIndexes.length)
+  for (let i = 0; i < remainingLength; i++) {
+    let currentIndex = remainingCurrentIndexes[i]
+    let nextIndex = remainingNextIndexes[i]
+    let currentUnit = currentUnits[currentIndex]
+    let nextUnit = nextUnits[nextIndex]
+
+    if (
+      currentUnit.kind !== 'node' ||
+      nextUnit.kind !== 'node' ||
+      getSiblingUnitKey(currentUnit) !== undefined ||
+      getSiblingUnitKey(nextUnit) !== undefined ||
+      !siblingUnitsComparable(currentUnit, nextUnit)
+    ) {
+      continue
+    }
+
+    used[currentIndex] = true
+    matchIndexForNext[nextIndex] = currentIndex
   }
 
   let committed = new Array<SiblingUnit>(nextUnits.length)

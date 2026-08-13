@@ -24,10 +24,26 @@ function diffDomNodes(current: Node[], next: Node[], data: FrameContext['data'] 
   } as any)
 }
 
-function diffDom(container: HTMLElement, next: string, data?: FrameContext['data']) {
+type TestFrame = {
+  dispose(): void
+  isDisplayingResolvedContent(): boolean
+  matchesIdentity(src: string, name: string | undefined): boolean
+  renderMarkerContent(): Promise<void>
+}
+
+function diffDom(
+  container: HTMLElement,
+  next: string,
+  data?: FrameContext['data'],
+  frameInstances: WeakMap<Comment, TestFrame> = new WeakMap(),
+) {
   let template = document.createElement('template')
   template.innerHTML = next
-  diffDomNodes(Array.from(container.childNodes), Array.from(template.content.childNodes), data)
+  diffNodes(Array.from(container.childNodes), Array.from(template.content.childNodes), {
+    frameInstances,
+    pendingClientEntries: new Map(),
+    data: data ?? {},
+  } as any)
 }
 
 describe('diffNodes', () => {
@@ -193,6 +209,43 @@ describe('diffNodes', () => {
       expect(container.childNodes.item(1)).toBe(start)
       expect(start.data.trim()).toBe('rmx:h:new')
       expect(container.querySelector('button')?.textContent).toBe('Stateful')
+    })
+
+    it('keeps ordinary sibling state with its node when a hydration range moves', () => {
+      let container = document.createElement('div')
+      container.innerHTML = [
+        '<input id="first" value="First">',
+        '<input id="second" value="Second">',
+        '<!-- rmx:h:old --><button>Stateful</button><!-- /rmx:h -->',
+      ].join('')
+      let first = container.querySelector('#first')
+      let second = container.querySelector('#second')
+      let start = container.childNodes.item(2)
+      invariant(first instanceof HTMLInputElement)
+      invariant(second instanceof HTMLInputElement)
+      invariant(start instanceof Comment)
+      first.value = 'Edited first'
+      second.value = 'Edited second'
+      attachClientEntryOwner(start)
+
+      diffDom(
+        container,
+        [
+          '<!-- rmx:h:new --><button>Server</button><!-- /rmx:h -->',
+          '<input id="first" value="First">',
+          '<input id="second" value="Second">',
+        ].join(''),
+        {
+          h: {
+            new: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} },
+          },
+        },
+      )
+
+      expect(container.querySelector('#first')).toBe(first)
+      expect(container.querySelector('#second')).toBe(second)
+      expect(first.value).toBe('Edited first')
+      expect(second.value).toBe('Edited second')
     })
 
     it('pairs repeated live hydration ranges by identity in source order', () => {
@@ -430,6 +483,38 @@ describe('diffNodes', () => {
       expect(root.childNodes.item(3)).not.toBe(currentFrameEnd)
       expect(currentFrameEnd.parentNode).toBeNull()
       expect(root.outerHTML).toBe(next)
+    })
+
+    it('preserves resolved frame content when a pending marker reuses the same id', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!-- rmx:f:same --><p>Resolved current</p><!-- /rmx:f -->'
+      let start = container.firstChild
+      invariant(start instanceof Comment)
+      let renderCount = 0
+      let frameInstances = new WeakMap<Comment, TestFrame>()
+      frameInstances.set(start, {
+        dispose() {},
+        isDisplayingResolvedContent: () => true,
+        matchesIdentity: (src, name) => src === '/same' && name === undefined,
+        async renderMarkerContent() {
+          renderCount++
+        },
+      })
+
+      diffDom(
+        container,
+        '<!-- rmx:f:same --><p>Pending fallback</p><!-- /rmx:f -->',
+        {
+          f: {
+            same: { src: '/same', status: 'pending' },
+          },
+        },
+        frameInstances,
+      )
+
+      expect(container.firstChild).toBe(start)
+      expect(container.querySelector('p')?.textContent).toBe('Resolved current')
+      expect(renderCount).toBe(0)
     })
   })
 

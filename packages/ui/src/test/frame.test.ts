@@ -3,7 +3,9 @@ import { afterEach, describe, it } from '@remix-run/test'
 
 import type { Handle } from '../runtime/component.ts'
 import {
+  consumeFrameTemplate,
   createFrame,
+  publishFrameTemplate,
   reloadFrameForNavigation,
   type LoadModule,
   type ResolveFrameOptions,
@@ -133,6 +135,53 @@ describe('frames', () => {
     resolveModule(() => () => jsx('section', { children: 'late' }))
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(document.querySelector('[data-entry]')?.textContent).toBe('initial')
+  })
+
+  it('does not render a pending template after its frame is disposed', async () => {
+    let markerId = 'disposed-pending-frame'
+    let start = document.createComment(` rmx:f:${markerId} `)
+    let fallback = document.createElement('p')
+    fallback.textContent = 'Fallback'
+    let end = document.createComment(' /rmx:f ')
+    document.body.append(start, fallback, end)
+
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let frame = createFrame([start, end], {
+      src: '/child',
+      marker: { id: markerId, src: '/child', status: 'pending' },
+      errorTarget,
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame: () => '',
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, errorTarget, styleManager),
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    frame.dispose()
+    start.remove()
+    fallback.remove()
+    end.remove()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    let fragment = document.createDocumentFragment()
+    let late = document.createElement('p')
+    late.id = 'late-frame-content'
+    fragment.append(late)
+    publishFrameTemplate(markerId, fragment)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    consumeFrameTemplate(markerId)
+    expect(document.getElementById('late-frame-content')).toBeNull()
+    await frame.ready()
   })
 
   it('renders a redirected response without changing the frame source', async () => {

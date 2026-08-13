@@ -109,6 +109,32 @@ const bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
 const frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 
+function createLinkedAbortController(
+  first: AbortSignal,
+  second?: AbortSignal,
+): { controller: AbortController; disconnect: () => void } {
+  let controller = new AbortController()
+  let signals = second ? [first, second] : [first]
+  let abort = () => controller.abort()
+
+  for (let signal of signals) {
+    if (signal.aborted) {
+      controller.abort()
+      break
+    }
+    signal.addEventListener('abort', abort, { once: true })
+  }
+
+  return {
+    controller,
+    disconnect() {
+      for (let signal of signals) {
+        signal.removeEventListener('abort', abort)
+      }
+    },
+  }
+}
+
 function stripDoctypeMarkup(html: string): string {
   return html.replace(DOCTYPE_PATTERN, '')
 }
@@ -238,6 +264,10 @@ type RenderOptions = {
   data?: RmxData
 }
 
+type ActiveRenderOptions = RenderOptions & {
+  data: RmxData
+}
+
 export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let container = createContainer(root)
   let contentRoot: VirtualRoot | undefined
@@ -298,8 +328,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   async function render(content: InternalFrameContent, options?: RenderOptions): Promise<void> {
+    if (disposed || lifecycleController.signal.aborted || options?.signal?.aborted) return
     let ownsData = options?.data === undefined
-    let renderOptions = { ...options, data: options?.data ?? {} }
+    let renderOptions: ActiveRenderOptions = {
+      ...options,
+      data: options?.data ?? {},
+    }
 
     try {
       await renderContent(content, renderOptions)
@@ -310,20 +344,25 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   async function renderContent(
     content: InternalFrameContent,
-    options: RenderOptions & { data: RmxData },
+    options: ActiveRenderOptions,
   ): Promise<void> {
-    if (options?.signal?.aborted) return
+    if (isRenderAborted(options.signal)) return
 
     if (content instanceof ReadableStream) {
-      await renderFrameStream(
-        content,
-        container.doc,
-        async (html, flushKind) => {
-          if (options.signal?.aborted) return
-          await render(html, { ...options, flushKind })
-        },
-        options.signal,
-      )
+      let linkedAbort = createLinkedAbortController(lifecycleController.signal, options.signal)
+      try {
+        await renderFrameStream(
+          content,
+          container.doc,
+          async (html, flushKind) => {
+            if (isRenderAborted(options.signal)) return
+            await render(html, { ...options, flushKind })
+          },
+          linkedAbort.controller.signal,
+        )
+      } finally {
+        linkedAbort.disconnect()
+      }
       return
     }
 
@@ -336,9 +375,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         contentRoot = createFrameContentRoot()
       }
 
-      if (options?.signal?.aborted) return
+      if (isRenderAborted(options.signal)) return
       contentRoot.render(content)
-      displayedContentStatus = options?.contentStatus ?? 'resolved'
+      displayedContentStatus = options.contentStatus ?? 'resolved'
       return
     }
 
@@ -364,7 +403,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let isFullDocumentReload =
       container.root instanceof Document &&
       htmlContent !== undefined &&
-      options?.flushKind === 'document'
+      options.flushKind === 'document'
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
@@ -381,25 +420,26 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         ...responseContext,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
-        signal: options?.signal,
+        signal: options.signal,
       })
       diffNodes([container.doc.body], [parsed.body], {
         ...responseContext,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
-        signal: options?.signal,
+        signal: options.signal,
       })
 
       let bodyContainer = createElementContainer(container.doc.body)
-      if (options?.signal?.aborted) return
+      if (isRenderAborted(options.signal)) return
       scheduleHydrationInContainer(
         bodyContainer,
         responseContext,
-        options?.initialHydrationTracker,
-        options?.signal,
+        options.initialHydrationTracker,
+        options.signal,
       )
       await createSubFrames(bodyContainer.childNodes, responseContext, options)
-      displayedContentStatus = options?.contentStatus ?? 'resolved'
+      if (isRenderAborted(options.signal)) return
+      displayedContentStatus = options.contentStatus ?? 'resolved'
       return
     }
 
@@ -415,24 +455,29 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let nextContainer = createContainer(fragment)
 
-    if (options?.signal?.aborted) return
+    if (isRenderAborted(options.signal)) return
 
     diffNodes(container.childNodes, Array.from(nextContainer.childNodes), {
       ...responseContext,
       regionTailRef: container.regionTailRef,
       regionParent: container.regionParent,
-      signal: options?.signal,
+      signal: options.signal,
     })
 
-    if (options?.signal?.aborted) return
+    if (isRenderAborted(options.signal)) return
     scheduleHydrationInContainer(
       container,
       responseContext,
-      options?.initialHydrationTracker,
-      options?.signal,
+      options.initialHydrationTracker,
+      options.signal,
     )
     await createSubFrames(container.childNodes, responseContext, options)
-    displayedContentStatus = options?.contentStatus ?? 'resolved'
+    if (isRenderAborted(options.signal)) return
+    displayedContentStatus = options.contentStatus ?? 'resolved'
+  }
+
+  function isRenderAborted(signal?: AbortSignal): boolean {
+    return disposed || lifecycleController.signal.aborted || signal?.aborted === true
   }
 
   function createFrameContentRoot(): VirtualRoot {
@@ -481,6 +526,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     try {
       await subFramesReady
+
+      if (disposed || context.lifecycleSignal.aborted) return
 
       if (currentMarker?.status === 'pending') {
         await watchPendingFrameTemplate(currentMarker, initialHydrationTracker)
@@ -542,7 +589,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   async function updateMarker(marker: FrameMarkerData, options?: RenderOptions): Promise<void> {
-    if (options?.signal?.aborted) return
+    if (disposed || context.lifecycleSignal.aborted || options?.signal?.aborted) return
     let previousMarker = currentMarker
     let isInheritedReload = previousMarker !== undefined && previousMarker.id !== marker.id
     currentMarker = marker
@@ -575,7 +622,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     content: InternalFrameContent,
     options?: RenderOptions,
   ): Promise<void> {
-    if (options?.signal?.aborted) return
+    if (disposed || context.lifecycleSignal.aborted || options?.signal?.aborted) return
     let previousMarker = currentMarker
     let isInheritedReload = previousMarker !== undefined && previousMarker.id !== marker.id
     currentMarker = marker
@@ -587,7 +634,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     clearPendingFrameTemplateWatch()
     await render(content, { ...options, contentStatus: 'resolved' })
 
-    if (isInheritedReload && !options?.signal?.aborted) {
+    if (
+      isInheritedReload &&
+      !disposed &&
+      !context.lifecycleSignal.aborted &&
+      !options?.signal?.aborted
+    ) {
       completeInheritedReload()
     }
   }
@@ -763,7 +815,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     signal?: AbortSignal,
     onResolved?: () => void,
   ): Promise<void> {
-    if (signal?.aborted) return
+    if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
     if (pendingTemplateMarkerId === marker.id) return
 
     clearPendingFrameTemplateWatch()
@@ -773,11 +825,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (early) {
       clearPendingFrameTemplateWatch()
       await render(early, { initialHydrationTracker, signal, contentStatus: 'resolved' })
-      if (!signal?.aborted) onResolved?.()
+      if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
       return
     }
 
-    if (signal?.aborted) {
+    if (disposed || context.lifecycleSignal.aborted || signal?.aborted) {
       clearPendingFrameTemplateWatch()
       return
     }
@@ -785,11 +837,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let observer = setupTemplateObserver()
     pendingTemplateObserver = observer
     let unsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
-      if (signal?.aborted) return
+      if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
       if (pendingTemplateMarkerId !== marker.id) return
       clearPendingFrameTemplateWatch()
       await render(fragment, { signal, contentStatus: 'resolved' })
-      if (!signal?.aborted) onResolved?.()
+      if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
     })
     pendingTemplateUnsubscribe = unsubscribe
 
@@ -807,7 +859,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (buffered) {
       clearPendingFrameTemplateWatch()
       await render(buffered, { initialHydrationTracker, signal, contentStatus: 'resolved' })
-      if (!signal?.aborted) onResolved?.()
+      if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
     }
   }
 }
