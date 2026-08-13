@@ -1,4 +1,5 @@
 import { createRouter } from 'remix/router'
+import { renderWith } from 'remix/middleware/render'
 import { css, type Handle, type RemixNode } from 'remix/ui'
 import { nodeResponse, run } from 'remix/ui/spa'
 
@@ -8,41 +9,45 @@ const routes = {
   greet: '/greet',
 }
 
+const render = renderWith(
+  ({ request }) =>
+    function render(content: RemixNode, init?: ResponseInit) {
+      let url = new URL(request.url)
+      return nodeResponse(
+        <Layout pathname={url.pathname} trace={`${request.method} ${url.pathname} → nodeResponse`}>
+          {content}
+        </Layout>,
+        init,
+      )
+    },
+)
+
 const router = createRouter({
+  middleware: [render],
   defaultHandler(context) {
-    return pageResponse(context.request, <NotFoundPage />, 404)
+    return context.render(<NotFoundPage />, { status: 404 })
   },
 })
 
 router.get(routes.home, async (context) => {
   await sleep(700, context.request.signal)
-  return pageResponse(context.request, <HomePage />)
+  return context.render(<HomePage />)
 })
 
 router.get(routes.about, async (context) => {
   await sleep(700, context.request.signal)
-  return pageResponse(context.request, <AboutPage />)
+  return context.render(<AboutPage />)
 })
 
-router.get(routes.greet, (context) => pageResponse(context.request, <GreetingPage name="friend" />))
+router.get(routes.greet, (context) => context.render(<GreetingPage name="friend" />))
 
 router.post(routes.greet, async (context) => {
   let formData = await context.request.formData()
   let value = formData.get('name')
   let name = typeof value === 'string' && value.trim() !== '' ? value.trim() : 'friend'
   await sleep(700, context.request.signal)
-  return pageResponse(context.request, <GreetingPage isSubmission name={name} />)
+  return context.render(<GreetingPage isSubmission name={name} />)
 })
-
-function pageResponse(request: Request, content: RemixNode, status = 200): Response {
-  let url = new URL(request.url)
-  return nodeResponse(
-    <Layout pathname={url.pathname} trace={`${request.method} ${url.pathname} → nodeResponse`}>
-      {content}
-    </Layout>,
-    { status },
-  )
-}
 
 interface LayoutProps {
   children?: RemixNode
