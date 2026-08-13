@@ -12,7 +12,7 @@ const router = await createTestRouter()
 
 describe('account handlers', () => {
   it('GET /account redirects to login when not authenticated', async () => {
-    let response = await router.fetch('https://remix.run/account')
+    let response = await router.fetch('https://remix.run/account', { redirect: 'manual' })
 
     assert.equal(response.status, 302)
     assert.equal(response.headers.get('Location'), '/login?returnTo=%2Faccount')

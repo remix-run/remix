@@ -16,7 +16,7 @@ declare global {
 
 describe('frame navigation', () => {
   it('redirects unauthenticated requests to sign in', async (t) => {
-    let page = await t.serve(await createTestServer(router.fetch))
+    let page = await t.serve(await createAppTestServer())
 
     await page.goto(routes.main.index.href())
     await waitForNavigationRuntime(page)
@@ -26,7 +26,7 @@ describe('frame navigation', () => {
   })
 
   it('signs in without reloading the document', async (t) => {
-    let page = await t.serve(await createTestServer(router.fetch))
+    let page = await t.serve(await createAppTestServer())
     await page.goto(routes.main.index.href())
     await waitForNavigationRuntime(page)
     let documentMarker = await markDocument(page)
@@ -39,7 +39,7 @@ describe('frame navigation', () => {
   })
 
   it('navigates without reloading the document and supports back navigation', async (t) => {
-    let server = await createTestServer(router.fetch)
+    let server = await createAppTestServer()
     let page = await t.serve(server)
     await setAuthCookie(page, server.baseUrl)
     await page.goto(routes.main.index.href())
@@ -60,7 +60,7 @@ describe('frame navigation', () => {
   })
 
   it('replaces history when filtering courses', async (t) => {
-    let server = await createTestServer(router.fetch)
+    let server = await createAppTestServer()
     let page = await t.serve(server)
     await setAuthCookie(page, server.baseUrl)
     await page.goto(routes.main.index.href())
@@ -86,7 +86,7 @@ describe('frame navigation', () => {
   })
 
   it('submits a form and follows its redirect without reloading the document', async (t) => {
-    let server = await createTestServer(router.fetch)
+    let server = await createAppTestServer()
     let page = await t.serve(server)
     await setAuthCookie(page, server.baseUrl)
     await page.goto(routes.main.index.href())
@@ -119,7 +119,7 @@ describe('frame navigation', () => {
   })
 
   it('follows a frame redirect without reloading the document', async (t) => {
-    let server = await createTestServer(router.fetch)
+    let server = await createAppTestServer()
     let page = await t.serve(server)
     await setAuthCookie(page, server.baseUrl)
     await page.goto(routes.main.index.href())
@@ -135,7 +135,7 @@ describe('frame navigation', () => {
   })
 
   it('reloads the document when a subframe redirects to sign in', async (t) => {
-    let server = await createTestServer(router.fetch)
+    let server = await createAppTestServer()
     let page = await t.serve(server)
     await setAuthCookie(page, server.baseUrl)
     await page.goto(routes.settings.overview.href())
@@ -150,6 +150,10 @@ describe('frame navigation', () => {
     await assertDocumentReplaced(page, documentMarker)
   })
 })
+
+function createAppTestServer() {
+  return createTestServer((request) => router.fetch(request, { redirect: 'manual' }))
+}
 
 async function setAuthCookie(page: Page, baseUrl: string): Promise<void> {
   let cookie = new SetCookie(await authCookie.serialize('1'))

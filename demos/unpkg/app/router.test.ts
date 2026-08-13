@@ -7,7 +7,13 @@ import {
   addFetchHandler,
   createNpmRegistryMock,
 } from '../test/mock-fetch.ts'
-import { router } from './router.ts'
+import { router as appRouter } from './router.ts'
+
+const router = {
+  fetch(request: Request) {
+    return appRouter.fetch(request, { redirect: 'manual' })
+  },
+}
 
 before(() => {
   installFetchMock()

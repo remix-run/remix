@@ -79,7 +79,7 @@ router.get(routes.index, () => {
 
 let server = http.createServer(
   createRequestListener(async (request) => {
-    return await router.fetch(request)
+    return await router.fetch(request, { redirect: 'manual' })
   }),
 )
 

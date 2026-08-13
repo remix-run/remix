@@ -9,6 +9,7 @@ A minimal, composable router built on the [web Fetch API](https://developer.mozi
 - **Typed Request Context**: Carry request-scoped context through routers, controllers, and actions
 - **Declarative Route Maps**: Define your route structure upfront with type-safe route names and request methods
 - **Flexible Middleware**: Use router, controller, and action middleware for each request boundary
+- **Redirect Handling**: Follow same-origin redirects or return them for another network boundary
 - **Easy Testing**: Use standard `fetch()` to test your routes - no special test harness required
 
 ## Installation
@@ -869,6 +870,18 @@ type AppContext = MiddlewareContext<typeof middleware>
 
 - use the `methodOverride()` middleware to override the request method
 - use a hidden `<input name="_method" value="...">` to override the request method
+
+#### Redirects
+
+`router.fetch()` follows same-origin redirects by default. Set the standard `RequestInit.redirect` option to `manual` to receive the redirect response unchanged, or to `error` to reject when a route redirects.
+
+Use `manual` at an HTTP server boundary so the client receives the redirect and decides whether to follow it:
+
+```ts
+let response = await router.fetch(request, { redirect: 'manual' })
+```
+
+Because `router.fetch()` dispatches requests in-process, `follow` returns cross-origin redirect responses for the network client to handle. Unlike browser `fetch()`, `manual` returns the original redirect response, including its status and `Location` header.
 
 ### Response Helpers
 

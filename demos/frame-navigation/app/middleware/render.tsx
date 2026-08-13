@@ -61,38 +61,18 @@ async function resolveFrame(
   let cookie = request.headers.get('Cookie')
   if (cookie) headers.set('Cookie', cookie)
 
-  let res = await followFrameRedirects(router, request, url, headers)
+  let res = await router.fetch(
+    new Request(url, {
+      method: 'GET',
+      headers,
+      signal: request.signal,
+    }),
+  )
   if (!res.ok) {
     return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`
   }
 
   return res.text()
-}
-
-async function followFrameRedirects(router: Router, request: Request, url: URL, headers: Headers) {
-  let currentUrl = url
-  let redirectsRemaining = 10
-
-  while (true) {
-    let res = await router.fetch(
-      new Request(currentUrl, {
-        method: 'GET',
-        headers,
-        signal: request.signal,
-      }),
-    )
-
-    let location = res.headers.get('Location')
-    if (!location || res.status < 300 || res.status >= 400) {
-      return res
-    }
-
-    if (redirectsRemaining-- <= 0) {
-      throw new Error('Too many frame redirects')
-    }
-
-    currentUrl = new URL(location, currentUrl)
-  }
 }
 
 function titleCaseFileName(fileUrl: string): string {

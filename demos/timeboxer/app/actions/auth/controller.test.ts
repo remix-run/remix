@@ -3,11 +3,17 @@ import { describe, it } from 'remix/test'
 
 process.env.SESSION_SECRET = 'test-session-secret'
 
-const { router } = await import('../../router.ts')
+const { router: appRouter } = await import('../../router.ts')
 const { routes } = await import('../../routes.ts')
 const { db, getMigrations, seed } = await import('../../db.ts')
 await db.reset({ migrations: await getMigrations(), seed })
 const { users } = await import('../../data/schema.ts')
+
+const router = {
+  fetch(request: Request) {
+    return appRouter.fetch(request, { redirect: 'manual' })
+  },
+}
 
 describe('auth endpoints', () => {
   it('validates signup credentials', async () => {

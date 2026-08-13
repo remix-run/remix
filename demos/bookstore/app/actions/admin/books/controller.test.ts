@@ -27,7 +27,7 @@ describe('admin books handlers', () => {
         inStock: 'true',
       }),
     })
-    let response = await router.fetch(createRequest)
+    let response = await router.fetch(createRequest, { redirect: 'manual' })
 
     assert.equal(response.status, 302)
     assert.ok(response.headers.get('Location')?.includes('/admin/books'))

@@ -10,7 +10,7 @@ await db.migrate(await getMigrations())
 const server = http.createServer(
   createRequestListener(async (request) => {
     try {
-      return await router.fetch(request)
+      return await router.fetch(request, { redirect: 'manual' })
     } catch (error) {
       console.error(error)
       return new Response('Internal Server Error', { status: 500 })

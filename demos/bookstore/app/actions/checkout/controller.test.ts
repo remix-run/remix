@@ -13,7 +13,7 @@ const router = await createTestRouter()
 
 describe('checkout handlers', () => {
   it('GET /checkout redirects when not authenticated', async () => {
-    let response = await router.fetch('https://remix.run/checkout')
+    let response = await router.fetch('https://remix.run/checkout', { redirect: 'manual' })
 
     assert.equal(response.status, 302)
     assert.equal(response.headers.get('Location'), '/login?returnTo=%2Fcheckout')
@@ -45,7 +45,7 @@ describe('checkout handlers', () => {
         zip: '12345',
       }),
     })
-    let checkoutResponse = await router.fetch(checkoutRequest)
+    let checkoutResponse = await router.fetch(checkoutRequest, { redirect: 'manual' })
     let confirmationUrl = checkoutResponse.headers.get('Location')
     sessionCookie = getSessionCookie(checkoutResponse) ?? sessionCookie
 

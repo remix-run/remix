@@ -143,6 +143,140 @@ describe('router.fetch()', () => {
     assert.deepEqual(requestLog, ['admin@remix.run'])
   })
 
+  it('follows redirects by default', async () => {
+    let router = createRouter()
+
+    router.get('/one', () => new Response(null, { status: 301, headers: { Location: 'two' } }))
+    router.get('/two', () => new Response(null, { status: 302, headers: { Location: '/three' } }))
+    router.get('/three', () => new Response(null, { status: 307, headers: { Location: '/four' } }))
+    router.get('/four', () => new Response(null, { status: 308, headers: { Location: '/home' } }))
+    router.get('/home', () => new Response('Home'))
+
+    let response = await router.fetch('https://remix.run/one')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Home')
+  })
+
+  it('returns redirect responses when redirect is manual', async () => {
+    let router = createRouter()
+    router.get('/old', () => new Response(null, { status: 302, headers: { Location: '/new' } }))
+    router.get('/new', () => new Response('New'))
+
+    let response = await router.fetch('https://remix.run/old', { redirect: 'manual' })
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), '/new')
+  })
+
+  it('rejects redirect responses when redirect is error', async () => {
+    let router = createRouter()
+    router.get('/old', () => new Response(null, { status: 302, headers: { Location: '/new' } }))
+
+    await assert.rejects(router.fetch('https://remix.run/old', { redirect: 'error' }), TypeError)
+  })
+
+  it('rewrites POST requests to GET after 303 redirects', async () => {
+    let router = createRouter()
+
+    router.post(
+      '/submit',
+      () => new Response(null, { status: 303, headers: { Location: '/done' } }),
+    )
+    router.get('/done', ({ headers, method }) => {
+      assert.equal(method, 'GET')
+      assert.equal(headers.get('Content-Type'), null)
+      return new Response('Done')
+    })
+
+    let response = await router.fetch('https://remix.run/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: 'submission',
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Done')
+  })
+
+  it('rewrites POST requests to GET after 302 redirects', async () => {
+    let router = createRouter()
+
+    router.post(
+      '/submit',
+      () => new Response(null, { status: 302, headers: { Location: '/done' } }),
+    )
+    router.get('/done', ({ method }) => new Response(method))
+
+    let response = await router.fetch('https://remix.run/submit', {
+      method: 'POST',
+      body: 'submission',
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'GET')
+  })
+
+  it('preserves the method and body after 307 redirects', async () => {
+    let router = createRouter()
+
+    router.post('/submit', async ({ request }) => {
+      assert.equal(await request.text(), 'submission')
+      return new Response(null, { status: 307, headers: { Location: '/done' } })
+    })
+    router.post('/done', async ({ method, request }) => {
+      assert.equal(method, 'POST')
+      return new Response(await request.text())
+    })
+
+    let response = await router.fetch('https://remix.run/submit', {
+      method: 'POST',
+      body: 'submission',
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'submission')
+  })
+
+  it('returns cross-origin redirect responses', async () => {
+    let router = createRouter()
+    let destinationCalled = false
+
+    router.get(
+      '/old',
+      () =>
+        new Response(null, {
+          status: 302,
+          headers: { Location: 'https://example.com/new' },
+        }),
+    )
+    router.get('/new', () => {
+      destinationCalled = true
+      return new Response('New')
+    })
+
+    let response = await router.fetch('https://remix.run/old')
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), 'https://example.com/new')
+    assert.equal(destinationCalled, false)
+  })
+
+  it('rejects after 20 redirects', async () => {
+    let router = createRouter()
+
+    router.get(
+      '/:count',
+      ({ params }) =>
+        new Response(null, {
+          status: 302,
+          headers: { Location: `/${Number(params.count) + 1}` },
+        }),
+    )
+
+    await assert.rejects(router.fetch('https://remix.run/0'), /Too many redirects/)
+  })
+
   it('runs router middleware even when there are no routes', async () => {
     let requestLog: string[] = []
     let router = createRouter({

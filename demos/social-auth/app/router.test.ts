@@ -38,6 +38,7 @@ describe('social-auth router', () => {
     let loginResponse = await router.fetch('https://social-auth.test/auth/login', {
       method: 'POST',
       body: new URLSearchParams({ email: 'user@example.com', password: 'password123' }),
+      redirect: 'manual',
     })
 
     assert.equal(loginResponse.status, 302)
@@ -62,6 +63,7 @@ describe('social-auth router', () => {
     let loginResponse = await router.fetch('https://social-auth.test/auth/login', {
       method: 'POST',
       body: new URLSearchParams({ email: 'user@example.com', password: 'wrong-password' }),
+      redirect: 'manual',
     })
 
     assert.equal(loginResponse.status, 302)
@@ -138,6 +140,7 @@ describe('social-auth router', () => {
           `https://social-auth.test/auth/google/callback?code=test-google-code&state=${encodeURIComponent(state)}`,
           loginSessionCookie,
         ),
+        { redirect: 'manual' },
       )
 
       assert.equal(callbackResponse.status, 302)
@@ -181,6 +184,7 @@ describe('social-auth router', () => {
         email: 'new-user@example.com',
         password: 'password123',
       }),
+      redirect: 'manual',
     })
 
     assert.equal(response.status, 302)
@@ -230,6 +234,7 @@ describe('social-auth router', () => {
     let loginResponse = await router.fetch('https://social-auth.test/auth/login', {
       method: 'POST',
       body: new URLSearchParams({ email: 'user@example.com', password: 'newpassword123' }),
+      redirect: 'manual',
     })
 
     assert.equal(loginResponse.status, 302)
@@ -241,6 +246,7 @@ describe('social-auth router', () => {
     let loginResponse = await router.fetch('https://social-auth.test/auth/login', {
       method: 'POST',
       body: new URLSearchParams({ email: 'user@example.com', password: 'password123' }),
+      redirect: 'manual',
     })
 
     let sessionCookie = getSessionCookie(loginResponse)
@@ -250,6 +256,7 @@ describe('social-auth router', () => {
       requestWithSession('https://social-auth.test/auth/logout', sessionCookie, {
         method: 'POST',
       }),
+      { redirect: 'manual' },
     )
 
     assert.equal(logoutResponse.status, 302)
@@ -257,6 +264,7 @@ describe('social-auth router', () => {
 
     let accountResponse = await router.fetch(
       requestWithSession('https://social-auth.test/account', sessionCookie),
+      { redirect: 'manual' },
     )
 
     assert.equal(accountResponse.status, 302)

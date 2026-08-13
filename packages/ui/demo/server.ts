@@ -6,7 +6,7 @@ import { router } from './config/router.tsx'
 const server = http.createServer(
   createRequestListener(async (request: Request) => {
     try {
-      return await router.fetch(request)
+      return await router.fetch(request, { redirect: 'manual' })
     } catch (error) {
       console.error(error)
       return new Response('Internal Server Error', { status: 500 })

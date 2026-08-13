@@ -7,7 +7,7 @@ const router = await createTestRouter()
 
 describe('admin handlers', () => {
   it('GET /admin redirects when not authenticated', async () => {
-    let response = await router.fetch('https://remix.run/admin')
+    let response = await router.fetch('https://remix.run/admin', { redirect: 'manual' })
 
     assert.equal(response.status, 302)
     assert.equal(response.headers.get('Location'), '/login?returnTo=%2Fadmin')

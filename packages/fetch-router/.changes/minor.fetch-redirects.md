@@ -1,0 +1,1 @@
+`Router.fetch()` now supports the `RequestInit.redirect` option. Same-origin redirect responses are followed by default; use `manual` to return the redirect response or `error` to reject it. In `follow` mode, cross-origin redirect responses are returned for the network client to handle.

@@ -26,6 +26,9 @@ import {
 
 type AnyContext = RequestContext<any, any>
 
+const redirectStatusCodes = new Set([301, 302, 303, 307, 308])
+const maxRedirectCount = 20
+
 type RouteTarget<
   pattern extends string = string,
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
@@ -236,6 +239,10 @@ export interface Router<context extends AnyContext = RequestContext> extends Rou
   /**
    * Fetch a response from the router.
    *
+   * Same-origin redirect responses are followed by default. Cross-origin redirects are returned
+   * unchanged. Set the `redirect` request option to `manual` to return any redirect response or
+   * `error` to reject it instead.
+   *
    * @param input The request input to fetch
    * @param init The request init options
    * @returns The response from the route that matched the request
@@ -302,6 +309,52 @@ function createRequestContext(input: string | URL | Request, init?: RequestInit)
   return new RequestContext(request)
 }
 
+function isRedirectResponse(response: Response): boolean {
+  return redirectStatusCodes.has(response.status)
+}
+
+function shouldRewriteRedirectMethod(request: Request, response: Response): boolean {
+  return (
+    ((response.status === 301 || response.status === 302) && request.method === 'POST') ||
+    (response.status === 303 && request.method !== 'GET' && request.method !== 'HEAD')
+  )
+}
+
+function resolveRedirectURL(request: Request, location: string): URL {
+  return new URL(location, request.url)
+}
+
+function cloneRequest(request: Request): Request {
+  // Some runtimes add host metadata generics to the clone return type, but it remains a Request.
+  return request.clone() as Request
+}
+
+function createRedirectRequest(request: Request, url: URL, response: Response): Request {
+  if (!shouldRewriteRedirectMethod(request, response)) {
+    return new Request(url, request)
+  }
+
+  let headers = new Headers(request.headers)
+  headers.delete('Content-Encoding')
+  headers.delete('Content-Language')
+  headers.delete('Content-Location')
+  headers.delete('Content-Type')
+
+  return new Request(url, {
+    cache: request.cache,
+    credentials: request.credentials,
+    headers,
+    integrity: request.integrity,
+    keepalive: request.keepalive,
+    method: 'GET',
+    mode: request.mode,
+    redirect: request.redirect,
+    referrer: request.referrer,
+    referrerPolicy: request.referrerPolicy,
+    signal: request.signal,
+  })
+}
+
 function getRoutePattern(target: RouteTarget): RoutePattern {
   if (target instanceof Route) {
     return target.pattern
@@ -351,6 +404,46 @@ export function createRouter<
     }
 
     return dispatch()
+  }
+
+  async function fetchRouter(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+    let context = createRequestContext(input, init)
+
+    for (let redirectCount = 0; ; redirectCount++) {
+      let request = context.request
+      let requestForRedirect =
+        request.redirect === 'follow' && request.body != null ? cloneRequest(request) : request
+      context.router = router
+
+      let response = await dispatchRouter(context)
+      if (!isRedirectResponse(response)) {
+        return response
+      }
+
+      if (request.redirect === 'manual') {
+        return response
+      }
+
+      if (request.redirect === 'error') {
+        throw new TypeError('Redirect encountered while redirect mode is set to `error`')
+      }
+
+      let location = response.headers.get('Location')
+      if (location == null) {
+        return response
+      }
+
+      let url = resolveRedirectURL(request, location)
+      if (url.origin !== new URL(request.url).origin) {
+        return response
+      }
+
+      if (redirectCount === maxRedirectCount) {
+        throw new TypeError('Too many redirects')
+      }
+
+      context = createRequestContext(createRedirectRequest(requestForRedirect, url, response))
+    }
   }
 
   async function dispatchMatches(context: RequestContext): Promise<Response> {
@@ -519,10 +612,7 @@ export function createRouter<
   let router: Router<RouterContext> = {
     ...rootBuilder,
     fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-      let context = createRequestContext(input, init)
-      context.router = router
-
-      return dispatchRouter(context)
+      return fetchRouter(input, init)
     },
   }
 

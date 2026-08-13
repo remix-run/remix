@@ -101,7 +101,9 @@ describe('OAuth flow integration', () => {
     assert.equal(providerAuthorizeResponse.status, 302)
     assert.equal(typeof callbackURL, 'string')
 
-    let callbackResponse = await router.fetch(createRequest(callbackURL!, loginResponse))
+    let callbackResponse = await router.fetch(createRequest(callbackURL!, loginResponse), {
+      redirect: 'manual',
+    })
 
     assert.equal(callbackResponse.status, 302)
     assert.equal(callbackResponse.headers.get('Location'), '/dashboard')

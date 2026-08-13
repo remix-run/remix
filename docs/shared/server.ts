@@ -24,7 +24,7 @@ export function startDocsServer<context extends RequestContext<any, any>>(
   let { assetServer, devRefresh, label, port = readPort() } = options
   let requestListener = createRequestListener(async (request) => {
     try {
-      return await router.fetch(request)
+      return await router.fetch(request, { redirect: 'manual' })
     } catch (error) {
       if (!(request.signal.aborted && error === request.signal.reason)) {
         console.error(error)

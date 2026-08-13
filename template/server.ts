@@ -11,7 +11,7 @@ const hmrProxyPort = process.env.HMR_PROXY_PORT
 const server = http.createServer(
   createRequestListener(async (request) => {
     try {
-      return await router.fetch(request)
+      return await router.fetch(request, { redirect: 'manual' })
     } catch (error) {
       if (!(request.signal.aborted && error === request.signal.reason)) {
         console.error(error)

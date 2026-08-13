@@ -83,7 +83,7 @@ describe('root controller', () => {
       body: formBody,
     })
 
-    let createResponse = await router.fetch(createRequest)
+    let createResponse = await router.fetch(createRequest, { redirect: 'manual' })
     assert.equal(createResponse.status, 302)
     assert.ok(createResponse.headers.get('Location')?.includes('/admin/books'))
 
