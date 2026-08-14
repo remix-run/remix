@@ -49,9 +49,3 @@ grandchild action
 The parent and child controller middleware are absent because controller middleware does not
 inherit. The parent mount middleware is present because the grandchild controller was registered
 inside the mounted route group.
-
-Run the focused regression tests with:
-
-```sh
-pnpm -C demos/controller-middleware test
-```
