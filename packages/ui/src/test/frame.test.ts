@@ -13,8 +13,11 @@ import {
 import { jsx } from '../runtime/jsx.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
+import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createStyleManager } from '../style/index.ts'
 import { withResolvers } from './utils.ts'
+
+const managedModulePreloadSelector = 'link[data-rmx][rel="modulepreload"]'
 
 describe('frames', () => {
   afterEach(() => {
@@ -472,6 +475,209 @@ describe('frames', () => {
 
     expect(scans.count).toBeLessThan(100)
   })
+
+  it('starts preloads from a document reload before hydrating its client entries', async () => {
+    document.documentElement.innerHTML = '<head><title>Initial</title></head><body></body>'
+
+    function StreamingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('section', { children: handle.props.label })
+    }
+
+    let preloadWasPresent = false
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let frame = createFrame(document, {
+      src: 'https://example.com/initial',
+      errorTarget,
+      loadModule() {
+        let preload = Array.from(
+          document.head.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"]'),
+        ).find((link) => new URL(link.href).pathname === '/entry.js')
+        preloadWasPresent = preload !== undefined
+        preload?.dispatchEvent(new Event('load'))
+        return StreamingEntry
+      },
+      resolveFrame() {
+        return appendFlushMarker(
+          [
+            '<!doctype html><html><head><title>Next</title>',
+            '<link data-rmx rel="modulepreload" href="/entry.js" />',
+            '</head><body><!-- rmx:h:h1 --><section>next</section><!-- /rmx:h -->',
+            rmxDataScript('next'),
+            '</body></html>',
+          ].join(''),
+          'document',
+        )
+      },
+      pendingClientEntries: new Map(),
+      scheduler,
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+      expect(preloadWasPresent).toBe(true)
+      expect(document.querySelector(managedModulePreloadSelector)).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('starts preloads from a nested frame reload before hydrating its client entries', async () => {
+    let start = document.createComment(' rmx:f:frame ')
+    let end = document.createComment(' /rmx:f ')
+    document.body.append(start, end)
+
+    function FragmentEntry() {
+      return () => jsx('section', { children: 'fragment' })
+    }
+
+    let preloadWasPresent = false
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let frame = createFrame([start, end], {
+      src: 'https://example.com/frame',
+      errorTarget,
+      loadModule() {
+        let preload = Array.from(
+          document.head.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"]'),
+        ).find((link) => new URL(link.href).pathname === '/fragment-entry.js')
+        preloadWasPresent = preload !== undefined
+        preload?.dispatchEvent(new Event('load'))
+        return FragmentEntry
+      },
+      resolveFrame() {
+        return [
+          '<head><link data-rmx rel="modulepreload" href="/fragment-entry.js" /></head>',
+          '<!-- rmx:h:h1 --><section>fragment</section><!-- /rmx:h -->',
+          rmxDataScript('fragment', '/fragment-entry.js', 'FragmentEntry'),
+        ].join('')
+      },
+      pendingClientEntries: new Map(),
+      scheduler,
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+      expect(preloadWasPresent).toBe(true)
+      expect(document.querySelector(managedModulePreloadSelector)).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('keeps active initial preloads connected across a document reload', async () => {
+    document.documentElement.innerHTML = [
+      '<head><title>Initial</title>',
+      '<link data-rmx rel="modulepreload" href="/entry.js" />',
+      '</head><body></body>',
+    ].join('')
+
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let frame = createFrame(document, {
+      src: 'https://example.com/initial',
+      errorTarget,
+      loadModule: () => () => null,
+      resolveFrame() {
+        return appendFlushMarker(
+          '<!doctype html><html><head><title>Next</title></head><body></body></html>',
+          'document',
+        )
+      },
+      pendingClientEntries: new Map(),
+      scheduler,
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      let activePreloads = Array.from(
+        document.head.querySelectorAll<HTMLLinkElement>(managedModulePreloadSelector),
+      )
+      expect(activePreloads).toHaveLength(2)
+
+      await frame.handle.reload()
+
+      expect(document.title).toBe('Next')
+      expect(activePreloads[0]?.isConnected).toBe(true)
+      expect(activePreloads[1]?.isConnected).toBe(true)
+      expect(document.head.querySelectorAll(managedModulePreloadSelector)).toHaveLength(2)
+
+      activePreloads[1]?.dispatchEvent(new Event('load'))
+      expect(document.head.querySelector(managedModulePreloadSelector)).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('keeps active frame preloads connected across a document reload', async () => {
+    document.documentElement.innerHTML = '<head><title>Initial</title></head><body></body>'
+
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let frame = createFrame(document, {
+      src: 'https://example.com/initial',
+      errorTarget,
+      loadModule: () => () => null,
+      resolveFrame() {
+        return appendFlushMarker(
+          '<!doctype html><html><head><title>Next</title></head><body></body></html>',
+          'document',
+        )
+      },
+      pendingClientEntries: new Map(),
+      scheduler,
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      let response = document.createElement('template')
+      response.innerHTML = '<link data-rmx rel="modulepreload" href="/frame-entry.js" />'
+      getDocumentModulePreloader(document).consumePreloadLinks(response.content)
+      let activePreload = document.head.querySelector<HTMLLinkElement>(managedModulePreloadSelector)
+      expect(activePreload).not.toBeNull()
+
+      await frame.handle.reload()
+
+      expect(document.title).toBe('Next')
+      expect(activePreload?.isConnected).toBe(true)
+      expect(document.head.querySelector(managedModulePreloadSelector)).toBe(activePreload)
+
+      activePreload?.dispatchEvent(new Event('load'))
+      expect(document.head.querySelector(managedModulePreloadSelector)).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
 })
 
 function countMarkerScans(marker: Comment, limit: number): { count: number } {
@@ -494,12 +700,16 @@ function countMarkerScans(marker: Comment, limit: number): { count: number } {
   return scans
 }
 
-function rmxDataScript(label: string): string {
+function rmxDataScript(
+  label: string,
+  moduleUrl = '/entry.js',
+  exportName = 'StreamingEntry',
+): string {
   let data = {
     h: {
       h1: {
-        moduleUrl: '/entry.js',
-        exportName: 'StreamingEntry',
+        moduleUrl,
+        exportName,
         props: { label },
       },
     },

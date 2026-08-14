@@ -1554,9 +1554,14 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
         </html>,
         {
           async resolveClientEntry(entryId, component) {
+            let [href, preloads] = await Promise.all([
+              assetServer.getHref(entryId),
+              assetServer.getPreloads(entryId),
+            ])
             return {
               exportName: component.name || 'ClientField',
-              href: await assetServer.getHref(entryId),
+              href,
+              preloads,
             }
           },
         },
@@ -1866,9 +1871,14 @@ function getNodeHmrServerSource(
     '    </html>,',
     '    {',
     '      async resolveClientEntry(entryId, component) {',
+    '        let [href, preloads] = await Promise.all([',
+    '          assetServer.getHref(entryId),',
+    '          assetServer.getPreloads(entryId),',
+    '        ])',
     '        return {',
     "          exportName: component.name || 'ClientField',",
-    '          href: await assetServer.getHref(entryId),',
+    '          href,',
+    '          preloads,',
     '        }',
     '      },',
     '    },',

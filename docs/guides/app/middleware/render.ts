@@ -29,9 +29,15 @@ export function render() {
               throw new Error(`Unable to resolve client entry export for ${entryId}`)
             }
 
+            let [href, preloads] = await Promise.all([
+              assetServer.getHref(moduleId),
+              assetServer.getPreloads(moduleId),
+            ])
+
             return {
-              href: await assetServer.getHref(moduleId),
+              href,
               exportName,
+              preloads,
             }
           },
           onError(error) {

@@ -14,9 +14,15 @@ export function render(node: RemixNode, request: Request, init?: ResponseInit) {
         throw new Error(`Expected \`import.meta.url\` for clientEntry ID, received '${entryId}'`)
       }
 
+      let [href, preloads] = await Promise.all([
+        assetServer.getHref(entryId),
+        assetServer.getPreloads(entryId),
+      ])
+
       return {
-        href: await assetServer.getHref(entryId),
+        href,
         exportName: entryId.split('#')[1] || component.name || titleCaseFileName(entryId),
+        preloads,
       }
     },
     async resolveFrame(src, target) {
