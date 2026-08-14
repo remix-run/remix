@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/data-table-postgres",
-  "version": "0.4.0",
-  "description": "PostgreSQL adapter for remix/data-table",
+  "version": "0.5.0",
+  "description": "PostgreSQL database implementation for remix/data-table",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {

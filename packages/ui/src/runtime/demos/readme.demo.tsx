@@ -278,7 +278,7 @@ function ButtonAdvanced() {
         }),
       ]}
     >
-      <span className="icon">★</span>
+      <span class="icon">★</span>
       Click me
     </button>
   )
@@ -607,9 +607,9 @@ function ListWithFragment() {
 // ============================================================================
 function Example(handle: Handle<{ title: string; children: RemixNode }>) {
   return () => (
-    <div className="example">
+    <div class="example">
       <h2>{handle.props.title}</h2>
-      <div className="example-content">{handle.props.children}</div>
+      <div class="example-content">{handle.props.children}</div>
     </div>
   )
 }
@@ -623,7 +623,7 @@ function Example(handle: Handle<{ title: string; children: RemixNode }>) {
  */
 export default function DemoApp() {
   return () => (
-    <div className="examples-grid">
+    <div class="examples-grid">
       <Example title="Getting Started - Counter">
         <App />
       </Example>

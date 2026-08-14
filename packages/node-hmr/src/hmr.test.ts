@@ -1,5 +1,4 @@
 import * as fs from 'node:fs/promises'
-import * as net from 'node:net'
 import * as path from 'node:path'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -443,7 +442,7 @@ describe('node-hmr', () => {
 
       await waitForResponse(ready.port, 'two')
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update value\.ts/)
+      await waitForOutput(server, /hmr update value\.ts/)
     } finally {
       await server.stop()
     }
@@ -493,7 +492,7 @@ describe('node-hmr', () => {
         () => server.output,
       )
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update value\.ts/)
+      await waitForOutput(server, /hmr update value\.ts/)
     } finally {
       await server.stop()
     }
@@ -557,7 +556,7 @@ describe('node-hmr', () => {
       await waitForResponse(ready.port, 'two', () => server.output)
       assert.equal(server.readyCount, 1)
       assert.match(server.output, /message boundary declined update/)
-      assert.match(server.output, /hmr update message\.ts/)
+      await waitForOutput(server, /hmr update message\.ts/)
       assert.doesNotMatch(server.output, /restart message boundary declined update/)
     } finally {
       await server.stop()
@@ -660,7 +659,7 @@ describe('node-hmr', () => {
 
       await waitForResponse(ready.port, 'two')
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update packages\/fixture-message\/index\.ts/)
+      await waitForOutput(server, /hmr update packages\/fixture-message\/index\.ts/)
     } finally {
       await server.stop()
     }
@@ -718,7 +717,7 @@ describe('node-hmr', () => {
 
       await waitForResponse(ready.port, 'two', () => server.output)
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update message\.ts/)
+      await waitForOutput(server, /hmr update message\.ts/)
 
       await fs.writeFile(path.join(fixture.path, 'value.ts'), `export const message = 'stale'`)
 
@@ -831,7 +830,7 @@ describe('node-hmr', () => {
 
       await waitForResponse(ready.port, 'two')
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update value\.ts/)
+      await waitForOutput(server, /hmr update value\.ts/)
     } finally {
       await server.stop()
     }
@@ -880,7 +879,7 @@ describe('node-hmr', () => {
 
       await waitForResponse(ready.port, 'Updated from generic boundary', () => server.output)
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update greeting\.tsx/)
+      await waitForOutput(server, /hmr update greeting\.tsx/)
     } finally {
       await server.stop()
     }
@@ -1154,6 +1153,50 @@ describe('node-hmr', () => {
         let payload = await events.read()
         assert.deepEqual(payload, { type: 'server:update' })
         await assertNoHmrEvent(events)
+      } finally {
+        await events.close()
+      }
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('waits for the replacement child before flushing browser reloads', async () => {
+    await using fixture = await createFixture(
+      {
+        'server.ts': getOverlappingServerUpdateSource(),
+        'rejecting.ts': getRejectingServerUpdateSource(),
+        'shared.ts': getSharedServerUpdateSource({ addedExport: false }),
+      },
+      { watch: { poll: true } },
+    )
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let hmrUrl = await server.waitForHmrUrl(0)
+      let events = await connectHmrEvents(hmrUrl.url)
+      try {
+        let ready = await server.waitForReady(0)
+        let browserEvent: HmrEventPayload | undefined
+        let browserEventPromise = events.read().then((event) => {
+          browserEvent = event
+        })
+
+        await fs.writeFile(
+          path.join(fixture.path, 'shared.ts'),
+          getSharedServerUpdateSource({ addedExport: true }),
+        )
+
+        let staleReady = await server.waitForReady(1)
+        assert.equal(staleReady.pid, ready.pid)
+        await waitForFile(path.join(fixture.path, 'replacement-started'))
+        assert.equal(browserEvent, undefined)
+
+        await fs.writeFile(path.join(fixture.path, 'release-replacement'), '')
+        let restarted = await server.waitForReady(2)
+        assert.notEqual(restarted.pid, ready.pid)
+        await browserEventPromise
+        assert.deepEqual(browserEvent, { type: 'browser:reload' })
       } finally {
         await events.close()
       }
@@ -1502,6 +1545,103 @@ function getEventChannelGreetingServerSource(): string {
   ].join('\n')
 }
 
+function getOverlappingServerUpdateSource(): string {
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
+
+  return [
+    `import { createServer } from 'node:http'`,
+    `import { access, writeFile } from 'node:fs/promises'`,
+    `import { fileURLToPath } from 'node:url'`,
+    `import { createBrowserHmrChannel, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    `import './rejecting.ts'`,
+    `import * as shared from './shared.ts'`,
+    ``,
+    `let initialStartedFile = fileURLToPath(new URL('./initial-started', import.meta.url))`,
+    `let invalidationStartedFile = fileURLToPath(new URL('./invalidation-started', import.meta.url))`,
+    `let releaseReplacementFile = fileURLToPath(new URL('./release-replacement', import.meta.url))`,
+    `let replacementStartedFile = fileURLToPath(new URL('./replacement-started', import.meta.url))`,
+    `let watchFile = fileURLToPath(new URL('./shared.ts', import.meta.url))`,
+    ``,
+    `let isReplacement = await exists(initialStartedFile)`,
+    `if (isReplacement) {`,
+    `  await writeFile(replacementStartedFile, '')`,
+    `  while (!(await exists(releaseReplacementFile))) {`,
+    `    await new Promise((resolve) => setTimeout(resolve, 10))`,
+    `  }`,
+    `} else {`,
+    `  await writeFile(initialStartedFile, '')`,
+    `}`,
+    ``,
+    `let browserHmrChannel = await createBrowserHmrChannel()`,
+    `browserHmrChannel.updateWatchedFiles({ add: [watchFile], remove: [] })`,
+    `browserHmrChannel.onFileEvents(() => [{ type: 'reload' }])`,
+    `console.log(JSON.stringify({ type: 'hmr-url', url: browserHmrChannel.url, pid: process.pid }))`,
+    ``,
+    `let currentMessage = shared.message`,
+    `let server`,
+    `await listen()`,
+    ``,
+    `if (import.meta.hot) {`,
+    `  import.meta.hot.accept('./shared.ts', async (updatedModule) => {`,
+    `    while (!(await exists(invalidationStartedFile))) {`,
+    `      await new Promise((resolve) => setTimeout(resolve, 10))`,
+    `    }`,
+    `    if (updatedModule && typeof updatedModule.message === 'string') {`,
+    `      currentMessage = updatedModule.message`,
+    `    }`,
+    `    server.closeAllConnections()`,
+    `    await new Promise((resolve) => server.close(resolve))`,
+    `    await listen()`,
+    `  })`,
+    `}`,
+    ``,
+    `async function listen() {`,
+    `  server = createServer((_request, response) => {`,
+    `    response.end(currentMessage)`,
+    `  })`,
+    `  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))`,
+    `  let address = server.address()`,
+    `  if (address && typeof address === 'object') {`,
+    `    emitServerReady()`,
+    `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
+    `  }`,
+    `}`,
+    ``,
+    `async function exists(filePath) {`,
+    `  try {`,
+    `    await access(filePath)`,
+    `    return true`,
+    `  } catch {`,
+    `    return false`,
+    `  }`,
+    `}`,
+  ].join('\n')
+}
+
+function getRejectingServerUpdateSource(): string {
+  return [
+    `import { writeFile } from 'node:fs/promises'`,
+    `import { fileURLToPath } from 'node:url'`,
+    `import './shared.ts'`,
+    ``,
+    `let invalidationStartedFile = fileURLToPath(new URL('./invalidation-started', import.meta.url))`,
+    ``,
+    `if (import.meta.hot) {`,
+    `  import.meta.hot.accept('./shared.ts', async () => {`,
+    `    await writeFile(invalidationStartedFile, '')`,
+    `    import.meta.hot.invalidate('Rejected shared server update')`,
+    `  })`,
+    `}`,
+  ].join('\n')
+}
+
+function getSharedServerUpdateSource(options: { addedExport: boolean }): string {
+  return [
+    `export const message = 'hello'`,
+    ...(options.addedExport ? [`export const added = true`] : []),
+  ].join('\n')
+}
+
 function getOverlappingBrowserHmrServerSource(): string {
   let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
 
@@ -1689,7 +1829,7 @@ function getHmrProxyHotChildServerSource(
 
 async function createFixture(
   files: Record<string, string>,
-  options: { nodeArgs?: string[] } = {},
+  options: { nodeArgs?: string[]; watch?: { poll: boolean } } = {},
 ): Promise<AsyncDisposable & { entryPath: string; path: string }> {
   let fixtureRoot = path.join(packageRoot, '.tmp')
   await fs.mkdir(fixtureRoot, { recursive: true })
@@ -1704,6 +1844,7 @@ async function createFixture(
       ``,
       `run('server.ts', {`,
       `  nodeArgs: ${JSON.stringify(nodeArgs)},`,
+      ...(options.watch === undefined ? [] : [`  watch: ${JSON.stringify(options.watch)},`]),
       `})`,
     ].join('\n'),
   })
@@ -1731,11 +1872,11 @@ async function createHmrProxyFixture(
   let nodeFetchServerImportUrl = pathToFileURL(
     path.join(packageRoot, '../node-fetch-server/src/index.ts'),
   ).href
-  let childPort = await getAvailablePort()
   await writeFixtureFiles(fixturePath, {
     ...files,
     'dev.ts': [
       `import * as http from 'node:http'`,
+      `import { readFile } from 'node:fs/promises'`,
       `import { fileURLToPath } from 'node:url'`,
       ``,
       `import { createFetchProxy } from ${JSON.stringify(fetchProxyImportUrl)}`,
@@ -1743,7 +1884,7 @@ async function createHmrProxyFixture(
       `import { createRequestListener } from ${JSON.stringify(nodeFetchServerImportUrl)}`,
       ``,
       `const originPort = 0`,
-      `const childPort = ${JSON.stringify(childPort)}`,
+      `let childPort = 0`,
       ``,
       `let returnedStaleGateway = false`,
       ``,
@@ -1760,9 +1901,10 @@ async function createHmrProxyFixture(
       `  createRequestListener(`,
       `    createHmrReadyFetch(`,
       `      hmrRunner,`,
-      `      createFetchProxy(\`http://127.0.0.1:\${childPort}\`, {`,
+      `      createFetchProxy('http://127.0.0.1:0', {`,
       `        xForwardedHeaders: true,`,
       `        async fetch(input, init) {`,
+      `          let childPort = await waitForPort(fileURLToPath(new URL('./child-port.txt', import.meta.url)))`,
       `          let targetUrl = new URL(String(input))`,
       `          if (targetUrl.pathname === '/retry-during-restart' && !returnedStaleGateway) {`,
       `            returnedStaleGateway = true`,
@@ -1770,7 +1912,8 @@ async function createHmrProxyFixture(
       `            await new Promise((resolve) => setTimeout(resolve, 500))`,
       `            return new Response('stale gateway', { status: 503 })`,
       `          }`,
-      `          return await fetch(input, init)`,
+      `          targetUrl.port = String(childPort)`,
+      `          return await fetch(targetUrl, init)`,
       `        },`,
       `      }),`,
       `    ),`,
@@ -1780,9 +1923,19 @@ async function createHmrProxyFixture(
       `server.listen(originPort, '127.0.0.1', () => {`,
       `  let address = server.address()`,
       `  if (address && typeof address === 'object') {`,
-      `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
+      `    console.log(JSON.stringify({ type: 'proxy-ready', port: address.port, pid: process.pid }))`,
       `  }`,
       `})`,
+      ``,
+      `async function waitForPort(filePath) {`,
+      `  while (true) {`,
+      `    try {`,
+      `      let port = Number(await readFile(filePath, 'utf8'))`,
+      `      if (port > 0) return port`,
+      `    } catch {}`,
+      `    await new Promise((resolve) => setTimeout(resolve, 25))`,
+      `  }`,
+      `}`,
       ``,
       `let shuttingDown = false`,
       ``,
@@ -1815,35 +1968,6 @@ async function writeFixtureFiles(root: string, files: Record<string, string>): P
       await fs.writeFile(absolutePath, contents)
     }),
   )
-}
-
-async function getAvailablePort(): Promise<number> {
-  let server = net.createServer()
-
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject)
-    server.listen(0, '127.0.0.1', () => {
-      server.off('error', reject)
-      resolve()
-    })
-  })
-
-  let address = server.address()
-  if (address == null || typeof address === 'string') {
-    throw new Error('Expected test server to listen on a TCP port')
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve()
-      }
-    })
-  })
-
-  return address.port
 }
 
 async function waitForOutput(server: ReturnType<typeof startFixtureServer>, pattern: RegExp) {
@@ -2097,7 +2221,7 @@ function parseReadyEvent(line: string): { pid: number; port: number } | null {
       typeof event === 'object' &&
       event !== null &&
       'type' in event &&
-      event.type === 'ready' &&
+      (event.type === 'ready' || event.type === 'proxy-ready') &&
       'port' in event &&
       typeof event.port === 'number' &&
       'pid' in event &&

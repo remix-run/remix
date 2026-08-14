@@ -1,11 +1,6 @@
 import { invariant } from './invariant.ts'
 import type { FrameContext } from './frame.ts'
-
-type HydratedVirtualRootStartMarker = Comment & {
-  $rmx: {
-    dispose(): void
-  }
-}
+import { disposeClientEntryBoundary, getClientEntryBoundaryOwner } from './client-entry-boundary.ts'
 
 type MarkerKind = 'frame-start' | 'frame-end' | 'virtual-root-start' | 'virtual-root-end'
 
@@ -15,6 +10,23 @@ type CommentMarkerRangeReplacement = {
   currentEndIndex: number
   nextEndIndex: number
 }
+
+type NodeSiblingUnit = {
+  kind: 'node'
+  node: Node
+  startIndex: number
+  endIndex: number
+}
+
+type BoundarySiblingUnit = {
+  kind: 'frame' | 'hydration'
+  start: Comment
+  end: Comment
+  startIndex: number
+  endIndex: number
+}
+
+type SiblingUnit = NodeSiblingUnit | BoundarySiblingUnit
 
 const REMIX_PRESERVE_DOM_ATTRIBUTE = 'rmx-preserve-dom'
 
@@ -28,70 +40,7 @@ export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
     context.regionTailRef ??
     (curr.length > 0 ? (curr[curr.length - 1].nextSibling as ChildNode | null) : null)
 
-  let currentIndex = 0
-  let nextIndex = 0
-  while (currentIndex < curr.length || nextIndex < next.length) {
-    let c = curr[currentIndex]
-    let n = next[nextIndex]
-
-    if (!c && n) {
-      if (regionTailRef) {
-        parent.insertBefore(n, regionTailRef)
-      } else {
-        parent.appendChild(n)
-      }
-      nextIndex++
-    } else if (c && !n) {
-      removeNode(c, parent, context)
-      currentIndex++
-    } else if (c && n) {
-      let replacement = getCommentMarkerRangeReplacement(
-        c,
-        n,
-        curr,
-        next,
-        currentIndex,
-        nextIndex,
-        context,
-      )
-      if (replacement) {
-        replaceCommentMarkerRange(replacement, parent, context)
-        currentIndex = replacement.currentEndIndex + 1
-        nextIndex = replacement.nextEndIndex + 1
-        continue
-      }
-
-      // Skip hydrated client-entry marker ranges; hydration pass re-renders
-      // roots with new props from incoming payload
-      if (isVirtualRootStartMarker(c) && isVirtualRootStartMarker(n)) {
-        let currentEnd = findHydrationEndMarker(c)
-        let nextEnd = findHydrationEndMarker(n)
-        let nextData = n.data
-        if (c.data !== nextData) c.data = nextData
-
-        let currentEndIndex = curr.indexOf(currentEnd)
-        let nextEndIndex = next.indexOf(nextEnd)
-        currentIndex = currentEndIndex + 1
-        nextIndex = nextEndIndex + 1
-        continue
-      }
-
-      let cursor = diffNode(c, n, context)
-      if (cursor) {
-        let nextEndIndex = next.indexOf(cursor)
-        let currentEndIndex =
-          isFrameStartMarker(c) && isFrameEndMarker(cursor)
-            ? findFrameEndIndex(curr, currentIndex)
-            : currentIndex
-        currentIndex = currentEndIndex + 1
-        nextIndex = nextEndIndex + 1
-        continue
-      }
-
-      currentIndex++
-      nextIndex++
-    }
-  }
+  diffSiblingUnits(curr, next, parent, regionTailRef, context)
 }
 
 function diffNode(current: Node, next: Node, context: FrameContext): ChildNode | undefined {
@@ -117,42 +66,43 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   // Comment -> Comment
   if (isCommentNode(current) && isCommentNode(next) && markerKindsMatch(current, next)) {
     let newData = next.data
-    if (current.data !== newData) {
-      let updated = false
-      if (isFrameStartMarker(current)) {
-        if (shouldPreserveFrameStartMarker(current, next, context)) {
+    let updated = false
+    if (isFrameStartMarker(current)) {
+      if (shouldPreserveFrameStartMarker(current, next, context)) {
+        if (current.data !== newData) {
           current.data = newData
-          updated = true
-
-          let frame = context.frameInstances.get(current)
-          let nextMarkerData = getFrameMarkerData(next, context)
-          if (frame && nextMarkerData) {
-            if (nextMarkerData.status === 'resolved') {
-              let nextEnd = findFrameEndMarker(next)
-              let nextContent = collectFrameContentFragment(current.ownerDocument, next, nextEnd)
-              void frame.renderMarkerContent(
-                { ...nextMarkerData, id: getFrameId(next) },
-                nextContent,
-                {
-                  signal: context.signal,
-                },
-              )
-              return nextEnd
-            }
-
-            if (frame.isDisplayingResolvedContent()) {
-              return findFrameEndMarker(next)
-            }
-          }
-        } else {
-          disposeFrameStartMarker(current, context)
-          current.data = newData
-          updated = true
         }
-      }
-      if (!updated) {
+        updated = true
+
+        let frame = context.frameInstances.get(current)
+        let nextMarkerData = getFrameMarkerData(next, context)
+        if (frame && nextMarkerData) {
+          if (nextMarkerData.status === 'resolved') {
+            let nextEnd = findFrameEndMarker(next)
+            let nextContent = collectFrameContentFragment(current.ownerDocument, next, nextEnd)
+            void frame.renderMarkerContent(
+              { ...nextMarkerData, id: getFrameId(next) },
+              nextContent,
+              {
+                data: context.data,
+                signal: context.signal,
+              },
+            )
+            return nextEnd
+          }
+
+          if (frame.isDisplayingResolvedContent()) {
+            return findFrameEndMarker(next)
+          }
+        }
+      } else if (current.data !== newData) {
+        disposeFrameStartMarker(current, context)
         current.data = newData
+        updated = true
       }
+    }
+    if (!updated && current.data !== newData) {
+      current.data = newData
     }
     return
   }
@@ -287,49 +237,70 @@ function isPopoverOpen(element: Element): boolean {
 }
 
 function diffElementChildren(current: Element, next: Element, context: FrameContext): void {
-  let currentChildren = Array.from(current.childNodes)
-  let nextChildren = Array.from(next.childNodes)
+  let currentChildren: Node[]
 
-  // Keyed map by data-key for current children
-  let keyToIndex = new Map<string, number>()
-  for (let i = 0; i < currentChildren.length; i++) {
-    let node = currentChildren[i]
-    if (isElement(node)) {
-      let key = node.getAttribute('data-key')
-      if (key != null) keyToIndex.set(key, i)
+  // Allow actively managed preload link tags in the head to stay in the document
+  // during diffing rather than removing them which aborts the preload in Safari
+  if (context.isActiveModulePreload && current === current.ownerDocument.head) {
+    currentChildren = []
+    for (let node of current.childNodes) {
+      if (!context.isActiveModulePreload(node)) currentChildren.push(node)
     }
+  } else {
+    currentChildren = Array.from(current.childNodes)
+  }
+  let nextChildren = Array.from(next.childNodes)
+  diffSiblingUnits(currentChildren, nextChildren, current, null, context)
+}
+
+function diffSiblingUnits(
+  currentNodes: Node[],
+  nextNodes: Node[],
+  parent: ParentNode,
+  regionTailRef: ChildNode | null,
+  context: FrameContext,
+): void {
+  let currentUnits = parseSiblingUnits(currentNodes)
+  let nextUnits = parseSiblingUnits(nextNodes)
+  let keyToIndex = new Map<string, number>()
+
+  for (let i = 0; i < currentUnits.length; i++) {
+    let key = getSiblingUnitKey(currentUnits[i])
+    if (key !== undefined) keyToIndex.set(key, i)
   }
 
-  let used = new Array<boolean>(currentChildren.length).fill(false)
-  let matchIndexForNext = new Array<number>(nextChildren.length).fill(-1)
+  let used = new Array<boolean>(currentUnits.length).fill(false)
+  let matchIndexForNext = new Array<number>(nextUnits.length).fill(-1)
 
-  for (let i = 0; i < nextChildren.length; i++) {
-    let nextChild = nextChildren[i]
+  // Reserve globally matched keyed elements and semantic boundaries before
+  // positionally pairing the remaining ordinary siblings.
+  for (let i = 0; i < nextUnits.length; i++) {
+    let nextUnit = nextUnits[i]
     let matchIndex = -1
+    let key = getSiblingUnitKey(nextUnit)
 
-    if (isFrameEndMarker(nextChild)) {
-      for (let j = 0; j < currentChildren.length; j++) {
-        if (!used[j] && isFrameEndMarker(currentChildren[j])) {
+    if (key !== undefined) {
+      let keyedIndex = keyToIndex.get(key)
+      if (
+        keyedIndex !== undefined &&
+        !used[keyedIndex] &&
+        siblingUnitsComparable(currentUnits[keyedIndex], nextUnit)
+      ) {
+        matchIndex = keyedIndex
+      }
+    }
+
+    // Boundary identities behave like implicit keys. Repeated boundaries with
+    // the same identity are paired in source order because server markers do
+    // not carry a separate application key.
+    if (matchIndex === -1 && nextUnit.kind !== 'node') {
+      for (let j = 0; j < currentUnits.length; j++) {
+        let currentUnit = currentUnits[j]
+        if (used[j] || currentUnit.kind !== nextUnit.kind) continue
+        if (shouldPreserveBoundaryUnit(currentUnit, nextUnit, context)) {
           matchIndex = j
           break
         }
-      }
-    } else if (isElement(nextChild)) {
-      let key = nextChild.getAttribute('data-key')
-      if (key != null && keyToIndex.has(key)) {
-        let idx = keyToIndex.get(key)!
-        if (!used[idx]) matchIndex = idx
-      }
-    }
-
-    if (matchIndex === -1) {
-      let candidateIndex = i
-      if (
-        candidateIndex < currentChildren.length &&
-        !used[candidateIndex] &&
-        nodeTypesComparable(currentChildren[candidateIndex], nextChild)
-      ) {
-        matchIndex = candidateIndex
       }
     }
 
@@ -337,125 +308,203 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
     matchIndexForNext[i] = matchIndex
   }
 
-  // Forward pass: update matched, collect committed
-  let committed: Array<Node | undefined> = new Array(nextChildren.length)
-  for (let i = 0; i < nextChildren.length; i++) {
-    let mi = matchIndexForNext[i]
-    if (mi !== -1) {
-      let curChild = currentChildren[mi]
-      let nextChild = nextChildren[i]
+  let remainingCurrentIndexes: number[] = []
+  for (let i = 0; i < currentUnits.length; i++) {
+    if (!used[i]) remainingCurrentIndexes.push(i)
+  }
 
-      let replacement = getCommentMarkerRangeReplacement(
-        curChild,
-        nextChild,
-        currentChildren,
-        nextChildren,
-        mi,
-        i,
-        context,
+  let remainingNextIndexes: number[] = []
+  for (let i = 0; i < nextUnits.length; i++) {
+    if (matchIndexForNext[i] === -1) remainingNextIndexes.push(i)
+  }
+
+  let remainingLength = Math.min(remainingCurrentIndexes.length, remainingNextIndexes.length)
+  for (let i = 0; i < remainingLength; i++) {
+    let currentIndex = remainingCurrentIndexes[i]
+    let nextIndex = remainingNextIndexes[i]
+    let currentUnit = currentUnits[currentIndex]
+    let nextUnit = nextUnits[nextIndex]
+
+    if (
+      currentUnit.kind !== 'node' ||
+      nextUnit.kind !== 'node' ||
+      getSiblingUnitKey(currentUnit) !== undefined ||
+      getSiblingUnitKey(nextUnit) !== undefined ||
+      !siblingUnitsComparable(currentUnit, nextUnit)
+    ) {
+      continue
+    }
+
+    used[currentIndex] = true
+    matchIndexForNext[nextIndex] = currentIndex
+  }
+
+  let committed = new Array<SiblingUnit>(nextUnits.length)
+  for (let i = 0; i < nextUnits.length; i++) {
+    let matchIndex = matchIndexForNext[i]
+    let nextUnit = nextUnits[i]
+    if (matchIndex === -1) {
+      committed[i] = nextUnit
+      continue
+    }
+
+    let currentUnit = currentUnits[matchIndex]
+    if (currentUnit.kind === 'node' && nextUnit.kind === 'node') {
+      diffNode(currentUnit.node, nextUnit.node, context)
+      committed[i] = currentUnit
+      continue
+    }
+
+    invariant(currentUnit.kind !== 'node' && nextUnit.kind !== 'node', 'Expected boundaries')
+
+    let replacement = getCommentMarkerRangeReplacement(
+      currentUnit.start,
+      nextUnit.start,
+      currentNodes,
+      nextNodes,
+      currentUnit.startIndex,
+      nextUnit.startIndex,
+      context,
+    )
+    if (replacement) {
+      replaceCommentMarkerRange(replacement, parent, context)
+      committed[i] = nextUnit
+      continue
+    }
+
+    let cursor = diffNode(currentUnit.start, nextUnit.start, context)
+    if (!cursor && currentUnit.kind === 'frame' && nextUnit.kind === 'frame') {
+      diffNodes(
+        collectNodesBetween(currentUnit.start, currentUnit.end),
+        nextNodes.slice(nextUnit.startIndex + 1, nextUnit.endIndex),
+        {
+          ...context,
+          regionParent: parent,
+          regionTailRef: currentUnit.end,
+        },
       )
-      if (replacement) {
-        replaceCommentMarkerRange(replacement, current, context)
-
-        for (let k = mi; k <= replacement.currentEndIndex; k++) used[k] = true
-
-        committed[i] = replacement.nextStart
-        committed[replacement.nextEndIndex] = nextChildren[replacement.nextEndIndex]
-        for (let j = i + 1; j < replacement.nextEndIndex; j++) committed[j] = undefined
-
-        i = replacement.nextEndIndex
-        continue
-      }
-
-      let cursor = diffNode(curChild, nextChild, context)
-      if (cursor) {
-        // `diffNode` can preserve hydration and frame marker ranges by returning
-        // the next end marker, so skip the owned interior nodes here.
-        let nextEndIdx = nextChildren.indexOf(cursor)
-        let currEndIdx =
-          isFrameStartMarker(curChild) && isFrameEndMarker(cursor)
-            ? findFrameEndIndex(currentChildren, mi)
-            : findHydrationEndIndex(currentChildren, mi)
-
-        // Adjacent marker ranges can pre-match into the next range and leave an
-        // orphaned end marker behind. Clear those stale matches first.
-        for (let j = i + 1; j <= nextEndIdx; j++) {
-          let matchedIndex = matchIndexForNext[j]
-          if (matchedIndex > currEndIdx) {
-            used[matchedIndex] = false
-          }
-          matchIndexForNext[j] = -1
-        }
-
-        // Mark the entire current region as used to avoid removals.
-        for (let k = mi; k <= currEndIdx; k++) used[k] = true
-
-        // Preserve both comment markers in committed; skip interior in reorder pass.
-        committed[i] = curChild // start marker
-        committed[nextEndIdx] = currentChildren[currEndIdx] // end marker
-        for (let j = i + 1; j < nextEndIdx; j++) committed[j] = undefined
-
-        // Jump to end of region.
-        i = nextEndIdx
-        continue
-      }
-      committed[i] = curChild
-    } else {
-      committed[i] = nextChildren[i]
     }
+    committed[i] = currentUnit
   }
 
-  // Backward pass: reorder via inserts while avoiding redundant moves
-  let anchor: Node | undefined = undefined
+  let anchor: Node | null = regionTailRef
   for (let i = committed.length - 1; i >= 0; i--) {
-    let node = committed[i]
-    if (!node) continue
+    let unit = committed[i]
+    let first = getSiblingUnitFirstNode(unit)
+    let ref = anchor?.parentNode === parent ? anchor : null
 
-    // Use only an anchor that is actually a child of the current parent
-    let ref = anchor && anchor.parentNode === current ? anchor : null
-
-    // Existing comment markers delimit live ranges, so do not reorder them
-    // independently from their contents. New markers still need to be inserted
-    // before they can be used as anchors.
-    if (getMarkerKind(node) !== undefined) {
-      if (node.parentNode !== current) {
-        current.insertBefore(node, ref)
-      }
-      anchor = node
+    if (
+      unit.kind === 'node' &&
+      isPreservedDomElement(unit.node) &&
+      unit.node.parentNode === parent
+    ) {
+      anchor = unit.node
       continue
     }
 
-    if (isPreservedDomElement(node) && node.parentNode === current) {
-      anchor = node
+    placeSiblingUnitBefore(unit, parent, ref)
+    if (first.parentNode === parent) anchor = first
+  }
+
+  for (let i = 0; i < currentUnits.length; i++) {
+    if (!used[i]) removeSiblingUnit(currentUnits[i], parent, context)
+  }
+}
+
+function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
+  let units: SiblingUnit[] = []
+
+  for (let i = 0; i < nodes.length; i++) {
+    let node = nodes[i]
+    if (isVirtualRootStartMarker(node)) {
+      let endIndex = findHydrationEndIndex(nodes, i)
+      invariant(endIndex > i, 'Hydration end marker not found')
+      let end = nodes[endIndex]
+      invariant(isVirtualRootEndMarker(end), 'Expected hydration end marker')
+      units.push({ kind: 'hydration', start: node, end, startIndex: i, endIndex })
+      i = endIndex
       continue
     }
 
-    if (node.parentNode === current) {
-      // Node already in parent: move only if its nextSibling is not the desired ref.
-      let targetNext = ref
-      let alreadyInPlace =
-        (targetNext === null && node.nextSibling === null) || node.nextSibling === targetNext
-      if (!alreadyInPlace) {
-        current.insertBefore(node, targetNext)
-      }
-    } else {
-      // New node: insert relative to a valid ref or append
-      current.insertBefore(node, ref)
+    if (isFrameStartMarker(node)) {
+      let endIndex = findFrameEndIndex(nodes, i)
+      invariant(endIndex > i, 'Frame end marker not found')
+      let end = nodes[endIndex]
+      invariant(isFrameEndMarker(end), 'Expected frame end marker')
+      units.push({ kind: 'frame', start: node, end, startIndex: i, endIndex })
+      i = endIndex
+      continue
     }
 
-    // Advance anchor only after the node is placed in the correct parent
-    if (node.parentNode === current) {
-      anchor = node
-    }
+    invariant(!isVirtualRootEndMarker(node), 'Unexpected hydration end marker')
+    invariant(!isFrameEndMarker(node), 'Unexpected frame end marker')
+    units.push({ kind: 'node', node, startIndex: i, endIndex: i })
   }
 
-  // Remove any current children not used
-  for (let i = 0; i < currentChildren.length; i++) {
-    if (!used[i]) {
-      let nodeToRemove = currentChildren[i]
-      removeNode(nodeToRemove, current, context)
+  return units
+}
+
+function getSiblingUnitKey(unit: SiblingUnit): string | undefined {
+  if (unit.kind !== 'node' || !isElement(unit.node)) return
+  return unit.node.getAttribute('data-key') ?? undefined
+}
+
+function siblingUnitsComparable(current: SiblingUnit, next: SiblingUnit): boolean {
+  if (current.kind !== next.kind) return false
+  if (current.kind !== 'node' || next.kind !== 'node') return true
+  return nodeTypesComparable(current.node, next.node)
+}
+
+function shouldPreserveBoundaryUnit(
+  current: BoundarySiblingUnit,
+  next: BoundarySiblingUnit,
+  context: FrameContext,
+): boolean {
+  if (current.kind !== next.kind) return false
+  return current.kind === 'frame'
+    ? shouldPreserveFrameStartMarker(current.start, next.start, context)
+    : shouldPreserveHydrationStartMarker(current.start, next.start, context)
+}
+
+function getSiblingUnitFirstNode(unit: SiblingUnit): Node {
+  return unit.kind === 'node' ? unit.node : unit.start
+}
+
+function placeSiblingUnitBefore(unit: SiblingUnit, parent: ParentNode, ref: Node | null): void {
+  if (unit.kind === 'node') {
+    if (unit.node.parentNode !== parent || unit.node.nextSibling !== ref) {
+      parent.insertBefore(unit.node, ref)
     }
+    return
   }
+
+  let nodes = collectNodeRange(unit.start, unit.end)
+  if (unit.start.parentNode === parent && unit.end.nextSibling === ref) return
+
+  let fragment = unit.start.ownerDocument.createDocumentFragment()
+  for (let node of nodes) fragment.appendChild(node)
+  parent.insertBefore(fragment, ref)
+}
+
+function removeSiblingUnit(unit: SiblingUnit, parent: ParentNode, context: FrameContext): void {
+  if (unit.kind === 'node') {
+    removeNode(unit.node, parent, context)
+    return
+  }
+
+  for (let node of collectNodeRange(unit.start, unit.end)) {
+    removeNode(node, parent, context)
+  }
+}
+
+function collectNodesBetween(start: Comment, end: Comment): Node[] {
+  let nodes: Node[] = []
+  let node = start.nextSibling
+  while (node && node !== end) {
+    nodes.push(node)
+    node = node.nextSibling
+  }
+  return nodes
 }
 
 function isPreservedDomElement(node: Node): node is Element {
@@ -505,8 +554,15 @@ function findHydrationEndMarker(start: Comment): Comment {
 }
 
 function findHydrationEndIndex(nodes: Node[], startIdx: number): number {
+  let depth = 1
+
   for (let j = startIdx + 1; j < nodes.length; j++) {
-    if (isHydrationEndComment(nodes[j])) return j
+    let node = nodes[j]
+    if (isVirtualRootStartMarker(node)) depth++
+    if (isHydrationEndComment(node)) {
+      depth--
+      if (depth === 0) return j
+    }
   }
   return startIdx
 }
@@ -569,14 +625,31 @@ function shouldPreserveFrameStartMarker(
 ): boolean {
   if (!isFrameStartMarker(next)) return false
 
-  let currentData = getFrameMarkerData(current, context)
   let nextData = getFrameMarkerData(next, context)
+  let currentFrame = context.frameInstances.get(current)
 
   return (
-    currentData !== undefined &&
+    currentFrame !== undefined &&
     nextData !== undefined &&
-    currentData.src === nextData.src &&
-    currentData.name === nextData.name
+    currentFrame.matchesIdentity(nextData.src, nextData.name)
+  )
+}
+
+function shouldPreserveHydrationStartMarker(
+  current: Comment,
+  next: Comment,
+  context: FrameContext,
+): boolean {
+  if (!isVirtualRootStartMarker(next)) return false
+
+  let currentOwner = getClientEntryBoundaryOwner(current)
+  let nextData = getHydrationMarkerData(next, context)
+
+  return (
+    currentOwner !== undefined &&
+    nextData !== undefined &&
+    currentOwner.identity.moduleUrl === nextData.moduleUrl &&
+    currentOwner.identity.exportName === nextData.exportName
   )
 }
 
@@ -604,6 +677,30 @@ function getCommentMarkerRangeReplacement(
       nextEndIndex: findFrameEndIndex(nextNodes, nextIndex),
     }
   }
+
+  if (
+    isVirtualRootStartMarker(current) &&
+    isVirtualRootStartMarker(next) &&
+    !shouldPreserveHydrationStartMarker(current, next, context)
+  ) {
+    return {
+      currentStart: current,
+      nextStart: next,
+      currentEndIndex: findHydrationEndIndex(currentNodes, currentIndex),
+      nextEndIndex: findHydrationEndIndex(nextNodes, nextIndex),
+    }
+  }
+}
+
+function getHydrationMarkerData(marker: Comment, context: FrameContext) {
+  let id = getHydrationId(marker)
+  return context.data.h?.[id]
+}
+
+function getHydrationId(marker: Comment): string {
+  let trimmed = marker.data.trim()
+  invariant(trimmed.startsWith('rmx:h:'), 'Invalid hydration start marker')
+  return trimmed.slice('rmx:h:'.length)
 }
 
 function getFrameMarkerData(marker: Comment, context: FrameContext) {
@@ -622,8 +719,8 @@ function replaceCommentMarkerRange(
   parent: ParentNode,
   context: FrameContext,
 ): void {
-  let currentEnd = findFrameEndMarker(replacement.currentStart)
-  let nextEnd = findFrameEndMarker(replacement.nextStart)
+  let currentEnd = findCommentMarkerRangeEnd(replacement.currentStart)
+  let nextEnd = findCommentMarkerRangeEnd(replacement.nextStart)
   let nextNodes = collectNodeRange(replacement.nextStart, nextEnd)
   let currentNodes = collectNodeRange(replacement.currentStart, currentEnd)
 
@@ -634,6 +731,12 @@ function replaceCommentMarkerRange(
   for (let node of currentNodes) {
     removeNode(node, parent, context)
   }
+}
+
+function findCommentMarkerRangeEnd(start: Comment): Comment {
+  if (isFrameStartMarker(start)) return findFrameEndMarker(start)
+  if (isVirtualRootStartMarker(start)) return findHydrationEndMarker(start)
+  throw new Error('Comment marker range start not found')
 }
 
 function collectNodeRange(start: Node, end: Node): Node[] {
@@ -681,8 +784,7 @@ function disposeRemovedVirtualRoots(node: Node): void {
     let next = stack.pop()
     if (!next) continue
 
-    if (isHydratedVirtualRootStartMarker(next)) {
-      next.$rmx.dispose()
+    if (isVirtualRootStartMarker(next) && disposeClientEntryBoundary(next)) {
       continue
     }
 
@@ -718,10 +820,6 @@ function disposeFrameStartMarker(marker: Comment, context: FrameContext): void {
 
 function isVirtualRootStartMarker(node: Node): node is Comment {
   return isCommentNode(node) && node.data.trim().startsWith('rmx:h:')
-}
-
-function isHydratedVirtualRootStartMarker(node: Node): node is HydratedVirtualRootStartMarker {
-  return isVirtualRootStartMarker(node) && '$rmx' in node
 }
 
 function isVirtualRootEndMarker(node: Node): node is Comment {

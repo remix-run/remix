@@ -178,21 +178,88 @@ During SSR, `handle.frame.src` should point at the frame currently being rendere
 
 ## Client-resolved frames
 
-On the client, `run` accepts an optional `resolveFrame` implementation:
+On the client, `run` accepts an optional `resolveFrame` implementation. The resolver owns the request, including how non-GET form data is encoded:
 
 ```tsx
+import type { ResolveFrameOptions } from 'remix/ui'
+
 let app = run({
   loadModule: ...,
-  async resolveFrame(src, signal, target) {
-    let headers = new Headers({ Accept: 'text/html' })
-    if (target) headers.set('X-Remix-Target', target)
-    let response = await fetch(src, { headers, signal })
-    return response.body ?? (await response.text())
+  async resolveFrame(src, options) {
+    let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
+    if (options?.target) headers.set('X-Remix-Target', options.target)
+    return fetch(src, {
+      headers,
+      method: options?.method,
+      body: getRequestBody(options),
+      signal: options?.signal,
+    })
   },
 })
+
+function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+  let formData = options?.formData
+  if (!formData) return
+  if (options.encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
+}
 ```
 
-This is used both for initial hydration of pending frames and for `handle.frame.reload()` calls. If omitted, frames resolve to `<p>resolve frame unimplemented</p>`. Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
+This is used for initial hydration of pending frames, `handle.frame.reload()` calls, link navigations, and form navigations. `options` may contain `signal` and `target`; non-GET form submissions also provide `formData`, `method`, and `encType`. The runtime reports the browser's selected transport metadata but does not encode the body or interpret fields such as `_method`. The resolver owns that policy. The example preserves the two common HTML encodings: `URLSearchParams` produces `application/x-www-form-urlencoded`, while passing `FormData` lets `fetch()` produce `multipart/form-data` with the required boundary.
+
+A client resolver may return frame content directly or return the fetched `Response`. Returning the response lets Remix stream its body. When `fetch()` followed a redirect during a top-frame navigation, the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`; other frames render the response without changing either URL.
+
+If omitted, frames resolve to `<p>resolve frame unimplemented</p>` and document navigations are left to the browser. Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
+
+## Link navigation
+
+When `run({ resolveFrame })` is active, eligible same-origin anchor navigations reload `handle.frames.top` through the frame resolver instead of performing a full document navigation.
+
+- `rmx-target="name"` reloads a named frame.
+- `rmx-src="/frame"` overrides the URL resolved into that frame while `href` remains the navigation destination.
+- `rmx-history="push|replace"` controls how the navigation updates history.
+- `rmx-reset-scroll="false"` preserves the current scroll position.
+- `rmx-document` leaves the link as a normal document navigation.
+
+The `link(href, { history })` mixin adds the corresponding `rmx-history` value when its host is a native anchor. Download links, cross-origin links, and links marked with `rmx-document` are left to the browser.
+
+## Form navigation
+
+When `run({ resolveFrame })` is active, eligible same-origin form submissions use the same frame navigation path as links. Native constraint validation and the form's `submit` event run first, so invalid forms never reach `resolveFrame`.
+
+- Submissions reload `handle.frames.top` by default.
+- `rmx-target="name"` reloads a named frame.
+- `rmx-src="/frame"` overrides the URL resolved into that frame while the form action remains the navigation destination.
+- `rmx-history="push|replace"` overrides how the navigation updates history.
+- `rmx-reset-scroll="false"` preserves the current scroll position.
+- `rmx-document` leaves the submission as a normal document navigation.
+- Submitter overrides such as `formmethod`, `formenctype`, and `formtarget` take precedence over the form attributes.
+- Cross-origin submissions, `method="dialog"`, and `target="_blank"` are left to the browser.
+
+GET forms behave like links: the browser includes their successful controls in the destination URL, and the resolver receives that URL as `src` without separate submission metadata. For non-GET forms, use `formData`, `method`, and `encType` to choose the request body. A resolver may send `FormData` directly for `multipart/form-data`, convert it to `URLSearchParams` for `application/x-www-form-urlencoded`, or apply an application-specific encoding policy.
+
+For example, this form works as a normal document POST without JavaScript and reloads the named frame after `run({ resolveFrame })` starts:
+
+```tsx
+<Frame name="account" src="/account/edit" />
+
+<form action="/account/edit" method="post" rmx-target="account">
+  <label for="display-name">Display name</label>
+  <input id="display-name" name="displayName" required />
+  <button type="submit">Save</button>
+</form>
+```
+
+The action should return HTML suitable for the targeted frame when the resolver identifies a frame request, while retaining its normal document response or redirect for unenhanced submissions. The resolver above forwards app-defined `X-Remix-Frame` and `X-Remix-Target` headers for that distinction.
+
+Enhanced non-GET submissions to the current URL replace its navigation history entry instead of pushing a duplicate. Submissions to a different URL push a new entry, as do GET submissions whose values are represented in the destination URL. The `rmx-history` attribute overrides that default: use `rmx-history="replace"` to force replacement or `rmx-history="push"` to force a push. Non-GET `FormData` is used only for the active frame reload and is not retained in history.
+
+Forms work as normal document submissions before the client runtime loads and whenever they use `rmx-document`, so this behavior remains progressively enhanced. Browsers ignore `rmx-history` without the client runtime and use their normal document history behavior.
 
 ## Frame lifecycle
 

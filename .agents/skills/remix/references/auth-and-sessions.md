@@ -137,7 +137,7 @@ Notice that there is no manual `Set-Cookie` plumbing in the action — the sessi
 ```typescript
 import { auth, createSessionAuthScheme } from 'remix/middleware/auth'
 import { Session } from 'remix/session'
-import { Database } from 'remix/data-table'
+import { databaseContext } from '~/middleware/database.ts'
 
 export function loadAuth() {
   return auth({
@@ -148,7 +148,7 @@ export function loadAuth() {
           return data ?? null
         },
         async verify(value, context) {
-          let db = context.get(Database)
+          let db = context.get(databaseContext)
           return (await db.find(users, value.userId)) ?? null
         },
         invalidate(session) {
@@ -195,7 +195,7 @@ export let passwordProvider = createCredentialsAuthProvider({
     return s.parse(loginSchema, formData)
   },
   async verify({ email, password }, context) {
-    let db = context.get(Database)
+    let db = context.get(databaseContext)
     let user = await db.findOne(users, { where: { email } })
     if (!user || !(await verifyPassword(password, user.password_hash))) {
       return null
@@ -300,7 +300,7 @@ export default createController(routes.auth.google, {
     async callback(context) {
       let { result, returnTo } = await finishExternalAuth(googleProvider, context)
 
-      let db = context.get(Database)
+      let db = context.get(databaseContext)
       let { user, authAccount } = await resolveExternalAuth(db, result)
 
       let session = completeAuth(context)
@@ -322,7 +322,7 @@ Use `refreshExternalAuth(provider, tokens)` when an app has stored OAuth/OIDC to
 
 ```typescript
 async function refreshGoogleTokens({ get }) {
-  let db = get(Database)
+  let db = get(databaseContext)
   let account = await db.findOne(authAccounts, { where: { provider: 'google' } })
   if (!account) return null
 

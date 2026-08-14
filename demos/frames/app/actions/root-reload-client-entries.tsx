@@ -1,13 +1,20 @@
 import { createAction } from 'remix/router'
-import type { Handle } from 'remix/ui'
+import { css, type Handle } from 'remix/ui'
 
 import {
   PersistentRootReloadEntry,
   RemovableRootReloadEntry,
   RootReloadControls,
-} from '../assets/root-reload-client-entries.tsx'
+} from './public/root-reload-client-entries.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
+import {
+  leadStyle,
+  linkStyle,
+  mutedStyle,
+  pageHeadingStyle,
+  sectionHeadingStyle,
+} from '../ui/public/styles.ts'
 
 export const rootReloadClientEntriesAction = createAction(routes.rootReloadClientEntries, {
   async handler({ render, url }) {
@@ -41,13 +48,11 @@ type RootReloadClientEntriesPageProps = {
 function RootReloadClientEntriesPage(handle: Handle<RootReloadClientEntriesPageProps>) {
   return () => (
     <Document title="Root reload client entries" maxWidth="860px">
-      <a href={routes.home.href()} style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
+      <a href={routes.home.href()} mix={linkStyle}>
         ← Back
       </a>
-      <h1 style={{ marginTop: 16, marginBottom: 8, letterSpacing: '-0.02em' }}>
-        Root reload client entries
-      </h1>
-      <p style={{ marginTop: 0, color: '#b9c6ff' }}>
+      <h1 mix={pageHeadingStyle}>Root reload client entries</h1>
+      <p mix={leadStyle}>
         Use the buttons below to reload the root document frame with new server props, either
         keeping all client entries or removing one entry from the next HTML payload.
       </p>
@@ -60,27 +65,27 @@ function RootReloadClientEntriesPage(handle: Handle<RootReloadClientEntriesPageP
       />
 
       <div
-        style={{
+        mix={css({
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
           gap: 16,
           marginTop: 20,
-        }}
+        })}
       >
         <PersistentRootReloadEntry serverVersion={handle.props.serverVersion} />
         {handle.props.includeRemoved ? (
           <RemovableRootReloadEntry serverVersion={handle.props.serverVersion} />
         ) : (
           <section
-            style={{
+            mix={css({
               border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: 12,
               padding: 16,
               background: 'rgba(255,255,255,0.03)',
-            }}
+            })}
           >
-            <h2 style={{ marginTop: 0, fontSize: 16 }}>Removed entry slot</h2>
-            <p id="removed-entry-replacement" style={{ marginBottom: 0, color: '#9aa8e8' }}>
+            <h2 mix={sectionHeadingStyle}>Removed entry slot</h2>
+            <p id="removed-entry-replacement" mix={[mutedStyle, css({ marginBottom: 0 })]}>
               The removable client entry is absent from this server response.
             </p>
           </section>

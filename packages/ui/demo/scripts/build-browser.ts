@@ -6,7 +6,7 @@ import { discoverDemoFiles } from '../app/demo-runner/discovery.ts'
 
 const DEMO_DIRECTORY = url.fileURLToPath(new URL('..', import.meta.url))
 const OUTPUT_DIRECTORY = path.join(DEMO_DIRECTORY, 'public/assets')
-const ENTRY_FILE = path.join(DEMO_DIRECTORY, 'app/assets/entry.tsx')
+const ENTRY_FILE = path.join(DEMO_DIRECTORY, 'app/demo-runner/public/entry.tsx')
 
 const buildOptions: esbuild.BuildOptions = {
   bundle: true,

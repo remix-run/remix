@@ -1,5 +1,5 @@
 import { jsx } from './jsx.ts'
-import { Frame, createFrameHandle, type FrameContent } from './component.ts'
+import { Frame, createFrameHandle, type FrameContent, type FrameResolution } from './component.ts'
 import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
@@ -10,6 +10,14 @@ import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
 import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
+import { getDocumentModulePreloader } from './module-preloader.ts'
+import { unwrapFrameResolution } from './frame-resolution.ts'
+import {
+  disposeClientEntryBoundary,
+  getClientEntryBoundaryOwner,
+  setClientEntryBoundaryOwner,
+  type ClientEntryIdentity,
+} from './client-entry-boundary.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -63,23 +71,70 @@ export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Func
  * Resolves content for a browser-loaded frame.
  *
  * @param src Source string from the `<Frame src>` prop.
- * @param signal Abort signal for the active frame load or reload.
- * @param target Optional name of the frame being reloaded.
- * @returns HTML, a stream of HTML bytes, or Remix node content to render into the frame.
+ * @param options Information about the active frame load or form submission.
+ * @returns Frame content or a response whose body should be rendered into the frame.
  */
 export type ResolveFrame = (
   src: string,
-  signal?: AbortSignal,
-  target?: string,
-) => Promise<FrameContent> | FrameContent
+  options?: ResolveFrameOptions,
+) => Promise<FrameResolution> | FrameResolution
+
+/**
+ * Information available while resolving browser-loaded frame content.
+ */
+export interface ResolveFrameOptions {
+  /** Optional name of the frame being loaded or reloaded. */
+  target?: string
+  /** Form values submitted to the frame source for a non-GET submission. */
+  formData?: FormData
+  /** HTTP method selected by the form and its submitter. */
+  method?: string
+  /** Form encoding selected by the form and its submitter. */
+  encType?: string
+  /** Aborts the reload when the navigation that started it is cancelled. */
+  signal?: AbortSignal
+}
 
 type InternalFrameContent = FrameContent | DocumentFragment
+
+type FrameReloadOptions = Omit<ResolveFrameOptions, 'target'>
+
+type FrameReloadResult = {
+  signal: AbortSignal
+  redirectedTo?: string
+}
 
 type FrameTemplateListener = (fragment: DocumentFragment) => void
 
 const bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
 const frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
+
+function createLinkedAbortController(
+  first: AbortSignal,
+  second?: AbortSignal,
+): { controller: AbortController; disconnect: () => void } {
+  let controller = new AbortController()
+  let signals = second ? [first, second] : [first]
+  let abort = () => controller.abort()
+
+  for (let signal of signals) {
+    if (signal.aborted) {
+      controller.abort()
+      break
+    }
+    signal.addEventListener('abort', abort, { once: true })
+  }
+
+  return {
+    controller,
+    disconnect() {
+      for (let signal of signals) {
+        signal.removeEventListener('abort', abort)
+      }
+    },
+  }
+}
 
 function stripDoctypeMarkup(html: string): string {
   return html.replace(DOCTYPE_PATTERN, '')
@@ -111,16 +166,34 @@ export type FrameRuntime = {
   pendingClientEntries: PendingClientEntries
   scheduler: Scheduler
   styleManager: StyleManager
-  data: RmxData
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
   serverFrameReload: { signal: AbortSignal } | undefined
+  reloadForNavigation?: (options?: FrameReloadOptions) => Promise<FrameReloadResult>
 }
 
 export function isFrameRuntime(value: unknown): value is FrameRuntime {
   return isRecord(value) && Reflect.get(value, FRAME_RUNTIME) === true
+}
+
+/**
+ * Reloads a frame and returns response metadata used by the navigation runtime.
+ *
+ * @param frame Frame handle to reload.
+ * @param options Form submission metadata and cancellation signal.
+ * @returns The reload signal and final response URL, when redirected.
+ */
+export function reloadFrameForNavigation(
+  frame: FrameHandle,
+  options?: FrameReloadOptions,
+): Promise<FrameReloadResult> {
+  let runtime = frame.$runtime
+  invariant(isFrameRuntime(runtime), 'Expected a frame runtime')
+  let reload = runtime.reloadForNavigation
+  invariant(reload, 'Expected frame runtime to support navigation reloads')
+  return reload(options)
 }
 
 export type FrameContext = {
@@ -137,9 +210,11 @@ export type FrameContext = {
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
+  lifecycleSignal: AbortSignal
   regionTailRef?: ChildNode | null
   regionParent?: ParentNode | null
   signal?: AbortSignal
+  isActiveModulePreload?: (node: Node) => boolean
 }
 
 type FrameInit = {
@@ -178,6 +253,7 @@ export type Frame = {
     content: InternalFrameContent,
     options?: RenderOptions,
   ) => Promise<void>
+  matchesIdentity: (src: string, name: string | undefined) => boolean
   dispose: () => void
   handle: FrameHandle
 }
@@ -187,6 +263,11 @@ type RenderOptions = {
   initialHydrationTracker?: InitialHydrationTracker
   signal?: AbortSignal
   contentStatus?: 'pending' | 'resolved'
+  data?: RmxData
+}
+
+type ActiveRenderOptions = RenderOptions & {
+  data: RmxData
 }
 
 export function createFrame(root: FrameRoot, init: FrameInit): Frame {
@@ -199,6 +280,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let reloadAbortUnsubscribe: (() => void) | undefined
   let reloadKind: 'direct' | 'ancestor' | undefined
   let styleManager = init.styleManager ?? createStyleManager()
+  let modulePreloader = getDocumentModulePreloader(container.doc)
   let currentMarker = init.marker
   let displayedContentStatus: 'pending' | 'resolved' = init.marker?.status ?? 'resolved'
   let pendingTemplateMarkerId: string | undefined
@@ -206,16 +288,24 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let pendingTemplateUnsubscribe: (() => void) | undefined
   let inheritedReloadPending = false
   let inheritedReloadAbortUnsubscribe: (() => void) | undefined
+  let disposed = false
+  let lifecycleController = new AbortController()
+
+  if (isDocumentNode(container.root)) {
+    modulePreloader.adoptInitialPreloadLinks(container.root)
+  } else {
+    modulePreloader.consumePreloadLinks(container.root)
+  }
 
   // Merge any rmx-data found in the current document once at startup.
   mergeRmxDataFromDocument(init.data, container.doc)
 
-  let runtime = createFrameRuntime({ ...init, styleManager })
+  let runtime = createFrameRuntime({ ...init, styleManager, reloadForNavigation: reload })
 
   let frame = createFrameHandle({
     src: init.src,
     $runtime: runtime,
-    reload: () => reload(),
+    reload: async () => (await reload()).signal,
     replace: async (content: FrameContent) => {
       await render(content)
     },
@@ -241,18 +331,47 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     moduleLoads: init.moduleLoads,
     frameInstances: init.frameInstances,
     namedFrames: init.namedFrames,
+    lifecycleSignal: lifecycleController.signal,
     regionTailRef: container.regionTailRef,
     regionParent: container.regionParent,
   }
 
   async function render(content: InternalFrameContent, options?: RenderOptions): Promise<void> {
-    if (options?.signal?.aborted) return
+    if (disposed || lifecycleController.signal.aborted || options?.signal?.aborted) return
+    let ownsData = options?.data === undefined
+    let renderOptions: ActiveRenderOptions = {
+      ...options,
+      data: options?.data ?? {},
+    }
+
+    try {
+      await renderContent(content, renderOptions)
+    } finally {
+      if (ownsData) clearRmxData(renderOptions.data)
+    }
+  }
+
+  async function renderContent(
+    content: InternalFrameContent,
+    options: ActiveRenderOptions,
+  ): Promise<void> {
+    if (isRenderAborted(options.signal)) return
 
     if (content instanceof ReadableStream) {
-      await renderFrameStream(content, container.doc, async (html, flushKind) => {
-        if (options?.signal?.aborted) return
-        await render(html, { ...options, flushKind })
-      })
+      let linkedAbort = createLinkedAbortController(lifecycleController.signal, options.signal)
+      try {
+        await renderFrameStream(
+          content,
+          container.doc,
+          async (html, flushKind) => {
+            if (isRenderAborted(options.signal)) return
+            await render(html, { ...options, flushKind })
+          },
+          linkedAbort.controller.signal,
+        )
+      } finally {
+        linkedAbort.disconnect()
+      }
       return
     }
 
@@ -265,9 +384,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         contentRoot = createFrameContentRoot()
       }
 
-      if (options?.signal?.aborted) return
+      if (isRenderAborted(options.signal)) return
       contentRoot.render(content)
-      displayedContentStatus = options?.contentStatus ?? 'resolved'
+      displayedContentStatus = options.contentStatus ?? 'resolved'
       return
     }
 
@@ -293,11 +412,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let isFullDocumentReload =
       container.root instanceof Document &&
       htmlContent !== undefined &&
-      options?.flushKind === 'document'
+      options.flushKind === 'document'
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
-      mergeRmxDataFromDocument(context.data, parsed)
+      modulePreloader.consumePreloadLinks(parsed)
+      let responseData = options.data
+      mergeRmxDataFromDocument(responseData, parsed)
+      let responseContext = { ...context, data: responseData }
       context.styleManager.adoptServerStyles(
         collectFrameServerStyleTags(createElementContainer(parsed)),
       )
@@ -305,59 +427,71 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       syncElementAttributes(container.doc.documentElement, parsed.documentElement)
 
       diffNodes([container.doc.head], [parsed.head], {
-        ...context,
+        ...responseContext,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
-        signal: options?.signal,
+        signal: options.signal,
+        isActiveModulePreload: modulePreloader.hasActivePreloads()
+          ? modulePreloader.isActivePreload
+          : undefined,
       })
       diffNodes([container.doc.body], [parsed.body], {
-        ...context,
+        ...responseContext,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
-        signal: options?.signal,
+        signal: options.signal,
       })
 
       let bodyContainer = createElementContainer(container.doc.body)
-      if (options?.signal?.aborted) return
+      if (isRenderAborted(options.signal)) return
       scheduleHydrationInContainer(
         bodyContainer,
-        context,
-        options?.initialHydrationTracker,
-        options?.signal,
+        responseContext,
+        options.initialHydrationTracker,
+        options.signal,
       )
-      await createSubFrames(bodyContainer.childNodes, context, options)
-      displayedContentStatus = options?.contentStatus ?? 'resolved'
+      await createSubFrames(bodyContainer.childNodes, responseContext, options)
+      if (isRenderAborted(options.signal)) return
+      displayedContentStatus = options.contentStatus ?? 'resolved'
       return
     }
 
     let fragment =
       htmlContent !== undefined ? createFragmentFromString(container.doc, htmlContent) : content
+    modulePreloader.consumePreloadLinks(fragment)
     context.styleManager.adoptServerStyles(
       collectFrameServerStyleTags(createElementContainer(fragment)),
     )
     removeEmptyHeads(fragment)
-    mergeRmxDataFromFragment(context.data, fragment)
+    let responseData = options.data
+    mergeRmxDataFromFragment(responseData, fragment)
+    let responseContext = { ...context, data: responseData }
 
     let nextContainer = createContainer(fragment)
 
-    if (options?.signal?.aborted) return
+    if (isRenderAborted(options.signal)) return
 
     diffNodes(container.childNodes, Array.from(nextContainer.childNodes), {
-      ...context,
+      ...responseContext,
       regionTailRef: container.regionTailRef,
       regionParent: container.regionParent,
-      signal: options?.signal,
+      signal: options.signal,
     })
 
-    if (options?.signal?.aborted) return
+    if (isRenderAborted(options.signal)) return
     scheduleHydrationInContainer(
       container,
-      context,
-      options?.initialHydrationTracker,
-      options?.signal,
+      responseContext,
+      options.initialHydrationTracker,
+      options.signal,
     )
-    await createSubFrames(container.childNodes, context, options)
-    displayedContentStatus = options?.contentStatus ?? 'resolved'
+    await createSubFrames(container.childNodes, responseContext, options)
+    if (isRenderAborted(options.signal)) return
+    displayedContentStatus = options.contentStatus ?? 'resolved'
+  }
+
+  function isRenderAborted(signal?: AbortSignal): boolean {
+    return disposed || lifecycleController.signal.aborted || signal?.aborted === true
   }
 
   function createFrameContentRoot(): VirtualRoot {
@@ -401,18 +535,30 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let initialHydrationTracker = createInitialHydrationTracker()
 
     context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
-    await createSubFrames(container.childNodes, context)
+    let subFramesReady = createSubFrames(container.childNodes, context)
     scheduleHydrationInContainer(container, context, initialHydrationTracker)
 
-    if (currentMarker?.status === 'pending') {
-      await watchPendingFrameTemplate(currentMarker, initialHydrationTracker)
-    }
+    try {
+      await subFramesReady
 
-    initialHydrationTracker.finalize()
-    await initialHydrationTracker.ready()
+      if (disposed || context.lifecycleSignal.aborted) return
+
+      if (currentMarker?.status === 'pending') {
+        await watchPendingFrameTemplate(currentMarker, initialHydrationTracker)
+      }
+
+      initialHydrationTracker.finalize()
+      await initialHydrationTracker.ready()
+    } finally {
+      clearRmxData(context.data)
+    }
   }
 
   function dispose(): void {
+    if (disposed) return
+    disposed = true
+    lifecycleController.abort()
+    clearRmxData(context.data)
     reloadController?.abort()
     reloadController = undefined
     reloadAbortUnsubscribe?.()
@@ -451,12 +597,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     startInheritedReload,
     updateMarker,
     renderMarkerContent,
+    matchesIdentity: (src, name) => !disposed && frame.src === src && frameName === name,
     dispose,
     handle: frame,
   }
 
   async function updateMarker(marker: FrameMarkerData, options?: RenderOptions): Promise<void> {
-    if (options?.signal?.aborted) return
+    if (disposed || context.lifecycleSignal.aborted || options?.signal?.aborted) return
     let previousMarker = currentMarker
     let isInheritedReload = previousMarker !== undefined && previousMarker.id !== marker.id
     currentMarker = marker
@@ -489,7 +636,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     content: InternalFrameContent,
     options?: RenderOptions,
   ): Promise<void> {
-    if (options?.signal?.aborted) return
+    if (disposed || context.lifecycleSignal.aborted || options?.signal?.aborted) return
     let previousMarker = currentMarker
     let isInheritedReload = previousMarker !== undefined && previousMarker.id !== marker.id
     currentMarker = marker
@@ -501,18 +648,23 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     clearPendingFrameTemplateWatch()
     await render(content, { ...options, contentStatus: 'resolved' })
 
-    if (isInheritedReload && !options?.signal?.aborted) {
+    if (
+      isInheritedReload &&
+      !disposed &&
+      !context.lifecycleSignal.aborted &&
+      !options?.signal?.aborted
+    ) {
       completeInheritedReload()
     }
   }
 
-  async function reload(): Promise<AbortSignal> {
-    let controller = startReload()
-    return await resolveAndRenderReload(controller)
+  async function reload(options?: FrameReloadOptions): Promise<FrameReloadResult> {
+    let controller = startReload(options?.signal)
+    return await resolveAndRenderReload(controller, options)
   }
 
-  function startReload(): AbortController {
-    let controller = replaceReloadController()
+  function startReload(signal?: AbortSignal): AbortController {
+    let controller = replaceReloadController(signal)
     reloadKind = 'direct'
     frame.dispatchEvent(new Event('reloadStart'))
     startSubFrameInheritedReloads(getContentNodes(), controller.signal)
@@ -567,14 +719,33 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     return controller
   }
 
-  async function resolveAndRenderReload(controller: AbortController): Promise<AbortSignal> {
+  async function resolveAndRenderReload(
+    controller: AbortController,
+    options?: FrameReloadOptions,
+  ): Promise<FrameReloadResult> {
     try {
-      let content = await init.resolveFrame(frame.src, controller.signal, frameName)
-      if (reloadController !== controller || controller.signal.aborted) return controller.signal
+      let resolution = await init.resolveFrame(frame.src, {
+        ...options,
+        signal: controller.signal,
+        target: frameName,
+      })
+      if (reloadController !== controller || controller.signal.aborted) {
+        return { signal: controller.signal }
+      }
+      let { content, redirectedTo } = await unwrapFrameResolution(resolution)
+      if (reloadController !== controller || controller.signal.aborted) {
+        return { signal: controller.signal }
+      }
       await render(content, { signal: controller.signal })
-      return controller.signal
+      return {
+        signal: controller.signal,
+        redirectedTo:
+          reloadController === controller && !controller.signal.aborted ? redirectedTo : undefined,
+      }
     } catch (error) {
-      if (reloadController !== controller || controller.signal.aborted) return controller.signal
+      if (reloadController !== controller || controller.signal.aborted) {
+        return { signal: controller.signal }
+      }
       init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       throw error
     } finally {
@@ -658,7 +829,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     signal?: AbortSignal,
     onResolved?: () => void,
   ): Promise<void> {
-    if (signal?.aborted) return
+    if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
     if (pendingTemplateMarkerId === marker.id) return
 
     clearPendingFrameTemplateWatch()
@@ -668,11 +839,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (early) {
       clearPendingFrameTemplateWatch()
       await render(early, { initialHydrationTracker, signal, contentStatus: 'resolved' })
-      if (!signal?.aborted) onResolved?.()
+      if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
       return
     }
 
-    if (signal?.aborted) {
+    if (disposed || context.lifecycleSignal.aborted || signal?.aborted) {
       clearPendingFrameTemplateWatch()
       return
     }
@@ -680,11 +851,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let observer = setupTemplateObserver()
     pendingTemplateObserver = observer
     let unsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
-      if (signal?.aborted) return
+      if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
       if (pendingTemplateMarkerId !== marker.id) return
       clearPendingFrameTemplateWatch()
       await render(fragment, { signal, contentStatus: 'resolved' })
-      if (!signal?.aborted) onResolved?.()
+      if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
     })
     pendingTemplateUnsubscribe = unsubscribe
 
@@ -702,7 +873,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (buffered) {
       clearPendingFrameTemplateWatch()
       await render(buffered, { initialHydrationTracker, signal, contentStatus: 'resolved' })
-      if (!signal?.aborted) onResolved?.()
+      if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
     }
   }
 }
@@ -715,11 +886,11 @@ export function createFrameRuntime(init: {
   pendingClientEntries: PendingClientEntries
   scheduler: Scheduler
   styleManager: StyleManager
-  data: RmxData
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
+  reloadForNavigation?: (options?: FrameReloadOptions) => Promise<FrameReloadResult>
 }): FrameRuntime {
   return {
     [FRAME_RUNTIME]: true,
@@ -730,12 +901,12 @@ export function createFrameRuntime(init: {
     pendingClientEntries: init.pendingClientEntries,
     scheduler: init.scheduler,
     styleManager: init.styleManager,
-    data: init.data,
     moduleCache: init.moduleCache,
     moduleLoads: init.moduleLoads,
     frameInstances: init.frameInstances,
     namedFrames: init.namedFrames,
     serverFrameReload: undefined,
+    reloadForNavigation: init.reloadForNavigation,
   }
 }
 
@@ -798,6 +969,11 @@ function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): vo
     mergeRmxData(into, parseRmxDataScript(script))
     script.remove()
   }
+}
+
+function clearRmxData(data: RmxData): void {
+  delete data.h
+  delete data.f
 }
 
 function removeEmptyHeads(fragment: DocumentFragment): void {
@@ -896,40 +1072,59 @@ function scheduleHydrationMarker(
   initialHydrationTracker?: InitialHydrationTracker,
   signal?: AbortSignal,
 ): void {
-  if (signal?.aborted) return
+  if (signal?.aborted || context.lifecycleSignal.aborted) return
 
   let done = initialHydrationTracker?.track()
   let key = `${entry.moduleUrl}#${entry.exportName}`
+  let identity: ClientEntryIdentity = {
+    moduleUrl: entry.moduleUrl,
+    exportName: entry.exportName,
+  }
+  let props: Record<string, unknown> | undefined = entry.props
+  let completed = false
+
+  let complete = () => {
+    if (completed) return
+    completed = true
+    props = undefined
+    signal?.removeEventListener('abort', complete)
+    context.lifecycleSignal.removeEventListener('abort', complete)
+    done?.()
+  }
+
+  signal?.addEventListener('abort', complete, { once: true })
+  context.lifecycleSignal.addEventListener('abort', complete, { once: true })
 
   let hydrateWithComponent = (component: ElementFunction) => {
-    if (signal?.aborted) return
+    if (signal?.aborted || context.lifecycleSignal.aborted) return
     if (!isHydrationMarkerLive(marker, context)) return
-    let vElement = createElement(component, entry.props)
+    if (!props) return
+    let vElement = createElement(component, props)
     context.pendingClientEntries.set(marker.start, [marker.end, vElement])
-    hydrateRegion(vElement, marker.start, marker.end, context, signal)
+    hydrateRegion(vElement, marker.start, marker.end, identity, context, signal)
   }
 
   let cached = context.moduleCache.get(key)
   if (cached) {
     hydrateWithComponent(cached)
-    done?.()
+    complete()
     return
   }
 
-  getOrStartModuleLoad(key, entry, marker.id, context)
+  getOrStartModuleLoad(key, identity, marker.id, context)
     .then((component) => {
       if (component) {
         hydrateWithComponent(component)
       }
     })
     .finally(() => {
-      done?.()
+      complete()
     })
 }
 
 function getOrStartModuleLoad(
   key: string,
-  entry: HydrationData,
+  identity: ClientEntryIdentity,
   markerId: string,
   context: FrameContext,
 ): Promise<ElementFunction | undefined> {
@@ -938,9 +1133,11 @@ function getOrStartModuleLoad(
 
   let loadPromise = (async () => {
     try {
-      let mod = await context.loadModule(entry.moduleUrl, entry.exportName)
+      let mod = await context.loadModule(identity.moduleUrl, identity.exportName)
       if (!isElementFunction(mod)) {
-        throw new Error(`Export "${entry.exportName}" from "${entry.moduleUrl}" is not a function`)
+        throw new Error(
+          `Export "${identity.exportName}" from "${identity.moduleUrl}" is not a function`,
+        )
       }
       context.moduleCache.set(key, mod)
       return mod
@@ -1011,6 +1208,7 @@ function hydrateRegion(
   vElement: RemixElement,
   start: Comment,
   end: Comment,
+  identity: ClientEntryIdentity,
   context: FrameContext,
   signal?: AbortSignal,
 ): void {
@@ -1021,9 +1219,10 @@ function hydrateRegion(
   // The same marker can be discovered by overlapping hydration passes
   // (for example, document root + nested frame root). Reuse the existing
   // virtual root instead of redefining the marker property.
-  if (isHydratedVirtualRootMarker(start)) {
+  let owner = getClientEntryBoundaryOwner(start)
+  if (owner) {
     if (!signal) {
-      start.$rmx.render(vElement)
+      owner.root.render(vElement)
       return
     }
 
@@ -1037,7 +1236,7 @@ function hydrateRegion(
 
     frameRuntime.serverFrameReload = { signal }
     try {
-      start.$rmx.render(vElement)
+      owner.root.render(vElement)
     } finally {
       frameRuntime.serverFrameReload = previousServerFrameReload
     }
@@ -1054,7 +1253,7 @@ function hydrateRegion(
     context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   })
 
-  Object.defineProperty(start, '$rmx', { value: root, enumerable: false })
+  setClientEntryBoundaryOwner(start, identity, root)
   root.render(vElement)
 }
 
@@ -1144,8 +1343,7 @@ function removeVirtualRoots(nodes: Node[]): void {
   for (let i = 0; i < nodes.length; i++) {
     let node = nodes[i]
 
-    if (isHydratedVirtualRootMarker(node)) {
-      node.$rmx.dispose()
+    if (isCommentNode(node) && isHydrationStart(node) && disposeClientEntryBoundary(node)) {
       let end = findEndMarker(node, isHydrationStart, isHydrationEnd)
       i = findMarkerRangeEndIndex(nodes, end, i)
       continue
@@ -1336,12 +1534,22 @@ async function renderFrameStream(
   stream: ReadableStream<Uint8Array>,
   doc: Document,
   applyHtml: (html: string, flushKind: FlushKind) => Promise<void>,
+  signal?: AbortSignal,
 ): Promise<void> {
   let reader = stream.getReader()
   let decoder = new TextDecoder()
   let buffer = ''
   let html = ''
   let appliedOnce = false
+  let abort = () => {
+    void reader.cancel().catch(() => {})
+  }
+  if (signal?.aborted) {
+    await reader.cancel()
+    reader.releaseLock()
+    return
+  }
+  signal?.addEventListener('abort', abort, { once: true })
 
   try {
     while (true) {
@@ -1380,6 +1588,7 @@ async function renderFrameStream(
       await applyHtml('', 'fragment')
     }
   } finally {
+    signal?.removeEventListener('abort', abort)
     reader.releaseLock()
   }
 }
@@ -1519,10 +1728,6 @@ function isHydrationEnd(node: Comment): boolean {
   return node.data.trim() === '/rmx:h'
 }
 
-function isHydratedVirtualRootMarker(node: Node): node is VirtualRootMarker {
-  return isCommentNode(node) && '$rmx' in node
-}
-
 function isFrameStart(node: Node): node is Comment {
   return isCommentNode(node) && node.data.trim().startsWith('rmx:f:')
 }
@@ -1567,6 +1772,10 @@ function findEndMarker(
 
 function isCommentNode(node: Node | null | undefined): node is Comment {
   return node?.nodeType === Node.COMMENT_NODE
+}
+
+function isDocumentNode(node: Node): node is Document {
+  return node.nodeType === Node.DOCUMENT_NODE
 }
 
 function isDocumentFragmentNode(value: unknown): value is DocumentFragment {

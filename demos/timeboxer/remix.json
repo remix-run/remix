@@ -1,0 +1,16 @@
+{
+  "$schema": "https://remix.run/schemas/remix.json",
+  "db": {
+    "adapter": {
+      "type": "sqlite",
+      "filename": {
+        "env": "DATABASE_URL",
+        "default": "./db/timebox.sqlite"
+      },
+      "foreignKeys": true
+    },
+    "migrations": {
+      "directory": "./db/migrations"
+    }
+  }
+}

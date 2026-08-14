@@ -1,5 +1,16 @@
 {
   "$schema": "https://remix.run/schemas/remix.json",
+  "db": {
+    "adapter": {
+      "type": "sqlite",
+      "filename": "./db/bookstore.sqlite",
+      "foreignKeys": true
+    },
+    "migrations": {
+      "directory": "./db/migrations"
+    },
+    "seed": "./db/seed.sql"
+  },
   "test": {
     "playwright": {
       "configFile": "./playwright.config.ts"

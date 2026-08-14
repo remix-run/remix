@@ -2,6 +2,41 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `createAssetServer()` now uses `allowFiles` and `denyFiles` instead of `allow` and `deny` for file path access rules.
+
+  ```ts
+  import { createAssetServer } from 'remix/assets'
+
+  // Before:
+  export const assetServer = createAssetServer({
+    allow: ['app/routes.ts', 'app/**/public/**'],
+    deny: ['app/**/*.test.*'],
+    /* ... */
+  })
+
+  // After:
+  export const assetServer = createAssetServer({
+    allowFiles: ['app/routes.ts', 'app/**/public/**'],
+    denyFiles: ['app/**/*.test.*'],
+    /* ... */
+  })
+  ```
+
+- Add an `allowPackages` option to `createAssetServer()` for package-level access control, allowing packages and their dependencies to be served, e.g. `allowPackages: ['remix']`
+
+- Added `hmr` support to `createAssetServer` that provides an `import.meta.hot` API to JS assets.
+
+- Added `scripts.loaders` to `createAssetServer` for post-processing compiled JavaScript with Node-compatible synchronous loaders.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`route-pattern@0.24.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.24.0)
+
 ## v0.4.4
 
 ### Patch Changes

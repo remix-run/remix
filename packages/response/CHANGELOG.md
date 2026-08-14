@@ -2,6 +2,12 @@
 
 This is the changelog for [`response`](https://github.com/remix-run/remix/tree/main/packages/response). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.8
+
+### Patch Changes
+
+- `compressResponse()` now adds `Vary: Accept-Encoding` to otherwise eligible identity responses, including requests that omit `Accept-Encoding`, so shared caches do not reuse an uncompressed response for compression-capable clients.
+
 ## v0.3.7
 
 ### Patch Changes

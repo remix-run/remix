@@ -1,4 +1,4 @@
-import type { ColumnDefinition, ForeignKeyAction, IdentityOptions, TableRef } from './adapter.ts'
+import type { ColumnDefinition, ForeignKeyAction, IdentityOptions, TableRef } from './driver.ts'
 
 function toTableRef(name: string): TableRef {
   let segments = name.split('.')

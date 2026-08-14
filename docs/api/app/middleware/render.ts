@@ -22,9 +22,19 @@ export function render(assetServer: DocsAssetServer) {
               throw new Error(`Unable to resolve client entry export for ${entryId}`)
             }
 
+            if (!moduleId.startsWith('file://')) {
+              return { href: moduleId, exportName }
+            }
+
+            let [href, preloads] = await Promise.all([
+              assetServer.getHref(moduleId),
+              assetServer.getPreloads(moduleId),
+            ])
+
             return {
-              href: moduleId.startsWith('file://') ? await assetServer.getHref(moduleId) : moduleId,
+              href,
               exportName,
+              preloads,
             }
           },
           onError(error) {

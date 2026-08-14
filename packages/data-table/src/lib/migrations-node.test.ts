@@ -4,9 +4,10 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, it } from '@remix-run/test'
 
-import { loadMigrations } from './migrations-node.ts'
+import type { Database } from './database.ts'
+import { loadMigrations, loadSeed } from './migrations-node.ts'
 import { createMigrationRunner } from './migrations/runner.ts'
-import { MemoryMigrationAdapter } from '../../test/memory-migration-adapter.ts'
+import { MemoryMigrationDriver } from '../../test/memory-migration-driver.ts'
 
 async function makeMigration(
   parent: string,
@@ -119,13 +120,13 @@ describe('migration node loader', () => {
       })
 
       let migrations = await loadMigrations(directory)
-      let adapter = new MemoryMigrationAdapter()
-      let runner = createMigrationRunner(adapter, migrations)
+      let driver = new MemoryMigrationDriver()
+      let runner = createMigrationRunner(driver, migrations)
 
       await runner.up({ to: '20260101000000_create_users' })
 
       assert.deepEqual(
-        adapter.journalRows.map((row) => row.id),
+        driver.journalRows.map((row) => row.id),
         ['20260101000000'],
       )
     } finally {
@@ -142,6 +143,42 @@ describe('migration node loader', () => {
 
       let migrations = await loadMigrations(directory)
       assert.equal(migrations.length, 1)
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('seed node loader', () => {
+  it('loads a SQL file as a seed function that runs the whole script', async () => {
+    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-seed-'))
+
+    try {
+      let sql =
+        "insert into users (name) values ('demo');\ninsert into users (name) values ('admin');\n"
+      await writeFile(path.join(directory, 'seed.sql'), sql)
+
+      let seed = await loadSeed(path.join(directory, 'seed.sql'))
+
+      let scripts: string[] = []
+      let db = {
+        executeScript(script: string) {
+          scripts.push(script)
+        },
+      } as unknown as Database
+      await seed(db)
+
+      assert.deepEqual(scripts, [sql])
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects when the seed file is missing', async () => {
+    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-seed-'))
+
+    try {
+      await assert.rejects(() => loadSeed(path.join(directory, 'seed.sql')))
     } finally {
       await rm(directory, { recursive: true, force: true })
     }

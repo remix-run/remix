@@ -1,0 +1,28 @@
+import { run } from 'remix/ui'
+
+const app = run({
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    let exp = (mod as any)[exportName]
+    if (typeof exp !== 'function') {
+      throw new Error(`Export "${exportName}" from "${moduleUrl}" is not a function`)
+    }
+    return exp
+  },
+  async resolveFrame(src, options) {
+    let res = await fetch(src, {
+      cache: 'no-store',
+      headers: { Accept: 'text/html' },
+      method: options?.method,
+      body: options?.method?.toLowerCase() === 'get' ? undefined : options?.formData,
+      signal: options?.signal,
+    })
+    if (!res.ok) {
+      return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`
+    }
+    if (res.body) return res.body
+    return await res.text()
+  },
+})
+
+app.ready().catch((error: unknown) => console.error(error))

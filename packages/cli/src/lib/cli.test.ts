@@ -79,7 +79,7 @@ const DOCTOR_COMMAND_HELP_TEXT = [
   '  --json       Print doctor findings as JSON',
   '  --strict     Exit with status 1 when warning-level findings are present',
   '  --no-strict  Do not exit with status 1 when warning-level findings are present',
-  '  --fix        Apply low-risk project and action fixes',
+  '  --fix        Apply available low-risk fixes',
   '',
   'Examples:',
   '  remix doctor',
@@ -497,8 +497,10 @@ describe('run', () => {
       let server = await fs.readFile(path.join(appDir, 'server.ts'), 'utf8')
       let assets = await fs.readFile(path.join(appDir, 'app', 'assets.ts'), 'utf8')
       let router = await fs.readFile(path.join(appDir, 'app', 'router.ts'), 'utf8')
-      let routes = await fs.readFile(path.join(appDir, 'app', 'routes.ts'), 'utf8')
-      let entry = await fs.readFile(path.join(appDir, 'app', 'assets', 'entry.ts'), 'utf8')
+      let entry = await fs.readFile(
+        path.join(appDir, 'app', 'actions', 'public', 'entry.ts'),
+        'utf8',
+      )
       let renderMiddleware = await fs.readFile(
         path.join(appDir, 'app', 'middleware', 'render.tsx'),
         'utf8',
@@ -523,7 +525,6 @@ describe('run', () => {
       assert.match(agentsGuide, /This starter intentionally begins small/)
       assert.match(agentsGuide, /Put top-level route actions in `app\/actions\/controller\.tsx`/)
       assert.match(readme, /^# My App/m)
-      assert.doesNotMatch(readme, /auth page/)
       assert.match(hmr, /createHmrReadyFetch/)
       assert.match(hmr, /run\('server\.ts'/)
       assert.match(server, /import \* as http from 'node:http'/)
@@ -531,43 +532,36 @@ describe('run', () => {
       assert.match(server, /http\.createServer/)
       assert.match(server, /createRequestListener/)
       assert.match(server, /emitServerReady/)
-      assert.doesNotMatch(server, /remix\/node-serve/)
       assert.doesNotMatch(assets, /remix-template:remove-/)
       assert.doesNotMatch(assets, /\.\.\/packages/)
-      assert.doesNotMatch(assets, /usesWorkspaceRemix/)
-      assert.doesNotMatch(assets, /workspacePackagesDir/)
-      assert.doesNotMatch(assets, /deny:/)
-      assert.doesNotMatch(assets, /define:/)
+      assert.match(assets, /allowFiles: \['app\/routes\.ts', 'app\/\*\*\/public\/\*\*'\]/)
+      assert.match(assets, /denyFiles: \['app\/\*\*\/\*\.test\.\*'\]/)
+      assert.match(assets, /const entry = 'app\/actions\/public\/entry\.ts'/)
+      assert.match(assets, /getHref\(entry\)/)
+      assert.match(assets, /getPreloads\(entry\)/)
       assert.match(assets, /createBrowserHmrChannel/)
       assert.match(assets, /scripts: \{ loaders: isHmr \? \[uiHmr\(\)\] : undefined \}/)
       assert.match(assets, /watch: isDevelopment/)
-      assert.doesNotMatch(router, /compression/)
-      assert.doesNotMatch(routes, /auth/)
+      assert.match(router, /staticFiles\('\.\/public'/)
       assert.match(entry, /loadModule/)
       assert.match(entry, /resolveFrame/)
       assert.match(entry, /server:update/)
-      assert.doesNotMatch(entry, /X-Remix-Frame/)
       assert.match(renderMiddleware, /resolveClientEntry/)
+      assert.match(renderMiddleware, /getPreloads/)
       assert.match(renderMiddleware, /resolveFrame/)
-      assert.doesNotMatch(renderMiddleware, /Accept-Encoding/)
-      assert.doesNotMatch(renderMiddleware, /X-Remix-Frame/)
       assert.match(controller, /context\.render\(<HomePage \/>/)
-      assert.doesNotMatch(controller, /AuthPage/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
       await assertPathExists(path.join(appDir, 'hmr.ts'))
       await assertPathExists(path.join(appDir, 'app', 'assets.ts'))
-      await assertPathExists(path.join(appDir, 'app', 'assets', 'prompt-button.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'document.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'home-page.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'public', 'prompt-button.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'public', 'entry.ts'))
       await assertPathExists(path.join(appDir, 'app', 'middleware', 'render.tsx'))
       await assertPathExists(path.join(appDir, 'public', 'favicon.svg'))
       await assertPathExists(path.join(appDir, '.gitignore'))
       await assertPathMissing(path.join(appDir, 'gitignore'))
-      await assertPathMissing(path.join(appDir, 'app', 'actions', 'assets.ts'))
-      await assertPathMissing(path.join(appDir, 'app', 'actions', 'render.tsx'))
-      await assertPathMissing(path.join(appDir, 'app', 'actions', 'home.tsx'))
-      await assertPathMissing(path.join(appDir, 'app', 'actions', 'auth.tsx'))
-      await assertPathMissing(path.join(appDir, 'app', 'actions', 'about.tsx'))
-      await assertPathMissing(path.join(appDir, 'app', 'ui', 'prompt-button.tsx'))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -617,9 +611,12 @@ describe('run', () => {
 
       assert.equal(result.exitCode, 0)
 
-      let documentSource = await fs.readFile(path.join(appDir, 'app', 'ui', 'document.tsx'), 'utf8')
-      let scaffoldHomePageSource = await fs.readFile(
-        path.join(appDir, 'app', 'ui', 'scaffold-home-page.tsx'),
+      let documentSource = await fs.readFile(
+        path.join(appDir, 'app', 'actions', 'document.tsx'),
+        'utf8',
+      )
+      let homePageSource = await fs.readFile(
+        path.join(appDir, 'app', 'actions', 'home-page.tsx'),
         'utf8',
       )
       let encodedAppName = encodeURIComponent(appName)
@@ -628,8 +625,8 @@ describe('run', () => {
         documentSource,
         new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
       )
-      assert.ok(!scaffoldHomePageSource.includes('readAppDisplayName'))
-      assert.ok(!scaffoldHomePageSource.includes(encodedAppName))
+      assert.ok(!homePageSource.includes('readAppDisplayName'))
+      assert.ok(!homePageSource.includes(encodedAppName))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }

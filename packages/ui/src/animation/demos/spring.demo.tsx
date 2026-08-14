@@ -225,7 +225,7 @@ export default function SpringDemo(handle: Handle) {
 
       {/* Draggable circle */}
       <div
-        className="draggable"
+        class="draggable"
         mix={[
           css({
             position: 'absolute',
@@ -304,7 +304,7 @@ export default function SpringDemo(handle: Handle) {
 
       {/* Controls */}
       <div
-        className="controls"
+        class="controls"
         mix={[
           css({
             position: 'absolute',

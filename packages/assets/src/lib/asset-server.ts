@@ -351,7 +351,9 @@ export function getInternalWatchTargets<transforms extends AssetRequestTransform
  *   fileMap: {
  *     '/app/*path': 'app/*path',
  *   },
- *   allowFiles: ['app/**'],
+ *   allowFiles: ['app/routes.ts', 'app/**\/public/**'],
+ *   allowPackages: ['remix'],
+ *   denyFiles: ['app/**\/*.test.*'],
  * })
  *
  * route('/assets/*path', ({ request }) => assetServer.fetch(request))

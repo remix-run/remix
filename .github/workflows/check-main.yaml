@@ -195,7 +195,7 @@ jobs:
         run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
       - name: Run tests
-        run: pnpm --parallel --filter "!remix-the-web" run test
+        run: pnpm test
 
   lint:
     name: Lint
@@ -394,7 +394,7 @@ jobs:
           REMIX_DATA_TABLE_POSTGRES_TEST_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
         run: |
           cd packages/data-table-postgres
-          pnpm test src/lib/adapter.integration.test.ts
+          pnpm test src/lib/driver.integration.test.ts
 
   mysql_integration:
     name: MySQL Integration
@@ -432,7 +432,7 @@ jobs:
           REMIX_DATA_TABLE_MYSQL_TEST_URL: mysql://root:root@127.0.0.1:3306/remix
         run: |
           cd packages/data-table-mysql
-          pnpm test src/lib/adapter.integration.test.ts
+          pnpm test src/lib/driver.integration.test.ts
 
   sqlite_integration:
     name: SQLite Integration
@@ -457,7 +457,7 @@ jobs:
           REMIX_DATA_TABLE_SQLITE_TEST: '1'
         run: |
           cd packages/data-table-sqlite
-          pnpm test src/lib/adapter.integration.test.ts
+          pnpm test src/lib/driver.integration.test.ts
 
   file_storage_unit:
     name: File Storage Unit and Build

@@ -1,5 +1,5 @@
 import { css, type Handle } from 'remix/ui'
-import { theme } from '../../ui/design.ts'
+import { theme } from '../../ui/public/design.ts'
 
 import { Layout } from '../../ui/layout.tsx'
 

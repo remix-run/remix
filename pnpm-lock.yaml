@@ -117,6 +117,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
+      playwright:
+        specifier: 'catalog:'
+        version: 1.60.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -530,9 +533,15 @@ importers:
       '@remix-run/data-table':
         specifier: workspace:^
         version: link:../data-table
-      '@remix-run/node-tsx':
+      '@remix-run/data-table-mysql':
         specifier: workspace:^
-        version: link:../node-tsx
+        version: link:../data-table-mysql
+      '@remix-run/data-table-postgres':
+        specifier: workspace:^
+        version: link:../data-table-postgres
+      '@remix-run/data-table-sqlite':
+        specifier: workspace:^
+        version: link:../data-table-sqlite
       '@remix-run/terminal':
         specifier: workspace:^
         version: link:../terminal

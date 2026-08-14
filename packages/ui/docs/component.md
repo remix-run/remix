@@ -48,7 +48,7 @@ function App() {
 
 let stream = renderToStream(<App />, {
   resolveFrame(src, target, context) {
-    let headers = new Headers({ Accept: 'text/html' })
+    let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
     if (target) headers.set('X-Remix-Target', target)
     return fetch(new URL(src, context?.currentFrameSrc ?? request.url), { headers }).then((res) =>
       res.text(),
@@ -101,6 +101,7 @@ The first argument is the module URL and export name the client will use to load
 Boot the client with `run`. It finds all client entries in the page, loads their modules, and hydrates them:
 
 ```tsx
+import type { ResolveFrameOptions } from 'remix/ui'
 import { run } from 'remix/ui'
 
 let app = run({
@@ -108,13 +109,30 @@ let app = run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, signal, target) {
+  async resolveFrame(src, options) {
     let headers = new Headers({ Accept: 'text/html' })
-    if (target) headers.set('X-Remix-Target', target)
-    let res = await fetch(src, { headers, signal })
+    if (options?.target) headers.set('X-Remix-Target', options.target)
+    let res = await fetch(src, {
+      headers,
+      method: options?.method,
+      body: getRequestBody(options),
+      signal: options?.signal,
+    })
     return res.body ?? (await res.text())
   },
 })
+
+function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+  let formData = options?.formData
+  if (!formData) return
+  if (options.encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
+}
 
 await app.ready()
 ```
@@ -359,7 +377,7 @@ function Button(handle: Handle) {
         }),
       ]}
     >
-      <span className="icon">★</span>
+      <span class="icon">★</span>
       Click me
     </button>
   )

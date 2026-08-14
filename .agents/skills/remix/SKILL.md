@@ -84,19 +84,19 @@ Use these root directories consistently:
 
 - `app/` for runtime application code
 - `db/` for migrations and local database files
-- `public/` for static assets served as-is
+- root `public/` for static assets served as-is from the app root
 - `test/` for shared helpers, fixtures, and integration coverage
 - `tmp/` for uploads, caches, local session files, and other scratch data
 
 Inside `app/`, organize by responsibility:
 
-- `assets/` for client entrypoints and client-owned browser behavior
 - `actions/` for controller-owned route handlers, route-local response rendering, and route-local UI/helpers that are not shared across route areas
 - `data/` for schema, queries, persistence setup, migrations, and runtime data initialization
 - `middleware/` for request lifecycle concerns such as auth, sessions, uploads, and database injection
+- `public/` directories inside the narrowest owner for browser-reachable source code, with the browser runtime entrypoint at `app/actions/public/entry.ts`
 - `ui/` for shared cross-route UI primitives
 - `utils/` only for genuinely cross-layer helpers that do not clearly belong elsewhere
-- `routes.ts` for the route contract
+- `routes.ts` for the shared server-and-browser route contract and type-safe href generation
 - `router.ts` for router setup and wiring
 
 ### Placement Precedence
@@ -148,10 +148,11 @@ When code could live in multiple places:
 - Model HTTP behavior explicitly. Status codes, headers, redirects, cache rules, and content types are part of the route contract
 - Make the server route correct first. A POST should already return the right HTML, redirect, or error response on its own before `clientEntry(...)` layers interactivity on top
 - Validate input at the boundary using `remix/data-schema` (and `remix/data-schema/form-data` for forms). `parseSafe` makes the failure path a return value instead of an exception
-- Derive `AppContext` from the middleware stack so `get(Database)`, `get(Session)`, `get(Auth)`, and similar keys stay typed. If the controller never reads from context, it doesn't need the harness
+- Derive `AppContext` from the middleware stack so `get(databaseContext)`, `get(Session)`, `get(Auth)`, and similar keys stay typed. If the controller never reads from context, it doesn't need the harness
 - Outside actions and controllers, only use `getContext()` when `asyncContext()` is in the middleware stack
 - Remix Component is not React: write `function Name(handle: Handle<Props>) { return () => ... }`, read props from `handle.props`, keep state in setup-scope variables, call `handle.update()` explicitly, and do DOM-sensitive work in event handlers or `queueTask(...)`, not in render
 - Prefer host-element mixins via `mix={mixin(...)}` for behavior and styling instead of inventing custom host prop conventions. Use `mix={[...]}` only when composing multiple mixins
+- Keep short, one-off static styles inline with `mix={css(...)}`. Extract a module-scoped style descriptor when it forms a reused visual recipe, has substantial selectors, media queries, or keyframes, or is large enough to obscure the component. Export a style descriptor only after multiple modules need the same visual recipe; otherwise keep it with its narrowest owner
 - Hydrated `clientEntry(...)` props must be serializable. Do not pass functions, class instances, or opaque runtime objects
 
 ## Security And Session Defaults
@@ -227,12 +228,12 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/data-schema/coerce` — coercion helpers for strings, numbers, booleans, dates, and ids. Use when input arrives as a string but should be a typed value
 - `remix/data-schema/form-data` — `f.object` and `f.field` for parsing `FormData` directly. Use in actions that read browser forms
 - `remix/data-schema/lazy` — recursive or mutually-referential schemas. Use when a schema needs to refer to itself or another schema that is declared later
-- `remix/data-table` — typed tables and a `Database` interface. Use for `table`, `column`, `createDatabase` when modeling persisted data
-- `remix/data-table/sqlite`, `remix/data-table/postgres`, `remix/data-table/mysql` — adapters. Use to back `createDatabase` with a real engine. SQLite accepts Node, Bun, and compatible synchronous clients with the shared `prepare`/`exec` surface
-- `remix/data-table/migrations` — migration authoring and runners. Use for `createMigration`, `createMigrationRunner`
+- `remix/data-table` — typed tables and the shared `Database` API. Use `table` and `column` when modeling persisted data, then create a concrete database from the matching dialect package. Integration packages can implement `DatabaseDriver` and extend `Database` to add another SQL dialect
+- `remix/data-table/sqlite`, `remix/data-table/postgres`, `remix/data-table/mysql` — concrete database integrations. Use `createSqliteDatabase`, `createPostgresDatabase`, or `createMysqlDatabase`. SQLite accepts Node, Bun, and compatible synchronous clients with the shared `prepare`/`exec` surface
+- `remix/data-table/migrations` — migration authoring and registries. Use for `createMigration` and `createMigrationRegistry`; run migrations with `Database.migrate()`
 - `remix/data-table/migrations/node` — `loadMigrations` from disk. Use in startup scripts that apply migrations
 - `remix/data-table/operators` — query operators such as `inList(...)`. Use when `where` clauses need set or comparison logic
-- `remix/data-table/sql-helpers` — SQL helper utilities for adapter or advanced query work. Avoid this in normal app code unless you are intentionally working below the table/query API
+- `remix/data-table/sql-helpers` — SQL helper utilities for database integrations or advanced query work. Avoid this in normal app code unless you are intentionally working below the table/query API
 
 ### Auth, Sessions, and Cookies
 
@@ -318,17 +319,18 @@ export const routes = route({
 ```typescript
 import { createController } from 'remix/router'
 
+import { databaseContext } from '../middleware/database.ts'
 import { routes } from '../routes.ts'
 
 export default createController(routes.books, {
   actions: {
     async index({ get }) {
-      let db = get(Database)
+      let db = get(databaseContext)
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
       return render(<BooksIndexPage allBooks={allBooks} />)
     },
     async show({ get, params }) {
-      let db = get(Database)
+      let db = get(databaseContext)
       let book = await db.findOne(books, { where: { slug: params.slug } })
       if (!book) return new Response('Not Found', { status: 404 })
       return render(<BookShowPage book={book} />)
@@ -393,8 +395,8 @@ import { redirect } from 'remix/response/redirect'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Session } from 'remix/session'
-import { Database } from 'remix/data-table'
 
+import { databaseContext } from '../middleware/database.ts'
 import { routes } from '../routes.ts'
 
 let bookSchema = f.object({
@@ -410,7 +412,7 @@ export default createController(routes.books, {
         return render(<NewBookPage errors={parsed.issues} />, { status: 400 })
       }
 
-      let db = get(Database)
+      let db = get(databaseContext)
       let book = await db.create(books, parsed.value)
 
       let session = get(Session)

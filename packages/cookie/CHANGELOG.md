@@ -2,6 +2,14 @@
 
 This is the changelog for [`cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie). It follows [semantic versioning](https://semver.org/).
 
+## v0.6.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Custom `encode` and `decode` functions now own the cookie value representation directly. Previously, custom `encode` output was still wrapped in Remix's default base64 encoding and custom `decode` received a value after that base64 wrapper was removed. Now custom `encode` output is signed and serialized as-is, and custom `decode` receives the unsigned raw cookie value. The default encoder and decoder still use the existing base64-safe representation when no custom functions are provided.
+
+- BREAKING CHANGE: `Cookie.httpOnly` now returns `boolean | undefined` instead of defaulting to `false`. This lets consumers distinguish an omitted `httpOnly` option from an explicit `httpOnly: false` setting.
+
 ## v0.5.4
 
 ### Patch Changes
