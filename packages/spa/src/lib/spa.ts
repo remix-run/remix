@@ -1,9 +1,7 @@
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 import { renderWith, type Renderer } from '@remix-run/render-middleware'
 import {
-  nodeFromSpaResponse,
   run as runRuntime,
-  setSpaResponseRedirect,
   spaResponse,
   type AppRuntime,
   type RemixNode,
@@ -70,7 +68,7 @@ export function render(transform?: RenderTransform): RenderMiddleware {
   return renderWith(
     (context) =>
       function render(node: RemixNode, init?: ResponseInit): Response {
-        return spaResponse(transform ? transform(node, context) : node, init)
+        return spaResponse.create(transform ? transform(node, context) : node, init)
       },
   )
 }
@@ -101,9 +99,7 @@ export function run(router: Router, options: RunOptions = {}): Runtime {
         signal: options?.signal,
       })
 
-      nodeFromSpaResponse(response)
-      if (redirectedTo) setSpaResponseRedirect(response, redirectedTo)
-      return response
+      return spaResponse.finalize(response, redirectedTo)
     },
   })
 

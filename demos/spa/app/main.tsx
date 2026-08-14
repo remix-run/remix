@@ -11,7 +11,7 @@ import {
 import { routes } from './routes.ts'
 import { sleep } from './utils.ts'
 
-// `render()` from `remix/spa` abstracts away the `spaResponse()` aspect
+// `render()` from `remix/spa` abstracts away the `spaResponse.create()` aspect
 // that proxies the RemixNode through the WeakMap.
 // Passing a callback allows you to use the render middleware to wrap a Layout
 // component around your SPA routes.

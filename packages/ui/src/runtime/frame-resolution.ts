@@ -1,15 +1,16 @@
 import type { FrameContent, FrameResolution } from './component.ts'
-import { getSpaResponseRedirect, isSpaResponse, nodeFromSpaResponse } from './spa-response.ts'
+import { getSpaResponseData } from './spa-response.ts'
 
 export async function unwrapFrameResolution(
   resolution: FrameResolution,
 ): Promise<{ content: FrameContent; redirectedTo?: string }> {
   if (!(resolution instanceof Response)) return { content: resolution }
 
-  if (isSpaResponse(resolution)) {
+  let data = getSpaResponseData(resolution)
+  if (data) {
     return {
-      content: nodeFromSpaResponse(resolution),
-      redirectedTo: getSpaResponseRedirect(resolution),
+      content: data.node,
+      redirectedTo: data.redirectedTo,
     }
   }
 

@@ -5,8 +5,8 @@ import { spaResponse } from '@remix-run/ui'
 describe('spaResponse', () => {
   it('rejects use outside a browser environment', () => {
     assert.throws(
-      () => spaResponse('Hello'),
-      new TypeError('spaResponse() can only be used in a browser'),
+      () => spaResponse.create('Hello'),
+      new TypeError('spaResponse.create() can only be used in a browser'),
     )
   })
 })

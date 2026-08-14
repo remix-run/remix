@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { createContextKey, createRouter, type Middleware } from '@remix-run/fetch-router'
 import { afterEach, describe, it, mock } from '@remix-run/test'
 import { on, type Handle } from '@remix-run/ui'
-import { nodeFromSpaResponse, spaResponse } from '@remix-run/ui'
+import { spaResponse } from '@remix-run/ui'
 
 import { render, run, type Router } from './spa.ts'
 
@@ -20,10 +20,21 @@ function greeting(value: string): Middleware<{
 }
 
 describe('render', () => {
-  it('adds a request-aware node renderer to an ordinary router context', async () => {
+  afterEach(() => {
+    document.body.textContent = ''
+  })
+
+  it('adds a request-aware node renderer to an ordinary router context', async (t) => {
+    let initialUrl = window.location.href
+    let routeUrl = new URL('/hello', initialUrl)
+    window.history.replaceState(null, '', routeUrl)
     let router = createRouter({
       middleware: [
-        render((node, context) => `${context.url.pathname}: ${node}`),
+        render((node, context) => (
+          <h1>
+            {context.url.pathname}: {node}
+          </h1>
+        )),
         greeting('Hello'),
       ],
     })
@@ -33,22 +44,39 @@ describe('render', () => {
       return render(value, { status: 201 })
     })
 
-    let response = await router.fetch('https://remix.run/hello')
+    let response = await router.fetch(routeUrl)
+    let app = run(router)
 
-    expect(response.status).toBe(201)
-    expect(nodeFromSpaResponse(response)).toBe('/hello: Hello')
-  })
-
-  it('makes the renderer available to the default handler', async () => {
-    let router = createRouter({
-      middleware: [render()],
-      defaultHandler: ({ render }) => render('Not Found', { status: 404 }),
+    t.after(() => {
+      app.dispose()
+      window.history.replaceState(null, '', initialUrl)
     })
 
-    let response = await router.fetch('https://remix.run/missing')
+    await app.ready()
+    expect(response.status).toBe(201)
+    expect(document.querySelector('h1')?.textContent).toBe('/hello: Hello')
+  })
 
+  it('makes the renderer available to the default handler', async (t) => {
+    let initialUrl = window.location.href
+    let routeUrl = new URL('/missing', initialUrl)
+    window.history.replaceState(null, '', routeUrl)
+    let router = createRouter({
+      middleware: [render()],
+      defaultHandler: ({ render }) => render(<h1>Not Found</h1>, { status: 404 }),
+    })
+
+    let response = await router.fetch(routeUrl)
+    let app = run(router)
+
+    t.after(() => {
+      app.dispose()
+      window.history.replaceState(null, '', initialUrl)
+    })
+
+    await app.ready()
     expect(response.status).toBe(404)
-    expect(nodeFromSpaResponse(response)).toBe('Not Found')
+    expect(document.querySelector('h1')?.textContent).toBe('Not Found')
   })
 })
 
@@ -65,7 +93,7 @@ describe('run', () => {
 
     let fetch = mock.fn(async (input: string | URL | Request, init?: RequestInit) => {
       let request = input instanceof Request ? input : new Request(input, init)
-      return spaResponse(<h1>{new URL(request.url).searchParams.get('spa-test')}</h1>)
+      return spaResponse.create(<h1>{new URL(request.url).searchParams.get('spa-test')}</h1>)
     })
     let app = run({ fetch })
 
@@ -136,7 +164,7 @@ describe('run', () => {
     app.flush()
     expect(button?.textContent).toBe('Loading: 1')
 
-    resolveRouteResponse(spaResponse(<h1>Ready</h1>))
+    resolveRouteResponse(spaResponse.create(<h1>Ready</h1>))
     await readyPromise
 
     expect(ready).toBe(true)
@@ -162,7 +190,7 @@ describe('run', () => {
             headers: { Location: '?spa-test=redirected' },
           })
         }
-        return spaResponse(<h1>Redirected</h1>)
+        return spaResponse.create(<h1>Redirected</h1>)
       },
     }
     let app = run(router)
