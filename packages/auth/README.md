@@ -414,6 +414,53 @@ router.get('/auth/company/callback', async (context) => {
 })
 ```
 
+Provider packages for other OAuth protocols can use `createOAuthProvider()` to implement the authorization, callback, and optional refresh hooks consumed by `startExternalAuth()`, `finishExternalAuth()`, and `refreshExternalAuth()`.
+
+```ts
+import { createOAuthProvider } from 'remix/auth'
+import type { OAuthTokens } from 'remix/auth'
+
+interface AcmeProfile {
+  id: string
+  email: string
+}
+
+interface AcmeTokens extends OAuthTokens {
+  resourceServer: string
+}
+
+export function createAcmeAuthProvider(options: AcmeAuthProviderOptions) {
+  return createOAuthProvider<AcmeProfile, 'acme', AcmeTokens>('acme', {
+    async createAuthorizationURL(transaction) {
+      let metadata = await discoverAuthorizationServer(options)
+
+      transaction.providerState = await encryptProviderState(metadata)
+      return createAuthorizationRequest(metadata, transaction)
+    },
+    async handleCallback(context, transaction) {
+      let metadata = await decryptProviderState(transaction.providerState)
+      let tokens = await exchangeAuthorizationCode(metadata, context, transaction)
+      let profile = await loadProfile(tokens)
+
+      return {
+        provider: 'acme',
+        account: {
+          provider: 'acme',
+          providerAccountId: profile.id,
+        },
+        profile,
+        tokens,
+      }
+    },
+    async refreshTokens(tokens) {
+      return refreshAcmeTokens(tokens)
+    },
+  })
+}
+```
+
+The runtime may write a serialized value to `transaction.providerState` during `createAuthorizationURL()`. Remix persists that value with the OAuth transaction and returns it to `handleCallback()`. Treat it as provider-owned opaque data, and encrypt sensitive values because session storage is not guaranteed to be confidential. Extending `OAuthTokens` preserves provider-specific fields through callback and refresh results without requiring those fields to become part of Remix's built-in token model.
+
 ## Related Packages
 
 - [`auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) - Request authentication and route protection helpers
