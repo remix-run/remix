@@ -34,26 +34,16 @@ router.mount('/parent', { middleware: [traceMiddleware('parent mount')] }, (pare
 pnpm -C demos/controller-middleware dev
 ```
 
-Then request each route:
+Then open <http://localhost:44100/parent> in your browser.
 
-```sh
-curl http://localhost:44100/parent
-curl http://localhost:44100/parent/child
-curl http://localhost:44100/parent/child/grandchild
-```
+Use the navigation bar to move between the parent, child, and grandchild routes. Each page shows its
+middleware execution trace, so the grandchild page displays:
 
-The grandchild route responds with a trace like:
-
-```json
-{
-  "route": "grandchild",
-  "trace": [
-    "router middleware",
-    "parent mount middleware",
-    "grandchild controller middleware",
-    "grandchild action"
-  ]
-}
+```text
+router middleware
+parent mount middleware
+grandchild controller middleware
+grandchild action
 ```
 
 The parent and child controller middleware are absent because controller middleware does not
