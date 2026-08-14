@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/ui-hmr",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Hot module replacement runtime and transforms for Remix UI components",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

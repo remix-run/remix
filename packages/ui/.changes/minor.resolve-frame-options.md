@@ -1,1 +1,0 @@
-BREAKING CHANGE: Browser `resolveFrame` callbacks now receive a single options object instead of positional signal and target arguments. Update `resolveFrame(src, signal, target)` implementations to use `resolveFrame(src, options)` and read `options?.signal` and `options?.target`.
