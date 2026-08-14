@@ -2,6 +2,12 @@
 
 This is the changelog for [`static-middleware`](https://github.com/remix-run/remix/tree/main/packages/static-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.15
+
+### Patch Changes
+
+- Republish the pending patch release as v0.4.15 because npm rejected v0.4.14.
+
 ## v0.4.14
 
 ### Patch Changes
