@@ -76,9 +76,15 @@ let stream = renderToStream(<App />, {
       throw new Error(`Unable to resolve client entry export for ${entryId}`)
     }
 
+    let [href, preloads] = await Promise.all([
+      assetServer.getHref(entryId),
+      assetServer.getPreloads(entryId),
+    ])
+
     return {
-      href: await assetServer.getHref(entryId),
+      href,
       exportName,
+      preloads,
     }
   },
 })
@@ -89,6 +95,8 @@ If the module export name differs from the component function name, include `#Ex
 On the server, `clientEntry` components render like any other component. The server wraps their output in comment markers and serializes props into a `<script type="application/json">` tag.
 
 Client entry props must be serializable: strings, numbers, booleans, `null`, `undefined`, plain objects/arrays of the above, JSX elements, and `<Frame>` elements. Functions and class instances cannot be passed.
+
+The resolved `preloads` array contains browser module hrefs. During server rendering these are emitted as `<link rel="modulepreload">` tags, including preloads discovered in blocking frames. When a later frame response introduces a client entry, its preloads start before the entry module is loaded.
 
 ## Booting the Client
 

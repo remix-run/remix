@@ -16,7 +16,7 @@ export function render() {
           frameSrc: request.url,
           signal: request.signal,
           resolveFrame: (src) => resolveFrame(router, request, src),
-          // Server rendering turns client entries into browser module URLs.
+          // Server rendering turns client entries into browser module URLs and preloads.
           async resolveClientEntry(entryId, component) {
             if (!entryId.startsWith('file://')) {
               throw new Error(
@@ -24,9 +24,15 @@ export function render() {
               )
             }
 
+            let [href, preloads] = await Promise.all([
+              assetServer.getHref(entryId),
+              assetServer.getPreloads(entryId),
+            ])
+
             return {
-              href: await assetServer.getHref(entryId),
+              href,
               exportName: entryId.split('#')[1] || component.name || titleCaseFileName(entryId),
+              preloads,
             }
           },
         })

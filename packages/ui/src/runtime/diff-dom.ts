@@ -237,7 +237,18 @@ function isPopoverOpen(element: Element): boolean {
 }
 
 function diffElementChildren(current: Element, next: Element, context: FrameContext): void {
-  let currentChildren = Array.from(current.childNodes)
+  let currentChildren: Node[]
+
+  // Allow actively managed preload link tags in the head to stay in the document
+  // during diffing rather than removing them which aborts the preload in Safari
+  if (context.isActiveModulePreload && current === current.ownerDocument.head) {
+    currentChildren = []
+    for (let node of current.childNodes) {
+      if (!context.isActiveModulePreload(node)) currentChildren.push(node)
+    }
+  } else {
+    currentChildren = Array.from(current.childNodes)
+  }
   let nextChildren = Array.from(next.childNodes)
   diffSiblingUnits(currentChildren, nextChildren, current, null, context)
 }

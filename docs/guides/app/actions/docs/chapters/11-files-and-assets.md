@@ -48,7 +48,7 @@ export const entryHref = await assetServer.getHref(entry);
 export const entryPreloads = await assetServer.getPreloads(entry);
 ```
 
-Render those preloads and the entry script from the document head. Resolve `clientEntry(import.meta.url, ...)` IDs through the asset server in the shared renderer instead of hard-coding deployment URLs in components.
+Render those preloads and the entry script from the document head. Resolve `clientEntry(import.meta.url, ...)` IDs to `href` and `preloads` through the asset server in the shared renderer instead of hard-coding deployment URLs in components.
 
 ## File transforms and transformed-output caches {#asset-file-transforms}
 

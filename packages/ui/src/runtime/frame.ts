@@ -10,6 +10,7 @@ import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
 import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
+import { getDocumentModulePreloader } from './module-preloader.ts'
 import { unwrapFrameResolution } from './frame-resolution.ts'
 import {
   disposeClientEntryBoundary,
@@ -213,6 +214,7 @@ export type FrameContext = {
   regionTailRef?: ChildNode | null
   regionParent?: ParentNode | null
   signal?: AbortSignal
+  isActiveModulePreload?: (node: Node) => boolean
 }
 
 type FrameInit = {
@@ -278,6 +280,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let reloadAbortUnsubscribe: (() => void) | undefined
   let reloadKind: 'direct' | 'ancestor' | undefined
   let styleManager = init.styleManager ?? createStyleManager()
+  let modulePreloader = getDocumentModulePreloader(container.doc)
   let currentMarker = init.marker
   let displayedContentStatus: 'pending' | 'resolved' = init.marker?.status ?? 'resolved'
   let pendingTemplateMarkerId: string | undefined
@@ -287,6 +290,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let inheritedReloadAbortUnsubscribe: (() => void) | undefined
   let disposed = false
   let lifecycleController = new AbortController()
+
+  if (isDocumentNode(container.root)) {
+    modulePreloader.adoptInitialPreloadLinks(container.root)
+  } else {
+    modulePreloader.consumePreloadLinks(container.root)
+  }
 
   // Merge any rmx-data found in the current document once at startup.
   mergeRmxDataFromDocument(init.data, container.doc)
@@ -407,6 +416,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
+      modulePreloader.consumePreloadLinks(parsed)
       let responseData = options.data
       mergeRmxDataFromDocument(responseData, parsed)
       let responseContext = { ...context, data: responseData }
@@ -421,6 +431,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         regionParent: container.doc.documentElement,
         regionTailRef: null,
         signal: options.signal,
+        isActiveModulePreload: modulePreloader.hasActivePreloads()
+          ? modulePreloader.isActivePreload
+          : undefined,
       })
       diffNodes([container.doc.body], [parsed.body], {
         ...responseContext,
@@ -445,6 +458,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       htmlContent !== undefined ? createFragmentFromString(container.doc, htmlContent) : content
+    modulePreloader.consumePreloadLinks(fragment)
     context.styleManager.adoptServerStyles(
       collectFrameServerStyleTags(createElementContainer(fragment)),
     )
@@ -1758,6 +1772,10 @@ function findEndMarker(
 
 function isCommentNode(node: Node | null | undefined): node is Comment {
   return node?.nodeType === Node.COMMENT_NODE
+}
+
+function isDocumentNode(node: Node): node is Document {
+  return node.nodeType === Node.DOCUMENT_NODE
 }
 
 function isDocumentFragmentNode(value: unknown): value is DocumentFragment {
