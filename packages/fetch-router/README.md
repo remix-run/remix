@@ -668,15 +668,15 @@ Router middleware is added to the router when it is created using the `createRou
 
 Mount middleware runs for every route registered by a mounted route installer. Controller middleware runs for every direct action in a controller. Action middleware runs only for one action, whether that action is created with `createAction()`, registered in a controller, or registered directly with `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. The object form for actions is `{ handler, middleware? }`, so you can omit `middleware` entirely when you do not need it.
 
-A controller's `middleware` applies only to the direct route actions in that controller, and its `actions` object may not include nested route-map keys. Use mount middleware when one boundary should apply across multiple controllers in a route group.
+A controller's `middleware` applies only to the direct route actions in that controller, and its `actions` object may not include nested route-map keys.
 
 ```tsx
 let routes = route({
   home: '/',
-  admin: route({
-    dashboard: '/dashboard',
-    settings: '/settings',
-  }),
+  admin: {
+    dashboard: '/admin/dashboard',
+    settings: '/admin/settings',
+  },
 })
 
 let router = createRouter({
@@ -686,29 +686,50 @@ let router = createRouter({
 
 router.map(routes.home, () => new Response('Home'))
 
-router.mount(
-  '/admin',
-  {
-    // Mount middleware applies to every route registered in this group.
-    middleware: [auth({ token: 'secret' })],
-  },
-  (admin) => {
-    admin.map(routes.admin, {
-      actions: {
-        dashboard() {
-          return new Response('Dashboard')
-        },
-        settings: {
-          // Action middleware applies only to this action.
-          middleware: [requireAdmin()],
-          handler() {
-            return new Response('Settings')
-          },
-        },
+router.map(routes.admin, {
+  // Controller middleware applies to all direct actions in this controller.
+  middleware: [auth({ token: 'secret' })],
+  actions: {
+    dashboard() {
+      return new Response('Dashboard')
+    },
+    settings: {
+      // Action middleware applies only to this action.
+      middleware: [requireAdmin()],
+      handler() {
+        return new Response('Settings')
       },
-    })
+    },
   },
-)
+})
+```
+
+Use mount middleware when one boundary should apply across multiple controllers in a route group.
+
+```tsx
+const routes = route({
+  index: get('/'),
+  parent: route('parent', {
+    index: get('/'),
+    grandchild: route('child', {
+      index: get('/'),
+    }),
+  }),
+})
+
+const rootController = createController(routes /*...*/)
+const parentController = createController(routes /*...*/)
+const childController = createController(routes.child /*...*/)
+
+const router = createRouter()
+
+router.map(routes, rootController)
+
+// Mount middleware applies to all routes below this mount point, including nested `.mount()` calls
+router.mount('/parent', { middleware: [mountMiddleware()] }, (parent) => {
+  parent.map(routes, parentController)
+  parent.map(routes.child, childController)
+})
 ```
 
 ### Request Context

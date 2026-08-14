@@ -12,6 +12,80 @@ import { createHtmlResponse } from 'remix/response/html'
 
 const ExecutionTrace = createContextKey<string[]>()
 
+const routes = route({
+  index: get('/'),
+  child: route('child', {
+    index: get('/'),
+    grandchild: route('grandchild', {
+      index: get('/'),
+    }),
+  }),
+})
+
+const rootController = createController(routes, {
+  middleware: [traceMiddleware('root controller')],
+  actions: {
+    index({ get }) {
+      return traceResponse('home', get(ExecutionTrace))
+    },
+  },
+})
+
+const parentController = createController(routes, {
+  middleware: [traceMiddleware('parent controller')],
+  actions: {
+    index({ get }) {
+      return traceResponse('parent', get(ExecutionTrace))
+    },
+  },
+})
+
+const childController = createController(routes.child, {
+  middleware: [traceMiddleware('child controller')],
+  actions: {
+    index({ get }) {
+      return traceResponse('child', get(ExecutionTrace))
+    },
+  },
+})
+
+const grandchildController = createController(routes.child.grandchild, {
+  middleware: [traceMiddleware('grandchild controller')],
+  actions: {
+    index({ get }) {
+      return traceResponse('grandchild', get(ExecutionTrace))
+    },
+  },
+})
+
+const routerMiddleware = createMiddleware(initializeExecutionTrace())
+type AppContext = MiddlewareContext<typeof routerMiddleware>
+
+declare module 'remix/router' {
+  interface RouterTypes {
+    context: AppContext
+  }
+}
+
+export const router = createRouter<AppContext>({ middleware: routerMiddleware })
+
+router.map(routes, rootController)
+
+router.mount('/parent', { middleware: [traceMiddleware('parent mount')] }, (parent) => {
+  parent.map(routes, parentController)
+  parent.map(routes.child, childController)
+  parent.map(routes.child.grandchild, grandchildController)
+})
+
+type RouteName = 'home' | 'parent' | 'child' | 'grandchild'
+
+const routeTitles = {
+  home: 'Home',
+  parent: 'Parent',
+  child: 'Child',
+  grandchild: 'Grandchild',
+} satisfies Record<RouteName, string>
+
 function initializeExecutionTrace(): Middleware {
   return (context, next) => {
     context.set(ExecutionTrace, ['router middleware'])
@@ -28,33 +102,6 @@ function traceMiddleware(name: string): Middleware {
     return next()
   }
 }
-
-const rootRoutes = route({
-  index: get('/'),
-})
-
-const routes = route({
-  index: get('/'),
-  child: route('child', {
-    index: get('/'),
-    grandchild: route('grandchild', {
-      index: get('/'),
-    }),
-  }),
-})
-
-const parentPath = '/parent'
-const childPath = `${parentPath}${routes.child.index.href()}`
-const grandchildPath = `${parentPath}${routes.child.grandchild.index.href()}`
-
-type RouteName = 'home' | 'parent' | 'child' | 'grandchild'
-
-const routeTitles = {
-  home: 'Home',
-  parent: 'Parent',
-  child: 'Child',
-  grandchild: 'Grandchild',
-} satisfies Record<RouteName, string>
 
 function navigationLink(routeName: RouteName, href: string, currentRoute: RouteName) {
   let title = routeTitles[routeName]
@@ -124,10 +171,10 @@ function traceResponse(routeName: RouteName, trace: string[] | undefined): Respo
       <body>
         <header>
           <nav aria-label="Demo routes">
-            ${navigationLink('home', rootRoutes.index.href(), routeName)}
-            ${navigationLink('parent', parentPath, routeName)}
-            ${navigationLink('child', childPath, routeName)}
-            ${navigationLink('grandchild', grandchildPath, routeName)}
+            ${navigationLink('home', routes.index.href(), routeName)}
+            ${navigationLink('parent', '/parent', routeName)}
+            ${navigationLink('child', '/parent/child', routeName)}
+            ${navigationLink('grandchild', '/parent/child/grandchild', routeName)}
           </nav>
         </header>
         <main>
@@ -141,58 +188,3 @@ function traceResponse(routeName: RouteName, trace: string[] | undefined): Respo
     </html>
   `)
 }
-
-const rootController = createController(rootRoutes, {
-  middleware: [traceMiddleware('root controller')],
-  actions: {
-    index({ get }) {
-      return traceResponse('home', get(ExecutionTrace))
-    },
-  },
-})
-
-const parentController = createController(routes, {
-  middleware: [traceMiddleware('parent controller')],
-  actions: {
-    index({ get }) {
-      return traceResponse('parent', get(ExecutionTrace))
-    },
-  },
-})
-
-const childController = createController(routes.child, {
-  middleware: [traceMiddleware('child controller')],
-  actions: {
-    index({ get }) {
-      return traceResponse('child', get(ExecutionTrace))
-    },
-  },
-})
-
-const grandchildController = createController(routes.child.grandchild, {
-  middleware: [traceMiddleware('grandchild controller')],
-  actions: {
-    index({ get }) {
-      return traceResponse('grandchild', get(ExecutionTrace))
-    },
-  },
-})
-
-const routerMiddleware = createMiddleware(initializeExecutionTrace())
-type AppContext = MiddlewareContext<typeof routerMiddleware>
-
-declare module 'remix/router' {
-  interface RouterTypes {
-    context: AppContext
-  }
-}
-
-export const router = createRouter<AppContext>({ middleware: routerMiddleware })
-
-router.map(rootRoutes, rootController)
-
-router.mount(parentPath, { middleware: [traceMiddleware('parent mount')] }, (parent) => {
-  parent.map(routes, parentController)
-  parent.map(routes.child, childController)
-  parent.map(routes.child.grandchild, grandchildController)
-})
