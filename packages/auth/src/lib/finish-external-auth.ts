@@ -2,7 +2,7 @@ import type { RequestContext } from '@remix-run/fetch-router'
 import type { Session } from '@remix-run/session'
 
 import { getOAuthProviderRuntime } from './provider.ts'
-import type { OAuthProvider, OAuthResult, OAuthTokens, OAuthTransaction } from './provider.ts'
+import type { OAuthProvider, OAuthResult, OAuthTransaction } from './provider.ts'
 import { getRequiredSearchParam, getSession } from './utils.ts'
 
 /**
@@ -16,13 +16,9 @@ export interface FinishExternalAuthOptions {
 /**
  * Completed result returned from a successful OAuth or OIDC callback flow.
  */
-export interface FinishedExternalAuthResult<
-  profile,
-  provider extends string = string,
-  tokens extends OAuthTokens = OAuthTokens,
-> {
+export interface FinishedExternalAuthResult<profile, provider extends string = string> {
   /** Normalized OAuth or OIDC result returned by the provider runtime. */
-  result: OAuthResult<profile, provider, tokens>
+  result: OAuthResult<profile, provider>
   /** Preserved post-auth redirect target, when one was stored in the transaction. */
   returnTo?: string
 }
@@ -39,12 +35,11 @@ export async function finishExternalAuth<
   context extends RequestContext<any, any> = RequestContext,
   profile = never,
   provider extends string = string,
-  tokens extends OAuthTokens = OAuthTokens,
 >(
-  provider: OAuthProvider<profile, provider, tokens>,
+  provider: OAuthProvider<profile, provider>,
   context: context,
   options: FinishExternalAuthOptions = {},
-): Promise<FinishedExternalAuthResult<profile, provider, tokens>> {
+): Promise<FinishedExternalAuthResult<profile, provider>> {
   let session: Session | undefined
   let transactionKey = options.transactionKey ?? '__auth'
   let transaction: OAuthTransaction | undefined

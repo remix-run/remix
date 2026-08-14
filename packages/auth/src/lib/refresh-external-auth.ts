@@ -1,19 +1,14 @@
 import { getOAuthProviderRuntime } from './provider.ts'
 import type { OAuthProvider, OAuthTokens } from './provider.ts'
 
-type NoInferValue<value> = [value][value extends unknown ? 0 : never]
-
 /**
  * Completed result returned from a successful refresh-token exchange.
  */
-export interface RefreshedExternalAuthResult<
-  provider extends string = string,
-  tokens extends OAuthTokens = OAuthTokens,
-> {
+export interface RefreshedExternalAuthResult<provider extends string = string> {
   /** Provider name whose token bundle was refreshed. */
   provider: provider
   /** Updated token bundle returned by the provider runtime. */
-  tokens: tokens
+  tokens: OAuthTokens
 }
 
 /**
@@ -23,14 +18,10 @@ export interface RefreshedExternalAuthResult<
  * @param tokens The current provider token bundle, including a refresh token when available.
  * @returns The provider name plus the refreshed token bundle.
  */
-export async function refreshExternalAuth<
-  profile = never,
-  provider extends string = string,
-  tokens extends OAuthTokens = OAuthTokens,
->(
-  provider: OAuthProvider<profile, provider, tokens>,
-  tokens: NoInferValue<tokens>,
-): Promise<RefreshedExternalAuthResult<provider, tokens>> {
+export async function refreshExternalAuth<profile = never, provider extends string = string>(
+  provider: OAuthProvider<profile, provider>,
+  tokens: OAuthTokens,
+): Promise<RefreshedExternalAuthResult<provider>> {
   let runtime = getOAuthProviderRuntime(provider)
 
   if (runtime.refreshTokens == null) {
