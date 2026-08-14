@@ -547,6 +547,7 @@ describe('run', () => {
       assert.match(entry, /resolveFrame/)
       assert.match(entry, /server:update/)
       assert.match(renderMiddleware, /resolveClientEntry/)
+      assert.match(renderMiddleware, /getPreloads/)
       assert.match(renderMiddleware, /resolveFrame/)
       assert.match(controller, /context\.render\(<HomePage \/>/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
