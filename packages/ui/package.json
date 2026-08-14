@@ -111,10 +111,6 @@
       "types": "./src/server/stream.ts",
       "default": "./src/server/stream.ts"
     },
-    "./spa": {
-      "types": "./src/spa.ts",
-      "default": "./src/spa.ts"
-    },
     "./tabs": {
       "types": "./src/tabs/index.tsx",
       "default": "./src/tabs/index.tsx"
@@ -226,10 +222,6 @@
       "./server": {
         "types": "./dist/server/stream.d.ts",
         "default": "./dist/server/stream.js"
-      },
-      "./spa": {
-        "types": "./dist/spa.d.ts",
-        "default": "./dist/spa.js"
       },
       "./tabs": {
         "types": "./dist/tabs/index.d.ts",

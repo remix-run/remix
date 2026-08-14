@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { nodeFromSpaResponse, spaResponse } from './spa.ts'
+import { nodeFromSpaResponse, spaResponse } from './index.ts'
 
 describe('SPA responses', () => {
   it('associates a Remix node with an otherwise bodyless response', () => {

@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { createContextKey, createRouter, type Middleware } from '@remix-run/fetch-router'
 import { afterEach, describe, it, mock } from '@remix-run/test'
 import { on, type Handle } from '@remix-run/ui'
-import { nodeFromSpaResponse, spaResponse } from '@remix-run/ui/spa'
+import { nodeFromSpaResponse, spaResponse } from '@remix-run/ui'
 
 import { render, run, type Router } from './spa.ts'
 
