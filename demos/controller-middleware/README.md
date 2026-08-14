@@ -3,7 +3,8 @@
 This demo makes middleware execution visible across a parent, child, and grandchild route. For
 readability, the routes, controllers, middleware, and router setup all live in `app/router.ts`.
 
-The route tree is mounted at `/parent`:
+The index route at `/` shows the root controller middleware in isolation. The nested route tree is
+mounted at `/parent`:
 
 ```ts
 const routes = route({
@@ -34,10 +35,10 @@ router.mount('/parent', { middleware: [traceMiddleware('parent mount')] }, (pare
 pnpm -C demos/controller-middleware dev
 ```
 
-Then open <http://localhost:44100/parent> in your browser.
+Then open <http://localhost:44100/> in your browser.
 
-Use the navigation bar to move between the parent, child, and grandchild routes. Each page shows its
-middleware execution trace, so the grandchild page displays:
+Use the navigation bar to move between the home, parent, child, and grandchild routes. Each page
+shows its middleware execution trace, so the grandchild page displays:
 
 ```text
 router middleware
