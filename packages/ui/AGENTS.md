@@ -954,7 +954,7 @@ function CardWithJSState(handle: Handle<{ children: RemixNode }>) {
         border: `1px solid ${isHovered ? 'blue' : '#ddd'}`,
       }}
     >
-      <div className="title" style={{ color: isHovered ? 'blue' : '#333' }}>
+      <div class="title" style={{ color: isHovered ? 'blue' : '#333' }}>
         Title
       </div>
     </div>
@@ -993,7 +993,7 @@ function Card(handle: Handle<{ children: RemixNode }>) {
         }),
       ]}
     >
-      <div className="title">Title</div>
+      <div class="title">Title</div>
     </div>
   )
 }
@@ -1143,7 +1143,7 @@ function ProductCard(handle: Handle<{ title: string; price: number; image: strin
         ]}
       />
       <div
-        className="content"
+        class="content"
         mix={[
           css({
             padding: '16px',
@@ -1154,7 +1154,7 @@ function ProductCard(handle: Handle<{ title: string; price: number; image: strin
         ]}
       >
         <h3
-          className="title"
+          class="title"
           mix={[
             css({
               fontSize: '18px',
@@ -1168,7 +1168,7 @@ function ProductCard(handle: Handle<{ title: string; price: number; image: strin
           {handle.props.title}
         </h3>
         <div
-          className="price"
+          class="price"
           mix={[
             css({
               fontSize: '20px',

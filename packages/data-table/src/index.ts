@@ -1,37 +1,23 @@
 export type {
-  AdapterCapabilityOverrides,
-  AdapterCapabilities,
+  DatabaseCapabilities,
+  DatabaseDriver,
+  DataManipulationOperation,
   DataManipulationRequest,
   ColumnCheck,
   ColumnComputed,
   ColumnDefault,
   ColumnDefinition,
   ColumnTypeName,
-  CountOperation,
   DataManipulationResult,
-  DataManipulationOperation,
-  DeleteOperation,
-  DatabaseAdapter,
-  ExistsOperation,
   ForeignKeyAction,
   IdentityOptions,
-  InsertManyOperation,
-  InsertOperation,
-  JoinClause,
-  JoinType,
-  RawOperation,
-  ReturningSelection,
-  SelectColumn,
-  SelectOperation,
   TableRef,
   TransactionOptions,
   TransactionToken,
-  UpdateOperation,
-  UpsertOperation,
-} from './lib/adapter.ts'
+} from './lib/driver.ts'
 
 export {
-  DataTableAdapterError,
+  DataTableDatabaseError,
   DataTableConstraintError,
   DataTableError,
   DataTableQueryError,
@@ -145,6 +131,7 @@ export type {
   CreateResultOptions,
   CreateRowOptions,
   DeleteManyOptions,
+  DatabaseOptions,
   FindManyOptions,
   FindOneOptions,
   OrderByInput,
@@ -160,20 +147,18 @@ export type {
   WriteRowResult,
   WriteRowsResult,
 } from './lib/database.ts'
-export { createDatabase, Database } from './lib/database.ts'
+export { Database } from './lib/database.ts'
 export type {
-  GetMigrations,
-  MigrateOptions,
+  DatabaseMigrateOptions,
+  DatabaseMigrationStatusOptions,
+  DatabaseResetOptions,
   MigrateResult,
   MigrationDescriptor,
   MigrationRegistry,
-  MigrationRunner,
-  MigrationRunnerOptions,
   Migrations,
   MigrationStatus,
   MigrationStatusEntry,
   Seed,
 } from './lib/migrations.ts'
-export { createMigrationRunner } from './lib/migrations/runner.ts'
 export type { AnyQuery } from './lib/query.ts'
 export { Query, query } from './lib/query.ts'

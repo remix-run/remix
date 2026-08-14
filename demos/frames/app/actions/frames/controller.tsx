@@ -1,10 +1,11 @@
 import { createController, type RouterTypes } from 'remix/router'
-import { Frame, type RemixNode } from 'remix/ui'
+import { Frame, css, type RemixNode } from 'remix/ui'
 
 import { Counter } from '../../ui/public/counter.tsx'
 import { ReloadScope } from '../../ui/public/reload-scope.tsx'
 import { ReloadTime } from './public/reload-time.tsx'
 import { routes } from '../../routes.ts'
+import { clockLabelStyle, leadStyle, mutedStyle } from '../../ui/public/styles.ts'
 import { searchUnitedStates } from '../../utils/us-states.ts'
 
 export const framesController = createController(routes.frames, {
@@ -15,10 +16,10 @@ export const framesController = createController(routes.frames, {
       return render(
         context,
         <div>
-          <p style={{ marginTop: 0, color: '#b9c6ff' }}>
+          <p mix={leadStyle}>
             This content is rendered by <code>/frames/sidebar</code>.
           </p>
-          <ul style={{ margin: 0, paddingLeft: '18px', color: '#e9eefc' }}>
+          <ul mix={listStyle}>
             <li>Streams in after initial HTML</li>
             <li>Can contain client entries</li>
             <li>Can nest frames</li>
@@ -33,13 +34,13 @@ export const framesController = createController(routes.frames, {
       return render(
         context,
         <div>
-          <p style={{ marginTop: 0, color: '#b9c6ff' }}>
+          <p mix={leadStyle}>
             Rendered by <code>/frames/activity</code> at{' '}
             <time>{new Date().toLocaleTimeString()}</time>.
           </p>
           <Frame
             src={routes.frames.activityDetail.href()}
-            fallback={<div style={{ color: '#9aa8e8' }}>Loading detail…</div>}
+            fallback={<div mix={mutedStyle}>Loading detail…</div>}
           />
         </div>,
       )
@@ -51,13 +52,13 @@ export const framesController = createController(routes.frames, {
       return render(
         context,
         <div>
-          <p style={{ marginTop: 0, marginBottom: 8, color: '#9aa8e8' }}>
+          <p mix={[mutedStyle, css({ marginTop: 0, marginBottom: 8 })]}>
             Nested frame with a hydrated counter:
           </p>
-          <div style={{ marginTop: 12 }}>
+          <div mix={css({ marginTop: 12 })}>
             <Frame
               src={routes.frames.time.href()}
-              fallback={<div style={{ color: '#9aa8e8' }}>Loading server time…</div>}
+              fallback={<div mix={mutedStyle}>Loading server time…</div>}
             />
           </div>
         </div>,
@@ -69,28 +70,17 @@ export const framesController = createController(routes.frames, {
 
       return render(
         context,
-        <div
-          style={{
-            border: '1px solid rgba(255,255,255,0.10)',
-            borderRadius: 10,
-            padding: 10,
-            background: 'rgba(255,255,255,0.02)',
-          }}
-        >
-          <div style={{ fontSize: 12, color: '#b9c6ff' }}>
-            Server fragment from /frames/client-frame-example
-          </div>
-          <div style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>
-            {new Date().toLocaleTimeString()}
-          </div>
-          <div style={{ marginTop: 8 }}>
+        <div mix={fragmentStyle}>
+          <div mix={fragmentLabelStyle}>Server fragment from /frames/client-frame-example</div>
+          <div mix={clockValueStyle}>{new Date().toLocaleTimeString()}</div>
+          <div mix={css({ marginTop: 8 })}>
             <Counter initialCount={5} label="Inside mounted frame" />
           </div>
-          <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 12, color: '#9aa8e8', marginBottom: 6 }}>Nested frame:</div>
+          <div mix={css({ marginTop: 10 })}>
+            <div mix={nestedFrameLabelStyle}>Nested frame:</div>
             <Frame
               src={routes.frames.clientFrameExampleNested.href()}
-              fallback={<div style={{ color: '#9aa8e8' }}>Loading nested frame…</div>}
+              fallback={<div mix={mutedStyle}>Loading nested frame…</div>}
             />
           </div>
         </div>,
@@ -102,16 +92,9 @@ export const framesController = createController(routes.frames, {
 
       return render(
         context,
-        <div
-          style={{
-            border: '1px solid rgba(255,255,255,0.10)',
-            borderRadius: 8,
-            padding: 8,
-            background: 'rgba(255,255,255,0.02)',
-          }}
-        >
-          <div style={{ fontSize: 12, color: '#b9c6ff' }}>Nested server fragment</div>
-          <div style={{ marginTop: 6 }}>
+        <div mix={nestedFragmentStyle}>
+          <div mix={fragmentLabelStyle}>Nested server fragment</div>
+          <div mix={css({ marginTop: 6 })}>
             <Counter initialCount={1} label="Nested frame counter" />
           </div>
         </div>,
@@ -123,27 +106,18 @@ export const framesController = createController(routes.frames, {
 
       return render(
         context,
-        <div
-          style={{
-            border: '1px solid rgba(255,255,255,0.10)',
-            borderRadius: 10,
-            padding: 10,
-            background: 'rgba(255,255,255,0.02)',
-          }}
-        >
-          <div style={{ fontSize: 12, color: '#b9c6ff' }}>
+        <div mix={fragmentStyle}>
+          <div mix={fragmentLabelStyle}>
             Outer server fragment from /frames/client-mounted-outer
           </div>
-          <div style={{ marginTop: 8 }}>
+          <div mix={css({ marginTop: 8 })}>
             <Counter initialCount={2} label="Outer frame counter" />
           </div>
-          <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 12, color: '#9aa8e8', marginBottom: 6 }}>
-              Nested non-blocking frame:
-            </div>
+          <div mix={css({ marginTop: 10 })}>
+            <div mix={nestedFrameLabelStyle}>Nested non-blocking frame:</div>
             <Frame
               src={routes.frames.clientMountedNested.href()}
-              fallback={<div style={{ color: '#9aa8e8' }}>Loading nested non-blocking frame…</div>}
+              fallback={<div mix={mutedStyle}>Loading nested non-blocking frame…</div>}
             />
           </div>
         </div>,
@@ -155,19 +129,10 @@ export const framesController = createController(routes.frames, {
 
       return render(
         context,
-        <div
-          style={{
-            border: '1px solid rgba(255,255,255,0.10)',
-            borderRadius: 8,
-            padding: 8,
-            background: 'rgba(255,255,255,0.02)',
-          }}
-        >
-          <div style={{ fontSize: 12, color: '#b9c6ff' }}>Nested server fragment</div>
-          <div style={{ fontSize: 16, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-            {new Date().toLocaleTimeString()}
-          </div>
-          <div style={{ marginTop: 6 }}>
+        <div mix={nestedFragmentStyle}>
+          <div mix={fragmentLabelStyle}>Nested server fragment</div>
+          <div mix={clockValueStyle}>{new Date().toLocaleTimeString()}</div>
+          <div mix={css({ marginTop: 6 })}>
             <Counter initialCount={3} label="Nested frame counter" />
           </div>
         </div>,
@@ -179,19 +144,10 @@ export const framesController = createController(routes.frames, {
 
       return render(
         context,
-        <div
-          style={{
-            border: '1px solid rgba(255,255,255,0.10)',
-            borderRadius: 10,
-            padding: 10,
-            background: 'rgba(255,255,255,0.02)',
-          }}
-        >
-          <div style={{ fontSize: 12, color: '#b9c6ff' }}>Frame inside preserved client entry</div>
-          <div style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>
-            {new Date().toLocaleTimeString()}
-          </div>
-          <div style={{ marginTop: 8 }}>
+        <div mix={fragmentStyle}>
+          <div mix={fragmentLabelStyle}>Frame inside preserved client entry</div>
+          <div mix={clockValueStyle}>{new Date().toLocaleTimeString()}</div>
+          <div mix={css({ marginTop: 8 })}>
             <Counter initialCount={10} label="Nested frame" />
           </div>
         </div>,
@@ -207,21 +163,19 @@ export const framesController = createController(routes.frames, {
         context,
         <div>
           <div
-            style={{
+            mix={css({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: 12,
-            }}
+            })}
           >
             <div>
-              <div style={{ fontSize: 13, color: '#b9c6ff' }}>Server time</div>
-              <div style={{ fontSize: 18, fontVariantNumeric: 'tabular-nums' }}>
-                {now.toLocaleTimeString()}
-              </div>
+              <div mix={clockLabelStyle}>Server time</div>
+              <div mix={largeClockValueStyle}>{now.toLocaleTimeString()}</div>
             </div>
             <Counter initialCount={0} label="In a frame" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div mix={css({ display: 'flex', flexDirection: 'column', gap: 12 })}>
               <ReloadTime />
             </div>
           </div>
@@ -250,19 +204,19 @@ export const framesController = createController(routes.frames, {
       return render(
         context,
         <div>
-          <p style={{ marginTop: 0, marginBottom: 10, color: '#b9c6ff' }}>
+          <p mix={[leadStyle, css({ marginBottom: 10 })]}>
             {query
               ? `Results for "${query}" (${matches.length})`
               : `Showing all states (${matches.length})`}
           </p>
           {matches.length > 0 ? (
-            <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+            <ul mix={[listStyle, css({ display: 'grid', gap: 4 })]}>
               {matches.map((state) => (
                 <li key={state}>{state}</li>
               ))}
             </ul>
           ) : (
-            <p style={{ margin: 0, color: '#9aa8e8' }}>No states matched that query.</p>
+            <p mix={[mutedStyle, css({ margin: 0 })]}>No states matched that query.</p>
           )}
         </div>,
       )
@@ -280,10 +234,8 @@ function renderReloadScopeFrame(context: RouterTypes['context'], label: string) 
   return render(
     context,
     <div>
-      <div style={{ fontSize: 13, color: '#b9c6ff' }}>{label}</div>
-      <div style={{ fontSize: 18, fontVariantNumeric: 'tabular-nums', marginBottom: 10 }}>
-        {now.toLocaleTimeString()}
-      </div>
+      <div mix={clockLabelStyle}>{label}</div>
+      <div mix={[largeClockValueStyle, css({ marginBottom: 10 })]}>{now.toLocaleTimeString()}</div>
       <ReloadScope />
     </div>,
   )
@@ -296,3 +248,38 @@ function delay(ms: number) {
 
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
+
+const listStyle = css({ margin: 0, paddingLeft: 18, color: '#e9eefc' })
+
+const fragmentStyle = css({
+  border: '1px solid rgba(255,255,255,0.10)',
+  borderRadius: 10,
+  padding: 10,
+  background: 'rgba(255,255,255,0.02)',
+})
+
+const nestedFragmentStyle = css({
+  border: '1px solid rgba(255,255,255,0.10)',
+  borderRadius: 8,
+  padding: 8,
+  background: 'rgba(255,255,255,0.02)',
+})
+
+const fragmentLabelStyle = css({ fontSize: 12, color: '#b9c6ff' })
+
+const nestedFrameLabelStyle = css({
+  fontSize: 12,
+  color: '#9aa8e8',
+  marginBottom: 6,
+})
+
+const clockValueStyle = css({
+  fontSize: 16,
+  fontVariantNumeric: 'tabular-nums',
+  marginTop: 2,
+})
+
+const largeClockValueStyle = css({
+  fontSize: 18,
+  fontVariantNumeric: 'tabular-nums',
+})

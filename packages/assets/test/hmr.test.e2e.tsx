@@ -42,9 +42,11 @@ describe('asset server HMR', () => {
 
     let counterPath = path.join(fixture.rootDir, 'app/counter.ts')
     let counterSource = await fs.readFile(counterPath, 'utf-8')
+    let accepted = waitForConsoleMessage(page, '[remix] HMR accepted update /assets/app/counter.ts')
     await fs.writeFile(counterPath, counterSource.replace('Increment', 'Increment via HMR'))
 
     await waitForText(page, '[data-testid="increment"]', 'Increment via HMR')
+    await accepted
     await assertCount(page, 'Count: 3')
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
   })
@@ -328,16 +330,68 @@ describe('asset server HMR', () => {
     let importedStyleRequest = waitForStylesheetResponse(page, 200, {
       pathname: '/assets/app/theme.css',
     })
+    let updated = waitForConsoleMessage(
+      page,
+      '[remix] HMR updated stylesheet /assets/app/styles.css',
+    )
     await fs.writeFile(
       path.join(fixture.rootDir, 'app/theme.css'),
       '[data-testid="increment"] { color: green; padding: 13px; }\n',
     )
     await linkedStyleRequest
     await importedStyleRequest
+    await updated
 
     await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
     assert.equal(await getStylesheetLinkHasTimestamp(page, '/assets/app/styles.css'), true)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(0, 128, 0)')
+  })
+
+  it('ignores JavaScript updates for modules that are not loaded in the page', async (t) => {
+    let fixture = await createHmrFixture()
+    t.after(fixture.close)
+    await write(fixture.rootDir, 'app/inactive.ts', getInactiveModuleSource('before'))
+
+    let fixtureServer = await createHmrTestServer(fixture)
+    let page = await t.serve(fixtureServer)
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await get(page, '/assets/app/inactive.ts')
+    await page.locator('[data-testid="field"]').fill('typed before update')
+
+    let updateSent = fixtureServer.waitForBrowserUpdate('/assets/app/inactive.ts')
+    await write(fixture.rootDir, 'app/inactive.ts', getInactiveModuleSource('after'))
+    await updateSent
+    await page.waitForTimeout(100)
+
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'typed before update')
+    assertNoConsoleMessage(page, '[remix] HMR accepted update /assets/app/inactive.ts')
+  })
+
+  it('ignores CSS updates for stylesheets that are not present in the page', async (t) => {
+    let fixture = await createHmrFixture()
+    t.after(fixture.close)
+    await write(fixture.rootDir, 'app/inactive.css', 'body { color: red; }\n')
+
+    let fixtureServer = await createHmrTestServer(fixture)
+    let page = await t.serve(fixtureServer)
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await get(page, '/assets/app/inactive.css')
+    await page.locator('[data-testid="field"]').fill('typed before update')
+
+    let updateSent = fixtureServer.waitForBrowserUpdate('/assets/app/inactive.css')
+    await write(fixture.rootDir, 'app/inactive.css', 'body { color: blue; }\n')
+    await updateSent
+    await page.waitForTimeout(100)
+
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'typed before update')
+    assertNoConsoleMessage(page, '[remix] HMR updated stylesheet /assets/app/inactive.css')
+    await waitForStylesheetLinkCount(page, '/assets/app/inactive.css', 0)
   })
 
   it('does not refresh stylesheets after server updates from node-hmr', async (t) => {
@@ -608,6 +662,7 @@ type HmrTestServer = {
   restartAssets(): Promise<void>
   startAssets(): Promise<void>
   stopAssets(): Promise<void>
+  waitForBrowserUpdate(pathname: string): Promise<void>
 }
 
 type BrowserHmrFileEvent = {
@@ -852,6 +907,15 @@ function getCounterModuleSource(options: { buttonText: string; extraExports?: st
     '    module.renderCounter()',
     '  })',
     '}',
+    '',
+  ].join('\n')
+}
+
+function getInactiveModuleSource(value: string): string {
+  return [
+    `export const value = ${JSON.stringify(value)}`,
+    '',
+    'if (import.meta.hot) import.meta.hot.accept()',
     '',
   ].join('\n')
 }
@@ -1329,6 +1393,7 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
   let appDir = path.relative(workspaceDir, path.join(fixture.rootDir, 'app'))
   let hmrEventStream: ReturnType<typeof createTestHmrEventStream> | undefined
   let browserHmrFileEventHandlers = new Set<BrowserHmrFileEventHandler>()
+  let browserUpdateWaiters = new Map<string, Array<() => void>>()
   let browserHmrWatcher: FSWatcher | undefined
 
   let createCurrentAssetServer = () =>
@@ -1419,6 +1484,13 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
         server.closeAllConnections()
       })
     },
+    waitForBrowserUpdate(pathname) {
+      return new Promise((resolve) => {
+        let waiters = browserUpdateWaiters.get(pathname) ?? []
+        waiters.push(resolve)
+        browserUpdateWaiters.set(pathname, waiters)
+      })
+    },
   }
 
   function startBrowserHmrWatcher(): void {
@@ -1455,6 +1527,12 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
           type: 'browser:update',
           updates: browserHmrEvent.updates,
         })
+        for (let update of browserHmrEvent.updates) {
+          let waiters = browserUpdateWaiters.get(update.path)
+          if (!waiters) continue
+          browserUpdateWaiters.delete(update.path)
+          for (let resolve of waiters) resolve()
+        }
       }
     }
   }
@@ -1751,6 +1829,14 @@ function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
       pageErrors.push(error.stack ?? error.message)
     }
   })
+}
+
+function assertNoConsoleMessage(page: TestPage, text: string): void {
+  let diagnostics = attachPageDiagnostics(page)
+  assert.equal(
+    diagnostics.consoleMessages.some((message) => message.includes(text)),
+    false,
+  )
 }
 
 function waitForNavigation(page: TestPage): Promise<void> {

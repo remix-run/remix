@@ -50,6 +50,13 @@ describe('router', () => {
     assert.ok(time.includes('In a frame'))
     assert.ok(!time.includes('<\\/template'))
   })
+
+  it('renders the reload scope page with source-resolved client entries', async () => {
+    let response = await router.fetch(new Request('http://localhost/reload-scope'))
+
+    assert.equal(response.status, 200)
+    assert.match(await response.text(), /Reload top frame/)
+  })
 })
 
 async function* readChunks(stream: ReadableStream<Uint8Array>): AsyncGenerator<string, void, void> {

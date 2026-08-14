@@ -1,17 +1,25 @@
-import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
+import type { DatabaseDriver, TransactionToken } from '../driver.ts'
 import type {
-  MigrateOptions,
+  MigrationOperationOptions,
   MigrateResult,
   MigrationDescriptor,
   MigrationDirection,
   MigrationJournalRow,
   MigrationRegistry,
-  MigrationRunner,
-  MigrationRunnerOptions,
   MigrationStatus,
   MigrationStatusEntry,
   MigrationTransactionMode,
 } from '../migrations.ts'
+
+interface MigrationRunnerOptions {
+  journalTable?: string
+}
+
+interface MigrationRunner {
+  up(options?: MigrationOperationOptions): Promise<MigrateResult>
+  down(options?: MigrationOperationOptions): Promise<MigrateResult>
+  status(): Promise<MigrationStatusEntry[]>
+}
 
 import { parseTransactionDirective } from './directive.ts'
 import {
@@ -25,12 +33,14 @@ import {
 } from './journal-store.ts'
 import { resolveMigrations } from './registry.ts'
 
+type MigrationRunnerContext = DatabaseDriver
+
 type RunMigrationsInput = {
-  adapter: DatabaseAdapter
+  driver: MigrationRunnerContext
   migrations: MigrationDescriptor[]
   journalTable: string
   direction: MigrationDirection
-  options: MigrateOptions
+  options: MigrationOperationOptions
 }
 
 function assertStepOption(step: number | undefined): void {
@@ -43,7 +53,7 @@ function assertStepOption(step: number | undefined): void {
   }
 }
 
-function assertMigrateOptions(options: MigrateOptions): void {
+function assertMigrationOperationOptions(options: MigrationOperationOptions): void {
   if (options.to !== undefined && options.step !== undefined) {
     throw new Error('Cannot combine "to" and "step" migration options in the same run')
   }
@@ -132,9 +142,15 @@ function resolveTransactionMode(migration: MigrationDescriptor): MigrationTransa
 }
 
 async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> {
-  if (input.adapter.withMigrationLock) {
-    return input.adapter.withMigrationLock(input.journalTable, (adapter) =>
-      runMigrationsUnlocked({ ...input, adapter }),
+  if (input.driver.capabilities.migrationLock && !input.driver.withMigrationLock) {
+    throw new Error(
+      'Database driver reports migration lock support but does not implement withMigrationLock()',
+    )
+  }
+
+  if (input.driver.withMigrationLock) {
+    return input.driver.withMigrationLock(input.journalTable, (driver) =>
+      runMigrationsUnlocked({ ...input, driver }),
     )
   }
 
@@ -142,13 +158,13 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
 }
 
 async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<MigrateResult> {
-  let adapter = input.adapter
+  let driver = input.driver
   let migrations = input.migrations
   let journalTable = input.journalTable
   let dryRun = Boolean(input.options.dryRun)
   let step = input.options.step
 
-  assertMigrateOptions(input.options)
+  assertMigrationOperationOptions(input.options)
   assertStepOption(step)
 
   let target = resolveTargetOption(migrations, input.options.to)
@@ -158,14 +174,14 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
   let journal: MigrationJournalRow[] = []
 
   if (dryRun) {
-    let canReadJournal = await hasMigrationJournal(adapter, journalTable)
+    let canReadJournal = await hasMigrationJournal(driver, journalTable)
 
     if (canReadJournal) {
-      journal = await loadJournalRows(adapter, journalTable)
+      journal = await loadJournalRows(driver, journalTable)
     }
   } else {
-    await ensureMigrationJournal(adapter, journalTable)
-    journal = await loadJournalRows(adapter, journalTable)
+    await ensureMigrationJournal(driver, journalTable)
+    journal = await loadJournalRows(driver, journalTable)
   }
 
   let appliedMap = new Map(journal.map((row) => [row.id, row]))
@@ -212,19 +228,19 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
     let script = (input.direction === 'up' ? migration.up : migration.down) as string
     let mode = resolveTransactionMode(migration)
 
-    if (mode === 'required' && !adapter.capabilities.transactionalDdl) {
+    if (mode === 'required' && !driver.capabilities.transactionalDdl) {
       throw new Error(
         'Migration "' +
           migration.id +
-          '" requires transactional DDL, but adapter does not support it',
+          '" requires transactional DDL, but the database does not support it',
       )
     }
 
-    let shouldUseTransaction = !dryRun && mode !== 'none' && adapter.capabilities.transactionalDdl
+    let shouldUseTransaction = !dryRun && mode !== 'none' && driver.capabilities.transactionalDdl
     let token: TransactionToken | undefined
 
     if (shouldUseTransaction) {
-      token = await adapter.beginTransaction()
+      token = await driver.beginTransaction()
     }
 
     sql.push(script)
@@ -232,14 +248,14 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
     try {
       if (!dryRun) {
         if (script.trim().length > 0) {
-          await adapter.executeScript(script, token)
+          await driver.executeScript(script, token)
         }
       }
 
       if (input.direction === 'up') {
         if (!dryRun) {
           await insertJournalRow(
-            adapter,
+            driver,
             journalTable,
             {
               id: migration.id,
@@ -258,7 +274,7 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
         })
       } else {
         if (!dryRun) {
-          await deleteJournalRow(adapter, journalTable, migration.id, token)
+          await deleteJournalRow(driver, journalTable, migration.id, token)
         }
 
         reverted.push({
@@ -267,16 +283,22 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
           status: 'pending',
         })
       }
-
-      if (token) {
-        await adapter.commitTransaction(token)
-      }
     } catch (error) {
       if (token) {
-        await adapter.rollbackTransaction(token)
+        try {
+          await driver.rollbackTransaction(token)
+        } catch (rollbackError) {
+          throw new AggregateError([error, rollbackError], 'Migration and rollback both failed', {
+            cause: error,
+          })
+        }
       }
 
       throw error
+    }
+
+    if (token) {
+      await driver.commitTransaction(token)
     }
   }
 
@@ -287,50 +309,26 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
   }
 }
 
-/**
- * Creates a migration runner for applying/reverting SQL migrations against an adapter.
- *
- * The `to` option on `up()`/`down()` accepts a bare migration id or the full
- * `id_name` directory form.
- *
- * Runs verify journal integrity first. `up()` rejects when an applied journal
- * entry is missing from the current migration set, while `down()` skips
- * orphaned journal entries so migrations that are still present can be
- * reverted. Checksum drift on matching entries rejects in both directions.
- * @param adapter Database adapter used to execute migration scripts.
- * @param migrations Migration descriptors or registry.
- * @param options Optional runner configuration.
- * @returns A migration runner instance.
- * @example
- * ```ts
- * import { createMigrationRunner } from 'remix/data-table/migrations'
- *
- * let runner = createMigrationRunner(adapter, migrations, {
- *   journalTable: 'app_migrations',
- * })
- * await runner.up()
- * ```
- */
 export function createMigrationRunner(
-  adapter: DatabaseAdapter,
+  driver: DatabaseDriver,
   migrations: MigrationDescriptor[] | MigrationRegistry,
   options: MigrationRunnerOptions = {},
 ): MigrationRunner {
   let journalTable = options.journalTable ?? 'data_table_migrations'
 
   return {
-    async up(runOptions: MigrateOptions = {}): Promise<MigrateResult> {
+    async up(runOptions: MigrationOperationOptions = {}): Promise<MigrateResult> {
       return runMigrations({
-        adapter,
+        driver,
         migrations: resolveMigrations(migrations),
         journalTable,
         direction: 'up',
         options: runOptions,
       })
     },
-    async down(runOptions: MigrateOptions = {}): Promise<MigrateResult> {
+    async down(runOptions: MigrationOperationOptions = {}): Promise<MigrateResult> {
       return runMigrations({
-        adapter,
+        driver,
         migrations: resolveMigrations(migrations),
         journalTable,
         direction: 'down',
@@ -338,9 +336,9 @@ export function createMigrationRunner(
       })
     },
     async status(): Promise<MigrationStatusEntry[]> {
-      await ensureMigrationJournal(adapter, journalTable)
-
-      let journal = await loadJournalRows(adapter, journalTable)
+      let journal = (await hasMigrationJournal(driver, journalTable))
+        ? await loadJournalRows(driver, journalTable)
+        : []
       let journalMap = new Map(journal.map((row) => [row.id, row]))
       let sortedMigrations = resolveMigrations(migrations)
       let migrationIds = new Set(sortedMigrations.map((migration) => migration.id))
