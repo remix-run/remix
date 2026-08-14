@@ -11,32 +11,33 @@ import {
 import { routes } from './routes.ts'
 import { sleep } from './utils.ts'
 
+// `render()` from `remix/spa` abstracts away the `spaResponse()` aspect
+// that proxies the RemixNode through the WeakMap.
+// Passing a callback allows you to use the render middleware to wrap a Layout
+// component around your SPA routes.
+const wrapRender = render((content, { url }) => <Layout url={url}>{content}</Layout>)
+
+// Example usage of a normal middleware
 const logSpaRequests: Middleware = async ({ request }, next) => {
   let url = new URL(request.url)
   let start = performance.now()
-
   console.log(`[SPA] → ${request.method} ${url.pathname}${url.search}`)
-
-  try {
-    let response = await next()
-    let duration = Math.round(performance.now() - start)
-
-    console.log(`[SPA] ← ${response.status} ${request.method} ${url.pathname} (${duration} ms)`)
-
-    return response
-  } catch (error) {
-    console.error(`[SPA] ✕ ${request.method} ${url.pathname}`, error)
-    throw error
-  }
+  let response = await next()
+  let duration = Math.round(performance.now() - start)
+  console.log(`[SPA] ← ${response.status} ${request.method} ${url.pathname} (${duration} ms)`)
+  return response
 }
 
+// Create a normal router using the spa render middleware allowing us to render
+// RemixNodes from handlers
 const router = createRouter({
-  middleware: [render((content, { url }) => <Layout url={url}>{content}</Layout>), logSpaRequests],
+  middleware: [wrapRender, logSpaRequests],
   defaultHandler({ render }) {
     return render(<NotFoundPage />, { status: 404 })
   },
 })
 
+// Map controllers the same way we do in SSR
 router.map(routes, {
   actions: {
     async home({ render, request }) {
@@ -60,6 +61,9 @@ router.map(routes, {
   },
 })
 
+// `run()` from `remix/spa` is a wrapper around `remix/ui`'s `run()` that implements
+// a SPA-aware `resolveFrame` and handles the fallback rendering and initial top-frame
+// reload to render the initial UI
 const app = run(router, { fallback: <LoadingPage /> })
 app.addEventListener('error', (event) => {
   console.error('Remix SPA failed:', event.error)
