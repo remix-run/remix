@@ -1,30 +1,30 @@
 # Controller middleware demo
 
-This demo makes mount, controller, and action middleware execution visible across nested route maps
-and controller boundaries. Each response includes the request's execution trace as JSON.
+This demo makes middleware execution visible across a parent, child, and grandchild route. For
+readability, the routes, controllers, middleware, and router setup all live in `app/router.ts`.
 
-Controller middleware still applies only to direct actions in that controller. Mount middleware
-applies across every controller and nested mount registered by the route installer, so it can define
-one boundary for a complete route group.
-
-The project URL contract remains nested:
+The route tree is mounted at `/parent`:
 
 ```ts
-projects: route('projects', {
+const routes = route({
   index: get('/'),
-  activity: route(':projectId/activity', {
+  child: route('child', {
     index: get('/'),
+    grandchild: route('grandchild', {
+      index: get('/'),
+    }),
   }),
 })
 ```
 
-The relative project routes are mounted once with shared middleware, then each route map is mapped
-to its own controller:
+Each level has its own controller. Controller middleware applies only to actions in that controller,
+while the parent mount middleware applies to all three controllers:
 
 ```ts
-router.mount('/projects', { middleware: [traceMount('projects')] }, (projects) => {
-  projects.map(projectRoutes, projectsController)
-  projects.map(projectRoutes.activity, activityController)
+router.mount('/parent', { middleware: [traceMiddleware('parent mount')] }, (parent) => {
+  parent.map(routes, parentController)
+  parent.map(routes.child, childController)
+  parent.map(routes.child.grandchild, grandchildController)
 })
 ```
 
@@ -37,29 +37,28 @@ pnpm -C demos/controller-middleware dev
 Then request each route:
 
 ```sh
-curl http://localhost:44100/
-curl http://localhost:44100/projects
-curl http://localhost:44100/projects/alpha/activity
+curl http://localhost:44100/parent
+curl http://localhost:44100/parent/child
+curl http://localhost:44100/parent/child/grandchild
 ```
 
-The project activity route responds with a trace like:
+The grandchild route responds with a trace like:
 
 ```json
 {
-  "route": "projects.activity.index",
-  "params": { "projectId": "alpha" },
+  "route": "grandchild",
   "trace": [
     "router middleware",
-    "projects mount middleware",
-    "activity controller middleware",
-    "projects.activity.index action"
+    "parent mount middleware",
+    "grandchild controller middleware",
+    "grandchild action"
   ]
 }
 ```
 
-The projects controller middleware is absent from the activity response because controller
-middleware does not inherit. The projects mount middleware is present because the activity
-controller was registered inside that mounted route group.
+The parent and child controller middleware are absent because controller middleware does not
+inherit. The parent mount middleware is present because the grandchild controller was registered
+inside the mounted route group.
 
 Run the focused regression tests with:
 
