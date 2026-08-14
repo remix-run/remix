@@ -1201,8 +1201,7 @@ function finalizeHtml(html: string, context: RenderContext): string {
         }
       }
     } else {
-      // Framework-owned head content is transported at the start of fragments
-      // so it can be consumed before the remaining frame content is rendered.
+      // No HTML root, prepend head
       html = `<head>${headContent}</head>${html}`
     }
   }
