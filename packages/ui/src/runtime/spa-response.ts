@@ -39,7 +39,13 @@ export function nodeFromSpaResponse(response: Response): RemixNode {
   return data.node
 }
 
-/** Associates the final redirect URL with an SPA response for frame history updates. */
+/**
+ * Associates the final redirect URL with an SPA response for frame history updates.
+ *
+ * @param response Response to associate with a redirect URL.
+ * @param redirectedTo Final redirect URL.
+ * @throws {TypeError} When the response was not created by {@link spaResponse}.
+ */
 export function setSpaResponseRedirect(response: Response, redirectedTo: string): void {
   let data = spaResponses?.get(response)
   if (!data) throw new TypeError('Expected a Remix SPA response')
