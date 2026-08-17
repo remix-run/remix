@@ -81,6 +81,31 @@ describe('createRelease', () => {
     })
   })
 
+  it('uses release notes supplied by the publisher', async () => {
+    await withGitHubToken(async () => {
+      let releaseOptions: Record<string, unknown> | undefined
+      let githubRequest: GitHubRequest = async (route, options) => {
+        if (route === 'GET /repos/{owner}/{repo}/releases/tags/{tag}') {
+          throw createHttpError(404, 'Not Found')
+        }
+
+        if (route === 'POST /repos/{owner}/{repo}/releases') {
+          releaseOptions = options
+          return { data: {} }
+        }
+
+        throw new Error(`Unexpected route: ${route}`)
+      }
+
+      await createRelease('remix', '3.0.0-beta.9', {
+        body: 'Changes since beta.6',
+        request: githubRequest,
+      })
+
+      assert.equal(releaseOptions?.body, 'Changes since beta.6')
+    })
+  })
+
   it('treats a failed create response as success when the release exists afterward', async () => {
     await withGitHubToken(async () => {
       let calls: MockCall[] = []

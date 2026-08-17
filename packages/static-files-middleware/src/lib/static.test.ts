@@ -375,7 +375,7 @@ describe('staticFiles middleware', () => {
 
   it('does not support absolute paths in the URL', async () => {
     let parentDir = path.dirname(tmpDir)
-    let secretFileName = 'secret-outside-root.txt'
+    let secretFileName = `${path.basename(tmpDir)}-secret-outside-root.txt`
     let secretPath = path.join(parentDir, secretFileName)
     fs.writeFileSync(secretPath, 'Secret content')
 

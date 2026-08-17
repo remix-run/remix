@@ -2,6 +2,7 @@ import assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import {
   createPublishPlan,
+  getReleaseNotes,
   isPackageVersionPublished,
   type PublishCandidate,
   type RegistryRequest,
@@ -32,6 +33,62 @@ function createRegistryRequest(
     urls,
   }
 }
+
+describe('getReleaseNotes', () => {
+  it('combines skipped changelog entries since the previous published version', async () => {
+    let publishedVersions = new Set(['3.0.0-beta.6'])
+    let notes = await getReleaseNotes({
+      entries: [
+        { version: '3.0.0-beta.9', body: 'Beta 9 changes' },
+        { version: '3.0.0-beta.8', body: 'Beta 8 changes' },
+        { version: '3.0.0-beta.7', body: 'Beta 7 changes' },
+        { version: '3.0.0-beta.6', body: 'Beta 6 changes' },
+      ],
+      targetVersion: '3.0.0-beta.9',
+      isVersionPublished: async (version) => publishedVersions.has(version),
+    })
+
+    assert.equal(
+      notes,
+      `This release includes all changes since v3.0.0-beta.6.
+
+## v3.0.0-beta.7
+
+Beta 7 changes
+
+## v3.0.0-beta.8
+
+Beta 8 changes
+
+## v3.0.0-beta.9
+
+Beta 9 changes`,
+    )
+  })
+
+  it('uses the target changelog entry when the previous version was published', async () => {
+    let notes = await getReleaseNotes({
+      entries: [
+        { version: '0.7.0', body: 'Current changes' },
+        { version: '0.6.0', body: 'Previous changes' },
+      ],
+      targetVersion: '0.7.0',
+      isVersionPublished: async () => true,
+    })
+
+    assert.equal(notes, 'Current changes')
+  })
+
+  it('returns null when the target changelog entry is missing', async () => {
+    let notes = await getReleaseNotes({
+      entries: [],
+      targetVersion: '1.0.0',
+      isVersionPublished: async () => false,
+    })
+
+    assert.equal(notes, null)
+  })
+})
 
 describe('isPackageVersionPublished', () => {
   it('checks scoped packages using the npm registry API', async () => {

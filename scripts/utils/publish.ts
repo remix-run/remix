@@ -1,3 +1,5 @@
+import type { ChangelogEntry } from './changes.ts'
+
 export interface PublishCandidate {
   packageName: string
   version: string
@@ -18,6 +20,12 @@ interface CreatePublishPlanOptions {
   prereleaseDirNames: Set<string>
   getDirectoryName(packageName: string): string | null
   getDependencies(packageName: string): string[]
+}
+
+interface GetReleaseNotesOptions {
+  entries: ChangelogEntry[]
+  targetVersion: string
+  isVersionPublished(version: string): Promise<boolean>
 }
 
 export async function isPackageVersionPublished(
@@ -43,6 +51,43 @@ export async function isPackageVersionPublished(
   }
 
   return true
+}
+
+export async function getReleaseNotes({
+  entries,
+  targetVersion,
+  isVersionPublished,
+}: GetReleaseNotesOptions): Promise<string | null> {
+  let targetIndex = entries.findIndex((entry) => entry.version === targetVersion)
+  if (targetIndex === -1) {
+    return null
+  }
+
+  let includedEntries = [entries[targetIndex]]
+  let previousPublishedVersion: string | null = null
+
+  for (let entry of entries.slice(targetIndex + 1)) {
+    if (await isVersionPublished(entry.version)) {
+      previousPublishedVersion = entry.version
+      break
+    }
+    includedEntries.push(entry)
+  }
+
+  if (includedEntries.length === 1) {
+    return includedEntries[0].body
+  }
+
+  let introduction =
+    previousPublishedVersion === null
+      ? 'This release includes all previously unpublished changelog entries.'
+      : `This release includes all changes since v${previousPublishedVersion}.`
+  let versionSections = includedEntries
+    .reverse()
+    .map((entry) => `## v${entry.version}\n\n${entry.body}`)
+    .join('\n\n')
+
+  return `${introduction}\n\n${versionSections}`
 }
 
 export function createPublishPlan({
