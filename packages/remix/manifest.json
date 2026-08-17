@@ -55,7 +55,7 @@
   "remix/middleware/method-override": "@remix-run/method-override-middleware",
   "remix/middleware/render": "@remix-run/render-middleware",
   "remix/middleware/session": "@remix-run/session-middleware",
-  "remix/middleware/static": "@remix-run/static-middleware",
+  "remix/middleware/static": "@remix-run/static-files",
   "remix/mime": "@remix-run/mime",
   "remix/multipart-parser": "@remix-run/multipart-parser",
   "remix/multipart-parser/node": "@remix-run/multipart-parser/node",

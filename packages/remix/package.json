@@ -79,7 +79,7 @@
     "./middleware/method-override": "./src/method-override-middleware.ts",
     "./middleware/render": "./src/render-middleware.ts",
     "./middleware/session": "./src/session-middleware.ts",
-    "./middleware/static": "./src/static-middleware.ts",
+    "./middleware/static": "./src/static-files.ts",
     "./mime": "./src/mime.ts",
     "./multipart-parser": "./src/multipart-parser.ts",
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
@@ -373,8 +373,8 @@
         "default": "./dist/session-middleware.js"
       },
       "./middleware/static": {
-        "types": "./dist/static-middleware.d.ts",
-        "default": "./dist/static-middleware.js"
+        "types": "./dist/static-files.d.ts",
+        "default": "./dist/static-files.js"
       },
       "./mime": {
         "types": "./dist/mime.d.ts",
@@ -676,7 +676,6 @@
     "@remix-run/session-middleware": "workspace:^",
     "@remix-run/session-storage-memcache": "workspace:^",
     "@remix-run/session-storage-redis": "workspace:^",
-    "@remix-run/static-middleware": "workspace:^",
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/assert": "workspace:^",
     "@remix-run/cli": "workspace:^",
@@ -684,7 +683,8 @@
     "@remix-run/terminal": "workspace:^",
     "@remix-run/render-middleware": "workspace:^",
     "@remix-run/node-hmr": "workspace:^",
-    "@remix-run/ui-hmr": "workspace:^"
+    "@remix-run/ui-hmr": "workspace:^",
+    "@remix-run/static-files": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
