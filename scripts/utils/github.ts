@@ -178,11 +178,13 @@ export async function createRelease(
   packageName: string,
   version: string,
   options: {
+    body?: string
     preview?: boolean
     request?: GitHubRequest
   } & RetryOptions = {},
 ): Promise<CreateReleaseResult> {
   let {
+    body: requestedBody,
     preview = false,
     request: githubRequest = defaultRequest,
     maxAttempts,
@@ -192,7 +194,7 @@ export async function createRelease(
   let tagName = getGitTag(packageName, version)
   let releaseName = `${getPackageShortName(packageName)} v${version}`
   let changes = getChangelogEntry({ packageName, version })
-  let body = changes?.body ?? 'No changelog entry found for this version.'
+  let body = requestedBody ?? changes?.body ?? 'No changelog entry found for this version.'
 
   if (preview) {
     console.log(`  Tag:  ${tagName}`)

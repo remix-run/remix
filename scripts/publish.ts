@@ -31,7 +31,7 @@ import {
 } from './utils/git.ts'
 import { createRelease, releaseExists } from './utils/github.ts'
 import { getRootDir, logAndExec } from './utils/process.ts'
-import { readChangesConfig, getChangelogEntry } from './utils/changes.ts'
+import { readChangesConfig, getChangelogEntries } from './utils/changes.ts'
 import {
   getAllPackageDirNames,
   getPackageFile,
@@ -42,7 +42,7 @@ import {
   getPackagePath,
 } from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
-import { createPublishPlan, isPackageVersionPublished } from './utils/publish.ts'
+import { createPublishPlan, getReleaseNotes, isPackageVersionPublished } from './utils/publish.ts'
 
 const rootDir = getRootDir()
 
@@ -345,7 +345,22 @@ interface ChangelogWarning {
  * Preview GitHub releases for packages that would be published.
  * Returns warnings for packages with missing changelog entries.
  */
-function previewGitHubReleases(packages: PublishedPackage[]): { warnings: ChangelogWarning[] } {
+async function getReleaseBody(pkg: PublishedPackage): Promise<string | null> {
+  let entries = getChangelogEntries({ packageName: pkg.packageName })
+  if (entries === null) {
+    return null
+  }
+
+  return getReleaseNotes({
+    entries,
+    targetVersion: pkg.version,
+    isVersionPublished: (version) => isPackageVersionPublished(pkg.packageName, version),
+  })
+}
+
+async function previewGitHubReleases(
+  packages: PublishedPackage[],
+): Promise<{ warnings: ChangelogWarning[] }> {
   let warnings: ChangelogWarning[] = []
 
   console.log('GitHub Release Preview')
@@ -355,10 +370,10 @@ function previewGitHubReleases(packages: PublishedPackage[]): { warnings: Change
   for (let pkg of packages) {
     let tagName = getGitTag(pkg.packageName, pkg.version)
     let releaseName = `${getPackageShortName(pkg.packageName)} v${pkg.version}`
-    let changes = getChangelogEntry({ packageName: pkg.packageName, version: pkg.version })
-    let body = changes?.body ?? 'No changelog entry found for this version.'
+    let releaseBody = await getReleaseBody(pkg)
+    let body = releaseBody ?? 'No changelog entry found for this version.'
 
-    if (changes === null) {
+    if (releaseBody === null) {
       warnings.push({ packageName: pkg.packageName, version: pkg.version })
     }
 
@@ -500,7 +515,7 @@ async function main() {
     }
     console.log()
 
-    let { warnings } = previewGitHubReleases(unpublished)
+    let { warnings } = await previewGitHubReleases(unpublished)
 
     if (warnings.length > 0) {
       console.log('⚠️  WARNINGS')
@@ -607,7 +622,12 @@ async function main() {
   let failedReleases: Array<{ pkg: PublishedPackage; error: string }> = []
 
   for (let pkg of packagesNeedingTagsOrReleases) {
-    let result = await createRelease(pkg.packageName, pkg.version)
+    let releaseBody = await getReleaseBody(pkg)
+    let result = await createRelease(
+      pkg.packageName,
+      pkg.version,
+      releaseBody === null ? {} : { body: releaseBody },
+    )
     if (result.status === 'created') {
       console.log(`  ✓ ${pkg.packageName} v${pkg.version}`)
     } else if (result.status === 'skipped') {
