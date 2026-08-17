@@ -140,6 +140,28 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
+  demos/spa:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      playwright:
+        specifier: 'catalog:'
+        version: 1.60.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vite:
+        specifier: 7.3.3
+        version: 7.3.3(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
+
   demos/sse:
     dependencies:
       remix:
@@ -1585,6 +1607,9 @@ importers:
       '@remix-run/session-storage-redis':
         specifier: workspace:^
         version: link:../session-storage-redis
+      '@remix-run/spa':
+        specifier: workspace:^
+        version: link:../spa
       '@remix-run/static-middleware':
         specifier: workspace:^
         version: link:../static-middleware
@@ -1796,6 +1821,34 @@ importers:
       redis:
         specifier: ^5.10.0
         version: 5.11.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  packages/spa:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+      '@remix-run/render-middleware':
+        specifier: workspace:^
+        version: link:../render-middleware
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../ui
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../test
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
