@@ -2,6 +2,24 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.9
+
+### Pre-release Changes
+
+- `run()` from `remix/ui` now fetches frame HTML by default, so apps no longer need a custom `resolveFrame` just to enable frame reloads and same-origin link and form navigation:
+
+  ```diff
+   let app = run({
+     loadModule,
+  -  resolveFrame: (src, options) => fetch(src, { signal: options?.signal }),
+   })
+  ```
+
+  Keep a custom resolver when the app needs custom request headers, body encoding, response handling, or error UI. Add `rmx-document` to a link or form to leave that navigation to the browser (see #11693).
+
+- Bumped `@remix-run/*` dependencies:
+  - [`ui@0.7.0`](https://github.com/remix-run/remix/releases/tag/ui@0.7.0)
+
 ## v3.0.0-beta.8
 
 ### Pre-release Changes
