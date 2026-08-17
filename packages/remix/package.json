@@ -79,7 +79,7 @@
     "./middleware/method-override": "./src/method-override-middleware.ts",
     "./middleware/render": "./src/render-middleware.ts",
     "./middleware/session": "./src/session-middleware.ts",
-    "./middleware/static": "./src/static-files.ts",
+    "./middleware/static": "./src/static-files-middleware.ts",
     "./mime": "./src/mime.ts",
     "./multipart-parser": "./src/multipart-parser.ts",
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
@@ -373,8 +373,8 @@
         "default": "./dist/session-middleware.js"
       },
       "./middleware/static": {
-        "types": "./dist/static-files.d.ts",
-        "default": "./dist/static-files.js"
+        "types": "./dist/static-files-middleware.d.ts",
+        "default": "./dist/static-files-middleware.js"
       },
       "./mime": {
         "types": "./dist/mime.d.ts",
@@ -684,7 +684,7 @@
     "@remix-run/render-middleware": "workspace:^",
     "@remix-run/node-hmr": "workspace:^",
     "@remix-run/ui-hmr": "workspace:^",
-    "@remix-run/static-files": "workspace:^"
+    "@remix-run/static-files-middleware": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",

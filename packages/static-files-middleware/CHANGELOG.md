@@ -1,6 +1,6 @@
-# `static-files` CHANGELOG
+# `static-files-middleware` CHANGELOG
 
-This is the changelog for [`static-files`](https://github.com/remix-run/remix/tree/main/packages/static-files). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`static-files-middleware`](https://github.com/remix-run/remix/tree/main/packages/static-files-middleware). It follows [semantic versioning](https://semver.org/).
 
 ## v0.1.0
 
