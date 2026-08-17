@@ -109,8 +109,7 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
     signal: options?.signal,
   })
 
-  // Allow 4xx responses to provide frame UI by default.
-  if (response.status >= 500) {
+  if (!response.ok) {
     throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
   }
 

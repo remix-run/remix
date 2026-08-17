@@ -108,7 +108,7 @@ async function resolveFrame(src, options) {
     signal: options?.signal,
   })
 
-  if (response.status >= 500) {
+  if (!response.ok) {
     throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
   }
 
@@ -151,9 +151,9 @@ response policy.
 
 Add `rmx-document` to a link or form to leave its navigation to the browser.
 
-The default resolver renders 4xx response bodies, but a 5xx response fails frame resolution with an
-error containing its status and status text. A custom `resolveFrame` may return a `Response` with any
-status when it wants Remix UI to render the response body.
+The default resolver rejects non-OK responses with an error containing their status and status text.
+A custom `resolveFrame` may return a `Response` with any status when it wants Remix UI to render the
+response body.
 
 Forms remain ordinary HTML forms before the runtime starts. Add `rmx-target` to reload a named frame, or `rmx-document` to require a full-document submission:
 

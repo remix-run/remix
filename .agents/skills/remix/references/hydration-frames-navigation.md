@@ -127,9 +127,9 @@ another body encoding, or a different response policy.
 
 Add `rmx-document` to a link or form to leave its navigation to the browser.
 
-The default resolver renders 4xx response bodies, but a 5xx response fails frame resolution with an
-error containing its status and status text. A custom `resolveFrame` may return a `Response` with any
-status when it wants the runtime to render the response body.
+The default resolver rejects non-OK responses with an error containing their status and status text.
+A custom `resolveFrame` may return a `Response` with any status when it wants the runtime to render
+the response body.
 
 ### `run` options
 

@@ -189,7 +189,7 @@ async function resolveFrame(src, options) {
     signal: options?.signal,
   })
 
-  if (response.status >= 500) {
+  if (!response.ok) {
     throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
   }
 
@@ -231,8 +231,8 @@ submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-
 additional headers, another body encoding, or a different response policy. Custom resolvers receive
 `signal` and `target`; non-GET form submissions also provide `formData`, `method`, and `encType`.
 
-The default resolver renders 4xx response bodies but rejects 5xx responses. A custom resolver may
-return a `Response` with any status when it wants Remix UI to render the response body.
+The default resolver rejects non-OK responses. A custom resolver may return a `Response` with any
+status when it wants Remix UI to render the response body.
 
 A client resolver may return frame content directly or return the fetched `Response`. Returning the response lets Remix stream its body. When `fetch()` followed a redirect during a top-frame navigation, the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`; other frames render the response without changing either URL.
 

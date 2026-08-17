@@ -228,7 +228,7 @@ describe('frames', () => {
     }
   })
 
-  it('renders 4xx response bodies', async () => {
+  it('renders 4xx response bodies from custom resolvers', async () => {
     let root = document.createElement('div')
     root.innerHTML = '<p id="initial">Initial</p>'
     document.body.append(root)

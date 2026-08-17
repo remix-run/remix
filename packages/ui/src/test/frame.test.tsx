@@ -217,15 +217,15 @@ describe('run', () => {
     }
   })
 
-  it('rejects 5xx responses from the default resolver without replacing frame content', async (t) => {
+  it('rejects non-OK responses from the default resolver without replacing frame content', async (t) => {
     document.body.innerHTML = '<main id="initial">Initial</main>'
     let fetchMock = t.mock.method(
       globalThis,
       'fetch',
       async () =>
-        new Response('<main id="error">Account unavailable</main>', {
-          status: 503,
-          statusText: 'Service Unavailable',
+        new Response('<main id="error">Account not found</main>', {
+          status: 404,
+          statusText: 'Not Found',
         }),
     )
 
@@ -240,14 +240,12 @@ describe('run', () => {
       app.frames.top.src = '/account'
 
       await expect(app.frames.top.reload()).rejects.toThrow(
-        'Failed to resolve frame: 503 Service Unavailable',
+        'Failed to resolve frame: 404 Not Found',
       )
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       expect(reportedError).toBeInstanceOf(Error)
-      expect((reportedError as Error).message).toBe(
-        'Failed to resolve frame: 503 Service Unavailable',
-      )
+      expect((reportedError as Error).message).toBe('Failed to resolve frame: 404 Not Found')
       expect(document.getElementById('initial')?.textContent).toBe('Initial')
       expect(document.getElementById('error')).toBeNull()
     } finally {
