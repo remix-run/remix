@@ -57,6 +57,7 @@
   "remix/middleware/session": "@remix-run/session-middleware",
   "remix/middleware/static": "@remix-run/static-middleware",
   "remix/mime": "@remix-run/mime",
+  "remix/mixin-repro": "@remix-run/mixin-repro",
   "remix/multipart-parser": "@remix-run/multipart-parser",
   "remix/multipart-parser/node": "@remix-run/multipart-parser/node",
   "remix/node-fetch-server": "@remix-run/node-fetch-server",

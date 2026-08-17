@@ -1270,6 +1270,12 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
+  packages/mixin-repro:
+    dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../ui
+
   packages/multipart-parser:
     dependencies:
       '@remix-run/headers':
@@ -1552,6 +1558,9 @@ importers:
       '@remix-run/mime':
         specifier: workspace:^
         version: link:../mime
+      '@remix-run/mixin-repro':
+        specifier: workspace:^
+        version: link:../mixin-repro
       '@remix-run/multipart-parser':
         specifier: workspace:^
         version: link:../multipart-parser
