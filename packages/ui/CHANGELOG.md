@@ -2,6 +2,12 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.6.0
+
+### Minor Changes
+
+- Allow `resolveClientEntry()` to return module preload hrefs so client entries can preload their browser module graphs
+
 ## v0.5.0
 
 ### Minor Changes

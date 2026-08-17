@@ -2,6 +2,16 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.7
+
+### Pre-release Changes
+
+- Allow `resolveClientEntry()` in `remix/ui` to return module preload hrefs so client entries can preload their browser module graphs
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cli@0.5.0`](https://github.com/remix-run/remix/releases/tag/cli@0.5.0)
+  - [`ui@0.6.0`](https://github.com/remix-run/remix/releases/tag/ui@0.6.0)
+
 ## v3.0.0-beta.6
 
 ### Pre-release Changes
