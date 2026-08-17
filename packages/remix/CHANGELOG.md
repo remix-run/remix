@@ -2,6 +2,15 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.8
+
+### Pre-release Changes
+
+- Fixed fresh Remix projects failing type checking when `staticFiles()` and other router middleware were used together. `remix/middleware/static` now uses the same router dependency as `remix/router`, preventing incompatible `RequestContext` types from being installed.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`static-files@0.1.0`](https://github.com/remix-run/remix/releases/tag/static-files@0.1.0)
+
 ## v3.0.0-beta.7
 
 ### Pre-release Changes
