@@ -871,7 +871,7 @@ export function getChangelogEntries({
 
 /**
  * Gets a specific version's entry from a package's CHANGELOG.md.
- * Accepts an npm package name (e.g., "@remix-run/static-middleware" or "remix").
+ * Accepts an npm package name (e.g., "@remix-run/static-files-middleware" or "remix").
  */
 export function getChangelogEntry({
   packageName,

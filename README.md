@@ -89,7 +89,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [session-middleware](packages/session-middleware): Middleware for managing sessions with cookie-based storage
 - [session-storage-memcache](packages/session-storage-memcache): Memcache session storage for remix/session
 - [session-storage-redis](packages/session-storage-redis): Redis session storage for remix/session
-- [static-middleware](packages/static-middleware): Middleware for serving static files from the filesystem
+- [static-files-middleware](packages/static-files-middleware): Middleware for serving static files from the filesystem
 - [tar-parser](packages/tar-parser): A fast, efficient parser for tar streams in any JavaScript environment
 - [terminal](packages/terminal): Terminal output utilities for JavaScript libraries and CLIs
 - [test](packages/test): A test framework for JavaScript and TypeScript projects
