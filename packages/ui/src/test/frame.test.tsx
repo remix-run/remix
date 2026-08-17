@@ -287,22 +287,6 @@ describe('run', () => {
     }
   })
 
-  it('disables navigation interception and manual frame reloads when resolveFrame is false', async (t) => {
-    let addNavigationListener = t.mock.method(window.navigation, 'addEventListener')
-    let app = run({ loadModule: mock.fn(), resolveFrame: false })
-
-    try {
-      await app.ready()
-
-      expect(addNavigationListener).not.toHaveBeenCalled()
-      await expect(app.frames.top.reload()).rejects.toThrow(
-        'Cannot resolve frame because resolveFrame is disabled',
-      )
-    } finally {
-      app.dispose()
-    }
-  })
-
   it('hydrates a single component', async () => {
     let Counter = clientEntry(
       '/js/counter.js#Counter',

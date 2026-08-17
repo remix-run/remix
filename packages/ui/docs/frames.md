@@ -225,16 +225,13 @@ submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-
 additional headers, another body encoding, or a different response policy. Custom resolvers receive
 `signal` and `target`; non-GET form submissions also provide `formData`, `method`, and `encType`.
 
-Set `resolveFrame: false` to leave link and form navigations to the browser. Frame handles remain
-available, but calling `reload()` rejects because frame resolution is disabled.
-
 A client resolver may return frame content directly or return the fetched `Response`. Returning the response lets Remix stream its body. When `fetch()` followed a redirect during a top-frame navigation, the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`; other frames render the response without changing either URL.
 
 Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
 
 ## Link navigation
 
-When frame resolution is enabled, eligible same-origin anchor navigations reload `handle.frames.top` through the frame resolver instead of performing a full document navigation.
+Eligible same-origin anchor navigations reload `handle.frames.top` through the frame resolver instead of performing a full document navigation.
 
 - `rmx-target="name"` reloads a named frame.
 - `rmx-src="/frame"` overrides the URL resolved into that frame while `href` remains the navigation destination.
@@ -246,7 +243,7 @@ The `link(href, { history })` mixin adds the corresponding `rmx-history` value w
 
 ## Form navigation
 
-When frame resolution is enabled, eligible same-origin form submissions use the same frame navigation path as links. Native constraint validation and the form's `submit` event run first, so invalid forms never reach `resolveFrame`.
+Eligible same-origin form submissions use the same frame navigation path as links. Native constraint validation and the form's `submit` event run first, so invalid forms never reach `resolveFrame`.
 
 - Submissions reload `handle.frames.top` by default.
 - `rmx-target="name"` reloads a named frame.

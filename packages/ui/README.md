@@ -143,8 +143,7 @@ CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass 
 `resolveFrame` when the server requires additional headers, another body encoding, or a different
 response policy.
 
-Set `resolveFrame: false` to leave link and form navigations to the browser. Frame handles remain
-available, but calling `reload()` rejects because frame resolution is disabled.
+Add `rmx-document` to a link or form to leave its navigation to the browser.
 
 When `resolveFrame` returns a `Response`, Remix UI renders its body for statuses below 500, including
 4xx responses. A 5xx response fails frame resolution with an error containing its status and status

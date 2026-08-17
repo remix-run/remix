@@ -24,10 +24,9 @@ export interface RunInit {
    * Resolves browser-loaded `<Frame>` content.
    *
    * Defaults to fetching the frame source as HTML with the submitted form data,
-   * method, encoding, and abort signal. Set to `false` to disable navigation
-   * interception and make frame reloads throw.
+   * method, encoding, and abort signal.
    */
-  resolveFrame?: ResolveFrame | false
+  resolveFrame?: ResolveFrame
 }
 
 /**
@@ -111,10 +110,6 @@ function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promis
   })
 }
 
-function disabledResolveFrame(): never {
-  throw new Error('Cannot resolve frame because resolveFrame is disabled')
-}
-
 /**
  * Starts the client-side Remix component runtime for the current document.
  *
@@ -126,9 +121,7 @@ export function run(init: RunInit): AppRuntime {
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
   let scheduler = createScheduler(document, errorTarget, styleManager)
 
-  let frameResolutionEnabled = init.resolveFrame !== false
-  let resolveFrame: ResolveFrame =
-    init.resolveFrame === false ? disabledResolveFrame : (init.resolveFrame ?? defaultResolveFrame)
+  let resolveFrame = init.resolveFrame ?? defaultResolveFrame
 
   topFrame = createFrame(document, {
     src: document.location.href,
@@ -152,7 +145,7 @@ export function run(init: RunInit): AppRuntime {
       return namedFrames.get(name)
     },
   }
-  if (frameResolutionEnabled) startNavigationListener(appController.signal)
+  startNavigationListener(appController.signal)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
     throw error
