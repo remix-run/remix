@@ -1,8 +1,8 @@
 /**
  * Publishes packages to npm and creates tags/releases for what was published.
  *
- * This script uses pnpm publish with --report-summary, reads the summary file,
- * and creates Git tags + GitHub releases. When one or more packages are in
+ * This script uses npm publish for trusted publishing authentication, then
+ * creates Git tags + GitHub releases. When one or more packages are in
  * prerelease mode (have .changes/config.json with prereleaseChannel), it publishes
  * in two phases: all other packages as "latest", then prerelease packages with
  * the "next" tag.
@@ -20,6 +20,7 @@
  */
 import * as cp from 'node:child_process'
 import * as fs from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
 
 import {
@@ -37,8 +38,11 @@ import {
   getGitTag,
   packageNameToDirectoryName,
   getPackageShortName,
+  getPackageDependencies,
+  getPackagePath,
 } from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
+import { createPublishPlan, isPackageVersionPublished } from './utils/publish.ts'
 
 const rootDir = getRootDir()
 
@@ -50,13 +54,6 @@ interface PublishedPackage {
   packageName: string
   version: string
   tag: string
-}
-
-interface PublishSummary {
-  publishedPackages: Array<{
-    name: string
-    version: string
-  }>
 }
 
 interface LocalPackage {
@@ -73,28 +70,6 @@ interface PrereleasePackage {
 interface TagPlan {
   pkg: PublishedPackage
   targetCommit: string
-}
-
-/**
- * Read published packages from pnpm's publish summary file.
- * See https://pnpm.io/cli/publish#--report-summary
- */
-function readPublishSummary(): PublishedPackage[] {
-  let summaryPath = path.join(rootDir, 'pnpm-publish-summary.json')
-
-  if (!fs.existsSync(summaryPath)) {
-    throw new Error(
-      `pnpm-publish-summary.json not found. This is unexpected after a successful publish.`,
-    )
-  }
-
-  let summary: PublishSummary = JSON.parse(fs.readFileSync(summaryPath, 'utf-8'))
-
-  return summary.publishedPackages.map((pkg) => ({
-    packageName: pkg.name,
-    version: pkg.version,
-    tag: getGitTag(pkg.name, pkg.version),
-  }))
 }
 
 /**
@@ -155,22 +130,6 @@ function getPrereleasePackages(): PrereleasePackage[] {
 }
 
 /**
- * Check if a specific version of a package is published on npm.
- */
-async function isVersionPublished(packageName: string, version: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    cp.exec(
-      `npm view ${packageName}@${version} version`,
-      { encoding: 'utf-8' },
-      (_error, stdout) => {
-        // If we get output that matches the version, it exists
-        resolve(stdout.trim() === version)
-      },
-    )
-  })
-}
-
-/**
  * Get all packages that have versions not yet published to npm.
  */
 async function getUnpublishedPackages(): Promise<PublishedPackage[]> {
@@ -180,7 +139,7 @@ async function getUnpublishedPackages(): Promise<PublishedPackage[]> {
   let npmResults = await Promise.all(
     localPackages.map(async (pkg) => ({
       pkg,
-      isPublished: await isVersionPublished(pkg.npmName, pkg.localVersion),
+      isPublished: await isPackageVersionPublished(pkg.npmName, pkg.localVersion),
     })),
   )
 
@@ -209,7 +168,7 @@ async function getPublishedPackagesMissingTags(): Promise<PublishedPackage[]> {
   let npmResults = await Promise.all(
     localPackages.map(async (pkg) => ({
       pkg,
-      isPublished: await isVersionPublished(pkg.npmName, pkg.localVersion),
+      isPublished: await isPackageVersionPublished(pkg.npmName, pkg.localVersion),
     })),
   )
 
@@ -242,7 +201,7 @@ async function getPublishedPackagesMissingReleases(): Promise<PublishedPackage[]
   let npmResults = await Promise.all(
     localPackages.map(async (pkg) => ({
       pkg,
-      isPublished: await isVersionPublished(pkg.npmName, pkg.localVersion),
+      isPublished: await isPackageVersionPublished(pkg.npmName, pkg.localVersion),
     })),
   )
 
@@ -456,54 +415,69 @@ async function main() {
   // Publish packages to npm
   console.log('Publishing packages to npm...\n')
 
+  let unpublished = await getUnpublishedPackages()
+  let publishPlan = createPublishPlan({
+    packages: unpublished,
+    prereleaseDirNames: new Set(prereleasePackages.map((pkg) => pkg.dirName)),
+    getDirectoryName: packageNameToDirectoryName,
+    getDependencies: getPackageDependencies,
+  })
   let published: PublishedPackage[] = []
 
-  if (prereleasePackages.length > 0) {
-    let publishCommands = [
-      [
-        'pnpm publish --recursive',
-        '--filter "./packages/*"',
-        ...prereleasePackages.map((pkg) => `--filter "!${pkg.dirName}"`),
-        '--access public',
-        '--no-git-checks',
-        '--report-summary',
-      ].join(' '),
-      ...prereleasePackages.map((pkg) =>
-        [
-          `pnpm publish --filter ${pkg.dirName}`,
-          '--tag next',
-          '--access public',
-          '--no-git-checks',
-          '--report-summary',
-        ].join(' '),
-      ),
-    ]
+  if (dryRun && publishPlan.length > 0) {
+    console.log('Would run:')
+  }
+
+  for (let plan of publishPlan) {
+    let packageDir = getPackagePath(plan.dirName)
+    let relativePackageDir = path.relative(rootDir, packageDir)
 
     if (dryRun) {
-      console.log('Would run:')
-      for (let publishCommand of publishCommands) {
-        console.log(`  $ ${publishCommand}`)
-      }
-      console.log()
-    } else {
-      for (let publishCommand of publishCommands) {
-        logAndExec(publishCommand)
-        published.push(...readPublishSummary())
-      }
+      console.log(
+        `  $ (cd ${relativePackageDir} && pnpm run --if-present prepublishOnly && pnpm pack)`,
+      )
+      console.log(`  $ npm publish <package tarball> --access public --tag ${plan.npmTag}`)
+      continue
     }
-  } else {
-    // Single-phase publish: everything as latest
-    let publishCommand =
-      'pnpm publish --recursive --filter "./packages/*" --access public --no-git-checks --report-summary'
 
-    if (dryRun) {
-      console.log('Would run:')
-      console.log(`  $ ${publishCommand}`)
-      console.log()
-    } else {
-      logAndExec(publishCommand)
-      published.push(...readPublishSummary())
+    console.log(`$ (cd ${relativePackageDir} && pnpm run --if-present prepublishOnly)`)
+    cp.execFileSync('pnpm', ['run', '--if-present', 'prepublishOnly'], {
+      cwd: packageDir,
+      stdio: 'inherit',
+    })
+
+    let packDir = fs.mkdtempSync(path.join(os.tmpdir(), `remix-publish-${plan.dirName}-`))
+    try {
+      console.log(`$ (cd ${relativePackageDir} && pnpm pack)`)
+      cp.execFileSync('pnpm', ['pack', '--pack-destination', packDir], {
+        cwd: packageDir,
+        stdio: 'inherit',
+      })
+
+      let tarballs = fs.readdirSync(packDir).filter((file) => file.endsWith('.tgz'))
+      if (tarballs.length !== 1) {
+        throw new Error(
+          `Expected pnpm pack to create one tarball for ${plan.packageName}, found ${tarballs.length}.`,
+        )
+      }
+
+      let tarballPath = path.join(packDir, tarballs[0])
+      console.log(
+        `$ npm publish ${path.basename(tarballPath)} --access public --tag ${plan.npmTag}`,
+      )
+      cp.execFileSync('npm', ['publish', tarballPath, '--access', 'public', '--tag', plan.npmTag], {
+        cwd: packageDir,
+        stdio: 'inherit',
+      })
+    } finally {
+      fs.rmSync(packDir, { recursive: true, force: true })
     }
+
+    published.push(plan)
+  }
+
+  if (dryRun && publishPlan.length > 0) {
+    console.log()
   }
 
   // In dry run mode, query npm to determine what would be published
@@ -511,8 +485,6 @@ async function main() {
   // the contents of the "Release" PR / `pnpm changes:version` output.
   if (dryRun) {
     console.log('Checking npm for unpublished versions...\n')
-
-    let unpublished = await getUnpublishedPackages()
 
     if (unpublished.length === 0) {
       console.log('All package versions are already published to npm.')
