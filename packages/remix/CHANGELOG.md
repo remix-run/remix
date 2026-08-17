@@ -198,7 +198,7 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   - [`response@0.3.8`](https://github.com/remix-run/remix/releases/tag/response@0.3.8)
   - [`route-pattern@0.24.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.24.0)
   - [`session-middleware@0.4.0`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.4.0)
-  - [`static-middleware@0.4.13`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.13)
+  - [`static-middleware@0.4.14`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.14)
   - [`test@0.6.0`](https://github.com/remix-run/remix/releases/tag/test@0.6.0)
   - [`ui@0.5.0`](https://github.com/remix-run/remix/releases/tag/ui@0.5.0)
   - [`ui-hmr@0.1.0`](https://github.com/remix-run/remix/releases/tag/ui-hmr@0.1.0)
