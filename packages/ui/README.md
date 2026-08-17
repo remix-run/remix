@@ -100,13 +100,19 @@ await app.ready()
 The default resolver is equivalent to:
 
 ```js
-function resolveFrame(src, options) {
-  return fetch(src, {
+async function resolveFrame(src, options) {
+  let response = await fetch(src, {
     body: getRequestBody(options),
     headers: { Accept: 'text/html' },
     method: options?.method,
     signal: options?.signal,
   })
+
+  if (response.status >= 500) {
+    throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
+  }
+
+  return response
 }
 
 function getRequestBody(options) {
@@ -145,9 +151,9 @@ response policy.
 
 Add `rmx-document` to a link or form to leave its navigation to the browser.
 
-When `resolveFrame` returns a `Response`, Remix UI renders its body for statuses below 500, including
-4xx responses. A 5xx response fails frame resolution with an error containing its status and status
-text.
+The default resolver renders 4xx response bodies, but a 5xx response fails frame resolution with an
+error containing its status and status text. A custom `resolveFrame` may return a `Response` with any
+status when it wants Remix UI to render the response body.
 
 Forms remain ordinary HTML forms before the runtime starts. Add `rmx-target` to reload a named frame, or `rmx-document` to require a full-document submission:
 

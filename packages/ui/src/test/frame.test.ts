@@ -265,15 +265,11 @@ describe('frames', () => {
     }
   })
 
-  it('rejects 5xx responses without replacing the frame content', async () => {
+  it('renders 5xx response bodies from custom resolvers', async () => {
     let root = document.createElement('div')
     root.innerHTML = '<p id="initial">Initial</p>'
     document.body.append(root)
     let errorTarget = new EventTarget()
-    let reportedError: unknown
-    errorTarget.addEventListener('error', (event) => {
-      if (event instanceof ErrorEvent) reportedError = event.error
-    })
     let frame = createFrame(root, {
       src: 'https://example.com/account',
       errorTarget,
@@ -297,16 +293,10 @@ describe('frames', () => {
 
     try {
       await frame.ready()
-      await expect(frame.handle.reload()).rejects.toThrow(
-        'Failed to resolve frame: 503 Service Unavailable',
-      )
+      await frame.handle.reload()
 
-      expect(reportedError).toBeInstanceOf(Error)
-      expect((reportedError as Error).message).toBe(
-        'Failed to resolve frame: 503 Service Unavailable',
-      )
-      expect(document.getElementById('initial')?.textContent).toBe('Initial')
-      expect(document.getElementById('error')).toBeNull()
+      expect(document.getElementById('initial')).toBeNull()
+      expect(document.getElementById('error')?.textContent).toBe('Account unavailable')
     } finally {
       frame.dispose()
     }

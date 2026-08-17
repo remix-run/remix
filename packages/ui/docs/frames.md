@@ -181,13 +181,19 @@ During SSR, `handle.frame.src` should point at the frame currently being rendere
 On the client, `run` fetches frame sources by default. The built-in resolver is equivalent to:
 
 ```js
-function resolveFrame(src, options) {
-  return fetch(src, {
+async function resolveFrame(src, options) {
+  let response = await fetch(src, {
     body: getRequestBody(options),
     headers: { Accept: 'text/html' },
     method: options?.method,
     signal: options?.signal,
   })
+
+  if (response.status >= 500) {
+    throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
+  }
+
+  return response
 }
 
 function getRequestBody(options) {
@@ -224,6 +230,9 @@ submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-
 `text/plain`, and `FormData` for `multipart/form-data`. Provide `resolveFrame` when an app needs
 additional headers, another body encoding, or a different response policy. Custom resolvers receive
 `signal` and `target`; non-GET form submissions also provide `formData`, `method`, and `encType`.
+
+The default resolver renders 4xx response bodies but rejects 5xx responses. A custom resolver may
+return a `Response` with any status when it wants Remix UI to render the response body.
 
 A client resolver may return frame content directly or return the fetched `Response`. Returning the response lets Remix stream its body. When `fetch()` followed a redirect during a top-frame navigation, the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`; other frames render the response without changing either URL.
 

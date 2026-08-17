@@ -101,13 +101,20 @@ function normalizeLineBreaks(value: string): string {
   return value.replace(/\r\n|\r|\n/g, '\r\n')
 }
 
-function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
-  return fetch(src, {
+async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
+  let response = await fetch(src, {
     body: getRequestBody(options),
     headers: { Accept: 'text/html' },
     method: options?.method,
     signal: options?.signal,
   })
+
+  // Allow 4xx responses to provide frame UI by default.
+  if (response.status >= 500) {
+    throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
+  }
+
+  return response
 }
 
 /**

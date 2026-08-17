@@ -1,1 +1,5 @@
-`run()` now uses a default browser frame resolver when `resolveFrame` is omitted. The default fetches the frame source with `Accept: text/html`, forwards the submitted method, supports native form encodings with `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for `text/plain`, and `FormData` for `multipart/form-data`, and supports cancellation with the provided abort signal. Apps only need a custom resolver for behavior such as additional request headers, other body encodings, redirects, or custom error presentation. Add `rmx-document` to a link or form to leave its navigation to the browser.
+`run()` now uses a default browser frame resolver when `resolveFrame` is omitted
+
+- Therefore, all `run()` calls will enable frame reloads and frame driven navigations via the Navigation API
+- The default resolver renders 4xx response bodies and rejects 5xx responses; applications can provide their own `resolveFrame` to render 5xx error UI or customize other behavior
+- The `rmx-document` attribute can be used to opt out of navigation interception
