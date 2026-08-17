@@ -95,11 +95,11 @@ describe('isPackageVersionPublished', () => {
     let { request, urls } = createRegistryRequest(200)
 
     assert.equal(
-      await isPackageVersionPublished('@remix-run/static-files-middleware', '0.1.0', request),
+      await isPackageVersionPublished('@remix-run/static-middleware', '0.4.14', request),
       true,
     )
     assert.deepEqual(urls.map(String), [
-      'https://registry.npmjs.org/%40remix-run%2Fstatic-files-middleware/0.1.0',
+      'https://registry.npmjs.org/%40remix-run%2Fstatic-middleware/0.4.14',
     ])
   })
 

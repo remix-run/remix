@@ -1,0 +1,1 @@
+BREAKING CHANGE: Route patterns now use delimiter-bounded params. Params stop at raw `/` and `.`, but not `-`, so a pattern such as `/:year-:month` must become one inseparable param such as `/:date`, or place the captures in separate path segments. Ambiguous adjacent captures are now rejected, and matching work is bounded to prevent pathological patterns (see #11651).

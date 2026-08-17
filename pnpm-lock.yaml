@@ -1588,9 +1588,9 @@ importers:
       '@remix-run/session-storage-redis':
         specifier: workspace:^
         version: link:../session-storage-redis
-      '@remix-run/static-files-middleware':
+      '@remix-run/static-middleware':
         specifier: workspace:^
-        version: link:../static-files-middleware
+        version: link:../static-middleware
       '@remix-run/tar-parser':
         specifier: workspace:^
         version: link:../tar-parser
@@ -1803,7 +1803,7 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
-  packages/static-files-middleware:
+  packages/static-middleware:
     dependencies:
       '@remix-run/fetch-router':
         specifier: workspace:^
@@ -2047,9 +2047,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../node-fetch-server
-      '@remix-run/static-files-middleware':
+      '@remix-run/static-middleware':
         specifier: workspace:*
-        version: link:../../static-files-middleware
+        version: link:../../static-middleware
       remix:
         specifier: workspace:*
         version: link:../../remix
