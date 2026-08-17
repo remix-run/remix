@@ -42,7 +42,13 @@ async function resolveFrameResponse(url: URL, options?: ResolveFrameOptions) {
     return new Promise<never>(() => {})
   }
 
-  if (!res.ok && res.status !== 422) {
+  // A 422 contains expected validation UI - unwrap and return
+  if (res.status === 422) {
+    return res.body ?? res.text()
+  }
+
+  // Other errors render a custom reload UI
+  if (!res.ok && res.status >= 400) {
     return (
       <ErrorCard
         eyebrow="Unexpected Error"

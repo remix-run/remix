@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@re
 import type { Handle, RemixNode } from '../runtime/component.ts'
 import { Frame } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
+import { reloadFrameForNavigation } from '../runtime/frame.ts'
 import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -176,6 +177,149 @@ describe('run', () => {
     document.body.innerHTML = ''
     for (let node of Array.from(document.head.childNodes)) {
       document.head.removeChild(node)
+    }
+  })
+
+  it('uses fetch to request HTML by default and posts form data', async (t) => {
+    let formData = new FormData()
+    formData.set('name', 'Ada')
+    let signal = new AbortController().signal
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="account">Ada</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        formData,
+        method: 'post',
+        signal,
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      let [src, init] = fetchMock.mock.calls[0]!.arguments
+      expect(src).toBe('/account')
+      expect(init?.body).toBe(formData)
+      expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
+      expect(init?.method).toBe('post')
+      expect(init?.signal).toBeInstanceOf(AbortSignal)
+      expect(document.getElementById('account')?.textContent).toBe('Ada')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('rejects non-OK responses from the default resolver without replacing frame content', async (t) => {
+    document.body.innerHTML = '<main id="initial">Initial</main>'
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response('<main id="error">Account not found</main>', {
+          status: 404,
+          statusText: 'Not Found',
+        }),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    let reportedError: unknown
+    app.addEventListener('error', (event) => {
+      reportedError = event.error
+    })
+
+    try {
+      await app.ready()
+      app.frames.top.src = '/account'
+
+      await expect(app.frames.top.reload()).rejects.toThrow(
+        'Failed to resolve frame: 404 Not Found',
+      )
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(reportedError).toBeInstanceOf(Error)
+      expect((reportedError as Error).message).toBe('Failed to resolve frame: 404 Not Found')
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+      expect(document.getElementById('error')).toBeNull()
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('encodes urlencoded form data with URLSearchParams by default', async (t) => {
+    let formData = new FormData()
+    formData.set('name', 'Ada Lovelace')
+    formData.set('avatar', new File([], 'avatar.png'))
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="account">Ada</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        encType: 'application/x-www-form-urlencoded',
+        formData,
+        method: 'post',
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      let [, init] = fetchMock.mock.calls[0]!.arguments
+      expect(init?.body).toBeInstanceOf(URLSearchParams)
+      expect(String(init?.body)).toBe('name=Ada+Lovelace&avatar=avatar.png')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('encodes text/plain form data with CRLF-delimited entries by default', async (t) => {
+    let formData = new FormData()
+    formData.set('name', 'Ada Lovelace')
+    formData.set('bio', 'First programmer\nMathematician')
+    formData.set('avatar', new File([], 'avatar.png'))
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="account">Ada</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        encType: 'text/plain',
+        formData,
+        method: 'post',
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      let [, init] = fetchMock.mock.calls[0]!.arguments
+      let request = new Request('https://example.com/account', init)
+      expect(request.headers.get('Content-Type')).toBe('text/plain')
+      expect(await request.text()).toBe(
+        'name=Ada Lovelace\r\nbio=First programmer\r\nMathematician\r\navatar=avatar.png\r\n',
+      )
+    } finally {
+      app.dispose()
     }
   })
 

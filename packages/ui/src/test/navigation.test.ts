@@ -750,33 +750,6 @@ describe('form navigation', () => {
     expect(intercept).not.toHaveBeenCalled()
     controller.abort()
   })
-
-  it('does not intercept forms when the runtime has no frame resolver', (t) => {
-    let navigateListener: EventListener | undefined
-    let stubNavigation = {
-      updateCurrentEntry: mock.fn(),
-      addEventListener(type: string, listener: EventListener) {
-        if (type === 'navigate') navigateListener = listener
-      },
-    }
-    stubGlobalField(t, 'navigation', stubNavigation)
-
-    let controller = new AbortController()
-    startNavigationListener(controller.signal, false)
-    let form = document.createElement('form')
-    let intercept = mock.fn()
-
-    navigateListener?.(
-      createFormNavigateEvent(form, {
-        intercept,
-        destinationUrl: new URL('/login', window.location.origin).href,
-      }),
-    )
-
-    expect(intercept).not.toHaveBeenCalled()
-    expect(stubNavigation.updateCurrentEntry).not.toHaveBeenCalled()
-    controller.abort()
-  })
 })
 
 function getCurrentNavigationEntry(): NavigationHistoryEntry {
