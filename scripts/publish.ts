@@ -1,7 +1,7 @@
 /**
  * Publishes packages to npm and creates tags/releases for what was published.
  *
- * This script uses npm publish for trusted publishing authentication, then
+ * This script uses pnpm publish with trusted publishing authentication, then
  * creates Git tags + GitHub releases. When one or more packages are in
  * prerelease mode (have .changes/config.json with prereleaseChannel), it publishes
  * in two phases: all other packages as "latest", then prerelease packages with
@@ -451,7 +451,9 @@ async function main() {
       console.log(
         `  $ (cd ${relativePackageDir} && pnpm run --if-present prepublishOnly && pnpm pack)`,
       )
-      console.log(`  $ npm publish <package tarball> --access public --tag ${plan.npmTag}`)
+      console.log(
+        `  $ pnpm publish <package tarball> --access public --tag ${plan.npmTag} --no-git-checks`,
+      )
       continue
     }
 
@@ -478,12 +480,16 @@ async function main() {
 
       let tarballPath = path.join(packDir, tarballs[0])
       console.log(
-        `$ npm publish ${path.basename(tarballPath)} --access public --tag ${plan.npmTag}`,
+        `$ pnpm publish ${path.basename(tarballPath)} --access public --tag ${plan.npmTag} --no-git-checks`,
       )
-      cp.execFileSync('npm', ['publish', tarballPath, '--access', 'public', '--tag', plan.npmTag], {
-        cwd: packageDir,
-        stdio: 'inherit',
-      })
+      cp.execFileSync(
+        'pnpm',
+        ['publish', tarballPath, '--access', 'public', '--tag', plan.npmTag, '--no-git-checks'],
+        {
+          cwd: packageDir,
+          stdio: 'inherit',
+        },
+      )
     } finally {
       fs.rmSync(packDir, { recursive: true, force: true })
     }

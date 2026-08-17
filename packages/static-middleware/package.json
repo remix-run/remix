@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/static-files-middleware",
-  "version": "0.1.0",
+  "name": "@remix-run/static-middleware",
+  "version": "0.4.13",
   "description": "Middleware for serving static files from the filesystem",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/static-files-middleware"
+    "directory": "packages/static-middleware"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/static-files-middleware#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/static-middleware#readme",
   "files": [
     "LICENSE",
     "README.md",

@@ -53,9 +53,6 @@ jobs:
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
 
-      - name: Install npm
-        run: npm install --global npm@12.0.2
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -88,7 +85,6 @@ jobs:
         run: node ./scripts/publish.ts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_LOGLEVEL: verbose
 
       - name: Output tag
         id: get_tag
