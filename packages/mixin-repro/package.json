@@ -7,6 +7,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@remix-run/ui": "workspace:^"
+    "@remix-run/ui": "remix-run/remix#preview/pr-11708&path:packages/ui"
   }
 }
