@@ -1,1 +1,0 @@
-Fixed fresh Remix projects failing type checking when `staticFiles()` and other router middleware are used together. `remix/middleware/static` continues to use `@remix-run/static-middleware`, now with the same `@remix-run/fetch-router` dependency as `remix/router`, so package managers do not install incompatible `RequestContext` types.
