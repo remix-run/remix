@@ -107,15 +107,6 @@ type MixinRuntimeType<
   type: string,
 ) => ((...args: [...args, currentProps: props]) => MixinReturn<node, props>) | void
 
-type MixinDescriptorType<
-  args extends unknown[] = [],
-  node extends EventTarget = Element,
-  props extends ElementProps = ElementProps,
-> = (
-  handle: MixinHandle<node, props>,
-  type: string,
-) => ((...args: [...args, currentProps: props]) => unknown) | void
-
 /**
  * Public mixin setup function signature.
  */
@@ -136,7 +127,7 @@ export type MixinDescriptor<
   args extends unknown[] = [],
   props extends ElementProps = ElementProps,
 > = {
-  type: MixinDescriptorType<args, node, props>
+  type: MixinRuntimeType<args, node, props>
   args: args
   readonly __node?: (node: node) => void
 }
@@ -158,22 +149,13 @@ type NestedMixValue<descriptor, depth extends number = 4> = depth extends 0
       | NullableMixValue<descriptor>
       | ReadonlyArray<NestedMixValue<descriptor, PreviousMixDepth[depth]>>
 
-type MixinInputDescriptor<
-  in node extends EventTarget = Element,
-  props extends ElementProps = ElementProps,
-> = {
-  type: (handle: MixinHandle<node, props>, type: string) => unknown
-  args: readonly unknown[]
-  readonly __node?: (node: node) => void
-}
-
 /**
  * Accepted authoring shape for the `mix` prop on host elements.
  */
 export type MixInput<
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
-> = NestedMixValue<MixinInputDescriptor<node, props>>
+> = NestedMixValue<MixinDescriptor<node, any, props>>
 
 /**
  * Accepted value shape for the `mix` prop.
@@ -181,7 +163,7 @@ export type MixInput<
 export type MixValue<
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
-> = MixinInputDescriptor<node, props> | ReadonlyArray<MixinInputDescriptor<node, props>>
+> = MixinDescriptor<node, any, props> | ReadonlyArray<MixinDescriptor<node, any, props>>
 
 type MixinReturn<node extends EventTarget = Element, props extends ElementProps = ElementProps> =
   | void
