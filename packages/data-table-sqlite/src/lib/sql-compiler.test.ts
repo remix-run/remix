@@ -331,6 +331,19 @@ describe('sqlite sql-compiler', () => {
     it('compile logical or', async () => {
       await db
         .query(accounts)
+        .where(or(eq(accounts.status, 'enabled'), eq(accounts.status, 'disabled')))
+        .all()
+
+      let compiled = compileSqliteOperation(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" where (("accounts"."status" = ?) or ("accounts"."status" = ?))',
+        values: ['enabled', 'disabled'],
+      })
+    })
+
+    it('compile logical or with object filters', async () => {
+      await db
+        .query(accounts)
         .where(or({ status: 'enabled' }, { email: 'admin@example.com' }))
         .all()
 
