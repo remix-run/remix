@@ -1,0 +1,12 @@
+{
+  "name": "@remix-run/mixin-repro",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@remix-run/ui": "workspace:^"
+  }
+}

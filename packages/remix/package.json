@@ -81,6 +81,7 @@
     "./middleware/session": "./src/session-middleware.ts",
     "./middleware/static": "./src/static-middleware.ts",
     "./mime": "./src/mime.ts",
+    "./mixin-repro": "./src/mixin-repro.ts",
     "./multipart-parser": "./src/multipart-parser.ts",
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
@@ -379,6 +380,10 @@
       "./mime": {
         "types": "./dist/mime.d.ts",
         "default": "./dist/mime.js"
+      },
+      "./mixin-repro": {
+        "types": "./dist/mixin-repro.d.ts",
+        "default": "./dist/mixin-repro.js"
       },
       "./multipart-parser": {
         "types": "./dist/multipart-parser.d.ts",
@@ -684,7 +689,8 @@
     "@remix-run/terminal": "workspace:^",
     "@remix-run/render-middleware": "workspace:^",
     "@remix-run/node-hmr": "workspace:^",
-    "@remix-run/ui-hmr": "workspace:^"
+    "@remix-run/ui-hmr": "workspace:^",
+    "@remix-run/mixin-repro": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
