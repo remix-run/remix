@@ -10,7 +10,7 @@ Fetch-based server for compiling browser assets on demand.
 - **Access Control** - Control exactly which files and packages can be served
 - **Preloads** - Generate preload URLs for scripts and styles based on imports
 - **Caching** - Conservative caching by default with stable URLs, ETags, and revalidation
-- **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
+- **Optional Fingerprinting** - Content-based fingerprinted URLs for long-lived browser caching
 - **Source Maps** - Serve inline or external sourcemaps
 - **Hot Module Reloading** - Handle live code updates in development
 - **Script Loaders** - Post-process compiled JavaScript with Node-compatible loaders
@@ -112,7 +112,7 @@ let assetServer = createAssetServer({
 })
 ```
 
-`fileMap` entries use [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) syntax for both URL and file patterns. Wildcards must be named, and the same params must appear in both patterns so imports can be rewritten back to public URLs. For example, with `basePath: '/assets'`, a `fileMap` key of `'/app/*path'` is served at `/assets/app/*path`.
+`fileMap` entries use [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) syntax for both URL and file patterns. Wildcards must be named, and the same params must appear in both patterns so files can be mapped back to public URLs. For example, with `basePath: '/assets'`, a `fileMap` key of `'/app/*path'` is served at `/assets/app/*path`.
 
 ### File watching
 
@@ -174,13 +174,30 @@ let assetServer = createAssetServer({
 })
 ```
 
+## Script Entries
+
+Use `assetServer.getScriptEntry()` when rendering a script entry module. Scripts keep JavaScript imports as authored, so rendered script entries need a public URL, modulepreload hints, and an import map.
+
+```ts
+let { href, importMap, preloads } = await assetServer.getScriptEntry('app/assets/entry.tsx')
+
+// Emit importMap in the document head after critical metadata/styles,
+// but before modulepreload links and module scripts.
+// <script type="importmap">{JSON.stringify(importMap).replace(/</g, '\\u003c')}</script>
+for (let preloadHref of preloads) {
+  // <link rel="modulepreload" href={preloadHref} />
+}
+
+// <script type="module" src={href} />
+```
+
 ## Hrefs
 
 Use `assetServer.getHref()` when you need the public URL for a served asset. You can provide a root-relative or absolute file path, or a `file://` URL.
 
 ```ts
-let src = await assetServer.getHref('app/actions/public/entry.ts')
-// '/assets/app/actions/public/entry.ts'
+let src = await assetServer.getHref('app/media/public/logo.svg')
+// '/assets/app/media/public/logo.svg'
 ```
 
 For configured `files` assets, you can also pass a `transform` pipeline to build a request URL with custom file transforms. Basic transforms are written as strings, while dynamic transforms use `[name, param]` tuples.
@@ -210,11 +227,30 @@ let preloads = await assetServer.getPreloads([
 // ]
 ```
 
+## Import Maps
+
+Scripts keep JavaScript imports as authored and rely on import maps for browser resolution. `assetServer.getScriptEntry()` returns the import map for a single rendered script entry. Call `assetServer.getImportMap()` directly when you need to generate a combined import map for multiple script roots or other custom graph-level behavior.
+
+```ts
+let importMap = await assetServer.getImportMap(['app/assets/entry.tsx', 'app/assets/search.tsx'])
+```
+
+Without fingerprinting, import maps resolve authored specifiers to stable asset URLs. With fingerprinting enabled, the same import maps resolve stable asset URLs to content-fingerprinted asset URLs.
+
+Bare-import resolution must be uniform for all importer files in the same directory. Resolution may
+vary between directories, in which case the asset server emits more-specific import map scopes. A
+configuration where project references make the same bare import resolve differently for two files
+in one directory is rejected.
+
+Scripts with bare imports must also be served through a hierarchy-preserving `fileMap` entry. Its URL
+and file patterns must end with the same segment-aligned named wildcard, such as
+`'/app/*path': 'app/*path'`. This lets filesystem resolution boundaries be represented as URL scopes.
+
 ## Fingerprinting
 
 By default, assets are served at stable URLs with ETags and `Cache-Control: no-cache`.
 
-If you want clients to cache assets aggressively without revalidation, you can opt into source-based fingerprinting.
+If you want clients to cache assets aggressively without revalidation, you can opt into content-based fingerprinting.
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -228,15 +264,13 @@ let assetServer = createAssetServer({
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   watch: false,
-  fingerprint: {
-    buildId: process.env.GITHUB_SHA,
-  },
+  fingerprint: true,
 })
 ```
 
 When fingerprinting is enabled, assets use a `.@<fingerprint>` segment before the file extension and are served with `Cache-Control: public, max-age=31536000, immutable`.
 
-Source fingerprints are based on the original file contents and the build ID. The build ID must change for each deployment so that fingerprinted assets are invalidated together. This fingerprinting strategy assumes that files on disk won't change, so fingerprinting requires `watch: false`.
+Fingerprints are based on emitted asset contents. This allows unchanged assets to keep the same URL across deployments, but it assumes that files on disk won't change after a URL is generated, so fingerprinting requires `watch: false`.
 
 ## Target
 
@@ -539,8 +573,6 @@ Use `files.cache` to store transformed file outputs via a [`file-storage`](https
 
 Without `files.cache`, transformed file outputs are recomputed per request.
 
-If `fingerprint.buildId` is set, the file cache can be reused across server restarts for the same build.
-
 ```ts
 import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
@@ -556,6 +588,7 @@ let assetServer = createAssetServer({
   allowPackages: ['remix'],
   files: {
     cache: createFsFileStorage(path.resolve('.tmp/assets-cache')),
+    cacheKey: process.env.GIT_COMMIT_SHA,
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
     transforms: {
       /*...*/
@@ -563,6 +596,8 @@ let assetServer = createAssetServer({
   },
 })
 ```
+
+`files.cacheKey` scopes transformed file cache entries. Use a stable deployment identifier, such as a commit SHA, when you want unchanged transformed files to be reused across server restarts for the same build. Omit it in development to use a random per-process cache namespace while transform code and dependencies are changing.
 
 #### Request transform limits
 

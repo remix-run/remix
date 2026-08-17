@@ -4,7 +4,8 @@ import {
   createAssetServerCompilationError,
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
-import { hashContent } from '../fingerprint.ts'
+import { formatFingerprintedPathname, hashContent } from '../fingerprint.ts'
+import { restoreAuthoredInjectedPackageSpecifier } from '../injected-packages.ts'
 import type { ResolvedModule } from './resolve.ts'
 import { composeSourceMaps } from '../source-maps.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
@@ -12,6 +13,7 @@ import type { AssetServerCompilationError } from '../compilation-error.ts'
 export type EmittedAsset = {
   content: string
   etag: string
+  fingerprint: string
 }
 
 export type EmittedModule = {
@@ -40,6 +42,7 @@ type RewriteImportsOptions = {
 export async function emitResolvedModule(
   resolvedModule: ResolvedModule,
   options: {
+    fingerprintAssets: boolean
     getHmrImportTimestamp(identityPath: string): number | null
     getServedUrl(identityPath: string): Promise<string>
     getStableUrl(identityPath: string): string
@@ -48,30 +51,35 @@ export async function emitResolvedModule(
   },
 ): Promise<EmitResult> {
   try {
-    let importUrls = await Promise.all(
-      resolvedModule.deps.map((depPath) => options.getServedUrl(depPath)),
-    )
+    let importUrls: string[] = []
     let rewriteResult = await rewriteImports(resolvedModule, options)
-    let finalCode = prependHmrContext(resolvedModule, rewriteResult.code, options)
+    let executableCode = prependHmrContext(resolvedModule, rewriteResult.code, options)
+    let sourceMap = rewriteResult.sourceMap
+      ? await createEmittedAsset(rewriteResult.sourceMap)
+      : null
+    let finalCode = executableCode
 
     if (rewriteResult.sourceMap) {
       if (options.sourceMaps === 'inline') {
         let encoded = Buffer.from(rewriteResult.sourceMap).toString('base64')
         finalCode += `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
       } else if (options.sourceMaps === 'external') {
-        finalCode += `\n//# sourceMappingURL=${await options.getServedUrl(resolvedModule.identityPath)}.map`
+        finalCode += `\n//# sourceMappingURL=${formatFingerprintedPathname(
+          resolvedModule.stableUrlPathname,
+          options.fingerprintAssets && sourceMap ? sourceMap.fingerprint : null,
+        )}.map`
       }
     }
+
+    let code = await createEmittedAsset(finalCode)
 
     return {
       ok: true,
       value: {
-        code: await createEmittedAsset(finalCode),
-        fingerprint: resolvedModule.fingerprint,
+        code,
+        fingerprint: options.fingerprintAssets ? code.fingerprint : null,
         importUrls,
-        sourceMap: rewriteResult.sourceMap
-          ? await createEmittedAsset(rewriteResult.sourceMap)
-          : null,
+        sourceMap,
       },
     }
   } catch (error) {
@@ -87,18 +95,24 @@ async function rewriteImports(
   options: RewriteImportsOptions,
 ): Promise<{ code: string; sourceMap: string | null }> {
   let rewrittenSource = new MagicString(resolvedModule.rawCode)
+  let changed = false
 
   for (let imported of resolvedModule.imports) {
-    let url = await options.getServedUrl(imported.depPath)
     let hmrImportTimestamp = options.getHmrImportTimestamp(imported.depPath)
-    if (hmrImportTimestamp !== null) {
-      url = addTimestampQuery(url, hmrImportTimestamp)
+    let url =
+      hmrImportTimestamp === null
+        ? restoreAuthoredInjectedPackageSpecifier(imported.specifier)
+        : addTimestampQuery(await options.getServedUrl(imported.depPath), hmrImportTimestamp)
+
+    if (url === null) {
+      continue
     }
     rewrittenSource.overwrite(
       imported.start,
       imported.end,
       imported.quote ? `${imported.quote}${url}${imported.quote}` : url,
     )
+    changed = true
   }
 
   for (let acceptedDep of resolvedModule.hmr.acceptedDeps) {
@@ -108,12 +122,12 @@ async function rewriteImports(
       acceptedDep.end,
       acceptedDep.quote ? `${acceptedDep.quote}${url}${acceptedDep.quote}` : url,
     )
+    changed = true
   }
 
-  let code = rewrittenSource.toString()
+  let code = changed ? rewrittenSource.toString() : resolvedModule.rawCode
   let sourceMap =
-    resolvedModule.sourceMap &&
-    (resolvedModule.imports.length > 0 || resolvedModule.hmr.acceptedDeps.length > 0)
+    resolvedModule.sourceMap && changed
       ? composeSourceMaps(
           rewrittenSource.generateMap({ hires: true }).toString(),
           resolvedModule.sourceMap,
@@ -148,9 +162,11 @@ function prependHmrContext(
 }
 
 async function createEmittedAsset(content: string): Promise<EmittedAsset> {
+  let fingerprint = await hashContent(content)
   return {
     content,
-    etag: `W/"${await hashContent(content)}"`,
+    etag: `W/"${fingerprint}"`,
+    fingerprint,
   }
 }
 

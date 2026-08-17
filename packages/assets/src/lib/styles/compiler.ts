@@ -2,6 +2,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { IfNoneMatch } from '@remix-run/headers/if-none-match'
+import { createAssetServerCompilationError } from '../compilation-error.ts'
 import { createFileMatcher } from '../file-matcher.ts'
 import { formatFingerprintedPathname } from '../fingerprint.ts'
 import { createModuleStore } from '../module-store.ts'
@@ -18,6 +19,11 @@ import type { TransformArgs, TransformedStyle } from './transform.ts'
 
 type StyleRecord = ModuleRecord<TransformedStyle, ResolvedStyle, EmittedStyle>
 type StyleStore = ModuleStore<TransformedStyle, ResolvedStyle, EmittedStyle>
+type PreparedStyle = {
+  resolvedStyle: ResolvedStyle
+  version: number
+}
+type PreparedStyleGraph = ReadonlyMap<string, PreparedStyle>
 
 type StyleCompileResult = {
   code: EmittedAsset
@@ -42,7 +48,6 @@ type StyleGetOptions = {
 }
 
 type StyleCompilerOptions = {
-  buildId?: string
   fingerprintAssets: boolean
   getServedFileUrl?(
     identityPath: string,
@@ -109,7 +114,6 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     routes: resolvedOptions.routes,
   }
   let transformArgs: TransformArgs = {
-    buildId: resolvedOptions.buildId ?? null,
     isWatchIgnored,
     minify: resolvedOptions.minify,
     routes: resolvedOptions.routes,
@@ -121,7 +125,8 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
   return {
     async getHref(filePath) {
       let resolvedStyle = resolveServedStyleOrThrow(resolveInputFilePath(filePath), resolveArgs)
-      return getServedUrl(resolvedStyle.identityPath)
+      let graph = await prepareStyleGraph(resolvedStyle.identityPath)
+      return getServedUrlFromGraph(resolvedStyle.identityPath, graph)
     },
 
     async getPreloadLayers(filePath) {
@@ -139,17 +144,18 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       let visited = new Set(resolvedEntries)
       let queue = [...resolvedEntries]
       let layers: string[][] = []
+      let graph = await prepareStyleGraph(resolvedEntries)
 
       while (queue.length > 0) {
         let frontier = queue
         queue = []
-        let resolvedStyles = await getOrCreateResolvedStyles(
-          frontier.map((identityPath) => styleStore.get(identityPath)),
-        )
         let layer: string[] = []
 
-        for (let resolvedStyle of resolvedStyles) {
-          layer.push(getServedUrlForResolvedStyle(resolvedStyle))
+        for (let identityPath of frontier) {
+          let preparedStyle = graph.get(identityPath)
+          if (!preparedStyle) throw new Error(`Missing prepared style ${identityPath}`)
+          let resolvedStyle = preparedStyle.resolvedStyle
+          layer.push(await getServedUrlFromGraph(identityPath, graph))
 
           for (let dep of resolvedStyle.deps) {
             if (visited.has(dep)) continue
@@ -218,12 +224,6 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     }
 
     return resolveFilePath(resolvedOptions.rootDir, filePath)
-  }
-
-  async function getOrCreateResolvedStyles(records: StyleRecord[]): Promise<ResolvedStyle[]> {
-    return mapWithConcurrency(records, preloadConcurrency, (record) =>
-      getOrCreateResolvedStyle(record),
-    )
   }
 
   async function getOrCreateResolvedStyle(record: StyleRecord): Promise<ResolvedStyle> {
@@ -296,16 +296,39 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       return record.emitted
     }
 
-    let cacheKey = getRecordCacheKey(record)
+    let graph = await prepareStyleGraph(record.identityPath)
+    return getOrCreateEmittedStyleFromGraph(record, graph)
+  }
+
+  async function getOrCreateEmittedStyleFromGraph(
+    record: StyleRecord,
+    graph: PreparedStyleGraph,
+  ): Promise<EmittedStyle> {
+    let preparedStyle = graph.get(record.identityPath)
+    if (!preparedStyle) {
+      throw new Error(`Missing prepared style ${record.identityPath}`)
+    }
+
+    if (
+      record.invalidationVersion === preparedStyle.version &&
+      record.emitted &&
+      styleStore.isEmittedFresh(record) &&
+      !hasHmrTimestampedDependency(record.resolved)
+    ) {
+      return record.emitted
+    }
+
+    let cacheKey = getCacheKey(record.identityPath, preparedStyle.version)
     let existing = emitInFlightByCacheKey.get(cacheKey)
     if (existing) return existing
 
     let promise = (async () => {
-      let startedVersion = record.invalidationVersion
-      let resolvedStyle = await getOrCreateResolvedStyle(record)
-      let emitResolvedStyleResult = await emitResolvedStyle(resolvedStyle, {
+      let emitResolvedStyleResult = await emitResolvedStyle(preparedStyle.resolvedStyle, {
+        fingerprintAssets: resolvedOptions.fingerprintAssets,
         getServedFileUrl: resolvedOptions.getServedFileUrl,
-        getServedUrl,
+        getServedUrl(identityPath) {
+          return getServedUrlFromGraph(identityPath, graph)
+        },
         sourceMaps: resolvedOptions.sourceMaps,
       })
 
@@ -313,7 +336,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
         throw emitResolvedStyleResult.error
       }
 
-      if (isFresh(record, startedVersion)) {
+      if (isFresh(record, preparedStyle.version)) {
         styleStore.setEmitted(record.identityPath, emitResolvedStyleResult.value, null)
       }
 
@@ -331,19 +354,93 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     }
   }
 
-  async function getServedUrl(identityPath: string): Promise<string> {
-    return getServedUrlForResolvedStyle(
-      await getOrCreateResolvedStyle(styleStore.get(identityPath)),
-    )
+  async function getServedUrlFromGraph(
+    identityPath: string,
+    graph: PreparedStyleGraph,
+  ): Promise<string> {
+    let preparedStyle = graph.get(identityPath)
+    if (!preparedStyle) throw new Error(`Missing prepared style ${identityPath}`)
+    let pathname = preparedStyle.resolvedStyle.stableUrlPathname
+
+    if (resolvedOptions.fingerprintAssets) {
+      let emittedStyle = await getOrCreateEmittedStyleFromGraph(styleStore.get(identityPath), graph)
+      pathname = formatFingerprintedPathname(
+        preparedStyle.resolvedStyle.stableUrlPathname,
+        emittedStyle.fingerprint,
+      )
+    }
+
+    let timestamp = styleStore.getHmrUpdateTimestamp(preparedStyle.resolvedStyle.identityPath)
+    return timestamp ? appendTimestamp(pathname, timestamp) : pathname
   }
 
-  function getServedUrlForResolvedStyle(resolvedStyle: ResolvedStyle): string {
-    let pathname = formatFingerprintedPathname(
-      resolvedStyle.stableUrlPathname,
-      resolvedOptions.fingerprintAssets ? resolvedStyle.fingerprint : null,
-    )
-    let timestamp = styleStore.getHmrUpdateTimestamp(resolvedStyle.identityPath)
-    return timestamp ? appendTimestamp(pathname, timestamp) : pathname
+  async function prepareStyleGraph(
+    rootPath: string | readonly string[],
+  ): Promise<PreparedStyleGraph> {
+    let preparedByPath = new Map<string, PreparedStyle>()
+    let rootPaths = Array.isArray(rootPath) ? rootPath : [rootPath]
+    let discovered = new Set(rootPaths)
+    let queue = [...rootPaths]
+
+    while (queue.length > 0) {
+      let frontier = queue
+      queue = []
+      let preparedStyles = await mapWithConcurrency(
+        frontier,
+        preloadConcurrency,
+        async (identityPath): Promise<PreparedStyle> => {
+          let record = styleStore.get(identityPath)
+          let version = record.invalidationVersion
+          let resolvedStyle = await getOrCreateResolvedStyle(record)
+          return {
+            resolvedStyle,
+            version,
+          }
+        },
+      )
+
+      for (let [index, identityPath] of frontier.entries()) {
+        let preparedStyle = preparedStyles[index]
+        preparedByPath.set(identityPath, preparedStyle)
+        for (let depPath of preparedStyle.resolvedStyle.deps) {
+          if (discovered.has(depPath)) continue
+          discovered.add(depPath)
+          queue.push(depPath)
+        }
+      }
+    }
+
+    assertNoCircularImports(preparedByPath, rootPaths)
+    return preparedByPath
+  }
+
+  function assertNoCircularImports(graph: PreparedStyleGraph, rootPaths: readonly string[]): void {
+    let visited = new Set<string>()
+    let path: string[] = []
+    let pathIndexByIdentity = new Map<string, number>()
+
+    function visit(identityPath: string): void {
+      let cycleStart = pathIndexByIdentity.get(identityPath)
+      if (cycleStart !== undefined) {
+        let cycle = [...path.slice(cycleStart), identityPath]
+        throw createAssetServerCompilationError(
+          `Circular CSS imports are not supported: ${cycle.join(' -> ')}`,
+          { code: 'EMIT_FAILED' },
+        )
+      }
+      if (visited.has(identityPath)) return
+
+      let preparedStyle = graph.get(identityPath)
+      if (!preparedStyle) throw new Error(`Missing prepared style ${identityPath}`)
+      pathIndexByIdentity.set(identityPath, path.length)
+      path.push(identityPath)
+      for (let depPath of preparedStyle.resolvedStyle.deps) visit(depPath)
+      path.pop()
+      pathIndexByIdentity.delete(identityPath)
+      visited.add(identityPath)
+    }
+
+    for (let identityPath of rootPaths) visit(identityPath)
   }
 
   function getHmrUpdatePathnames(identityPath: string, timestamp: number): string[] {
@@ -389,7 +486,11 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
 }
 
 function getRecordCacheKey(record: StyleRecord): string {
-  return `${record.identityPath}\0${record.invalidationVersion}`
+  return getCacheKey(record.identityPath, record.invalidationVersion)
+}
+
+function getCacheKey(identityPath: string, version: number): string {
+  return `${identityPath}\0${version}`
 }
 
 function isFresh(record: StyleRecord, version: number): boolean {
@@ -407,15 +508,12 @@ function getNotModifiedStyle(
   let emittedStyle = record.emitted
   if (!emittedStyle || options.ifNoneMatch === null) return null
 
-  if (
-    options.requestedFingerprint !== null &&
-    emittedStyle.fingerprint !== options.requestedFingerprint
-  ) {
-    return null
-  }
-
   let asset = getEmittedAssetForRequest(emittedStyle, options.isSourceMapRequest)
   if (!asset) return null
+
+  if (options.requestedFingerprint !== null && asset.fingerprint !== options.requestedFingerprint) {
+    return null
+  }
 
   if (!IfNoneMatch.from(options.ifNoneMatch).matches(asset.etag)) return null
   return { etag: asset.etag, type: 'not-modified' }

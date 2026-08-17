@@ -9,7 +9,6 @@ import type { TransformedModule } from './scripts/transform.ts'
 
 function createTransformedModule(): TransformedModule {
   return {
-    fingerprint: null,
     hmr: {
       acceptedDeps: [],
       selfAccepting: false,
@@ -32,6 +31,7 @@ function createEmittedModule(): EmittedModule {
     code: {
       content: 'export const value = 1',
       etag: 'W/"code"',
+      fingerprint: 'code',
     },
     fingerprint: null,
     importUrls: [],
@@ -50,11 +50,11 @@ function createResolvedModule(
 
   return {
     deps: options.deps ?? [],
-    fingerprint: null,
     hmr: {
       acceptedDeps: (options.acceptedDeps ?? []).map((depPath, index) => ({
         depPath,
         end: index,
+        specifier: depPath,
         start: index,
       })),
       selfAccepting: false,

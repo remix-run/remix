@@ -60,16 +60,18 @@ describe('createApiRouter()', () => {
     let docsStylesIndex = html.indexOf(
       'data-key="docs-stylesheet" rel="stylesheet" href="/assets/app/actions/public/docs.css"',
     )
+    let importMapIndex = html.indexOf('type="importmap"')
 
     let entryScriptIndex = html.indexOf(
       'data-key="docs-client-entry" type="module" src="/assets/app/actions/public/entry.tsx"',
     )
     let pagefindScriptIndex = html.indexOf('data-key="docs-pagefind-client-entry"')
 
-    assert.equal(entryPreloadIndex >= 0, true)
-    assert.equal(pagefindStylesIndex > entryPreloadIndex, true)
+    assert.equal(pagefindStylesIndex >= 0, true)
     assert.equal(docsStylesIndex > pagefindStylesIndex, true)
-    assert.equal(entryScriptIndex > docsStylesIndex, true)
+    assert.equal(importMapIndex > docsStylesIndex, true)
+    assert.equal(entryPreloadIndex > importMapIndex, true)
+    assert.equal(entryScriptIndex > entryPreloadIndex, true)
     assert.equal(pagefindScriptIndex > entryScriptIndex, true)
   })
 

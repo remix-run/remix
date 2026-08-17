@@ -25,13 +25,11 @@ export function render() {
             )
           }
 
-          let [href, preloads] = await Promise.all([
-            assetServer.getHref(entryId),
-            assetServer.getPreloads(entryId),
-          ])
+          let { href, importMap, preloads } = await assetServer.getScriptEntry(entryId)
 
           return {
             href,
+            importMap,
             exportName: entryId.split('#')[1] || component.name || titleCaseFileName(entryId),
             preloads,
           }

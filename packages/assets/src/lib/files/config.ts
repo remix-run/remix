@@ -115,10 +115,17 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
    * Optional backing store for cached transformed file outputs.
    */
   cache?: FileStorage
+  /**
+   * Optional namespace for cached transformed file outputs. Use a stable value such as a
+   * commit SHA to reuse transformed files across server restarts for the same deployment.
+   * When omitted, a random per-process namespace is used.
+   */
+  cacheKey?: string
 }
 
 export interface ResolvedAssetServerFilesOptions {
   cache?: FileStorage
+  cacheKey?: string
   extensions: readonly string[]
   globalTransforms: readonly ResolvedAssetGlobalTransform[]
   hasTransforms: boolean
@@ -303,8 +310,19 @@ export function normalizeFilesOptions<transforms extends AssetRequestTransformMa
     }
   }
 
+  if (files.cacheKey !== undefined) {
+    if (typeof files.cacheKey !== 'string') {
+      throw new TypeError('files.cacheKey must be a string')
+    }
+
+    if (files.cacheKey.length === 0) {
+      throw new TypeError('files.cacheKey must be a non-empty string')
+    }
+  }
+
   return {
     cache: files.cache,
+    cacheKey: files.cacheKey,
     extensions: normalizedExtensions,
     globalTransforms: normalizedGlobalTransforms,
     hasTransforms: normalizedTransforms.size > 0 || normalizedGlobalTransforms.length > 0,

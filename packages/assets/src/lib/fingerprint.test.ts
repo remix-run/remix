@@ -1,12 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import {
-  formatFingerprintedPathname,
-  generateFingerprint,
-  hashContent,
-  parseFingerprintSuffix,
-} from './fingerprint.ts'
+import { formatFingerprintedPathname, hashContent, parseFingerprintSuffix } from './fingerprint.ts'
 
 describe('hashContent', () => {
   it('accepts byte content', async () => {
@@ -14,47 +9,6 @@ describe('hashContent', () => {
     let hashB = await hashContent(Uint8Array.from([0, 1, 2, 4]))
 
     assert.notEqual(hashA, hashB)
-  })
-})
-
-describe('generateFingerprint', () => {
-  it('changes when the buildId changes', async () => {
-    let fingerprintA = await generateFingerprint({
-      buildId: 'build-a',
-      content: 'export const value = 1',
-    })
-    let fingerprintB = await generateFingerprint({
-      buildId: 'build-b',
-      content: 'export const value = 1',
-    })
-
-    assert.notEqual(fingerprintA, fingerprintB)
-  })
-
-  it('uses an unambiguous serialization format', async () => {
-    let fingerprintA = await generateFingerprint({
-      buildId: 'b\0c',
-      content: 'a',
-    })
-    let fingerprintB = await generateFingerprint({
-      buildId: 'c',
-      content: 'a\0b',
-    })
-
-    assert.notEqual(fingerprintA, fingerprintB)
-  })
-
-  it('accepts byte content', async () => {
-    let fingerprintA = await generateFingerprint({
-      buildId: 'build-a',
-      content: Uint8Array.from([0, 1, 2, 3]),
-    })
-    let fingerprintB = await generateFingerprint({
-      buildId: 'build-a',
-      content: Uint8Array.from([0, 1, 2, 4]),
-    })
-
-    assert.notEqual(fingerprintA, fingerprintB)
   })
 })
 

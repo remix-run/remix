@@ -111,4 +111,21 @@ describe('compileRoutes', () => {
       '/assets/npm/%40remix-run/ui/jsx-runtime.ts',
     )
   })
+
+  it('rejects fileMap entries that do not round trip through overlapping routes', () => {
+    let routes = compileRoutes('/assets', [
+      {
+        fileMap: {
+          '/app/*path': 'app/*path',
+          '/app/special/*path': 'special/*path',
+        },
+        rootDir: '/repo',
+      },
+    ])
+
+    assert.throws(
+      () => routes.toUrlPathname('/repo/special/entry.ts'),
+      /fileMap entries must map files to URLs reversibly/,
+    )
+  })
 })

@@ -79,6 +79,20 @@ interface ResolvedClientEntry {
   exportName: string
   /** Browser module hrefs to begin preloading before hydrating this entry. */
   preloads?: readonly string[]
+  importMap?: ImportMap
+}
+
+export interface ImportMap {
+  imports?: ImportMapImports
+  scopes?: Record<string, ImportMapImports>
+}
+
+type ImportMapAddress = string | null
+type ImportMapImports = Record<string, ImportMapAddress>
+
+interface ClientEntryHeadResources {
+  modulePreloadTags: Set<string>
+  importMap?: ImportMap
 }
 
 interface FrameData {
@@ -101,7 +115,7 @@ interface RenderContext {
   hydrationData: Map<string, HydrationData>
   unresolvedHydrationData: Map<string, UnresolvedHydrationData>
   frameData: Map<string, FrameData>
-  modulePreloadTags: Set<string>
+  clientEntryHeadResources: ClientEntryHeadResources
   blockingFrameTails: ReadableStream<Uint8Array>[]
   signal: AbortSignal
   flushKind: FlushKind
@@ -133,7 +147,6 @@ const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
 const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
 
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
-
 function stripDoctypeMarkup(html: string): string {
   return html.replace(DOCTYPE_PATTERN, '')
 }
@@ -210,7 +223,7 @@ export function renderToStream(
     hydrationData: new Map(),
     unresolvedHydrationData: new Map(),
     frameData: new Map(),
-    modulePreloadTags: new Set(),
+    clientEntryHeadResources: { modulePreloadTags: new Set() },
     blockingFrameTails: [],
     signal: renderAbortController.signal,
     flushKind: 'fragment',
@@ -385,9 +398,12 @@ async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<Reso
 async function resolveFrameHtml(
   input: string | ReadableStream<Uint8Array>,
 ): Promise<ResolvedFrameHtml> {
-  if (typeof input === 'string') return { html: stripFlushMarkers(stripDoctypeMarkup(input)) }
+  if (typeof input === 'string') {
+    let html = stripFlushMarkers(stripDoctypeMarkup(input))
+    return { html }
+  }
 
-  return await splitFirstChunk(input)
+  return splitFirstChunk(input)
 }
 
 function isRemixElement(node: unknown): node is RemixElement {
@@ -496,7 +512,7 @@ function buildFrameSegment(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
     ).then(async (resolved) => {
       let { html, tail } = await resolveFrameHtml(resolved)
-      html = hoistModulePreloadsFromFrameHead(html, context)
+      html = hoistClientEntryResourcesFromFrameHead(html, context.clientEntryHeadResources)
       seg.content = staticSeg(html)
       if (tail) {
         context.blockingFrameTails.push(tail)
@@ -533,6 +549,16 @@ function buildElementSegment(
 
   if (props.innerHTML) {
     return staticSeg(`<${tag}${attrs}>${props.innerHTML}</${tag}>`)
+  }
+
+  if (tag === 'script') {
+    if (typeof props.children === 'string') {
+      return staticSeg(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
+    }
+    if (props.children != null) {
+      console.error(new Error('script elements must receive a single string child'))
+    }
+    return staticSeg(`<${tag}${attrs}></${tag}>`)
   }
 
   let open = staticSeg(`<${tag}${attrs}>`)
@@ -1071,6 +1097,7 @@ async function resolveClientEntries(
         : resolveDefaultClientEntry(entryId, component)
       validateResolvedClientEntry(entryId, resolvedEntry)
       resolvedEntries.set(component, resolvedEntry)
+      collectResolvedClientEntryResources(context.clientEntryHeadResources, resolvedEntry)
     }
 
     context.hydrationData.set(hydrationId, {
@@ -1078,13 +1105,21 @@ async function resolveClientEntries(
       moduleUrl: resolvedEntry.href,
       props,
     })
-
-    for (let preload of resolvedEntry.preloads ?? []) {
-      context.modulePreloadTags.add(createModulePreloadTag(preload))
-    }
   }
 
   context.unresolvedHydrationData.clear()
+}
+
+function collectResolvedClientEntryResources(
+  resources: ClientEntryHeadResources,
+  resolvedEntry: ResolvedClientEntry,
+): void {
+  for (let preload of resolvedEntry.preloads ?? []) {
+    resources.modulePreloadTags.add(createModulePreloadTag(preload))
+  }
+  if (resolvedEntry.importMap) {
+    mergeImportMap(resources, resolvedEntry.importMap)
+  }
 }
 
 function validateResolvedClientEntry(
@@ -1116,6 +1151,12 @@ function validateResolvedClientEntry(
         )
       }
     }
+  }
+
+  if (resolvedEntry.importMap !== undefined && !isImportMap(resolvedEntry.importMap)) {
+    throw new Error(
+      `resolveClientEntry importMap must be a valid import map. Received "${entryId}".`,
+    )
   }
 }
 
@@ -1174,6 +1215,16 @@ function escapeTemplateContent(html: string): string {
   return html.replace(/<\/template/gi, '<\\/template')
 }
 
+const SCRIPT_TAG_PATTERN = /(<\/|<)(s)(cript)/gi
+
+function escapeScriptTextContent(value: string): string {
+  return value.replace(
+    SCRIPT_TAG_PATTERN,
+    (_match, prefix: string, firstLetter: string, suffix: string) =>
+      `${prefix}${firstLetter === 's' ? '\\u0073' : '\\u0053'}${suffix}`,
+  )
+}
+
 function transformAttributeName(name: string, isSvg: boolean): string {
   return normalizeAttributeName(name, isSvg).attr
 }
@@ -1181,29 +1232,27 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 function finalizeHtml(html: string, context: RenderContext): string {
   let hasHtmlRoot = context.flushKind === 'document'
 
-  let preloads = collectModulePreloadTags(context)
+  let preloads = collectModulePreloadTags(context.clientEntryHeadResources)
   let styles = collectStyleTags(context)
-  if (preloads || styles) {
-    let headContent = preloads + styles
-    if (hasHtmlRoot) {
-      // For HTML root, inject into existing head or create one
-      let headCloseIndex = html.indexOf('</head>')
-      if (headCloseIndex !== -1) {
-        // Inject before existing </head>
-        html = html.slice(0, headCloseIndex) + headContent + html.slice(headCloseIndex)
-      } else {
-        // No existing head, inject after <html>
-        let htmlOpenMatch = html.match(/<html[^>]*>/)
-        if (htmlOpenMatch) {
-          let insertIndex = htmlOpenMatch.index! + htmlOpenMatch[0].length
-          html =
-            html.slice(0, insertIndex) + `<head>${headContent}</head>` + html.slice(insertIndex)
-        }
-      }
+  let importMapScript = collectImportMapScript(context.clientEntryHeadResources)
+  let headContent = preloads + styles + importMapScript
+  if (hasHtmlRoot && headContent) {
+    let headCloseIndex = html.indexOf('</head>')
+    if (headCloseIndex !== -1) {
+      html = html.slice(0, headCloseIndex) + headContent + html.slice(headCloseIndex)
     } else {
-      // No HTML root, prepend head
-      html = `<head>${headContent}</head>${html}`
+      let htmlOpenMatch = html.match(/<html[^>]*>/)
+      if (htmlOpenMatch) {
+        let insertIndex = htmlOpenMatch.index! + htmlOpenMatch[0].length
+        html = html.slice(0, insertIndex) + `<head>${headContent}</head>` + html.slice(insertIndex)
+      } else {
+        html = headContent + html
+      }
     }
+  }
+
+  if (!hasHtmlRoot && headContent) {
+    html = `<head>${headContent}</head>${html}`
   }
 
   // Append aggregated hydration/frame data script at the end
@@ -1239,11 +1288,22 @@ function createModulePreloadTag(href: string): string {
   return `${MARKED_MODULE_PRELOAD_START}${escapeHtml(href)}${MODULE_PRELOAD_END}`
 }
 
-function collectModulePreloadTags(context: RenderContext): string {
-  return Array.from(context.modulePreloadTags).join('')
+function collectModulePreloadTags(resources: ClientEntryHeadResources): string {
+  return Array.from(resources.modulePreloadTags).join('')
 }
 
-function hoistModulePreloadsFromFrameHead(html: string, context: RenderContext): string {
+function hoistClientEntryResourcesFromFrameHead(
+  html: string,
+  resources: ClientEntryHeadResources,
+): string {
+  html = hoistModulePreloadsFromFrameHead(html, resources)
+  return hoistImportMapsFromFrameHead(html, resources)
+}
+
+function hoistModulePreloadsFromFrameHead(
+  html: string,
+  resources: ClientEntryHeadResources,
+): string {
   if (!html.startsWith(FRAME_HEAD_OPEN_TAG)) return html
 
   let tags: string[] = []
@@ -1266,7 +1326,7 @@ function hoistModulePreloadsFromFrameHead(html: string, context: RenderContext):
   if (headClose === -1) return html
 
   for (let tag of tags) {
-    context.modulePreloadTags.add(tag)
+    resources.modulePreloadTags.add(tag)
   }
 
   if (remainingHeadStart === headClose) {
@@ -1350,6 +1410,123 @@ function buildRmxDataScript(context: RenderContext): string {
 
   let serializedData = escapeScriptJson(JSON.stringify(data))
   return `<script type="application/json" id="rmx-data">${serializedData}</script>`
+}
+
+function buildImportMapScript(importMap: ImportMap): string {
+  let serializedData = escapeScriptJson(JSON.stringify(importMap))
+  return `<script data-rmx type="importmap">${serializedData}</script>`
+}
+
+function collectImportMapScript(resources: ClientEntryHeadResources): string {
+  return resources.importMap ? buildImportMapScript(resources.importMap) : ''
+}
+
+const MANAGED_IMPORT_MAP_START = '<script data-rmx type="importmap">'
+const IMPORT_MAP_SCRIPT_END = '</script>'
+
+function hoistImportMapsFromFrameHead(html: string, resources: ClientEntryHeadResources): string {
+  if (!html.startsWith(FRAME_HEAD_OPEN_TAG)) return html
+
+  let headClose = html.indexOf(FRAME_HEAD_CLOSE_TAG, FRAME_HEAD_OPEN_TAG.length)
+  if (headClose === -1) return html
+
+  let importMaps: ImportMap[] = []
+  let remainingHead: string[] = []
+  let cursor = FRAME_HEAD_OPEN_TAG.length
+  while (cursor < headClose) {
+    let scriptStart = html.indexOf(MANAGED_IMPORT_MAP_START, cursor)
+    if (scriptStart === -1 || scriptStart >= headClose) break
+
+    let contentStart = scriptStart + MANAGED_IMPORT_MAP_START.length
+    let scriptEnd = html.indexOf(IMPORT_MAP_SCRIPT_END, contentStart)
+    if (scriptEnd === -1 || scriptEnd >= headClose) return html
+
+    let tagEnd = scriptEnd + IMPORT_MAP_SCRIPT_END.length
+    remainingHead.push(html.slice(cursor, scriptStart))
+    importMaps.push(parseFrameworkImportMap(html.slice(contentStart, scriptEnd)))
+    cursor = tagEnd
+  }
+
+  if (importMaps.length === 0) return html
+  remainingHead.push(html.slice(cursor, headClose))
+
+  for (let importMap of importMaps) {
+    mergeImportMap(resources, importMap)
+  }
+
+  let remainingHeadHtml = remainingHead.join('')
+  let contentAfterHead = html.slice(headClose + FRAME_HEAD_CLOSE_TAG.length)
+  if (!remainingHeadHtml) return contentAfterHead
+
+  return `${FRAME_HEAD_OPEN_TAG}${remainingHeadHtml}${FRAME_HEAD_CLOSE_TAG}${contentAfterHead}`
+}
+
+function parseFrameworkImportMap(json: string): ImportMap {
+  let value: unknown
+  try {
+    value = JSON.parse(json)
+  } catch {
+    throw new Error('Invalid framework-owned import map in frame head')
+  }
+  if (!isImportMap(value)) {
+    throw new Error('Invalid framework-owned import map in frame head')
+  }
+  return value
+}
+
+function isImportMap(value: unknown): value is ImportMap {
+  if (!isObjectRecord(value)) return false
+  if (value.imports !== undefined && !isImportMapImports(value.imports)) return false
+  if (value.scopes !== undefined) {
+    if (!isObjectRecord(value.scopes)) return false
+    for (let imports of Object.values(value.scopes)) {
+      if (!isImportMapImports(imports)) return false
+    }
+  }
+  return true
+}
+
+function isImportMapImports(value: unknown): value is ImportMapImports {
+  if (!isObjectRecord(value)) return false
+  return Object.values(value).every((address) => address === null || typeof address === 'string')
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function mergeImportMap(resources: ClientEntryHeadResources, source: ImportMap): void {
+  let target = (resources.importMap ??= {})
+  if (source.imports) {
+    target.imports ??= {}
+    mergeImportMapImports(target.imports, source.imports)
+  }
+  if (source.scopes) {
+    target.scopes ??= {}
+    for (let [scope, imports] of Object.entries(source.scopes)) {
+      let targetImports = (target.scopes[scope] ??= {})
+      mergeImportMapImports(targetImports, imports, scope)
+    }
+  }
+}
+
+function mergeImportMapImports(
+  target: ImportMapImports,
+  source: ImportMapImports,
+  scope?: string,
+): void {
+  for (let [specifier, address] of Object.entries(source)) {
+    if (!Object.hasOwn(target, specifier)) {
+      target[specifier] = address
+      continue
+    }
+    if (target[specifier] !== address) {
+      let scopeDescription = scope ? ` in scope "${scope}"` : ''
+      throw new Error(
+        `Conflicting framework import map entry for "${specifier}"${scopeDescription}`,
+      )
+    }
+  }
 }
 
 function escapeScriptJson(json: string): string {

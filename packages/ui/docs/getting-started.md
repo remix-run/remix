@@ -90,7 +90,7 @@ function App() {
     <html>
       <head>
         <title>My App</title>
-        <script async type="module" src="/assets/entry.js" />
+        <script type="module" src="/assets/entry.js" />
       </head>
       <body>
         <h1>Hello</h1>

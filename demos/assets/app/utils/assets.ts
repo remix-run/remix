@@ -41,7 +41,5 @@ export const assetServer = createAssetServer({
     },
   },
   watch: isDevelopment,
-  fingerprint: isDevelopment
-    ? undefined
-    : { buildId: process.env.GITHUB_SHA || String(Date.now()) },
+  fingerprint: !isDevelopment,
 })

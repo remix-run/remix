@@ -318,9 +318,10 @@ describe('node-hmr', () => {
 
       await fs.writeFile(releaseFileA, '')
       assert.deepEqual(await events.read(), {
-        timestamp: 1,
+        data: {
+          'test/browser@1': { path: '/a.css', timestamp: 1 },
+        },
         type: 'browser:update',
-        updates: [{ path: '/a.css', type: 'css' }],
       })
       assert.equal(readyResolved, false)
 
@@ -370,9 +371,14 @@ describe('node-hmr', () => {
       watcher.emit('all', 'change', 'browser/entry.ts', watchFileStats)
 
       assert.deepEqual(await events.read(), {
-        timestamp: 1,
+        data: {
+          'test/browser@1': {
+            details: [null, true, { version: 1 }],
+            path: '/entry.ts',
+            timestamp: 1,
+          },
+        },
         type: 'browser:update',
-        updates: [{ path: '/entry.ts', type: 'js' }],
       })
 
       await new Promise((resolve) => setTimeout(resolve, 250))
@@ -1669,9 +1675,13 @@ function getOverlappingBrowserHmrServerSource(): string {
     `    }`,
     `  }`,
     `  return [{`,
-    `    timestamp: isFileA ? 1 : 2,`,
+    `    data: {`,
+    `      'test/browser@1': {`,
+    `        path: isFileA ? '/a.css' : '/b.css',`,
+    `        timestamp: isFileA ? 1 : 2,`,
+    `      },`,
+    `    },`,
     `    type: 'update',`,
-    `    updates: [{ path: isFileA ? '/a.css' : '/b.css', type: 'css' }],`,
     `  }]`,
     `})`,
     `await fs.writeFile(process.env.HMR_URL_FILE, channel.url)`,
@@ -1690,9 +1700,14 @@ function getBrowserHmrServerSource(): string {
     `let channel = await createBrowserHmrChannel()`,
     `channel.updateWatchedFiles({ add: [process.env.WATCH_FILE], remove: [] })`,
     `channel.onFileEvents(() => [{`,
-    `  timestamp: 1,`,
+    `  data: {`,
+    `    'test/browser@1': {`,
+    `      details: [null, true, { version: 1 }],`,
+    `      path: '/entry.ts',`,
+    `      timestamp: 1,`,
+    `    },`,
+    `  },`,
     `  type: 'update',`,
-    `  updates: [{ path: '/entry.ts', type: 'js' }],`,
     `}])`,
     `await fs.writeFile(process.env.HMR_URL_FILE, channel.url)`,
     `emitServerReady()`,

@@ -18,7 +18,6 @@ import {
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
-import { generateFingerprint } from '../fingerprint.ts'
 import {
   maskAuthoredInjectedPackageSpecifier,
   mayContainInjectedPackageSpecifier,
@@ -83,7 +82,6 @@ type UnresolvedImport = {
 type HmrAcceptedDependency = UnresolvedImport
 
 export type TransformedModule = {
-  fingerprint: string | null
   hmr: {
     acceptedDeps: HmrAcceptedDependency[]
     selfAccepting: boolean
@@ -121,7 +119,6 @@ type TsconfigTransformOptions = {
 type TsconfigTransformOptionsResolver = ReturnType<typeof createTsconfigTransformOptionsResolver>
 
 export type TransformArgs = {
-  buildId: string | null
   define: Record<string, string> | null
   externalSet: ReadonlySet<string>
   isWatchIgnored(filePath: string): boolean
@@ -272,13 +269,6 @@ export async function transformModule(
         trackedFiles,
       },
       value: {
-        fingerprint:
-          args.buildId === null
-            ? null
-            : await generateFingerprint({
-                buildId: args.buildId,
-                content: sourceText,
-              }),
         hmr: getHmrAnalysis(analysis.rawCode),
         identityPath: record.identityPath,
         importerDir: path.dirname(resolvedPath),

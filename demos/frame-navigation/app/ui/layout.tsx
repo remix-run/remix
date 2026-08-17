@@ -24,7 +24,8 @@ const navItems = [
 export function Layout(handle: Handle<LayoutProps>) {
   return () => {
     let { title, activeNav, children } = handle.props
-    let { scriptSrc, scriptPreloads } = getAssetEntry()
+    let { scriptEntry } = getAssetEntry()
+    let { href, importMap, preloads } = scriptEntry
 
     return (
       <html lang="en">
@@ -32,10 +33,11 @@ export function Layout(handle: Handle<LayoutProps>) {
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>{title} | LMS</title>
-          {scriptPreloads.map((href) => (
-            <link key={href} rel="modulepreload" href={href} />
+          <script type="importmap">{JSON.stringify(importMap)}</script>
+          {preloads.map((preloadHref) => (
+            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}
-          <script async type="module" src={scriptSrc} />
+          <script type="module" src={href} />
         </head>
         <body mix={bodyStyle}>
           <div mix={appShellStyle}>

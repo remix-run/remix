@@ -48,7 +48,10 @@ describe('getHmrAnalysis', () => {
 
 describe('createHmrClientSource', () => {
   it('awaits async dispose and accept callbacks during JavaScript updates', () => {
-    let source = createHmrClientSource({ eventPathname: '/__hmr' })
+    let source = createHmrClientSource({
+      dataKey: 'remix/assets@1:/assets',
+      eventPathname: '/__hmr',
+    })
 
     assert.match(source, /await callback\(previousContext\.data\)/)
     assert.match(source, /await callback\(updatedModule\)/)
