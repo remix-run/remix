@@ -64,7 +64,7 @@ const getNpmPackageNameToDirectoryMap = (() => {
  * Returns null if no mapping is found.
  *
  * Examples:
- *   "@remix-run/static-middleware" -> "static-middleware"
+ *   "@remix-run/static-files-middleware" -> "static-files-middleware"
  *   "remix" -> "remix"
  */
 export function packageNameToDirectoryName(packageName: string): string | null {

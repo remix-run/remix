@@ -1840,61 +1840,6 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20260707.2
 
-  packages/static-middleware:
-    devDependencies:
-      '@remix-run/assert':
-        specifier: workspace:*
-        version: link:../assert
-      '@remix-run/fetch-router':
-        specifier: workspace:*
-        version: link:../fetch-router
-      '@remix-run/form-data-middleware':
-        specifier: workspace:*
-        version: link:../form-data-middleware
-      '@remix-run/fs':
-        specifier: workspace:*
-        version: link:../fs
-      '@remix-run/html-template':
-        specifier: workspace:*
-        version: link:../html-template
-      '@remix-run/method-override-middleware':
-        specifier: workspace:*
-        version: link:../method-override-middleware
-      '@remix-run/mime':
-        specifier: workspace:*
-        version: link:../mime
-      '@remix-run/response':
-        specifier: workspace:*
-        version: link:../response
-      '@remix-run/test':
-        specifier: workspace:*
-        version: link:../test
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      typescript:
-        specifier: 'catalog:'
-        version: 7.0.2
-
-  packages/static-middleware/demos/list-files:
-    dependencies:
-      '@remix-run/fetch-router':
-        specifier: workspace:^
-        version: link:../../../fetch-router
-      '@remix-run/node-fetch-server':
-        specifier: workspace:^
-        version: link:../../../node-fetch-server
-      '@remix-run/static-middleware':
-        specifier: workspace:^
-        version: link:../..
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      typescript:
-        specifier: 'catalog:'
-        version: 7.0.2
-
   packages/tar-parser:
     devDependencies:
       '@remix-run/assert':
