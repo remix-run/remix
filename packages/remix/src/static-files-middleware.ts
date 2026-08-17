@@ -1,2 +1,2 @@
 // IMPORTANT: This file is auto-generated, please do not edit manually.
-export * from '@remix-run/static-files'
+export * from '@remix-run/static-files-middleware'

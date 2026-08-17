@@ -4,7 +4,7 @@
   "dependencies": {
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",
-    "@remix-run/static-files": "workspace:*",
+    "@remix-run/static-files-middleware": "workspace:*",
     "remix": "workspace:*"
   },
   "devDependencies": {
