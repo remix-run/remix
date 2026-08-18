@@ -135,6 +135,10 @@ describe('asset server HMR', () => {
     await page.locator('[data-testid="field"]').fill('hello')
     assert.equal(await page.locator('script[type="importmap"]').count(), 1)
 
+    let firstAccepted = waitForConsoleMessage(
+      page,
+      '[remix] HMR accepted update /assets/app/counter.ts',
+    )
     await write(
       fixture.rootDir,
       'app/counter.ts',
@@ -145,9 +149,17 @@ describe('asset server HMR', () => {
     )
 
     await waitForText(page, '[data-testid="increment"]', 'Package: Increment via new package')
+    await firstAccepted
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
     assert.equal(await page.locator('script[type="importmap"]').count(), 2)
 
+    // Let both polling watchers observe the first update before replacing it.
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    let secondAccepted = waitForConsoleMessage(
+      page,
+      '[remix] HMR accepted update /assets/app/counter.ts',
+    )
     await write(
       fixture.rootDir,
       'app/counter.ts',
@@ -162,6 +174,7 @@ describe('asset server HMR', () => {
       '[data-testid="increment"]',
       'Package: Increment via existing package mapping',
     )
+    await secondAccepted
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
     assert.equal(await page.locator('script[type="importmap"]').count(), 2)
   })
