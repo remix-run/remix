@@ -344,7 +344,7 @@ describe('asset-server', () => {
       try {
         let assets = await assetServer.getAssets()
         let appAssets = assets.filter((asset) => asset.url?.startsWith('/assets/app/'))
-        let realCaseDir = await fs.realpath(caseDir)
+        let realCaseDir = nodeFs.realpathSync(caseDir)
 
         let actual = appAssets.map((asset) => [
           asset.url,
