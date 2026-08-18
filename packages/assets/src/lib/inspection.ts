@@ -1,4 +1,5 @@
-import * as fs from 'node:fs/promises'
+import * as fs from 'node:fs'
+import * as fsPromises from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -117,7 +118,7 @@ async function inspectRouteMatch(
   fileExtensions: ReadonlySet<string>,
 ): Promise<AssetDetails> {
   let exists = await pathExists(routeMatch.filePath)
-  let identityPath = exists ? await fs.realpath(routeMatch.filePath) : routeMatch.filePath
+  let identityPath = exists ? fs.realpathSync(routeMatch.filePath) : routeMatch.filePath
   let normalizedIdentityPath = normalizeFilePath(identityPath)
   let access = options.accessPolicy.inspect(normalizedIdentityPath)
 
@@ -184,7 +185,7 @@ function resolveDiscoveryRoot(rootDir: string, pattern: string): string {
 async function collectFiles(root: string, filePaths: Set<string>): Promise<void> {
   let stat
   try {
-    stat = await fs.stat(root)
+    stat = await fsPromises.stat(root)
   } catch (error) {
     if (isPathNotFoundError(error)) return
     throw error
@@ -196,7 +197,7 @@ async function collectFiles(root: string, filePaths: Set<string>): Promise<void>
   }
   if (!stat.isDirectory()) return
 
-  let entries = await fs.readdir(root, { withFileTypes: true })
+  let entries = await fsPromises.readdir(root, { withFileTypes: true })
   for (let entry of entries) {
     let entryPath = path.join(root, entry.name)
     if (entry.isDirectory()) {
@@ -209,7 +210,7 @@ async function collectFiles(root: string, filePaths: Set<string>): Promise<void>
 
 async function pathExists(filePath: string): Promise<boolean> {
   try {
-    await fs.access(filePath)
+    await fsPromises.access(filePath)
     return true
   } catch (error) {
     if (isPathNotFoundError(error)) return false

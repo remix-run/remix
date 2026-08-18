@@ -1,4 +1,4 @@
-import * as fs from 'node:fs/promises'
+import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as process from 'node:process'
 import { createAssetServer, type AssetDetails } from '@remix-run/assets'
@@ -22,7 +22,7 @@ export async function runAssetsCommand(argv: string[], context: CliContext): Pro
     let assetServer = createAssetServer({ ...config.assets, watch: false })
     try {
       let input = parsed.positionals[0]
-      let rootDir = await fs.realpath(config.assets.rootDir)
+      let rootDir = fs.realpathSync(config.assets.rootDir)
 
       if (input === undefined) {
         process.stdout.write(formatAssetList(await assetServer.getAssets(), rootDir))

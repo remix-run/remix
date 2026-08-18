@@ -348,7 +348,7 @@ describe('asset-server', () => {
 
         let actual = appAssets.map((asset) => [
           asset.url,
-          path.relative(realCaseDir, asset.filePath ?? ''),
+          normalizeWindowsPath(path.relative(realCaseDir, asset.filePath ?? '')),
           asset.type,
         ])
         assert.deepEqual(actual, [
