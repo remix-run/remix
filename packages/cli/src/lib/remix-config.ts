@@ -69,6 +69,13 @@ export type RemixDbAdapterConfig =
       characterSet?: string
       collation?: string
     }
+  | {
+      type: 'module'
+      module: string
+      export?: string
+      connection?: RemixDbString
+      options?: Record<string, unknown>
+    }
 
 export interface RemixDbCommandConfig {
   adapter: RemixDbAdapterConfig
@@ -322,7 +329,7 @@ function parseDbConfig(
 function parseDbAdapterConfig(value: unknown, source: ConfigSource): RemixDbAdapterConfig {
   let objectPath = ['db', 'adapter']
   let object = requireObject(value, source, objectPath)
-  let type = requireEnum(object.type, ['sqlite', 'postgres', 'mysql'], source, [
+  let type = requireEnum(object.type, ['sqlite', 'postgres', 'mysql', 'module'], source, [
     ...objectPath,
     'type',
   ])
@@ -367,12 +374,34 @@ function parseDbAdapterConfig(value: unknown, source: ConfigSource): RemixDbAdap
     }
   }
 
-  requireKnownProperties(object, ['characterSet', 'collation', 'type', 'uri'], source, objectPath)
+  if (type === 'mysql') {
+    requireKnownProperties(object, ['characterSet', 'collation', 'type', 'uri'], source, objectPath)
+    return {
+      type,
+      uri: parseDbString(object.uri, source, [...objectPath, 'uri']),
+      characterSet: optionalString(object.characterSet, source, [...objectPath, 'characterSet']),
+      collation: optionalString(object.collation, source, [...objectPath, 'collation']),
+    }
+  }
+
+  requireKnownProperties(
+    object,
+    ['connection', 'export', 'module', 'options', 'type'],
+    source,
+    objectPath,
+  )
   return {
     type,
-    uri: parseDbString(object.uri, source, [...objectPath, 'uri']),
-    characterSet: optionalString(object.characterSet, source, [...objectPath, 'characterSet']),
-    collation: optionalString(object.collation, source, [...objectPath, 'collation']),
+    module: requireString(object.module, source, [...objectPath, 'module']),
+    export: optionalString(object.export, source, [...objectPath, 'export']),
+    connection:
+      object.connection === undefined
+        ? undefined
+        : parseDbString(object.connection, source, [...objectPath, 'connection']),
+    options:
+      object.options === undefined
+        ? undefined
+        : toPlainObject(requireObject(object.options, source, [...objectPath, 'options'])),
   }
 }
 
@@ -756,6 +785,22 @@ function getLineAndColumn(text: string, offset: number): { column: number; line:
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && 'code' in error
+}
+
+// The JSONC parser builds null-prototype objects. Adapter options are handed
+// to third-party code, so give them ordinary object prototypes first.
+function toPlainObject(value: Record<string, unknown>): Record<string, unknown> {
+  let result: Record<string, unknown> = {}
+  for (let [key, item] of Object.entries(value)) {
+    result[key] = toPlainValue(item)
+  }
+  return result
+}
+
+function toPlainValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(toPlainValue)
+  if (isRecord(value)) return toPlainObject(value)
+  return value
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
