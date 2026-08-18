@@ -1,0 +1,1 @@
+Add a shared `assets` section to `remix.json`, export `loadConfig(fileOrDirectory)` from `remix/cli`, and add `remix assets`. The command lists browser-reachable assets as stable URL-to-file mappings or explains the mapping, file type, access rules, and status for one URL or file path (see #11725).

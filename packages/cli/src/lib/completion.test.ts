@@ -9,6 +9,7 @@ describe('completion engine', () => {
 
     assert.equal(result.mode, 'values')
     assert.deepEqual(result.values, [
+      'assets',
       'completion',
       'db',
       'doctor',
@@ -31,6 +32,7 @@ describe('completion engine', () => {
 
     assert.equal(topLevelResult.mode, 'values')
     assert.deepEqual(topLevelResult.values, [
+      'assets',
       'completion',
       'db',
       'doctor',

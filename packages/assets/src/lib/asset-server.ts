@@ -29,6 +29,7 @@ import { createResponseForStyle, createStyleCompiler, isStyleFilePath } from './
 import { resolveScriptTarget, resolveStyleTarget } from './target.ts'
 import type { AssetTarget, ResolvedScriptTarget, ResolvedStyleTarget } from './target.ts'
 import { createAssetServerWatcher } from './watch.ts'
+import { createAssetInspector, type AssetDetails } from './inspection.ts'
 import type { AssetServerWatcher, ChokidarWatcher } from './watch.ts'
 
 interface AssetServerWatchOptions {
@@ -290,6 +291,16 @@ export interface AssetServer<transforms extends AssetRequestTransformMap = {}> {
    */
   getPreloads(filePath: string | readonly string[]): Promise<string[]>
   /**
+   * Returns diagnostic details about one public asset URL or file path, including the matched URL
+   * and file patterns, access rules, file type, and browser-reachability status.
+   */
+  getAssetDetails(input: string): Promise<AssetDetails>
+  /**
+   * Returns every file currently reachable through this asset server, sorted by public URL and
+   * then absolute file path.
+   */
+  getAssets(): Promise<AssetDetails[]>
+  /**
    * Closes this server's filesystem watcher and browser HMR channel.
    *
    * @returns A promise that resolves after owned development resources have been released.
@@ -371,6 +382,13 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       ? getPackageSearchRoots(options.fileMap, resolvedOptions.rootDir)
       : undefined,
     rootDir: resolvedOptions.rootDir,
+  })
+  let assetInspector = createAssetInspector({
+    accessPolicy,
+    allowFiles: resolvedOptions.allowFiles,
+    fileExtensions: resolvedOptions.files.extensions,
+    rootDir: resolvedOptions.rootDir,
+    routes: resolvedOptions.routes,
   })
   let watcher: AssetServerWatcher | null = null
   let chokidarWatcher: ChokidarWatcher | null = null
@@ -575,6 +593,12 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   }
 
   let assetServer: AssetServer<transforms> = {
+    getAssetDetails(input) {
+      return assetInspector.getAssetDetails(input)
+    },
+    getAssets() {
+      return assetInspector.getAssets()
+    },
     async fetch(request) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return null
       let requestPathname = new URL(request.url).pathname

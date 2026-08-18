@@ -27,14 +27,15 @@ const ROOT_HELP_TEXT = [
   '  remix <command> [options]',
   '',
   'Commands:',
-  '  completion      Print shell completion scripts for Remix',
-  '  help [command]  Show help for Remix commands',
-  '  new <name>      Create a new Remix project',
-  '  db <command>    Manage the current app database',
-  '  doctor          Check project health for the current project',
-  '  routes          Show the route tree for the current project',
-  '  test [glob]     Run tests for the current project',
-  '  version         Show the current Remix version',
+  '  assets [url-or-file]  Inspect browser-reachable assets',
+  '  completion            Print shell completion scripts for Remix',
+  '  help [command]        Show help for Remix commands',
+  '  new <name>            Create a new Remix project',
+  '  db <command>          Manage the current app database',
+  '  doctor                Check project health for the current project',
+  '  routes                Show the route tree for the current project',
+  '  test [glob]           Run tests for the current project',
+  '  version               Show the current Remix version',
   '',
   'Options:',
   '  --config <path>  Use a custom Remix config file',
@@ -43,6 +44,7 @@ const ROOT_HELP_TEXT = [
   '  -v, --version    Show version',
   '',
   'Examples:',
+  '  remix assets',
   '  remix completion bash',
   '  remix help',
   '  remix help completion',
@@ -97,6 +99,7 @@ const HELP_COMMAND_HELP_TEXT = [
   '',
   'Examples:',
   '  remix help',
+  '  remix help assets',
   '  remix help completion',
   '  remix help db',
   '  remix help doctor',
@@ -325,6 +328,7 @@ describe('run', () => {
   })
 
   it('prints command help from the help command', async () => {
+    let assetsHelp = await captureOutput(() => run(['help', 'assets']))
     let doctorHelp = await captureOutput(() => run(['help', 'doctor']))
     let completionHelp = await captureOutput(() => run(['help', 'completion']))
     let newHelp = await captureOutput(() => run(['help', 'new']))
@@ -333,6 +337,9 @@ describe('run', () => {
     let testHelp = await captureOutput(() => run(['help', 'test']))
     let versionHelp = await captureOutput(() => run(['help', 'version']))
 
+    assert.equal(assetsHelp.exitCode, 0)
+    assert.match(assetsHelp.stdout, /remix assets \[url-or-file\]/)
+    assert.equal(assetsHelp.stderr, '')
     assert.equal(doctorHelp.exitCode, 0)
     assert.equal(doctorHelp.stdout, DOCTOR_COMMAND_HELP_TEXT)
     assert.equal(doctorHelp.stderr, '')

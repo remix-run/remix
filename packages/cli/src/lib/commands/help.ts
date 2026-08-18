@@ -24,6 +24,7 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
   return formatHelpText(
     {
       commands: [
+        { description: 'Inspect browser-reachable assets', label: 'assets [url-or-file]' },
         { description: 'Print shell completion scripts for Remix', label: 'completion' },
         { description: 'Show help for Remix commands', label: 'help [command]' },
         { description: 'Create a new Remix project', label: 'new <name>' },
@@ -34,6 +35,7 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
         { description: 'Show the current Remix version', label: 'version' },
       ],
       examples: [
+        'remix assets',
         'remix completion bash',
         'remix help',
         'remix help completion',
@@ -64,6 +66,7 @@ export function getHelpCommandHelpText(target: NodeJS.WriteStream = process.stdo
       description: 'Show help for Remix commands.',
       examples: [
         'remix help',
+        'remix help assets',
         'remix help completion',
         'remix help db',
         'remix help doctor',
@@ -92,6 +95,11 @@ async function getCommandHelpText(argv: string[]): Promise<string> {
   if (command === 'new' && rest.length === 0) {
     let { getNewCommandHelpText } = await import('./new.ts')
     return getNewCommandHelpText()
+  }
+
+  if (command === 'assets' && rest.length === 0) {
+    let { getAssetsCommandHelpText } = await import('./assets.ts')
+    return getAssetsCommandHelpText()
   }
 
   if (command === 'completion' && rest.length === 0) {

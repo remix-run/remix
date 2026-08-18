@@ -1,0 +1,1 @@
+Add shared asset configuration and inspection through `remix/cli` and `remix/assets`, including `loadConfig()`, `remix assets`, `assetServer.getAssets()`, and `assetServer.getAssetDetails()` (see #11725).

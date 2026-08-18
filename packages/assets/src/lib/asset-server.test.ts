@@ -324,6 +324,95 @@ describe('asset-server', () => {
     await fs.rm(dir, { recursive: true, force: true })
   })
 
+  it('lists browser-reachable assets using the configured mapping and access policy', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/public/entry.ts', 'export const value = 1')
+      await write(caseDir, 'app/public/styles.css', 'body { color: red }')
+      await write(caseDir, 'app/public/logo.svg', '<svg />')
+      await write(caseDir, 'app/public/entry.test.ts', 'export const test = true')
+      await write(caseDir, 'app/private/secret.ts', 'export const secret = true')
+
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/public/**'],
+        denyFiles: ['app/**/*.test.*'],
+        fileMap: { '/app/*path': 'app/*path' },
+        files: { extensions: ['.svg'] },
+        rootDir: caseDir,
+      })
+
+      try {
+        let assets = await assetServer.getAssets()
+        let appAssets = assets.filter((asset) => asset.url?.startsWith('/assets/app/'))
+        let realCaseDir = await fs.realpath(caseDir)
+
+        let actual = appAssets.map((asset) => [
+          asset.url,
+          path.relative(realCaseDir, asset.filePath ?? ''),
+          asset.type,
+        ])
+        assert.deepEqual(actual, [
+          ['/assets/app/public/entry.ts', 'app/public/entry.ts', 'script'],
+          ['/assets/app/public/logo.svg', 'app/public/logo.svg', 'file'],
+          ['/assets/app/public/styles.css', 'app/public/styles.css', 'style'],
+        ])
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('explains reachable, denied, unsupported, missing, and unmapped assets', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/public/entry.ts', 'export const value = 1')
+      await write(caseDir, 'app/public/entry.test.ts', 'export const test = true')
+      await write(caseDir, 'app/public/readme.txt', 'hello')
+
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/public/**'],
+        denyFiles: ['app/**/*.test.*'],
+        fileMap: { '/app/*path': 'app/*path' },
+        rootDir: caseDir,
+      })
+
+      try {
+        let reachable = await assetServer.getAssetDetails('/assets/app/public/entry.ts')
+        assert.equal(reachable.status, 'reachable')
+        assert.equal(reachable.type, 'script')
+        assert.equal(reachable.filePattern, 'app/*path')
+        assert.equal(reachable.urlPattern, '/assets/app/*path')
+        assert.deepEqual(reachable.access?.allowedBy, {
+          kind: 'file',
+          value: 'app/public/**',
+        })
+
+        let byFile = await assetServer.getAssetDetails('app/public/entry.ts')
+        assert.equal(byFile.url, '/assets/app/public/entry.ts')
+        assert.equal(byFile.status, 'reachable')
+
+        let denied = await assetServer.getAssetDetails('/assets/app/public/entry.test.ts')
+        assert.equal(denied.status, 'denied')
+        assert.equal(denied.access?.deniedBy, 'app/**/*.test.*')
+
+        let unsupported = await assetServer.getAssetDetails('/assets/app/public/readme.txt')
+        assert.equal(unsupported.status, 'unsupported')
+
+        let missing = await assetServer.getAssetDetails('/assets/app/public/missing.ts')
+        assert.equal(missing.status, 'missing')
+
+        let unmapped = await assetServer.getAssetDetails('/other/entry.ts')
+        assert.equal(unmapped.status, 'unmapped')
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('handles GET and HEAD requests but ignores POST', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
     let assetServer = createTestServer(dir)
@@ -5604,6 +5693,13 @@ describe('asset-server', () => {
     )
     assert.ok(response)
     assert.equal(response.status, 200)
+    let details = await assetServer.getAssetDetails(
+      '/assets/node_modules/@remix-run/__allowed-package/index.ts',
+    )
+    assert.deepEqual(details.access?.allowedBy, {
+      kind: 'package',
+      value: '@remix-run/__allowed-package',
+    })
   })
 
   it('allows imported package files by package name', async () => {

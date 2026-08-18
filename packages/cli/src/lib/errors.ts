@@ -28,6 +28,11 @@ export const CLI_ERROR_DEFINITIONS = {
     title: 'Could not determine an app name',
     fix: 'Pass --app-name or choose a target directory name that can become an app name.',
   },
+  assetsConfigRequired: {
+    code: 'RMX_ASSETS_CONFIG_REQUIRED',
+    title: 'Asset configuration is required',
+    fix: 'Add an assets configuration to remix.json.',
+  },
   dbConfigRequired: {
     code: 'RMX_DB_CONFIG_REQUIRED',
     title: 'Database configuration is required',
@@ -191,6 +196,12 @@ export function appNameUnavailable(targetDir?: string): UsageError {
   return createUsageError(CLI_ERROR_DEFINITIONS.appNameUnavailable, {
     context: targetDir == null ? undefined : { targetDir },
     message: 'Could not determine an app name from the target directory.',
+  })
+}
+
+export function assetsConfigRequired(): CliError {
+  return createCliError(CLI_ERROR_DEFINITIONS.assetsConfigRequired, {
+    message: 'Asset configuration is missing from remix.json.',
   })
 }
 

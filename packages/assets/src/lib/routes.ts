@@ -34,7 +34,16 @@ interface CompiledRoute {
 
 export interface CompiledRoutes {
   resolveUrlPathname(pathname: string): string | null
+  matchUrlPathname(pathname: string): AssetRouteMatch | null
   toUrlPathname(filePath: string): string | null
+  matchFilePath(filePath: string): AssetRouteMatch | null
+}
+
+export interface AssetRouteMatch {
+  filePath: string
+  filePattern: string
+  urlPathname: string
+  urlPattern: string
 }
 
 function normalizeFilePattern(pattern: string): string {
@@ -72,31 +81,51 @@ export function compileRoutes(
 
   return {
     resolveUrlPathname(pathname) {
-      let normalizedPathname = normalizePathname(pathname)
-
-      for (let route of compiledRoutes) {
-        let match = route.urlMatcher.match(`http://remix.run${normalizedPathname}`)
-        if (!match) continue
-        let relativeFilePath = decodeURIComponent(
-          createHref(route.filePattern, match.params),
-        ).replace(/^\/+/, '')
-        return resolveFilePath(route.rootDir, relativeFilePath)
-      }
-
-      return null
+      return matchUrlPathname(pathname)?.filePath ?? null
     },
+    matchUrlPathname,
     toUrlPathname(filePath) {
-      let normalizedFilePath = normalizeFilePath(filePath)
-
-      for (let route of compiledRoutes) {
-        let relativeFilePath = getRelativeFilePath(route.rootDir, normalizedFilePath)
-        let match = route.fileMatcher.match(`http://remix.run/${relativeFilePath}`)
-        if (!match) continue
-        return normalizePathname(createHref(route.urlPattern, match.params))
-      }
-
-      return null
+      return matchFilePath(filePath)?.urlPathname ?? null
     },
+    matchFilePath,
+  }
+
+  function matchUrlPathname(pathname: string): AssetRouteMatch | null {
+    let normalizedPathname = normalizePathname(pathname)
+
+    for (let route of compiledRoutes) {
+      let match = route.urlMatcher.match(`http://remix.run${normalizedPathname}`)
+      if (!match) continue
+      let relativeFilePath = decodeURIComponent(
+        createHref(route.filePattern, match.params),
+      ).replace(/^\/+/, '')
+      return {
+        filePath: resolveFilePath(route.rootDir, relativeFilePath),
+        filePattern: route.filePattern.source.replace(/^\/+/, ''),
+        urlPathname: normalizedPathname,
+        urlPattern: route.urlPattern.source,
+      }
+    }
+
+    return null
+  }
+
+  function matchFilePath(filePath: string): AssetRouteMatch | null {
+    let normalizedFilePath = normalizeFilePath(filePath)
+
+    for (let route of compiledRoutes) {
+      let relativeFilePath = getRelativeFilePath(route.rootDir, normalizedFilePath)
+      let match = route.fileMatcher.match(`http://remix.run/${relativeFilePath}`)
+      if (!match) continue
+      return {
+        filePath: normalizedFilePath,
+        filePattern: route.filePattern.source.replace(/^\/+/, ''),
+        urlPathname: normalizePathname(createHref(route.urlPattern, match.params)),
+        urlPattern: route.urlPattern.source,
+      }
+    }
+
+    return null
   }
 }
 
