@@ -22,6 +22,24 @@ export type RunRemixDbOptions =
       journalTable?: string
     })
   | (DatabaseCommandOptions & {
+      /** Reverts applied migrations, newest first. */
+      command: 'rollback'
+      /** Migrations to revert. */
+      migrations: Migrations
+      /**
+       * Reverts back through this migration, inclusive. Accepts a bare
+       * migration id or the full `id_name` directory form. Mutually exclusive
+       * with `step`.
+       */
+      to?: string
+      /** Reverts this many migrations. Mutually exclusive with `to`. */
+      step?: number
+      /** Reports what would be reverted without running it. */
+      dryRun?: boolean
+      /** Migration journal table. */
+      journalTable?: string
+    })
+  | (DatabaseCommandOptions & {
       /** Wipes, migrates, and optionally seeds the database. */
       command: 'reset'
       /** Migrations to apply after wiping the database. */
@@ -71,6 +89,27 @@ export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
 
     for (let entry of result.applied) {
       console.log('applied ' + entry.id + '_' + entry.name)
+    }
+
+    return 0
+  }
+
+  if (options.command === 'rollback') {
+    let bounds =
+      options.to === undefined ? { step: options.step ?? 1 } : ({ to: options.to } as const)
+    let result = await options.db.migrate(options.migrations, {
+      ...bounds,
+      direction: 'down',
+      dryRun: options.dryRun,
+      journalTable: options.journalTable,
+    })
+
+    if (result.reverted.length === 0) {
+      console.log('no migrations to revert')
+    }
+
+    for (let entry of result.reverted) {
+      console.log((options.dryRun ? 'would revert ' : 'reverted ') + entry.id + '_' + entry.name)
     }
 
     return 0

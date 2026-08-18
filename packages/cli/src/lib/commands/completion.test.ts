@@ -110,6 +110,7 @@ describe('completion command', () => {
         'mode:values',
         'migrate',
         'reset',
+        'rollback',
         'seed',
         'status',
         'wipe',
