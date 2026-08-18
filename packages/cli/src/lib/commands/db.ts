@@ -355,11 +355,21 @@ async function executeDatabaseCommand(plan: DatabaseCommandPlan, db: Database): 
   }
 
   if (plan.command === 'rollback') {
+    if (plan.to !== undefined) {
+      return runRemixDb({
+        command: plan.command,
+        db,
+        migrations,
+        to: plan.to,
+        dryRun: plan.dryRun,
+        journalTable: plan.journalTable,
+      })
+    }
+
     return runRemixDb({
       command: plan.command,
       db,
       migrations,
-      to: plan.to,
       step: plan.step,
       dryRun: plan.dryRun,
       journalTable: plan.journalTable,
