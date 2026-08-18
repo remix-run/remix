@@ -50,6 +50,7 @@ remix completion bash >> ~/.bashrc
 remix doctor
 remix doctor --fix
 remix db migrate
+remix db rollback
 remix db status
 remix db reset --force
 remix routes
@@ -70,6 +71,7 @@ await runRemix(['completion', 'bash'])
 await runRemix(['doctor'])
 await runRemix(['doctor', '--fix'])
 await runRemix(['db', 'migrate'])
+await runRemix(['db', 'rollback'])
 await runRemix(['db', 'status'])
 await runRemix(['db', 'reset', '--force'])
 await runRemix(['routes'])
@@ -80,6 +82,8 @@ await runRemix(['version'])
 ```
 
 Destructive database commands (`remix db wipe` and `remix db reset`) refuse to run without `--force`.
+
+`remix db rollback` reverts the most recent migration by default. Use `--step <count>` or `--to <migration>` to select a bound, and use `--dry-run` to report what would be reverted without changing the database.
 
 `runRemix()` returns the CLI exit code as a promise.
 
@@ -162,8 +166,9 @@ disable configured strict mode for one run.
 a string or an object naming an environment variable with an optional default. `db.seed` names a
 SQL file that `remix db seed` and `remix db reset` run against the database. Database flags such as
 `--migrations`, `--seed`, `--journal-table`, and `--connection-env` override the corresponding
-config for one invocation. When no global `--config` is provided, database commands find the
-nearest `remix.json` by walking up from the working directory.
+config for one invocation. Rollbacks also accept `--step`, `--to`, and `--dry-run`. When no global
+`--config` is provided, database commands find the nearest `remix.json` by walking up from the
+working directory.
 
 Use the global `--config` option to select another JSONC file. The option itself is resolved from the
 CLI working directory and may appear before or after the command:

@@ -51,12 +51,14 @@ describe('completion engine', () => {
     let wipeFlags = getCompletionResult(['remix', 'db', 'wipe', ''], 3)
     let resetFlags = getCompletionResult(['remix', 'db', 'reset', '--force', ''], 4)
     let migrateFlags = getCompletionResult(['remix', 'db', 'migrate', ''], 3)
+    let rollbackFlags = getCompletionResult(['remix', 'db', 'rollback', ''], 3)
     let seedFlags = getCompletionResult(['remix', 'db', 'seed', ''], 3)
 
     assert.equal(subcommands.mode, 'values')
     assert.deepEqual(subcommands.values, [
       'migrate',
       'reset',
+      'rollback',
       'seed',
       'status',
       'wipe',
@@ -93,6 +95,20 @@ describe('completion engine', () => {
       '--connection-env',
       '--journal-table',
       '--migrations',
+      '--to',
+      '--config',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
+
+    assert.equal(rollbackFlags.mode, 'values')
+    assert.deepEqual(rollbackFlags.values, [
+      '--dry-run',
+      '--connection-env',
+      '--journal-table',
+      '--migrations',
+      '--step',
       '--to',
       '--config',
       '-h',

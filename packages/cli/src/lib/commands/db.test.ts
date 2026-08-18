@@ -21,7 +21,10 @@ describe('db command', () => {
     assert.match(result.stdout, /--journal-table <name>/)
     assert.match(result.stdout, /--migrations <path>/)
     assert.match(result.stdout, /--seed <path>/)
+    assert.match(result.stdout, /--step <count>/)
     assert.match(result.stdout, /--to <migration>/)
+    assert.match(result.stdout, /--dry-run/)
+    assert.match(result.stdout, /remix db rollback/)
   })
 
   it('refuses destructive database commands without --force', async () => {
@@ -234,6 +237,114 @@ describe('db command', () => {
     }
   })
 
+  it('rolls back the most recent migration, newest first', async () => {
+    let projectDir = await createDatabaseProject({ reversible: true })
+
+    try {
+      await captureOutput(() => runRemix(['db', 'migrate'], { cwd: projectDir }))
+
+      let rollback = await captureOutput(() => runRemix(['db', 'rollback'], { cwd: projectDir }))
+      assert.equal(rollback.exitCode, 0, rollback.stderr)
+      assert.match(rollback.stdout, /reverted 20260715130000_create_second/)
+      assert.equal(readTableNames(projectDir).includes('second_table'), false)
+      assert.ok(readTableNames(projectDir).includes('first_table'))
+
+      let status = await captureOutput(() => runRemix(['db', 'status'], { cwd: projectDir }))
+      assert.match(status.stdout, /20260715120000 create_first applied/)
+      assert.match(status.stdout, /20260715130000 create_second pending/)
+
+      let remaining = await captureOutput(() =>
+        runRemix(['db', 'rollback', '--step', '1'], { cwd: projectDir }),
+      )
+      assert.equal(remaining.exitCode, 0, remaining.stderr)
+      assert.match(remaining.stdout, /reverted 20260715120000_create_first/)
+
+      let empty = await captureOutput(() => runRemix(['db', 'rollback'], { cwd: projectDir }))
+      assert.equal(empty.exitCode, 0, empty.stderr)
+      assert.match(empty.stdout, /no migrations to revert/)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('bounds a rollback with --step, --to, and --dry-run', async () => {
+    let projectDir = await createDatabaseProject({ reversible: true })
+
+    try {
+      await captureOutput(() => runRemix(['db', 'migrate'], { cwd: projectDir }))
+
+      let dryRun = await captureOutput(() =>
+        runRemix(['db', 'rollback', '--dry-run'], { cwd: projectDir }),
+      )
+      assert.equal(dryRun.exitCode, 0, dryRun.stderr)
+      assert.match(dryRun.stdout, /would revert 20260715130000_create_second/)
+      // A dry run reports without reverting, so the table is still there.
+      assert.ok(readTableNames(projectDir).includes('second_table'))
+
+      // --to is inclusive: it reverts back through the named migration.
+      let toFirst = await captureOutput(() =>
+        runRemix(['db', 'rollback', '--to', '20260715120000'], { cwd: projectDir }),
+      )
+      assert.equal(toFirst.exitCode, 0, toFirst.stderr)
+      assert.match(toFirst.stdout, /reverted 20260715130000_create_second/)
+      assert.match(toFirst.stdout, /reverted 20260715120000_create_first/)
+      assert.equal(readTableNames(projectDir).includes('first_table'), false)
+
+      let both = await captureOutput(() =>
+        runRemix(['db', 'migrate'], { cwd: projectDir }).then(() =>
+          runRemix(['db', 'rollback', '--step', '2'], { cwd: projectDir }),
+        ),
+      )
+      assert.equal(both.exitCode, 0, both.stderr)
+      assert.match(both.stdout, /reverted 20260715130000_create_second/)
+      assert.match(both.stdout, /reverted 20260715120000_create_first/)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects invalid rollback bounds and irreversible migrations', async () => {
+    let projectDir = await createDatabaseProject({ reversible: true })
+
+    try {
+      let both = await captureOutput(() =>
+        runRemix(['db', 'rollback', '--step', '1', '--to', '20260715120000'], { cwd: projectDir }),
+      )
+      assert.equal(both.exitCode, 1)
+      assert.match(both.stderr, /Options --step and --to are mutually exclusive/)
+
+      let zero = await captureOutput(() =>
+        runRemix(['db', 'rollback', '--step', '0'], { cwd: projectDir }),
+      )
+      assert.equal(zero.exitCode, 1)
+      assert.match(zero.stderr, /--step expects a positive integer/)
+
+      let notANumber = await captureOutput(() =>
+        runRemix(['db', 'rollback', '--step', 'two'], { cwd: projectDir }),
+      )
+      assert.equal(notANumber.exitCode, 1)
+      assert.match(notANumber.stderr, /--step expects a positive integer/)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+
+    // Without a down script the whole rollback fails before touching the database.
+    let irreversibleDir = await createDatabaseProject()
+
+    try {
+      await captureOutput(() => runRemix(['db', 'migrate'], { cwd: irreversibleDir }))
+
+      let irreversible = await captureOutput(() =>
+        runRemix(['db', 'rollback'], { cwd: irreversibleDir }),
+      )
+      assert.equal(irreversible.exitCode, 1)
+      assert.match(irreversible.stderr, /has no down script/)
+      assert.ok(readTableNames(irreversibleDir).includes('second_table'))
+    } finally {
+      await fs.rm(irreversibleDir, { recursive: true, force: true })
+    }
+  })
+
   it('reports unknown subcommands and invalid command options', async () => {
     let unknown = await captureOutput(() => runRemix(['db', 'wat']))
     let invalid = await captureOutput(() => runRemix(['db', 'migrate', '--seed', './seed.sql']))
@@ -266,6 +377,7 @@ async function createDatabaseProject(
   options: {
     migrationsDirectory?: string
     missingSeed?: boolean
+    reversible?: boolean
   } = {},
 ): Promise<string> {
   let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-db-command-'))
@@ -292,6 +404,15 @@ async function createDatabaseProject(
     'create table second_table (id integer primary key);\n',
     'utf8',
   )
+
+  // The second migration is irreversible by default, so `rollback` tests opt in to a down script.
+  if (options.reversible) {
+    await fs.writeFile(
+      path.join(projectDir, 'db/migrations/20260715130000_create_second/down.sql'),
+      'drop table second_table;\n',
+      'utf8',
+    )
+  }
 
   if (!options.missingSeed) {
     await fs.writeFile(

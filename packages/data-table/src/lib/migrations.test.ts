@@ -239,6 +239,28 @@ describe('migration runner', () => {
     )
   })
 
+  it('rejects an empty rollback target without reverting migrations', async () => {
+    let driver = new MemoryMigrationDriver()
+    let runner = createMigrationRunner(driver, [
+      {
+        id: '20260101000000',
+        name: 'create_users',
+        up: 'create table users (id integer)',
+        down: 'drop table users',
+      },
+    ])
+
+    await runner.up()
+    driver.executedScripts = []
+
+    await assert.rejects(() => runner.down({ to: '' }), /Unknown migration target/)
+    assert.equal(driver.executedScripts.length, 0)
+    assert.deepEqual(
+      driver.journalRows.map((row) => row.id),
+      ['20260101000000'],
+    )
+  })
+
   it('resolves full id_name targets against bare migration ids', async () => {
     let driver = new MemoryMigrationDriver()
     let migrations = [

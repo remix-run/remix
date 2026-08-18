@@ -6,7 +6,7 @@ export interface CompletionResult {
 }
 
 const COMPLETION_SHELLS = ['bash', 'zsh'] as const
-const DB_COMMANDS = ['migrate', 'reset', 'seed', 'status', 'wipe'] as const
+const DB_COMMANDS = ['migrate', 'reset', 'rollback', 'seed', 'status', 'wipe'] as const
 const HELP_COMMANDS = [
   'completion',
   'db',
@@ -530,6 +530,16 @@ function completeDb(
       usedGlobalFlags,
       ['--force'],
       ['--connection-env', '--journal-table', '--migrations', '--seed'],
+    )
+  }
+
+  if (subcommand === 'rollback') {
+    return completeDbOptions(
+      rest,
+      currentWord,
+      usedGlobalFlags,
+      ['--dry-run'],
+      ['--connection-env', '--journal-table', '--migrations', '--step', '--to'],
     )
   }
 
