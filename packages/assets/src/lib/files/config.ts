@@ -118,7 +118,6 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
   /**
    * Optional namespace for cached transformed file outputs. Use a stable value such as a
    * commit SHA to reuse transformed files across server restarts for the same deployment.
-   * When omitted, a random per-process namespace is used.
    */
   cacheKey?: string
 }

@@ -104,12 +104,6 @@ export function compileRoutes(
       let match = route.fileMatcher.match(`http://remix.run/${relativeFilePath}`)
       if (!match) continue
       let urlPathname = normalizePathname(createHref(route.urlPattern, match.params))
-      let roundTripFilePath = resolveUrlPathname(urlPathname)
-      if (roundTripFilePath !== normalizedFilePath) {
-        throw new Error(
-          `fileMap entries must map files to URLs reversibly.\nFile: ${normalizedFilePath}\nURL: ${urlPathname}\nResolved file: ${roundTripFilePath ?? '(none)'}`,
-        )
-      }
       return urlPathname
     }
 
@@ -128,12 +122,6 @@ export function compileRoutes(
         if (!route.fileMapScope) return null
 
         let urlPathname = normalizePathname(createHref(route.urlPattern, match.params))
-        if (resolveUrlPathname(urlPathname) !== normalizedFilePath) {
-          throw new Error(
-            `fileMap entries must map files to URLs reversibly.\nFile: ${normalizedFilePath}\nURL: ${urlPathname}`,
-          )
-        }
-
         let scopeParams = { ...match.params, [route.fileMapScope.wildcardName]: '' }
         let urlDirectory = ensureTrailingSlash(createHref(route.urlPattern, scopeParams))
         let relativeFileDirectory = decodeURIComponent(

@@ -21,6 +21,7 @@ import {
   supportedScriptExtensions,
 } from './resolve.ts'
 import type { ResolveArgs, ResolvedModule } from './resolve.ts'
+import { isBareImportSpecifier } from './specifiers.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ResolvedScriptTarget } from '../target.ts'
 import { createModuleStore } from '../module-store.ts'
@@ -117,7 +118,7 @@ export type ScriptHmrUpdate =
   | {
       accepted: true
       acceptedFilePath: string
-      acceptedPath: string
+      acceptedUrlPathname: string
       filePath: string
       path: string
       timestamp: number
@@ -624,7 +625,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     let promise = (async () => {
       let startedVersion = record.invalidationVersion
       let resolvedModule = await getOrCreateResolvedScript(record)
-      await validateResolvedScriptGraph(resolvedModule)
+      await resolveScriptGraph(resolvedModule)
       let emitResolvedModuleResult = await emitResolvedModule(resolvedModule, {
         fingerprintAssets: resolvedOptions.fingerprintAssets,
         getHmrImportTimestamp,
@@ -660,7 +661,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     }
   }
 
-  async function validateResolvedScriptGraph(root: ResolvedModule): Promise<void> {
+  async function resolveScriptGraph(root: ResolvedModule): Promise<void> {
     let visited = new Set([root.identityPath])
     let queue = [...root.deps]
 
@@ -730,7 +731,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         {
           accepted: true,
           acceptedFilePath: resolvedModule.identityPath,
-          acceptedPath: updatePathname,
+          acceptedUrlPathname: updatePathname,
           filePath: resolvedModule.identityPath,
           path: updatePathname,
           timestamp,
@@ -744,7 +745,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       return dedupeHmrBoundaries(boundaries).map(({ acceptedModule, boundaryModule }) => ({
         accepted: true,
         acceptedFilePath: acceptedModule.identityPath,
-        acceptedPath: acceptedModule.stableUrlPathname,
+        acceptedUrlPathname: acceptedModule.stableUrlPathname,
         filePath: sourceFilePath,
         path: boundaryModule.stableUrlPathname,
         timestamp,
@@ -816,20 +817,8 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   }
 }
 
-function isBareImportSpecifier(specifier: string): boolean {
-  return (
-    !specifier.startsWith('./') &&
-    !specifier.startsWith('../') &&
-    !specifier.startsWith('/') &&
-    !specifier.startsWith('file:') &&
-    !specifier.startsWith('data:') &&
-    !specifier.startsWith('http://') &&
-    !specifier.startsWith('https://')
-  )
-}
-
 function resolveImportMapUrlSpecifier(specifier: string, importerUrlPathname: string): string {
-  return new URL(specifier, `http://asset-server.local${importerUrlPathname}`).pathname
+  return new URL(specifier, `http://localhost${importerUrlPathname}`).pathname
 }
 
 function addImportMapEntry(imports: Record<string, string>, specifier: string, url: string): void {

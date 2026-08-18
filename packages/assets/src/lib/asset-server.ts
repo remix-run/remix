@@ -872,11 +872,8 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       for (let nextFilePath of filePaths) {
         let typeCheckFilePath = stripFilePathUrlSuffix(nextFilePath)
         if (!isScriptFilePath(typeCheckFilePath)) {
-          throw createAssetServerCompilationError(
-            `Import maps are only supported for script files: ${nextFilePath}`,
-            {
-              code: 'FILE_NOT_SUPPORTED',
-            },
+          throw new TypeError(
+            `assetServer.getImportMap() only supports script files: ${nextFilePath}`,
           )
         }
       }
@@ -1016,7 +1013,9 @@ export function createScriptHmrPayload(
     timestamp,
     type: 'browser:update',
     updates: acceptedUpdates.map((update) => ({
-      ...(update.acceptedPath === update.path ? {} : { acceptedPath: update.acceptedPath }),
+      ...(update.acceptedUrlPathname === update.path
+        ? {}
+        : { acceptedPath: update.acceptedUrlPathname }),
       path: update.path,
       type: 'js',
     })),

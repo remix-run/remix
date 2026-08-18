@@ -2418,6 +2418,19 @@ describe('asset-server', () => {
     )
   })
 
+  it('getImportMap rejects non-script files with a TypeError', async () => {
+    let assetServer = createTestServer(dir)
+
+    await assert.rejects(assetServer.getImportMap('app/styles.css'), (error: unknown) => {
+      assert.ok(error instanceof TypeError)
+      assert.match(
+        error.message,
+        /assetServer\.getImportMap\(\) only supports script files: app\/styles\.css/,
+      )
+      return true
+    })
+  })
+
   it('can generate an import map for multiple explicit script roots', async () => {
     await write(
       dir,
@@ -2616,7 +2629,7 @@ describe('asset-server', () => {
     )
   })
 
-  it('does not skip intermediate resolution boundaries for late entries', async () => {
+  it('adds a more specific scope when a parent scope resolves the import differently', async () => {
     await write(
       dir,
       'app/coverage-source.ts',
@@ -2745,7 +2758,7 @@ describe('asset-server', () => {
     )
   })
 
-  it('rejects bare imports from fileMap entries without directory hierarchy', async () => {
+  it('rejects a bare import when the importer directory cannot be represented as a URL scope', async () => {
     await write(dir, 'app/entry.ts', 'import { value } from "pkg"\nexport { value }')
     await writeJson(dir, 'app/node_modules/pkg/package.json', {
       name: 'pkg',
@@ -3138,6 +3151,27 @@ describe('asset-server', () => {
       importMap.scopes?.['/assets/app/']?.['dynamic-pkg'] ?? '',
       /\/assets\/app\/node_modules\/dynamic-pkg\/index\.@.*\.ts/,
     )
+  })
+
+  it('includes statically analyzable dynamic import graphs in entry preloads', async () => {
+    await write(
+      dir,
+      'app/features/lazy.ts',
+      'import { value } from "./dep.ts"\nexport const lazy = value',
+    )
+    await write(dir, 'app/features/dep.ts', 'export const value = 1')
+    await write(
+      dir,
+      'app/entry.ts',
+      'export let load = () => import("./features/lazy.ts").then((mod) => mod.lazy)',
+    )
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let preloads = await assetServer.getPreloads('app/entry.ts')
+
+    assert.match(preloads[0] ?? '', /\/assets\/app\/entry\.@.*\.ts/)
+    assert.match(preloads[1] ?? '', /\/assets\/app\/features\/lazy\.@.*\.ts/)
+    assert.match(preloads[2] ?? '', /\/assets\/app\/features\/dep\.@.*\.ts/)
   })
 
   it('maps re-exported package specifiers', async () => {

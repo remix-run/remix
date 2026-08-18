@@ -17,6 +17,7 @@ import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ResolveModuleResult, TransformedModule } from './transform.ts'
 import type { EmittedModule } from './emit.ts'
+import { isBareImportSpecifier } from './specifiers.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -540,18 +541,6 @@ function isWithinDirectory(directory: string, parentDirectory: string): boolean 
 
 function ensureTrailingSlash(value: string): string {
   return value.endsWith('/') ? value : `${value}/`
-}
-
-function isBareImportSpecifier(specifier: string): boolean {
-  return (
-    !specifier.startsWith('./') &&
-    !specifier.startsWith('../') &&
-    !specifier.startsWith('/') &&
-    !specifier.startsWith('file:') &&
-    !specifier.startsWith('data:') &&
-    !specifier.startsWith('http://') &&
-    !specifier.startsWith('https://')
-  )
 }
 
 function findNearestPackageJsonPath(filePath: string): string | null {

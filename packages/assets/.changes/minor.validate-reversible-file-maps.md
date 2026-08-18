@@ -1,1 +1,0 @@
-BREAKING CHANGE: Reject `fileMap` routes when a concrete file maps to a URL that resolves back to a different file. This prevents ambiguous overlapping routes from silently producing asset URLs that cannot be used to request the original file.

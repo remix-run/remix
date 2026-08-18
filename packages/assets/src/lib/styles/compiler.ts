@@ -19,11 +19,11 @@ import type { TransformArgs, TransformedStyle } from './transform.ts'
 
 type StyleRecord = ModuleRecord<TransformedStyle, ResolvedStyle, EmittedStyle>
 type StyleStore = ModuleStore<TransformedStyle, ResolvedStyle, EmittedStyle>
-type PreparedStyle = {
+type ResolvedStyleGraphEntry = {
+  invalidationVersion: number
   resolvedStyle: ResolvedStyle
-  version: number
 }
-type PreparedStyleGraph = ReadonlyMap<string, PreparedStyle>
+type ResolvedStyleGraph = ReadonlyMap<string, ResolvedStyleGraphEntry>
 
 type StyleCompileResult = {
   code: EmittedAsset
@@ -125,7 +125,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
   return {
     async getHref(filePath) {
       let resolvedStyle = resolveServedStyleOrThrow(resolveInputFilePath(filePath), resolveArgs)
-      let graph = await prepareStyleGraph(resolvedStyle.identityPath)
+      let graph = await resolveStyleGraph(resolvedStyle.identityPath)
       return getServedUrlFromGraph(resolvedStyle.identityPath, graph)
     },
 
@@ -144,7 +144,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       let visited = new Set(resolvedEntries)
       let queue = [...resolvedEntries]
       let layers: string[][] = []
-      let graph = await prepareStyleGraph(resolvedEntries)
+      let graph = await resolveStyleGraph(resolvedEntries)
 
       while (queue.length > 0) {
         let frontier = queue
@@ -152,9 +152,9 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
         let layer: string[] = []
 
         for (let identityPath of frontier) {
-          let preparedStyle = graph.get(identityPath)
-          if (!preparedStyle) throw new Error(`Missing prepared style ${identityPath}`)
-          let resolvedStyle = preparedStyle.resolvedStyle
+          let graphEntry = graph.get(identityPath)
+          if (!graphEntry) throw new Error(`Missing resolved style ${identityPath}`)
+          let resolvedStyle = graphEntry.resolvedStyle
           layer.push(await getServedUrlFromGraph(identityPath, graph))
 
           for (let dep of resolvedStyle.deps) {
@@ -296,21 +296,21 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       return record.emitted
     }
 
-    let graph = await prepareStyleGraph(record.identityPath)
+    let graph = await resolveStyleGraph(record.identityPath)
     return getOrCreateEmittedStyleFromGraph(record, graph)
   }
 
   async function getOrCreateEmittedStyleFromGraph(
     record: StyleRecord,
-    graph: PreparedStyleGraph,
+    graph: ResolvedStyleGraph,
   ): Promise<EmittedStyle> {
-    let preparedStyle = graph.get(record.identityPath)
-    if (!preparedStyle) {
-      throw new Error(`Missing prepared style ${record.identityPath}`)
+    let graphEntry = graph.get(record.identityPath)
+    if (!graphEntry) {
+      throw new Error(`Missing resolved style ${record.identityPath}`)
     }
 
     if (
-      record.invalidationVersion === preparedStyle.version &&
+      record.invalidationVersion === graphEntry.invalidationVersion &&
       record.emitted &&
       styleStore.isEmittedFresh(record) &&
       !hasHmrTimestampedDependency(record.resolved)
@@ -318,12 +318,12 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       return record.emitted
     }
 
-    let cacheKey = getCacheKey(record.identityPath, preparedStyle.version)
+    let cacheKey = getCacheKey(record.identityPath, graphEntry.invalidationVersion)
     let existing = emitInFlightByCacheKey.get(cacheKey)
     if (existing) return existing
 
     let promise = (async () => {
-      let emitResolvedStyleResult = await emitResolvedStyle(preparedStyle.resolvedStyle, {
+      let emitResolvedStyleResult = await emitResolvedStyle(graphEntry.resolvedStyle, {
         fingerprintAssets: resolvedOptions.fingerprintAssets,
         getServedFileUrl: resolvedOptions.getServedFileUrl,
         getServedUrl(identityPath) {
@@ -336,7 +336,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
         throw emitResolvedStyleResult.error
       }
 
-      if (isFresh(record, preparedStyle.version)) {
+      if (isFresh(record, graphEntry.invalidationVersion)) {
         styleStore.setEmitted(record.identityPath, emitResolvedStyleResult.value, null)
       }
 
@@ -356,28 +356,28 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
 
   async function getServedUrlFromGraph(
     identityPath: string,
-    graph: PreparedStyleGraph,
+    graph: ResolvedStyleGraph,
   ): Promise<string> {
-    let preparedStyle = graph.get(identityPath)
-    if (!preparedStyle) throw new Error(`Missing prepared style ${identityPath}`)
-    let pathname = preparedStyle.resolvedStyle.stableUrlPathname
+    let graphEntry = graph.get(identityPath)
+    if (!graphEntry) throw new Error(`Missing resolved style ${identityPath}`)
+    let pathname = graphEntry.resolvedStyle.stableUrlPathname
 
     if (resolvedOptions.fingerprintAssets) {
       let emittedStyle = await getOrCreateEmittedStyleFromGraph(styleStore.get(identityPath), graph)
       pathname = formatFingerprintedPathname(
-        preparedStyle.resolvedStyle.stableUrlPathname,
+        graphEntry.resolvedStyle.stableUrlPathname,
         emittedStyle.fingerprint,
       )
     }
 
-    let timestamp = styleStore.getHmrUpdateTimestamp(preparedStyle.resolvedStyle.identityPath)
+    let timestamp = styleStore.getHmrUpdateTimestamp(graphEntry.resolvedStyle.identityPath)
     return timestamp ? appendTimestamp(pathname, timestamp) : pathname
   }
 
-  async function prepareStyleGraph(
+  async function resolveStyleGraph(
     rootPath: string | readonly string[],
-  ): Promise<PreparedStyleGraph> {
-    let preparedByPath = new Map<string, PreparedStyle>()
+  ): Promise<ResolvedStyleGraph> {
+    let resolvedByPath = new Map<string, ResolvedStyleGraphEntry>()
     let rootPaths = Array.isArray(rootPath) ? rootPath : [rootPath]
     let discovered = new Set(rootPaths)
     let queue = [...rootPaths]
@@ -385,24 +385,24 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     while (queue.length > 0) {
       let frontier = queue
       queue = []
-      let preparedStyles = await mapWithConcurrency(
+      let graphEntries = await mapWithConcurrency(
         frontier,
         preloadConcurrency,
-        async (identityPath): Promise<PreparedStyle> => {
+        async (identityPath): Promise<ResolvedStyleGraphEntry> => {
           let record = styleStore.get(identityPath)
-          let version = record.invalidationVersion
+          let invalidationVersion = record.invalidationVersion
           let resolvedStyle = await getOrCreateResolvedStyle(record)
           return {
+            invalidationVersion,
             resolvedStyle,
-            version,
           }
         },
       )
 
       for (let [index, identityPath] of frontier.entries()) {
-        let preparedStyle = preparedStyles[index]
-        preparedByPath.set(identityPath, preparedStyle)
-        for (let depPath of preparedStyle.resolvedStyle.deps) {
+        let graphEntry = graphEntries[index]
+        resolvedByPath.set(identityPath, graphEntry)
+        for (let depPath of graphEntry.resolvedStyle.deps) {
           if (discovered.has(depPath)) continue
           discovered.add(depPath)
           queue.push(depPath)
@@ -410,11 +410,11 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       }
     }
 
-    assertNoCircularImports(preparedByPath, rootPaths)
-    return preparedByPath
+    assertNoCircularImports(resolvedByPath, rootPaths)
+    return resolvedByPath
   }
 
-  function assertNoCircularImports(graph: PreparedStyleGraph, rootPaths: readonly string[]): void {
+  function assertNoCircularImports(graph: ResolvedStyleGraph, rootPaths: readonly string[]): void {
     let visited = new Set<string>()
     let path: string[] = []
     let pathIndexByIdentity = new Map<string, number>()
@@ -430,11 +430,11 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       }
       if (visited.has(identityPath)) return
 
-      let preparedStyle = graph.get(identityPath)
-      if (!preparedStyle) throw new Error(`Missing prepared style ${identityPath}`)
+      let graphEntry = graph.get(identityPath)
+      if (!graphEntry) throw new Error(`Missing resolved style ${identityPath}`)
       pathIndexByIdentity.set(identityPath, path.length)
       path.push(identityPath)
-      for (let depPath of preparedStyle.resolvedStyle.deps) visit(depPath)
+      for (let depPath of graphEntry.resolvedStyle.deps) visit(depPath)
       path.pop()
       pathIndexByIdentity.delete(identityPath)
       visited.add(identityPath)

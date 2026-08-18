@@ -35,9 +35,9 @@ Map the asset namespace to a controller action that calls `assetServer.fetch(req
 
 Put browser source beside its narrowest owner, such as `app/actions/cart/public/` or `app/ui/public/`. Every local dependency in that browser module graph must also match `allowFiles`, so keep the graph inside the colocated `public/` directory. Package dependencies are allowed separately with `allowPackages`.
 
-The asset server compiles TypeScript and JavaScript on demand while keeping their imports as authored, follows and rewrites CSS `@import` and `url()` references, and can serve explicitly configured leaf-file extensions. This keeps the whole browser graph visible without exposing the rest of the app.
+The asset server compiles TypeScript and JavaScript on demand, generates preloads and import maps, follows and rewrites CSS `@import` and `url()` references, and can serve explicitly configured leaf-file extensions. This keeps the whole browser graph visible without exposing the rest of the app.
 
-## Asset hrefs, script entries, and import maps {#client-entry-hrefs-and-module-preloads}
+## Asset hrefs, client entries, import maps and preloads {#client-entry-hrefs-import-maps-and-module-preloads}
 
 Use `getScriptEntry()` for rendered script entries because scripts need a public URL, modulepreload hints, and an import map. Use `getHref()` for styles and files, and `getPreloads()` when you need lower-level preload control. Resolve stable root entry metadata once in `app/assets.ts`:
 

@@ -786,6 +786,36 @@ describe('frames', () => {
     }
   })
 
+  it('installs late import maps before starting their module preloads', async () => {
+    document.documentElement.innerHTML = '<head></head><body></body>'
+
+    let frame = createTestFrame()
+
+    try {
+      await frame.ready()
+      await frame.render(
+        [
+          '<head>',
+          '<link data-rmx rel="modulepreload" href="/import-map-order-entry.js" />',
+          remixImportMapScript({ imports: { pkg: '/pkg.js' } }),
+          '</head>',
+          '<main>Loaded</main>',
+        ].join(''),
+      )
+
+      let managedResources = document.head.querySelectorAll(
+        'script[data-rmx][type="importmap"], link[data-rmx][rel="modulepreload"]',
+      )
+      expect(managedResources).toHaveLength(2)
+      expect(managedResources[0]).toBeInstanceOf(HTMLScriptElement)
+      expect(managedResources[1]).toBeInstanceOf(HTMLLinkElement)
+
+      managedResources[1]?.dispatchEvent(new Event('load'))
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('keeps active initial preloads connected across a document reload', async () => {
     document.documentElement.innerHTML = [
       '<head><title>Initial</title>',

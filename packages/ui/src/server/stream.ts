@@ -1235,7 +1235,7 @@ function finalizeHtml(html: string, context: RenderContext): string {
   let preloads = collectModulePreloadTags(context.clientEntryHeadResources)
   let styles = collectStyleTags(context)
   let importMapScript = collectImportMapScript(context.clientEntryHeadResources)
-  let headContent = preloads + styles + importMapScript
+  let headContent = importMapScript + preloads + styles
   if (hasHtmlRoot && headContent) {
     let headCloseIndex = html.indexOf('</head>')
     if (headCloseIndex !== -1) {
@@ -1283,6 +1283,8 @@ const FRAME_HEAD_OPEN_TAG = '<head>'
 const FRAME_HEAD_CLOSE_TAG = '</head>'
 const MARKED_MODULE_PRELOAD_START = '<link data-rmx rel="modulepreload" href="'
 const MODULE_PRELOAD_END = '" />'
+const MANAGED_IMPORT_MAP_START = '<script data-rmx type="importmap">'
+const IMPORT_MAP_SCRIPT_END = '</script>'
 
 function createModulePreloadTag(href: string): string {
   return `${MARKED_MODULE_PRELOAD_START}${escapeHtml(href)}${MODULE_PRELOAD_END}`
@@ -1296,44 +1298,44 @@ function hoistClientEntryResourcesFromFrameHead(
   html: string,
   resources: ClientEntryHeadResources,
 ): string {
-  html = hoistModulePreloadsFromFrameHead(html, resources)
-  return hoistImportMapsFromFrameHead(html, resources)
-}
-
-function hoistModulePreloadsFromFrameHead(
-  html: string,
-  resources: ClientEntryHeadResources,
-): string {
   if (!html.startsWith(FRAME_HEAD_OPEN_TAG)) return html
 
-  let tags: string[] = []
-  let remainingHeadStart = FRAME_HEAD_OPEN_TAG.length
-  while (html.startsWith(MARKED_MODULE_PRELOAD_START, remainingHeadStart)) {
-    let tagEnd = html.indexOf(
-      MODULE_PRELOAD_END,
-      remainingHeadStart + MARKED_MODULE_PRELOAD_START.length,
-    )
-    if (tagEnd === -1) return html
-
-    tagEnd += MODULE_PRELOAD_END.length
-    tags.push(html.slice(remainingHeadStart, tagEnd))
-    remainingHeadStart = tagEnd
-  }
-
-  if (tags.length === 0) return html
-
-  let headClose = html.indexOf(FRAME_HEAD_CLOSE_TAG, remainingHeadStart)
+  let headClose = html.indexOf(FRAME_HEAD_CLOSE_TAG, FRAME_HEAD_OPEN_TAG.length)
   if (headClose === -1) return html
 
-  for (let tag of tags) {
+  let preloadTags: string[] = []
+  let importMaps: ImportMap[] = []
+  let cursor = FRAME_HEAD_OPEN_TAG.length
+  if (html.startsWith(MANAGED_IMPORT_MAP_START, cursor)) {
+    let contentStart = cursor + MANAGED_IMPORT_MAP_START.length
+    let scriptEnd = html.indexOf(IMPORT_MAP_SCRIPT_END, contentStart)
+    if (scriptEnd === -1 || scriptEnd >= headClose) return html
+    importMaps.push(parseFrameworkImportMap(html.slice(contentStart, scriptEnd)))
+    cursor = scriptEnd + IMPORT_MAP_SCRIPT_END.length
+  }
+
+  while (html.startsWith(MARKED_MODULE_PRELOAD_START, cursor)) {
+    let tagEnd = html.indexOf(MODULE_PRELOAD_END, cursor + MARKED_MODULE_PRELOAD_START.length)
+    if (tagEnd === -1 || tagEnd >= headClose) return html
+    tagEnd += MODULE_PRELOAD_END.length
+    preloadTags.push(html.slice(cursor, tagEnd))
+    cursor = tagEnd
+  }
+
+  if (preloadTags.length === 0 && importMaps.length === 0) return html
+
+  for (let tag of preloadTags) {
     resources.modulePreloadTags.add(tag)
   }
-
-  if (remainingHeadStart === headClose) {
-    return html.slice(headClose + FRAME_HEAD_CLOSE_TAG.length)
+  for (let importMap of importMaps) {
+    mergeImportMap(resources, importMap)
   }
 
-  return FRAME_HEAD_OPEN_TAG + html.slice(remainingHeadStart)
+  let remainingHeadHtml = html.slice(cursor, headClose)
+  let contentAfterHead = html.slice(headClose + FRAME_HEAD_CLOSE_TAG.length)
+  if (!remainingHeadHtml) return contentAfterHead
+
+  return `${FRAME_HEAD_OPEN_TAG}${remainingHeadHtml}${FRAME_HEAD_CLOSE_TAG}${contentAfterHead}`
 }
 
 function processStyleProps(props: any): any {
@@ -1419,46 +1421,6 @@ function buildImportMapScript(importMap: ImportMap): string {
 
 function collectImportMapScript(resources: ClientEntryHeadResources): string {
   return resources.importMap ? buildImportMapScript(resources.importMap) : ''
-}
-
-const MANAGED_IMPORT_MAP_START = '<script data-rmx type="importmap">'
-const IMPORT_MAP_SCRIPT_END = '</script>'
-
-function hoistImportMapsFromFrameHead(html: string, resources: ClientEntryHeadResources): string {
-  if (!html.startsWith(FRAME_HEAD_OPEN_TAG)) return html
-
-  let headClose = html.indexOf(FRAME_HEAD_CLOSE_TAG, FRAME_HEAD_OPEN_TAG.length)
-  if (headClose === -1) return html
-
-  let importMaps: ImportMap[] = []
-  let remainingHead: string[] = []
-  let cursor = FRAME_HEAD_OPEN_TAG.length
-  while (cursor < headClose) {
-    let scriptStart = html.indexOf(MANAGED_IMPORT_MAP_START, cursor)
-    if (scriptStart === -1 || scriptStart >= headClose) break
-
-    let contentStart = scriptStart + MANAGED_IMPORT_MAP_START.length
-    let scriptEnd = html.indexOf(IMPORT_MAP_SCRIPT_END, contentStart)
-    if (scriptEnd === -1 || scriptEnd >= headClose) return html
-
-    let tagEnd = scriptEnd + IMPORT_MAP_SCRIPT_END.length
-    remainingHead.push(html.slice(cursor, scriptStart))
-    importMaps.push(parseFrameworkImportMap(html.slice(contentStart, scriptEnd)))
-    cursor = tagEnd
-  }
-
-  if (importMaps.length === 0) return html
-  remainingHead.push(html.slice(cursor, headClose))
-
-  for (let importMap of importMaps) {
-    mergeImportMap(resources, importMap)
-  }
-
-  let remainingHeadHtml = remainingHead.join('')
-  let contentAfterHead = html.slice(headClose + FRAME_HEAD_CLOSE_TAG.length)
-  if (!remainingHeadHtml) return contentAfterHead
-
-  return `${FRAME_HEAD_OPEN_TAG}${remainingHeadHtml}${FRAME_HEAD_CLOSE_TAG}${contentAfterHead}`
 }
 
 function parseFrameworkImportMap(json: string): ImportMap {

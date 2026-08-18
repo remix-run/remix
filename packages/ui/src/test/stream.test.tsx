@@ -1139,7 +1139,7 @@ describe('stream', () => {
       expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
     })
 
-    it('groups fragment preloads and styles in a leading transport head', async () => {
+    it('orders fragment import maps and preloads before styles', async () => {
       let html = await drain(
         renderToStream(
           <main mix={[css({ color: 'purple' })]}>
@@ -1151,6 +1151,9 @@ describe('stream', () => {
                 href: '/assets/island.js',
                 exportName: 'Island',
                 preloads: ['/assets/island.js'],
+                importMap: {
+                  imports: { '/assets/island.js': '/assets/island.hash.js' },
+                },
               }
             },
           },
@@ -1158,9 +1161,8 @@ describe('stream', () => {
       )
 
       expect(html).toMatch(
-        /^<head><link data-rmx rel="modulepreload" href="\/assets\/island\.js" \/><style data-rmx=/,
+        /^<head><script data-rmx type="importmap">.*<\/script><link data-rmx rel="modulepreload" href="\/assets\/island\.js" \/><style data-rmx=.*<\/style><\/head><main class="rmxc-[a-z0-9]+">/s,
       )
-      expect(html).toMatch(/<\/style><\/head><main class="rmxc-[a-z0-9]+">/)
     })
 
     it('hoists module preloads from blocking frames', async () => {
@@ -1218,6 +1220,9 @@ describe('stream', () => {
                       href: '/assets/island.js',
                       exportName: 'Island',
                       preloads: ['/assets/island.js'],
+                      importMap: {
+                        imports: { '/assets/island.js': '/assets/island.hash.js' },
+                      },
                     }
                   },
                 },
@@ -1227,8 +1232,18 @@ describe('stream', () => {
         ),
       )
 
+      let documentHead = html.match(/<head>(.*?)<\/head>/s)?.[1]
+      invariant(documentHead)
+      expect(documentHead).toContain(
+        '<script data-rmx type="importmap">{"imports":{"/assets/island.js":"/assets/island.hash.js"}}</script>',
+      )
+      expect(documentHead).toContain(
+        '<link data-rmx rel="modulepreload" href="/assets/island.js" />',
+      )
       expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
-      expect(html).toMatch(/<body><!-- rmx:f:[^ ]+ --><head><style data-rmx=/)
+      expect(html).toMatch(
+        /<body><!-- rmx:f:[^ ]+ --><head><style data-rmx=.*<\/style><\/head><main/s,
+      )
     })
 
     it('does not inspect marker-shaped markup outside the leading frame head', async () => {
@@ -1256,7 +1271,7 @@ describe('stream', () => {
       expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
     })
 
-    it('does not inspect the leading frame head after its generated preload prefix', async () => {
+    it('does not inspect the leading frame head after its generated resource prefix', async () => {
       let markerShapedMarkup =
         '<link data-rmx rel="modulepreload" href="/assets/not-a-preload.js" />'
       let html = await drain(
@@ -1273,6 +1288,7 @@ describe('stream', () => {
             resolveFrame() {
               return [
                 '<head>',
+                '<script data-rmx type="importmap">{"imports":{"island":"/assets/island.js"}}</script>',
                 '<link data-rmx rel="modulepreload" href="/assets/island.js" />',
                 '<style data-rmx="rmxc-frame">@layer rmx-ui.rmxc-frame { color: purple }</style>',
                 `<script type="text/plain">${markerShapedMarkup}</script>`,
@@ -1286,6 +1302,9 @@ describe('stream', () => {
       expect(html).toContain(
         '<head><style data-rmx="rmxc-frame">@layer rmx-ui.rmxc-frame { color: purple }</style>' +
           `<script type="text/plain">${markerShapedMarkup}</script></head>`,
+      )
+      expect(html).toContain(
+        '<script data-rmx type="importmap">{"imports":{"island":"/assets/island.js"}}</script>',
       )
       expect(html.match(/href="\/assets\/island\.js"/g)).toHaveLength(1)
     })
@@ -2157,6 +2176,7 @@ describe('stream', () => {
       )
 
       let head = html.match(/<head>(.*?)<\/head>/s)?.[1]
+      invariant(head)
       expect(head).toContain(
         '<link data-rmx rel="modulepreload" href="/assets/app/components/counter.@abc123.tsx" />',
       )
@@ -2166,7 +2186,9 @@ describe('stream', () => {
       expect(head).toContain(
         '<script data-rmx type="importmap">{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}</script>',
       )
-      expect(head).toMatch(/<script data-rmx type="importmap">.*<\/script>$/)
+      expect(head.indexOf('<script data-rmx type="importmap">')).toBeLessThan(
+        head.indexOf('<link data-rmx rel="modulepreload"'),
+      )
     })
 
     it('emits discovered import maps after authored document head content', async () => {

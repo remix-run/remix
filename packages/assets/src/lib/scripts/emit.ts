@@ -53,11 +53,10 @@ export async function emitResolvedModule(
   try {
     let importUrls: string[] = []
     let rewriteResult = await rewriteImports(resolvedModule, options)
-    let executableCode = prependHmrContext(resolvedModule, rewriteResult.code, options)
+    let finalCode = prependHmrContext(resolvedModule, rewriteResult.code, options)
     let sourceMap = rewriteResult.sourceMap
       ? await createEmittedAsset(rewriteResult.sourceMap)
       : null
-    let finalCode = executableCode
 
     if (rewriteResult.sourceMap) {
       if (options.sourceMaps === 'inline') {

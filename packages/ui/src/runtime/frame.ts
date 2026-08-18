@@ -294,8 +294,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let lifecycleController = new AbortController()
 
   function consumeClientEntryResources(source: ParentNode): void {
-    modulePreloader.consumePreloadLinks(source)
     importMapManager.consumeImportMaps(source)
+    modulePreloader.consumePreloadLinks(source)
   }
 
   function shouldPreserveManagedHeadNode(node: Node): boolean {

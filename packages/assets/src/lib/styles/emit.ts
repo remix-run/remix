@@ -51,11 +51,10 @@ export async function emitResolvedStyle(
       resolvedStyle.deps.map((depPath) => options.getServedUrl(depPath)),
     )
     let rewriteResult = await rewriteDependencies(resolvedStyle, options)
-    let executableCode = rewriteResult.code
+    let finalCode = rewriteResult.code
     let sourceMap = rewriteResult.sourceMap
       ? await createEmittedAsset(rewriteResult.sourceMap)
       : null
-    let finalCode = executableCode
 
     if (rewriteResult.sourceMap) {
       if (options.sourceMaps === 'inline') {

@@ -37,6 +37,7 @@ import type { EmittedModule } from './emit.ts'
 import type { ResolvedScriptTarget } from '../target.ts'
 import type { ResolvedModule } from './resolve.ts'
 import { scriptLoaderConditions } from './conditions.ts'
+import { isBareImportSpecifier } from './specifiers.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -422,18 +423,6 @@ function findNearestTsconfigPath(directory: string): string | null {
     if (parentDirectory === currentDirectory) return null
     currentDirectory = parentDirectory
   }
-}
-
-function isBareImportSpecifier(specifier: string): boolean {
-  return (
-    !specifier.startsWith('./') &&
-    !specifier.startsWith('../') &&
-    !specifier.startsWith('/') &&
-    !specifier.startsWith('file:') &&
-    !specifier.startsWith('data:') &&
-    !specifier.startsWith('http://') &&
-    !specifier.startsWith('https://')
-  )
 }
 
 async function analyzeModuleSource(
