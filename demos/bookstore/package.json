@@ -15,6 +15,10 @@
     "playwright": "catalog:"
   },
   "scripts": {
+    "db:migrate": "remix db migrate",
+    "db:reset": "remix db reset --force",
+    "db:seed": "remix db seed",
+    "db:status": "remix db status",
     "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
     "hmr": "NODE_ENV=development node hmr.ts",
     "start": "node --import remix/node-tsx server.ts",

@@ -7,6 +7,7 @@ A full-featured e-commerce bookstore that demonstrates Remix application structu
 ```bash
 cd demos/bookstore
 pnpm install
+pnpm db:reset
 pnpm start
 ```
 
@@ -23,7 +24,13 @@ For development mode, run `pnpm dev`, or run `pnpm hmr` to enable HMR.
 
 - The SQLite file is stored at `db/bookstore.sqlite`
 - Migration files live in `db/migrations`
-- On startup, the app loads migrations from `db/migrations` and runs pending migrations before seeding demo data
+- [`remix.json`](remix.json) configures the database connection, migrations directory, and seed file for the Remix CLI
+- `pnpm db:status` shows which migrations are pending or applied
+- `pnpm db:migrate` applies pending migrations
+- `pnpm db:seed` loads the demo catalog, users, and orders without duplicating existing data
+- `pnpm db:reset` wipes the database, reapplies every migration, and seeds a fresh copy of the demo data
+
+Database setup is separate from server startup, so run `pnpm db:reset` before starting the demo for the first time. After pulling new migrations, run `pnpm db:migrate` before restarting the server.
 
 ## Code Highlights
 
@@ -38,7 +45,7 @@ For development mode, run `pnpm dev`, or run `pnpm hmr` to enable HMR.
 - [`app/utils/assets.ts`](app/utils/assets.ts) and [`app/middleware/asset-entry.ts`](app/middleware/asset-entry.ts) compile the client entry and stylesheet from `app/actions/public/`, while feature-specific browser modules live in the owning action's `public/` directory.
 - [`app/middleware/session.ts`](app/middleware/session.ts) configures the signed cookie and filesystem-backed session storage, and [`app/middleware/uploads.ts`](app/middleware/uploads.ts) owns the upload handler used by the router.
 - [`app/middleware/database.ts`](app/middleware/database.ts) injects the initialized database into request context, and [`app/utils/context.ts`](app/utils/context.ts) shows how app code reads request-scoped services like `Database`, `Session`, and the authenticated user without prop drilling.
-- [`app/data/setup.ts`](app/data/setup.ts) initializes the SQLite database, applies the [`up.sql`](db/migrations/20260228090000_create_bookstore_schema/up.sql) and [`down.sql`](db/migrations/20260228090000_create_bookstore_schema/down.sql) migration files, and seeds the demo catalog, users, and orders.
+- [`app/db.ts`](app/db.ts) initializes the SQLite database used by the application. The Remix CLI applies the [`up.sql`](db/migrations/20260228090000_create_bookstore_schema/up.sql) and [`down.sql`](db/migrations/20260228090000_create_bookstore_schema/down.sql) migration files and loads the demo data from [`db/seed.sql`](db/seed.sql).
 - The `uploads` action in [`app/actions/controller.tsx`](app/actions/controller.tsx) serves uploaded files from storage with stable URLs and caching headers.
 - [`app/ui/restful-form.tsx`](app/ui/restful-form.tsx) adds hidden `_method` support so forms can drive PUT and DELETE actions through the router's method-override middleware.
 - [`app/actions/fragments/public/cart-button.tsx`](app/actions/fragments/public/cart-button.tsx), [`app/actions/fragments/public/cart-items.tsx`](app/actions/fragments/public/cart-items.tsx), and [`app/actions/books/public/image-carousel.tsx`](app/actions/books/public/image-carousel.tsx) demonstrate progressively enhanced client-side behavior on top of server-rendered flows.
