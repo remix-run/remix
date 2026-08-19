@@ -1,44 +1,40 @@
 # Bookstore Demo
 
-A full-featured e-commerce bookstore that demonstrates Remix application structure, controller ownership, middleware composition, authentication, shopping cart flows, admin CRUD, file uploads, and progressively enhanced UI.
+This demo is a small but complete online bookstore. You can browse books, manage a cart, check out, update your account, and run the store from an admin area. It is a good place to see how routing, middleware, data, sessions, and progressively enhanced UI fit together in a Remix app.
 
-## Running the Demo
+## Run It
 
-```bash
+```sh
 cd demos/bookstore
 pnpm install
+pnpm db:reset
 pnpm start
 ```
 
-Then visit http://localhost:44100
+Visit [http://localhost:44100](http://localhost:44100) and sign in with one of the demo accounts:
 
-For development mode, run `pnpm dev`, or run `pnpm hmr` to enable HMR.
+- Admin: `admin@bookstore.com` / `admin123`
+- Customer: `customer@example.com` / `password123`
 
-### Demo Accounts
+Use `pnpm dev` for automatic server restarts, or `pnpm hmr` to enable hot module replacement.
 
-- **Admin**: admin@bookstore.com / admin123
-- **Customer**: customer@example.com / password123
+## Explore the Code
 
-## Database and Migrations
+- Start with [`app/routes.ts`](app/routes.ts) and [`app/router.ts`](app/router.ts) to see the typed route contract and the middleware stack that serves it.
+- Follow the storefront through [`app/actions/books`](app/actions/books), [`app/actions/cart`](app/actions/cart), and [`app/actions/checkout`](app/actions/checkout). These flows work on the server first, then add richer browser behavior where it helps.
+- Look in [`app/actions/auth`](app/actions/auth), [`app/actions/account`](app/actions/account), and [`app/actions/admin`](app/actions/admin) for nested controllers, sessions, authorization, CRUD, and file uploads.
+- [`app/ui`](app/ui) contains the shared document and layout pieces. Colocated `public` directories contain the browser code for cart fragments and the image carousel.
+- [`app/data/schema.ts`](app/data/schema.ts), [`db/migrations`](db/migrations), and [`remix.json`](remix.json) show the typed SQLite schema and the `remix db` workflow.
 
-- The SQLite file is stored at `db/bookstore.sqlite`
-- Migration files live in `db/migrations`
-- On startup, the app loads migrations from `db/migrations` and runs pending migrations before seeding demo data
+## Database Commands
 
-## Code Highlights
+The setup command above creates `db/bookstore.sqlite`, applies the migrations, and loads the sample catalog and accounts. You can manage it with:
 
-- [`app/routes.ts`](app/routes.ts) defines the route contract with `route()`, `form()`, and `resources()` helpers so controllers and UI can generate URLs from a single typed source of truth.
-- [`app/router.ts`](app/router.ts) wires the full Remix request stack together: static assets, form parsing, method override, sessions, async context, uploads, database loading, auth, and the asset server route. It still exports `createBookstoreRouter()` so the server and tests share the same composition entrypoint.
-- [`app/actions/controller.tsx`](app/actions/controller.tsx) owns the top-level leaf actions for the root route map, while [`app/actions/contact/controller.tsx`](app/actions/contact/controller.tsx) shows a controller for a nested route map.
-- [`app/actions/books/controller.tsx`](app/actions/books/controller.tsx), [`app/actions/cart/controller.tsx`](app/actions/cart/controller.tsx), and [`app/actions/checkout/controller.tsx`](app/actions/checkout/controller.tsx) show the same pattern for browsing, cart mutations, and checkout flows.
-- [`app/actions/auth/controller.tsx`](app/actions/auth/controller.tsx) owns only the direct auth actions, while nested auth route maps such as login, registration, forgot-password, and reset-password are mapped explicitly in [`app/router.ts`](app/router.ts).
-- [`app/actions/admin/books/controller.tsx`](app/actions/admin/books/controller.tsx) demonstrates admin CRUD with multipart uploads while keeping forms and page rendering in feature-local `form.tsx`, `index-page.tsx`, and `show-page.tsx` files.
-- [`app/middleware/render.tsx`](app/middleware/render.tsx) installs the request-scoped HTML renderer used by actions through `context.render` and preserves server-side frame resolution for fragment-based rendering.
-- [`app/ui/layout.tsx`](app/ui/layout.tsx) and [`app/ui/document.tsx`](app/ui/document.tsx) define the shared document shell, while reusable UI primitives live under `app/ui/` instead of a generic components folder.
-- [`app/utils/assets.ts`](app/utils/assets.ts) and [`app/middleware/asset-entry.ts`](app/middleware/asset-entry.ts) compile the client entry and stylesheet from `app/actions/public/`, while feature-specific browser modules live in the owning action's `public/` directory.
-- [`app/middleware/session.ts`](app/middleware/session.ts) configures the signed cookie and filesystem-backed session storage, and [`app/middleware/uploads.ts`](app/middleware/uploads.ts) owns the upload handler used by the router.
-- [`app/middleware/database.ts`](app/middleware/database.ts) injects the initialized database into request context, and [`app/utils/context.ts`](app/utils/context.ts) shows how app code reads request-scoped services like `Database`, `Session`, and the authenticated user without prop drilling.
-- [`app/data/setup.ts`](app/data/setup.ts) initializes the SQLite database, applies the [`up.sql`](db/migrations/20260228090000_create_bookstore_schema/up.sql) and [`down.sql`](db/migrations/20260228090000_create_bookstore_schema/down.sql) migration files, and seeds the demo catalog, users, and orders.
-- The `uploads` action in [`app/actions/controller.tsx`](app/actions/controller.tsx) serves uploaded files from storage with stable URLs and caching headers.
-- [`app/ui/restful-form.tsx`](app/ui/restful-form.tsx) adds hidden `_method` support so forms can drive PUT and DELETE actions through the router's method-override middleware.
-- [`app/actions/fragments/public/cart-button.tsx`](app/actions/fragments/public/cart-button.tsx), [`app/actions/fragments/public/cart-items.tsx`](app/actions/fragments/public/cart-items.tsx), and [`app/actions/books/public/image-carousel.tsx`](app/actions/books/public/image-carousel.tsx) demonstrate progressively enhanced client-side behavior on top of server-rendered flows.
+```sh
+pnpm db:status
+pnpm db:migrate
+pnpm db:seed
+pnpm db:reset
+```
+
+`db:reset` recreates the database from scratch. The other commands let you inspect or update it without discarding your local changes.
