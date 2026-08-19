@@ -27,9 +27,7 @@ export async function runAssetsCommand(argv: string[], context: CliContext): Pro
       if (input === undefined) {
         process.stdout.write(formatAssetList(await assetServer.getAssets(), rootDir))
       } else {
-        process.stdout.write(
-          formatAssetDetails(input, await assetServer.getAssetDetails(input), rootDir),
-        )
+        process.stdout.write(formatAssetDetails(await assetServer.getAssetDetails(input), rootDir))
       }
     } finally {
       await assetServer.close()
@@ -66,17 +64,11 @@ function formatAssetList(assets: readonly AssetDetails[], rootDir: string): stri
     .join('\n')}\n`
 }
 
-function formatAssetDetails(input: string, details: AssetDetails, rootDir: string): string {
-  let lines = [`Input: ${input}`, `Status: ${details.status}`]
+function formatAssetDetails(details: AssetDetails, rootDir: string): string {
+  let lines = [`Status: ${details.status}`]
   if (details.url !== undefined) lines.push(`URL: ${details.url}`)
   if (details.filePath !== undefined) {
     lines.push(`File: ${formatFilePath(details.filePath, rootDir)}`)
-  }
-  if (details.type !== undefined) lines.push(`Type: ${details.type}`)
-  if (details.urlPattern !== undefined) lines.push(`URL pattern: ${details.urlPattern}`)
-  if (details.filePattern !== undefined) lines.push(`File pattern: ${details.filePattern}`)
-  if (details.access?.allowedBy !== undefined) {
-    lines.push(`Allowed by: ${details.access.allowedBy.kind} ${details.access.allowedBy.value}`)
   }
   if (details.access?.deniedBy !== undefined) {
     lines.push(`Denied by: ${details.access.deniedBy}`)

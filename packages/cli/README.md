@@ -88,9 +88,7 @@ Destructive database commands (`remix db wipe` and `remix db reset`) refuse to r
 
 `runRemix()` returns the CLI exit code as a promise.
 
-`remix assets` lists each browser-reachable asset as `URL -> file`, one per line. Pass one public
-URL or file path to see its mapping, type, access rules, and whether it is reachable, denied,
-unsupported, missing, or unmapped.
+`remix assets` lists each browser-reachable asset as `URL -> file`, one per line. Pass one public URL or file path to see its resolved mapping and whether it is reachable, denied, unsupported, missing, or unmapped. Denied assets also show the matching deny rule.
 
 ## Configuration
 

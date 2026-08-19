@@ -46,14 +46,9 @@ describe('assets command', () => {
       assert.equal(
         byUrl.stdout,
         [
-          'Input: /assets/app/public/entry.ts',
           'Status: reachable',
           'URL: /assets/app/public/entry.ts',
           'File: app/public/entry.ts',
-          'Type: script',
-          'URL pattern: /assets/app/*path',
-          'File pattern: app/*path',
-          'Allowed by: file app/public/**',
           '',
         ].join('\n'),
       )
@@ -63,19 +58,32 @@ describe('assets command', () => {
         projectDir,
       )
       assert.equal(byAbsoluteUrl.exitCode, 0, byAbsoluteUrl.stderr)
-      assert.match(byAbsoluteUrl.stdout, /^Status: reachable$/m)
-      assert.match(byAbsoluteUrl.stdout, /^URL: \/assets\/app\/public\/entry\.ts$/m)
+      assert.equal(byAbsoluteUrl.stdout, byUrl.stdout)
 
       let byFile = await runAssets(['app/public/logo.svg'], projectDir)
       assert.equal(byFile.exitCode, 0, byFile.stderr)
-      assert.match(byFile.stdout, /^Status: reachable$/m)
-      assert.match(byFile.stdout, /^URL: \/assets\/app\/public\/logo\.svg$/m)
-      assert.match(byFile.stdout, /^Type: file$/m)
+      assert.equal(
+        byFile.stdout,
+        [
+          'Status: reachable',
+          'URL: /assets/app/public/logo.svg',
+          'File: app/public/logo.svg',
+          '',
+        ].join('\n'),
+      )
 
       let denied = await runAssets(['/assets/app/public/entry.test.ts'], projectDir)
       assert.equal(denied.exitCode, 0, denied.stderr)
-      assert.match(denied.stdout, /^Status: denied$/m)
-      assert.match(denied.stdout, /^Denied by: app\/\*\*\/\*\.test\.\*$/m)
+      assert.equal(
+        denied.stdout,
+        [
+          'Status: denied',
+          'URL: /assets/app/public/entry.test.ts',
+          'File: app/public/entry.test.ts',
+          'Denied by: app/**/*.test.*',
+          '',
+        ].join('\n'),
+      )
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
