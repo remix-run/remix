@@ -130,23 +130,23 @@ This means a counter inside a reloading frame keeps its count, but sees any new 
 
 ## Preserving client-owned DOM
 
-Add `rmx-preserve-dom` to an element when its live DOM should be owned by client code after the element has been matched during a frame reload:
+Add `data-rmx-preserve-dom` to an element when its live DOM should be owned by client code after the element has been matched during a frame reload:
 
 ```tsx
 function SearchWidget() {
   return () => (
-    <pagefind-ui data-key="search" rmx-preserve-dom>
+    <pagefind-ui data-rmx-key="search" data-rmx-preserve-dom>
       <button type="button">Search</button>
     </pagefind-ui>
   )
 }
 ```
 
-During server rendering and streaming, Remix UI still renders the element's attributes and children. During initial client boot, hydration still discovers and hydrates client entries inside the element. The attribute only affects later frame reconciliation: when incoming frame HTML contains `rmx-preserve-dom` on a matched element, Remix UI preserves the current element attributes and children instead of applying incoming DOM changes below that element.
+During server rendering and streaming, Remix UI still renders the element's attributes and children. During initial client boot, hydration still discovers and hydrates client entries inside the element. The attribute only affects later frame reconciliation: when incoming frame HTML contains `data-rmx-preserve-dom` on a matched element, Remix UI preserves the current element attributes and children instead of applying incoming DOM changes below that element.
 
-Use this for custom elements, third-party widgets, and imperative integrations that take ownership of their own subtree after initial render. Keep the preserved boundary as small as possible, and add `data-key` when the element can move among siblings so reloads can match the same live element before falling back to index-based matching.
+Use this for custom elements, third-party widgets, and imperative integrations that take ownership of their own subtree after initial render. Keep the preserved boundary as small as possible, and add `data-rmx-key` when the element can move among siblings so reloads can match the same live element before falling back to index-based matching.
 
-Avoid wrapping Remix-owned UI that should continue receiving server-driven frame updates. A client entry inside `rmx-preserve-dom` can hydrate from the initial HTML, but later frame reloads will not patch new server-rendered children or props through the preserved host. Put the client entry outside the preserved boundary when it needs future frame data, or put `rmx-preserve-dom` inside the client entry around only the imperative DOM island.
+Avoid wrapping Remix-owned UI that should continue receiving server-driven frame updates. A client entry inside `data-rmx-preserve-dom` can hydrate from the initial HTML, but later frame reloads will not patch new server-rendered children or props through the preserved host. Put the client entry outside the preserved boundary when it needs future frame data, or put `data-rmx-preserve-dom` inside the client entry around only the imperative DOM island.
 
 ## Nested frames
 
@@ -242,24 +242,24 @@ Because this function defines the trust boundary for frame HTML, only return con
 
 Eligible same-origin anchor navigations reload `handle.frames.top` through the frame resolver instead of performing a full document navigation.
 
-- `rmx-target="name"` reloads a named frame.
-- `rmx-src="/frame"` overrides the URL resolved into that frame while `href` remains the navigation destination.
-- `rmx-history="push|replace"` controls how the navigation updates history.
-- `rmx-reset-scroll="false"` preserves the current scroll position.
-- `rmx-document` leaves the link as a normal document navigation.
+- `data-rmx-target="name"` reloads a named frame.
+- `data-rmx-src="/frame"` overrides the URL resolved into that frame while `href` remains the navigation destination.
+- `data-rmx-history="push|replace"` controls how the navigation updates history.
+- `data-rmx-reset-scroll="false"` preserves the current scroll position.
+- `data-rmx-document` leaves the link as a normal document navigation.
 
-The `link(href, { history })` mixin adds the corresponding `rmx-history` value when its host is a native anchor. Download links, cross-origin links, and links marked with `rmx-document` are left to the browser.
+The `link(href, { history })` mixin adds the corresponding `data-rmx-history` value when its host is a native anchor. Download links, cross-origin links, and links marked with `data-rmx-document` are left to the browser.
 
 ## Form navigation
 
 Eligible same-origin form submissions use the same frame navigation path as links. Native constraint validation and the form's `submit` event run first, so invalid forms never reach `resolveFrame`.
 
 - Submissions reload `handle.frames.top` by default.
-- `rmx-target="name"` reloads a named frame.
-- `rmx-src="/frame"` overrides the URL resolved into that frame while the form action remains the navigation destination.
-- `rmx-history="push|replace"` overrides how the navigation updates history.
-- `rmx-reset-scroll="false"` preserves the current scroll position.
-- `rmx-document` leaves the submission as a normal document navigation.
+- `data-rmx-target="name"` reloads a named frame.
+- `data-rmx-src="/frame"` overrides the URL resolved into that frame while the form action remains the navigation destination.
+- `data-rmx-history="push|replace"` overrides how the navigation updates history.
+- `data-rmx-reset-scroll="false"` preserves the current scroll position.
+- `data-rmx-document` leaves the submission as a normal document navigation.
 - Submitter overrides such as `formmethod`, `formenctype`, and `formtarget` take precedence over the form attributes.
 - Cross-origin submissions, `method="dialog"`, and `target="_blank"` are left to the browser.
 
@@ -270,7 +270,7 @@ For example, this form works as a normal document POST without JavaScript and re
 ```tsx
 <Frame name="account" src="/account/edit" />
 
-<form action="/account/edit" method="post" rmx-target="account">
+<form action="/account/edit" method="post" data-rmx-target="account">
   <label for="display-name">Display name</label>
   <input id="display-name" name="displayName" required />
   <button type="submit">Save</button>
@@ -279,9 +279,9 @@ For example, this form works as a normal document POST without JavaScript and re
 
 The action should return HTML suitable for the targeted frame while retaining its normal document response or redirect for unenhanced submissions. Apps that distinguish frame requests with custom headers can provide a resolver that adds them.
 
-Enhanced non-GET submissions to the current URL replace its navigation history entry instead of pushing a duplicate. Submissions to a different URL push a new entry, as do GET submissions whose values are represented in the destination URL. The `rmx-history` attribute overrides that default: use `rmx-history="replace"` to force replacement or `rmx-history="push"` to force a push. Non-GET `FormData` is used only for the active frame reload and is not retained in history.
+Enhanced non-GET submissions to the current URL replace its navigation history entry instead of pushing a duplicate. Submissions to a different URL push a new entry, as do GET submissions whose values are represented in the destination URL. The `data-rmx-history` attribute overrides that default: use `data-rmx-history="replace"` to force replacement or `data-rmx-history="push"` to force a push. Non-GET `FormData` is used only for the active frame reload and is not retained in history.
 
-Forms work as normal document submissions before the client runtime loads and whenever they use `rmx-document`, so this behavior remains progressively enhanced. Browsers ignore `rmx-history` without the client runtime and use their normal document history behavior.
+Forms work as normal document submissions before the client runtime loads and whenever they use `data-rmx-document`, so this behavior remains progressively enhanced. Browsers ignore `data-rmx-history` without the client runtime and use their normal document history behavior.
 
 ## Frame lifecycle
 

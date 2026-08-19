@@ -7,8 +7,8 @@ declare namespace JSX {
     'pagefind-modal': {
       instance?: string
       'reset-on-close'?: boolean
-      'data-key'?: string
-      'rmx-preserve-dom'?: boolean | ''
+      'data-rmx-key'?: string
+      'data-rmx-preserve-dom'?: boolean | ''
       style?: string
     }
   }

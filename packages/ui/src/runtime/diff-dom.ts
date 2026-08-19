@@ -28,7 +28,7 @@ type BoundarySiblingUnit = {
 
 type SiblingUnit = NodeSiblingUnit | BoundarySiblingUnit
 
-const REMIX_PRESERVE_DOM_ATTRIBUTE = 'rmx-preserve-dom'
+const REMIX_PRESERVE_DOM_ATTRIBUTE = 'data-rmx-preserve-dom'
 
 export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
   let parent = curr[0]?.parentNode ?? context.regionParent ?? null
@@ -446,7 +446,7 @@ function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
 
 function getSiblingUnitKey(unit: SiblingUnit): string | undefined {
   if (unit.kind !== 'node' || !isElement(unit.node)) return
-  return unit.node.getAttribute('data-key') ?? undefined
+  return unit.node.getAttribute('data-rmx-key') ?? undefined
 }
 
 function siblingUnitsComparable(current: SiblingUnit, next: SiblingUnit): boolean {

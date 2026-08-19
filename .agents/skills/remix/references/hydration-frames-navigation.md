@@ -125,7 +125,7 @@ method and abort signal. GET form values are already encoded in `src`; non-GET s
 `FormData` for `multipart/form-data`. Provide `resolveFrame` when an app needs additional headers,
 another body encoding, or a different response policy.
 
-Add `rmx-document` to a link or form to leave its navigation to the browser.
+Add `data-rmx-document` to a link or form to leave its navigation to the browser.
 
 The default resolver rejects non-OK responses with an error containing their status and status text.
 A custom `resolveFrame` may return a `Response` with any status when it wants the runtime to render
@@ -208,14 +208,14 @@ When a frame reloads, matching DOM nodes are updated in place. Client entries re
 When `run()` is active, eligible same-origin forms progressively enhance into frame navigations. Native validation and the form's `submit` event still run first.
 
 - Forms target `handle.frames.top` by default.
-- `rmx-target` selects a named frame.
-- `rmx-src` selects a different frame request URL while preserving the form action as the navigation destination.
-- `rmx-history="push|replace"` overrides how the navigation updates history.
-- `rmx-reset-scroll="false"` preserves scroll position.
-- `rmx-document` opts back into a document submission.
+- `data-rmx-target` selects a named frame.
+- `data-rmx-src` selects a different frame request URL while preserving the form action as the navigation destination.
+- `data-rmx-history="push|replace"` overrides how the navigation updates history.
+- `data-rmx-reset-scroll="false"` preserves scroll position.
+- `data-rmx-document` opts back into a document submission.
 - Cross-origin forms, `method="dialog"`, and `target="_blank"` remain browser-owned.
 
-GET controls are already encoded in `src`, so GET forms reach the resolver like links. Non-GET forms provide their native `FormData`, effective method, and encoding. The resolver owns body encoding and method-override conventions. Non-GET submissions to the current URL replace its history entry; GET submissions and submissions to a different URL push one. The `rmx-history` attribute overrides those defaults.
+GET controls are already encoded in `src`, so GET forms reach the resolver like links. Non-GET forms provide their native `FormData`, effective method, and encoding. The resolver owns body encoding and method-override conventions. Non-GET submissions to the current URL replace its history entry; GET submissions and submissions to a different URL push one. The `data-rmx-history` attribute overrides those defaults.
 
 ### Nested frames
 
@@ -280,7 +280,7 @@ navigate('/dashboard', { history: 'replace' })
 
 Options: `src`, `target`, `history` (`'push' | 'replace'`), `resetScroll`.
 
-Attributes understood by the runtime: `rmx-target`, `rmx-src`, `rmx-history`, `rmx-reset-scroll`, `rmx-document`.
+Attributes understood by the runtime: `data-rmx-target`, `data-rmx-src`, `data-rmx-history`, `data-rmx-reset-scroll`, `data-rmx-document`.
 
 ## Head Management
 

@@ -55,7 +55,7 @@ async function resolveFrameResponse(url: URL, options?: ResolveFrameOptions) {
         title="Reload required"
         message="An unexpected error occurred. Please reload the page to try again."
         action={
-          <a rmx-document href={window.location.href} mix={actionLinkCss}>
+          <a data-rmx-document href={window.location.href} mix={actionLinkCss}>
             Reload
           </a>
         }

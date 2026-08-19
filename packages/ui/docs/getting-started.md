@@ -128,7 +128,7 @@ await app.ready()
 
 `run()` fetches frame sources by default, including the submitted method, encoding, and `FormData`.
 Provide `resolveFrame` only when the app needs custom request headers, body encoding, or response
-policy. Add `rmx-document` to a link or form to leave its navigation to the browser.
+policy. Add `data-rmx-document` to a link or form to leave its navigation to the browser.
 
 ### Client entry component
 
