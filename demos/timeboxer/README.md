@@ -8,6 +8,7 @@ A small schedule-planning app that demonstrates username/password authentication
 cd demos/timeboxer
 cp .env.example .env
 pnpm install
+pnpm db:reset
 pnpm start
 ```
 
@@ -17,6 +18,10 @@ Then visit [http://localhost:44100](http://localhost:44100).
 
 - `SESSION_SECRET` signs the session cookie and is required outside tests.
 - `DATABASE_URL` optionally overrides the local SQLite path. By default the demo stores data in `db/timebox.sqlite`.
+
+## Database Commands
+
+Use `pnpm db:status` to inspect migrations and `pnpm db:migrate` to apply them. Run `pnpm db:reset` whenever you want to recreate the local database from scratch.
 
 ## Code Highlights
 
