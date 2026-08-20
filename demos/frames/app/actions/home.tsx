@@ -33,6 +33,10 @@ export function HomePage() {
           Root reload client entries
         </a>
         {' · '}
+        <a href={routes.scrollRestoration.href()} mix={linkStyle}>
+          Navigation scroll behavior
+        </a>
+        {' · '}
         <a href={routes.stateSearch.href()} mix={linkStyle}>
           Dynamic src search demo
         </a>
