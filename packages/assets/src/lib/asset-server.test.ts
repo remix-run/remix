@@ -73,10 +73,6 @@ function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions
   return createAssetServerForTest({
     allowFiles: ['app/**', 'app/node_modules/**'],
     basePath: '/assets',
-    fileMap: {
-      '/app/*path': 'app/*path',
-      '/npm/*path': 'app/node_modules/*path',
-    },
     rootDir,
     watch: overrides.watch ?? false,
     ...overrides,
@@ -772,9 +768,6 @@ describe('asset-server', () => {
     let assetServer = createAssetServer({
       allowFiles: ['app/**'],
       basePath: '/assets',
-      fileMap: {
-        '/assets/app/*path': 'app/*path',
-      },
       files: {
         extensions: ['.svg'],
         transforms: {
@@ -2669,12 +2662,7 @@ describe('asset-server', () => {
         ].join('\n'),
       )
 
-      let assetServer = createTestServer(caseDir, {
-        fileMap: {
-          '/app/*path': 'app/*path',
-          '/node_modules/*path': 'app/node_modules/*path',
-        },
-      })
+      let assetServer = createTestServer(caseDir)
       try {
         let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
         let uiUrls = [...servedUrls].filter((url) => url.includes('%40remix-run/ui/dist/index.js'))
@@ -2874,7 +2862,7 @@ describe('asset-server', () => {
     )
   })
 
-  it('getHref rejects modules outside configured fileMap entries', async () => {
+  it('getHref rejects modules outside configured mounts', async () => {
     await write(dir, 'other.ts', 'export const value = 1')
     let assetServer = createTestServer(dir)
 
@@ -2890,7 +2878,6 @@ describe('asset-server', () => {
       allowFiles: ['app/**'],
       denyFiles: ['app/entry.ts'],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
     })
 
     await assert.rejects(
@@ -3117,9 +3104,6 @@ describe('asset-server', () => {
       let assetServer = createAssetServer({
         allowFiles: ['app/**'],
         basePath: '/assets',
-        fileMap: {
-          '/app/*path': 'app/*path',
-        },
         rootDir: caseDir,
       })
 
@@ -3649,8 +3633,8 @@ describe('asset-server', () => {
       let assetServer = createAssetServer({
         allowFiles: ['../packages/**'],
         basePath: '/assets',
-        fileMap: {
-          '/packages/*path': '../packages/*path',
+        mounts: {
+          '/packages': '../packages',
         },
         rootDir: projectDir,
       })
@@ -5319,7 +5303,7 @@ describe('asset-server', () => {
     }
   })
 
-  it('supports absolute entry-point patterns', async () => {
+  it('supports absolute entry-point paths', async () => {
     let entryPath = await write(dir, 'app/entry-abs.ts', 'export const abs = true')
     let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
 
@@ -5339,9 +5323,6 @@ describe('asset-server', () => {
     let assetServer = createAssetServer({
       allowFiles: ['app/**'],
       basePath: '',
-      fileMap: {
-        '/app/*path': 'app/*path',
-      },
       rootDir: dir,
       watch: false,
     })
@@ -5357,7 +5338,6 @@ describe('asset-server', () => {
         createAssetServerForTest({
           allowFiles: ['app/\0allowed-realpath.ts'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       { code: 'ERR_INVALID_ARG_VALUE' },
     )
@@ -5370,7 +5350,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['.'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -5380,7 +5359,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['..'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -5390,7 +5368,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@remix-run/__allowed-package/subpath'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -5400,7 +5377,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@scope/.'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -5410,7 +5386,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@scope/..'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -5420,7 +5395,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['../@remix-run/__allowed-package'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -5430,7 +5404,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@remix-run/__allowed-package\\subpath'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -5440,7 +5413,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@scope'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -5450,7 +5422,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@scope/@remix-run/__allowed-package/subpath'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -5463,7 +5434,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['path'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /Could not resolve allowed package "path"/,
     )
@@ -5484,7 +5454,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@remix-run/__allowed-package'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /Dependency "\.\." .* must be a package name/,
     )
@@ -5505,26 +5474,23 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@remix-run/__allowed-package'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /Optional dependency "@scope\/\.\." .* must be a package name/,
     )
   })
 
-  it('rejects absolute file patterns', async () => {
+  it('rejects absolute mount file roots', async () => {
     await write(dir, 'app/entry.ts', 'export const abs = true')
     assert.throws(
       () =>
         createAssetServerForTest({
           allowFiles: [path.join(dir, 'app')],
           rootDir: dir,
-          fileMap: {
-            '/app/*path': `${path.join(dir, 'app')}/*path`,
-          },
+          mounts: { app: path.join(dir, 'app') },
           fingerprint: { buildId: 'build' },
           watch: false,
         }),
-      /must be relative to the asset server root/,
+      /mounts values must be relative to rootDir/,
     )
   })
 
@@ -5536,7 +5502,6 @@ describe('asset-server', () => {
       allowFiles: [allowedPath, path.join(dir, 'app')],
       denyFiles: [path.join(dir, 'app/blocked.ts')],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
     })
 
     let allowedResponse = await get(assetServer, '/assets/app/allowed.ts')
@@ -5549,15 +5514,94 @@ describe('asset-server', () => {
     assert.equal(dotfileResponse.status, 200)
   })
 
-  it('rejects unnamed route wildcards because fileMap entries must be reversible', async () => {
+  it('uses app and npm mounts by default', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = true')
+    await write(dir, 'node_modules/pkg/index.ts', 'export const value = true')
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['app/**', 'node_modules/**'],
+      rootDir: dir,
+    })
+
+    assert.equal(await assetServer.getHref('app/entry.ts'), '/assets/app/entry.ts')
+    assert.equal(await assetServer.getHref('node_modules/pkg/index.ts'), '/assets/npm/pkg/index.ts')
+  })
+
+  it('rejects empty mounts during startup', async () => {
     assert.throws(
       () =>
         createAssetServerForTest({
           allowFiles: ['app/**'],
           rootDir: dir,
-          fileMap: { '/app/*': 'app/*path' },
+          mounts: {},
         }),
-      /must use named wildcards/,
+      /mounts must include at least one entry/,
+    )
+  })
+
+  it('supports mount URL roots with multiple path segments', async () => {
+    await write(dir, 'packages/runtime/entry.ts', 'export const value = true')
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['packages/runtime/**'],
+      rootDir: dir,
+      mounts: { '/internal/runtime/': 'packages/runtime' },
+    })
+
+    let href = await assetServer.getHref('packages/runtime/entry.ts')
+    assert.equal(href, '/assets/internal/runtime/entry.ts')
+
+    let response = await get(assetServer, href)
+    assert.ok(response)
+    assert.equal(response.status, 200)
+  })
+
+  it('rejects incompatible overlapping mount URL roots during startup', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: ['app/**'],
+          rootDir: dir,
+          mounts: { app: 'app', 'app/routes': 'routes' },
+        }),
+      /mounts keys must not overlap\. Received "app" and "app\/routes"\./,
+    )
+  })
+
+  it('rejects compatible but redundant overlapping mounts during startup', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: ['app/**'],
+          rootDir: dir,
+          mounts: { app: 'app', 'app/vendor': 'app/vendor' },
+        }),
+      /mounts values must not overlap\. Received "app" and "app\/vendor"/,
+    )
+  })
+
+  it('rejects overlapping mount file roots during startup', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: ['app/**'],
+          rootDir: dir,
+          mounts: { app: 'app', routes: 'app/routes' },
+        }),
+      /mounts values must not overlap\. Received "app" and "app\/routes"/,
+    )
+  })
+
+  it('rejects symlinked overlapping mount file roots during startup', async () => {
+    await fs.mkdir(path.join(dir, 'app'), { recursive: true })
+    await symlinkDirectory(path.join(dir, 'app'), path.join(dir, 'alias'))
+
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: ['app/**'],
+          rootDir: dir,
+          mounts: { app: 'app', alias: 'alias' },
+        }),
+      /mounts values must not overlap\. Received "app" and "alias", resolving to/,
     )
   })
 
@@ -5568,7 +5612,6 @@ describe('asset-server', () => {
       allowFiles: ['app/**/*.ts'],
       denyFiles: ['app/**/private/**'],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
     })
 
     let allowedResponse = await get(assetServer, '/assets/app/features/allowed.ts')
@@ -5595,7 +5638,7 @@ describe('asset-server', () => {
       allowFiles: [],
       allowPackages: ['@remix-run/__allowed-package'],
       rootDir: dir,
-      fileMap: { '/node_modules/*path': 'app/node_modules/*path' },
+      mounts: { node_modules: 'app/node_modules' },
     })
 
     let response = await get(
@@ -5628,10 +5671,6 @@ describe('asset-server', () => {
       allowFiles: ['app/entry.ts'],
       allowPackages: ['@remix-run/__allowed-package'],
       rootDir: dir,
-      fileMap: {
-        '/app/*path': 'app/*path',
-        '/node_modules/*path': 'app/node_modules/*path',
-      },
     })
 
     let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
@@ -5717,7 +5756,6 @@ describe('asset-server', () => {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
         rootDir: dir,
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
     let firstAssetServer = createServer()
@@ -5818,7 +5856,6 @@ describe('asset-server', () => {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
         rootDir: caseDir,
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let allowedPackageResponse = await get(
@@ -5896,7 +5933,6 @@ describe('asset-server', () => {
           return new Response('Blocked import', { status: 500 })
         },
         rootDir: caseDir,
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let peerDependencyResponse = await get(
@@ -5952,7 +5988,6 @@ describe('asset-server', () => {
       allowFiles: [],
       allowPackages: ['@remix-run/__allowed-package', '@remix-run/__peer-of-allowed-package'],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
     })
 
     let response = await get(
@@ -5981,7 +6016,6 @@ describe('asset-server', () => {
       assetServer = createWatchedTestServer(caseDir, {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let beforeResponse = await get(
@@ -6051,7 +6085,6 @@ describe('asset-server', () => {
       assetServer = createWatchedTestServer(caseDir, {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let targets = getInternalWatchTargets(assetServer).map((target) =>
@@ -6081,7 +6114,6 @@ describe('asset-server', () => {
       assetServer = createWatchedTestServer(caseDir, {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let targets = getInternalWatchTargets(assetServer).map((target) =>
@@ -6123,7 +6155,6 @@ describe('asset-server', () => {
       assetServer = createWatchedTestServer(caseDir, {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let beforeResponse = await get(
@@ -6196,7 +6227,6 @@ describe('asset-server', () => {
       assetServer = createWatchedTestServer(appDir, {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let targets = getInternalWatchTargets(assetServer).map((target) =>
@@ -6277,7 +6307,7 @@ describe('asset-server', () => {
       allowPackages: ['@remix-run/__allowed-package'],
       denyFiles: ['app/node_modules/@remix-run/__allowed-package/private.ts'],
       rootDir: dir,
-      fileMap: { '/node_modules/*path': 'app/node_modules/*path' },
+      mounts: { node_modules: 'app/node_modules' },
     })
 
     let publicResponse = await get(
@@ -6311,7 +6341,7 @@ describe('asset-server', () => {
       allowPackages: ['@remix-run/__allowed-package'],
       denyFiles: ['app/node_modules/**/@remix-run/__allowed-package/secret.ts'],
       rootDir: dir,
-      fileMap: { '/node_modules/*path': 'app/node_modules/*path' },
+      mounts: { node_modules: 'app/node_modules' },
     })
 
     let publicResponse = await get(assetServer, `${packageStoreUrlPath}/public.ts`)
@@ -6356,10 +6386,6 @@ describe('asset-server', () => {
       allowFiles: ['app/entry.ts'],
       allowPackages: ['@remix-run/__allowed-package'],
       rootDir: dir,
-      fileMap: {
-        '/app/*path': 'app/*path',
-        '/node_modules/*path': 'app/node_modules/*path',
-      },
     })
 
     let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
@@ -6438,7 +6464,7 @@ describe('asset-server', () => {
       allowFiles: [],
       allowPackages: ['@remix-run/__allowed-package'],
       rootDir: dir,
-      fileMap: { '/node_modules/*path': 'app/node_modules/*path' },
+      mounts: { node_modules: 'app/node_modules' },
     })
 
     let allowedDependencyResponse = await get(
@@ -6466,10 +6492,6 @@ describe('asset-server', () => {
     let assetServer = createAssetServerForTest({
       allowFiles: ['app/**/*', 'node_modules/**/*'],
       rootDir: dir,
-      fileMap: {
-        '/app/*path': 'app/*path',
-        '/npm/*path': 'node_modules/*path',
-      },
     })
 
     let dotfileResponse = await get(assetServer, '/assets/app/.dotfile.ts')
@@ -6487,7 +6509,6 @@ describe('asset-server', () => {
       allowFiles: ['app/**'],
       denyFiles: ['app/blocked.ts'],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
       onError(error) {
         receivedError = error
       },
@@ -6582,10 +6603,6 @@ describe('asset-server', () => {
       ].join('\n'),
     )
     let assetServer = createTestServer(dir, {
-      fileMap: {
-        '/npm/*path': 'app/node_modules/*path',
-        '/app/*path': 'app/*path',
-      },
       target: {
         es: '2020',
       },
@@ -6604,7 +6621,7 @@ describe('asset-server', () => {
     assert.doesNotMatch(body, /from ["']@oxc-project\/runtime/)
     assert.ok(
       entryImportSpecifiers.includes(
-        '/assets/npm/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+        '/assets/app/node_modules/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
       ),
     )
     assert.ok(helperPaths.length > 0)
@@ -6617,9 +6634,9 @@ describe('asset-server', () => {
     let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
     assert.ok(
       servedUrls.has(
-        '/assets/npm/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+        '/assets/app/node_modules/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
       ),
-      'expected authored runtime imports to use the consumer fileMap path',
+      'expected authored runtime imports to use the consumer mount path',
     )
     assert.ok(
       servedUrls.has(
@@ -7015,9 +7032,6 @@ describe('asset-server', () => {
         createAssetServer({
           allowFiles: ['app/**'],
           basePath: '/assets',
-          fileMap: {
-            '/app/*path': 'app/*path',
-          },
           rootDir: dir,
           fingerprint: { buildId: 'build' },
         }),
@@ -7495,7 +7509,7 @@ describe('asset-server', () => {
     assert.match(normalizeWindowsPath(receivedError.message), /secret\.svg/)
   })
 
-  it('calls onError when a CSS import is outside configured fileMap entries', async () => {
+  it('calls onError when a CSS import is outside configured mounts', async () => {
     await write(
       dir,
       'app/styles/app.css',
@@ -7514,14 +7528,14 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_FILE_MAP')
-    assert.match(receivedError.message, /outside all configured fileMap entries/)
+    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_MOUNTS')
+    assert.match(receivedError.message, /outside all configured mounts/)
     assert.match(receivedError.message, /"\.\.\/\.\.\/shared\/reset\.css"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
     assert.match(normalizeWindowsPath(receivedError.message), /shared\/reset\.css/)
   })
 
-  it('calls onError when a CSS url dependency is outside configured fileMap entries', async () => {
+  it('calls onError when a CSS url dependency is outside configured mounts', async () => {
     await write(
       dir,
       'app/styles/app.css',
@@ -7543,8 +7557,8 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'URL_OUTSIDE_FILE_MAP')
-    assert.match(receivedError.message, /outside all configured fileMap entries/)
+    assert.equal(receivedError.code, 'URL_OUTSIDE_MOUNTS')
+    assert.match(receivedError.message, /outside all configured mounts/)
     assert.match(receivedError.message, /"\.\.\/\.\.\/shared\/logo\.svg"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
     assert.match(normalizeWindowsPath(receivedError.message), /shared\/logo\.svg/)
@@ -7593,7 +7607,7 @@ describe('asset-server', () => {
     assert.match(normalizeWindowsPath(receivedError.message), /secret\.ts/)
   })
 
-  it('calls onError when an imported module is outside configured fileMap entries', async () => {
+  it('calls onError when an imported module is outside configured mounts', async () => {
     await write(dir, 'app/entry.ts', 'import "../shared/util.ts"\nexport const entry = util')
     await write(dir, 'shared/util.ts', 'export const util = true')
     let receivedError: unknown
@@ -7608,8 +7622,8 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_FILE_MAP')
-    assert.match(receivedError.message, /outside all configured fileMap entries/)
+    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_MOUNTS')
+    assert.match(receivedError.message, /outside all configured mounts/)
     assert.match(receivedError.message, /"\.\.\/shared\/util\.ts"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
     assert.match(normalizeWindowsPath(receivedError.message), /shared\/util\.ts/)

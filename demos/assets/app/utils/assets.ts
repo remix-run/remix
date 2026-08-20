@@ -10,9 +10,6 @@ export const assetServer = createAssetServer({
   rootDir: path.resolve(import.meta.dirname, '../..'),
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   denyFiles: ['app/**/*.test.*'],
-  fileMap: {
-    '/app/*path': 'app/*path',
-  },
   files: {
     cache: createFsFileStorage(path.resolve(import.meta.dirname, '../../.tmp/assets-cache')),
     extensions: ['.svg'],

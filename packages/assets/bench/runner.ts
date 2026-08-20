@@ -192,7 +192,7 @@ function createBenchAssetServer(
     allowFiles: overrides.allowFiles ?? fixture.assetServer.allowFiles,
     allowPackages: overrides.allowPackages ?? fixture.assetServer.allowPackages,
     basePath: overrides.basePath ?? fixture.assetServer.basePath,
-    fileMap: overrides.fileMap ?? fixture.assetServer.fileMap,
+    mounts: overrides.mounts ?? fixture.assetServer.mounts,
     denyFiles: overrides.denyFiles,
     fingerprint: Object.hasOwn(overrides, 'fingerprint')
       ? overrides.fingerprint
