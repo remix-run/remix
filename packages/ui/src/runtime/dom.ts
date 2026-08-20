@@ -2065,6 +2065,10 @@ export interface ButtonHTMLProps<
   type?: Trackable<'submit' | 'reset' | 'button' | undefined>
   /** The `value` HTML attribute. */
   value?: Trackable<string | number | undefined>
+
+  // Non-standard Attributes
+  /** Overrides how this button's form submission updates the current history entry. */
+  'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
 }
 
 /**
