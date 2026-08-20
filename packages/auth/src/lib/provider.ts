@@ -69,13 +69,13 @@ export interface OAuthProvider<
  */
 export interface OAuthTransaction {
   /** Provider name that started the transaction. */
-  provider: string
+  readonly provider: string
   /** Random value used to validate the callback. */
-  state: string
+  readonly state: string
   /** PKCE verifier used to exchange the callback authorization code. */
-  codeVerifier: string
+  readonly codeVerifier: string
   /** Optional post-auth redirect target supplied by the application. */
-  returnTo?: string
+  readonly returnTo?: string
   /**
    * Opaque provider-owned data persisted with the transaction.
    *
