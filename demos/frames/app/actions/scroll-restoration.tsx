@@ -79,8 +79,8 @@ function NewsletterSignup(handle: Handle<{ history?: 'push' | 'replace' }>) {
       </h2>
       <p mix={[leadStyle, css({ lineHeight: 1.6 })]}>
         This form submits to another URL and redirects back here. Both buttons preserve the current
-        scroll position with <code>data-rmx-reset-scroll="false"</code>; they differ only in whether the
-        navigation pushes or replaces the history entry.
+        scroll position with <code>data-rmx-reset-scroll="false"</code>; they differ only in whether
+        the navigation pushes or replaces the history entry.
       </p>
 
       {handle.props.history ? (
