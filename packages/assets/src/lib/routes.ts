@@ -111,7 +111,7 @@ function resolveMountFileRoot(rootDir: string, fileRoot: string): string {
   try {
     resolvedRoot = normalizeFilePath(fs.realpathSync(resolvedRoot))
   } catch (error) {
-    if (!isPathNotFoundError(error)) throw error
+    if (!isUnresolvedPathError(error, resolvedRoot)) throw error
   }
 
   return resolvedRoot.replace(/\/+$/, '') || '/'
@@ -174,10 +174,13 @@ function rootsOverlap(root: string, otherRoot: string): boolean {
   )
 }
 
-function isPathNotFoundError(error: unknown): boolean {
+function isUnresolvedPathError(error: unknown, filePath: string): boolean {
+  // Windows reports UNKNOWN rather than ENOENT when a UNC share cannot be reached.
   return (
     error instanceof Error &&
     'code' in error &&
-    (error.code === 'ENOENT' || error.code === 'ENOTDIR')
+    (error.code === 'ENOENT' ||
+      error.code === 'ENOTDIR' ||
+      (error.code === 'UNKNOWN' && filePath.startsWith('//')))
   )
 }
