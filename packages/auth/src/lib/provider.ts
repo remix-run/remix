@@ -31,7 +31,11 @@ export interface OAuthAccount<provider extends string = string> {
 /**
  * Normalized result returned by OAuth and OIDC callback handlers.
  */
-export interface OAuthResult<profile, provider extends string = string> {
+export interface OAuthResult<
+  profile,
+  provider extends string = string,
+  tokens extends OAuthTokens = OAuthTokens,
+> {
   /** Provider name that completed the callback flow. */
   provider: provider
   /** Stable provider-backed account identity for the authenticated user. */
@@ -39,40 +43,76 @@ export interface OAuthResult<profile, provider extends string = string> {
   /** Normalized profile data returned by the provider. */
   profile: profile
   /** Tokens returned by the provider for the completed authorization flow. */
-  tokens: OAuthTokens
+  tokens: tokens
 }
 
 /**
  * Public shape for an OAuth or OIDC provider used by external auth request handlers.
  */
-export interface OAuthProvider<_profile, provider extends string = string> {
+export interface OAuthProvider<
+  _profile,
+  provider extends string = string,
+  tokens extends OAuthTokens = OAuthTokens,
+> {
   /** Provider name used for routing, callbacks, and persisted transactions. */
   name: provider
+  /**
+   * Preserves the provider-specific token type for external auth helpers.
+   *
+   * @internal
+   */
+  readonly [oauthProviderTokens]?: (tokens: tokens) => tokens
 }
 
+/**
+ * In-progress OAuth data persisted between the authorization redirect and callback.
+ */
 export interface OAuthTransaction {
-  provider: string
-  state: string
-  codeVerifier: string
-  returnTo?: string
+  /** Provider name that started the transaction. */
+  readonly provider: string
+  /** Random value used to validate the callback. */
+  readonly state: string
+  /** PKCE verifier used to exchange the callback authorization code. */
+  readonly codeVerifier: string
+  /** Optional post-auth redirect target supplied by the application. */
+  readonly returnTo?: string
+  /**
+   * Opaque provider-owned data persisted with the transaction.
+   *
+   * Providers must encrypt sensitive values before assigning this field because session storage
+   * is not guaranteed to provide confidentiality.
+   */
+  providerState?: string
 }
 
-export interface OAuthProviderRuntime<profile, provider extends string = string> {
+/**
+ * Protocol hooks used by an OAuth provider package.
+ */
+export interface OAuthProviderRuntime<
+  profile,
+  provider extends string = string,
+  tokens extends OAuthTokens = OAuthTokens,
+> {
+  /** Creates the provider authorization URL and may attach opaque provider state to the transaction. */
   createAuthorizationURL(transaction: OAuthTransaction): URL | Promise<URL>
+  /** Exchanges a valid callback for the normalized provider result. */
   handleCallback(
     context: RequestContext,
     transaction: OAuthTransaction,
-  ): Promise<OAuthResult<profile, provider>>
-  refreshTokens?(tokens: OAuthTokens): Promise<OAuthTokens>
+  ): Promise<OAuthResult<profile, provider, tokens>>
+  /** Refreshes a provider-specific token bundle when the provider supports token refresh. */
+  refreshTokens?(tokens: tokens): Promise<tokens>
 }
 
-export const oauthProviderRuntime = Symbol('oauth-provider-runtime')
+const oauthProviderRuntime = Symbol('oauth-provider-runtime')
+const oauthProviderTokens = Symbol('oauth-provider-tokens')
 
-export type InternalOAuthProvider<profile, provider extends string = string> = OAuthProvider<
+type InternalOAuthProvider<
   profile,
-  provider
-> & {
-  [oauthProviderRuntime]: OAuthProviderRuntime<profile, provider>
+  provider extends string = string,
+  tokens extends OAuthTokens = OAuthTokens,
+> = OAuthProvider<profile, provider, tokens> & {
+  [oauthProviderRuntime]: OAuthProviderRuntime<profile, provider, tokens>
 }
 
 interface ExchangeTokenOptionsBase {
@@ -94,20 +134,36 @@ export interface ExchangeRefreshTokenOptions extends ExchangeTokenOptionsBase {
   scopes?: string[]
 }
 
-export function createOAuthProvider<profile, provider extends string>(
+/**
+ * Creates an OAuth provider for use with the external auth request helpers.
+ *
+ * @param name Stable provider name used for routing and persisted transactions.
+ * @param runtime Provider-owned authorization, callback, and optional token refresh hooks.
+ * @returns A provider that can be passed to `startExternalAuth()`, `finishExternalAuth()`, and
+ * `refreshExternalAuth()`.
+ */
+export function createOAuthProvider<
+  profile,
+  provider extends string,
+  tokens extends OAuthTokens = OAuthTokens,
+>(
   name: provider,
-  runtime: OAuthProviderRuntime<profile, provider>,
-): OAuthProvider<profile, provider> {
+  runtime: OAuthProviderRuntime<profile, provider, tokens>,
+): OAuthProvider<profile, provider, tokens> {
   return {
     name,
     [oauthProviderRuntime]: runtime,
-  } as InternalOAuthProvider<profile, provider>
+  } as InternalOAuthProvider<profile, provider, tokens>
 }
 
-export function getOAuthProviderRuntime<profile, provider extends string>(
-  provider: OAuthProvider<profile, provider>,
-): OAuthProviderRuntime<profile, provider> {
-  let runtime = (provider as InternalOAuthProvider<profile, provider>)[oauthProviderRuntime]
+export function getOAuthProviderRuntime<
+  profile,
+  provider extends string,
+  tokens extends OAuthTokens = OAuthTokens,
+>(
+  provider: OAuthProvider<profile, provider, tokens>,
+): OAuthProviderRuntime<profile, provider, tokens> {
+  let runtime = (provider as InternalOAuthProvider<profile, provider, tokens>)[oauthProviderRuntime]
   if (runtime == null) {
     throw new Error(`Invalid OAuth provider "${provider.name}".`)
   }
