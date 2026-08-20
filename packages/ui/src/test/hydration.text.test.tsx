@@ -132,5 +132,35 @@ describe('hydration', () => {
       expect(container.querySelector('div')).toBe(existingDiv)
       expect(existingDiv.textContent).toBe('')
     })
+
+    it('handles a single text node larger than the browser text-node cap', async () => {
+      // ~80 KB of distinct, countable lines; well above Chromium's 65536-char limit
+      // which causes the HTML parser to split the text into multiple adjacent Text nodes.
+      let lineCount = 10000
+      let largeText = Array.from({ length: lineCount }, (_, i) => `row-${i}`).join('\n')
+      // Sanity: the text must be large enough to trigger parser splitting
+      expect(largeText.length).toBeGreaterThan(65536)
+
+      let html = await renderToString(<pre>{largeText}</pre>)
+      container.innerHTML = html
+
+      let existingPre = container.querySelector('pre')
+      invariant(existingPre)
+
+      // Before hydration the parser may have split the text into multiple nodes
+      // After hydration the reconciler should consolidate them into a single text node
+      let root = createRoot(container)
+      root.render(<pre>{largeText}</pre>)
+      root.flush()
+
+      let hydratedPre = container.querySelector('pre')
+      invariant(hydratedPre)
+      expect(hydratedPre).toBe(existingPre)
+      // Must be a single text node — no leftover split siblings
+      expect(hydratedPre.childNodes.length).toBe(1)
+      // Content must match exactly — no duplication
+      expect(hydratedPre.textContent).toBe(largeText)
+      expect(hydratedPre.textContent.split('\n').length).toBe(lineCount)
+    })
   })
 })
