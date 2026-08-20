@@ -1,25 +1,15 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 
 /**
- * DPoP binding material required to sign follow-up requests for DPoP-bound access tokens.
+ * OAuth and OIDC tokens returned from a successful authorization code exchange.
  */
-export interface OAuthDpopBinding {
-  /** Public JWK advertised in DPoP proofs. */
-  publicJwk: JsonWebKey
-  /** Private JWK used to sign DPoP proofs. */
-  privateJwk: JsonWebKey
-  /** Latest nonce advertised by the target server, when one is required. */
-  nonce?: string
-}
-
-/**
- * Shared token fields returned from a successful authorization code exchange.
- */
-interface OAuthTokenBase {
+export interface OAuthTokens {
   /** Access token returned by the provider. */
   accessToken: string
   /** Refresh token returned by the provider, when available. */
   refreshToken?: string
+  /** Token type returned by the provider, such as `Bearer`. */
+  tokenType?: string
   /** Expiration time derived from the provider token response, when available. */
   expiresAt?: Date
   /** Scopes granted to the current access token, when provided by the provider. */
@@ -27,31 +17,6 @@ interface OAuthTokenBase {
   /** OpenID Connect ID token returned by the provider, when available. */
   idToken?: string
 }
-
-/**
- * OAuth tokens that are not bound to DPoP key material.
- */
-export interface OAuthStandardTokens extends OAuthTokenBase {
-  /** Token type returned by the provider, such as `Bearer`. */
-  tokenType?: string
-  /** DPoP binding data is not present for non-DPoP tokens. */
-  dpop?: undefined
-}
-
-/**
- * OAuth tokens bound to a DPoP key pair.
- */
-export interface OAuthDpopTokens extends OAuthTokenBase {
-  /** DPoP-bound access tokens always advertise the `DPoP` token type. */
-  tokenType: 'DPoP'
-  /** DPoP binding material returned for DPoP-bound access tokens, when available. */
-  dpop: OAuthDpopBinding
-}
-
-/**
- * OAuth and OIDC tokens returned from a successful authorization code exchange.
- */
-export type OAuthTokens = OAuthStandardTokens | OAuthDpopTokens
 
 /**
  * Stable account identifier for a provider-backed identity.
@@ -66,11 +31,7 @@ export interface OAuthAccount<provider extends string = string> {
 /**
  * Normalized result returned by OAuth and OIDC callback handlers.
  */
-export interface OAuthResult<
-  profile,
-  provider extends string = string,
-  tokens extends OAuthTokens = OAuthTokens,
-> {
+export interface OAuthResult<profile, provider extends string = string> {
   /** Provider name that completed the callback flow. */
   provider: provider
   /** Stable provider-backed account identity for the authenticated user. */
@@ -78,25 +39,15 @@ export interface OAuthResult<
   /** Normalized profile data returned by the provider. */
   profile: profile
   /** Tokens returned by the provider for the completed authorization flow. */
-  tokens: tokens
+  tokens: OAuthTokens
 }
 
 /**
  * Public shape for an OAuth or OIDC provider used by external auth request handlers.
  */
-export interface OAuthProvider<
-  _profile,
-  provider extends string = string,
-  tokens extends OAuthTokens = OAuthTokens,
-> {
+export interface OAuthProvider<_profile, provider extends string = string> {
   /** Provider name used for routing, callbacks, and persisted transactions. */
   name: provider
-  /**
-   * Phantom token marker used to preserve provider-specific token types.
-   *
-   * @internal
-   */
-  readonly [oauthProviderTokens]?: (tokens: tokens) => tokens
 }
 
 export interface OAuthTransaction {
@@ -104,31 +55,24 @@ export interface OAuthTransaction {
   state: string
   codeVerifier: string
   returnTo?: string
-  providerState?: string
 }
 
-export interface OAuthProviderRuntime<
-  profile,
-  provider extends string = string,
-  tokens extends OAuthTokens = OAuthTokens,
-> {
+export interface OAuthProviderRuntime<profile, provider extends string = string> {
   createAuthorizationURL(transaction: OAuthTransaction): URL | Promise<URL>
   handleCallback(
     context: RequestContext,
     transaction: OAuthTransaction,
-  ): Promise<OAuthResult<profile, provider, tokens>>
-  refreshTokens?(tokens: tokens): Promise<tokens>
+  ): Promise<OAuthResult<profile, provider>>
+  refreshTokens?(tokens: OAuthTokens): Promise<OAuthTokens>
 }
 
 export const oauthProviderRuntime = Symbol('oauth-provider-runtime')
-const oauthProviderTokens = Symbol('oauth-provider-tokens')
 
-export type InternalOAuthProvider<
+export type InternalOAuthProvider<profile, provider extends string = string> = OAuthProvider<
   profile,
-  provider extends string = string,
-  tokens extends OAuthTokens = OAuthTokens,
-> = OAuthProvider<profile, provider, tokens> & {
-  [oauthProviderRuntime]: OAuthProviderRuntime<profile, provider, tokens>
+  provider
+> & {
+  [oauthProviderRuntime]: OAuthProviderRuntime<profile, provider>
 }
 
 interface ExchangeTokenOptionsBase {
@@ -150,28 +94,20 @@ export interface ExchangeRefreshTokenOptions extends ExchangeTokenOptionsBase {
   scopes?: string[]
 }
 
-export function createOAuthProvider<
-  profile,
-  provider extends string,
-  tokens extends OAuthTokens = OAuthTokens,
->(
+export function createOAuthProvider<profile, provider extends string>(
   name: provider,
-  runtime: OAuthProviderRuntime<profile, provider, tokens>,
-): OAuthProvider<profile, provider, tokens> {
+  runtime: OAuthProviderRuntime<profile, provider>,
+): OAuthProvider<profile, provider> {
   return {
     name,
     [oauthProviderRuntime]: runtime,
-  } as InternalOAuthProvider<profile, provider, tokens>
+  } as InternalOAuthProvider<profile, provider>
 }
 
-export function getOAuthProviderRuntime<
-  profile,
-  provider extends string,
-  tokens extends OAuthTokens = OAuthTokens,
->(
-  provider: OAuthProvider<profile, provider, tokens>,
-): OAuthProviderRuntime<profile, provider, tokens> {
-  let runtime = (provider as InternalOAuthProvider<profile, provider, tokens>)[oauthProviderRuntime]
+export function getOAuthProviderRuntime<profile, provider extends string>(
+  provider: OAuthProvider<profile, provider>,
+): OAuthProviderRuntime<profile, provider> {
+  let runtime = (provider as InternalOAuthProvider<profile, provider>)[oauthProviderRuntime]
   if (runtime == null) {
     throw new Error(`Invalid OAuth provider "${provider.name}".`)
   }
@@ -196,7 +132,7 @@ export function createAuthorizationURL(
 
 export async function exchangeAuthorizationCode(
   options: ExchangeAuthorizationCodeOptions,
-): Promise<OAuthStandardTokens> {
+): Promise<OAuthTokens> {
   return exchangeOAuthTokens(
     {
       ...options,
@@ -213,7 +149,7 @@ export async function exchangeAuthorizationCode(
 
 export async function exchangeRefreshToken(
   options: ExchangeRefreshTokenOptions,
-): Promise<OAuthStandardTokens> {
+): Promise<OAuthTokens> {
   let params = new URLSearchParams({
     grant_type: 'refresh_token',
     refresh_token: options.refreshToken,
@@ -232,10 +168,10 @@ export async function exchangeRefreshToken(
   )
 }
 
-export function mergeRefreshedStandardTokens(
-  currentTokens: OAuthStandardTokens,
-  refreshedTokens: OAuthStandardTokens,
-): OAuthStandardTokens {
+export function mergeRefreshedTokens(
+  currentTokens: OAuthTokens,
+  refreshedTokens: OAuthTokens,
+): OAuthTokens {
   return {
     ...currentTokens,
     ...refreshedTokens,
@@ -274,7 +210,7 @@ export function getAuthorizationCode(context: RequestContext): string {
 async function exchangeOAuthTokens(
   options: ExchangeTokenOptionsBase & { fallbackError: string },
   params: URLSearchParams,
-): Promise<OAuthStandardTokens> {
+): Promise<OAuthTokens> {
   let clientAuthentication = options.clientAuthentication ?? 'request-body'
 
   if (clientAuthentication === 'request-body') {
@@ -305,7 +241,7 @@ async function exchangeOAuthTokens(
   return normalizeOAuthTokenResponse(json)
 }
 
-function normalizeOAuthTokenResponse(json: unknown): OAuthStandardTokens {
+function normalizeOAuthTokenResponse(json: unknown): OAuthTokens {
   if (typeof json !== 'object' || json == null || Array.isArray(json)) {
     throw new Error('Expected OAuth provider to return a JSON object.')
   }

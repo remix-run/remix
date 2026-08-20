@@ -1,7 +1,7 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 
 import { getOAuthProviderRuntime } from './provider.ts'
-import type { OAuthProvider, OAuthTokens } from './provider.ts'
+import type { OAuthProvider } from './provider.ts'
 import {
   createOAuthTransaction,
   createRedirectResponse,
@@ -30,10 +30,8 @@ export interface StartExternalAuthOptions {
 export async function startExternalAuth<
   context extends RequestContext<any, any> = RequestContext,
   profile = never,
-  provider extends string = string,
-  tokens extends OAuthTokens = OAuthTokens,
 >(
-  provider: OAuthProvider<profile, provider, tokens>,
+  provider: OAuthProvider<profile>,
   context: context,
   options: StartExternalAuthOptions = {},
 ): Promise<Response> {
