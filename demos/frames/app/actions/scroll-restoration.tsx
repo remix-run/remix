@@ -1,9 +1,9 @@
-import { Frame, css, type Handle } from 'remix/ui'
+import { css, type Handle } from 'remix/ui'
 
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import { leadStyle, linkStyle, pageHeadingStyle, panelStyle } from '../ui/public/styles.ts'
-import { ScrollRestorationDetail } from './public/scroll-restoration.tsx'
+import { StoreScrollReproduction } from './public/scroll-restoration.tsx'
 
 export function ScrollRestorationPage(handle: Handle<{ newsletterHistory?: 'push' | 'replace' }>) {
   return () => (
@@ -13,24 +13,11 @@ export function ScrollRestorationPage(handle: Handle<{ newsletterHistory?: 'push
       </a>
       <h1 mix={pageHeadingStyle}>Navigation scroll behavior</h1>
       <p mix={[leadStyle, css({ lineHeight: 1.6 })]}>
-        This page exercises native traversal restoration and explicit scroll preservation for new
-        push and replace navigations.
+        This mirrors the store issue: a top-level client entry switches between a short detail and a
+        tall collection rendered by a blocking frame.
       </p>
 
-      <section mix={[panelStyle, css({ margin: '20px 0' })]}>
-        <h2 mix={css({ marginTop: 0, fontSize: 18 })}>Traversal restoration</h2>
-        <p mix={[leadStyle, css({ lineHeight: 1.6 })]}>
-          The tall list is rendered in a blocking frame with a hydrated client entry. Traversal
-          waits for that frame to finish reconciling before the browser restores scroll.
-        </p>
-        <ol mix={css({ marginBottom: 0, paddingLeft: 22, lineHeight: 1.7 })}>
-          <li>Scroll to the end of the list and open the detail page.</li>
-          <li>Scroll partway down the detail page, then use the browser Back button.</li>
-          <li>Confirm this page returns to the end of the list.</li>
-        </ol>
-      </section>
-
-      <Frame src={routes.frames.scrollRestorationItems.href()} />
+      <StoreScrollReproduction variant="list" />
 
       <section
         id="scroll-restoration-list-end"
@@ -169,16 +156,17 @@ const newsletterButtonStyle = css({
 
 export function ScrollRestorationDetailPage() {
   return () => (
-    <Document title="Scroll restoration detail" maxWidth="860px">
-      <a href={routes.scrollRestoration.href()} mix={linkStyle}>
-        ← Return with a new navigation
+    <Document title="Navigation scroll behavior" maxWidth="860px">
+      <a href={routes.home.href()} mix={linkStyle}>
+        ← Back to demos
       </a>
-      <h1 mix={pageHeadingStyle}>Shorter detail document</h1>
+      <h1 mix={pageHeadingStyle}>Navigation scroll behavior</h1>
       <p mix={[leadStyle, css({ lineHeight: 1.6 })]}>
-        Scroll down this page, note <code>window.scrollY</code>, then use the browser Back button.
-        The link above starts a new navigation and does not test traversal restoration.
+        This mirrors the store issue: a top-level client entry switches between a short detail and a
+        tall collection rendered by a blocking frame.
       </p>
-      <ScrollRestorationDetail />
+
+      <StoreScrollReproduction variant="detail" />
     </Document>
   )
 }
