@@ -90,7 +90,7 @@ describe('navigate', () => {
 
     let anchor = document.createElement('a')
     anchor.href = '/login'
-    anchor.setAttribute('rmx-document', '')
+    anchor.setAttribute('data-rmx-document', '')
     document.body.append(anchor)
     anchor.addEventListener('click', (event) => event.preventDefault())
 
@@ -237,7 +237,7 @@ describe('navigate', () => {
 
     let anchor = document.createElement('a')
     anchor.href = destination.href
-    anchor.setAttribute('rmx-history', 'replace')
+    anchor.setAttribute('data-rmx-history', 'replace')
     document.body.append(anchor)
 
     let entryCountBeforeNavigation = window.navigation.entries().length
@@ -444,7 +444,7 @@ describe('form navigation', () => {
     controller.abort()
   })
 
-  it('pushes same-location POST history when rmx-history is push', async () => {
+  it('pushes same-location POST history when data-rmx-history is push', async () => {
     let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
@@ -457,7 +457,7 @@ describe('form navigation', () => {
     let form = document.createElement('form')
     form.action = window.location.href
     form.method = 'post'
-    form.setAttribute('rmx-history', 'push')
+    form.setAttribute('data-rmx-history', 'push')
     document.body.append(form)
 
     let entryBeforeSubmission = getCurrentNavigationEntry()
@@ -545,7 +545,7 @@ describe('form navigation', () => {
     button.value = 'save'
     button.setAttribute('formmethod', 'post')
     button.setAttribute('formenctype', 'multipart/form-data')
-    button.setAttribute('rmx-target', 'account')
+    button.setAttribute('data-rmx-target', 'account')
     form.append(input, button)
     document.body.append(form)
 
@@ -644,7 +644,7 @@ describe('form navigation', () => {
     let form = document.createElement('form')
     form.action = originalUrl
     form.method = 'get'
-    form.setAttribute('rmx-history', 'replace')
+    form.setAttribute('data-rmx-history', 'replace')
     let input = document.createElement('input')
     input.name = 'query'
     input.value = 'replace-frames'
@@ -701,7 +701,7 @@ describe('form navigation', () => {
     let controller = new AbortController()
     startNavigationListenerImpl(controller.signal, stubFrames)
     let form = document.createElement('form')
-    form.setAttribute('rmx-document', '')
+    form.setAttribute('data-rmx-document', '')
     let intercept = mock.fn()
 
     navigateListener?.(

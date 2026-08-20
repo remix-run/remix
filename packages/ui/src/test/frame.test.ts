@@ -17,7 +17,7 @@ import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createStyleManager } from '../style/index.ts'
 import { withResolvers } from './utils.ts'
 
-const managedModulePreloadSelector = 'link[data-rmx][rel="modulepreload"]'
+const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'
 
 describe('frames', () => {
   afterEach(() => {
@@ -492,7 +492,7 @@ describe('frames', () => {
         return appendFlushMarker(
           [
             '<!doctype html><html><head><title>Next</title>',
-            '<link data-rmx rel="modulepreload" href="/entry.js" />',
+            '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
             '</head><body><!-- rmx:h:h1 --><section>next</section><!-- /rmx:h -->',
             rmxDataScript('next'),
             '</body></html>',
@@ -546,7 +546,7 @@ describe('frames', () => {
       },
       resolveFrame() {
         return [
-          '<head><link data-rmx rel="modulepreload" href="/fragment-entry.js" /></head>',
+          '<head><link data-rmx-module-preload rel="modulepreload" href="/fragment-entry.js" /></head>',
           '<!-- rmx:h:h1 --><section>fragment</section><!-- /rmx:h -->',
           rmxDataScript('fragment', '/fragment-entry.js', 'FragmentEntry'),
         ].join('')
@@ -574,7 +574,7 @@ describe('frames', () => {
   it('keeps active initial preloads connected across a document reload', async () => {
     document.documentElement.innerHTML = [
       '<head><title>Initial</title>',
-      '<link data-rmx rel="modulepreload" href="/entry.js" />',
+      '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
       '</head><body></body>',
     ].join('')
 
@@ -651,7 +651,8 @@ describe('frames', () => {
     try {
       await frame.ready()
       let response = document.createElement('template')
-      response.innerHTML = '<link data-rmx rel="modulepreload" href="/frame-entry.js" />'
+      response.innerHTML =
+        '<link data-rmx-module-preload rel="modulepreload" href="/frame-entry.js" />'
       getDocumentModulePreloader(document).consumePreloadLinks(response.content)
       let activePreload = document.head.querySelector<HTMLLinkElement>(managedModulePreloadSelector)
       expect(activePreload).not.toBeNull()

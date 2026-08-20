@@ -1232,7 +1232,7 @@ function finalizeHtml(html: string, context: RenderContext): string {
 
 const FRAME_HEAD_OPEN_TAG = '<head>'
 const FRAME_HEAD_CLOSE_TAG = '</head>'
-const MARKED_MODULE_PRELOAD_START = '<link data-rmx rel="modulepreload" href="'
+const MARKED_MODULE_PRELOAD_START = '<link data-rmx-module-preload rel="modulepreload" href="'
 const MODULE_PRELOAD_END = '" />'
 
 function createModulePreloadTag(href: string): string {
@@ -1322,7 +1322,7 @@ function renderStyleTag(
 ): string {
   let wrappedCss = wrapStyleForLayer(selector, css, layer)
   if (!wrappedCss) return ''
-  return `<style data-rmx="${escapeHtml(selector)}">${escapeStyleText(wrappedCss)}</style>`
+  return `<style data-rmx-style="${escapeHtml(selector)}">${escapeStyleText(wrappedCss)}</style>`
 }
 
 function escapeStyleText(css: string): string {

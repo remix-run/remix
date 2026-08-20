@@ -401,7 +401,7 @@ describe('diffNodes', () => {
       let innerEnd = document.createComment('/rmx:h')
       let owned = document.createElement('section')
       let outerEnd = document.createComment('/rmx:h')
-      let dataKey = 'data-key'
+      let dataKey = 'data-rmx-key'
       owned.setAttribute(dataKey, 'entry')
       current.append(outerStart, innerStart, innerContent, innerEnd, owned, outerEnd)
 
@@ -519,10 +519,10 @@ describe('diffNodes', () => {
   })
 
   describe('keyed diffs', () => {
-    it('retains keyed elements via data-key', () => {
+    it('retains keyed elements via data-rmx-key', () => {
       let container = document.createElement('div')
       container.innerHTML =
-        '<ul><li data-key="a">A</li><li data-key="b">B</li><li data-key="c">C</li></ul>'
+        '<ul><li data-rmx-key="a">A</li><li data-rmx-key="b">B</li><li data-rmx-key="c">C</li></ul>'
       let list = container.querySelector('ul')
       invariant(list)
 
@@ -533,7 +533,7 @@ describe('diffNodes', () => {
 
       diffDom(
         container,
-        '<ul><li data-key="b">B</li><li data-key="a">A</li><li data-key="c">C</li></ul>',
+        '<ul><li data-rmx-key="b">B</li><li data-rmx-key="a">A</li><li data-rmx-key="c">C</li></ul>',
       )
 
       let updatedList = container.querySelector('ul')
@@ -542,7 +542,7 @@ describe('diffNodes', () => {
       expect(updatedList.children.item(1)).toBe(a)
       expect(updatedList.children.item(2)).toBe(c)
       expect(updatedList.innerHTML).toBe(
-        '<li data-key="b">B</li><li data-key="a">A</li><li data-key="c">C</li>',
+        '<li data-rmx-key="b">B</li><li data-rmx-key="a">A</li><li data-rmx-key="c">C</li>',
       )
     })
   })
@@ -627,16 +627,16 @@ describe('diffNodes', () => {
       expect(button.isConnected).toBe(false)
     })
 
-    it('preserves rmx-preserve-dom element attributes and children', () => {
+    it('preserves data-rmx-preserve-dom element attributes and children', () => {
       let container = document.createElement('div')
       container.innerHTML =
-        '<div rmx-preserve-dom data-state="client"><button>Client</button></div>'
+        '<div data-rmx-preserve-dom data-state="client"><button>Client</button></div>'
       let div = container.querySelector('div')
       invariant(div)
       let button = div.querySelector('button')
       invariant(button)
 
-      diffDom(container, '<div rmx-preserve-dom data-state="server"><span>Server</span></div>')
+      diffDom(container, '<div data-rmx-preserve-dom data-state="server"><span>Server</span></div>')
 
       expect(container.firstElementChild).toBe(div)
       expect(div.getAttribute('data-state')).toBe('client')
@@ -644,7 +644,7 @@ describe('diffNodes', () => {
       expect(div.innerHTML).toBe('<button>Client</button>')
     })
 
-    it('preserves rmx-preserve-dom custom element children added during initialization', () => {
+    it('preserves data-rmx-preserve-dom custom element children added during initialization', () => {
       let tagName = 'mock-pagefind-modal-trigger-lifecycle'
       if (!customElements.get(tagName)) {
         customElements.define(
@@ -680,10 +680,10 @@ describe('diffNodes', () => {
         let button = trigger.querySelector('button')
         invariant(button)
 
-        diffDom(container, `<${tagName} rmx-preserve-dom></${tagName}>`)
+        diffDom(container, `<${tagName} data-rmx-preserve-dom></${tagName}>`)
 
         expect(container.firstElementChild).toBe(trigger)
-        expect(trigger.hasAttribute('rmx-preserve-dom')).toBe(true)
+        expect(trigger.hasAttribute('data-rmx-preserve-dom')).toBe(true)
         expect(trigger.querySelector('button')).toBe(button)
         expect(button.isConnected).toBe(true)
       } finally {
@@ -691,7 +691,7 @@ describe('diffNodes', () => {
       }
     })
 
-    it('can pair rmx-preserve-dom elements with data-key before index fallback moves them', () => {
+    it('can pair data-rmx-preserve-dom elements with data-rmx-key before index fallback moves them', () => {
       let tagName = 'mock-pagefind-modal-lifecycle'
       let connects = 0
       let disconnects = 0
@@ -715,7 +715,7 @@ describe('diffNodes', () => {
       document.body.appendChild(container)
 
       try {
-        container.innerHTML = `<section><span>Old</span><${tagName} data-key="modal" rmx-preserve-dom><dialog>Client</dialog></${tagName}></section>`
+        container.innerHTML = `<section><span>Old</span><${tagName} data-rmx-key="modal" data-rmx-preserve-dom><dialog>Client</dialog></${tagName}></section>`
         let modal = container.querySelector(tagName)
         invariant(modal)
         let dialog = modal.querySelector('dialog')
@@ -725,7 +725,7 @@ describe('diffNodes', () => {
 
         diffDom(
           container,
-          `<section><span>New</span><p>Inserted</p><${tagName} data-key="modal" rmx-preserve-dom></${tagName}></section>`,
+          `<section><span>New</span><p>Inserted</p><${tagName} data-rmx-key="modal" data-rmx-preserve-dom></${tagName}></section>`,
         )
 
         expect(container.querySelector(tagName)).toBe(modal)
@@ -738,7 +738,7 @@ describe('diffNodes', () => {
       }
     })
 
-    it('does not reconnect keyed rmx-preserve-dom elements during reordering', () => {
+    it('does not reconnect keyed data-rmx-preserve-dom elements during reordering', () => {
       let tagName = 'mock-pagefind-modal-stationary'
       let connects = 0
       let disconnects = 0
@@ -762,7 +762,7 @@ describe('diffNodes', () => {
       document.body.appendChild(container)
 
       try {
-        container.innerHTML = `<section><${tagName} data-key="modal" rmx-preserve-dom><dialog>Client</dialog></${tagName}><p>Old</p></section>`
+        container.innerHTML = `<section><${tagName} data-rmx-key="modal" data-rmx-preserve-dom><dialog>Client</dialog></${tagName}><p>Old</p></section>`
         let modal = container.querySelector(tagName)
         invariant(modal)
         let dialog = modal.querySelector('dialog')
@@ -772,7 +772,7 @@ describe('diffNodes', () => {
 
         diffDom(
           container,
-          `<section><p>New</p><${tagName} data-key="modal" rmx-preserve-dom></${tagName}></section>`,
+          `<section><p>New</p><${tagName} data-rmx-key="modal" data-rmx-preserve-dom></${tagName}></section>`,
         )
 
         expect(container.querySelector(tagName)).toBe(modal)

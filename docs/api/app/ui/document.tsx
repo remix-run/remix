@@ -172,7 +172,7 @@ function Head(
         {/* Keep styles after variable head content so frame diffs do not reload them. */}
         {searchEnabled ? (
           <link
-            data-key="docs-pagefind-stylesheet"
+            data-rmx-key="docs-pagefind-stylesheet"
             href={withVersion(
               routes.assets.href({ asset: 'pagefind/pagefind-component-ui.css' }),
               activeVersion,
@@ -180,11 +180,11 @@ function Head(
             rel="stylesheet"
           />
         ) : null}
-        <link data-key="docs-stylesheet" rel="stylesheet" href={stylesheetHref} />
-        <script data-key="docs-client-entry" type="module" src={entryHref} />
+        <link data-rmx-key="docs-stylesheet" rel="stylesheet" href={stylesheetHref} />
+        <script data-rmx-key="docs-client-entry" type="module" src={entryHref} />
         {searchEnabled ? (
           <script
-            data-key="docs-pagefind-client-entry"
+            data-rmx-key="docs-pagefind-client-entry"
             src={withVersion(
               routes.assets.href({ asset: 'pagefind/pagefind-component-ui.js' }),
               activeVersion,
@@ -210,7 +210,7 @@ function MainContent(
     let contentId = `${handle.id}-content`
 
     return (
-      <div class="docs-layout" data-key={`api-page-${handle.props.page.path}`}>
+      <div class="docs-layout" data-rmx-key={`api-page-${handle.props.page.path}`}>
         <article class="docs-article">
           <div
             id={contentId}

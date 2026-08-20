@@ -55,16 +55,16 @@ describe('createApiRouter()', () => {
       'rel="modulepreload" href="/assets/app/actions/public/entry.tsx"',
     )
     let pagefindStylesIndex = html.indexOf(
-      'data-key="docs-pagefind-stylesheet" href="/assets/pagefind/pagefind-component-ui.css"',
+      'data-rmx-key="docs-pagefind-stylesheet" href="/assets/pagefind/pagefind-component-ui.css"',
     )
     let docsStylesIndex = html.indexOf(
-      'data-key="docs-stylesheet" rel="stylesheet" href="/assets/app/actions/public/docs.css"',
+      'data-rmx-key="docs-stylesheet" rel="stylesheet" href="/assets/app/actions/public/docs.css"',
     )
 
     let entryScriptIndex = html.indexOf(
-      'data-key="docs-client-entry" type="module" src="/assets/app/actions/public/entry.tsx"',
+      'data-rmx-key="docs-client-entry" type="module" src="/assets/app/actions/public/entry.tsx"',
     )
-    let pagefindScriptIndex = html.indexOf('data-key="docs-pagefind-client-entry"')
+    let pagefindScriptIndex = html.indexOf('data-rmx-key="docs-pagefind-client-entry"')
 
     assert.equal(entryPreloadIndex >= 0, true)
     assert.equal(pagefindStylesIndex > entryPreloadIndex, true)

@@ -154,8 +154,8 @@ async function navigateWithLink(
 ): Promise<void> {
   let link = document.createElement('a')
   link.href = href
-  link.setAttribute('rmx-target', options.target)
-  if (options.src !== undefined) link.setAttribute('rmx-src', options.src)
+  link.setAttribute('data-rmx-target', options.target)
+  if (options.src !== undefined) link.setAttribute('data-rmx-src', options.src)
   document.body.append(link)
 
   link.click()
@@ -2235,7 +2235,7 @@ describe('run', () => {
     expect(fixture.requests).toEqual([{ src: destinationUrl, target: undefined }])
   })
 
-  it('reloads only the target frame using the public destination without rmx-src', async (t) => {
+  it('reloads only the target frame using the public destination without data-rmx-src', async (t) => {
     let fixture = await setupFrameNavigationTest(t)
     let destinationUrl = new URL('/destination', window.location.href).href
 
