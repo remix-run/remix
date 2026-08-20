@@ -21,7 +21,7 @@ Then visit [http://localhost:44100](http://localhost:44100).
 
 ## Database Commands
 
-Use `pnpm db:status` to inspect migrations and `pnpm db:migrate` to apply them. Run `pnpm db:reset` whenever you want to recreate the local database from scratch.
+Use `pnpm db:status` to inspect migrations, `pnpm db:migrate` to apply them, and `pnpm db:rollback` to revert the latest one. Run `pnpm db:reset` whenever you want to recreate the local database from scratch. These commands load the same `.env` file as the server, so `DATABASE_URL` selects the same database for both.
 
 ## Code Highlights
 

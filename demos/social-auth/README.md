@@ -63,7 +63,7 @@ If you configure the external providers locally, use these callback URLs:
 
 The demo keeps its runtime schema in `app/data/`, its SQLite database and migrations in `db/`, and its session files in `tmp/`. The database connection, migrations, and seed file are configured in [`remix.json`](remix.json).
 
-Use `pnpm db:status` to inspect migrations, `pnpm db:migrate` to apply them, and `pnpm db:seed` to reload the demo accounts. Run `pnpm db:reset` whenever you want a fresh database.
+Use `pnpm db:status` to inspect migrations, `pnpm db:migrate` to apply them, `pnpm db:rollback` to revert the latest one, and `pnpm db:seed` to reload the demo accounts. Run `pnpm db:reset` whenever you want a fresh database.
 
 On successful external login, the demo:
 
