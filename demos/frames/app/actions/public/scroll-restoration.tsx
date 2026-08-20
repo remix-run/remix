@@ -1,5 +1,6 @@
-import { clientEntry, css, on, type Handle } from 'remix/ui'
+import { clientEntry, Frame, css, on, type Handle } from 'remix/ui'
 
+import { routes } from '../../routes.ts'
 import { leadStyle, mutedStyle, panelStyle, sectionHeadingStyle } from '../../ui/public/styles.ts'
 
 const listItems = Array.from({ length: 48 }, (_, index) => index + 1)
@@ -39,7 +40,7 @@ export const ScrollRestorationList = clientEntry(
               css({ marginLeft: 12 }),
             ]}
           >
-            Hydration check: {interactions}
+            Frame hydration check: {interactions}
           </button>
         </div>
 
@@ -66,43 +67,84 @@ export const ScrollRestorationList = clientEntry(
   },
 )
 
-export const ScrollRestorationDetail = clientEntry(
+export const StoreScrollReproduction = clientEntry(
   import.meta.url,
-  function ScrollRestorationDetail(handle: Handle) {
+  function StoreScrollReproduction(handle: Handle<{ variant: 'list' | 'detail' }>) {
     let interactions = 0
 
     return () => (
-      <article
-        id="scroll-restoration-detail"
-        mix={[
-          panelStyle,
-          css({
-            minHeight: 1400,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            padding: 20,
-            marginTop: 20,
-            background: 'rgba(255,255,255,0.03)',
-          }),
-        ]}
-      >
-        <div>
-          <h2 mix={sectionHeadingStyle}>Hydrated detail content</h2>
+      <section id="store-scroll-reproduction">
+        <div
+          mix={[
+            panelStyle,
+            css({
+              position: 'sticky',
+              top: 12,
+              zIndex: 1,
+              padding: 14,
+              marginBottom: 20,
+              background: '#151c35',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+            }),
+          ]}
+        >
+          <strong>Store-style top-level client entry</strong>
+          <span mix={[mutedStyle, css({ marginLeft: 8 })]}>
+            rendering {handle.props.variant === 'list' ? 'the collection frame' : 'a short detail'}
+          </span>
           <button
             type="button"
-            mix={on('click', () => {
-              interactions++
-              handle.update()
-            })}
+            mix={[
+              on('click', () => {
+                interactions++
+                handle.update()
+              }),
+              css({ marginLeft: 12 }),
+            ]}
           >
             Hydration check: {interactions}
           </button>
         </div>
-        <p mix={[leadStyle, css({ marginBottom: 0 })]}>
-          You are near the end of the detail page. Use the browser Back button now.
-        </p>
-      </article>
+
+        {handle.props.variant === 'list' ? (
+          <div>
+            <section mix={[panelStyle, css({ marginBottom: 20 })]}>
+              <h2 mix={css({ marginTop: 0, fontSize: 18 })}>Traversal restoration</h2>
+              <ol mix={css({ marginBottom: 0, paddingLeft: 22, lineHeight: 1.7 })}>
+                <li>Click the top-level hydration check to give the client entry local state.</li>
+                <li>Scroll to the end of the collection and open the detail view.</li>
+                <li>Use the browser Back button—not a return link.</li>
+                <li>Confirm the hydration count and collection scroll position are restored.</li>
+              </ol>
+            </section>
+            <Frame src={routes.frames.scrollRestorationItems.href()} />
+          </div>
+        ) : (
+          <article
+            id="scroll-restoration-detail"
+            mix={[
+              panelStyle,
+              css({
+                minHeight: 1000,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                padding: 20,
+                background: 'rgba(255,255,255,0.03)',
+              }),
+            ]}
+          >
+            <div>
+              <h2 mix={sectionHeadingStyle}>Short detail view</h2>
+              <p mix={[leadStyle, css({ lineHeight: 1.6 })]}>
+                The top-level client entry now renders much less content than the collection. Use
+                the browser Back button while this short layout is present.
+              </p>
+            </div>
+            <p mix={[leadStyle, css({ marginBottom: 0 })]}>Use the browser Back button now.</p>
+          </article>
+        )}
+      </section>
     )
   },
 )
