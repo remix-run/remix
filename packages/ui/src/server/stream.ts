@@ -89,6 +89,8 @@ export interface ImportMap {
 
 type ImportMapAddress = string | null
 type ImportMapImports = Record<string, ImportMapAddress>
+type AuthoredImportMapEntries = Map<string, ImportMapAddress>
+type AuthoredImportMapScope = { imports: AuthoredImportMapEntries }
 
 interface ClientEntryHeadResources {
   modulePreloadTags: Set<string>
@@ -103,6 +105,7 @@ interface FrameData {
 
 interface RenderContext {
   insideSvg: boolean
+  insideHead: boolean
   onError: (error: unknown) => void
   parentVNode?: VNode
   styleCache: Map<string, { selector: string; css: string }>
@@ -114,6 +117,8 @@ interface RenderContext {
   pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
   hydrationData: Map<string, HydrationData>
   unresolvedHydrationData: Map<string, UnresolvedHydrationData>
+  authoredImportMapImports: AuthoredImportMapEntries
+  authoredImportMapScopes: Map<string, AuthoredImportMapScope>
   frameData: Map<string, FrameData>
   clientEntryHeadResources: ClientEntryHeadResources
   blockingFrameTails: ReadableStream<Uint8Array>[]
@@ -216,12 +221,15 @@ export function renderToStream(
 
   let context: RenderContext = {
     insideSvg: false,
+    insideHead: false,
     onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
     styleCache: new Map(),
     pendingFrames: [],
     hydrationData: new Map(),
     unresolvedHydrationData: new Map(),
+    authoredImportMapImports: new Map(),
+    authoredImportMapScopes: new Map(),
     frameData: new Map(),
     clientEntryHeadResources: { modulePreloadTags: new Set() },
     blockingFrameTails: [],
@@ -553,6 +561,9 @@ function buildElementSegment(
 
   if (tag === 'script') {
     if (typeof props.children === 'string') {
+      if (context.insideHead) {
+        collectAuthoredImportMap(context, tag, processedProps, props.children)
+      }
       return staticSeg(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
     }
     if (props.children != null) {
@@ -576,6 +587,49 @@ function buildTextareaElementSegment(tag: string, props: any): Segment {
   let attrs = renderAttributes(props, false, TEXTAREA_VALUE_PROPS)
   let value = props.value ?? props.defaultValue ?? ''
   return staticSeg(`<${tag}${attrs}>${escapeTextContent(String(value))}</${tag}>`)
+}
+
+function collectAuthoredImportMap(
+  context: RenderContext,
+  tag: string,
+  props: Record<string, unknown>,
+  children: unknown,
+): void {
+  if (
+    tag !== 'script' ||
+    typeof props.type !== 'string' ||
+    props.type.toLowerCase() !== 'importmap' ||
+    (props.src !== undefined && props.src !== null && props.src !== false) ||
+    typeof children !== 'string'
+  ) {
+    return
+  }
+
+  let importMap = parseAuthoredImportMap(children)
+  if (!importMap) return
+
+  if (importMap.imports) {
+    collectAuthoredImportMapEntries(context.authoredImportMapImports, importMap.imports)
+  }
+  if (importMap.scopes) {
+    for (let [scope, imports] of Object.entries(importMap.scopes)) {
+      let authoredScope = context.authoredImportMapScopes.get(scope)
+      if (!authoredScope) {
+        authoredScope = { imports: new Map() }
+        context.authoredImportMapScopes.set(scope, authoredScope)
+      }
+      collectAuthoredImportMapEntries(authoredScope.imports, imports)
+    }
+  }
+}
+
+function collectAuthoredImportMapEntries(
+  target: AuthoredImportMapEntries,
+  source: ImportMapImports,
+): void {
+  for (let [specifier, address] of Object.entries(source)) {
+    if (!target.has(specifier)) target.set(specifier, address)
+  }
 }
 
 function renderInputAttributes(props: any): string {
@@ -603,8 +657,11 @@ function buildHeadElementSegment(
   let attrs = renderAttributes(processedProps, false)
 
   let open = staticSeg(`<${tag}${attrs}>`)
+  let previousInsideHead = context.insideHead
+  context.insideHead = true
   let children =
     props.children != null ? buildSegment(props.children, context, frameState) : staticSeg('')
+  context.insideHead = previousInsideHead
   let close = staticSeg(`</${tag}>`)
 
   return compositeSeg([open, children, close])
@@ -1234,7 +1291,7 @@ function finalizeHtml(html: string, context: RenderContext): string {
 
   let preloads = collectModulePreloadTags(context.clientEntryHeadResources)
   let styles = collectStyleTags(context)
-  let importMapScript = collectImportMapScript(context.clientEntryHeadResources)
+  let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
   let headContent = importMapScript + preloads + styles
   if (hasHtmlRoot && headContent) {
     let headCloseIndex = html.indexOf('</head>')
@@ -1419,8 +1476,96 @@ function buildImportMapScript(importMap: ImportMap): string {
   return `<script data-rmx-import-map type="importmap">${serializedData}</script>`
 }
 
-function collectImportMapScript(resources: ClientEntryHeadResources): string {
-  return resources.importMap ? buildImportMapScript(resources.importMap) : ''
+function collectImportMapScript(
+  context: RenderContext,
+  resources: ClientEntryHeadResources,
+): string {
+  let importMap = getImportMapDelta(context, resources.importMap)
+  return importMap ? buildImportMapScript(importMap) : ''
+}
+
+function getImportMapDelta(
+  context: RenderContext,
+  importMap: ImportMap | undefined,
+): ImportMap | null {
+  if (!importMap) return null
+
+  let imports = importMap.imports
+    ? getImportMapImportsDelta(context.authoredImportMapImports, importMap.imports)
+    : undefined
+  let scopes: Record<string, ImportMapImports> = {}
+  for (let [scope, scopedImports] of Object.entries(importMap.scopes ?? {})) {
+    let authoredImports =
+      context.authoredImportMapScopes.get(scope)?.imports ?? new Map<string, ImportMapAddress>()
+    let importsDelta = getImportMapImportsDelta(authoredImports, scopedImports, scope)
+    if (importsDelta) scopes[scope] = importsDelta
+  }
+
+  if (!imports && Object.keys(scopes).length === 0) return null
+  return {
+    ...(imports ? { imports } : null),
+    ...(Object.keys(scopes).length > 0 ? { scopes } : null),
+  }
+}
+
+function getImportMapImportsDelta(
+  authoredImports: AuthoredImportMapEntries,
+  discoveredImports: ImportMapImports,
+  scope?: string,
+): ImportMapImports | undefined {
+  let delta: ImportMapImports = {}
+  for (let [specifier, address] of Object.entries(discoveredImports)) {
+    if (!authoredImports.has(specifier)) {
+      delta[specifier] = address
+      continue
+    }
+
+    let authoredAddress = authoredImports.get(specifier)
+    if (authoredAddress === address) continue
+
+    let scopeDescription = scope ? ` in scope "${scope}"` : ''
+    console.warn(
+      `[remix] Ignoring conflicting import map entry for "${specifier}"${scopeDescription}: ` +
+        `${formatImportMapAddress(authoredAddress)} is already authored, but the discovered map points to ${formatImportMapAddress(address)}`,
+    )
+  }
+
+  return Object.keys(delta).length > 0 ? delta : undefined
+}
+
+function parseAuthoredImportMap(json: string): ImportMap | null {
+  let value: unknown
+  try {
+    value = JSON.parse(json)
+  } catch {
+    return null
+  }
+  if (!isObjectRecord(value)) return null
+
+  let importMap: ImportMap = {}
+  if (value.imports !== undefined) {
+    if (!isObjectRecord(value.imports)) return null
+    importMap.imports = parseAuthoredImportMapImports(value.imports)
+  }
+  if (value.scopes !== undefined) {
+    if (!isObjectRecord(value.scopes)) return null
+    let scopes: Array<[string, ImportMapImports]> = []
+    for (let [scope, imports] of Object.entries(value.scopes)) {
+      if (!isObjectRecord(imports)) continue
+      scopes.push([scope, parseAuthoredImportMapImports(imports)])
+    }
+    importMap.scopes = Object.fromEntries(scopes)
+  }
+  return importMap
+}
+
+function parseAuthoredImportMapImports(value: Record<string, unknown>): ImportMapImports {
+  return Object.fromEntries(
+    Object.entries(value).map(([specifier, address]) => [
+      specifier,
+      address === null || typeof address === 'string' ? address : null,
+    ]),
+  )
 }
 
 function parseFrameworkImportMap(json: string): ImportMap {
@@ -1494,6 +1639,10 @@ function mergeImportMapImports(
 function escapeScriptJson(json: string): string {
   // Avoid prematurely closing the script tag when serialized data contains "</script>".
   return json.replace(/</g, '\\u003c')
+}
+
+function formatImportMapAddress(address: ImportMapAddress | undefined): string {
+  return address === null ? 'null' : `"${address}"`
 }
 
 // Frame styles work end-to-end when frame handlers use their own `renderToStream`:
