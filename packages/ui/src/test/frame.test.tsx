@@ -1112,11 +1112,13 @@ describe('run', () => {
     let aSelector = findClassByPrefix(document, 'entry-a')
     invariant(aSelector, 'expected SSR markup to carry an rmxc-* class for entry-a')
 
+    let [bModuleRequested, markBModuleRequested] = withResolvers<void>()
     let [bModuleGate, allowBModule] = withResolvers<void>()
     let app = run({
       async loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/js/entry-a.js' && exportName === 'EntryA') return EntryA
         if (moduleUrl === '/js/entry-b.js' && exportName === 'EntryB') {
+          markBModuleRequested()
           await bModuleGate
           return EntryB
         }
@@ -1135,7 +1137,11 @@ describe('run', () => {
     // before hydration makes it interactive.
     let topFrame = app.frames.top
     topFrame.src = '/b'
-    await topFrame.reload()
+    let reloadSettled = false
+    let reloadPromise = topFrame.reload().then(() => {
+      reloadSettled = true
+    })
+    await bModuleRequested
 
     // Pull EntryB's hashed selector from the SSR markup that replaceServerStyles
     // just adopted into adoptedStyleSheets.
@@ -1147,10 +1153,11 @@ describe('run', () => {
     expect(document.getElementById('entry-a')).toBeNull()
     expect(document.getElementById('entry-b')).not.toBeNull()
     expect(rulePresent(bSelectorFromB)).toBe(true)
+    expect(reloadSettled).toBe(false)
 
     // Allow the module load to finish and hydrate the destination SSR.
     allowBModule()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await reloadPromise
 
     expect(document.getElementById('entry-a')).toBeNull()
     expect(document.getElementById('entry-b')).not.toBeNull()
@@ -1452,16 +1459,21 @@ describe('run', () => {
       app.frames.top.src = '/reloaded'
       fastButton.click()
       invariant(reloadPromise)
-      await reloadPromise
+      let reloadSettled = false
+      void reloadPromise.then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
 
       let reloadedSlow = document.getElementById('partial-slow')
       invariant(reloadedSlow instanceof HTMLParagraphElement)
       expect(reloadedSlow).not.toBe(initialSlow)
       expect(reloadedSlow.textContent).toBe('Reloaded')
       expect(slowLoadCount).toBe(1)
+      expect(reloadSettled).toBe(false)
 
       resolveSlowModule(Slow)
-      await app.ready()
+      await Promise.all([reloadPromise, app.ready()])
       expect(document.getElementById('partial-slow')?.textContent).toBe('Reloaded')
     } finally {
       app.dispose()
@@ -1517,17 +1529,22 @@ describe('run', () => {
       invariant(targetFrame)
 
       targetFrame.src = '/reloaded'
-      await targetFrame.reload()
+      let reloadSettled = false
+      let reloadPromise = targetFrame.reload().then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
 
       let reloadedSlow = document.getElementById('named-partial-slow')
       invariant(reloadedSlow instanceof HTMLParagraphElement)
       expect(reloadedSlow).not.toBe(initialSlow)
       expect(reloadedSlow.textContent).toBe('Reloaded')
       expect(slowLoadCount).toBe(1)
+      expect(reloadSettled).toBe(false)
 
       let setupCountBeforeHydration = entrySetupCount
       resolveSlowModule(Slow)
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await reloadPromise
 
       expect(document.getElementById('named-partial-slow')?.textContent).toBe('Reloaded')
       expect(entrySetupCount).toBe(setupCountBeforeHydration + 1)
@@ -2306,6 +2323,273 @@ describe('run', () => {
       { src: firstTargetSrc, target: 'target' },
       { src: secondTargetSrc, target: 'target' },
     ])
+  })
+
+  it('restores window scroll across traversal of reconciled documents', async (t) => {
+    let initialUrl = window.location.href
+    let initialEntryKey = window.navigation.currentEntry?.key
+    let listUrl = new URL('/scroll-list', initialUrl).href
+    let detailUrl = new URL('/scroll-detail', initialUrl).href
+    window.history.replaceState(null, '', listUrl)
+
+    let ListEntry = clientEntry(
+      '/js/scroll-list.js#ScrollList',
+      function ScrollList(handle: Handle<{ height: number }>) {
+        return () => (
+          <ul
+            id="scroll-list-items"
+            style={{ display: 'block', height: `${handle.props.height}px` }}
+          />
+        )
+      },
+    )
+
+    let DetailEntry = clientEntry(
+      '/js/scroll-detail.js#ScrollDetail',
+      function ScrollDetail(handle: Handle<{ height: number }>) {
+        return () => (
+          <article
+            id="scroll-detail-content"
+            style={{ display: 'block', height: `${handle.props.height}px` }}
+          />
+        )
+      },
+    )
+
+    async function renderListItems() {
+      return await renderFrameContent(<ListEntry height={4000} />)
+    }
+
+    function renderListDocument() {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <main id="scroll-list-page">
+              <h1>List</h1>
+              <Frame src="/list-items" />
+            </main>
+          </body>
+        </html>,
+        {
+          async resolveFrame(src) {
+            if (src === '/list-items') return await renderListItems()
+            throw new Error(`Unexpected server frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    async function renderDetailDocument() {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main id="scroll-detail-page">
+                <p>Breadcrumbs</p>
+                <DetailEntry height={1600} />
+                <footer>Related</footer>
+              </main>
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderListDocument()),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/scroll-list.js' && exportName === 'ScrollList') return ListEntry
+        if (moduleUrl === '/js/scroll-detail.js' && exportName === 'ScrollDetail')
+          return DetailEntry
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        let pathname = new URL(src, window.location.href).pathname
+        if (pathname === '/scroll-list') return renderListDocument()
+        if (pathname === '/scroll-detail') return await renderDetailDocument()
+        if (pathname === '/list-items') return await renderListItems()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    t.after(async () => {
+      if (initialEntryKey && window.navigation.currentEntry?.key !== initialEntryKey) {
+        await window.navigation.traverseTo(initialEntryKey).finished
+      }
+      app.dispose()
+      window.history.replaceState(null, '', initialUrl)
+      window.scrollTo(0, 0)
+    })
+
+    await app.ready()
+    window.scrollTo(0, 2500)
+    expect(window.scrollY).toBe(2500)
+
+    await navigate(detailUrl)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(document.querySelector('#scroll-detail-page')).not.toBe(null)
+    expect(window.scrollY).toBe(0)
+
+    window.scrollTo(0, 200)
+    expect(window.scrollY).toBe(200)
+
+    await window.navigation.back().finished
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(document.querySelector('#scroll-list-page')).not.toBe(null)
+
+    expect(document.querySelector('#scroll-list-items')).not.toBe(null)
+    expect(window.scrollY).toBe(2500)
+
+    await window.navigation.forward().finished
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+    expect(document.querySelector('#scroll-detail-page')).not.toBe(null)
+    expect(window.scrollY).toBe(200)
+  })
+
+  it('preserves window scroll when a reconciled document opts out of resetting it', async (t) => {
+    let initialUrl = window.location.href
+    let initialEntryKey = window.navigation.currentEntry?.key
+    let sourceUrl = new URL('/scroll-preserve-source', initialUrl).href
+    let destinationUrl = new URL('/scroll-preserve-destination', initialUrl).href
+    window.history.replaceState(null, '', sourceUrl)
+
+    async function renderSourceDocument() {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main id="scroll-preserve-source" style={{ display: 'block', height: '3000px' }} />
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    function renderDestinationDocument() {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <main id="scroll-preserve-destination">
+              <Frame src="/scroll-preserve-content" />
+            </main>
+          </body>
+        </html>,
+        {
+          async resolveFrame(src) {
+            if (src !== '/scroll-preserve-content') {
+              throw new Error(`Unexpected server frame src: ${src}`)
+            }
+            return '<div id="scroll-preserve-content" style="height:3200px"></div>'
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(await renderSourceDocument(), 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule: mock.fn(),
+      async resolveFrame(src: string) {
+        let pathname = new URL(src, window.location.href).pathname
+        if (pathname === '/scroll-preserve-source') {
+          return await renderSourceDocument()
+        }
+        if (pathname === '/scroll-preserve-destination') {
+          return renderDestinationDocument()
+        }
+        if (pathname === '/scroll-preserve-content') {
+          return '<div id="scroll-preserve-content" style="height:3200px"></div>'
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    t.after(async () => {
+      if (initialEntryKey && window.navigation.currentEntry?.key !== initialEntryKey) {
+        await window.navigation.traverseTo(initialEntryKey).finished
+      }
+      app.dispose()
+      window.history.replaceState(null, '', initialUrl)
+      window.scrollTo(0, 0)
+    })
+
+    await app.ready()
+    window.scrollTo(0, 1200)
+
+    await navigate(destinationUrl, { resetScroll: false })
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+    expect(document.querySelector('#scroll-preserve-destination')).not.toBe(null)
+    expect(document.querySelector('#scroll-preserve-content')).not.toBe(null)
+    expect(window.scrollY).toBe(1200)
+  })
+
+  it('uses native fragment scrolling after reconciling the destination document', async (t) => {
+    let initialUrl = window.location.href
+    let initialEntryKey = window.navigation.currentEntry?.key
+    let sourceUrl = new URL('/scroll-fragment-source', initialUrl).href
+    let destinationUrl = new URL('/scroll-fragment-destination#scroll-target', initialUrl).href
+    window.history.replaceState(null, '', sourceUrl)
+
+    async function renderSourceDocument() {
+      return await renderDocumentContent(
+        <main id="scroll-fragment-source" style={{ display: 'block', height: '3000px' }} />,
+      )
+    }
+
+    async function renderDestinationDocument() {
+      return await renderDocumentContent(
+        <main id="scroll-fragment-destination">
+          <div style={{ height: '1400px' }} />
+          <h1 id="scroll-target">Target</h1>
+          <div style={{ height: '1000px' }} />
+        </main>,
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(await renderSourceDocument(), 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule: mock.fn(),
+      async resolveFrame(src: string) {
+        let pathname = new URL(src, window.location.href).pathname
+        if (pathname === '/scroll-fragment-source') return await renderSourceDocument()
+        if (pathname === '/scroll-fragment-destination') return await renderDestinationDocument()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    t.after(async () => {
+      if (initialEntryKey && window.navigation.currentEntry?.key !== initialEntryKey) {
+        await window.navigation.traverseTo(initialEntryKey).finished
+      }
+      app.dispose()
+      window.history.replaceState(null, '', initialUrl)
+      window.scrollTo(0, 0)
+    })
+
+    await app.ready()
+    window.scrollTo(0, 800)
+
+    await navigate(destinationUrl)
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+    let target = document.querySelector('#scroll-target')
+    invariant(target instanceof HTMLElement)
+    expect(window.scrollY).toBeGreaterThan(1000)
+    expect(Math.round(target.getBoundingClientRect().top)).toBe(0)
   })
 
   it('dispatches reloadStart and reloadComplete events for handle.frame and handle.frames.get(name)', async () => {

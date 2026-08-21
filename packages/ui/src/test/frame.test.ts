@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 
-import type { Handle } from '../runtime/component.ts'
+import { Frame, type Handle } from '../runtime/component.ts'
 import {
   consumeFrameTemplate,
   createFrame,
@@ -98,6 +98,350 @@ describe('frames', () => {
       expect(document.querySelector('[data-entry]')?.textContent).toBe('next')
       expect(setupCount).toBe(setupCountBeforeReload)
       expect(disconnectCount).toBe(disconnectCountBeforeReload)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for client entry reconciliation before a reload resolves', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    function ReloadedEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('p', { id: 'reloaded', children: handle.props.label })
+    }
+
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let frame = createFrame(root, {
+      src: 'https://example.com/initial',
+      errorTarget: new EventTarget(),
+      loadModule: () => modulePromise,
+      resolveFrame: () =>
+        [
+          '<!-- rmx:h:h1 --><p id="reloaded">Server</p><!-- /rmx:h -->',
+          rmxDataScript('Hydrated', '/reloaded.js', 'ReloadedEntry'),
+        ].join(''),
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveModule(ReloadedEntry)
+      await reload
+
+      expect(document.getElementById('reloaded')?.textContent).toBe('Hydrated')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for blocking frames created by client entry reconciliation', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = [
+      '<!-- rmx:h:h1 --><p id="detail">Detail</p><!-- /rmx:h -->',
+      rmxDataScript('detail', '/store-entry.js', 'StoreEntry'),
+    ].join('')
+    document.body.append(root)
+
+    function StoreEntry(handle: Handle<{ label: string }>) {
+      return () =>
+        handle.props.label === 'collection'
+          ? jsx(Frame, { src: '/collection' })
+          : jsx('p', { id: 'detail', children: 'Detail' })
+    }
+
+    let [collectionPromise, resolveCollection] = withResolvers<string>()
+    let frame = createFrame(root, {
+      src: 'https://example.com/initial',
+      errorTarget: new EventTarget(),
+      loadModule: () => StoreEntry,
+      resolveFrame(src) {
+        if (src === '/collection') return collectionPromise
+        return [
+          '<!-- rmx:h:h1 --><p id="server-collection">Server collection</p><!-- /rmx:h -->',
+          rmxDataScript('collection', '/store-entry.js', 'StoreEntry'),
+        ].join('')
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveCollection('<p id="collection">Collection</p>')
+      await reload
+
+      expect(document.getElementById('collection')?.textContent).toBe('Collection')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('does not wait for non-blocking frames created by client entry reconciliation', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = [
+      '<!-- rmx:h:h1 --><p id="detail">Detail</p><!-- /rmx:h -->',
+      rmxDataScript('detail', '/store-entry.js', 'StoreEntry'),
+    ].join('')
+    document.body.append(root)
+
+    function StoreEntry(handle: Handle<{ label: string }>) {
+      return () =>
+        handle.props.label === 'collection'
+          ? jsx(Frame, {
+              src: '/collection',
+              fallback: jsx('p', { id: 'loading', children: 'Loading' }),
+            })
+          : jsx('p', { id: 'detail', children: 'Detail' })
+    }
+
+    let [collectionPromise, resolveCollection] = withResolvers<string>()
+    let frame = createFrame(root, {
+      src: 'https://example.com/initial',
+      errorTarget: new EventTarget(),
+      loadModule: () => StoreEntry,
+      resolveFrame(src) {
+        if (src === '/collection') return collectionPromise
+        return [
+          '<!-- rmx:h:h1 --><p id="server-collection">Server collection</p><!-- /rmx:h -->',
+          rmxDataScript('collection', '/store-entry.js', 'StoreEntry'),
+        ].join('')
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      await reloadFrameForNavigation(frame.handle)
+
+      expect(document.getElementById('loading')?.textContent).toBe('Loading')
+      resolveCollection('<p id="collection">Collection</p>')
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(document.getElementById('collection')?.textContent).toBe('Collection')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for blocking child frames before a reload resolves', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    function BlockingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('p', { id: 'blocking-entry', children: handle.props.label })
+    }
+
+    let data = {
+      h: {
+        h1: {
+          moduleUrl: '/blocking.js',
+          exportName: 'BlockingEntry',
+          props: { label: 'Hydrated blocking frame' },
+        },
+      },
+      f: {
+        f1: {
+          status: 'resolved',
+          src: '/blocking',
+        },
+      },
+    }
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let frame = createFrame(root, {
+      src: 'https://example.com/initial',
+      errorTarget: new EventTarget(),
+      loadModule: () => modulePromise,
+      resolveFrame: () =>
+        [
+          '<!-- rmx:f:f1 -->',
+          '<!-- rmx:h:h1 --><p id="blocking-entry">Server</p><!-- /rmx:h -->',
+          '<!-- /rmx:f -->',
+          `<script type="application/json" id="rmx-data">${JSON.stringify(data)}</script>`,
+        ].join(''),
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveModule(BlockingEntry)
+      await reload
+
+      expect(document.getElementById('blocking-entry')?.textContent).toBe('Hydrated blocking frame')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for preserved blocking child frames to reconcile before a reload resolves', async () => {
+    let root = document.createElement('div')
+    let initialData = {
+      h: {
+        h1: {
+          moduleUrl: '/initial-blocking.js',
+          exportName: 'InitialBlockingEntry',
+          props: { label: 'Initial blocking frame' },
+        },
+      },
+      f: {
+        f1: {
+          status: 'resolved',
+          src: '/blocking',
+        },
+      },
+    }
+    root.innerHTML = [
+      '<!-- rmx:f:f1 -->',
+      '<!-- rmx:h:h1 --><p id="blocking-entry">Initial server</p><!-- /rmx:h -->',
+      '<!-- /rmx:f -->',
+      `<script type="application/json" id="rmx-data">${JSON.stringify(initialData)}</script>`,
+    ].join('')
+    document.body.append(root)
+
+    function InitialBlockingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('p', { id: 'blocking-entry', children: handle.props.label })
+    }
+
+    function ReloadedBlockingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('p', { id: 'blocking-entry', children: handle.props.label })
+    }
+
+    let nextData = {
+      h: {
+        h2: {
+          moduleUrl: '/reloaded-blocking.js',
+          exportName: 'ReloadedBlockingEntry',
+          props: { label: 'Reloaded blocking frame' },
+        },
+      },
+      f: initialData.f,
+    }
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let frame = createFrame(root, {
+      src: 'https://example.com/initial',
+      errorTarget: new EventTarget(),
+      loadModule(moduleUrl) {
+        if (moduleUrl === '/initial-blocking.js') return InitialBlockingEntry
+        if (moduleUrl === '/reloaded-blocking.js') return modulePromise
+        throw new Error(`Unexpected module: ${moduleUrl}`)
+      },
+      resolveFrame: () =>
+        [
+          '<!-- rmx:f:f1 -->',
+          '<!-- rmx:h:h2 --><p id="blocking-entry">Reloaded server</p><!-- /rmx:h -->',
+          '<!-- /rmx:f -->',
+          `<script type="application/json" id="rmx-data">${JSON.stringify(nextData)}</script>`,
+        ].join(''),
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveModule(ReloadedBlockingEntry)
+      await reload
+
+      expect(document.getElementById('blocking-entry')?.textContent).toBe('Reloaded blocking frame')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('does not wait for pending child frames before a reload resolves', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    let data = {
+      f: {
+        f1: {
+          status: 'pending',
+          src: '/pending',
+        },
+      },
+    }
+    let frame = createFrame(root, {
+      src: 'https://example.com/initial',
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame: () =>
+        [
+          '<!-- rmx:f:f1 --><p id="pending-fallback">Loading</p><!-- /rmx:f -->',
+          `<script type="application/json" id="rmx-data">${JSON.stringify(data)}</script>`,
+        ].join(''),
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      await reloadFrameForNavigation(frame.handle)
+
+      expect(document.getElementById('pending-fallback')?.textContent).toBe('Loading')
     } finally {
       frame.dispose()
     }
