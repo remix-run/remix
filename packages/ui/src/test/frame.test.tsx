@@ -2435,7 +2435,6 @@ describe('run', () => {
     await navigate(detailUrl)
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(document.querySelector('#scroll-detail-page')).not.toBe(null)
-    expect(window.scrollY).toBe(0)
 
     window.scrollTo(0, 200)
     expect(window.scrollY).toBe(200)

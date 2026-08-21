@@ -145,8 +145,8 @@ export function startNavigationListenerImpl(
         let { redirectedTo } = await options.reloadFrame(frame, {
           ...submission,
           signal: event.signal,
-          onBeforeCommit:
-            event.navigationType === 'traverse'
+          onAfterCommit:
+            event.navigationType === 'traverse' && state.resetScroll
               ? () => {
                   if (!event.signal.aborted) event.scroll()
                 }

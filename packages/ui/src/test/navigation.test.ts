@@ -40,7 +40,10 @@ function stubGlobalField(t: TestContext, name: string, value: unknown): void {
   })
 }
 
-function startStubNavigationListener(t: TestContext): (event: Event) => void {
+function startStubNavigationListener(
+  t: TestContext,
+  frames: Parameters<typeof startNavigationListenerImpl>[1] = stubFrames,
+): (event: Event) => void {
   let navigateListener: EventListener | undefined
   let stubNavigation = {
     updateCurrentEntry: mock.fn(),
@@ -51,7 +54,7 @@ function startStubNavigationListener(t: TestContext): (event: Event) => void {
   stubGlobalField(t, 'navigation', stubNavigation)
 
   let controller = new AbortController()
-  startNavigationListenerImpl(controller.signal, stubFrames)
+  startNavigationListenerImpl(controller.signal, frames)
   t.after(() => controller.abort())
 
   return (event) => {
@@ -134,8 +137,15 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
-  it('opts out of browser scroll restoration on traverse navigations', (t) => {
-    let dispatchNavigation = startStubNavigationListener(t)
+  it('opts out of browser scroll restoration on traverse navigations', async (t) => {
+    let onAfterCommit: (() => void) | undefined
+    let dispatchNavigation = startStubNavigationListener(t, {
+      ...stubFrames,
+      async reloadFrame(frame, options) {
+        onAfterCommit = options?.onAfterCommit
+        return stubFrames.reloadFrame(frame)
+      },
+    })
     let intercept = mock.fn()
     let event = Object.assign(new Event('navigate'), {
       canIntercept: true,
@@ -155,7 +165,10 @@ describe('navigate', () => {
 
     dispatchNavigation(event)
 
-    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    let interceptOptions = intercept.mock.calls[0]?.arguments[0]
+    expect(interceptOptions?.scroll).toBe('manual')
+    await interceptOptions?.handler?.()
+    expect(onAfterCommit).toBe(undefined)
   })
 
   it('preserves manual scrolling across frame redirects', (t) => {
@@ -175,7 +188,7 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
-  it('starts traversal restoration when the destination begins committing', async (t) => {
+  it('starts traversal restoration after the destination commits', async (t) => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
       updateCurrentEntry() {},
@@ -193,9 +206,9 @@ describe('navigate', () => {
       getNamedFrame: () => topFrame,
       async reloadFrame(_frame, options) {
         order.push('reload')
-        let onBeforeCommit = Reflect.get(options ?? {}, 'onBeforeCommit')
-        if (typeof onBeforeCommit === 'function') onBeforeCommit()
         order.push('commit')
+        let onAfterCommit = Reflect.get(options ?? {}, 'onAfterCommit')
+        if (typeof onAfterCommit === 'function') onAfterCommit()
         return { signal: new AbortController().signal }
       },
     })
@@ -230,7 +243,7 @@ describe('navigate', () => {
       if (!interceptOptions?.handler) throw new Error('Expected navigation interception handler')
       await interceptOptions.handler()
 
-      expect(order).toEqual(['reload', 'scroll', 'commit'])
+      expect(order).toEqual(['reload', 'commit', 'scroll'])
     } finally {
       controller.abort()
     }
