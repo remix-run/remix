@@ -39,6 +39,26 @@ function stubGlobalField(t: TestContext, name: string, value: unknown): void {
   })
 }
 
+function startStubNavigationListener(t: TestContext): (event: Event) => void {
+  let navigateListener: EventListener | undefined
+  let stubNavigation = {
+    updateCurrentEntry: mock.fn(),
+    addEventListener(type: string, listener: EventListener) {
+      if (type === 'navigate') navigateListener = listener
+    },
+  }
+  stubGlobalField(t, 'navigation', stubNavigation)
+
+  let controller = new AbortController()
+  startNavigationListenerImpl(controller.signal, stubFrames)
+  t.after(() => controller.abort())
+
+  return (event) => {
+    if (!navigateListener) throw new Error('Expected a navigate listener')
+    navigateListener(event)
+  }
+}
+
 describe('navigate', () => {
   afterEach(() => {
     document.body.textContent = ''
@@ -74,6 +94,84 @@ describe('navigate', () => {
       state: { target: undefined, src: '/login', resetScroll: false, $rmx: true },
       history: undefined,
     })
+  })
+
+  it('leaves default scrolling to the browser', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+
+    let interceptOptions = intercept.mock.calls[0]?.arguments[0]
+    expect(interceptOptions?.scroll).toBe(undefined)
+    await interceptOptions?.handler?.()
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('opts out of browser scrolling when data-rmx-reset-scroll is false', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    anchor.setAttribute('data-rmx-reset-scroll', 'false')
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+  })
+
+  it('opts out of browser scroll restoration on traverse navigations', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let intercept = mock.fn()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      navigationType: 'traverse',
+      signal: new AbortController().signal,
+      destination: {
+        url: new URL('/previous', window.location.origin).href,
+        getState: () => ({
+          target: undefined,
+          src: '/previous',
+          resetScroll: false,
+          $rmx: true,
+        }),
+      },
+      intercept,
+    })
+
+    dispatchNavigation(event)
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+  })
+
+  it('preserves manual scrolling across frame redirects', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let intercept = mock.fn()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      destination: {
+        url: new URL('/redirected', window.location.origin).href,
+      },
+      info: { type: 'frame-redirect', resetScroll: false },
+      intercept,
+    })
+
+    dispatchNavigation(event)
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
   it('does not intercept anchors marked for document navigation', (t) => {
@@ -777,6 +875,27 @@ function createFormNavigateEvent(
     navigationType: 'push',
     sourceElement: form,
     formData: new FormData(form),
+    signal: new AbortController().signal,
+    destination: {
+      url: options.destinationUrl,
+      key: 'next',
+      getState: () => undefined,
+    },
+    intercept: options.intercept,
+  })
+}
+
+function createAnchorNavigateEvent(
+  anchor: HTMLAnchorElement,
+  options: {
+    intercept: (options?: NavigationInterceptOptions) => void
+    destinationUrl: string
+  },
+): Event {
+  return Object.assign(new Event('navigate'), {
+    canIntercept: true,
+    navigationType: 'push',
+    sourceElement: anchor,
     signal: new AbortController().signal,
     destination: {
       url: options.destinationUrl,
