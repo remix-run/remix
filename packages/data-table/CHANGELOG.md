@@ -2,6 +2,14 @@
 
 This is the changelog for [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- Add a `rollback` command to `runRemixDb()`
+
+  Reverts applied migrations newest first, bounded by `step` (default `1`) or `to` (inclusive), with optional `dryRun`. This is what backs `remix db rollback`, and it gives hosts embedding the data-table CLI the same command (see #11723).
+
 ## v0.4.0
 
 ### Minor Changes

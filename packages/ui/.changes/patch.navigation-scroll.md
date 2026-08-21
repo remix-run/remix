@@ -1,1 +1,0 @@
-Fix `data-rmx-reset-scroll="false"` and `navigate(..., { resetScroll: false })` to preserve the current scroll position. Default navigations now leave scroll resets and history restoration to the browser.

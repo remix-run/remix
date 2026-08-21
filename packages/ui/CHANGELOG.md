@@ -2,6 +2,16 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.8.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remix UI framework-owned DOM attributes now consistently use the `data-rmx-*` namespace. Rename `rmx-document`, `rmx-target`, `rmx-src`, `rmx-history`, `rmx-reset-scroll`, `rmx-preserve-dom`, and `data-key` to `data-rmx-document`, `data-rmx-target`, `data-rmx-src`, `data-rmx-history`, `data-rmx-reset-scroll`, `data-rmx-preserve-dom`, and `data-rmx-key`. Generated style and module preload markers now use `data-rmx-style` and `data-rmx-module-preload` instead of `data-rmx`.
+
+### Patch Changes
+
+- Fix `data-rmx-reset-scroll="false"` and `navigate(..., { resetScroll: false })` to preserve the current scroll position. Default navigations now leave scroll resets and history restoration to the browser.
+
 ## v0.7.0
 
 ### Minor Changes
