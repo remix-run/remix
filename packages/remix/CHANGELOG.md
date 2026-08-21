@@ -2,6 +2,27 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.11
+
+### Pre-release Changes
+
+- BREAKING CHANGE: Remove the built-in Atmosphere auth provider and its DPoP-specific types from `remix/auth`. Use `OAuthTokens` in place of `OAuthStandardTokens`. Custom provider packages can use `createOAuthProvider()` and extend `OAuthTokens` with protocol-specific data. Applications using the Atmosphere provider must remove it or move their atproto authentication to a separate package.
+
+- Add `remix db rollback` for reverting applied migrations with step, target, and dry-run bounds (see #11723).
+
+- Add the `runRemixDb()` rollback command through `remix/data-table/cli` (see #11723).
+
+- Remix UI framework-owned DOM attributes now consistently use the `data-rmx-*` namespace. Update navigation, DOM preservation, and reconciliation key attributes to their new `data-rmx-*` names.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`auth@0.3.0`](https://github.com/remix-run/remix/releases/tag/auth@0.3.0)
+  - [`cli@0.6.0`](https://github.com/remix-run/remix/releases/tag/cli@0.6.0)
+  - [`data-table@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.5.0)
+  - [`data-table-mysql@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.1)
+  - [`data-table-postgres@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.1)
+  - [`data-table-sqlite@0.6.1`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.1)
+  - [`ui@0.8.0`](https://github.com/remix-run/remix/releases/tag/ui@0.8.0)
+
 ## v3.0.0-beta.10
 
 ### Pre-release Changes

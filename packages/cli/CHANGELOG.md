@@ -2,6 +2,22 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v0.6.0
+
+### Minor Changes
+
+- Add `remix db rollback`, which reverts applied migrations by running their `down.sql`
+
+  `Database.migrate()` already accepted `direction`, `to`, `step`, and `dryRun`, but the CLI never passed them, so a migration's `down.sql` was unreachable from `remix db` — `--to` only bounds forward progress. `rollback` reverts newest first, bounded by `--step <count>` (default `1`) or `--to <migration>`, which reverts back through that migration inclusive. `--dry-run` reports what would be reverted without running it. It also takes `--migrations`, `--journal-table`, and `--connection-env` (see #11723).
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.5.0)
+  - [`data-table-mysql@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.1)
+  - [`data-table-postgres@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.1)
+  - [`data-table-sqlite@0.6.1`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.1)
+
 ## v0.5.0
 
 ### Minor Changes
