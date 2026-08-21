@@ -173,13 +173,12 @@ export function startNavigationListenerImpl(
 
           // Modern browsers allow you to update the in-flight navigation entry before it's committed
           if (supportsPrecommit) {
-            let precommitInterceptOptions: NavigationInterceptOptionsWithPrecommit = {
+            event.intercept({
               ...interceptOptions,
               precommitHandler(controller) {
                 controller.redirect(event.destination.url, { history: 'replace' })
               },
-            }
-            event.intercept(precommitInterceptOptions)
+            })
             return
           }
 
