@@ -285,6 +285,9 @@ describe('navigate', () => {
     })
 
     let entryCountBeforeNavigation = window.navigation.entries().length
+    let originalBodyHeight = document.body.style.height
+    document.body.style.height = '3000px'
+    window.scrollTo(0, 600)
     try {
       let redirected = waitForNavigationUrl(redirectedUrl.href)
       void navigate(requestedUrl.href).catch(() => {})
@@ -300,6 +303,7 @@ describe('navigate', () => {
         resetScroll: true,
         $rmx: true,
       })
+      expect(window.scrollY).toBe(0)
 
       await window.navigation.back().finished
       expect(topFrame.src).toBe(originalUrl)
@@ -312,6 +316,8 @@ describe('navigate', () => {
       if (window.location.href !== originalUrl) {
         await navigate(originalUrl, { history: 'replace' })
       }
+      document.body.style.height = originalBodyHeight
+      window.scrollTo(0, 0)
       controller.abort()
     }
   })
@@ -511,6 +517,67 @@ describe('form navigation', () => {
       expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     } finally {
       if (didNavigate) await window.navigation.back().finished
+      controller.abort()
+    }
+  })
+
+  it('preserves scroll across POST frame redirects when reset is disabled', async () => {
+    let originalUrl = window.location.href
+    let requestedUrl = new URL(originalUrl)
+    requestedUrl.searchParams.set('form-navigation', 'requested')
+    let redirectedUrl = new URL(originalUrl)
+    redirectedUrl.searchParams.set('form-navigation', 'redirected')
+    let topFrame = { src: '' } as FrameHandle
+    let shouldRedirect = true
+    let reload = mock.fn(async (_options?: ResolveFrameOptions) => {
+      if (shouldRedirect) {
+        shouldRedirect = false
+        return {
+          signal: new AbortController().signal,
+          redirectedTo: redirectedUrl.href,
+        }
+      }
+      return { signal: new AbortController().signal }
+    })
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame: (_frame, options) => reload(options),
+    })
+
+    let form = document.createElement('form')
+    form.action = requestedUrl.href
+    form.method = 'post'
+    form.setAttribute('data-rmx-reset-scroll', 'false')
+    document.body.append(form)
+
+    let originalBodyHeight = document.body.style.height
+    document.body.style.height = '3000px'
+    window.scrollTo(0, 600)
+    expect(window.scrollY).toBe(600)
+
+    let didNavigate = false
+    try {
+      let redirected = waitForNavigationUrl(redirectedUrl.href)
+      form.requestSubmit()
+      await redirected
+      didNavigate = true
+
+      expect(reload).toHaveBeenCalledTimes(1)
+      expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
+      expect(topFrame.src).toBe(redirectedUrl.href)
+      expect(window.navigation.currentEntry?.getState()).toEqual({
+        target: undefined,
+        src: redirectedUrl.href,
+        resetScroll: false,
+        $rmx: true,
+      })
+      expect(window.scrollY).toBe(600)
+    } finally {
+      if (didNavigate) await window.navigation.back().finished
+      document.body.style.height = originalBodyHeight
+      window.scrollTo(0, 0)
       controller.abort()
     }
   })

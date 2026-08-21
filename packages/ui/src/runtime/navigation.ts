@@ -36,6 +36,7 @@ interface FormSubmissionNavigationInfo {
 
 interface FrameRedirectNavigationInfo {
   type: typeof frameRedirectNavigationInfoType
+  resetScroll: boolean
 }
 
 const formSubmissionNavigationInfoType = 'frame-form-submission'
@@ -108,7 +109,14 @@ export function startNavigationListenerImpl(
       if (!event.canIntercept || isCrossOriginDestination(event)) return
 
       if (isFrameRedirectNavigationInfo(event.info)) {
-        event.intercept({ async handler() {} })
+        event.intercept({
+          ...getScrollInterceptionOptions(event, event.info.resetScroll),
+          async handler() {
+            if (!event.signal.aborted && event.info.resetScroll) {
+              window.scrollTo(0, 0)
+            }
+          },
+        })
         return
       }
 
@@ -141,7 +149,7 @@ export function startNavigationListenerImpl(
           signal: event.signal,
         })
 
-        if (redirectedTo && frame === topFrame) {
+        if (redirectedTo !== undefined && frame === topFrame) {
           frame.src = redirectedTo
           // Start the successor navigation without awaiting it: this handler must settle before
           // the replacement navigation can finish.
@@ -150,13 +158,14 @@ export function startNavigationListenerImpl(
             state: { ...state, src: redirectedTo },
             info: {
               type: frameRedirectNavigationInfoType,
+              resetScroll: state.resetScroll,
             } satisfies FrameRedirectNavigationInfo,
           })
-        }
-
-        let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
-        if (state.resetScroll && isNewEntry) {
-          window.scrollTo(0, 0)
+        } else {
+          let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
+          if (!event.signal.aborted && state.resetScroll && isNewEntry) {
+            window.scrollTo(0, 0)
+          }
         }
       }
 
@@ -170,6 +179,7 @@ export function startNavigationListenerImpl(
           if (supportsPrecommit) {
             let interceptOptions: NavigationInterceptOptionsWithPrecommit = {
               handler,
+              ...getScrollInterceptionOptions(event, state.resetScroll),
               precommitHandler(controller) {
                 controller.redirect(event.destination.url, { history: 'replace' })
               },
@@ -194,14 +204,14 @@ export function startNavigationListenerImpl(
           }
         }
 
-        event.intercept({ handler })
+        event.intercept({ handler, ...getScrollInterceptionOptions(event, state.resetScroll) })
       } else {
         // <a>/<form method="get"> navigations
         if (runtimeNavigation.replaceHistory && event.cancelable) {
           event.preventDefault()
           navigation.navigate(event.destination.url, { history: 'replace', state })
         } else {
-          event.intercept({ handler })
+          event.intercept({ handler, ...getScrollInterceptionOptions(event, state.resetScroll) })
         }
       }
     },
@@ -211,6 +221,14 @@ export function startNavigationListenerImpl(
 
 function isRuntimeNavigation(info: unknown): info is NavigationState {
   return typeof info === 'object' && info != null && '$rmx' in info
+}
+
+function getScrollInterceptionOptions(
+  event: NavigateEvent,
+  resetScroll: boolean,
+): Partial<Pick<NavigationInterceptOptions, 'scroll'>> {
+  let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
+  return isNewEntry && !resetScroll ? { scroll: 'manual' } : {}
 }
 
 function isFormSubmissionNavigationInfo(value: unknown): value is FormSubmissionNavigationInfo {
@@ -231,7 +249,9 @@ function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNa
     typeof value === 'object' &&
     value != null &&
     'type' in value &&
-    value.type === frameRedirectNavigationInfoType
+    value.type === frameRedirectNavigationInfoType &&
+    'resetScroll' in value &&
+    typeof value.resetScroll === 'boolean'
   )
 }
 
