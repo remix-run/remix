@@ -9,8 +9,8 @@ describe('PagefindElements', () => {
     let html = await renderToString(<PagefindElements baseUrl="/" bundlePath="/assets/pagefind/" />)
 
     assert.match(html, /<pagefind-config base-url="\/" bundle-path="\/assets\/pagefind\/">/)
-    assert.match(html, /<pagefind-modal[^>]*data-key="pagefind-modal"/)
-    assert.match(html, /<pagefind-modal[^>]*rmx-preserve-dom/)
+    assert.match(html, /<pagefind-modal[^>]*data-rmx-key="pagefind-modal"/)
+    assert.match(html, /<pagefind-modal[^>]*data-rmx-preserve-dom/)
     assert.match(html, /<pagefind-modal[^>]*reset-on-close/)
   })
 })

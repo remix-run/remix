@@ -1,8 +1,8 @@
 /**
  * Publishes packages to npm and creates tags/releases for what was published.
  *
- * This script uses pnpm publish with --report-summary, reads the summary file,
- * and creates Git tags + GitHub releases. When one or more packages are in
+ * This script uses pnpm publish with trusted publishing authentication, then
+ * creates Git tags + GitHub releases. When one or more packages are in
  * prerelease mode (have .changes/config.json with prereleaseChannel), it publishes
  * in two phases: all other packages as "latest", then prerelease packages with
  * the "next" tag.
@@ -20,6 +20,7 @@
  */
 import * as cp from 'node:child_process'
 import * as fs from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
 
 import {
@@ -30,15 +31,18 @@ import {
 } from './utils/git.ts'
 import { createRelease, releaseExists } from './utils/github.ts'
 import { getRootDir, logAndExec } from './utils/process.ts'
-import { readChangesConfig, getChangelogEntry } from './utils/changes.ts'
+import { readChangesConfig, getChangelogEntries } from './utils/changes.ts'
 import {
   getAllPackageDirNames,
   getPackageFile,
   getGitTag,
   packageNameToDirectoryName,
   getPackageShortName,
+  getPackageDependencies,
+  getPackagePath,
 } from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
+import { createPublishPlan, getReleaseNotes, isPackageVersionPublished } from './utils/publish.ts'
 
 const rootDir = getRootDir()
 
@@ -50,13 +54,6 @@ interface PublishedPackage {
   packageName: string
   version: string
   tag: string
-}
-
-interface PublishSummary {
-  publishedPackages: Array<{
-    name: string
-    version: string
-  }>
 }
 
 interface LocalPackage {
@@ -73,28 +70,6 @@ interface PrereleasePackage {
 interface TagPlan {
   pkg: PublishedPackage
   targetCommit: string
-}
-
-/**
- * Read published packages from pnpm's publish summary file.
- * See https://pnpm.io/cli/publish#--report-summary
- */
-function readPublishSummary(): PublishedPackage[] {
-  let summaryPath = path.join(rootDir, 'pnpm-publish-summary.json')
-
-  if (!fs.existsSync(summaryPath)) {
-    throw new Error(
-      `pnpm-publish-summary.json not found. This is unexpected after a successful publish.`,
-    )
-  }
-
-  let summary: PublishSummary = JSON.parse(fs.readFileSync(summaryPath, 'utf-8'))
-
-  return summary.publishedPackages.map((pkg) => ({
-    packageName: pkg.name,
-    version: pkg.version,
-    tag: getGitTag(pkg.name, pkg.version),
-  }))
 }
 
 /**
@@ -155,22 +130,6 @@ function getPrereleasePackages(): PrereleasePackage[] {
 }
 
 /**
- * Check if a specific version of a package is published on npm.
- */
-async function isVersionPublished(packageName: string, version: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    cp.exec(
-      `npm view ${packageName}@${version} version`,
-      { encoding: 'utf-8' },
-      (_error, stdout) => {
-        // If we get output that matches the version, it exists
-        resolve(stdout.trim() === version)
-      },
-    )
-  })
-}
-
-/**
  * Get all packages that have versions not yet published to npm.
  */
 async function getUnpublishedPackages(): Promise<PublishedPackage[]> {
@@ -180,7 +139,7 @@ async function getUnpublishedPackages(): Promise<PublishedPackage[]> {
   let npmResults = await Promise.all(
     localPackages.map(async (pkg) => ({
       pkg,
-      isPublished: await isVersionPublished(pkg.npmName, pkg.localVersion),
+      isPublished: await isPackageVersionPublished(pkg.npmName, pkg.localVersion),
     })),
   )
 
@@ -209,7 +168,7 @@ async function getPublishedPackagesMissingTags(): Promise<PublishedPackage[]> {
   let npmResults = await Promise.all(
     localPackages.map(async (pkg) => ({
       pkg,
-      isPublished: await isVersionPublished(pkg.npmName, pkg.localVersion),
+      isPublished: await isPackageVersionPublished(pkg.npmName, pkg.localVersion),
     })),
   )
 
@@ -242,7 +201,7 @@ async function getPublishedPackagesMissingReleases(): Promise<PublishedPackage[]
   let npmResults = await Promise.all(
     localPackages.map(async (pkg) => ({
       pkg,
-      isPublished: await isVersionPublished(pkg.npmName, pkg.localVersion),
+      isPublished: await isPackageVersionPublished(pkg.npmName, pkg.localVersion),
     })),
   )
 
@@ -386,7 +345,22 @@ interface ChangelogWarning {
  * Preview GitHub releases for packages that would be published.
  * Returns warnings for packages with missing changelog entries.
  */
-function previewGitHubReleases(packages: PublishedPackage[]): { warnings: ChangelogWarning[] } {
+async function getReleaseBody(pkg: PublishedPackage): Promise<string | null> {
+  let entries = getChangelogEntries({ packageName: pkg.packageName })
+  if (entries === null) {
+    return null
+  }
+
+  return getReleaseNotes({
+    entries,
+    targetVersion: pkg.version,
+    isVersionPublished: (version) => isPackageVersionPublished(pkg.packageName, version),
+  })
+}
+
+async function previewGitHubReleases(
+  packages: PublishedPackage[],
+): Promise<{ warnings: ChangelogWarning[] }> {
   let warnings: ChangelogWarning[] = []
 
   console.log('GitHub Release Preview')
@@ -396,10 +370,10 @@ function previewGitHubReleases(packages: PublishedPackage[]): { warnings: Change
   for (let pkg of packages) {
     let tagName = getGitTag(pkg.packageName, pkg.version)
     let releaseName = `${getPackageShortName(pkg.packageName)} v${pkg.version}`
-    let changes = getChangelogEntry({ packageName: pkg.packageName, version: pkg.version })
-    let body = changes?.body ?? 'No changelog entry found for this version.'
+    let releaseBody = await getReleaseBody(pkg)
+    let body = releaseBody ?? 'No changelog entry found for this version.'
 
-    if (changes === null) {
+    if (releaseBody === null) {
       warnings.push({ packageName: pkg.packageName, version: pkg.version })
     }
 
@@ -456,54 +430,75 @@ async function main() {
   // Publish packages to npm
   console.log('Publishing packages to npm...\n')
 
+  let unpublished = await getUnpublishedPackages()
+  let publishPlan = createPublishPlan({
+    packages: unpublished,
+    prereleaseDirNames: new Set(prereleasePackages.map((pkg) => pkg.dirName)),
+    getDirectoryName: packageNameToDirectoryName,
+    getDependencies: getPackageDependencies,
+  })
   let published: PublishedPackage[] = []
 
-  if (prereleasePackages.length > 0) {
-    let publishCommands = [
-      [
-        'pnpm publish --recursive',
-        '--filter "./packages/*"',
-        ...prereleasePackages.map((pkg) => `--filter "!${pkg.dirName}"`),
-        '--access public',
-        '--no-git-checks',
-        '--report-summary',
-      ].join(' '),
-      ...prereleasePackages.map((pkg) =>
-        [
-          `pnpm publish --filter ${pkg.dirName}`,
-          '--tag next',
-          '--access public',
-          '--no-git-checks',
-          '--report-summary',
-        ].join(' '),
-      ),
-    ]
+  if (dryRun && publishPlan.length > 0) {
+    console.log('Would run:')
+  }
+
+  for (let plan of publishPlan) {
+    let packageDir = getPackagePath(plan.dirName)
+    let relativePackageDir = path.relative(rootDir, packageDir)
 
     if (dryRun) {
-      console.log('Would run:')
-      for (let publishCommand of publishCommands) {
-        console.log(`  $ ${publishCommand}`)
-      }
-      console.log()
-    } else {
-      for (let publishCommand of publishCommands) {
-        logAndExec(publishCommand)
-        published.push(...readPublishSummary())
-      }
+      console.log(
+        `  $ (cd ${relativePackageDir} && pnpm run --if-present prepublishOnly && pnpm pack)`,
+      )
+      console.log(
+        `  $ pnpm publish <package tarball> --access public --tag ${plan.npmTag} --no-git-checks`,
+      )
+      continue
     }
-  } else {
-    // Single-phase publish: everything as latest
-    let publishCommand =
-      'pnpm publish --recursive --filter "./packages/*" --access public --no-git-checks --report-summary'
 
-    if (dryRun) {
-      console.log('Would run:')
-      console.log(`  $ ${publishCommand}`)
-      console.log()
-    } else {
-      logAndExec(publishCommand)
-      published.push(...readPublishSummary())
+    console.log(`$ (cd ${relativePackageDir} && pnpm run --if-present prepublishOnly)`)
+    cp.execFileSync('pnpm', ['run', '--if-present', 'prepublishOnly'], {
+      cwd: packageDir,
+      stdio: 'inherit',
+    })
+
+    let packDir = fs.mkdtempSync(path.join(os.tmpdir(), `remix-publish-${plan.dirName}-`))
+    try {
+      console.log(`$ (cd ${relativePackageDir} && pnpm pack)`)
+      cp.execFileSync('pnpm', ['pack', '--pack-destination', packDir], {
+        cwd: packageDir,
+        stdio: 'inherit',
+      })
+
+      let tarballs = fs.readdirSync(packDir).filter((file) => file.endsWith('.tgz'))
+      if (tarballs.length !== 1) {
+        throw new Error(
+          `Expected pnpm pack to create one tarball for ${plan.packageName}, found ${tarballs.length}.`,
+        )
+      }
+
+      let tarballPath = path.join(packDir, tarballs[0])
+      console.log(
+        `$ pnpm publish ${path.basename(tarballPath)} --access public --tag ${plan.npmTag} --no-git-checks`,
+      )
+      cp.execFileSync(
+        'pnpm',
+        ['publish', tarballPath, '--access', 'public', '--tag', plan.npmTag, '--no-git-checks'],
+        {
+          cwd: packageDir,
+          stdio: 'inherit',
+        },
+      )
+    } finally {
+      fs.rmSync(packDir, { recursive: true, force: true })
     }
+
+    published.push(plan)
+  }
+
+  if (dryRun && publishPlan.length > 0) {
+    console.log()
   }
 
   // In dry run mode, query npm to determine what would be published
@@ -511,8 +506,6 @@ async function main() {
   // the contents of the "Release" PR / `pnpm changes:version` output.
   if (dryRun) {
     console.log('Checking npm for unpublished versions...\n')
-
-    let unpublished = await getUnpublishedPackages()
 
     if (unpublished.length === 0) {
       console.log('All package versions are already published to npm.')
@@ -528,7 +521,7 @@ async function main() {
     }
     console.log()
 
-    let { warnings } = previewGitHubReleases(unpublished)
+    let { warnings } = await previewGitHubReleases(unpublished)
 
     if (warnings.length > 0) {
       console.log('⚠️  WARNINGS')
@@ -635,7 +628,12 @@ async function main() {
   let failedReleases: Array<{ pkg: PublishedPackage; error: string }> = []
 
   for (let pkg of packagesNeedingTagsOrReleases) {
-    let result = await createRelease(pkg.packageName, pkg.version)
+    let releaseBody = await getReleaseBody(pkg)
+    let result = await createRelease(
+      pkg.packageName,
+      pkg.version,
+      releaseBody === null ? {} : { body: releaseBody },
+    )
     if (result.status === 'created') {
       console.log(`  ✓ ${pkg.packageName} v${pkg.version}`)
     } else if (result.status === 'skipped') {

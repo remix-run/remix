@@ -247,7 +247,6 @@ function logout(context) {
 
 ```typescript
 import {
-  createAtmosphereAuthProvider,
   createGoogleAuthProvider,
   createGitHubAuthProvider,
   startExternalAuth,
@@ -267,20 +266,7 @@ let githubProvider = createGitHubAuthProvider({
   clientSecret: process.env.GITHUB_CLIENT_SECRET,
   redirectUri: new URL(routes.auth.github.callback.href(), origin),
 })
-
-let atmosphereSessionSecret = process.env.ATMOSPHERE_SESSION_SECRET
-if (!atmosphereSessionSecret && process.env.NODE_ENV !== 'test') {
-  throw new Error('ATMOSPHERE_SESSION_SECRET is required')
-}
-
-let atmosphereProvider = createAtmosphereAuthProvider({
-  clientId: 'https://app.example.com/oauth/client-metadata.json',
-  redirectUri: new URL(routes.auth.atmosphere.callback.href(), origin),
-  sessionSecret: atmosphereSessionSecret ?? 'test-only-secret',
-})
 ```
-
-For Atmosphere-compatible atproto OAuth, create the provider once, call `atmosphereProvider.prepare(handleOrDid)` before `startExternalAuth(...)`, then pass the same module-scope provider to `finishExternalAuth(...)` and `refreshExternalAuth(...)`.
 
 ### OAuth controller
 
@@ -318,7 +304,7 @@ export default createController(routes.auth.google, {
 
 ### Refresh stored provider tokens
 
-Use `refreshExternalAuth(provider, tokens)` when an app has stored OAuth/OIDC tokens and needs a fresh access token from a refresh token. Built-in OIDC providers, X, and Atmosphere support refresh-token exchange. If the provider does not rotate the refresh token, the refreshed bundle preserves the current one.
+Use `refreshExternalAuth(provider, tokens)` when an app has stored OAuth/OIDC tokens and needs a fresh access token from a refresh token. Built-in OIDC providers and X support refresh-token exchange. If the provider does not rotate the refresh token, the refreshed bundle preserves the current one.
 
 ```typescript
 async function refreshGoogleTokens({ get }) {

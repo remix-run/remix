@@ -42,14 +42,20 @@ async function resolveFrameResponse(url: URL, options?: ResolveFrameOptions) {
     return new Promise<never>(() => {})
   }
 
-  if (!res.ok && res.status !== 422) {
+  // A 422 contains expected validation UI - unwrap and return
+  if (res.status === 422) {
+    return res.body ?? res.text()
+  }
+
+  // Other errors render a custom reload UI
+  if (!res.ok && res.status >= 400) {
     return (
       <ErrorCard
         eyebrow="Unexpected Error"
         title="Reload required"
         message="An unexpected error occurred. Please reload the page to try again."
         action={
-          <a rmx-document href={window.location.href} mix={actionLinkCss}>
+          <a data-rmx-document href={window.location.href} mix={actionLinkCss}>
             Reload
           </a>
         }

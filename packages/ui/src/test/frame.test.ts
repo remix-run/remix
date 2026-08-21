@@ -17,7 +17,7 @@ import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createStyleManager } from '../style/index.ts'
 import { withResolvers } from './utils.ts'
 
-const managedModulePreloadSelector = 'link[data-rmx][rel="modulepreload"]'
+const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'
 
 describe('frames', () => {
   afterEach(() => {
@@ -294,6 +294,80 @@ describe('frames', () => {
       expect(document.getElementById('result')?.textContent).toBe('Settings overview')
       expect(frame.handle.src).toBe(frameSrc)
       expect(result.redirectedTo).toBe(redirectedUrl)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('renders 4xx response bodies from custom resolvers', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let errorTarget = new EventTarget()
+    let frame = createFrame(root, {
+      src: 'https://example.com/account',
+      errorTarget,
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return new Response('<main id="not-found">Account not found</main>', {
+          status: 404,
+          statusText: 'Not Found',
+        })
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, errorTarget, createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(document.getElementById('not-found')?.textContent).toBe('Account not found')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('renders 5xx response bodies from custom resolvers', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let errorTarget = new EventTarget()
+    let frame = createFrame(root, {
+      src: 'https://example.com/account',
+      errorTarget,
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return new Response('<main id="error">Account unavailable</main>', {
+          status: 503,
+          statusText: 'Service Unavailable',
+        })
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, errorTarget, createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(document.getElementById('error')?.textContent).toBe('Account unavailable')
     } finally {
       frame.dispose()
     }
@@ -707,7 +781,7 @@ describe('frames', () => {
         return appendFlushMarker(
           [
             '<!doctype html><html><head><title>Next</title>',
-            '<link data-rmx rel="modulepreload" href="/entry.js" />',
+            '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
             '</head><body><!-- rmx:h:h1 --><section>next</section><!-- /rmx:h -->',
             rmxDataScript('next'),
             '</body></html>',
@@ -761,7 +835,7 @@ describe('frames', () => {
       },
       resolveFrame() {
         return [
-          '<head><link data-rmx rel="modulepreload" href="/fragment-entry.js" /></head>',
+          '<head><link data-rmx-module-preload rel="modulepreload" href="/fragment-entry.js" /></head>',
           '<!-- rmx:h:h1 --><section>fragment</section><!-- /rmx:h -->',
           rmxDataScript('fragment', '/fragment-entry.js', 'FragmentEntry'),
         ].join('')
@@ -796,7 +870,7 @@ describe('frames', () => {
       await frame.render(
         [
           '<head>',
-          '<link data-rmx rel="modulepreload" href="/import-map-order-entry.js" />',
+          '<link data-rmx-module-preload rel="modulepreload" href="/import-map-order-entry.js" />',
           remixImportMapScript({ imports: { pkg: '/pkg.js' } }),
           '</head>',
           '<main>Loaded</main>',
@@ -804,7 +878,7 @@ describe('frames', () => {
       )
 
       let managedResources = document.head.querySelectorAll(
-        'script[data-rmx][type="importmap"], link[data-rmx][rel="modulepreload"]',
+        'script[data-rmx][type="importmap"], link[data-rmx-module-preload][rel="modulepreload"]',
       )
       expect(managedResources).toHaveLength(2)
       expect(managedResources[0]).toBeInstanceOf(HTMLScriptElement)
@@ -819,7 +893,7 @@ describe('frames', () => {
   it('keeps active initial preloads connected across a document reload', async () => {
     document.documentElement.innerHTML = [
       '<head><title>Initial</title>',
-      '<link data-rmx rel="modulepreload" href="/entry.js" />',
+      '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
       '</head><body></body>',
     ].join('')
 
@@ -896,7 +970,8 @@ describe('frames', () => {
     try {
       await frame.ready()
       let response = document.createElement('template')
-      response.innerHTML = '<link data-rmx rel="modulepreload" href="/frame-entry.js" />'
+      response.innerHTML =
+        '<link data-rmx-module-preload rel="modulepreload" href="/frame-entry.js" />'
       getDocumentModulePreloader(document).consumePreloadLinks(response.content)
       let activePreload = document.head.querySelector<HTMLLinkElement>(managedModulePreloadSelector)
       expect(activePreload).not.toBeNull()

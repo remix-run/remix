@@ -101,7 +101,6 @@ The resolved `preloads` array contains browser module hrefs. During server rende
 Use `run` to start the client runtime. It scans the document for client entry markers, loads modules, and hydrates each one:
 
 ```tsx
-import type { ResolveFrameOptions } from 'remix/ui'
 import { run } from 'remix/ui'
 
 const app = run({
@@ -109,30 +108,7 @@ const app = run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, options) {
-    let headers = new Headers({ accept: 'text/html', 'x-remix-frame': 'true' })
-    if (options?.target) headers.set('x-remix-target', options.target)
-    let response = await fetch(src, {
-      body: getRequestBody(options),
-      headers,
-      method: options?.method,
-      signal: options?.signal,
-    })
-    return response.body ?? (await response.text())
-  },
 })
-
-function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
-  let formData = options?.formData
-  if (!formData) return
-  if (options.encType !== 'application/x-www-form-urlencoded') return formData
-
-  let body = new URLSearchParams()
-  for (let [name, value] of formData) {
-    body.append(name, typeof value === 'string' ? value : value.name)
-  }
-  return body
-}
 
 app.addEventListener('error', (event) => {
   console.error('Component error:', event.error)
@@ -141,10 +117,22 @@ app.addEventListener('error', (event) => {
 await app.ready()
 ```
 
+By default, `run()` resolves frames with `fetch()`, requests `text/html`, and forwards the submitted
+method and abort signal. GET form values are already encoded in `src`; non-GET submissions use
+`URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for `text/plain`, and
+`FormData` for `multipart/form-data`. Provide `resolveFrame` when an app needs additional headers,
+another body encoding, or a different response policy.
+
+Add `data-rmx-document` to a link or form to leave its navigation to the browser.
+
+The default resolver rejects non-OK responses with an error containing their status and status text.
+A custom `resolveFrame` may return a `Response` with any status when it wants the runtime to render
+the response body.
+
 ### `run` options
 
 - **`loadModule(moduleUrl, exportName)`** (required) — return the component function for each client entry. Typically uses dynamic `import()`.
-- **`resolveFrame(src, options)`** (optional) — called when a `<Frame>` loads or reloads content and for intercepted link and form navigations. `options` may contain `signal` and `target`; non-GET forms also provide `formData`, `method`, and `encType`.
+- **`resolveFrame(src, options)`** (optional) — overrides the default `fetch()` resolver when a `<Frame>` loads or reloads content and for intercepted link and form navigations. `options` may contain `signal` and `target`; non-GET forms also provide `formData`, `method`, and `encType`.
 
 ### `app` methods
 
@@ -215,17 +203,17 @@ When a frame reloads, matching DOM nodes are updated in place. Client entries re
 
 ### Form navigation
 
-When `run({ resolveFrame })` is active, eligible same-origin forms progressively enhance into frame navigations. Native validation and the form's `submit` event still run first.
+When `run()` is active, eligible same-origin forms progressively enhance into frame navigations. Native validation and the form's `submit` event still run first.
 
 - Forms target `handle.frames.top` by default.
-- `rmx-target` selects a named frame.
-- `rmx-src` selects a different frame request URL while preserving the form action as the navigation destination.
-- `rmx-history="push|replace"` overrides how the navigation updates history.
-- `rmx-reset-scroll="false"` preserves scroll position.
-- `rmx-document` opts back into a document submission.
+- `data-rmx-target` selects a named frame.
+- `data-rmx-src` selects a different frame request URL while preserving the form action as the navigation destination.
+- `data-rmx-history="push|replace"` overrides how the navigation updates history.
+- `data-rmx-reset-scroll="false"` preserves scroll position.
+- `data-rmx-document` opts back into a document submission.
 - Cross-origin forms, `method="dialog"`, and `target="_blank"` remain browser-owned.
 
-GET controls are already encoded in `src`, so GET forms reach the resolver like links. Non-GET forms provide their native `FormData`, effective method, and encoding. The resolver owns body encoding and method-override conventions. Non-GET submissions to the current URL replace its history entry; GET submissions and submissions to a different URL push one. The `rmx-history` attribute overrides those defaults.
+GET controls are already encoded in `src`, so GET forms reach the resolver like links. Non-GET forms provide their native `FormData`, effective method, and encoding. The resolver owns body encoding and method-override conventions. Non-GET submissions to the current URL replace its history entry; GET submissions and submissions to a different URL push one. The `data-rmx-history` attribute overrides those defaults.
 
 ### Nested frames
 
@@ -290,7 +278,7 @@ navigate('/dashboard', { history: 'replace' })
 
 Options: `src`, `target`, `history` (`'push' | 'replace'`), `resetScroll`.
 
-Attributes understood by the runtime: `rmx-target`, `rmx-src`, `rmx-history`, `rmx-reset-scroll`, `rmx-document`.
+Attributes understood by the runtime: `data-rmx-target`, `data-rmx-src`, `data-rmx-history`, `data-rmx-reset-scroll`, `data-rmx-document`.
 
 ## Head Management
 

@@ -2,6 +2,229 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.10
+
+### Pre-release Changes
+
+- BREAKING CHANGE: Beta.10 supersedes beta.6 through beta.9 and consolidates their changes into one supported prerelease. Legacy package-aligned `remix/*` aliases have been removed in favor of canonical entrypoints that group related APIs together. Update imports when moving from beta.5 to beta.10:
+
+  ```diff
+  - import { requireAuth } from 'remix/auth-middleware'
+  - import { createPostgresDatabase } from 'remix/data-table-postgres'
+  - import { createRouter } from 'remix/fetch-router'
+  + import { requireAuth } from 'remix/middleware/auth'
+  + import { createPostgresDatabase } from 'remix/data-table/postgres'
+  + import { createRouter } from 'remix/router'
+  ```
+
+  The same canonical structure applies to the other entrypoints: middleware lives under `remix/middleware/*`, database dialects under `remix/data-table/*`, storage adapters under `remix/file-storage/*` and `remix/session-storage/*`, and route definitions move from `remix/fetch-router/routes` to `remix/routes`.
+
+- BREAKING CHANGE: `createAssetServer()` from `remix/assets` now uses `allowFiles` and `denyFiles` instead of `allow` and `deny` for file path access rules:
+
+  ```diff
+   import { createAssetServer } from 'remix/assets'
+
+   export const assetServer = createAssetServer({
+  -  allow: ['app/routes.ts', 'app/**/public/**'],
+  -  deny: ['app/**/*.test.*'],
+  +  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  +  denyFiles: ['app/**/*.test.*'],
+   })
+  ```
+
+- BREAKING CHANGE: `remix/cookie` now treats custom `encode` and `decode` functions as the complete cookie value codec. Custom encoded values are signed and serialized as-is instead of being wrapped in Remix's default base64 encoding. The default codec keeps the existing base64-safe representation.
+
+- BREAKING CHANGE: Route patterns now use delimiter-bounded params. Params stop at raw `/` and `.`, but not `-`, so a pattern such as `/:year-:month` must become one inseparable param such as `/:date`, or place the captures in separate path segments. Ambiguous adjacent captures are now rejected, and matching work is bounded to prevent pathological patterns (see #11651).
+
+- BREAKING CHANGE: Href helpers from `remix/route-pattern/href` and `remix/routes` now take search parameters in a `searchParams` options property:
+
+  ```diff
+  - const href = userRoute.href({ id: '123' }, { tab: 'settings' })
+  + const href = userRoute.href(
+  +   { id: '123' },
+  +   { searchParams: { tab: 'settings' } },
+  + )
+  ```
+
+  The options object also accepts a `baseURL` for generating path-relative same-origin hrefs. Route matching accepts the same option for relative URL strings, and `searchParams` accepts both typed objects and `URLSearchParams`.
+
+- BREAKING CHANGE: `remix/middleware/session` now makes session cookies HTTP-only when `httpOnly` is omitted. Set `httpOnly: false` explicitly if client-side JavaScript must read the cookie. `Cookie.httpOnly` from `remix/cookie` now returns `boolean | undefined` so omitted and explicitly disabled settings can be distinguished.
+
+- BREAKING CHANGE: Run tests with `remix test` instead of the removed `remix-test` executable, and move settings from `remix-test.config.ts` or `.js` into the `test` property of `remix.json`:
+
+  ```diff
+  - remix-test --type server --concurrency 1
+  + remix test --type server --concurrency 1
+  ```
+
+  ```jsonc
+  {
+    "$schema": "https://remix.run/schemas/remix.json",
+    "test": {
+      "type": ["server"],
+      "concurrency": 1,
+      "quiet": true,
+    },
+  }
+  ```
+
+  The programmatic `runRemixTest()` API from `remix/test/cli` now accepts typed runner options instead of raw command-line arguments. The test runner also adds `--only` for matching suite or test names, `--quiet` for omitting skipped tests, and defaults `NODE_ENV` to `test` when it is not already set (see #11623, #11628).
+
+- BREAKING CHANGE: Browser frame resolvers now receive one options object instead of positional `signal` and `target` arguments:
+
+  ```diff
+  - async function resolveFrame(src, signal, target) {
+  + async function resolveFrame(src, options) {
+  +   const { signal, target } = options ?? {}
+      // ...
+    }
+  ```
+
+- Add an `allowPackages` option to `createAssetServer()` from `remix/assets`. This allows a package and its dependencies to be served without listing every file the package may load:
+
+  ```ts
+  import { createAssetServer } from 'remix/assets'
+
+  export const assetServer = createAssetServer({
+    allowFiles: ['app/routes.ts', 'app/**/public/**'],
+    allowPackages: ['remix'],
+  })
+  ```
+
+- Added a new `remix db` workflow for inspecting migration status, migrating, seeding, wiping, and resetting the current app database. Configure a built-in SQLite, PostgreSQL, or MySQL database in `remix.json`; for example:
+
+  ```jsonc
+  {
+    "$schema": "https://remix.run/schemas/remix.json",
+    "db": {
+      "adapter": {
+        "type": "sqlite",
+        "filename": "./db/app.sqlite",
+      },
+      "migrations": {
+        "directory": "./db/migrations",
+      },
+      "seed": "./db/seed.sql",
+    },
+  }
+  ```
+
+  The same configuration then powers the complete local database lifecycle:
+
+  ```sh
+  remix db status
+  remix db migrate
+  remix db seed
+  remix db reset --force
+  ```
+
+  Command flags override configured values, database commands work from project subdirectories by finding the nearest `remix.json`, and destructive `wipe` and `reset` commands require `--force` (see #11608, #11639).
+
+- Added an optional JSONC `remix.json` file for shared `remix db`, `remix test`, and `remix doctor` settings. Relative paths and globs resolve from the configuration file, command-line options take precedence, and the global `remix --config <path>` option selects a different file (see #11628, #11638, #11639).
+
+- Added complete `createPostgresDatabase()`, `createMysqlDatabase()`, and `createSqliteDatabase()` factories through `remix/data-table/postgres`, `remix/data-table/mysql`, and `remix/data-table/sqlite`. These return the `Database` used for queries and lifecycle operations such as `migrate()`, `migrationStatus()`, `reset()`, `wipe()`, and `close()` (see #11608, #11639).
+
+  BREAKING CHANGE: Replace the removed adapter and migration-runner APIs with a concrete database and its lifecycle methods:
+
+  ```diff
+  - import { createDatabase } from 'remix/data-table'
+  - import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
+  + import { createPostgresDatabase } from 'remix/data-table/postgres'
+  - const db = createDatabase(
+  -   createPostgresDatabaseAdapter({ connectionString: process.env.DATABASE_URL }),
+  - )
+  + const db = createPostgresDatabase({
+  +   connectionString: process.env.DATABASE_URL,
+  + })
+  - await migrationRunner.migrate()
+  + await db.migrate(migrations)
+  ```
+
+  Applications should use a dialect factory; database integration packages can extend `Database` with a composed `DatabaseDriver` from `remix/data-table`.
+
+- Beta.10 includes an integrated full-stack hot module replacement workflow. Run `npm run hmr` in a newly generated project to reload server modules and update compatible UI components in place while preserving their state.
+
+  New projects include the script and a complete `hmr.ts` runner. The core setup looks like this:
+
+  ```json
+  {
+    "scripts": {
+      "hmr": "NODE_ENV=development node hmr.ts"
+    }
+  }
+  ```
+
+  ```ts
+  // hmr.ts (excerpt)
+  import { run } from 'remix/node-hmr'
+
+  const hmrRunner = run('server.ts', {
+    nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
+    browserHmrChannel: { port: 44101 },
+  })
+  ```
+
+  `remix/node-hmr`, `remix/ui-hmr`, and `remix/assets` coordinate server and browser updates through the standard `import.meta.hot` API. Browser-reachable source is scaffolded in colocated `public/` directories so the server/browser boundary remains explicit.
+
+- Remix UI navigation now progressively enhances same-origin forms into frame navigations. Forms support `rmx-target`, `rmx-document`, and `rmx-history="push|replace"`; resolvers receive native submission data and may return a `Response`, including redirected responses whose final URL becomes the top frame's canonical location. The new `rmx-preserve-dom` attribute protects client-owned subtrees such as custom elements during reloads, and `run()` exposes `app.frames` for inspecting the current frame collection.
+
+- `run()` from `remix/ui` now fetches frame HTML by default, so apps no longer need a custom `resolveFrame` just to enable frame reloads and same-origin link and form navigation:
+
+  ```diff
+   let app = run({
+     loadModule,
+  -  resolveFrame: (src, options) => fetch(src, { signal: options?.signal }),
+   })
+  ```
+
+  Keep a custom resolver when the app needs custom request headers, body encoding, response handling, or error UI. Add `rmx-document` to a link or form to leave that navigation to the browser (see #11693).
+
+- Allow `resolveClientEntry()` in `remix/ui` to return module preload hrefs so client entries can preload their browser module graphs.
+
+- This beta also improves runtime reliability across the stack. UI hydration, document navigation, and frame reloads no longer stall, lose newly rendered siblings, retain stale server-rendered content, or reload the wrong top-frame URL in the fixed edge cases. Styled components adapt to dark color schemes, and server-rendered CSS safely escapes values that could close a `<style>` element. Node handlers now receive native `Request` instances, response compression varies caches correctly by `Accept-Encoding`, proxied responses discard stale encoding and framing headers, and multipart parsing rejects overlong boundaries without stalling non-Node runtimes.
+
+- Fixed fresh Remix projects failing type checking when `staticFiles()` and other router middleware are used together. `remix/middleware/static` continues to use `@remix-run/static-middleware`, now with the same `@remix-run/fetch-router` dependency as `remix/router`, so package managers do not install incompatible `RequestContext` types.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`static-middleware@0.4.14`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.14)
+
+## v3.0.0-beta.9
+
+### Pre-release Changes
+
+- `run()` from `remix/ui` now fetches frame HTML by default, so apps no longer need a custom `resolveFrame` just to enable frame reloads and same-origin link and form navigation:
+
+  ```diff
+   let app = run({
+     loadModule,
+  -  resolveFrame: (src, options) => fetch(src, { signal: options?.signal }),
+   })
+  ```
+
+  Keep a custom resolver when the app needs custom request headers, body encoding, response handling, or error UI. Add `rmx-document` to a link or form to leave that navigation to the browser (see #11693).
+
+- Bumped `@remix-run/*` dependencies:
+  - [`ui@0.7.0`](https://github.com/remix-run/remix/releases/tag/ui@0.7.0)
+
+## v3.0.0-beta.8
+
+### Pre-release Changes
+
+- Fixed fresh Remix projects failing type checking when `staticFiles()` and other router middleware were used together. `remix/middleware/static` now uses the same router dependency as `remix/router`, preventing incompatible `RequestContext` types from being installed.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`static-files-middleware@0.1.0`](https://github.com/remix-run/remix/releases/tag/static-files-middleware@0.1.0)
+
+## v3.0.0-beta.7
+
+### Pre-release Changes
+
+- Allow `resolveClientEntry()` in `remix/ui` to return module preload hrefs so client entries can preload their browser module graphs
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cli@0.5.0`](https://github.com/remix-run/remix/releases/tag/cli@0.5.0)
+  - [`ui@0.6.0`](https://github.com/remix-run/remix/releases/tag/ui@0.6.0)
+
 ## v3.0.0-beta.6
 
 ### Pre-release Changes

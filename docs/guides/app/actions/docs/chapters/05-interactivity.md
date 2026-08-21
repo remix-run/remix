@@ -699,11 +699,11 @@ a link is an intentional part of the UI.
 Native anchors and forms can also control frame-aware navigation with attributes that correspond to
 the `link(...)` and `navigate(...)` options:
 
-- `rmx-target` names the frame to reload.
-- `rmx-src` provides the URL to fetch for that frame while `href` remains the browser's destination.
-- `rmx-history="push|replace"` controls how the navigation updates history, including overriding a form's default.
-- `rmx-reset-scroll="false"` preserves the current scroll position.
-- `rmx-document` opts out of interception and lets the browser perform a full-document navigation.
+- `data-rmx-target` names the frame to reload.
+- `data-rmx-src` provides the URL to fetch for that frame while `href` remains the browser's destination.
+- `data-rmx-history="push|replace"` controls how the navigation updates history, including overriding a form's default.
+- `data-rmx-reset-scroll="false"` preserves the current scroll position.
+- `data-rmx-document` opts out of interception and lets the browser perform a full-document navigation.
 
 [Streaming UI with Frames](/streaming-ui-with-frames/) shows these attributes with named frames and
 explains when a form can submit directly through the frame resolver.

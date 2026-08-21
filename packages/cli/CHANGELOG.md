@@ -2,6 +2,12 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- Updated the default `remix new` app template to provide preloads for client entries
+
 ## v0.4.0
 
 ### Minor Changes

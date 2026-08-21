@@ -72,11 +72,9 @@ export async function navigate(href: string, options?: NavigationOptions) {
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.
- * @param canResolveFrames Whether the runtime has a resolver that can handle intercepted navigations.
  * @returns void
  */
-export function startNavigationListener(signal: AbortSignal, canResolveFrames = true) {
-  if (!canResolveFrames) return
+export function startNavigationListener(signal: AbortSignal) {
   return startNavigationListenerImpl(signal, {
     getTopFrame,
     getNamedFrame,
@@ -288,22 +286,22 @@ function getSourceElementNavigation(
 
   let linkElement = sourceElement.closest('a, area')
   if (linkElement instanceof Element) {
-    if (linkElement.hasAttribute('rmx-document')) return
+    if (linkElement.hasAttribute('data-rmx-document')) return
     if (linkElement.hasAttribute('download')) return
 
     return {
       state: {
-        target: linkElement.getAttribute('rmx-target') ?? undefined,
-        src: linkElement.getAttribute('rmx-src') ?? event.destination.url,
-        resetScroll: linkElement.getAttribute('rmx-reset-scroll') !== 'false',
+        target: linkElement.getAttribute('data-rmx-target') ?? undefined,
+        src: linkElement.getAttribute('data-rmx-src') ?? event.destination.url,
+        resetScroll: linkElement.getAttribute('data-rmx-reset-scroll') !== 'false',
         $rmx: true,
       },
-      replaceHistory: getReplaceHistory(linkElement.getAttribute('rmx-history'), false),
+      replaceHistory: getReplaceHistory(linkElement.getAttribute('data-rmx-history'), false),
     }
   }
 
   let formNavigation = resolveFormNavigation(event)
-  if (!formNavigation || formNavigation.hasAttribute('rmx-document')) return
+  if (!formNavigation || formNavigation.hasAttribute('data-rmx-document')) return
 
   let replaceHistoryByDefault =
     formNavigation.getSubmission !== undefined &&
@@ -311,13 +309,13 @@ function getSourceElementNavigation(
 
   return {
     state: {
-      target: formNavigation.getAttribute('rmx-target') ?? undefined,
-      src: formNavigation.getAttribute('rmx-src') ?? event.destination.url,
-      resetScroll: formNavigation.getAttribute('rmx-reset-scroll') !== 'false',
+      target: formNavigation.getAttribute('data-rmx-target') ?? undefined,
+      src: formNavigation.getAttribute('data-rmx-src') ?? event.destination.url,
+      resetScroll: formNavigation.getAttribute('data-rmx-reset-scroll') !== 'false',
       $rmx: true,
     },
     replaceHistory: getReplaceHistory(
-      formNavigation.getAttribute('rmx-history'),
+      formNavigation.getAttribute('data-rmx-history'),
       replaceHistoryByDefault,
     ),
     getSubmission: formNavigation.getSubmission,

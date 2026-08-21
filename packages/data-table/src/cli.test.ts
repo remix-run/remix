@@ -12,6 +12,7 @@ import type {
   MigrationStatusEntry,
   Seed,
 } from './lib/migrations.ts'
+import { MemoryMigrationDriver } from '../test/memory-migration-driver.ts'
 import { createRecordingDriver, TestDatabase } from '../test/recording-driver.ts'
 
 const migrations: Migrations = [
@@ -117,6 +118,82 @@ describe('runRemixDb', () => {
     )
 
     assert.deepEqual(lines, ['no pending migrations'])
+  })
+
+  it('rolls back migrations with the requested bounds and prints reverted migrations', async () => {
+    let db = new RecordingDatabase()
+    db.migrateResult = {
+      applied: [],
+      reverted: [{ id: '20260715123000', name: 'create_users', status: 'pending' }],
+      sql: [],
+    }
+
+    let { value: exitCode, lines } = await captureLog(() =>
+      runRemixDb({
+        command: 'rollback',
+        db,
+        migrations,
+        step: 2,
+        dryRun: true,
+        journalTable: 'app_migrations',
+      }),
+    )
+
+    assert.equal(exitCode, 0)
+    assert.deepEqual(db.calls, ['migrate'])
+    assert.deepEqual(db.migrateOptions, {
+      direction: 'down',
+      step: 2,
+      dryRun: true,
+      journalTable: 'app_migrations',
+    })
+    assert.deepEqual(lines, ['would revert 20260715123000_create_users'])
+  })
+
+  it('rejects conflicting rollback bounds without touching the database', async () => {
+    let db = new RecordingDatabase()
+
+    await assert.rejects(
+      () =>
+        runRemixDb({
+          command: 'rollback',
+          db,
+          migrations,
+          to: '20260715123000',
+          step: 1,
+        } as never),
+      /Cannot combine "to" and "step"/,
+    )
+    assert.deepEqual(db.calls, [])
+  })
+
+  it('rejects an empty rollback target without reverting migrations', async () => {
+    let driver = new MemoryMigrationDriver()
+    let db = new TestDatabase(driver)
+    let reversibleMigrations: Migrations = [
+      {
+        id: '20260715123000',
+        name: 'create_users',
+        up: 'create table users (id integer)',
+        down: 'drop table users',
+      },
+    ]
+
+    await db.migrate(reversibleMigrations)
+    driver.executedScripts = []
+
+    await assert.rejects(
+      () =>
+        runRemixDb({
+          command: 'rollback',
+          db,
+          migrations: reversibleMigrations,
+          to: '',
+        }),
+      /Unknown migration target/,
+    )
+    assert.equal(driver.executedScripts.length, 0)
+    assert.equal(driver.journalRows.length, 1)
   })
 
   it('wipes the database', async () => {

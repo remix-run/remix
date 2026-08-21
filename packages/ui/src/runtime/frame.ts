@@ -1018,7 +1018,7 @@ function collectOwnedServerStyleTags(nodes: Node[], styles: HTMLStyleElement[]):
       continue
     }
 
-    if (node instanceof HTMLStyleElement && node.matches('style[data-rmx]')) {
+    if (node instanceof HTMLStyleElement && node.matches('style[data-rmx-style]')) {
       styles.push(node)
       continue
     }

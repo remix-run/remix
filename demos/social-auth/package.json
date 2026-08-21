@@ -13,6 +13,11 @@
     "typescript": "catalog:"
   },
   "scripts": {
+    "db:migrate": "remix db migrate",
+    "db:reset": "remix db reset --force",
+    "db:rollback": "remix db rollback",
+    "db:seed": "remix db seed",
+    "db:status": "remix db status",
     "dev": "node --env-file-if-exists=.env --watch --import remix/node-tsx server.ts",
     "start": "node --env-file-if-exists=.env --import remix/node-tsx server.ts",
     "test": "NODE_ENV=test remix test",
