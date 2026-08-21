@@ -98,7 +98,7 @@ export interface ResolveFrameOptions {
 type InternalFrameContent = FrameContent | DocumentFragment
 
 type FrameReloadOptions = Omit<ResolveFrameOptions, 'target'> & {
-  onBeforeCommit?: () => void
+  onAfterCommit?: () => void
 }
 
 type FrameReloadResult = {
@@ -269,7 +269,7 @@ type RenderOptions = {
   signal?: AbortSignal
   contentStatus?: 'pending' | 'resolved'
   data?: RmxData
-  onBeforeCommit?: () => void
+  onAfterCommit?: () => void
 }
 
 type ActiveRenderOptions = RenderOptions & {
@@ -381,10 +381,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       return
     }
 
-    // A navigation may need to apply native scrolling after the destination content is ready but
-    // before it changes the current layout. Streamed content reaches this point with its first batch.
-    options.onBeforeCommit?.()
-
     if (isRemixNodeFrameContent(content)) {
       if (!contentRoot) {
         let currentNodes = getContentNodes()
@@ -396,6 +392,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
       if (isRenderAborted(options.signal)) return
       contentRoot.render(content)
+      if (isRenderAborted(options.signal)) return
+      options.onAfterCommit?.()
       displayedContentStatus = options.contentStatus ?? 'resolved'
       return
     }
@@ -456,6 +454,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         signal: options.signal,
       })
 
+      if (isRenderAborted(options.signal)) return
+      options.onAfterCommit?.()
       let bodyContainer = createElementContainer(container.doc.body)
       if (isRenderAborted(options.signal)) return
       scheduleHydrationInContainer(
@@ -497,6 +497,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     })
 
     if (isRenderAborted(options.signal)) return
+    options.onAfterCommit?.()
     scheduleHydrationInContainer(
       container,
       responseContext,
@@ -742,7 +743,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     options?: FrameReloadOptions,
   ): Promise<FrameReloadResult> {
     try {
-      let { onBeforeCommit, ...resolveOptions } = options ?? {}
+      let { onAfterCommit, ...resolveOptions } = options ?? {}
       let resolution = await init.resolveFrame(frame.src, {
         ...resolveOptions,
         signal: controller.signal,
@@ -756,14 +757,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         return { signal: controller.signal }
       }
       let reconciliationTracker = createReconciliationTracker()
-      let didStartCommit = false
+      let didCommit = false
       await render(content, {
         signal: controller.signal,
         reconciliationTracker,
-        onBeforeCommit() {
-          if (didStartCommit) return
-          didStartCommit = true
-          onBeforeCommit?.()
+        onAfterCommit() {
+          if (didCommit) return
+          didCommit = true
+          onAfterCommit?.()
         },
       })
       reconciliationTracker.finalize()

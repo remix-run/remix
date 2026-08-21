@@ -103,7 +103,7 @@ describe('frames', () => {
     }
   })
 
-  it('notifies navigation immediately before committing reload content', async () => {
+  it('notifies navigation immediately after committing reload content', async () => {
     let root = document.createElement('div')
     root.innerHTML = '<p id="initial">Initial</p>'
     document.body.append(root)
@@ -127,10 +127,10 @@ describe('frames', () => {
       await frame.ready()
       let commitCount = 0
       let reload = reloadFrameForNavigation(frame.handle, {
-        onBeforeCommit() {
+        onAfterCommit() {
           commitCount++
-          expect(document.getElementById('initial')?.textContent).toBe('Initial')
-          expect(document.getElementById('next')).toBeNull()
+          expect(document.getElementById('initial')).toBeNull()
+          expect(document.getElementById('next')?.textContent).toBe('Next')
         },
       })
       await new Promise((resolve) => setTimeout(resolve, 0))
@@ -179,12 +179,18 @@ describe('frames', () => {
 
     try {
       await frame.ready()
+      let commitCount = 0
       let reloadSettled = false
-      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+      let reload = reloadFrameForNavigation(frame.handle, {
+        onAfterCommit() {
+          commitCount++
+        },
+      }).then(() => {
         reloadSettled = true
       })
       await new Promise((resolve) => setTimeout(resolve, 0))
 
+      expect(commitCount).toBe(1)
       expect(reloadSettled).toBe(false)
       resolveModule(ReloadedEntry)
       await reload
