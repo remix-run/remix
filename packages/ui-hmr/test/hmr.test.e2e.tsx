@@ -13,6 +13,7 @@ import { uiHmr } from '../src/assets.ts'
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const workspaceDir = path.resolve(packageDir, '../..')
+const fixtureTmpDir = path.join(workspaceDir, '.tmp/ui-hmr')
 const nodeHmrImportUrl = pathToFileURL(
   path.resolve(workspaceDir, 'packages/node-hmr/src/index.ts'),
 ).href
@@ -1338,9 +1339,8 @@ async function createHmrFixture(
     counterExtraExports?: string
   } = {},
 ): Promise<HmrFixture> {
-  let tmpDir = path.join(packageDir, '.tmp')
-  await fs.mkdir(tmpDir, { recursive: true })
-  let rootDir = await fs.mkdtemp(path.join(tmpDir, 'hmr-e2e-'))
+  await fs.mkdir(fixtureTmpDir, { recursive: true })
+  let rootDir = await fs.mkdtemp(path.join(fixtureTmpDir, 'hmr-e2e-'))
 
   await writeWorkspacePackageLinks(rootDir, ['@remix-run/ui', '@remix-run/ui-hmr'])
   await write(
@@ -1438,9 +1438,8 @@ function getCounterComponentSource(options: { buttonText: string; countText: str
 }
 
 async function createServerFrameHmrFixture(): Promise<HmrFixture> {
-  let tmpDir = path.join(packageDir, '.tmp')
-  await fs.mkdir(tmpDir, { recursive: true })
-  let rootDir = await fs.mkdtemp(path.join(tmpDir, 'server-frame-hmr-e2e-'))
+  await fs.mkdir(fixtureTmpDir, { recursive: true })
+  let rootDir = await fs.mkdtemp(path.join(fixtureTmpDir, 'server-frame-hmr-e2e-'))
 
   await write(
     rootDir,
@@ -1584,9 +1583,8 @@ async function createNodeHmrFixture(
     slowDocumentMs?: number
   } = {},
 ): Promise<NodeHmrFixture> {
-  let tmpDir = path.join(packageDir, '.tmp')
-  await fs.mkdir(tmpDir, { recursive: true })
-  let rootDir = await fs.mkdtemp(path.join(tmpDir, 'node-hmr-e2e-'))
+  await fs.mkdir(fixtureTmpDir, { recursive: true })
+  let rootDir = await fs.mkdtemp(path.join(fixtureTmpDir, 'node-hmr-e2e-'))
 
   await writeWorkspacePackageLinks(rootDir, [
     '@remix-run/assets',
@@ -1817,9 +1815,9 @@ function getNodeHmrServerSource(
     'let assetServer = createAssetServer({',
     `  allowFiles: [${JSON.stringify(`${appDir}/**`)}, 'packages/remix/**', 'packages/ui/**', 'packages/ui-hmr/**'],`,
     "  basePath: '/assets',",
-    '  fileMap: {',
-    `    '/app/*path': ${JSON.stringify(`${appDir}/*path`)},`,
-    "    '/packages/*path': 'packages/*path',",
+    '  mounts: {',
+    `    app: ${JSON.stringify(appDir)},`,
+    "    packages: 'packages',",
     '  },',
     '  hmr: createBrowserHmrChannel,',
     '  onError(error) {',
@@ -2029,9 +2027,9 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     createAssetServer({
       allowFiles: [`${appDir}/**`, 'packages/remix/**', 'packages/ui/**', 'packages/ui-hmr/**'],
       basePath: '/assets',
-      fileMap: {
-        '/app/*path': `${appDir}/*path`,
-        '/packages/*path': 'packages/*path',
+      mounts: {
+        app: appDir,
+        packages: 'packages',
       },
       hmr: () => ({
         close() {

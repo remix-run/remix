@@ -175,9 +175,9 @@ export function resolveServedStyleOrThrow(
   let stableUrlPathname = args.routes.toUrlPathname(identityPath)
   if (!stableUrlPathname) {
     throw createAssetServerCompilationError(
-      `File ${identityPath} is outside all configured fileMap entries.`,
+      `File ${identityPath} is outside all configured mounts.`,
       {
-        code: 'FILE_OUTSIDE_FILE_MAP',
+        code: 'FILE_OUTSIDE_MOUNTS',
       },
     )
   }
@@ -232,10 +232,10 @@ function resolveImportDependency(
 
   if (!args.routes.toUrlPathname(identityPath)) {
     throw createAssetServerCompilationError(
-      `Import "${url}" in ${importerPath}, resolved to "${identityPath}", is outside all configured fileMap entries. ` +
-        `Add a matching fileMap entry for this file path, or mark this import as external.`,
+      `Import "${url}" in ${importerPath}, resolved to "${identityPath}", is outside all configured mounts. ` +
+        `Add a matching mount for this file path, or mark this import as external.`,
       {
-        code: 'IMPORT_OUTSIDE_FILE_MAP',
+        code: 'IMPORT_OUTSIDE_MOUNTS',
       },
     )
   }
@@ -302,10 +302,10 @@ function resolveUrlDependency(
 
   if (!args.routes.toUrlPathname(identityPath)) {
     throw createAssetServerCompilationError(
-      `URL "${url}" in ${importerPath}, resolved to "${identityPath}", is outside all configured fileMap entries. ` +
-        `Add a matching fileMap entry for this file path.`,
+      `URL "${url}" in ${importerPath}, resolved to "${identityPath}", is outside all configured mounts. ` +
+        `Add a matching mount for this file path.`,
       {
-        code: 'URL_OUTSIDE_FILE_MAP',
+        code: 'URL_OUTSIDE_MOUNTS',
       },
     )
   }
