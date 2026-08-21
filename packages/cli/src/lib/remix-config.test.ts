@@ -5,11 +5,80 @@ import { fileURLToPath } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { loadRemixConfig } from './remix-config.ts'
+import { loadConfig, loadRemixConfig } from './remix-config.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 
-describe('loadRemixConfig', () => {
+describe('Remix config loading', () => {
+  it('loads an explicit config file or searches upward from a directory', async () => {
+    let rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-discovery-'))
+    let nestedDir = path.join(rootDir, 'app', 'actions')
+    let configPath = path.join(rootDir, 'project.jsonc')
+
+    try {
+      await fs.mkdir(nestedDir, { recursive: true })
+      await fs.writeFile(path.join(rootDir, 'remix.json'), '{ "doctor": { "strict": true } }')
+      await fs.writeFile(configPath, '{ "doctor": { "strict": false } }')
+
+      assert.deepEqual(await loadConfig(nestedDir), { doctor: { strict: true } })
+      assert.deepEqual(await loadConfig(configPath), { doctor: { strict: false } })
+    } finally {
+      await fs.rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  it('parses asset configuration and resolves its root from the config file', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-assets-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({
+          assets: {
+            allowFiles: ['app/routes.ts', 'app/**/public/**'],
+            allowPackages: ['remix'],
+            basePath: '/assets',
+            denyFiles: ['app/**/*.test.*'],
+            fileMap: { '/app/*path': 'app/*path' },
+            files: { extensions: ['.svg', '.png'] },
+            rootDir: '..',
+          },
+        }),
+      )
+
+      let config = await loadConfig(cwd)
+      assert.deepEqual(config.assets, {
+        allowFiles: ['app/routes.ts', 'app/**/public/**'],
+        allowPackages: ['remix'],
+        basePath: '/assets',
+        denyFiles: ['app/**/*.test.*'],
+        fileMap: { '/app/*path': 'app/*path' },
+        files: { extensions: ['.svg', '.png'] },
+        rootDir: path.dirname(cwd),
+      })
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects incomplete asset configuration with a source location', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-assets-invalid-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        ['{', '  "assets": {', '    "basePath": "/assets"', '  }', '}'].join('\n'),
+      )
+
+      await assert.rejects(
+        () => loadConfig(cwd),
+        /Expected an array of strings at assets\.allowFiles/,
+      )
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
   it('treats a missing default config as empty', async () => {
     let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-missing-default-'))
 

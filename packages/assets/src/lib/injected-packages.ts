@@ -45,6 +45,12 @@ export function getInjectedPackageRouteConfigs(): {
   })
 }
 
+export function getInjectedPackageRoots(): readonly string[] {
+  return injectedPackageNames.map(
+    (packageName) => getResolvedInjectedPackage(packageName).packageRoot,
+  )
+}
+
 export function getInjectedPackageNameForSpecifier(specifier: string): string | null {
   for (let injectedSpecifier of generatedInjectedPackageSpecifiers) {
     if (specifier === injectedSpecifier) {

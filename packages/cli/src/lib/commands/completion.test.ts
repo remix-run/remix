@@ -80,6 +80,7 @@ describe('completion command', () => {
       result.stdout,
       [
         'mode:values',
+        'assets',
         'completion',
         'db',
         'doctor',

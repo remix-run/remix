@@ -8,6 +8,7 @@ export interface CompletionResult {
 const COMPLETION_SHELLS = ['bash', 'zsh'] as const
 const DB_COMMANDS = ['migrate', 'reset', 'rollback', 'seed', 'status', 'wipe'] as const
 const HELP_COMMANDS = [
+  'assets',
   'completion',
   'db',
   'doctor',
@@ -18,6 +19,7 @@ const HELP_COMMANDS = [
   'version',
 ] as const
 const ROOT_COMMANDS = [
+  'assets',
   'completion',
   'db',
   'doctor',
@@ -225,6 +227,10 @@ function completeCommand(
     return completeHelp(tokens, currentWord, usedGlobalFlags)
   }
 
+  if (command === 'assets') {
+    return completeAssets(tokens, currentWord, usedGlobalFlags)
+  }
+
   if (command === 'new') {
     return completeNew(tokens, currentWord, usedGlobalFlags)
   }
@@ -259,6 +265,23 @@ function completeCommand(
   }
 
   return completeValues([], currentWord)
+}
+
+function completeAssets(
+  tokens: string[],
+  currentWord: string,
+  usedGlobalFlags: Set<string>,
+): CompletionResult {
+  let filteredTokens = filterGlobalCommandTokens(tokens, usedGlobalFlags)
+  if (filteredTokens == null || filteredTokens.length > 0) {
+    return completeValues([], currentWord)
+  }
+
+  if (currentWord.startsWith('-')) {
+    return completeValues(withHelpFlags([], usedGlobalFlags), currentWord)
+  }
+
+  return { mode: 'files' }
 }
 
 function completeTest(
