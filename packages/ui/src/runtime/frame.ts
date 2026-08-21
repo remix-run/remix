@@ -1251,20 +1251,19 @@ function hydrateRegion(
 
   context.pendingClientEntries.delete(start)
 
-  // The same marker can be discovered by overlapping hydration passes
-  // (for example, document root + nested frame root). Reuse the existing
-  // virtual root instead of redefining the marker property.
-  let owner = getClientEntryBoundaryOwner(start)
-  if (owner) {
+  // During a server frame reload, expose the reload signal and reconciliation
+  // tracker to client frames created while this entry renders so blocking
+  // frames keep the reload pending until their content arrives.
+  let renderEntry = (root: Pick<VirtualRoot, 'render'>) => {
     if (!signal) {
-      owner.root.render(vElement)
+      root.render(vElement)
       return
     }
 
     let frameRuntime = context.frame.$runtime
     invariant(
       isFrameRuntime(frameRuntime),
-      'Expected frame runtime while rendering a preserved client entry',
+      'Expected frame runtime while rendering a client entry during a reload',
     )
 
     let previousServerFrameReload = frameRuntime.serverFrameReload
@@ -1274,10 +1273,18 @@ function hydrateRegion(
       reconciliationTracker: context.reconciliationTracker,
     }
     try {
-      owner.root.render(vElement)
+      root.render(vElement)
     } finally {
       frameRuntime.serverFrameReload = previousServerFrameReload
     }
+  }
+
+  // The same marker can be discovered by overlapping hydration passes
+  // (for example, document root + nested frame root). Reuse the existing
+  // virtual root instead of redefining the marker property.
+  let owner = getClientEntryBoundaryOwner(start)
+  if (owner) {
+    renderEntry(owner.root)
     return
   }
 
@@ -1292,7 +1299,7 @@ function hydrateRegion(
   })
 
   setClientEntryBoundaryOwner(start, identity, root)
-  root.render(vElement)
+  renderEntry(root)
 }
 
 async function createSubFrames(

@@ -203,6 +203,54 @@ describe('frames', () => {
     }
   })
 
+  it('waits for blocking frames created by newly hydrated client entries', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    function StoreEntry() {
+      return () => jsx(Frame, { src: '/collection' })
+    }
+
+    let [collectionPromise, resolveCollection] = withResolvers<string>()
+    let frame = createFrame(root, {
+      src: 'https://example.com/initial',
+      errorTarget: new EventTarget(),
+      loadModule: () => StoreEntry,
+      resolveFrame(src) {
+        if (src === '/collection') return collectionPromise
+        return [
+          '<!-- rmx:h:h1 --><p id="server-collection">Server collection</p><!-- /rmx:h -->',
+          rmxDataScript('collection', '/store-entry.js', 'StoreEntry'),
+        ].join('')
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveCollection('<p id="collection">Collection</p>')
+      await reload
+
+      expect(document.getElementById('collection')?.textContent).toBe('Collection')
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('does not wait for non-blocking frames created by client entry reconciliation', async () => {
     let root = document.createElement('div')
     root.innerHTML = [
