@@ -1,0 +1,1 @@
+**BREAKING CHANGE:** During server rendering, script elements with children must now contain a single string child. This allows script content to be embedded without HTML entity escaping breaking the content, while still escaping script-tag sequences that could terminate the element.

@@ -556,7 +556,7 @@ function buildElementSegment(
       return staticSeg(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
     }
     if (props.children != null) {
-      console.error(new Error('script elements must receive a single string child'))
+      console.error(new Error('script elements with children must have a single string child'))
     }
     return staticSeg(`<${tag}${attrs}></${tag}>`)
   }
