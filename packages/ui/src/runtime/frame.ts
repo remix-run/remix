@@ -97,7 +97,9 @@ export interface ResolveFrameOptions {
 
 type InternalFrameContent = FrameContent | DocumentFragment
 
-type FrameReloadOptions = Omit<ResolveFrameOptions, 'target'>
+type FrameReloadOptions = Omit<ResolveFrameOptions, 'target'> & {
+  onBeforeCommit?: () => void
+}
 
 type FrameReloadResult = {
   signal: AbortSignal
@@ -267,6 +269,7 @@ type RenderOptions = {
   signal?: AbortSignal
   contentStatus?: 'pending' | 'resolved'
   data?: RmxData
+  onBeforeCommit?: () => void
 }
 
 type ActiveRenderOptions = RenderOptions & {
@@ -377,6 +380,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       }
       return
     }
+
+    // A navigation may need to apply native scrolling after the destination content is ready but
+    // before it changes the current layout. Streamed content reaches this point with its first batch.
+    options.onBeforeCommit?.()
 
     if (isRemixNodeFrameContent(content)) {
       if (!contentRoot) {
@@ -735,8 +742,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     options?: FrameReloadOptions,
   ): Promise<FrameReloadResult> {
     try {
+      let { onBeforeCommit, ...resolveOptions } = options ?? {}
       let resolution = await init.resolveFrame(frame.src, {
-        ...options,
+        ...resolveOptions,
         signal: controller.signal,
         target: frameName,
       })
@@ -748,9 +756,15 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         return { signal: controller.signal }
       }
       let reconciliationTracker = createReconciliationTracker()
+      let didStartCommit = false
       await render(content, {
         signal: controller.signal,
         reconciliationTracker,
+        onBeforeCommit() {
+          if (didStartCommit) return
+          didStartCommit = true
+          onBeforeCommit?.()
+        },
       })
       reconciliationTracker.finalize()
       await reconciliationTracker.ready()

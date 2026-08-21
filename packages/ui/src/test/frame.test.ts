@@ -103,6 +103,52 @@ describe('frames', () => {
     }
   })
 
+  it('notifies navigation immediately before committing reload content', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    let [contentPromise, resolveContent] = withResolvers<string>()
+    let frame = createFrame(root, {
+      src: 'https://example.com/initial',
+      errorTarget: new EventTarget(),
+      loadModule: () => () => () => null,
+      resolveFrame: () => contentPromise,
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      let commitCount = 0
+      let reload = reloadFrameForNavigation(frame.handle, {
+        onBeforeCommit() {
+          commitCount++
+          expect(document.getElementById('initial')?.textContent).toBe('Initial')
+          expect(document.getElementById('next')).toBeNull()
+        },
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(commitCount).toBe(0)
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+
+      resolveContent('<p id="next">Next</p>')
+      await reload
+
+      expect(commitCount).toBe(1)
+      expect(document.getElementById('initial')).toBeNull()
+      expect(document.getElementById('next')?.textContent).toBe('Next')
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('waits for client entry reconciliation before a reload resolves', async () => {
     let root = document.createElement('div')
     root.innerHTML = '<p id="initial">Initial</p>'
