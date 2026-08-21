@@ -73,6 +73,7 @@ let router = createRouter({ middleware })
 
 - Put fast exits early: `staticFiles()`, `cors()` preflight handling, and `cop()` when used
 - Parse request bodies before middleware that depends on them, such as `methodOverride()` and form field token extraction in `csrf()`
+- `formData()` parses eagerly and awaits custom upload handlers before downstream middleware runs. For protected uploads, run authentication first and place `requireAuth()` before `formData({ uploadHandler })` on the controller or action so anonymous requests cannot write files before rejection
 - Run `session()` before `csrf()` and before session-backed `auth()`
 - Add `asyncContext()` before helpers or shared code call `getContext()`
 - Keep route protection like `requireAuth()` as controller middleware or action middleware unless the entire app is private
@@ -81,7 +82,7 @@ let router = createRouter({ middleware })
 
 - **Session-backed HTML app** -> `compression()`, `staticFiles()`, optional `cop()`, `formData()`, `methodOverride()`, `session()`, optional `csrf()`, `asyncContext()`, `auth({ schemes })`
 - **Cross-origin API** -> `compression()`, `cors()`, optional `asyncContext()`, optional `auth({ schemes })`
-- **Upload flow** -> `compression()`, `staticFiles()`, `formData({ uploadHandler })`, then sessions, auth, and data-loading middleware as needed
+- **Protected upload flow** -> resolve sessions and auth without consuming the body, then use `requireAuth()`, `formData({ uploadHandler })`, and data-loading middleware on the protected controller or action
 - **Optional development HMR** -> keep `server.ts` as the child app server, add `hmr.ts` for `remix/node-hmr`, and proxy public requests through `createHmrReadyFetch()`
 
 ### Middleware with options
@@ -108,6 +109,8 @@ formData({
 ```
 
 Errors thrown or rejected by `uploadHandler` propagate directly. Catch domain-specific upload errors at the route boundary when they should become user-facing `Response` objects.
+
+`formData()` consumes form bodies before calling downstream middleware. Router middleware also runs when no route matches, so a router-level upload handler can write files for requests that later receive `401`, `403`, or `404` responses. Scope side-effecting upload handlers to the controller or action that owns the upload, after any authentication or authorization middleware. Storage writes are not rolled back automatically when later middleware or the action fails, so use temporary storage and cleanup when the workflow requires atomicity.
 
 ## Writing Custom Middleware
 

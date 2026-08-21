@@ -17,9 +17,11 @@ npm i remix
 
 ## Usage
 
-Use the `formData()` middleware at the router level to parse `FormData` from the request body and make it available as `context.formData` (or `context.get(FormData)`).
+Use the `formData()` middleware at the router, controller, or action level to parse `FormData` from the request body and make it available as `context.formData` (or `context.get(FormData)`).
 
 When `formData()` runs successfully it always provides a `FormData` value. Requests that do not contain a form body, including `GET` and `HEAD` requests, receive an empty `FormData`.
+
+`formData()` parses the request body eagerly. It finishes parsing the form, awaits every custom `uploadHandler`, and then runs downstream middleware and the action handler. Reading `context.formData` does not trigger parsing lazily.
 
 Uploaded files are available in the parsed `FormData` object. For a single file field, use `formData.get(name)`. For repeated file fields, use `formData.getAll(name)`.
 
@@ -45,25 +47,59 @@ router.post('/users', async (context) => {
 
 Use `context.formData` (or `context.get(FormData)`).
 
+### Middleware Ordering
+
+Router middleware runs before controller and action middleware, including when no route matches the request. A router-level `formData()` with an `uploadHandler` may therefore write uploaded files before downstream authentication or authorization middleware rejects the request. Those writes are not rolled back automatically.
+
+For protected uploads, resolve authentication without consuming the body, then put `requireAuth()` before `formData()` on the controller or action that accepts the upload:
+
+```ts
+import { requireAuth } from 'remix/middleware/auth'
+import { formData } from 'remix/middleware/form-data'
+
+router.post('/users/avatar', {
+  middleware: [
+    requireAuth(),
+    formData({
+      async uploadHandler(upload) {
+        return uploadStorage.put(crypto.randomUUID(), upload)
+      },
+    }),
+  ],
+  handler(context) {
+    let avatar = context.formData.get('avatar')
+    return Response.json({ uploaded: avatar != null })
+  },
+})
+```
+
+This example assumes an earlier `auth()` middleware has populated `context.auth`. Put any authorization checks that do not need the form body before `formData()` as well. If authorization depends on parsed form fields, write uploads to temporary storage and promote them only after authorization succeeds. Also set multipart size limits, rate-limit upload endpoints as appropriate, and clean up temporary files when downstream work fails.
+
 ### Custom File Upload Handler
 
 You can use a custom upload handler to customize how file uploads are handled. The return value of the upload handler will be used as the value of the form field in the `FormData` object.
 
-```ts
-import { formData } from 'remix/middleware/form-data'
-import { writeFile } from 'node:fs/promises'
+The multipart request is read incrementally, but each complete file part is buffered in memory before the upload handler receives its `FileUpload`. Returning a path or storage key prevents completed file contents from accumulating in the returned `FormData`, but it does not stream bytes directly from the request to storage.
 
-let router = createRouter({
+```ts
+import { requireAuth } from 'remix/middleware/auth'
+import { formData } from 'remix/middleware/form-data'
+import { createFsFileStorage } from 'remix/file-storage/fs'
+
+let uploadStorage = createFsFileStorage('./uploads')
+
+router.post('/users/avatar', {
   middleware: [
+    requireAuth(),
     formData({
       async uploadHandler(upload) {
-        // Save to disk and return path
-        let path = `./uploads/${upload.name}`
-        await writeFile(path, Buffer.from(await upload.arrayBuffer()))
-        return path
+        return uploadStorage.put(crypto.randomUUID(), upload)
       },
     }),
   ],
+  handler(context) {
+    return Response.json({ uploaded: context.formData.has('avatar') })
+  },
 })
 ```
 

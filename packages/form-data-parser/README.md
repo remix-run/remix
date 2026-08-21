@@ -1,11 +1,11 @@
 # form-data-parser
 
-A streaming `multipart/form-data` parser that solves memory issues with file uploads in server environments. Built as an enhanced replacement for the native `request.formData()` API, it enables efficient handling of large file uploads by streaming directly to disk or cloud storage services like [AWS S3](https://aws.amazon.com/s3/) or [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/), preventing server crashes from memory exhaustion.
+A `multipart/form-data` parser with configurable limits and custom file upload handling. It reads the request stream incrementally, buffers each complete file part, and lets you replace that file with a storage value in the returned `FormData`.
 
 ## Features
 
-- **Drop-in replacement** for `request.formData()` with streaming file upload support
-- **Minimal buffering** - processes file upload streams with minimal memory footprint
+- **Drop-in replacement** for `request.formData()` with custom file upload handling
+- **Bounded parsing** - configurable limits for files, parts, headers, and total content
 - **Standards-based** - built on the [web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) and [File API](https://developer.mozilla.org/en-US/docs/Web/API/File)
 - **Smart fallback** - parses `application/x-www-form-urlencoded` requests with the same total size and field count limits, and uses native `request.formData()` for other form requests
 - **Storage agnostic** - works with any storage backend (local disk, S3, R2, etc.)
@@ -22,7 +22,7 @@ In normal usage, this makes it difficult to process requests with large file upl
 
 For attackers, this creates an attack vector where malicious actors can overwhelm your server's memory by sending large payloads with many files.
 
-`form-data-parser` solves this by handling file uploads as they arrive in the request body stream, allowing you to safely store files and use either a) the `File` directly or b) a unique identifier for that file in the returned `FormData` object.
+`form-data-parser` applies configurable limits while reading the request body and passes each completed file to an upload handler. Each file is buffered in memory before the upload handler runs. The handler can store the file and return a path, key, or other `FormData` value so completed files do not remain in the returned `FormData`.
 
 ## Installation
 
@@ -58,8 +58,7 @@ async function uploadHandler(fileUpload: FileUpload) {
 
 // Handle form submissions with file uploads
 async function requestHandler(request: Request) {
-  // Parse the form data from the request.body stream, passing any files
-  // through your upload handler as they are parsed from the stream
+  // Parse the form data and pass each completed file to the upload handler
   let formData = await parseFormData(request, uploadHandler)
 
   let avatarFilename = formData.get('user-avatar')
