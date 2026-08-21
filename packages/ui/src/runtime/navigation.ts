@@ -36,6 +36,7 @@ interface FormSubmissionNavigationInfo {
 
 interface FrameRedirectNavigationInfo {
   type: typeof frameRedirectNavigationInfoType
+  resetScroll: boolean
 }
 
 const formSubmissionNavigationInfoType = 'frame-form-submission'
@@ -108,7 +109,10 @@ export function startNavigationListenerImpl(
       if (!event.canIntercept || isCrossOriginDestination(event)) return
 
       if (isFrameRedirectNavigationInfo(event.info)) {
-        event.intercept({ async handler() {} })
+        event.intercept({
+          async handler() {},
+          scroll: event.info.resetScroll === false ? 'manual' : undefined,
+        })
         return
       }
 
@@ -150,15 +154,16 @@ export function startNavigationListenerImpl(
             state: { ...state, src: redirectedTo },
             info: {
               type: frameRedirectNavigationInfoType,
+              resetScroll: state.resetScroll,
             } satisfies FrameRedirectNavigationInfo,
           })
         }
-
-        let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
-        if (state.resetScroll && isNewEntry) {
-          window.scrollTo(0, 0)
-        }
       }
+
+      let interceptOptions = {
+        handler,
+        scroll: state.resetScroll === false ? 'manual' : undefined,
+      } satisfies NavigationInterceptOptions
 
       if (runtimeNavigation.getSubmission) {
         // <form method="post"> navigations
@@ -168,13 +173,12 @@ export function startNavigationListenerImpl(
 
           // Modern browsers allow you to update the in-flight navigation entry before it's committed
           if (supportsPrecommit) {
-            let interceptOptions: NavigationInterceptOptionsWithPrecommit = {
-              handler,
+            event.intercept({
+              ...interceptOptions,
               precommitHandler(controller) {
                 controller.redirect(event.destination.url, { history: 'replace' })
               },
-            }
-            event.intercept(interceptOptions)
+            })
             return
           }
 
@@ -194,14 +198,14 @@ export function startNavigationListenerImpl(
           }
         }
 
-        event.intercept({ handler })
+        event.intercept(interceptOptions)
       } else {
         // <a>/<form method="get"> navigations
         if (runtimeNavigation.replaceHistory && event.cancelable) {
           event.preventDefault()
           navigation.navigate(event.destination.url, { history: 'replace', state })
         } else {
-          event.intercept({ handler })
+          event.intercept(interceptOptions)
         }
       }
     },
@@ -231,7 +235,9 @@ function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNa
     typeof value === 'object' &&
     value != null &&
     'type' in value &&
-    value.type === frameRedirectNavigationInfoType
+    value.type === frameRedirectNavigationInfoType &&
+    'resetScroll' in value &&
+    typeof value.resetScroll === 'boolean'
   )
 }
 
