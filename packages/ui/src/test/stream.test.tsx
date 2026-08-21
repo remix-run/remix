@@ -2471,31 +2471,50 @@ describe('stream', () => {
       expect(done.done).toBe(true)
     })
 
-    it('cancels blocking frame rendering when signal aborts without calling onError', async () => {
+    it('cancels all blocking frames without unhandled rejections', async () => {
       let controller = new AbortController()
       let errors: unknown[] = []
+      let [frameOne, , rejectFrameOne] = withResolvers<string>()
+      let [frameTwo, , rejectFrameTwo] = withResolvers<string>()
+      let unhandledRejections: unknown[] = []
+      let onUnhandledRejection = (event: PromiseRejectionEvent) => {
+        event.preventDefault()
+        unhandledRejections.push(event.reason)
+      }
+      window.addEventListener('unhandledrejection', onUnhandledRejection)
 
-      let stream = renderToStream(<Frame src="/fragments/product" />, {
-        onError(error) {
-          errors.push(error)
-        },
-        resolveFrame: () =>
-          new Promise<string>((_resolve, reject) => {
-            controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
-              once: true,
-            })
-          }),
-        signal: controller.signal,
-      })
+      try {
+        let stream = renderToStream(
+          <div>
+            <Frame src="/fragments/one" />
+            <Frame src="/fragments/two" />
+          </div>,
+          {
+            onError(error) {
+              errors.push(error)
+            },
+            resolveFrame(src) {
+              return src === '/fragments/one' ? frameOne : frameTwo
+            },
+            signal: controller.signal,
+          },
+        )
 
-      let reader = stream.getReader()
-      let read = reader.read()
+        let reader = stream.getReader()
+        let read = reader.read()
 
-      let abortError = new DOMException('This operation was aborted', 'AbortError')
-      controller.abort(abortError)
+        let abortError = new DOMException('This operation was aborted', 'AbortError')
+        controller.abort(abortError)
+        rejectFrameOne(abortError)
+        rejectFrameTwo(abortError)
 
-      await expect(read).resolves.toEqual({ done: true, value: undefined })
-      expect(errors).toEqual([])
+        await expect(read).resolves.toEqual({ done: true, value: undefined })
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        expect(errors).toEqual([])
+        expect(unhandledRejections).toEqual([])
+      } finally {
+        window.removeEventListener('unhandledrejection', onUnhandledRejection)
+      }
     })
 
     it('cancels non-blocking frame rendering when signal aborts without calling onError', async () => {
