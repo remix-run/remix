@@ -1163,7 +1163,7 @@ function insertFrame(
       resolveController: undefined,
     },
   })
-  resolveClientFrame(committed, runtime)
+  resolveClientFrame(committed, runtime, runtime.serverFrameReload)
 
   return committed
 }
@@ -1171,7 +1171,7 @@ function insertFrame(
 function resolveClientFrame(
   node: CommittedFrameNode,
   runtime: FrameRuntime,
-  serverFrameReload?: { signal: AbortSignal },
+  serverFrameReload?: NonNullable<FrameRuntime['serverFrameReload']>,
 ): void {
   let frameSrc = getFrameSrc(node)
   let state = node._state
@@ -1189,7 +1189,7 @@ function resolveClientFrame(
   let resolveController = reload?.controller ?? new AbortController()
   state.resolveController = resolveController
 
-  Promise.resolve()
+  let resolve = Promise.resolve()
     .then(() =>
       runtime.resolveFrame(frameSrc, {
         signal: resolveController.signal,
@@ -1218,6 +1218,10 @@ function resolveClientFrame(
         state.resolveController = undefined
       }
     })
+
+  if (serverFrameReload?.reconciliationTracker && !node.props.fallback) {
+    serverFrameReload.reconciliationTracker.waitFor(resolve)
+  }
 }
 
 function disposeFrameResources(node: CommittedFrameNode): void {
