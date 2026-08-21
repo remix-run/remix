@@ -131,6 +131,13 @@ export function startNavigationListenerImpl(
       let frame = namedFrame ?? topFrame
 
       let handler = async () => {
+        if (event.signal.aborted) return
+
+        if (event.navigationType === 'traverse') {
+          // Enter native restoration mode before reconciliation can move or clamp the viewport.
+          event.scroll()
+        }
+
         let submission = await runtimeNavigation.getSubmission?.()
         if (event.signal.aborted) return
 
