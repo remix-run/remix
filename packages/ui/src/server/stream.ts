@@ -1283,7 +1283,7 @@ const FRAME_HEAD_OPEN_TAG = '<head>'
 const FRAME_HEAD_CLOSE_TAG = '</head>'
 const MARKED_MODULE_PRELOAD_START = '<link data-rmx-module-preload rel="modulepreload" href="'
 const MODULE_PRELOAD_END = '" />'
-const MANAGED_IMPORT_MAP_START = '<script data-rmx type="importmap">'
+const MANAGED_IMPORT_MAP_START = '<script data-rmx-import-map type="importmap">'
 const IMPORT_MAP_SCRIPT_END = '</script>'
 
 function createModulePreloadTag(href: string): string {
@@ -1416,7 +1416,7 @@ function buildRmxDataScript(context: RenderContext): string {
 
 function buildImportMapScript(importMap: ImportMap): string {
   let serializedData = escapeScriptJson(JSON.stringify(importMap))
-  return `<script data-rmx type="importmap">${serializedData}</script>`
+  return `<script data-rmx-import-map type="importmap">${serializedData}</script>`
 }
 
 function collectImportMapScript(resources: ClientEntryHeadResources): string {

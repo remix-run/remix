@@ -17,7 +17,7 @@ interface ImportMapManager {
   shouldPreserveHeadNode(node: Node): boolean
 }
 
-const MANAGED_IMPORT_MAP_SELECTOR = 'script[data-rmx][type="importmap"]'
+const MANAGED_IMPORT_MAP_SELECTOR = 'script[data-rmx-import-map][type="importmap"]'
 const IMPORT_MAP_SELECTOR = 'script[type="importmap"]'
 
 export function getDocumentImportMapManager(doc: Document): ImportMapManager {
@@ -182,7 +182,7 @@ function mergeInstalledImportMap(
 
 function appendImportMapScript(doc: Document, importMap: ImportMap): HTMLScriptElement {
   let script = doc.createElement('script')
-  script.setAttribute('data-rmx', '')
+  script.setAttribute('data-rmx-import-map', '')
   script.type = 'importmap'
   script.textContent = JSON.stringify(importMap)
   doc.head.appendChild(script)

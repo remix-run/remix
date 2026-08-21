@@ -148,7 +148,7 @@ describe('frames', () => {
       let initialScripts = getImportMapScripts()
       let hmrImportMap = document.createElement('script')
       hmrImportMap.type = 'importmap'
-      hmrImportMap.setAttribute('data-rmx', '')
+      hmrImportMap.setAttribute('data-rmx-import-map', '')
       hmrImportMap.textContent = JSON.stringify({
         imports: { '/hmr.js': '/hmr.hash.js' },
       })
@@ -167,7 +167,7 @@ describe('frames', () => {
       expect(parseImportMapScript(scripts[3]!)).toEqual({
         imports: { '/late.js': '/late.hash.js' },
       })
-      expect(scripts[3]?.hasAttribute('data-rmx')).toBe(true)
+      expect(scripts[3]?.hasAttribute('data-rmx-import-map')).toBe(true)
       expect(document.head.lastElementChild).toBe(scripts[3])
     } finally {
       frame.dispose()
@@ -557,7 +557,7 @@ describe('frames', () => {
         imports: { '/b.js': '/b.hash.js' },
         scopes: { '/scope/': { other: '/other.hash.js' } },
       })
-      expect(scripts[1]?.hasAttribute('data-rmx')).toBe(true)
+      expect(scripts[1]?.hasAttribute('data-rmx-import-map')).toBe(true)
       expect(document.body.querySelector('head')).toBeNull()
 
       await frame.render(`${remixImportMapHead(lateImportMap)}<main>Reloaded</main>`)
@@ -602,7 +602,7 @@ describe('frames', () => {
       expect(scripts).toHaveLength(2)
       expect(scripts[0]).toBe(externalImportMap)
       expect(Array.from(scripts[1]!.attributes, (attribute) => attribute.name)).toEqual([
-        'data-rmx',
+        'data-rmx-import-map',
         'type',
       ])
       expect(parseImportMapScript(scripts[1]!)).toEqual({
@@ -878,7 +878,7 @@ describe('frames', () => {
       )
 
       let managedResources = document.head.querySelectorAll(
-        'script[data-rmx][type="importmap"], link[data-rmx-module-preload][rel="modulepreload"]',
+        'script[data-rmx-import-map][type="importmap"], link[data-rmx-module-preload][rel="modulepreload"]',
       )
       expect(managedResources).toHaveLength(2)
       expect(managedResources[0]).toBeInstanceOf(HTMLScriptElement)
@@ -1030,14 +1030,14 @@ function remixImportMapHead(importMap: {
   imports?: Record<string, string | null>
   scopes?: Record<string, Record<string, string | null>>
 }): string {
-  return `<head><script data-rmx type="importmap">${JSON.stringify(importMap)}</script></head>`
+  return `<head><script data-rmx-import-map type="importmap">${JSON.stringify(importMap)}</script></head>`
 }
 
 function remixImportMapScript(importMap: {
   imports?: Record<string, string | null>
   scopes?: Record<string, Record<string, string | null>>
 }): string {
-  return `<script data-rmx type="importmap">${JSON.stringify(importMap)}</script>`
+  return `<script data-rmx-import-map type="importmap">${JSON.stringify(importMap)}</script>`
 }
 
 function getImportMapScripts(): HTMLScriptElement[] {

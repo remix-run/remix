@@ -409,7 +409,7 @@ function installImportMap(importMap) {
   if (!delta) return true
 
   let script = document.createElement('script')
-  script.setAttribute('data-rmx', '')
+  script.setAttribute('data-rmx-import-map', '')
   script.type = 'importmap'
   script.textContent = JSON.stringify(delta)
   document.head.appendChild(script)

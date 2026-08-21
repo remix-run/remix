@@ -1163,7 +1163,7 @@ describe('stream', () => {
       )
 
       expect(html).toMatch(
-        /^<head><script data-rmx type="importmap">.*<\/script><link data-rmx-module-preload rel="modulepreload" href="\/assets\/island\.js" \/><style data-rmx-style=.*<\/style><\/head><main class="rmxc-[a-z0-9]+">/s,
+        /^<head><script data-rmx-import-map type="importmap">.*<\/script><link data-rmx-module-preload rel="modulepreload" href="\/assets\/island\.js" \/><style data-rmx-style=.*<\/style><\/head><main class="rmxc-[a-z0-9]+">/s,
       )
     })
 
@@ -1239,7 +1239,7 @@ describe('stream', () => {
       let documentHead = html.match(/<head>(.*?)<\/head>/s)?.[1]
       invariant(documentHead)
       expect(documentHead).toContain(
-        '<script data-rmx type="importmap">{"imports":{"/assets/island.js":"/assets/island.hash.js"}}</script>',
+        '<script data-rmx-import-map type="importmap">{"imports":{"/assets/island.js":"/assets/island.hash.js"}}</script>',
       )
       expect(documentHead).toContain(
         '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
@@ -1290,7 +1290,7 @@ describe('stream', () => {
             resolveFrame() {
               return [
                 '<head>',
-                '<script data-rmx type="importmap">{"imports":{"island":"/assets/island.js"}}</script>',
+                '<script data-rmx-import-map type="importmap">{"imports":{"island":"/assets/island.js"}}</script>',
                 '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
                 '<style data-rmx-style="rmxc-frame">@layer rmx-ui.rmxc-frame { color: purple }</style>',
                 `<script type="text/plain">${markerShapedMarkup}</script>`,
@@ -1306,7 +1306,7 @@ describe('stream', () => {
           `<script type="text/plain">${markerShapedMarkup}</script></head>`,
       )
       expect(html).toContain(
-        '<script data-rmx type="importmap">{"imports":{"island":"/assets/island.js"}}</script>',
+        '<script data-rmx-import-map type="importmap">{"imports":{"island":"/assets/island.js"}}</script>',
       )
       expect(html.match(/href="\/assets\/island\.js"/g)).toHaveLength(1)
     })
@@ -2038,8 +2038,8 @@ describe('stream', () => {
       expect(importMapScript?.textContent).toBe(
         '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}',
       )
-      expect(importMapScript?.hasAttribute('data-rmx')).toBe(true)
-      expect(html).toMatch(/^<head><script data-rmx type="importmap">/)
+      expect(importMapScript?.hasAttribute('data-rmx-import-map')).toBe(true)
+      expect(html).toMatch(/^<head><script data-rmx-import-map type="importmap">/)
 
       let data = parseRmxDataFromHtml(html)
       let entries = Object.values<any>(data.h)
@@ -2093,7 +2093,7 @@ describe('stream', () => {
 
       let shelf = document.createElement('template')
       shelf.innerHTML = html
-      let importMapScripts = shelf.content.querySelectorAll('script[data-rmx][type="importmap"]')
+      let importMapScripts = shelf.content.querySelectorAll('script[data-rmx-import-map][type="importmap"]')
       expect(importMapScripts).toHaveLength(1)
       expect(JSON.parse(importMapScripts[0]?.textContent ?? '{}')).toEqual({
         imports: {
@@ -2188,9 +2188,9 @@ describe('stream', () => {
         '<link data-rmx-module-preload rel="modulepreload" href="/assets/app/shared.@def456.ts" />',
       )
       expect(head).toContain(
-        '<script data-rmx type="importmap">{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}</script>',
+        '<script data-rmx-import-map type="importmap">{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}</script>',
       )
-      expect(head.indexOf('<script data-rmx type="importmap">')).toBeLessThan(
+      expect(head.indexOf('<script data-rmx-import-map type="importmap">')).toBeLessThan(
         head.indexOf('<link data-rmx-module-preload rel="modulepreload"'),
       )
     })
@@ -2229,7 +2229,7 @@ describe('stream', () => {
         ),
       )
 
-      let importMapIndex = html.indexOf('<script data-rmx type="importmap">')
+      let importMapIndex = html.indexOf('<script data-rmx-import-map type="importmap">')
       let metaIndex = html.indexOf('<meta name="theme-color"')
       let stylesheetIndex = html.indexOf('<link rel="stylesheet"')
 
@@ -2269,8 +2269,8 @@ describe('stream', () => {
         ),
       )
 
-      expect(html).toContain('<html><head><script data-rmx type="importmap">')
-      expect(html.indexOf('<script data-rmx type="importmap">')).toBeLessThan(
+      expect(html).toContain('<html><head><script data-rmx-import-map type="importmap">')
+      expect(html.indexOf('<script data-rmx-import-map type="importmap">')).toBeLessThan(
         html.indexOf('<body>'),
       )
     })
@@ -2362,11 +2362,11 @@ describe('stream', () => {
       expect(importMapScripts[0]?.textContent).toBe(
         '{"imports":{"/assets/app/entry.tsx":"/assets/app/entry.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}',
       )
-      expect(importMapScripts[0]?.hasAttribute('data-rmx')).toBe(false)
+      expect(importMapScripts[0]?.hasAttribute('data-rmx-import-map')).toBe(false)
       expect(importMapScripts[1]?.textContent).toBe(
         '{"imports":{"/assets/app/shared.ts":"/assets/app/shared.@def456.ts","/assets/app/components/counter.tsx":"/assets/app/components/counter.@def456.tsx"},"scopes":{"/assets/app/components/":{"pkg":"/assets/app/node_modules/pkg/index.@fedcba.ts"}}}',
       )
-      expect(importMapScripts[1]?.hasAttribute('data-rmx')).toBe(true)
+      expect(importMapScripts[1]?.hasAttribute('data-rmx-import-map')).toBe(true)
     })
 
     it('leaves arbitrary authored import map content opaque', async () => {
@@ -2416,7 +2416,7 @@ describe('stream', () => {
       let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
       expect(importMapScripts).toHaveLength(2)
       expect(importMapScripts[0]?.textContent).toBe('not valid JSON')
-      expect(importMapScripts[0]?.hasAttribute('data-rmx')).toBe(false)
+      expect(importMapScripts[0]?.hasAttribute('data-rmx-import-map')).toBe(false)
       expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
         imports: {
           'https://example.com/app/shared.ts': 'https://example.com/app/shared.@abc.ts',
@@ -2925,9 +2925,9 @@ describe('stream', () => {
           '/assets/app/outer.tsx': '/assets/app/outer.@abc123.tsx',
         },
       })
-      expect(importMapScript?.hasAttribute('data-rmx')).toBe(true)
-      expect(result.match(/<script data-rmx type="importmap">/g)).toHaveLength(1)
-      expect(result.indexOf('<script data-rmx type="importmap">')).toBeLessThan(
+      expect(importMapScript?.hasAttribute('data-rmx-import-map')).toBe(true)
+      expect(result.match(/<script data-rmx-import-map type="importmap">/g)).toHaveLength(1)
+      expect(result.indexOf('<script data-rmx-import-map type="importmap">')).toBeLessThan(
         result.indexOf('<body>'),
       )
       expect(result).toMatch(/<!-- rmx:f:[^ ]+ --><head><style data-rmx-style=/)
@@ -2946,7 +2946,7 @@ describe('stream', () => {
         </html>,
         {
           resolveFrame: () =>
-            '<head><script data-rmx type="importmap">not valid JSON</script></head>' +
+            '<head><script data-rmx-import-map type="importmap">not valid JSON</script></head>' +
             '<main>Frame content</main>',
         },
       )
@@ -3004,7 +3004,7 @@ describe('stream', () => {
       invariant(!secondChunk.done)
       expect(secondChunk.value).toContain('<template id="f')
       expect(secondChunk.value).toContain(
-        '<head><script data-rmx type="importmap">' +
+        '<head><script data-rmx-import-map type="importmap">' +
           '{"imports":{"/assets/app/components/counter.tsx":' +
           '"/assets/app/components/counter.@abc123.tsx"}}' +
           '</script></head>',
