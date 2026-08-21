@@ -176,19 +176,56 @@ let assetServer = createAssetServer({
 
 ## Script Entries
 
-Use `assetServer.getScriptEntry()` when rendering a script entry module. Scripts keep JavaScript imports as authored, so rendered script entries need a public URL, modulepreload hints, and an import map.
+Use `assetServer.getScriptEntry()` to get everything needed to load a script and its dependencies.
 
 ```ts
 let { href, importMap, preloads } = await assetServer.getScriptEntry('app/assets/entry.tsx')
+```
 
-// Emit importMap in the document head after critical metadata/styles,
-// but before modulepreload links and module scripts.
-// <script type="importmap">{JSON.stringify(importMap).replace(/</g, '\\u003c')}</script>
-for (let preloadHref of preloads) {
-  // <link rel="modulepreload" href={preloadHref} />
+This can be used when rendering a document shell:
+
+```tsx
+import type { Handle, RemixNode } from 'remix/ui'
+import { assetServer } from './assets.ts'
+
+let { href, importMap, preloads } = await assetServer.getScriptEntry('app/assets/entry.tsx')
+
+export function Document(handle: Handle<{ children: RemixNode }>) {
+  return () => (
+    <html>
+      <head>
+        {/* ... */}
+        <script type="importmap">{JSON.stringify(importMap)}</script>
+        {preloads.map((preload) => (
+          <link rel="modulepreload" href={preload} />
+        ))}
+        <script type="module" src={href} />
+      </head>
+      <body>{handle.props.children}</body>
+    </html>
+  )
 }
+```
 
-// <script type="module" src={href} />
+This can also be used for resolved client entries in [`remix/ui`](https://github.com/remix-run/remix/tree/main/packages/ui) when using `import.meta.url` as the client entry ID:
+
+```tsx
+import { renderToStream } from 'remix/ui/server'
+import { assetServer } from './assets.ts'
+
+let stream = renderToStream(<App />, {
+  async resolveClientEntry(entryId, component) {
+    let { href, importMap, preloads } = await assetServer.getScriptEntry(entryId)
+
+    return {
+      href,
+      importMap,
+      preloads,
+      exportName: entryId.split('#')[1] || component.name,
+    }
+  },
+  // ...
+})
 ```
 
 ## Hrefs
@@ -209,6 +246,16 @@ let src = await assetServer.getHref('app/media/public/image.png', {
 // '/assets/app/media/public/image.png?transform=resize%3A100x100&transform=webp'
 ```
 
+## Import Maps
+
+Scripts retain their imports as authored and rely on import maps for resolution in the browser. `assetServer.getScriptEntry()` returns the import map for a single rendered script entry. Use `assetServer.getImportMap()` directly when you need to generate a combined import map for multiple script roots or other custom graph-level behavior.
+
+```ts
+let importMap = await assetServer.getImportMap(['app/assets/entry.tsx', 'app/assets/search.tsx'])
+```
+
+Without fingerprinting, import maps resolve authored specifiers to stable asset URLs. With fingerprinting enabled, the same import maps resolve stable asset URLs to content-fingerprinted asset URLs.
+
 ## Preloads
 
 Use `assetServer.getPreloads()` when rendering HTML so you can turn the returned URLs into `<link rel="modulepreload">`, stylesheet preload tags, or `Link` headers for one or more assets and their dependencies. You can provide root-relative or absolute file paths, or `file://` URLs.
@@ -226,25 +273,6 @@ let preloads = await assetServer.getPreloads([
 //   ...etc
 // ]
 ```
-
-## Import Maps
-
-Scripts keep JavaScript imports as authored and rely on import maps for browser resolution. `assetServer.getScriptEntry()` returns the import map for a single rendered script entry. Call `assetServer.getImportMap()` directly when you need to generate a combined import map for multiple script roots or other custom graph-level behavior.
-
-```ts
-let importMap = await assetServer.getImportMap(['app/assets/entry.tsx', 'app/assets/search.tsx'])
-```
-
-Without fingerprinting, import maps resolve authored specifiers to stable asset URLs. With fingerprinting enabled, the same import maps resolve stable asset URLs to content-fingerprinted asset URLs.
-
-Bare-import resolution must be uniform for all importer files in the same directory. Resolution may
-vary between directories, in which case the asset server emits more-specific import map scopes. A
-configuration where project references make the same bare import resolve differently for two files
-in one directory is rejected.
-
-Scripts with bare imports must also be served through a hierarchy-preserving `fileMap` entry. Its URL
-and file patterns must end with the same segment-aligned named wildcard, such as
-`'/app/*path': 'app/*path'`. This lets filesystem resolution boundaries be represented as URL scopes.
 
 ## Fingerprinting
 
@@ -569,9 +597,9 @@ let assetServer = createAssetServer({
 
 #### File transform caching
 
-Use `files.cache` to store transformed file outputs via a [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) backend.
+Use `files.cache` to store transformed file outputs via a [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) backend. Without `files.cache`, transformed file outputs are recomputed per request.
 
-Without `files.cache`, transformed file outputs are recomputed per request.
+`files.cacheKey` scopes transformed file cache entries. Use a stable identifier, such as a commit SHA, when you want unchanged transformed files to be reused across server restarts for the same build.
 
 ```ts
 import * as path from 'node:path'
@@ -596,8 +624,6 @@ let assetServer = createAssetServer({
   },
 })
 ```
-
-`files.cacheKey` scopes transformed file cache entries. Use a stable deployment identifier, such as a commit SHA, when you want unchanged transformed files to be reused across server restarts for the same build. Omit it in development to use a random per-process cache namespace while transform code and dependencies are changing.
 
 #### Request transform limits
 
