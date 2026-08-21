@@ -7,6 +7,7 @@ import {
 } from '../runtime/navigation.ts'
 import type { FrameHandle } from '../runtime/component.ts'
 import type { ResolveFrameOptions } from '../runtime/frame.ts'
+import { withResolvers } from './utils.ts'
 
 // Stand-in frame the navigation handler can call without dragging in the
 // full app runtime from ./run.ts. Only `src` and `reload` are touched on
@@ -172,6 +173,67 @@ describe('navigate', () => {
     dispatchNavigation(event)
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+  })
+
+  it('starts traversal restoration from the destination commit callback', async (t) => {
+    let navigateListener: EventListener | undefined
+    let stubNavigation = {
+      updateCurrentEntry() {},
+      addEventListener(type: string, listener: EventListener) {
+        if (type === 'navigate') navigateListener = listener
+      },
+    }
+    stubGlobalField(t, 'navigation', stubNavigation)
+
+    let order: string[] = []
+    let topFrame = { src: '' } as FrameHandle
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      async reloadFrame(_frame, options) {
+        order.push('reload')
+        order.push('commit')
+        let onAfterCommit = Reflect.get(options ?? {}, 'onAfterCommit')
+        if (typeof onAfterCommit === 'function') onAfterCommit()
+        return { signal: new AbortController().signal }
+      },
+    })
+
+    let [interceptPromise, resolveIntercept] =
+      withResolvers<Parameters<NavigateEvent['intercept']>[0]>()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      navigationType: 'traverse',
+      signal: new AbortController().signal,
+      destination: {
+        url: new URL('/collection', window.location.origin).href,
+        key: 'collection',
+        getState: () => ({
+          target: undefined,
+          src: '/collection',
+          resetScroll: true,
+          $rmx: true,
+        }),
+      },
+      scroll() {
+        order.push('scroll')
+      },
+      intercept(options: Parameters<NavigateEvent['intercept']>[0]) {
+        resolveIntercept(options)
+      },
+    })
+
+    try {
+      navigateListener?.(event)
+      let interceptOptions = await interceptPromise
+      if (!interceptOptions?.handler) throw new Error('Expected navigation interception handler')
+      await interceptOptions.handler()
+
+      expect(order).toEqual(['reload', 'commit', 'scroll'])
+    } finally {
+      controller.abort()
+    }
   })
 
   it('does not intercept anchors marked for document navigation', (t) => {
