@@ -19,6 +19,25 @@ import { withResolvers } from './utils.ts'
 
 const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'
 
+type TestFrameOptions = Partial<Parameters<typeof createFrame>[1]> &
+  Pick<Parameters<typeof createFrame>[1], 'resolveFrame'>
+
+function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestFrameOptions) {
+  return createFrame(root, {
+    src: 'https://example.com/initial',
+    errorTarget: new EventTarget(),
+    loadModule: () => () => () => null,
+    pendingClientEntries: new Map(),
+    scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+    data: {},
+    moduleCache: new Map(),
+    moduleLoads: new Map(),
+    frameInstances: new WeakMap(),
+    namedFrames: new Map(),
+    ...options,
+  })
+}
+
 describe('frames', () => {
   afterEach(() => {
     document.documentElement.innerHTML = '<head></head><body></body>'
@@ -109,18 +128,8 @@ describe('frames', () => {
     document.body.append(root)
 
     let [contentPromise, resolveContent] = withResolvers<string>()
-    let frame = createFrame(root, {
-      src: 'https://example.com/initial',
-      errorTarget: new EventTarget(),
-      loadModule: () => () => () => null,
+    let frame = createTestFrame(root, {
       resolveFrame: () => contentPromise,
-      pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
-      data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new Map(),
     })
 
     try {
@@ -159,22 +168,13 @@ describe('frames', () => {
     }
 
     let [modulePromise, resolveModule] = withResolvers<Function>()
-    let frame = createFrame(root, {
-      src: 'https://example.com/initial',
-      errorTarget: new EventTarget(),
+    let frame = createTestFrame(root, {
       loadModule: () => modulePromise,
       resolveFrame: () =>
         [
           '<!-- rmx:h:h1 --><p id="reloaded">Server</p><!-- /rmx:h -->',
           rmxDataScript('Hydrated', '/reloaded.js', 'ReloadedEntry'),
         ].join(''),
-      pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
-      data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new Map(),
     })
 
     try {
@@ -217,9 +217,7 @@ describe('frames', () => {
     }
 
     let [collectionPromise, resolveCollection] = withResolvers<string>()
-    let frame = createFrame(root, {
-      src: 'https://example.com/initial',
-      errorTarget: new EventTarget(),
+    let frame = createTestFrame(root, {
       loadModule: () => StoreEntry,
       resolveFrame(src) {
         if (src === '/collection') return collectionPromise
@@ -228,13 +226,6 @@ describe('frames', () => {
           rmxDataScript('collection', '/store-entry.js', 'StoreEntry'),
         ].join('')
       },
-      pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
-      data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new Map(),
     })
 
     try {
@@ -265,9 +256,7 @@ describe('frames', () => {
     }
 
     let [collectionPromise, resolveCollection] = withResolvers<string>()
-    let frame = createFrame(root, {
-      src: 'https://example.com/initial',
-      errorTarget: new EventTarget(),
+    let frame = createTestFrame(root, {
       loadModule: () => StoreEntry,
       resolveFrame(src) {
         if (src === '/collection') return collectionPromise
@@ -276,13 +265,6 @@ describe('frames', () => {
           rmxDataScript('collection', '/store-entry.js', 'StoreEntry'),
         ].join('')
       },
-      pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
-      data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new Map(),
     })
 
     try {
@@ -303,7 +285,7 @@ describe('frames', () => {
     }
   })
 
-  it('does not wait for non-blocking frames created by client entry reconciliation', async () => {
+  it('resolves after committing fallback for frames created by client entry reconciliation', async () => {
     let root = document.createElement('div')
     root.innerHTML = [
       '<!-- rmx:h:h1 --><p id="detail">Detail</p><!-- /rmx:h -->',
@@ -322,9 +304,7 @@ describe('frames', () => {
     }
 
     let [collectionPromise, resolveCollection] = withResolvers<string>()
-    let frame = createFrame(root, {
-      src: 'https://example.com/initial',
-      errorTarget: new EventTarget(),
+    let frame = createTestFrame(root, {
       loadModule: () => StoreEntry,
       resolveFrame(src) {
         if (src === '/collection') return collectionPromise
@@ -333,13 +313,6 @@ describe('frames', () => {
           rmxDataScript('collection', '/store-entry.js', 'StoreEntry'),
         ].join('')
       },
-      pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
-      data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new Map(),
     })
 
     try {
@@ -380,9 +353,7 @@ describe('frames', () => {
       },
     }
     let [modulePromise, resolveModule] = withResolvers<Function>()
-    let frame = createFrame(root, {
-      src: 'https://example.com/initial',
-      errorTarget: new EventTarget(),
+    let frame = createTestFrame(root, {
       loadModule: () => modulePromise,
       resolveFrame: () =>
         [
@@ -391,13 +362,6 @@ describe('frames', () => {
           '<!-- /rmx:f -->',
           `<script type="application/json" id="rmx-data">${JSON.stringify(data)}</script>`,
         ].join(''),
-      pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
-      data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new Map(),
     })
 
     try {
@@ -462,9 +426,7 @@ describe('frames', () => {
       f: initialData.f,
     }
     let [modulePromise, resolveModule] = withResolvers<Function>()
-    let frame = createFrame(root, {
-      src: 'https://example.com/initial',
-      errorTarget: new EventTarget(),
+    let frame = createTestFrame(root, {
       loadModule(moduleUrl) {
         if (moduleUrl === '/initial-blocking.js') return InitialBlockingEntry
         if (moduleUrl === '/reloaded-blocking.js') return modulePromise
@@ -477,13 +439,6 @@ describe('frames', () => {
           '<!-- /rmx:f -->',
           `<script type="application/json" id="rmx-data">${JSON.stringify(nextData)}</script>`,
         ].join(''),
-      pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
-      data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new Map(),
     })
 
     try {
@@ -504,7 +459,7 @@ describe('frames', () => {
     }
   })
 
-  it('does not wait for pending child frames before a reload resolves', async () => {
+  it('resolves after committing a pending child frame fallback', async () => {
     let root = document.createElement('div')
     root.innerHTML = '<p id="initial">Initial</p>'
     document.body.append(root)
@@ -517,9 +472,7 @@ describe('frames', () => {
         },
       },
     }
-    let frame = createFrame(root, {
-      src: 'https://example.com/initial',
-      errorTarget: new EventTarget(),
+    let frame = createTestFrame(root, {
       loadModule() {
         throw new Error('Unexpected client entry')
       },
@@ -528,13 +481,6 @@ describe('frames', () => {
           '<!-- rmx:f:f1 --><p id="pending-fallback">Loading</p><!-- /rmx:f -->',
           `<script type="application/json" id="rmx-data">${JSON.stringify(data)}</script>`,
         ].join(''),
-      pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
-      data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new Map(),
     })
 
     try {

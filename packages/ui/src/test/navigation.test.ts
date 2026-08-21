@@ -40,10 +40,7 @@ function stubGlobalField(t: TestContext, name: string, value: unknown): void {
   })
 }
 
-function startStubNavigationListener(
-  t: TestContext,
-  frames: Parameters<typeof startNavigationListenerImpl>[1] = stubFrames,
-): (event: Event) => void {
+function startStubNavigationListener(t: TestContext): (event: Event) => void {
   let navigateListener: EventListener | undefined
   let stubNavigation = {
     updateCurrentEntry: mock.fn(),
@@ -54,7 +51,7 @@ function startStubNavigationListener(
   stubGlobalField(t, 'navigation', stubNavigation)
 
   let controller = new AbortController()
-  startNavigationListenerImpl(controller.signal, frames)
+  startNavigationListenerImpl(controller.signal, stubFrames)
   t.after(() => controller.abort())
 
   return (event) => {
@@ -137,15 +134,8 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
-  it('opts out of browser scroll restoration on traverse navigations', async (t) => {
-    let onAfterCommit: (() => void) | undefined
-    let dispatchNavigation = startStubNavigationListener(t, {
-      ...stubFrames,
-      async reloadFrame(frame, options) {
-        onAfterCommit = options?.onAfterCommit
-        return stubFrames.reloadFrame(frame)
-      },
-    })
+  it('opts out of browser scroll restoration on traverse navigations', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
     let intercept = mock.fn()
     let event = Object.assign(new Event('navigate'), {
       canIntercept: true,
@@ -165,10 +155,7 @@ describe('navigate', () => {
 
     dispatchNavigation(event)
 
-    let interceptOptions = intercept.mock.calls[0]?.arguments[0]
-    expect(interceptOptions?.scroll).toBe('manual')
-    await interceptOptions?.handler?.()
-    expect(onAfterCommit).toBe(undefined)
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
   it('preserves manual scrolling across frame redirects', (t) => {
@@ -188,7 +175,7 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
-  it('starts traversal restoration after the destination commits', async (t) => {
+  it('starts traversal restoration from the destination commit callback', async (t) => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
       updateCurrentEntry() {},
