@@ -103,6 +103,77 @@ describe('frames', () => {
     }
   })
 
+  it('preserves installed import maps while diffing a reloaded document head', async () => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      '<title>Initial</title>',
+      importMapScript({ imports: { '/authored.js': '/authored.hash.js' } }),
+      '<meta name="after-import-map" content="initial">',
+      remixImportMapScript({ imports: { '/initial.js': '/initial.hash.js' } }),
+      '</head>',
+      '<body><main>Initial</main></body>',
+    ].join('')
+
+    let frame = createFrame(document, {
+      src: 'https://example.com/initial',
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return htmlStream([
+          appendFlushMarker(
+            [
+              '<!doctype html><html><head><title>Next</title>',
+              importMapScript({ imports: { '/authored.js': '/authored.hash.js' } }),
+              '<meta name="after-import-map" content="next">',
+              remixImportMapScript({ imports: { '/late.js': '/late.hash.js' } }),
+              '</head><body><main>Next</main></body></html>',
+            ].join(''),
+            'document',
+          ),
+        ])
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new Map(),
+    })
+
+    try {
+      await frame.ready()
+      let initialScripts = getImportMapScripts()
+      let hmrImportMap = document.createElement('script')
+      hmrImportMap.type = 'importmap'
+      hmrImportMap.setAttribute('data-rmx-import-map', '')
+      hmrImportMap.textContent = JSON.stringify({
+        imports: { '/hmr.js': '/hmr.hash.js' },
+      })
+      document.head.appendChild(hmrImportMap)
+
+      await frame.handle.reload()
+
+      let scripts = getImportMapScripts()
+      expect(document.title).toBe('Next')
+      expect(scripts).toHaveLength(4)
+      expect(scripts[0]).toBe(initialScripts[0])
+      expect(scripts[1]).toBe(initialScripts[1])
+      expect(scripts[2]).toBe(hmrImportMap)
+      expect(scripts[0]?.nextElementSibling?.getAttribute('name')).toBe('after-import-map')
+      expect(scripts[1]?.previousElementSibling?.getAttribute('name')).toBe('after-import-map')
+      expect(parseImportMapScript(scripts[3]!)).toEqual({
+        imports: { '/late.js': '/late.hash.js' },
+      })
+      expect(scripts[3]?.hasAttribute('data-rmx-import-map')).toBe(true)
+      expect(document.head.lastElementChild).toBe(scripts[3])
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('releases pending hydration metadata when its frame is disposed', async () => {
     document.body.innerHTML = [
       '<!-- rmx:h:h1 -->',
@@ -431,6 +502,224 @@ describe('frames', () => {
     }
   })
 
+  it('leaves authored import maps in frame content', async () => {
+    document.documentElement.innerHTML = '<head></head><body></body>'
+
+    let frame = createTestFrame()
+
+    try {
+      await frame.ready()
+      await frame.render(
+        `${importMapScript({ imports: { '/authored.js': '/authored.hash.js' } })}<main>Loaded</main>`,
+      )
+
+      expect(getImportMapScripts()).toHaveLength(0)
+      expect(document.body.querySelector('script[type="importmap"]')?.textContent).toBe(
+        '{"imports":{"/authored.js":"/authored.hash.js"}}',
+      )
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('installs only new entries from late Remix import maps', async () => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      importMapScript({
+        imports: { '/a.js': '/a.hash.js' },
+        scopes: { '/scope/': { pkg: '/pkg.hash.js' } },
+      }),
+      '</head>',
+      '<body></body>',
+    ].join('')
+
+    let frame = createTestFrame()
+    let lateImportMap = {
+      imports: {
+        '/a.js': '/a.hash.js',
+        '/b.js': '/b.hash.js',
+      },
+      scopes: {
+        '/scope/': {
+          pkg: '/pkg.hash.js',
+          other: '/other.hash.js',
+        },
+      },
+    }
+
+    try {
+      await frame.ready()
+      await frame.render(`${remixImportMapHead(lateImportMap)}<main>Loaded</main>`)
+
+      let scripts = getImportMapScripts()
+      expect(scripts).toHaveLength(2)
+      expect(parseImportMapScript(scripts[1]!)).toEqual({
+        imports: { '/b.js': '/b.hash.js' },
+        scopes: { '/scope/': { other: '/other.hash.js' } },
+      })
+      expect(scripts[1]?.hasAttribute('data-rmx-import-map')).toBe(true)
+      expect(document.body.querySelector('head')).toBeNull()
+
+      await frame.render(`${remixImportMapHead(lateImportMap)}<main>Reloaded</main>`)
+
+      expect(getImportMapScripts()).toHaveLength(2)
+      expect(document.body.querySelector('head')).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('compares late Remix import maps with maps added externally after startup', async (t) => {
+    document.documentElement.innerHTML = '<head></head><body></body>'
+
+    let frame = createTestFrame()
+    let warn = t.mock.method(console, 'warn', () => {})
+
+    try {
+      await frame.ready()
+
+      let externalImportMap = document.createElement('script')
+      externalImportMap.type = 'importmap'
+      externalImportMap.textContent = JSON.stringify({
+        imports: {
+          '/external.js': '/external.hash.js',
+          '/conflict.js': '/old.hash.js',
+        },
+      })
+      document.head.appendChild(externalImportMap)
+
+      await frame.render(
+        `${remixImportMapHead({
+          imports: {
+            '/external.js': '/external.hash.js',
+            '/conflict.js': '/new.hash.js',
+            '/late.js': '/late.hash.js',
+          },
+        })}<main>Loaded</main>`,
+      )
+
+      let scripts = getImportMapScripts()
+      expect(scripts).toHaveLength(2)
+      expect(scripts[0]).toBe(externalImportMap)
+      expect(Array.from(scripts[1]!.attributes, (attribute) => attribute.name)).toEqual([
+        'data-rmx-import-map',
+        'type',
+      ])
+      expect(parseImportMapScript(scripts[1]!)).toEqual({
+        imports: { '/late.js': '/late.hash.js' },
+      })
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0]?.arguments[0]).toBe(
+        '[remix] Ignoring conflicting import map entry for "/conflict.js": ' +
+          '"/old.hash.js" is already installed, but the new map points to "/new.hash.js"',
+      )
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('dedupes normalized and null entries from late Remix import maps', async () => {
+    let baseUrl = new URL('/app/page', document.baseURI)
+    document.documentElement.innerHTML = [
+      '<head>',
+      importMapScript({
+        imports: {
+          './shared.js': './shared.hash.js',
+          blocked: null,
+          invalidAddress: 'https://[',
+        },
+        scopes: {
+          './features/': { pkg: '../pkg.hash.js' },
+          'https://[': { ignored: '/ignored.js' },
+        },
+      }),
+      '</head>',
+      '<body></body>',
+    ].join('')
+    document.head.insertAdjacentHTML('afterbegin', `<base href="${baseUrl}">`)
+
+    let frame = createTestFrame()
+
+    try {
+      await frame.ready()
+      await frame.render(
+        `${remixImportMapHead({
+          imports: {
+            [new URL('./shared.js', baseUrl).href]: new URL('./shared.hash.js', baseUrl).href,
+            blocked: null,
+            invalidAddress: null,
+            added: '/added.hash.js',
+          },
+          scopes: {
+            [new URL('./features/', baseUrl).href]: {
+              pkg: new URL('../pkg.hash.js', baseUrl).href,
+              other: '/other.hash.js',
+            },
+          },
+        })}<main>Loaded</main>`,
+      )
+
+      expect(parseImportMapScript(getImportMapScripts()[1]!)).toEqual({
+        imports: { added: '/added.hash.js' },
+        scopes: {
+          [new URL('./features/', baseUrl).href]: { other: '/other.hash.js' },
+        },
+      })
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('warns and ignores conflicting late Remix import map entries', async (t) => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      importMapScript({
+        imports: { '/conflict.js': '/old.hash.js' },
+        scopes: { '/conflict-scope/': { scopedPkg: '/old-pkg.hash.js' } },
+      }),
+      '</head>',
+      '<body></body>',
+    ].join('')
+
+    let frame = createTestFrame()
+    let warn = t.mock.method(console, 'warn', () => {})
+
+    try {
+      await frame.ready()
+      await frame.render(
+        `${remixImportMapHead({
+          imports: {
+            '/conflict.js': '/new.hash.js',
+            '/added.js': '/added.hash.js',
+          },
+          scopes: {
+            '/conflict-scope/': {
+              scopedPkg: '/new-pkg.hash.js',
+              addedPkg: '/added-pkg.hash.js',
+            },
+          },
+        })}<main>Loaded</main>`,
+      )
+
+      expect(warn).toHaveBeenCalledTimes(2)
+      expect(warn.mock.calls[0]?.arguments[0]).toBe(
+        '[remix] Ignoring conflicting import map entry for "/conflict.js": ' +
+          '"/old.hash.js" is already installed, but the new map points to "/new.hash.js"',
+      )
+      expect(warn.mock.calls[1]?.arguments[0]).toBe(
+        '[remix] Ignoring conflicting import map entry for "scopedPkg" in scope "/conflict-scope/": ' +
+          '"/old-pkg.hash.js" is already installed, but the new map points to "/new-pkg.hash.js"',
+      )
+      expect(parseImportMapScript(getImportMapScripts()[1]!)).toEqual({
+        imports: { '/added.js': '/added.hash.js' },
+        scopes: { '/conflict-scope/': { addedPkg: '/added-pkg.hash.js' } },
+      })
+      expect(document.querySelector('main')?.textContent).toBe('Loaded')
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('does not loop when a nested frame range escapes its region', async () => {
     let outerStart = document.createComment(' rmx:f:outer ')
     let innerStart = document.createComment(' rmx:f:inner ')
@@ -571,6 +860,36 @@ describe('frames', () => {
     }
   })
 
+  it('installs late import maps before starting their module preloads', async () => {
+    document.documentElement.innerHTML = '<head></head><body></body>'
+
+    let frame = createTestFrame()
+
+    try {
+      await frame.ready()
+      await frame.render(
+        [
+          '<head>',
+          '<link data-rmx-module-preload rel="modulepreload" href="/import-map-order-entry.js" />',
+          remixImportMapScript({ imports: { pkg: '/pkg.js' } }),
+          '</head>',
+          '<main>Loaded</main>',
+        ].join(''),
+      )
+
+      let managedResources = document.head.querySelectorAll(
+        'script[data-rmx-import-map][type="importmap"], link[data-rmx-module-preload][rel="modulepreload"]',
+      )
+      expect(managedResources).toHaveLength(2)
+      expect(managedResources[0]).toBeInstanceOf(HTMLScriptElement)
+      expect(managedResources[1]).toBeInstanceOf(HTMLLinkElement)
+
+      managedResources[1]?.dispatchEvent(new Event('load'))
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('keeps active initial preloads connected across a document reload', async () => {
     document.documentElement.innerHTML = [
       '<head><title>Initial</title>',
@@ -670,6 +989,64 @@ describe('frames', () => {
     }
   })
 })
+
+function createTestFrame(): ReturnType<typeof createFrame> {
+  let errorTarget = new EventTarget()
+  let styleManager = createStyleManager()
+  let scheduler = createScheduler(document, errorTarget, styleManager)
+  let loadModule = (() => {
+    throw new Error('Unexpected module load')
+  }) satisfies LoadModule
+  let start = document.createComment('frame:start')
+  let end = document.createComment('frame:end')
+  document.body.append(start, end)
+
+  return createFrame([start, end], {
+    src: 'https://example.com/',
+    errorTarget,
+    loadModule,
+    resolveFrame() {
+      return ''
+    },
+    pendingClientEntries: new Map(),
+    scheduler,
+    styleManager,
+    data: {},
+    moduleCache: new Map(),
+    moduleLoads: new Map(),
+    frameInstances: new WeakMap(),
+    namedFrames: new Map(),
+  })
+}
+
+function importMapScript(importMap: {
+  imports?: Record<string, string | null>
+  scopes?: Record<string, Record<string, string | null>>
+}): string {
+  return `<script type="importmap">${JSON.stringify(importMap)}</script>`
+}
+
+function remixImportMapHead(importMap: {
+  imports?: Record<string, string | null>
+  scopes?: Record<string, Record<string, string | null>>
+}): string {
+  return `<head><script data-rmx-import-map type="importmap">${JSON.stringify(importMap)}</script></head>`
+}
+
+function remixImportMapScript(importMap: {
+  imports?: Record<string, string | null>
+  scopes?: Record<string, Record<string, string | null>>
+}): string {
+  return `<script data-rmx-import-map type="importmap">${JSON.stringify(importMap)}</script>`
+}
+
+function getImportMapScripts(): HTMLScriptElement[] {
+  return Array.from(document.head.querySelectorAll('script[type="importmap"]'))
+}
+
+function parseImportMapScript(script: HTMLScriptElement): unknown {
+  return JSON.parse(script.textContent ?? '{}')
+}
 
 function countMarkerScans(marker: Comment, limit: number): { count: number } {
   let data = marker.data

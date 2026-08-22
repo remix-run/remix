@@ -90,6 +90,86 @@ describe('stream', () => {
       expect(html).toBe('<div>&lt;script&gt;alert(1)&lt;/script&gt;</div>')
     })
 
+    it('renders script string children as raw text', async () => {
+      let script = 'if (value < 10 && value > 0) console.log("in range")'
+      let html = await drain(renderToStream(<script>{script}</script>))
+
+      expect(html).toBe(`<script>${script}</script>`)
+    })
+
+    it('renders empty script elements', async (t) => {
+      let errorSpy = t.mock.method(console, 'error', () => {})
+      let html = await drain(renderToStream(<script />))
+
+      expect(html).toBe('<script></script>')
+      expect(errorSpy).not.toHaveBeenCalled()
+    })
+
+    it('prevents script string children from terminating the element', async () => {
+      let importMap = {
+        imports: {
+          example: '/example.js?before=a&after=</ScRiPt><script>alert(1)</script>',
+        },
+      }
+      let html = await drain(
+        renderToStream(<script type="importmap">{JSON.stringify(importMap)}</script>),
+      )
+
+      expect(html).toBe(
+        '<script type="importmap">' +
+          '{"imports":{"example":"/example.js?before=a&after=</\\u0053cRiPt><\\u0073cript>alert(1)</\\u0073cript>"}}' +
+          '</script>',
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let scripts = shelf.content.querySelectorAll('script')
+      expect(scripts).toHaveLength(1)
+      expect(JSON.parse(scripts[0]!.textContent!)).toEqual(importMap)
+    })
+
+    it('escapes script prefixes conservatively while preserving non-matching text', async () => {
+      let script =
+        'prescription pre<scription pre<Scription pre</scRipTion pre</ScripTion </ script> </script><script><!-- <script> -->'
+      let html = await drain(renderToStream(<script>{script}</script>))
+
+      expect(html).toBe(
+        '<script>' +
+          'prescription pre<\\u0073cription pre<\\u0053cription pre</\\u0073cRipTion pre</\\u0053cripTion ' +
+          '</ script> </\\u0073cript><\\u0073cript><!-- <\\u0073cript> -->' +
+          '</script>',
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let scripts = shelf.content.querySelectorAll('script')
+      expect(scripts).toHaveLength(1)
+    })
+
+    it('renders SVG script string children as raw text', async () => {
+      let script = 'if (value < 10 && value > 0) console.log("in range")'
+      let html = await drain(
+        renderToStream(
+          <svg>
+            <script>{script}</script>
+          </svg>,
+        ),
+      )
+
+      expect(html).toBe(`<svg><script>${script}</script></svg>`)
+    })
+
+    it('warns and ignores non-string script children', async (t) => {
+      let errorSpy = t.mock.method(console, 'error', () => {})
+      let html = await drain(renderToStream(<script>{['one', 'two']}</script>))
+
+      expect(html).toBe('<script></script>')
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      let error = errorSpy.mock.calls[0]?.arguments[0]
+      invariant(error instanceof Error)
+      expect(error.message).toBe('script elements with children must have a single string child')
+    })
+
     it('renders textarea defaultValue as escaped text content', async () => {
       let stream = renderToStream(<textarea defaultValue={'Hello <Ryan> & friends'} />)
       let html = await drain(stream)
@@ -1087,7 +1167,7 @@ describe('stream', () => {
       expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
     })
 
-    it('groups fragment preloads and styles in a leading transport head', async () => {
+    it('orders fragment import maps and preloads before styles', async () => {
       let html = await drain(
         renderToStream(
           <main mix={[css({ color: 'purple' })]}>
@@ -1099,6 +1179,9 @@ describe('stream', () => {
                 href: '/assets/island.js',
                 exportName: 'Island',
                 preloads: ['/assets/island.js'],
+                importMap: {
+                  imports: { '/assets/island.js': '/assets/island.hash.js' },
+                },
               }
             },
           },
@@ -1106,9 +1189,8 @@ describe('stream', () => {
       )
 
       expect(html).toMatch(
-        /^<head><link data-rmx-module-preload rel="modulepreload" href="\/assets\/island\.js" \/><style data-rmx-style=/,
+        /^<head><script data-rmx-import-map type="importmap">.*<\/script><link data-rmx-module-preload rel="modulepreload" href="\/assets\/island\.js" \/><style data-rmx-style=.*<\/style><\/head><main class="rmxc-[a-z0-9]+">/s,
       )
-      expect(html).toMatch(/<\/style><\/head><main class="rmxc-[a-z0-9]+">/)
     })
 
     it('hoists module preloads from blocking frames', async () => {
@@ -1168,6 +1250,9 @@ describe('stream', () => {
                       href: '/assets/island.js',
                       exportName: 'Island',
                       preloads: ['/assets/island.js'],
+                      importMap: {
+                        imports: { '/assets/island.js': '/assets/island.hash.js' },
+                      },
                     }
                   },
                 },
@@ -1177,6 +1262,14 @@ describe('stream', () => {
         ),
       )
 
+      let documentHead = html.match(/<head>(.*?)<\/head>/s)?.[1]
+      invariant(documentHead)
+      expect(documentHead).toContain(
+        '<script data-rmx-import-map type="importmap">{"imports":{"/assets/island.js":"/assets/island.hash.js"}}</script>',
+      )
+      expect(documentHead).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
+      )
       expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
       expect(html).toMatch(/<body><!-- rmx:f:[^ ]+ --><head><style data-rmx-style=/)
     })
@@ -1206,7 +1299,7 @@ describe('stream', () => {
       expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
     })
 
-    it('does not inspect the leading frame head after its generated preload prefix', async () => {
+    it('does not inspect the leading frame head after its generated resource prefix', async () => {
       let markerShapedMarkup =
         '<link data-rmx-module-preload rel="modulepreload" href="/assets/not-a-preload.js" />'
       let html = await drain(
@@ -1223,6 +1316,7 @@ describe('stream', () => {
             resolveFrame() {
               return [
                 '<head>',
+                '<script data-rmx-import-map type="importmap">{"imports":{"island":"/assets/island.js"}}</script>',
                 '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
                 '<style data-rmx-style="rmxc-frame">@layer rmx-ui.rmxc-frame { color: purple }</style>',
                 `<script type="text/plain">${markerShapedMarkup}</script>`,
@@ -1236,6 +1330,9 @@ describe('stream', () => {
       expect(html).toContain(
         '<head><style data-rmx-style="rmxc-frame">@layer rmx-ui.rmxc-frame { color: purple }</style>' +
           `<script type="text/plain">${markerShapedMarkup}</script></head>`,
+      )
+      expect(html).toContain(
+        '<script data-rmx-import-map type="importmap">{"imports":{"island":"/assets/island.js"}}</script>',
       )
       expect(html.match(/href="\/assets\/island\.js"/g)).toHaveLength(1)
     })
@@ -1935,6 +2032,772 @@ describe('stream', () => {
       })
     })
 
+    it('emits import maps returned from resolved client entries', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function ImportMapCounter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(<Counter initialCount={42} />, {
+          resolveClientEntry() {
+            return {
+              href: '/assets/app/components/counter.tsx',
+              exportName: 'Counter',
+              importMap: {
+                imports: {
+                  '/assets/app/components/counter.tsx':
+                    '/assets/app/components/counter.@abc123.tsx',
+                  '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                },
+              },
+            }
+          },
+        }),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScript = shelf.content.querySelector('script[type="importmap"]')
+      expect(importMapScript?.textContent).toBe(
+        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}',
+      )
+      expect(importMapScript?.hasAttribute('data-rmx-import-map')).toBe(true)
+      expect(html).toMatch(/^<head><script data-rmx-import-map type="importmap">/)
+
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+      expect(entries[0]).toMatchObject({
+        moduleUrl: '/assets/app/components/counter.tsx',
+        exportName: 'Counter',
+      })
+    })
+
+    it('merges client entry import maps and dedupes overlapping entries', async () => {
+      let First = clientEntry('file:///app/first.tsx', function First() {
+        return () => <div>First</div>
+      })
+      let Second = clientEntry('file:///app/second.tsx', function Second() {
+        return () => <div>Second</div>
+      })
+      let Duplicate = clientEntry('file:///app/duplicate.tsx', function Duplicate() {
+        return () => <div>Duplicate</div>
+      })
+      let firstImportMap = {
+        imports: {
+          first: '/assets/first.hash.js',
+          shared: '/assets/shared.hash.js',
+        },
+      }
+      let secondImportMap = {
+        imports: {
+          second: '/assets/second.hash.js',
+          shared: '/assets/shared.hash.js',
+        },
+      }
+
+      let html = await drain(
+        renderToStream(
+          <>
+            <First />
+            <Second />
+            <Duplicate />
+          </>,
+          {
+            resolveClientEntry(entryId) {
+              return {
+                href: entryId,
+                exportName: 'default',
+                importMap: entryId.endsWith('/second.tsx') ? secondImportMap : firstImportMap,
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll(
+        'script[data-rmx-import-map][type="importmap"]',
+      )
+      expect(importMapScripts).toHaveLength(1)
+      expect(JSON.parse(importMapScripts[0]?.textContent ?? '{}')).toEqual({
+        imports: {
+          first: '/assets/first.hash.js',
+          shared: '/assets/shared.hash.js',
+          second: '/assets/second.hash.js',
+        },
+      })
+    })
+
+    it('rejects conflicting client entry import maps', async () => {
+      let First = clientEntry('file:///app/first.tsx', function First() {
+        return () => <div>First</div>
+      })
+      let Second = clientEntry('file:///app/second.tsx', function Second() {
+        return () => <div>Second</div>
+      })
+
+      let stream = renderToStream(
+        <>
+          <First />
+          <Second />
+        </>,
+        {
+          resolveClientEntry(entryId) {
+            return {
+              href: entryId,
+              exportName: 'default',
+              importMap: {
+                imports: {
+                  shared: entryId.endsWith('/first.tsx')
+                    ? '/assets/shared.first.js'
+                    : '/assets/shared.second.js',
+                },
+              },
+            }
+          },
+        },
+      )
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Conflicting framework import map entry for "shared"',
+      )
+    })
+
+    it('emits preloads and import maps returned from the same resolved client entry', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function PreloadedImportMapCounter() {
+          return () => <div>Count</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <title>Counter</title>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                preloads: [
+                  '/assets/app/components/counter.@abc123.tsx',
+                  '/assets/app/shared.@def456.ts',
+                ],
+                importMap: {
+                  imports: {
+                    '/assets/app/components/counter.tsx':
+                      '/assets/app/components/counter.@abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let head = html.match(/<head>(.*?)<\/head>/s)?.[1]
+      invariant(head)
+      expect(head).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/app/components/counter.@abc123.tsx" />',
+      )
+      expect(head).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/app/shared.@def456.ts" />',
+      )
+      expect(head).toContain(
+        '<script data-rmx-import-map type="importmap">{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}</script>',
+      )
+      expect(head.indexOf('<script data-rmx-import-map type="importmap">')).toBeLessThan(
+        head.indexOf('<link data-rmx-module-preload rel="modulepreload"'),
+      )
+    })
+
+    it('emits discovered import maps after authored document head content', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <meta name="theme-color" content="white" />
+              <link rel="stylesheet" href="/assets/app.css" />
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    '/assets/app/components/counter.tsx':
+                      '/assets/app/components/counter.@abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let importMapIndex = html.indexOf('<script data-rmx-import-map type="importmap">')
+      let metaIndex = html.indexOf('<meta name="theme-color"')
+      let stylesheetIndex = html.indexOf('<link rel="stylesheet"')
+
+      expect(importMapIndex).toBeGreaterThan(html.indexOf('<head>'))
+      expect(importMapIndex).toBeGreaterThan(metaIndex)
+      expect(importMapIndex).toBeGreaterThan(stylesheetIndex)
+      expect(html).toContain('</script></head>')
+    })
+
+    it('creates a document head for discovered import maps when one is omitted', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <body>
+              <Counter />
+              <script type="module" src="/assets/app/entry.@abc123.tsx" />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    '/assets/app/components/counter.tsx':
+                      '/assets/app/components/counter.@abc123.tsx',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      expect(html).toContain('<html><head><script data-rmx-import-map type="importmap">')
+      expect(html.indexOf('<script data-rmx-import-map type="importmap">')).toBeLessThan(
+        html.indexOf('<body>'),
+      )
+    })
+
+    it('leaves authored import maps in document heads before module preloads', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <meta charSet="utf-8" />
+              <title>Import maps</title>
+              <link rel="stylesheet" href="/assets/app.css" />
+              <script type="importmap">
+                {JSON.stringify({
+                  imports: {
+                    '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                  },
+                })}
+              </script>
+              <link rel="modulepreload" href="/assets/app/shared.@def456.ts" />
+              <script type="module" src="/assets/app/entry.@abc123.tsx" />
+            </head>
+            <body>App</body>
+          </html>,
+        ),
+      )
+
+      let stylesheetIndex = html.indexOf('<link rel="stylesheet"')
+      let importMapIndex = html.indexOf('<script type="importmap">')
+      let modulePreloadIndex = html.indexOf('<link rel="modulepreload"')
+      let moduleScriptIndex = html.indexOf('<script type="module"')
+
+      expect(importMapIndex).toBeGreaterThan(stylesheetIndex)
+      expect(importMapIndex).toBeLessThan(modulePreloadIndex)
+      expect(importMapIndex).toBeLessThan(moduleScriptIndex)
+    })
+
+    it('dedupes resolved client entry import maps against authored document import maps', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="importmap">
+                {JSON.stringify({
+                  imports: {
+                    '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                  },
+                })}
+              </script>
+              <link rel="modulepreload" href="/assets/app/shared.@def456.ts" />
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                    '/assets/app/components/counter.tsx':
+                      '/assets/app/components/counter.@def456.tsx',
+                  },
+                  scopes: {
+                    '/assets/app/components/': {
+                      pkg: '/assets/app/node_modules/pkg/index.@fedcba.ts',
+                    },
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
+      expect(importMapScripts).toHaveLength(2)
+      expect(importMapScripts[0]?.textContent).toBe(
+        '{"imports":{"/assets/app/entry.tsx":"/assets/app/entry.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}',
+      )
+      expect(importMapScripts[0]?.hasAttribute('data-rmx-import-map')).toBe(false)
+      expect(importMapScripts[1]?.textContent).toBe(
+        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@def456.tsx"},"scopes":{"/assets/app/components/":{"pkg":"/assets/app/node_modules/pkg/index.@fedcba.ts"}}}',
+      )
+      expect(importMapScripts[1]?.hasAttribute('data-rmx-import-map')).toBe(true)
+    })
+
+    it('does not dedupe against authored import maps rendered with innerHTML', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script
+                type="importmap"
+                innerHTML={JSON.stringify({
+                  imports: { pkg: '/assets/pkg.@abc.ts' },
+                })}
+              />
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    pkg: '/assets/pkg.@abc.ts',
+                    added: '/assets/added.@abc.ts',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
+      expect(importMapScripts).toHaveLength(2)
+      expect(JSON.parse(importMapScripts[0]?.textContent ?? '{}')).toEqual({
+        imports: { pkg: '/assets/pkg.@abc.ts' },
+      })
+      expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
+        imports: {
+          pkg: '/assets/pkg.@abc.ts',
+          added: '/assets/added.@abc.ts',
+        },
+      })
+    })
+
+    it('does not dedupe against authored import maps with a src attribute', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="importmap" src="/import-map.json">
+                {JSON.stringify({ imports: { pkg: '/assets/pkg.@abc.ts' } })}
+              </script>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    pkg: '/assets/pkg.@abc.ts',
+                    added: '/assets/added.@abc.ts',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = Array.from(shelf.content.querySelectorAll('script')).filter(
+        (script) => script.type.toLowerCase() === 'importmap',
+      )
+      expect(importMapScripts).toHaveLength(2)
+      expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
+        imports: {
+          pkg: '/assets/pkg.@abc.ts',
+          added: '/assets/added.@abc.ts',
+        },
+      })
+    })
+
+    it('matches authored import map types case-insensitively', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="IMPORTMAP">
+                {JSON.stringify({ imports: { pkg: '/assets/pkg.@abc.ts' } })}
+              </script>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    pkg: '/assets/pkg.@abc.ts',
+                    added: '/assets/added.@abc.ts',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = Array.from(shelf.content.querySelectorAll('script')).filter(
+        (script) => script.type.toLowerCase() === 'importmap',
+      )
+      expect(importMapScripts).toHaveLength(2)
+      expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
+        imports: { added: '/assets/added.@abc.ts' },
+      })
+    })
+
+    it('dedupes exact and null entries from partially invalid authored import maps', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="importmap">
+                {JSON.stringify({
+                  imports: {
+                    '/assets/shared.ts': '/assets/shared.@abc.ts',
+                    blocked: null,
+                    invalidAddress: 'https://[',
+                    invalidType: true,
+                  },
+                  scopes: {
+                    '/assets/features/': { pkg: '/assets/pkg.@abc.ts' },
+                  },
+                })}
+              </script>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    '/assets/shared.ts': '/assets/shared.@abc.ts',
+                    blocked: null,
+                    invalidAddress: 'https://[',
+                    invalidType: null,
+                    added: '/assets/added.@abc.ts',
+                  },
+                  scopes: {
+                    '/assets/features/': {
+                      pkg: '/assets/pkg.@abc.ts',
+                      other: '/assets/other.@abc.ts',
+                    },
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
+      expect(importMapScripts).toHaveLength(2)
+      expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
+        imports: { added: '/assets/added.@abc.ts' },
+        scopes: {
+          '/assets/features/': { other: '/assets/other.@abc.ts' },
+        },
+      })
+    })
+
+    it('does not dedupe against authored import maps after the document head', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <script type="importmap">
+                {JSON.stringify({ imports: { pkg: '/assets/pkg.@abc.ts' } })}
+              </script>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: { imports: { pkg: '/assets/pkg.@abc.ts' } },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
+      expect(importMapScripts).toHaveLength(2)
+      expect(importMapScripts[0]?.hasAttribute('data-rmx-import-map')).toBe(true)
+      expect(importMapScripts[1]?.hasAttribute('data-rmx-import-map')).toBe(false)
+    })
+
+    it('leaves arbitrary authored import map content opaque', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="importmap">not valid JSON</script>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            frameSrc: 'https://example.com/app/page',
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    'https://example.com/app/shared.ts': 'https://example.com/app/shared.@abc.ts',
+                    blocked: null,
+                    invalidAddress: null,
+                    added: '/assets/added.@abc.ts',
+                  },
+                  scopes: {
+                    'https://example.com/app/features/': {
+                      pkg: 'https://example.com/pkg.@abc.ts',
+                      other: '/assets/other.@abc.ts',
+                    },
+                    'https://[': { ignored: '/ignored.ts' },
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
+      expect(importMapScripts).toHaveLength(2)
+      expect(importMapScripts[0]?.textContent).toBe('not valid JSON')
+      expect(importMapScripts[0]?.hasAttribute('data-rmx-import-map')).toBe(false)
+      expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
+        imports: {
+          'https://example.com/app/shared.ts': 'https://example.com/app/shared.@abc.ts',
+          blocked: null,
+          invalidAddress: null,
+          added: '/assets/added.@abc.ts',
+        },
+        scopes: {
+          'https://example.com/app/features/': {
+            pkg: 'https://example.com/pkg.@abc.ts',
+            other: '/assets/other.@abc.ts',
+          },
+          'https://[': { ignored: '/ignored.ts' },
+        },
+      })
+    })
+
+    it('warns and ignores client entry import maps that conflict with authored maps', async (t) => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+      let warn = t.mock.method(console, 'warn', () => {})
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="importmap">
+                {JSON.stringify({
+                  imports: {
+                    '/assets/app/shared.ts': '/assets/app/shared.@old.ts',
+                  },
+                })}
+              </script>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    '/assets/app/shared.ts': '/assets/app/shared.@new.ts',
+                    '/assets/app/added.ts': '/assets/app/added.@new.ts',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0]?.arguments[0]).toBe(
+        '[remix] Ignoring conflicting import map entry for "/assets/app/shared.ts": ' +
+          '"/assets/app/shared.@old.ts" is already authored, but the discovered map points to "/assets/app/shared.@new.ts"',
+      )
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
+      expect(importMapScripts).toHaveLength(2)
+      expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
+        imports: {
+          '/assets/app/added.ts': '/assets/app/added.@new.ts',
+        },
+      })
+    })
+
+    it('emits scoped import maps returned from resolved client entries', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(<Counter />, {
+          resolveClientEntry() {
+            return {
+              href: '/assets/app/components/counter.tsx',
+              exportName: 'Counter',
+              importMap: {
+                imports: {
+                  '/assets/app/components/counter.tsx':
+                    '/assets/app/components/counter.@abc123.tsx',
+                },
+                scopes: {
+                  '/assets/app/components/': {
+                    pkg: '/assets/app/node_modules/pkg/index.@def456.ts',
+                  },
+                },
+              },
+            }
+          },
+        }),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScript = shelf.content.querySelector('script[type="importmap"]')
+      expect(importMapScript?.textContent).toBe(
+        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx"},"scopes":{"/assets/app/components/":{"pkg":"/assets/app/node_modules/pkg/index.@def456.ts"}}}',
+      )
+    })
+
     it('resolves opaque client-entry ids inside blocking frames during SSR', async () => {
       let Counter = clientEntry(
         'file:///app/components/counter.tsx',
@@ -2267,6 +3130,162 @@ describe('stream', () => {
       // Should have aggregated frame metadata script
       let data = parseRmxDataFromHtml(result)
       expect(data.f[frameId].status).toBe('resolved')
+    })
+
+    it('hoists framework import maps from blocking frame heads', async () => {
+      let Outer = clientEntry('file:///app/outer.tsx', function OuterImportMapEntry() {
+        return () => <div>Outer</div>
+      })
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let result = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <title>Frame import map</title>
+            </head>
+            <body>
+              <Outer />
+              <Frame src="/x" />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/outer.tsx',
+                exportName: 'Outer',
+                importMap: {
+                  imports: {
+                    '/assets/app/outer.tsx': '/assets/app/outer.@abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.@abc123.ts',
+                  },
+                },
+              }
+            },
+            resolveFrame: async () =>
+              drain(
+                renderToStream(
+                  <>
+                    <Counter />
+                    <div mix={css({ color: 'purple' })}>Styled frame content</div>
+                  </>,
+                  {
+                    resolveClientEntry() {
+                      return {
+                        href: '/assets/app/components/counter.tsx',
+                        exportName: 'Counter',
+                        importMap: {
+                          imports: {
+                            '/assets/app/components/counter.tsx':
+                              '/assets/app/components/counter.@abc123.tsx',
+                            '/assets/app/shared.ts': '/assets/app/shared.@abc123.ts',
+                          },
+                        },
+                      }
+                    },
+                  },
+                ),
+              ),
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = result
+      let importMapScript = shelf.content.querySelector('script[type="importmap"]')
+      expect(JSON.parse(importMapScript?.textContent ?? '{}')).toEqual({
+        imports: {
+          '/assets/app/components/counter.tsx': '/assets/app/components/counter.@abc123.tsx',
+          '/assets/app/shared.ts': '/assets/app/shared.@abc123.ts',
+          '/assets/app/outer.tsx': '/assets/app/outer.@abc123.tsx',
+        },
+      })
+      expect(importMapScript?.hasAttribute('data-rmx-import-map')).toBe(true)
+      expect(result.match(/<script data-rmx-import-map type="importmap">/g)).toHaveLength(1)
+      expect(result.indexOf('<script data-rmx-import-map type="importmap">')).toBeLessThan(
+        result.indexOf('<body>'),
+      )
+      expect(result).toMatch(/<!-- rmx:f:[^ ]+ --><head><style data-rmx-style=/)
+      expect(result).toContain('<div>Count</div>')
+    })
+
+    it('rejects malformed framework import maps in blocking frame heads', async () => {
+      let stream = renderToStream(
+        <html>
+          <head>
+            <title>Invalid frame import map</title>
+          </head>
+          <body>
+            <Frame src="/x" />
+          </body>
+        </html>,
+        {
+          resolveFrame: () =>
+            '<head><script data-rmx-import-map type="importmap">not valid JSON</script></head>' +
+            '<main>Frame content</main>',
+        },
+      )
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid framework-owned import map in frame head',
+      )
+    })
+
+    it('preserves framework import maps in non-blocking frame heads', async () => {
+      let [framePromise, resolveFrame] = withResolvers<string>()
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let stream = renderToStream(
+        <html>
+          <head>
+            <title>Late frame import map</title>
+          </head>
+          <body>
+            <Frame src="/x" fallback={<div>Loading</div>} />
+          </body>
+        </html>,
+        {
+          resolveFrame: () => framePromise,
+        },
+      )
+      let chunks = readChunks(stream)
+
+      let firstChunk = await chunks.next()
+      invariant(!firstChunk.done)
+      expect(firstChunk.value).not.toContain('<script type="importmap">')
+
+      resolveFrame(
+        await drain(
+          renderToStream(<Counter />, {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    '/assets/app/components/counter.tsx':
+                      '/assets/app/components/counter.@abc123.tsx',
+                  },
+                },
+              }
+            },
+          }),
+        ),
+      )
+
+      let secondChunk = await chunks.next()
+      invariant(!secondChunk.done)
+      expect(secondChunk.value).toContain('<template id="f')
+      expect(secondChunk.value).toContain(
+        '<head><script data-rmx-import-map type="importmap">' +
+          '{"imports":{"/assets/app/components/counter.tsx":' +
+          '"/assets/app/components/counter.@abc123.tsx"}}' +
+          '</script></head>',
+      )
     })
 
     it('renders blocking frames without fallback', async () => {

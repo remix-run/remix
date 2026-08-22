@@ -18,6 +18,7 @@ import {
   setClientEntryBoundaryOwner,
   type ClientEntryIdentity,
 } from './client-entry-boundary.ts'
+import { getDocumentImportMapManager } from './import-map-manager.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -214,7 +215,7 @@ export type FrameContext = {
   regionTailRef?: ChildNode | null
   regionParent?: ParentNode | null
   signal?: AbortSignal
-  isActiveModulePreload?: (node: Node) => boolean
+  shouldPreserveHeadNode?: (node: Node) => boolean
 }
 
 type FrameInit = {
@@ -281,6 +282,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let reloadKind: 'direct' | 'ancestor' | undefined
   let styleManager = init.styleManager ?? createStyleManager()
   let modulePreloader = getDocumentModulePreloader(container.doc)
+  let importMapManager = getDocumentImportMapManager(container.doc)
   let currentMarker = init.marker
   let displayedContentStatus: 'pending' | 'resolved' = init.marker?.status ?? 'resolved'
   let pendingTemplateMarkerId: string | undefined
@@ -291,10 +293,22 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let disposed = false
   let lifecycleController = new AbortController()
 
+  function consumeClientEntryResources(source: ParentNode): void {
+    importMapManager.consumeImportMaps(source)
+    modulePreloader.consumePreloadLinks(source)
+  }
+
+  function shouldPreserveManagedHeadNode(node: Node): boolean {
+    return (
+      importMapManager.shouldPreserveHeadNode(node) ||
+      (modulePreloader.hasActivePreloads() && modulePreloader.isActivePreload(node))
+    )
+  }
+
   if (isDocumentNode(container.root)) {
     modulePreloader.adoptInitialPreloadLinks(container.root)
   } else {
-    modulePreloader.consumePreloadLinks(container.root)
+    consumeClientEntryResources(container.root)
   }
 
   // Merge any rmx-data found in the current document once at startup.
@@ -416,7 +430,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
-      modulePreloader.consumePreloadLinks(parsed)
+      consumeClientEntryResources(parsed)
       let responseData = options.data
       mergeRmxDataFromDocument(responseData, parsed)
       let responseContext = { ...context, data: responseData }
@@ -431,9 +445,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         regionParent: container.doc.documentElement,
         regionTailRef: null,
         signal: options.signal,
-        isActiveModulePreload: modulePreloader.hasActivePreloads()
-          ? modulePreloader.isActivePreload
-          : undefined,
+        shouldPreserveHeadNode: shouldPreserveManagedHeadNode,
       })
       diffNodes([container.doc.body], [parsed.body], {
         ...responseContext,
@@ -458,7 +470,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       htmlContent !== undefined ? createFragmentFromString(container.doc, htmlContent) : content
-    modulePreloader.consumePreloadLinks(fragment)
+    consumeClientEntryResources(fragment)
     context.styleManager.adoptServerStyles(
       collectFrameServerStyleTags(createElementContainer(fragment)),
     )

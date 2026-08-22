@@ -4,7 +4,7 @@ import {
   createAssetServerCompilationError,
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
-import { hashContent } from '../fingerprint.ts'
+import { formatFingerprintedPathname, hashContent } from '../fingerprint.ts'
 import { composeSourceMaps } from '../source-maps.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
 import type { ResolvedStyle } from './resolve.ts'
@@ -12,6 +12,7 @@ import type { ResolvedStyle } from './resolve.ts'
 export type EmittedAsset = {
   content: string
   etag: string
+  fingerprint: string
 }
 
 export type EmittedStyle = {
@@ -34,6 +35,7 @@ type EmitResult =
 export async function emitResolvedStyle(
   resolvedStyle: ResolvedStyle,
   options: {
+    fingerprintAssets: boolean
     getServedFileUrl?(
       identityPath: string,
       options: {
@@ -50,25 +52,31 @@ export async function emitResolvedStyle(
     )
     let rewriteResult = await rewriteDependencies(resolvedStyle, options)
     let finalCode = rewriteResult.code
+    let sourceMap = rewriteResult.sourceMap
+      ? await createEmittedAsset(rewriteResult.sourceMap)
+      : null
 
     if (rewriteResult.sourceMap) {
       if (options.sourceMaps === 'inline') {
         let encoded = Buffer.from(rewriteResult.sourceMap).toString('base64')
         finalCode += `\n/*# sourceMappingURL=data:application/json;base64,${encoded} */`
       } else if (options.sourceMaps === 'external') {
-        finalCode += `\n/*# sourceMappingURL=${await options.getServedUrl(resolvedStyle.identityPath)}.map */`
+        finalCode += `\n/*# sourceMappingURL=${formatFingerprintedPathname(
+          resolvedStyle.stableUrlPathname,
+          options.fingerprintAssets && sourceMap ? sourceMap.fingerprint : null,
+        )}.map */`
       }
     }
+
+    let code = await createEmittedAsset(finalCode)
 
     return {
       ok: true,
       value: {
-        code: await createEmittedAsset(finalCode),
-        fingerprint: resolvedStyle.fingerprint,
+        code,
+        fingerprint: options.fingerprintAssets ? code.fingerprint : null,
         importUrls,
-        sourceMap: rewriteResult.sourceMap
-          ? await createEmittedAsset(rewriteResult.sourceMap)
-          : null,
+        sourceMap,
       },
     }
   } catch (error) {
@@ -192,9 +200,11 @@ async function getServedFileUrl(
 }
 
 async function createEmittedAsset(content: string): Promise<EmittedAsset> {
+  let fingerprint = await hashContent(content)
   return {
     content,
-    etag: `W/"${await hashContent(content)}"`,
+    etag: `W/"${fingerprint}"`,
+    fingerprint,
   }
 }
 

@@ -76,13 +76,11 @@ let stream = renderToStream(<App />, {
       throw new Error(`Unable to resolve client entry export for ${entryId}`)
     }
 
-    let [href, preloads] = await Promise.all([
-      assetServer.getHref(entryId),
-      assetServer.getPreloads(entryId),
-    ])
+    let { href, importMap, preloads } = await assetServer.getScriptEntry(entryId)
 
     return {
       href,
+      importMap,
       exportName,
       preloads,
     }

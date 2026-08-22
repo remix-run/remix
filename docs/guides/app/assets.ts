@@ -24,7 +24,7 @@ export const assetServer = createAssetServer({
   },
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: isProduction,
-  fingerprint: isProduction ? { buildId: process.env.GITHUB_SHA || String(Date.now()) } : undefined,
+  fingerprint: isProduction,
   watch: false,
   scripts: {
     define: {
@@ -33,14 +33,13 @@ export const assetServer = createAssetServer({
   },
 })
 
-const scriptEntry = path.resolve(import.meta.dirname, 'actions/public/entry.ts')
+const scriptEntryPath = path.resolve(import.meta.dirname, 'actions/public/entry.ts')
 const devRefreshScriptEntry = path.resolve(import.meta.dirname, 'actions/public/dev-refresh.ts')
 const stylesheetEntry = path.resolve(import.meta.dirname, 'actions/public/docs.css')
 
-export const scriptSrc = await assetServer.getHref(scriptEntry)
-export const scriptPreloads = await assetServer.getPreloads(scriptEntry)
+export const scriptEntry = await assetServer.getScriptEntry(scriptEntryPath)
 export const stylesheetHref = await assetServer.getHref(stylesheetEntry)
 export const stylesheetPreloads = await assetServer.getPreloads(stylesheetEntry)
-export const devRefreshScriptSrc = isProduction
+export const devRefreshScript = isProduction
   ? undefined
-  : await assetServer.getHref(devRefreshScriptEntry)
+  : await assetServer.getScriptEntry(devRefreshScriptEntry)

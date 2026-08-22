@@ -19,11 +19,8 @@ import {
 import type { AssetServer, AssetServerOptions, BrowserHmrChannel } from './asset-server.ts'
 import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
+import { hashContent } from './fingerprint.ts'
 import type { ModuleLoader } from './loaders.ts'
-
-type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
-
-const packageRoot = path.resolve(import.meta.dirname, '../..')
 
 function createAssetServerForTest(
   options: Omit<AssetServerOptions<AssetRequestTransformMap>, 'basePath'> & {
@@ -165,7 +162,9 @@ async function getCompiledCodeAndSourceMap(
   assert.ok(entryResponse)
   let compiledCode = await entryResponse.text()
 
-  let sourceMapResponse = await get(assetServer, `${await assetServer.getHref(filePath)}.map`)
+  let sourceMapHref = compiledCode.match(/sourceMappingURL=([^\s*]+)/)?.[1]
+  assert.ok(sourceMapHref)
+  let sourceMapResponse = await get(assetServer, sourceMapHref)
   assert.ok(sourceMapResponse)
 
   return {
@@ -211,6 +210,40 @@ async function assertRecursivelyServedImports(
   return seen
 }
 
+async function assertImportMapImport(
+  assetServer: ReturnType<typeof createAssetServer>,
+  filePath: string,
+  specifier: string,
+  pattern: RegExp,
+): Promise<void> {
+  let importMap = await assetServer.getImportMap(filePath)
+  let mappedUrl = importMap.imports[specifier]
+  assert.ok(mappedUrl, `Expected import map entry for ${specifier}`)
+  assert.match(mappedUrl, pattern)
+}
+
+async function assertImportMapScopeImport(
+  assetServer: ReturnType<typeof createAssetServer>,
+  filePath: string,
+  scope: string,
+  specifier: string,
+  pattern: RegExp,
+): Promise<void> {
+  let importMap = await assetServer.getImportMap(filePath)
+  let mappedUrl = importMap.scopes?.[scope]?.[specifier]
+  assert.ok(mappedUrl, `Expected import map entry for ${specifier} in scope ${scope}`)
+  assert.match(mappedUrl, pattern)
+}
+
+async function assertNoImportMapImport(
+  assetServer: ReturnType<typeof createAssetServer>,
+  filePath: string,
+  specifier: string,
+): Promise<void> {
+  let importMap = await assetServer.getImportMap(filePath)
+  assert.equal(importMap.imports[specifier], undefined)
+}
+
 async function assertCharacterAccurateImportRewriteSourceMap(
   rootDir: string,
   sourceText = 'import { dep } from "./dep.ts"\nexport function value() {\n  return dep + 1\n}\n',
@@ -219,7 +252,7 @@ async function assertCharacterAccurateImportRewriteSourceMap(
   await write(rootDir, 'app/entry.ts', sourceText)
 
   let assetServer = createTestServer(rootDir, {
-    fingerprint: { buildId: 'build' },
+    fingerprint: true,
     minify: true,
     sourceMaps: 'external',
   })
@@ -227,8 +260,8 @@ async function assertCharacterAccurateImportRewriteSourceMap(
     let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(assetServer, 'app/entry.ts')
     let consumer = new SourceMapConsumer(sourceMap)
 
-    let rewrittenImport = getLineAndColumn(compiledCode, '/assets/app/dep.@')
-    let originalImport = consumer.originalPositionFor(rewrittenImport)
+    let generatedImport = getLineAndColumn(compiledCode, './dep.ts')
+    let originalImport = consumer.originalPositionFor(generatedImport)
     let expectedImport = getLineAndColumn(sourceText, '"./dep.ts"')
     assert.equal(originalImport.line, expectedImport.line)
     assert.equal(originalImport.column, expectedImport.column)
@@ -385,7 +418,7 @@ describe('asset-server', () => {
 
   it('supports .mts modules', async () => {
     await write(dir, 'app/entry.mts', 'export const value = 1')
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let response = await getByFile(assetServer, 'app/entry.mts')
     assert.ok(response)
@@ -399,7 +432,13 @@ describe('asset-server', () => {
 
     let response = await get(assetServer, '/assets/app/entry.ts')
     assert.ok(response)
-    assert.match(await response.text(), /\/assets\/app\/dep\.ts/)
+    assert.match(await response.text(), /"\.\/dep\.js"/)
+    await assertImportMapImport(
+      assetServer,
+      'app/entry.ts',
+      '/assets/app/dep.js',
+      /\/assets\/app\/dep\.ts/,
+    )
   })
 
   it('resolves explicit .js imports to directory indexes when needed', async () => {
@@ -411,7 +450,13 @@ describe('asset-server', () => {
 
       let response = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(response)
-      assert.match(await response.text(), /\/assets\/app\/dep\.js\/index\.js/)
+      assert.match(await response.text(), /"\.\/dep\.js"/)
+      await assertImportMapImport(
+        assetServer,
+        'app/entry.ts',
+        '/assets/app/dep.js',
+        /\/assets\/app\/dep\.js\/index\.js/,
+      )
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -424,7 +469,13 @@ describe('asset-server', () => {
 
     let response = await get(assetServer, '/assets/app/entry.tsx')
     assert.ok(response)
-    assert.match(await response.text(), /\/assets\/app\/dep\.tsx/)
+    assert.match(await response.text(), /"\.\/dep\.jsx"/)
+    await assertImportMapImport(
+      assetServer,
+      'app/entry.tsx',
+      '/assets/app/dep.jsx',
+      /\/assets\/app\/dep\.tsx/,
+    )
   })
 
   it('resolves explicit .mjs imports to .mts files when needed', async () => {
@@ -434,7 +485,13 @@ describe('asset-server', () => {
 
     let response = await get(assetServer, '/assets/app/entry.mts')
     assert.ok(response)
-    assert.match(await response.text(), /\/assets\/app\/dep\.mts/)
+    assert.match(await response.text(), /"\.\/dep\.mjs"/)
+    await assertImportMapImport(
+      assetServer,
+      'app/entry.mts',
+      '/assets/app/dep.mjs',
+      /\/assets\/app\/dep\.mts/,
+    )
   })
 
   it('serves CSS assets directly and ignores unsupported direct requests for other non-compiled files', async () => {
@@ -1192,6 +1249,128 @@ describe('asset-server', () => {
     assert.equal(transformCalls, 1)
   })
 
+  it('reuses transformed file cache entries across servers with the same files cache key', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let cache = createMemoryFileStorage()
+    let transformCalls = 0
+    let createServer = () =>
+      createTestServer(dir, {
+        files: {
+          cache,
+          cacheKey: 'commit-a',
+          extensions: ['.svg'],
+          transforms: {
+            optimize: defineFileTransform({
+              async transform(bytes) {
+                transformCalls += 1
+                return bytes
+              },
+            }),
+          },
+        },
+      })
+
+    let firstServer = createServer()
+    let firstHref = await firstServer.getHref('app/images/logo.svg', {
+      transform: ['optimize'],
+    })
+    let firstResponse = await get(firstServer, firstHref)
+    assert.ok(firstResponse)
+    assert.equal(firstResponse.status, 200)
+    assert.equal(transformCalls, 1)
+
+    let secondServer = createServer()
+    let secondHref = await secondServer.getHref('app/images/logo.svg', {
+      transform: ['optimize'],
+    })
+    let secondResponse = await get(secondServer, secondHref)
+    assert.ok(secondResponse)
+    assert.equal(secondResponse.status, 200)
+    assert.equal(transformCalls, 1)
+  })
+
+  it('does not reuse transformed file cache entries across different files cache keys', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let cache = createMemoryFileStorage()
+    let transformCalls = 0
+    let createServer = (cacheKey: string) =>
+      createTestServer(dir, {
+        files: {
+          cache,
+          cacheKey,
+          extensions: ['.svg'],
+          transforms: {
+            optimize: defineFileTransform({
+              async transform(bytes) {
+                transformCalls += 1
+                return bytes
+              },
+            }),
+          },
+        },
+      })
+
+    let firstServer = createServer('commit-a')
+    let firstHref = await firstServer.getHref('app/images/logo.svg', {
+      transform: ['optimize'],
+    })
+    let firstResponse = await get(firstServer, firstHref)
+    assert.ok(firstResponse)
+    assert.equal(firstResponse.status, 200)
+    assert.equal(transformCalls, 1)
+
+    let secondServer = createServer('commit-b')
+    let secondHref = await secondServer.getHref('app/images/logo.svg', {
+      transform: ['optimize'],
+    })
+    let secondResponse = await get(secondServer, secondHref)
+    assert.ok(secondResponse)
+    assert.equal(secondResponse.status, 200)
+    assert.equal(transformCalls, 2)
+  })
+
+  it('lets files.cacheKey control transformed file cache invalidation across servers', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let cache = createMemoryFileStorage()
+    let transformCalls = 0
+    let createServer = () =>
+      createTestServer(dir, {
+        files: {
+          cache,
+          cacheKey: 'commit-a',
+          extensions: ['.txt'],
+          transforms: {
+            upper: defineFileTransform({
+              async transform(bytes) {
+                transformCalls += 1
+                return new TextDecoder().decode(bytes).toUpperCase()
+              },
+            }),
+          },
+        },
+      })
+
+    let firstServer = createServer()
+    let firstHref = await firstServer.getHref('app/content/value.txt', {
+      transform: ['upper'],
+    })
+    let firstResponse = await get(firstServer, firstHref)
+    assert.ok(firstResponse)
+    assert.equal(await firstResponse.text(), 'HELLO\n')
+    assert.equal(transformCalls, 1)
+
+    await write(dir, 'app/content/value.txt', 'world\n')
+
+    let secondServer = createServer()
+    let secondHref = await secondServer.getHref('app/content/value.txt', {
+      transform: ['upper'],
+    })
+    let secondResponse = await get(secondServer, secondHref)
+    assert.ok(secondResponse)
+    assert.equal(await secondResponse.text(), 'HELLO\n')
+    assert.equal(transformCalls, 1)
+  })
+
   it('invalidates transformed file cache entries when source files change without watch mode', async () => {
     await write(dir, 'app/content/value.txt', 'hello\n')
     let transformCalls = 0
@@ -1459,7 +1638,7 @@ describe('asset-server', () => {
           }),
         },
       },
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
     })
 
     let response = await getByFile(assetServer, 'app/styles/app.css')
@@ -1543,7 +1722,7 @@ describe('asset-server', () => {
           }),
         },
       },
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
     })
 
     let response = await getByFile(assetServer, 'app/styles/app.css')
@@ -1575,7 +1754,7 @@ describe('asset-server', () => {
         '@import "#theme"',
       ].join(';\n') + ';\n',
     )
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let response = await getByFile(assetServer, 'app/styles/app.css')
     assert.ok(response)
@@ -1602,7 +1781,7 @@ describe('asset-server', () => {
         '.fragment { filter: url("#my-filter"); }',
       ].join('\n') + '\n',
     )
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let response = await getByFile(assetServer, 'app/styles/app.css')
     assert.ok(response)
@@ -1625,7 +1804,7 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
       },
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
     })
 
     let href = await assetServer.getHref('app/images/logo.svg')
@@ -1633,6 +1812,8 @@ describe('asset-server', () => {
 
     let fingerprintedResponse = await get(assetServer, href)
     assert.ok(fingerprintedResponse)
+    let body = await fingerprintedResponse.bytes()
+    assert.equal(href.match(/\.@([A-Za-z0-9_-]+)\.svg/)?.[1], await hashContent(body))
     assert.equal(
       fingerprintedResponse.headers.get('Cache-Control'),
       'public, max-age=31536000, immutable',
@@ -1648,7 +1829,7 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
       },
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
     })
 
     let href = await assetServer.getHref('app/images/logo.svg')
@@ -1676,7 +1857,7 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
       },
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
     })
 
     let firstHref = await assetServer.getHref('app/images/logo.svg')
@@ -1716,7 +1897,7 @@ describe('asset-server', () => {
           }),
         },
       },
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
     })
 
     let href = await assetServer.getHref('app/images/logo.svg', {
@@ -1760,7 +1941,7 @@ describe('asset-server', () => {
           }),
         },
       },
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
     })
 
     let href = await assetServer.getHref('app/images/logo.svg', {
@@ -1786,7 +1967,7 @@ describe('asset-server', () => {
     assert.equal(mismatch, null)
   })
 
-  it('reuses the source fingerprint across transformed file variants', async () => {
+  it('fingerprints transformed files from their emitted bytes', async () => {
     await write(
       dir,
       'app/images/logo.svg',
@@ -1804,7 +1985,7 @@ describe('asset-server', () => {
           }),
         },
       },
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
     })
 
     let purpleHref = await assetServer.getHref('app/images/logo.svg', {
@@ -1814,16 +1995,24 @@ describe('asset-server', () => {
       transform: [['recolor', '#ef4444']],
     })
 
+    let purpleResponse = await get(assetServer, purpleHref)
+    let redResponse = await get(assetServer, redHref)
+    assert.ok(purpleResponse)
+    assert.ok(redResponse)
+    let purpleBody = await purpleResponse.bytes()
+    let redBody = await redResponse.bytes()
+
     let purpleFingerprint = purpleHref.match(/\.@([A-Za-z0-9_-]+)\.svg/)?.[1]
     let redFingerprint = redHref.match(/\.@([A-Za-z0-9_-]+)\.svg/)?.[1]
-    assert.ok(purpleFingerprint)
-    assert.equal(purpleFingerprint, redFingerprint)
+    assert.equal(purpleFingerprint, await hashContent(purpleBody))
+    assert.equal(redFingerprint, await hashContent(redBody))
+    assert.notEqual(purpleFingerprint, redFingerprint)
   })
 
   it('fingerprints CSS import graphs when fingerprinting is enabled', async () => {
     await write(dir, 'app/styles/app.css', '@import "./reset.css";\nbody { color: black; }\n')
     await write(dir, 'app/styles/reset.css', 'body { color: red; }\n')
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let appHref = await assetServer.getHref('app/styles/app.css')
     let resetHref = await assetServer.getHref('app/styles/reset.css')
@@ -1840,6 +2029,34 @@ describe('asset-server', () => {
 
     let preloads = await assetServer.getPreloads('app/styles/app.css')
     assert.deepEqual(preloads, [appHref, resetHref])
+  })
+
+  it('rejects self-importing CSS without fingerprinting', async () => {
+    await write(dir, 'app/styles/app.css', '@import "./app.css";\nbody { color: black; }\n')
+    let assetServer = createTestServer(dir)
+
+    await assert.rejects(
+      assetServer.getHref('app/styles/app.css'),
+      /Circular CSS imports are not supported: .*app\.css -> .*app\.css/,
+    )
+  })
+
+  it('rejects multi-file CSS import cycles when fingerprinting', async () => {
+    await write(dir, 'app/styles/a.css', '@import "./b.css";\n.a { color: red; }\n')
+    await write(dir, 'app/styles/b.css', '@import "./a.css";\n.b { color: blue; }\n')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    await assert.rejects(
+      Promise.all([
+        assetServer.getHref('app/styles/a.css'),
+        assetServer.getHref('app/styles/b.css'),
+      ]),
+      /Circular CSS imports are not supported: .*\.css -> .*\.css -> .*\.css/,
+    )
+    await assert.rejects(
+      assetServer.getPreloads('app/styles/a.css'),
+      /Circular CSS imports are not supported: .*a\.css -> .*b\.css -> .*a\.css/,
+    )
   })
 
   it('getPreloads accepts multiple style roots and dedupes shared imports', async () => {
@@ -1859,7 +2076,7 @@ describe('asset-server', () => {
   it('uses immutable caching for fingerprinted style requests and returns null on mismatch', async () => {
     await write(dir, 'app/styles/app.css', '@import "./reset.css";\nbody { color: black; }\n')
     await write(dir, 'app/styles/reset.css', 'body { color: red; }\n')
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let appHref = await assetServer.getHref('app/styles/app.css')
     assert.match(appHref, /^\/assets\/app\/styles\/app\.@[A-Za-z0-9_-]+\.css$/)
@@ -1887,33 +2104,34 @@ describe('asset-server', () => {
     assert.equal(mismatch, null)
   })
 
-  it('keeps fingerprinted style graphs stable within a build', async () => {
+  it('cascades fingerprinted style graphs when dependencies change', async () => {
     await write(dir, 'app/styles/app.css', '@import "./mid.css";\nbody { color: black; }\n')
     await write(dir, 'app/styles/mid.css', '@import "./leaf.css";\nbody { color: red; }\n')
     await write(dir, 'app/styles/leaf.css', 'body { color: blue; }\n')
 
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let firstServer = createTestServer(dir, { fingerprint: true })
 
-    let before = await assetServer.getPreloads('app/styles/app.css')
+    let before = await firstServer.getPreloads('app/styles/app.css')
     let beforeMid = before.find((url) => url.includes('/assets/app/styles/mid.@'))
     let beforeLeaf = before.find((url) => url.includes('/assets/app/styles/leaf.@'))
 
     await write(dir, 'app/styles/leaf.css', 'body { color: green; }\n')
 
-    let after = await assetServer.getPreloads('app/styles/app.css')
+    let secondServer = createTestServer(dir, { fingerprint: true })
+    let after = await secondServer.getPreloads('app/styles/app.css')
     let afterMid = after.find((url) => url.includes('/assets/app/styles/mid.@'))
     let afterLeaf = after.find((url) => url.includes('/assets/app/styles/leaf.@'))
 
-    assert.equal(afterMid, beforeMid)
-    assert.equal(afterLeaf, beforeLeaf)
+    assert.notEqual(afterMid, beforeMid)
+    assert.notEqual(afterLeaf, beforeLeaf)
   })
 
-  it('uses buildId to change internal style fingerprints', async () => {
+  it('keeps fingerprinted style graphs stable across servers when contents are unchanged', async () => {
     await write(dir, 'app/styles/app.css', '@import "./dep.css";\nbody { color: black; }\n')
     await write(dir, 'app/styles/dep.css', 'body { color: red; }\n')
 
-    let serverA = createTestServer(dir, { fingerprint: { buildId: 'build-a' } })
-    let serverB = createTestServer(dir, { fingerprint: { buildId: 'build-b' } })
+    let serverA = createTestServer(dir, { fingerprint: true })
+    let serverB = createTestServer(dir, { fingerprint: true })
 
     let bodyA = await (await getByFile(serverA, 'app/styles/app.css'))!.text()
     let bodyB = await (await getByFile(serverB, 'app/styles/app.css'))!.text()
@@ -1921,7 +2139,7 @@ describe('asset-server', () => {
     let matchB = bodyB.match(/@import "\/assets\/app\/styles\/dep\.@([A-Za-z0-9_-]+)\.css";/)
 
     assert.ok(matchA && matchB)
-    assert.notEqual(matchA[1], matchB[1])
+    assert.equal(matchA[1], matchB[1])
   })
 
   it('supports external style source maps', async () => {
@@ -1948,13 +2166,15 @@ describe('asset-server', () => {
   it('supports external style source maps for fingerprinted request URLs', async () => {
     await write(dir, 'app/styles/app.css', 'body { color: red; }\n')
     let assetServer = createTestServer(dir, {
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
       sourceMaps: 'external',
     })
 
     let response = await getByFile(assetServer, 'app/styles/app.css')
     assert.ok(response)
     let body = await response.text()
+    let href = await assetServer.getHref('app/styles/app.css')
+    assert.equal(href.match(/\.@([A-Za-z0-9_-]+)\.css/)?.[1], await hashContent(body))
     let sourceMapMatch = body.match(/\/assets\/app\/styles\/app\.@([A-Za-z0-9_-]+)\.css\.map/)
     assert.ok(sourceMapMatch)
 
@@ -1964,7 +2184,9 @@ describe('asset-server', () => {
     )
     assert.ok(sourceMapResponse)
 
-    let sourceMap = JSON.parse(await sourceMapResponse.text()) as RawSourceMap
+    let sourceMapBody = await sourceMapResponse.text()
+    assert.equal(sourceMapMatch[1], await hashContent(sourceMapBody))
+    let sourceMap = JSON.parse(sourceMapBody) as RawSourceMap
     assert.deepEqual(sourceMap.sources, ['/assets/app/styles/app.css'])
     assert.deepEqual(sourceMap.sourcesContent, ['body { color: red; }\n'])
   })
@@ -1973,7 +2195,7 @@ describe('asset-server', () => {
     await write(dir, 'app/styles/app.css', '@import "./reset.css";\nbody { color: black; }\n')
     await write(dir, 'app/styles/reset.css', 'body { color: red; }\n')
     let assetServer = createTestServer(dir, {
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
       sourceMaps: 'external',
     })
 
@@ -1991,10 +2213,11 @@ describe('asset-server', () => {
     let resetResponse = await get(assetServer, `/assets/app/styles/reset.@${resetMatch[1]}.css`)
     assert.ok(resetResponse)
     let resetBody = await resetResponse.text()
-    assert.ok(resetBody.includes(`/assets/app/styles/reset.@${resetMatch[1]}.css.map`))
+    let resetMapMatch = resetBody.match(/\/assets\/app\/styles\/reset\.@([A-Za-z0-9_-]+)\.css\.map/)
+    assert.ok(resetMapMatch)
 
     let appMap = await get(assetServer, `/assets/app/styles/app.@${appMapMatch[1]}.css.map`)
-    let resetMap = await get(assetServer, `/assets/app/styles/reset.@${resetMatch[1]}.css.map`)
+    let resetMap = await get(assetServer, `/assets/app/styles/reset.@${resetMapMatch[1]}.css.map`)
     assert.ok(appMap && resetMap)
     assert.equal(appMap.status, 200)
     assert.equal(resetMap.status, 200)
@@ -2061,7 +2284,7 @@ describe('asset-server', () => {
     await write(dir, 'app/styles/reset.css', 'body { color: red; }\n')
     await write(dir, 'app/styles/app.css', sourceText)
     let assetServer = createTestServer(dir, {
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
       sourceMaps: 'external',
     })
 
@@ -2112,15 +2335,15 @@ describe('asset-server', () => {
   it('uses immutable caching for fingerprinted script requests', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let entryResponse = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(entryResponse)
-    let entryBody = await entryResponse.text()
-    let depMatch = entryBody.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
-    assert.ok(depMatch)
+    let importMap = await assetServer.getImportMap('app/entry.ts')
+    let depHref = importMap.imports['/assets/app/dep.ts']
+    assert.ok(depHref)
 
-    let depResponse = await get(assetServer, `/assets/app/dep.@${depMatch[1]}.ts`)
+    let depResponse = await get(assetServer, depHref)
     assert.ok(depResponse)
     assert.equal(entryResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
     assert.equal(depResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
@@ -2129,17 +2352,21 @@ describe('asset-server', () => {
   it('fingerprints all modules with filename.@fingerprint.ext urls and returns null on mismatch', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let entryHref = await assetServer.getHref('app/entry.ts')
     let entryResponse = await get(assetServer, entryHref)
     assert.ok(entryResponse)
     let body = await entryResponse.text()
-    let match = body.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
-    assert.ok(match, `expected fingerprinted dep import, got:\n${body}`)
+    let importMap = await assetServer.getImportMap('app/entry.ts')
+    let depHref = importMap.imports['/assets/app/dep.ts']
+    assert.ok(depHref)
+    assert.match(body, /"\.\/dep\.ts"/)
     assert.match(entryHref, /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/)
+    assert.equal(entryHref.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1], await hashContent(body))
+    assert.match(depHref, /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts/)
 
-    let depResponse = await get(assetServer, `/assets/app/dep.@${match[1]}.ts`)
+    let depResponse = await get(assetServer, depHref)
     assert.ok(depResponse)
     assert.equal(depResponse.status, 200)
     assert.ok(depResponse.headers.get('ETag'))
@@ -2151,12 +2378,434 @@ describe('asset-server', () => {
     assert.equal(mismatch, null)
   })
 
-  it('keeps fingerprinted script graphs stable within a build', async () => {
+  it('supports content-based script fingerprints without a build id via import maps', async () => {
+    await write(dir, 'app/entry.ts', 'import { dep } from "./dep.ts"\nexport const entry = dep')
+    await write(dir, 'app/dep.ts', 'export const dep = 1')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let entryHref = await assetServer.getHref('app/entry.ts')
+    let entryResponse = await get(assetServer, entryHref)
+    assert.ok(entryResponse)
+    let entryBody = await entryResponse.text()
+    let importMap = await assetServer.getImportMap('app/entry.ts')
+
+    assert.match(entryHref, /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/)
+    assert.ok(entryBody.includes('"./dep.ts"'), entryBody)
+    assert.match(importMap.imports['/assets/app/entry.ts'] ?? '', /\/assets\/app\/entry\.@/)
+    assert.match(importMap.imports['/assets/app/dep.ts'] ?? '', /\/assets\/app\/dep\.@/)
+
+    let depHref = importMap.imports['/assets/app/dep.ts']
+    assert.ok(depHref)
+    let depResponse = await get(assetServer, depHref)
+    assert.ok(depResponse)
+    assert.equal(depResponse.status, 200)
+  })
+
+  it('gets href, preloads, and import map for a script entry', async () => {
+    await write(dir, 'app/entry.ts', 'import { dep } from "./dep.ts"\nexport const entry = dep')
+    await write(dir, 'app/dep.ts', 'export const dep = 1')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let { href, importMap, preloads } = await assetServer.getScriptEntry('app/entry.ts')
+
+    assert.equal(href, await assetServer.getHref('app/entry.ts'))
+    assert.deepEqual(preloads, await assetServer.getPreloads('app/entry.ts'))
+    assert.deepEqual(importMap, await assetServer.getImportMap('app/entry.ts'))
+    assert.match(href, /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(
+      importMap.imports['/assets/app/dep.ts'] ?? '',
+      /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts/,
+    )
+  })
+
+  it('getImportMap rejects non-script files with a TypeError', async () => {
+    let assetServer = createTestServer(dir)
+
+    await assert.rejects(assetServer.getImportMap('app/styles.css'), (error: unknown) => {
+      assert.ok(error instanceof TypeError)
+      assert.match(
+        error.message,
+        /assetServer\.getImportMap\(\) only supports script files: app\/styles\.css/,
+      )
+      return true
+    })
+  })
+
+  it('can generate an import map for multiple explicit script roots', async () => {
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { shared } from "./shared.ts"\nexport const entry = shared',
+    )
+    await write(
+      dir,
+      'app/lazy.ts',
+      'import { shared } from "./shared.ts"\nexport const lazy = shared',
+    )
+    await write(dir, 'app/shared.ts', 'export const shared = 1')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let importMap = await assetServer.getImportMap(['app/entry.ts', 'app/lazy.ts'])
+
+    assert.match(importMap.imports['/assets/app/entry.ts'] ?? '', /\/assets\/app\/entry\.@/)
+    assert.match(importMap.imports['/assets/app/lazy.ts'] ?? '', /\/assets\/app\/lazy\.@/)
+    assert.match(importMap.imports['/assets/app/shared.ts'] ?? '', /\/assets\/app\/shared\.@/)
+  })
+
+  it('reifies package-local bare import resolution with import map scopes', async () => {
+    await write(dir, 'app/entry.ts', 'import { value } from "pkg"\nexport const entry = value')
+    await writeJson(dir, 'app/node_modules/pkg/package.json', {
+      name: 'pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(
+      dir,
+      'app/node_modules/pkg/index.ts',
+      'import { value } from "dep"\nexport { value }',
+    )
+    await writeJson(dir, 'app/node_modules/pkg/node_modules/dep/package.json', {
+      name: 'dep',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/node_modules/pkg/node_modules/dep/index.ts', 'export const value = 1')
+    await writeJson(dir, 'app/node_modules/dep/package.json', {
+      name: 'dep',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/node_modules/dep/index.ts', 'export const value = 2')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let entryBody = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+    let packageBody = await (await getByFile(assetServer, 'app/node_modules/pkg/index.ts'))!.text()
+    let importMap = await assetServer.getImportMap('app/entry.ts')
+
+    assert.match(entryBody, /from "pkg"/)
+    assert.match(packageBody, /from "dep"/)
+    assert.match(
+      importMap.scopes?.['/assets/app/']?.['pkg'] ?? '',
+      /\/assets\/app\/node_modules\/pkg\/index\.@.*\.ts/,
+    )
+    assert.match(
+      importMap.scopes?.['/assets/app/node_modules/pkg/']?.['dep'] ?? '',
+      /\/assets\/app\/node_modules\/pkg\/node_modules\/dep\/index\.@.*\.ts/,
+    )
+    assert.deepEqual(Object.keys(importMap.scopes ?? {}).sort(), [
+      '/assets/app/',
+      '/assets/app/node_modules/pkg/',
+    ])
+  })
+
+  it('resolves multiple bare import scopes within one module', async () => {
+    await write(
+      dir,
+      'app/multiple-scopes/entry.ts',
+      'import { a } from "scope-a"\nimport { b } from "scope-b"\nexport { a, b }',
+    )
+    await writeJson(dir, 'app/multiple-scopes/node_modules/scope-a/package.json', {
+      name: 'scope-a',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/multiple-scopes/node_modules/scope-a/index.ts', 'export const a = 1')
+    await writeJson(dir, 'app/multiple-scopes/node_modules/scope-b/package.json', {
+      name: 'scope-b',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/multiple-scopes/node_modules/scope-b/index.ts', 'export const b = 2')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let importMap = await assetServer.getImportMap('app/multiple-scopes/entry.ts')
+
+    assert.match(
+      importMap.scopes?.['/assets/app/multiple-scopes/']?.['scope-a'] ?? '',
+      /\/assets\/app\/multiple-scopes\/node_modules\/scope-a\/index\.@.*\.ts/,
+    )
+    assert.match(
+      importMap.scopes?.['/assets/app/multiple-scopes/']?.['scope-b'] ?? '',
+      /\/assets\/app\/multiple-scopes\/node_modules\/scope-b\/index\.@.*\.ts/,
+    )
+  })
+
+  it('collapses bare imports from many importer directories into one scope', async () => {
+    let featureImports: string[] = []
+    for (let index = 0; index < 100; index++) {
+      let featurePath = `app/features/feature-${index}/index.ts`
+      await write(
+        dir,
+        featurePath,
+        `import { value } from "pkg"\nexport const value${index} = value`,
+      )
+      featureImports.push(`import "./features/feature-${index}/index.ts"`)
+    }
+    await write(dir, 'app/entry.ts', featureImports.join('\n'))
+    await writeJson(dir, 'app/node_modules/pkg/package.json', {
+      name: 'pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/node_modules/pkg/index.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let importMap = await assetServer.getImportMap('app/entry.ts')
+
+    assert.deepEqual(Object.keys(importMap.scopes ?? {}), ['/assets/app/'])
+    assert.match(
+      importMap.scopes?.['/assets/app/']?.['pkg'] ?? '',
+      /\/assets\/app\/node_modules\/pkg\/index\.@.*\.ts/,
+    )
+  })
+
+  it('adds more-specific scopes for independently resolved late entries', async () => {
+    await write(dir, 'app/entry.ts', 'import { value } from "pkg"\nexport const entry = value')
+    await write(
+      dir,
+      'app/features/late.ts',
+      'import { value } from "pkg"\nexport const late = value',
+    )
+    await writeJson(dir, 'app/node_modules/pkg/package.json', {
+      name: 'pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/node_modules/pkg/index.ts', 'export const value = "root"')
+    await writeJson(dir, 'app/features/node_modules/pkg/package.json', {
+      name: 'pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/features/node_modules/pkg/index.ts', 'export const value = "feature"')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let initialImportMap = await assetServer.getImportMap('app/entry.ts')
+    let lateImportMap = await assetServer.getImportMap('app/features/late.ts')
+
+    assert.deepEqual(Object.keys(initialImportMap.scopes ?? {}), ['/assets/app/'])
+    assert.match(
+      initialImportMap.scopes?.['/assets/app/']?.['pkg'] ?? '',
+      /\/assets\/app\/node_modules\/pkg\/index\.@.*\.ts/,
+    )
+    assert.deepEqual(Object.keys(lateImportMap.scopes ?? {}), ['/assets/app/features/'])
+    assert.match(
+      lateImportMap.scopes?.['/assets/app/features/']?.['pkg'] ?? '',
+      /\/assets\/app\/features\/node_modules\/pkg\/index\.@.*\.ts/,
+    )
+  })
+
+  it('reuses broad scopes for independently resolved late entries with the same target', async () => {
+    await write(
+      dir,
+      'app/same-target/entry.ts',
+      'import { value } from "same-target-pkg"\nexport const entry = value',
+    )
+    await write(
+      dir,
+      'app/same-target/features/late.ts',
+      'import { value } from "same-target-pkg"\nexport const late = value',
+    )
+    await writeJson(dir, 'app/same-target/node_modules/same-target-pkg/package.json', {
+      name: 'same-target-pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(
+      dir,
+      'app/same-target/node_modules/same-target-pkg/index.ts',
+      'export const value = "root"',
+    )
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let initialImportMap = await assetServer.getImportMap('app/same-target/entry.ts')
+    let lateImportMap = await assetServer.getImportMap('app/same-target/features/late.ts')
+
+    assert.deepEqual(Object.keys(initialImportMap.scopes ?? {}), ['/assets/app/same-target/'])
+    assert.deepEqual(Object.keys(lateImportMap.scopes ?? {}), ['/assets/app/same-target/'])
+    assert.equal(
+      lateImportMap.scopes?.['/assets/app/same-target/']?.['same-target-pkg'],
+      initialImportMap.scopes?.['/assets/app/same-target/']?.['same-target-pkg'],
+    )
+  })
+
+  it('adds a more specific scope when a parent scope resolves the import differently', async () => {
+    await write(
+      dir,
+      'app/coverage-source.ts',
+      'import { value } from "masked-pkg"\nexport const source = value',
+    )
+    await write(
+      dir,
+      'app/masked/inner/late.ts',
+      'import { value } from "masked-pkg"\nexport const late = value',
+    )
+    await writeJson(dir, 'app/node_modules/masked-pkg/package.json', {
+      name: 'masked-pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/node_modules/masked-pkg/index.ts', 'export const value = "root"')
+    await writeJson(dir, 'app/masked/node_modules/masked-pkg/package.json', {
+      name: 'masked-pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(
+      dir,
+      'app/masked/node_modules/masked-pkg/index.ts',
+      'export const value = "intermediate"',
+    )
+    await symlinkDirectory(
+      path.join(dir, 'app/node_modules/masked-pkg'),
+      path.join(dir, 'app/masked/inner/node_modules/masked-pkg'),
+    )
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let initialImportMap = await assetServer.getImportMap('app/coverage-source.ts')
+    let lateImportMap = await assetServer.getImportMap('app/masked/inner/late.ts')
+
+    assert.deepEqual(Object.keys(initialImportMap.scopes ?? {}), ['/assets/app/'])
+    assert.deepEqual(Object.keys(lateImportMap.scopes ?? {}), ['/assets/app/masked/inner/'])
+  })
+
+  it('rejects bare import resolution selected by importer file membership', async () => {
+    await writeJson(dir, 'tsconfig.json', {
+      files: [],
+      references: [{ path: './tsconfig.a.json' }, { path: './tsconfig.b.json' }],
+    })
+    await writeJson(dir, 'tsconfig.a.json', {
+      files: ['app/a.ts'],
+      compilerOptions: {
+        baseUrl: '.',
+        paths: { alias: ['./app/a-target.ts'] },
+      },
+    })
+    await writeJson(dir, 'tsconfig.b.json', {
+      files: ['app/b.ts'],
+      compilerOptions: {
+        baseUrl: '.',
+        paths: { alias: ['./app/b-target.ts'] },
+      },
+    })
+    await write(dir, 'app/a.ts', 'import { value } from "alias"\nexport { value }')
+    await write(dir, 'app/b.ts', 'import { value } from "alias"\nexport { value }')
+    await write(dir, 'app/a-target.ts', 'export const value = "a"')
+    await write(dir, 'app/b-target.ts', 'export const value = "b"')
+    let assetServer = createTestServer(dir)
+
+    await assert.rejects(
+      assetServer.getImportMap('app/a.ts'),
+      /resolves differently based on the importer file/,
+    )
+  })
+
+  it('treats non-reference tsconfig file selection as directory-uniform', async () => {
+    await writeJson(dir, 'app/directory-uniform/tsconfig.json', {
+      files: ['a.ts'],
+      compilerOptions: {
+        baseUrl: '.',
+        paths: { alias: ['./target.ts'] },
+      },
+    })
+    await write(
+      dir,
+      'app/directory-uniform/a.ts',
+      'import { value } from "alias"\nexport const a = value',
+    )
+    await write(
+      dir,
+      'app/directory-uniform/b.ts',
+      'import { value } from "alias"\nexport const b = value',
+    )
+    await write(dir, 'app/directory-uniform/target.ts', 'export const value = true')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let importMap = await assetServer.getImportMap([
+      'app/directory-uniform/a.ts',
+      'app/directory-uniform/b.ts',
+    ])
+
+    assert.match(
+      importMap.scopes?.['/assets/app/directory-uniform/']?.['alias'] ?? '',
+      /\/assets\/app\/directory-uniform\/target\.@.*\.ts/,
+    )
+  })
+
+  it('reports concurrent scope failures in authored import order', async () => {
+    await writeJson(dir, 'tsconfig.json', {
+      files: [],
+      references: [{ path: './tsconfig.scope-errors.json' }],
+    })
+    await writeJson(dir, 'tsconfig.scope-errors.json', {
+      files: ['app/scope-errors.ts'],
+      compilerOptions: {
+        baseUrl: '.',
+        paths: {
+          'first-alias': ['./app/first-target.ts'],
+          'second-alias': ['./app/second-target.ts'],
+        },
+      },
+    })
+    await write(dir, 'app/scope-errors.ts', 'import "first-alias"\nimport "second-alias"')
+    await write(dir, 'app/first-target.ts', 'export const first = true')
+    await write(dir, 'app/second-target.ts', 'export const second = true')
+    let assetServer = createTestServer(dir)
+
+    await assert.rejects(
+      assetServer.getImportMap('app/scope-errors.ts'),
+      /Bare import "first-alias" .* resolves differently based on the importer file/,
+    )
+  })
+
+  it('rejects a bare import when the importer directory cannot be represented as a URL scope', async () => {
+    await write(dir, 'app/entry.ts', 'import { value } from "pkg"\nexport { value }')
+    await writeJson(dir, 'app/node_modules/pkg/package.json', {
+      name: 'pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/node_modules/pkg/index.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir, {
+      fileMap: {
+        '/entry.ts': 'app/entry.ts',
+        '/app/*path': 'app/*path',
+      },
+    })
+
+    await assert.rejects(
+      assetServer.getImportMap('app/entry.ts'),
+      /fileMap entry does not preserve directory hierarchy/,
+    )
+  })
+
+  it('does not cascade script fingerprints through importers when a dependency changes', async () => {
+    await write(dir, 'app/entry.ts', 'import { dep } from "./dep.ts"\nexport const entry = dep')
+    await write(dir, 'app/dep.ts', 'export const dep = 1')
+    let firstServer = createTestServer(dir, { fingerprint: true })
+
+    let firstEntryHref = await firstServer.getHref('app/entry.ts')
+    let firstImportMap = await firstServer.getImportMap('app/entry.ts')
+
+    await write(dir, 'app/dep.ts', 'export const dep = 2')
+    let secondServer = createTestServer(dir, { fingerprint: true })
+
+    let secondEntryHref = await secondServer.getHref('app/entry.ts')
+    let secondImportMap = await secondServer.getImportMap('app/entry.ts')
+
+    assert.equal(secondEntryHref, firstEntryHref)
+    assert.notEqual(
+      secondImportMap.imports['/assets/app/dep.ts'],
+      firstImportMap.imports['/assets/app/dep.ts'],
+    )
+  })
+
+  it('keeps fingerprinted script import URLs stable when dependencies change', async () => {
     await write(dir, 'app/entry.ts', 'import "./mid.ts"\nexport const entry = true')
     await write(dir, 'app/mid.ts', 'import "./leaf.ts"\nexport const mid = true')
     await write(dir, 'app/leaf.ts', 'export const leaf = 1')
 
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let before = await assetServer.getPreloads('app/entry.ts')
     let beforeMid = before.find((url) => url.includes('/assets/app/mid.@'))
@@ -2172,20 +2821,16 @@ describe('asset-server', () => {
     assert.equal(afterLeaf, beforeLeaf)
   })
 
-  it('uses buildId to change internal fingerprints', async () => {
+  it('keeps authored relative imports in fingerprinted scripts', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
 
-    let serverA = createTestServer(dir, { fingerprint: { buildId: 'build-a' } })
-    let serverB = createTestServer(dir, { fingerprint: { buildId: 'build-b' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
-    let bodyA = await (await getByFile(serverA, 'app/entry.ts'))!.text()
-    let bodyB = await (await getByFile(serverB, 'app/entry.ts'))!.text()
-    let matchA = bodyA.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
-    let matchB = bodyB.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
 
-    assert.ok(matchA && matchB)
-    assert.notEqual(matchA[1], matchB[1])
+    assert.match(body, /import "\.\/dep\.ts"/)
+    assert.doesNotMatch(body, /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts/)
   })
 
   it('keeps cached source output stable until the server restarts', async () => {
@@ -2230,44 +2875,83 @@ describe('asset-server', () => {
     assert.equal(secondEtag, firstEtag)
   })
 
-  it('fingerprints rewritten imports even when those modules can also be fetched directly', async () => {
+  it('maps authored imports even when those modules can also be fetched directly', async () => {
     await write(dir, 'app/a.ts', 'import "./b.ts"\nexport const a = true')
     await write(dir, 'app/b.ts', 'export const b = true')
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let response = await getByFile(assetServer, 'app/a.ts')
     assert.ok(response)
     let body = await response.text()
-    assert.ok(body.includes('/assets/app/b.@'))
+    let importMap = await assetServer.getImportMap('app/a.ts')
+    assert.ok(body.includes('./b.ts'))
+    assert.match(importMap.imports['/assets/app/b.ts'] ?? '', /\/assets\/app\/b\.@/)
+  })
+
+  it('omits identity import map entries for stable script URLs', async () => {
+    await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
+    await write(dir, 'app/dep.ts', 'export const dep = 1')
+    let assetServer = createTestServer(dir)
+
+    let importMap = await assetServer.getImportMap('app/entry.ts')
+
+    assert.deepEqual(importMap, { imports: {} })
+  })
+
+  it('keeps non-identity scoped import map entries for stable script URLs', async () => {
+    await write(dir, 'app/entry.ts', 'import { value } from "pkg"\nexport const entry = value')
+    await writeJson(dir, 'app/node_modules/pkg/package.json', {
+      name: 'pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/node_modules/pkg/index.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir)
+
+    let importMap = await assetServer.getImportMap('app/entry.ts')
+
+    assert.deepEqual(importMap.imports, {})
+    assert.deepEqual(importMap.scopes, {
+      '/assets/app/': {
+        pkg: '/assets/app/node_modules/pkg/index.ts',
+      },
+    })
   })
 
   it('supports external source maps for fingerprinted request URLs', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry: number = 1')
     await write(dir, 'app/dep.ts', 'export const dep: number = 2')
     let assetServer = createTestServer(dir, {
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
       sourceMaps: 'external',
     })
 
     let entryResponse = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(entryResponse)
     let entryBody = await entryResponse.text()
+    let entryHref = await assetServer.getHref('app/entry.ts')
+    assert.equal(entryHref.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1], await hashContent(entryBody))
     let entryMapMatch = entryBody.match(/\/assets\/app\/entry\.@([A-Za-z0-9_-]+)\.ts\.map/)
     assert.ok(entryMapMatch)
 
-    let depMatch = entryBody.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
+    let importMap = await assetServer.getImportMap('app/entry.ts')
+    let depHref = importMap.imports['/assets/app/dep.ts']
+    assert.ok(depHref)
+    let depMatch = depHref.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
     assert.ok(depMatch)
 
-    let depResponse = await get(assetServer, `/assets/app/dep.@${depMatch[1]}.ts`)
+    let depResponse = await get(assetServer, depHref)
     assert.ok(depResponse)
     let depBody = await depResponse.text()
-    assert.ok(depBody.includes(`/assets/app/dep.@${depMatch[1]}.ts.map`))
+    let depMapMatch = depBody.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts\.map/)
+    assert.ok(depMapMatch)
 
     let entryMap = await get(assetServer, `/assets/app/entry.@${entryMapMatch[1]}.ts.map`)
-    let depMap = await get(assetServer, `/assets/app/dep.@${depMatch[1]}.ts.map`)
+    let depMap = await get(assetServer, `/assets/app/dep.@${depMapMatch[1]}.ts.map`)
     assert.ok(entryMap && depMap)
     assert.equal(entryMap.status, 200)
     assert.equal(depMap.status, 200)
+    assert.equal(entryMapMatch[1], await hashContent(await entryMap.text()))
   })
 
   it('supports external source maps after module loaders transform scripts', async () => {
@@ -2384,7 +3068,7 @@ describe('asset-server', () => {
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     await write(dir, 'app/entry.ts', 'import "./dep.ts"; console.log(1)')
     let assetServer = createTestServer(dir, {
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
       sourceMaps: 'external',
       minify: true,
     })
@@ -2393,10 +3077,9 @@ describe('asset-server', () => {
     assert.ok(entryResponse)
     let compiledCode = await entryResponse.text()
 
-    let sourceMapResponse = await get(
-      assetServer,
-      `${await assetServer.getHref('app/entry.ts')}.map`,
-    )
+    let sourceMapHref = compiledCode.match(/sourceMappingURL=([^\s]+)/)?.[1]
+    assert.ok(sourceMapHref)
+    let sourceMapResponse = await get(assetServer, sourceMapHref)
     assert.ok(sourceMapResponse)
     let sourceMap = JSON.parse(await sourceMapResponse.text()) as RawSourceMap
     let consumer = new SourceMapConsumer(sourceMap)
@@ -2407,39 +3090,91 @@ describe('asset-server', () => {
     assert.equal(original.column, 19)
   })
 
-  it('preserves quoted dynamic import specifiers when rewriting URLs', async () => {
+  it('preserves quoted dynamic import specifiers with import maps', async () => {
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     await write(
       dir,
       'app/entry.ts',
       'export let load = () => import("./dep.ts").then((mod) => mod.dep)',
     )
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
     let body = await response.text()
 
-    assert.match(body, /import\("\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts"\)/)
+    assert.match(body, /import\("\.\/dep\.ts"\)/)
   })
 
-  it('rewrites static template-literal dynamic imports', async () => {
+  it('preserves static template-literal dynamic imports with import maps', async () => {
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     await write(
       dir,
       'app/entry.ts',
       'export let load = () => import(`./dep.ts`).then((mod) => mod.dep)',
     )
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
     let body = await response.text()
 
-    assert.match(body, /import\((["`])\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts\1\)/)
+    assert.match(body, /import\((["`])\.\/dep\.ts\1\)/)
   })
 
-  it('rewrites re-exported package specifiers', async () => {
+  it('includes statically analyzable dynamic import graphs in the entry import map', async () => {
+    await write(
+      dir,
+      'app/features/lazy.ts',
+      'import { value } from "dynamic-pkg"\nexport const lazy = value',
+    )
+    await write(
+      dir,
+      'app/entry.ts',
+      'export let load = () => import("./features/lazy.ts").then((mod) => mod.lazy)',
+    )
+    await writeJson(dir, 'app/node_modules/dynamic-pkg/package.json', {
+      name: 'dynamic-pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/node_modules/dynamic-pkg/index.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let importMap = await assetServer.getImportMap('app/entry.ts')
+
+    assert.match(
+      importMap.imports['/assets/app/features/lazy.ts'] ?? '',
+      /\/assets\/app\/features\/lazy\.@.*\.ts/,
+    )
+    assert.match(
+      importMap.scopes?.['/assets/app/']?.['dynamic-pkg'] ?? '',
+      /\/assets\/app\/node_modules\/dynamic-pkg\/index\.@.*\.ts/,
+    )
+  })
+
+  it('includes statically analyzable dynamic import graphs in entry preloads', async () => {
+    await write(
+      dir,
+      'app/features/lazy.ts',
+      'import { value } from "./dep.ts"\nexport const lazy = value',
+    )
+    await write(dir, 'app/features/dep.ts', 'export const value = 1')
+    await write(
+      dir,
+      'app/entry.ts',
+      'export let load = () => import("./features/lazy.ts").then((mod) => mod.lazy)',
+    )
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let preloads = await assetServer.getPreloads('app/entry.ts')
+
+    assert.match(preloads[0] ?? '', /\/assets\/app\/entry\.@.*\.ts/)
+    assert.match(preloads[1] ?? '', /\/assets\/app\/features\/lazy\.@.*\.ts/)
+    assert.match(preloads[2] ?? '', /\/assets\/app\/features\/dep\.@.*\.ts/)
+  })
+
+  it('maps re-exported package specifiers', async () => {
     await writeJson(dir, 'app/node_modules/@remix-run/__example/package.json', {
       name: '@remix-run/__example',
       type: 'module',
@@ -2452,16 +3187,18 @@ describe('asset-server', () => {
     let response = await getByFile(assetServer, 'app/bridge.ts')
     assert.ok(response)
     let body = await response.text()
+    let importMap = await assetServer.getImportMap('app/bridge.ts')
 
+    assert.match(body, /export \* from "@remix-run\/__example"/)
     assert.match(
-      body,
-      /export \* from "\/assets\/app\/node_modules\/%40remix-run\/__example\/index\.ts"/,
+      importMap.scopes?.['/assets/app/']?.['@remix-run/__example'] ?? '',
+      /\/assets\/app\/node_modules\/%40remix-run\/__example\/index\.ts/,
     )
   })
 
   it('leaves variable dynamic imports unchanged', async () => {
     await write(dir, 'app/entry.ts', 'export let load = (specifier) => import(specifier)')
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
@@ -2476,7 +3213,7 @@ describe('asset-server', () => {
       'app/entry.ts',
       'export let load = (name) => import(`./${name}.ts`).then((mod) => mod.value)',
     )
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
@@ -2491,7 +3228,7 @@ describe('asset-server', () => {
       'app/entry.ts',
       'export let load = (fileName) => import("./" + fileName).then((mod) => mod.value)',
     )
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
@@ -2500,7 +3237,7 @@ describe('asset-server', () => {
     assert.match(body, /import\("\.\/" \+ fileName\)/)
   })
 
-  it('updates source map mappings for rewritten dynamic imports', async () => {
+  it('keeps source map mappings for dynamic imports with import maps', async () => {
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     await write(
       dir,
@@ -2508,7 +3245,7 @@ describe('asset-server', () => {
       'export let load = () => import("./dep.ts").then((mod) => mod.dep)',
     )
     let assetServer = createTestServer(dir, {
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
       sourceMaps: 'external',
     })
 
@@ -2516,16 +3253,15 @@ describe('asset-server', () => {
     assert.ok(entryResponse)
     let compiledCode = await entryResponse.text()
 
-    let sourceMapResponse = await get(
-      assetServer,
-      `${await assetServer.getHref('app/entry.ts')}.map`,
-    )
+    let sourceMapHref = compiledCode.match(/sourceMappingURL=([^\s]+)/)?.[1]
+    assert.ok(sourceMapHref)
+    let sourceMapResponse = await get(assetServer, sourceMapHref)
     assert.ok(sourceMapResponse)
     let sourceMap = JSON.parse(await sourceMapResponse.text()) as RawSourceMap
     let consumer = new SourceMapConsumer(sourceMap)
 
-    let rewrittenImport = getLineAndColumn(compiledCode, '/assets/app/dep.@')
-    let originalImport = consumer.originalPositionFor(rewrittenImport)
+    let generatedImport = getLineAndColumn(compiledCode, './dep.ts')
+    let originalImport = consumer.originalPositionFor(generatedImport)
     assert.equal(originalImport.line, 1)
     assert.equal(originalImport.column, 31)
 
@@ -2581,7 +3317,7 @@ describe('asset-server', () => {
         'export const entry = true',
       ].join('\n'),
     )
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
@@ -2599,13 +3335,22 @@ describe('asset-server', () => {
     await fs.symlink(path.join(dir, 'app/shared/value.ts'), path.join(dir, 'app/alias/value.ts'))
     await write(dir, 'app/entry.ts', 'import { value } from "./alias/value.ts"\nexport { value }')
 
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
     let body = await response.text()
-    assert.ok(body.includes('/assets/app/shared/value.@'))
-    assert.ok(!body.includes('/assets/app/alias/value.@'))
+    let importMap = await assetServer.getImportMap('app/entry.ts')
+    assert.ok(body.includes('./alias/value.ts'))
+    assert.ok(!body.includes('/assets/app/shared/value.ts'))
+    assert.match(
+      importMap.imports['/assets/app/shared/value.ts'] ?? '',
+      /\/assets\/app\/shared\/value\.@/,
+    )
+    assert.match(
+      importMap.imports['/assets/app/alias/value.ts'] ?? '',
+      /\/assets\/app\/shared\/value\.@/,
+    )
   })
 
   it('uses one canonical URL when app and package imports resolve to the same pnpm package', async () => {
@@ -2676,8 +3421,13 @@ describe('asset-server', () => {
         },
       })
       try {
-        let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-        let uiUrls = [...servedUrls].filter((url) => url.includes('%40remix-run/ui/dist/index.js'))
+        let importMap = await assetServer.getImportMap('app/entry.ts')
+        let uiUrls = [
+          importMap.scopes?.['/assets/app/']?.['@remix-run/ui'],
+          importMap.scopes?.[
+            '/assets/app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/dist/'
+          ]?.['@remix-run/ui'],
+        ].filter((url): url is string => url != null)
 
         let expectedUiUrls = [
           '/assets/app/node_modules/.pnpm/%40remix-run%2Bui%401.0.0/node_modules/%40remix-run/ui/dist/index.js',
@@ -2693,7 +3443,7 @@ describe('asset-server', () => {
 
   it('getHref returns fingerprinted URLs for served script files when fingerprinting is enabled', async () => {
     await write(dir, 'app/entry.ts', 'export const entry = true')
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
     let entryUrl = new URL(`file://${path.join(dir, 'app/entry.ts')}`)
     entryUrl.searchParams.set('tsx-namespace', '123')
 
@@ -2721,7 +3471,7 @@ describe('asset-server', () => {
     await write(dir, 'app/b.ts', 'export const b = true')
     await write(dir, 'app/c.ts', 'export const c = true')
 
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let urls = await assetServer.getPreloads('app/entry.ts')
     assert.match(urls[0] ?? '', /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/)
@@ -2735,7 +3485,7 @@ describe('asset-server', () => {
     await write(dir, 'app/a.ts', 'import "./b.ts"\nexport const a = true')
     await write(dir, 'app/b.ts', 'export const b = true')
 
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let urls = await assetServer.getPreloads('app/a.ts')
     assert.match(urls[0] ?? '', /\/assets\/app\/a\.@[A-Za-z0-9_-]+\.ts/)
@@ -2747,7 +3497,7 @@ describe('asset-server', () => {
     await write(dir, 'app/b.ts', 'import "./shared.ts"\nexport const b = true')
     await write(dir, 'app/shared.ts', 'export const shared = true')
 
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let urls = await assetServer.getPreloads(['app/a.ts', 'app/b.ts'])
     assert.match(urls[0] ?? '', /\/assets\/app\/a\.@[A-Za-z0-9_-]+\.ts/)
@@ -2770,7 +3520,7 @@ describe('asset-server', () => {
     await write(dir, 'app/b-2.ts', 'export const b2 = true')
     await write(dir, 'app/c-2.ts', 'export const c2 = true')
 
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let urls = await assetServer.getPreloads(['app/a.ts', 'app/b.ts', 'app/c.ts'])
 
@@ -2797,7 +3547,7 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
       },
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
     })
 
     let urls = await assetServer.getPreloads('app/images/logo.svg')
@@ -2824,7 +3574,7 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
       },
-      fingerprint: { buildId: 'build' },
+      fingerprint: true,
     })
 
     let urls = await assetServer.getPreloads([
@@ -2854,7 +3604,7 @@ describe('asset-server', () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
 
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     await assert.rejects(
       () => assetServer.getPreloads('/assets/app/dep.@abc123.ts'),
@@ -2866,7 +3616,7 @@ describe('asset-server', () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
 
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     await assert.rejects(
       () => assetServer.getPreloads(['app/entry.ts', '/assets/app/dep.@abc123.ts']),
@@ -2924,7 +3674,7 @@ describe('asset-server', () => {
       await write(caseDir, 'app/entry.tsx', 'export let entry = <div />')
 
       let assetServer = createTestServer(caseDir, {
-        fingerprint: { buildId: 'build' },
+        fingerprint: true,
       })
 
       let urls = await assetServer.getPreloads('app/entry.tsx')
@@ -3009,7 +3759,7 @@ describe('asset-server', () => {
       await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
 
       let assetServer = createTestServer(caseDir, {
-        fingerprint: { buildId: 'build' },
+        fingerprint: true,
       })
 
       let before = await assetServer.getPreloads('app/entry.tsx')
@@ -3042,7 +3792,13 @@ describe('asset-server', () => {
 
       let before = await get(firstServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\/index\.js/)
+      assert.match(await before.text(), /"\.\/dep"/)
+      await assertImportMapImport(
+        firstServer,
+        'app/entry.ts',
+        '/assets/app/dep',
+        /\/assets\/app\/dep\/index\.js/,
+      )
 
       await fs.rm(path.join(caseDir, 'app/dep/index.js'))
       await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
@@ -3051,8 +3807,13 @@ describe('asset-server', () => {
       let afterRestart = await get(secondServer, '/assets/app/entry.ts')
       assert.ok(afterRestart)
       let afterRestartBody = await afterRestart.text()
-      assert.doesNotMatch(afterRestartBody, /\/assets\/app\/dep\/index\.js/)
-      assert.match(afterRestartBody, /\/assets\/app\/dep\/index\.ts/)
+      assert.match(afterRestartBody, /"\.\/dep"/)
+      await assertImportMapImport(
+        secondServer,
+        'app/entry.ts',
+        '/assets/app/dep',
+        /\/assets\/app\/dep\/index\.ts/,
+      )
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -3069,15 +3830,26 @@ describe('asset-server', () => {
 
       let before = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\/index\.js/)
+      assert.match(await before.text(), /"\.\/dep"/)
+      await assertImportMapImport(
+        assetServer,
+        'app/entry.ts',
+        '/assets/app/dep',
+        /\/assets\/app\/dep\/index\.js/,
+      )
 
       await fs.rm(path.join(caseDir, 'app/dep/index.js'))
       await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
       let after = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/assets\/app\/dep\/index\.js/)
-      assert.doesNotMatch(afterBody, /\/assets\/app\/dep\/index\.ts/)
+      assert.match(afterBody, /"\.\/dep"/)
+      await assertImportMapImport(
+        assetServer,
+        'app/entry.ts',
+        '/assets/app/dep',
+        /\/assets\/app\/dep\/index\.js/,
+      )
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -3728,7 +4500,8 @@ describe('asset-server', () => {
         assert.equal(after.status, 200)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/missing\.ts/)
+        assert.match(afterBody, /"\.\/missing\.ts"/)
+        await assertNoImportMapImport(assetServer, 'app/entry.ts', '/assets/app/missing.ts')
       } finally {
         await assetServer.close()
       }
@@ -4066,7 +4839,14 @@ describe('asset-server', () => {
       try {
         let firstResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(firstResponse)
-        assert.match(await firstResponse.text(), /\/assets\/app\/dep-a\.ts/)
+        assert.match(await firstResponse.text(), /"#dep"/)
+        await assertImportMapScopeImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/',
+          '#dep',
+          /\/assets\/app\/dep-a\.ts/,
+        )
 
         let packageJsonPath = await writeJson(caseDir, 'package.json', {
           imports: {
@@ -4081,8 +4861,14 @@ describe('asset-server', () => {
         assert.ok(secondResponse)
         let secondBody = await secondResponse.text()
 
-        assert.match(secondBody, /\/assets\/app\/dep-b\.ts/)
-        assert.doesNotMatch(secondBody, /\/assets\/app\/dep-a\.ts/)
+        assert.match(secondBody, /"#dep"/)
+        await assertImportMapScopeImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/',
+          '#dep',
+          /\/assets\/app\/dep-b\.ts/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -4113,7 +4899,14 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep-a\.ts/)
+        assert.match(await before.text(), /"#dep"/)
+        await assertImportMapScopeImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/',
+          '#dep',
+          /\/assets\/app\/dep-a\.ts/,
+        )
 
         let packageJsonPath = await writeJson(caseDir, 'package.json', {
           imports: {
@@ -4127,8 +4920,14 @@ describe('asset-server', () => {
         let after = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(after)
         let afterBody = await after.text()
-        assert.match(afterBody, /\/assets\/app\/dep-a\.ts/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/dep-b\.ts/)
+        assert.match(afterBody, /"#dep"/)
+        await assertImportMapScopeImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/',
+          '#dep',
+          /\/assets\/app\/dep-a\.ts/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -4166,7 +4965,14 @@ describe('asset-server', () => {
         assert.ok(response)
         let body = await response.text()
 
-        assert.match(body, /\/assets\/app\/dep\.ts/)
+        assert.match(body, /"#dep"/)
+        await assertImportMapScopeImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/',
+          '#dep',
+          /\/assets\/app\/dep\.ts/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -4199,7 +5005,14 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+        assert.match(await before.text(), /"#dep"/)
+        await assertImportMapScopeImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/',
+          '#dep',
+          /\/assets\/app\/dep\.ts/,
+        )
 
         let packageJsonPath = path.join(caseDir, 'package.json')
         await fs.rm(packageJsonPath)
@@ -4342,7 +5155,14 @@ describe('asset-server', () => {
           assert.ok(response)
           let body = await response.text()
 
-          assert.match(body, expected)
+          assert.match(body, /"#dep"/)
+          await assertImportMapScopeImport(
+            assetServer,
+            'app/entry.ts',
+            '/assets/app/',
+            '#dep',
+            expected,
+          )
         }
       } finally {
         await assetServer.close()
@@ -4379,7 +5199,8 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/broken\.ts/)
+        assert.match(afterBody, /"\.\/broken\.ts"/)
+        await assertNoImportMapImport(assetServer, 'app/entry.ts', '/assets/app/broken.ts')
       } finally {
         await assetServer.close()
       }
@@ -4438,7 +5259,8 @@ describe('asset-server', () => {
         assert.ok(recovered)
         let recoveredBody = await recovered.text()
 
-        assert.match(recoveredBody, /\/assets\/app\/broken\.ts/)
+        assert.match(recoveredBody, /"\.\/broken\.ts"/)
+        await assertNoImportMapImport(assetServer, 'app/entry.ts', '/assets/app/broken.ts')
         assert.match(recoveredBody, /entry = true/)
         assert.ok(errorCodes.includes('TRANSFORM_FAILED'))
         assert.ok(errorCodes.includes('IMPORT_RESOLUTION_FAILED'))
@@ -4572,7 +5394,14 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep-a\.ts/)
+        assert.match(await before.text(), /"#dep"/)
+        await assertImportMapScopeImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/',
+          '#dep',
+          /\/assets\/app\/dep-a\.ts/,
+        )
 
         let tsconfigPath = await writeJson(caseDir, 'tsconfig.json', {
           compilerOptions: {
@@ -4588,8 +5417,14 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/dep-b\.ts/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/dep-a\.ts/)
+        assert.match(afterBody, /"#dep"/)
+        await assertImportMapScopeImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/',
+          '#dep',
+          /\/assets\/app\/dep-b\.ts/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -4628,7 +5463,14 @@ describe('asset-server', () => {
         assert.ok(response)
         let body = await response.text()
 
-        assert.match(body, /\/assets\/app\/dep\.ts/)
+        assert.match(body, /"#dep"/)
+        await assertImportMapScopeImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/',
+          '#dep',
+          /\/assets\/app\/dep\.ts/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -4662,7 +5504,14 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+        assert.match(await before.text(), /"#dep"/)
+        await assertImportMapScopeImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/',
+          '#dep',
+          /\/assets\/app\/dep\.ts/,
+        )
 
         let tsconfigPath = path.join(caseDir, 'tsconfig.json')
         await fs.rm(tsconfigPath)
@@ -4719,7 +5568,14 @@ describe('asset-server', () => {
           assert.ok(response)
           let body = await response.text()
 
-          assert.match(body, expected)
+          assert.match(body, /"#dep"/)
+          await assertImportMapScopeImport(
+            assetServer,
+            'app/entry.ts',
+            '/assets/app/',
+            '#dep',
+            expected,
+          )
         }
       } finally {
         await assetServer.close()
@@ -4753,7 +5609,14 @@ describe('asset-server', () => {
       try {
         let firstResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(firstResponse)
-        assert.match(await firstResponse.text(), /%40remix-run\/__example\/a\.ts/)
+        assert.match(await firstResponse.text(), /"@remix-run\/__example"/)
+        await assertImportMapScopeImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/',
+          '@remix-run/__example',
+          /%40remix-run\/__example\/a\.ts/,
+        )
 
         let packageJsonPath = await writeJson(
           caseDir,
@@ -4771,8 +5634,14 @@ describe('asset-server', () => {
         assert.ok(secondResponse)
         let secondBody = await secondResponse.text()
 
-        assert.match(secondBody, /%40remix-run\/__example\/b\.ts/)
-        assert.doesNotMatch(secondBody, /%40remix-run\/__example\/a\.ts/)
+        assert.match(secondBody, /"@remix-run\/__example"/)
+        await assertImportMapScopeImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/',
+          '@remix-run/__example',
+          /%40remix-run\/__example\/b\.ts/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -4823,7 +5692,14 @@ describe('asset-server', () => {
           assert.ok(response)
           let body = await response.text()
 
-          assert.match(body, expected)
+          assert.match(body, /"@remix-run\/__example"/)
+          await assertImportMapScopeImport(
+            assetServer,
+            'app/entry.ts',
+            '/assets/app/',
+            '@remix-run/__example',
+            expected,
+          )
         }
       } finally {
         await assetServer.close()
@@ -4844,7 +5720,13 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.js/)
+        assert.match(await before.text(), /"\.\/dep"/)
+        await assertImportMapImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/dep',
+          /\/assets\/app\/dep\.js/,
+        )
 
         let depPath = await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
         await emitWatchEvent(assetServer, depPath, 'add')
@@ -4853,7 +5735,13 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/dep\.ts/)
+        assert.match(afterBody, /"\.\/dep"/)
+        await assertImportMapImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/dep',
+          /\/assets\/app\/dep\.ts/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -4874,7 +5762,13 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+        assert.match(await before.text(), /"\.\/dep"/)
+        await assertImportMapImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/dep',
+          /\/assets\/app\/dep\.ts/,
+        )
 
         let depPath = path.join(caseDir, 'app/dep.ts')
         await fs.rm(depPath)
@@ -4884,7 +5778,13 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/dep\.js/)
+        assert.match(afterBody, /"\.\/dep"/)
+        await assertImportMapImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/dep',
+          /\/assets\/app\/dep\.js/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -4963,12 +5863,14 @@ describe('asset-server', () => {
       await write(caseDir, 'app/entry.ts', 'import "./dep"\nexport const entry = true')
 
       let assetServer = createTestServer(caseDir, {
-        fingerprint: { buildId: 'build' },
+        fingerprint: true,
       })
 
       let before = await getByFile(assetServer, 'app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\/index\.@[A-Za-z0-9_-]+\.js/)
+      assert.match(await before.text(), /"\.\/dep"/)
+      let importMap = await assetServer.getImportMap('app/entry.ts')
+      assert.match(importMap.imports['/assets/app/dep'] ?? '', /\/assets\/app\/dep\/index\.@.*\.js/)
 
       await fs.rm(path.join(caseDir, 'app/dep/index.js'))
       await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
@@ -4976,8 +5878,8 @@ describe('asset-server', () => {
       let after = await getByFile(assetServer, 'app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/assets\/app\/dep\/index\.@[A-Za-z0-9_-]+\.js/)
-      assert.doesNotMatch(afterBody, /\/assets\/app\/dep\/index\.@[A-Za-z0-9_-]+\.ts/)
+      assert.match(afterBody, /"\.\/dep"/)
+      assert.doesNotMatch(afterBody, /\/assets\/app\/dep\/index\.ts/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -4993,7 +5895,13 @@ describe('asset-server', () => {
 
       let before = await get(firstServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/styles\.css\.js/)
+      assert.match(await before.text(), /"\.\/styles\.css"/)
+      await assertImportMapImport(
+        firstServer,
+        'app/entry.ts',
+        '/assets/app/styles.css',
+        /\/assets\/app\/styles\.css\.js/,
+      )
 
       await fs.rm(path.join(caseDir, 'app/styles.css.js'))
       await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
@@ -5002,8 +5910,13 @@ describe('asset-server', () => {
       let afterRestart = await get(secondServer, '/assets/app/entry.ts')
       assert.ok(afterRestart)
       let afterRestartBody = await afterRestart.text()
-      assert.doesNotMatch(afterRestartBody, /\/assets\/app\/styles\.css\.js/)
-      assert.match(afterRestartBody, /\/assets\/app\/styles\.css\.ts/)
+      assert.match(afterRestartBody, /"\.\/styles\.css"/)
+      await assertImportMapImport(
+        secondServer,
+        'app/entry.ts',
+        '/assets/app/styles.css',
+        /\/assets\/app\/styles\.css\.ts/,
+      )
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -5019,7 +5932,13 @@ describe('asset-server', () => {
 
       let before = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/styles\.css\.js/)
+      assert.match(await before.text(), /"\.\/styles\.css"/)
+      await assertImportMapImport(
+        assetServer,
+        'app/entry.ts',
+        '/assets/app/styles.css',
+        /\/assets\/app\/styles\.css\.js/,
+      )
 
       await fs.rm(path.join(caseDir, 'app/styles.css.js'))
       await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
@@ -5027,8 +5946,13 @@ describe('asset-server', () => {
       let after = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/assets\/app\/styles\.css\.js/)
-      assert.doesNotMatch(afterBody, /\/assets\/app\/styles\.css\.ts/)
+      assert.match(afterBody, /"\.\/styles\.css"/)
+      await assertImportMapImport(
+        assetServer,
+        'app/entry.ts',
+        '/assets/app/styles.css',
+        /\/assets\/app\/styles\.css\.js/,
+      )
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -5045,7 +5969,13 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/styles\.css\.js/)
+        assert.match(await before.text(), /"\.\/styles\.css"/)
+        await assertImportMapImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/styles.css',
+          /\/assets\/app\/styles\.css\.js/,
+        )
 
         let stylesPath = await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
         await emitWatchEvent(assetServer, stylesPath, 'add')
@@ -5054,8 +5984,13 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/styles\.css\.ts/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/styles\.css\.js/)
+        assert.match(afterBody, /"\.\/styles\.css"/)
+        await assertImportMapImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/styles.css',
+          /\/assets\/app\/styles\.css\.ts/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -5076,7 +6011,13 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/styles\.css\.ts/)
+        assert.match(await before.text(), /"\.\/styles\.css"/)
+        await assertImportMapImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/styles.css',
+          /\/assets\/app\/styles\.css\.ts/,
+        )
 
         let stylesPath = path.join(caseDir, 'app/styles.css.ts')
         await fs.rm(stylesPath)
@@ -5086,8 +6027,13 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/styles\.css\.js/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/styles\.css\.ts/)
+        assert.match(afterBody, /"\.\/styles\.css"/)
+        await assertImportMapImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/styles.css',
+          /\/assets\/app\/styles\.css\.js/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -5103,12 +6049,17 @@ describe('asset-server', () => {
       await write(caseDir, 'app/entry.ts', 'import "./styles.css"\nexport const entry = true')
 
       let assetServer = createTestServer(caseDir, {
-        fingerprint: { buildId: 'build' },
+        fingerprint: true,
       })
 
       let before = await getByFile(assetServer, 'app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/styles\.css\.@[A-Za-z0-9_-]+\.js/)
+      assert.match(await before.text(), /"\.\/styles\.css"/)
+      let importMap = await assetServer.getImportMap('app/entry.ts')
+      assert.match(
+        importMap.imports['/assets/app/styles.css'] ?? '',
+        /\/assets\/app\/styles\.css\.@.*\.js/,
+      )
 
       await fs.rm(path.join(caseDir, 'app/styles.css.js'))
       await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
@@ -5116,8 +6067,8 @@ describe('asset-server', () => {
       let after = await getByFile(assetServer, 'app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/assets\/app\/styles\.css\.@[A-Za-z0-9_-]+\.js/)
-      assert.doesNotMatch(afterBody, /\/assets\/app\/styles\.css\.@[A-Za-z0-9_-]+\.ts/)
+      assert.match(afterBody, /"\.\/styles\.css"/)
+      assert.doesNotMatch(afterBody, /\/assets\/app\/styles\.css\.ts/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -5133,7 +6084,13 @@ describe('asset-server', () => {
 
       let before = await get(firstServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+      assert.match(await before.text(), /"\.\/dep\.js"/)
+      await assertImportMapImport(
+        firstServer,
+        'app/entry.ts',
+        '/assets/app/dep.js',
+        /\/assets\/app\/dep\.ts/,
+      )
 
       await write(caseDir, 'app/dep.js', 'export const dep = "js"')
 
@@ -5141,8 +6098,8 @@ describe('asset-server', () => {
       let afterRestart = await get(secondServer, '/assets/app/entry.ts')
       assert.ok(afterRestart)
       let afterRestartBody = await afterRestart.text()
-      assert.doesNotMatch(afterRestartBody, /\/assets\/app\/dep\.ts/)
-      assert.match(afterRestartBody, /\/assets\/app\/dep\.js/)
+      assert.match(afterRestartBody, /"\.\/dep\.js"/)
+      await assertNoImportMapImport(secondServer, 'app/entry.ts', '/assets/app/dep.js')
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -5158,7 +6115,13 @@ describe('asset-server', () => {
 
       let before = await get(firstServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+      assert.match(await before.text(), /"\.\/dep\.js"/)
+      await assertImportMapImport(
+        firstServer,
+        'app/entry.ts',
+        '/assets/app/dep.js',
+        /\/assets\/app\/dep\.ts/,
+      )
 
       await fs.rm(path.join(caseDir, 'app/dep.ts'))
       await write(caseDir, 'app/dep.js/index.js', 'export const dep = "dir"')
@@ -5167,8 +6130,13 @@ describe('asset-server', () => {
       let afterRestart = await get(secondServer, '/assets/app/entry.ts')
       assert.ok(afterRestart)
       let afterRestartBody = await afterRestart.text()
-      assert.doesNotMatch(afterRestartBody, /\/assets\/app\/dep\.ts/)
-      assert.match(afterRestartBody, /\/assets\/app\/dep\.js\/index\.js/)
+      assert.match(afterRestartBody, /"\.\/dep\.js"/)
+      await assertImportMapImport(
+        secondServer,
+        'app/entry.ts',
+        '/assets/app/dep.js',
+        /\/assets\/app\/dep\.js\/index\.js/,
+      )
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -5184,15 +6152,26 @@ describe('asset-server', () => {
 
       let before = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+      assert.match(await before.text(), /"\.\/dep\.js"/)
+      await assertImportMapImport(
+        assetServer,
+        'app/entry.ts',
+        '/assets/app/dep.js',
+        /\/assets\/app\/dep\.ts/,
+      )
 
       await write(caseDir, 'app/dep.js', 'export const dep = "js"')
 
       let after = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/assets\/app\/dep\.ts/)
-      assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.js/)
+      assert.match(afterBody, /"\.\/dep\.js"/)
+      await assertImportMapImport(
+        assetServer,
+        'app/entry.ts',
+        '/assets/app/dep.js',
+        /\/assets\/app\/dep\.ts/,
+      )
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -5209,7 +6188,13 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+        assert.match(await before.text(), /"\.\/dep\.js"/)
+        await assertImportMapImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/dep.js',
+          /\/assets\/app\/dep\.ts/,
+        )
 
         let depPath = await write(caseDir, 'app/dep.js', 'export const dep = "js"')
         await emitWatchEvent(assetServer, depPath, 'add')
@@ -5218,8 +6203,8 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/dep\.js/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.ts/)
+        assert.match(afterBody, /"\.\/dep\.js"/)
+        await assertNoImportMapImport(assetServer, 'app/entry.ts', '/assets/app/dep.js')
       } finally {
         await assetServer.close()
       }
@@ -5240,7 +6225,8 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.js/)
+        assert.match(await before.text(), /"\.\/dep\.js"/)
+        await assertNoImportMapImport(assetServer, 'app/entry.ts', '/assets/app/dep.js')
 
         let depPath = path.join(caseDir, 'app/dep.js')
         await fs.rm(depPath)
@@ -5250,8 +6236,13 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/dep\.ts/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.js/)
+        assert.match(afterBody, /"\.\/dep\.js"/)
+        await assertImportMapImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/dep.js',
+          /\/assets\/app\/dep\.ts/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -5271,7 +6262,13 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+        assert.match(await before.text(), /"\.\/dep\.js"/)
+        await assertImportMapImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/dep.js',
+          /\/assets\/app\/dep\.ts/,
+        )
 
         let depPath = path.join(caseDir, 'app/dep.ts')
         await fs.rm(depPath)
@@ -5283,8 +6280,13 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/dep\.js\/index\.js/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.ts/)
+        assert.match(afterBody, /"\.\/dep\.js"/)
+        await assertImportMapImport(
+          assetServer,
+          'app/entry.ts',
+          '/assets/app/dep.js',
+          /\/assets\/app\/dep\.js\/index\.js/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -5300,20 +6302,22 @@ describe('asset-server', () => {
       await write(caseDir, 'app/entry.ts', 'import "./dep.js"\nexport const entry = true')
 
       let assetServer = createTestServer(caseDir, {
-        fingerprint: { buildId: 'build' },
+        fingerprint: true,
       })
 
       let before = await getByFile(assetServer, 'app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts/)
+      assert.match(await before.text(), /"\.\/dep\.js"/)
+      let importMap = await assetServer.getImportMap('app/entry.ts')
+      assert.match(importMap.imports['/assets/app/dep.js'] ?? '', /\/assets\/app\/dep\.@.*\.ts/)
 
       await write(caseDir, 'app/dep.js', 'export const dep = "js"')
 
       let after = await getByFile(assetServer, 'app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts/)
-      assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.js/)
+      assert.match(afterBody, /"\.\/dep\.js"/)
+      assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.js/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -5321,7 +6325,7 @@ describe('asset-server', () => {
 
   it('supports absolute entry-point patterns', async () => {
     let entryPath = await write(dir, 'app/entry-abs.ts', 'export const abs = true')
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let response = await get(assetServer, await assetServer.getHref(entryPath))
     assert.ok(response)
@@ -5329,7 +6333,7 @@ describe('asset-server', () => {
   })
 
   it('does not require separate entry-point configuration when fingerprinting', async () => {
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, { fingerprint: true })
     assert.ok(assetServer)
   })
 
@@ -5521,7 +6525,7 @@ describe('asset-server', () => {
           fileMap: {
             '/app/*path': `${path.join(dir, 'app')}/*path`,
           },
-          fingerprint: { buildId: 'build' },
+          fingerprint: true,
           watch: false,
         }),
       /must be relative to the asset server root/,
@@ -5634,8 +6638,13 @@ describe('asset-server', () => {
       },
     })
 
-    let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-    assert.ok(servedUrls.has('/assets/app/node_modules/%40remix-run/__allowed-package/index.ts'))
+    await assertImportMapScopeImport(
+      assetServer,
+      'app/entry.ts',
+      '/assets/app/',
+      '@remix-run/__allowed-package',
+      /\/assets\/app\/node_modules\/%40remix-run\/__allowed-package\/index\.ts/,
+    )
   })
 
   it('allows package dependency files by package name without prior importer requests', async () => {
@@ -6362,11 +7371,12 @@ describe('asset-server', () => {
       },
     })
 
-    let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-    assert.ok(
-      servedUrls.has(
-        '/assets/app/node_modules/.pnpm/%40remix-run%2B__allowed-package%401.0.0/node_modules/%40remix-run/__allowed-package/index.ts',
-      ),
+    await assertImportMapScopeImport(
+      assetServer,
+      'app/entry.ts',
+      '/assets/app/',
+      '@remix-run/__allowed-package',
+      /\/assets\/app\/node_modules\/\.pnpm\/%40remix-run%2B__allowed-package%401\.0\.0\/node_modules\/%40remix-run\/__allowed-package\/index\.ts/,
     )
   })
 
@@ -6596,37 +7606,23 @@ describe('asset-server', () => {
     assert.equal(response.status, 200)
 
     let body = await response.text()
-    let entryImportSpecifiers = await getAbsoluteImportSpecifiers(body)
-    let helperPaths = entryImportSpecifiers.filter((specifier) =>
-      specifier.startsWith('/assets/__@remix/injected/@oxc-project/runtime/'),
-    )
+    let importMap = await assetServer.getImportMap('app/entry.ts')
 
-    assert.doesNotMatch(body, /from ["']@oxc-project\/runtime/)
+    assert.match(body, /from ["']@oxc-project\/runtime/)
     assert.ok(
-      entryImportSpecifiers.includes(
-        '/assets/npm/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
-      ),
+      importMap.scopes?.['/assets/app/']?.[
+        '@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js'
+      ] === '/assets/npm/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
     )
-    assert.ok(helperPaths.length > 0)
-    assert.ok(
-      helperPaths.includes(
-        '/assets/__@remix/injected/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
-      ),
+    assert.match(
+      importMap.scopes?.['/assets/app/']?.[
+        '@oxc-project/runtime/helpers/classPrivateMethodInitSpec'
+      ] ?? '',
+      /\/assets\/__@remix\/injected\/@oxc-project\/runtime\/src\/helpers\/esm\/classPrivateMethodInitSpec\.js/,
     )
 
     let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-    assert.ok(
-      servedUrls.has(
-        '/assets/npm/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
-      ),
-      'expected authored runtime imports to use the consumer fileMap path',
-    )
-    assert.ok(
-      servedUrls.has(
-        '/assets/__@remix/injected/@oxc-project/runtime/src/helpers/esm/checkPrivateRedeclaration.js',
-      ),
-      'expected transitive Oxc helper imports to be servable',
-    )
+    assert.deepEqual(servedUrls, new Set(['/assets/app/entry.ts']))
   })
 
   it('does not inherit target from tsconfig', async () => {
@@ -6973,38 +7969,25 @@ describe('asset-server', () => {
     })
   })
 
-  it('rejects fingerprinting without a buildId string', async () => {
-    await write(dir, 'app/entry.ts', 'export const value = 1')
-    assert.throws(
-      () =>
-        createTestServer(dir, {
-          fingerprint: {
-            buildId: 123,
-          } as unknown as FingerprintOptions,
-        }),
-      /fingerprint\.buildId must be a string/,
-    )
-  })
-
-  it('rejects fingerprinting without a non-empty buildId', async () => {
-    await write(dir, 'app/entry.ts', 'export const value = 1')
-    assert.throws(
-      () =>
-        createTestServer(dir, {
-          fingerprint: { buildId: '' },
-        }),
-      /fingerprint\.buildId must be a non-empty string/,
-    )
-  })
-
   it('rejects fingerprinting in watch mode', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
     assert.throws(
       () =>
         createWatchedTestServer(dir, {
-          fingerprint: { buildId: 'build' },
+          fingerprint: true,
         }),
       /fingerprint cannot be used with watch mode/,
+    )
+  })
+
+  it('rejects non-boolean fingerprint options', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          fingerprint: { buildId: 'legacy' } as never,
+        }),
+      /fingerprint must be a boolean/,
     )
   })
 
@@ -7019,7 +8002,7 @@ describe('asset-server', () => {
             '/app/*path': 'app/*path',
           },
           rootDir: dir,
-          fingerprint: { buildId: 'build' },
+          fingerprint: true,
         }),
       /fingerprint cannot be used with watch mode/,
     )
@@ -7078,6 +8061,35 @@ describe('asset-server', () => {
           },
         }),
       /files\.maxRequestTransforms must be a positive integer/,
+    )
+  })
+
+  it('rejects non-string files.cacheKey values', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          files: {
+            // @ts-expect-error - exercise runtime validation for invalid cache keys
+            cacheKey: 123,
+            extensions: ['.svg'],
+          },
+        }),
+      /files\.cacheKey must be a string/,
+    )
+  })
+
+  it('rejects empty files.cacheKey values', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          files: {
+            cacheKey: '',
+            extensions: ['.svg'],
+          },
+        }),
+      /files\.cacheKey must be a non-empty string/,
     )
   })
 

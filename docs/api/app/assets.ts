@@ -31,9 +31,7 @@ export function createAssetServer(version?: string): DocsAssetServer {
     },
     sourceMaps: isDevelopment ? 'external' : undefined,
     minify: isProduction,
-    fingerprint: isProduction
-      ? { buildId: process.env.GITHUB_SHA || String(Date.now()) }
-      : undefined,
+    fingerprint: isProduction,
     watch: false,
     scripts: {
       define: {

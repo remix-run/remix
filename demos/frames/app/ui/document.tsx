@@ -11,7 +11,8 @@ type DocumentProps = {
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { title, maxWidth = '760px', children } = handle.props
-    let { scriptSrc, scriptPreloads } = getAssetEntry()
+    let { scriptEntry } = getAssetEntry()
+    let { href, importMap, preloads } = scriptEntry
 
     return (
       <html>
@@ -19,10 +20,11 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>{title}</title>
-          {scriptPreloads.map((href) => (
-            <link key={href} rel="modulepreload" href={href} />
+          <script type="importmap">{JSON.stringify(importMap)}</script>
+          {preloads.map((preloadHref) => (
+            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}
-          <script async type="module" src={scriptSrc} />
+          <script type="module" src={href} />
         </head>
         <body mix={bodyStyle}>
           {/* `maxWidth` is caller-driven, so it stays an inline style. */}

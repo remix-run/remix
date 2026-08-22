@@ -13,7 +13,8 @@ export default createController(routes.auth.login, {
         return redirect(routes.main.index.href())
       }
 
-      let { scriptSrc, scriptPreloads } = getAssetEntry()
+      let { scriptEntry } = getAssetEntry()
+      let { href, importMap, preloads } = scriptEntry
 
       return render(
         <html lang="en">
@@ -21,10 +22,11 @@ export default createController(routes.auth.login, {
             <meta charSet="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
             <title>Sign in | LMS</title>
-            {scriptPreloads.map((href) => (
-              <link key={href} rel="modulepreload" href={href} />
+            <script type="importmap">{JSON.stringify(importMap)}</script>
+            {preloads.map((preloadHref) => (
+              <link key={preloadHref} rel="modulepreload" href={preloadHref} />
             ))}
-            <script async type="module" src={scriptSrc} />
+            <script type="module" src={href} />
           </head>
           <body mix={loginBodyStyle}>
             <main mix={loginShellStyle}>

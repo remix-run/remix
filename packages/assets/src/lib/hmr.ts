@@ -16,6 +16,11 @@ export type HmrPayload =
         | {
             /** Importing module whose dependency-accept handler accepts this update. */
             acceptedPath?: string
+            /** Import map entries required before this update can be evaluated. */
+            importMap?: {
+              imports: Record<string, string>
+              scopes?: Record<string, Record<string, string>>
+            }
             /** Public URL of the changed JavaScript module. */
             path: string
             /** Identifies a JavaScript module update. */
@@ -38,7 +43,7 @@ export type HmrPayload =
       type: 'browser:reload'
     }
 
-export function createHmrClientSource(options: { eventPathname: string }): string {
+export function createHmrClientSource(options: { dataKey: string; eventPathname: string }): string {
   return `
 const contexts = new Map()
 const dataByPath = new Map()
@@ -136,11 +141,18 @@ events.onerror = () => {
 
 events.onmessage = (event) => {
   let payload = JSON.parse(event.data)
+  if (payload.type === 'browser:update') {
+    let update = payload.data?.[${JSON.stringify(options.dataKey)}]
+    if (!update) return
+    handleBrowserUpdate(update).catch((error) => {
+      console.error('[remix] HMR update failed', error)
+      if (update.updates.some((entry) => entry.type !== 'js')) reloadPage()
+    })
+    return
+  }
   handlePayload(payload).catch((error) => {
     console.error('[remix] HMR update failed', error)
-    if (payload.type !== 'browser:update' || payload.updates.some((update) => update.type !== 'js')) {
-      reloadPage()
-    }
+    reloadPage()
   })
 }
 
@@ -155,27 +167,28 @@ async function handlePayload(payload) {
     await dispatchCustomEvent(payload.type, payload)
     return
   }
+}
 
-  if (payload.type === 'browser:update') {
-    for (let update of payload.updates) {
-      if (update.type === 'css') {
-        let updated = await queueStylesheetUpdate(update.path, payload.timestamp)
-        if (updated) console.debug('[remix] HMR updated stylesheet', update.path)
-        continue
-      }
+async function handleBrowserUpdate(payload) {
+  for (let update of payload.updates) {
+    if (update.type === 'css') {
+      let updated = await queueStylesheetUpdate(update.path, payload.timestamp)
+      if (updated) console.debug('[remix] HMR updated stylesheet', update.path)
+      continue
+    }
 
-      try {
-        let updated = await updateJavaScriptModule(
-          update.path,
-          update.acceptedPath ?? update.path,
-          payload.timestamp,
-        )
-        failedJavaScriptUpdates.delete(update.path)
-        if (updated) console.debug('[remix] HMR accepted update', update.path)
-      } catch (error) {
-        failedJavaScriptUpdates.set(update.path, update.acceptedPath ?? update.path)
-        throw error
-      }
+    try {
+      if (update.importMap && !installImportMap(update.importMap)) return
+      let updated = await updateJavaScriptModule(
+        update.path,
+        update.acceptedPath ?? update.path,
+        payload.timestamp,
+      )
+      failedJavaScriptUpdates.delete(update.path)
+      if (updated) console.debug('[remix] HMR accepted update', update.path)
+    } catch (error) {
+      failedJavaScriptUpdates.set(update.path, update.acceptedPath ?? update.path)
+      throw error
     }
   }
 }
@@ -384,6 +397,141 @@ function withTimestamp(path, timestamp) {
   let url = new URL(path, location.href)
   url.searchParams.set('t', String(timestamp))
   return url.pathname + url.search
+}
+
+function installImportMap(importMap) {
+  let installed = readInstalledImportMap()
+  let delta = getImportMapDelta(installed, importMap)
+  if (delta === null) {
+    reloadPage()
+    return false
+  }
+  if (!delta) return true
+
+  let script = document.createElement('script')
+  script.setAttribute('data-rmx-import-map', '')
+  script.type = 'importmap'
+  script.textContent = JSON.stringify(delta)
+  document.head.appendChild(script)
+  return true
+}
+
+function readInstalledImportMap() {
+  let installed = { imports: new Map(), scopes: new Map() }
+  for (let script of document.querySelectorAll('script[type="importmap"]')) {
+    let importMap
+    try {
+      importMap = JSON.parse(script.textContent ?? '')
+    } catch {
+      continue
+    }
+    if (!importMap || typeof importMap !== 'object') continue
+    mergeImportMap(installed, importMap)
+  }
+  return installed
+}
+
+function getImportMapDelta(installed, importMap) {
+  let imports = getImportMapImportsDelta(installed.imports, importMap.imports)
+  if (imports === null) return null
+
+  let scopes
+  if (importMap.scopes && typeof importMap.scopes === 'object') {
+    scopes = {}
+    for (let [scope, entries] of Object.entries(importMap.scopes)) {
+      let normalizedScope = normalizeImportMapUrl(scope)
+      if (!normalizedScope || !entries || typeof entries !== 'object') continue
+      let installedEntries = installed.scopes.get(normalizedScope) ?? new Map()
+      let entriesDelta = getImportMapImportsDelta(installedEntries, entries, scope)
+      if (entriesDelta === null) return null
+      if (entriesDelta) scopes[scope] = entriesDelta
+    }
+    if (Object.keys(scopes).length === 0) scopes = undefined
+  }
+
+  if (!imports && !scopes) return undefined
+  return {
+    ...(imports ? { imports } : null),
+    ...(scopes ? { scopes } : null),
+  }
+}
+
+function getImportMapImportsDelta(installed, entries, scope) {
+  if (!entries || typeof entries !== 'object') return undefined
+  let delta = {}
+  for (let [specifier, href] of Object.entries(entries)) {
+    if (href !== null && typeof href !== 'string') continue
+    let normalizedSpecifier = normalizeImportMapSpecifier(specifier)
+    if (!normalizedSpecifier) continue
+    let normalizedHref = normalizeImportMapAddress(href)
+    let existing = installed.get(normalizedSpecifier)
+    if (existing === normalizedHref) continue
+    if (existing !== undefined) {
+      let scopeDescription = scope ? \` in scope "\${scope}"\` : ''
+      console.warn(
+        \`[remix] HMR reloading page after import map conflict for "\${specifier}"\${scopeDescription}: \` +
+          formatImportMapAddress(existing) +
+          ' is already installed, but the new map points to ' +
+          formatImportMapAddress(normalizedHref),
+      )
+      return null
+    }
+    delta[specifier] = href
+  }
+  return Object.keys(delta).length > 0 ? delta : undefined
+}
+
+function mergeImportMap(installed, importMap) {
+  mergeImportMapImports(installed.imports, importMap.imports)
+  if (!importMap.scopes || typeof importMap.scopes !== 'object') return
+  for (let [scope, entries] of Object.entries(importMap.scopes)) {
+    let normalizedScope = normalizeImportMapUrl(scope)
+    if (!normalizedScope || !entries || typeof entries !== 'object') continue
+    let installedEntries = installed.scopes.get(normalizedScope)
+    if (!installedEntries) {
+      installedEntries = new Map()
+      installed.scopes.set(normalizedScope, installedEntries)
+    }
+    mergeImportMapImports(installedEntries, entries)
+  }
+}
+
+function mergeImportMapImports(installed, entries) {
+  if (!entries || typeof entries !== 'object') return
+  for (let [specifier, href] of Object.entries(entries)) {
+    if (href !== null && typeof href !== 'string') continue
+    let normalizedSpecifier = normalizeImportMapSpecifier(specifier)
+    if (!normalizedSpecifier || installed.has(normalizedSpecifier)) continue
+    installed.set(normalizedSpecifier, normalizeImportMapAddress(href))
+  }
+}
+
+function normalizeImportMapSpecifier(specifier) {
+  if (
+    specifier.startsWith('/') ||
+    specifier.startsWith('./') ||
+    specifier.startsWith('../') ||
+    URL.canParse(specifier)
+  ) {
+    return normalizeImportMapUrl(specifier)
+  }
+  return specifier
+}
+
+function normalizeImportMapAddress(href) {
+  return href === null ? null : normalizeImportMapUrl(href)
+}
+
+function formatImportMapAddress(href) {
+  return href === null ? 'null' : '"' + href + '"'
+}
+
+function normalizeImportMapUrl(value) {
+  try {
+    return new URL(value, document.baseURI).href
+  } catch {
+    return null
+  }
 }
 
 function reloadPage() {

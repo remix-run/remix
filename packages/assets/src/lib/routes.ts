@@ -25,6 +25,7 @@ interface RouteConfig {
 }
 
 interface CompiledRoute {
+  fileMapScope: FileMapScope | null
   rootDir: string
   urlPattern: RoutePattern
   urlMatcher: Matcher
@@ -32,7 +33,17 @@ interface CompiledRoute {
   fileMatcher: Matcher
 }
 
+interface FileMapScope {
+  wildcardName: string
+}
+
+export interface DirectoryRouteMapping {
+  fileDirectory: string
+  urlDirectory: string
+}
+
 export interface CompiledRoutes {
+  getDirectoryRouteMapping(filePath: string): DirectoryRouteMapping | null
   resolveUrlPathname(pathname: string): string | null
   toUrlPathname(filePath: string): string | null
 }
@@ -70,33 +81,87 @@ export function compileRoutes(
     ),
   )
 
+  function resolveUrlPathname(pathname: string): string | null {
+    let normalizedPathname = normalizePathname(pathname)
+
+    for (let route of compiledRoutes) {
+      let match = route.urlMatcher.match(`http://remix.run${normalizedPathname}`)
+      if (!match) continue
+      let relativeFilePath = decodeURIComponent(
+        createHref(route.filePattern, match.params),
+      ).replace(/^\/+/, '')
+      return resolveFilePath(route.rootDir, relativeFilePath)
+    }
+
+    return null
+  }
+
+  function toUrlPathname(filePath: string): string | null {
+    let normalizedFilePath = normalizeFilePath(filePath)
+
+    for (let route of compiledRoutes) {
+      let relativeFilePath = getRelativeFilePath(route.rootDir, normalizedFilePath)
+      let match = route.fileMatcher.match(`http://remix.run/${relativeFilePath}`)
+      if (!match) continue
+      let urlPathname = normalizePathname(createHref(route.urlPattern, match.params))
+      return urlPathname
+    }
+
+    return null
+  }
+
   return {
-    resolveUrlPathname(pathname) {
-      let normalizedPathname = normalizePathname(pathname)
-
-      for (let route of compiledRoutes) {
-        let match = route.urlMatcher.match(`http://remix.run${normalizedPathname}`)
-        if (!match) continue
-        let relativeFilePath = decodeURIComponent(
-          createHref(route.filePattern, match.params),
-        ).replace(/^\/+/, '')
-        return resolveFilePath(route.rootDir, relativeFilePath)
-      }
-
-      return null
-    },
-    toUrlPathname(filePath) {
+    getDirectoryRouteMapping(filePath) {
       let normalizedFilePath = normalizeFilePath(filePath)
 
-      for (let route of compiledRoutes) {
+      for (let routeIndex = 0; routeIndex < compiledRoutes.length; routeIndex++) {
+        let route = compiledRoutes[routeIndex]
         let relativeFilePath = getRelativeFilePath(route.rootDir, normalizedFilePath)
         let match = route.fileMatcher.match(`http://remix.run/${relativeFilePath}`)
         if (!match) continue
-        return normalizePathname(createHref(route.urlPattern, match.params))
+        if (!route.fileMapScope) return null
+
+        let urlPathname = normalizePathname(createHref(route.urlPattern, match.params))
+        let scopeParams = { ...match.params, [route.fileMapScope.wildcardName]: '' }
+        let urlDirectory = ensureTrailingSlash(createHref(route.urlPattern, scopeParams))
+        let relativeFileDirectory = decodeURIComponent(
+          createHref(route.filePattern, scopeParams),
+        ).replace(/^\/+/, '')
+        let fileDirectory = resolveFilePath(route.rootDir, relativeFileDirectory)
+
+        let importerUrlDirectory = getUrlDirectory(urlPathname)
+        let narrowedUrlDirectory = urlDirectory
+        let hasRouteBarrier = false
+        for (let otherIndex = 0; otherIndex < compiledRoutes.length; otherIndex++) {
+          if (otherIndex === routeIndex) continue
+          let otherRoute = compiledRoutes[otherIndex]
+          if (otherRoute.fileMapScope) continue
+          if (!routeCanMatchWithinDirectory(otherRoute, urlDirectory)) continue
+          if (routeCanMatchWithinDirectory(otherRoute, importerUrlDirectory)) return null
+          narrowedUrlDirectory = getChildUrlDirectory(urlDirectory, importerUrlDirectory)
+          hasRouteBarrier = true
+        }
+
+        if (hasRouteBarrier) {
+          let relativeDirectory = narrowedUrlDirectory
+            .slice(urlDirectory.length)
+            .replace(/\/+$/, '')
+          return {
+            fileDirectory: ensureTrailingSlash(resolveFilePath(fileDirectory, relativeDirectory)),
+            urlDirectory: narrowedUrlDirectory,
+          }
+        }
+
+        return {
+          fileDirectory: ensureTrailingSlash(fileDirectory),
+          urlDirectory,
+        }
       }
 
       return null
     },
+    resolveUrlPathname,
+    toUrlPathname,
   }
 }
 
@@ -122,12 +187,63 @@ function compileRoute(
   validateRoutePatterns(urlPattern, filePattern)
 
   return {
+    fileMapScope: getFileMapScope(urlPattern, filePattern),
     rootDir: normalizeFilePath(options.rootDir).replace(/\/+$/, ''),
     urlPattern,
     urlMatcher: createMatcher(urlPattern),
     filePattern,
     fileMatcher: createMatcher(stripDotSegments(filePatternSource)),
   }
+}
+
+function getFileMapScope(urlPattern: RoutePattern, filePattern: RoutePattern): FileMapScope | null {
+  let urlCaptures = getPathnameCaptures(urlPattern)
+  let fileCaptures = getPathnameCaptures(filePattern)
+  let finalCapture = urlCaptures[urlCaptures.length - 1]
+  if (!finalCapture || finalCapture.type !== '*' || finalCapture.optional) return null
+
+  let wildcardSuffix = `*${finalCapture.name}`
+  let urlPathname = urlPattern.toJSON().pathname
+  let filePathname = filePattern.toJSON().pathname
+  if (!urlPathname.endsWith(wildcardSuffix) || !filePathname.endsWith(wildcardSuffix)) return null
+
+  let urlPrefix = urlPathname.slice(0, -wildcardSuffix.length)
+  let filePrefix = filePathname.slice(0, -wildcardSuffix.length)
+  if (!isSegmentBoundary(urlPrefix) || !isSegmentBoundary(filePrefix)) return null
+
+  return { wildcardName: finalCapture.name }
+}
+
+function isSegmentBoundary(prefix: string): boolean {
+  return prefix === '' || prefix.endsWith('/')
+}
+
+function routeCanMatchWithinDirectory(route: CompiledRoute, directory: string): boolean {
+  let pathname = route.urlPattern.toJSON().pathname
+  let dynamicIndex = pathname.search(/[:*(]/)
+  let staticPrefix = normalizePathname(
+    dynamicIndex === -1 ? pathname : pathname.slice(0, dynamicIndex),
+  )
+  return (
+    ensureTrailingSlash(staticPrefix).startsWith(directory) ||
+    directory.startsWith(ensureTrailingSlash(staticPrefix))
+  )
+}
+
+function ensureTrailingSlash(value: string): string {
+  return value.endsWith('/') ? value : `${value}/`
+}
+
+function getUrlDirectory(pathname: string): string {
+  return ensureTrailingSlash(pathname.slice(0, pathname.lastIndexOf('/') + 1))
+}
+
+function getChildUrlDirectory(parentDirectory: string, descendantDirectory: string): string {
+  let relativePathname = descendantDirectory.slice(parentDirectory.length)
+  let firstSlashIndex = relativePathname.indexOf('/')
+  let firstSegment =
+    firstSlashIndex === -1 ? relativePathname : relativePathname.slice(0, firstSlashIndex)
+  return `${parentDirectory}${firstSegment}/`
 }
 
 function stripDotSegments(pattern: string): string {
