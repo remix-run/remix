@@ -674,10 +674,12 @@ describe('stream', () => {
       let html = await renderToString(
         <div mix={[css({ color: '</style><script>globalThis.__xss = true</script><style>' })]} />,
       )
+      let template = document.createElement('template')
+      template.innerHTML = html
 
+      expect(template.content.querySelector('script')).toBeNull()
       expect(html).not.toContain('</style><script>')
-      expect(html).not.toContain('<script>globalThis.__xss = true</script>')
-      expect(html).toContain('color: \\3C /style>\\3C script>globalThis.__xss = true\\3C /script>')
+      expect(html).toContain('color: \\3C /style><script>globalThis.__xss = true</script><style>')
     })
   })
 
@@ -974,9 +976,9 @@ describe('stream', () => {
         <div
           mix={[
             css({
-              fontSize: '14px',
-              '@media (min-width: 768px)': {
-                fontSize: '16px',
+              fontSize: '16px',
+              '@media (width < 768px)': {
+                fontSize: '14px',
               },
             }),
           ]}
@@ -986,9 +988,8 @@ describe('stream', () => {
       )
       let html = await drain(stream)
 
-      // Should generate media query
-      expect(html).toContain('@media (min-width: 768px)')
-      expect(html).toContain('font-size: 16px')
+      expect(html).toContain('@media (width < 768px)')
+      expect(html).toContain('font-size: 14px')
     })
 
     it('merges styles with existing head content', async () => {
