@@ -100,8 +100,6 @@ In deployment:
 - Render the script import map before modulepreload links and module scripts
 - Keep bare-import resolution uniform for files in the same directory; different directories may use
   different resolutions through more-specific import map scopes
-- Serve scripts with bare imports through hierarchy-preserving `fileMap` entries whose URL and file
-  patterns end with the same named wildcard
 
 Fingerprinting assumes files on disk are stable and requires `watch: false`.
 

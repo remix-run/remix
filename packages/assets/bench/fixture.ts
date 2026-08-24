@@ -14,7 +14,8 @@ export interface BenchFixture {
   entryPoint: string
   entryPointUrl: string
   assetServer: Pick<AssetServerOptions, 'allowFiles' | 'allowPackages' | 'basePath' | 'mounts'>
-  expectedEntryUrlSubstrings: string[]
+  expectedEntryImportMapUrlSubstrings: string[]
+  expectedEntrySourceSubstrings: string[]
   expectedPreloadUrlSubstrings: string[]
   stats: BenchFixtureStat[]
 }
@@ -51,11 +52,17 @@ async function readBasicFixture(): Promise<BenchFixture> {
     packagesRoot,
     entryPointFile: 'app/entry.tsx',
     entryPointUrl: '/assets/app/entry.tsx',
-    expectedEntryUrlSubstrings: [
+    expectedEntryImportMapUrlSubstrings: [
       '/assets/app/summary.@',
       '/assets/bench-packages/shared/strings.@',
       '/assets/bench-packages/ui/panel.@',
       '/assets/packages/ui/',
+    ],
+    expectedEntrySourceSubstrings: [
+      '@remix-run/ui',
+      '#packages/shared/strings.ts',
+      '@bench/ui/panel.tsx',
+      './summary.ts',
     ],
     expectedPreloadUrlSubstrings: [
       '/assets/bench-packages/shared/strings.@',
@@ -83,7 +90,8 @@ async function readDeepGraphFixture(): Promise<BenchFixture> {
     packagesRoot,
     entryPointFile: 'app/package-entry.tsx',
     entryPointUrl: '/assets/app/package-entry.tsx',
-    expectedEntryUrlSubstrings: [],
+    expectedEntryImportMapUrlSubstrings: [],
+    expectedEntrySourceSubstrings: [],
     expectedPreloadUrlSubstrings: [
       '/assets/bench-packages/ui/',
       '/assets/packages/ui/',
@@ -109,7 +117,8 @@ interface CreateBenchFixtureOptions {
   packagesRoot: string
   entryPointFile: string
   entryPointUrl: string
-  expectedEntryUrlSubstrings: string[]
+  expectedEntryImportMapUrlSubstrings: string[]
+  expectedEntrySourceSubstrings: string[]
   expectedPreloadUrlSubstrings: string[]
   createStats(): Promise<BenchFixtureStat[]>
 }
@@ -136,7 +145,8 @@ async function createBenchFixture(options: CreateBenchFixtureOptions): Promise<B
       },
     },
     entryPointUrl: options.entryPointUrl,
-    expectedEntryUrlSubstrings: options.expectedEntryUrlSubstrings,
+    expectedEntryImportMapUrlSubstrings: options.expectedEntryImportMapUrlSubstrings,
+    expectedEntrySourceSubstrings: options.expectedEntrySourceSubstrings,
     expectedPreloadUrlSubstrings: options.expectedPreloadUrlSubstrings,
     stats: await options.createStats(),
   }

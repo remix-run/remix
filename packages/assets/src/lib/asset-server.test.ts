@@ -2517,6 +2517,73 @@ describe('asset-server', () => {
     ])
   })
 
+  it('maps bare import scopes through custom source and dependency mounts', async () => {
+    await write(dir, 'client/entry.ts', 'import { value } from "pkg"\nexport { value }')
+    await writeJson(dir, 'node_modules/pkg/package.json', {
+      name: 'pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'node_modules/pkg/index.ts', 'export const value = 1')
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['client/**', 'node_modules/**'],
+      mounts: { source: 'client', vendor: 'node_modules' },
+      rootDir: dir,
+    })
+
+    let importMap = await assetServer.getImportMap('client/entry.ts')
+
+    assert.equal(importMap.scopes?.['/assets/source/']?.['pkg'], '/assets/vendor/pkg/index.ts')
+  })
+
+  it('broadens bare import scopes through the mount root', async () => {
+    await write(dir, 'client/entry.ts', 'import { value } from "pkg"\nexport { value }')
+    await writeJson(dir, 'node_modules/pkg/package.json', {
+      name: 'pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'node_modules/pkg/index.ts', 'export const value = 1')
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['client/**', 'node_modules/**'],
+      mounts: { source: '.' },
+      rootDir: dir,
+    })
+
+    let importMap = await assetServer.getImportMap('client/entry.ts')
+
+    assert.equal(
+      importMap.scopes?.['/assets/source/']?.['pkg'],
+      '/assets/source/node_modules/pkg/index.ts',
+    )
+  })
+
+  it('URL-encodes bare import scope pathnames', async () => {
+    await write(
+      dir,
+      'client/feature files/entry.ts',
+      'import { value } from "pkg"\nexport { value }',
+    )
+    await writeJson(dir, 'client/feature files/node_modules/pkg/package.json', {
+      name: 'pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'client/feature files/node_modules/pkg/index.ts', 'export const value = 1')
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['client/**'],
+      mounts: { source: 'client' },
+      rootDir: dir,
+    })
+
+    let importMap = await assetServer.getImportMap('client/feature files/entry.ts')
+
+    assert.equal(
+      importMap.scopes?.['/assets/source/feature%20files/']?.['pkg'],
+      '/assets/source/feature%20files/node_modules/pkg/index.ts',
+    )
+  })
+
   it('resolves multiple bare import scopes within one module', async () => {
     await write(
       dir,
@@ -2774,27 +2841,6 @@ describe('asset-server', () => {
     await assert.rejects(
       assetServer.getImportMap('app/scope-errors.ts'),
       /Bare import "first-alias" .* resolves differently based on the importer file/,
-    )
-  })
-
-  it('rejects a bare import when the importer directory cannot be represented as a URL scope', async () => {
-    await write(dir, 'app/entry.ts', 'import { value } from "pkg"\nexport { value }')
-    await writeJson(dir, 'app/node_modules/pkg/package.json', {
-      name: 'pkg',
-      type: 'module',
-      exports: './index.ts',
-    })
-    await write(dir, 'app/node_modules/pkg/index.ts', 'export const value = 1')
-    let assetServer = createTestServer(dir, {
-      fileMap: {
-        '/entry.ts': 'app/entry.ts',
-        '/app/*path': 'app/*path',
-      },
-    })
-
-    await assert.rejects(
-      assetServer.getImportMap('app/entry.ts'),
-      /fileMap entry does not preserve directory hierarchy/,
     )
   })
 

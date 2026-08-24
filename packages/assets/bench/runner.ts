@@ -44,11 +44,7 @@ const benchmarks: Benchmark[] = [
       let fixture = await getBasicFixture()
       return async function run() {
         let assetServer = createBenchAssetServer(fixture)
-        let source = await readHandledResponseText(
-          assetServer,
-          await assetServer.getHref(fixture.entryPoint),
-        )
-        assertContainsSubstrings(source, fixture.expectedEntryUrlSubstrings, fixture.label)
+        await readAndAssertScriptEntry(assetServer, fixture)
       }
     },
   },
@@ -58,17 +54,9 @@ const benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getBasicFixture()
       let assetServer = createBenchAssetServer(fixture)
-      let source = await readHandledResponseText(
-        assetServer,
-        await assetServer.getHref(fixture.entryPoint),
-      )
-      assertContainsSubstrings(source, fixture.expectedEntryUrlSubstrings, fixture.label)
+      await readAndAssertScriptEntry(assetServer, fixture)
       return async function run() {
-        let nextSource = await readHandledResponseText(
-          assetServer,
-          await assetServer.getHref(fixture.entryPoint),
-        )
-        assertContainsSubstrings(nextSource, fixture.expectedEntryUrlSubstrings, fixture.label)
+        await readAndAssertScriptEntry(assetServer, fixture)
       }
     },
   },
@@ -79,11 +67,7 @@ const benchmarks: Benchmark[] = [
       let fixture = await getBasicFixture()
       return async function run() {
         let assetServer = createBenchAssetServer(fixture, { minify: true })
-        let source = await readHandledResponseText(
-          assetServer,
-          await assetServer.getHref(fixture.entryPoint),
-        )
-        assertContainsSubstrings(source, fixture.expectedEntryUrlSubstrings, fixture.label)
+        await readAndAssertScriptEntry(assetServer, fixture)
       }
     },
   },
@@ -231,6 +215,20 @@ async function readHandledResponseText(
   assert.ok(response, `expected response for ${pathname}`)
   assert.equal(response.status, 200, `expected 200 response for ${pathname}`)
   return response.text()
+}
+
+async function readAndAssertScriptEntry(
+  assetServer: AssetServer,
+  fixture: BenchFixture,
+): Promise<void> {
+  let { href, importMap } = await assetServer.getScriptEntry(fixture.entryPoint)
+  let source = await readHandledResponseText(assetServer, href)
+  assertContainsSubstrings(source, fixture.expectedEntrySourceSubstrings, fixture.label)
+  assertContainsSubstrings(
+    JSON.stringify(importMap),
+    fixture.expectedEntryImportMapUrlSubstrings,
+    fixture.label,
+  )
 }
 
 function assertContainsSubstrings(

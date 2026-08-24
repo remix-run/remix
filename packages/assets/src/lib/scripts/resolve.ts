@@ -463,22 +463,10 @@ async function getBareImportScopePathname(args: {
   routes: CompiledRoutes
   specifier: string
 }): Promise<string> {
-  let routeMapping = args.routes.getDirectoryRouteMapping(args.importerPath)
-  if (!routeMapping) {
-    throw createAssetServerCompilationError(
-      `Bare import "${args.specifier}" in ${args.importerPath} cannot be represented by an import map scope because its fileMap entry does not preserve directory hierarchy. ` +
-        `Use a fileMap entry with the same trailing named wildcard in its URL and file patterns.`,
-      { code: 'IMPORT_MAP_SCOPE_NOT_SUPPORTED' },
-    )
-  }
-
   let importerDirectory = normalizeFilePath(path.dirname(args.importerPath))
-  let minimumDirectory = routeMapping.fileDirectory.replace(/\/+$/, '')
-  if (!isWithinDirectory(importerDirectory, minimumDirectory)) {
-    throw createAssetServerCompilationError(
-      `Bare import "${args.specifier}" in ${args.importerPath} cannot be represented by its fileMap entry.`,
-      { code: 'IMPORT_MAP_SCOPE_NOT_SUPPORTED' },
-    )
+  let importerScopePathname = args.routes.toUrlPathname(importerDirectory)
+  if (!importerScopePathname) {
+    throw new Error(`Expected a URL pathname for ${importerDirectory}`)
   }
 
   let importerDirectoryResolution: string | null = args.resolvedIdentityPath
@@ -497,35 +485,25 @@ async function getBareImportScopePathname(args: {
   }
 
   let directory = importerDirectory
-  let broadestDirectory = importerDirectory
-  while (isWithinDirectory(directory, minimumDirectory)) {
+  let scopePathname = importerScopePathname
+  let broadestScopePathname = importerScopePathname
+  while (true) {
     let resolvedIdentityPath =
       directory === importerDirectory
         ? importerDirectoryResolution
         : await args.resolveDirectorySpecifierIdentity(directory, args.specifier)
     if (resolvedIdentityPath !== args.resolvedIdentityPath) break
 
-    broadestDirectory = directory
-    if (directory === minimumDirectory) break
+    broadestScopePathname = scopePathname
     let parentDirectory = normalizeFilePath(path.dirname(directory))
     if (parentDirectory === directory) break
+    let parentScopePathname = args.routes.toUrlPathname(parentDirectory)
+    if (!parentScopePathname) break
     directory = parentDirectory
+    scopePathname = parentScopePathname
   }
 
-  return getScopePathname(routeMapping, minimumDirectory, broadestDirectory)
-}
-
-function getScopePathname(
-  routeMapping: { fileDirectory: string; urlDirectory: string },
-  minimumDirectory: string,
-  directory: string,
-): string {
-  let relativeDirectory = path.relative(minimumDirectory, directory).replaceAll('\\', '/')
-  return ensureTrailingSlash(
-    relativeDirectory
-      ? `${routeMapping.urlDirectory.replace(/\/+$/, '')}/${relativeDirectory}`
-      : routeMapping.urlDirectory,
-  )
+  return ensureTrailingSlash(broadestScopePathname)
 }
 
 function normalizedSpecifierForDirectoryResolution(
@@ -533,10 +511,6 @@ function normalizedSpecifierForDirectoryResolution(
   importerPath: string,
 ): string {
   return normalizeSpecifierResolution(specifier, importerPath).specifier
-}
-
-function isWithinDirectory(directory: string, parentDirectory: string): boolean {
-  return directory === parentDirectory || directory.startsWith(`${parentDirectory}/`)
 }
 
 function ensureTrailingSlash(value: string): string {
