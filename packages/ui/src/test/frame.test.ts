@@ -122,7 +122,7 @@ describe('frames', () => {
     }
   })
 
-  it('notifies navigation immediately after committing reload content', async () => {
+  it('resolves after committing reload content', async () => {
     let root = document.createElement('div')
     root.innerHTML = '<p id="initial">Initial</p>'
     document.body.append(root)
@@ -134,23 +134,14 @@ describe('frames', () => {
 
     try {
       await frame.ready()
-      let commitCount = 0
-      let reload = reloadFrameForNavigation(frame.handle, {
-        onAfterCommit() {
-          commitCount++
-          expect(document.getElementById('initial')).toBeNull()
-          expect(document.getElementById('next')?.textContent).toBe('Next')
-        },
-      })
+      let reload = reloadFrameForNavigation(frame.handle)
       await new Promise((resolve) => setTimeout(resolve, 0))
 
-      expect(commitCount).toBe(0)
       expect(document.getElementById('initial')?.textContent).toBe('Initial')
 
       resolveContent('<p id="next">Next</p>')
       await reload
 
-      expect(commitCount).toBe(1)
       expect(document.getElementById('initial')).toBeNull()
       expect(document.getElementById('next')?.textContent).toBe('Next')
     } finally {
@@ -179,18 +170,12 @@ describe('frames', () => {
 
     try {
       await frame.ready()
-      let commitCount = 0
       let reloadSettled = false
-      let reload = reloadFrameForNavigation(frame.handle, {
-        onAfterCommit() {
-          commitCount++
-        },
-      }).then(() => {
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
         reloadSettled = true
       })
       await new Promise((resolve) => setTimeout(resolve, 0))
 
-      expect(commitCount).toBe(1)
       expect(reloadSettled).toBe(false)
       resolveModule(ReloadedEntry)
       await reload
@@ -280,6 +265,75 @@ describe('frames', () => {
       await reload
 
       expect(document.getElementById('collection')?.textContent).toBe('Collection')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for blocking frames rendered from RemixNode content', async () => {
+    document.body.innerHTML = '<p id="initial">Initial</p>'
+
+    let [collectionPromise, resolveCollection] = withResolvers<string>()
+    let frame = createTestFrame(document, {
+      resolveFrame(src) {
+        if (src === '/collection') return collectionPromise
+        return jsx(Frame, { src: '/collection' })
+      },
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(reloadSettled).toBe(false)
+
+      resolveCollection('<p id="collection">Collection</p>')
+      await reload
+
+      expect(document.getElementById('collection')?.textContent).toBe('Collection')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for nested blocking frames rendered from RemixNode frame content', async () => {
+    document.body.innerHTML = '<p id="initial">Initial</p>'
+
+    let [grandchildPromise, resolveGrandchild] = withResolvers<string>()
+    let [grandchildRequested, markGrandchildRequested] = withResolvers<void>()
+    let frame = createTestFrame(document, {
+      resolveFrame(src) {
+        if (src === '/child') return jsx(Frame, { src: '/grandchild' })
+        if (src === '/grandchild') {
+          markGrandchildRequested()
+          return grandchildPromise
+        }
+        return jsx(Frame, { src: '/child' })
+      },
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+
+      await grandchildRequested
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(reloadSettled).toBe(false)
+
+      resolveGrandchild('<p id="grandchild">Grandchild</p>')
+      await reload
+
+      expect(document.getElementById('grandchild')?.textContent).toBe('Grandchild')
     } finally {
       frame.dispose()
     }

@@ -1,1 +1,1 @@
-Restore saved scroll positions for intercepted back and forward navigations by starting the Navigation API's native restoration after primary destination content commits and keeping the transition pending through blocking frames and client entries.
+Restore saved scroll positions for intercepted back and forward navigations by keeping the transition pending until client entries, nested blocking frames, and queued DOM updates finish so the Navigation API can restore scrolling against the completed layout.
