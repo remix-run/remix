@@ -556,9 +556,9 @@ export function resolveServedFileOrThrow(filePath: string, args: ResolveArgs): R
   let stableUrlPathname = args.routes.toUrlPathname(identityPath)
   if (!stableUrlPathname) {
     throw createAssetServerCompilationError(
-      `File ${identityPath} is outside all configured fileMap entries.`,
+      `File ${identityPath} is outside all configured mounts.`,
       {
-        code: 'FILE_OUTSIDE_FILE_MAP',
+        code: 'FILE_OUTSIDE_MOUNTS',
       },
     )
   }

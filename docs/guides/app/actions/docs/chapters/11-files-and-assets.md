@@ -11,7 +11,7 @@ Use `staticFiles()` for files served from the root `public/` directory as-is. Us
 
 ## Configure the asset server boundary {#remix-s-unbundled-asset-server}
 
-Define `rootDir`, the public `basePath`, and a `fileMap` from URL patterns to root-relative source patterns. Allow `app/routes.ts` for type-safe hrefs and `app/**/public/**` for browser source, then deny test files so they can remain beside the modules they exercise:
+Define `rootDir` and the public `basePath`. The default directory mounts serve `app` beneath `/assets/app` and `node_modules` beneath `/assets/npm`, preserving the path below each directory. Allow `app/routes.ts` for type-safe hrefs and `app/**/public/**` for browser source, then deny test files so they can remain beside the modules they exercise:
 
 ```ts filename=app/assets.ts
 import { createAssetServer } from "remix/assets";
@@ -19,10 +19,6 @@ import { createAssetServer } from "remix/assets";
 export const assetServer = createAssetServer({
   basePath: "/assets",
   rootDir: process.cwd(),
-  fileMap: {
-    "app/*path": "app/*path",
-    "node_modules/*path": "node_modules/*path",
-  },
   allowFiles: ["app/routes.ts", "app/**/public/**"],
   allowPackages: ["remix"],
   denyFiles: ["app/**/*.test.*"],

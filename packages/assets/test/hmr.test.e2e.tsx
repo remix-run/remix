@@ -1622,8 +1622,8 @@ function getNodeHmrServerSource(
     'let assetServer = createAssetServer({',
     `  allowFiles: [${JSON.stringify(`${appDir}/**`)}],`,
     "  basePath: '/assets',",
-    '  fileMap: {',
-    `    '/app/*path': ${JSON.stringify(`${appDir}/*path`)},`,
+    '  mounts: {',
+    `    app: ${JSON.stringify(appDir)},`,
     '  },',
     '  hmr: createBrowserHmrChannel,',
     '  onError(error) {',
@@ -1791,8 +1791,8 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     createAssetServer({
       allowFiles: [`${appDir}/**`],
       basePath: '/assets',
-      fileMap: {
-        '/app/*path': `${appDir}/*path`,
+      mounts: {
+        app: appDir,
       },
       hmr: () => ({
         close() {

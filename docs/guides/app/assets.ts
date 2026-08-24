@@ -17,10 +17,10 @@ export const assetServer = createAssetServer({
   ],
   allowPackages: ['remix'],
   denyFiles: ['**/*.test.*'],
-  fileMap: {
-    '/app/*path': 'docs/guides/app/*path',
-    '/docs-shared/*path': 'docs/shared/*path',
-    '/packages/*path': 'packages/*path',
+  mounts: {
+    app: 'docs/guides/app',
+    'docs-shared': 'docs/shared',
+    packages: 'packages',
   },
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: isProduction,

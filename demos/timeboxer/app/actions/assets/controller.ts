@@ -7,9 +7,9 @@ import { routes } from '../../routes.ts'
 export const assetServer = createAssetServer({
   basePath: '/assets',
   rootDir: path.resolve(import.meta.dirname, '../../../../..'),
-  fileMap: {
-    '/app/*path': 'demos/timeboxer/app/*path',
-    '/packages/*path': 'packages/*path',
+  mounts: {
+    app: 'demos/timeboxer/app',
+    packages: 'packages',
   },
   allowFiles: ['demos/timeboxer/app/routes.ts', 'demos/timeboxer/app/**/public/**'],
   allowPackages: ['remix'],

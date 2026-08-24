@@ -11,9 +11,9 @@ export const assetServer = createAssetServer({
   allowFiles: ['demos/frames/app/routes.ts', 'demos/frames/app/**/public/**'],
   allowPackages: ['remix'],
   denyFiles: ['demos/frames/app/**/*.test.*'],
-  fileMap: {
-    '/app/*path': 'demos/frames/app/*path',
-    '/packages/*path': 'packages/*path',
+  mounts: {
+    app: 'demos/frames/app',
+    packages: 'packages',
   },
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,

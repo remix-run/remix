@@ -37,7 +37,7 @@ Both document shells also load `/favicon.svg`. These files live in `assets/`. Ea
 2. Include `assets/` in the prerenderer's `publicDirs` so the files are copied to the static output root.
 3. Keep the asset names stable when changing the shared components.
 
-Shared browser modules and styles use a separate source-asset contract. Each site's Remix asset server must allow `docs/shared/**/public/**` and map `/docs-shared/*path` to `docs/shared/*path`. Local dependencies of shared browser modules must remain inside a colocated `public/` directory. This produces browser URLs beneath the site's asset base, such as `/assets/docs-shared/ui/public/docs-shell.tsx`; it does not replace the root-relative static asset URLs above.
+Shared browser modules and styles use a separate source-asset contract. Each site's Remix asset server must allow `docs/shared/**/public/**` and mount `docs/shared` at `docs-shared`. Local dependencies of shared browser modules must remain inside a colocated `public/` directory. This produces browser URLs beneath the site's asset base, such as `/assets/docs-shared/ui/public/docs-shell.tsx`; it does not replace the root-relative static asset URLs above.
 
 The static prerenders discover TypeScript modules beneath site and shared `public/` directories so frame client entries are emitted even though their URLs live inside the streamed frame payload rather than ordinary `<script>` elements.
 

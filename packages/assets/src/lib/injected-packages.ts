@@ -28,17 +28,17 @@ export function isInjectedPackageFilePath(filePath: string): boolean {
   return false
 }
 
-export function getInjectedPackageRouteConfigs(): {
-  fileMap: Record<string, string>
+export function getInjectedPackageMountConfigs(): {
+  mounts: Record<string, string>
   rootDir: string
 }[] {
   return injectedPackageNames.map((packageName) => {
     let { packageRoot } = getResolvedInjectedPackage(packageName)
-    let { filePattern, routeRoot } = getInjectedPackageRoute(packageRoot, packageName)
+    let { fileRoot, routeRoot } = getInjectedPackageRoute(packageRoot, packageName)
 
     return {
-      fileMap: {
-        [getInjectedPackageRoutePattern(packageName)]: filePattern,
+      mounts: {
+        [getInjectedPackageMountPath(packageName)]: fileRoot,
       },
       rootDir: routeRoot,
     }
@@ -119,17 +119,17 @@ function getResolvedInjectedPackage(packageName: string): ResolvedInjectedPackag
   return resolvedInjectedPackage
 }
 
-function getInjectedPackageRoutePattern(packageName: string): string {
-  return `${injectedPackagesBasePath}/${packageName}/*path`
+function getInjectedPackageMountPath(packageName: string): string {
+  return `${injectedPackagesBasePath}/${packageName}`
 }
 
 function getInjectedPackageRoute(
   packageRoot: string,
   packageName: string,
-): { filePattern: string; routeRoot: string } {
+): { fileRoot: string; routeRoot: string } {
   if (!packageRoot.endsWith(`/${packageName}`)) {
     return {
-      filePattern: `${packageRoot.slice(getFilePathDirectory(packageRoot).length + 1)}/*path`,
+      fileRoot: packageRoot.slice(getFilePathDirectory(packageRoot).length + 1),
       routeRoot: getFilePathDirectory(packageRoot),
     }
   }
@@ -141,7 +141,7 @@ function getInjectedPackageRoute(
   }
 
   return {
-    filePattern: `${packageName}/*path`,
+    fileRoot: packageName,
     routeRoot,
   }
 }

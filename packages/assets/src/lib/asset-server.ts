@@ -17,7 +17,7 @@ import type {
 import { getFingerprintRequestCacheControl, parseFingerprintSuffix } from './fingerprint.ts'
 import { createHmrClientSource } from './hmr.ts'
 import type { HmrPayload } from './hmr.ts'
-import { getInjectedPackageRouteConfigs } from './injected-packages.ts'
+import { getInjectedPackageMountConfigs } from './injected-packages.ts'
 import type { ModuleLoader } from './loaders.ts'
 import { normalizeFilePath, normalizePathname } from './paths.ts'
 import { compileRoutes } from './routes.ts'
@@ -169,6 +169,10 @@ interface AssetServerScriptOptions {
 }
 
 const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
+const defaultMounts = {
+  app: 'app',
+  npm: 'node_modules',
+} as const
 
 /**
  * Options used to construct an {@link AssetServer} via {@link createAssetServer}.
@@ -176,8 +180,14 @@ const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
 export interface AssetServerOptions<transforms extends AssetRequestTransformMap = {}> {
   /** Public mount path for this asset server, e.g. `'/assets'`. */
   basePath: string
-  /** File patterns keyed by public URL patterns. */
-  fileMap: Readonly<Record<string, string>>
+  /**
+   * Directories to mount at public URL paths.
+   *
+   * Each key is a public URL path and its value is a directory relative to `rootDir`. Defaults to
+   * `{ app: 'app', npm: 'node_modules' }`. Public paths must not contain query strings, fragments,
+   * or encoded dot segments.
+   */
+  mounts?: Readonly<Record<string, string>>
   /**
    * Root directory used to resolve relative file paths. Defaults to `process.cwd()`.
    */
@@ -188,7 +198,7 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
   allowFiles: readonly string[]
   /**
    * Exact package names whose files are allowed to be served. Dependencies and installed optional
-   * dependencies are allowed automatically. Package files must still match `fileMap`.
+   * dependencies are allowed automatically. Package files must still be within a configured mount.
    */
   allowPackages?: readonly string[]
   /**
@@ -328,6 +338,7 @@ type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
   loaders: readonly ModuleLoader[]
   onError: NonNullable<AssetServerOptions['onError']>
   rootDir: string
+  mounts: Readonly<Record<string, string>>
   routes: CompiledRoutes
   sourceMapSourcePaths: 'url' | 'absolute'
   sourceMaps?: 'inline' | 'external'
@@ -355,7 +366,7 @@ export function getInternalWatchTargets<transforms extends AssetRequestTransform
  * Create an asset server instance
  *
  * Compiles TypeScript/JavaScript scripts and CSS styles on demand with optional
- * content-based URL fingerprinting, caching, and configurable file mapping.
+ * content-based URL fingerprinting, caching, and configurable directory mounts.
  *
  * @param options Server configuration
  * @returns A {@link AssetServer} with `fetch()`, `getHref()`, and `getPreloads()` methods
@@ -364,9 +375,6 @@ export function getInternalWatchTargets<transforms extends AssetRequestTransform
  * ```ts
  * let assetServer = createAssetServer({
  *   basePath: '/assets',
- *   fileMap: {
- *     '/app/*path': 'app/*path',
- *   },
  *   allowFiles: ['app/routes.ts', 'app/**\/public/**'],
  *   allowPackages: ['remix'],
  *   denyFiles: ['app/**\/*.test.*'],
@@ -384,7 +392,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     allowPackages: resolvedOptions.allowPackages,
     denyFiles: resolvedOptions.denyFiles,
     packageSearchRoots: hasPackages(resolvedOptions.allowPackages)
-      ? getPackageSearchRoots(options.fileMap, resolvedOptions.rootDir)
+      ? getPackageSearchRoots(resolvedOptions.mounts, resolvedOptions.rootDir)
       : undefined,
     rootDir: resolvedOptions.rootDir,
   })
@@ -1085,9 +1093,13 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
   })
   let watchOptions = normalizeWatchOptions(options.watch)
   let hmrFactory = normalizeHmrFactory(options.hmr)
+  let mounts = options.mounts ?? defaultMounts
 
   if (hmrFactory && watchOptions === null) {
     throw new TypeError('hmr requires watch mode')
+  }
+  if (Object.keys(mounts).length === 0) {
+    throw new TypeError('mounts must include at least one entry')
   }
   return {
     allowFiles: options.allowFiles,
@@ -1100,15 +1112,16 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
     fingerprintAssets,
     hmr: hmrFactory,
     minify: options.minify ?? false,
+    mounts,
     loaders: scriptOptions.loaders ?? [],
     onError: options.onError ?? defaultErrorHandler,
     rootDir,
     routes: compileRoutes(basePath, [
       {
-        fileMap: options.fileMap,
+        mounts,
         rootDir,
       },
-      ...getInjectedPackageRouteConfigs(),
+      ...getInjectedPackageMountConfigs(),
     ]),
     sourceMapSourcePaths: options.sourceMapSourcePaths ?? 'url',
     sourceMaps: options.sourceMaps,
@@ -1215,19 +1228,10 @@ function hasPackages(packages: readonly string[] | undefined): boolean {
 }
 
 function getPackageSearchRoots(
-  fileMap: AssetServerOptions['fileMap'],
+  mounts: Readonly<Record<string, string>>,
   rootDir: string,
 ): readonly string[] {
-  return Object.values(fileMap).map((filePattern) =>
-    path.resolve(rootDir, getStaticFilePatternPrefix(filePattern)),
-  )
-}
-
-function getStaticFilePatternPrefix(filePattern: string): string {
-  let firstDynamicIndex = filePattern.search(/[*:]/)
-  let staticPrefix =
-    firstDynamicIndex === -1 ? filePattern : filePattern.slice(0, firstDynamicIndex)
-  return staticPrefix.replace(/[/\\]*$/, '')
+  return Object.values(mounts).map((fileRoot) => path.resolve(rootDir, fileRoot))
 }
 
 function parseAssetRequestPathname(
