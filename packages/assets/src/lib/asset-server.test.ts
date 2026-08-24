@@ -2391,7 +2391,7 @@ describe('asset-server', () => {
 
     assert.match(entryHref, /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/)
     assert.ok(entryBody.includes('"./dep.ts"'), entryBody)
-    assert.match(importMap.imports['/assets/app/entry.ts'] ?? '', /\/assets\/app\/entry\.@/)
+    assert.equal(importMap.imports['/assets/app/entry.ts'], undefined)
     assert.match(importMap.imports['/assets/app/dep.ts'] ?? '', /\/assets\/app\/dep\.@/)
 
     let depHref = importMap.imports['/assets/app/dep.ts']
@@ -2447,9 +2447,35 @@ describe('asset-server', () => {
 
     let importMap = await assetServer.getImportMap(['app/entry.ts', 'app/lazy.ts'])
 
-    assert.match(importMap.imports['/assets/app/entry.ts'] ?? '', /\/assets\/app\/entry\.@/)
-    assert.match(importMap.imports['/assets/app/lazy.ts'] ?? '', /\/assets\/app\/lazy\.@/)
+    assert.equal(importMap.imports['/assets/app/entry.ts'], undefined)
+    assert.equal(importMap.imports['/assets/app/lazy.ts'], undefined)
     assert.match(importMap.imports['/assets/app/shared.ts'] ?? '', /\/assets\/app\/shared\.@/)
+  })
+
+  it('maps a script root when it is imported by another module in its graph', async () => {
+    await write(dir, 'app/entry.ts', 'import { dep } from "./dep.ts"\nexport const entry = dep')
+    await write(
+      dir,
+      'app/dep.ts',
+      'import { entry } from "./entry.ts"\nexport const dep = () => entry',
+    )
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let importMap = await assetServer.getImportMap('app/entry.ts')
+
+    assert.match(importMap.imports['/assets/app/entry.ts'] ?? '', /\/assets\/app\/entry\.@/)
+    assert.match(importMap.imports['/assets/app/dep.ts'] ?? '', /\/assets\/app\/dep\.@/)
+  })
+
+  it('maps an explicit script root when it is imported by another explicit root', async () => {
+    await write(dir, 'app/entry.ts', 'import { lazy } from "./lazy.ts"\nexport const entry = lazy')
+    await write(dir, 'app/lazy.ts', 'export const lazy = true')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let importMap = await assetServer.getImportMap(['app/entry.ts', 'app/lazy.ts'])
+
+    assert.equal(importMap.imports['/assets/app/entry.ts'], undefined)
+    assert.match(importMap.imports['/assets/app/lazy.ts'] ?? '', /\/assets\/app\/lazy\.@/)
   })
 
   it('reifies package-local bare import resolution with import map scopes', async () => {

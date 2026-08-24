@@ -255,6 +255,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
     async getImportMap(filePath) {
       let resolvedEntries = resolveInputScriptRoots(filePath)
+      let resolvedEntrySet = new Set(resolvedEntries)
       let visited = new Set<string>()
       let queue = [...resolvedEntries]
       let imports: Record<string, string> = {}
@@ -270,11 +271,13 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         for (let resolvedModule of resolvedModules) {
           if (visited.has(resolvedModule.identityPath)) continue
           visited.add(resolvedModule.identityPath)
-          addImportMapEntry(
-            imports,
-            resolvedModule.stableUrlPathname,
-            await getServedUrl(resolvedModule.identityPath),
-          )
+          if (!resolvedEntrySet.has(resolvedModule.identityPath)) {
+            addImportMapEntry(
+              imports,
+              resolvedModule.stableUrlPathname,
+              await getServedUrl(resolvedModule.identityPath),
+            )
+          }
 
           for (let imported of resolvedModule.imports) {
             let depUrl = await getServedUrl(imported.depPath)
@@ -292,10 +295,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
                 imported.specifier,
                 resolvedModule.stableUrlPathname,
               )
-              let depStableUrl = await getStableUrl(imported.depPath)
-              if (browserResolvedSpecifier !== depStableUrl) {
-                addImportMapEntry(imports, browserResolvedSpecifier, depUrl)
-              }
+              addImportMapEntry(imports, browserResolvedSpecifier, depUrl)
             }
           }
 
