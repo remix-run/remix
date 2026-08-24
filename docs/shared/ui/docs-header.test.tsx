@@ -11,7 +11,7 @@ const navigationLinks = [
 ] satisfies readonly DocsNavigationLink[]
 
 describe('createDocsNavigationLinks', () => {
-  it('returns the six absolute links in navigation order', () => {
+  it('returns the seven absolute links in navigation order', () => {
     let links = createDocsNavigationLinks()
 
     assert.deepEqual(
@@ -19,10 +19,11 @@ describe('createDocsNavigationLinks', () => {
       [
         ['guides', { href: 'https://guides.remix.run/', label: 'Guides' }],
         ['api', { href: 'https://api.remix.run', label: 'API' }],
+        ['github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' }],
         ['blog', { href: 'https://remix.run/blog', label: 'Blog' }],
+        ['newsletter', { href: 'https://remix.run/newsletter', label: 'Newsletter' }],
         ['jam', { href: 'https://remix.run/jam/2026', label: 'Jam' }],
         ['store', { href: 'https://shop.remix.run', label: 'Store' }],
-        ['github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' }],
       ],
     )
   })
@@ -33,7 +34,7 @@ describe('createDocsNavigationLinks', () => {
 
     assert.deepEqual(
       [...links.values()].map((link) => link.label),
-      ['Guides', 'API', 'Blog', 'Jam', 'Store', 'GitHub'],
+      ['Guides', 'API', 'GitHub', 'Blog', 'Newsletter', 'Jam', 'Store'],
     )
     assert.deepEqual(links.get('api'), { href: '/v3', label: 'API', current: 'page' })
   })
@@ -50,7 +51,10 @@ describe('DocsHeader', () => {
     assert.match(html, /id="site-primary-navigation"[^>]*popover="auto"/)
     assert.equal(html.match(/>Guides<\/a>/g)?.length, 2)
     assert.equal(html.match(/href="\/guides"[^>]*aria-current="location"/g)?.length, 2)
-    assert.match(html, /href="https:\/\/remix\.run"[^>]*aria-label="Remix Docs"/)
+    assert.match(
+      html,
+      /id="docs-brand"[^>]*href="https:\/\/remix\.run"[^>]*aria-label="Remix Docs"/,
+    )
     assert.equal(html.match(/id="docs-search-button"/g)?.length, 1)
     assert.doesNotMatch(html, /class="[^"]*site-header/)
     assert.doesNotMatch(html, /\[object Object\]/)
