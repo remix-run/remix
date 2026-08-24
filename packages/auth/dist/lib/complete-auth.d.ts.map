@@ -1,0 +1,1 @@
+{"version":3,"file":"complete-auth.d.ts","sourceRoot":"","sources":["../../src/lib/complete-auth.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,yBAAyB,CAAA;AAC7D,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,oBAAoB,CAAA;AAIjD;;;;;GAKG;AACH,wBAAgB,YAAY,CAAC,OAAO,SAAS,cAAc,CAAC,GAAG,EAAE,GAAG,CAAC,GAAG,cAAc,EACpF,OAAO,EAAE,OAAO,GACf,OAAO,CAIT"}
