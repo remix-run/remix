@@ -3,7 +3,7 @@ import { css, type Handle } from 'remix/ui'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import { leadStyle, linkStyle, pageHeadingStyle, panelStyle } from '../ui/public/styles.ts'
-import { StoreScrollReproduction } from './public/scroll-restoration.tsx'
+import { ScrollRestorationDetail, StoreScrollReproduction } from './public/scroll-restoration.tsx'
 
 export function ScrollRestorationPage(handle: Handle<{ newsletterHistory?: 'push' | 'replace' }>) {
   return () => (
@@ -166,6 +166,7 @@ export function ScrollRestorationDetailPage() {
         tall collection rendered by a blocking frame.
       </p>
 
+      <ScrollRestorationDetail />
       <StoreScrollReproduction variant="detail" />
     </Document>
   )

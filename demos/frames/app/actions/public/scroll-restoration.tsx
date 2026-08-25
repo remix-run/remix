@@ -119,32 +119,39 @@ export const StoreScrollReproduction = clientEntry(
             </section>
             <Frame src={routes.frames.scrollRestorationItems.href()} />
           </div>
-        ) : (
-          <article
-            id="scroll-restoration-detail"
-            mix={[
-              panelStyle,
-              css({
-                minHeight: 1000,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                padding: 20,
-                background: 'rgba(255,255,255,0.03)',
-              }),
-            ]}
-          >
-            <div>
-              <h2 mix={sectionHeadingStyle}>Short detail view</h2>
-              <p mix={[leadStyle, css({ lineHeight: 1.6 })]}>
-                The top-level client entry now renders much less content than the collection. Use
-                the browser Back button while this short layout is present.
-              </p>
-            </div>
-            <p mix={[leadStyle, css({ marginBottom: 0 })]}>Use the browser Back button now.</p>
-          </article>
-        )}
+        ) : null}
       </section>
+    )
+  },
+)
+
+export const ScrollRestorationDetail = clientEntry(
+  import.meta.url,
+  function ScrollRestorationDetail() {
+    return () => (
+      <article
+        id="scroll-restoration-detail"
+        mix={[
+          panelStyle,
+          css({
+            minHeight: 1000,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            padding: 20,
+            background: 'rgba(255,255,255,0.03)',
+          }),
+        ]}
+      >
+        <div>
+          <h2 mix={sectionHeadingStyle}>Short detail view</h2>
+          <p mix={[leadStyle, css({ lineHeight: 1.6 })]}>
+            The top-level client entry now renders much less content than the collection. Use the
+            browser Back button while this short layout is present.
+          </p>
+        </div>
+        <p mix={[leadStyle, css({ marginBottom: 0 })]}>Use the browser Back button now.</p>
+      </article>
     )
   },
 )

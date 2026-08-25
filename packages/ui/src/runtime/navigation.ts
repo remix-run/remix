@@ -134,7 +134,7 @@ export function startNavigationListenerImpl(
         if (event.signal.aborted) return
 
         if (event.navigationType === 'traverse' && state.resetScroll) {
-          preserveStartingDocumentHeight(navigation, event)
+          preserveStartingDocumentScrollState(navigation, event)
         }
 
         let submission = await runtimeNavigation.getSubmission?.()
@@ -252,20 +252,23 @@ function isCrossOriginDestination(event: NavigateEvent): boolean {
   return destination.origin !== window.location.origin
 }
 
-function preserveStartingDocumentHeight(navigation: Navigation, event: NavigateEvent): void {
-  // Full-document reconciliation can temporarily shrink the page and clamp the viewport before
-  // the Navigation API performs its deferred restoration. Keep the starting scroll range intact
-  // until the navigation finishes so native restoration remains authoritative.
+function preserveStartingDocumentScrollState(navigation: Navigation, event: NavigateEvent): void {
+  // Full-document reconciliation can temporarily shrink the page or trigger scroll anchoring
+  // before the Navigation API performs its deferred restoration. Preserve the starting scroll
+  // range and position until the navigation finishes so native restoration remains authoritative.
   // Root scroll height includes page-level effects such as body padding.
-
-  // We think this is a bug in Chromium where they are incorrectly classifying a
-  // DOM-modification-driven scroll change as a user scroll action, causing it to skip restoration
-  // after the transition. The intended user-scroll behavior is tested here:
-  // https://github.com/web-platform-tests/wpt/blob/master/navigation-api/scroll-behavior/after-transition-skips-restore-when-scrolled.html
-
   let startingDocumentHeight = document.documentElement.scrollHeight
   let stylesheet = new CSSStyleSheet()
-  stylesheet.replaceSync(`html { min-height: ${startingDocumentHeight}px !important; }`)
+  stylesheet.replaceSync(`
+    html {
+      min-height: ${startingDocumentHeight}px !important;
+      overflow-anchor: none !important;
+    }
+
+    body {
+      overflow-anchor: none !important;
+    }
+  `)
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet]
 
   let cleanedUp = false

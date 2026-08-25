@@ -251,11 +251,18 @@ describe('navigate', () => {
       expect(scroll).not.toHaveBeenCalled()
       expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
       let stylesheet = document.adoptedStyleSheets[adoptedStyleSheetCount]
-      let rule = stylesheet?.cssRules[0]
-      if (!(rule instanceof CSSStyleRule)) throw new Error('Expected document height CSS rule')
-      expect(rule.selectorText).toBe('html')
-      expect(rule.style.minHeight).toBe(`${startingDocumentHeight}px`)
-      expect(rule.style.getPropertyPriority('min-height')).toBe('important')
+      let htmlRule = stylesheet?.cssRules[0]
+      if (!(htmlRule instanceof CSSStyleRule)) throw new Error('Expected html scroll state rule')
+      expect(htmlRule.selectorText).toBe('html')
+      expect(htmlRule.style.minHeight).toBe(`${startingDocumentHeight}px`)
+      expect(htmlRule.style.getPropertyPriority('min-height')).toBe('important')
+      expect(htmlRule.style.overflowAnchor).toBe('none')
+      expect(htmlRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
+      let bodyRule = stylesheet?.cssRules[1]
+      if (!(bodyRule instanceof CSSStyleRule)) throw new Error('Expected body scroll state rule')
+      expect(bodyRule.selectorText).toBe('body')
+      expect(bodyRule.style.overflowAnchor).toBe('none')
+      expect(bodyRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
 
       resolveReload({ signal: event.signal })
       await handler
