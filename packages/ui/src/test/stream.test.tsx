@@ -680,7 +680,7 @@ describe('stream', () => {
       let shelf = document.createElement('template')
       shelf.innerHTML = html
       expect(shelf.content.querySelectorAll('script')).toHaveLength(0)
-      expect(html).toContain('<\\/style><script>globalThis.__xss = true</script><style>')
+      expect(html).toContain('\\3C/style><script>globalThis.__xss = true</script><style>')
     })
   })
 
