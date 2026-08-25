@@ -257,11 +257,17 @@ function preserveStartingDocumentScrollState(navigation: Navigation, event: Navi
   // before the Navigation API performs its deferred restoration. Preserve the starting scroll
   // range and position until the navigation finishes so native restoration remains authoritative.
   // Root scroll height includes page-level effects such as body padding.
-  let startingDocumentHeight = document.documentElement.scrollHeight
+
+  // We think this is a bug in Chromium where they are incorrectly classifying a
+  // DOM-modification-driven scroll change as a user scroll action, causing it to skip restoration
+  // after the transition. The intended user-scroll behavior is tested here:
+  // https://github.com/web-platform-tests/wpt/blob/master/navigation-api/scroll-behavior/after-transition-skips-restore-when-scrolled.html
+
+  let { scrollHeight, clientHeight } = document.documentElement
   let stylesheet = new CSSStyleSheet()
   stylesheet.replaceSync(`
     html {
-      min-height: ${startingDocumentHeight}px !important;
+      min-height: ${scrollHeight + clientHeight}px !important;
       overflow-anchor: none !important;
     }
 
