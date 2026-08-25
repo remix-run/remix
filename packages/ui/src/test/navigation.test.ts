@@ -241,6 +241,7 @@ describe('navigate', () => {
       let handlerSettled = false
       let adoptedStyleSheetCount = document.adoptedStyleSheets.length
       let startingDocumentHeight = document.documentElement.scrollHeight
+      let startingViewportHeight = document.documentElement.clientHeight
       let handler = interceptOptions.handler().then(() => {
         handlerSettled = true
       })
@@ -254,7 +255,7 @@ describe('navigate', () => {
       let htmlRule = stylesheet?.cssRules[0]
       if (!(htmlRule instanceof CSSStyleRule)) throw new Error('Expected html scroll state rule')
       expect(htmlRule.selectorText).toBe('html')
-      expect(htmlRule.style.minHeight).toBe(`${startingDocumentHeight}px`)
+      expect(htmlRule.style.minHeight).toBe(`${startingDocumentHeight + startingViewportHeight}px`)
       expect(htmlRule.style.getPropertyPriority('min-height')).toBe('important')
       expect(htmlRule.style.overflowAnchor).toBe('none')
       expect(htmlRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
