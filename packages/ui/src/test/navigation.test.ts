@@ -177,10 +177,26 @@ describe('navigate', () => {
 
   it('leaves traversal restoration to the browser after frame reconciliation', async (t) => {
     let navigateListener: EventListener | undefined
+    let navigationEvents = new EventTarget()
     let stubNavigation = {
       updateCurrentEntry() {},
-      addEventListener(type: string, listener: EventListener) {
-        if (type === 'navigate') navigateListener = listener
+      addEventListener(
+        type: string,
+        listener: EventListener,
+        options?: AddEventListenerOptions | boolean,
+      ) {
+        if (type === 'navigate') {
+          navigateListener = listener
+        } else {
+          navigationEvents.addEventListener(type, listener, options)
+        }
+      },
+      removeEventListener(
+        type: string,
+        listener: EventListener,
+        options?: EventListenerOptions | boolean,
+      ) {
+        navigationEvents.removeEventListener(type, listener, options)
       },
     }
     stubGlobalField(t, 'navigation', stubNavigation)
@@ -223,6 +239,8 @@ describe('navigate', () => {
       let interceptOptions = intercept.mock.calls[0]?.arguments[0]
       if (!interceptOptions?.handler) throw new Error('Expected navigation interception handler')
       let handlerSettled = false
+      let adoptedStyleSheetCount = document.adoptedStyleSheets.length
+      let startingDocumentHeight = document.documentElement.scrollHeight
       let handler = interceptOptions.handler().then(() => {
         handlerSettled = true
       })
@@ -231,11 +249,21 @@ describe('navigate', () => {
       expect(interceptOptions.scroll).toBe(undefined)
       expect(handlerSettled).toBe(false)
       expect(scroll).not.toHaveBeenCalled()
+      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+      let stylesheet = document.adoptedStyleSheets[adoptedStyleSheetCount]
+      let rule = stylesheet?.cssRules[0]
+      if (!(rule instanceof CSSStyleRule)) throw new Error('Expected document height CSS rule')
+      expect(rule.selectorText).toBe('html')
+      expect(rule.style.minHeight).toBe(`${startingDocumentHeight}px`)
+      expect(rule.style.getPropertyPriority('min-height')).toBe('important')
 
       resolveReload({ signal: event.signal })
       await handler
 
       expect(scroll).not.toHaveBeenCalled()
+      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+      navigationEvents.dispatchEvent(new Event('navigatesuccess'))
+      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
     } finally {
       controller.abort()
     }

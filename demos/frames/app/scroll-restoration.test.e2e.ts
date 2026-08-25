@@ -24,8 +24,21 @@ describe('scroll restoration', () => {
     await page.getByRole('link', { name: 'Open the shorter detail page' }).click()
     await page.getByRole('heading', { name: 'Short detail view' }).waitFor()
     await reproduction.getByRole('button', { name: 'Hydration check: 1', exact: true }).waitFor()
-
-    await page.goBack()
+    await page.evaluate(() => window.scrollTo(0, 500))
+    let detailScrollPosition = await page.evaluate(() => window.scrollY)
+    assert.ok(
+      detailScrollPosition > 100,
+      `Expected the detail page to scroll, got ${detailScrollPosition}`,
+    )
+    await Promise.all([
+      page.evaluate(
+        () =>
+          new Promise<void>((resolve) => {
+            window.navigation.addEventListener('navigatesuccess', () => resolve(), { once: true })
+          }),
+      ),
+      page.goBack(),
+    ])
     await page.getByText('List row 48', { exact: true }).waitFor()
     await reproduction.getByRole('button', { name: 'Hydration check: 1', exact: true }).waitFor()
     let restoredPosition = await page.evaluate(() => window.scrollY)

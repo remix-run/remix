@@ -133,6 +133,10 @@ export function startNavigationListenerImpl(
       let handler = async () => {
         if (event.signal.aborted) return
 
+        if (event.navigationType === 'traverse' && state.resetScroll) {
+          preserveStartingDocumentHeight(navigation, event)
+        }
+
         let submission = await runtimeNavigation.getSubmission?.()
         if (event.signal.aborted) return
 
@@ -246,6 +250,33 @@ function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNa
 function isCrossOriginDestination(event: NavigateEvent): boolean {
   let destination = new URL(event.destination.url)
   return destination.origin !== window.location.origin
+}
+
+function preserveStartingDocumentHeight(navigation: Navigation, event: NavigateEvent): void {
+  // Full-document reconciliation can temporarily shrink the page and clamp the viewport before
+  // the Navigation API performs its deferred restoration. Keep the starting scroll range intact
+  // until the navigation finishes so native restoration remains authoritative.
+  // Root scroll height includes page-level effects such as body padding.
+  let startingDocumentHeight = document.documentElement.scrollHeight
+  let stylesheet = new CSSStyleSheet()
+  stylesheet.replaceSync(`html { min-height: ${startingDocumentHeight}px !important; }`)
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet]
+
+  let cleanedUp = false
+  let cleanup = () => {
+    if (cleanedUp) return
+    cleanedUp = true
+    event.signal.removeEventListener('abort', cleanup)
+    navigation.removeEventListener('navigatesuccess', cleanup)
+    navigation.removeEventListener('navigateerror', cleanup)
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+      (current) => current !== stylesheet,
+    )
+  }
+
+  event.signal.addEventListener('abort', cleanup, { once: true })
+  navigation.addEventListener('navigatesuccess', cleanup, { once: true })
+  navigation.addEventListener('navigateerror', cleanup, { once: true })
 }
 
 function getRuntimeNavigation(
