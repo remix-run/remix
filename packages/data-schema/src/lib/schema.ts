@@ -1,4 +1,6 @@
-import type { StandardSchemaV1 } from '@standard-schema/spec'
+import type { StandardJSONSchemaV1, StandardSchemaV1 } from '@standard-schema/spec'
+import { toJSONSchema } from './json-schema.ts'
+import type { JSONSchemaTarget } from './json-schema.ts'
 
 /**
  * A validation issue returned by a schema, compatible with Standard Schema v1.
@@ -59,6 +61,8 @@ type SyncStandardSchemaProps<input, output> = Omit<
   validate: (value: unknown, options?: ValidationOptions) => ValidationResult<output>
   // Preserve Standard Schema's compile-time type channel.
   types?: StandardSchemaV1.Types<input, output> | undefined
+  // Standard JSON Schema v1.
+  jsonSchema: StandardJSONSchemaV1.Converter
 }
 
 type SyncStandardSchema<input, output = input> = {
@@ -90,8 +94,9 @@ export type SchemaMeta = {
   /**
    * An explicit JSON Schema fragment for this node.
    *
-   * Consumers that convert a schema to another format can use this to describe a node the
-   * conversion cannot derive on its own.
+   * The fragment is merged last, so it wins over anything the emitter derives. Attaching one
+   * also allows a schema that would otherwise have no representation, such as a refined
+   * schema, to be emitted.
    */
   jsonSchema?: Record<string, unknown>
 }
@@ -200,8 +205,9 @@ export type Schema<input, output = input> = SyncStandardSchema<input, output> & 
   /**
    * Attach documentation to this schema.
    *
-   * Values are merged with any metadata already present, and survive `pipe`, `refine` and
-   * `transform`.
+   * `title` and `description` are emitted by {@link toJSONSchema}, and `jsonSchema` provides an
+   * explicit fragment for schemas the emitter cannot derive on its own. Values are merged with
+   * any metadata already present, and survive `pipe`, `refine` and `transform`.
    *
    * @param values The metadata to merge
    * @returns A new schema carrying the metadata
@@ -266,6 +272,14 @@ export function createSchema<input, output>(
       vendor: 'data-schema',
       validate(value: unknown, options?: ValidationOptions) {
         return validator(value, { path: [], options })
+      },
+      jsonSchema: {
+        input(options: StandardJSONSchemaV1.Options) {
+          return toJSONSchema(schema, { io: 'input', target: options.target as JSONSchemaTarget })
+        },
+        output(options: StandardJSONSchemaV1.Options) {
+          return toJSONSchema(schema, { io: 'output', target: options.target as JSONSchemaTarget })
+        },
       },
     },
     '~run'(value: unknown, context: ValidationContext) {

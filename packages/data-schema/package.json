@@ -24,6 +24,7 @@
     "./checks": "./src/checks.ts",
     "./coerce": "./src/coerce.ts",
     "./form-data": "./src/form-data.ts",
+    "./json-schema": "./src/json-schema.ts",
     "./lazy": "./src/lazy.ts",
     "./package.json": "./package.json"
   },
@@ -45,6 +46,10 @@
         "types": "./dist/form-data.d.ts",
         "default": "./dist/form-data.js"
       },
+      "./json-schema": {
+        "types": "./dist/json-schema.d.ts",
+        "default": "./dist/json-schema.js"
+      },
       "./lazy": {
         "types": "./dist/lazy.d.ts",
         "default": "./dist/lazy.js"
@@ -56,6 +61,7 @@
     "@remix-run/assert": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
+    "ajv": "^8.17.1",
     "typescript": "catalog:"
   },
   "scripts": {
