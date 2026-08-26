@@ -2065,10 +2065,6 @@ export interface ButtonHTMLProps<
   type?: Trackable<'submit' | 'reset' | 'button' | undefined>
   /** The `value` HTML attribute. */
   value?: Trackable<string | number | undefined>
-
-  // Non-standard Attributes
-  /** Overrides how this button's form submission updates the current history entry. */
-  'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
 }
 
 /**
@@ -2645,10 +2641,6 @@ export interface PartialInputHTMLProps<
   value?: Trackable<string | number | undefined>
   /** The `width` HTML attribute. */
   width?: Trackable<number | string | undefined>
-
-  // Non-standard Attributes
-  /** Overrides how this input's form submission updates the current history entry. */
-  'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
 }
 
 export type InputAriaRoles =

@@ -148,3 +148,108 @@ export const StoreScrollReproduction = clientEntry(
     )
   },
 )
+
+export const NewsletterSignup = clientEntry(
+  import.meta.url,
+  function NewsletterSignup(handle: Handle<{ history?: 'push' | 'replace' }>) {
+    return () => (
+      <section
+        aria-labelledby="newsletter-heading"
+        mix={[
+          panelStyle,
+          css({
+            marginTop: 20,
+            padding: 20,
+            background: 'rgba(34,197,94,0.08)',
+          }),
+        ]}
+      >
+        <h2 id="newsletter-heading" mix={css({ marginTop: 0, fontSize: 20 })}>
+          Newsletter form navigation
+        </h2>
+        <p mix={[leadStyle, css({ lineHeight: 1.6 })]}>
+          This form submits to another URL and redirects back here. Both buttons preserve the
+          current scroll position with <code>data-rmx-reset-scroll="false"</code>. A userland submit
+          handler applies the selected history mode to the form before navigation.
+        </p>
+
+        {handle.props.history ? (
+          <p
+            role="status"
+            mix={css({
+              border: '1px solid rgba(34,197,94,0.45)',
+              borderRadius: 10,
+              padding: 12,
+              color: '#bbf7d0',
+              background: 'rgba(34,197,94,0.12)',
+            })}
+          >
+            Subscribed using a <strong>{handle.props.history}</strong> navigation. The form stayed
+            in view after the redirect.
+          </p>
+        ) : null}
+
+        <form
+          method="post"
+          action={routes.newsletterSignup.href()}
+          data-rmx-reset-scroll="false"
+          mix={[
+            on('submit', (event) => {
+              let history = event.submitter?.getAttribute('value')
+              if (history === 'push' || history === 'replace') {
+                event.currentTarget.setAttribute('data-rmx-history', history)
+              }
+            }),
+            css({ display: 'grid', gap: 12 }),
+          ]}
+        >
+          <label for="newsletter-email" mix={css({ display: 'grid', gap: 6 })}>
+            <span mix={css({ fontWeight: 700 })}>Email address</span>
+            <input
+              id="newsletter-email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+              placeholder="you@example.com"
+              mix={css({
+                width: '100%',
+                maxWidth: 420,
+                boxSizing: 'border-box',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: 10,
+                padding: '10px 12px',
+                color: '#e9eefc',
+                background: 'rgba(255,255,255,0.06)',
+              })}
+            />
+          </label>
+          <div mix={css({ display: 'flex', flexWrap: 'wrap', gap: 10 })}>
+            <button type="submit" name="history" value="push" mix={newsletterButtonStyle}>
+              Subscribe with push
+            </button>
+            <button type="submit" name="history" value="replace" mix={newsletterButtonStyle}>
+              Subscribe with replace
+            </button>
+          </div>
+        </form>
+        <p mix={css({ marginBottom: 0, color: '#9aa8e8', fontSize: 14, lineHeight: 1.5 })}>
+          After a push, Back returns to the previous entry. A replace updates the current entry
+          instead. Neither submission should jump to the top of this page.
+        </p>
+      </section>
+    )
+  },
+)
+
+const newsletterButtonStyle = css({
+  border: '1px solid rgba(255,255,255,0.2)',
+  borderRadius: 10,
+  padding: '10px 14px',
+  color: '#ffffff',
+  background: 'rgba(129,140,248,0.35)',
+  cursor: 'pointer',
+  fontWeight: 700,
+  '&:hover': { background: 'rgba(129,140,248,0.5)' },
+  '&:focus-visible': { outline: '2px solid #a5b4fc', outlineOffset: 2 },
+})
