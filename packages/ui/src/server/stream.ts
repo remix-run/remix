@@ -1326,8 +1326,8 @@ function renderStyleTag(
 }
 
 function escapeStyleText(css: string): string {
-  // A literal "</style" closes an HTML style element even when it appears inside a CSS string.
-  return css.replace(/</g, '\\3C ')
+  // Only neutralize literal style end tags. Escaping every '<' breaks valid range media queries.
+  return css.replace(/<\/style/gi, '\\3C/style')
 }
 
 function buildRmxDataScript(context: RenderContext): string {

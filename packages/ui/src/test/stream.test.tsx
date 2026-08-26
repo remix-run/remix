@@ -676,8 +676,11 @@ describe('stream', () => {
       )
 
       expect(html).not.toContain('</style><script>')
-      expect(html).not.toContain('<script>globalThis.__xss = true</script>')
-      expect(html).toContain('color: \\3C /style>\\3C script>globalThis.__xss = true\\3C /script>')
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      expect(shelf.content.querySelectorAll('script')).toHaveLength(0)
+      expect(html).toContain('\\3C/style><script>globalThis.__xss = true</script><style>')
     })
   })
 
@@ -989,6 +992,22 @@ describe('stream', () => {
       // Should generate media query
       expect(html).toContain('@media (min-width: 768px)')
       expect(html).toContain('font-size: 16px')
+    })
+
+    it('preserves range media query operators in css mixin', async () => {
+      let html = await renderToString(
+        <div
+          mix={[
+            css({
+              '@media (width < 900px)': {
+                display: 'none',
+              },
+            }),
+          ]}
+        />,
+      )
+
+      expect(html).toContain('@media (width < 900px)')
     })
 
     it('merges styles with existing head content', async () => {
