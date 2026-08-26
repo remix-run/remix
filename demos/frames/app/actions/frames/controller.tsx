@@ -3,6 +3,7 @@ import { Frame, css, type RemixNode } from 'remix/ui'
 
 import { Counter } from '../../ui/public/counter.tsx'
 import { ReloadScope } from '../../ui/public/reload-scope.tsx'
+import { ScrollAnchoringList } from '../public/scroll-anchoring.tsx'
 import { ScrollRestorationList } from '../public/scroll-restoration.tsx'
 import { ReloadTime } from './public/reload-time.tsx'
 import { routes } from '../../routes.ts'
@@ -194,6 +195,10 @@ export const framesController = createController(routes.frames, {
       await delay(500)
 
       return renderReloadScopeFrame(context, 'Blocking frame server time')
+    },
+
+    async scrollAnchoringItems(context) {
+      return render(context, <ScrollAnchoringList loadedAt={new Date().toLocaleTimeString()} />)
     },
 
     async scrollRestorationItems(context) {
