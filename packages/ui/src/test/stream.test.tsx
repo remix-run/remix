@@ -90,6 +90,86 @@ describe('stream', () => {
       expect(html).toBe('<div>&lt;script&gt;alert(1)&lt;/script&gt;</div>')
     })
 
+    it('renders script string children as raw text', async () => {
+      let script = 'if (value < 10 && value > 0) console.log("in range")'
+      let html = await drain(renderToStream(<script>{script}</script>))
+
+      expect(html).toBe(`<script>${script}</script>`)
+    })
+
+    it('renders empty script elements', async (t) => {
+      let errorSpy = t.mock.method(console, 'error', () => {})
+      let html = await drain(renderToStream(<script />))
+
+      expect(html).toBe('<script></script>')
+      expect(errorSpy).not.toHaveBeenCalled()
+    })
+
+    it('prevents script string children from terminating the element', async () => {
+      let importMap = {
+        imports: {
+          example: '/example.js?before=a&after=</ScRiPt><script>alert(1)</script>',
+        },
+      }
+      let html = await drain(
+        renderToStream(<script type="importmap">{JSON.stringify(importMap)}</script>),
+      )
+
+      expect(html).toBe(
+        '<script type="importmap">' +
+          '{"imports":{"example":"/example.js?before=a&after=</\\u0053cRiPt><\\u0073cript>alert(1)</\\u0073cript>"}}' +
+          '</script>',
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let scripts = shelf.content.querySelectorAll('script')
+      expect(scripts).toHaveLength(1)
+      expect(JSON.parse(scripts[0]!.textContent!)).toEqual(importMap)
+    })
+
+    it('escapes script prefixes conservatively while preserving non-matching text', async () => {
+      let script =
+        'prescription pre<scription pre<Scription pre</scRipTion pre</ScripTion </ script> </script><script><!-- <script> -->'
+      let html = await drain(renderToStream(<script>{script}</script>))
+
+      expect(html).toBe(
+        '<script>' +
+          'prescription pre<\\u0073cription pre<\\u0053cription pre</\\u0073cRipTion pre</\\u0053cripTion ' +
+          '</ script> </\\u0073cript><\\u0073cript><!-- <\\u0073cript> -->' +
+          '</script>',
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let scripts = shelf.content.querySelectorAll('script')
+      expect(scripts).toHaveLength(1)
+    })
+
+    it('renders SVG script string children as raw text', async () => {
+      let script = 'if (value < 10 && value > 0) console.log("in range")'
+      let html = await drain(
+        renderToStream(
+          <svg>
+            <script>{script}</script>
+          </svg>,
+        ),
+      )
+
+      expect(html).toBe(`<svg><script>${script}</script></svg>`)
+    })
+
+    it('warns and ignores non-string script children', async (t) => {
+      let errorSpy = t.mock.method(console, 'error', () => {})
+      let html = await drain(renderToStream(<script>{['one', 'two']}</script>))
+
+      expect(html).toBe('<script></script>')
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      let error = errorSpy.mock.calls[0]?.arguments[0]
+      invariant(error instanceof Error)
+      expect(error.message).toBe('script elements with children must have a single string child')
+    })
+
     it('renders textarea defaultValue as escaped text content', async () => {
       let stream = renderToStream(<textarea defaultValue={'Hello <Ryan> & friends'} />)
       let html = await drain(stream)

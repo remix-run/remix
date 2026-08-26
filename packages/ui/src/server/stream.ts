@@ -535,6 +535,16 @@ function buildElementSegment(
     return staticSeg(`<${tag}${attrs}>${props.innerHTML}</${tag}>`)
   }
 
+  if (tag === 'script') {
+    if (typeof props.children === 'string') {
+      return staticSeg(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
+    }
+    if (props.children != null) {
+      console.error(new Error('script elements with children must have a single string child'))
+    }
+    return staticSeg(`<${tag}${attrs}></${tag}>`)
+  }
+
   let open = staticSeg(`<${tag}${attrs}>`)
   // Adjust svg context for children: foreignObject switches back to HTML
   let previousInsideSvg = context.insideSvg
@@ -1172,6 +1182,16 @@ function escapeTextContent(str: string): string {
 
 function escapeTemplateContent(html: string): string {
   return html.replace(/<\/template/gi, '<\\/template')
+}
+
+const SCRIPT_TAG_PATTERN = /(<\/|<)(s)(cript)/gi
+
+function escapeScriptTextContent(value: string): string {
+  return value.replace(
+    SCRIPT_TAG_PATTERN,
+    (_match, prefix: string, firstLetter: string, suffix: string) =>
+      `${prefix}${firstLetter === 's' ? '\\u0073' : '\\u0053'}${suffix}`,
+  )
 }
 
 function transformAttributeName(name: string, isSvg: boolean): string {
