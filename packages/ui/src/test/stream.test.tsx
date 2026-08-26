@@ -756,8 +756,11 @@ describe('stream', () => {
       )
 
       expect(html).not.toContain('</style><script>')
-      expect(html).not.toContain('<script>globalThis.__xss = true</script>')
-      expect(html).toContain('color: \\3C /style>\\3C script>globalThis.__xss = true\\3C /script>')
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      expect(shelf.content.querySelectorAll('script')).toHaveLength(0)
+      expect(html).toContain('\\3C/style><script>globalThis.__xss = true</script><style>')
     })
   })
 
@@ -1069,6 +1072,22 @@ describe('stream', () => {
       // Should generate media query
       expect(html).toContain('@media (min-width: 768px)')
       expect(html).toContain('font-size: 16px')
+    })
+
+    it('preserves range media query operators in css mixin', async () => {
+      let html = await renderToString(
+        <div
+          mix={[
+            css({
+              '@media (width < 900px)': {
+                display: 'none',
+              },
+            }),
+          ]}
+        />,
+      )
+
+      expect(html).toContain('@media (width < 900px)')
     })
 
     it('merges styles with existing head content', async () => {
@@ -3490,31 +3509,50 @@ describe('stream', () => {
       expect(done.done).toBe(true)
     })
 
-    it('cancels blocking frame rendering when signal aborts without calling onError', async () => {
+    it('cancels all blocking frames without unhandled rejections', async () => {
       let controller = new AbortController()
       let errors: unknown[] = []
+      let [frameOne, , rejectFrameOne] = withResolvers<string>()
+      let [frameTwo, , rejectFrameTwo] = withResolvers<string>()
+      let unhandledRejections: unknown[] = []
+      let onUnhandledRejection = (event: PromiseRejectionEvent) => {
+        event.preventDefault()
+        unhandledRejections.push(event.reason)
+      }
+      window.addEventListener('unhandledrejection', onUnhandledRejection)
 
-      let stream = renderToStream(<Frame src="/fragments/product" />, {
-        onError(error) {
-          errors.push(error)
-        },
-        resolveFrame: () =>
-          new Promise<string>((_resolve, reject) => {
-            controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
-              once: true,
-            })
-          }),
-        signal: controller.signal,
-      })
+      try {
+        let stream = renderToStream(
+          <div>
+            <Frame src="/fragments/one" />
+            <Frame src="/fragments/two" />
+          </div>,
+          {
+            onError(error) {
+              errors.push(error)
+            },
+            resolveFrame(src) {
+              return src === '/fragments/one' ? frameOne : frameTwo
+            },
+            signal: controller.signal,
+          },
+        )
 
-      let reader = stream.getReader()
-      let read = reader.read()
+        let reader = stream.getReader()
+        let read = reader.read()
 
-      let abortError = new DOMException('This operation was aborted', 'AbortError')
-      controller.abort(abortError)
+        let abortError = new DOMException('This operation was aborted', 'AbortError')
+        controller.abort(abortError)
+        rejectFrameOne(abortError)
+        rejectFrameTwo(abortError)
 
-      await expect(read).resolves.toEqual({ done: true, value: undefined })
-      expect(errors).toEqual([])
+        await expect(read).resolves.toEqual({ done: true, value: undefined })
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        expect(errors).toEqual([])
+        expect(unhandledRejections).toEqual([])
+      } finally {
+        window.removeEventListener('unhandledrejection', onUnhandledRejection)
+      }
     })
 
     it('cancels non-blocking frame rendering when signal aborts without calling onError', async () => {

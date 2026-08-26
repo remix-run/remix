@@ -80,14 +80,17 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
           if (nextMarkerData.status === 'resolved') {
             let nextEnd = findFrameEndMarker(next)
             let nextContent = collectFrameContentFragment(current.ownerDocument, next, nextEnd)
-            void frame.renderMarkerContent(
+            let render = frame.renderMarkerContent(
               { ...nextMarkerData, id: getFrameId(next) },
               nextContent,
               {
                 data: context.data,
                 signal: context.signal,
+                reconciliationTracker: context.reconciliationTracker,
               },
             )
+            if (context.reconciliationTracker) context.reconciliationTracker.waitFor(render)
+            else void render
             return nextEnd
           }
 

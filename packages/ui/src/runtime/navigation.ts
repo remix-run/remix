@@ -36,6 +36,7 @@ interface FormSubmissionNavigationInfo {
 
 interface FrameRedirectNavigationInfo {
   type: typeof frameRedirectNavigationInfoType
+  resetScroll: boolean
 }
 
 const formSubmissionNavigationInfoType = 'frame-form-submission'
@@ -108,7 +109,10 @@ export function startNavigationListenerImpl(
       if (!event.canIntercept || isCrossOriginDestination(event)) return
 
       if (isFrameRedirectNavigationInfo(event.info)) {
-        event.intercept({ async handler() {} })
+        event.intercept({
+          async handler() {},
+          scroll: event.info.resetScroll === false ? 'manual' : undefined,
+        })
         return
       }
 
@@ -127,6 +131,12 @@ export function startNavigationListenerImpl(
       let frame = namedFrame ?? topFrame
 
       let handler = async () => {
+        if (event.signal.aborted) return
+
+        if (event.navigationType === 'traverse' && state.resetScroll) {
+          preserveStartingDocumentScrollState(navigation, event)
+        }
+
         let submission = await runtimeNavigation.getSubmission?.()
         if (event.signal.aborted) return
 
@@ -150,15 +160,16 @@ export function startNavigationListenerImpl(
             state: { ...state, src: redirectedTo },
             info: {
               type: frameRedirectNavigationInfoType,
+              resetScroll: state.resetScroll,
             } satisfies FrameRedirectNavigationInfo,
           })
         }
-
-        let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
-        if (state.resetScroll && isNewEntry) {
-          window.scrollTo(0, 0)
-        }
       }
+
+      let interceptOptions = {
+        handler,
+        scroll: state.resetScroll === false ? 'manual' : undefined,
+      } satisfies NavigationInterceptOptions
 
       if (runtimeNavigation.getSubmission) {
         // <form method="post"> navigations
@@ -168,13 +179,12 @@ export function startNavigationListenerImpl(
 
           // Modern browsers allow you to update the in-flight navigation entry before it's committed
           if (supportsPrecommit) {
-            let interceptOptions: NavigationInterceptOptionsWithPrecommit = {
-              handler,
+            event.intercept({
+              ...interceptOptions,
               precommitHandler(controller) {
                 controller.redirect(event.destination.url, { history: 'replace' })
               },
-            }
-            event.intercept(interceptOptions)
+            })
             return
           }
 
@@ -194,14 +204,14 @@ export function startNavigationListenerImpl(
           }
         }
 
-        event.intercept({ handler })
+        event.intercept(interceptOptions)
       } else {
         // <a>/<form method="get"> navigations
         if (runtimeNavigation.replaceHistory && event.cancelable) {
           event.preventDefault()
           navigation.navigate(event.destination.url, { history: 'replace', state })
         } else {
-          event.intercept({ handler })
+          event.intercept(interceptOptions)
         }
       }
     },
@@ -231,13 +241,57 @@ function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNa
     typeof value === 'object' &&
     value != null &&
     'type' in value &&
-    value.type === frameRedirectNavigationInfoType
+    value.type === frameRedirectNavigationInfoType &&
+    'resetScroll' in value &&
+    typeof value.resetScroll === 'boolean'
   )
 }
 
 function isCrossOriginDestination(event: NavigateEvent): boolean {
   let destination = new URL(event.destination.url)
   return destination.origin !== window.location.origin
+}
+
+function preserveStartingDocumentScrollState(navigation: Navigation, event: NavigateEvent): void {
+  // Full-document reconciliation can temporarily shrink the page or trigger scroll anchoring
+  // before the Navigation API performs its deferred restoration. Preserve the starting scroll
+  // range and position until the navigation finishes so native restoration remains authoritative.
+  // Root scroll height includes page-level effects such as body padding.
+
+  // We think this is a bug in Chromium where they are incorrectly classifying a
+  // DOM-modification-driven scroll change as a user scroll action, causing it to skip restoration
+  // after the transition. The intended user-scroll behavior is tested here:
+  // https://github.com/web-platform-tests/wpt/blob/master/navigation-api/scroll-behavior/after-transition-skips-restore-when-scrolled.html
+
+  let { scrollHeight, clientHeight } = document.documentElement
+  let stylesheet = new CSSStyleSheet()
+  stylesheet.replaceSync(`
+    html {
+      min-height: ${scrollHeight + clientHeight}px !important;
+      overflow-anchor: none !important;
+    }
+
+    body {
+      overflow-anchor: none !important;
+    }
+  `)
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet]
+
+  let cleanedUp = false
+  let cleanup = () => {
+    if (cleanedUp) return
+    cleanedUp = true
+    event.signal.removeEventListener('abort', cleanup)
+    navigation.removeEventListener('navigatesuccess', cleanup)
+    navigation.removeEventListener('navigateerror', cleanup)
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+      (current) => current !== stylesheet,
+    )
+  }
+
+  event.signal.addEventListener('abort', cleanup, { once: true })
+  navigation.addEventListener('navigatesuccess', cleanup, { once: true })
+  navigation.addEventListener('navigateerror', cleanup, { once: true })
 }
 
 function getRuntimeNavigation(

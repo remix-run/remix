@@ -1,0 +1,1 @@
+BREAKING CHANGE: During server rendering, script elements with non-string children previously serialized those children as escaped HTML text. They now render empty and report an error. Pass a single string child, such as `JSON.stringify(value)`, to embed script content without HTML entity escaping. Script-tag sequences that could terminate the element remain escaped.

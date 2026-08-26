@@ -201,6 +201,13 @@ html {
   border-radius: 0;
 }
 
+.api-demo__source .line {
+  position: relative;
+  display: block;
+  min-height: 1lh;
+  white-space: pre;
+}
+
 @media (width < 900px) {
   .api-page-content > h1:first-child,
   .api-page-content > div > h1:first-child {

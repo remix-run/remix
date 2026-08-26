@@ -1,0 +1,1 @@
+Changed the scheduler's cascading update guard to warn when many component updates happen in one event-loop turn and only throw the infinite-loop error when a single component instance repeatedly updates itself. This keeps large `clientEntry` hydration bursts interactive while still surfacing component names and counts for diagnosis.

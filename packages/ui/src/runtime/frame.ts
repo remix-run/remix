@@ -171,7 +171,9 @@ export type FrameRuntime = {
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
-  serverFrameReload: { signal: AbortSignal } | undefined
+  serverFrameReload:
+    | { signal: AbortSignal; reconciliationTracker?: ReconciliationTracker }
+    | undefined
   reloadForNavigation?: (options?: FrameReloadOptions) => Promise<FrameReloadResult>
 }
 
@@ -216,6 +218,7 @@ export type FrameContext = {
   regionParent?: ParentNode | null
   signal?: AbortSignal
   shouldPreserveHeadNode?: (node: Node) => boolean
+  reconciliationTracker?: ReconciliationTracker
 }
 
 type FrameInit = {
@@ -261,7 +264,7 @@ export type Frame = {
 
 type RenderOptions = {
   flushKind?: FlushKind
-  initialHydrationTracker?: InitialHydrationTracker
+  reconciliationTracker?: ReconciliationTracker
   signal?: AbortSignal
   contentStatus?: 'pending' | 'resolved'
   data?: RmxData
@@ -399,7 +402,22 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       }
 
       if (isRenderAborted(options.signal)) return
-      contentRoot.render(content)
+      let previousServerFrameReload = runtime.serverFrameReload
+      if (options.signal) {
+        runtime.serverFrameReload = {
+          signal: options.signal,
+          reconciliationTracker: options.reconciliationTracker,
+        }
+      }
+
+      try {
+        contentRoot.render(content)
+        await new Promise<void>((resolve) => context.scheduler.enqueueCommitPhase([resolve]))
+      } finally {
+        runtime.serverFrameReload = previousServerFrameReload
+      }
+
+      if (isRenderAborted(options.signal)) return
       displayedContentStatus = options.contentStatus ?? 'resolved'
       return
     }
@@ -433,7 +451,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       consumeClientEntryResources(parsed)
       let responseData = options.data
       mergeRmxDataFromDocument(responseData, parsed)
-      let responseContext = { ...context, data: responseData }
+      let responseContext = {
+        ...context,
+        data: responseData,
+        reconciliationTracker: options.reconciliationTracker,
+      }
       context.styleManager.adoptServerStyles(
         collectFrameServerStyleTags(createElementContainer(parsed)),
       )
@@ -459,7 +481,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       scheduleHydrationInContainer(
         bodyContainer,
         responseContext,
-        options.initialHydrationTracker,
+        options.reconciliationTracker,
         options.signal,
       )
       await createSubFrames(bodyContainer.childNodes, responseContext, options)
@@ -477,7 +499,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     removeEmptyHeads(fragment)
     let responseData = options.data
     mergeRmxDataFromFragment(responseData, fragment)
-    let responseContext = { ...context, data: responseData }
+    let responseContext = {
+      ...context,
+      data: responseData,
+      reconciliationTracker: options.reconciliationTracker,
+    }
 
     let nextContainer = createContainer(fragment)
 
@@ -490,11 +516,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       signal: options.signal,
     })
 
-    if (isRenderAborted(options.signal)) return
     scheduleHydrationInContainer(
       container,
       responseContext,
-      options.initialHydrationTracker,
+      options.reconciliationTracker,
       options.signal,
     )
     await createSubFrames(container.childNodes, responseContext, options)
@@ -544,11 +569,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   async function hydrateInitial(): Promise<void> {
-    let initialHydrationTracker = createInitialHydrationTracker()
+    let reconciliationTracker = createReconciliationTracker()
 
     context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
     let subFramesReady = createSubFrames(container.childNodes, context)
-    scheduleHydrationInContainer(container, context, initialHydrationTracker)
+    scheduleHydrationInContainer(container, context, reconciliationTracker)
 
     try {
       await subFramesReady
@@ -556,11 +581,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (disposed || context.lifecycleSignal.aborted) return
 
       if (currentMarker?.status === 'pending') {
-        await watchPendingFrameTemplate(currentMarker, initialHydrationTracker)
+        await watchPendingFrameTemplate(currentMarker, reconciliationTracker)
       }
 
-      initialHydrationTracker.finalize()
-      await initialHydrationTracker.ready()
+      reconciliationTracker.finalize()
+      await reconciliationTracker.ready()
     } finally {
       clearRmxData(context.data)
     }
@@ -627,7 +652,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (marker.status === 'pending') {
       await watchPendingFrameTemplate(
         marker,
-        options?.initialHydrationTracker,
+        options?.reconciliationTracker,
         options?.signal,
         isInheritedReload
           ? () => {
@@ -748,7 +773,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (reloadController !== controller || controller.signal.aborted) {
         return { signal: controller.signal }
       }
-      await render(content, { signal: controller.signal })
+      let reconciliationTracker = createReconciliationTracker()
+      await render(content, {
+        signal: controller.signal,
+        reconciliationTracker,
+      })
+      reconciliationTracker.finalize()
+      await reconciliationTracker.ready()
       return {
         signal: controller.signal,
         redirectedTo:
@@ -837,7 +868,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   async function watchPendingFrameTemplate(
     marker: FrameMarkerData,
-    initialHydrationTracker?: InitialHydrationTracker,
+    reconciliationTracker?: ReconciliationTracker,
     signal?: AbortSignal,
     onResolved?: () => void,
   ): Promise<void> {
@@ -850,7 +881,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let early = consumeFrameTemplate(marker.id) ?? getEarlyFrameContent(marker.id)
     if (early) {
       clearPendingFrameTemplateWatch()
-      await render(early, { initialHydrationTracker, signal, contentStatus: 'resolved' })
+      await render(early, { reconciliationTracker, signal, contentStatus: 'resolved' })
       if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
       return
     }
@@ -884,7 +915,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let buffered = consumeFrameTemplate(marker.id)
     if (buffered) {
       clearPendingFrameTemplateWatch()
-      await render(buffered, { initialHydrationTracker, signal, contentStatus: 'resolved' })
+      await render(buffered, { reconciliationTracker, signal, contentStatus: 'resolved' })
       if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
     }
   }
@@ -922,42 +953,60 @@ export function createFrameRuntime(init: {
   }
 }
 
-type InitialHydrationTracker = {
+export type ReconciliationTracker = {
   track: () => () => void
+  waitFor: (task: Promise<void>) => void
   finalize: () => void
   ready: () => Promise<void>
 }
 
-function createInitialHydrationTracker(): InitialHydrationTracker {
+function createReconciliationTracker(): ReconciliationTracker {
   let pending = 0
   let finalized = false
+  let failed = false
+  let failure: unknown
 
   let resolveReady: (() => void) | undefined
-  let readyPromise = new Promise<void>((resolve) => {
+  let rejectReady: ((error: unknown) => void) | undefined
+  let readyPromise = new Promise<void>((resolve, reject) => {
     resolveReady = resolve
+    rejectReady = reject
   })
 
-  function maybeResolve() {
-    if (finalized && pending === 0) {
-      resolveReady?.()
-      resolveReady = undefined
+  function maybeSettle() {
+    if (!finalized || pending !== 0) return
+    if (failed) rejectReady?.(failure)
+    else resolveReady?.()
+    resolveReady = undefined
+    rejectReady = undefined
+  }
+
+  function track(): () => void {
+    pending++
+    let completed = false
+    return () => {
+      if (completed) return
+      completed = true
+      pending--
+      maybeSettle()
     }
   }
 
   return {
-    track() {
-      pending++
-      let completed = false
-      return () => {
-        if (completed) return
-        completed = true
-        pending--
-        maybeResolve()
-      }
+    track,
+    waitFor(task) {
+      let complete = track()
+      void task.then(complete, (error) => {
+        if (!failed) {
+          failed = true
+          failure = error
+        }
+        complete()
+      })
     },
     finalize() {
       finalized = true
-      maybeResolve()
+      maybeSettle()
     },
     ready() {
       return readyPromise
@@ -1061,7 +1110,7 @@ function copyOwnRmxEntries<T>(target: Record<string, T>, source: Record<string, 
 function scheduleHydrationInContainer(
   container: FrameContainer,
   context: FrameContext,
-  initialHydrationTracker?: InitialHydrationTracker,
+  reconciliationTracker?: ReconciliationTracker,
   signal?: AbortSignal,
 ): void {
   let hydrationMarkers = findHydrationMarkers(container)
@@ -1073,7 +1122,7 @@ function scheduleHydrationInContainer(
   for (let marker of hydrationMarkers) {
     let entry = hydrationData[marker.id]
     if (!entry) continue
-    scheduleHydrationMarker(marker, entry, context, initialHydrationTracker, signal)
+    scheduleHydrationMarker(marker, entry, context, reconciliationTracker, signal)
   }
 }
 
@@ -1081,12 +1130,12 @@ function scheduleHydrationMarker(
   marker: HydrationMarker,
   entry: HydrationData,
   context: FrameContext,
-  initialHydrationTracker?: InitialHydrationTracker,
+  reconciliationTracker?: ReconciliationTracker,
   signal?: AbortSignal,
 ): void {
   if (signal?.aborted || context.lifecycleSignal.aborted) return
 
-  let done = initialHydrationTracker?.track()
+  let done = reconciliationTracker?.track()
   let key = `${entry.moduleUrl}#${entry.exportName}`
   let identity: ClientEntryIdentity = {
     moduleUrl: entry.moduleUrl,
@@ -1228,30 +1277,40 @@ function hydrateRegion(
 
   context.pendingClientEntries.delete(start)
 
-  // The same marker can be discovered by overlapping hydration passes
-  // (for example, document root + nested frame root). Reuse the existing
-  // virtual root instead of redefining the marker property.
-  let owner = getClientEntryBoundaryOwner(start)
-  if (owner) {
+  // During a server frame reload, expose the reload signal and reconciliation
+  // tracker to client frames created while this entry renders so blocking
+  // frames keep the reload pending until their content arrives.
+  let renderEntry = (root: Pick<VirtualRoot, 'render'>) => {
     if (!signal) {
-      owner.root.render(vElement)
+      root.render(vElement)
       return
     }
 
     let frameRuntime = context.frame.$runtime
     invariant(
       isFrameRuntime(frameRuntime),
-      'Expected frame runtime while rendering a preserved client entry',
+      'Expected frame runtime while rendering a client entry during a reload',
     )
 
     let previousServerFrameReload = frameRuntime.serverFrameReload
 
-    frameRuntime.serverFrameReload = { signal }
+    frameRuntime.serverFrameReload = {
+      signal,
+      reconciliationTracker: context.reconciliationTracker,
+    }
     try {
-      owner.root.render(vElement)
+      root.render(vElement)
     } finally {
       frameRuntime.serverFrameReload = previousServerFrameReload
     }
+  }
+
+  // The same marker can be discovered by overlapping hydration passes
+  // (for example, document root + nested frame root). Reuse the existing
+  // virtual root instead of redefining the marker property.
+  let owner = getClientEntryBoundaryOwner(start)
+  if (owner) {
+    renderEntry(owner.root)
     return
   }
 
@@ -1266,7 +1325,7 @@ function hydrateRegion(
   })
 
   setClientEntryBoundaryOwner(start, identity, root)
-  root.render(vElement)
+  renderEntry(root)
 }
 
 async function createSubFrames(
@@ -1314,6 +1373,9 @@ async function createSubFrames(
             namedFrames: context.namedFrames,
           })
           context.frameInstances.set(node, subFrame)
+          if (frameMarker.status === 'resolved') {
+            tasks.push(subFrame.ready())
+          }
         }
       }
 

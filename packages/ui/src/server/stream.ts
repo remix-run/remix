@@ -516,7 +516,7 @@ function buildFrameSegment(
     framePromise.catch(() => {})
     context.pendingFrames.push({ frameId, promise: framePromise })
   } else {
-    seg.pending = Promise.resolve(
+    let framePromise = Promise.resolve(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
     ).then(async (resolved) => {
       let { html, tail } = await resolveFrameHtml(resolved)
@@ -526,6 +526,9 @@ function buildFrameSegment(
         context.blockingFrameTails.push(tail)
       }
     })
+    // An earlier blocking frame may reject before this promise is awaited.
+    framePromise.catch(() => {})
+    seg.pending = framePromise
   }
 
   return seg
@@ -1445,8 +1448,8 @@ function renderStyleTag(
 }
 
 function escapeStyleText(css: string): string {
-  // A literal "</style" closes an HTML style element even when it appears inside a CSS string.
-  return css.replace(/</g, '\\3C ')
+  // Only neutralize literal style end tags. Escaping every '<' breaks valid range media queries.
+  return css.replace(/<\/style/gi, '\\3C/style')
 }
 
 function buildRmxDataScript(context: RenderContext): string {

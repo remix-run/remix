@@ -1,4 +1,4 @@
-import { clientEntry } from 'remix/ui'
+import { clientEntry, navigate } from 'remix/ui'
 import type { Handle } from 'remix/ui'
 
 interface DocsShellBehaviorProps {
@@ -9,6 +9,7 @@ interface DocsShellBehaviorProps {
 interface DocsShellBehaviorOptions {
   navigationName: string
   navigationCompleteTarget?: EventTarget
+  navigateTo?: (href: string) => void | Promise<void>
 }
 
 type MobilePanel = 'navigation' | 'secondary'
@@ -33,6 +34,7 @@ export function startDocsShellBehavior(
   options: DocsShellBehaviorOptions,
 ): void {
   let root = document.documentElement
+  let brand = document.getElementById('docs-brand')
   let siteNavigation = document.getElementById('site-primary-navigation')
   let navigation = document.getElementById('docs-navigation')
   let navigationToggle = document.getElementById('docs-navigation-toggle')
@@ -53,6 +55,7 @@ export function startDocsShellBehavior(
 
   updateShellState()
 
+  brand?.addEventListener('contextmenu', openBrandPage, { signal })
   navigationToggle?.addEventListener('click', toggleNavigation, { signal })
   mobileNavigationToggle?.addEventListener('click', toggleMobileNavigation, { signal })
   mobileSecondaryNavigationToggle?.addEventListener('click', toggleMobileSecondaryNavigation, {
@@ -96,6 +99,11 @@ export function startDocsShellBehavior(
     setNavigationCollapsed(navigationCollapsed)
     updateMobileNavigationTop()
     syncMobileNavigation()
+  }
+
+  function openBrandPage(event: MouseEvent) {
+    event.preventDefault()
+    void (options.navigateTo ?? navigate)('https://remix.run/brand')
   }
 
   function toggleNavigation() {
