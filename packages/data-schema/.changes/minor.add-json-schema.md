@@ -1,0 +1,3 @@
+Add `@remix-run/data-schema/json-schema` with `toJSONSchema()`, which converts a schema into a JSON Schema 2020-12 document (`draft-07` is also supported). Every schema also implements the [Standard JSON Schema v1](https://standardschema.dev/json-schema) interface through `~standard.jsonSchema`.
+
+Schemas with no sound representation throw a `JSONSchemaError` naming the path instead of dropping the constraint. Use the new `schema.meta({ title, description, jsonSchema })` to document a schema, or to supply an explicit fragment for those cases. Schemas now also carry a `~def` describing how they were built, for introspection.
