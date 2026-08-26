@@ -1,5 +1,5 @@
 import type { ErrorAttributes, FormRawValue } from 'remix/data-schema/form'
-import { clientEntry } from 'remix/ui'
+import { clientEntry, on } from 'remix/ui'
 import type { Handle } from 'remix/ui'
 import button from 'remix/ui/button'
 import checkbox from 'remix/ui/checkbox'
@@ -9,6 +9,8 @@ import input from 'remix/ui/input'
 import { RegistrationForm } from '../actions/registration/registration-form.ts'
 import * as styles from '../actions/registration/styles.ts'
 import { routes } from '../routes.ts'
+
+const validateDisplayName = RegistrationForm.createInputValidator('displayName')
 
 export const RegistrationFields = clientEntry(
   import.meta.url,
@@ -53,7 +55,11 @@ export const RegistrationFields = clientEntry(
                   {...RegistrationForm.getInputAttrs('displayName', submission)}
                   autoComplete="name"
                   placeholder="Ada Lovelace"
-                  mix={[input(), styles.control]}
+                  mix={[
+                    input(),
+                    styles.control,
+                    on('input', (event) => validateDisplayName(event.currentTarget)),
+                  ]}
                 />
                 <FieldErrors
                   attrs={RegistrationForm.getErrorAttrs('displayName')}

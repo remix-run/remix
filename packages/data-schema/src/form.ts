@@ -12,5 +12,6 @@ export type {
   FormSubmission,
   FormSuccess,
   InputAttributes,
+  InputValidationTarget,
   LabelAttributes,
 } from './lib/form.ts'

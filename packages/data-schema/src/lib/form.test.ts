@@ -255,4 +255,77 @@ describe('createForm', () => {
     assert.deepEqual(result.values, {})
     assert.equal(CredentialsForm.getInputAttrs('password', result).defaultValue, undefined)
   })
+
+  it('sets and clears custom validity from field schema issues', () => {
+    let Profile = s.object({
+      username: s.string().refine((value) => value.startsWith('@'), 'Start with @'),
+    })
+    let ProfileForm = createForm(Profile, {
+      fields: { username: { label: 'Username', type: 'text' } },
+    })
+    let validationMessage = ''
+    let input = {
+      value: 'ada',
+      checked: false,
+      setCustomValidity(message: string) {
+        validationMessage = message
+      },
+    }
+    let validateUsername = ProfileForm.createInputValidator('username')
+
+    validateUsername(input)
+    assert.equal(validationMessage, 'Start with @')
+
+    input.value = '@ada'
+    validateUsername(input)
+    assert.equal(validationMessage, '')
+  })
+
+  it('uses form decoding for number and ancillary checkbox validators', () => {
+    let Preferences = s.object({
+      age: s.number().refine((value) => value >= 18, 'Must be at least 18'),
+    })
+    let PreferencesForm = createForm(Preferences, {
+      fields: {
+        age: { label: 'Age', type: 'number' },
+        terms: {
+          label: 'Accept the terms',
+          type: 'checkbox',
+          schema: s.literal(true),
+        },
+      },
+    })
+    let ageValidationMessage = ''
+    let ageInput = {
+      value: '17',
+      checked: false,
+      setCustomValidity(message: string) {
+        ageValidationMessage = message
+      },
+    }
+    let termsValidationMessage = ''
+    let termsInput = {
+      value: 'on',
+      checked: false,
+      setCustomValidity(message: string) {
+        termsValidationMessage = message
+      },
+    }
+    let validateAge = PreferencesForm.createInputValidator('age')
+    let validateTerms = PreferencesForm.createInputValidator('terms')
+
+    validateAge(ageInput)
+    validateTerms(termsInput)
+
+    assert.equal(ageValidationMessage, 'Must be at least 18')
+    assert.equal(termsValidationMessage, 'Expected literal value')
+
+    ageInput.value = '18'
+    termsInput.checked = true
+    validateAge(ageInput)
+    validateTerms(termsInput)
+
+    assert.equal(ageValidationMessage, '')
+    assert.equal(termsValidationMessage, '')
+  })
 })

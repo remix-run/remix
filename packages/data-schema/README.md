@@ -158,10 +158,12 @@ The same form definition produces low-level attribute bags. Markup remains appli
 
 ```tsx
 import type { FormFailure } from 'remix/data-schema/form'
-import type { Handle } from 'remix/ui'
+import { on, type Handle } from 'remix/ui'
 import checkbox from 'remix/ui/checkbox'
 import { form as formValidation } from 'remix/ui/form'
 import input from 'remix/ui/input'
+
+let validateEmail = AccountForm.createInputValidator('email')
 
 function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
   return () => {
@@ -178,7 +180,7 @@ function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
         <input
           {...AccountForm.getInputAttrs('email', submission)}
           autoComplete="email"
-          mix={input()}
+          mix={[input(), on('input', (event) => validateEmail(event.currentTarget))]}
         />
         {emailError ? <p {...AccountForm.getErrorAttrs('email')}>{emailError}</p> : null}
 
@@ -195,9 +197,9 @@ function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
 }
 ```
 
-The browser blocks invalid submissions with the Constraint Validation API even when JavaScript is disabled. With JavaScript, `formValidation()` marks a field after its first blur and updates its native validity state as the user types. Do not add `noValidate` unless the application intentionally opts out of native validation.
+The browser blocks invalid submissions with the Constraint Validation API even when JavaScript is disabled. With JavaScript, `createInputValidator()` runs the original field schema against the input's current value and sets the first schema issue through `setCustomValidity()`. `formValidation()` marks a field after its first blur and updates its accessible invalid state as the user types. Do not add `noValidate` unless the application intentionally opts out of native validation.
 
-The first release maps field-level `required`, `minLength`, `maxLength`, `min`, and `max` constraints to native attributes. Other refinements still run on the server. Whole-object, cross-field, and asynchronous form rules are not part of the projection yet and should be applied in the server handler.
+The first release maps field-level `required`, `minLength`, `maxLength`, `min`, and `max` constraints to native attributes. Other synchronous field refinements can use `createInputValidator()` for client-side feedback and still run authoritatively during server parsing. Whole-object, cross-field, and asynchronous form rules are not part of the projection yet and should be applied in the server handler.
 
 You can also customize built-in validation messages with `errorMap`:
 

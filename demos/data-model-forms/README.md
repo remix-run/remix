@@ -8,6 +8,7 @@ The registration flow demonstrates:
 - adding request-only password and terms fields with their own schemas
 - spreading low-level helpers directly onto native labels, inputs, and error elements
 - blocking invalid submissions with the browser Constraint Validation API
+- applying a model refinement through native custom validity as the user types
 - showing invalid state after blur and updating it as the user types
 - returning a populated form with server errors after a failed POST
 - validating database writes with the same field schemas used by the form
@@ -38,7 +39,10 @@ import { createForm } from 'remix/data-schema/form'
 
 let Account = s.object({
   id: s.string(),
-  displayName: s.string().pipe(minLength(2)),
+  displayName: s
+    .string()
+    .pipe(minLength(2))
+    .refine((value) => value.trim() === value, 'Remove leading or trailing spaces'),
   email: s.string().pipe(email()),
 })
 
@@ -96,15 +100,21 @@ The page owns its DOM structure and applies the generated attributes directly:
 
 ```tsx
 import input from 'remix/ui/input'
+import { on } from 'remix/ui'
 
-<label {...RegistrationForm.getLabelAttrs('email')}>
-  {RegistrationForm.fields.email.label}
-  {RegistrationForm.fields.email.required ? <span>Required</span> : null}
+let validateDisplayName = RegistrationForm.createInputValidator('displayName')
+
+<label {...RegistrationForm.getLabelAttrs('displayName')}>
+  {RegistrationForm.fields.displayName.label}
+  {RegistrationForm.fields.displayName.required ? <span>Required</span> : null}
 </label>
 <input
-  {...RegistrationForm.getInputAttrs('email', submission)}
-  autoComplete="email"
-  mix={input()}
+  {...RegistrationForm.getInputAttrs('displayName', submission)}
+  autoComplete="name"
+  mix={[
+    input(),
+    on('input', (event) => validateDisplayName(event.currentTarget)),
+  ]}
 />
 ```
 
@@ -161,9 +171,9 @@ return redirect(routes.registration.index.href(), 303)
 
 The redirect makes the successful flow POST-redirect-GET. The following GET queries SQLite and renders every stored account, proving that the form payload reached the persistent data layer without retaining the raw password.
 
-The form controls live inside a small `clientEntry()` component so the `form()` mixin can attach its blur and input listeners. Everything still renders on the server first. If JavaScript is unavailable, the same native constraints block invalid submissions and the server returns the same accessible error markup.
+The form controls live inside a small `clientEntry()` component so the `form()` mixin can attach its blur and input listeners. `createInputValidator()` reuses the configured field's schema and input decoder, then reports the first issue through the input's native `setCustomValidity()` method. The form mixin only presents that invalid state after the field has blurred once. Everything still renders on the server first. If JavaScript is unavailable, native constraints still block representable errors and the server returns accessible error markup for every schema issue.
 
-Try `a@b` as the email address to see the server-error path: browsers accept it as a native email value, while the data model's email rule requires a dotted domain. The returned page keeps the email and checkbox state, highlights the email error, and leaves the password blank.
+With JavaScript enabled, add a leading or trailing space to the display name to see its non-native model refinement participate in client-side constraint validation. Try `a@b` as the email address to see the server-error path: browsers accept it as a native email value, while the data model's email rule requires a dotted domain. The returned page keeps the email and checkbox state, highlights the email error, and leaves the password blank.
 
 ## Verify the demo
 

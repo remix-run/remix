@@ -137,6 +137,18 @@ export interface ErrorAttributes {
   id: string
 }
 
+/**
+ * The native input state used for client-side schema validation.
+ */
+export interface InputValidationTarget {
+  /** The input's current string value. */
+  readonly value: string
+  /** Whether a checkbox input is currently checked. */
+  readonly checked: boolean
+  /** Sets or clears the input's custom Constraint Validation API message. */
+  setCustomValidity(message: string): void
+}
+
 type AnyFormFieldOptions = FormFieldOptions | AncillaryFormFieldOptions<Schema<any, unknown>>
 
 type FormFields = Record<string, AnyFormFieldOptions>
@@ -213,6 +225,19 @@ export interface FormDefinition<shape extends ObjectShape, fields extends FormFi
     field: field,
     submission?: FormSubmission,
   ): ReadonlyArray<string>
+  /**
+   * Creates a synchronous client-side validator for one projected field.
+   *
+   * The validator decodes the current input state just like {@link parse} and sets the first schema
+   * issue as the input's custom Constraint Validation API message. A valid value clears any prior
+   * custom message.
+   *
+   * @param field The projected field name.
+   * @returns A validator that accepts a native input or compatible input state.
+   */
+  createInputValidator<field extends keyof fields & string>(
+    field: field,
+  ): (input: InputValidationTarget) => void
   /**
    * Decodes submitted values according to their input types and validates them with the model.
    *
@@ -305,6 +330,18 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
     },
     getFieldErrors(field, submission) {
       return readFieldErrors(field, submission)
+    },
+    createInputValidator(field) {
+      let fieldOptions = getFieldOptions(fields, field)
+      let schema = getFieldSchema(model, field, fieldOptions)
+
+      return (input) => {
+        let rawValue = fieldOptions.type === 'checkbox' ? input.checked : input.value
+        let value = decodeFormValue(rawValue, fieldOptions.type)
+        let result = schema['~run'](value, { path: [field] })
+
+        input.setCustomValidity(result.issues?.[0]?.message ?? '')
+      }
     },
     parse(formData) {
       let issues: Issue[] = []
