@@ -61,6 +61,24 @@ async function renderFrameContent(content: RemixNode): Promise<string> {
   return await drain(renderToStream(content))
 }
 
+function waitForElement(
+  selector: string,
+  predicate: (element: Element) => boolean = () => true,
+): Promise<Element> {
+  let element = document.querySelector(selector)
+  if (element && predicate(element)) return Promise.resolve(element)
+
+  return new Promise((resolve) => {
+    let observer = new MutationObserver(() => {
+      let element = document.querySelector(selector)
+      if (!element || !predicate(element)) return
+      observer.disconnect()
+      resolve(element)
+    })
+    observer.observe(document.documentElement, { childList: true, subtree: true })
+  })
+}
+
 function createDisposableEntry(id: string, onDispose: () => void) {
   return clientEntry(id, function Entry(handle: Handle) {
     handle.signal.addEventListener('abort', onDispose)
@@ -1112,11 +1130,13 @@ describe('run', () => {
     let aSelector = findClassByPrefix(document, 'entry-a')
     invariant(aSelector, 'expected SSR markup to carry an rmxc-* class for entry-a')
 
+    let [bModuleRequested, markBModuleRequested] = withResolvers<void>()
     let [bModuleGate, allowBModule] = withResolvers<void>()
     let app = run({
       async loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/js/entry-a.js' && exportName === 'EntryA') return EntryA
         if (moduleUrl === '/js/entry-b.js' && exportName === 'EntryB') {
+          markBModuleRequested()
           await bModuleGate
           return EntryB
         }
@@ -1135,7 +1155,11 @@ describe('run', () => {
     // before hydration makes it interactive.
     let topFrame = app.frames.top
     topFrame.src = '/b'
-    await topFrame.reload()
+    let reloadSettled = false
+    let reloadPromise = topFrame.reload().then(() => {
+      reloadSettled = true
+    })
+    await bModuleRequested
 
     // Pull EntryB's hashed selector from the SSR markup that replaceServerStyles
     // just adopted into adoptedStyleSheets.
@@ -1147,10 +1171,11 @@ describe('run', () => {
     expect(document.getElementById('entry-a')).toBeNull()
     expect(document.getElementById('entry-b')).not.toBeNull()
     expect(rulePresent(bSelectorFromB)).toBe(true)
+    expect(reloadSettled).toBe(false)
 
     // Allow the module load to finish and hydrate the destination SSR.
     allowBModule()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await reloadPromise
 
     expect(document.getElementById('entry-a')).toBeNull()
     expect(document.getElementById('entry-b')).not.toBeNull()
@@ -1388,7 +1413,10 @@ describe('run', () => {
 
   it('shows updated SSR when reloading an entry whose initial module is still loading', async () => {
     let reloadPromise: Promise<AbortSignal> | undefined
+    let markFastHydrated: (() => void) | undefined
     let Fast = clientEntry('/js/partial-fast.js#Fast', function Fast(handle: Handle) {
+      markFastHydrated?.()
+      markFastHydrated = undefined
       return () => (
         <button
           id="partial-fast"
@@ -1424,6 +1452,8 @@ describe('run', () => {
     )
     document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
 
+    let [fastHydrated, resolveFastHydrated] = withResolvers<void>()
+    markFastHydrated = resolveFastHydrated
     let [slowModulePromise, resolveSlowModule] = withResolvers<Function>()
     let slowLoadCount = 0
     let app = run({
@@ -1442,7 +1472,7 @@ describe('run', () => {
     })
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await fastHydrated
 
       let fastButton = document.getElementById('partial-fast')
       invariant(fastButton instanceof HTMLButtonElement)
@@ -1450,18 +1480,27 @@ describe('run', () => {
       invariant(initialSlow instanceof HTMLParagraphElement)
 
       app.frames.top.src = '/reloaded'
+      let reloadedSlowReady = waitForElement(
+        '#partial-slow',
+        (element) => element !== initialSlow && element.textContent === 'Reloaded',
+      )
       fastButton.click()
       invariant(reloadPromise)
-      await reloadPromise
+      let reloadSettled = false
+      void reloadPromise.then(() => {
+        reloadSettled = true
+      })
+      await reloadedSlowReady
 
       let reloadedSlow = document.getElementById('partial-slow')
       invariant(reloadedSlow instanceof HTMLParagraphElement)
       expect(reloadedSlow).not.toBe(initialSlow)
       expect(reloadedSlow.textContent).toBe('Reloaded')
       expect(slowLoadCount).toBe(1)
+      expect(reloadSettled).toBe(false)
 
       resolveSlowModule(Slow)
-      await app.ready()
+      await Promise.all([reloadPromise, app.ready()])
       expect(document.getElementById('partial-slow')?.textContent).toBe('Reloaded')
     } finally {
       app.dispose()
@@ -1517,17 +1556,26 @@ describe('run', () => {
       invariant(targetFrame)
 
       targetFrame.src = '/reloaded'
-      await targetFrame.reload()
+      let reloadedSlowReady = waitForElement(
+        '#named-partial-slow',
+        (element) => element !== initialSlow && element.textContent === 'Reloaded',
+      )
+      let reloadSettled = false
+      let reloadPromise = targetFrame.reload().then(() => {
+        reloadSettled = true
+      })
+      await reloadedSlowReady
 
       let reloadedSlow = document.getElementById('named-partial-slow')
       invariant(reloadedSlow instanceof HTMLParagraphElement)
       expect(reloadedSlow).not.toBe(initialSlow)
       expect(reloadedSlow.textContent).toBe('Reloaded')
       expect(slowLoadCount).toBe(1)
+      expect(reloadSettled).toBe(false)
 
       let setupCountBeforeHydration = entrySetupCount
       resolveSlowModule(Slow)
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await reloadPromise
 
       expect(document.getElementById('named-partial-slow')?.textContent).toBe('Reloaded')
       expect(entrySetupCount).toBe(setupCountBeforeHydration + 1)
@@ -2306,6 +2354,118 @@ describe('run', () => {
       { src: firstTargetSrc, target: 'target' },
       { src: secondTargetSrc, target: 'target' },
     ])
+  })
+
+  it('restores traversal scroll after a preserved entry resolves a blocking frame', async (t) => {
+    let initialUrl = window.location.href
+    let initialEntryKey = window.navigation.currentEntry?.key
+    let listUrl = new URL('/scroll-list', initialUrl).href
+    let detailUrl = new URL('/scroll-detail', initialUrl).href
+    window.history.replaceState(null, '', listUrl)
+
+    let StoreEntry = clientEntry(
+      '/js/scroll-store.js#ScrollStore',
+      function ScrollStore(handle: Handle<{ variant: 'list' | 'detail' }>) {
+        let showItems = false
+
+        return () =>
+          handle.props.variant === 'list' ? (
+            <main id="scroll-list-page">
+              <button
+                id="show-scroll-list-items"
+                type="button"
+                mix={on('click', () => {
+                  showItems = true
+                  handle.update()
+                })}
+              >
+                Show list items
+              </button>
+              {showItems ? <Frame src="/list-items" /> : <p>List items hidden</p>}
+            </main>
+          ) : (
+            <main id="scroll-detail-page" style={{ display: 'block', height: '1000px' }}>
+              Detail
+            </main>
+          )
+      },
+    )
+
+    async function renderStoreDocument(variant: 'list' | 'detail') {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <StoreEntry variant={variant} />
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderStoreDocument('list'),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let listItemsContent = '<div id="scroll-list-items" style="height:4000px"></div>'
+    let [deferredListItems, resolveDeferredListItems] = withResolvers<string>()
+    let [deferredListItemsRequested, markDeferredListItemsRequested] = withResolvers<void>()
+    let listItemsRequestCount = 0
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/scroll-store.js' && exportName === 'ScrollStore') return StoreEntry
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        let pathname = new URL(src, window.location.href).pathname
+        if (pathname === '/scroll-list') return await renderStoreDocument('list')
+        if (pathname === '/scroll-detail') return await renderStoreDocument('detail')
+        if (pathname === '/list-items') {
+          listItemsRequestCount++
+          if (listItemsRequestCount === 1) return listItemsContent
+          markDeferredListItemsRequested()
+          return await deferredListItems
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    t.after(async () => {
+      resolveDeferredListItems(listItemsContent)
+      if (initialEntryKey && window.navigation.currentEntry?.key !== initialEntryKey) {
+        await window.navigation.traverseTo(initialEntryKey).finished
+      }
+      app.dispose()
+      window.history.replaceState(null, '', initialUrl)
+      window.scrollTo(0, 0)
+    })
+
+    await app.ready()
+    let initialListItems = waitForElement('#scroll-list-items')
+    let showItemsButton = document.getElementById('show-scroll-list-items')
+    invariant(showItemsButton instanceof HTMLButtonElement)
+    showItemsButton.click()
+    app.flush()
+    await initialListItems
+
+    window.scrollTo(0, 2500)
+    expect(window.scrollY).toBe(2500)
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+    await navigate(detailUrl)
+    expect(document.getElementById('scroll-detail-page')?.textContent).toContain('Detail')
+
+    let backNavigation = window.navigation.back().finished
+    await deferredListItemsRequested
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    resolveDeferredListItems(listItemsContent)
+    await backNavigation
+
+    expect(document.getElementById('scroll-list-items')).not.toBe(null)
+    expect(window.scrollY).toBe(2500)
   })
 
   it('dispatches reloadStart and reloadComplete events for handle.frame and handle.frames.get(name)', async () => {
