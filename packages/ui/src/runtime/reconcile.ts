@@ -1203,7 +1203,10 @@ function resolveClientFrame(
       state.fallbackRoot?.dispose()
       state.fallbackRoot = undefined
       let nextContent = asAbortableFrameContent(content, resolveController.signal)
-      await instance.render(nextContent, { signal: resolveController.signal })
+      await instance.render(nextContent, {
+        signal: resolveController.signal,
+        reconciliationTracker: serverFrameReload?.reconciliationTracker,
+      })
       if (state.resolveToken !== token || resolveController.signal.aborted) return
       state.resolved = true
     })

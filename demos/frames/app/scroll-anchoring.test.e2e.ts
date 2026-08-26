@@ -5,12 +5,12 @@ import { describe, it } from 'remix/test'
 import { router } from './router.ts'
 import { routes } from './routes.ts'
 
-describe('scroll restoration', () => {
-  it('restores traversal scroll when client entry reconciliation shrinks the document', async (t) => {
+describe('scroll anchoring', () => {
+  it('restores traversal scroll after an earlier client entry is removed', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
-    await page.goto(routes.scrollRestoration.href())
+    await page.goto(routes.scrollAnchoring.href())
 
-    let reproduction = page.locator('#store-scroll-reproduction')
+    let reproduction = page.locator('#scroll-anchoring-reproduction')
     let hydrationCheck = reproduction.getByRole('button', {
       name: 'Hydration check: 0',
       exact: true,
@@ -19,10 +19,10 @@ describe('scroll restoration', () => {
     await hydrationCheck.click()
     await reproduction.getByRole('button', { name: 'Hydration check: 1', exact: true }).waitFor()
 
-    await page.locator('#scroll-restoration-list-end').scrollIntoViewIfNeeded()
+    await page.locator('#scroll-anchoring-list-end').scrollIntoViewIfNeeded()
     let scrollPosition = await page.evaluate(() => window.scrollY)
-    await page.getByRole('link', { name: 'Open the shorter detail page' }).click()
-    await page.getByRole('heading', { name: 'Short detail view' }).waitFor()
+    await page.getByRole('link', { name: 'Open the anchoring detail page' }).click()
+    await page.getByRole('heading', { name: 'Scroll anchoring detail' }).waitFor()
     await reproduction.getByRole('button', { name: 'Hydration check: 1', exact: true }).waitFor()
     await page.evaluate(() => window.scrollTo(0, 500))
     let detailScrollPosition = await page.evaluate(() => window.scrollY)
@@ -30,6 +30,7 @@ describe('scroll restoration', () => {
       detailScrollPosition > 100,
       `Expected the detail page to scroll, got ${detailScrollPosition}`,
     )
+
     await Promise.all([
       page.evaluate(
         () =>
@@ -39,7 +40,7 @@ describe('scroll restoration', () => {
       ),
       page.goBack(),
     ])
-    await page.getByText('List row 48', { exact: true }).waitFor()
+    await page.getByText('Anchoring row 48', { exact: true }).waitFor()
     await reproduction.getByRole('button', { name: 'Hydration check: 1', exact: true }).waitFor()
     let restoredPosition = await page.evaluate(() => window.scrollY)
 

@@ -7,6 +7,7 @@ import { ClientMountedPage } from './client-mounted.tsx'
 import { HomePage } from './home.tsx'
 import { ReloadScopePage } from './reload-scope.tsx'
 import { rootReloadClientEntriesAction } from './root-reload-client-entries.tsx'
+import { ScrollAnchoringDetailPage, ScrollAnchoringPage } from './scroll-anchoring.tsx'
 import { ScrollRestorationDetailPage, ScrollRestorationPage } from './scroll-restoration.tsx'
 import { StateSearchRoutePage } from './state-search.tsx'
 import { TimePage } from './time.tsx'
@@ -43,6 +44,14 @@ export default createController(routes, {
     },
 
     rootReloadClientEntries: rootReloadClientEntriesAction,
+
+    scrollAnchoring({ render }) {
+      return render(<ScrollAnchoringPage />)
+    },
+
+    scrollAnchoringDetail({ render }) {
+      return render(<ScrollAnchoringDetailPage />)
+    },
 
     scrollRestoration({ render, url }) {
       let newsletterHistory = getNewsletterHistory(url.searchParams.get('newsletter'))

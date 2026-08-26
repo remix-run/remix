@@ -37,6 +37,10 @@ export function HomePage() {
           Navigation scroll behavior
         </a>
         {' · '}
+        <a href={routes.scrollAnchoring.href()} mix={linkStyle}>
+          Scroll anchoring restoration
+        </a>
+        {' · '}
         <a href={routes.stateSearch.href()} mix={linkStyle}>
           Dynamic src search demo
         </a>

@@ -2453,6 +2453,7 @@ describe('run', () => {
 
     window.scrollTo(0, 2500)
     expect(window.scrollY).toBe(2500)
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
 
     await navigate(detailUrl)
     expect(document.getElementById('scroll-detail-page')?.textContent).toContain('Detail')
