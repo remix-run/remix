@@ -426,7 +426,7 @@ const navigationCss = css({
   justifyContent: 'flex-end',
   width: 'auto',
   height: 'var(--site-header-height)',
-  gap: '32px',
+  gap: '24px',
   overflow: 'visible',
   fontSize: '16px',
   flexWrap: 'nowrap',
