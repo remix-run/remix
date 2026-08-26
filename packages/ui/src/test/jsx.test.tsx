@@ -65,6 +65,12 @@ describe('jsx', () => {
       let descriptor = withArgument('value')
       let mix: MixInput<HTMLButtonElement> = descriptor
 
+      let invalid: MixinDescriptor<Element> = {
+        // @ts-expect-error mixin runners must return a supported mixin value
+        type: () => () => 123,
+        args: [],
+      }
+
       let element = <button mix={mix}>Click me</button>
 
       expect(element.props.mix).toEqual([descriptor])

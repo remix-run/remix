@@ -111,10 +111,10 @@ type MixinDescriptorType<
   args extends unknown[] = [],
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
-> = (
-  handle: MixinHandle<node, props>,
+> = <boundNode extends node>(
+  handle: MixinHandle<boundNode, props>,
   type: string,
-) => ((...args: [...args, currentProps: props]) => unknown) | void
+) => ((...args: [...args, currentProps: props]) => MixinReturn<boundNode, props>) | void
 
 /**
  * Public mixin setup function signature.
@@ -277,7 +277,11 @@ export function createMixin<
   return <boundNode extends node = node>(
     ...args: RebindTuple<args, node, boundNode>
   ): MixinDescriptor<boundNode, RebindTuple<args, node, boundNode>, props> => ({
-    type: type as unknown as MixinRuntimeType<RebindTuple<args, node, boundNode>, boundNode, props>,
+    type: type as unknown as MixinDescriptorType<
+      RebindTuple<args, node, boundNode>,
+      boundNode,
+      props
+    >,
     args: args as RebindTuple<args, node, boundNode>,
   })
 }
