@@ -66,6 +66,9 @@ export type WhereObject<column extends string = string> = Partial<Record<column,
  */
 export type WhereInput<column extends string = string> = Predicate<column> | WhereObject<column>
 
+type WhereInputColumn<input extends WhereInput> =
+  input extends Predicate<infer column> ? column : keyof input & string
+
 /**
  * Builds an equality predicate.
  */
@@ -293,23 +296,33 @@ export function notNull<column extends string | ColumnReferenceLike>(
 }
 
 /**
- * Combines predicates with logical `AND`.
- * @param predicates Child predicates.
+ * Combines where inputs with logical `AND`.
+ * @param inputs Child predicates or object shorthand filters.
  * @returns A logical `and` predicate.
  */
-export function and<column extends string>(...predicates: Predicate<column>[]): Predicate<column> {
-  let filtered = predicates.filter(Boolean)
-  return { type: 'logical', operator: 'and', predicates: filtered }
+export function and<inputs extends WhereInput[]>(
+  ...inputs: inputs
+): Predicate<WhereInputColumn<inputs[number]>> {
+  type column = WhereInputColumn<inputs[number]>
+  let predicates = inputs
+    .filter(Boolean)
+    .map((input) => normalizeWhereInput(input) as Predicate<column>)
+  return { type: 'logical', operator: 'and', predicates }
 }
 
 /**
- * Combines predicates with logical `OR`.
- * @param predicates Child predicates.
+ * Combines where inputs with logical `OR`.
+ * @param inputs Child predicates or object shorthand filters.
  * @returns A logical `or` predicate.
  */
-export function or<column extends string>(...predicates: Predicate<column>[]): Predicate<column> {
-  let filtered = predicates.filter(Boolean)
-  return { type: 'logical', operator: 'or', predicates: filtered }
+export function or<inputs extends WhereInput[]>(
+  ...inputs: inputs
+): Predicate<WhereInputColumn<inputs[number]>> {
+  type column = WhereInputColumn<inputs[number]>
+  let predicates = inputs
+    .filter(Boolean)
+    .map((input) => normalizeWhereInput(input) as Predicate<column>)
+  return { type: 'logical', operator: 'or', predicates }
 }
 
 /**
