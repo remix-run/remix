@@ -80,6 +80,7 @@ describe('completion command', () => {
       result.stdout,
       [
         'mode:values',
+        'assets',
         'completion',
         'db',
         'doctor',
@@ -110,6 +111,7 @@ describe('completion command', () => {
         'mode:values',
         'migrate',
         'reset',
+        'rollback',
         'seed',
         'status',
         'wipe',

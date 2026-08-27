@@ -7,7 +7,7 @@ import { REMIX_UI_STYLE_LAYER } from './layers.ts'
 // never become *wrong* — only unused. That observation drives a two-tier
 // lifetime model on a single document-level registry:
 //
-// - **Server-adopted rules are pinned.** Once a `<style data-rmx>` tag is
+// - **Server-adopted rules are pinned.** Once a `<style data-rmx-style>` tag is
 //   adopted, its rule stays for the life of the manager. Frame reloads,
 //   island hydration, and streamed templates never need to agree on which
 //   scope "owns" a shared rule — adoption is additive and idempotent, and the
@@ -34,7 +34,7 @@ export interface StyleManager {
   dispose(): void
 }
 
-const SERVER_STYLE_SELECTOR = 'style[data-rmx]'
+const SERVER_STYLE_SELECTOR = 'style[data-rmx-style]'
 
 function getStyleLayerName(className: string, layer: string = REMIX_UI_STYLE_LAYER): string {
   return `${layer}.${className}`
@@ -95,7 +95,7 @@ function isHtmlStyleElement(node: unknown): node is HTMLStyleElement {
 }
 
 function getStyleSelector(styleEl: HTMLStyleElement): string | null {
-  let selector = styleEl.getAttribute('data-rmx')?.trim()
+  let selector = styleEl.getAttribute('data-rmx-style')?.trim()
   return selector ? selector : null
 }
 

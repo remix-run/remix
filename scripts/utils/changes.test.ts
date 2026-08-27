@@ -4,7 +4,12 @@ import * as path from 'node:path'
 import assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { PackageRelease } from './changes.ts'
-import { generateChangelogContent, getNextVersion, parsePackageChanges } from './changes.ts'
+import {
+  generateChangelogContent,
+  getNextVersion,
+  parseChangelog,
+  parsePackageChanges,
+} from './changes.ts'
 
 function makeRelease(overrides: Partial<PackageRelease> = {}): PackageRelease {
   return {
@@ -59,6 +64,40 @@ describe('parsePackageChanges', () => {
       assert.equal(result.changes.length, 0)
       assert.equal(result.changesConfig, null)
     })
+  })
+})
+
+describe('parseChangelog', () => {
+  it('returns version entries in document order', () => {
+    let entries = parseChangelog(`# package changelog
+
+## v3.0.0-beta.9
+
+### Pre-release Changes
+
+- New behavior
+
+## v3.0.0-beta.8 (2026-08-17)
+
+### Pre-release Changes
+
+- Earlier behavior
+
+## Unreleased
+`)
+
+    assert.deepEqual(entries, [
+      {
+        version: '3.0.0-beta.9',
+        date: undefined,
+        body: '### Pre-release Changes\n\n- New behavior',
+      },
+      {
+        version: '3.0.0-beta.8',
+        date: new Date('2026-08-17'),
+        body: '### Pre-release Changes\n\n- Earlier behavior',
+      },
+    ])
   })
 })
 

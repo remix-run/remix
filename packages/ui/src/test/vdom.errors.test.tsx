@@ -432,5 +432,50 @@ describe('vdom error handling', () => {
       expect(container.innerHTML).toBe('<div>count: 3</div>')
       expect(errorHandler).not.toHaveBeenCalled()
     })
+
+    it('warns instead of erroring when many component instances update in one event loop turn', (t) => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let errorHandler = t.mock.fn()
+      let warnSpy = t.mock.method(console, 'warn', () => {})
+      root.addEventListener('error', errorHandler)
+
+      let updateCount = 60
+      let counts = Array.from({ length: updateCount }, () => 0)
+      let updates: Array<() => void> = []
+
+      function Counter(handle: Handle<{ index: number }>) {
+        let index = handle.props.index
+        updates[index] = () => {
+          handle.update()
+        }
+        return () => <div data-index={index}>count: {counts[index] ?? 0}</div>
+      }
+
+      root.render(
+        <>
+          {Array.from({ length: updateCount }, (_, index) => (
+            <Counter key={index} index={index} />
+          ))}
+        </>,
+      )
+      root.flush()
+
+      for (let index = 0; index < updateCount; index++) {
+        counts[index] = (counts[index] ?? 0) + 1
+        let update = updates[index]
+        if (!update) throw new Error(`Missing update for component ${index}`)
+        update()
+        root.flush()
+      }
+
+      expect(errorHandler).not.toHaveBeenCalled()
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+      expect(String(warnSpy.mock.calls[0]!.arguments[0])).toContain(
+        '50 cascading component updates',
+      )
+      expect(String(warnSpy.mock.calls[0]!.arguments[0])).toContain('Counter x50')
+      expect(container.querySelector('[data-index="59"]')?.textContent).toBe('count: 1')
+    })
   })
 })

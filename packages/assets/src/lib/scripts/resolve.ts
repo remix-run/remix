@@ -137,7 +137,7 @@ export async function resolveModule(
       return failResolve(
         createAssetServerCompilationError(
           `Failed to resolve import "${displaySpecifier}" in ${transformed.resolvedPath}. ` +
-            `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
+            `Ensure it resolves to a file within a configured asset server mount, or mark it as external.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
           },
@@ -186,10 +186,10 @@ export async function resolveModule(
     if (!stableUrlPathname) {
       return failResolve(
         createAssetServerCompilationError(
-          `Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured fileMap entries. ` +
-            `Add a matching fileMap entry for this file path, or mark this import as external.`,
+          `Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured mounts. ` +
+            `Add a matching mount for this file path, or mark this import as external.`,
           {
-            code: 'IMPORT_OUTSIDE_FILE_MAP',
+            code: 'IMPORT_OUTSIDE_MOUNTS',
           },
         ),
         trackedFiles,
@@ -254,7 +254,7 @@ export async function resolveModule(
       return failResolve(
         createAssetServerCompilationError(
           `Failed to resolve accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}. ` +
-            `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
+            `Ensure it resolves to a file within a configured asset server mount, or mark it as external.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
           },
@@ -303,10 +303,10 @@ export async function resolveModule(
     if (!stableUrlPathname) {
       return failResolve(
         createAssetServerCompilationError(
-          `Accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured fileMap entries. ` +
-            `Add a matching fileMap entry for this file path, or mark this import as external.`,
+          `Accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured mounts. ` +
+            `Add a matching mount for this file path, or mark this import as external.`,
           {
-            code: 'IMPORT_OUTSIDE_FILE_MAP',
+            code: 'IMPORT_OUTSIDE_MOUNTS',
           },
         ),
         trackedFiles,
@@ -462,7 +462,7 @@ async function batchResolveSpecifiers(
           normalizedResolution.importerPath === getInjectedPackageImporterPath()
             ? `Failed to resolve injected import "${specifier}" from asset server.`
             : `Failed to resolve import "${normalizedResolution.specifier}" in ${normalizedResolution.importerPath}. ` +
-                `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
+                `Ensure it resolves to a file within a configured asset server mount, or mark it as external.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
           },

@@ -7,6 +7,7 @@ allowBuilds:
 catalog:
   '@types/hast': 3.0.5
   '@types/node': ^24.6.0
+  '@typescript/native-preview': 7.0.0-dev.20260707.2
   github-slugger: 2.0.0
   oxfmt: ^0.51.0
   pagefind: 1.5.2
@@ -34,7 +35,6 @@ packages:
   - packages/node-fetch-server/bench
   - packages/node-fetch-server/demos/*
   - packages/route-pattern/bench
-  - packages/static-middleware/demos/*
   - packages/tar-parser/bench
   - template
   - scripts

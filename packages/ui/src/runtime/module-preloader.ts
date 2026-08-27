@@ -1,4 +1,4 @@
-const SERVER_MODULE_PRELOAD_SELECTOR = 'link[data-rmx][rel~="modulepreload" i][href]'
+const SERVER_MODULE_PRELOAD_SELECTOR = 'link[data-rmx-module-preload][rel~="modulepreload" i][href]'
 
 interface ModulePreloader {
   adoptInitialPreloadLinks(source: ParentNode): void
@@ -36,7 +36,7 @@ function createModulePreloader(doc: Document): ModulePreloader {
     let link = doc.createElement('link')
     link.rel = 'modulepreload'
     link.href = href
-    link.setAttribute('data-rmx', '')
+    link.setAttribute('data-rmx-module-preload', '')
     let url = link.href
     if (requestedUrls.has(url)) return
     requestedUrls.add(url)
@@ -74,7 +74,7 @@ function createModulePreloader(doc: Document): ModulePreloader {
         let observerLink = doc.createElement('link')
         observerLink.rel = 'modulepreload'
         observerLink.href = initialLink.href
-        observerLink.setAttribute('data-rmx', '')
+        observerLink.setAttribute('data-rmx-module-preload', '')
         let url = initialLink.href
         requestedUrls.add(url)
         activateLink(initialLink)

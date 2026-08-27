@@ -120,7 +120,6 @@ let isDevelopment = process.env.NODE_ENV === 'development'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   denyFiles: ['app/**/*.test.*'],
   hmr:

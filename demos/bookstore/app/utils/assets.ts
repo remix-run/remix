@@ -12,9 +12,9 @@ export const assetServer = createAssetServer({
   allowFiles: ['demos/bookstore/app/routes.ts', 'demos/bookstore/app/**/public/**'],
   allowPackages: ['remix'],
   denyFiles: ['demos/bookstore/app/**/*.test.*'],
-  fileMap: {
-    '/app/*path': 'demos/bookstore/app/*path',
-    '/packages/*path': 'packages/*path',
+  mounts: {
+    app: 'demos/bookstore/app',
+    packages: 'packages',
   },
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,

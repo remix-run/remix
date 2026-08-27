@@ -7,6 +7,7 @@ import {
 } from '../runtime/navigation.ts'
 import type { FrameHandle } from '../runtime/component.ts'
 import type { ResolveFrameOptions } from '../runtime/frame.ts'
+import { withResolvers } from './utils.ts'
 
 // Stand-in frame the navigation handler can call without dragging in the
 // full app runtime from ./run.ts. Only `src` and `reload` are touched on
@@ -37,6 +38,26 @@ function stubGlobalField(t: TestContext, name: string, value: unknown): void {
     if (hadOwn) (globalThis as any)[key] = previous
     else delete (globalThis as any)[key]
   })
+}
+
+function startStubNavigationListener(t: TestContext): (event: Event) => void {
+  let navigateListener: EventListener | undefined
+  let stubNavigation = {
+    updateCurrentEntry: mock.fn(),
+    addEventListener(type: string, listener: EventListener) {
+      if (type === 'navigate') navigateListener = listener
+    },
+  }
+  stubGlobalField(t, 'navigation', stubNavigation)
+
+  let controller = new AbortController()
+  startNavigationListenerImpl(controller.signal, stubFrames)
+  t.after(() => controller.abort())
+
+  return (event) => {
+    if (!navigateListener) throw new Error('Expected a navigate listener')
+    navigateListener(event)
+  }
 }
 
 describe('navigate', () => {
@@ -76,6 +97,186 @@ describe('navigate', () => {
     })
   })
 
+  it('leaves default scrolling to the browser', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+
+    let interceptOptions = intercept.mock.calls[0]?.arguments[0]
+    expect(interceptOptions?.scroll).toBe(undefined)
+    await interceptOptions?.handler?.()
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('opts out of browser scrolling when data-rmx-reset-scroll is false', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    anchor.setAttribute('data-rmx-reset-scroll', 'false')
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+  })
+
+  it('opts out of browser scroll restoration on traverse navigations', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let intercept = mock.fn()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      navigationType: 'traverse',
+      signal: new AbortController().signal,
+      destination: {
+        url: new URL('/previous', window.location.origin).href,
+        getState: () => ({
+          target: undefined,
+          src: '/previous',
+          resetScroll: false,
+          $rmx: true,
+        }),
+      },
+      intercept,
+    })
+
+    dispatchNavigation(event)
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+  })
+
+  it('preserves manual scrolling across frame redirects', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let intercept = mock.fn()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      destination: {
+        url: new URL('/redirected', window.location.origin).href,
+      },
+      info: { type: 'frame-redirect', resetScroll: false },
+      intercept,
+    })
+
+    dispatchNavigation(event)
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+  })
+
+  it('leaves traversal restoration to the browser after frame reconciliation', async (t) => {
+    let navigateListener: EventListener | undefined
+    let navigationEvents = new EventTarget()
+    let stubNavigation = {
+      updateCurrentEntry() {},
+      addEventListener(
+        type: string,
+        listener: EventListener,
+        options?: AddEventListenerOptions | boolean,
+      ) {
+        if (type === 'navigate') {
+          navigateListener = listener
+        } else {
+          navigationEvents.addEventListener(type, listener, options)
+        }
+      },
+      removeEventListener(
+        type: string,
+        listener: EventListener,
+        options?: EventListenerOptions | boolean,
+      ) {
+        navigationEvents.removeEventListener(type, listener, options)
+      },
+    }
+    stubGlobalField(t, 'navigation', stubNavigation)
+
+    let [reloadPromise, resolveReload] = withResolvers<{ signal: AbortSignal }>()
+    let topFrame = { src: '' } as FrameHandle
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame(_frame, options) {
+        let onAfterCommit = Reflect.get(options ?? {}, 'onAfterCommit')
+        if (typeof onAfterCommit === 'function') onAfterCommit()
+        return reloadPromise
+      },
+    })
+
+    let scroll = mock.fn()
+    let intercept = mock.fn()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      navigationType: 'traverse',
+      signal: new AbortController().signal,
+      destination: {
+        url: new URL('/collection', window.location.origin).href,
+        key: 'collection',
+        getState: () => ({
+          target: undefined,
+          src: '/collection',
+          resetScroll: true,
+          $rmx: true,
+        }),
+      },
+      scroll,
+      intercept,
+    })
+
+    try {
+      navigateListener?.(event)
+      let interceptOptions = intercept.mock.calls[0]?.arguments[0]
+      if (!interceptOptions?.handler) throw new Error('Expected navigation interception handler')
+      let handlerSettled = false
+      let adoptedStyleSheetCount = document.adoptedStyleSheets.length
+      let startingDocumentHeight = document.documentElement.scrollHeight
+      let startingViewportHeight = document.documentElement.clientHeight
+      let handler = interceptOptions.handler().then(() => {
+        handlerSettled = true
+      })
+      await Promise.resolve()
+
+      expect(interceptOptions.scroll).toBe(undefined)
+      expect(handlerSettled).toBe(false)
+      expect(scroll).not.toHaveBeenCalled()
+      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+      let stylesheet = document.adoptedStyleSheets[adoptedStyleSheetCount]
+      let htmlRule = stylesheet?.cssRules[0]
+      if (!(htmlRule instanceof CSSStyleRule)) throw new Error('Expected html scroll state rule')
+      expect(htmlRule.selectorText).toBe('html')
+      expect(htmlRule.style.minHeight).toBe(`${startingDocumentHeight + startingViewportHeight}px`)
+      expect(htmlRule.style.getPropertyPriority('min-height')).toBe('important')
+      expect(htmlRule.style.overflowAnchor).toBe('none')
+      expect(htmlRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
+      let bodyRule = stylesheet?.cssRules[1]
+      if (!(bodyRule instanceof CSSStyleRule)) throw new Error('Expected body scroll state rule')
+      expect(bodyRule.selectorText).toBe('body')
+      expect(bodyRule.style.overflowAnchor).toBe('none')
+      expect(bodyRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
+
+      resolveReload({ signal: event.signal })
+      await handler
+
+      expect(scroll).not.toHaveBeenCalled()
+      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+      navigationEvents.dispatchEvent(new Event('navigatesuccess'))
+      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
+    } finally {
+      controller.abort()
+    }
+  })
+
   it('does not intercept anchors marked for document navigation', (t) => {
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
     let updateCurrentEntryMock = mock.fn()
@@ -90,7 +291,7 @@ describe('navigate', () => {
 
     let anchor = document.createElement('a')
     anchor.href = '/login'
-    anchor.setAttribute('rmx-document', '')
+    anchor.setAttribute('data-rmx-document', '')
     document.body.append(anchor)
     anchor.addEventListener('click', (event) => event.preventDefault())
 
@@ -237,7 +438,7 @@ describe('navigate', () => {
 
     let anchor = document.createElement('a')
     anchor.href = destination.href
-    anchor.setAttribute('rmx-history', 'replace')
+    anchor.setAttribute('data-rmx-history', 'replace')
     document.body.append(anchor)
 
     let entryCountBeforeNavigation = window.navigation.entries().length
@@ -444,7 +645,7 @@ describe('form navigation', () => {
     controller.abort()
   })
 
-  it('pushes same-location POST history when rmx-history is push', async () => {
+  it('pushes same-location POST history when data-rmx-history is push', async () => {
     let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
@@ -457,7 +658,7 @@ describe('form navigation', () => {
     let form = document.createElement('form')
     form.action = window.location.href
     form.method = 'post'
-    form.setAttribute('rmx-history', 'push')
+    form.setAttribute('data-rmx-history', 'push')
     document.body.append(form)
 
     let entryBeforeSubmission = getCurrentNavigationEntry()
@@ -545,7 +746,7 @@ describe('form navigation', () => {
     button.value = 'save'
     button.setAttribute('formmethod', 'post')
     button.setAttribute('formenctype', 'multipart/form-data')
-    button.setAttribute('rmx-target', 'account')
+    button.setAttribute('data-rmx-target', 'account')
     form.append(input, button)
     document.body.append(form)
 
@@ -644,7 +845,7 @@ describe('form navigation', () => {
     let form = document.createElement('form')
     form.action = originalUrl
     form.method = 'get'
-    form.setAttribute('rmx-history', 'replace')
+    form.setAttribute('data-rmx-history', 'replace')
     let input = document.createElement('input')
     input.name = 'query'
     input.value = 'replace-frames'
@@ -701,7 +902,7 @@ describe('form navigation', () => {
     let controller = new AbortController()
     startNavigationListenerImpl(controller.signal, stubFrames)
     let form = document.createElement('form')
-    form.setAttribute('rmx-document', '')
+    form.setAttribute('data-rmx-document', '')
     let intercept = mock.fn()
 
     navigateListener?.(
@@ -750,33 +951,6 @@ describe('form navigation', () => {
     expect(intercept).not.toHaveBeenCalled()
     controller.abort()
   })
-
-  it('does not intercept forms when the runtime has no frame resolver', (t) => {
-    let navigateListener: EventListener | undefined
-    let stubNavigation = {
-      updateCurrentEntry: mock.fn(),
-      addEventListener(type: string, listener: EventListener) {
-        if (type === 'navigate') navigateListener = listener
-      },
-    }
-    stubGlobalField(t, 'navigation', stubNavigation)
-
-    let controller = new AbortController()
-    startNavigationListener(controller.signal, false)
-    let form = document.createElement('form')
-    let intercept = mock.fn()
-
-    navigateListener?.(
-      createFormNavigateEvent(form, {
-        intercept,
-        destinationUrl: new URL('/login', window.location.origin).href,
-      }),
-    )
-
-    expect(intercept).not.toHaveBeenCalled()
-    expect(stubNavigation.updateCurrentEntry).not.toHaveBeenCalled()
-    controller.abort()
-  })
 })
 
 function getCurrentNavigationEntry(): NavigationHistoryEntry {
@@ -804,6 +978,27 @@ function createFormNavigateEvent(
     navigationType: 'push',
     sourceElement: form,
     formData: new FormData(form),
+    signal: new AbortController().signal,
+    destination: {
+      url: options.destinationUrl,
+      key: 'next',
+      getState: () => undefined,
+    },
+    intercept: options.intercept,
+  })
+}
+
+function createAnchorNavigateEvent(
+  anchor: HTMLAnchorElement,
+  options: {
+    intercept: (options?: NavigationInterceptOptions) => void
+    destinationUrl: string
+  },
+): Event {
+  return Object.assign(new Event('navigate'), {
+    canIntercept: true,
+    navigationType: 'push',
+    sourceElement: anchor,
     signal: new AbortController().signal,
     destination: {
       url: options.destinationUrl,

@@ -306,7 +306,7 @@ such as progress, coordinates, opacity, or transforms that can change on every u
 values in `css(...)` would create another generated rule for each value.
 
 During server rendering, Remix collects generated rules, deduplicates them, and inserts their
-`<style data-rmx>` tags into the document head. A server-rendered page does not wait for browser
+`<style data-rmx-style>` tags into the document head. A server-rendered page does not wait for browser
 JavaScript to receive its component styles.
 
 ::frame{src="/examples/04-rendering-ui/styling-card/"}

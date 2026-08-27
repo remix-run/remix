@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/cli",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Command-line interface for Remix",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -37,6 +37,7 @@
     }
   },
   "dependencies": {
+    "@remix-run/assets": "workspace:^",
     "@remix-run/data-table": "workspace:^",
     "@remix-run/data-table-mysql": "workspace:^",
     "@remix-run/data-table-postgres": "workspace:^",

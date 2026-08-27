@@ -51,7 +51,8 @@ const allRemixRunPackages: string[] = fs
   .flatMap((d) => {
     let pkgJsonPath = path.join(packagesDir, d.name, 'package.json')
     if (!fs.existsSync(pkgJsonPath)) return []
-    let { name } = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'))
+    let { name, private: isPrivate } = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'))
+    if (isPrivate === true) return []
     return name?.startsWith('@remix-run/') ? [name as string] : []
   })
 
@@ -122,7 +123,7 @@ describe('manifest', () => {
     }
   })
 
-  it('every @remix-run/* workspace package is referenced in the manifest', () => {
+  it('every public @remix-run/* workspace package is referenced in the manifest', () => {
     for (let pkgName of allRemixRunPackages) {
       // @remix-run/cli is intentionally excluded from the manifest — it is handled
       // separately by the generate-remix script via the CLI_PACKAGE_NAME constant.

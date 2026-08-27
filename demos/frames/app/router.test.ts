@@ -57,6 +57,18 @@ describe('router', () => {
     assert.equal(response.status, 200)
     assert.match(await response.text(), /Reload top frame/)
   })
+
+  it('redirects newsletter submissions back to the scroll-preservation example', async () => {
+    let response = await router.fetch(
+      new Request('http://localhost/scroll-restoration/newsletter', {
+        method: 'POST',
+        body: new URLSearchParams({ email: 'reader@example.com', history: 'push' }),
+      }),
+    )
+
+    assert.equal(response.status, 303)
+    assert.equal(response.headers.get('Location'), '/scroll-restoration?newsletter=push')
+  })
 })
 
 async function* readChunks(stream: ReadableStream<Uint8Array>): AsyncGenerator<string, void, void> {

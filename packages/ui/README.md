@@ -81,10 +81,10 @@ function Actions() {
 
 ## Frame Navigation
 
-Configure `resolveFrame` once to progressively enhance same-origin links and forms. The resolver owns the fetch request and receives native submission metadata for non-GET forms:
+`run()` progressively enhances same-origin links and forms using a default `resolveFrame` that
+fetches the frame source:
 
 ```tsx
-import type { ResolveFrameOptions } from 'remix/ui'
 import { run } from 'remix/ui'
 
 let app = run({
@@ -92,20 +92,44 @@ let app = run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, options) {
-    return fetch(src, {
-      headers: { Accept: 'text/html', 'X-Remix-Frame': 'true' },
-      method: options?.method,
-      body: getRequestBody(options),
-      signal: options?.signal,
-    })
-  },
 })
 
-function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+await app.ready()
+```
+
+The default resolver is equivalent to:
+
+```js
+async function resolveFrame(src, options) {
+  let response = await fetch(src, {
+    body: getRequestBody(options),
+    headers: { Accept: 'text/html' },
+    method: options?.method,
+    signal: options?.signal,
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
+  }
+
+  return response
+}
+
+function getRequestBody(options) {
   let formData = options?.formData
-  if (!formData) return
-  if (options.encType !== 'application/x-www-form-urlencoded') return formData
+  if (!formData || options?.method?.toLowerCase() === 'get') return
+
+  if (options?.encType === 'text/plain') {
+    let body = ''
+    for (let [name, value] of formData) {
+      name = normalizeLineBreaks(name)
+      value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
+      body += `${name}=${value}\r\n`
+    }
+    return new Blob([body], { type: 'text/plain' })
+  }
+
+  if (options?.encType !== 'application/x-www-form-urlencoded') return formData
 
   let body = new URLSearchParams()
   for (let [name, value] of formData) {
@@ -114,10 +138,24 @@ function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
   return body
 }
 
-await app.ready()
+function normalizeLineBreaks(value) {
+  return value.replace(/\r\n|\r|\n/g, '\r\n')
+}
 ```
 
-Forms remain ordinary HTML forms before the runtime starts. Add `rmx-target` to reload a named frame, or `rmx-document` to require a full-document submission:
+The default resolver requests HTML. GET form values are already encoded in `src`;
+`application/x-www-form-urlencoded` submissions use `URLSearchParams`, `text/plain` submissions use
+CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass a custom
+`resolveFrame` when the server requires additional headers, another body encoding, or a different
+response policy.
+
+Add `data-rmx-document` to a link or form to leave its navigation to the browser.
+
+The default resolver rejects non-OK responses with an error containing their status and status text.
+A custom `resolveFrame` may return a `Response` with any status when it wants Remix UI to render the
+response body.
+
+Forms remain ordinary HTML forms before the runtime starts. Add `data-rmx-target` to reload a named frame, or `data-rmx-document` to require a full-document submission:
 
 ```tsx
 import { Frame } from 'remix/ui'
@@ -126,7 +164,7 @@ function AccountPage() {
   return () => (
     <>
       <Frame name="account" src="/account/edit" />
-      <form action="/account/edit" method="post" rmx-target="account">
+      <form action="/account/edit" method="post" data-rmx-target="account">
         <label for="display-name">Display name</label>
         <input id="display-name" name="displayName" required />
         <button type="submit">Save</button>
@@ -138,7 +176,7 @@ function AccountPage() {
 
 Native constraint validation and submitter overrides still apply. GET form values arrive in `src`; non-GET forms provide `formData`, `method`, and `encType` to the resolver. See [Frames](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#form-navigation) for targeting, history behavior, request encoding, opt-outs, and server response guidance.
 
-Use `rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
+Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 
 ## Single-page Applications
 
@@ -170,15 +208,15 @@ and `rmx-target`.
 
 ## Preserving Client-Owned DOM
 
-Use `rmx-preserve-dom` on the smallest element whose live DOM should belong to client code after initial render, such as a custom element or third-party widget:
+Use `data-rmx-preserve-dom` on the smallest element whose live DOM should belong to client code after initial render, such as a custom element or third-party widget:
 
 ```tsx
-<pagefind-ui data-key="search" rmx-preserve-dom>
+<pagefind-ui data-rmx-key="search" data-rmx-preserve-dom>
   <button type="button">Search</button>
 </pagefind-ui>
 ```
 
-Remix UI still renders the element's children during SSR and still hydrates any initial client entries inside it. On later frame reloads, matched `rmx-preserve-dom` elements keep their current attributes and children instead of accepting incoming DOM updates. See [Preserving client-owned DOM](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#preserving-client-owned-dom) for guidance and caveats.
+Remix UI still renders the element's children during SSR and still hydrates any initial client entries inside it. On later frame reloads, matched `data-rmx-preserve-dom` elements keep their current attributes and children instead of accepting incoming DOM updates. See [Preserving client-owned DOM](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#preserving-client-owned-dom) for guidance and caveats.
 
 ## Cascade Layers
 
