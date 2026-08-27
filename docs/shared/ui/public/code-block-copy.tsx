@@ -1,4 +1,4 @@
-import { addEventListeners, clientEntry } from 'remix/ui'
+import { clientEntry } from 'remix/ui'
 import type { Handle } from 'remix/ui'
 
 export const CodeBlockCopyButtons = clientEntry(
@@ -20,9 +20,11 @@ export const CodeBlockCopyButtons = clientEntry(
 
 function startCodeBlockCopyBehavior(root: HTMLElement, signal: AbortSignal) {
   let copiedTimers = new Map<HTMLButtonElement, number>()
+  let clickController: AbortController | undefined
 
-  addEventListeners(root, signal, {
-    async click(event, eventSignal) {
+  root.addEventListener(
+    'click',
+    async (event) => {
       if (!(event.target instanceof Element)) return
 
       let button = event.target.closest<HTMLButtonElement>('[data-code-block-copy]')
@@ -33,6 +35,10 @@ function startCodeBlockCopyBehavior(root: HTMLElement, signal: AbortSignal) {
       if (!text) return
 
       event.preventDefault()
+
+      clickController?.abort()
+      clickController = new AbortController()
+      let eventSignal = clickController.signal
 
       try {
         await navigator.clipboard.writeText(text)
@@ -56,9 +62,11 @@ function startCodeBlockCopyBehavior(root: HTMLElement, signal: AbortSignal) {
         }, 1500),
       )
     },
-  })
+    { signal },
+  )
 
   signal.addEventListener('abort', () => {
+    clickController?.abort()
     for (let [button, timer] of copiedTimers) {
       window.clearTimeout(timer)
       delete button.dataset.copied
