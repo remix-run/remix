@@ -27,7 +27,7 @@
     "assets": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["allowFiles", "basePath", "fileMap"],
+      "required": ["allowFiles", "basePath"],
       "properties": {
         "allowFiles": {
           "$ref": "#/$defs/stringArray",
@@ -45,9 +45,9 @@
           "$ref": "#/$defs/stringArray",
           "description": "File paths and glob patterns that must not be served."
         },
-        "fileMap": {
+        "mounts": {
           "type": "object",
-          "description": "File patterns keyed by public URL patterns relative to basePath.",
+          "description": "Directories keyed by public URL paths relative to basePath.",
           "additionalProperties": { "type": "string" }
         },
         "files": {

@@ -40,7 +40,7 @@ export interface RemixConfig {
 /** JSON-compatible asset server configuration loaded from `remix.json`. */
 export interface RemixAssetsConfig extends Pick<
   AssetServerOptions,
-  'allowFiles' | 'allowPackages' | 'basePath' | 'denyFiles' | 'fileMap'
+  'allowFiles' | 'allowPackages' | 'basePath' | 'denyFiles' | 'mounts'
 > {
   /** Leaf file asset configuration. */
   files?: Pick<NonNullable<AssetServerOptions['files']>, 'extensions'>
@@ -240,7 +240,7 @@ function parseAssetsConfig(
   let object = requireObject(value, source, objectPath)
   requireKnownProperties(
     object,
-    ['allowFiles', 'allowPackages', 'basePath', 'denyFiles', 'fileMap', 'files', 'rootDir'],
+    ['allowFiles', 'allowPackages', 'basePath', 'denyFiles', 'files', 'mounts', 'rootDir'],
     source,
     objectPath,
   )
@@ -248,7 +248,6 @@ function parseAssetsConfig(
   let config: RemixAssetsConfig = {
     allowFiles: requireStringArray(object.allowFiles, source, [...objectPath, 'allowFiles']),
     basePath: requireString(object.basePath, source, [...objectPath, 'basePath']),
-    fileMap: requireStringRecord(object.fileMap, source, [...objectPath, 'fileMap']),
     rootDir: path.resolve(
       configDir,
       optionalString(object.rootDir, source, [...objectPath, 'rootDir']) ?? '.',
@@ -259,9 +258,14 @@ function parseAssetsConfig(
     'allowPackages',
   ])
   let denyFiles = optionalStringArray(object.denyFiles, source, [...objectPath, 'denyFiles'])
+  let mounts =
+    object.mounts === undefined
+      ? undefined
+      : requireStringRecord(object.mounts, source, [...objectPath, 'mounts'])
 
   if (allowPackages !== undefined) config.allowPackages = allowPackages
   if (denyFiles !== undefined) config.denyFiles = denyFiles
+  if (mounts !== undefined) config.mounts = mounts
 
   if (object.files !== undefined) {
     let filesPath = [...objectPath, 'files']

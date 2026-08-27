@@ -39,7 +39,7 @@ describe('Remix config loading', () => {
             allowPackages: ['remix'],
             basePath: '/assets',
             denyFiles: ['app/**/*.test.*'],
-            fileMap: { '/app/*path': 'app/*path' },
+            mounts: { app: 'app' },
             files: { extensions: ['.svg', '.png'] },
             rootDir: '..',
           },
@@ -52,7 +52,7 @@ describe('Remix config loading', () => {
         allowPackages: ['remix'],
         basePath: '/assets',
         denyFiles: ['app/**/*.test.*'],
-        fileMap: { '/app/*path': 'app/*path' },
+        mounts: { app: 'app' },
         files: { extensions: ['.svg', '.png'] },
         rootDir: path.dirname(cwd),
       })

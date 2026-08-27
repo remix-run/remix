@@ -353,9 +353,6 @@ importers:
       '@remix-run/mime':
         specifier: workspace:^
         version: link:../mime
-      '@remix-run/route-pattern':
-        specifier: workspace:^
-        version: link:../route-pattern
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0

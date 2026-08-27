@@ -106,9 +106,9 @@ trailing commas. Every top-level field is optional:
   "assets": {
     "rootDir": ".",
     "basePath": "/assets",
-    "fileMap": {
-      "/app/*path": "app/*path",
-      "/npm/*path": "node_modules/*path",
+    "mounts": {
+      "app": "app",
+      "npm": "node_modules",
     },
     "allowFiles": ["app/routes.ts", "app/**/public/**"],
     "allowPackages": ["remix"],

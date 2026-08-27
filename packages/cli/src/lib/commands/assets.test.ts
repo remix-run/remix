@@ -128,7 +128,6 @@ async function createAssetsProject(): Promise<string> {
         allowFiles: ['app/public/**'],
         basePath: '/assets',
         denyFiles: ['app/**/*.test.*'],
-        fileMap: { '/app/*path': 'app/*path' },
         files: { extensions: ['.svg'] },
       },
     }),

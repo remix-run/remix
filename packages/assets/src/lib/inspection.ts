@@ -32,16 +32,16 @@ export interface AssetDetails {
   access?: AssetAccessDetails
   /** Absolute mapped file path. */
   filePath?: string
-  /** Configured file pattern that matched the asset. */
-  filePattern?: string
+  /** Configured filesystem mount root that matched the asset. */
+  fileRoot?: string
   /** Browser-reachability result. */
   status: AssetStatus
   /** How the asset server handles the file. */
   type?: AssetKind
   /** Stable public URL pathname for the asset. */
   url?: string
-  /** Configured URL pattern that matched the asset. */
-  urlPattern?: string
+  /** Public mount root that matched the asset. */
+  urlRoot?: string
 }
 
 interface AssetInspectorOptions {
@@ -126,10 +126,10 @@ async function inspectRouteMatch(
   let details = {
     access,
     filePath: routeMatch.filePath,
-    filePattern: routeMatch.filePattern,
+    fileRoot: routeMatch.fileRoot,
     type,
     url: routeMatch.urlPathname,
-    urlPattern: routeMatch.urlPattern,
+    urlRoot: routeMatch.urlRoot,
   }
 
   if (!exists) return { ...details, status: 'missing' }

@@ -540,6 +540,7 @@ describe('run', () => {
       assert.match(server, /createRequestListener/)
       assert.match(server, /emitServerReady/)
       assert.doesNotMatch(assets, /remix-template:remove-/)
+      assert.doesNotMatch(assets, /\bmounts\s*:/)
       assert.doesNotMatch(assets, /\.\.\/packages/)
       assert.match(assets, /allowFiles: \['app\/routes\.ts', 'app\/\*\*\/public\/\*\*'\]/)
       assert.match(assets, /denyFiles: \['app\/\*\*\/\*\.test\.\*'\]/)

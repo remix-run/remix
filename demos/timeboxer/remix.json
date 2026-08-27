@@ -3,9 +3,9 @@
   "assets": {
     "rootDir": "../..",
     "basePath": "/assets",
-    "fileMap": {
-      "/app/*path": "demos/timeboxer/app/*path",
-      "/packages/*path": "packages/*path"
+    "mounts": {
+      "app": "demos/timeboxer/app",
+      "packages": "packages"
     },
     "allowFiles": ["demos/timeboxer/app/routes.ts", "demos/timeboxer/app/**/public/**"],
     "allowPackages": ["remix"],
