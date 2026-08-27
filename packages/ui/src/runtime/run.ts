@@ -76,9 +76,12 @@ export function getNamedFrame(name: string): FrameHandle {
 // manual reloads use the requested form encoding instead of always sending multipart bodies.
 function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
   let formData = options?.formData
-  if (!formData || options?.method?.toLowerCase() === 'get') return
+  let method = options?.method
+  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
 
-  if (options?.encType === 'text/plain') {
+  let encType = options?.encType
+
+  if (encType === 'text/plain') {
     let body = ''
     for (let [name, value] of formData) {
       name = normalizeLineBreaks(name)
@@ -88,7 +91,7 @@ function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
     return new Blob([body], { type: 'text/plain' })
   }
 
-  if (options?.encType !== 'application/x-www-form-urlencoded') return formData
+  if (encType !== 'application/x-www-form-urlencoded') return formData
 
   let body = new URLSearchParams()
   for (let [name, value] of formData) {

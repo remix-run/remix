@@ -91,14 +91,11 @@ export function run(router: Router, options: RunOptions = {}): Runtime {
     },
     async resolveFrame(src, options) {
       let url = new URL(src, document.baseURI)
-      let method = options?.method?.toUpperCase() ?? 'GET'
-      let body = ['GET', 'HEAD'].includes(method) ? undefined : getRequestBody(options)
       let { response, redirectedTo } = await followFrameRedirects(router, url, {
-        method,
-        body,
+        method: options?.method,
+        body: getRequestBody(options),
         signal: options?.signal,
       })
-
       return spaResponse.finalize(response, redirectedTo)
     },
   })
@@ -157,9 +154,13 @@ async function followFrameRedirects(
   throw new TypeError(`SPA route exceeded ${maxRedirects} redirects`)
 }
 
+// Frame reloads can receive raw FormData without going through form navigation. Encode it here so
+// manual reloads use the requested form encoding instead of always sending multipart bodies.
 function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
   let formData = options?.formData
-  if (!formData) return
+  let method = options?.method
+  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
+
   let encType = options?.encType
 
   if (encType === 'text/plain') {
