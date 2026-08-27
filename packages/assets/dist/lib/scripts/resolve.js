@@ -1,0 +1,431 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { createAssetServerCompilationError, isAssetServerCompilationError, } from '../compilation-error.js';
+import { getInjectedPackageNameForSpecifier, getInjectedPackageImporterPath, restoreAuthoredInjectedPackageSpecifier, } from '../injected-packages.js';
+import { normalizeFilePath } from '../paths.js';
+import { isBareImportSpecifier } from './specifiers.js';
+export const resolverExtensionAlias = {
+    '.js': ['.js', '.ts', '.tsx', '.jsx'],
+    '.jsx': ['.jsx', '.tsx'],
+    '.mjs': ['.mjs', '.mts'],
+};
+export const resolverExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs'];
+export const supportedScriptExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs'];
+const supportedScriptExtensionSet = new Set(supportedScriptExtensions);
+export async function resolveModule(record, transformed, args) {
+    let trackedFiles = new Set(transformed.trackedFiles);
+    let trackedResolutions = [];
+    let resolvedImports;
+    try {
+        resolvedImports =
+            transformed.unresolvedImports.length > 0
+                ? await batchResolveSpecifiers(getUniqueSpecifiers(transformed.unresolvedImports), transformed.resolvedPath, args.resolverFactory)
+                : new Map();
+    }
+    catch (error) {
+        return failResolve(error, trackedFiles, trackedResolutions, transformed.resolvedPath, {
+            isWatchIgnored: args.isWatchIgnored,
+        });
+    }
+    let importsWithPaths = [];
+    let pendingBareImportScopes = [];
+    let acceptedDepsWithPaths = [];
+    let deps = new Set();
+    for (let unresolved of transformed.unresolvedImports) {
+        let displaySpecifier = getDisplayImportSpecifier(unresolved.specifier);
+        let trackedResolution = getTrackedRelativeImportResolution(transformed.importerDir, displaySpecifier, args.isWatchIgnored);
+        let resolvedSpec = resolvedImports.get(unresolved.specifier);
+        if (!resolvedSpec?.absolutePath) {
+            return failResolve(createAssetServerCompilationError(`Failed to resolve import "${displaySpecifier}" in ${transformed.resolvedPath}. ` +
+                `Ensure it resolves to a file within a configured asset server mount, or mark it as external.`, {
+                code: 'IMPORT_RESOLUTION_FAILED',
+            }), trackedFiles, trackedResolutions, transformed.resolvedPath, { isWatchIgnored: args.isWatchIgnored, trackedResolution });
+        }
+        let resolvedImport = args.resolveModulePath(resolvedSpec.absolutePath);
+        if (!resolvedImport) {
+            return failResolve(createAssetServerCompilationError(`Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedSpec.absolutePath}", is not a supported script file. ` +
+                `Supported extensions are ${supportedScriptExtensions.join(', ')}.`, {
+                code: 'IMPORT_NOT_SUPPORTED',
+            }), trackedFiles, trackedResolutions, transformed.resolvedPath, { isWatchIgnored: args.isWatchIgnored, trackedResolution });
+        }
+        if (!args.isAllowed(resolvedImport.identityPath)) {
+            return failResolve(createAssetServerCompilationError(`Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is not allowed by the asset server access configuration. ` +
+                `Add a matching allowFiles or allowPackages rule, remove a conflicting denyFiles rule, or mark this import as external.`, {
+                code: 'IMPORT_NOT_ALLOWED',
+            }), trackedFiles, trackedResolutions, transformed.resolvedPath, { isWatchIgnored: args.isWatchIgnored, trackedResolution });
+        }
+        let stableUrlPathname = args.routes.toUrlPathname(resolvedImport.identityPath);
+        if (!stableUrlPathname) {
+            return failResolve(createAssetServerCompilationError(`Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured mounts. ` +
+                `Add a matching mount for this file path, or mark this import as external.`, {
+                code: 'IMPORT_OUTSIDE_MOUNTS',
+            }), trackedFiles, trackedResolutions, transformed.resolvedPath, { isWatchIgnored: args.isWatchIgnored, trackedResolution });
+        }
+        deps.add(resolvedImport.identityPath);
+        if (transformed.packageSpecifiers.includes(unresolved.specifier)) {
+            let packageJsonPath = resolvedSpec.packageJsonPath ?? findNearestPackageJsonPath(resolvedImport.resolvedPath);
+            if (packageJsonPath && !args.isWatchIgnored(packageJsonPath)) {
+                trackedFiles.add(packageJsonPath);
+            }
+        }
+        if (trackedResolution) {
+            trackedResolutions.push({
+                ...trackedResolution,
+                resolvedIdentityPath: resolvedImport.identityPath,
+            });
+        }
+        let imported = {
+            depPath: resolvedImport.identityPath,
+            end: unresolved.end,
+            quote: unresolved.quote,
+            specifier: displaySpecifier,
+            start: unresolved.start,
+        };
+        importsWithPaths.push(imported);
+        if (isBareImportSpecifier(displaySpecifier)) {
+            pendingBareImportScopes.push({
+                imported,
+                resolvedIdentityPath: resolvedImport.identityPath,
+                specifier: normalizedSpecifierForDirectoryResolution(unresolved.specifier, transformed.resolvedPath),
+                trackedResolution,
+            });
+        }
+    }
+    if (pendingBareImportScopes.length > 0) {
+        let scopeResults = await resolveBareImportScopes(pendingBareImportScopes, transformed.resolvedPath, args);
+        for (let index = 0; index < scopeResults.length; index++) {
+            let result = scopeResults[index];
+            let pending = pendingBareImportScopes[index];
+            if (!result.ok) {
+                return failResolve(result.error, trackedFiles, trackedResolutions, transformed.resolvedPath, {
+                    isWatchIgnored: args.isWatchIgnored,
+                    trackedResolution: pending.trackedResolution,
+                });
+            }
+            pending.imported.scopePathname = result.scopePathname;
+        }
+    }
+    for (let unresolved of transformed.hmr.acceptedDeps) {
+        if (isBrowserExternalModuleUrl(unresolved.specifier))
+            continue;
+        let displaySpecifier = getDisplayImportSpecifier(unresolved.specifier);
+        let trackedResolution = getTrackedRelativeImportResolution(transformed.importerDir, displaySpecifier, args.isWatchIgnored);
+        let resolvedSpec = resolvedImports.get(unresolved.specifier);
+        if (!resolvedSpec?.absolutePath) {
+            try {
+                resolvedSpec = await batchResolveSpecifiers([unresolved.specifier], transformed.resolvedPath, args.resolverFactory).then((resolved) => resolved.get(unresolved.specifier));
+            }
+            catch (error) {
+                return failResolve(error, trackedFiles, trackedResolutions, transformed.resolvedPath, {
+                    isWatchIgnored: args.isWatchIgnored,
+                    trackedResolution,
+                });
+            }
+        }
+        if (!resolvedSpec?.absolutePath) {
+            return failResolve(createAssetServerCompilationError(`Failed to resolve accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}. ` +
+                `Ensure it resolves to a file within a configured asset server mount, or mark it as external.`, {
+                code: 'IMPORT_RESOLUTION_FAILED',
+            }), trackedFiles, trackedResolutions, transformed.resolvedPath, { isWatchIgnored: args.isWatchIgnored, trackedResolution });
+        }
+        let resolvedImport = args.resolveModulePath(resolvedSpec.absolutePath);
+        if (!resolvedImport) {
+            return failResolve(createAssetServerCompilationError(`Accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedSpec.absolutePath}", is not a supported script file. ` +
+                `Supported extensions are ${supportedScriptExtensions.join(', ')}.`, {
+                code: 'IMPORT_NOT_SUPPORTED',
+            }), trackedFiles, trackedResolutions, transformed.resolvedPath, { isWatchIgnored: args.isWatchIgnored, trackedResolution });
+        }
+        if (!args.isAllowed(resolvedImport.identityPath)) {
+            return failResolve(createAssetServerCompilationError(`Accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is not allowed by the asset server allow/deny configuration. ` +
+                `Add a matching allow rule for this file path, remove a conflicting deny rule for this file path, or mark this import as external.`, {
+                code: 'IMPORT_NOT_ALLOWED',
+            }), trackedFiles, trackedResolutions, transformed.resolvedPath, { isWatchIgnored: args.isWatchIgnored, trackedResolution });
+        }
+        let stableUrlPathname = args.routes.toUrlPathname(resolvedImport.identityPath);
+        if (!stableUrlPathname) {
+            return failResolve(createAssetServerCompilationError(`Accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured mounts. ` +
+                `Add a matching mount for this file path, or mark this import as external.`, {
+                code: 'IMPORT_OUTSIDE_MOUNTS',
+            }), trackedFiles, trackedResolutions, transformed.resolvedPath, { isWatchIgnored: args.isWatchIgnored, trackedResolution });
+        }
+        if (trackedResolution) {
+            trackedResolutions.push({
+                ...trackedResolution,
+                resolvedIdentityPath: resolvedImport.identityPath,
+            });
+        }
+        acceptedDepsWithPaths.push({
+            depPath: resolvedImport.identityPath,
+            end: unresolved.end,
+            quote: unresolved.quote,
+            specifier: displaySpecifier,
+            start: unresolved.start,
+        });
+    }
+    return {
+        ok: true,
+        tracking: toResolveTracking(trackedFiles, trackedResolutions),
+        value: {
+            deps: [...deps],
+            hmr: {
+                acceptedDeps: acceptedDepsWithPaths,
+                selfAccepting: transformed.hmr.selfAccepting,
+                usesImportMetaHot: transformed.hmr.usesImportMetaHot,
+            },
+            identityPath: record.identityPath,
+            imports: importsWithPaths,
+            trackedFiles: [...trackedFiles],
+            rawCode: transformed.rawCode,
+            resolvedPath: transformed.resolvedPath,
+            sourceMap: transformed.sourceMap,
+            stableUrlPathname: transformed.stableUrlPathname,
+        },
+    };
+}
+async function resolveBareImportScopes(pendingScopes, importerPath, args) {
+    let results = new Array(pendingScopes.length);
+    let nextIndex = 0;
+    async function worker() {
+        while (nextIndex < pendingScopes.length) {
+            let index = nextIndex++;
+            let pending = pendingScopes[index];
+            try {
+                results[index] = {
+                    ok: true,
+                    scopePathname: await getBareImportScopePathname({
+                        importerPath,
+                        resolvedIdentityPath: pending.resolvedIdentityPath,
+                        specifier: pending.specifier,
+                        ...args,
+                    }),
+                };
+            }
+            catch (error) {
+                results[index] = {
+                    ok: false,
+                    error: isAssetServerCompilationError(error)
+                        ? error
+                        : createAssetServerCompilationError(`Failed to determine an import map scope for "${pending.imported.specifier}" in ${importerPath}. ${formatUnknownError(error)}`, { cause: error, code: 'IMPORT_RESOLUTION_FAILED' }),
+                };
+            }
+        }
+    }
+    if (pendingScopes.length === 1) {
+        await worker();
+    }
+    else {
+        await Promise.all(Array.from({ length: Math.min(args.concurrency, pendingScopes.length) }, () => worker()));
+    }
+    return results;
+}
+async function getBareImportScopePathname(args) {
+    let importerDirectory = normalizeFilePath(path.dirname(args.importerPath));
+    let importerScopePathname = args.routes.toUrlPathname(importerDirectory);
+    if (!importerScopePathname) {
+        throw new Error(`Expected a URL pathname for ${importerDirectory}`);
+    }
+    let importerDirectoryResolution = args.resolvedIdentityPath;
+    if (!args.isDirectoryResolutionFileIndependent(importerDirectory)) {
+        importerDirectoryResolution = await args.resolveDirectorySpecifierIdentity(importerDirectory, args.specifier);
+        if (importerDirectoryResolution !== args.resolvedIdentityPath) {
+            throw createAssetServerCompilationError(`Bare import "${args.specifier}" in ${args.importerPath} resolves differently based on the importer file. ` +
+                `Browser module resolution must be uniform for all files in the same directory.`, { code: 'IMPORT_RESOLUTION_NOT_DIRECTORY_UNIFORM' });
+        }
+    }
+    let directory = importerDirectory;
+    let scopePathname = importerScopePathname;
+    let broadestScopePathname = importerScopePathname;
+    while (true) {
+        let resolvedIdentityPath = directory === importerDirectory
+            ? importerDirectoryResolution
+            : await args.resolveDirectorySpecifierIdentity(directory, args.specifier);
+        if (resolvedIdentityPath !== args.resolvedIdentityPath)
+            break;
+        broadestScopePathname = scopePathname;
+        let parentDirectory = normalizeFilePath(path.dirname(directory));
+        if (parentDirectory === directory)
+            break;
+        let parentScopePathname = args.routes.toUrlPathname(parentDirectory);
+        if (!parentScopePathname)
+            break;
+        directory = parentDirectory;
+        scopePathname = parentScopePathname;
+    }
+    return ensureTrailingSlash(broadestScopePathname);
+}
+function normalizedSpecifierForDirectoryResolution(specifier, importerPath) {
+    return normalizeSpecifierResolution(specifier, importerPath).specifier;
+}
+function ensureTrailingSlash(value) {
+    return value.endsWith('/') ? value : `${value}/`;
+}
+function findNearestPackageJsonPath(filePath) {
+    let directory = path.dirname(filePath);
+    while (true) {
+        let packageJsonPath = path.join(directory, 'package.json');
+        if (fs.existsSync(packageJsonPath)) {
+            return normalizeFilePath(packageJsonPath);
+        }
+        let parentDirectory = path.dirname(directory);
+        if (parentDirectory === directory)
+            return null;
+        directory = parentDirectory;
+    }
+}
+function isRelativeImportSpecifier(specifier) {
+    return specifier.startsWith('./') || specifier.startsWith('../');
+}
+function getTrackedRelativeImportResolution(importerDir, specifier, isWatchIgnored) {
+    if (!isRelativeImportSpecifier(specifier))
+        return null;
+    let candidatePath = resolveCandidateBasePath(importerDir, specifier);
+    let candidatePrefixes = [`${candidatePath}/`].filter((candidatePrefix) => !isWatchIgnored(candidatePrefix.replace(/\/+$/, '') || '/'));
+    let extension = path.extname(specifier);
+    if (extension === '') {
+        let candidatePaths = [
+            candidatePath,
+            ...supportedScriptExtensions.map((candidateExtension) => `${candidatePath}${candidateExtension}`),
+        ].filter((candidatePath) => !isWatchIgnored(candidatePath));
+        return candidatePaths.length === 0 && candidatePrefixes.length === 0
+            ? null
+            : {
+                candidatePaths,
+                candidatePrefixes,
+                specifier,
+            };
+    }
+    let candidateExtensions = resolverExtensionAlias[extension];
+    if (!candidateExtensions && !supportedScriptExtensionSet.has(extension)) {
+        let candidatePaths = [
+            candidatePath,
+            ...supportedScriptExtensions.map((candidateExtension) => `${candidatePath}${candidateExtension}`),
+        ].filter((candidatePath) => !isWatchIgnored(candidatePath));
+        return candidatePaths.length === 0 && candidatePrefixes.length === 0
+            ? null
+            : {
+                candidatePaths,
+                candidatePrefixes,
+                specifier,
+            };
+    }
+    if (!candidateExtensions)
+        return null;
+    let candidatePaths = [
+        candidatePath,
+        ...candidateExtensions.map((candidateExtension) => `${candidatePath.slice(0, candidatePath.length - extension.length)}${candidateExtension}`),
+    ].filter((candidatePath) => !isWatchIgnored(candidatePath));
+    return candidatePaths.length === 0 && candidatePrefixes.length === 0
+        ? null
+        : {
+            candidatePaths,
+            candidatePrefixes,
+            specifier,
+        };
+}
+function resolveCandidateBasePath(importerDir, specifier) {
+    return normalizeFilePath(path.resolve(importerDir, specifier));
+}
+async function batchResolveSpecifiers(specifiers, importerPath, resolverFactory) {
+    let resolvedBySpecifier = new Map();
+    if (specifiers.length === 0)
+        return resolvedBySpecifier;
+    try {
+        for (let specifier of specifiers) {
+            let normalizedResolution = normalizeSpecifierResolution(specifier, importerPath);
+            let resolutionResult = await resolverFactory.resolveFileAsync(normalizedResolution.importerPath, normalizedResolution.specifier);
+            if (resolutionResult.error) {
+                throw createAssetServerCompilationError(normalizedResolution.importerPath === getInjectedPackageImporterPath()
+                    ? `Failed to resolve injected import "${specifier}" from asset server.`
+                    : `Failed to resolve import "${normalizedResolution.specifier}" in ${normalizedResolution.importerPath}. ` +
+                        `Ensure it resolves to a file within a configured asset server mount, or mark it as external.`, {
+                    code: 'IMPORT_RESOLUTION_FAILED',
+                });
+            }
+            resolvedBySpecifier.set(specifier, {
+                absolutePath: resolutionResult.path && path.isAbsolute(resolutionResult.path)
+                    ? normalizeFilePath(resolutionResult.path)
+                    : null,
+                packageJsonPath: resolutionResult.packageJsonPath
+                    ? normalizeFilePath(resolutionResult.packageJsonPath)
+                    : null,
+                specifier,
+            });
+        }
+    }
+    catch (error) {
+        if (isAssetServerCompilationError(error) && error.code === 'IMPORT_RESOLUTION_FAILED') {
+            throw error;
+        }
+        throw createAssetServerCompilationError(`Failed to resolve imports in ${importerPath}. ${formatUnknownError(error)}`, {
+            cause: error,
+            code: 'IMPORT_RESOLUTION_FAILED',
+        });
+    }
+    return resolvedBySpecifier;
+}
+function getUniqueSpecifiers(unresolvedImports) {
+    return [...new Set(unresolvedImports.map((unresolved) => unresolved.specifier))];
+}
+function formatUnknownError(error) {
+    return error instanceof Error ? error.message : String(error);
+}
+function normalizeSpecifierResolution(specifier, importerPath) {
+    let authoredInjectedPackageSpecifier = restoreAuthoredInjectedPackageSpecifier(specifier);
+    if (authoredInjectedPackageSpecifier) {
+        return {
+            importerPath,
+            specifier: authoredInjectedPackageSpecifier,
+        };
+    }
+    if (getInjectedPackageNameForSpecifier(specifier)) {
+        return {
+            importerPath: getInjectedPackageImporterPath(),
+            specifier,
+        };
+    }
+    return {
+        importerPath,
+        specifier,
+    };
+}
+function getDisplayImportSpecifier(specifier) {
+    return restoreAuthoredInjectedPackageSpecifier(specifier) ?? specifier;
+}
+function isBrowserExternalModuleUrl(url) {
+    return url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://');
+}
+function failResolve(error, trackedFiles, trackedResolutions, importerPath, options = {}) {
+    return {
+        ok: false,
+        error: toResolveError(error, importerPath),
+        tracking: toResolveTracking(trackedFiles, appendFailedTrackedResolution(trackedResolutions, options.trackedResolution)),
+    };
+}
+function toResolveTracking(trackedFiles, trackedResolutions) {
+    return {
+        trackedFiles: [
+            ...trackedFiles,
+            ...trackedResolutions.flatMap((trackedResolution) => trackedResolution.candidatePaths),
+        ],
+        trackedDirectories: trackedResolutions.flatMap((trackedResolution) => trackedResolution.candidatePrefixes),
+    };
+}
+function appendFailedTrackedResolution(trackedResolutions, trackedResolution) {
+    if (trackedResolution == null)
+        return [...trackedResolutions];
+    return [
+        ...trackedResolutions,
+        {
+            ...trackedResolution,
+            resolvedIdentityPath: null,
+        },
+    ];
+}
+function toResolveError(error, importerPath) {
+    if (isAssetServerCompilationError(error))
+        return error;
+    return createAssetServerCompilationError(`Failed to resolve imports in ${importerPath}. ${formatUnknownError(error)}`, {
+        cause: error,
+        code: 'IMPORT_RESOLUTION_FAILED',
+    });
+}
