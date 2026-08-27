@@ -178,6 +178,34 @@ Native constraint validation and submitter overrides still apply. GET form value
 
 Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 
+## Single-page Applications
+
+Use `render` and `run` from `remix/spa` when every route runs in the browser and returns a Remix UI
+tree instead of an HTTP response body. The render middleware keeps the router's standard `Request`
+to `Response` contract while associating the response with a node for the top frame to render:
+
+```tsx
+import { createRouter } from 'remix/router'
+import { render, run } from 'remix/spa'
+
+let router = createRouter({ middleware: [render()] })
+
+router.get('/', ({ render }) => render(<h1>Home</h1>))
+router.get('/about', ({ render }) => render(<h1>About</h1>))
+
+function LoadingPage() {
+  return () => <p role="status">Loading…</p>
+}
+
+let app = run(router, { fallback: <LoadingPage /> })
+await app.ready()
+```
+
+The optional `fallback` is a live Remix node displayed while the initial route loads.
+`app.ready()` resolves after the initial URL has replaced it with the routed node. The runtime then
+reuses frame navigation for same-origin links, forms, history traversal, redirects, cancellation,
+and `rmx-target`.
+
 ## Preserving Client-Owned DOM
 
 Use `data-rmx-preserve-dom` on the smallest element whose live DOM should belong to client code after initial render, such as a custom element or third-party widget:
