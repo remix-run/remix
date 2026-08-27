@@ -450,12 +450,12 @@ The ref callback runs when the element is inserted, not on every component updat
 conditional, its ref signal has the right lifetime for work that should stop when just that element
 disappears.
 
-For `window`, `document`, media queries, and other `EventTarget` values, use
-`addEventListeners(target, signal, listeners)`. Schedule browser-only setup after the client commit
-and tie it to `handle.signal`, which aborts when the component disconnects:
+For event targets outside the rendered tree, such as `window`, `document`, or a media query, use
+native `addEventListener()`. Schedule browser-only setup after the client commit, and pass
+`handle.signal` so the listener is removed when the component disconnects:
 
 ```tsx
-import { addEventListeners, clientEntry } from "remix/ui";
+import { clientEntry } from "remix/ui";
 import type { Handle } from "remix/ui";
 
 export const ViewportWidth = clientEntry(import.meta.url, function ViewportWidth(handle: Handle) {
@@ -463,12 +463,14 @@ export const ViewportWidth = clientEntry(import.meta.url, function ViewportWidth
 
   handle.queueTask(() => {
     width = window.innerWidth;
-    addEventListeners(window, handle.signal, {
-      resize() {
+    window.addEventListener(
+      "resize",
+      () => {
         width = window.innerWidth;
         handle.update();
       },
-    });
+      { signal: handle.signal },
+    );
     handle.update();
   });
 
@@ -480,7 +482,7 @@ Scheduling the setup avoids reading `window` during server rendering. For a clie
 already runs only in the browser, so it can register the listener directly.
 
 Some listeners need a shorter lifetime than the component. Create an `AbortController` when that
-work starts, use its signal with `addEventListeners(...)`, and abort it when the work finishes. Also
+work starts, pass its signal to `addEventListener(...)`, and abort it when the work finishes. Also
 abort it from `handle.signal` so navigation cannot leave temporary listeners behind.
 
 ## Async work and cancellation {#optimistic-updates-and-cancellation-with-handle-signal}
@@ -599,7 +601,7 @@ The component creates the model from serializable props, listens for changes, an
 open state for its details panel:
 
 ```tsx filename=app/ui/public/cart.tsx
-import { addEventListeners, clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/ui";
 import type { Handle } from "remix/ui";
 
 import { CartModel, type CartItem } from "./cart-model.ts";
@@ -613,11 +615,7 @@ export const Cart = clientEntry(import.meta.url, function Cart(handle: Handle<Ca
   let cart = new CartModel(handle.props.initialItems);
   let detailsOpen = false;
 
-  addEventListeners(cart, handle.signal, {
-    change() {
-      handle.update();
-    },
-  });
+  cart.addEventListener("change", () => handle.update(), { signal: handle.signal });
 
   return () => (
     <section>
@@ -640,7 +638,7 @@ export const Cart = clientEntry(import.meta.url, function Cart(handle: Handle<Ca
 });
 ```
 
-`addEventListeners()` connects model changes to `handle.update()`, and `handle.signal` removes the
+`cart.addEventListener()` connects model changes to `handle.update()`, and `handle.signal` removes the
 subscription when the component disconnects. If several components use the same model, create it at
 their nearest shared client boundary and provide it through component context. Do not pass a class
 instance through `clientEntry(...)` props because those props are serialized.

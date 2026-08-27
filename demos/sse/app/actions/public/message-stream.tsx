@@ -1,4 +1,4 @@
-import { addEventListeners, clientEntry, css, type Handle } from 'remix/ui'
+import { clientEntry, css, type Handle } from 'remix/ui'
 
 import { routes } from '../../routes.ts'
 
@@ -14,22 +14,32 @@ export const MessageStream = clientEntry(
         routes.messages.href(null, limit ? { searchParams: { limit } } : undefined),
       )
 
-      addEventListeners(eventSource, handle.signal, {
-        open: () => {
+      eventSource.addEventListener(
+        'open',
+        () => {
           connected = true
           handle.update()
         },
-        message: (event) => {
+        { signal: handle.signal },
+      )
+      eventSource.addEventListener(
+        'message',
+        (event) => {
           let data = JSON.parse(event.data)
           messages.push(data)
           handle.update()
         },
-        error: () => {
+        { signal: handle.signal },
+      )
+      eventSource.addEventListener(
+        'error',
+        () => {
           connected = false
           handle.update()
           eventSource.close()
         },
-      })
+        { signal: handle.signal },
+      )
 
       handle.signal.addEventListener('abort', () => {
         eventSource.close()

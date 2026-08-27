@@ -1,4 +1,4 @@
-import { addEventListeners, createMixin } from "remix/ui";
+import { createMixin } from "remix/ui";
 
 export const dragVelocityReleaseEventType = "rmx:drag-velocity-release" as const;
 
@@ -105,12 +105,10 @@ const baseDragVelocityEvents = createMixin<HTMLElement>((handle) => {
 
   handle.addEventListener("insert", (event) => {
     target = event.node;
-    addEventListeners(target, handle.signal, {
-      pointerdown: onPointerDown,
-      pointermove: onPointerMove,
-      pointerup: onPointerUp,
-      pointercancel: onPointerCancel,
-    });
+    target.addEventListener("pointerdown", onPointerDown, { signal: handle.signal });
+    target.addEventListener("pointermove", onPointerMove, { signal: handle.signal });
+    target.addEventListener("pointerup", onPointerUp, { signal: handle.signal });
+    target.addEventListener("pointercancel", onPointerCancel, { signal: handle.signal });
   });
 });
 

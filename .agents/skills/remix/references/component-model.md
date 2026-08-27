@@ -210,7 +210,7 @@ function ThemedContent(handle: Handle) {
 For granular updates without re-rendering the full subtree, use `TypedEventTarget`:
 
 ```tsx
-import { TypedEventTarget, addEventListeners } from 'remix/ui'
+import { TypedEventTarget } from 'remix/ui'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
   #value: 'light' | 'dark' = 'light'
@@ -239,32 +239,34 @@ function ThemeProvider(handle: Handle<{ children?: RemixNode }, Theme>) {
 
 function ThemedContent(handle: Handle) {
   let theme = handle.context.get(ThemeProvider)
-  addEventListeners(theme, handle.signal, {
-    change() {
-      handle.update()
-    },
-  })
+  theme.addEventListener('change', () => handle.update(), { signal: handle.signal })
   return () => <div>Theme: {theme.value}</div>
 }
 ```
 
 ## Global Events
 
-Use `addEventListeners(target, handle.signal, listeners)` to listen to global targets with automatic cleanup when the component disconnects:
+Use `on(...)` for element events. For browser globals such as `window` or `document`, schedule setup with `handle.queueTask()` and pass `handle.signal` to `addEventListener()` so the listener is removed when the component disconnects:
 
 ```tsx
-import { addEventListeners, type Handle } from 'remix/ui'
+import type { Handle } from 'remix/ui'
 
-function ResizeTracker(handle: Handle) {
-  let width = window.innerWidth
+function ViewportWidth(handle: Handle) {
+  let width: number | undefined
 
-  addEventListeners(window, handle.signal, {
-    resize() {
-      width = window.innerWidth
-      handle.update()
-    },
+  handle.queueTask(() => {
+    width = window.innerWidth
+    window.addEventListener(
+      'resize',
+      () => {
+        width = window.innerWidth
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
+    handle.update()
   })
 
-  return () => <div>{width}</div>
+  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
 }
 ```
