@@ -36,7 +36,6 @@ export type {
   FrameProps,
 } from './runtime/component.ts'
 export type { LoadModule, ResolveFrame, ResolveFrameOptions } from './runtime/frame.ts'
-export { mixinRepro } from './runtime/mixin-repro.ts'
 
 // -- Elements/JSX/Props --
 export { createElement } from './runtime/create-element.ts'
