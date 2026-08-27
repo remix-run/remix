@@ -35,7 +35,9 @@ describe('asset server HMR', () => {
     let page = await t.serve(await createHmrTestServer(fixture))
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
-    await page.goto('/')
+    let documentResponse = await page.goto('/')
+    assert.ok(documentResponse)
+    assert.equal(documentResponse.status(), 200, await documentResponse.text())
     await connected
     await assertCount(page, 'Count: 3')
     await page.locator('[data-testid="field"]').fill('hello')
@@ -49,6 +51,273 @@ describe('asset server HMR', () => {
     await accepted
     await assertCount(page, 'Count: 3')
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+  })
+
+  it('recovers an accepted browser module after a failed transform is fixed', async (t) => {
+    let fixture = await createHmrFixture()
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await assertCount(page, 'Count: 3')
+    await page.locator('[data-testid="field"]').fill('hello')
+
+    let failed = waitForConsoleMessage(page, '[remix] HMR update failed')
+    await write(fixture.rootDir, 'app/counter.ts', 'export const broken = "\n')
+    await failed
+
+    // Let both polling watchers observe the broken version before replacing it.
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({ buttonText: 'Increment after recovery' }),
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Increment after recovery')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+  })
+
+  it('resolves bare imports from timestamped browser module updates through import map scopes', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImport: true })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    let documentResponse = await page.goto('/')
+    assert.ok(documentResponse)
+    assert.equal(documentResponse.status(), 200, await documentResponse.text())
+    await connected
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+
+    let importMap = await page.locator('script[type="importmap"]').textContent()
+    assert.ok(importMap)
+    assert.deepEqual(JSON.parse(importMap).scopes, {
+      '/assets/app/': {
+        'test-package': '/assets/app/test-package.ts',
+      },
+    })
+
+    let updatedModuleRequest = page.waitForResponse((response) => {
+      let url = new URL(response.url())
+      return url.pathname === '/assets/app/counter.ts' && url.searchParams.has('t')
+    })
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        bareImport: true,
+        buttonText: 'Increment via HMR',
+      }),
+    )
+
+    assert.equal((await updatedModuleRequest).status(), 200)
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment via HMR')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+  })
+
+  it('installs a new bare import mapping before applying a browser module update', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImportConfigured: true })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+    assert.equal(await page.locator('script[type="importmap"]').count(), 1)
+
+    let firstAccepted = waitForConsoleMessage(
+      page,
+      '[remix] HMR accepted update /assets/app/counter.ts',
+    )
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        bareImport: true,
+        buttonText: 'Increment via new package',
+      }),
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment via new package')
+    await firstAccepted
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+    assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+
+    // Let both polling watchers observe the first update before replacing it.
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    let secondAccepted = waitForConsoleMessage(
+      page,
+      '[remix] HMR accepted update /assets/app/counter.ts',
+    )
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        bareImport: true,
+        buttonText: 'Increment via existing package mapping',
+      }),
+    )
+
+    await waitForText(
+      page,
+      '[data-testid="increment"]',
+      'Package: Increment via existing package mapping',
+    )
+    await secondAccepted
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+    assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+  })
+
+  it('installs mappings for a new transitive browser module graph before applying an update', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImportConfigured: true })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+    assert.equal(await page.locator('script[type="importmap"]').count(), 1)
+
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        buttonPrefixImport: './feature.ts',
+        buttonText: 'Increment via new feature',
+      }),
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Feature: Increment via new feature')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+    assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+  })
+
+  it('logs and reloads when an update conflicts with an installed import map', async (t) => {
+    let fixture = await createHmrFixture({
+      conflictingInitialBareImport: true,
+      counterBareImportConfigured: true,
+    })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('reload me')
+
+    let warned = waitForConsoleMessage(
+      page,
+      '[remix] HMR reloading page after import map conflict for "test-package" in scope "/assets/app/"',
+    )
+    let reloaded = waitForNavigation(page)
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        bareImport: true,
+        buttonText: 'Increment after import map conflict',
+      }),
+    )
+
+    await warned
+    await reloaded
+    await waitForText(
+      page,
+      '[data-testid="increment"]',
+      'Package: Increment after import map conflict',
+    )
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
+  })
+
+  it('updates bare dependencies accepted through import map scopes', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImport: true })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+
+    let updatedDependencyRequest = page.waitForResponse((response) => {
+      let url = new URL(response.url())
+      return url.pathname === '/assets/app/test-package.ts' && url.searchParams.has('t')
+    })
+    await write(
+      fixture.rootDir,
+      'app/test-package.ts',
+      `export const buttonPrefix = 'Updated package: '\n`,
+    )
+
+    assert.equal((await updatedDependencyRequest).status(), 200)
+    await waitForText(page, '[data-testid="increment"]', 'Updated package: Increment')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+  })
+
+  it('reloads when tsconfig metadata changes an installed import map', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImport: true })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
+    await page.locator('[data-testid="field"]').fill('reload me')
+
+    let reloaded = waitForNavigation(page)
+    await write(
+      fixture.rootDir,
+      'tsconfig.json',
+      JSON.stringify(getHmrTsconfig('./app/test-package-next.ts')),
+    )
+
+    await reloaded
+    await waitForText(page, '[data-testid="increment"]', 'Updated package: Increment')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
+  })
+
+  it('reloads when package metadata changes an installed import map', async (t) => {
+    let fixture = await createHmrFixture({ counterPackageImport: true })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
+    await page.locator('[data-testid="field"]').fill('reload me')
+
+    let reloaded = waitForNavigation(page)
+    await write(
+      fixture.rootDir,
+      'app/node_modules/test-package/package.json',
+      JSON.stringify(getHmrPackageJson('./next.ts')),
+    )
+
+    await reloaded
+    await waitForText(page, '[data-testid="increment"]', 'Updated package: Increment')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
   })
 
   it('reloads the page when an accepted browser module export is added', async (t) => {
@@ -672,10 +941,9 @@ type BrowserHmrFileEvent = {
 
 type BrowserHmrEvent =
   | {
+      data: Record<string, unknown>
       files?: string[]
-      timestamp: number
       type: 'update'
-      updates: Extract<HmrPayload, { type: 'browser:update' }>['updates']
     }
   | {
       files?: string[]
@@ -785,6 +1053,10 @@ async function createHmrFixture(
       parentAccepts: boolean
       trackDependencyDispose?: boolean
     }
+    conflictingInitialBareImport?: boolean
+    counterBareImport?: boolean
+    counterBareImportConfigured?: boolean
+    counterPackageImport?: boolean
     counterExtraExports?: string
   } = {},
 ): Promise<HmrFixture> {
@@ -795,11 +1067,12 @@ async function createHmrFixture(
   await write(
     rootDir,
     'tsconfig.json',
-    JSON.stringify({
-      compilerOptions: {
-        jsx: 'react-jsx',
-      },
-    }),
+    JSON.stringify(
+      (options.counterBareImport || options.counterBareImportConfigured) &&
+        !options.counterPackageImport
+        ? getHmrTsconfig('./app/test-package.ts')
+        : getHmrTsconfig(),
+    ),
   )
   await write(
     rootDir,
@@ -841,10 +1114,45 @@ async function createHmrFixture(
     rootDir,
     'app/counter.ts',
     getCounterModuleSource({
+      bareImport: options.counterBareImport || options.counterPackageImport,
       buttonText: 'Increment',
       extraExports: options.counterExtraExports,
     }),
   )
+  if (options.counterPackageImport) {
+    await write(
+      rootDir,
+      'app/node_modules/test-package/package.json',
+      JSON.stringify(getHmrPackageJson('./current.ts')),
+    )
+    await write(
+      rootDir,
+      'app/node_modules/test-package/current.ts',
+      `export const buttonPrefix = 'Package: '\n`,
+    )
+    await write(
+      rootDir,
+      'app/node_modules/test-package/next.ts',
+      `export const buttonPrefix = 'Updated package: '\n`,
+    )
+  } else if (options.counterBareImport || options.counterBareImportConfigured) {
+    await write(rootDir, 'app/test-package.ts', `export const buttonPrefix = 'Package: '\n`)
+    await write(
+      rootDir,
+      'app/test-package-next.ts',
+      `export const buttonPrefix = 'Updated package: '\n`,
+    )
+    await write(
+      rootDir,
+      'app/feature.ts',
+      [
+        "import { buttonPrefix as packagePrefix } from 'test-package'",
+        '',
+        "export const buttonPrefix = packagePrefix.replace('Package', 'Feature')",
+        '',
+      ].join('\n'),
+    )
+  }
   await write(rootDir, 'app/styles.css', '@import "./theme.css";\n')
   await write(
     rootDir,
@@ -852,31 +1160,114 @@ async function createHmrFixture(
     '[data-testid="increment"] { color: red; padding: 13px; }\n',
   )
 
+  let documentRenderCount = 0
+
   return {
     rootDir,
+    async renderDocument(assetServer) {
+      documentRenderCount++
+      let { href, importMap } = await assetServer.getScriptEntry(
+        path.join(rootDir, 'app/entry.tsx'),
+      )
+      let html = [
+        '<!doctype html>',
+        '<html>',
+        '  <head>',
+        '    <title>HMR Test</title>',
+        '    <link rel="stylesheet" href="/assets/app/styles.css">',
+        ...(options.conflictingInitialBareImport && documentRenderCount === 1
+          ? [
+              `    <script type="importmap">${JSON.stringify({
+                scopes: {
+                  '/assets/app/': {
+                    'test-package': '/assets/app/test-package-next.ts',
+                  },
+                },
+              })}</script>`,
+            ]
+          : []),
+        `    <script type="importmap">${JSON.stringify(importMap)}</script>`,
+        '  </head>',
+        '  <body>',
+        '    <div id="app"></div>',
+        `    <script type="module" src="${href}"></script>`,
+        '  </body>',
+        '</html>',
+        '',
+      ].join('\n')
+      let body = new Response(html).body
+      assert.ok(body)
+      return body
+    },
     async close() {
       await removeFixtureDir(rootDir)
     },
   }
 }
 
-function getCounterModuleSource(options: { buttonText: string; extraExports?: string }): string {
+function getHmrPackageJson(target: string): object {
+  return {
+    exports: target,
+    name: 'test-package',
+    type: 'module',
+  }
+}
+
+function getHmrTsconfig(bareImportTarget?: string): object {
+  return {
+    compilerOptions: {
+      jsx: 'react-jsx',
+      ...(bareImportTarget
+        ? {
+            baseUrl: '.',
+            paths: {
+              'test-package': [bareImportTarget],
+            },
+          }
+        : {}),
+    },
+  }
+}
+
+function getCounterModuleSource(options: {
+  bareImport?: boolean
+  buttonPrefixImport?: string
+  buttonText: string
+  extraExports?: string
+}): string {
+  let buttonPrefixImport = options.bareImport ? 'test-package' : options.buttonPrefixImport
   let runtimeExportNames = ['renderCounter']
   if (options.extraExports?.includes('foo')) runtimeExportNames.push('foo')
   if (options.extraExports?.includes('loader')) runtimeExportNames.push('loader')
 
   return [
+    ...(buttonPrefixImport
+      ? [`import { buttonPrefix } from ${JSON.stringify(buttonPrefixImport)}`, '']
+      : []),
     `let buttonText = ${JSON.stringify(options.buttonText)}`,
+    ...(buttonPrefixImport ? ['let currentButtonPrefix = buttonPrefix'] : []),
     'let count = 3',
     '',
     'export function renderCounter() {',
     '  document.querySelector(\'[data-testid="count"]\')!.textContent = `Count: ${count}`',
-    '  document.querySelector(\'[data-testid="increment"]\')!.textContent = buttonText',
+    `  document.querySelector('[data-testid="increment"]')!.textContent = ${
+      buttonPrefixImport ? 'currentButtonPrefix + buttonText' : 'buttonText'
+    }`,
     '}',
     '',
     options.extraExports ?? '',
     '',
     'if (import.meta.hot) {',
+    ...(options.bareImport
+      ? [
+          "  import.meta.hot.accept('test-package', (module) => {",
+          "    if (module && typeof module === 'object' && 'buttonPrefix' in module) {",
+          '      currentButtonPrefix = String(module.buttonPrefix)',
+          '      renderCounter()',
+          '    }',
+          '  })',
+        ]
+      : []),
     '  let runtimeExports = {',
     '    ...(import.meta.hot.data.runtimeExports as Record<string, unknown> | undefined),',
     ...runtimeExportNames.map((name) => `    ${name},`),
@@ -1496,7 +1887,7 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
   function startBrowserHmrWatcher(): void {
     if (browserHmrWatcher) return
 
-    browserHmrWatcher = watch(path.join(fixture.rootDir, 'app'), {
+    browserHmrWatcher = watch(fixture.rootDir, {
       ignoreInitial: true,
       interval: 50,
       usePolling: true,
@@ -1523,19 +1914,31 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
         }
 
         hmrEventStream?.send({
-          timestamp: browserHmrEvent.timestamp,
+          data: browserHmrEvent.data,
           type: 'browser:update',
-          updates: browserHmrEvent.updates,
         })
-        for (let update of browserHmrEvent.updates) {
-          let waiters = browserUpdateWaiters.get(update.path)
+        for (let updatePath of getBrowserHmrUpdatePaths(browserHmrEvent.data)) {
+          let waiters = browserUpdateWaiters.get(updatePath)
           if (!waiters) continue
-          browserUpdateWaiters.delete(update.path)
+          browserUpdateWaiters.delete(updatePath)
           for (let resolve of waiters) resolve()
         }
       }
     }
   }
+}
+
+function getBrowserHmrUpdatePaths(data: Record<string, unknown>): string[] {
+  let paths: string[] = []
+  for (let payload of Object.values(data)) {
+    if (typeof payload !== 'object' || payload === null || !('updates' in payload)) continue
+    if (!Array.isArray(payload.updates)) continue
+    for (let update of payload.updates) {
+      if (typeof update !== 'object' || update === null || !('path' in update)) continue
+      if (typeof update.path === 'string') paths.push(update.path)
+    }
+  }
+  return paths
 }
 
 async function getWatchEventFilePath(filePath: string): Promise<string> {
@@ -1720,7 +2123,7 @@ function createTestHmrEventStream() {
     for (let client of clients) client.enqueue(event)
   }
 
-  let send = (payload: HmrPayload) => {
+  let send = (payload: HmrPayload | { data: Record<string, unknown>; type: 'browser:update' }) => {
     let event = encoder.encode(`data: ${JSON.stringify(payload)}\n\n`)
     for (let client of clients) client.enqueue(event)
   }

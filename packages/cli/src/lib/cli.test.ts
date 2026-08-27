@@ -545,8 +545,7 @@ describe('run', () => {
       assert.match(assets, /allowFiles: \['app\/routes\.ts', 'app\/\*\*\/public\/\*\*'\]/)
       assert.match(assets, /denyFiles: \['app\/\*\*\/\*\.test\.\*'\]/)
       assert.match(assets, /const entry = 'app\/actions\/public\/entry\.ts'/)
-      assert.match(assets, /getHref\(entry\)/)
-      assert.match(assets, /getPreloads\(entry\)/)
+      assert.match(assets, /getScriptEntry\(entry\)/)
       assert.match(assets, /createBrowserHmrChannel/)
       assert.match(assets, /scripts: \{ loaders: isHmr \? \[uiHmr\(\)\] : undefined \}/)
       assert.match(assets, /watch: isDevelopment/)
@@ -555,7 +554,10 @@ describe('run', () => {
       assert.match(entry, /resolveFrame/)
       assert.match(entry, /server:update/)
       assert.match(renderMiddleware, /resolveClientEntry/)
-      assert.match(renderMiddleware, /getPreloads/)
+      assert.match(
+        renderMiddleware,
+        /\{ href, importMap, preloads \} = await assetServer\.getScriptEntry\(entryId\)/,
+      )
       assert.match(renderMiddleware, /resolveFrame/)
       assert.match(controller, /context\.render\(<HomePage \/>/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))

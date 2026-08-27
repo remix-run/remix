@@ -26,13 +26,11 @@ export function render(assetServer: DocsAssetServer) {
               return { href: moduleId, exportName }
             }
 
-            let [href, preloads] = await Promise.all([
-              assetServer.getHref(moduleId),
-              assetServer.getPreloads(moduleId),
-            ])
+            let { href, importMap, preloads } = await assetServer.getScriptEntry(moduleId)
 
             return {
               href,
+              importMap,
               exportName,
               preloads,
             }

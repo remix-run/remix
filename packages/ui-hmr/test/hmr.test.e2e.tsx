@@ -1208,31 +1208,18 @@ type HmrPayload =
       type: 'server:update'
     }
   | {
-      timestamp: number
+      data: Record<string, unknown>
       type: 'browser:update'
-      updates: BrowserHmrUpdate[]
     }
   | {
       type: 'browser:reload'
     }
 
-type BrowserHmrUpdate =
-  | {
-      acceptedPath?: string
-      path: string
-      type: 'js'
-    }
-  | {
-      path: string
-      type: 'css'
-    }
-
 type BrowserHmrEvent =
   | {
+      data: Record<string, unknown>
       files?: string[]
-      timestamp: number
       type: 'update'
-      updates: BrowserHmrUpdate[]
     }
   | {
       files?: string[]
@@ -1523,6 +1510,9 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
   return {
     async renderDocument(assetServer) {
       let message = await fs.readFile(path.join(rootDir, 'server-message.txt'), 'utf-8')
+      let { href, importMap, preloads } = await assetServer.getScriptEntry(
+        path.join(rootDir, 'app/entry.tsx'),
+      )
       let clientFieldPath = path.join(rootDir, 'app/ClientField.tsx')
       let ClientField = createTestClientEntry(
         pathToFileURL(clientFieldPath).href,
@@ -1542,24 +1532,27 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
         <html>
           <head>
             <title>Server HMR Test</title>
+            <script type="importmap">{JSON.stringify(importMap).replace(/</g, '\\u003c')}</script>
+            {preloads.map((preloadHref) => (
+              <link key={preloadHref} rel="modulepreload" href={preloadHref} />
+            ))}
           </head>
           <body>
             <main>
               <p data-testid="server-message">{message}</p>
               <ClientField />
             </main>
-            <script src="/assets/app/entry.tsx" type="module" />
+            <script src={href} type="module" />
           </body>
         </html>,
         {
           async resolveClientEntry(entryId, component) {
-            let [href, preloads] = await Promise.all([
-              assetServer.getHref(entryId),
-              assetServer.getPreloads(entryId),
-            ])
+            let { href, importMap, preloads } = await assetServer.getScriptEntry(entryId)
+
             return {
               exportName: component.name || 'ClientField',
               href,
+              importMap,
               preloads,
             }
           },
@@ -1852,11 +1845,18 @@ function getNodeHmrServerSource(
         ]),
     '',
     'async function renderDocument() {',
+    `  let { href, importMap, preloads } = await assetServer.getScriptEntry(${JSON.stringify(`${appDir}/entry.tsx`)})`,
     '  return renderToStream(',
     '    <html>',
     '      <head>',
     '        <title>{title}</title>',
     '        <link rel="stylesheet" href="/assets/app/styles.css" />',
+    '        <script type="importmap">',
+    "          {JSON.stringify(importMap).replace(/</g, '\\\\u003c')}",
+    '        </script>',
+    '        {preloads.map((preloadHref) => (',
+    '          <link key={preloadHref} rel="modulepreload" href={preloadHref} />',
+    '        ))}',
     '      </head>',
     '      <body>',
     '        <main>',
@@ -1864,18 +1864,17 @@ function getNodeHmrServerSource(
     '          <p data-testid="server-message">{serverMessage}</p>',
     '          <ClientField />',
     '        </main>',
-    '        <script src="/assets/app/entry.tsx" type="module" />',
+    '        <script src={href} type="module" />',
     '      </body>',
     '    </html>,',
     '    {',
     '      async resolveClientEntry(entryId, component) {',
-    '        let [href, preloads] = await Promise.all([',
-    '          assetServer.getHref(entryId),',
-    '          assetServer.getPreloads(entryId),',
-    '        ])',
+    '        let { href, importMap, preloads } = await assetServer.getScriptEntry(entryId)',
+    '',
     '        return {',
     "          exportName: component.name || 'ClientField',",
     '          href,',
+    '          importMap,',
     '          preloads,',
     '        }',
     '      },',
@@ -2147,9 +2146,8 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
         }
 
         hmrEventStream?.send({
-          timestamp: browserHmrEvent.timestamp,
+          data: browserHmrEvent.data,
           type: 'browser:update',
-          updates: browserHmrEvent.updates,
         })
       }
     }
@@ -2303,7 +2301,7 @@ async function handleRequest(
       return
     }
     response.writeHead(200, headers)
-    response.end(await fs.readFile(path.join(fixture.rootDir, 'index.html'), 'utf-8'))
+    response.end(await renderStaticIndex(fixture, assetServer))
     return
   }
 
@@ -2327,6 +2325,33 @@ async function handleRequest(
 
   response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
   response.end('Not Found')
+}
+
+async function renderStaticIndex(fixture: HmrFixture, assetServer: AssetServer): Promise<string> {
+  let html = await fs.readFile(path.join(fixture.rootDir, 'index.html'), 'utf-8')
+  let { href, importMap, preloads } = await assetServer.getScriptEntry(
+    path.join(fixture.rootDir, 'app/entry.tsx'),
+  )
+  let importMapScript = `    <script type="importmap">${JSON.stringify(importMap).replace(
+    /</g,
+    '\\u003c',
+  )}</script>`
+  let preloadLinks = preloads
+    .map(
+      (preloadHref) => `    <link rel="modulepreload" href="${escapeHtmlAttribute(preloadHref)}">`,
+    )
+    .join('\n')
+  let script = `    <script type="module" src="${escapeHtmlAttribute(href)}"></script>`
+  let replacement = [importMapScript, preloadLinks, script].filter(Boolean).join('\n')
+
+  return html.replace(
+    /^\s*<script\s+type="module"\s+src="\/assets\/app\/entry\.tsx"><\/script>$/m,
+    replacement,
+  )
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
 }
 
 function createTestHmrEventStream() {

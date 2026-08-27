@@ -30,7 +30,7 @@ export function createApiController(options: ApiControllerOptions) {
 
         if (docFile?.kind === 'demo') {
           let ExampleComponent = clientEntry(
-            `${docFile.assetHref}#default`,
+            `${docFile.importHref}#default`,
             await loadDemoComponent(docFile),
           )
           let sourceHtml = await renderDemoSource(docFile.source)

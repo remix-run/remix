@@ -30,5 +30,4 @@ export const assetServer = createAssetServer({
 
 const entry = 'app/actions/public/entry.ts'
 
-export const entryHref = await assetServer.getHref(entry)
-export const entryPreloads = await assetServer.getPreloads(entry)
+export const scriptEntry = await assetServer.getScriptEntry(entry)

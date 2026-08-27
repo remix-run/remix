@@ -33,12 +33,10 @@ let stream = renderToStream(<App />, {
     return fetchHtml(frameUrl)
   },
   async resolveClientEntry(entryId, component) {
-    let [href, preloads] = await Promise.all([
-      assetServer.getHref(entryId),
-      assetServer.getPreloads(entryId),
-    ])
+    let { href, importMap, preloads } = await assetServer.getScriptEntry(entryId)
     return {
       href,
+      importMap,
       exportName: entryId.split('#')[1] || component.name,
       preloads,
     }
@@ -59,7 +57,7 @@ return new Response(stream, {
 - **`topFrameSrc`** - Overrides the root frame URL used for `handle.frames.top.src`. This is mainly useful when calling `renderToStream()` from inside `resolveFrame()` for a nested frame render.
 - **`signal`** - Cancels pending server rendering work. Pass `request.signal` so client disconnects can stop unresolved frame work without invoking `onError` for the disconnect itself.
 - **`resolveFrame(src, target, context)`** - Called when a `<Frame>` needs its content. Return a string of HTML, a `ReadableStream<Uint8Array>`, or a promise of either. `context.currentFrameSrc` is the URL for the frame that contains the `<Frame>`, and `context.topFrameSrc` is the outer document URL. Required if your component tree contains `<Frame>` elements.
-- **`resolveClientEntry(entryId, component)`** - Resolves the public module URL, export name, and optional module preload hrefs for a hydrated client entry.
+- **`resolveClientEntry(entryId, component)`** - Resolves the public module URL, export name, optional import map, and optional module preload hrefs for a hydrated client entry.
 - **`onError(error)`** - Called when a rendering error occurs. If not provided, the stream rejects with the error.
 
 When you render nested frame responses with `renderToStream()` inside `resolveFrame()`, pass `frameSrc` for the frame being rendered and carry `topFrameSrc` forward from the parent context. That preserves `handle.frames.top.src` across the whole SSR frame tree.

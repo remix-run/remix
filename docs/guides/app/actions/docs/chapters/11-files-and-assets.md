@@ -7,7 +7,7 @@ Remix has separate paths for files that already exist in public form, browser so
 
 ## Static files and source-served assets {#static-files-vs-source-served-assets}
 
-Use `staticFiles()` for files served from the root `public/` directory as-is. Use `createAssetServer()` for TypeScript, JavaScript, CSS, images, or fonts that need import rewriting, compilation, transforms, preloads, or fingerprinted URLs. Source assets live in separate, colocated `public/` directories under `app/`; the shared name communicates browser reachability, while the serving mechanism remains different.
+Use `staticFiles()` for files served from the root `public/` directory as-is. Use `createAssetServer()` for TypeScript, JavaScript, CSS, images, or fonts that need compilation, dependency resolution, transforms, preloads, or fingerprinted URLs. Source assets live in separate, colocated `public/` directories under `app/`; the shared name communicates browser reachability, while the serving mechanism remains different.
 
 ## Configure the asset server boundary {#remix-s-unbundled-asset-server}
 
@@ -31,20 +31,19 @@ Map the asset namespace to a controller action that calls `assetServer.fetch(req
 
 Put browser source beside its narrowest owner, such as `app/actions/cart/public/` or `app/ui/public/`. Every local dependency in that browser module graph must also match `allowFiles`, so keep the graph inside the colocated `public/` directory. Package dependencies are allowed separately with `allowPackages`.
 
-The asset server compiles TypeScript and JavaScript on demand, rewrites imports, follows CSS `@import` and `url()` references, and can serve explicitly configured leaf-file extensions. This keeps the whole browser graph visible without exposing the rest of the app.
+The asset server compiles TypeScript and JavaScript on demand, generates preloads and import maps, follows and rewrites CSS `@import` and `url()` references, and can serve explicitly configured leaf-file extensions. This keeps the whole browser graph visible without exposing the rest of the app.
 
-## Asset hrefs, client entries, and preloads {#client-entry-hrefs-and-module-preloads}
+## Asset hrefs, client entries, import maps and preloads {#client-entry-hrefs-import-maps-and-module-preloads}
 
-Use `getHref()` for scripts, styles, and files, and `getPreloads()` for entry dependencies. Resolve stable root entry metadata once in `app/assets.ts`:
+Use `getScriptEntry()` for rendered script entries because scripts need a public URL, modulepreload hints, and an import map. Use `getHref()` for styles and files, and `getPreloads()` when you need lower-level preload control. Resolve stable root entry metadata once in `app/assets.ts`:
 
 ```ts filename=app/assets.ts
 const entry = "app/actions/public/entry.ts";
 
-export const entryHref = await assetServer.getHref(entry);
-export const entryPreloads = await assetServer.getPreloads(entry);
+export const scriptEntry = await assetServer.getScriptEntry(entry);
 ```
 
-Render those preloads and the entry script from the document head. Resolve `clientEntry(import.meta.url, ...)` IDs to `href` and `preloads` through the asset server in the shared renderer instead of hard-coding deployment URLs in components.
+Render the script entry import map before its modulepreload links and module script. Resolve `clientEntry(import.meta.url, ...)` IDs to `href`, `importMap`, and `preloads` through the asset server in the shared renderer instead of hard-coding deployment URLs in components.
 
 ## File transforms and transformed-output caches {#asset-file-transforms}
 
@@ -52,7 +51,7 @@ Define request-selected transforms with `defineFileTransform()`, optional global
 
 ## Development watching and production fingerprints {#fingerprinting-source-maps-minification}
 
-Choose one development watcher. A long-lived asset server may watch source files itself, while the generated app sets `watch: false` and lets Node's `--watch` restart the process. Close asset-owned watchers during shutdown. In production, disable watching, choose browser targets, source-map and minification policy, and enable fingerprinting with a build ID that changes on every deploy.
+Choose one development watcher. A long-lived asset server may watch source files itself, while the generated app sets `watch: false` and lets Node's `--watch` restart the process. Close asset-owned watchers during shutdown. In production, disable watching, choose browser targets, source-map and minification policy, and enable content-based fingerprinting for long-lived immutable asset caching.
 
 ## Parse bounded form uploads {#file-uploads}
 

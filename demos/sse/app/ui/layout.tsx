@@ -7,7 +7,8 @@ const rawCss = String.raw
 
 export function Layout(handle: Handle<{ children?: RemixNode }>) {
   return () => {
-    let { scriptSrc, scriptPreloads } = getAssetEntry()
+    let { scriptEntry } = getAssetEntry()
+    let { href, importMap, preloads } = scriptEntry
 
     return (
       <html lang="en">
@@ -15,10 +16,11 @@ export function Layout(handle: Handle<{ children?: RemixNode }>) {
           <meta charSet="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title>Server-Sent Events Demo</title>
-          {scriptPreloads.map((href) => (
-            <link key={href} rel="modulepreload" href={href} />
+          <script type="importmap">{JSON.stringify(importMap)}</script>
+          {preloads.map((preloadHref) => (
+            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}
-          <script type="module" async src={scriptSrc} />
+          <script type="module" src={href} />
           <style>
             {rawCss`
             @layer reset {

@@ -55,7 +55,7 @@ export function createApiRouter(options: ApiRouterOptions) {
   middleware.push(render(options.assetServer))
 
   let router = createRemixRouter<AppContext>({ middleware })
-  let getDocsContext = createDocsContextLoader(options.assetServer, options.docsContext)
+  let getDocsContext = createDocsContextLoader(options.docsContext)
 
   let rootControllerOptions = {
     assetServer: options.assetServer,

@@ -18,7 +18,6 @@ import {
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
-import { generateFingerprint } from '../fingerprint.ts'
 import {
   maskAuthoredInjectedPackageSpecifier,
   mayContainInjectedPackageSpecifier,
@@ -38,6 +37,7 @@ import type { EmittedModule } from './emit.ts'
 import type { ResolvedScriptTarget } from '../target.ts'
 import type { ResolvedModule } from './resolve.ts'
 import { scriptLoaderConditions } from './conditions.ts'
+import { isBareImportSpecifier } from './specifiers.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -83,7 +83,6 @@ type UnresolvedImport = {
 type HmrAcceptedDependency = UnresolvedImport
 
 export type TransformedModule = {
-  fingerprint: string | null
   hmr: {
     acceptedDeps: HmrAcceptedDependency[]
     selfAccepting: boolean
@@ -121,7 +120,6 @@ type TsconfigTransformOptions = {
 type TsconfigTransformOptionsResolver = ReturnType<typeof createTsconfigTransformOptionsResolver>
 
 export type TransformArgs = {
-  buildId: string | null
   define: Record<string, string> | null
   externalSet: ReadonlySet<string>
   isWatchIgnored(filePath: string): boolean
@@ -272,13 +270,6 @@ export async function transformModule(
         trackedFiles,
       },
       value: {
-        fingerprint:
-          args.buildId === null
-            ? null
-            : await generateFingerprint({
-                buildId: args.buildId,
-                content: sourceText,
-              }),
         hmr: getHmrAnalysis(analysis.rawCode),
         identityPath: record.identityPath,
         importerDir: path.dirname(resolvedPath),
@@ -432,18 +423,6 @@ function findNearestTsconfigPath(directory: string): string | null {
     if (parentDirectory === currentDirectory) return null
     currentDirectory = parentDirectory
   }
-}
-
-function isBareImportSpecifier(specifier: string): boolean {
-  return (
-    !specifier.startsWith('./') &&
-    !specifier.startsWith('../') &&
-    !specifier.startsWith('/') &&
-    !specifier.startsWith('file:') &&
-    !specifier.startsWith('data:') &&
-    !specifier.startsWith('http://') &&
-    !specifier.startsWith('https://')
-  )
 }
 
 async function analyzeModuleSource(

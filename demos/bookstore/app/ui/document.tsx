@@ -10,7 +10,8 @@ export interface DocumentProps {
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { title = 'Bookstore', children } = handle.props
-    let { scriptSrc, scriptPreloads, stylesheetHref } = getAssetEntry()
+    let { scriptEntry, stylesheetHref } = getAssetEntry()
+    let { href, importMap, preloads } = scriptEntry
 
     return (
       <html lang="en">
@@ -19,10 +20,11 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title>{title}</title>
           <link rel="stylesheet" href={stylesheetHref} />
-          {scriptPreloads.map((href) => (
-            <link key={href} rel="modulepreload" href={href} />
+          <script type="importmap">{JSON.stringify(importMap)}</script>
+          {preloads.map((preloadHref) => (
+            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}
-          <script type="module" async src={scriptSrc} />
+          <script type="module" src={href} />
         </head>
         <body>{children}</body>
       </html>

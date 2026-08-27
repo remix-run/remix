@@ -17,6 +17,7 @@ import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ResolveModuleResult, TransformedModule } from './transform.ts'
 import type { EmittedModule } from './emit.ts'
+import { isBareImportSpecifier } from './specifiers.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -34,10 +35,19 @@ type ResolvedImport = {
   depPath: string
   end: number
   quote?: '"' | "'" | '`'
+  scopePathname?: string
+  specifier: string
   start: number
 }
 
 type ResolvedHmrAcceptedDependency = ResolvedImport
+
+type PendingBareImportScope = {
+  imported: ResolvedImport
+  resolvedIdentityPath: string
+  specifier: string
+  trackedResolution: RelativeImportResolution | null
+}
 
 type RelativeImportResolution = {
   candidatePaths: readonly string[]
@@ -51,7 +61,6 @@ type TrackedResolution = RelativeImportResolution & {
 
 export type ResolvedModule = {
   deps: string[]
-  fingerprint: string | null
   hmr: Omit<TransformedModule['hmr'], 'acceptedDeps'> & {
     acceptedDeps: ResolvedHmrAcceptedDependency[]
   }
@@ -78,10 +87,13 @@ type ResolveResult = {
 )
 
 export type ResolveArgs = {
+  concurrency: number
+  isDirectoryResolutionFileIndependent(directory: string): boolean
   isAllowed(absolutePath: string): boolean
   isWatchIgnored(filePath: string): boolean
   resolveModulePath(absolutePath: string): ResolveModuleResult | null
   resolverFactory: ResolverFactory
+  resolveDirectorySpecifierIdentity(directory: string, specifier: string): Promise<string | null>
   routes: CompiledRoutes
 }
 
@@ -121,6 +133,7 @@ export async function resolveModule(
   }
 
   let importsWithPaths: ResolvedImport[] = []
+  let pendingBareImportScopes: PendingBareImportScope[] = []
   let acceptedDepsWithPaths: ResolvedHmrAcceptedDependency[] = []
   let deps = new Set<string>()
 
@@ -216,12 +229,51 @@ export async function resolveModule(
       })
     }
 
-    importsWithPaths.push({
+    let imported: ResolvedImport = {
       depPath: resolvedImport.identityPath,
       end: unresolved.end,
       quote: unresolved.quote,
+      specifier: displaySpecifier,
       start: unresolved.start,
-    })
+    }
+    importsWithPaths.push(imported)
+
+    if (isBareImportSpecifier(displaySpecifier)) {
+      pendingBareImportScopes.push({
+        imported,
+        resolvedIdentityPath: resolvedImport.identityPath,
+        specifier: normalizedSpecifierForDirectoryResolution(
+          unresolved.specifier,
+          transformed.resolvedPath,
+        ),
+        trackedResolution,
+      })
+    }
+  }
+
+  if (pendingBareImportScopes.length > 0) {
+    let scopeResults = await resolveBareImportScopes(
+      pendingBareImportScopes,
+      transformed.resolvedPath,
+      args,
+    )
+    for (let index = 0; index < scopeResults.length; index++) {
+      let result = scopeResults[index]
+      let pending = pendingBareImportScopes[index]
+      if (!result.ok) {
+        return failResolve(
+          result.error,
+          trackedFiles,
+          trackedResolutions,
+          transformed.resolvedPath,
+          {
+            isWatchIgnored: args.isWatchIgnored,
+            trackedResolution: pending.trackedResolution,
+          },
+        )
+      }
+      pending.imported.scopePathname = result.scopePathname
+    }
   }
 
   for (let unresolved of transformed.hmr.acceptedDeps) {
@@ -327,6 +379,7 @@ export async function resolveModule(
       depPath: resolvedImport.identityPath,
       end: unresolved.end,
       quote: unresolved.quote,
+      specifier: displaySpecifier,
       start: unresolved.start,
     })
   }
@@ -336,7 +389,6 @@ export async function resolveModule(
     tracking: toResolveTracking(trackedFiles, trackedResolutions),
     value: {
       deps: [...deps],
-      fingerprint: transformed.fingerprint,
       hmr: {
         acceptedDeps: acceptedDepsWithPaths,
         selfAccepting: transformed.hmr.selfAccepting,
@@ -351,6 +403,118 @@ export async function resolveModule(
       stableUrlPathname: transformed.stableUrlPathname,
     },
   }
+}
+
+async function resolveBareImportScopes(
+  pendingScopes: PendingBareImportScope[],
+  importerPath: string,
+  args: ResolveArgs,
+): Promise<
+  ({ ok: true; scopePathname: string } | { ok: false; error: AssetServerCompilationError })[]
+> {
+  let results = new Array<
+    { ok: true; scopePathname: string } | { ok: false; error: AssetServerCompilationError }
+  >(pendingScopes.length)
+  let nextIndex = 0
+
+  async function worker(): Promise<void> {
+    while (nextIndex < pendingScopes.length) {
+      let index = nextIndex++
+      let pending = pendingScopes[index]
+      try {
+        results[index] = {
+          ok: true,
+          scopePathname: await getBareImportScopePathname({
+            importerPath,
+            resolvedIdentityPath: pending.resolvedIdentityPath,
+            specifier: pending.specifier,
+            ...args,
+          }),
+        }
+      } catch (error) {
+        results[index] = {
+          ok: false,
+          error: isAssetServerCompilationError(error)
+            ? error
+            : createAssetServerCompilationError(
+                `Failed to determine an import map scope for "${pending.imported.specifier}" in ${importerPath}. ${formatUnknownError(error)}`,
+                { cause: error, code: 'IMPORT_RESOLUTION_FAILED' },
+              ),
+        }
+      }
+    }
+  }
+
+  if (pendingScopes.length === 1) {
+    await worker()
+  } else {
+    await Promise.all(
+      Array.from({ length: Math.min(args.concurrency, pendingScopes.length) }, () => worker()),
+    )
+  }
+  return results
+}
+
+async function getBareImportScopePathname(args: {
+  importerPath: string
+  isDirectoryResolutionFileIndependent(directory: string): boolean
+  resolvedIdentityPath: string
+  resolveDirectorySpecifierIdentity(directory: string, specifier: string): Promise<string | null>
+  routes: CompiledRoutes
+  specifier: string
+}): Promise<string> {
+  let importerDirectory = normalizeFilePath(path.dirname(args.importerPath))
+  let importerScopePathname = args.routes.toUrlPathname(importerDirectory)
+  if (!importerScopePathname) {
+    throw new Error(`Expected a URL pathname for ${importerDirectory}`)
+  }
+
+  let importerDirectoryResolution: string | null = args.resolvedIdentityPath
+  if (!args.isDirectoryResolutionFileIndependent(importerDirectory)) {
+    importerDirectoryResolution = await args.resolveDirectorySpecifierIdentity(
+      importerDirectory,
+      args.specifier,
+    )
+    if (importerDirectoryResolution !== args.resolvedIdentityPath) {
+      throw createAssetServerCompilationError(
+        `Bare import "${args.specifier}" in ${args.importerPath} resolves differently based on the importer file. ` +
+          `Browser module resolution must be uniform for all files in the same directory.`,
+        { code: 'IMPORT_RESOLUTION_NOT_DIRECTORY_UNIFORM' },
+      )
+    }
+  }
+
+  let directory = importerDirectory
+  let scopePathname = importerScopePathname
+  let broadestScopePathname = importerScopePathname
+  while (true) {
+    let resolvedIdentityPath =
+      directory === importerDirectory
+        ? importerDirectoryResolution
+        : await args.resolveDirectorySpecifierIdentity(directory, args.specifier)
+    if (resolvedIdentityPath !== args.resolvedIdentityPath) break
+
+    broadestScopePathname = scopePathname
+    let parentDirectory = normalizeFilePath(path.dirname(directory))
+    if (parentDirectory === directory) break
+    let parentScopePathname = args.routes.toUrlPathname(parentDirectory)
+    if (!parentScopePathname) break
+    directory = parentDirectory
+    scopePathname = parentScopePathname
+  }
+
+  return ensureTrailingSlash(broadestScopePathname)
+}
+
+function normalizedSpecifierForDirectoryResolution(
+  specifier: string,
+  importerPath: string,
+): string {
+  return normalizeSpecifierResolution(specifier, importerPath).specifier
+}
+
+function ensureTrailingSlash(value: string): string {
+  return value.endsWith('/') ? value : `${value}/`
 }
 
 function findNearestPackageJsonPath(filePath: string): string | null {

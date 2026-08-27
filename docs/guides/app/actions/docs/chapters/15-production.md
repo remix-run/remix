@@ -47,4 +47,4 @@ Remix supplies request logging and explicit error hooks, not a deployment-specif
 
 ## Deployment checklist {#deployment-checklist}
 
-Verify runtime versions, environment validation, migrations, trusted-proxy settings, session and upload storage, asset build IDs, cache headers, graceful shutdown, error reporting, health checks, and a smoke request against the deployed origin.
+Verify runtime versions, environment validation, migrations, trusted-proxy settings, session and upload storage, asset fingerprinting, cache headers, graceful shutdown, error reporting, health checks, and a smoke request against the deployed origin.

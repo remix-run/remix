@@ -10,7 +10,7 @@ import {
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
-import { formatFingerprintedPathname, generateFingerprint, hashContent } from '../fingerprint.ts'
+import { formatFingerprintedPathname, hashContent } from '../fingerprint.ts'
 import { normalizeFilePath, resolveFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { AssetFileTransformResult, ResolvedAssetRequestTransformMap } from './config.ts'
@@ -56,8 +56,8 @@ type FileGetHrefOptions = {
 }
 
 type FileCompilerOptions = {
-  buildId?: string
   cache?: FileStorage
+  cacheKey?: string
   extensions: readonly string[]
   fingerprintAssets: boolean
   globalTransforms: readonly {
@@ -128,7 +128,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   let transformedAssetMetadataByCacheKey = new Map<string, EmittedFileMetadata>()
   let transformedCacheKeysByIdentityPath = new Map<string, Set<string>>()
   let transformedEmitInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
-  let cacheEpoch = resolvedOptions.buildId ?? crypto.randomUUID()
+  let cacheKey = resolvedOptions.cacheKey ?? crypto.randomUUID()
   let resolveArgs: ResolveArgs = {
     extensions: resolvedOptions.extensionSet,
     isAllowed: resolvedOptions.isAllowed,
@@ -140,9 +140,13 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
       let resolvedFile = resolveServedFileOrThrow(resolveInputFilePath(filePath), resolveArgs)
       let record = getFreshSourceFileRecord(resolvedFile.identityPath)
       if (shouldUseTransformPipeline(getOptions.transform)) {
-        let cacheKey = getTransformedRecordCacheKey(cacheEpoch, record, getOptions.transform)
+        let transformedCacheKey = getTransformedRecordCacheKey(
+          cacheKey,
+          record,
+          getOptions.transform,
+        )
         let notModified = getNotModifiedFile(
-          transformedAssetMetadataByCacheKey.get(cacheKey),
+          transformedAssetMetadataByCacheKey.get(transformedCacheKey),
           getOptions,
         )
         if (notModified) return notModified
@@ -179,12 +183,13 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     async getHref(filePath, hrefOptions) {
       let resolvedFile = resolveServedFileOrThrow(resolveInputFilePath(filePath), resolveArgs)
       let record = getFreshSourceFileRecord(resolvedFile.identityPath)
-      let href = resolvedOptions.fingerprintAssets
-        ? formatFingerprintedPathname(
-            resolvedFile.stableUrlPathname,
-            (await getOrCreateSourceFileMetadata(record)).fingerprint,
-          )
-        : resolvedFile.stableUrlPathname
+      let href = resolvedFile.stableUrlPathname
+      if (resolvedOptions.fingerprintAssets) {
+        let emittedFile = shouldUseTransformPipeline(hrefOptions.transform)
+          ? await getOrCreateTransformedFile(record, hrefOptions.transform)
+          : await getOrCreateSourceFile(record)
+        href = formatFingerprintedPathname(href, emittedFile.fingerprint)
+      }
 
       if (shouldUseTransformPipeline(hrefOptions.transform)) {
         return appendTransformQuery(href, hrefOptions.transform)
@@ -291,19 +296,15 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
       resolvedOptions.transforms,
       resolvedOptions.maxRequestTransforms,
     )
-    let cacheKey = getTransformedRecordCacheKey(cacheEpoch, record, transformQuery)
-    let existing = transformedEmitInFlightByCacheKey.get(cacheKey)
+    let transformedCacheKey = getTransformedRecordCacheKey(cacheKey, record, transformQuery)
+    let existing = transformedEmitInFlightByCacheKey.get(transformedCacheKey)
     if (existing) return existing
 
     let promise = (async () => {
-      let sourceFile = await getOrCreateSourceFile(record)
-      let cachedFile = await getCachedTransformedFile(
-        cacheKey,
-        record.identityPath,
-        sourceFile.fingerprint,
-      )
+      let cachedFile = await getCachedTransformedFile(transformedCacheKey, record.identityPath)
       if (cachedFile) return cachedFile
 
+      let sourceFile = await getOrCreateSourceFile(record)
       let transformedFile = await applyTransforms(record.identityPath, sourceFile, parsedTransforms)
       if (transformedFile === null) {
         return sourceFile
@@ -312,24 +313,23 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
       let emittedFile = await createEmittedFile(transformedFile.body, {
         extension: transformedFile.extension,
         filePath: record.identityPath,
-        fingerprint: sourceFile.fingerprint,
       })
       rememberTransformedAssetMetadata(
-        cacheKey,
+        transformedCacheKey,
         record.identityPath,
         toEmittedFileMetadata(emittedFile),
       )
-      await setCachedTransformedFile(cacheKey, record.identityPath, emittedFile)
+      await setCachedTransformedFile(transformedCacheKey, record.identityPath, emittedFile)
       return emittedFile
     })()
 
-    transformedEmitInFlightByCacheKey.set(cacheKey, promise)
+    transformedEmitInFlightByCacheKey.set(transformedCacheKey, promise)
 
     try {
       return await promise
     } finally {
-      if (transformedEmitInFlightByCacheKey.get(cacheKey) === promise) {
-        transformedEmitInFlightByCacheKey.delete(cacheKey)
+      if (transformedEmitInFlightByCacheKey.get(transformedCacheKey) === promise) {
+        transformedEmitInFlightByCacheKey.delete(transformedCacheKey)
       }
     }
   }
@@ -338,13 +338,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     return createEmittedFile(body, {
       extension: path.extname(identityPath).toLowerCase(),
       filePath: identityPath,
-      fingerprint:
-        resolvedOptions.fingerprintAssets && resolvedOptions.buildId
-          ? await generateFingerprint({
-              buildId: resolvedOptions.buildId,
-              content: body,
-            })
-          : null,
     })
   }
 
@@ -439,7 +432,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   async function getCachedTransformedFile(
     cacheKey: string,
     identityPath: string,
-    fingerprint: string | null,
   ): Promise<EmittedFile | null> {
     if (!resolvedOptions.cache) return null
 
@@ -452,7 +444,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
       (await createEmittedFileMetadata(body, {
         extension: path.extname(file.name).toLowerCase(),
         filePath: identityPath,
-        fingerprint,
       }))
 
     rememberTransformedAssetMetadata(cacheKey, identityPath, metadata)
@@ -484,7 +475,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     options: {
       extension: string
       filePath: string
-      fingerprint: string | null
     },
   ): Promise<EmittedFile> {
     let metadata = await createEmittedFileMetadata(body, options)
@@ -522,9 +512,9 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     options: {
       extension: string
       filePath: string
-      fingerprint: string | null
     },
   ): Promise<EmittedFileMetadata> {
+    let contentHash = await hashContent(body)
     let contentType =
       detectContentType(`file${options.extension}`) ??
       detectContentType(options.filePath) ??
@@ -532,9 +522,9 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
 
     return {
       contentType,
-      etag: `W/"${await hashContent(body)}"`,
+      etag: `W/"${contentHash}"`,
       extension: options.extension,
-      fingerprint: options.fingerprint,
+      fingerprint: resolvedOptions.fingerprintAssets ? contentHash : null,
     }
   }
 }
@@ -609,12 +599,12 @@ function getRecordCacheKey(record: SourceFileRecord): string {
 }
 
 function getTransformedRecordCacheKey(
-  cacheEpoch: string,
+  cacheKey: string,
   record: SourceFileRecord,
   transformQuery: readonly string[] | null,
 ): string {
   return [
-    encodeCacheKeyPart(cacheEpoch),
+    encodeCacheKeyPart(cacheKey),
     encodeCacheKeyPart(record.identityPath),
     String(record.invalidationVersion),
     encodeCacheKeyPart(JSON.stringify(transformQuery ?? [])),
