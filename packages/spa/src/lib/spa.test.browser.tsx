@@ -172,6 +172,43 @@ describe('run', () => {
     expect(document.querySelector('h1')?.textContent).toBe('Ready')
   })
 
+  it('encodes text/plain form submissions with normalized line breaks', async (t) => {
+    let [submittedRequest, resolveSubmittedRequest] = withResolvers<Request>()
+    let requestCount = 0
+    let router: Router = {
+      async fetch(input, init) {
+        let request = input instanceof Request ? input : new Request(input, init)
+        requestCount++
+
+        if (requestCount === 1) {
+          return spaResponse.create(
+            <form method="post" encType="text/plain">
+              <textarea name="note" defaultValue={'first\nsecond'} />
+              <input name="city" value="Paris" />
+              <button type="submit">Submit</button>
+            </form>,
+          )
+        }
+
+        resolveSubmittedRequest(request)
+        return spaResponse.create(<h1>Submitted</h1>)
+      },
+    }
+    let app = run(router)
+
+    t.after(() => app.dispose())
+
+    await app.ready()
+
+    let form = document.querySelector('form')
+    if (!form) throw new Error('Expected a form')
+    form.requestSubmit()
+
+    let request = await submittedRequest
+    expect(request.headers.get('Content-Type')).toBe('text/plain')
+    expect(await request.text()).toBe('note=first\r\nsecond\r\ncity=Paris\r\n')
+  })
+
   it('follows same-origin redirects and applies Fetch redirect method semantics', async (t) => {
     let initialUrl = window.location.href
     let routeUrl = new URL(initialUrl)
