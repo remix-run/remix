@@ -32,6 +32,7 @@ describe('frame navigation', () => {
     let documentMarker = await markDocument(page)
 
     await page.getByRole('button', { name: 'Set auth cookie' }).click()
+    await page.waitForURL((url) => url.pathname === routes.main.index.href())
     await page.getByRole('heading', { name: 'Learning dashboard' }).waitFor()
 
     assert.equal(new URL(page.url()).pathname, routes.main.index.href())

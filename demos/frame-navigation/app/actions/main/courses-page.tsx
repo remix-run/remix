@@ -33,8 +33,8 @@ export function MainCoursesPage(handle: Handle<MainCoursesPageProps>) {
         <form
           method="GET"
           action={routes.main.courses.href()}
-          rmx-target={frames.courses}
-          rmx-history="replace"
+          data-rmx-target={frames.courses}
+          data-rmx-history="replace"
           mix={filterFormStyle}
         >
           <label for="course-filter" mix={filterLabelStyle}>
@@ -53,7 +53,11 @@ export function MainCoursesPage(handle: Handle<MainCoursesPageProps>) {
               Filter
             </button>
             {query ? (
-              <a href={routes.main.courses.href()} rmx-target={frames.courses} mix={clearLinkStyle}>
+              <a
+                href={routes.main.courses.href()}
+                data-rmx-target={frames.courses}
+                mix={clearLinkStyle}
+              >
                 Clear
               </a>
             ) : null}

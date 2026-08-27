@@ -1,19 +1,14 @@
-import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
+import { loadConfig } from 'remix/cli'
 import { createController } from 'remix/router'
 
 import { routes } from '../../routes.ts'
 
+const config = await loadConfig(import.meta.dirname)
+if (config.assets === undefined) throw new Error('Missing assets configuration')
+
 export const assetServer = createAssetServer({
-  basePath: '/assets',
-  rootDir: path.resolve(import.meta.dirname, '../../../../..'),
-  mounts: {
-    app: 'demos/timeboxer/app',
-    packages: 'packages',
-  },
-  allowFiles: ['demos/timeboxer/app/routes.ts', 'demos/timeboxer/app/**/public/**'],
-  allowPackages: ['remix'],
-  denyFiles: ['demos/timeboxer/app/**/*.test.*'],
+  ...config.assets,
   sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
   scripts: {
     define: {

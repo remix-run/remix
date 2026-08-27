@@ -195,22 +195,28 @@ function Clock(handle: Handle) {
 }
 ```
 
-## `addEventListeners(target, handle.signal, listeners)`
+## Native Event Listeners
 
-Listen to an `EventTarget` with automatic cleanup when the component disconnects. Ideal for global event targets like `document` and `window`.
+Use `on(...)` for element events. For browser globals such as `window` or `document`, schedule setup with `handle.queueTask()` and pass `handle.signal` to `addEventListener()` so the listener is removed when the component disconnects.
 
 ```tsx
-function KeyboardTracker(handle: Handle) {
-  let keys: string[] = []
+function ViewportWidth(handle: Handle) {
+  let width: number | undefined
 
-  addEventListeners(document, handle.signal, {
-    keydown(event) {
-      keys.push(event.key)
-      handle.update()
-    },
+  handle.queueTask(() => {
+    width = window.innerWidth
+    window.addEventListener(
+      'resize',
+      () => {
+        width = window.innerWidth
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
+    handle.update()
   })
 
-  return () => <div>Keys: {keys.join(', ')}</div>
+  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
 }
 ```
 

@@ -34,10 +34,10 @@ export const link: MixinFactory<
         return renderMixinElement(handle.element, {
           ...(props ?? {}),
           href,
-          ...(options?.target == null ? {} : { 'rmx-target': options.target }),
-          ...(options?.src == null ? {} : { 'rmx-src': options.src }),
-          ...(options?.history == null ? {} : { 'rmx-history': options.history }),
-          ...(options?.resetScroll === false ? { 'rmx-reset-scroll': 'false' } : {}),
+          ...(options?.target == null ? {} : { 'data-rmx-target': options.target }),
+          ...(options?.src == null ? {} : { 'data-rmx-src': options.src }),
+          ...(options?.history == null ? {} : { 'data-rmx-history': options.history }),
+          ...(options?.resetScroll === false ? { 'data-rmx-reset-scroll': 'false' } : {}),
         })
       }
 

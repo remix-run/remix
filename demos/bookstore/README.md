@@ -33,8 +33,9 @@ The setup command above creates `db/bookstore.sqlite`, applies the migrations, a
 ```sh
 pnpm db:status
 pnpm db:migrate
+pnpm db:rollback
 pnpm db:seed
 pnpm db:reset
 ```
 
-`db:reset` recreates the database from scratch. The other commands let you inspect or update it without discarding your local changes.
+`db:rollback` reverts the latest migration, while `db:reset` recreates the database from scratch. The other commands let you inspect or update it without discarding your local changes.

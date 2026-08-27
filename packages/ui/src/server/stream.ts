@@ -492,7 +492,7 @@ function buildFrameSegment(
     framePromise.catch(() => {})
     context.pendingFrames.push({ frameId, promise: framePromise })
   } else {
-    seg.pending = Promise.resolve(
+    let framePromise = Promise.resolve(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
     ).then(async (resolved) => {
       let { html, tail } = await resolveFrameHtml(resolved)
@@ -502,6 +502,9 @@ function buildFrameSegment(
         context.blockingFrameTails.push(tail)
       }
     })
+    // An earlier blocking frame may reject before this promise is awaited.
+    framePromise.catch(() => {})
+    seg.pending = framePromise
   }
 
   return seg
@@ -533,6 +536,16 @@ function buildElementSegment(
 
   if (props.innerHTML) {
     return staticSeg(`<${tag}${attrs}>${props.innerHTML}</${tag}>`)
+  }
+
+  if (tag === 'script') {
+    if (typeof props.children === 'string') {
+      return staticSeg(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
+    }
+    if (props.children != null) {
+      console.error(new Error('script elements with children must have a single string child'))
+    }
+    return staticSeg(`<${tag}${attrs}></${tag}>`)
   }
 
   let open = staticSeg(`<${tag}${attrs}>`)
@@ -1174,6 +1187,16 @@ function escapeTemplateContent(html: string): string {
   return html.replace(/<\/template/gi, '<\\/template')
 }
 
+const SCRIPT_TAG_PATTERN = /(<\/|<)(s)(cript)/gi
+
+function escapeScriptTextContent(value: string): string {
+  return value.replace(
+    SCRIPT_TAG_PATTERN,
+    (_match, prefix: string, firstLetter: string, suffix: string) =>
+      `${prefix}${firstLetter === 's' ? '\\u0073' : '\\u0053'}${suffix}`,
+  )
+}
+
 function transformAttributeName(name: string, isSvg: boolean): string {
   return normalizeAttributeName(name, isSvg).attr
 }
@@ -1232,7 +1255,7 @@ function finalizeHtml(html: string, context: RenderContext): string {
 
 const FRAME_HEAD_OPEN_TAG = '<head>'
 const FRAME_HEAD_CLOSE_TAG = '</head>'
-const MARKED_MODULE_PRELOAD_START = '<link data-rmx rel="modulepreload" href="'
+const MARKED_MODULE_PRELOAD_START = '<link data-rmx-module-preload rel="modulepreload" href="'
 const MODULE_PRELOAD_END = '" />'
 
 function createModulePreloadTag(href: string): string {
@@ -1322,12 +1345,12 @@ function renderStyleTag(
 ): string {
   let wrappedCss = wrapStyleForLayer(selector, css, layer)
   if (!wrappedCss) return ''
-  return `<style data-rmx="${escapeHtml(selector)}">${escapeStyleText(wrappedCss)}</style>`
+  return `<style data-rmx-style="${escapeHtml(selector)}">${escapeStyleText(wrappedCss)}</style>`
 }
 
 function escapeStyleText(css: string): string {
-  // A literal "</style" closes an HTML style element even when it appears inside a CSS string.
-  return css.replace(/</g, '\\3C ')
+  // Only neutralize literal style end tags. Escaping every '<' breaks valid range media queries.
+  return css.replace(/<\/style/gi, '\\3C/style')
 }
 
 function buildRmxDataScript(context: RenderContext): string {

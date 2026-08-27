@@ -243,7 +243,7 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/session-storage/redis` — Redis-backed storage. Use for multi-process or multi-host deployments
 - `remix/session-storage/memcache` — Memcache-backed storage. Same multi-host use case as Redis
 - `remix/cookie` — `createCookie` for plain signed/unsigned cookies. Use for non-sensitive preferences where the client is allowed to control the value (theme, locale, dismissed banner). For state where tampering matters, prefer `remix/session`
-- `remix/auth` — credentials, OAuth, OIDC, and Atmosphere providers. Use to define how identity is verified, start/finish external login, and refresh stored OAuth/OIDC token bundles with `refreshExternalAuth(...)`
+- `remix/auth` — credentials, OAuth, and OIDC providers. Use to define how identity is verified, start/finish external login, and refresh stored OAuth/OIDC token bundles with `refreshExternalAuth(...)`
 - `remix/middleware/auth` — `auth({ schemes })`, `requireAuth`, the `Auth` context key. Use to resolve identity into the request context and to gate routes
 
 ### UI, Hydration, and Browser Behavior

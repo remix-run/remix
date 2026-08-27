@@ -9,16 +9,24 @@ export interface DocsNavigationLink {
   current?: 'location' | 'page'
 }
 
-export type DocsNavigationLinkId = 'guides' | 'api' | 'blog' | 'jam' | 'store' | 'github'
+export type DocsNavigationLinkId =
+  | 'guides'
+  | 'api'
+  | 'github'
+  | 'blog'
+  | 'newsletter'
+  | 'jam'
+  | 'store'
 
 export function createDocsNavigationLinks(): Map<DocsNavigationLinkId, DocsNavigationLink> {
   return new Map<DocsNavigationLinkId, DocsNavigationLink>()
     .set('guides', { href: 'https://guides.remix.run/', label: 'Guides' })
     .set('api', { href: 'https://api.remix.run', label: 'API' })
+    .set('github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' })
     .set('blog', { href: 'https://remix.run/blog', label: 'Blog' })
+    .set('newsletter', { href: 'https://remix.run/newsletter', label: 'Newsletter' })
     .set('jam', { href: 'https://remix.run/jam/2026', label: 'Jam' })
     .set('store', { href: 'https://shop.remix.run', label: 'Store' })
-    .set('github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' })
 }
 
 export interface DocsHeaderProps {
@@ -31,7 +39,12 @@ export interface DocsHeaderProps {
 export function DocsHeader(handle: Handle<DocsHeaderProps>) {
   return () => (
     <header mix={docsHeaderCss}>
-      <a href="https://remix.run" aria-label={handle.props.brandLabel} mix={brandCss}>
+      <a
+        id="docs-brand"
+        href="https://remix.run"
+        aria-label={handle.props.brandLabel}
+        mix={brandCss}
+      >
         <img
           src="/remix-logo-light-mode.svg"
           alt=""
@@ -413,7 +426,7 @@ const navigationCss = css({
   justifyContent: 'flex-end',
   width: 'auto',
   height: 'var(--site-header-height)',
-  gap: '32px',
+  gap: '24px',
   overflow: 'visible',
   fontSize: '16px',
   flexWrap: 'nowrap',

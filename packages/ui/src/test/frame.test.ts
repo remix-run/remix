@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 
-import type { Handle } from '../runtime/component.ts'
+import { Frame, type Handle } from '../runtime/component.ts'
 import {
   consumeFrameTemplate,
   createFrame,
@@ -17,7 +17,26 @@ import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createStyleManager } from '../style/index.ts'
 import { withResolvers } from './utils.ts'
 
-const managedModulePreloadSelector = 'link[data-rmx][rel="modulepreload"]'
+const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'
+
+type TestFrameOptions = Partial<Parameters<typeof createFrame>[1]> &
+  Pick<Parameters<typeof createFrame>[1], 'resolveFrame'>
+
+function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestFrameOptions) {
+  return createFrame(root, {
+    src: 'https://example.com/initial',
+    errorTarget: new EventTarget(),
+    loadModule: () => () => () => null,
+    pendingClientEntries: new Map(),
+    scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+    data: {},
+    moduleCache: new Map(),
+    moduleLoads: new Map(),
+    frameInstances: new WeakMap(),
+    namedFrames: new Map(),
+    ...options,
+  })
+}
 
 describe('frames', () => {
   afterEach(() => {
@@ -98,6 +117,431 @@ describe('frames', () => {
       expect(document.querySelector('[data-entry]')?.textContent).toBe('next')
       expect(setupCount).toBe(setupCountBeforeReload)
       expect(disconnectCount).toBe(disconnectCountBeforeReload)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('resolves after committing reload content', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    let [contentPromise, resolveContent] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      resolveFrame: () => contentPromise,
+    })
+
+    try {
+      await frame.ready()
+      let reload = reloadFrameForNavigation(frame.handle)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+
+      resolveContent('<p id="next">Next</p>')
+      await reload
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(document.getElementById('next')?.textContent).toBe('Next')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for client entry reconciliation before a reload resolves', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    function ReloadedEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('p', { id: 'reloaded', children: handle.props.label })
+    }
+
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let frame = createTestFrame(root, {
+      loadModule: () => modulePromise,
+      resolveFrame: () =>
+        [
+          '<!-- rmx:h:h1 --><p id="reloaded">Server</p><!-- /rmx:h -->',
+          rmxDataScript('Hydrated', '/reloaded.js', 'ReloadedEntry'),
+        ].join(''),
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveModule(ReloadedEntry)
+      await reload
+
+      expect(document.getElementById('reloaded')?.textContent).toBe('Hydrated')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for blocking frames created by client entry reconciliation', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = [
+      '<!-- rmx:h:h1 --><p id="detail">Detail</p><!-- /rmx:h -->',
+      rmxDataScript('detail', '/store-entry.js', 'StoreEntry'),
+    ].join('')
+    document.body.append(root)
+
+    function StoreEntry(handle: Handle<{ label: string }>) {
+      return () =>
+        handle.props.label === 'collection'
+          ? jsx(Frame, { src: '/collection' })
+          : jsx('p', { id: 'detail', children: 'Detail' })
+    }
+
+    let [collectionPromise, resolveCollection] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      loadModule: () => StoreEntry,
+      resolveFrame(src) {
+        if (src === '/collection') return collectionPromise
+        return [
+          '<!-- rmx:h:h1 --><p id="server-collection">Server collection</p><!-- /rmx:h -->',
+          rmxDataScript('collection', '/store-entry.js', 'StoreEntry'),
+        ].join('')
+      },
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveCollection('<p id="collection">Collection</p>')
+      await reload
+
+      expect(document.getElementById('collection')?.textContent).toBe('Collection')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for blocking frames created by newly hydrated client entries', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    function StoreEntry() {
+      return () => jsx(Frame, { src: '/collection' })
+    }
+
+    let [collectionPromise, resolveCollection] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      loadModule: () => StoreEntry,
+      resolveFrame(src) {
+        if (src === '/collection') return collectionPromise
+        return [
+          '<!-- rmx:h:h1 --><p id="server-collection">Server collection</p><!-- /rmx:h -->',
+          rmxDataScript('collection', '/store-entry.js', 'StoreEntry'),
+        ].join('')
+      },
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveCollection('<p id="collection">Collection</p>')
+      await reload
+
+      expect(document.getElementById('collection')?.textContent).toBe('Collection')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for blocking frames rendered from RemixNode content', async () => {
+    document.body.innerHTML = '<p id="initial">Initial</p>'
+
+    let [collectionPromise, resolveCollection] = withResolvers<string>()
+    let frame = createTestFrame(document, {
+      resolveFrame(src) {
+        if (src === '/collection') return collectionPromise
+        return jsx(Frame, { src: '/collection' })
+      },
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(reloadSettled).toBe(false)
+
+      resolveCollection('<p id="collection">Collection</p>')
+      await reload
+
+      expect(document.getElementById('collection')?.textContent).toBe('Collection')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for nested blocking frames rendered from RemixNode frame content', async () => {
+    document.body.innerHTML = '<p id="initial">Initial</p>'
+
+    let [grandchildPromise, resolveGrandchild] = withResolvers<string>()
+    let [grandchildRequested, markGrandchildRequested] = withResolvers<void>()
+    let frame = createTestFrame(document, {
+      resolveFrame(src) {
+        if (src === '/child') return jsx(Frame, { src: '/grandchild' })
+        if (src === '/grandchild') {
+          markGrandchildRequested()
+          return grandchildPromise
+        }
+        return jsx(Frame, { src: '/child' })
+      },
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+
+      await grandchildRequested
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(reloadSettled).toBe(false)
+
+      resolveGrandchild('<p id="grandchild">Grandchild</p>')
+      await reload
+
+      expect(document.getElementById('grandchild')?.textContent).toBe('Grandchild')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('resolves after committing fallback for frames created by client entry reconciliation', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = [
+      '<!-- rmx:h:h1 --><p id="detail">Detail</p><!-- /rmx:h -->',
+      rmxDataScript('detail', '/store-entry.js', 'StoreEntry'),
+    ].join('')
+    document.body.append(root)
+
+    function StoreEntry(handle: Handle<{ label: string }>) {
+      return () =>
+        handle.props.label === 'collection'
+          ? jsx(Frame, {
+              src: '/collection',
+              fallback: jsx('p', { id: 'loading', children: 'Loading' }),
+            })
+          : jsx('p', { id: 'detail', children: 'Detail' })
+    }
+
+    let [collectionPromise, resolveCollection] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      loadModule: () => StoreEntry,
+      resolveFrame(src) {
+        if (src === '/collection') return collectionPromise
+        return [
+          '<!-- rmx:h:h1 --><p id="server-collection">Server collection</p><!-- /rmx:h -->',
+          rmxDataScript('collection', '/store-entry.js', 'StoreEntry'),
+        ].join('')
+      },
+    })
+
+    try {
+      await frame.ready()
+      await reloadFrameForNavigation(frame.handle)
+
+      expect(document.getElementById('loading')?.textContent).toBe('Loading')
+      resolveCollection('<p id="collection">Collection</p>')
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(document.getElementById('collection')?.textContent).toBe('Collection')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for blocking child frames before a reload resolves', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    function BlockingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('p', { id: 'blocking-entry', children: handle.props.label })
+    }
+
+    let data = {
+      h: {
+        h1: {
+          moduleUrl: '/blocking.js',
+          exportName: 'BlockingEntry',
+          props: { label: 'Hydrated blocking frame' },
+        },
+      },
+      f: {
+        f1: {
+          status: 'resolved',
+          src: '/blocking',
+        },
+      },
+    }
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let frame = createTestFrame(root, {
+      loadModule: () => modulePromise,
+      resolveFrame: () =>
+        [
+          '<!-- rmx:f:f1 -->',
+          '<!-- rmx:h:h1 --><p id="blocking-entry">Server</p><!-- /rmx:h -->',
+          '<!-- /rmx:f -->',
+          `<script type="application/json" id="rmx-data">${JSON.stringify(data)}</script>`,
+        ].join(''),
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveModule(BlockingEntry)
+      await reload
+
+      expect(document.getElementById('blocking-entry')?.textContent).toBe('Hydrated blocking frame')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for preserved blocking child frames to reconcile before a reload resolves', async () => {
+    let root = document.createElement('div')
+    let initialData = {
+      h: {
+        h1: {
+          moduleUrl: '/initial-blocking.js',
+          exportName: 'InitialBlockingEntry',
+          props: { label: 'Initial blocking frame' },
+        },
+      },
+      f: {
+        f1: {
+          status: 'resolved',
+          src: '/blocking',
+        },
+      },
+    }
+    root.innerHTML = [
+      '<!-- rmx:f:f1 -->',
+      '<!-- rmx:h:h1 --><p id="blocking-entry">Initial server</p><!-- /rmx:h -->',
+      '<!-- /rmx:f -->',
+      `<script type="application/json" id="rmx-data">${JSON.stringify(initialData)}</script>`,
+    ].join('')
+    document.body.append(root)
+
+    function InitialBlockingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('p', { id: 'blocking-entry', children: handle.props.label })
+    }
+
+    function ReloadedBlockingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('p', { id: 'blocking-entry', children: handle.props.label })
+    }
+
+    let nextData = {
+      h: {
+        h2: {
+          moduleUrl: '/reloaded-blocking.js',
+          exportName: 'ReloadedBlockingEntry',
+          props: { label: 'Reloaded blocking frame' },
+        },
+      },
+      f: initialData.f,
+    }
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let frame = createTestFrame(root, {
+      loadModule(moduleUrl) {
+        if (moduleUrl === '/initial-blocking.js') return InitialBlockingEntry
+        if (moduleUrl === '/reloaded-blocking.js') return modulePromise
+        throw new Error(`Unexpected module: ${moduleUrl}`)
+      },
+      resolveFrame: () =>
+        [
+          '<!-- rmx:f:f1 -->',
+          '<!-- rmx:h:h2 --><p id="blocking-entry">Reloaded server</p><!-- /rmx:h -->',
+          '<!-- /rmx:f -->',
+          `<script type="application/json" id="rmx-data">${JSON.stringify(nextData)}</script>`,
+        ].join(''),
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveModule(ReloadedBlockingEntry)
+      await reload
+
+      expect(document.getElementById('blocking-entry')?.textContent).toBe('Reloaded blocking frame')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('resolves after committing a pending child frame fallback', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    let data = {
+      f: {
+        f1: {
+          status: 'pending',
+          src: '/pending',
+        },
+      },
+    }
+    let frame = createTestFrame(root, {
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame: () =>
+        [
+          '<!-- rmx:f:f1 --><p id="pending-fallback">Loading</p><!-- /rmx:f -->',
+          `<script type="application/json" id="rmx-data">${JSON.stringify(data)}</script>`,
+        ].join(''),
+    })
+
+    try {
+      await frame.ready()
+      await reloadFrameForNavigation(frame.handle)
+
+      expect(document.getElementById('pending-fallback')?.textContent).toBe('Loading')
     } finally {
       frame.dispose()
     }
@@ -492,7 +936,7 @@ describe('frames', () => {
         return appendFlushMarker(
           [
             '<!doctype html><html><head><title>Next</title>',
-            '<link data-rmx rel="modulepreload" href="/entry.js" />',
+            '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
             '</head><body><!-- rmx:h:h1 --><section>next</section><!-- /rmx:h -->',
             rmxDataScript('next'),
             '</body></html>',
@@ -546,7 +990,7 @@ describe('frames', () => {
       },
       resolveFrame() {
         return [
-          '<head><link data-rmx rel="modulepreload" href="/fragment-entry.js" /></head>',
+          '<head><link data-rmx-module-preload rel="modulepreload" href="/fragment-entry.js" /></head>',
           '<!-- rmx:h:h1 --><section>fragment</section><!-- /rmx:h -->',
           rmxDataScript('fragment', '/fragment-entry.js', 'FragmentEntry'),
         ].join('')
@@ -574,7 +1018,7 @@ describe('frames', () => {
   it('keeps active initial preloads connected across a document reload', async () => {
     document.documentElement.innerHTML = [
       '<head><title>Initial</title>',
-      '<link data-rmx rel="modulepreload" href="/entry.js" />',
+      '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
       '</head><body></body>',
     ].join('')
 
@@ -651,7 +1095,8 @@ describe('frames', () => {
     try {
       await frame.ready()
       let response = document.createElement('template')
-      response.innerHTML = '<link data-rmx rel="modulepreload" href="/frame-entry.js" />'
+      response.innerHTML =
+        '<link data-rmx-module-preload rel="modulepreload" href="/frame-entry.js" />'
       getDocumentModulePreloader(document).consumePreloadLinks(response.content)
       let activePreload = document.head.querySelector<HTMLLinkElement>(managedModulePreloadSelector)
       expect(activePreload).not.toBeNull()

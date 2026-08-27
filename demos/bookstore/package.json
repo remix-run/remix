@@ -17,6 +17,7 @@
   "scripts": {
     "db:migrate": "remix db migrate",
     "db:reset": "remix db reset --force",
+    "db:rollback": "remix db rollback",
     "db:seed": "remix db seed",
     "db:status": "remix db status",
     "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",

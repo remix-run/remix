@@ -1,4 +1,4 @@
-import type { OAuthAccount, OAuthProvider, OAuthResult, OAuthStandardTokens } from '../provider.ts'
+import type { OAuthAccount, OAuthProvider, OAuthResult } from '../provider.ts'
 import {
   createAuthorizationURL,
   createOAuthProvider,
@@ -68,7 +68,7 @@ export interface GitHubAuthProviderEmail {
  */
 export function createGitHubAuthProvider(
   options: GitHubAuthProviderOptions,
-): OAuthProvider<GitHubAuthProfile, 'github', OAuthStandardTokens> {
+): OAuthProvider<GitHubAuthProfile, 'github'> {
   let scopes = options.scopes ?? DEFAULT_GITHUB_SCOPES
 
   return createOAuthProvider('github', {
@@ -84,10 +84,7 @@ export function createGitHubAuthProvider(
         code_challenge_method: 'S256',
       })
     },
-    async handleCallback(
-      context,
-      transaction,
-    ): Promise<OAuthResult<GitHubAuthProfile, 'github', OAuthStandardTokens>> {
+    async handleCallback(context, transaction): Promise<OAuthResult<GitHubAuthProfile, 'github'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: GITHUB_TOKEN_ENDPOINT,
         clientId: options.clientId,

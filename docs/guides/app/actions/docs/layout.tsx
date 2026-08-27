@@ -100,7 +100,7 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
         currentChapterSlug={handle.props.slug}
         hasSecondaryNavigation
       >
-        <div class="docs-layout" data-key={`docs-chapter-${handle.props.slug}`}>
+        <div class="docs-layout" data-rmx-key={`docs-chapter-${handle.props.slug}`}>
           <article class="docs-article">
             <nav class="docs-breadcrumb" aria-label="Breadcrumb" data-pagefind-ignore>
               <a href={routes.docs.index.href()}>Docs</a>

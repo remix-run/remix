@@ -40,7 +40,7 @@ export function AccountPage(handle: Handle<AccountPageProps>) {
           </div>
           <a
             href={routes.main.account.edit.index.href()}
-            rmx-target={frames.account}
+            data-rmx-target={frames.account}
             mix={editLinkStyle}
           >
             Edit
