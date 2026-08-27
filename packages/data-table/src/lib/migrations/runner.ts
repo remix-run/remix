@@ -63,7 +63,7 @@ function resolveTargetOption(
   migrations: MigrationDescriptor[],
   to: string | undefined,
 ): string | undefined {
-  if (!to) {
+  if (to === undefined) {
     return undefined
   }
 

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@re
 import type { Handle, RemixNode } from '../runtime/component.ts'
 import { Frame } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
+import { reloadFrameForNavigation } from '../runtime/frame.ts'
 import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -58,6 +59,24 @@ async function renderDocumentContent(content: RemixNode): Promise<string> {
 
 async function renderFrameContent(content: RemixNode): Promise<string> {
   return await drain(renderToStream(content))
+}
+
+function waitForElement(
+  selector: string,
+  predicate: (element: Element) => boolean = () => true,
+): Promise<Element> {
+  let element = document.querySelector(selector)
+  if (element && predicate(element)) return Promise.resolve(element)
+
+  return new Promise((resolve) => {
+    let observer = new MutationObserver(() => {
+      let element = document.querySelector(selector)
+      if (!element || !predicate(element)) return
+      observer.disconnect()
+      resolve(element)
+    })
+    observer.observe(document.documentElement, { childList: true, subtree: true })
+  })
 }
 
 function createDisposableEntry(id: string, onDispose: () => void) {
@@ -153,8 +172,8 @@ async function navigateWithLink(
 ): Promise<void> {
   let link = document.createElement('a')
   link.href = href
-  link.setAttribute('rmx-target', options.target)
-  if (options.src !== undefined) link.setAttribute('rmx-src', options.src)
+  link.setAttribute('data-rmx-target', options.target)
+  if (options.src !== undefined) link.setAttribute('data-rmx-src', options.src)
   document.body.append(link)
 
   link.click()
@@ -176,6 +195,149 @@ describe('run', () => {
     document.body.innerHTML = ''
     for (let node of Array.from(document.head.childNodes)) {
       document.head.removeChild(node)
+    }
+  })
+
+  it('uses fetch to request HTML by default and posts form data', async (t) => {
+    let formData = new FormData()
+    formData.set('name', 'Ada')
+    let signal = new AbortController().signal
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="account">Ada</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        formData,
+        method: 'post',
+        signal,
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      let [src, init] = fetchMock.mock.calls[0]!.arguments
+      expect(src).toBe('/account')
+      expect(init?.body).toBe(formData)
+      expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
+      expect(init?.method).toBe('post')
+      expect(init?.signal).toBeInstanceOf(AbortSignal)
+      expect(document.getElementById('account')?.textContent).toBe('Ada')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('rejects non-OK responses from the default resolver without replacing frame content', async (t) => {
+    document.body.innerHTML = '<main id="initial">Initial</main>'
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response('<main id="error">Account not found</main>', {
+          status: 404,
+          statusText: 'Not Found',
+        }),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    let reportedError: unknown
+    app.addEventListener('error', (event) => {
+      reportedError = event.error
+    })
+
+    try {
+      await app.ready()
+      app.frames.top.src = '/account'
+
+      await expect(app.frames.top.reload()).rejects.toThrow(
+        'Failed to resolve frame: 404 Not Found',
+      )
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(reportedError).toBeInstanceOf(Error)
+      expect((reportedError as Error).message).toBe('Failed to resolve frame: 404 Not Found')
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+      expect(document.getElementById('error')).toBeNull()
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('encodes urlencoded form data with URLSearchParams by default', async (t) => {
+    let formData = new FormData()
+    formData.set('name', 'Ada Lovelace')
+    formData.set('avatar', new File([], 'avatar.png'))
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="account">Ada</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        encType: 'application/x-www-form-urlencoded',
+        formData,
+        method: 'post',
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      let [, init] = fetchMock.mock.calls[0]!.arguments
+      expect(init?.body).toBeInstanceOf(URLSearchParams)
+      expect(String(init?.body)).toBe('name=Ada+Lovelace&avatar=avatar.png')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('encodes text/plain form data with CRLF-delimited entries by default', async (t) => {
+    let formData = new FormData()
+    formData.set('name', 'Ada Lovelace')
+    formData.set('bio', 'First programmer\nMathematician')
+    formData.set('avatar', new File([], 'avatar.png'))
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="account">Ada</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        encType: 'text/plain',
+        formData,
+        method: 'post',
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      let [, init] = fetchMock.mock.calls[0]!.arguments
+      let request = new Request('https://example.com/account', init)
+      expect(request.headers.get('Content-Type')).toBe('text/plain')
+      expect(await request.text()).toBe(
+        'name=Ada Lovelace\r\nbio=First programmer\r\nMathematician\r\navatar=avatar.png\r\n',
+      )
+    } finally {
+      app.dispose()
     }
   })
 
@@ -968,11 +1130,13 @@ describe('run', () => {
     let aSelector = findClassByPrefix(document, 'entry-a')
     invariant(aSelector, 'expected SSR markup to carry an rmxc-* class for entry-a')
 
+    let [bModuleRequested, markBModuleRequested] = withResolvers<void>()
     let [bModuleGate, allowBModule] = withResolvers<void>()
     let app = run({
       async loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/js/entry-a.js' && exportName === 'EntryA') return EntryA
         if (moduleUrl === '/js/entry-b.js' && exportName === 'EntryB') {
+          markBModuleRequested()
           await bModuleGate
           return EntryB
         }
@@ -991,7 +1155,11 @@ describe('run', () => {
     // before hydration makes it interactive.
     let topFrame = app.frames.top
     topFrame.src = '/b'
-    await topFrame.reload()
+    let reloadSettled = false
+    let reloadPromise = topFrame.reload().then(() => {
+      reloadSettled = true
+    })
+    await bModuleRequested
 
     // Pull EntryB's hashed selector from the SSR markup that replaceServerStyles
     // just adopted into adoptedStyleSheets.
@@ -1003,10 +1171,11 @@ describe('run', () => {
     expect(document.getElementById('entry-a')).toBeNull()
     expect(document.getElementById('entry-b')).not.toBeNull()
     expect(rulePresent(bSelectorFromB)).toBe(true)
+    expect(reloadSettled).toBe(false)
 
     // Allow the module load to finish and hydrate the destination SSR.
     allowBModule()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await reloadPromise
 
     expect(document.getElementById('entry-a')).toBeNull()
     expect(document.getElementById('entry-b')).not.toBeNull()
@@ -1244,7 +1413,10 @@ describe('run', () => {
 
   it('shows updated SSR when reloading an entry whose initial module is still loading', async () => {
     let reloadPromise: Promise<AbortSignal> | undefined
+    let markFastHydrated: (() => void) | undefined
     let Fast = clientEntry('/js/partial-fast.js#Fast', function Fast(handle: Handle) {
+      markFastHydrated?.()
+      markFastHydrated = undefined
       return () => (
         <button
           id="partial-fast"
@@ -1280,6 +1452,8 @@ describe('run', () => {
     )
     document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
 
+    let [fastHydrated, resolveFastHydrated] = withResolvers<void>()
+    markFastHydrated = resolveFastHydrated
     let [slowModulePromise, resolveSlowModule] = withResolvers<Function>()
     let slowLoadCount = 0
     let app = run({
@@ -1298,7 +1472,7 @@ describe('run', () => {
     })
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await fastHydrated
 
       let fastButton = document.getElementById('partial-fast')
       invariant(fastButton instanceof HTMLButtonElement)
@@ -1306,18 +1480,27 @@ describe('run', () => {
       invariant(initialSlow instanceof HTMLParagraphElement)
 
       app.frames.top.src = '/reloaded'
+      let reloadedSlowReady = waitForElement(
+        '#partial-slow',
+        (element) => element !== initialSlow && element.textContent === 'Reloaded',
+      )
       fastButton.click()
       invariant(reloadPromise)
-      await reloadPromise
+      let reloadSettled = false
+      void reloadPromise.then(() => {
+        reloadSettled = true
+      })
+      await reloadedSlowReady
 
       let reloadedSlow = document.getElementById('partial-slow')
       invariant(reloadedSlow instanceof HTMLParagraphElement)
       expect(reloadedSlow).not.toBe(initialSlow)
       expect(reloadedSlow.textContent).toBe('Reloaded')
       expect(slowLoadCount).toBe(1)
+      expect(reloadSettled).toBe(false)
 
       resolveSlowModule(Slow)
-      await app.ready()
+      await Promise.all([reloadPromise, app.ready()])
       expect(document.getElementById('partial-slow')?.textContent).toBe('Reloaded')
     } finally {
       app.dispose()
@@ -1373,17 +1556,26 @@ describe('run', () => {
       invariant(targetFrame)
 
       targetFrame.src = '/reloaded'
-      await targetFrame.reload()
+      let reloadedSlowReady = waitForElement(
+        '#named-partial-slow',
+        (element) => element !== initialSlow && element.textContent === 'Reloaded',
+      )
+      let reloadSettled = false
+      let reloadPromise = targetFrame.reload().then(() => {
+        reloadSettled = true
+      })
+      await reloadedSlowReady
 
       let reloadedSlow = document.getElementById('named-partial-slow')
       invariant(reloadedSlow instanceof HTMLParagraphElement)
       expect(reloadedSlow).not.toBe(initialSlow)
       expect(reloadedSlow.textContent).toBe('Reloaded')
       expect(slowLoadCount).toBe(1)
+      expect(reloadSettled).toBe(false)
 
       let setupCountBeforeHydration = entrySetupCount
       resolveSlowModule(Slow)
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await reloadPromise
 
       expect(document.getElementById('named-partial-slow')?.textContent).toBe('Reloaded')
       expect(entrySetupCount).toBe(setupCountBeforeHydration + 1)
@@ -2091,7 +2283,7 @@ describe('run', () => {
     expect(fixture.requests).toEqual([{ src: destinationUrl, target: undefined }])
   })
 
-  it('reloads only the target frame using the public destination without rmx-src', async (t) => {
+  it('reloads only the target frame using the public destination without data-rmx-src', async (t) => {
     let fixture = await setupFrameNavigationTest(t)
     let destinationUrl = new URL('/destination', window.location.href).href
 
@@ -2162,6 +2354,118 @@ describe('run', () => {
       { src: firstTargetSrc, target: 'target' },
       { src: secondTargetSrc, target: 'target' },
     ])
+  })
+
+  it('restores traversal scroll after a preserved entry resolves a blocking frame', async (t) => {
+    let initialUrl = window.location.href
+    let initialEntryKey = window.navigation.currentEntry?.key
+    let listUrl = new URL('/scroll-list', initialUrl).href
+    let detailUrl = new URL('/scroll-detail', initialUrl).href
+    window.history.replaceState(null, '', listUrl)
+
+    let StoreEntry = clientEntry(
+      '/js/scroll-store.js#ScrollStore',
+      function ScrollStore(handle: Handle<{ variant: 'list' | 'detail' }>) {
+        let showItems = false
+
+        return () =>
+          handle.props.variant === 'list' ? (
+            <main id="scroll-list-page">
+              <button
+                id="show-scroll-list-items"
+                type="button"
+                mix={on('click', () => {
+                  showItems = true
+                  handle.update()
+                })}
+              >
+                Show list items
+              </button>
+              {showItems ? <Frame src="/list-items" /> : <p>List items hidden</p>}
+            </main>
+          ) : (
+            <main id="scroll-detail-page" style={{ display: 'block', height: '1000px' }}>
+              Detail
+            </main>
+          )
+      },
+    )
+
+    async function renderStoreDocument(variant: 'list' | 'detail') {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <StoreEntry variant={variant} />
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderStoreDocument('list'),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let listItemsContent = '<div id="scroll-list-items" style="height:4000px"></div>'
+    let [deferredListItems, resolveDeferredListItems] = withResolvers<string>()
+    let [deferredListItemsRequested, markDeferredListItemsRequested] = withResolvers<void>()
+    let listItemsRequestCount = 0
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/scroll-store.js' && exportName === 'ScrollStore') return StoreEntry
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        let pathname = new URL(src, window.location.href).pathname
+        if (pathname === '/scroll-list') return await renderStoreDocument('list')
+        if (pathname === '/scroll-detail') return await renderStoreDocument('detail')
+        if (pathname === '/list-items') {
+          listItemsRequestCount++
+          if (listItemsRequestCount === 1) return listItemsContent
+          markDeferredListItemsRequested()
+          return await deferredListItems
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    t.after(async () => {
+      resolveDeferredListItems(listItemsContent)
+      if (initialEntryKey && window.navigation.currentEntry?.key !== initialEntryKey) {
+        await window.navigation.traverseTo(initialEntryKey).finished
+      }
+      app.dispose()
+      window.history.replaceState(null, '', initialUrl)
+      window.scrollTo(0, 0)
+    })
+
+    await app.ready()
+    let initialListItems = waitForElement('#scroll-list-items')
+    let showItemsButton = document.getElementById('show-scroll-list-items')
+    invariant(showItemsButton instanceof HTMLButtonElement)
+    showItemsButton.click()
+    app.flush()
+    await initialListItems
+
+    window.scrollTo(0, 2500)
+    expect(window.scrollY).toBe(2500)
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+    await navigate(detailUrl)
+    expect(document.getElementById('scroll-detail-page')?.textContent).toContain('Detail')
+
+    let backNavigation = window.navigation.back().finished
+    await deferredListItemsRequested
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    resolveDeferredListItems(listItemsContent)
+    await backNavigation
+
+    expect(document.getElementById('scroll-list-items')).not.toBe(null)
+    expect(window.scrollY).toBe(2500)
   })
 
   it('dispatches reloadStart and reloadComplete events for handle.frame and handle.frames.get(name)', async () => {

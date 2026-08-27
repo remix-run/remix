@@ -6,6 +6,33 @@ interface DatabaseCommandOptions {
   db: Database
 }
 
+type RollbackBoundOptions =
+  | {
+      /**
+       * Reverts back through this migration, inclusive. Accepts a bare
+       * migration id or the full `id_name` directory form.
+       */
+      to: string
+      step?: never
+    }
+  | {
+      to?: never
+      /** Reverts this many migrations. Defaults to `1`. */
+      step?: number
+    }
+
+type RollbackCommandOptions = DatabaseCommandOptions &
+  RollbackBoundOptions & {
+    /** Reverts applied migrations, newest first. */
+    command: 'rollback'
+    /** Migrations to revert. */
+    migrations: Migrations
+    /** Reports what would be reverted without running it. */
+    dryRun?: boolean
+    /** Migration journal table. */
+    journalTable?: string
+  }
+
 /** Structured invocation options accepted by {@link runRemixDb}. */
 export type RunRemixDbOptions =
   | (DatabaseCommandOptions & {
@@ -21,6 +48,7 @@ export type RunRemixDbOptions =
       /** Migration journal table. */
       journalTable?: string
     })
+  | RollbackCommandOptions
   | (DatabaseCommandOptions & {
       /** Wipes, migrates, and optionally seeds the database. */
       command: 'reset'
@@ -71,6 +99,37 @@ export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
 
     for (let entry of result.applied) {
       console.log('applied ' + entry.id + '_' + entry.name)
+    }
+
+    return 0
+  }
+
+  if (options.command === 'rollback') {
+    if (options.to !== undefined && options.step !== undefined) {
+      throw new Error('Cannot combine "to" and "step" migration options in the same run')
+    }
+
+    let result =
+      options.to === undefined
+        ? await options.db.migrate(options.migrations, {
+            direction: 'down',
+            step: options.step ?? 1,
+            dryRun: options.dryRun,
+            journalTable: options.journalTable,
+          })
+        : await options.db.migrate(options.migrations, {
+            direction: 'down',
+            to: options.to,
+            dryRun: options.dryRun,
+            journalTable: options.journalTable,
+          })
+
+    if (result.reverted.length === 0) {
+      console.log('no migrations to revert')
+    }
+
+    for (let entry of result.reverted) {
+      console.log((options.dryRun ? 'would revert ' : 'reverted ') + entry.id + '_' + entry.name)
     }
 
     return 0

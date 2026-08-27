@@ -1,4 +1,4 @@
-import { addEventListeners, css, on, ref, type Handle } from '@remix-run/ui'
+import { css, on, ref, type Handle } from '@remix-run/ui'
 
 import { dragVelocityEvents } from './drag-release.ts'
 import { spring, type SpringPreset } from '@remix-run/ui/animation'
@@ -99,41 +99,44 @@ function PointerTrail(handle: Handle) {
     }
   }
 
-  if (typeof document !== 'undefined') {
-    addEventListeners(document, handle.signal, {
-      pointerdown(event) {
-        if (!(event.target as HTMLElement).closest('.draggable')) return
-        isDown = true
-        releaseTime = 0
-        points = [{ x: event.clientX, y: event.clientY, time: performance.now() }]
-        startDrawing()
-      },
+  let onPointerDown = (event: PointerEvent) => {
+    if (!(event.target instanceof Element) || !event.target.closest('.draggable')) return
+    isDown = true
+    releaseTime = 0
+    points = [{ x: event.clientX, y: event.clientY, time: performance.now() }]
+    startDrawing()
+  }
 
-      pointermove(event) {
-        if (!isDown) return
-        points.push({ x: event.clientX, y: event.clientY, time: performance.now() })
-      },
+  let onPointerMove = (event: PointerEvent) => {
+    if (!isDown) return
+    points.push({ x: event.clientX, y: event.clientY, time: performance.now() })
+  }
 
-      pointerup() {
-        if (!isDown) return
-        isDown = false
-        releaseTime = performance.now()
-      },
+  let onPointerUp = () => {
+    if (!isDown) return
+    isDown = false
+    releaseTime = performance.now()
+  }
 
-      pointercancel() {
-        isDown = false
-        releaseTime = performance.now()
-      },
-    })
+  let onPointerCancel = () => {
+    isDown = false
+    releaseTime = performance.now()
   }
 
   return () => (
     <canvas
       mix={[
-        ref((node) => {
+        ref((node, signal) => {
           canvas = node
-          canvas.width = window.innerWidth
-          canvas.height = window.innerHeight
+          let root = canvas.parentElement
+          if (!root) return
+
+          canvas.width = root.clientWidth
+          canvas.height = root.clientHeight
+          root.addEventListener('pointerdown', onPointerDown, { signal })
+          root.addEventListener('pointermove', onPointerMove, { signal })
+          root.addEventListener('pointerup', onPointerUp, { signal })
+          root.addEventListener('pointercancel', onPointerCancel, { signal })
         }),
         css({
           position: 'absolute',
@@ -173,20 +176,6 @@ export default function SpringDemo(handle: Handle) {
   // Get default spring transition for target circle
   let springValue = spring(selectedPreset)
 
-  if (typeof document !== 'undefined') {
-    addEventListeners(document, handle.signal, {
-      click(event) {
-        // Ignore clicks on controls or when dragging
-        if ((event.target as HTMLElement).closest('.controls')) return
-        if ((event.target as HTMLElement).closest('.draggable')) return
-
-        targetX = event.clientX
-        targetY = event.clientY
-        handle.update()
-      },
-    })
-  }
-
   return () => (
     <div
       mix={[
@@ -196,6 +185,14 @@ export default function SpringDemo(handle: Handle) {
           backgroundColor: '#1a1a2e',
           cursor: 'crosshair',
           overflow: 'hidden',
+        }),
+        on('click', (event) => {
+          if (!(event.target instanceof Element)) return
+          if (event.target.closest('.controls, .draggable')) return
+
+          targetX = event.clientX
+          targetY = event.clientY
+          handle.update()
         }),
       ]}
     >

@@ -35,6 +35,17 @@ describe('startDocsShellBehavior', () => {
     assert.equal(fixture.navigationToggle.getAttribute('aria-label'), 'Collapse chapter navigation')
   })
 
+  it('opens the Remix brand page from the brand context menu', () => {
+    let fixture = createShellFixture()
+    let event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+
+    fixture.brand.dispatchEvent(event)
+
+    assert.equal(event.defaultPrevented, true)
+    assert.equal(fixture.brandPageHref, 'https://remix.run/brand')
+    fixture.cleanup()
+  })
+
   it('preserves collapsed state when the shell is reconnected', () => {
     let fixture = createShellFixture()
 
@@ -126,6 +137,7 @@ describe('startDocsShellBehavior', () => {
 function createShellFixture() {
   let container = document.createElement('div')
   container.innerHTML = `
+    <a id="docs-brand" href="https://remix.run">Remix</a>
     <button id="docs-navigation-toggle" aria-expanded="true"></button>
     <button id="docs-mobile-navigation-toggle" aria-expanded="false"></button>
     <button id="docs-mobile-secondary-navigation-toggle" aria-expanded="false"></button>
@@ -138,6 +150,7 @@ function createShellFixture() {
   `
   document.body.append(container)
   let mobileNavigationBottom = 112
+  let brandPageHref: string | undefined
   let mobileNavigationBar = getElement('docs-mobile-navigation-bar')
   let navigationCompleteTarget = new EventTarget()
   mobileNavigationBar.getBoundingClientRect = () =>
@@ -147,6 +160,10 @@ function createShellFixture() {
   startBehavior()
 
   return {
+    brand: getElement('docs-brand'),
+    get brandPageHref() {
+      return brandPageHref
+    },
     navigation: getElement('docs-navigation'),
     navigationToggle: getElement('docs-navigation-toggle'),
     mobileNavigationToggle: getElement('docs-mobile-navigation-toggle'),
@@ -181,6 +198,9 @@ function createShellFixture() {
     startDocsShellBehavior(controller.signal, {
       navigationName: 'chapter navigation',
       navigationCompleteTarget,
+      navigateTo(href) {
+        brandPageHref = href
+      },
     })
   }
 }

@@ -6,9 +6,9 @@ Fetch-based server for compiling browser assets on demand.
 
 - **On-Demand Compilation** - Compile browser scripts and styles on demand
 - **File Serving** - Serve configured file assets like images and fonts with optional transforms
-- **Custom File Mapping** - Define patterns for mapping public URLs to file paths on disk
 - **Access Control** - Control exactly which files and packages can be served
 - **Preloads** - Generate preload URLs for scripts and styles based on imports
+- **Inspection** - List browser-reachable assets and explain URL-to-file mappings
 - **Caching** - Conservative caching by default with stable URLs, ETags, and revalidation
 - **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
 - **Source Maps** - Serve inline or external sourcemaps
@@ -21,6 +21,12 @@ Fetch-based server for compiling browser assets on demand.
 npm i remix
 ```
 
+The optional image transform examples also use Sharp:
+
+```sh
+npm i sharp
+```
+
 ## Usage
 
 Use `createAssetServer` to serve browser assets from a URL namespace in your app.
@@ -31,10 +37,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
@@ -51,6 +53,64 @@ router.get('/assets/*', ({ request }) => {
 
 This example gives you an `/assets/*` endpoint that serves compiled browser source from `public/` directories throughout `app/` and from the `remix` package.
 
+## Shared Configuration
+
+Keep JSON-compatible asset mapping, access, and file-type settings in `remix.json` so the running
+server and Remix CLI use the same configuration:
+
+```jsonc
+{
+  "$schema": "https://remix.run/schemas/remix.json",
+  "assets": {
+    "basePath": "/assets",
+    "mounts": {
+      "app": "app",
+      "npm": "node_modules",
+    },
+    "allowFiles": ["app/routes.ts", "app/**/public/**"],
+    "allowPackages": ["remix"],
+    "denyFiles": ["app/**/*.test.*"],
+    "files": {
+      "extensions": [".svg", ".png", ".jpg", ".woff2"],
+    },
+  },
+}
+```
+
+Load it from application code and add runtime-only behavior there:
+
+```ts
+import { createAssetServer, defineFileTransform } from 'remix/assets'
+import { loadConfig } from 'remix/cli'
+import sharp from 'sharp'
+
+let config = await loadConfig(import.meta.dirname)
+if (config.assets === undefined) throw new Error('Missing assets configuration')
+if (config.assets.files === undefined) throw new Error('Missing asset file configuration')
+
+let assetServer = createAssetServer({
+  ...config.assets,
+  files: {
+    ...config.assets.files,
+    transforms: {
+      webp: defineFileTransform({
+        extensions: ['.png', '.jpg'],
+        async transform(bytes) {
+          return {
+            content: await sharp(bytes).webp({ quality: 80 }).toBuffer(),
+            extension: '.webp',
+          }
+        },
+      }),
+    },
+  },
+})
+```
+
+`loadConfig()` accepts either a config file or a directory. When given a directory, it searches
+upward for the nearest `remix.json`. Run `remix assets` to list reachable files, or
+`remix assets inspect <url-or-file>` to inspect one mapping and its access decision.
+
 ## Root Directory
 
 Use `rootDir` to specify the root directory of the asset server, which is used to resolve relative file paths. Defaults to `process.cwd()`.
@@ -62,10 +122,6 @@ import { createAssetServer } from 'remix/assets'
 let assetServer = createAssetServer({
   rootDir: path.resolve(import.meta.dirname, '..'),
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
 })
@@ -80,10 +136,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   denyFiles: ['app/**/*.server.*'],
@@ -92,27 +144,25 @@ let assetServer = createAssetServer({
 
 Values for `allowFiles` and `denyFiles` are file paths or globs. Relative values are resolved from `rootDir`. Absolute file paths match exactly, and absolute directory paths also match their descendants.
 
-Values for `allowPackages` are exact package names. Dependencies and installed optional dependencies of packages in `allowPackages` are also allowed automatically. Peer dependencies must be listed explicitly if they should be browser-reachable. Allowed package files must still be reachable through `fileMap`.
+Values for `allowPackages` are exact package names. Dependencies and installed optional dependencies of packages in `allowPackages` are also allowed automatically. Peer dependencies must be listed explicitly if they should be browser-reachable. Allowed package files must still be reachable through `mounts`.
 
-## File Map
+## Mounts
 
-Use `fileMap` to map public URLs to file paths on disk. `basePath` defines the shared public mount point, and the `fileMap` keys are URL patterns relative to that base path. The values are root-relative file path patterns.
+By default, the asset server mounts the `app` directory at `/app` and `node_modules` at `/npm`. Use `mounts` to replace these defaults. Keys are public paths relative to `basePath`, and values are directory paths relative to `rootDir`.
 
 ```ts
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
+  mounts: {
+    source: 'app',
+    vendor: 'node_modules',
   },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
 })
 ```
-
-`fileMap` entries use [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) syntax for both URL and file patterns. Wildcards must be named, and the same params must appear in both patterns so imports can be rewritten back to public URLs. For example, with `basePath: '/assets'`, a `fileMap` key of `'/app/*path'` is served at `/assets/app/*path`.
 
 ### File watching
 
@@ -123,10 +173,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
 })
@@ -145,10 +191,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   watch: false,
@@ -162,10 +204,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   watch: {
@@ -181,6 +219,20 @@ Use `assetServer.getHref()` when you need the public URL for a served asset. You
 ```ts
 let src = await assetServer.getHref('app/actions/public/entry.ts')
 // '/assets/app/actions/public/entry.ts'
+```
+
+## Inspection
+
+Use `getAssets()` for a sorted list of files that are currently browser-reachable through the
+asset server. Use `getAssetDetails()` with a public URL or file path to inspect its mapping, file
+type, access rules, and reachability status.
+
+```ts
+let assets = await assetServer.getAssets()
+// [{ url: '/assets/app/actions/public/entry.ts', filePath: '/project/app/actions/public/entry.ts', ... }]
+
+let details = await assetServer.getAssetDetails('/assets/app/actions/public/entry.ts')
+// { status: 'reachable', type: 'script', ... }
 ```
 
 For configured `files` assets, you can also pass a `transform` pipeline to build a request URL with custom file transforms. Basic transforms are written as strings, while dynamic transforms use `[name, param]` tuples.
@@ -221,10 +273,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   watch: false,
@@ -247,10 +295,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   target: {
@@ -272,10 +316,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   sourceMaps: 'external',
@@ -289,10 +329,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   sourceMaps: 'inline',
@@ -309,10 +345,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   minify: true,
@@ -330,10 +362,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   scripts: {
@@ -355,10 +383,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   scripts: {
@@ -376,7 +400,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   denyFiles: ['app/**/*.test.*'],
   scripts: {
@@ -404,10 +427,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
@@ -430,10 +449,6 @@ import sharp from 'sharp'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
@@ -464,10 +479,6 @@ import { createAssetServer, defineFileTransform } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
@@ -512,10 +523,6 @@ import { optimize as optimizeSvg } from 'svgo'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
@@ -548,10 +555,6 @@ import { createFsFileStorage } from 'remix/file-storage/fs'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
@@ -573,10 +576,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
@@ -624,10 +623,6 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: {
-    '/app/*path': 'app/*path',
-    '/npm/*path': 'node_modules/*path',
-  },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   onError(error) {
@@ -651,7 +646,6 @@ import { createAssetServer } from 'remix/assets'
 let isDevelopment = process.env.NODE_ENV === 'development'
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   denyFiles: ['app/**/*.test.*'],
   hmr: isDevelopment
@@ -798,7 +792,6 @@ if (import.meta.hot) {
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - A Fetch-based router that pairs naturally with `assets`
 - [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) - Provides the server-side `import.meta.hot` runtime and browser HMR channel used by `hmr`
 - [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) - Provides a Remix UI component HMR loader for `scripts.loaders`
-- [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) - Route-pattern syntax for URL and route file matching
 
 ## License
 

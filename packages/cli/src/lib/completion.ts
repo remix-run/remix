@@ -6,8 +6,9 @@ export interface CompletionResult {
 }
 
 const COMPLETION_SHELLS = ['bash', 'zsh'] as const
-const DB_COMMANDS = ['migrate', 'reset', 'seed', 'status', 'wipe'] as const
+const DB_COMMANDS = ['migrate', 'reset', 'rollback', 'seed', 'status', 'wipe'] as const
 const HELP_COMMANDS = [
+  'assets',
   'completion',
   'db',
   'doctor',
@@ -18,6 +19,7 @@ const HELP_COMMANDS = [
   'version',
 ] as const
 const ROOT_COMMANDS = [
+  'assets',
   'completion',
   'db',
   'doctor',
@@ -225,6 +227,10 @@ function completeCommand(
     return completeHelp(tokens, currentWord, usedGlobalFlags)
   }
 
+  if (command === 'assets') {
+    return completeAssets(tokens, currentWord, usedGlobalFlags)
+  }
+
   if (command === 'new') {
     return completeNew(tokens, currentWord, usedGlobalFlags)
   }
@@ -259,6 +265,30 @@ function completeCommand(
   }
 
   return completeValues([], currentWord)
+}
+
+function completeAssets(
+  tokens: string[],
+  currentWord: string,
+  usedGlobalFlags: Set<string>,
+): CompletionResult {
+  let filteredTokens = filterGlobalCommandTokens(tokens, usedGlobalFlags)
+  if (filteredTokens == null) {
+    return completeValues([], currentWord)
+  }
+
+  if (filteredTokens.length === 0) {
+    return completeValues(withHelpFlags(['inspect'], usedGlobalFlags), currentWord)
+  }
+
+  let [subcommand, ...rest] = filteredTokens
+  if (subcommand !== 'inspect' || rest.length > 0) {
+    return completeValues([], currentWord)
+  }
+
+  return currentWord.startsWith('-')
+    ? completeValues(withHelpFlags([], usedGlobalFlags), currentWord)
+    : { mode: 'files' }
 }
 
 function completeTest(
@@ -530,6 +560,16 @@ function completeDb(
       usedGlobalFlags,
       ['--force'],
       ['--connection-env', '--journal-table', '--migrations', '--seed'],
+    )
+  }
+
+  if (subcommand === 'rollback') {
+    return completeDbOptions(
+      rest,
+      currentWord,
+      usedGlobalFlags,
+      ['--dry-run'],
+      ['--connection-env', '--journal-table', '--migrations', '--step', '--to'],
     )
   }
 

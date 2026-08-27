@@ -37,7 +37,7 @@ When a component is rendered:
 
 3. **Component Removal**:
    - `handle.signal` is aborted
-   - All event listeners registered via `addEventListeners()` are automatically cleaned up
+   - Event listeners registered with `{ signal: handle.signal }` are removed automatically
    - Any queued tasks are executed with an aborted signal
 
 ## Props On The Handle

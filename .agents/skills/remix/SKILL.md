@@ -210,7 +210,7 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/node-hmr` — optional development Node HMR runner for rapid UI edits. Use `run` in `hmr.ts` to supervise `server.ts` behind an `hmr` script, and use `createHmrReadyFetch` when a stable public proxy should wait for child server readiness during updates
 - `remix/node-hmr/runtime` — child-process runtime API for code running under `remix/node-hmr`. Use to create browser HMR channels for asset servers and to emit server readiness after the child server starts listening
 - `remix/node-hmr/types` — type-only entry for `import.meta.hot` in Node modules
-- `remix/assets` — browser asset server. Use for `createAssetServer` when serving compiled scripts and styles, getting public hrefs, emitting preloads, and wiring browser HMR. Configure a `basePath`, keep `fileMap` URL patterns relative to it, use `allowFiles`/`denyFiles` for path and glob rules, and use exact package names in `allowPackages` for package-level access. Shared compiler options such as `target`, `sourceMaps`, `sourceMapSourcePaths`, and `minify` live at the top level
+- `remix/assets` — browser asset server. Use for `createAssetServer` when serving compiled scripts and styles, getting public hrefs, emitting preloads, and wiring browser HMR. Configure a `basePath`; use optional directory `mounts` configuration when the default mounts that serve `app` at `app` and `node_modules` at `npm` are not enough; use `allowFiles`/`denyFiles` for path and glob rules; and use exact package names in `allowPackages` for package-level access. Shared compiler options such as `target`, `sourceMaps`, `sourceMapSourcePaths`, and `minify` live at the top level
 - `remix/assets/types/hmr` — type-only entry for `import.meta.hot` in browser modules compiled by `remix/assets`
 - `remix/headers` — `SuperHeaders` plus typed header parsers and builders. Use the default export when you want a `Headers` subclass with typed accessors like `headers.contentType`, `headers.cacheControl`, and `headers.setCookie`; use named classes such as `CacheControl`, `ContentDisposition`, and `Vary` when working with individual header values
 - `remix/response/redirect` — `redirect(href, status?)`. Use for the canonical "POST then redirect" pattern and other location changes
@@ -243,7 +243,7 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/session-storage/redis` — Redis-backed storage. Use for multi-process or multi-host deployments
 - `remix/session-storage/memcache` — Memcache-backed storage. Same multi-host use case as Redis
 - `remix/cookie` — `createCookie` for plain signed/unsigned cookies. Use for non-sensitive preferences where the client is allowed to control the value (theme, locale, dismissed banner). For state where tampering matters, prefer `remix/session`
-- `remix/auth` — credentials, OAuth, OIDC, and Atmosphere providers. Use to define how identity is verified, start/finish external login, and refresh stored OAuth/OIDC token bundles with `refreshExternalAuth(...)`
+- `remix/auth` — credentials, OAuth, and OIDC providers. Use to define how identity is verified, start/finish external login, and refresh stored OAuth/OIDC token bundles with `refreshExternalAuth(...)`
 - `remix/middleware/auth` — `auth({ schemes })`, `requireAuth`, the `Auth` context key. Use to resolve identity into the request context and to gate routes
 
 ### UI, Hydration, and Browser Behavior

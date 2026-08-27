@@ -9,6 +9,7 @@ describe('completion engine', () => {
 
     assert.equal(result.mode, 'values')
     assert.deepEqual(result.values, [
+      'assets',
       'completion',
       'db',
       'doctor',
@@ -31,6 +32,7 @@ describe('completion engine', () => {
 
     assert.equal(topLevelResult.mode, 'values')
     assert.deepEqual(topLevelResult.values, [
+      'assets',
       'completion',
       'db',
       'doctor',
@@ -46,17 +48,28 @@ describe('completion engine', () => {
     ])
   })
 
+  it('completes the assets inspect subcommand and file argument', () => {
+    let subcommands = getCompletionResult(['remix', 'assets', ''], 2)
+    let input = getCompletionResult(['remix', 'assets', 'inspect', ''], 3)
+
+    assert.equal(subcommands.mode, 'values')
+    assert.deepEqual(subcommands.values, ['inspect', '--config', '-h', '--help', '--no-color'])
+    assert.equal(input.mode, 'files')
+  })
+
   it('completes database subcommands and per-command flags', () => {
     let subcommands = getCompletionResult(['remix', 'db', ''], 2)
     let wipeFlags = getCompletionResult(['remix', 'db', 'wipe', ''], 3)
     let resetFlags = getCompletionResult(['remix', 'db', 'reset', '--force', ''], 4)
     let migrateFlags = getCompletionResult(['remix', 'db', 'migrate', ''], 3)
+    let rollbackFlags = getCompletionResult(['remix', 'db', 'rollback', ''], 3)
     let seedFlags = getCompletionResult(['remix', 'db', 'seed', ''], 3)
 
     assert.equal(subcommands.mode, 'values')
     assert.deepEqual(subcommands.values, [
       'migrate',
       'reset',
+      'rollback',
       'seed',
       'status',
       'wipe',
@@ -93,6 +106,20 @@ describe('completion engine', () => {
       '--connection-env',
       '--journal-table',
       '--migrations',
+      '--to',
+      '--config',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
+
+    assert.equal(rollbackFlags.mode, 'values')
+    assert.deepEqual(rollbackFlags.values, [
+      '--dry-run',
+      '--connection-env',
+      '--journal-table',
+      '--migrations',
+      '--step',
       '--to',
       '--config',
       '-h',

@@ -30,7 +30,7 @@ describe('docs responses', () => {
     assert.match(html, /href="\/assets\/pagefind\/pagefind-component-ui\.css"/)
     assert.match(html, /src="\/assets\/pagefind\/pagefind-component-ui\.js"/)
     assert.match(html, /<pagefind-config base-url="\/" bundle-path="\/assets\/pagefind\/">/)
-    assert.match(html, /<pagefind-modal[^>]*rmx-preserve-dom[^>]*reset-on-close/)
+    assert.match(html, /<pagefind-modal[^>]*data-rmx-preserve-dom[^>]*reset-on-close/)
     assert.match(html, /\/assets\/docs-shared\/ui\/public\/docs-shell\.tsx/)
   })
 
@@ -57,7 +57,10 @@ describe('docs responses', () => {
     let chapterNavigation = getChapterNavigationHtml(html)
     assert.equal(chapterNavigation.match(/aria-current="page"/g)?.length, 1)
     assert.match(chapterNavigation, /href="\/start-here\/" aria-current="page"/)
-    assert.match(getOpeningTag(html, 'div', 'docs-layout'), /data-key="docs-chapter-start-here"/)
+    assert.match(
+      getOpeningTag(html, 'div', 'docs-layout'),
+      /data-rmx-key="docs-chapter-start-here"/,
+    )
     assert.match(html, /\/assets\/docs-shared\/ui\/public\/code-block-copy\.tsx/)
   })
 })

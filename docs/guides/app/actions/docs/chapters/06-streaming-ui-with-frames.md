@@ -272,23 +272,23 @@ handler:
 <form
   action={routes.albums.recommendations.href({ albumId: album.id })}
   method="get"
-  rmx-target="album-recommendations"
+  data-rmx-target="album-recommendations"
 >
   <button type="submit">Refresh recommendations</button>
 </form>
 ```
 
 The form remains a normal document navigation before the runtime starts. Native constraint
-validation and the form's `submit` event run before Remix intercepts it. `rmx-target` chooses a named
-frame, `rmx-src` can provide a different frame request URL, `rmx-reset-scroll="false"` preserves the
-current scroll position, and `rmx-document` opts out of interception. `rmx-history="push|replace"`
+validation and the form's `submit` event run before Remix intercepts it. `data-rmx-target` chooses a named
+frame, `data-rmx-src` can provide a different frame request URL, `data-rmx-reset-scroll="false"` preserves the
+current scroll position, and `data-rmx-document` opts out of interception. `data-rmx-history="push|replace"`
 controls how the navigation updates history.
 
 GET controls are already encoded in the destination URL. For non-GET forms, `resolveFrame` receives
 `formData`, `method`, and `encType`. The action should return HTML for the targeted frame when it
 receives a frame request, while keeping its normal document response or redirect for unenhanced
 submissions. Non-GET submissions to the current URL replace that history entry; GET submissions and
-submissions to a different URL push one. The `rmx-history` attribute overrides those defaults.
+submissions to a different URL push one. The `data-rmx-history` attribute overrides those defaults.
 
 ## Coordinate a mutation and a separate frame reload {#coordinating-forms-fetches-frame-reloads-and-navigation}
 
@@ -327,7 +327,7 @@ import { on } from "remix/ui";
 
 This custom handler is useful because the mutation response and recommendations frame are two
 different requests. When the form action itself returns the HTML that belongs in the target frame,
-prefer `rmx-target` and let the runtime submit it through `resolveFrame`.
+prefer `data-rmx-target` and let the runtime submit it through `resolveFrame`.
 
 The handler above keeps the mutation in its existing action and the recommendations HTML in its
 existing `GET` action. The browser component coordinates the two requests without duplicating either
@@ -345,17 +345,17 @@ A link can keep its public destination in `href` while loading a smaller route i
 // Inside a component that renders an album link:
 <a
   href={routes.albums.show.href({ albumId: album.id })}
-  rmx-src={routes.albums.recommendations.href({ albumId: album.id })}
-  rmx-target="album-recommendations"
-  rmx-reset-scroll="false"
+  data-rmx-src={routes.albums.recommendations.href({ albumId: album.id })}
+  data-rmx-target="album-recommendations"
+  data-rmx-reset-scroll="false"
 >
   Show recommendations
 </a>
 ```
 
-`rmx-target` chooses the frame, while `rmx-src` chooses the request used to fill it. The address bar
-still moves to `href`. Add `rmx-history="replace"` when it should replace the current history entry. Use
-`rmx-document` when a same-origin link must perform an ordinary document navigation instead.
+`data-rmx-target` chooses the frame, while `data-rmx-src` chooses the request used to fill it. The address bar
+still moves to `href`. Add `data-rmx-history="replace"` when it should replace the current history entry. Use
+`data-rmx-document` when a same-origin link must perform an ordinary document navigation instead.
 
 ## Handle failures and cancellation
 

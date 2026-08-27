@@ -12,7 +12,7 @@ import { invariant } from '../runtime/invariant.ts'
 
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
 const flushMarkerPattern = /<!--\s*rmx:flush\s+(?:document|fragment)\s*-->/g
-const managedModulePreloadPattern = /<link data-rmx rel="modulepreload"/g
+const managedModulePreloadPattern = /<link data-rmx-module-preload rel="modulepreload"/g
 
 describe('stream', () => {
   function getLatestRmxDataScript(root: ParentNode): HTMLScriptElement {
@@ -88,6 +88,86 @@ describe('stream', () => {
       let stream = renderToStream(<div>{'<script>alert(1)</script>'}</div>)
       let html = await drain(stream)
       expect(html).toBe('<div>&lt;script&gt;alert(1)&lt;/script&gt;</div>')
+    })
+
+    it('renders script string children as raw text', async () => {
+      let script = 'if (value < 10 && value > 0) console.log("in range")'
+      let html = await drain(renderToStream(<script>{script}</script>))
+
+      expect(html).toBe(`<script>${script}</script>`)
+    })
+
+    it('renders empty script elements', async (t) => {
+      let errorSpy = t.mock.method(console, 'error', () => {})
+      let html = await drain(renderToStream(<script />))
+
+      expect(html).toBe('<script></script>')
+      expect(errorSpy).not.toHaveBeenCalled()
+    })
+
+    it('prevents script string children from terminating the element', async () => {
+      let importMap = {
+        imports: {
+          example: '/example.js?before=a&after=</ScRiPt><script>alert(1)</script>',
+        },
+      }
+      let html = await drain(
+        renderToStream(<script type="importmap">{JSON.stringify(importMap)}</script>),
+      )
+
+      expect(html).toBe(
+        '<script type="importmap">' +
+          '{"imports":{"example":"/example.js?before=a&after=</\\u0053cRiPt><\\u0073cript>alert(1)</\\u0073cript>"}}' +
+          '</script>',
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let scripts = shelf.content.querySelectorAll('script')
+      expect(scripts).toHaveLength(1)
+      expect(JSON.parse(scripts[0]!.textContent!)).toEqual(importMap)
+    })
+
+    it('escapes script prefixes conservatively while preserving non-matching text', async () => {
+      let script =
+        'prescription pre<scription pre<Scription pre</scRipTion pre</ScripTion </ script> </script><script><!-- <script> -->'
+      let html = await drain(renderToStream(<script>{script}</script>))
+
+      expect(html).toBe(
+        '<script>' +
+          'prescription pre<\\u0073cription pre<\\u0053cription pre</\\u0073cRipTion pre</\\u0053cripTion ' +
+          '</ script> </\\u0073cript><\\u0073cript><!-- <\\u0073cript> -->' +
+          '</script>',
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let scripts = shelf.content.querySelectorAll('script')
+      expect(scripts).toHaveLength(1)
+    })
+
+    it('renders SVG script string children as raw text', async () => {
+      let script = 'if (value < 10 && value > 0) console.log("in range")'
+      let html = await drain(
+        renderToStream(
+          <svg>
+            <script>{script}</script>
+          </svg>,
+        ),
+      )
+
+      expect(html).toBe(`<svg><script>${script}</script></svg>`)
+    })
+
+    it('warns and ignores non-string script children', async (t) => {
+      let errorSpy = t.mock.method(console, 'error', () => {})
+      let html = await drain(renderToStream(<script>{['one', 'two']}</script>))
+
+      expect(html).toBe('<script></script>')
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      let error = errorSpy.mock.calls[0]?.arguments[0]
+      invariant(error instanceof Error)
+      expect(error.message).toBe('script elements with children must have a single string child')
     })
 
     it('renders textarea defaultValue as escaped text content', async () => {
@@ -665,7 +745,7 @@ describe('stream', () => {
       )
       let html = await drain(stream)
 
-      expect(html).toContain('<style data-rmx=')
+      expect(html).toContain('<style data-rmx-style=')
       expect(html).toMatch(/class="base rmxc-[a-z0-9]+ rmxc-[a-z0-9]+"/)
       expect(html).toContain('.rmxc-')
     })
@@ -676,8 +756,11 @@ describe('stream', () => {
       )
 
       expect(html).not.toContain('</style><script>')
-      expect(html).not.toContain('<script>globalThis.__xss = true</script>')
-      expect(html).toContain('color: \\3C /style>\\3C script>globalThis.__xss = true\\3C /script>')
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      expect(shelf.content.querySelectorAll('script')).toHaveLength(0)
+      expect(html).toContain('\\3C/style><script>globalThis.__xss = true</script><style>')
     })
   })
 
@@ -768,7 +851,7 @@ describe('stream', () => {
       let html = await drain(stream)
 
       // Should have a style tag in head
-      expect(html).toContain('<style data-rmx=')
+      expect(html).toContain('<style data-rmx-style=')
       expect(html).toContain('.rmxc-')
       expect(html).toContain('color: red')
       expect(html).toContain('font-size: 16px')
@@ -874,7 +957,7 @@ describe('stream', () => {
 
       expect(html).toContain('<template')
       // One tag in the outer frame's template, one in the inner frame's.
-      let tags = html.match(/data-rmx="[^"]+"/g) ?? []
+      let tags = html.match(/data-rmx-style="[^"]+"/g) ?? []
       expect(tags).toHaveLength(2)
       expect(new Set(tags).size).toBe(1)
     })
@@ -890,7 +973,7 @@ describe('stream', () => {
       let html = await drain(stream)
 
       // Style should be in the head section
-      expect(html).toContain('<html><head><style data-rmx=')
+      expect(html).toContain('<html><head><style data-rmx-style=')
       expect(html).toContain('color: purple')
       expect(html).toContain('</style></head><body>')
     })
@@ -900,7 +983,7 @@ describe('stream', () => {
       let html = await drain(stream)
 
       // Style should be in a head element
-      expect(html).toMatch(/^<head><style data-rmx=/)
+      expect(html).toMatch(/^<head><style data-rmx-style=/)
       expect(html).toContain('color: orange')
       expect(html).toMatch(/<\/style><\/head><div class="rmxc-[a-z0-9]+">No HTML root<\/div>$/)
     })
@@ -991,6 +1074,22 @@ describe('stream', () => {
       expect(html).toContain('font-size: 16px')
     })
 
+    it('preserves range media query operators in css mixin', async () => {
+      let html = await renderToString(
+        <div
+          mix={[
+            css({
+              '@media (width < 900px)': {
+                display: 'none',
+              },
+            }),
+          ]}
+        />,
+      )
+
+      expect(html).toContain('@media (width < 900px)')
+    })
+
     it('merges styles with existing head content', async () => {
       let stream = renderToStream(
         <html>
@@ -1007,7 +1106,7 @@ describe('stream', () => {
 
       // Styles should be injected into existing head, preserving other content
       expect(html).toContain('<head>')
-      expect(html).toContain('<style data-rmx=')
+      expect(html).toContain('<style data-rmx-style=')
       expect(html).toContain('font-weight: bold')
       expect(html).toContain('<title>Page Title</title>')
       expect(html).toContain('<meta charset="utf-8" />')
@@ -1017,7 +1116,7 @@ describe('stream', () => {
       let headMatch = html.match(/<head>(.*?)<\/head>/s)
       expect(headMatch).toBeTruthy()
       let headContent = headMatch![1]
-      expect(headContent).toContain('<style data-rmx=')
+      expect(headContent).toContain('<style data-rmx-style=')
       expect(headContent).toContain('<title>Page Title</title>')
       expect(headContent).toContain('<meta charset="utf-8" />')
     })
@@ -1054,7 +1153,9 @@ describe('stream', () => {
 
       expect(html.match(/href="\/assets\/island\.js"/g)).toHaveLength(1)
       expect(html.match(/href="\/assets\/shared\.js"/g)).toHaveLength(1)
-      expect(html).toContain('<link data-rmx rel="modulepreload" href="/assets/island.js" />')
+      expect(html).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
+      )
       expect(html).not.toContain('"preloads"')
     })
 
@@ -1104,7 +1205,7 @@ describe('stream', () => {
       )
 
       expect(html).toMatch(
-        /^<head><link data-rmx rel="modulepreload" href="\/assets\/island\.js" \/><style data-rmx=/,
+        /^<head><link data-rmx-module-preload rel="modulepreload" href="\/assets\/island\.js" \/><style data-rmx-style=/,
       )
       expect(html).toMatch(/<\/style><\/head><main class="rmxc-[a-z0-9]+">/)
     })
@@ -1137,7 +1238,9 @@ describe('stream', () => {
       )
 
       let head = html.match(/<head>(.*?)<\/head>/s)?.[1]
-      expect(head).toContain('<link data-rmx rel="modulepreload" href="/assets/island.js" />')
+      expect(head).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
+      )
       expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
     })
 
@@ -1174,12 +1277,12 @@ describe('stream', () => {
       )
 
       expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
-      expect(html).toMatch(/<body><!-- rmx:f:[^ ]+ --><head><style data-rmx=/)
+      expect(html).toMatch(/<body><!-- rmx:f:[^ ]+ --><head><style data-rmx-style=/)
     })
 
     it('does not inspect marker-shaped markup outside the leading frame head', async () => {
       let markerShapedMarkup =
-        '<link data-rmx rel="modulepreload" href="/assets/not-a-preload.js" />'
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/not-a-preload.js" />'
       let html = await drain(
         renderToStream(
           <html>
@@ -1204,7 +1307,7 @@ describe('stream', () => {
 
     it('does not inspect the leading frame head after its generated preload prefix', async () => {
       let markerShapedMarkup =
-        '<link data-rmx rel="modulepreload" href="/assets/not-a-preload.js" />'
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/not-a-preload.js" />'
       let html = await drain(
         renderToStream(
           <html>
@@ -1219,8 +1322,8 @@ describe('stream', () => {
             resolveFrame() {
               return [
                 '<head>',
-                '<link data-rmx rel="modulepreload" href="/assets/island.js" />',
-                '<style data-rmx="rmxc-frame">@layer rmx-ui.rmxc-frame { color: purple }</style>',
+                '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
+                '<style data-rmx-style="rmxc-frame">@layer rmx-ui.rmxc-frame { color: purple }</style>',
                 `<script type="text/plain">${markerShapedMarkup}</script>`,
                 '</head><main>Frame</main>',
               ].join('')
@@ -1230,7 +1333,7 @@ describe('stream', () => {
       )
 
       expect(html).toContain(
-        '<head><style data-rmx="rmxc-frame">@layer rmx-ui.rmxc-frame { color: purple }</style>' +
+        '<head><style data-rmx-style="rmxc-frame">@layer rmx-ui.rmxc-frame { color: purple }</style>' +
           `<script type="text/plain">${markerShapedMarkup}</script></head>`,
       )
       expect(html.match(/href="\/assets\/island\.js"/g)).toHaveLength(1)
@@ -1257,7 +1360,7 @@ describe('stream', () => {
       )
 
       expect(html).toContain(
-        '<html><head><link data-rmx rel="modulepreload" href="/assets/island.js" /></head><body>',
+        '<html><head><link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" /></head><body>',
       )
     })
 
@@ -1293,7 +1396,9 @@ describe('stream', () => {
       )
 
       let head = html.match(/<head>(.*?)<\/head>/s)?.[1]
-      expect(head).toContain('<link data-rmx rel="modulepreload" href="/assets/island.js" />')
+      expect(head).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
+      )
       expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
     })
 
@@ -1316,7 +1421,7 @@ describe('stream', () => {
 
       expect(html).toContain('<template id="f')
       expect(html).toContain(
-        '<head><link data-rmx rel="modulepreload" href="/assets/island.js" /></head>',
+        '<head><link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" /></head>',
       )
     })
 
@@ -2217,7 +2322,7 @@ describe('stream', () => {
 
       expect(result).not.toContain('<!DOCTYPE')
       expect(result).toContain('<template')
-      expect(result).toContain('<head><style data-rmx=')
+      expect(result).toContain('<head><style data-rmx-style=')
       expect(result).toContain('<div class="rmxc-')
       expect(result).toContain('>Resolved</div>')
     })
@@ -2465,31 +2570,50 @@ describe('stream', () => {
       expect(done.done).toBe(true)
     })
 
-    it('cancels blocking frame rendering when signal aborts without calling onError', async () => {
+    it('cancels all blocking frames without unhandled rejections', async () => {
       let controller = new AbortController()
       let errors: unknown[] = []
+      let [frameOne, , rejectFrameOne] = withResolvers<string>()
+      let [frameTwo, , rejectFrameTwo] = withResolvers<string>()
+      let unhandledRejections: unknown[] = []
+      let onUnhandledRejection = (event: PromiseRejectionEvent) => {
+        event.preventDefault()
+        unhandledRejections.push(event.reason)
+      }
+      window.addEventListener('unhandledrejection', onUnhandledRejection)
 
-      let stream = renderToStream(<Frame src="/fragments/product" />, {
-        onError(error) {
-          errors.push(error)
-        },
-        resolveFrame: () =>
-          new Promise<string>((_resolve, reject) => {
-            controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
-              once: true,
-            })
-          }),
-        signal: controller.signal,
-      })
+      try {
+        let stream = renderToStream(
+          <div>
+            <Frame src="/fragments/one" />
+            <Frame src="/fragments/two" />
+          </div>,
+          {
+            onError(error) {
+              errors.push(error)
+            },
+            resolveFrame(src) {
+              return src === '/fragments/one' ? frameOne : frameTwo
+            },
+            signal: controller.signal,
+          },
+        )
 
-      let reader = stream.getReader()
-      let read = reader.read()
+        let reader = stream.getReader()
+        let read = reader.read()
 
-      let abortError = new DOMException('This operation was aborted', 'AbortError')
-      controller.abort(abortError)
+        let abortError = new DOMException('This operation was aborted', 'AbortError')
+        controller.abort(abortError)
+        rejectFrameOne(abortError)
+        rejectFrameTwo(abortError)
 
-      await expect(read).resolves.toEqual({ done: true, value: undefined })
-      expect(errors).toEqual([])
+        await expect(read).resolves.toEqual({ done: true, value: undefined })
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        expect(errors).toEqual([])
+        expect(unhandledRejections).toEqual([])
+      } finally {
+        window.removeEventListener('unhandledrejection', onUnhandledRejection)
+      }
     })
 
     it('cancels non-blocking frame rendering when signal aborts without calling onError', async () => {

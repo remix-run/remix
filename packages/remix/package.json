@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "3.0.0-beta.6",
+  "version": "3.0.0-beta.10",
   "description": "The Remix web framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -676,7 +676,6 @@
     "@remix-run/session-middleware": "workspace:^",
     "@remix-run/session-storage-memcache": "workspace:^",
     "@remix-run/session-storage-redis": "workspace:^",
-    "@remix-run/static-middleware": "workspace:^",
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/assert": "workspace:^",
     "@remix-run/cli": "workspace:^",
@@ -684,7 +683,8 @@
     "@remix-run/terminal": "workspace:^",
     "@remix-run/render-middleware": "workspace:^",
     "@remix-run/node-hmr": "workspace:^",
-    "@remix-run/ui-hmr": "workspace:^"
+    "@remix-run/ui-hmr": "workspace:^",
+    "@remix-run/static-middleware": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",

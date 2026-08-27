@@ -5,6 +5,7 @@ Command-line interface for creating and managing Remix projects.
 ## Features
 
 - Create new Remix projects with `npx remix@next new` or installed `remix new`
+- List browser-reachable files and inspect URL mappings with `remix assets`
 - Print shell completion scripts with `remix completion`
 - Check project environment and Remix app conventions with `remix doctor`
 - Apply available low-risk project fixes with `remix doctor --fix`
@@ -46,10 +47,13 @@ The rest of the CLI is available through the installed `remix` command:
 
 ```sh
 remix new my-remix-app
+remix assets
+remix assets inspect /assets/app/actions/public/entry.ts
 remix completion bash >> ~/.bashrc
 remix doctor
 remix doctor --fix
 remix db migrate
+remix db rollback
 remix db status
 remix db reset --force
 remix routes
@@ -66,10 +70,13 @@ You can also run the CLI programmatically:
 import { runRemix } from 'remix/cli'
 
 await runRemix(['new', 'my-remix-app'])
+await runRemix(['assets'])
+await runRemix(['assets', 'inspect', '/assets/app/actions/public/entry.ts'])
 await runRemix(['completion', 'bash'])
 await runRemix(['doctor'])
 await runRemix(['doctor', '--fix'])
 await runRemix(['db', 'migrate'])
+await runRemix(['db', 'rollback'])
 await runRemix(['db', 'status'])
 await runRemix(['db', 'reset', '--force'])
 await runRemix(['routes'])
@@ -81,7 +88,11 @@ await runRemix(['version'])
 
 Destructive database commands (`remix db wipe` and `remix db reset`) refuse to run without `--force`.
 
+`remix db rollback` reverts the most recent migration by default. Use `--step <count>` or `--to <migration>` to select a bound, and use `--dry-run` to report what would be reverted without changing the database.
+
 `runRemix()` returns the CLI exit code as a promise.
+
+`remix assets` lists each browser-reachable asset as `URL -> file`, one per line. Run `remix assets inspect <url-or-file>` to see one asset's resolved mapping and whether it is reachable, denied, unsupported, missing, or unmapped. Denied assets also show the matching deny rule.
 
 ## Configuration
 
@@ -91,6 +102,21 @@ trailing commas. Every top-level field is optional:
 ```jsonc
 {
   "$schema": "https://remix.run/schemas/remix.json",
+
+  "assets": {
+    "rootDir": ".",
+    "basePath": "/assets",
+    "mounts": {
+      "app": "app",
+      "npm": "node_modules",
+    },
+    "allowFiles": ["app/routes.ts", "app/**/public/**"],
+    "allowPackages": ["remix"],
+    "denyFiles": ["app/**/*.test.*"],
+    "files": {
+      "extensions": [".svg", ".png", ".jpg", ".woff2"],
+    },
+  },
 
   "db": {
     "adapter": {
@@ -162,8 +188,9 @@ disable configured strict mode for one run.
 a string or an object naming an environment variable with an optional default. `db.seed` names a
 SQL file that `remix db seed` and `remix db reset` run against the database. Database flags such as
 `--migrations`, `--seed`, `--journal-table`, and `--connection-env` override the corresponding
-config for one invocation. When no global `--config` is provided, database commands find the
-nearest `remix.json` by walking up from the working directory.
+config for one invocation. Rollbacks also accept `--step`, `--to`, and `--dry-run`. When no global
+`--config` is provided, database commands find the nearest `remix.json` by walking up from the
+working directory.
 
 Use the global `--config` option to select another JSONC file. The option itself is resolved from the
 CLI working directory and may appear before or after the command:
@@ -176,6 +203,26 @@ remix test --config ./config/remix.ci.json
 A missing default `remix.json` is ignored. A missing explicitly selected file, malformed JSONC,
 unknown property, or invalid value is reported as a CLI error. The optional `$schema` field enables
 editor completion and validation; it has no runtime effect.
+
+Load the complete validated config from application code with `loadConfig()`:
+
+```ts
+import { createAssetServer } from 'remix/assets'
+import { loadConfig } from 'remix/cli'
+
+let config = await loadConfig(import.meta.dirname)
+if (config.assets === undefined) throw new Error('Missing assets configuration')
+
+let assetServer = createAssetServer({
+  ...config.assets,
+  sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
+})
+```
+
+Pass a config file to load it directly, or a directory to search upward for the nearest
+`remix.json`. Asset paths are resolved relative to the config file, so `config.assets` can be spread
+directly into `createAssetServer()`. Add runtime-only options such as transforms, caches, HMR, or
+error handlers in application code.
 
 ## License
 
