@@ -649,8 +649,9 @@ details button and rendered item count because those depend on the component and
 ## Client navigation {#client-navigation}
 
 Keep using real anchors for links. After `run()` starts, the runtime can enhance same-origin
-navigations through the browser's Navigation API. Cross-origin links, downloads, and navigations the
-browser cannot intercept continue as normal document requests.
+navigations through the browser's Navigation API when its source element data is available, with a
+History API fallback in other browsers. Cross-origin links, downloads, and navigations the runtime
+cannot intercept continue as normal document requests.
 
 ```tsx filename=app/ui/album-link.tsx
 import type { Handle } from "remix/ui";

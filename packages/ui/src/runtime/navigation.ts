@@ -1,6 +1,8 @@
 import { getTopFrame, getNamedFrame } from './run.ts'
 import { reloadFrameForNavigation } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
+import { getNavigationDriver, setNavigationDriver } from './navigation-driver.ts'
+import { reloadNavigationFrame, type NavigationFrameOptions } from './navigation-frame.ts'
 
 interface NavigationPrecommitControllerLike {
   redirect(url: string, options: { history: 'replace' }): void
@@ -11,7 +13,7 @@ interface NavigationInterceptOptionsWithPrecommit extends NavigationInterceptOpt
   precommitHandler(controller: NavigationPrecommitControllerLike): void
 }
 
-type NavigationState = {
+export type NavigationState = {
   target: string | undefined
   src: string
   resetScroll: boolean
@@ -53,7 +55,7 @@ export type NavigationOptions = {
 }
 
 /**
- * Performs a Navigation API transition understood by Remix frame runtime state.
+ * Performs a client-side transition understood by the Remix frame runtime.
  *
  * @param href Destination URL.
  * @param options Navigation options.
@@ -65,8 +67,13 @@ export async function navigate(href: string, options?: NavigationOptions) {
     resetScroll: options?.resetScroll !== false,
     $rmx: true,
   } satisfies NavigationState
-  let transition = window.navigation.navigate(href, { state, history: options?.history })
-  await transition.finished
+  let driver = getNavigationDriver()
+  if (driver) {
+    await driver.navigate(href, state, options?.history)
+  } else {
+    let transition = window.navigation.navigate(href, { state, history: options?.history })
+    await transition.finished
+  }
 }
 
 /**
@@ -84,16 +91,16 @@ export function startNavigationListener(signal: AbortSignal) {
 }
 
 // Internal version used by unit tests so we can inject stub frames
-export function startNavigationListenerImpl(
-  signal: AbortSignal,
-  options: {
-    getTopFrame: typeof getTopFrame
-    getNamedFrame: typeof getNamedFrame
-    reloadFrame: typeof reloadFrameForNavigation
-  },
-) {
+export function startNavigationListenerImpl(signal: AbortSignal, options: NavigationFrameOptions) {
   let navigation = window.navigation
   let resolveFormNavigation = createFormNavigationResolver(signal)
+
+  setNavigationDriver(signal, {
+    async navigate(href, state, history) {
+      let transition = navigation.navigate(href, { state, history })
+      await transition.finished
+    },
+  })
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, resetScroll: true, $rmx: true },
@@ -126,10 +133,6 @@ export function startNavigationListenerImpl(
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
 
-      let topFrame = options.getTopFrame()
-      let namedFrame = state.target ? options.getNamedFrame(state.target) : undefined
-      let frame = namedFrame ?? topFrame
-
       let handler = async () => {
         if (event.signal.aborted) return
 
@@ -144,12 +147,13 @@ export function startNavigationListenerImpl(
           navigation.updateCurrentEntry({ state })
         }
 
-        topFrame.src = event.destination.url
-        if (frame !== topFrame) frame.src = state.src
-        let { redirectedTo } = await options.reloadFrame(frame, {
-          ...submission,
-          signal: event.signal,
-        })
+        let { frame, topFrame, redirectedTo } = await reloadNavigationFrame(
+          event.destination.url,
+          state,
+          event.signal,
+          submission,
+          options,
+        )
 
         if (redirectedTo && frame === topFrame) {
           frame.src = redirectedTo

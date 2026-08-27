@@ -5,6 +5,7 @@ import type { FrameHandle, Handle } from './component.ts'
 import { createComponentErrorEvent } from './error-event.ts'
 import type { ComponentErrorEvent } from './error-event.ts'
 import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame.ts'
+import { startHistoryNavigationListener } from './history-navigation.ts'
 import { startNavigationListener } from './navigation.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 
@@ -154,7 +155,11 @@ export function run(init: RunInit): AppRuntime {
       return namedFrames.get(name)
     },
   }
-  startNavigationListener(appController.signal)
+  if (supportsNavigationSourceElement()) {
+    startNavigationListener(appController.signal)
+  } else {
+    startHistoryNavigationListener(appController.signal)
+  }
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
     throw error
@@ -170,4 +175,15 @@ export function run(init: RunInit): AppRuntime {
       styleManager.dispose()
     },
   })
+}
+
+function supportsNavigationSourceElement(): boolean {
+  let navigation = Reflect.get(window, 'navigation')
+  let NavigateEventConstructor = Reflect.get(window, 'NavigateEvent')
+  return (
+    typeof navigation === 'object' &&
+    navigation !== null &&
+    typeof NavigateEventConstructor === 'function' &&
+    'sourceElement' in NavigateEventConstructor.prototype
+  )
 }

@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { createContextKey, createRouter, type Middleware } from '@remix-run/fetch-router'
 import { afterEach, describe, it, mock } from '@remix-run/test'
-import { on, type Handle } from '@remix-run/ui'
+import { navigate, on, type Handle } from '@remix-run/ui'
 import { spaResponse } from '@remix-run/ui'
 
 import { render, run, type Router } from './spa.ts'
@@ -242,6 +242,79 @@ describe('run', () => {
     expect(requests.map((request) => request.method)).toEqual(['GET', 'GET'])
     expect(document.querySelector('h1')?.textContent).toBe('Redirected')
   })
+
+  it('runs SPA navigation through History when sourceElement is unavailable', async (t) => {
+    let initialUrl = window.location.href
+    let routeUrl = new URL('/history-start', initialUrl)
+    window.history.replaceState(null, '', routeUrl)
+    let navigateEventDescriptor = Object.getOwnPropertyDescriptor(window, 'NavigateEvent')
+    let defined = Reflect.defineProperty(window, 'NavigateEvent', {
+      configurable: true,
+      writable: true,
+      value: class NavigateEventWithoutSourceElement extends Event {},
+    })
+    if (!defined) throw new Error('Expected NavigateEvent to be configurable in the test browser')
+
+    let requests: Request[] = []
+    let router: Router = {
+      async fetch(input, init) {
+        let request = input instanceof Request ? input : new Request(input, init)
+        requests.push(request)
+        let pathname = new URL(request.url).pathname
+        if (pathname === '/history-start') return spaResponse.create(<h1>Start</h1>)
+        if (pathname === '/history-programmatic') {
+          return spaResponse.create(<a href="/history-form">Open form</a>)
+        }
+        if (pathname === '/history-form') {
+          return spaResponse.create(
+            <form action="/history-submit" method="post">
+              <input name="name" value="Ada" />
+              <button type="submit">Save</button>
+            </form>,
+          )
+        }
+        if (pathname === '/history-submit') {
+          return new Response(null, { status: 302, headers: { Location: '/history-final' } })
+        }
+        if (pathname === '/history-final') return spaResponse.create(<h1>Saved</h1>)
+        return new Response('Not found', { status: 404 })
+      },
+    }
+    let documentNavigationCount = performance.getEntriesByType('navigation').length
+    let app = run(router)
+
+    t.after(() => {
+      app.dispose()
+      if (navigateEventDescriptor) {
+        Reflect.defineProperty(window, 'NavigateEvent', navigateEventDescriptor)
+      } else {
+        Reflect.deleteProperty(window, 'NavigateEvent')
+      }
+      window.history.replaceState(null, '', initialUrl)
+    })
+
+    await app.ready()
+    await navigate('/history-programmatic', { history: 'replace' })
+    document.querySelector('a')?.click()
+    await waitFor(() => document.querySelector('form') !== null)
+    document.querySelector('form')?.requestSubmit()
+    await waitFor(() => document.querySelector('h1')?.textContent === 'Saved')
+
+    expect(window.location.pathname).toBe('/history-final')
+    expect(requests.map((request) => [request.method, new URL(request.url).pathname])).toEqual([
+      ['GET', '/history-start'],
+      ['GET', '/history-programmatic'],
+      ['GET', '/history-form'],
+      ['POST', '/history-submit'],
+      ['GET', '/history-final'],
+    ])
+
+    window.history.back()
+    await waitFor(() => window.location.pathname === '/history-form')
+    await waitFor(() => document.querySelector('form') !== null)
+
+    expect(performance.getEntriesByType('navigation').length).toBe(documentNavigationCount)
+  })
 })
 
 function withResolvers<value>(): [Promise<value>, (value: value) => void] {
@@ -250,4 +323,12 @@ function withResolvers<value>(): [Promise<value>, (value: value) => void] {
     resolve = promiseResolve
   })
   return [promise, resolve]
+}
+
+async function waitFor(condition: () => boolean): Promise<void> {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    if (condition()) return
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  }
+  throw new Error('Timed out waiting for SPA navigation')
 }
