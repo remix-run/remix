@@ -12,8 +12,8 @@ describe('assets command', () => {
     let result = await captureOutput(() => runRemix(['assets', '--help']))
 
     assert.equal(result.exitCode, 0, result.stderr)
-    assert.match(result.stdout, /remix assets \[url-or-file\]/)
-    assert.match(result.stdout, /List browser-reachable assets or inspect one asset URL or file\./)
+    assert.match(result.stdout, /remix assets inspect <url-or-file>/)
+    assert.match(result.stdout, /List or inspect browser-reachable assets\./)
     assert.equal(result.stderr, '')
   })
 
@@ -41,7 +41,7 @@ describe('assets command', () => {
     let projectDir = await createAssetsProject()
 
     try {
-      let byUrl = await runAssets(['/assets/app/public/entry.ts'], projectDir)
+      let byUrl = await runAssets(['inspect', '/assets/app/public/entry.ts'], projectDir)
       assert.equal(byUrl.exitCode, 0, byUrl.stderr)
       assert.equal(
         byUrl.stdout,
@@ -54,13 +54,13 @@ describe('assets command', () => {
       )
 
       let byAbsoluteUrl = await runAssets(
-        ['https://example.com/assets/app/public/entry.ts'],
+        ['inspect', 'https://example.com/assets/app/public/entry.ts'],
         projectDir,
       )
       assert.equal(byAbsoluteUrl.exitCode, 0, byAbsoluteUrl.stderr)
       assert.equal(byAbsoluteUrl.stdout, byUrl.stdout)
 
-      let byFile = await runAssets(['app/public/logo.svg'], projectDir)
+      let byFile = await runAssets(['inspect', 'app/public/logo.svg'], projectDir)
       assert.equal(byFile.exitCode, 0, byFile.stderr)
       assert.equal(
         byFile.stdout,
@@ -72,7 +72,7 @@ describe('assets command', () => {
         ].join('\n'),
       )
 
-      let denied = await runAssets(['/assets/app/public/entry.test.ts'], projectDir)
+      let denied = await runAssets(['inspect', '/assets/app/public/entry.test.ts'], projectDir)
       assert.equal(denied.exitCode, 0, denied.stderr)
       assert.equal(
         denied.stdout,
@@ -87,6 +87,16 @@ describe('assets command', () => {
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
+  })
+
+  it('requires the inspect subcommand and an asset URL or file path', async () => {
+    let direct = await runAssets(['/assets/app/public/entry.ts'], process.cwd())
+    let missing = await runAssets(['inspect'], process.cwd())
+
+    assert.equal(direct.exitCode, 1)
+    assert.match(direct.stderr, /Unknown command: assets \/assets\/app\/public\/entry\.ts/)
+    assert.equal(missing.exitCode, 1)
+    assert.match(missing.stderr, /`remix assets inspect` requires a URL or file path\./)
   })
 
   it('reports a missing assets configuration', async () => {

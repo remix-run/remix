@@ -273,15 +273,22 @@ function completeAssets(
   usedGlobalFlags: Set<string>,
 ): CompletionResult {
   let filteredTokens = filterGlobalCommandTokens(tokens, usedGlobalFlags)
-  if (filteredTokens == null || filteredTokens.length > 0) {
+  if (filteredTokens == null) {
     return completeValues([], currentWord)
   }
 
-  if (currentWord.startsWith('-')) {
-    return completeValues(withHelpFlags([], usedGlobalFlags), currentWord)
+  if (filteredTokens.length === 0) {
+    return completeValues(withHelpFlags(['inspect'], usedGlobalFlags), currentWord)
   }
 
-  return { mode: 'files' }
+  let [subcommand, ...rest] = filteredTokens
+  if (subcommand !== 'inspect' || rest.length > 0) {
+    return completeValues([], currentWord)
+  }
+
+  return currentWord.startsWith('-')
+    ? completeValues(withHelpFlags([], usedGlobalFlags), currentWord)
+    : { mode: 'files' }
 }
 
 function completeTest(

@@ -5,7 +5,7 @@ Command-line interface for creating and managing Remix projects.
 ## Features
 
 - Create new Remix projects with `npx remix@next new` or installed `remix new`
-- Inspect browser-reachable files and URL mappings with `remix assets`
+- List browser-reachable files and inspect URL mappings with `remix assets`
 - Print shell completion scripts with `remix completion`
 - Check project environment and Remix app conventions with `remix doctor`
 - Apply available low-risk project fixes with `remix doctor --fix`
@@ -48,7 +48,7 @@ The rest of the CLI is available through the installed `remix` command:
 ```sh
 remix new my-remix-app
 remix assets
-remix assets /assets/app/actions/public/entry.ts
+remix assets inspect /assets/app/actions/public/entry.ts
 remix completion bash >> ~/.bashrc
 remix doctor
 remix doctor --fix
@@ -70,7 +70,7 @@ import { runRemix } from 'remix/cli'
 
 await runRemix(['new', 'my-remix-app'])
 await runRemix(['assets'])
-await runRemix(['assets', '/assets/app/actions/public/entry.ts'])
+await runRemix(['assets', 'inspect', '/assets/app/actions/public/entry.ts'])
 await runRemix(['completion', 'bash'])
 await runRemix(['doctor'])
 await runRemix(['doctor', '--fix'])
@@ -88,7 +88,7 @@ Destructive database commands (`remix db wipe` and `remix db reset`) refuse to r
 
 `runRemix()` returns the CLI exit code as a promise.
 
-`remix assets` lists each browser-reachable asset as `URL -> file`, one per line. Pass one public URL or file path to see its resolved mapping and whether it is reachable, denied, unsupported, missing, or unmapped. Denied assets also show the matching deny rule.
+`remix assets` lists each browser-reachable asset as `URL -> file`, one per line. Run `remix assets inspect <url-or-file>` to see one asset's resolved mapping and whether it is reachable, denied, unsupported, missing, or unmapped. Denied assets also show the matching deny rule.
 
 ## Configuration
 

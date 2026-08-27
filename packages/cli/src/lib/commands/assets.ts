@@ -4,7 +4,13 @@ import * as process from 'node:process'
 import { createAssetServer, type AssetDetails } from '@remix-run/assets'
 
 import type { CliContext } from '../cli-context.ts'
-import { assetsConfigRequired, renderCliError, toCliError } from '../errors.ts'
+import {
+  assetsConfigRequired,
+  invalidOptionValue,
+  renderCliError,
+  toCliError,
+  unknownCommand,
+} from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 
@@ -15,19 +21,20 @@ export async function runAssetsCommand(argv: string[], context: CliContext): Pro
   }
 
   try {
-    let parsed = parseArgs(argv, {}, { maxPositionals: 1 })
+    let invocation = parseAssetsCommandArgs(argv)
     let config = await context.loadConfig()
     if (config.assets === undefined) throw assetsConfigRequired()
 
     let assetServer = createAssetServer({ ...config.assets, watch: false })
     try {
-      let input = parsed.positionals[0]
       let rootDir = fs.realpathSync(config.assets.rootDir)
 
-      if (input === undefined) {
+      if (invocation.command === 'list') {
         process.stdout.write(formatAssetList(await assetServer.getAssets(), rootDir))
       } else {
-        process.stdout.write(formatAssetDetails(await assetServer.getAssetDetails(input), rootDir))
+        process.stdout.write(
+          formatAssetDetails(await assetServer.getAssetDetails(invocation.input), rootDir),
+        )
       }
     } finally {
       await assetServer.close()
@@ -45,16 +52,31 @@ export async function runAssetsCommand(argv: string[], context: CliContext): Pro
 export function getAssetsCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
   return formatHelpText(
     {
-      description: 'List browser-reachable assets or inspect one asset URL or file.',
+      description: 'List or inspect browser-reachable assets.',
+      commands: [{ description: 'Inspect one asset URL or file', label: 'inspect <url-or-file>' }],
       examples: [
         'remix assets',
-        'remix assets /assets/app/actions/public/entry.ts',
-        'remix assets app/actions/public/entry.ts',
+        'remix assets inspect /assets/app/actions/public/entry.ts',
+        'remix assets inspect app/actions/public/entry.ts',
       ],
-      usage: ['remix assets [url-or-file]'],
+      usage: ['remix assets', 'remix assets inspect <url-or-file>'],
     },
     target,
   )
+}
+
+type AssetsCommandInvocation = { command: 'list' } | { command: 'inspect'; input: string }
+
+function parseAssetsCommandArgs(argv: string[]): AssetsCommandInvocation {
+  let parsed = parseArgs(argv, {}, { maxPositionals: 2 })
+  let [command, input] = parsed.positionals
+
+  if (command === undefined) return { command: 'list' }
+  if (command !== 'inspect') throw unknownCommand(`assets ${command}`)
+  if (input === undefined) {
+    throw invalidOptionValue('`remix assets inspect` requires a URL or file path.')
+  }
+  return { command, input }
 }
 
 function formatAssetList(assets: readonly AssetDetails[], rootDir: string): string {

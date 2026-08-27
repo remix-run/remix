@@ -48,6 +48,15 @@ describe('completion engine', () => {
     ])
   })
 
+  it('completes the assets inspect subcommand and file argument', () => {
+    let subcommands = getCompletionResult(['remix', 'assets', ''], 2)
+    let input = getCompletionResult(['remix', 'assets', 'inspect', ''], 3)
+
+    assert.equal(subcommands.mode, 'values')
+    assert.deepEqual(subcommands.values, ['inspect', '--config', '-h', '--help', '--no-color'])
+    assert.equal(input.mode, 'files')
+  })
+
   it('completes database subcommands and per-command flags', () => {
     let subcommands = getCompletionResult(['remix', 'db', ''], 2)
     let wipeFlags = getCompletionResult(['remix', 'db', 'wipe', ''], 3)

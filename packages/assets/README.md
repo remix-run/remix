@@ -114,7 +114,7 @@ let assetServer = createAssetServer({
 
 `loadConfig()` accepts either a config file or a directory. When given a directory, it searches
 upward for the nearest `remix.json`. Run `remix assets` to list reachable files, or
-`remix assets <url-or-file>` to inspect one mapping and its access decision.
+`remix assets inspect <url-or-file>` to inspect one mapping and its access decision.
 
 ## Root Directory
 

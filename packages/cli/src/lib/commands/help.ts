@@ -24,7 +24,7 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
   return formatHelpText(
     {
       commands: [
-        { description: 'Inspect browser-reachable assets', label: 'assets [url-or-file]' },
+        { description: 'List or inspect browser-reachable assets', label: 'assets [command]' },
         { description: 'Print shell completion scripts for Remix', label: 'completion' },
         { description: 'Show help for Remix commands', label: 'help [command]' },
         { description: 'Create a new Remix project', label: 'new <name>' },

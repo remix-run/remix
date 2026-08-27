@@ -27,15 +27,15 @@ const ROOT_HELP_TEXT = [
   '  remix <command> [options]',
   '',
   'Commands:',
-  '  assets [url-or-file]  Inspect browser-reachable assets',
-  '  completion            Print shell completion scripts for Remix',
-  '  help [command]        Show help for Remix commands',
-  '  new <name>            Create a new Remix project',
-  '  db <command>          Manage the current app database',
-  '  doctor                Check project health for the current project',
-  '  routes                Show the route tree for the current project',
-  '  test [glob]           Run tests for the current project',
-  '  version               Show the current Remix version',
+  '  assets [command]  List or inspect browser-reachable assets',
+  '  completion        Print shell completion scripts for Remix',
+  '  help [command]    Show help for Remix commands',
+  '  new <name>        Create a new Remix project',
+  '  db <command>      Manage the current app database',
+  '  doctor            Check project health for the current project',
+  '  routes            Show the route tree for the current project',
+  '  test [glob]       Run tests for the current project',
+  '  version           Show the current Remix version',
   '',
   'Options:',
   '  --config <path>  Use a custom Remix config file',
@@ -338,7 +338,7 @@ describe('run', () => {
     let versionHelp = await captureOutput(() => run(['help', 'version']))
 
     assert.equal(assetsHelp.exitCode, 0)
-    assert.match(assetsHelp.stdout, /remix assets \[url-or-file\]/)
+    assert.match(assetsHelp.stdout, /remix assets inspect <url-or-file>/)
     assert.equal(assetsHelp.stderr, '')
     assert.equal(doctorHelp.exitCode, 0)
     assert.equal(doctorHelp.stdout, DOCTOR_COMMAND_HELP_TEXT)
