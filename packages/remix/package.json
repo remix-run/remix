@@ -109,6 +109,7 @@
     "./session-storage/memcache": "./src/session-storage-memcache.ts",
     "./session-storage/memory": "./src/session/memory-storage.ts",
     "./session-storage/redis": "./src/session-storage-redis.ts",
+    "./spa": "./src/spa.ts",
     "./tar-parser": "./src/tar-parser.ts",
     "./terminal": "./src/terminal.ts",
     "./test": "./src/test.ts",
@@ -483,6 +484,10 @@
         "types": "./dist/session-storage-redis.d.ts",
         "default": "./dist/session-storage-redis.js"
       },
+      "./spa": {
+        "types": "./dist/spa.d.ts",
+        "default": "./dist/spa.js"
+      },
       "./tar-parser": {
         "types": "./dist/tar-parser.d.ts",
         "default": "./dist/tar-parser.js"
@@ -684,6 +689,7 @@
     "@remix-run/render-middleware": "workspace:^",
     "@remix-run/node-hmr": "workspace:^",
     "@remix-run/ui-hmr": "workspace:^",
+    "@remix-run/spa": "workspace:^",
     "@remix-run/static-middleware": "workspace:^"
   },
   "scripts": {

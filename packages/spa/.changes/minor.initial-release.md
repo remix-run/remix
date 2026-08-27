@@ -1,0 +1,1 @@
+Added the initial `@remix-run/spa` package with `render()` middleware and a `run(router, { fallback? })` browser runtime for client-rendered Remix applications. Route handlers use `context.render()` while the package preserves the router's `Request` to `Response` contract and hides the SPA response carrier.

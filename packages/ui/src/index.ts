@@ -36,6 +36,7 @@ export type {
   FrameProps,
 } from './runtime/component.ts'
 export type { LoadModule, ResolveFrame, ResolveFrameOptions } from './runtime/frame.ts'
+export { spaResponse } from './runtime/spa-response.ts'
 
 // -- Elements/JSX/Props --
 export { createElement } from './runtime/create-element.ts'
@@ -58,8 +59,7 @@ export type {
   MixValue,
 } from './runtime/mixins/mixin.ts'
 export { TypedEventTarget } from './runtime/typed-event-target.ts'
-export { addEventListeners } from './runtime/event-listeners.ts'
-export type { Dispatched } from './runtime/event-listeners.ts'
+export type { Dispatched } from './runtime/event-types.ts'
 export { on } from './runtime/mixins/on-mixin.ts'
 export { link } from './runtime/mixins/link-mixin.ts'
 export { ref } from './runtime/mixins/ref-mixin.ts'

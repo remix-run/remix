@@ -21,7 +21,16 @@ interface CompiledMount {
 
 export interface CompiledRoutes {
   resolveUrlPathname(pathname: string): string | null
+  matchUrlPathname(pathname: string): AssetRouteMatch | null
   toUrlPathname(filePath: string): string | null
+  matchFilePath(filePath: string): AssetRouteMatch | null
+}
+
+export interface AssetRouteMatch {
+  filePath: string
+  fileRoot: string
+  urlPathname: string
+  urlRoot: string
 }
 
 export function compileRoutes(
@@ -42,29 +51,52 @@ export function compileRoutes(
 
   return {
     resolveUrlPathname(pathname) {
-      let normalizedPathname = normalizePathname(pathname)
-
-      for (let mount of compiledMounts) {
-        let relativePathname = getPathWithinRoot(mount.urlRoot, normalizedPathname)
-        if (relativePathname === null) continue
-        let filePath = resolveFilePath(mount.fileRoot, decodeURIComponent(relativePathname))
-        return getPathWithinRoot(mount.fileRoot, filePath) === null ? null : filePath
-      }
-
-      return null
+      return matchUrlPathname(pathname)?.filePath ?? null
     },
+    matchUrlPathname,
     toUrlPathname(filePath) {
-      let normalizedFilePath = normalizeFilePath(filePath)
-
-      for (let mount of compiledMounts) {
-        let relativeFilePath = getPathWithinRoot(mount.fileRoot, normalizedFilePath)
-        if (relativeFilePath === null) continue
-        let encodedFilePath = relativeFilePath.split('/').map(encodeURIComponent).join('/')
-        return joinUrlPath(mount.urlRoot, encodedFilePath)
-      }
-
-      return null
+      return matchFilePath(filePath)?.urlPathname ?? null
     },
+    matchFilePath,
+  }
+
+  function matchUrlPathname(pathname: string): AssetRouteMatch | null {
+    let normalizedPathname = normalizePathname(pathname)
+
+    for (let mount of compiledMounts) {
+      let relativePathname = getPathWithinRoot(mount.urlRoot, normalizedPathname)
+      if (relativePathname === null) continue
+      let filePath = resolveFilePath(mount.fileRoot, decodeURIComponent(relativePathname))
+      if (getPathWithinRoot(mount.fileRoot, filePath) === null) return null
+
+      return {
+        filePath,
+        fileRoot: mount.fileRootValue,
+        urlPathname: normalizedPathname,
+        urlRoot: mount.urlRoot,
+      }
+    }
+
+    return null
+  }
+
+  function matchFilePath(filePath: string): AssetRouteMatch | null {
+    let normalizedFilePath = normalizeFilePath(filePath)
+
+    for (let mount of compiledMounts) {
+      let relativeFilePath = getPathWithinRoot(mount.fileRoot, normalizedFilePath)
+      if (relativeFilePath === null) continue
+      let encodedFilePath = relativeFilePath.split('/').map(encodeURIComponent).join('/')
+
+      return {
+        filePath: normalizedFilePath,
+        fileRoot: mount.fileRootValue,
+        urlPathname: joinUrlPath(mount.urlRoot, encodedFilePath),
+        urlRoot: mount.urlRoot,
+      }
+    }
+
+    return null
   }
 }
 

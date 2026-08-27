@@ -83,6 +83,7 @@
   "remix/session-storage/memcache": "@remix-run/session-storage-memcache",
   "remix/session-storage/memory": "@remix-run/session/memory-storage",
   "remix/session-storage/redis": "@remix-run/session-storage-redis",
+  "remix/spa": "@remix-run/spa",
   "remix/tar-parser": "@remix-run/tar-parser",
   "remix/terminal": "@remix-run/terminal",
   "remix/test": "@remix-run/test",

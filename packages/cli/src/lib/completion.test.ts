@@ -9,6 +9,7 @@ describe('completion engine', () => {
 
     assert.equal(result.mode, 'values')
     assert.deepEqual(result.values, [
+      'assets',
       'completion',
       'db',
       'doctor',
@@ -31,6 +32,7 @@ describe('completion engine', () => {
 
     assert.equal(topLevelResult.mode, 'values')
     assert.deepEqual(topLevelResult.values, [
+      'assets',
       'completion',
       'db',
       'doctor',
@@ -44,6 +46,15 @@ describe('completion engine', () => {
       '--help',
       '--no-color',
     ])
+  })
+
+  it('completes the assets inspect subcommand and file argument', () => {
+    let subcommands = getCompletionResult(['remix', 'assets', ''], 2)
+    let input = getCompletionResult(['remix', 'assets', 'inspect', ''], 3)
+
+    assert.equal(subcommands.mode, 'values')
+    assert.deepEqual(subcommands.values, ['inspect', '--config', '-h', '--help', '--no-color'])
+    assert.equal(input.mode, 'files')
   })
 
   it('completes database subcommands and per-command flags', () => {

@@ -5,7 +5,7 @@ import type { Handle, RemixNode } from '../runtime/component.ts'
 import { createMixin, on, ref } from '../index.ts'
 
 import { animateLayout } from '../animation/index.ts'
-import type { Dispatched, MixinDescriptor, MixinHandle, Props } from '../index.ts'
+import type { Dispatched, MixInput, MixinDescriptor, MixinHandle, Props } from '../index.ts'
 
 type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix
 type FalsyMixValue = false | 0 | 0n | '' | null | undefined
@@ -58,6 +58,22 @@ describe('jsx', () => {
       let withNested = <button mix={[[descriptor], [[[descriptor]]]]}>Click me</button>
 
       expect(withNested.props.mix).toEqual([descriptor, descriptor])
+    })
+
+    it('accepts mixin descriptors with arguments on subtype hosts', () => {
+      let withArgument = createMixin<Element, [value: string]>((_handle) => {})
+      let descriptor = withArgument('value')
+      let mix: MixInput<HTMLButtonElement> = descriptor
+
+      let invalid: MixinDescriptor<Element> = {
+        // @ts-expect-error mixin runners must return a supported mixin value
+        type: () => () => 123,
+        args: [],
+      }
+
+      let element = <button mix={mix}>Click me</button>
+
+      expect(element.props.mix).toEqual([descriptor])
     })
 
     it('does not accept children for textarea elements', () => {

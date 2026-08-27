@@ -8,6 +8,7 @@ Fetch-based server for compiling browser assets on demand.
 - **File Serving** - Serve configured file assets like images and fonts with optional transforms
 - **Access Control** - Control exactly which files and packages can be served
 - **Preloads** - Generate preload URLs for scripts and styles based on imports
+- **Inspection** - List browser-reachable assets and explain URL-to-file mappings
 - **Caching** - Conservative caching by default with stable URLs, ETags, and revalidation
 - **Optional Fingerprinting** - Content-based fingerprinted URLs for long-lived browser caching
 - **Source Maps** - Serve inline or external sourcemaps
@@ -18,6 +19,12 @@ Fetch-based server for compiling browser assets on demand.
 
 ```sh
 npm i remix
+```
+
+The optional image transform examples also use Sharp:
+
+```sh
+npm i sharp
 ```
 
 ## Usage
@@ -45,6 +52,64 @@ router.get('/assets/*', ({ request }) => {
 ```
 
 This example gives you an `/assets/*` endpoint that serves compiled browser source from `public/` directories throughout `app/` and from the `remix` package.
+
+## Shared Configuration
+
+Keep JSON-compatible asset mapping, access, and file-type settings in `remix.json` so the running
+server and Remix CLI use the same configuration:
+
+```jsonc
+{
+  "$schema": "https://remix.run/schemas/remix.json",
+  "assets": {
+    "basePath": "/assets",
+    "mounts": {
+      "app": "app",
+      "npm": "node_modules",
+    },
+    "allowFiles": ["app/routes.ts", "app/**/public/**"],
+    "allowPackages": ["remix"],
+    "denyFiles": ["app/**/*.test.*"],
+    "files": {
+      "extensions": [".svg", ".png", ".jpg", ".woff2"],
+    },
+  },
+}
+```
+
+Load it from application code and add runtime-only behavior there:
+
+```ts
+import { createAssetServer, defineFileTransform } from 'remix/assets'
+import { loadConfig } from 'remix/cli'
+import sharp from 'sharp'
+
+let config = await loadConfig(import.meta.dirname)
+if (config.assets === undefined) throw new Error('Missing assets configuration')
+if (config.assets.files === undefined) throw new Error('Missing asset file configuration')
+
+let assetServer = createAssetServer({
+  ...config.assets,
+  files: {
+    ...config.assets.files,
+    transforms: {
+      webp: defineFileTransform({
+        extensions: ['.png', '.jpg'],
+        async transform(bytes) {
+          return {
+            content: await sharp(bytes).webp({ quality: 80 }).toBuffer(),
+            extension: '.webp',
+          }
+        },
+      }),
+    },
+  },
+})
+```
+
+`loadConfig()` accepts either a config file or a directory. When given a directory, it searches
+upward for the nearest `remix.json`. Run `remix assets` to list reachable files, or
+`remix assets inspect <url-or-file>` to inspect one mapping and its access decision.
 
 ## Root Directory
 
@@ -208,6 +273,20 @@ Use `assetServer.getHref()` when you need the public URL for a served asset. You
 ```ts
 let src = await assetServer.getHref('app/media/public/logo.svg')
 // '/assets/app/media/public/logo.svg'
+```
+
+## Inspection
+
+Use `getAssets()` for a sorted list of files that are currently browser-reachable through the
+asset server. Use `getAssetDetails()` with a public URL or file path to inspect its mapping, file
+type, access rules, and reachability status.
+
+```ts
+let assets = await assetServer.getAssets()
+// [{ url: '/assets/app/actions/public/entry.ts', filePath: '/project/app/actions/public/entry.ts', ... }]
+
+let details = await assetServer.getAssetDetails('/assets/app/actions/public/entry.ts')
+// { status: 'reachable', type: 'script', ... }
 ```
 
 For configured `files` assets, you can also pass a `transform` pipeline to build a request URL with custom file transforms. Basic transforms are written as strings, while dynamic transforms use `[name, param]` tuples.
