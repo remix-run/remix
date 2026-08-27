@@ -243,17 +243,10 @@ describe('run', () => {
     expect(document.querySelector('h1')?.textContent).toBe('Redirected')
   })
 
-  it('runs SPA navigation through History when sourceElement is unavailable', async (t) => {
+  it('runs SPA navigation through History', async (t) => {
     let initialUrl = window.location.href
     let routeUrl = new URL('/history-start', initialUrl)
     window.history.replaceState(null, '', routeUrl)
-    let navigateEventDescriptor = Object.getOwnPropertyDescriptor(window, 'NavigateEvent')
-    let defined = Reflect.defineProperty(window, 'NavigateEvent', {
-      configurable: true,
-      writable: true,
-      value: class NavigateEventWithoutSourceElement extends Event {},
-    })
-    if (!defined) throw new Error('Expected NavigateEvent to be configurable in the test browser')
 
     let requests: Request[] = []
     let router: Router = {
@@ -283,13 +276,10 @@ describe('run', () => {
     let documentNavigationCount = performance.getEntriesByType('navigation').length
     let app = run(router)
 
+    expect(Reflect.has(window.history.state, '__remixNavigation')).toBe(true)
+
     t.after(() => {
       app.dispose()
-      if (navigateEventDescriptor) {
-        Reflect.defineProperty(window, 'NavigateEvent', navigateEventDescriptor)
-      } else {
-        Reflect.deleteProperty(window, 'NavigateEvent')
-      }
       window.history.replaceState(null, '', initialUrl)
     })
 

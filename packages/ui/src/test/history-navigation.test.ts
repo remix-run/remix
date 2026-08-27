@@ -256,6 +256,27 @@ describe('History API navigation', () => {
     })
   })
 
+  it('preserves manual scrolling across top-frame redirects', async (t) => {
+    let topFrame = { src: window.location.href } as FrameHandle
+    let reloadFrame = mock.fn(async (_frame: FrameHandle, _options?: TestReloadOptions) => ({
+      signal: new AbortController().signal,
+      redirectedTo: '/redirected',
+    }))
+    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+    startHistoryDriver(t, { topFrame, reloadFrame })
+
+    await navigate('/requested', { history: 'replace', resetScroll: false })
+
+    expect(window.location.pathname).toBe('/redirected')
+    expect(scrollTo).not.toHaveBeenCalled()
+    expect(getHistoryNavigationState()).toEqual({
+      target: undefined,
+      src: new URL('/redirected', window.location.href).href,
+      resetScroll: false,
+      $rmx: true,
+    })
+  })
+
   it('keeps the public URL when a named frame redirects', async (t) => {
     let topFrame = { src: window.location.href } as FrameHandle
     let namedFrame = { src: '' } as FrameHandle
@@ -560,6 +581,107 @@ describe('History API navigation', () => {
     expect(reloadFrame).not.toHaveBeenCalled()
   })
 
+  it('honors application form cancellation from an earlier window listener', async (t) => {
+    let topFrame = { src: window.location.href } as FrameHandle
+    let reloadFrame = mock.fn(async (_frame: FrameHandle, _options?: TestReloadOptions) => ({
+      signal: new AbortController().signal,
+    }))
+    let form = document.createElement('form')
+    document.body.append(form)
+    window.addEventListener('submit', (event) => event.preventDefault(), {
+      once: true,
+    })
+    startHistoryDriver(t, { topFrame, reloadFrame })
+
+    form.requestSubmit()
+    await Promise.resolve()
+
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('leaves invalid forms to native constraint validation', async (t) => {
+    let topFrame = { src: window.location.href } as FrameHandle
+    let reloadFrame = mock.fn(async (_frame: FrameHandle, _options?: TestReloadOptions) => ({
+      signal: new AbortController().signal,
+    }))
+    let form = document.createElement('form')
+    let input = document.createElement('input')
+    input.required = true
+    form.append(input)
+    document.body.append(form)
+    startHistoryDriver(t, { topFrame, reloadFrame })
+
+    form.requestSubmit()
+    await Promise.resolve()
+
+    expect(input.matches(':invalid')).toBe(true)
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('uses POST history defaults and data-rmx-history overrides', async (t) => {
+    let topFrame = { src: window.location.href } as FrameHandle
+    let reloadFrame = mock.fn(async (_frame: FrameHandle, _options?: TestReloadOptions) => ({
+      signal: new AbortController().signal,
+    }))
+    startHistoryDriver(t, { topFrame, reloadFrame })
+
+    let sameUrlForm = document.createElement('form')
+    sameUrlForm.action = window.location.href
+    sameUrlForm.method = 'post'
+    document.body.append(sameUrlForm)
+    let initialEntryId = getHistoryNavigationEntryId()
+
+    sameUrlForm.requestSubmit()
+    await waitFor(() => reloadFrame.mock.calls.length === 1)
+    expect(getHistoryNavigationEntryId()).toBe(initialEntryId)
+
+    sameUrlForm.setAttribute('data-rmx-history', 'push')
+    sameUrlForm.requestSubmit()
+    await waitFor(() => reloadFrame.mock.calls.length === 2)
+    let pushedEntryId = getHistoryNavigationEntryId()
+    expect(pushedEntryId).not.toBe(initialEntryId)
+
+    let differentUrlForm = document.createElement('form')
+    differentUrlForm.action = '/different-post'
+    differentUrlForm.method = 'post'
+    document.body.append(differentUrlForm)
+    differentUrlForm.requestSubmit()
+    await waitFor(() => reloadFrame.mock.calls.length === 3)
+
+    expect(window.location.pathname).toBe('/different-post')
+    expect(getHistoryNavigationEntryId()).not.toBe(pushedEntryId)
+  })
+
+  it('leaves interactions hidden from delegated events to native browser behavior', async (t) => {
+    let topFrame = { src: window.location.href } as FrameHandle
+    let reloadFrame = mock.fn(async (_frame: FrameHandle, _options?: TestReloadOptions) => ({
+      signal: new AbortController().signal,
+    }))
+    startHistoryDriver(t, { topFrame, reloadFrame })
+
+    let stoppedAnchor = document.createElement('a')
+    stoppedAnchor.href = '#stopped-link'
+    stoppedAnchor.addEventListener('click', (event) => event.stopPropagation())
+    document.body.append(stoppedAnchor)
+    stoppedAnchor.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(window.location.hash).toBe('#stopped-link')
+
+    let host = document.createElement('div')
+    let closedRoot = host.attachShadow({ mode: 'closed' })
+    let closedAnchor = document.createElement('a')
+    closedAnchor.href = '#closed-shadow-link'
+    closedRoot.append(closedAnchor)
+    document.body.append(host)
+    closedAnchor.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(window.location.hash).toBe('#closed-shadow-link')
+
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
   it('leaves opted-out links and forms to native navigation', async (t) => {
     let topFrame = { src: window.location.href } as FrameHandle
     let reloadFrame = mock.fn(async (_frame: FrameHandle, _options?: TestReloadOptions) => ({
@@ -591,6 +713,14 @@ describe('History API navigation', () => {
     let blobUrl = URL.createObjectURL(new Blob(['document']))
     blobAnchor.href = blobUrl
     t.after(() => URL.revokeObjectURL(blobUrl))
+    let crossOriginAnchor = document.createElement('a')
+    crossOriginAnchor.href = 'https://example.com/document-link'
+    let downloadAnchor = document.createElement('a')
+    downloadAnchor.href = '/report.csv'
+    downloadAnchor.download = ''
+    let targetedAnchor = document.createElement('a')
+    targetedAnchor.href = '/targeted-link'
+    targetedAnchor.target = '_blank'
     let baseTargetForm = document.createElement('form')
     baseTargetForm.action = '/base-target-form'
     baseTargetForm.target = ''
@@ -608,6 +738,9 @@ describe('History API navigation', () => {
       baseTargetAnchor,
       noHrefAnchor,
       blobAnchor,
+      crossOriginAnchor,
+      downloadAnchor,
+      targetedAnchor,
       baseTargetForm,
       submitterTargetForm,
     )
@@ -617,6 +750,9 @@ describe('History API navigation', () => {
     baseTargetAnchor.click()
     noHrefAnchor.click()
     blobAnchor.click()
+    crossOriginAnchor.click()
+    downloadAnchor.click()
+    targetedAnchor.click()
     baseTargetForm.requestSubmit()
     submitterTargetForm.requestSubmit(submitterTargetButton)
     await Promise.resolve()

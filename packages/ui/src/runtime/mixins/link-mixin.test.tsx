@@ -4,6 +4,7 @@ import { afterEach, describe, it, type TestContext } from '@remix-run/test'
 import { createRoot } from '../vdom.ts'
 import { invariant } from '../invariant.ts'
 import type { RemixNode } from '../jsx.ts'
+import { setNavigationDriver } from '../navigation-driver.ts'
 import { link } from './link-mixin.ts'
 
 function render(node: RemixNode) {
@@ -17,6 +18,14 @@ function render(node: RemixNode) {
 
 function stubGlobalMethod(t: TestContext, api: string, method: string, impl: any) {
   return t.mock.method((globalThis as any)[api], method, impl)
+}
+
+function stubNavigationDriver(t: TestContext) {
+  let navigate = t.mock.fn(async () => {})
+  let controller = new AbortController()
+  setNavigationDriver(controller.signal, { navigate })
+  t.after(() => controller.abort())
+  return navigate
 }
 
 describe('link mixin', () => {
@@ -87,9 +96,7 @@ describe('link mixin', () => {
   })
 
   it('navigates on plain click for non-anchor hosts', (t) => {
-    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
-      finished: Promise.resolve(),
-    }))
+    let navigateMock = stubNavigationDriver(t)
 
     let { container } = render(<button mix={link('/login', { target: 'auth' })}>Login</button>)
 
@@ -97,16 +104,15 @@ describe('link mixin', () => {
     invariant(button)
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
-    expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: 'auth', src: '/login', resetScroll: true, $rmx: true },
-      history: undefined,
-    })
+    expect(navigateMock).toHaveBeenCalledWith(
+      '/login',
+      { target: 'auth', src: '/login', resetScroll: true, $rmx: true },
+      undefined,
+    )
   })
 
   it('passes history options through for non-anchor navigation', (t) => {
-    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
-      finished: Promise.resolve(),
-    }))
+    let navigateMock = stubNavigationDriver(t)
 
     let { container } = render(<button mix={link('/login', { history: 'replace' })}>Login</button>)
 
@@ -114,16 +120,15 @@ describe('link mixin', () => {
     invariant(button)
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
-    expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', resetScroll: true, $rmx: true },
-      history: 'replace',
-    })
+    expect(navigateMock).toHaveBeenCalledWith(
+      '/login',
+      { target: undefined, src: '/login', resetScroll: true, $rmx: true },
+      'replace',
+    )
   })
 
   it('passes resetScroll=false through for non-anchor navigation', (t) => {
-    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
-      finished: Promise.resolve(),
-    }))
+    let navigateMock = stubNavigationDriver(t)
 
     let { container } = render(<button mix={link('/login', { resetScroll: false })}>Login</button>)
 
@@ -131,16 +136,15 @@ describe('link mixin', () => {
     invariant(button)
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
-    expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', resetScroll: false, $rmx: true },
-      history: undefined,
-    })
+    expect(navigateMock).toHaveBeenCalledWith(
+      '/login',
+      { target: undefined, src: '/login', resetScroll: false, $rmx: true },
+      undefined,
+    )
   })
 
   it('activates link buttons on Enter and suppresses keyboard clicks from Enter and Space', (t) => {
-    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
-      finished: Promise.resolve(),
-    }))
+    let navigateMock = stubNavigationDriver(t)
 
     let { container } = render(<button mix={link('/login')}>Login</button>)
 
@@ -164,9 +168,7 @@ describe('link mixin', () => {
   })
 
   it('activates generic link elements on Enter', (t) => {
-    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
-      finished: Promise.resolve(),
-    }))
+    let navigateMock = stubNavigationDriver(t)
 
     let { container } = render(<li mix={link('/login')}>Login</li>)
 
@@ -177,16 +179,15 @@ describe('link mixin', () => {
     )
 
     expect(navigateMock).toHaveBeenCalledTimes(1)
-    expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', resetScroll: true, $rmx: true },
-      history: undefined,
-    })
+    expect(navigateMock).toHaveBeenCalledWith(
+      '/login',
+      { target: undefined, src: '/login', resetScroll: true, $rmx: true },
+      undefined,
+    )
   })
 
   it('opens a new tab for meta-click, ctrl-click, and middle-click on non-anchor hosts', (t) => {
-    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
-      finished: Promise.resolve(),
-    }))
+    let navigateMock = stubNavigationDriver(t)
     let openMock = stubGlobalMethod(t, 'globalThis', 'open', () => null)
 
     let { container } = render(<button mix={link('/login')}>Login</button>)
@@ -209,9 +210,7 @@ describe('link mixin', () => {
   })
 
   it('does not navigate disabled or aria-disabled link hosts', (t) => {
-    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
-      finished: Promise.resolve(),
-    }))
+    let navigateMock = stubNavigationDriver(t)
 
     let { container } = render(
       <div>

@@ -107,7 +107,6 @@ async function waitForTransitionWindow(): Promise<void> {
 
 async function setupFrameNavigationTest(t: TestContext) {
   let initialUrl = window.location.href
-  let initialEntryKey = window.navigation.currentEntry?.key
   let baseUrl = new URL('/', initialUrl).href
   window.history.replaceState(null, '', baseUrl)
 
@@ -143,10 +142,7 @@ async function setupFrameNavigationTest(t: TestContext) {
     },
   })
 
-  t.after(async () => {
-    if (initialEntryKey && window.navigation.currentEntry?.key !== initialEntryKey) {
-      await window.navigation.traverseTo(initialEntryKey).finished
-    }
+  t.after(() => {
     app.dispose()
     window.history.replaceState(null, '', initialUrl)
   })
@@ -176,11 +172,16 @@ async function navigateWithLink(
   if (options.src !== undefined) link.setAttribute('data-rmx-src', options.src)
   document.body.append(link)
 
+  let reloadComplete = waitForFrameReload(getNamedFrame(options.target))
   link.click()
-  let transition = window.navigation.transition
-  invariant(transition, 'Expected link click to start a navigation transition')
-  await transition.finished
+  await reloadComplete
   link.remove()
+}
+
+function waitForFrameReload(frame: FrameHandle): Promise<void> {
+  return new Promise((resolve) => {
+    frame.addEventListener('reloadComplete', () => resolve(), { once: true })
+  })
 }
 
 describe('run', () => {
@@ -2333,16 +2334,18 @@ describe('run', () => {
       src: secondTargetSrc,
       resetScroll: false,
     })
-    await window.navigation.back().finished
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    let backNavigation = waitForFrameReload(fixture.frames().target)
+    window.history.back()
+    await backNavigation
 
     let frames = fixture.frames()
     expect(window.location.href).toBe(firstDestinationUrl)
     expect(frames.top.src).toBe(window.location.href)
     expect(frames.target.src).toBe(firstTargetSrc)
 
-    await window.navigation.forward().finished
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    let forwardNavigation = waitForFrameReload(fixture.frames().target)
+    window.history.forward()
+    await forwardNavigation
 
     frames = fixture.frames()
     expect(window.location.href).toBe(secondDestinationUrl)
@@ -2358,7 +2361,6 @@ describe('run', () => {
 
   it('restores traversal scroll after a preserved entry resolves a blocking frame', async (t) => {
     let initialUrl = window.location.href
-    let initialEntryKey = window.navigation.currentEntry?.key
     let listUrl = new URL('/scroll-list', initialUrl).href
     let detailUrl = new URL('/scroll-detail', initialUrl).href
     window.history.replaceState(null, '', listUrl)
@@ -2433,11 +2435,8 @@ describe('run', () => {
       },
     })
 
-    t.after(async () => {
+    t.after(() => {
       resolveDeferredListItems(listItemsContent)
-      if (initialEntryKey && window.navigation.currentEntry?.key !== initialEntryKey) {
-        await window.navigation.traverseTo(initialEntryKey).finished
-      }
       app.dispose()
       window.history.replaceState(null, '', initialUrl)
       window.scrollTo(0, 0)
@@ -2458,11 +2457,13 @@ describe('run', () => {
     await navigate(detailUrl)
     expect(document.getElementById('scroll-detail-page')?.textContent).toContain('Detail')
 
-    let backNavigation = window.navigation.back().finished
+    let backNavigation = waitForFrameReload(getTopFrame())
+    window.history.back()
     await deferredListItemsRequested
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     resolveDeferredListItems(listItemsContent)
     await backNavigation
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('scroll-list-items')).not.toBe(null)
     expect(window.scrollY).toBe(2500)

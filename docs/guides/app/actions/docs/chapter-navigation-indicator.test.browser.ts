@@ -56,23 +56,23 @@ function createChapterNavigationFixture() {
   let list = getList('test-chapter-list')
   let firstLink = getLink('first-chapter')
   let secondLink = getLink('second-chapter')
-  let navigation = new EventTarget()
 
   list.getBoundingClientRect = () => DOMRect.fromRect()
   firstLink.getBoundingClientRect = () => DOMRect.fromRect({ y: 0, height: 32 })
   secondLink.getBoundingClientRect = () => DOMRect.fromRect({ y: 36, height: 32 })
 
   let controller = new AbortController()
-  startChapterNavigationIndicator(list, controller.signal, navigation)
+  startChapterNavigationIndicator(list, controller.signal)
 
   return {
     list,
     navigate(href: string) {
-      let event = new Event('navigate')
-      Object.defineProperty(event, 'destination', {
-        value: { url: new URL(href, window.location.href).href },
-      })
-      navigation.dispatchEvent(event)
+      let link = findLink(href)
+      let removeLink = !link.isConnected
+      if (removeLink) list.append(link)
+      link.addEventListener('click', (event) => event.preventDefault(), { once: true })
+      link.click()
+      if (removeLink) link.remove()
     },
     selectSecondChapter() {
       firstLink.removeAttribute('aria-current')
@@ -81,12 +81,24 @@ function createChapterNavigationFixture() {
     restart() {
       controller.abort()
       controller = new AbortController()
-      startChapterNavigationIndicator(list, controller.signal, navigation)
+      startChapterNavigationIndicator(list, controller.signal)
     },
     cleanup() {
       controller.abort()
       container.remove()
     },
+  }
+
+  function findLink(href: string): HTMLAnchorElement {
+    let destination = new URL(href, window.location.href)
+    let link = Array.from(list.querySelectorAll<HTMLAnchorElement>('a[href]')).find(
+      (candidate) => candidate.href === destination.href,
+    )
+    if (link) return link
+
+    link = document.createElement('a')
+    link.href = destination.href
+    return link
   }
 }
 

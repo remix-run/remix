@@ -1,7 +1,10 @@
-import type { FormSubmission } from './form-navigation.ts'
 import { reloadFrameForNavigation } from './frame.ts'
 import { setNavigationDriver } from './navigation-driver.ts'
-import { reloadNavigationFrame, type NavigationFrameOptions } from './navigation-frame.ts'
+import {
+  reloadNavigationFrame,
+  type FormSubmission,
+  type NavigationFrameOptions,
+} from './navigation-frame.ts'
 import type { NavigationState } from './navigation.ts'
 import { getNamedFrame, getTopFrame } from './run.ts'
 
@@ -91,6 +94,7 @@ export function startHistoryNavigationListenerImpl(
   window.addEventListener(
     'submit',
     (event) => {
+      if (!(event instanceof SubmitEvent)) return
       if (event.defaultPrevented) return
       let form = event.target
       if (!(form instanceof HTMLFormElement)) return
@@ -231,7 +235,6 @@ export function startHistoryNavigationListenerImpl(
       currentEntry = { ...currentEntry, scroll: getScrollPosition() }
       scrollPositions.set(currentEntry.id, currentEntry.scroll)
       cancelScheduledScrollSave()
-      replaceHistoryEntry(currentEntry)
 
       if (action === 'replace') {
         currentEntry = {
@@ -241,6 +244,7 @@ export function startHistoryNavigationListenerImpl(
         }
         replaceHistoryEntry(currentEntry, destination.href)
       } else {
+        replaceHistoryEntry(currentEntry)
         currentEntry = {
           id: createEntryId(),
           index: currentEntry.index + 1,
@@ -284,7 +288,8 @@ export function startHistoryNavigationListenerImpl(
       throwIfStale(controller, transition)
       if (!userScrolled) restoreScroll(destination, state, action, savedScroll)
       throwIfStale(controller, transition)
-      currentEntry = { ...currentEntry, scroll: getScrollPosition() }
+      let finalScroll = getScrollPosition()
+      currentEntry = { ...currentEntry, scroll: finalScroll }
       scrollPositions.set(currentEntry.id, currentEntry.scroll)
       replaceHistoryEntry(currentEntry)
     } finally {
@@ -624,7 +629,23 @@ function createHistoryState(
 }
 
 function replaceHistoryEntry(entry: HistoryNavigationEntry, href?: string): void {
+  if (href === undefined) {
+    let activeEntry = getHistoryNavigationEntry(window.history.state)
+    if (activeEntry && historyEntriesEqual(activeEntry, entry)) return
+  }
   window.history.replaceState(createHistoryState(window.history.state, entry), '', href)
+}
+
+function historyEntriesEqual(left: HistoryNavigationEntry, right: HistoryNavigationEntry): boolean {
+  return (
+    left.id === right.id &&
+    left.index === right.index &&
+    left.navigation.target === right.navigation.target &&
+    left.navigation.src === right.navigation.src &&
+    left.navigation.resetScroll === right.navigation.resetScroll &&
+    left.scroll.x === right.scroll.x &&
+    left.scroll.y === right.scroll.y
+  )
 }
 
 function getScrollPosition(): { x: number; y: number } {

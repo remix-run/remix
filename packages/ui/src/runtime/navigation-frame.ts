@@ -1,7 +1,12 @@
 import type { FrameHandle } from './component.ts'
-import type { FormSubmission } from './form-navigation.ts'
 import type { reloadFrameForNavigation } from './frame.ts'
 import type { NavigationState } from './navigation.ts'
+
+export interface FormSubmission {
+  formData: FormData | undefined
+  method: string
+  encType: string
+}
 
 export interface NavigationFrameOptions {
   getTopFrame(): FrameHandle

@@ -46,6 +46,10 @@ app.ready().catch((error: unknown) => {
 
 startPagefindSearch()
 
-window.navigation.addEventListener('navigate', () => {
-  closePagefindSearch()
+window.addEventListener('click', (event) => {
+  let source = event.composedPath()[0] ?? event.target
+  if (source instanceof Element && source.closest('a[href], area[href]')) {
+    closePagefindSearch()
+  }
 })
+window.addEventListener('popstate', closePagefindSearch)

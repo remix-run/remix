@@ -6,12 +6,6 @@ import {
   positionSelectionIndicator,
 } from 'remix-docs-shared/ui/selection-indicator'
 
-type NavigationEvent = Event & {
-  destination?: {
-    url?: string
-  }
-}
-
 type PendingChapterTransition = {
   fromHref: string
   toHref: string
@@ -35,11 +29,7 @@ export const ChapterNavigationIndicator = clientEntry(
   },
 )
 
-export function startChapterNavigationIndicator(
-  list: HTMLOListElement,
-  signal: AbortSignal,
-  navigation: EventTarget | undefined = window.navigation,
-): void {
+export function startChapterNavigationIndicator(list: HTMLOListElement, signal: AbortSignal): void {
   let selectedLink = list.querySelector<HTMLAnchorElement>('a[aria-current="page"]') ?? undefined
   let animationFrame: number | undefined
 
@@ -58,7 +48,8 @@ export function startChapterNavigationIndicator(
     }
   }
 
-  navigation?.addEventListener('navigate', rememberDestination, { signal })
+  list.addEventListener('click', rememberLinkDestination, { signal })
+  window.addEventListener('popstate', rememberCurrentDestination, { signal })
   window.addEventListener('resize', repositionIndicator, { signal })
 
   void document.fonts.ready.then(() => {
@@ -72,9 +63,19 @@ export function startChapterNavigationIndicator(
     clearSelectionIndicator(list)
   })
 
-  function rememberDestination(event: Event): void {
-    let href = (event as NavigationEvent).destination?.url
-    if (!href || !selectedLink) return
+  function rememberLinkDestination(event: MouseEvent): void {
+    let source = event.composedPath()[0] ?? event.target
+    let link = source instanceof Element ? source.closest('a[href]') : null
+    let href = link?.getAttribute('href')
+    if (href) rememberDestination(href)
+  }
+
+  function rememberCurrentDestination(): void {
+    rememberDestination(window.location.href)
+  }
+
+  function rememberDestination(href: string): void {
+    if (!selectedLink) return
 
     let destinationLink = findChapterLink(list, href)
     if (!destinationLink || destinationLink === selectedLink) return

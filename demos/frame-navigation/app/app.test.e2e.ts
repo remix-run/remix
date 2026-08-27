@@ -171,8 +171,12 @@ async function setAuthCookie(page: Page, baseUrl: string): Promise<void> {
 
 async function waitForNavigationRuntime(page: Page): Promise<void> {
   await page.waitForFunction(() => {
-    let state = window.navigation.currentEntry?.getState()
-    return typeof state === 'object' && state != null && '$rmx' in state
+    let state = window.history.state
+    if (typeof state !== 'object' || state === null) return false
+    let entry = Reflect.get(state, '__remixNavigation')
+    if (typeof entry !== 'object' || entry === null) return false
+    let navigation = Reflect.get(entry, 'navigation')
+    return typeof navigation === 'object' && navigation !== null && '$rmx' in navigation
   })
 }
 

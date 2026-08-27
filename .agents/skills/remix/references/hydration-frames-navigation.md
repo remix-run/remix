@@ -8,7 +8,7 @@ How server-rendered UI becomes interactive in the browser, and how the page upda
 - Booting the client runtime with `run`
 - Streaming server content into a region of the page with `<Frame>` and reloading those regions
 - Handling browser HMR updates for hydrated entries
-- Triggering Navigation API transitions with `navigate(...)` or `link(...)`
+- Triggering History API transitions with `navigate(...)` or `link(...)`
 - Server rendering with `renderToStream` or `renderToString`
 - Managing the document `<head>`
 
@@ -270,7 +270,7 @@ Components using the `css` mixin have styles collected during rendering and emit
 
 Use real anchors for normal document navigation. For app-driven navigation:
 
-- `navigate(href, options?)` — performs a Navigation API transition
+- `navigate(href, options?)` — performs a client-side History API transition
 - `link(href, options?)` mixin — makes any element behave like a navigation link
 
 ```tsx

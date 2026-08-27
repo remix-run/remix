@@ -56,37 +56,24 @@ app.addEventListener('error', (event) => {
 
 app.ready().catch(() => {})
 
-// HACK: `remix/ui` currently intercepts reloads and same-document hash
-// navigations because the current Navigation API entry has Remix runtime state.
-// That prevents dev refresh from reloading the document and breaks native hash
-// scrolling/history. Stop these navigations before the Remix listener sees them
-// so the browser keeps owning their behavior. Remove this once `remix/ui` ignores
-// reloads and same-document hash navigations itself.
+// HACK: `remix/ui` currently intercepts same-document hash navigations. That
+// breaks native hash scrolling/history. Stop these clicks before the Remix
+// listener sees them so the browser keeps owning their behavior. Remove this
+// once `remix/ui` ignores same-document hash navigations itself.
 function startNavigationGuard() {
-  let navigation = (window as Window & { navigation?: EventTarget }).navigation
-  if (!navigation) return
+  window.addEventListener('click', (event) => {
+    let source = event.composedPath()[0] ?? event.target
+    let link = source instanceof Element ? source.closest('a[href], area[href]') : null
+    if (!link) return
 
-  navigation.addEventListener(
-    'navigate',
-    (event) => {
-      closePagefindSearch()
+    closePagefindSearch()
 
-      let navigateEvent = event as Event & {
-        destination?: { url?: string }
-        navigationType?: string
-      }
-      if (navigateEvent.navigationType === 'reload') {
-        event.stopImmediatePropagation()
-        return
-      }
-
-      let href = navigateEvent.destination?.url
-      if (href && isSameDocumentHashUrl(href)) {
-        event.stopImmediatePropagation()
-      }
-    },
-    { capture: true },
-  )
+    let href = link.getAttribute('href')
+    if (href && isSameDocumentHashUrl(href)) {
+      event.stopImmediatePropagation()
+    }
+  })
+  window.addEventListener('popstate', closePagefindSearch)
 }
 
 function isSameDocumentHashUrl(href: string) {

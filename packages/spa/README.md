@@ -89,9 +89,7 @@ const router = createRouter({
 - [Fetch standard](https://fetch.spec.whatwg.org/) - The request and response model preserved by SPA
   routers
 - [History API](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface) -
-  Baseline browser history used by the Remix UI runtime
-- [Navigation API](https://wicg.github.io/navigation-api/) - Enhanced browser navigation lifecycle
-  used when the browser provides the required source element data
+  Browser history used by the Remix UI runtime
 
 ## License
 

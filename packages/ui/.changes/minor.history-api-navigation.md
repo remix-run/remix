@@ -1,1 +1,1 @@
-Added a History API navigation fallback for browsers without `NavigateEvent.sourceElement`. Same-origin links, forms, programmatic navigation, redirects, and back/forward traversal can now use the Remix SPA and frame runtime without requiring full Navigation API support (see #11749).
+Replaced the Navigation API dependency in the Remix SPA and frame runtime with the broadly supported History API. Same-origin links, forms, programmatic navigation, redirects, and back/forward traversal now work without requiring `window.navigation` or `NavigateEvent.sourceElement` (see #11749).

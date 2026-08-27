@@ -1,1 +1,1 @@
-Restore saved scroll positions for intercepted back and forward navigations when client entry reconciliation temporarily shrinks the document or triggers scroll anchoring, while continuing to wait for nested blocking frames before the Navigation API restores scrolling.
+Restore saved scroll positions for intercepted back and forward navigations when client entry reconciliation temporarily shrinks the document or triggers scroll anchoring, while continuing to wait for nested blocking frames before restoring scrolling.
