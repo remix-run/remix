@@ -25,7 +25,6 @@ import {
 import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 import {
-  loadRemixConfig,
   type RemixDbAdapterConfig,
   type RemixDbCommandConfig,
   type RemixDbString,
@@ -230,7 +229,7 @@ async function resolveDbConfig(
     let configDir = await findAppRoot(context.cwd, 'remix.json')
     if (configDir === null) throw remixConfigNotFound(path.join(context.cwd, 'remix.json'))
     configPath = path.join(configDir, 'remix.json')
-    config = await loadRemixConfig(configDir, undefined)
+    config = await context.loadConfig()
   }
 
   if (config.db === undefined) throw dbConfigRequired(configPath)

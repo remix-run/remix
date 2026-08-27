@@ -1,5 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import * as process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import {
   findNodeAtLocation,
   getNodeValue,
@@ -8,8 +10,10 @@ import {
   type Node as JsonNode,
   type ParseError,
 } from 'jsonc-parser'
+import type { AssetServerOptions } from '@remix-run/assets'
 import type { RemixTestPool } from '@remix-run/test/cli'
 
+import { findAppRoot } from './app-root.ts'
 import { invalidRemixConfig, remixConfigNotFound } from './errors.ts'
 
 const reporters = ['spec', 'files', 'tap', 'dot'] as const
@@ -21,10 +25,27 @@ type TestPool = RemixTestPool
 type TestType = (typeof testTypes)[number]
 type JsonPath = Array<number | string>
 
+/** Validated configuration loaded from a Remix project config file. */
 export interface RemixConfig {
+  /** Shared asset mapping and browser access configuration. */
+  assets?: RemixAssetsConfig
+  /** Database command configuration. */
   db?: RemixDbCommandConfig
+  /** Project health-check configuration. */
   doctor?: RemixDoctorCommandConfig
+  /** Test runner configuration. */
   test?: RemixTestCommandConfig
+}
+
+/** JSON-compatible asset server configuration loaded from `remix.json`. */
+export interface RemixAssetsConfig extends Pick<
+  AssetServerOptions,
+  'allowFiles' | 'allowPackages' | 'basePath' | 'denyFiles' | 'fileMap'
+> {
+  /** Leaf file asset configuration. */
+  files?: Pick<NonNullable<AssetServerOptions['files']>, 'extensions'>
+  /** Absolute root directory used to resolve asset file paths. */
+  rootDir: string
 }
 
 export type RemixDbString = string | { env: string; default?: string }
@@ -99,6 +120,36 @@ interface ConfigSource {
   text: string
 }
 
+/**
+ * Loads the nearest Remix project configuration or an explicitly selected config file.
+ *
+ * @param from A config file or directory from which to search upward for `remix.json`. Defaults to
+ * `process.cwd()`.
+ * @returns The validated Remix project configuration, or an empty object when no config is found.
+ */
+export async function loadConfig(from: string | URL = process.cwd()): Promise<RemixConfig> {
+  let fromPath = path.resolve(from instanceof URL ? fileURLToPath(from) : from)
+  let stat
+
+  try {
+    stat = await fs.stat(fromPath)
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') throw remixConfigNotFound(fromPath)
+    throw error
+  }
+
+  if (stat.isFile()) {
+    return loadRemixConfig(path.dirname(fromPath), path.basename(fromPath))
+  }
+
+  if (!stat.isDirectory()) {
+    throw new TypeError(`Expected a Remix config file or directory: ${fromPath}`)
+  }
+
+  let configDir = await findAppRoot(fromPath, 'remix.json')
+  return configDir === null ? {} : loadRemixConfig(configDir, undefined)
+}
+
 export async function loadRemixConfig(
   cwd: string,
   configPath: string | undefined,
@@ -153,13 +204,17 @@ function parseConfig(
   cwd: string,
 ): RemixConfig {
   let object = requireObject(value, source, [])
-  requireKnownProperties(object, ['$schema', 'db', 'doctor', 'test'], source, [])
+  requireKnownProperties(object, ['$schema', 'assets', 'db', 'doctor', 'test'], source, [])
 
   if (object.$schema !== undefined) {
     requireString(object.$schema, source, ['$schema'])
   }
 
   let config: RemixConfig = {}
+
+  if (object.assets !== undefined) {
+    config.assets = parseAssetsConfig(object.assets, source, configDir)
+  }
 
   if (object.db !== undefined) {
     config.db = parseDbConfig(object.db, source, configDir)
@@ -171,6 +226,50 @@ function parseConfig(
 
   if (object.test !== undefined) {
     config.test = parseTestConfig(object.test, source, configDir, cwd)
+  }
+
+  return config
+}
+
+function parseAssetsConfig(
+  value: unknown,
+  source: ConfigSource,
+  configDir: string,
+): RemixAssetsConfig {
+  let objectPath = ['assets']
+  let object = requireObject(value, source, objectPath)
+  requireKnownProperties(
+    object,
+    ['allowFiles', 'allowPackages', 'basePath', 'denyFiles', 'fileMap', 'files', 'rootDir'],
+    source,
+    objectPath,
+  )
+
+  let config: RemixAssetsConfig = {
+    allowFiles: requireStringArray(object.allowFiles, source, [...objectPath, 'allowFiles']),
+    basePath: requireString(object.basePath, source, [...objectPath, 'basePath']),
+    fileMap: requireStringRecord(object.fileMap, source, [...objectPath, 'fileMap']),
+    rootDir: path.resolve(
+      configDir,
+      optionalString(object.rootDir, source, [...objectPath, 'rootDir']) ?? '.',
+    ),
+  }
+  let allowPackages = optionalStringArray(object.allowPackages, source, [
+    ...objectPath,
+    'allowPackages',
+  ])
+  let denyFiles = optionalStringArray(object.denyFiles, source, [...objectPath, 'denyFiles'])
+
+  if (allowPackages !== undefined) config.allowPackages = allowPackages
+  if (denyFiles !== undefined) config.denyFiles = denyFiles
+
+  if (object.files !== undefined) {
+    let filesPath = [...objectPath, 'files']
+    let files = requireObject(object.files, source, filesPath)
+    requireKnownProperties(files, ['extensions'], source, filesPath)
+    config.files = {
+      extensions: requireStringArray(files.extensions, source, [...filesPath, 'extensions']),
+    }
   }
 
   return config
@@ -507,15 +606,36 @@ function requireString(value: unknown, source: ConfigSource, propertyPath: JsonP
   return value
 }
 
+function requireStringArray(
+  value: unknown,
+  source: ConfigSource,
+  propertyPath: JsonPath,
+): string[] {
+  if (!Array.isArray(value)) throwConfigError(source, propertyPath, 'Expected an array of strings')
+  return value.map((item, index) => requireString(item, source, [...propertyPath, index]))
+}
+
+function requireStringRecord(
+  value: unknown,
+  source: ConfigSource,
+  propertyPath: JsonPath,
+): Record<string, string> {
+  let object = requireObject(value, source, propertyPath)
+  return Object.fromEntries(
+    Object.entries(object).map(([key, item]) => [
+      key,
+      requireString(item, source, [...propertyPath, key]),
+    ]),
+  )
+}
+
 function optionalStringArray(
   value: unknown,
   source: ConfigSource,
   propertyPath: JsonPath,
 ): string[] | undefined {
   if (value === undefined) return undefined
-  if (!Array.isArray(value)) throwConfigError(source, propertyPath, 'Expected an array of strings')
-
-  return value.map((item, index) => requireString(item, source, [...propertyPath, index]))
+  return requireStringArray(value, source, propertyPath)
 }
 
 function optionalEnum<const value extends string>(

@@ -10,6 +10,9 @@
       "type": "string",
       "description": "JSON Schema used by editors to validate this file."
     },
+    "assets": {
+      "$ref": "#/$defs/assets"
+    },
     "db": {
       "$ref": "#/$defs/db"
     },
@@ -21,6 +24,52 @@
     }
   },
   "$defs": {
+    "assets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowFiles", "basePath", "fileMap"],
+      "properties": {
+        "allowFiles": {
+          "$ref": "#/$defs/stringArray",
+          "description": "File paths and glob patterns that may be served."
+        },
+        "allowPackages": {
+          "$ref": "#/$defs/stringArray",
+          "description": "Package names whose files and dependencies may be served."
+        },
+        "basePath": {
+          "type": "string",
+          "description": "Public URL prefix for served assets."
+        },
+        "denyFiles": {
+          "$ref": "#/$defs/stringArray",
+          "description": "File paths and glob patterns that must not be served."
+        },
+        "fileMap": {
+          "type": "object",
+          "description": "File patterns keyed by public URL patterns relative to basePath.",
+          "additionalProperties": { "type": "string" }
+        },
+        "files": {
+          "$ref": "#/$defs/assetsFiles"
+        },
+        "rootDir": {
+          "type": "string",
+          "description": "Root directory for asset file paths, relative to this config file."
+        }
+      }
+    },
+    "assetsFiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["extensions"],
+      "properties": {
+        "extensions": {
+          "$ref": "#/$defs/stringArray",
+          "description": "Additional file extensions served without script or style compilation."
+        }
+      }
+    },
     "db": {
       "type": "object",
       "additionalProperties": false,
