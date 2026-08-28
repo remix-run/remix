@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/render-middleware",
   "version": "0.1.5",
-  "description": "Middleware for adding request-scoped renderers to fetch-router context",
+  "description": "Conventional Remix UI and custom request-scoped render middleware",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -39,7 +39,10 @@
     "typescript": "catalog:"
   },
   "dependencies": {
-    "@remix-run/fetch-router": "workspace:^"
+    "@remix-run/assets": "workspace:^",
+    "@remix-run/fetch-router": "workspace:^",
+    "@remix-run/response": "workspace:^",
+    "@remix-run/ui": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -11,7 +11,6 @@ import { hashPassword } from '../../../data/passwords.ts'
 import { userPasswords, users } from '../../../data/schema.ts'
 import { databaseContext } from '../../../middleware/database.ts'
 import { routes } from '../../../routes.ts'
-import { render } from '../../../utils/render.tsx'
 import { issuesToErrors } from '../form-errors.ts'
 import { SignupPage } from '../pages.tsx'
 
@@ -38,16 +37,15 @@ export const authSignup = createController(routes.auth.signup, {
         return redirect(routes.home.index.href())
       }
 
-      return render(<SignupPage csrfToken={getCsrfToken(context)} />, context.request)
+      return context.render(<SignupPage csrfToken={getCsrfToken(context)} />)
     },
 
     async action(context) {
       let parsed = s.parseSafe(signupSchema, context.get(FormData))
 
       if (!parsed.success) {
-        return render(
+        return context.render(
           <SignupPage csrfToken={getCsrfToken(context)} errors={issuesToErrors(parsed.issues)} />,
-          context.request,
           { status: 400 },
         )
       }
@@ -57,12 +55,11 @@ export const authSignup = createController(routes.auth.signup, {
       let existingUser = await db.findOne(users, { where: { username } })
 
       if (existingUser) {
-        return render(
+        return context.render(
           <SignupPage
             csrfToken={getCsrfToken(context)}
             errors={{ username: 'That username is already taken.' }}
           />,
-          context.request,
           { status: 409 },
         )
       }

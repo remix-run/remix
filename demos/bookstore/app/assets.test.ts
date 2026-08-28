@@ -2,18 +2,18 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
 import { createBookstoreRouter } from './router.ts'
-import { assetServer } from './utils/assets.ts'
+import { assets } from './utils/assets.ts'
 
 describe('browser assets', () => {
   it('serves every colocated browser entry graph and rejects server source', async () => {
     let router = createBookstoreRouter()
-    let hrefs = await assetServer.getPreloads([
+    let hrefs = await assets.getPreloads([
       'demos/bookstore/app/actions/public/entry.tsx',
       'demos/bookstore/app/actions/fragments/public/cart-button.tsx',
       'demos/bookstore/app/actions/fragments/public/cart-items.tsx',
       'demos/bookstore/app/actions/books/public/image-carousel.tsx',
     ])
-    hrefs.push(await assetServer.getHref('demos/bookstore/app/actions/public/app.css'))
+    hrefs.push(await assets.getHref('demos/bookstore/app/actions/public/app.css'))
 
     await assertServed(router.fetch, hrefs)
 

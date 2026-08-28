@@ -6,7 +6,7 @@ const nodeEnv = process.env.NODE_ENV ?? 'development'
 const isDevelopment = nodeEnv === 'development'
 const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
 
-export const assetServer = createAssetServer({
+export const assets = createAssetServer({
   basePath: '/assets',
   rootDir,
   /* remix-template:remove-start This is only needed inside the Remix monorepo. */
@@ -30,5 +30,5 @@ export const assetServer = createAssetServer({
 
 const entry = 'app/actions/public/entry.ts'
 
-export const entryHref = await assetServer.getHref(entry)
-export const entryPreloads = await assetServer.getPreloads(entry)
+export const entryHref = await assets.getHref(entry)
+export const entryPreloads = await assets.getPreloads(entry)

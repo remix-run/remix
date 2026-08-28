@@ -2,11 +2,11 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { router } from './router.ts'
-import { assetServer } from './utils/assets.ts'
+import { assets } from './utils/assets.ts'
 
 describe('browser assets', () => {
   it('serves every colocated browser entry graph and rejects server source', async () => {
-    let hrefs = await assetServer.getPreloads([
+    let hrefs = await assets.getPreloads([
       'demos/frames/app/actions/public/entry.tsx',
       'demos/frames/app/actions/public/client-mounted-page-example.tsx',
       'demos/frames/app/actions/public/root-reload-client-entries.tsx',

@@ -3,13 +3,14 @@ import * as path from 'node:path'
 import { asyncContext } from 'remix/middleware/async-context'
 import { compression } from 'remix/middleware/compression'
 import { logger } from 'remix/middleware/logger'
+import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 import { createRouter, type MiddlewareContext } from 'remix/router'
 
 import { createRootController } from './actions/controller.tsx'
 import docsController from './actions/docs/controller.tsx'
 import docsExamplesController from './actions/docs/examples/controller.tsx'
-import { render } from './middleware/render.ts'
+import { assetServer } from './assets.ts'
 import { routes } from './routes.ts'
 
 export type AppContext = MiddlewareContext<[ReturnType<typeof render>]>
@@ -31,7 +32,7 @@ export function createGuidesRouter(options: { pagefindAssetsDir?: string } = {})
       staticFiles(publicDir, { index: false }),
       staticFiles(sharedAssetsDir, { index: false }),
       asyncContext(),
-      render(),
+      render({ assets: assetServer }),
     ],
   })
 

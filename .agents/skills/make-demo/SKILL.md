@@ -35,7 +35,7 @@ A good demo should:
 - For demos that run through `remix/node-tsx`, do not enable `erasableSyntaxOnly`; the runtime intentionally supports TypeScript syntax that needs transformation.
 - Treat development HMR as an optional mode for rapid UI edits. Keep `server.ts` as the real app server, keep `pnpm dev` running it directly, and put `remix/node-hmr` supervision in `hmr.ts` behind a `pnpm hmr` script. Use a stable public proxy with `createHmrReadyFetch()` when browser requests can race child server restarts.
 - For demos that combine HMR with `remix/ui`, use `--import remix/ui-hmr/node` for the child server and add `uiHmr()` to the asset server's loaders. Keep all HMR wiring development-only.
-- For HTML responses rendered with `remix/ui`, prefer a local `app/middleware/render.tsx` middleware that uses `renderWith(...)`, calls `renderToStream(...)`, wraps it with `createHtmlResponse(...)` from `remix/response/html`, and lets actions render with `context.get(Renderer)(...)`.
+- For HTML responses rendered with `remix/ui`, install `render()` from `remix/middleware/render` in the router middleware stack and let actions render with `context.render(...)`. Pass the app asset server as `render({ assets })` when components use source-based `clientEntry()` modules. Use `renderWith(...)` only when the demo intentionally teaches a custom renderer contract or response pipeline.
 - Prefer direct use of Remix and package APIs in demo code. Do not add custom wrappers around simple calls like `session.get()`, `session.set()`, `session.flash()`, `session.unset()`, `redirect()`, or `context.get(...)` unless the wrapper adds real domain logic, reusable policy, or a genuinely clearer abstraction.
 - Demo code must have good hygiene. Use clear names, small focused modules, explicit control flow, and accessible markup. Avoid hacks, dead code, unexplained shortcuts, or patterns that would be poor examples for users to copy.
 - Make the demo teach good patterns. Assume readers and future agents will study it as an example of how Remix code should be written in this repository.
@@ -124,7 +124,6 @@ demos/<name>/
       setup.test.ts
 
     middleware/
-      render.tsx
       auth.ts
       database.ts
       session.ts

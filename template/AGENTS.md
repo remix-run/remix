@@ -23,9 +23,8 @@ Refer to ./.agents/skills/remix/SKILL.md
 - `app/actions/home-page.tsx` and `app/actions/document.tsx` render the route-owned starter UI
 - `app/actions/public/` contains the browser runtime entry and interactive prompt button
 - `app/routes.ts` defines the shared route contract used by server and browser modules for type-safe hrefs
-- `app/router.ts` wires routes to route handlers
-- `app/middleware/render.tsx` installs the request-scoped renderer used by actions
-- `app/assets.ts` owns the server-side asset pipeline used by the asset route and renderer
+- `app/router.ts` wires routes to route handlers and installs the standard Remix UI renderer used by actions
+- `app/assets.ts` owns the server-side asset pipeline used by the asset route and render middleware
 - Root `public/` contains static files served unchanged from the app root
 
 ## Route Ownership

@@ -3,6 +3,7 @@ import * as path from 'node:path'
 import { asyncContext } from 'remix/middleware/async-context'
 import { compression } from 'remix/middleware/compression'
 import { logger } from 'remix/middleware/logger'
+import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 import { createRouter as createRemixRouter, type MiddlewareContext } from 'remix/router'
 
@@ -15,7 +16,6 @@ import {
   type Versions,
 } from './data/docs.ts'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
-import { render } from './middleware/render.ts'
 import { getVersionPathname, routes } from './routes.ts'
 import type { DocsAssetServer } from './assets.ts'
 
@@ -52,7 +52,7 @@ export function createApiRouter(options: ApiRouterOptions) {
   middleware.push(staticFiles(sharedAssetsDir, { index: false }))
   middleware.push(asyncContext())
   middleware.push(loadAssetEntry(options.assetServer))
-  middleware.push(render(options.assetServer))
+  middleware.push(render({ assets: options.assetServer }))
 
   let router = createRemixRouter<AppContext>({ middleware })
   let getDocsContext = createDocsContextLoader(options.assetServer, options.docsContext)

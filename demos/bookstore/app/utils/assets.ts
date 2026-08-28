@@ -6,7 +6,7 @@ import { assetsBase } from '../routes.ts'
 const isDevelopment = process.env.NODE_ENV === 'development'
 const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
 
-export const assetServer = createAssetServer({
+export const assets = createAssetServer({
   basePath: assetsBase,
   rootDir: path.resolve(import.meta.dirname, '../../../..'),
   allowFiles: ['demos/bookstore/app/routes.ts', 'demos/bookstore/app/**/public/**'],

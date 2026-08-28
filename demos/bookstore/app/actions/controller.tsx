@@ -4,7 +4,7 @@ import { createFileResponse as sendFile } from 'remix/response/file'
 
 import { books } from '../data/schema.ts'
 import { routes } from '../routes.ts'
-import { assetServer } from '../utils/assets.ts'
+import { assets } from '../utils/assets.ts'
 import { getCurrentCart } from '../utils/context.ts'
 import { uploadsStorage } from '../utils/uploads.ts'
 import { AboutPage } from './about.tsx'
@@ -14,7 +14,7 @@ import { SearchPage } from './search.tsx'
 export default createController(routes, {
   actions: {
     async assets({ request }) {
-      let assetResponse = await assetServer.fetch(request)
+      let assetResponse = await assets.fetch(request)
       return assetResponse ?? new Response('Not found', { status: 404 })
     },
     async uploads({ request, params }) {

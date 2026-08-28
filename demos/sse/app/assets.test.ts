@@ -2,11 +2,11 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
 import { router } from './router.ts'
-import { assetServer } from './utils/assets.ts'
+import { assets } from './utils/assets.ts'
 
 describe('browser assets', () => {
   it('serves every colocated browser entry graph and rejects server source', async () => {
-    let hrefs = await assetServer.getPreloads([
+    let hrefs = await assets.getPreloads([
       'demos/sse/app/actions/public/entry.tsx',
       'demos/sse/app/actions/public/message-stream.tsx',
     ])

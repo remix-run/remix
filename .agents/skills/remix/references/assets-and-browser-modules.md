@@ -29,7 +29,7 @@ export const routes = route({
   assets: get('/assets/*path'),
 })
 
-let assetServer = createAssetServer({
+let assets = createAssetServer({
   basePath: '/assets',
   rootDir: process.cwd(),
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
@@ -48,7 +48,7 @@ let assetServer = createAssetServer({
 export default createController(routes, {
   actions: {
     async assets({ request }) {
-      return (await assetServer.fetch(request)) ?? new Response('Not Found', { status: 404 })
+      return (await assets.fetch(request)) ?? new Response('Not Found', { status: 404 })
     },
   },
 })
@@ -74,13 +74,13 @@ export default createController(routes, {
 Use `getHref()` when you need the public URL for one module, and `getPreloads()` when you want `<link rel="modulepreload">` tags or `Link` headers for one or more entrypoints and their dependencies.
 
 ```typescript
-let entryHref = await assetServer.getHref('app/actions/public/entry.ts')
-let entryPreloads = await assetServer.getPreloads('app/actions/public/entry.ts')
+let entryHref = await assets.getHref('app/actions/public/entry.ts')
+let entryPreloads = await assets.getPreloads('app/actions/public/entry.ts')
 ```
 
 Use this when rendering documents or layouts that boot browser behavior with a known client entry.
 
-When resolving hydrated client entries during server rendering, pass the source entry ID from `clientEntry(import.meta.url, ...)` to `getHref()` and `getPreloads()` inside `resolveClientEntry`. Return those preload hrefs through the entry's `preloads` property so the browser can fetch the module graph without walking it serially. Keep this resolution in the shared render helper rather than hard-coding public asset URLs in source-owned component modules.
+For normal Remix applications, pass the asset server to `render({ assets })` from `remix/middleware/render`. The middleware resolves source entry IDs from `clientEntry(import.meta.url, ...)` with `getHref()` and `getPreloads()` and applies the UI renderer's explicit-hash or named-component export rules. Use a custom `resolveClientEntry` callback only when building a custom rendering pipeline.
 
 ## Development vs Deployment
 

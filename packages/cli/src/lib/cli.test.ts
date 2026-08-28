@@ -508,10 +508,6 @@ describe('run', () => {
         path.join(appDir, 'app', 'actions', 'public', 'entry.ts'),
         'utf8',
       )
-      let renderMiddleware = await fs.readFile(
-        path.join(appDir, 'app', 'middleware', 'render.tsx'),
-        'utf8',
-      )
       let controller = await fs.readFile(
         path.join(appDir, 'app', 'actions', 'controller.tsx'),
         'utf8',
@@ -551,12 +547,11 @@ describe('run', () => {
       assert.match(assets, /scripts: \{ loaders: isHmr \? \[uiHmr\(\)\] : undefined \}/)
       assert.match(assets, /watch: isDevelopment/)
       assert.match(router, /staticFiles\('\.\/public'/)
+      assert.match(router, /import \{ render \} from 'remix\/middleware\/render'/)
+      assert.match(router, /render\(\{ assets \}\)/)
       assert.match(entry, /loadModule/)
       assert.match(entry, /resolveFrame/)
       assert.match(entry, /server:update/)
-      assert.match(renderMiddleware, /resolveClientEntry/)
-      assert.match(renderMiddleware, /getPreloads/)
-      assert.match(renderMiddleware, /resolveFrame/)
       assert.match(controller, /context\.render\(<HomePage \/>/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
       await assertPathExists(path.join(appDir, 'hmr.ts'))
@@ -566,7 +561,7 @@ describe('run', () => {
       await assertPathExists(path.join(appDir, 'app', 'actions', 'home-page.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'actions', 'public', 'prompt-button.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'actions', 'public', 'entry.ts'))
-      await assertPathExists(path.join(appDir, 'app', 'middleware', 'render.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'middleware', 'render.tsx'))
       await assertPathExists(path.join(appDir, 'public', 'favicon.svg'))
       await assertPathExists(path.join(appDir, '.gitignore'))
       await assertPathMissing(path.join(appDir, 'gitignore'))

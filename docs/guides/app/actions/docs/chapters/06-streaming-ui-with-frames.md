@@ -115,55 +115,34 @@ when the request fails.
 
 ## Render the response as a stream {#server-rendering-with-rendertostream-and-rendertostring}
 
-The generated render middleware uses `renderToStream()` for normal HTML responses. Most actions use
-it indirectly through `context.render(...)`.
+Add the standard render middleware to `app/router.ts`. It gives actions `context.render(...)`,
+streams their component trees, and sends frame requests back through the same router:
 
-The frame-related part of that middleware supplies the current request URL, its cancellation signal,
-and a resolver that sends frame URLs back through the app router:
+```ts filename=app/router.ts
+import { render } from "remix/middleware/render";
+import { createRouter } from "remix/router";
 
-```tsx filename=app/middleware/render.tsx
-import { createHtmlResponse } from "remix/response/html";
-import { renderToStream } from "remix/ui/server";
+import { assets } from "./assets.ts";
 
-// Inside the request-scoped render function:
-let stream = renderToStream(node, {
-  frameSrc: request.url,
-  signal: request.signal,
-  resolveFrame(src, target) {
-    return resolveFrame(router, request, src, target);
-  },
-  // Keep the app's existing resolveClientEntry and onError options here.
-});
-
-return createHtmlResponse(stream, init);
-```
-
-The resolver makes a normal request to the route from the first section. Forward the cookie when
-frames share the document's session:
-
-```ts filename=app/middleware/render.tsx
-import type { Router } from "remix/router";
-
-async function resolveFrame(router: Router, request: Request, src: string, target?: string) {
-  let headers = new Headers({ Accept: "text/html" });
-  let cookie = request.headers.get("Cookie");
-  if (cookie) headers.set("Cookie", cookie);
-  if (target) headers.set("X-Remix-Target", target);
-
-  let response = await router.fetch(
-    new Request(new URL(src, request.url), {
-      headers,
-      signal: request.signal,
+export const router = createRouter({
+  middleware: [
+    render({
+      assets,
+      onError(error) {
+        console.error(error);
+      },
     }),
-  );
-
-  if (!response.ok) {
-    throw new Error(`Frame request failed with status ${response.status}`);
-  }
-
-  return response.body ?? response.text();
-}
+  ],
+});
 ```
+
+The middleware forwards same-origin request headers needed by frame routes, strips body and
+transport headers from its internal `GET` requests, follows redirects, and cancels pending frame
+work when the outer request is canceled. It also uses the asset server to resolve hydrated client
+entries and their module preloads.
+
+Use `renderWith(...)` from `remix/middleware/render` when an app needs a different renderer or
+response type. Normal HTML actions should use the standard `render()` middleware.
 
 `renderToString()` is the smaller alternative when code needs the complete HTML value before it can
 continue, such as an email preview or a small embedded fragment:

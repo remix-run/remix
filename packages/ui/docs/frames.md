@@ -42,21 +42,19 @@ The presence of a `fallback` prop determines streaming behavior:
 
 ## Resolving frame content
 
-On the server, `renderToStream` calls your `resolveFrame` function to get the HTML for each frame:
+In a Remix app, install `render()` once. It resolves nested and targeted frames through the current router, carries request credentials and top-frame state, follows redirects, and preserves non-successful response content:
 
 ```tsx
-import { renderToStream } from 'remix/ui/server'
+import { render } from 'remix/middleware/render'
+import { createRouter } from 'remix/router'
 
-let stream = renderToStream(<App />, {
-  frameSrc: request.url,
-  async resolveFrame(src, _target, context) {
-    let res = await fetch(new URL(src, context?.currentFrameSrc ?? request.url))
-    return res.body // or res.text() for a string
-  },
-})
+let router = createRouter({ middleware: [render()] })
+
+router.get('/', (context) => context.render(<App />))
+router.get('/recommendations', (context) => context.render(<Recommendations />))
 ```
 
-`resolveFrame` can return:
+For a fully custom rendering pipeline, `renderToStream({ resolveFrame })` accepts frame content as:
 
 - A string of HTML
 - A `ReadableStream<Uint8Array>`

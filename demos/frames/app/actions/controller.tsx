@@ -2,7 +2,7 @@ import { redirect } from 'remix/response/redirect'
 import { createController } from 'remix/router'
 
 import { routes } from '../routes.ts'
-import { assetServer } from '../utils/assets.ts'
+import { assets } from '../utils/assets.ts'
 import { ClientMountedPage } from './client-mounted.tsx'
 import { HomePage } from './home.tsx'
 import { ReloadScopePage } from './reload-scope.tsx'
@@ -15,7 +15,7 @@ import { TimePage } from './time.tsx'
 export default createController(routes, {
   actions: {
     async assets({ request }) {
-      let assetResponse = await assetServer.fetch(request)
+      let assetResponse = await assets.fetch(request)
       return assetResponse ?? new Response('Not found', { status: 404 })
     },
 
