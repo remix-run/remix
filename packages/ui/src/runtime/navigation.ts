@@ -56,9 +56,10 @@ function resyncWebKitScrollAfterNavigation(event: NavigateEvent, resetScroll: bo
       // WebKit can reset its internal scroll position without synchronizing the visual viewport.
       // https://bugs.webkit.org/show_bug.cgi?id=309542
       if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 0) return
-      window.scrollTo(0, 1)
+      window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
       requestAnimationFrame(() => {
-        if (!event.signal.aborted) window.scrollTo(0, 0)
+        if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 1) return
+        window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
       })
     },
     { once: true, signal: event.signal },

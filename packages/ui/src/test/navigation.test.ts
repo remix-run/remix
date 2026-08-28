@@ -49,6 +49,28 @@ function stubNavigatorUserAgent(t: TestContext, userAgent: string): void {
   })
 }
 
+function stubWindowScrollPosition(t: TestContext) {
+  let x = 0
+  let y = 0
+  let scrollXDescriptor = Object.getOwnPropertyDescriptor(window, 'scrollX')
+  let scrollYDescriptor = Object.getOwnPropertyDescriptor(window, 'scrollY')
+  Object.defineProperties(window, {
+    scrollX: { configurable: true, get: () => x },
+    scrollY: { configurable: true, get: () => y },
+  })
+  t.after(() => {
+    if (scrollXDescriptor) Object.defineProperty(window, 'scrollX', scrollXDescriptor)
+    else Reflect.deleteProperty(window, 'scrollX')
+    if (scrollYDescriptor) Object.defineProperty(window, 'scrollY', scrollYDescriptor)
+    else Reflect.deleteProperty(window, 'scrollY')
+  })
+
+  return (xPosition: number, yPosition: number) => {
+    x = xPosition
+    y = yPosition
+  }
+}
+
 function startStubNavigationListener(t: TestContext): (event: Event) => void {
   let stubNavigation = Object.assign(new EventTarget(), {
     updateCurrentEntry: mock.fn(),
@@ -128,6 +150,7 @@ describe('navigate', () => {
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.6 Safari/605.1.15',
     )
     let dispatchNavigation = startStubNavigationListener(t)
+    let setScrollPosition = stubWindowScrollPosition(t)
     let scrollTo = t.mock.method(window, 'scrollTo', () => {})
     let animationFrameCallbacks: FrameRequestCallback[] = []
     t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
@@ -146,12 +169,53 @@ describe('navigate', () => {
     expect(scrollTo).not.toHaveBeenCalled()
 
     dispatchNavigation(new Event('navigatesuccess'))
-    expect(scrollTo).toHaveBeenNthCalledWith(1, 0, 1)
+    expect(scrollTo).toHaveBeenNthCalledWith(1, {
+      behavior: 'instant',
+      left: 0,
+      top: 1,
+    })
+    setScrollPosition(0, 1)
 
     let animationFrameCallback = animationFrameCallbacks[0]
     if (!animationFrameCallback) throw new Error('Expected an animation frame callback')
     animationFrameCallback(0)
-    expect(scrollTo).toHaveBeenNthCalledWith(2, 0, 0)
+    expect(scrollTo).toHaveBeenNthCalledWith(2, {
+      behavior: 'instant',
+      left: 0,
+      top: 0,
+    })
+  })
+
+  it('preserves scrolling that occurs after WebKit scroll resynchronization', (t) => {
+    stubNavigatorUserAgent(
+      t,
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.6 Safari/605.1.15',
+    )
+    let dispatchNavigation = startStubNavigationListener(t)
+    let setScrollPosition = stubWindowScrollPosition(t)
+    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+    let animationFrameCallbacks: FrameRequestCallback[] = []
+    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+      animationFrameCallbacks.push(callback)
+      return 1
+    })
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept: mock.fn(),
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+    dispatchNavigation(new Event('navigatesuccess'))
+    setScrollPosition(0, 200)
+
+    let animationFrameCallback = animationFrameCallbacks[0]
+    if (!animationFrameCallback) throw new Error('Expected an animation frame callback')
+    animationFrameCallback(0)
+
+    expect(scrollTo).toHaveBeenCalledTimes(1)
   })
 
   it('does not resynchronize WebKit scroll state for fragment navigations', (t) => {
