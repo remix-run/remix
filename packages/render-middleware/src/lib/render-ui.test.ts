@@ -186,7 +186,7 @@ describe('render', () => {
 
     let response = await router.fetch('https://remix.run/')
 
-    await assert.rejects(response.text(), /Frame response must have a text\/html Content-Type/)
+    await assert.rejects(response.text(), /Frame response must be HTML/)
     assert.equal(errors.length, 1)
   })
 

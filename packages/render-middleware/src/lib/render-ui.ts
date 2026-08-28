@@ -103,7 +103,7 @@ async function resolveFrame(
   let response = await followFrameRedirects(context, frameUrl, headers)
 
   if (!isHtmlResponse(response)) {
-    throw new Error('Frame response must have a text/html Content-Type')
+    throw new Error('Frame response must be HTML')
   }
 
   if (response.body != null) {
