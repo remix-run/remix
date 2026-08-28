@@ -133,7 +133,7 @@ export function startNavigationListenerImpl(
             state: replayedSubmission.state,
             getSubmission: replayedSubmission.getSubmission,
           }
-        : getRuntimeNavigation(event, resolveFormNavigation)
+        : getRuntimeNavigation(event, resolveFormNavigation, navigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
 
@@ -202,7 +202,7 @@ export function startNavigationListenerImpl(
           // Safari doesn't support precommit as of Aug 2026, so we do a full replacement navigation
           if (event.cancelable) {
             event.preventDefault()
-            window.navigation.navigate(event.destination.url, {
+            navigation.navigate(event.destination.url, {
               history: 'replace',
               state,
               info: {
@@ -308,13 +308,14 @@ function preserveStartingDocumentScrollState(navigation: Navigation, event: Navi
 function getRuntimeNavigation(
   event: NavigateEvent,
   resolveFormNavigation: ReturnType<typeof createFormNavigationResolver>,
+  navigation: Navigation,
 ): RuntimeNavigation | undefined {
   if (event.navigationType === 'traverse') {
     let state = getTraverseNavigationState(event)
     return state ? { state } : undefined
   }
 
-  let sourceNavigation = getSourceElementNavigation(event, resolveFormNavigation)
+  let sourceNavigation = getSourceElementNavigation(event, resolveFormNavigation, navigation)
   if (sourceNavigation) return sourceNavigation
 
   let destinationState = event.destination.getState()
@@ -345,6 +346,7 @@ function getTraverseNavigationState(event: NavigateEvent): NavigationState | und
 function getSourceElementNavigation(
   event: NavigateEvent,
   resolveFormNavigation: ReturnType<typeof createFormNavigationResolver>,
+  navigation: Navigation,
 ): RuntimeNavigation | undefined {
   let sourceEvent = event as SourceElementNavigateEvent
   let sourceElement = sourceEvent.sourceElement
@@ -371,7 +373,7 @@ function getSourceElementNavigation(
 
   let replaceHistoryByDefault =
     formNavigation.getSubmission !== undefined &&
-    event.destination.url === window.navigation.currentEntry?.url
+    event.destination.url === navigation.currentEntry?.url
 
   return {
     state: {

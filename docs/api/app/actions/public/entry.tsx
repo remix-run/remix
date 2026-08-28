@@ -46,6 +46,6 @@ app.ready().catch((error: unknown) => {
 
 startPagefindSearch()
 
-window.navigation.addEventListener('navigate', () => {
+window.navigation?.addEventListener('navigate', () => {
   closePagefindSearch()
 })
