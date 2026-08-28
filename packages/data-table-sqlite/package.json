@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/data-table-sqlite",
-  "version": "0.5.1",
-  "description": "SQLite adapter for remix/data-table",
+  "version": "0.6.0",
+  "description": "SQLite database implementation for remix/data-table",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -37,19 +37,19 @@
     "@remix-run/data-table": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "dependencies": {
     "@remix-run/data-table": "workspace:^"
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix test",
     "test:bun": "bun x --bun remix test",
     "test:coverage": "remix test --coverage",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "remix",

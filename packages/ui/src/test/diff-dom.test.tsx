@@ -2,13 +2,47 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { invariant } from '../runtime/invariant.ts'
 import { diffNodes } from '../runtime/diff-dom.ts'
+import type { FrameContext } from '../runtime/frame.ts'
+import {
+  setClientEntryBoundaryOwner,
+  type ClientEntryIdentity,
+} from '../runtime/client-entry-boundary.ts'
 
-function diffDom(container: HTMLElement, next: string) {
+function attachClientEntryOwner(
+  marker: Comment,
+  onDispose = () => {},
+  identity: ClientEntryIdentity = { moduleUrl: '/entry.js', exportName: 'Entry' },
+): void {
+  setClientEntryBoundaryOwner(marker, identity, { dispose: onDispose, render() {} })
+}
+
+function diffDomNodes(current: Node[], next: Node[], data: FrameContext['data'] = {}) {
+  diffNodes(current, next, {
+    frameInstances: new WeakMap(),
+    pendingClientEntries: new Map(),
+    data,
+  } as any)
+}
+
+type TestFrame = {
+  dispose(): void
+  isDisplayingResolvedContent(): boolean
+  matchesIdentity(src: string, name: string | undefined): boolean
+  renderMarkerContent(): Promise<void>
+}
+
+function diffDom(
+  container: HTMLElement,
+  next: string,
+  data?: FrameContext['data'],
+  frameInstances: WeakMap<Comment, TestFrame> = new WeakMap(),
+) {
   let template = document.createElement('template')
   template.innerHTML = next
-
   diffNodes(Array.from(container.childNodes), Array.from(template.content.childNodes), {
+    frameInstances,
     pendingClientEntries: new Map(),
+    data: data ?? {},
   } as any)
 }
 
@@ -108,20 +142,387 @@ describe('diffNodes', () => {
     it('updates hydration marker ids while fast-forwarding boundaries', () => {
       let container = document.createElement('div')
       container.innerHTML = '<!-- rmx:h:old --><button>Old</button><!-- /rmx:h -->'
-
-      diffDom(container, '<!-- rmx:h:new --><button>Old</button><!-- /rmx:h -->')
-
       let start = container.firstChild
-      invariant(start && start.nodeType === Node.COMMENT_NODE)
-      expect((start as Comment).data.trim()).toBe('rmx:h:new')
+      invariant(start instanceof Comment)
+      attachClientEntryOwner(start)
+
+      diffDom(container, '<!-- rmx:h:new --><button>Old</button><!-- /rmx:h -->', {
+        h: {
+          old: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} },
+          new: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} },
+        },
+      })
+
+      expect(start.data.trim()).toBe('rmx:h:new')
+      expect(container.firstChild).toBe(start)
+    })
+
+    it('replaces same-identity hydration ranges that do not have a live owner', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!-- rmx:h:old --><button>Old</button><!-- /rmx:h -->'
+      let oldStart = container.firstChild
+
+      diffDom(container, '<!-- rmx:h:new --><button>New</button><!-- /rmx:h -->', {
+        h: {
+          new: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} },
+        },
+      })
+
+      expect(container.firstChild).not.toBe(oldStart)
+      expect(container.querySelector('button')?.textContent).toBe('New')
+    })
+
+    it('replaces hydration ranges with different client entry identities', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!-- rmx:h:old --><button>Old</button><!-- /rmx:h -->'
+      let oldStart = container.firstChild
+
+      diffDom(container, '<!-- rmx:h:new --><button>New</button><!-- /rmx:h -->', {
+        h: {
+          old: { moduleUrl: '/old.js', exportName: 'Old', props: {} },
+          new: { moduleUrl: '/new.js', exportName: 'New', props: {} },
+        },
+      })
+
+      expect(container.firstChild).not.toBe(oldStart)
+      expect(container.querySelector('button')?.textContent).toBe('New')
+    })
+
+    it('moves complete live hydration ranges when ordinary siblings shift', () => {
+      let container = document.createElement('div')
+      container.innerHTML =
+        '<!-- rmx:h:old --><button>Stateful</button><!-- /rmx:h --><span>After</span>'
+      let start = container.firstChild
+      invariant(start instanceof Comment)
+      attachClientEntryOwner(start)
+
+      diffDom(
+        container,
+        '<p>Before</p><!-- rmx:h:new --><button>Server</button><!-- /rmx:h --><span>After</span>',
+        {
+          h: {
+            new: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} },
+          },
+        },
+      )
+
+      expect(container.childNodes.item(1)).toBe(start)
+      expect(start.data.trim()).toBe('rmx:h:new')
+      expect(container.querySelector('button')?.textContent).toBe('Stateful')
+    })
+
+    it('keeps ordinary sibling state with its node when a hydration range moves', () => {
+      let container = document.createElement('div')
+      container.innerHTML = [
+        '<input id="first" value="First">',
+        '<input id="second" value="Second">',
+        '<!-- rmx:h:old --><button>Stateful</button><!-- /rmx:h -->',
+      ].join('')
+      let first = container.querySelector('#first')
+      let second = container.querySelector('#second')
+      let start = container.childNodes.item(2)
+      invariant(first instanceof HTMLInputElement)
+      invariant(second instanceof HTMLInputElement)
+      invariant(start instanceof Comment)
+      first.value = 'Edited first'
+      second.value = 'Edited second'
+      attachClientEntryOwner(start)
+
+      diffDom(
+        container,
+        [
+          '<!-- rmx:h:new --><button>Server</button><!-- /rmx:h -->',
+          '<input id="first" value="First">',
+          '<input id="second" value="Second">',
+        ].join(''),
+        {
+          h: {
+            new: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} },
+          },
+        },
+      )
+
+      expect(container.querySelector('#first')).toBe(first)
+      expect(container.querySelector('#second')).toBe(second)
+      expect(first.value).toBe('Edited first')
+      expect(second.value).toBe('Edited second')
+    })
+
+    it('pairs repeated live hydration ranges by identity in source order', () => {
+      let container = document.createElement('div')
+      container.innerHTML = [
+        '<!-- rmx:h:first --><button>First</button><!-- /rmx:h -->',
+        '<!-- rmx:h:second --><button>Second</button><!-- /rmx:h -->',
+      ].join('')
+      let firstStart = container.childNodes.item(0)
+      let secondStart = container.childNodes.item(3)
+      invariant(firstStart instanceof Comment)
+      invariant(secondStart instanceof Comment)
+      let firstDisposeCount = 0
+      let secondDisposeCount = 0
+      attachClientEntryOwner(firstStart, () => {
+        firstDisposeCount++
+      })
+      attachClientEntryOwner(secondStart, () => {
+        secondDisposeCount++
+      })
+
+      diffDom(container, '<!-- rmx:h:next --><button>Server</button><!-- /rmx:h -->', {
+        h: {
+          next: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} },
+        },
+      })
+
+      expect(container.firstChild).toBe(firstStart)
+      expect(secondStart.parentNode).toBeNull()
+      expect(container.querySelector('button')?.textContent).toBe('First')
+      expect(firstDisposeCount).toBe(0)
+      expect(secondDisposeCount).toBe(1)
+    })
+
+    it('does not let an unmatched boundary consume a later semantic match', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!-- rmx:h:current --><button>Stateful</button><!-- /rmx:h -->'
+      let currentStart = container.firstChild
+      invariant(currentStart instanceof Comment)
+      let disposeCount = 0
+      attachClientEntryOwner(currentStart, () => {
+        disposeCount++
+      })
+
+      diffDom(
+        container,
+        [
+          '<!-- rmx:h:inserted --><button>Inserted</button><!-- /rmx:h -->',
+          '<!-- rmx:h:preserved --><button>Server</button><!-- /rmx:h -->',
+        ].join(''),
+        {
+          h: {
+            inserted: { moduleUrl: '/other.js', exportName: 'Other', props: {} },
+            preserved: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} },
+          },
+        },
+      )
+
+      expect(container.childNodes.item(3)).toBe(currentStart)
+      expect(currentStart.data.trim()).toBe('rmx:h:preserved')
+      expect(container.querySelectorAll('button').item(1).textContent).toBe('Stateful')
+      expect(disposeCount).toBe(0)
+    })
+
+    it('keeps generated boundary lists balanced with exact ordinary destination DOM', () => {
+      let identities: ClientEntryIdentity[] = [
+        { moduleUrl: '/a.js', exportName: 'Entry' },
+        { moduleUrl: '/b.js', exportName: 'Entry' },
+        { moduleUrl: '/b.js', exportName: 'Other' },
+      ]
+
+      for (let seed = 0; seed < 24; seed++) {
+        let host = document.createElement('div')
+        let current = document.createElement('div')
+        let next = document.createElement('div')
+        host.appendChild(current)
+        let disposeCounts: number[] = []
+        let currentCount = (seed % 4) + 1
+        let nextCount = ((seed * 3) % 5) + 1
+
+        for (let i = 0; i < currentCount; i++) {
+          if ((seed + i) % 2 === 0) {
+            let ordinary = document.createElement('span')
+            ordinary.setAttribute('data-source', `${seed}-${i}`)
+            current.appendChild(ordinary)
+          }
+
+          let start = document.createComment(`rmx:h:current-${seed}-${i}`)
+          let content = document.createElement('button')
+          content.textContent = `Current ${seed}-${i}`
+          let end = document.createComment('/rmx:h')
+          current.append(start, content, end)
+
+          disposeCounts.push(0)
+          let disposeIndex = disposeCounts.length - 1
+          attachClientEntryOwner(
+            start,
+            () => {
+              disposeCounts[disposeIndex]++
+            },
+            identities[(seed + i) % identities.length],
+          )
+        }
+
+        let hydrationData: NonNullable<FrameContext['data']['h']> = {}
+        let data: FrameContext['data'] = { h: hydrationData }
+        let expectedOrdinaryIds: string[] = []
+        for (let i = 0; i < nextCount; i++) {
+          if ((seed + i) % 3 !== 0) {
+            let id = `${seed}-${i}`
+            let ordinary = document.createElement('span')
+            ordinary.setAttribute('data-destination', id)
+            next.appendChild(ordinary)
+            expectedOrdinaryIds.push(id)
+          }
+
+          let id = `next-${seed}-${i}`
+          let identity = identities[(seed * 2 + i) % identities.length]
+          let start = document.createComment(`rmx:h:${id}`)
+          let content = document.createElement('button')
+          content.textContent = `Next ${seed}-${i}`
+          let end = document.createComment('/rmx:h')
+          next.append(start, content, end)
+          hydrationData[id] = { ...identity, props: {} }
+        }
+
+        diffDomNodes([current], [next], data)
+
+        let comments = Array.from(current.childNodes).filter(
+          (node): node is Comment => node instanceof Comment,
+        )
+        let starts = comments.filter((comment) => comment.data.trim().startsWith('rmx:h:'))
+        let ends = comments.filter((comment) => comment.data.trim() === '/rmx:h')
+        let ordinaryIds = Array.from(current.querySelectorAll('[data-destination]')).map(
+          (element) => element.getAttribute('data-destination') ?? '',
+        )
+
+        expect(starts).toHaveLength(nextCount)
+        expect(ends).toHaveLength(nextCount)
+        expect(ordinaryIds).toEqual(expectedOrdinaryIds)
+        expect(disposeCounts.every((count) => count === 0 || count === 1)).toBe(true)
+      }
+    })
+
+    it('does not match keyed elements owned by nested hydration ranges', () => {
+      let container = document.createElement('div')
+      let current = document.createElement('div')
+      container.appendChild(current)
+
+      let outerStart = document.createComment('rmx:h:outer')
+      let innerStart = document.createComment('rmx:h:inner')
+      let innerContent = document.createElement('span')
+      let innerEnd = document.createComment('/rmx:h')
+      let owned = document.createElement('section')
+      let outerEnd = document.createComment('/rmx:h')
+      let dataKey = 'data-rmx-key'
+      owned.setAttribute(dataKey, 'entry')
+      current.append(outerStart, innerStart, innerContent, innerEnd, owned, outerEnd)
+
+      let disposeCount = 0
+      attachClientEntryOwner(outerStart, () => {
+        disposeCount++
+        owned.remove()
+      })
+
+      let next = document.createElement('div')
+      let replacement = document.createElement('section')
+      replacement.id = 'replacement'
+      replacement.setAttribute(dataKey, 'entry')
+      next.appendChild(replacement)
+
+      diffDomNodes([current], [next])
+
+      expect(current.childNodes).toHaveLength(1)
+      expect(current.firstChild).toBe(replacement)
+      expect(disposeCount).toBe(1)
+    })
+
+    it('does not match frame end markers owned by hydration ranges', () => {
+      let container = document.createElement('div')
+      let current = document.createElement('div')
+      container.appendChild(current)
+
+      let hydrationStart = document.createComment('rmx:h:entry')
+      let currentFrameStart = document.createComment('rmx:f:current')
+      let currentFrameContent = document.createElement('p')
+      let currentFrameEnd = document.createComment('/rmx:f')
+      let hydrationEnd = document.createComment('/rmx:h')
+      current.append(
+        hydrationStart,
+        currentFrameStart,
+        currentFrameContent,
+        currentFrameEnd,
+        hydrationEnd,
+      )
+
+      let disposeCount = 0
+      attachClientEntryOwner(hydrationStart, () => {
+        disposeCount++
+        let range = document.createRange()
+        range.setStartBefore(currentFrameStart)
+        range.setEndAfter(currentFrameEnd)
+        range.deleteContents()
+      })
+
+      let next = document.createElement('div')
+      let nextFrameStart = document.createComment('rmx:f:next')
+      let nextFrameContent = document.createElement('section')
+      let nextFrameEnd = document.createComment('/rmx:f')
+      next.append(nextFrameStart, nextFrameContent, nextFrameEnd)
+
+      diffDomNodes([current], [next])
+
+      expect(current.childNodes).toHaveLength(3)
+      expect(current.childNodes.item(0)).toBe(nextFrameStart)
+      expect(current.childNodes.item(1)).toBe(nextFrameContent)
+      expect(current.childNodes.item(2)).toBe(nextFrameEnd)
+      expect(disposeCount).toBe(1)
+    })
+
+    it('does not match a shifted frame start with the current frame end', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<div><i></i><!-- rmx:f:f00000000 --><b></b><!-- /rmx:f --></div>'
+
+      let root = container.firstElementChild
+      invariant(root)
+      let currentFrameEnd = root.childNodes.item(3)
+      invariant(currentFrameEnd instanceof Comment)
+
+      let next = '<div><i></i><u></u><b></b><!-- rmx:f:f11111111 --><b></b><!-- /rmx:f --></div>'
+
+      // The inserted siblings shift the incoming frame start to the current frame end's index.
+      diffDom(container, next)
+
+      expect(root.childNodes.item(3)).not.toBe(currentFrameEnd)
+      expect(currentFrameEnd.parentNode).toBeNull()
+      expect(root.outerHTML).toBe(next)
+    })
+
+    it('preserves resolved frame content when a pending marker reuses the same id', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!-- rmx:f:same --><p>Resolved current</p><!-- /rmx:f -->'
+      let start = container.firstChild
+      invariant(start instanceof Comment)
+      let renderCount = 0
+      let frameInstances = new WeakMap<Comment, TestFrame>()
+      frameInstances.set(start, {
+        dispose() {},
+        isDisplayingResolvedContent: () => true,
+        matchesIdentity: (src, name) => src === '/same' && name === undefined,
+        async renderMarkerContent() {
+          renderCount++
+        },
+      })
+
+      diffDom(
+        container,
+        '<!-- rmx:f:same --><p>Pending fallback</p><!-- /rmx:f -->',
+        {
+          f: {
+            same: { src: '/same', status: 'pending' },
+          },
+        },
+        frameInstances,
+      )
+
+      expect(container.firstChild).toBe(start)
+      expect(container.querySelector('p')?.textContent).toBe('Resolved current')
+      expect(renderCount).toBe(0)
     })
   })
 
   describe('keyed diffs', () => {
-    it('retains keyed elements via data-key', () => {
+    it('retains keyed elements via data-rmx-key', () => {
       let container = document.createElement('div')
       container.innerHTML =
-        '<ul><li data-key="a">A</li><li data-key="b">B</li><li data-key="c">C</li></ul>'
+        '<ul><li data-rmx-key="a">A</li><li data-rmx-key="b">B</li><li data-rmx-key="c">C</li></ul>'
       let list = container.querySelector('ul')
       invariant(list)
 
@@ -132,7 +533,7 @@ describe('diffNodes', () => {
 
       diffDom(
         container,
-        '<ul><li data-key="b">B</li><li data-key="a">A</li><li data-key="c">C</li></ul>',
+        '<ul><li data-rmx-key="b">B</li><li data-rmx-key="a">A</li><li data-rmx-key="c">C</li></ul>',
       )
 
       let updatedList = container.querySelector('ul')
@@ -141,7 +542,7 @@ describe('diffNodes', () => {
       expect(updatedList.children.item(1)).toBe(a)
       expect(updatedList.children.item(2)).toBe(c)
       expect(updatedList.innerHTML).toBe(
-        '<li data-key="b">B</li><li data-key="a">A</li><li data-key="c">C</li>',
+        '<li data-rmx-key="b">B</li><li data-rmx-key="a">A</li><li data-rmx-key="c">C</li>',
       )
     })
   })
@@ -226,16 +627,16 @@ describe('diffNodes', () => {
       expect(button.isConnected).toBe(false)
     })
 
-    it('preserves rmx-preserve-dom element attributes and children', () => {
+    it('preserves data-rmx-preserve-dom element attributes and children', () => {
       let container = document.createElement('div')
       container.innerHTML =
-        '<div rmx-preserve-dom data-state="client"><button>Client</button></div>'
+        '<div data-rmx-preserve-dom data-state="client"><button>Client</button></div>'
       let div = container.querySelector('div')
       invariant(div)
       let button = div.querySelector('button')
       invariant(button)
 
-      diffDom(container, '<div rmx-preserve-dom data-state="server"><span>Server</span></div>')
+      diffDom(container, '<div data-rmx-preserve-dom data-state="server"><span>Server</span></div>')
 
       expect(container.firstElementChild).toBe(div)
       expect(div.getAttribute('data-state')).toBe('client')
@@ -243,7 +644,7 @@ describe('diffNodes', () => {
       expect(div.innerHTML).toBe('<button>Client</button>')
     })
 
-    it('preserves rmx-preserve-dom custom element children added during initialization', () => {
+    it('preserves data-rmx-preserve-dom custom element children added during initialization', () => {
       let tagName = 'mock-pagefind-modal-trigger-lifecycle'
       if (!customElements.get(tagName)) {
         customElements.define(
@@ -279,10 +680,10 @@ describe('diffNodes', () => {
         let button = trigger.querySelector('button')
         invariant(button)
 
-        diffDom(container, `<${tagName} rmx-preserve-dom></${tagName}>`)
+        diffDom(container, `<${tagName} data-rmx-preserve-dom></${tagName}>`)
 
         expect(container.firstElementChild).toBe(trigger)
-        expect(trigger.hasAttribute('rmx-preserve-dom')).toBe(true)
+        expect(trigger.hasAttribute('data-rmx-preserve-dom')).toBe(true)
         expect(trigger.querySelector('button')).toBe(button)
         expect(button.isConnected).toBe(true)
       } finally {
@@ -290,7 +691,7 @@ describe('diffNodes', () => {
       }
     })
 
-    it('can pair rmx-preserve-dom elements with data-key before index fallback moves them', () => {
+    it('can pair data-rmx-preserve-dom elements with data-rmx-key before index fallback moves them', () => {
       let tagName = 'mock-pagefind-modal-lifecycle'
       let connects = 0
       let disconnects = 0
@@ -314,7 +715,7 @@ describe('diffNodes', () => {
       document.body.appendChild(container)
 
       try {
-        container.innerHTML = `<section><span>Old</span><${tagName} data-key="modal" rmx-preserve-dom><dialog>Client</dialog></${tagName}></section>`
+        container.innerHTML = `<section><span>Old</span><${tagName} data-rmx-key="modal" data-rmx-preserve-dom><dialog>Client</dialog></${tagName}></section>`
         let modal = container.querySelector(tagName)
         invariant(modal)
         let dialog = modal.querySelector('dialog')
@@ -324,7 +725,7 @@ describe('diffNodes', () => {
 
         diffDom(
           container,
-          `<section><span>New</span><p>Inserted</p><${tagName} data-key="modal" rmx-preserve-dom></${tagName}></section>`,
+          `<section><span>New</span><p>Inserted</p><${tagName} data-rmx-key="modal" data-rmx-preserve-dom></${tagName}></section>`,
         )
 
         expect(container.querySelector(tagName)).toBe(modal)
@@ -337,7 +738,7 @@ describe('diffNodes', () => {
       }
     })
 
-    it('does not reconnect keyed rmx-preserve-dom elements during reordering', () => {
+    it('does not reconnect keyed data-rmx-preserve-dom elements during reordering', () => {
       let tagName = 'mock-pagefind-modal-stationary'
       let connects = 0
       let disconnects = 0
@@ -361,7 +762,7 @@ describe('diffNodes', () => {
       document.body.appendChild(container)
 
       try {
-        container.innerHTML = `<section><${tagName} data-key="modal" rmx-preserve-dom><dialog>Client</dialog></${tagName}><p>Old</p></section>`
+        container.innerHTML = `<section><${tagName} data-rmx-key="modal" data-rmx-preserve-dom><dialog>Client</dialog></${tagName}><p>Old</p></section>`
         let modal = container.querySelector(tagName)
         invariant(modal)
         let dialog = modal.querySelector('dialog')
@@ -371,7 +772,7 @@ describe('diffNodes', () => {
 
         diffDom(
           container,
-          `<section><p>New</p><${tagName} data-key="modal" rmx-preserve-dom></${tagName}></section>`,
+          `<section><p>New</p><${tagName} data-rmx-key="modal" data-rmx-preserve-dom></${tagName}></section>`,
         )
 
         expect(container.querySelector(tagName)).toBe(modal)

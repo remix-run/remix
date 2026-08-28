@@ -1,4 +1,6 @@
 import type { ElementProps, ElementType, RemixNode, Renderable } from './jsx.ts'
+import type { ElementFunction } from './element-function.ts'
+import type { Key } from './key.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 
 /**
@@ -139,6 +141,15 @@ export interface Context<C> {
 export type FrameContent = ReadableStream<Uint8Array> | string | RemixNode
 
 /**
+ * Value returned by a browser frame resolver.
+ *
+ * Response bodies are rendered as frame content regardless of status. The default browser resolver
+ * rejects non-OK responses before returning them. When `fetch()` followed a redirect, the response's
+ * final URL updates the frame source and browser URL for a top-frame navigation.
+ */
+export type FrameResolution = FrameContent | Response
+
+/**
  * Events emitted by frame handles during reloads.
  */
 export type FrameHandleEventMap = {
@@ -208,13 +219,13 @@ export interface BuiltinElements {
 /**
  * Key type used to stabilize host elements and components during reconciliation.
  */
-export type Key = string | number | bigint
+export type { Key } from './key.ts'
 
 type ComponentConfig = {
   id: string
-  type: Function
+  type: ElementFunction
   frame: FrameHandle
-  getContext: (type: Component) => unknown
+  getContext: (type: ElementFunction) => unknown
   getFrameByName: (name: string) => FrameHandle | undefined
   getTopFrame?: () => FrameHandle | undefined
   signal?: AbortSignal
@@ -257,7 +268,7 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
   #connectedController: AbortController | undefined
   #contextValue: C | undefined
   #handle: Handle<ElementProps, C>
-  #props = {} as ElementProps
+  #props: ElementProps = {}
   #renderController: AbortController | undefined
   #renderFn: RenderFn | undefined
   #removed = false
@@ -269,7 +280,10 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
   #scheduleUpdate = (): void => {
     let queue = this.#updateQueue
     if (!queue) throw new Error('scheduleUpdate not implemented')
-    queue.enqueue(this.#updateVNode!, this.#updateDomParent!)
+    let vnode = this.#updateVNode
+    let domParent = this.#updateDomParent
+    if (!vnode || !domParent) throw new Error('scheduleUpdate target not initialized')
+    queue.enqueue(vnode, domParent)
   }
   #tasks: Task[] = []
 
@@ -291,14 +305,15 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
     let renderFn = this.#renderFn
 
     if (renderFn === undefined) {
-      let result = this.#config.type(this.#handle)
+      let initialize = this.#config.type as unknown as (handle: Handle<ElementProps, C>) => unknown
+      let result = initialize(this.#handle)
 
-      if (typeof result !== 'function') {
+      if (!isRenderFn(result)) {
         let name = this.#config.type.name || 'Anonymous'
         throw new Error(`${name} must return a render function, received ${typeof result}`)
       }
 
-      renderFn = result as RenderFn
+      renderFn = result
       this.#renderFn = renderFn
     }
 
@@ -330,7 +345,8 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
       set: (value: C) => {
         this.#contextValue = value
       },
-      get: (type: ElementType | symbol) => this.#config.getContext(type as Component),
+      get: (type: ElementType | symbol) =>
+        isElementFunction(type) ? this.#config.getContext(type) : undefined,
     }
 
     return {
@@ -385,9 +401,18 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
     }
 
     signal ??= this.#renderController?.signal
+    signal ??= sharedAbortedSignal ??= AbortSignal.abort()
     let tasks = this.#tasks.splice(0, this.#tasks.length)
-    return tasks.map((task) => () => task(signal!))
+    return tasks.map((task) => () => task(signal))
   }
+}
+
+function isRenderFn(value: unknown): value is RenderFn {
+  return typeof value === 'function'
+}
+
+function isElementFunction(value: unknown): value is ElementFunction {
+  return typeof value === 'function'
 }
 
 // Shared empty result and aborted signal so the common no-task removal path

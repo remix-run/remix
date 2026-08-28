@@ -1,7 +1,7 @@
 import { createMixin, type MixinType } from './mixin.ts'
 import type { ElementProps } from '../jsx.ts'
 import type { MixinDescriptor } from './mixin.ts'
-import type { EnsureEvent, EventMap } from '../event-listeners.ts'
+import type { EnsureEvent, EventMap } from '../event-types.ts'
 
 type SignaledListener<event extends Event> = (
   event: event,

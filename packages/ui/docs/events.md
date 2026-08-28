@@ -200,42 +200,26 @@ function KeyboardNav(handle: Handle) {
 
 ## Global Event Listeners
 
-Use `addEventListeners()` for global event targets with automatic cleanup:
+Use `on(...)` for element events. For page-level events, schedule browser-only setup with `handle.queueTask()` and pass `handle.signal` to `addEventListener()` so the listener is removed when the component disconnects.
 
 ```tsx
-function WindowResizeTracker(handle: Handle) {
-  let width = window.innerWidth
-  let height = window.innerHeight
+function ViewportWidth(handle: Handle) {
+  let width: number | undefined
 
-  // Set up global listeners once in setup
-  addEventListeners(window, handle.signal, {
-    resize() {
-      width = window.innerWidth
-      height = window.innerHeight
-      handle.update()
-    },
+  handle.queueTask(() => {
+    width = window.innerWidth
+    window.addEventListener(
+      'resize',
+      () => {
+        width = window.innerWidth
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
+    handle.update()
   })
 
-  return () => (
-    <div>
-      Window size: {width} x {height}
-    </div>
-  )
-}
-```
-
-```tsx
-function KeyboardTracker(handle: Handle) {
-  let keys: string[] = []
-
-  addEventListeners(document, handle.signal, {
-    keydown(event) {
-      keys.push(event.key)
-      handle.update()
-    },
-  })
-
-  return () => <div>Keys: {keys.join(', ')}</div>
+  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
 }
 ```
 
@@ -319,5 +303,5 @@ mix={[on('click', async (event, signal) => {
 
 ## See Also
 
-- [Handle API](./handle.md) - `addEventListeners()` for global listeners
+- [Handle API](./handle.md) - `handle.signal` for global listener cleanup
 - [Patterns](./patterns.md) - Data loading and async patterns

@@ -1,3 +1,3 @@
 Added `package.json` `exports`:
 
-- `remix/data-table/cli` to expose the typed data-table command invocation API
+- `remix/spa` to expose SPA render middleware and the client runtime from `@remix-run/spa`

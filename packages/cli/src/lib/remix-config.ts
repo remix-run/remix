@@ -1,5 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import * as process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import {
   findNodeAtLocation,
   getNodeValue,
@@ -8,8 +10,10 @@ import {
   type Node as JsonNode,
   type ParseError,
 } from 'jsonc-parser'
+import type { AssetServerOptions } from '@remix-run/assets'
 import type { RemixTestPool } from '@remix-run/test/cli'
 
+import { findAppRoot } from './app-root.ts'
 import { invalidRemixConfig, remixConfigNotFound } from './errors.ts'
 
 const reporters = ['spec', 'files', 'tap', 'dot'] as const
@@ -21,9 +25,58 @@ type TestPool = RemixTestPool
 type TestType = (typeof testTypes)[number]
 type JsonPath = Array<number | string>
 
+/** Validated configuration loaded from a Remix project config file. */
 export interface RemixConfig {
+  /** Shared asset mapping and browser access configuration. */
+  assets?: RemixAssetsConfig
+  /** Database command configuration. */
+  db?: RemixDbCommandConfig
+  /** Project health-check configuration. */
   doctor?: RemixDoctorCommandConfig
+  /** Test runner configuration. */
   test?: RemixTestCommandConfig
+}
+
+/** JSON-compatible asset server configuration loaded from `remix.json`. */
+export interface RemixAssetsConfig extends Pick<
+  AssetServerOptions,
+  'allowFiles' | 'allowPackages' | 'basePath' | 'denyFiles' | 'mounts'
+> {
+  /** Leaf file asset configuration. */
+  files?: Pick<NonNullable<AssetServerOptions['files']>, 'extensions'>
+  /** Absolute root directory used to resolve asset file paths. */
+  rootDir: string
+}
+
+export type RemixDbString = string | { env: string; default?: string }
+
+export type RemixDbAdapterConfig =
+  | {
+      type: 'sqlite'
+      filename: RemixDbString
+      foreignKeys?: boolean
+      busyTimeout?: number
+    }
+  | {
+      type: 'postgres'
+      connectionString: RemixDbString
+      maintenanceDatabase?: string
+      template?: string
+    }
+  | {
+      type: 'mysql'
+      uri: RemixDbString
+      characterSet?: string
+      collation?: string
+    }
+
+export interface RemixDbCommandConfig {
+  adapter: RemixDbAdapterConfig
+  migrations?: {
+    directory: string
+    journalTable?: string
+  }
+  seed?: string
 }
 
 export interface RemixDoctorCommandConfig {
@@ -65,6 +118,36 @@ interface ConfigSource {
   filePath: string
   root: JsonNode | undefined
   text: string
+}
+
+/**
+ * Loads the nearest Remix project configuration or an explicitly selected config file.
+ *
+ * @param from A config file or directory from which to search upward for `remix.json`. Defaults to
+ * `process.cwd()`.
+ * @returns The validated Remix project configuration, or an empty object when no config is found.
+ */
+export async function loadConfig(from: string | URL = process.cwd()): Promise<RemixConfig> {
+  let fromPath = path.resolve(from instanceof URL ? fileURLToPath(from) : from)
+  let stat
+
+  try {
+    stat = await fs.stat(fromPath)
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') throw remixConfigNotFound(fromPath)
+    throw error
+  }
+
+  if (stat.isFile()) {
+    return loadRemixConfig(path.dirname(fromPath), path.basename(fromPath))
+  }
+
+  if (!stat.isDirectory()) {
+    throw new TypeError(`Expected a Remix config file or directory: ${fromPath}`)
+  }
+
+  let configDir = await findAppRoot(fromPath, 'remix.json')
+  return configDir === null ? {} : loadRemixConfig(configDir, undefined)
 }
 
 export async function loadRemixConfig(
@@ -121,13 +204,21 @@ function parseConfig(
   cwd: string,
 ): RemixConfig {
   let object = requireObject(value, source, [])
-  requireKnownProperties(object, ['$schema', 'doctor', 'test'], source, [])
+  requireKnownProperties(object, ['$schema', 'assets', 'db', 'doctor', 'test'], source, [])
 
   if (object.$schema !== undefined) {
     requireString(object.$schema, source, ['$schema'])
   }
 
   let config: RemixConfig = {}
+
+  if (object.assets !== undefined) {
+    config.assets = parseAssetsConfig(object.assets, source, configDir)
+  }
+
+  if (object.db !== undefined) {
+    config.db = parseDbConfig(object.db, source, configDir)
+  }
 
   if (object.doctor !== undefined) {
     config.doctor = parseDoctorConfig(object.doctor, source)
@@ -138,6 +229,165 @@ function parseConfig(
   }
 
   return config
+}
+
+function parseAssetsConfig(
+  value: unknown,
+  source: ConfigSource,
+  configDir: string,
+): RemixAssetsConfig {
+  let objectPath = ['assets']
+  let object = requireObject(value, source, objectPath)
+  requireKnownProperties(
+    object,
+    ['allowFiles', 'allowPackages', 'basePath', 'denyFiles', 'files', 'mounts', 'rootDir'],
+    source,
+    objectPath,
+  )
+
+  let config: RemixAssetsConfig = {
+    allowFiles: requireStringArray(object.allowFiles, source, [...objectPath, 'allowFiles']),
+    basePath: requireString(object.basePath, source, [...objectPath, 'basePath']),
+    rootDir: path.resolve(
+      configDir,
+      optionalString(object.rootDir, source, [...objectPath, 'rootDir']) ?? '.',
+    ),
+  }
+  let allowPackages = optionalStringArray(object.allowPackages, source, [
+    ...objectPath,
+    'allowPackages',
+  ])
+  let denyFiles = optionalStringArray(object.denyFiles, source, [...objectPath, 'denyFiles'])
+  let mounts =
+    object.mounts === undefined
+      ? undefined
+      : requireStringRecord(object.mounts, source, [...objectPath, 'mounts'])
+
+  if (allowPackages !== undefined) config.allowPackages = allowPackages
+  if (denyFiles !== undefined) config.denyFiles = denyFiles
+  if (mounts !== undefined) config.mounts = mounts
+
+  if (object.files !== undefined) {
+    let filesPath = [...objectPath, 'files']
+    let files = requireObject(object.files, source, filesPath)
+    requireKnownProperties(files, ['extensions'], source, filesPath)
+    config.files = {
+      extensions: requireStringArray(files.extensions, source, [...filesPath, 'extensions']),
+    }
+  }
+
+  return config
+}
+
+function parseDbConfig(
+  value: unknown,
+  source: ConfigSource,
+  configDir: string,
+): RemixDbCommandConfig {
+  let objectPath = ['db']
+  let object = requireObject(value, source, objectPath)
+  requireKnownProperties(object, ['adapter', 'migrations', 'seed'], source, objectPath)
+
+  if (object.adapter === undefined) {
+    throwConfigError(source, [...objectPath, 'adapter'], 'Expected an adapter configuration')
+  }
+
+  let config: RemixDbCommandConfig = {
+    adapter: parseDbAdapterConfig(object.adapter, source),
+  }
+
+  if (object.migrations !== undefined) {
+    let migrationsPath = [...objectPath, 'migrations']
+    let migrations = requireObject(object.migrations, source, migrationsPath)
+    requireKnownProperties(migrations, ['directory', 'journalTable'], source, migrationsPath)
+    let directory = requireString(migrations.directory, source, [...migrationsPath, 'directory'])
+    let journalTable = optionalString(migrations.journalTable, source, [
+      ...migrationsPath,
+      'journalTable',
+    ])
+    config.migrations = {
+      directory: path.resolve(configDir, directory),
+      journalTable,
+    }
+  }
+
+  if (object.seed !== undefined) {
+    let seed = requireString(object.seed, source, [...objectPath, 'seed'])
+    config.seed = path.resolve(configDir, seed)
+  }
+
+  return config
+}
+
+function parseDbAdapterConfig(value: unknown, source: ConfigSource): RemixDbAdapterConfig {
+  let objectPath = ['db', 'adapter']
+  let object = requireObject(value, source, objectPath)
+  let type = requireEnum(object.type, ['sqlite', 'postgres', 'mysql'], source, [
+    ...objectPath,
+    'type',
+  ])
+
+  if (type === 'sqlite') {
+    requireKnownProperties(
+      object,
+      ['busyTimeout', 'filename', 'foreignKeys', 'type'],
+      source,
+      objectPath,
+    )
+    let busyTimeout = optionalNumber(object.busyTimeout, source, [...objectPath, 'busyTimeout'])
+    if (busyTimeout !== undefined && busyTimeout < 0) {
+      throwConfigError(source, [...objectPath, 'busyTimeout'], 'Expected a non-negative number')
+    }
+    return {
+      type,
+      filename: parseDbString(object.filename, source, [...objectPath, 'filename']),
+      foreignKeys: optionalBoolean(object.foreignKeys, source, [...objectPath, 'foreignKeys']),
+      busyTimeout,
+    }
+  }
+
+  if (type === 'postgres') {
+    requireKnownProperties(
+      object,
+      ['connectionString', 'maintenanceDatabase', 'template', 'type'],
+      source,
+      objectPath,
+    )
+    return {
+      type,
+      connectionString: parseDbString(object.connectionString, source, [
+        ...objectPath,
+        'connectionString',
+      ]),
+      maintenanceDatabase: optionalString(object.maintenanceDatabase, source, [
+        ...objectPath,
+        'maintenanceDatabase',
+      ]),
+      template: optionalString(object.template, source, [...objectPath, 'template']),
+    }
+  }
+
+  requireKnownProperties(object, ['characterSet', 'collation', 'type', 'uri'], source, objectPath)
+  return {
+    type,
+    uri: parseDbString(object.uri, source, [...objectPath, 'uri']),
+    characterSet: optionalString(object.characterSet, source, [...objectPath, 'characterSet']),
+    collation: optionalString(object.collation, source, [...objectPath, 'collation']),
+  }
+}
+
+function parseDbString(
+  value: unknown,
+  source: ConfigSource,
+  propertyPath: JsonPath,
+): RemixDbString {
+  if (typeof value === 'string') return value
+
+  let object = requireObject(value, source, propertyPath)
+  requireKnownProperties(object, ['default', 'env'], source, propertyPath)
+  let env = requireString(object.env, source, [...propertyPath, 'env'])
+  let defaultValue = optionalString(object.default, source, [...propertyPath, 'default'])
+  return defaultValue === undefined ? { env } : { env, default: defaultValue }
 }
 
 function parseDoctorConfig(value: unknown, source: ConfigSource): RemixDoctorCommandConfig {
@@ -360,15 +610,36 @@ function requireString(value: unknown, source: ConfigSource, propertyPath: JsonP
   return value
 }
 
+function requireStringArray(
+  value: unknown,
+  source: ConfigSource,
+  propertyPath: JsonPath,
+): string[] {
+  if (!Array.isArray(value)) throwConfigError(source, propertyPath, 'Expected an array of strings')
+  return value.map((item, index) => requireString(item, source, [...propertyPath, index]))
+}
+
+function requireStringRecord(
+  value: unknown,
+  source: ConfigSource,
+  propertyPath: JsonPath,
+): Record<string, string> {
+  let object = requireObject(value, source, propertyPath)
+  return Object.fromEntries(
+    Object.entries(object).map(([key, item]) => [
+      key,
+      requireString(item, source, [...propertyPath, key]),
+    ]),
+  )
+}
+
 function optionalStringArray(
   value: unknown,
   source: ConfigSource,
   propertyPath: JsonPath,
 ): string[] | undefined {
   if (value === undefined) return undefined
-  if (!Array.isArray(value)) throwConfigError(source, propertyPath, 'Expected an array of strings')
-
-  return value.map((item, index) => requireString(item, source, [...propertyPath, index]))
+  return requireStringArray(value, source, propertyPath)
 }
 
 function optionalEnum<const value extends string>(

@@ -5,11 +5,80 @@ import { fileURLToPath } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { loadRemixConfig } from './remix-config.ts'
+import { loadConfig, loadRemixConfig } from './remix-config.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 
-describe('loadRemixConfig', () => {
+describe('Remix config loading', () => {
+  it('loads an explicit config file or searches upward from a directory', async () => {
+    let rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-discovery-'))
+    let nestedDir = path.join(rootDir, 'app', 'actions')
+    let configPath = path.join(rootDir, 'project.jsonc')
+
+    try {
+      await fs.mkdir(nestedDir, { recursive: true })
+      await fs.writeFile(path.join(rootDir, 'remix.json'), '{ "doctor": { "strict": true } }')
+      await fs.writeFile(configPath, '{ "doctor": { "strict": false } }')
+
+      assert.deepEqual(await loadConfig(nestedDir), { doctor: { strict: true } })
+      assert.deepEqual(await loadConfig(configPath), { doctor: { strict: false } })
+    } finally {
+      await fs.rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  it('parses asset configuration and resolves its root from the config file', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-assets-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({
+          assets: {
+            allowFiles: ['app/routes.ts', 'app/**/public/**'],
+            allowPackages: ['remix'],
+            basePath: '/assets',
+            denyFiles: ['app/**/*.test.*'],
+            mounts: { app: 'app' },
+            files: { extensions: ['.svg', '.png'] },
+            rootDir: '..',
+          },
+        }),
+      )
+
+      let config = await loadConfig(cwd)
+      assert.deepEqual(config.assets, {
+        allowFiles: ['app/routes.ts', 'app/**/public/**'],
+        allowPackages: ['remix'],
+        basePath: '/assets',
+        denyFiles: ['app/**/*.test.*'],
+        mounts: { app: 'app' },
+        files: { extensions: ['.svg', '.png'] },
+        rootDir: path.dirname(cwd),
+      })
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects incomplete asset configuration with a source location', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-assets-invalid-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        ['{', '  "assets": {', '    "basePath": "/assets"', '  }', '}'].join('\n'),
+      )
+
+      await assert.rejects(
+        () => loadConfig(cwd),
+        /Expected an array of strings at assets\.allowFiles/,
+      )
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
   it('treats a missing default config as empty', async () => {
     let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-missing-default-'))
 
@@ -56,6 +125,123 @@ describe('loadRemixConfig', () => {
       )
 
       assert.deepEqual(await loadRemixConfig(cwd, undefined), { doctor: { strict: true } })
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('parses built-in database configurations', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-db-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({
+          db: {
+            adapter: {
+              type: 'sqlite',
+              filename: { env: 'DATABASE_URL', default: './db/app.sqlite' },
+              foreignKeys: true,
+              busyTimeout: 250,
+            },
+            migrations: { directory: './db/migrations', journalTable: 'app_migrations' },
+            seed: './db/seed.sql',
+          },
+        }),
+        'utf8',
+      )
+
+      let config = await loadRemixConfig(cwd, undefined)
+      assert.deepEqual(config.db?.adapter, {
+        type: 'sqlite',
+        filename: { env: 'DATABASE_URL', default: './db/app.sqlite' },
+        foreignKeys: true,
+        busyTimeout: 250,
+      })
+      assert.deepEqual(config.db?.migrations, {
+        directory: path.join(cwd, 'db/migrations'),
+        journalTable: 'app_migrations',
+      })
+      assert.equal(config.db?.seed, path.join(cwd, 'db/seed.sql'))
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects unsupported database adapter types', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-db-module-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({ db: { adapter: { type: 'module', module: './app/database.ts' } } }),
+        'utf8',
+      )
+
+      await assert.rejects(
+        () => loadRemixConfig(cwd, undefined),
+        /Expected one of: sqlite, postgres, mysql at db\.adapter\.type/,
+      )
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('parses postgres and mysql database configurations', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-db-server-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({
+          db: {
+            adapter: {
+              type: 'postgres',
+              connectionString: { env: 'DATABASE_URL' },
+              maintenanceDatabase: 'postgres',
+              template: 'template0',
+            },
+          },
+        }),
+        'utf8',
+      )
+      let postgres = await loadRemixConfig(cwd, undefined)
+      assert.equal(postgres.db?.adapter.type, 'postgres')
+
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({
+          db: {
+            adapter: {
+              type: 'mysql',
+              uri: { env: 'DATABASE_URL' },
+              characterSet: 'utf8mb4',
+              collation: 'utf8mb4_unicode_ci',
+            },
+          },
+        }),
+        'utf8',
+      )
+      let mysql = await loadRemixConfig(cwd, undefined)
+      assert.equal(mysql.db?.adapter.type, 'mysql')
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects invalid database configuration with a source location', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-db-invalid-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        ['{', '  "db": {', '    "adapter": { "type": "sqlite" }', '  }', '}'].join('\n'),
+        'utf8',
+      )
+      await assert.rejects(
+        () => loadRemixConfig(cwd, undefined),
+        /Expected an object at db\.adapter\.filename|Expected a string at db\.adapter\.filename/,
+      )
     } finally {
       await fs.rm(cwd, { recursive: true, force: true })
     }
@@ -249,7 +435,7 @@ describe('loadRemixConfig', () => {
       'utf8',
     )
     let websiteSchema = await fs.readFile(
-      path.join(ROOT_DIR, 'guides', 'public', 'schemas', 'remix.json'),
+      path.join(ROOT_DIR, 'docs', 'guides', 'public', 'schemas', 'remix.json'),
       'utf8',
     )
 

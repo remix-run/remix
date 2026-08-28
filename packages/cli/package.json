@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/cli",
-  "version": "0.3.4",
+  "version": "0.5.0",
   "description": "Command-line interface for Remix",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -37,8 +37,11 @@
     }
   },
   "dependencies": {
+    "@remix-run/assets": "workspace:^",
     "@remix-run/data-table": "workspace:^",
-    "@remix-run/node-tsx": "workspace:^",
+    "@remix-run/data-table-mysql": "workspace:^",
+    "@remix-run/data-table-postgres": "workspace:^",
+    "@remix-run/data-table-sqlite": "workspace:^",
     "@remix-run/terminal": "workspace:^",
     "@remix-run/test": "workspace:^",
     "jsonc-parser": "^3.3.1",
@@ -48,16 +51,16 @@
     "@remix-run/assert": "workspace:^",
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "postpack": "node ../../scripts/sync-cli-template.ts --clean",
     "prepack": "node ../../scripts/sync-cli-template.ts",
     "prepublishOnly": "pnpm run build",
     "test": "remix test --concurrency 1",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "remix",

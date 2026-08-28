@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/static-middleware",
-  "version": "0.4.13",
+  "version": "0.4.14",
   "description": "Middleware for serving static files from the filesystem",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -32,13 +32,13 @@
     }
   },
   "devDependencies": {
-    "@remix-run/assert": "workspace:*",
-    "@remix-run/fetch-router": "workspace:*",
-    "@remix-run/form-data-middleware": "workspace:*",
-    "@remix-run/method-override-middleware": "workspace:*",
-    "@remix-run/mime": "workspace:*",
-    "@remix-run/response": "workspace:*",
-    "@remix-run/test": "workspace:*",
+    "@remix-run/assert": "workspace:^",
+    "@remix-run/fetch-router": "workspace:^",
+    "@remix-run/form-data-middleware": "workspace:^",
+    "@remix-run/method-override-middleware": "workspace:^",
+    "@remix-run/mime": "workspace:^",
+    "@remix-run/response": "workspace:^",
+    "@remix-run/test": "workspace:^",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },

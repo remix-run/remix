@@ -8,10 +8,8 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 export const assetServer = createAssetServer({
   basePath: assetsBase,
   rootDir: path.resolve(import.meta.dirname, '../..'),
-  allowFiles: ['app/client/**'],
-  fileMap: {
-    '/app/client/*path': 'app/client/*path',
-  },
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  denyFiles: ['app/**/*.test.*'],
   files: {
     cache: createFsFileStorage(path.resolve(import.meta.dirname, '../../.tmp/assets-cache')),
     extensions: ['.svg'],

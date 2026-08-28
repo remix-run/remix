@@ -9,7 +9,7 @@ import {
   inspectControllerOwnership,
   type ControllerOwnership,
   type OwnedSubtree,
-  type RouteDirectoryPlan,
+  type RouteDirectory,
 } from './controller-ownership.ts'
 import {
   routeMapLoaderFailed,
@@ -152,29 +152,17 @@ function decorateRouteTree(
     ownership.routeDirectories.map((directory) => [directory.routeName, directory]),
   )
 
-  return decorateRouteTreeWithLookup(
-    rawTree,
-    subtreesByRouteName,
-    directoriesByRouteName,
-    ownership.scan.routeDirectoryPaths,
-  )
+  return decorateRouteTreeWithLookup(rawTree, subtreesByRouteName, directoriesByRouteName)
 }
 
 function decorateRouteTreeWithLookup(
   rawTree: RawRouteTreeNode[],
   subtreesByRouteName: Map<string, OwnedSubtree>,
-  directoriesByRouteName: Map<string, RouteDirectoryPlan>,
-  actualRouteDirectories: Set<string>,
+  directoriesByRouteName: Map<string, RouteDirectory>,
   parentSegments: string[] = [],
 ): RouteTreeNode[] {
   return rawTree.map((rawNode) => {
-    let owner = getRouteOwner(
-      rawNode,
-      parentSegments,
-      subtreesByRouteName,
-      directoriesByRouteName,
-      actualRouteDirectories,
-    )
+    let owner = getRouteOwner(rawNode, parentSegments, subtreesByRouteName, directoriesByRouteName)
     let nextParentSegments =
       rawNode.kind === 'group' ? [...parentSegments, rawNode.key] : parentSegments
 
@@ -185,7 +173,6 @@ function decorateRouteTreeWithLookup(
               rawNode.children,
               subtreesByRouteName,
               directoriesByRouteName,
-              actualRouteDirectories,
               nextParentSegments,
             )
           : [],
@@ -203,8 +190,7 @@ function getRouteOwner(
   rawNode: RawRouteTreeNode,
   parentSegments: string[],
   subtreesByRouteName: Map<string, OwnedSubtree>,
-  directoriesByRouteName: Map<string, RouteDirectoryPlan>,
-  actualRouteDirectories: Set<string>,
+  directoriesByRouteName: Map<string, RouteDirectory>,
 ): RouteTreeOwner {
   let ownerRouteName =
     rawNode.kind === 'group'
@@ -230,7 +216,7 @@ function getRouteOwner(
     }
 
     return {
-      exists: actualRouteDirectories.has(directory.directoryPath),
+      exists: directory.exists,
       kind: 'directory',
       path: directory.directoryPath,
     }

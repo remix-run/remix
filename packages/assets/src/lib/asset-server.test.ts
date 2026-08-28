@@ -5,6 +5,7 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
+import MagicString from 'magic-string'
 import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
@@ -15,11 +16,14 @@ import {
   getInternalChokidarWatcher,
   getInternalWatchTargets,
 } from './asset-server.ts'
-import type { AssetServer, AssetServerOptions } from './asset-server.ts'
+import type { AssetServer, AssetServerOptions, BrowserHmrChannel } from './asset-server.ts'
 import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
+import type { ModuleLoader } from './loaders.ts'
 
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
+
+const packageRoot = path.resolve(import.meta.dirname, '../..')
 
 function createAssetServerForTest(
   options: Omit<AssetServerOptions<AssetRequestTransformMap>, 'basePath'> & {
@@ -69,10 +73,6 @@ function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions
   return createAssetServerForTest({
     allowFiles: ['app/**', 'app/node_modules/**'],
     basePath: '/assets',
-    fileMap: {
-      '/app/*path': 'app/*path',
-      '/npm/*path': 'app/node_modules/*path',
-    },
     rootDir,
     watch: overrides.watch ?? false,
     ...overrides,
@@ -121,7 +121,18 @@ async function emitWatchEvent(
   let chokidarWatcher = getInternalChokidarWatcher(assetServer)
   assert.ok(chokidarWatcher)
   chokidarWatcher.emit(event, getWatchEventFilePath(filePath))
-  await Promise.resolve()
+  await new Promise((resolve) => setTimeout(resolve, 25))
+}
+
+function createTestBrowserHmrChannel(): BrowserHmrChannel {
+  return {
+    close() {},
+    onFileEvents() {
+      return () => {}
+    },
+    updateWatchedFiles() {},
+    url: 'http://127.0.0.1:1234/hmr',
+  }
 }
 
 function getWatchEventFilePath(filePath: string): string {
@@ -242,6 +253,30 @@ function decodeInlineSourceMap(source: string): { sources?: string[] } {
   return JSON.parse(decoded) as { sources?: string[] }
 }
 
+function createPrependModuleLoader(prefix: string): ModuleLoader {
+  return (_url, _context, nextLoad) => {
+    let result = nextLoad(_url, _context)
+    if (typeof result.source !== 'string') {
+      throw new TypeError('Expected module loader source to be a string')
+    }
+    let source = stripInlineSourceMap(result.source)
+    let rewritten = new MagicString(source)
+    rewritten.prepend(prefix)
+    let map = rewritten.generateMap({ hires: true }).toString()
+    return {
+      ...result,
+      source: `${rewritten.toString()}\n//# sourceMappingURL=data:application/json;base64,${Buffer.from(map).toString('base64')}`,
+    }
+  }
+}
+
+function stripInlineSourceMap(source: string): string {
+  return source.replace(
+    /(?:\/\/# sourceMappingURL=data:application\/json;base64,[A-Za-z0-9+/=]+|\/\*# sourceMappingURL=data:application\/json;base64,[A-Za-z0-9+/=]+ \*\/)\s*$/g,
+    '',
+  )
+}
+
 async function withTsconfigTransformCase(
   files: Record<string, unknown>,
   callback: (context: {
@@ -283,6 +318,93 @@ describe('asset-server', () => {
 
   after(async () => {
     await fs.rm(dir, { recursive: true, force: true })
+  })
+
+  it('lists browser-reachable assets using the configured mapping and access policy', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/public/entry.ts', 'export const value = 1')
+      await write(caseDir, 'app/public/styles.css', 'body { color: red }')
+      await write(caseDir, 'app/public/logo.svg', '<svg />')
+      await write(caseDir, 'app/public/entry.test.ts', 'export const test = true')
+      await write(caseDir, 'app/private/secret.ts', 'export const secret = true')
+
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/public/**'],
+        denyFiles: ['app/**/*.test.*'],
+        files: { extensions: ['.svg'] },
+        rootDir: caseDir,
+      })
+
+      try {
+        let assets = await assetServer.getAssets()
+        let appAssets = assets.filter((asset) => asset.url?.startsWith('/assets/app/'))
+        let realCaseDir = nodeFs.realpathSync(caseDir)
+
+        let actual = appAssets.map((asset) => [
+          asset.url,
+          normalizeWindowsPath(path.relative(realCaseDir, asset.filePath ?? '')),
+          asset.type,
+        ])
+        assert.deepEqual(actual, [
+          ['/assets/app/public/entry.ts', 'app/public/entry.ts', 'script'],
+          ['/assets/app/public/logo.svg', 'app/public/logo.svg', 'file'],
+          ['/assets/app/public/styles.css', 'app/public/styles.css', 'style'],
+        ])
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('explains reachable, denied, unsupported, missing, and unmapped assets', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/public/entry.ts', 'export const value = 1')
+      await write(caseDir, 'app/public/entry.test.ts', 'export const test = true')
+      await write(caseDir, 'app/public/readme.txt', 'hello')
+
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/public/**'],
+        denyFiles: ['app/**/*.test.*'],
+        rootDir: caseDir,
+      })
+
+      try {
+        let reachable = await assetServer.getAssetDetails('/assets/app/public/entry.ts')
+        assert.equal(reachable.status, 'reachable')
+        assert.equal(reachable.type, 'script')
+        assert.equal(reachable.fileRoot, 'app')
+        assert.equal(reachable.urlRoot, '/assets/app')
+        assert.deepEqual(reachable.access?.allowedBy, {
+          kind: 'file',
+          value: 'app/public/**',
+        })
+
+        let byFile = await assetServer.getAssetDetails('app/public/entry.ts')
+        assert.equal(byFile.url, '/assets/app/public/entry.ts')
+        assert.equal(byFile.status, 'reachable')
+
+        let denied = await assetServer.getAssetDetails('/assets/app/public/entry.test.ts')
+        assert.equal(denied.status, 'denied')
+        assert.equal(denied.access?.deniedBy, 'app/**/*.test.*')
+
+        let unsupported = await assetServer.getAssetDetails('/assets/app/public/readme.txt')
+        assert.equal(unsupported.status, 'unsupported')
+
+        let missing = await assetServer.getAssetDetails('/assets/app/public/missing.ts')
+        assert.equal(missing.status, 'missing')
+
+        let unmapped = await assetServer.getAssetDetails('/other/entry.ts')
+        assert.equal(unmapped.status, 'unmapped')
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
   })
 
   it('handles GET and HEAD requests but ignores POST', async () => {
@@ -733,9 +855,6 @@ describe('asset-server', () => {
     let assetServer = createAssetServer({
       allowFiles: ['app/**'],
       basePath: '/assets',
-      fileMap: {
-        '/assets/app/*path': 'app/*path',
-      },
       files: {
         extensions: ['.svg'],
         transforms: {
@@ -1179,11 +1298,11 @@ describe('asset-server', () => {
     assert.equal(await firstResponse.text(), 'HELLO\n')
     assert.equal(transformCalls, 1)
 
-    await write(dir, 'app/content/value.txt', 'world\n')
+    await write(dir, 'app/content/value.txt', 'world!\n')
 
     let secondResponse = await get(assetServer, href)
     assert.ok(secondResponse)
-    assert.equal(await secondResponse.text(), 'WORLD\n')
+    assert.equal(await secondResponse.text(), 'WORLD!\n')
     assert.equal(transformCalls, 2)
   })
 
@@ -2231,6 +2350,34 @@ describe('asset-server', () => {
     assert.equal(depMap.status, 200)
   })
 
+  it('supports external source maps after module loaders transform scripts', async () => {
+    let source = 'let value: number = 1\nconsole.log(value)\n'
+    await write(dir, 'app/entry.ts', source)
+    let assetServer = createTestServer(dir, {
+      scripts: {
+        loaders: [createPrependModuleLoader('console.debug("loader")\n')],
+      },
+      sourceMaps: 'external',
+    })
+    try {
+      let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(
+        assetServer,
+        'app/entry.ts',
+      )
+      let consumer = new SourceMapConsumer(sourceMap)
+
+      let generated = getLineAndColumn(compiledCode, 'console.log(value)')
+      let original = consumer.originalPositionFor(generated)
+      let expected = getLineAndColumn(source, 'console.log(value)')
+
+      assert.equal(original.source, '/assets/app/entry.ts')
+      assert.equal(original.line, expected.line)
+      assert.equal(original.column, expected.column)
+    } finally {
+      await assetServer.close()
+    }
+  })
+
   it('supports inline source maps with absolute source paths', async () => {
     let entryPath = await write(dir, 'app/entry.ts', 'export const entry: number = 1')
     let assetServer = createTestServer(dir, {
@@ -2254,6 +2401,34 @@ describe('asset-server', () => {
       .replace(/\\/g, '/')
       .replace(/^\/([A-Za-z]:\/)/, '$1')
     assert.deepEqual(sourceMap.sources, [expectedSource])
+  })
+
+  it('supports inline source maps after module loaders transform scripts', async () => {
+    let source = 'let value: number = 1\nconsole.log(value)\n'
+    await write(dir, 'app/entry.ts', source)
+    let assetServer = createTestServer(dir, {
+      scripts: {
+        loaders: [createPrependModuleLoader('console.debug("loader")\n')],
+      },
+      sourceMaps: 'inline',
+    })
+    try {
+      let response = await get(assetServer, '/assets/app/entry.ts')
+      assert.ok(response)
+      let compiledCode = await response.text()
+      let sourceMap = decodeInlineSourceMap(compiledCode) as RawSourceMap
+      let consumer = new SourceMapConsumer(sourceMap)
+
+      let generated = getLineAndColumn(compiledCode, 'console.log(value)')
+      let original = consumer.originalPositionFor(generated)
+      let expected = getLineAndColumn(source, 'console.log(value)')
+
+      assert.equal(original.source, '/assets/app/entry.ts')
+      assert.equal(original.line, expected.line)
+      assert.equal(original.column, expected.column)
+    } finally {
+      await assetServer.close()
+    }
   })
 
   it('applies top-level common compiler options to scripts', async () => {
@@ -2574,12 +2749,7 @@ describe('asset-server', () => {
         ].join('\n'),
       )
 
-      let assetServer = createTestServer(caseDir, {
-        fileMap: {
-          '/app/*path': 'app/*path',
-          '/node_modules/*path': 'app/node_modules/*path',
-        },
-      })
+      let assetServer = createTestServer(caseDir)
       try {
         let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
         let uiUrls = [...servedUrls].filter((url) => url.includes('%40remix-run/ui/dist/index.js'))
@@ -2779,7 +2949,7 @@ describe('asset-server', () => {
     )
   })
 
-  it('getHref rejects modules outside configured fileMap entries', async () => {
+  it('getHref rejects modules outside configured mounts', async () => {
     await write(dir, 'other.ts', 'export const value = 1')
     let assetServer = createTestServer(dir)
 
@@ -2795,7 +2965,6 @@ describe('asset-server', () => {
       allowFiles: ['app/**'],
       denyFiles: ['app/entry.ts'],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
     })
 
     await assert.rejects(
@@ -3022,9 +3191,6 @@ describe('asset-server', () => {
       let assetServer = createAssetServer({
         allowFiles: ['app/**'],
         basePath: '/assets',
-        fileMap: {
-          '/app/*path': 'app/*path',
-        },
         rootDir: caseDir,
       })
 
@@ -3049,6 +3215,498 @@ describe('asset-server', () => {
     }
   })
 
+  it('serves the HMR client and injects import.meta.hot contexts', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 1',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: createTestBrowserHmrChannel,
+      })
+
+      try {
+        let clientResponse = await get(assetServer, '/assets/__remix_hmr/client.js')
+        assert.ok(clientResponse)
+        assert.equal(clientResponse.status, 200)
+        assert.match(await clientResponse.text(), /createHotContext/)
+
+        let eventsResponse = await get(assetServer, '/assets/__remix_hmr/events')
+        assert.equal(eventsResponse, null)
+
+        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(entryResponse)
+        let entryBody = await entryResponse.text()
+
+        assert.match(entryBody, /from "\/assets\/__remix_hmr\/client\.js"/)
+        assert.match(
+          entryBody,
+          /import\.meta\.hot = __remixCreateHotContext\("\/assets\/app\/entry\.ts"\)/,
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('can use an external HMR event stream', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 1',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: createTestBrowserHmrChannel,
+      })
+
+      try {
+        let clientResponse = await get(assetServer, '/assets/__remix_hmr/client.js')
+        assert.ok(clientResponse)
+        assert.match(
+          await clientResponse.text(),
+          /new EventSource\("http:\/\/127\.0\.0\.1:1234\/hmr"\)/,
+        )
+
+        let eventsResponse = await get(assetServer, '/assets/__remix_hmr/events')
+        assert.equal(eventsResponse, null)
+
+        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(entryResponse)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('creates and closes the browser HMR channel with the asset server', async () => {
+    let caseDir = await makeTmpDir()
+    let createCount = 0
+    let unsubscribeCount = 0
+    let closeCount = 0
+    try {
+      let assetServer = createWatchedTestServer(caseDir, {
+        async hmr() {
+          createCount += 1
+          return {
+            close() {
+              closeCount += 1
+            },
+            onFileEvents() {
+              return () => {
+                unsubscribeCount += 1
+              }
+            },
+            updateWatchedFiles() {},
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      let clientResponse = await get(assetServer, '/assets/__remix_hmr/client.js')
+      assert.ok(clientResponse)
+
+      await assetServer.close()
+      await assetServer.close()
+
+      assert.equal(createCount, 1)
+      assert.equal(unsubscribeCount, 1)
+      assert.equal(closeCount, 1)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('closes the browser HMR channel when an async factory resolves after the asset server closes', async () => {
+    let caseDir = await makeTmpDir()
+    let createCount = 0
+    let unsubscribeCount = 0
+    let closeCount = 0
+    let resolveChannel: (channel: BrowserHmrChannel) => void = (_channel) => {
+      throw new Error('Channel promise was not created')
+    }
+    let channelPromise = new Promise<BrowserHmrChannel>((resolve) => {
+      resolveChannel = resolve
+    })
+
+    try {
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr() {
+          createCount += 1
+          return channelPromise
+        },
+      })
+
+      let closePromise = assetServer.close()
+
+      resolveChannel({
+        close() {
+          closeCount += 1
+        },
+        onFileEvents() {
+          return () => {
+            unsubscribeCount += 1
+          }
+        },
+        updateWatchedFiles() {},
+        url: 'http://127.0.0.1:1234/hmr',
+      })
+
+      await closePromise
+
+      assert.equal(createCount, 1)
+      assert.equal(unsubscribeCount, 0)
+      assert.equal(closeCount, 1)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('runs script module loaders before HMR analysis', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: createTestBrowserHmrChannel,
+        scripts: {
+          loaders: [
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: `${result.source}\nif (import.meta.hot) import.meta.hot.accept()`,
+              }
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        let body = await response.text()
+
+        assert.match(body, /import\.meta\.hot\.accept\(/)
+        assert.match(
+          body,
+          /import\.meta\.hot = __remixCreateHotContext\("\/assets\/app\/entry\.ts"\)/,
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('runs script module loaders in configured order', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const values = []')
+      let assetServer = createWatchedTestServer(caseDir, {
+        scripts: {
+          loaders: [
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: `${result.source}\nvalues.push('first')`,
+              }
+            },
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: `${result.source}\nvalues.push('second')`,
+              }
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        let body = await response.text()
+
+        assert.match(body, /values\.push\('first'\)\nvalues\.push\('second'\)/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('passes Node-shaped context to script module loaders', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const dep = 1')
+      await write(caseDir, 'app/entry.ts', "import { dep } from './dep.ts'\nexport { dep }")
+      let seenLoadContext: unknown
+      let assetServer = createTestServer(caseDir, {
+        scripts: {
+          loaders: [
+            (url, context, nextLoad) => {
+              seenLoadContext = context
+              return nextLoad(url, context)
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+
+        assert.ok(seenLoadContext !== null && typeof seenLoadContext === 'object')
+        let loadContext = seenLoadContext as {
+          conditions?: unknown
+          format?: unknown
+          importAttributes?: unknown
+          moduleUrl?: unknown
+        }
+        assert.deepEqual(loadContext.conditions, ['browser', 'import', 'module', 'default'])
+        assert.equal(loadContext.format, 'module')
+        assert.deepEqual(loadContext.importAttributes, {})
+        assert.equal(typeof loadContext.moduleUrl, 'string')
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('loads script source through module loaders', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let assetServer = createTestServer(caseDir, {
+        scripts: {
+          loaders: [
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: new TextEncoder().encode(`${result.source}\nexport const extra = 2`),
+              }
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        let body = await response.text()
+
+        assert.match(body, /export const extra = 2/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module loaders do not return source', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          loaders: [
+            () => ({
+              format: 'module',
+              shortCircuit: true,
+            }),
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'LOADER_FAILED')
+        assert.match(error.message, /did not return source/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module loaders do not call nextLoad or short circuit', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          loaders: [
+            () => ({
+              format: 'module',
+              source: 'export const value = 2',
+            }),
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'LOADER_FAILED')
+        assert.match(error.message, /without calling nextLoad or setting shortCircuit: true/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module loaders change the URL passed to nextLoad', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          loaders: [(url, context, nextLoad) => nextLoad(new URL('./other.ts', url).href, context)],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'LOADER_FAILED')
+        assert.match(error.message, /attempted to change the module URL/)
+        assert.match(error.message, /Loaders cannot change module URLs/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('reports exceptions thrown by script module loaders as loader failures', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let loaderError = new Error('Loader exploded')
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          loaders: [
+            () => {
+              throw loaderError
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'LOADER_FAILED')
+        assert.equal(error.cause, loaderError)
+        assert.match(error.message, /Loader exploded/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module loaders return unsupported formats', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          loaders: [
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                format: 'commonjs',
+              }
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'LOADER_FAILED')
+        assert.match(error.message, /unsupported format "commonjs"/)
+        assert.match(error.message, /Only "module" is supported/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('picks up source changes outside rootDir in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -3062,8 +3720,8 @@ describe('asset-server', () => {
       let assetServer = createAssetServer({
         allowFiles: ['../packages/**'],
         basePath: '/assets',
-        fileMap: {
-          '/packages/*path': '../packages/*path',
+        mounts: {
+          '/packages': '../packages',
         },
         rootDir: projectDir,
       })
@@ -3351,11 +4009,11 @@ describe('asset-server', () => {
       await write(
         caseDir,
         'app/styles/app.css',
-        'body { background-image: url("../assets/images/logo.svg"); }\n',
+        'body { background-image: url("../public/images/logo.svg"); }\n',
       )
       let logoPath = await write(
         caseDir,
-        'app/assets/images/logo.svg',
+        'app/public/images/logo.svg',
         '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n',
       )
       let logoWatchPath = nodeFs.realpathSync(logoPath)
@@ -3375,9 +4033,9 @@ describe('asset-server', () => {
         let before = await get(assetServer, '/assets/app/styles/app.css')
         assert.ok(before)
         assert.equal(before.status, 200)
-        assert.match(await before.text(), /url\("\/assets\/app\/assets\/images\/logo\.svg"\)/)
+        assert.match(await before.text(), /url\("\/assets\/app\/public\/images\/logo\.svg"\)/)
 
-        await fs.rm(path.join(caseDir, 'app/assets'), { recursive: true })
+        await fs.rm(path.join(caseDir, 'app/public'), { recursive: true })
         let chokidarWatcher = getInternalChokidarWatcher(assetServer)
         assert.ok(chokidarWatcher)
         chokidarWatcher.emit('unlink', logoWatchPath)
@@ -4732,7 +5390,7 @@ describe('asset-server', () => {
     }
   })
 
-  it('supports absolute entry-point patterns', async () => {
+  it('supports absolute entry-point paths', async () => {
     let entryPath = await write(dir, 'app/entry-abs.ts', 'export const abs = true')
     let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
 
@@ -4752,9 +5410,6 @@ describe('asset-server', () => {
     let assetServer = createAssetServer({
       allowFiles: ['app/**'],
       basePath: '',
-      fileMap: {
-        '/app/*path': 'app/*path',
-      },
       rootDir: dir,
       watch: false,
     })
@@ -4770,7 +5425,6 @@ describe('asset-server', () => {
         createAssetServerForTest({
           allowFiles: ['app/\0allowed-realpath.ts'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       { code: 'ERR_INVALID_ARG_VALUE' },
     )
@@ -4783,7 +5437,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['.'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -4793,7 +5446,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['..'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -4803,7 +5455,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@remix-run/__allowed-package/subpath'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -4813,7 +5464,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@scope/.'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -4823,7 +5473,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@scope/..'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -4833,7 +5482,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['../@remix-run/__allowed-package'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -4843,7 +5491,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@remix-run/__allowed-package\\subpath'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -4853,7 +5500,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@scope'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -4863,7 +5509,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@scope/@remix-run/__allowed-package/subpath'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /allowPackages values must be package names/,
     )
@@ -4876,7 +5521,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['path'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /Could not resolve allowed package "path"/,
     )
@@ -4897,7 +5541,6 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@remix-run/__allowed-package'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /Dependency "\.\." .* must be a package name/,
     )
@@ -4918,26 +5561,23 @@ describe('asset-server', () => {
           allowFiles: [],
           allowPackages: ['@remix-run/__allowed-package'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       /Optional dependency "@scope\/\.\." .* must be a package name/,
     )
   })
 
-  it('rejects absolute file patterns', async () => {
+  it('rejects absolute mount file roots', async () => {
     await write(dir, 'app/entry.ts', 'export const abs = true')
     assert.throws(
       () =>
         createAssetServerForTest({
           allowFiles: [path.join(dir, 'app')],
           rootDir: dir,
-          fileMap: {
-            '/app/*path': `${path.join(dir, 'app')}/*path`,
-          },
+          mounts: { app: path.join(dir, 'app') },
           fingerprint: { buildId: 'build' },
           watch: false,
         }),
-      /must be relative to the asset server root/,
+      /mounts values must be relative to rootDir/,
     )
   })
 
@@ -4949,7 +5589,6 @@ describe('asset-server', () => {
       allowFiles: [allowedPath, path.join(dir, 'app')],
       denyFiles: [path.join(dir, 'app/blocked.ts')],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
     })
 
     let allowedResponse = await get(assetServer, '/assets/app/allowed.ts')
@@ -4962,15 +5601,94 @@ describe('asset-server', () => {
     assert.equal(dotfileResponse.status, 200)
   })
 
-  it('rejects unnamed route wildcards because fileMap entries must be reversible', async () => {
+  it('uses app and npm mounts by default', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = true')
+    await write(dir, 'node_modules/pkg/index.ts', 'export const value = true')
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['app/**', 'node_modules/**'],
+      rootDir: dir,
+    })
+
+    assert.equal(await assetServer.getHref('app/entry.ts'), '/assets/app/entry.ts')
+    assert.equal(await assetServer.getHref('node_modules/pkg/index.ts'), '/assets/npm/pkg/index.ts')
+  })
+
+  it('rejects empty mounts during startup', async () => {
     assert.throws(
       () =>
         createAssetServerForTest({
           allowFiles: ['app/**'],
           rootDir: dir,
-          fileMap: { '/app/*': 'app/*path' },
+          mounts: {},
         }),
-      /must use named wildcards/,
+      /mounts must include at least one entry/,
+    )
+  })
+
+  it('supports mount URL roots with multiple path segments', async () => {
+    await write(dir, 'packages/runtime/entry.ts', 'export const value = true')
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['packages/runtime/**'],
+      rootDir: dir,
+      mounts: { '/internal/runtime/': 'packages/runtime' },
+    })
+
+    let href = await assetServer.getHref('packages/runtime/entry.ts')
+    assert.equal(href, '/assets/internal/runtime/entry.ts')
+
+    let response = await get(assetServer, href)
+    assert.ok(response)
+    assert.equal(response.status, 200)
+  })
+
+  it('rejects incompatible overlapping mount URL roots during startup', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: ['app/**'],
+          rootDir: dir,
+          mounts: { app: 'app', 'app/routes': 'routes' },
+        }),
+      /mounts keys must not overlap\. Received "app" and "app\/routes"\./,
+    )
+  })
+
+  it('rejects compatible but redundant overlapping mounts during startup', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: ['app/**'],
+          rootDir: dir,
+          mounts: { app: 'app', 'app/vendor': 'app/vendor' },
+        }),
+      /mounts values must not overlap\. Received "app" and "app\/vendor"/,
+    )
+  })
+
+  it('rejects overlapping mount file roots during startup', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: ['app/**'],
+          rootDir: dir,
+          mounts: { app: 'app', routes: 'app/routes' },
+        }),
+      /mounts values must not overlap\. Received "app" and "app\/routes"/,
+    )
+  })
+
+  it('rejects symlinked overlapping mount file roots during startup', async () => {
+    await fs.mkdir(path.join(dir, 'app'), { recursive: true })
+    await symlinkDirectory(path.join(dir, 'app'), path.join(dir, 'alias'))
+
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: ['app/**'],
+          rootDir: dir,
+          mounts: { app: 'app', alias: 'alias' },
+        }),
+      /mounts values must not overlap\. Received "app" and "alias", resolving to/,
     )
   })
 
@@ -4981,7 +5699,6 @@ describe('asset-server', () => {
       allowFiles: ['app/**/*.ts'],
       denyFiles: ['app/**/private/**'],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
     })
 
     let allowedResponse = await get(assetServer, '/assets/app/features/allowed.ts')
@@ -5008,7 +5725,7 @@ describe('asset-server', () => {
       allowFiles: [],
       allowPackages: ['@remix-run/__allowed-package'],
       rootDir: dir,
-      fileMap: { '/node_modules/*path': 'app/node_modules/*path' },
+      mounts: { node_modules: 'app/node_modules' },
     })
 
     let response = await get(
@@ -5017,6 +5734,13 @@ describe('asset-server', () => {
     )
     assert.ok(response)
     assert.equal(response.status, 200)
+    let details = await assetServer.getAssetDetails(
+      '/assets/node_modules/@remix-run/__allowed-package/index.ts',
+    )
+    assert.deepEqual(details.access?.allowedBy, {
+      kind: 'package',
+      value: '@remix-run/__allowed-package',
+    })
   })
 
   it('allows imported package files by package name', async () => {
@@ -5041,10 +5765,6 @@ describe('asset-server', () => {
       allowFiles: ['app/entry.ts'],
       allowPackages: ['@remix-run/__allowed-package'],
       rootDir: dir,
-      fileMap: {
-        '/app/*path': 'app/*path',
-        '/node_modules/*path': 'app/node_modules/*path',
-      },
     })
 
     let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
@@ -5130,7 +5850,6 @@ describe('asset-server', () => {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
         rootDir: dir,
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
     let firstAssetServer = createServer()
@@ -5231,7 +5950,6 @@ describe('asset-server', () => {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
         rootDir: caseDir,
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let allowedPackageResponse = await get(
@@ -5309,7 +6027,6 @@ describe('asset-server', () => {
           return new Response('Blocked import', { status: 500 })
         },
         rootDir: caseDir,
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let peerDependencyResponse = await get(
@@ -5365,7 +6082,6 @@ describe('asset-server', () => {
       allowFiles: [],
       allowPackages: ['@remix-run/__allowed-package', '@remix-run/__peer-of-allowed-package'],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
     })
 
     let response = await get(
@@ -5377,30 +6093,32 @@ describe('asset-server', () => {
   })
 
   it('updates allowed package dependencies when workspace lockfiles change in watch mode', async () => {
-    await write(dir, 'pnpm-lock.yaml', 'lockfile')
-    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
-      name: '@remix-run/__allowed-package',
-      type: 'module',
-    })
-    await write(
-      dir,
-      'app/node_modules/@remix-run/__allowed-package/index.ts',
-      'export const value = true',
-    )
-
-    let assetServer = createWatchedTestServer(dir, {
-      allowFiles: [],
-      allowPackages: ['@remix-run/__allowed-package'],
-      fileMap: { '/app/*path': 'app/*path' },
-    })
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
     try {
+      await write(caseDir, 'pnpm-lock.yaml', 'lockfile')
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__allowed-package/index.ts',
+        'export const value = true',
+      )
+
+      assetServer = createWatchedTestServer(caseDir, {
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+      })
+
       let beforeResponse = await get(
         assetServer,
         '/assets/app/node_modules/@remix-run/__new-dep-of-allowed-package/index.ts',
       )
       assert.equal(beforeResponse, null)
 
-      await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
         name: '@remix-run/__allowed-package',
         type: 'module',
         dependencies: {
@@ -5408,7 +6126,7 @@ describe('asset-server', () => {
         },
       })
       await writeJson(
-        dir,
+        caseDir,
         'app/node_modules/@remix-run/__new-dep-of-allowed-package/package.json',
         {
           name: '@remix-run/__new-dep-of-allowed-package',
@@ -5416,11 +6134,11 @@ describe('asset-server', () => {
         },
       )
       await write(
-        dir,
+        caseDir,
         'app/node_modules/@remix-run/__new-dep-of-allowed-package/index.ts',
         'export const dep = true',
       )
-      let appPackageJsonPath = await writeJson(dir, 'package.json', {
+      let appPackageJsonPath = await writeJson(caseDir, 'package.json', {
         dependencies: {
           '@remix-run/__allowed-package': '1.0.0',
         },
@@ -5433,7 +6151,7 @@ describe('asset-server', () => {
       )
       assert.equal(unchangedResponse, null)
 
-      let lockfilePath = await write(dir, 'pnpm-lock.yaml', 'changed')
+      let lockfilePath = await write(caseDir, 'pnpm-lock.yaml', 'changed')
       await emitWatchEvent(assetServer, lockfilePath, 'change')
 
       let afterResponse = await get(
@@ -5443,7 +6161,8 @@ describe('asset-server', () => {
       assert.ok(afterResponse)
       assert.equal(afterResponse.status, 200)
     } finally {
-      await assetServer.close()
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
     }
   })
 
@@ -5460,7 +6179,6 @@ describe('asset-server', () => {
       assetServer = createWatchedTestServer(caseDir, {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let targets = getInternalWatchTargets(assetServer).map((target) =>
@@ -5490,7 +6208,6 @@ describe('asset-server', () => {
       assetServer = createWatchedTestServer(caseDir, {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let targets = getInternalWatchTargets(assetServer).map((target) =>
@@ -5532,7 +6249,6 @@ describe('asset-server', () => {
       assetServer = createWatchedTestServer(caseDir, {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let beforeResponse = await get(
@@ -5605,7 +6321,6 @@ describe('asset-server', () => {
       assetServer = createWatchedTestServer(appDir, {
         allowFiles: [],
         allowPackages: ['@remix-run/__allowed-package'],
-        fileMap: { '/app/*path': 'app/*path' },
       })
 
       let targets = getInternalWatchTargets(assetServer).map((target) =>
@@ -5686,7 +6401,7 @@ describe('asset-server', () => {
       allowPackages: ['@remix-run/__allowed-package'],
       denyFiles: ['app/node_modules/@remix-run/__allowed-package/private.ts'],
       rootDir: dir,
-      fileMap: { '/node_modules/*path': 'app/node_modules/*path' },
+      mounts: { node_modules: 'app/node_modules' },
     })
 
     let publicResponse = await get(
@@ -5720,7 +6435,7 @@ describe('asset-server', () => {
       allowPackages: ['@remix-run/__allowed-package'],
       denyFiles: ['app/node_modules/**/@remix-run/__allowed-package/secret.ts'],
       rootDir: dir,
-      fileMap: { '/node_modules/*path': 'app/node_modules/*path' },
+      mounts: { node_modules: 'app/node_modules' },
     })
 
     let publicResponse = await get(assetServer, `${packageStoreUrlPath}/public.ts`)
@@ -5765,10 +6480,6 @@ describe('asset-server', () => {
       allowFiles: ['app/entry.ts'],
       allowPackages: ['@remix-run/__allowed-package'],
       rootDir: dir,
-      fileMap: {
-        '/app/*path': 'app/*path',
-        '/node_modules/*path': 'app/node_modules/*path',
-      },
     })
 
     let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
@@ -5847,7 +6558,7 @@ describe('asset-server', () => {
       allowFiles: [],
       allowPackages: ['@remix-run/__allowed-package'],
       rootDir: dir,
-      fileMap: { '/node_modules/*path': 'app/node_modules/*path' },
+      mounts: { node_modules: 'app/node_modules' },
     })
 
     let allowedDependencyResponse = await get(
@@ -5875,10 +6586,6 @@ describe('asset-server', () => {
     let assetServer = createAssetServerForTest({
       allowFiles: ['app/**/*', 'node_modules/**/*'],
       rootDir: dir,
-      fileMap: {
-        '/app/*path': 'app/*path',
-        '/npm/*path': 'node_modules/*path',
-      },
     })
 
     let dotfileResponse = await get(assetServer, '/assets/app/.dotfile.ts')
@@ -5896,7 +6603,6 @@ describe('asset-server', () => {
       allowFiles: ['app/**'],
       denyFiles: ['app/blocked.ts'],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
       onError(error) {
         receivedError = error
       },
@@ -5991,10 +6697,6 @@ describe('asset-server', () => {
       ].join('\n'),
     )
     let assetServer = createTestServer(dir, {
-      fileMap: {
-        '/npm/*path': 'app/node_modules/*path',
-        '/app/*path': 'app/*path',
-      },
       target: {
         es: '2020',
       },
@@ -6013,7 +6715,7 @@ describe('asset-server', () => {
     assert.doesNotMatch(body, /from ["']@oxc-project\/runtime/)
     assert.ok(
       entryImportSpecifiers.includes(
-        '/assets/npm/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+        '/assets/app/node_modules/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
       ),
     )
     assert.ok(helperPaths.length > 0)
@@ -6026,9 +6728,9 @@ describe('asset-server', () => {
     let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
     assert.ok(
       servedUrls.has(
-        '/assets/npm/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+        '/assets/app/node_modules/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
       ),
-      'expected authored runtime imports to use the consumer fileMap path',
+      'expected authored runtime imports to use the consumer mount path',
     )
     assert.ok(
       servedUrls.has(
@@ -6424,14 +7126,27 @@ describe('asset-server', () => {
         createAssetServer({
           allowFiles: ['app/**'],
           basePath: '/assets',
-          fileMap: {
-            '/app/*path': 'app/*path',
-          },
           rootDir: dir,
           fingerprint: { buildId: 'build' },
         }),
       /fingerprint cannot be used with watch mode/,
     )
+  })
+
+  it('rejects browser HMR without watch mode', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    let createCount = 0
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          hmr() {
+            createCount += 1
+            return createTestBrowserHmrChannel()
+          },
+        }),
+      /hmr requires watch mode/,
+    )
+    assert.equal(createCount, 0)
   })
 
   it('rejects files extensions for compiled asset types', async () => {
@@ -6888,7 +7603,7 @@ describe('asset-server', () => {
     assert.match(normalizeWindowsPath(receivedError.message), /secret\.svg/)
   })
 
-  it('calls onError when a CSS import is outside configured fileMap entries', async () => {
+  it('calls onError when a CSS import is outside configured mounts', async () => {
     await write(
       dir,
       'app/styles/app.css',
@@ -6907,14 +7622,14 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_FILE_MAP')
-    assert.match(receivedError.message, /outside all configured fileMap entries/)
+    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_MOUNTS')
+    assert.match(receivedError.message, /outside all configured mounts/)
     assert.match(receivedError.message, /"\.\.\/\.\.\/shared\/reset\.css"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
     assert.match(normalizeWindowsPath(receivedError.message), /shared\/reset\.css/)
   })
 
-  it('calls onError when a CSS url dependency is outside configured fileMap entries', async () => {
+  it('calls onError when a CSS url dependency is outside configured mounts', async () => {
     await write(
       dir,
       'app/styles/app.css',
@@ -6936,8 +7651,8 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'URL_OUTSIDE_FILE_MAP')
-    assert.match(receivedError.message, /outside all configured fileMap entries/)
+    assert.equal(receivedError.code, 'URL_OUTSIDE_MOUNTS')
+    assert.match(receivedError.message, /outside all configured mounts/)
     assert.match(receivedError.message, /"\.\.\/\.\.\/shared\/logo\.svg"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
     assert.match(normalizeWindowsPath(receivedError.message), /shared\/logo\.svg/)
@@ -6986,7 +7701,7 @@ describe('asset-server', () => {
     assert.match(normalizeWindowsPath(receivedError.message), /secret\.ts/)
   })
 
-  it('calls onError when an imported module is outside configured fileMap entries', async () => {
+  it('calls onError when an imported module is outside configured mounts', async () => {
     await write(dir, 'app/entry.ts', 'import "../shared/util.ts"\nexport const entry = util')
     await write(dir, 'shared/util.ts', 'export const util = true')
     let receivedError: unknown
@@ -7001,8 +7716,8 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_FILE_MAP')
-    assert.match(receivedError.message, /outside all configured fileMap entries/)
+    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_MOUNTS')
+    assert.match(receivedError.message, /outside all configured mounts/)
     assert.match(receivedError.message, /"\.\.\/shared\/util\.ts"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
     assert.match(normalizeWindowsPath(receivedError.message), /shared\/util\.ts/)
@@ -7023,9 +7738,10 @@ describe('asset-server', () => {
     assert.equal(await response.text(), 'Custom build error')
   })
 
-  it('falls back to the default 500 when onError throws', async () => {
+  it('falls back to the default 500 when onError throws', async (t) => {
     await write(dir, 'app/entry.ts', 'import "./broken.ts"\nexport const entry = true')
     await write(dir, 'app/broken.ts', 'export const nope =')
+    let consoleError = t.mock.method(console, 'error', () => {})
     let assetServer = createTestServer(dir, {
       onError() {
         throw new Error('error handler failed')
@@ -7035,6 +7751,8 @@ describe('asset-server', () => {
     let response = await get(assetServer, '/assets/app/entry.ts')
     assert.ok(response)
     await assertInternalServerError(response)
+    assert.equal(consoleError.mock.calls.length, 1)
+    assert.match(String(consoleError.mock.calls[0]?.arguments[0]), /error handler failed/)
   })
 
   it('logs watcher errors', async (t) => {

@@ -1,5 +1,6 @@
 import type { Context, FrameHandle } from '../component.ts'
 import type { ElementProps, RemixElement } from '../jsx.ts'
+import type { Key } from '../key.ts'
 import type { Scheduler } from '../scheduler.ts'
 import type { SchedulerPhaseEvent } from '../scheduler.ts'
 import { jsx } from '../jsx.ts'
@@ -40,13 +41,13 @@ export type MixinElement<
 export type MixinInsertEvent<node extends EventTarget = Element> = Event & {
   node: node
   parent: ParentNode
-  key?: string
+  key?: Key
 }
 
 export type MixinReclaimedEvent<node extends EventTarget = Element> = Event & {
   node: node
   parent: ParentNode
-  key?: string
+  key?: Key
 }
 
 export type MixinUpdateEvent<node extends EventTarget = Element> = Event & {
@@ -71,14 +72,15 @@ type MixinHandleEventMap<node extends EventTarget = Element> = {
 /**
  * Runtime handle passed to mixin setup functions.
  *
- * Mixin render callbacks receive host props with `children` and `innerHTML` removed.
+ * The node type is covariant so a handle for a subtype host can be used by a mixin authored for
+ * its base type. Mixin render callbacks receive host props with `children` and `innerHTML` removed.
  * Returned mixin elements may patch host attributes and nested `mix`, but cannot replace
  * the host subtree.
  */
-export type MixinHandle<
-  node extends EventTarget = Element,
+export interface MixinHandle<
+  out node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
-> = TypedEventTarget<MixinHandleEventMap<node>> & {
+> extends TypedEventTarget<MixinHandleEventMap<node>> {
   id: string
   context: MixinContext
   frame: FrameHandle
@@ -92,7 +94,7 @@ export function renderMixinElement<
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
 >(element: MixinElement<node, props>, props?: MixinProps<node, props>): RemixElement {
-  let { key, ...rest } = (props ?? {}) as MixinProps<node, props> & { key?: any }
+  let { key, ...rest } = (props ?? {}) as MixinProps<node, props> & { key?: Key }
   return jsx(element, rest, key)
 }
 
@@ -104,6 +106,15 @@ type MixinRuntimeType<
   handle: MixinHandle<node, props>,
   type: string,
 ) => ((...args: [...args, currentProps: props]) => MixinReturn<node, props>) | void
+
+type MixinDescriptorType<
+  args extends unknown[] = [],
+  node extends EventTarget = Element,
+  props extends ElementProps = ElementProps,
+> = <boundNode extends node>(
+  handle: MixinHandle<boundNode, props>,
+  type: string,
+) => ((...args: [...args, currentProps: props]) => MixinReturn<boundNode, props>) | void
 
 /**
  * Public mixin setup function signature.
@@ -121,11 +132,11 @@ export type MixinType<
  * Serializable descriptor stored in the `mix` prop.
  */
 export type MixinDescriptor<
-  node extends EventTarget = Element,
+  in node extends EventTarget = Element,
   args extends unknown[] = [],
   props extends ElementProps = ElementProps,
 > = {
-  type: MixinRuntimeType<args, node, props>
+  type: MixinDescriptorType<args, node, props>
   args: args
   readonly __node?: (node: node) => void
 }
@@ -147,13 +158,22 @@ type NestedMixValue<descriptor, depth extends number = 4> = depth extends 0
       | NullableMixValue<descriptor>
       | ReadonlyArray<NestedMixValue<descriptor, PreviousMixDepth[depth]>>
 
+type MixinInputDescriptor<
+  in node extends EventTarget = Element,
+  props extends ElementProps = ElementProps,
+> = {
+  type: (handle: MixinHandle<node, props>, type: string) => unknown
+  args: readonly unknown[]
+  readonly __node?: (node: node) => void
+}
+
 /**
  * Accepted authoring shape for the `mix` prop on host elements.
  */
 export type MixInput<
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
-> = NestedMixValue<MixinDescriptor<node, any, props>>
+> = NestedMixValue<MixinInputDescriptor<node, props>>
 
 /**
  * Accepted value shape for the `mix` prop.
@@ -161,7 +181,7 @@ export type MixInput<
 export type MixValue<
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
-> = MixinDescriptor<node, any, props> | ReadonlyArray<MixinDescriptor<node, any, props>>
+> = MixinInputDescriptor<node, props> | ReadonlyArray<MixinInputDescriptor<node, props>>
 
 type MixinReturn<node extends EventTarget = Element, props extends ElementProps = ElementProps> =
   | void
@@ -172,6 +192,7 @@ type MixinReturn<node extends EventTarget = Element, props extends ElementProps 
 
 type AnyMixinType = MixinRuntimeType<unknown[], Element, ElementProps>
 type AnyMixinDescriptor = MixinDescriptor<Element, unknown[], ElementProps>
+export type MixinRuntimeValue = AnyMixinDescriptor | ReadonlyArray<AnyMixinDescriptor>
 type AnyMixinRunner = (
   ...args: [...unknown[], currentProps: ElementProps]
 ) => MixinReturn<Element, ElementProps>
@@ -201,11 +222,11 @@ type MixinHandleFactoryOptions = {
   getBinding: () => MixinRuntimeBinding | undefined
 }
 
-export type MixinRuntimeBinding = {
+export type MixinRuntimeBinding<target = unknown> = {
   node: Element
   parent: ParentNode
-  key?: string
-  target: unknown
+  key?: Key
+  target: target
   frame: FrameHandle
   scheduler: Scheduler
   enqueueUpdate(done: (signal: AbortSignal) => void): void
@@ -256,7 +277,11 @@ export function createMixin<
   return <boundNode extends node = node>(
     ...args: RebindTuple<args, node, boundNode>
   ): MixinDescriptor<boundNode, RebindTuple<args, node, boundNode>, props> => ({
-    type: type as unknown as MixinRuntimeType<RebindTuple<args, node, boundNode>, boundNode, props>,
+    type: type as unknown as MixinDescriptorType<
+      RebindTuple<args, node, boundNode>,
+      boundNode,
+      props
+    >,
     args: args as RebindTuple<args, node, boundNode>,
   })
 }
@@ -381,9 +406,9 @@ export function teardownMixins(state?: MixinRuntimeState) {
   finalizeMixinTeardown(state)
 }
 
-export function bindMixinRuntime(
+export function bindMixinRuntime<target>(
   state: MixinRuntimeState | undefined,
-  binding?: MixinRuntimeBinding,
+  binding?: MixinRuntimeBinding<target>,
   options?: { dispatchReclaimed?: boolean },
 ) {
   if (!state) return
@@ -700,7 +725,7 @@ function dispatchMixinInsert(
   scope: symbol,
   node: Element,
   parent: ParentNode,
-  key?: string,
+  key?: Key,
 ) {
   let event = new Event('insert') as MixinInsertEvent<Element>
   event.node = node
@@ -714,7 +739,7 @@ function dispatchMixinReclaimed(
   scope: symbol,
   node: Element,
   parent: ParentNode,
-  key?: string,
+  key?: Key,
 ) {
   let event = new Event('reclaimed') as MixinReclaimedEvent<Element>
   event.node = node
@@ -738,7 +763,7 @@ function queueMixinInsert(
   scope: symbol,
   node: Element,
   parent: ParentNode,
-  key?: string,
+  key?: Key,
 ) {
   handle.queueCommitTask(() => {
     dispatchMixinInsert(handle, scope, node, parent, key)
@@ -750,7 +775,7 @@ function queueMixinReclaimed(
   scope: symbol,
   node: Element,
   parent: ParentNode,
-  key?: string,
+  key?: Key,
 ) {
   handle.queueCommitTask(() => {
     dispatchMixinReclaimed(handle, scope, node, parent, key)
@@ -896,7 +921,7 @@ function isRemixElement(value: unknown): value is RemixElement {
   return (value as { $rmx?: unknown }).$rmx === true
 }
 
-function isMixinDescriptor(value: unknown): value is AnyMixinDescriptor {
+export function isMixinDescriptor(value: unknown): value is AnyMixinDescriptor {
   if (!value || typeof value !== 'object' || isRemixElement(value)) {
     return false
   }

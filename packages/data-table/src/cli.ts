@@ -1,31 +1,63 @@
 import type { Database } from './lib/database.ts'
-import type { GetMigrations, Seed } from './lib/migrations.ts'
+import type { Migrations, Seed } from './lib/migrations.ts'
 
 interface DatabaseCommandOptions {
-  /** Database instance exported by the application database module. */
+  /** Database instance used by the command. */
   db: Database
 }
+
+type RollbackBoundOptions =
+  | {
+      /**
+       * Reverts back through this migration, inclusive. Accepts a bare
+       * migration id or the full `id_name` directory form.
+       */
+      to: string
+      step?: never
+    }
+  | {
+      to?: never
+      /** Reverts this many migrations. Defaults to `1`. */
+      step?: number
+    }
+
+type RollbackCommandOptions = DatabaseCommandOptions &
+  RollbackBoundOptions & {
+    /** Reverts applied migrations, newest first. */
+    command: 'rollback'
+    /** Migrations to revert. */
+    migrations: Migrations
+    /** Reports what would be reverted without running it. */
+    dryRun?: boolean
+    /** Migration journal table. */
+    journalTable?: string
+  }
 
 /** Structured invocation options accepted by {@link runRemixDb}. */
 export type RunRemixDbOptions =
   | (DatabaseCommandOptions & {
       /** Applies pending migrations. */
       command: 'migrate'
-      /** Loads the migrations to apply. */
-      getMigrations: GetMigrations
+      /** Migrations to apply. */
+      migrations: Migrations
       /**
        * Stops after applying this migration. Accepts a bare migration id or
        * the full `id_name` directory form.
        */
       to?: string
+      /** Migration journal table. */
+      journalTable?: string
     })
+  | RollbackCommandOptions
   | (DatabaseCommandOptions & {
       /** Wipes, migrates, and optionally seeds the database. */
       command: 'reset'
-      /** Loads the migrations to apply after wiping the database. */
-      getMigrations: GetMigrations
+      /** Migrations to apply after wiping the database. */
+      migrations: Migrations
       /** Initializes database data after migrations finish. */
       seed?: Seed
+      /** Migration journal table. */
+      journalTable?: string
     })
   | (DatabaseCommandOptions & {
       /** Runs the application's seed function. */
@@ -36,8 +68,10 @@ export type RunRemixDbOptions =
   | (DatabaseCommandOptions & {
       /** Reports the status of known migrations. */
       command: 'status'
-      /** Loads the migrations to inspect. */
-      getMigrations: GetMigrations
+      /** Migrations to inspect. */
+      migrations: Migrations
+      /** Migration journal table. */
+      journalTable?: string
     })
   | (DatabaseCommandOptions & {
       /** Destructively recreates the configured database. */
@@ -53,8 +87,11 @@ export type RunRemixDbOptions =
  */
 export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
   if (options.command === 'migrate') {
-    let migrateOptions = options.to === undefined ? undefined : { to: options.to }
-    let result = await options.db.migrate(await options.getMigrations(), migrateOptions)
+    let migrateOptions =
+      options.to === undefined
+        ? { journalTable: options.journalTable }
+        : { to: options.to, journalTable: options.journalTable }
+    let result = await options.db.migrate(options.migrations, migrateOptions)
 
     if (result.applied.length === 0) {
       console.log('no pending migrations')
@@ -67,10 +104,42 @@ export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
     return 0
   }
 
+  if (options.command === 'rollback') {
+    if (options.to !== undefined && options.step !== undefined) {
+      throw new Error('Cannot combine "to" and "step" migration options in the same run')
+    }
+
+    let result =
+      options.to === undefined
+        ? await options.db.migrate(options.migrations, {
+            direction: 'down',
+            step: options.step ?? 1,
+            dryRun: options.dryRun,
+            journalTable: options.journalTable,
+          })
+        : await options.db.migrate(options.migrations, {
+            direction: 'down',
+            to: options.to,
+            dryRun: options.dryRun,
+            journalTable: options.journalTable,
+          })
+
+    if (result.reverted.length === 0) {
+      console.log('no migrations to revert')
+    }
+
+    for (let entry of result.reverted) {
+      console.log((options.dryRun ? 'would revert ' : 'reverted ') + entry.id + '_' + entry.name)
+    }
+
+    return 0
+  }
+
   if (options.command === 'reset') {
     await options.db.reset({
-      migrations: await options.getMigrations(),
+      migrations: options.migrations,
       seed: options.seed,
+      journalTable: options.journalTable,
     })
 
     console.log('database reset')
@@ -80,11 +149,16 @@ export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
 
   if (options.command === 'seed') {
     await options.seed(options.db)
+
+    console.log('database seeded')
+
     return 0
   }
 
   if (options.command === 'status') {
-    let entries = await options.db.migrationStatus(await options.getMigrations())
+    let entries = await options.db.migrationStatus(options.migrations, {
+      journalTable: options.journalTable,
+    })
 
     for (let entry of entries) {
       console.log(entry.id + ' ' + entry.name + ' ' + entry.status)

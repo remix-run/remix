@@ -75,7 +75,7 @@ const separatorCss = css({
   marginBlock: '4px',
   marginInline: '8px',
   border: 0,
-  borderTop: '1px solid #e7e7e7',
+  borderTop: '1px solid light-dark(#e7e7e7, #333333)',
 })
 
 const fileCardCss = css({
@@ -85,15 +85,15 @@ const fileCardCss = css({
   gap: '12px',
   width: 'min(100%, 21rem)',
   padding: '12px',
-  border: '1px solid #e7e7e7',
+  border: '1px solid light-dark(#e7e7e7, #333333)',
   borderRadius: '12px',
-  backgroundColor: '#f8f8f8',
-  color: '#151515',
+  backgroundColor: 'light-dark(#f8f8f8, #1f1f1f)',
+  color: 'light-dark(#151515, #ececec)',
   boxShadow: '0 1px 1px rgb(0 0 0 / 0.05)',
   cursor: 'context-menu',
   userSelect: 'none',
   '&:focus-visible': {
-    outline: '2px solid #1A72FF',
+    outline: '2px solid light-dark(#1A72FF, #6eaaff)',
     outlineOffset: '2px',
   },
 })
@@ -104,8 +104,8 @@ const fileIconCss = css({
   width: '36px',
   height: '36px',
   borderRadius: '8px',
-  backgroundColor: '#1A72FF',
-  color: 'rgb(255 255 255 / 0.92)',
+  backgroundColor: 'light-dark(#1A72FF, #6eaaff)',
+  color: 'light-dark(rgb(255 255 255 / 0.92), #151515)',
   fontSize: '12px',
   fontWeight: '700',
 })
@@ -125,7 +125,7 @@ const fileNameCss = css({
 })
 
 const fileMetaCss = css({
-  color: '#4f4f4f',
+  color: 'light-dark(#4f4f4f, #b3b3b3)',
   fontSize: '12px',
   lineHeight: '1.45',
 })
@@ -133,7 +133,7 @@ const fileMetaCss = css({
 const statusCss = css({
   margin: 0,
   minHeight: '1.45em',
-  color: '#4f4f4f',
+  color: 'light-dark(#4f4f4f, #b3b3b3)',
   fontSize: '13px',
   lineHeight: '1.45',
 })

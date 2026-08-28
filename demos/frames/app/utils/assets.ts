@@ -8,11 +8,12 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 export const assetServer = createAssetServer({
   basePath: assetsBase,
   rootDir: path.resolve(import.meta.dirname, '../../../..'),
-  allowFiles: ['demos/frames/app/assets/**', 'demos/frames/app/routes.ts'],
+  allowFiles: ['demos/frames/app/routes.ts', 'demos/frames/app/**/public/**'],
   allowPackages: ['remix'],
-  fileMap: {
-    '/app/*path': 'demos/frames/app/*path',
-    '/packages/*path': 'packages/*path',
+  denyFiles: ['demos/frames/app/**/*.test.*'],
+  mounts: {
+    app: 'demos/frames/app',
+    packages: 'packages',
   },
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,

@@ -121,14 +121,14 @@ let app = run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, signal) {
-    let res = await fetch(src, { headers: { Accept: 'text/html' }, signal })
-    return res.body ?? (await res.text())
-  },
 })
 
 await app.ready()
 ```
+
+`run()` fetches frame sources by default, including the submitted method, encoding, and `FormData`.
+Provide `resolveFrame` only when the app needs custom request headers, body encoding, or response
+policy. Add `data-rmx-document` to a link or form to leave its navigation to the browser.
 
 ### Client entry component
 

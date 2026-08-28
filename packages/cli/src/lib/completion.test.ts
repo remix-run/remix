@@ -9,6 +9,7 @@ describe('completion engine', () => {
 
     assert.equal(result.mode, 'values')
     assert.deepEqual(result.values, [
+      'assets',
       'completion',
       'db',
       'doctor',
@@ -31,6 +32,7 @@ describe('completion engine', () => {
 
     assert.equal(topLevelResult.mode, 'values')
     assert.deepEqual(topLevelResult.values, [
+      'assets',
       'completion',
       'db',
       'doctor',
@@ -46,17 +48,28 @@ describe('completion engine', () => {
     ])
   })
 
+  it('completes the assets inspect subcommand and file argument', () => {
+    let subcommands = getCompletionResult(['remix', 'assets', ''], 2)
+    let input = getCompletionResult(['remix', 'assets', 'inspect', ''], 3)
+
+    assert.equal(subcommands.mode, 'values')
+    assert.deepEqual(subcommands.values, ['inspect', '--config', '-h', '--help', '--no-color'])
+    assert.equal(input.mode, 'files')
+  })
+
   it('completes database subcommands and per-command flags', () => {
     let subcommands = getCompletionResult(['remix', 'db', ''], 2)
     let wipeFlags = getCompletionResult(['remix', 'db', 'wipe', ''], 3)
     let resetFlags = getCompletionResult(['remix', 'db', 'reset', '--force', ''], 4)
     let migrateFlags = getCompletionResult(['remix', 'db', 'migrate', ''], 3)
+    let rollbackFlags = getCompletionResult(['remix', 'db', 'rollback', ''], 3)
     let seedFlags = getCompletionResult(['remix', 'db', 'seed', ''], 3)
 
     assert.equal(subcommands.mode, 'values')
     assert.deepEqual(subcommands.values, [
       'migrate',
       'reset',
+      'rollback',
       'seed',
       'status',
       'wipe',
@@ -67,22 +80,77 @@ describe('completion engine', () => {
     ])
 
     assert.equal(wipeFlags.mode, 'values')
-    assert.deepEqual(wipeFlags.values, ['--force', '--config', '-h', '--help', '--no-color'])
+    assert.deepEqual(wipeFlags.values, [
+      '--force',
+      '--connection-env',
+      '--config',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
 
     assert.equal(resetFlags.mode, 'values')
-    assert.deepEqual(resetFlags.values, ['--config', '-h', '--help', '--no-color'])
+    assert.deepEqual(resetFlags.values, [
+      '--connection-env',
+      '--journal-table',
+      '--migrations',
+      '--seed',
+      '--config',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
 
     assert.equal(migrateFlags.mode, 'values')
-    assert.deepEqual(migrateFlags.values, ['--to', '--config', '-h', '--help', '--no-color'])
+    assert.deepEqual(migrateFlags.values, [
+      '--connection-env',
+      '--journal-table',
+      '--migrations',
+      '--to',
+      '--config',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
+
+    assert.equal(rollbackFlags.mode, 'values')
+    assert.deepEqual(rollbackFlags.values, [
+      '--dry-run',
+      '--connection-env',
+      '--journal-table',
+      '--migrations',
+      '--step',
+      '--to',
+      '--config',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
 
     assert.equal(seedFlags.mode, 'values')
-    assert.deepEqual(seedFlags.values, ['--config', '-h', '--help', '--no-color'])
+    assert.deepEqual(seedFlags.values, [
+      '--connection-env',
+      '--seed',
+      '--config',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
   })
 
   it('returns no completions for free-text migration targets', () => {
     let result = getCompletionResult(['remix', 'db', 'migrate', '--to', ''], 4)
 
     assert.deepEqual(result, { mode: 'none' })
+  })
+
+  it('uses file completion for database migration and seed paths', () => {
+    assert.deepEqual(getCompletionResult(['remix', 'db', 'migrate', '--migrations', ''], 4), {
+      mode: 'files',
+    })
+    assert.deepEqual(getCompletionResult(['remix', 'db', 'seed', '--seed', ''], 4), {
+      mode: 'files',
+    })
   })
 
   it('uses file completion for new target directories', () => {

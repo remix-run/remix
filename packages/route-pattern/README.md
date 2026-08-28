@@ -8,7 +8,7 @@ Type-safe URL matching and href generation for JavaScript. `route-pattern` suppo
 - **Expressive** - Variables, wildcards, optionals, and search constraints
 - **Full URL support** - Match protocol, hostname, port, pathname, and search
 - **Simple & deterministic ranking** - Predictable left-to-right priority for static, variable, and wildcard patterns
-- **Fast** - Trie-based matching for scalable performance
+- **Fast** - Indexed, bounded-state matching without variant expansion or regex backtracking
 - **Modular** - Import only the features you need to for smaller bundles
 - **Runtime agnostic** - Works across Node.js, Bun, Deno, Cloudflare Workers, and browsers
 
@@ -84,8 +84,13 @@ Protocol must be `http`, `https`, or `http(s)`:
 
 ```ts
 'users/:id' // matches /users/123
-'blog/:year-:month-:day/:slug' // matches /blog/2024-01-15/hello
+'blog/:date/:slug' // matches /blog/2024-01-15/hello
+'files/:name.:ext' // matches /files/readme.md
 ```
+
+Pathname variables possessively capture the largest non-empty run up to `/` or `.`. Hyphens are data, so UUIDs and slugs remain intact. A variable may have static text before it, but every path through following optionals must reach `/`, `.`, a wildcard, or the end of the hostname or pathname. Capture an inseparable value such as a date with one variable instead of `:year-:month-:day`.
+
+Raw `/` and `.` are structural delimiters. Their percent-encoded forms remain data and are decoded in the resulting param. Static pattern text may use either decoded text or percent encoding, so `/café` and `/caf%C3%A9` match the same pathname text.
 
 **Wildcards** match multi-segment paths using `*name`:
 
@@ -94,6 +99,8 @@ Protocol must be `http`, `https`, or `http(s)`:
 'node_modules/*package/dist/index.js' // matches /node_modules/@remix-run/router/dist/index.js
 'files/*' // matches any path under /files, but doesn't capture the wildcard value
 ```
+
+Patterns may contain any number of wildcards when static text or a delimiter separates them. Adjacent wildcards such as `*left*right` are rejected because their capture boundary is ambiguous.
 
 **Optionals** make parts optional using `()`:
 
@@ -104,13 +111,28 @@ Protocol must be `http`, `https`, or `http(s)`:
 'api(/v:major(.:minor))' // matches /api, /api/v2, /api/v2.1
 ```
 
-While variables, wilcards, and optionals are most prevalent in pathnames, you can also use them in hostnames:
+Optionals compile as state branches rather than concrete variants, so independent and nested optionals do not cause exponential matcher construction. Empty optionals and adjacent optional branches that give the same URL different capture schemas are rejected.
+
+While variables, wildcards, and optionals are most prevalent in pathnames, you can also use them in hostnames:
 
 ```ts
 ':tenant.example.com/dashboard' // matches acme.example.com/dashboard
 '(www.)example.com/blog/:slug(.html)' // matches example.com/blog/hello, www.example.com/blog/hello.html
 '*.example.com/files/*path' // matches cdn.example.com/files/images/logo.png
 '(:locale.)example.com/docs(/:section)' // matches en.example.com/docs, en.example.com/docs/guides
+```
+
+Capture names may repeat. `params` uses the last participating capture in pattern order, while `paramsMeta` retains every participating capture:
+
+```ts
+let matcher = createMatcher('/:id/:id')
+let match = matcher.match('https://example.com/first/second')
+
+match?.params
+// { id: 'second' }
+
+match?.paramsMeta.pathname.map(({ name, value }) => ({ name, value }))
+// [{ name: 'id', value: 'first' }, { name: 'id', value: 'second' }]
 ```
 
 **Escape characters** with `\`:
@@ -151,7 +173,21 @@ docsMatcher.match(url)?.params
 // Type safe params     ^? { tenant: string | undefined, path: string, ext: string } | undefined
 ```
 
-Matchers accept absolute URL strings or `URL` objects. Relative strings such as `/blog/v3` are not accepted because matching uses the platform `URL` parser; wrap relative paths with a known origin before matching them.
+Matchers accept absolute URL strings or `URL` objects. To match a relative URL reference, pass an absolute `baseURL`; the input is resolved with the same semantics as `new URL(input, baseURL)`, and the resolved URL is returned on the match.
+
+```ts
+let match = blogMatcher.match('../blog/v3', {
+  baseURL: 'https://example.com/admin/settings',
+})
+
+match?.params
+// { slug: 'v3' }
+
+match?.url.href
+// 'https://example.com/blog/v3'
+```
+
+This works for root-relative, path-relative, query-relative, and network-path references. Without `baseURL`, string inputs must still be absolute.
 
 ### Match against multiple patterns
 
@@ -195,6 +231,14 @@ matcher.match('https://example.com/docs/Intro')?.params
 // { slug: 'Intro' }
 ```
 
+Matchers limit individual pattern size, total matcher size, and the work performed by one match. Pattern and matcher sizes are measured in UTF-8 bytes. Direct package consumers may lower or raise individual limits. Exceeding one throws `MatcherResourceError` with structured `details` instead of silently abandoning matching:
+
+```ts
+let matcher = createMultiMatcher({
+  limits: { maxPatternSize: 4096, maxMatchWork: 100_000 },
+})
+```
+
 ### Ranking matches by specificity
 
 When multiple patterns match the same URL, `route-pattern` chooses the most specific match deterministically. Matches are ranked left-to-right, character-by-character:
@@ -216,12 +260,12 @@ import { descending } from 'remix/route-pattern/specificity'
 let matcher = createMultiMatcher()
 matcher.add('files/*path', null)
 matcher.add('files/:name', null)
-matcher.add('files/readme.md', null)
+matcher.add('files/readme', null)
 
-let matches = matcher.matchAll('https://example.com/files/readme.md')
+let matches = matcher.matchAll('https://example.com/files/readme')
 
 matches.sort(descending).map((match) => match.pattern.toString())
-// ['/files/readme.md', '/files/:name', '/files/*path']
+// ['/files/readme', '/files/:name', '/files/*path']
 ```
 
 ## Generate hrefs
@@ -247,8 +291,41 @@ createHref('http(s)://:region.cdn.com/assets/*file.:ext', {
 })
 // 'https://us-west.cdn.com/assets/images/logo.png'
 
-createHref('blog/:slug?ref=docs', { slug: 'v3' }, { utm_source: 'newsletter' })
+createHref(
+  'blog/:slug?ref=docs',
+  { slug: 'v3' },
+  {
+    searchParams: { utm_source: 'newsletter' },
+  },
+)
 // '/blog/v3?utm_source=newsletter&ref=docs'
+
+createHref('users/:id', { id: 'a.b' })
+// '/users/a%2Eb' (the encoded dot remains variable data when matched)
+```
+
+Pass `baseURL` to generate a path-relative reference to a same-origin route. Patterns with a different origin remain absolute.
+
+```ts
+let baseURL = new URL('https://example.com/admin/settings')
+
+createHref('users/:id', { id: '123' }, { baseURL })
+// '../users/123'
+
+createHref('https://cdn.example.com/assets/*path', { path: 'logo.svg' }, { baseURL })
+// 'https://cdn.example.com/assets/logo.svg'
+```
+
+The `searchParams` option accepts a plain object or `URLSearchParams`. Use `URLSearchParams` when duplicate keys or their order matter:
+
+```ts
+let searchParams = new URLSearchParams([
+  ['tag', 'featured'],
+  ['tag', 'popular'],
+])
+
+createHref('search', undefined, { searchParams })
+// '/search?tag=featured&tag=popular'
 ```
 
 `createHref()` throws `CreateHrefError` when it cannot safely generate an href. The error exposes stable structured details on `error.details`; the string message is for humans.
@@ -300,7 +377,13 @@ The public support types are:
 - `RoutePatternCapture` from `remix/route-pattern`
 - `RoutePatternJSON` from `remix/route-pattern`
 - `CreateHrefErrorDetails` from `remix/route-pattern/href`
+- `CreateHrefOptions` and `CreateHrefSearchParams` from `remix/route-pattern/href`
 - `MatchParamMeta` from `remix/route-pattern/match`
+- `MatchOptions` from `remix/route-pattern/match`
+- `MatcherLimits` from `remix/route-pattern/match`
+- `MatcherResourceError` and `MatcherResourceErrorDetails` from `remix/route-pattern/match`
+
+Literal patterns are validated and infer named params until the type-level parser reaches its 64-step complexity budget. Larger runtime-valid patterns remain accepted and fall back to safe general pattern types instead of risking a TypeScript excessive-instantiation error.
 
 ## Combine patterns
 

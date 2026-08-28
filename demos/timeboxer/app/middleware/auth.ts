@@ -1,11 +1,12 @@
 import { createCredentialsAuthProvider } from 'remix/auth'
 import { auth, createSessionAuthScheme } from 'remix/middleware/auth'
-import { Database } from 'remix/data-table'
+import type { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 
 import { verifyPassword } from '../data/passwords.ts'
 import { userPasswords, users, type User } from '../data/schema.ts'
+import { databaseContext } from './database.ts'
 
 export interface AuthSession {
   userId: number
@@ -22,7 +23,7 @@ export const passwordProvider = createCredentialsAuthProvider({
     return s.parse(credentialsSchema, context.get(FormData))
   },
   async verify({ username, password }, context) {
-    let db = requireDatabase(context.get(Database))
+    let db = requireDatabase(context.get(databaseContext))
     let user = await db.findOne(users, { where: { username } })
 
     if (!user) {
@@ -56,7 +57,7 @@ export function loadAuth() {
           return null
         },
         async verify(value, context) {
-          let db = requireDatabase(context.get(Database))
+          let db = requireDatabase(context.get(databaseContext))
           return await db.find(users, value.userId)
         },
         invalidate(session) {

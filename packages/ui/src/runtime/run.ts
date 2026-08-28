@@ -1,10 +1,10 @@
 import { createFrame, type Frame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
-import type { FrameHandle } from './component.ts'
+import type { FrameHandle, Handle } from './component.ts'
 import { createComponentErrorEvent } from './error-event.ts'
 import type { ComponentErrorEvent } from './error-event.ts'
-import type { LoadModule, ResolveFrame } from './frame.ts'
+import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame.ts'
 import { startNavigationListener } from './navigation.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 
@@ -23,8 +23,8 @@ export interface RunInit {
   /**
    * Resolves browser-loaded `<Frame>` content.
    *
-   * Omit this only when the runtime never needs to load or reload frames in the
-   * browser.
+   * Defaults to fetching the frame source as HTML with the submitted form data,
+   * method, encoding, and abort signal.
    */
   resolveFrame?: ResolveFrame
 }
@@ -40,6 +40,8 @@ export type AppRuntimeEventMap = {
  * Client runtime returned by {@link run}.
  */
 export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
+  /** Access top-level and named frames in the application runtime. */
+  frames: Handle['frames']
   /** Resolves after the current document finishes hydrating. */
   ready(): Promise<void>
   /** Flushes any queued component updates synchronously. */
@@ -70,10 +72,57 @@ export function getNamedFrame(name: string): FrameHandle {
   return namedFrames.get(name) ?? getTopFrame()
 }
 
+// Frame reloads can receive raw FormData without going through form navigation. Encode it here so
+// manual reloads use the requested form encoding instead of always sending multipart bodies.
+function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+  let formData = options?.formData
+  let method = options?.method
+  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
+
+  let encType = options?.encType
+
+  if (encType === 'text/plain') {
+    let body = ''
+    for (let [name, value] of formData) {
+      name = normalizeLineBreaks(name)
+      value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
+      body += `${name}=${value}\r\n`
+    }
+    return new Blob([body], { type: 'text/plain' })
+  }
+
+  if (encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
+}
+
+function normalizeLineBreaks(value: string): string {
+  return value.replace(/\r\n|\r|\n/g, '\r\n')
+}
+
+async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
+  let response = await fetch(src, {
+    body: getRequestBody(options),
+    headers: { Accept: 'text/html' },
+    method: options?.method,
+    signal: options?.signal,
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
+  }
+
+  return response
+}
+
 /**
  * Starts the client-side Remix component runtime for the current document.
  *
- * @param init Runtime hooks for loading modules and resolving frames.
+ * @param init Runtime options for loading modules and customizing frame resolution.
  * @returns The running application runtime.
  */
 export function run(init: RunInit): AppRuntime {
@@ -81,7 +130,7 @@ export function run(init: RunInit): AppRuntime {
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
   let scheduler = createScheduler(document, errorTarget, styleManager)
 
-  let resolveFrame: ResolveFrame = init.resolveFrame ?? (() => '<p>resolve frame unimplemented</p>')
+  let resolveFrame = init.resolveFrame ?? defaultResolveFrame
 
   topFrame = createFrame(document, {
     src: document.location.href,
@@ -99,6 +148,12 @@ export function run(init: RunInit): AppRuntime {
   })
 
   let appController = new AbortController()
+  let frames: Handle['frames'] = {
+    top: topFrame.handle,
+    get(name) {
+      return namedFrames.get(name)
+    },
+  }
   startNavigationListener(appController.signal)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
@@ -106,6 +161,7 @@ export function run(init: RunInit): AppRuntime {
   })
 
   return Object.assign(errorTarget, {
+    frames,
     ready: () => readyPromise,
     flush: () => topFrame.flush(),
     dispose: () => {

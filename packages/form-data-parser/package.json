@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/form-data-parser",
-  "version": "0.17.4",
+  "version": "0.17.5",
   "description": "A request.formData() wrapper with streaming file upload handling",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
@@ -39,15 +39,15 @@
     "@remix-run/data-schema": "workspace:^",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix test",
     "test:bun": "bun x --bun remix test",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "form-data",

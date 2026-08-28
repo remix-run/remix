@@ -213,17 +213,17 @@ describe('createStyleManager', () => {
   it('adopts server-rendered style tag', () => {
     // Simulate server-rendered style tag
     let serverStyle = document.createElement('style')
-    serverStyle.setAttribute('data-rmx', 'rmxc-server1')
+    serverStyle.setAttribute('data-rmx-style', 'rmxc-server1')
     serverStyle.textContent = '@layer rmx { .rmxc-server1 { color: blue; } }'
     document.head.appendChild(serverStyle)
-    expect(document.querySelector('style[data-rmx]')).not.toBeNull()
+    expect(document.querySelector('style[data-rmx-style]')).not.toBeNull()
 
     // Create manager and adopt server styles for its frame
     let mgr = createStyleManager('rmx')
     mgr.adoptServerStyles(document)
 
     // Tag should be removed after adoption
-    expect(document.querySelector('style[data-rmx]')).toBeNull()
+    expect(document.querySelector('style[data-rmx-style]')).toBeNull()
 
     // Server-rendered selector should be recognized as existing
     expect(mgr.has('rmxc-server1')).toBe(true)
@@ -251,7 +251,7 @@ describe('createStyleManager', () => {
   it('does not start transitions when adopting server-rendered styles', async () => {
     let host = document.createElement('div')
     let serverStyle = document.createElement('style')
-    serverStyle.setAttribute('data-rmx', 'rmxc-adopt-transition')
+    serverStyle.setAttribute('data-rmx-style', 'rmxc-adopt-transition')
     serverStyle.textContent = `
       @layer rmx-test.rmxc-adopt-transition {
         .rmxc-adopt-transition {
@@ -310,13 +310,13 @@ describe('createStyleManager', () => {
     let mgr = createStyleManager('rmx')
 
     let streamedStyle = document.createElement('style')
-    streamedStyle.setAttribute('data-rmx', 'rmxc-stream1')
+    streamedStyle.setAttribute('data-rmx-style', 'rmxc-stream1')
     streamedStyle.textContent = '@layer rmx { .rmxc-stream1 { color: green; } }'
     document.head.appendChild(streamedStyle)
 
     mgr.adoptServerStyles(document)
 
-    expect(document.querySelector('style[data-rmx]')).toBeNull()
+    expect(document.querySelector('style[data-rmx-style]')).toBeNull()
     expect(mgr.has('rmxc-stream1')).toBe(true)
 
     mgr.dispose()
@@ -327,7 +327,7 @@ describe('createStyleManager', () => {
 
     function appendStreamedStyle() {
       let streamedStyle = document.createElement('style')
-      streamedStyle.setAttribute('data-rmx', 'rmxc-stream1')
+      streamedStyle.setAttribute('data-rmx-style', 'rmxc-stream1')
       streamedStyle.textContent = '@layer rmx { .rmxc-stream1 { color: green; } }'
       document.head.appendChild(streamedStyle)
     }
@@ -348,7 +348,7 @@ describe('createStyleManager', () => {
     appendStreamedStyle()
     mgr.adoptServerStyles(document)
 
-    expect(document.querySelectorAll('style[data-rmx="rmxc-stream1"]')).toHaveLength(0)
+    expect(document.querySelectorAll('style[data-rmx-style="rmxc-stream1"]')).toHaveLength(0)
     expect(countRules('rmxc-stream1')).toBe(1)
     expect(mgr.has('rmxc-stream1')).toBe(true)
 
@@ -361,7 +361,7 @@ describe('createStyleManager', () => {
 
     for (let selector of ['rmxc-base', 'rmxc-trigger', 'rmxc-user']) {
       let style = document.createElement('style')
-      style.setAttribute('data-rmx', selector)
+      style.setAttribute('data-rmx-style', selector)
       style.textContent = `@layer rmx { .${selector} { color: red; } }`
       container.appendChild(style)
     }
@@ -376,7 +376,7 @@ describe('createStyleManager', () => {
 
     expect(cssText.indexOf('.rmxc-base')).toBeLessThan(cssText.indexOf('.rmxc-trigger'))
     expect(cssText.indexOf('.rmxc-trigger')).toBeLessThan(cssText.indexOf('.rmxc-user'))
-    expect(container.querySelector('style[data-rmx]')).toBeNull()
+    expect(container.querySelector('style[data-rmx-style]')).toBeNull()
 
     container.remove()
     mgr.dispose()
@@ -416,7 +416,7 @@ describe('createStyleManager', () => {
     let container = document.createElement('div')
     for (let selector of ['rmxc-first', 'rmxc-second']) {
       let style = document.createElement('style')
-      style.setAttribute('data-rmx', selector)
+      style.setAttribute('data-rmx-style', selector)
       style.textContent = `@layer rmx-test { .${selector} { color: red; } }`
       container.appendChild(style)
     }
@@ -428,7 +428,7 @@ describe('createStyleManager', () => {
     // Re-adopting the same selector returns it in the set even when the rule
     // is short-circuited as a duplicate.
     let duplicateStyle = document.createElement('style')
-    duplicateStyle.setAttribute('data-rmx', 'rmxc-first')
+    duplicateStyle.setAttribute('data-rmx-style', 'rmxc-first')
     duplicateStyle.textContent = '@layer rmx-test { .rmxc-first { color: red; } }'
     container.appendChild(duplicateStyle)
 
@@ -457,7 +457,7 @@ describe('createStyleManager', () => {
     let first = document.createElement('div')
     for (let selector of ['rmxc-only-first', 'rmxc-shared']) {
       let style = document.createElement('style')
-      style.setAttribute('data-rmx', selector)
+      style.setAttribute('data-rmx-style', selector)
       style.textContent = `@layer rmx-test { .${selector} { color: red; } }`
       first.appendChild(style)
     }
@@ -474,7 +474,7 @@ describe('createStyleManager', () => {
     let second = document.createElement('div')
     for (let selector of ['rmxc-only-second', 'rmxc-shared']) {
       let style = document.createElement('style')
-      style.setAttribute('data-rmx', selector)
+      style.setAttribute('data-rmx-style', selector)
       style.textContent = `@layer rmx-test { .${selector} { color: blue; } }`
       second.appendChild(style)
     }
@@ -498,7 +498,7 @@ describe('createStyleManager', () => {
 
     let host = document.createElement('div')
     let style = document.createElement('style')
-    style.setAttribute('data-rmx', 'rmxc-upgrade')
+    style.setAttribute('data-rmx-style', 'rmxc-upgrade')
     style.textContent = '@layer rmx-test { .rmxc-upgrade { color: red; } }'
     host.appendChild(style)
     document.body.appendChild(host)

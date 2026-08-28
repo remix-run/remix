@@ -2,7 +2,11 @@ import { createController } from 'remix/router'
 import { completeAuth, verifyCredentials } from 'remix/auth'
 import { redirect } from 'remix/response/redirect'
 
-import { getPostAuthRedirect, getReturnToQuery, passwordProvider } from '../../middleware/auth.ts'
+import {
+  getPostAuthRedirect,
+  getReturnToHrefOptions,
+  passwordProvider,
+} from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
 
 export function createAuthController() {
@@ -16,7 +20,7 @@ export function createAuthController() {
 
           if (user == null) {
             session.flash('error', 'Invalid email or password. Please try again.')
-            return redirect(routes.home.href(undefined, getReturnToQuery(url)))
+            return redirect(routes.home.href(undefined, getReturnToHrefOptions(url)))
           }
 
           let authSession = completeAuth(context)
@@ -28,7 +32,7 @@ export function createAuthController() {
           return redirect(getPostAuthRedirect(url))
         } catch {
           session.flash('error', 'We could not complete that sign-in request.')
-          return redirect(routes.home.href(undefined, getReturnToQuery(url)))
+          return redirect(routes.home.href(undefined, getReturnToHrefOptions(url)))
         }
       },
 

@@ -63,11 +63,12 @@ type ExportEntry = {
   readmePath?: string
 }
 
-type ExportMode = 'value' | 'type' | 'side-effect' | 'type-and-side-effect'
+type ExportMode = 'value' | 'type' | 'side-effect' | 'type-and-side-effect' | 'type-reference'
 
 type ExportClassification = {
   hasDefaultValueExport: boolean
   hasRuntimeCode: boolean
+  hasTypeReference?: boolean
   hasTypeExports: boolean
   hasValueExports: boolean
 }
@@ -122,6 +123,7 @@ async function scanPackages(): Promise<RemixRunPackage[]> {
     if (!isFile(packageJsonPath)) continue
 
     let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
+    if (packageJson.private === true) continue
     let packageName = packageJson.name as string
     if (!packageName.startsWith('@remix-run/')) continue
 
@@ -150,10 +152,8 @@ async function scanPackages(): Promise<RemixRunPackage[]> {
 
 /**
  * Builds ExportEntry list directly from the manifest. Each manifest entry
- * maps a remix/* path to a specifier. Multiple remix paths may share the same
- * stub file (e.g. remix/router and remix/fetch-router both use fetch-router.ts).
- * READMEs are attached to the first entry per stub (the canonical one, since
- * canonical entries come first in manifest.json).
+ * maps a remix/* path to a specifier. READMEs are attached once per generated
+ * source file.
  */
 async function buildExportsFromManifest(
   manifest: Record<string, string>,
@@ -172,7 +172,12 @@ async function buildExportsFromManifest(
 
   for (let [remixPath, specifier] of Object.entries(manifest)) {
     if (remixPath.startsWith('_')) continue // skip comment/metadata keys
-    let sourceFile = getSourceFileForManifestEntry(remixPath, specifier)
+    let exportClassification = await getExportClassificationForSpecifier(specifier, pkgJsonByName)
+    let exportMode = getExportMode(exportClassification)
+    let sourceFile =
+      exportMode === 'type-reference'
+        ? specifier.replace('@remix-run/', '') + '.d.ts'
+        : getSourceFileForManifestEntry(remixPath, specifier)
     let exportPath = './' + remixPath.replace('remix/', '')
 
     let readmePath: string | undefined
@@ -180,9 +185,6 @@ async function buildExportsFromManifest(
       readmePath = findReadmeForSpecifier(specifier, pkgJsonByName)
       if (readmePath) readmesWritten.add(sourceFile)
     }
-    let exportClassification = await getExportClassificationForSpecifier(specifier, pkgJsonByName)
-    let exportMode = getExportMode(exportClassification)
-
     exports.push({
       sourceFile,
       exportPath,
@@ -303,13 +305,23 @@ async function updateRemixPackage() {
 
   for (let entry of allExports) {
     let exportPath = path.join(SOURCE_FOLDER, entry.sourceFile)
-    remixPackageJson.exports[entry.exportPath] = `./${exportPath}`
+    remixPackageJson.exports[entry.exportPath] =
+      entry.exportMode === 'type-reference'
+        ? {
+            types: `./${exportPath}`,
+          }
+        : `./${exportPath}`
 
-    let distFile = path.join(entry.sourceFile.replace(/\.ts$/, ''))
-    remixPackageJson.publishConfig.exports[entry.exportPath] = {
-      types: `./dist/${distFile}.d.ts`,
-      default: `./dist/${distFile}.js`,
-    }
+    let distFile = path.join(entry.sourceFile.replace(/\.d\.ts$/, '').replace(/\.ts$/, ''))
+    remixPackageJson.publishConfig.exports[entry.exportPath] =
+      entry.exportMode === 'type-reference'
+        ? {
+            types: `./dist/${distFile}.d.ts`,
+          }
+        : {
+            types: `./dist/${distFile}.d.ts`,
+            default: `./dist/${distFile}.js`,
+          }
   }
 
   remixPackageJson.exports['./package.json'] = './package.json'
@@ -406,7 +418,7 @@ function createExportSource(entry: ExportEntry): string {
     ].join('\n')
   }
 
-  if (entry.exportMode === 'type') {
+  if (entry.exportMode === 'type' || entry.exportMode === 'type-reference') {
     return [
       `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
       `export type * from '${entry.reExportFrom}'\n`,
@@ -463,6 +475,10 @@ async function getExportClassificationForSpecifier(
 }
 
 function getExportMode(classification: ExportClassification): ExportMode {
+  if (classification.hasTypeReference) {
+    return 'type-reference'
+  }
+
   if (classification.hasValueExports) {
     return 'value'
   }
@@ -493,6 +509,16 @@ async function getPackageExportClassification(
       hasRuntimeCode: false,
       hasTypeExports: false,
       hasValueExports: true,
+    }
+  }
+
+  if (exportTarget.endsWith('.d.ts')) {
+    return {
+      hasDefaultValueExport: false,
+      hasRuntimeCode: false,
+      hasTypeReference: true,
+      hasTypeExports: true,
+      hasValueExports: false,
     }
   }
 
@@ -706,6 +732,7 @@ async function outputExportsChangeFiles(
   let newExportsSet = new Set<string>(
     Object.keys(exportsConfig).filter((key) => key !== '.' && key !== './package.json'),
   )
+  let generatedSourceFiles = new Set(allExports.map((entry) => entry.sourceFile))
   let filteredExistingExports = new Set(existingExports)
   let addedExports = Array.from(newExportsSet).filter((key) => !filteredExistingExports.has(key))
   let removedExports = Array.from(filteredExistingExports).filter((key) => !newExportsSet.has(key))
@@ -764,7 +791,10 @@ async function outputExportsChangeFiles(
       changes += ` - \`${exportName}\`\n`
 
       // Remove re-export file
-      let srcFile = path.join(remixDir, SOURCE_FOLDER, exportPath + '.ts')
+      let sourceFile = exportPath + '.ts'
+      if (generatedSourceFiles.has(sourceFile)) continue
+
+      let srcFile = path.join(remixDir, SOURCE_FOLDER, sourceFile)
       try {
         await fs.unlink(srcFile)
       } catch (e) {

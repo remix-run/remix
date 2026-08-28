@@ -3,7 +3,6 @@ import { beforeEach, describe, it } from '@remix-run/test'
 import {
   between,
   column,
-  createDatabase,
   table,
   eq,
   gt,
@@ -17,11 +16,11 @@ import {
   notInList,
   isNull,
   notNull,
-  type DataManipulationOperation,
-  type DatabaseAdapter,
   or,
   and,
 } from '@remix-run/data-table'
+import { type DataManipulationOperation } from '@remix-run/data-table'
+import { createRecordingDriver, TestDatabase } from '../../../data-table/test/recording-driver.ts'
 import { compileSqliteOperation } from './sql-compiler.ts'
 
 const accounts = table({
@@ -45,13 +44,12 @@ const tasks = table({
 
 let statements: DataManipulationOperation[] = []
 
-const fakeAdapter = {
+const recording = createRecordingDriver({
   capabilities: {
     upsert: true,
     returning: true,
   },
-
-  execute: async (request) => {
+  async execute(request) {
     statements.push(request.operation)
     // usefull for update
     if (request.operation.kind === 'select') {
@@ -68,8 +66,9 @@ const fakeAdapter = {
     }
     return {}
   },
-} as DatabaseAdapter
-const db = createDatabase(fakeAdapter)
+})
+
+const db = new TestDatabase(recording.driver)
 
 describe('sqlite sql-compiler', () => {
   beforeEach(() => {
@@ -339,6 +338,19 @@ describe('sqlite sql-compiler', () => {
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("accounts"."status" = ?) or ("accounts"."status" = ?))',
         values: ['enabled', 'disabled'],
+      })
+    })
+
+    it('compile logical or with object filters', async () => {
+      await db
+        .query(accounts)
+        .where(or({ status: 'enabled' }, { email: 'admin@example.com' }))
+        .all()
+
+      let compiled = compileSqliteOperation(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" where ((("status" = ?)) or (("email" = ?)))',
+        values: ['enabled', 'admin@example.com'],
       })
     })
 

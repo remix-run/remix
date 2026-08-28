@@ -301,6 +301,49 @@ describe('createRangeRoot', () => {
 
       expect(container.innerHTML).toBe('<!--start--><span>A</span><span>B</span><!--end-->')
     })
+
+    it('keeps component fragment updates inside hydration range markers', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!--rmx:h:c1--><div>1</div><!--/rmx:h-->'
+      let content = <div>1</div>
+
+      let start = container.childNodes[0] as Comment
+      let end = container.childNodes[2] as Comment
+      let update = () => {}
+
+      function App(handle: Handle) {
+        update = () => {
+          handle.update()
+        }
+        return () => content
+      }
+
+      let root = createRangeRoot([start, end])
+      root.render(<App />)
+      root.flush()
+      expect(container.innerHTML).toBe('<!--rmx:h:c1--><div>1</div><!--/rmx:h-->')
+
+      // Wrap content in a fragment
+      content = (
+        <>
+          <div>1</div>
+        </>
+      )
+      update()
+      root.flush()
+      expect(container.innerHTML).toBe('<!--rmx:h:c1--><div>1</div><!--/rmx:h-->')
+
+      // Add a new element before existing content
+      content = (
+        <>
+          <div>0</div>
+          <div>1</div>
+        </>
+      )
+      update()
+      root.flush()
+      expect(container.innerHTML).toBe('<!--rmx:h:c1--><div>0</div><div>1</div><!--/rmx:h-->')
+    })
   })
 
   describe('events', () => {

@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/test",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A test framework for JavaScript and TypeScript projects",
   "author": "Shopify Inc.",
   "license": "MIT",
@@ -41,12 +41,12 @@
     }
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix test",
     "test:bun": "bun x --bun remix test --type server",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@remix-run/node-tsx": "workspace:^",
@@ -78,7 +78,7 @@
     "@types/istanbul-lib-report": "^3.0.3",
     "@types/istanbul-reports": "^3.0.4",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:",
     "clsx": "2.1.1",
     "decamelize": "6.0.1",
     "playwright": "catalog:"
