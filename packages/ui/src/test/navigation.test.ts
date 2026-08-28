@@ -97,6 +97,58 @@ describe('navigate', () => {
     })
   })
 
+  it('falls back to document navigation when the Navigation API is unavailable', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.hash = 'document-navigation-fallback'
+    stubGlobalField(t, 'navigation', undefined)
+
+    try {
+      await navigate(destination.href)
+      expect(window.location.href).toBe(destination.href)
+    } finally {
+      let wentBack = new Promise<void>((resolve) => {
+        window.addEventListener('popstate', () => resolve(), { once: true })
+      })
+      window.history.back()
+      await wentBack
+
+      let wentForward = new Promise<void>((resolve) => {
+        window.addEventListener('popstate', () => resolve(), { once: true })
+      })
+      window.history.forward()
+      await wentForward
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('replaces document history when the Navigation API is unavailable', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.hash = 'replace-document-navigation-fallback'
+    let originalHistoryLength = window.history.length
+    stubGlobalField(t, 'navigation', undefined)
+
+    try {
+      await navigate(destination.href, { history: 'replace' })
+      expect(window.location.href).toBe(destination.href)
+      expect(window.history.length).toBe(originalHistoryLength)
+    } finally {
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('skips navigation listeners when the Navigation API is unavailable', (t) => {
+    stubGlobalField(t, 'navigation', undefined)
+    let addDocumentListener = t.mock.method(document, 'addEventListener')
+    let controller = new AbortController()
+
+    startNavigationListener(controller.signal)
+
+    expect(addDocumentListener).not.toHaveBeenCalled()
+    controller.abort()
+  })
+
   it('leaves default scrolling to the browser', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let scrollTo = t.mock.method(window, 'scrollTo', () => {})

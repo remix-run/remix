@@ -65,8 +65,17 @@ export async function navigate(href: string, options?: NavigationOptions) {
     resetScroll: options?.resetScroll !== false,
     $rmx: true,
   } satisfies NavigationState
-  if (!window.navigation) { window.location.assign(href); return }
-  let transition = window.navigation.navigate(href, { state, history: options?.history })
+  let navigation = window.navigation
+  if (!navigation) {
+    if (options?.history === 'replace') {
+      window.location.replace(href)
+    } else {
+      window.location.assign(href)
+    }
+    return
+  }
+
+  let transition = navigation.navigate(href, { state, history: options?.history })
   await transition.finished
 }
 
