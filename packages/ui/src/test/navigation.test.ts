@@ -40,14 +40,19 @@ function stubGlobalField(t: TestContext, name: string, value: unknown): void {
   })
 }
 
+function stubNavigatorUserAgent(t: TestContext, userAgent: string): void {
+  let descriptor = Object.getOwnPropertyDescriptor(navigator, 'userAgent')
+  Object.defineProperty(navigator, 'userAgent', { configurable: true, value: userAgent })
+  t.after(() => {
+    if (descriptor) Object.defineProperty(navigator, 'userAgent', descriptor)
+    else Reflect.deleteProperty(navigator, 'userAgent')
+  })
+}
+
 function startStubNavigationListener(t: TestContext): (event: Event) => void {
-  let navigateListener: EventListener | undefined
-  let stubNavigation = {
+  let stubNavigation = Object.assign(new EventTarget(), {
     updateCurrentEntry: mock.fn(),
-    addEventListener(type: string, listener: EventListener) {
-      if (type === 'navigate') navigateListener = listener
-    },
-  }
+  })
   stubGlobalField(t, 'navigation', stubNavigation)
 
   let controller = new AbortController()
@@ -55,8 +60,7 @@ function startStubNavigationListener(t: TestContext): (event: Event) => void {
   t.after(() => controller.abort())
 
   return (event) => {
-    if (!navigateListener) throw new Error('Expected a navigate listener')
-    navigateListener(event)
+    stubNavigation.dispatchEvent(event)
   }
 }
 
@@ -114,6 +118,60 @@ describe('navigate', () => {
     let interceptOptions = intercept.mock.calls[0]?.arguments[0]
     expect(interceptOptions?.scroll).toBe(undefined)
     await interceptOptions?.handler?.()
+    dispatchNavigation(new Event('navigatesuccess'))
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('resynchronizes WebKit scroll state after a navigation scroll reset', (t) => {
+    stubNavigatorUserAgent(
+      t,
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.6 Safari/605.1.15',
+    )
+    let dispatchNavigation = startStubNavigationListener(t)
+    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+    let animationFrameCallbacks: FrameRequestCallback[] = []
+    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+      animationFrameCallbacks.push(callback)
+      return 1
+    })
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept: mock.fn(),
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    dispatchNavigation(new Event('navigatesuccess'))
+    expect(scrollTo).toHaveBeenNthCalledWith(1, 0, 1)
+
+    let animationFrameCallback = animationFrameCallbacks[0]
+    if (!animationFrameCallback) throw new Error('Expected an animation frame callback')
+    animationFrameCallback(0)
+    expect(scrollTo).toHaveBeenNthCalledWith(2, 0, 0)
+  })
+
+  it('does not resynchronize WebKit scroll state for fragment navigations', (t) => {
+    stubNavigatorUserAgent(
+      t,
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.6 Safari/605.1.15',
+    )
+    let dispatchNavigation = startStubNavigationListener(t)
+    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+    let anchor = document.createElement('a')
+    anchor.href = '/login#details'
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept: mock.fn(),
+        destinationUrl: new URL('/login#details', window.location.origin).href,
+      }),
+    )
+    dispatchNavigation(new Event('navigatesuccess'))
+
     expect(scrollTo).not.toHaveBeenCalled()
   })
 

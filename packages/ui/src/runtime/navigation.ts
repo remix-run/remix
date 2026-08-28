@@ -42,6 +42,29 @@ interface FrameRedirectNavigationInfo {
 const formSubmissionNavigationInfoType = 'frame-form-submission'
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
+function resyncWebKitScrollAfterNavigation(event: NavigateEvent, resetScroll: boolean): void {
+  let userAgent = navigator.userAgent
+  if (!userAgent.includes('AppleWebKit')) return
+  if (userAgent.includes('Chrome') || userAgent.includes('Chromium')) return
+  if (!resetScroll || (event.navigationType !== 'push' && event.navigationType !== 'replace'))
+    return
+  if (new URL(event.destination.url).hash) return
+
+  window.navigation.addEventListener(
+    'navigatesuccess',
+    () => {
+      // WebKit can reset its internal scroll position without synchronizing the visual viewport.
+      // https://bugs.webkit.org/show_bug.cgi?id=309542
+      if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 0) return
+      window.scrollTo(0, 1)
+      requestAnimationFrame(() => {
+        if (!event.signal.aborted) window.scrollTo(0, 0)
+      })
+    },
+    { once: true, signal: event.signal },
+  )
+}
+
 /**
  * Options for client-side frame-aware navigation.
  */
@@ -109,6 +132,7 @@ export function startNavigationListenerImpl(
       if (!event.canIntercept || isCrossOriginDestination(event)) return
 
       if (isFrameRedirectNavigationInfo(event.info)) {
+        resyncWebKitScrollAfterNavigation(event, event.info.resetScroll)
         event.intercept({
           async handler() {},
           scroll: event.info.resetScroll === false ? 'manual' : undefined,
@@ -125,6 +149,7 @@ export function startNavigationListenerImpl(
         : getRuntimeNavigation(event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
+      resyncWebKitScrollAfterNavigation(event, state.resetScroll)
 
       let topFrame = options.getTopFrame()
       let namedFrame = state.target ? options.getNamedFrame(state.target) : undefined
