@@ -65,7 +65,17 @@ export async function navigate(href: string, options?: NavigationOptions) {
     resetScroll: options?.resetScroll !== false,
     $rmx: true,
   } satisfies NavigationState
-  let transition = window.navigation.navigate(href, { state, history: options?.history })
+  let navigation = window.navigation
+  if (!navigation) {
+    if (options?.history === 'replace') {
+      window.location.replace(href)
+    } else {
+      window.location.assign(href)
+    }
+    return
+  }
+
+  let transition = navigation.navigate(href, { state, history: options?.history })
   await transition.finished
 }
 
@@ -93,6 +103,7 @@ export function startNavigationListenerImpl(
   },
 ) {
   let navigation = window.navigation
+  if (!navigation) return
   let resolveFormNavigation = createFormNavigationResolver(signal)
 
   navigation.updateCurrentEntry({
@@ -122,7 +133,7 @@ export function startNavigationListenerImpl(
             state: replayedSubmission.state,
             getSubmission: replayedSubmission.getSubmission,
           }
-        : getRuntimeNavigation(event, resolveFormNavigation)
+        : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
 
@@ -191,7 +202,7 @@ export function startNavigationListenerImpl(
           // Safari doesn't support precommit as of Aug 2026, so we do a full replacement navigation
           if (event.cancelable) {
             event.preventDefault()
-            window.navigation.navigate(event.destination.url, {
+            navigation.navigate(event.destination.url, {
               history: 'replace',
               state,
               info: {
@@ -295,22 +306,26 @@ function preserveStartingDocumentScrollState(navigation: Navigation, event: Navi
 }
 
 function getRuntimeNavigation(
+  navigation: Navigation,
   event: NavigateEvent,
   resolveFormNavigation: ReturnType<typeof createFormNavigationResolver>,
 ): RuntimeNavigation | undefined {
   if (event.navigationType === 'traverse') {
-    let state = getTraverseNavigationState(event)
+    let state = getTraverseNavigationState(navigation, event)
     return state ? { state } : undefined
   }
 
-  let sourceNavigation = getSourceElementNavigation(event, resolveFormNavigation)
+  let sourceNavigation = getSourceElementNavigation(navigation, event, resolveFormNavigation)
   if (sourceNavigation) return sourceNavigation
 
   let destinationState = event.destination.getState()
   if (isRuntimeNavigation(destinationState)) return { state: destinationState }
 }
 
-function getTraverseNavigationState(event: NavigateEvent): NavigationState | undefined {
+function getTraverseNavigationState(
+  navigation: Navigation,
+  event: NavigateEvent,
+): NavigationState | undefined {
   let destinationState = event.destination.getState()
   if (isRuntimeNavigation(destinationState)) {
     return destinationState
@@ -318,7 +333,6 @@ function getTraverseNavigationState(event: NavigateEvent): NavigationState | und
 
   // Safari returns `null` for destination.getState(), even though its in the
   // navigation.entries(), so we do its job for it and look it up.
-  let navigation = window.navigation
   let matchingEntry = navigation.entries().find((entry) => entry.key === event.destination.key)
   if (matchingEntry) {
     let state = matchingEntry.getState()
@@ -331,6 +345,7 @@ function getTraverseNavigationState(event: NavigateEvent): NavigationState | und
 }
 
 function getSourceElementNavigation(
+  navigation: Navigation,
   event: NavigateEvent,
   resolveFormNavigation: ReturnType<typeof createFormNavigationResolver>,
 ): RuntimeNavigation | undefined {
@@ -359,7 +374,7 @@ function getSourceElementNavigation(
 
   let replaceHistoryByDefault =
     formNavigation.getSubmission !== undefined &&
-    event.destination.url === window.navigation.currentEntry?.url
+    event.destination.url === navigation.currentEntry?.url
 
   return {
     state: {
