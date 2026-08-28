@@ -461,7 +461,40 @@ describe('History API navigation', () => {
     expect(scrollTo).toHaveBeenCalledWith(0, 0)
   })
 
-  it('does not overwrite user scroll during a transition', async (t) => {
+  it('resets scroll after a push navigation', async (t) => {
+    let scroll = mockWindowScroll(t, 0, 400)
+    let topFrame = { src: window.location.href } as FrameHandle
+    let reloadFrame = mock.fn(async (_frame: FrameHandle, _options?: TestReloadOptions) => ({
+      signal: new AbortController().signal,
+    }))
+    startHistoryDriver(t, { topFrame, reloadFrame })
+
+    await navigate('/push-scroll-reset', { history: 'push' })
+
+    expect({ x: scroll.x, y: scroll.y }).toEqual({ x: 0, y: 0 })
+  })
+
+  it('preserves scroll for links marked with data-rmx-reset-scroll=false', async (t) => {
+    let scroll = mockWindowScroll(t, 0, 400)
+    let topFrame = { src: window.location.href } as FrameHandle
+    let reloadFrame = mock.fn(async (_frame: FrameHandle, _options?: TestReloadOptions) => ({
+      signal: new AbortController().signal,
+    }))
+    startHistoryDriver(t, { topFrame, reloadFrame })
+    let anchor = document.createElement('a')
+    anchor.href = '/preserved-link-scroll'
+    anchor.setAttribute('data-rmx-reset-scroll', 'false')
+    document.body.append(anchor)
+
+    anchor.click()
+    await waitFor(() => reloadFrame.mock.calls.length === 1)
+
+    expect({ x: scroll.x, y: scroll.y }).toEqual({ x: 0, y: 400 })
+    expect(scroll.scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('resets scroll after wheel input that does not move the page', async (t) => {
+    let scroll = mockWindowScroll(t, 0, 400)
     let topFrame = { src: window.location.href } as FrameHandle
     let finishReload: (() => void) | undefined
     let reloadFrame = mock.fn(async (_frame: FrameHandle, _options?: TestReloadOptions) => {
@@ -470,16 +503,59 @@ describe('History API navigation', () => {
       })
       return { signal: new AbortController().signal }
     })
-    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
     startHistoryDriver(t, { topFrame, reloadFrame })
 
-    let navigation = navigate('/user-scroll', { history: 'replace' })
+    let navigation = navigate('/no-op-wheel', { history: 'push' })
     await waitFor(() => finishReload !== undefined)
     window.dispatchEvent(new WheelEvent('wheel'))
     finishReload?.()
     await navigation
 
-    expect(scrollTo).not.toHaveBeenCalled()
+    expect({ x: scroll.x, y: scroll.y }).toEqual({ x: 0, y: 0 })
+  })
+
+  it('does not overwrite user scroll during a transition', async (t) => {
+    let scroll = mockWindowScroll(t, 0, 400)
+    let topFrame = { src: window.location.href } as FrameHandle
+    let finishReload: (() => void) | undefined
+    let reloadFrame = mock.fn(async (_frame: FrameHandle, _options?: TestReloadOptions) => {
+      await new Promise<void>((resolve) => {
+        finishReload = resolve
+      })
+      return { signal: new AbortController().signal }
+    })
+    startHistoryDriver(t, { topFrame, reloadFrame })
+
+    let navigation = navigate('/user-scroll', { history: 'replace' })
+    await waitFor(() => finishReload !== undefined)
+    window.dispatchEvent(new WheelEvent('wheel'))
+    scroll.set(0, 300)
+    window.dispatchEvent(new Event('scroll'))
+    finishReload?.()
+    await navigation
+
+    expect({ x: scroll.x, y: scroll.y }).toEqual({ x: 0, y: 300 })
+    expect(scroll.scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('uses only anchors as legacy named fragment targets', async (t) => {
+    let topFrame = { src: window.location.href } as FrameHandle
+    let reloadFrame = mock.fn(async (_frame: FrameHandle, _options?: TestReloadOptions) => ({
+      signal: new AbortController().signal,
+    }))
+    startHistoryDriver(t, { topFrame, reloadFrame })
+    let input = document.createElement('input')
+    input.name = 'results'
+    let anchor = document.createElement('a')
+    anchor.name = 'results'
+    document.body.append(input, anchor)
+    let inputScroll = t.mock.method(input, 'scrollIntoView', () => {})
+    let anchorScroll = t.mock.method(anchor, 'scrollIntoView', () => {})
+
+    await navigate('/fragment#results', { history: 'replace' })
+
+    expect(inputScroll).not.toHaveBeenCalled()
+    expect(anchorScroll).toHaveBeenCalledTimes(1)
   })
 
   it('falls back to event.target when composedPath is unavailable', async (t) => {
@@ -810,4 +886,47 @@ async function waitFor(condition: () => boolean): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 0))
   }
   throw new Error('Timed out waiting for browser navigation')
+}
+
+function mockWindowScroll(t: TestContext, initialX: number, initialY: number) {
+  let x = initialX
+  let y = initialY
+  let originalScrollX = Object.getOwnPropertyDescriptor(window, 'scrollX')
+  let originalScrollY = Object.getOwnPropertyDescriptor(window, 'scrollY')
+  Object.defineProperty(window, 'scrollX', { configurable: true, get: () => x })
+  Object.defineProperty(window, 'scrollY', { configurable: true, get: () => y })
+  let scrollTo = t.mock.method(
+    window,
+    'scrollTo',
+    (xOrOptions?: number | ScrollToOptions, nextY?: number) => {
+      if (typeof xOrOptions === 'object') {
+        x = xOrOptions.left ?? x
+        y = xOrOptions.top ?? y
+      } else {
+        x = xOrOptions ?? x
+        y = nextY ?? y
+      }
+    },
+  )
+
+  t.after(() => {
+    if (originalScrollX) Object.defineProperty(window, 'scrollX', originalScrollX)
+    else Reflect.deleteProperty(window, 'scrollX')
+    if (originalScrollY) Object.defineProperty(window, 'scrollY', originalScrollY)
+    else Reflect.deleteProperty(window, 'scrollY')
+  })
+
+  return {
+    get x() {
+      return x
+    },
+    get y() {
+      return y
+    },
+    scrollTo,
+    set(nextX: number, nextY: number) {
+      x = nextX
+      y = nextY
+    },
+  }
 }

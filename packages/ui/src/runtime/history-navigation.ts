@@ -144,6 +144,10 @@ export function startHistoryNavigationListenerImpl(
         return
       }
 
+      if (!activeController && entry.id !== currentEntry.id) {
+        currentEntry = { ...currentEntry, scroll: getScrollPosition() }
+        scrollPositions.set(currentEntry.id, currentEntry.scroll)
+      }
       cancelScheduledScrollSave()
       entry = { ...entry, scroll: scrollPositions.get(entry.id) ?? entry.scroll }
       currentEntry = entry
@@ -195,23 +199,34 @@ export function startHistoryNavigationListenerImpl(
     let transition = ++activeTransition
     let userScrolled = false
     let pointerDown = false
+    let pointerScrollStart: { x: number; y: number } | undefined
+    let pendingUserScrollStart: { x: number; y: number } | undefined
+    let pendingUserScrollFrame: number | undefined
     let focusChanged = false
     let startingFocus = document.activeElement
     let savedScroll = traversedEntry?.scroll ?? getScrollPosition()
     let onPointerDown = () => {
       pointerDown = true
+      pointerScrollStart = getScrollPosition()
     }
     let onPointerUp = () => {
       pointerDown = false
+      pointerScrollStart = undefined
     }
     let onScroll = () => {
-      if (pointerDown) userScrolled = true
+      let start = pointerDown ? pointerScrollStart : pendingUserScrollStart
+      if (start && !scrollPositionsEqual(start, getScrollPosition())) userScrolled = true
     }
     let onUserScroll = () => {
-      userScrolled = true
+      pendingUserScrollStart = getScrollPosition()
+      if (pendingUserScrollFrame !== undefined) cancelAnimationFrame(pendingUserScrollFrame)
+      pendingUserScrollFrame = requestAnimationFrame(() => {
+        pendingUserScrollFrame = undefined
+        pendingUserScrollStart = undefined
+      })
     }
     let onKeyDown = (event: KeyboardEvent) => {
-      if (isScrollKey(event)) userScrolled = true
+      if (isScrollKey(event)) onUserScroll()
     }
     let onFocusIn = () => {
       focusChanged = true
@@ -303,6 +318,7 @@ export function startHistoryNavigationListenerImpl(
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('focusin', onFocusIn)
       window.removeEventListener('scroll', onScroll)
+      if (pendingUserScrollFrame !== undefined) cancelAnimationFrame(pendingUserScrollFrame)
       if (activeController === controller) activeController = undefined
     }
   }
@@ -652,6 +668,13 @@ function getScrollPosition(): { x: number; y: number } {
   return { x: window.scrollX, y: window.scrollY }
 }
 
+function scrollPositionsEqual(
+  left: { x: number; y: number },
+  right: { x: number; y: number },
+): boolean {
+  return left.x === right.x && left.y === right.y
+}
+
 function restoreScroll(
   destination: URL,
   state: NavigationState,
@@ -684,7 +707,12 @@ function getFragmentTarget(hash: string): Element | undefined {
   try {
     name = decodeURIComponent(name)
   } catch {}
-  return document.getElementById(name) ?? document.getElementsByName(name)[0]
+  return (
+    document.getElementById(name) ??
+    Array.from(document.getElementsByTagName('a')).find(
+      (anchor) => anchor.getAttribute('name') === name,
+    )
+  )
 }
 
 function resetFocus(startingFocus: Element | null): void {

@@ -44,4 +44,36 @@ describe('scroll restoration', () => {
       `Expected traversal to restore ${scrollPosition}, got ${restoredPosition}`,
     )
   })
+
+  it('restores separate positions for duplicate URLs after an immediate traversal', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    let pushCurrentUrl = async () => {
+      await page.evaluate(() => {
+        let anchor = document.createElement('a')
+        anchor.href = window.location.href
+        anchor.textContent = 'Reload current URL'
+        document.body.append(anchor)
+        anchor.click()
+      })
+    }
+    await page.goto(routes.scrollRestoration.href())
+    await page.locator('#scroll-restoration-list-end').waitFor()
+
+    await page.evaluate(() => window.scrollTo(0, 100))
+    await pushCurrentUrl()
+    await page.waitForFunction(() => window.scrollY === 0)
+
+    await page.evaluate(() => window.scrollTo(0, 200))
+    await pushCurrentUrl()
+    await page.waitForFunction(() => window.scrollY === 0)
+
+    await page.evaluate(() => {
+      window.scrollTo(0, 300)
+      window.history.back()
+    })
+    await page.waitForFunction(() => window.scrollY === 200)
+
+    await page.evaluate(() => window.history.forward())
+    await page.waitForFunction(() => window.scrollY === 300)
+  })
 })
