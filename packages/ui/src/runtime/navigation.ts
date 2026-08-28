@@ -133,7 +133,7 @@ export function startNavigationListenerImpl(
             state: replayedSubmission.state,
             getSubmission: replayedSubmission.getSubmission,
           }
-        : getRuntimeNavigation(event, resolveFormNavigation, navigation)
+        : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
 
@@ -306,23 +306,26 @@ function preserveStartingDocumentScrollState(navigation: Navigation, event: Navi
 }
 
 function getRuntimeNavigation(
+  navigation: Navigation,
   event: NavigateEvent,
   resolveFormNavigation: ReturnType<typeof createFormNavigationResolver>,
-  navigation: Navigation,
 ): RuntimeNavigation | undefined {
   if (event.navigationType === 'traverse') {
-    let state = getTraverseNavigationState(event)
+    let state = getTraverseNavigationState(navigation, event)
     return state ? { state } : undefined
   }
 
-  let sourceNavigation = getSourceElementNavigation(event, resolveFormNavigation, navigation)
+  let sourceNavigation = getSourceElementNavigation(navigation, event, resolveFormNavigation)
   if (sourceNavigation) return sourceNavigation
 
   let destinationState = event.destination.getState()
   if (isRuntimeNavigation(destinationState)) return { state: destinationState }
 }
 
-function getTraverseNavigationState(event: NavigateEvent): NavigationState | undefined {
+function getTraverseNavigationState(
+  navigation: Navigation,
+  event: NavigateEvent,
+): NavigationState | undefined {
   let destinationState = event.destination.getState()
   if (isRuntimeNavigation(destinationState)) {
     return destinationState
@@ -330,8 +333,6 @@ function getTraverseNavigationState(event: NavigateEvent): NavigationState | und
 
   // Safari returns `null` for destination.getState(), even though its in the
   // navigation.entries(), so we do its job for it and look it up.
-  let navigation = window.navigation
-  if (!navigation) return undefined
   let matchingEntry = navigation.entries().find((entry) => entry.key === event.destination.key)
   if (matchingEntry) {
     let state = matchingEntry.getState()
@@ -344,9 +345,9 @@ function getTraverseNavigationState(event: NavigateEvent): NavigationState | und
 }
 
 function getSourceElementNavigation(
+  navigation: Navigation,
   event: NavigateEvent,
   resolveFormNavigation: ReturnType<typeof createFormNavigationResolver>,
-  navigation: Navigation,
 ): RuntimeNavigation | undefined {
   let sourceEvent = event as SourceElementNavigateEvent
   let sourceElement = sourceEvent.sourceElement
