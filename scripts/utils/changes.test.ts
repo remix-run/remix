@@ -9,6 +9,7 @@ import {
   getNextVersion,
   parseChangelog,
   parsePackageChanges,
+  readChangesConfig,
 } from './changes.ts'
 
 function makeRelease(overrides: Partial<PackageRelease> = {}): PackageRelease {
@@ -63,6 +64,42 @@ describe('parsePackageChanges', () => {
 
       assert.equal(result.changes.length, 0)
       assert.equal(result.changesConfig, null)
+    })
+  })
+})
+
+describe('readChangesConfig', () => {
+  it('reads a custom prerelease start', () => {
+    withTemporaryPackage('3.0.0-beta.10', (packageDirName, packagePath) => {
+      let changesPath = path.join(packagePath, '.changes')
+      fs.mkdirSync(changesPath)
+      fs.writeFileSync(
+        path.join(changesPath, 'config.json'),
+        JSON.stringify({ prereleaseChannel: 'rc', prereleaseStart: 1 }),
+      )
+
+      assert.deepEqual(readChangesConfig(packageDirName, packagePath), {
+        exists: true,
+        valid: true,
+        config: { prereleaseChannel: 'rc', prereleaseStart: 1 },
+      })
+    })
+  })
+
+  it('rejects an invalid prerelease start', () => {
+    withTemporaryPackage('3.0.0-beta.10', (packageDirName, packagePath) => {
+      let changesPath = path.join(packagePath, '.changes')
+      fs.mkdirSync(changesPath)
+      fs.writeFileSync(
+        path.join(changesPath, 'config.json'),
+        JSON.stringify({ prereleaseChannel: 'rc', prereleaseStart: -1 }),
+      )
+
+      assert.deepEqual(readChangesConfig(packageDirName, packagePath), {
+        exists: true,
+        valid: false,
+        error: '.changes/config.json "prereleaseStart" must be a non-negative integer',
+      })
     })
   })
 })
@@ -182,6 +219,26 @@ describe('getNextVersion', () => {
     assert.equal(
       getNextVersion('3.0.0-alpha.0', 'patch', { prereleaseChannel: 'alpha' }),
       '3.0.0-alpha.1',
+    )
+  })
+
+  it('starts a new prerelease channel at a configured number', () => {
+    assert.equal(
+      getNextVersion('3.0.0-beta.10', 'patch', {
+        prereleaseChannel: 'rc',
+        prereleaseStart: 1,
+      }),
+      '3.0.0-rc.1',
+    )
+  })
+
+  it('increments the configured channel after it starts', () => {
+    assert.equal(
+      getNextVersion('3.0.0-rc.1', 'patch', {
+        prereleaseChannel: 'rc',
+        prereleaseStart: 1,
+      }),
+      '3.0.0-rc.2',
     )
   })
 })
