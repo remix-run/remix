@@ -1,3 +1,4 @@
 {
-  "prereleaseChannel": "beta"
+  "prereleaseChannel": "rc",
+  "prereleaseStart": 1
 }

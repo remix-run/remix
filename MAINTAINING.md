@@ -44,11 +44,13 @@ Packages can opt into prerelease mode by creating an optional `.changes/config.j
 
 ```json
 {
-  "prereleaseChannel": "alpha"
+  "prereleaseChannel": "alpha",
+  "prereleaseStart": 0
 }
 ```
 
 The `prereleaseChannel` determines the version suffix, such as `alpha`, `beta`, or `rc`.
+`prereleaseStart` optionally sets the first number for a new channel and defaults to `0`.
 Prereleases are always published to npm with the `next` tag. This is currently used for `remix`.
 
 #### Bumping Prerelease Versions
@@ -62,7 +64,8 @@ example from `3.0.0-alpha.1` to `3.0.0-alpha.2`. Changelog entries are grouped u
 To transition between channels, such as `alpha` to `beta`:
 
 1. Update `prereleaseChannel` in `.changes/config.json` to the new channel.
-2. Add a change file describing the transition.
+2. Set `prereleaseStart` if the new channel should not start at `0`.
+3. Add a change file describing the transition.
 
 The version resets to the new channel, for example from `3.0.0-alpha.7` to `3.0.0-beta.0`. The
 bump type is used only for changelog categorization; by convention, use `patch`.
