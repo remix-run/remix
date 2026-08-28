@@ -409,7 +409,7 @@ environment variable at command runtime, and paths are resolved relative to `rem
 
 ```jsonc
 {
-  "$schema": "https://remix.run/schemas/remix.json",
+  "$schema": "https://raw.githubusercontent.com/remix-run/remix/main/packages/cli/schema/remix.json",
   "db": {
     "adapter": {
       "type": "postgres",

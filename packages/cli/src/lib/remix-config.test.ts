@@ -429,18 +429,16 @@ describe('Remix config loading', () => {
     }
   })
 
-  it('publishes the same schema with the CLI package and Remix website', async () => {
+  it('publishes the schema with its raw GitHub URL as its ID', async () => {
     let packageSchema = await fs.readFile(
       path.join(ROOT_DIR, 'packages', 'cli', 'schema', 'remix.json'),
       'utf8',
     )
-    let websiteSchema = await fs.readFile(
-      path.join(ROOT_DIR, 'docs', 'guides', 'public', 'schemas', 'remix.json'),
-      'utf8',
-    )
 
-    assert.equal(packageSchema, websiteSchema)
-    assert.equal(JSON.parse(packageSchema).$id, 'https://remix.run/schemas/remix.json')
+    assert.equal(
+      JSON.parse(packageSchema).$id,
+      'https://raw.githubusercontent.com/remix-run/remix/main/packages/cli/schema/remix.json',
+    )
   })
 })
 

@@ -101,7 +101,7 @@ trailing commas. Every top-level field is optional:
 
 ```jsonc
 {
-  "$schema": "https://remix.run/schemas/remix.json",
+  "$schema": "https://raw.githubusercontent.com/remix-run/remix/main/packages/cli/schema/remix.json",
 
   "assets": {
     "rootDir": ".",

@@ -59,7 +59,7 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
   ```jsonc
   {
-    "$schema": "https://remix.run/schemas/remix.json",
+    "$schema": "https://raw.githubusercontent.com/remix-run/remix/main/packages/cli/schema/remix.json",
     "test": {
       "type": ["server"],
       "concurrency": 1,
@@ -95,7 +95,7 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
   ```jsonc
   {
-    "$schema": "https://remix.run/schemas/remix.json",
+    "$schema": "https://raw.githubusercontent.com/remix-run/remix/main/packages/cli/schema/remix.json",
     "db": {
       "adapter": {
         "type": "sqlite",
@@ -282,7 +282,7 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
   ```jsonc
   {
-    "$schema": "https://remix.run/schemas/remix.json",
+    "$schema": "https://raw.githubusercontent.com/remix-run/remix/main/packages/cli/schema/remix.json",
     "test": {
       "type": ["server"],
       "concurrency": 1,
@@ -318,7 +318,7 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
   ```jsonc
   {
-    "$schema": "https://remix.run/schemas/remix.json",
+    "$schema": "https://raw.githubusercontent.com/remix-run/remix/main/packages/cli/schema/remix.json",
     "db": {
       "adapter": {
         "type": "sqlite",

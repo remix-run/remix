@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://remix.run/schemas/remix.json",
+  "$id": "https://raw.githubusercontent.com/remix-run/remix/main/packages/cli/schema/remix.json",
   "title": "Remix CLI configuration",
   "description": "Configuration for the Remix command-line interface.",
   "type": "object",
