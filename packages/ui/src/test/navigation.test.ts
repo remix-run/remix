@@ -9,6 +9,13 @@ import type { FrameHandle } from '../runtime/component.ts'
 import type { ResolveFrameOptions } from '../runtime/frame.ts'
 import { withResolvers } from './utils.ts'
 
+type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }
+
+function createReloadTransition(result: StubFrameReloadResult | Promise<StubFrameReloadResult>) {
+  let finished = Promise.resolve(result)
+  return { committed: finished.then(() => {}), finished }
+}
+
 // Stand-in frame the navigation handler can call without dragging in the
 // full app runtime from ./run.ts. Only `src` and `reload` are touched on
 // the path under test.
@@ -20,7 +27,8 @@ const stubFrame = {
 const stubFrames = {
   getTopFrame: () => stubFrame,
   getNamedFrame: () => stubFrame,
-  reloadFrame: async (frame: FrameHandle) => ({ signal: await frame.reload() }),
+  reloadFrame: (frame: FrameHandle) =>
+    createReloadTransition(frame.reload().then((signal) => ({ signal }))),
 }
 
 function stubGlobalMethod(t: TestContext, api: string, method: string, impl: any) {
@@ -177,23 +185,27 @@ describe('navigate', () => {
     controller.abort()
   })
 
-  it('leaves default scrolling to the browser', async (t) => {
+  it('uses browser scrolling after the frame content commits', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let scrollTo = t.mock.method(window, 'scrollTo', () => {})
     let anchor = document.createElement('a')
     anchor.href = '/login'
+    let scroll = mock.fn()
     let intercept = mock.fn()
 
     dispatchNavigation(
       createAnchorNavigateEvent(anchor, {
         intercept,
         destinationUrl: new URL('/login', window.location.origin).href,
+        info: { resetScroll: true },
+        scroll,
       }),
     )
 
     let interceptOptions = intercept.mock.calls[0]?.arguments[0]
     expect(interceptOptions?.scroll).toBe(undefined)
     await interceptOptions?.handler?.()
+    expect(scroll).toHaveBeenCalledTimes(1)
     dispatchNavigation(new Event('navigatesuccess'))
     expect(scrollTo).not.toHaveBeenCalled()
   })
@@ -377,16 +389,15 @@ describe('navigate', () => {
     }
     stubGlobalField(t, 'navigation', stubNavigation)
 
-    let [reloadPromise, resolveReload] = withResolvers<{ signal: AbortSignal }>()
+    let [committed, resolveCommitted] = withResolvers<void>()
+    let [finished, resolveFinished] = withResolvers<{ signal: AbortSignal }>()
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame(_frame, options) {
-        let onAfterCommit = Reflect.get(options ?? {}, 'onAfterCommit')
-        if (typeof onAfterCommit === 'function') onAfterCommit()
-        return reloadPromise
+      reloadFrame() {
+        return { committed, finished }
       },
     })
 
@@ -395,6 +406,7 @@ describe('navigate', () => {
     let event = Object.assign(new Event('navigate'), {
       canIntercept: true,
       navigationType: 'traverse',
+      info: { resetScroll: true },
       signal: new AbortController().signal,
       destination: {
         url: new URL('/collection', window.location.origin).href,
@@ -441,10 +453,16 @@ describe('navigate', () => {
       expect(bodyRule.style.overflowAnchor).toBe('none')
       expect(bodyRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
 
-      resolveReload({ signal: event.signal })
+      resolveCommitted()
+      await Promise.resolve()
+
+      expect(handlerSettled).toBe(false)
+      expect(scroll).toHaveBeenCalledTimes(1)
+
+      resolveFinished({ signal: event.signal })
       await handler
 
-      expect(scroll).not.toHaveBeenCalled()
+      expect(scroll).toHaveBeenCalledTimes(1)
       expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
       navigationEvents.dispatchEvent(new Event('navigatesuccess'))
       expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
@@ -609,7 +627,8 @@ describe('navigate', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: async (_frame, options) => ({ signal: await reload(options) }),
+      reloadFrame: (_frame, options) =>
+        createReloadTransition(reload(options).then((signal) => ({ signal }))),
     })
 
     let anchor = document.createElement('a')
@@ -644,15 +663,15 @@ describe('navigate', () => {
     redirectedUrl.searchParams.set('frame-navigation', 'redirected')
     let topFrame = { src: '' } as FrameHandle
     let shouldRedirect = true
-    let reloadFrame = mock.fn(async () => {
+    let reloadFrame = mock.fn(() => {
       if (shouldRedirect) {
         shouldRedirect = false
-        return {
+        return createReloadTransition({
           signal: new AbortController().signal,
           redirectedTo: redirectedUrl.href,
-        }
+        })
       }
-      return { signal: new AbortController().signal }
+      return createReloadTransition({ signal: new AbortController().signal })
     })
     let controller = new AbortController()
     startNavigationListenerImpl(controller.signal, {
@@ -701,10 +720,12 @@ describe('navigate', () => {
     let redirectedFrameUrl = new URL('/redirected-frame', originalUrl)
     let topFrame = { src: originalUrl } as FrameHandle
     let childFrame = { src: '' } as FrameHandle
-    let reloadFrame = mock.fn(async (frame: FrameHandle) => ({
-      signal: new AbortController().signal,
-      redirectedTo: frame === childFrame ? redirectedFrameUrl.href : undefined,
-    }))
+    let reloadFrame = mock.fn((frame: FrameHandle) =>
+      createReloadTransition({
+        signal: new AbortController().signal,
+        redirectedTo: frame === childFrame ? redirectedFrameUrl.href : undefined,
+      }),
+    )
     let controller = new AbortController()
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
@@ -756,7 +777,7 @@ describe('form navigation', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: (_frame, options) => reload(options),
+      reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
     let form = document.createElement('form')
@@ -794,7 +815,7 @@ describe('form navigation', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: (_frame, options) => reload(options),
+      reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
     let form = document.createElement('form')
@@ -828,7 +849,8 @@ describe('form navigation', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: async (_frame, options) => ({ signal: await reload(options) }),
+      reloadFrame: (_frame, options) =>
+        createReloadTransition(reload(options).then((signal) => ({ signal }))),
     })
 
     let form = document.createElement('form')
@@ -864,7 +886,7 @@ describe('form navigation', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: (_frame, options) => reload(options),
+      reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
     let destination = new URL(window.location.href)
@@ -906,7 +928,8 @@ describe('form navigation', () => {
         expect(name).toBe('account')
         return namedFrame
       },
-      reloadFrame: (frame, options) => (frame === namedFrame ? namedReload(options) : topReload()),
+      reloadFrame: (frame, options) =>
+        createReloadTransition(frame === namedFrame ? namedReload(options) : topReload()),
     })
 
     let destinationUrl = window.location.href
@@ -958,7 +981,7 @@ describe('form navigation', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: (_frame, options) => reload(options),
+      reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
     let form = document.createElement('form')
@@ -1015,7 +1038,7 @@ describe('form navigation', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: (_frame, options) => reload(options),
+      reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
     let form = document.createElement('form')
@@ -1169,11 +1192,14 @@ function createAnchorNavigateEvent(
   options: {
     intercept: (options?: NavigationInterceptOptions) => void
     destinationUrl: string
+    info?: unknown
+    scroll?: () => void
   },
 ): Event {
   return Object.assign(new Event('navigate'), {
     canIntercept: true,
     navigationType: 'push',
+    info: options.info,
     sourceElement: anchor,
     signal: new AbortController().signal,
     destination: {
@@ -1181,6 +1207,7 @@ function createAnchorNavigateEvent(
       key: 'next',
       getState: () => undefined,
     },
+    scroll: options.scroll,
     intercept: options.intercept,
   })
 }

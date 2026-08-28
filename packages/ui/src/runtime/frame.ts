@@ -104,6 +104,11 @@ type FrameReloadResult = {
   redirectedTo?: string
 }
 
+type FrameReloadTransition = {
+  committed: Promise<void>
+  finished: Promise<FrameReloadResult>
+}
+
 type FrameTemplateListener = (fragment: DocumentFragment) => void
 
 const bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
@@ -173,7 +178,7 @@ export type FrameRuntime = {
   serverFrameReload:
     | { signal: AbortSignal; reconciliationTracker?: ReconciliationTracker }
     | undefined
-  reloadForNavigation?: (options?: FrameReloadOptions) => Promise<FrameReloadResult>
+  reloadForNavigation?: (options?: FrameReloadOptions) => FrameReloadTransition
 }
 
 export function isFrameRuntime(value: unknown): value is FrameRuntime {
@@ -190,7 +195,7 @@ export function isFrameRuntime(value: unknown): value is FrameRuntime {
 export function reloadFrameForNavigation(
   frame: FrameHandle,
   options?: FrameReloadOptions,
-): Promise<FrameReloadResult> {
+): FrameReloadTransition {
   let runtime = frame.$runtime
   invariant(isFrameRuntime(runtime), 'Expected a frame runtime')
   let reload = runtime.reloadForNavigation
@@ -303,7 +308,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   // Merge any rmx-data found in the current document once at startup.
   mergeRmxDataFromDocument(init.data, container.doc)
 
-  let runtime = createFrameRuntime({ ...init, styleManager, reloadForNavigation: reload })
+  let runtime = createFrameRuntime({
+    ...init,
+    styleManager,
+    reloadForNavigation: startReloadTransition,
+  })
 
   let frame = createFrameHandle({
     src: init.src,
@@ -684,8 +693,23 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   async function reload(options?: FrameReloadOptions): Promise<FrameReloadResult> {
+    return await startReloadTransition(options).finished
+  }
+
+  function startReloadTransition(options?: FrameReloadOptions): FrameReloadTransition {
     let controller = startReload(options?.signal)
-    return await resolveAndRenderReload(controller, options)
+    let resolveCommitted!: () => void
+    let rejectCommitted!: (error: unknown) => void
+    let committed = new Promise<void>((resolve, reject) => {
+      resolveCommitted = resolve
+      rejectCommitted = reject
+    })
+    let finished = resolveAndRenderReload(controller, options, resolveCommitted)
+
+    // Settle committed when a reload is aborted or fails before rendering any content.
+    void finished.then(resolveCommitted, rejectCommitted)
+
+    return { committed, finished }
   }
 
   function startReload(signal?: AbortSignal): AbortController {
@@ -747,6 +771,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   async function resolveAndRenderReload(
     controller: AbortController,
     options?: FrameReloadOptions,
+    onCommit?: () => void,
   ): Promise<FrameReloadResult> {
     try {
       let resolution = await init.resolveFrame(frame.src, {
@@ -766,6 +791,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         signal: controller.signal,
         reconciliationTracker,
       })
+      onCommit?.()
       reconciliationTracker.finalize()
       await reconciliationTracker.ready()
       return {
@@ -921,7 +947,7 @@ export function createFrameRuntime(init: {
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
-  reloadForNavigation?: (options?: FrameReloadOptions) => Promise<FrameReloadResult>
+  reloadForNavigation?: (options?: FrameReloadOptions) => FrameReloadTransition
 }): FrameRuntime {
   return {
     [FRAME_RUNTIME]: true,

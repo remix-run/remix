@@ -1,1 +1,1 @@
-Fix `data-rmx-reset-scroll="false"` and `navigate(..., { resetScroll: false })` to preserve the current scroll position. Default navigations now leave scroll resets and history restoration to the browser.
+Fix `data-rmx-reset-scroll="false"` and `navigate(..., { resetScroll: false })` to preserve the current scroll position. Default navigations now let the browser reset or restore scroll immediately after the destination DOM commits, without waiting for client entries and blocking frames to finish loading.

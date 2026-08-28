@@ -220,7 +220,7 @@ describe('run', () => {
         formData,
         method: 'post',
         signal,
-      })
+      }).finished
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       let [src, init] = fetchMock.mock.calls[0]!.arguments
@@ -293,7 +293,7 @@ describe('run', () => {
         encType: 'application/x-www-form-urlencoded',
         formData,
         method: 'post',
-      })
+      }).finished
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       let [, init] = fetchMock.mock.calls[0]!.arguments
@@ -327,7 +327,7 @@ describe('run', () => {
         encType: 'text/plain',
         formData,
         method: 'post',
-      })
+      }).finished
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       let [, init] = fetchMock.mock.calls[0]!.arguments

@@ -183,10 +183,15 @@ export function startNavigationListenerImpl(
 
         topFrame.src = event.destination.url
         if (frame !== topFrame) frame.src = state.src
-        let { redirectedTo } = await options.reloadFrame(frame, {
+        let reload = options.reloadFrame(frame, {
           ...submission,
           signal: event.signal,
         })
+        await reload.committed
+        if (event.signal.aborted) return
+        if (state.resetScroll) event.scroll()
+
+        let { redirectedTo } = await reload.finished
 
         if (redirectedTo && frame === topFrame) {
           frame.src = redirectedTo
