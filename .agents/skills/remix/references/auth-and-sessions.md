@@ -137,7 +137,7 @@ Notice that there is no manual `Set-Cookie` plumbing in the action — the sessi
 ```typescript
 import { auth, createSessionAuthScheme } from 'remix/middleware/auth'
 import { Session } from 'remix/session'
-import { Database } from 'remix/data-table'
+import { databaseContext } from '~/middleware/database.ts'
 
 export function loadAuth() {
   return auth({
@@ -148,7 +148,7 @@ export function loadAuth() {
           return data ?? null
         },
         async verify(value, context) {
-          let db = context.get(Database)
+          let db = context.get(databaseContext)
           return (await db.find(users, value.userId)) ?? null
         },
         invalidate(session) {
@@ -195,7 +195,7 @@ export let passwordProvider = createCredentialsAuthProvider({
     return s.parse(loginSchema, formData)
   },
   async verify({ email, password }, context) {
-    let db = context.get(Database)
+    let db = context.get(databaseContext)
     let user = await db.findOne(users, { where: { email } })
     if (!user || !(await verifyPassword(password, user.password_hash))) {
       return null
@@ -247,7 +247,6 @@ function logout(context) {
 
 ```typescript
 import {
-  createAtmosphereAuthProvider,
   createGoogleAuthProvider,
   createGitHubAuthProvider,
   startExternalAuth,
@@ -267,20 +266,7 @@ let githubProvider = createGitHubAuthProvider({
   clientSecret: process.env.GITHUB_CLIENT_SECRET,
   redirectUri: new URL(routes.auth.github.callback.href(), origin),
 })
-
-let atmosphereSessionSecret = process.env.ATMOSPHERE_SESSION_SECRET
-if (!atmosphereSessionSecret && process.env.NODE_ENV !== 'test') {
-  throw new Error('ATMOSPHERE_SESSION_SECRET is required')
-}
-
-let atmosphereProvider = createAtmosphereAuthProvider({
-  clientId: 'https://app.example.com/oauth/client-metadata.json',
-  redirectUri: new URL(routes.auth.atmosphere.callback.href(), origin),
-  sessionSecret: atmosphereSessionSecret ?? 'test-only-secret',
-})
 ```
-
-For Atmosphere-compatible atproto OAuth, create the provider once, call `atmosphereProvider.prepare(handleOrDid)` before `startExternalAuth(...)`, then pass the same module-scope provider to `finishExternalAuth(...)` and `refreshExternalAuth(...)`.
 
 ### OAuth controller
 
@@ -300,7 +286,7 @@ export default createController(routes.auth.google, {
     async callback(context) {
       let { result, returnTo } = await finishExternalAuth(googleProvider, context)
 
-      let db = context.get(Database)
+      let db = context.get(databaseContext)
       let { user, authAccount } = await resolveExternalAuth(db, result)
 
       let session = completeAuth(context)
@@ -318,11 +304,11 @@ export default createController(routes.auth.google, {
 
 ### Refresh stored provider tokens
 
-Use `refreshExternalAuth(provider, tokens)` when an app has stored OAuth/OIDC tokens and needs a fresh access token from a refresh token. Built-in OIDC providers, X, and Atmosphere support refresh-token exchange. If the provider does not rotate the refresh token, the refreshed bundle preserves the current one.
+Use `refreshExternalAuth(provider, tokens)` when an app has stored OAuth/OIDC tokens and needs a fresh access token from a refresh token. Built-in OIDC providers and X support refresh-token exchange. If the provider does not rotate the refresh token, the refreshed bundle preserves the current one.
 
 ```typescript
 async function refreshGoogleTokens({ get }) {
-  let db = get(Database)
+  let db = get(databaseContext)
   let account = await db.findOne(authAccounts, { where: { provider: 'google' } })
   if (!account) return null
 

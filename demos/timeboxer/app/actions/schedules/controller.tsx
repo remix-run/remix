@@ -1,6 +1,6 @@
 import { Auth } from 'remix/middleware/auth'
 import { getCsrfToken } from 'remix/middleware/csrf'
-import { DataTableConstraintError, Database } from 'remix/data-table'
+import { DataTableConstraintError } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import { maxLength, minLength } from 'remix/data-schema/checks'
 import { createController } from 'remix/router'
@@ -14,6 +14,7 @@ import {
   ScheduleDataError,
 } from '../../data/schedules.ts'
 import { routes } from '../../routes.ts'
+import { databaseContext } from '../../middleware/database.ts'
 import { createScheduleIcs } from './ics.ts'
 import { SchedulePage } from './page.tsx'
 
@@ -52,7 +53,7 @@ export const schedulesController = createController(routes.schedules, {
       let auth = context.get(Auth)!
       if (!auth.ok) return unauthorized()
 
-      let db = context.get(Database)!
+      let db = context.get(databaseContext)!
       let userSchedules = await listSchedules(db, authUserId(auth))
 
       return Response.json({ schedules: userSchedules })
@@ -66,7 +67,7 @@ export const schedulesController = createController(routes.schedules, {
       if (!parsed.success) return validationError(parsed.issues)
 
       try {
-        let db = context.get(Database)!
+        let db = context.get(databaseContext)!
         let schedule = await createSchedule(db, authUserId(auth), parsed.value.name)
 
         return Response.json({ schedule }, { status: 201 })
@@ -83,7 +84,7 @@ export const schedulesController = createController(routes.schedules, {
       if (scheduleId instanceof Response) return scheduleId
 
       try {
-        let db = context.get(Database)!
+        let db = context.get(databaseContext)!
         let userId = authUserId(auth)
         await deleteSchedule(db, userId, scheduleId)
 
@@ -113,7 +114,7 @@ export const schedulesController = createController(routes.schedules, {
       if (scheduleId instanceof Response) return scheduleId
 
       try {
-        let db = context.get(Database)!
+        let db = context.get(databaseContext)!
         let schedule = await getScheduleDocument(db, authUserId(auth), scheduleId)
 
         return new Response(createScheduleIcs(schedule), {
@@ -140,7 +141,7 @@ export const schedulesController = createController(routes.schedules, {
       if (scheduleId instanceof Response) return scheduleId
 
       try {
-        let db = context.get(Database)!
+        let db = context.get(databaseContext)!
         let schedule = await getScheduleDocument(db, authUserId(auth), scheduleId)
 
         if (wantsJson(context.request)) {
@@ -173,7 +174,7 @@ export const schedulesController = createController(routes.schedules, {
       if (!parsed.success) return validationError(parsed.issues)
 
       try {
-        let db = context.get(Database)!
+        let db = context.get(databaseContext)!
         let schedule = await replaceScheduleDocument(db, authUserId(auth), scheduleId, parsed.value)
 
         return Response.json({ schedule })

@@ -2,7 +2,7 @@ import { createController } from 'remix/router'
 
 import { assets } from '../assets.ts'
 import { routes } from '../routes.ts'
-import { HomePage } from '../ui/scaffold-home-page.tsx'
+import { HomePage } from './home-page.tsx'
 
 export default createController(routes, {
   actions: {

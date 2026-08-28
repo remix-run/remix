@@ -44,8 +44,8 @@ const CROSS_ORIGIN_FRAME_HEADERS = [
 
 /** Options for the standard Remix UI renderer. */
 export interface RenderOptions {
-  /** Asset server used to turn source-based client entry IDs into browser module URLs. */
-  assets?: Pick<AssetServer, 'getHref'>
+  /** Asset server used to turn source-based client entry IDs into browser module and preload URLs. */
+  assets?: Pick<AssetServer, 'getHref' | 'getPreloads'>
   /** Error hook invoked when server rendering fails. */
   onError?: (error: unknown) => void
 }
@@ -121,7 +121,7 @@ function createFrameRequestHeaders(
   for (let name of FRAME_REQUEST_HEADERS_TO_REMOVE) {
     headers.delete(name)
   }
-  for (let name of headers.keys()) {
+  for (let name of [...headers.keys()]) {
     if (name.startsWith('sec-fetch-')) headers.delete(name)
   }
 
@@ -186,10 +186,10 @@ function createCrossOriginFrameHeaders(headers: Headers): Headers {
 }
 
 async function resolveClientEntry(
-  assets: Pick<AssetServer, 'getHref'>,
+  assets: Pick<AssetServer, 'getHref' | 'getPreloads'>,
   entryId: string,
   component: { readonly name: string },
-): Promise<{ href: string; exportName: string }> {
+): Promise<{ href: string; exportName: string; preloads?: string[] }> {
   let hashIndex = entryId.lastIndexOf('#')
   let sourceId = hashIndex === -1 ? entryId : entryId.slice(0, hashIndex)
   let explicitExportName = hashIndex === -1 ? '' : entryId.slice(hashIndex + 1)
@@ -201,10 +201,11 @@ async function resolveClientEntry(
     )
   }
 
-  return {
-    href: sourceId.startsWith('file:') ? await assets.getHref(sourceId) : sourceId,
-    exportName,
-  }
+  if (!sourceId.startsWith('file:')) return { href: sourceId, exportName }
+
+  let [href, preloads] = await Promise.all([assets.getHref(sourceId), assets.getPreloads(sourceId)])
+
+  return { href, exportName, preloads }
 }
 
 function escapeHtml(value: string): string {

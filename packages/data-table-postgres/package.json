@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/data-table-postgres",
-  "version": "0.4.0",
-  "description": "PostgreSQL adapter for remix/data-table",
+  "version": "0.5.0",
+  "description": "PostgreSQL database implementation for remix/data-table",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -38,7 +38,7 @@
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@types/pg": "^8.15.6",
-    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:",
     "pg": "^8.16.3"
   },
   "dependencies": {
@@ -53,13 +53,13 @@
     }
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test",
-    "test:bun": "bun x --bun remix-test",
-    "test:coverage": "remix-test --coverage",
-    "typecheck": "tsgo --noEmit"
+    "test": "remix test",
+    "test:bun": "bun x --bun remix test",
+    "test:coverage": "remix test --coverage",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "remix",

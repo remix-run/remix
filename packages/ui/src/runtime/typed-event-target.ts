@@ -1,12 +1,7 @@
 /**
  * An `EventTarget` subclass with typed event maps.
  */
-export class TypedEventTarget<eventMap> extends EventTarget {
-  /**
-   * Phantom property that carries the event map type on instances.
-   */
-  declare readonly __eventMap?: eventMap
-}
+export class TypedEventTarget<eventMap> extends EventTarget {}
 
 /**
  * Interface surface for {@link TypedEventTarget} with typed listener overloads.

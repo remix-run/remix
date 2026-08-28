@@ -27,24 +27,29 @@ const ROOT_HELP_TEXT = [
   '  remix <command> [options]',
   '',
   'Commands:',
-  '  completion      Print shell completion scripts for Remix',
-  '  help [command]  Show help for Remix commands',
-  '  new <name>      Create a new Remix project',
-  '  doctor          Check project health for the current project',
-  '  routes          Show the route tree for the current project',
-  '  test [glob]     Run tests for the current project',
-  '  version         Show the current Remix version',
+  '  assets [command]  List or inspect browser-reachable assets',
+  '  completion        Print shell completion scripts for Remix',
+  '  help [command]    Show help for Remix commands',
+  '  new <name>        Create a new Remix project',
+  '  db <command>      Manage the current app database',
+  '  doctor            Check project health for the current project',
+  '  routes            Show the route tree for the current project',
+  '  test [glob]       Run tests for the current project',
+  '  version           Show the current Remix version',
   '',
   'Options:',
-  '  -h, --help     Show help',
-  '  --no-color     Disable ANSI color output',
-  '  -v, --version  Show version',
+  '  --config <path>  Use a custom Remix config file',
+  '  -h, --help       Show help',
+  '  --no-color       Disable ANSI color output',
+  '  -v, --version    Show version',
   '',
   'Examples:',
+  '  remix assets',
   '  remix completion bash',
   '  remix help',
   '  remix help completion',
   '  remix help doctor',
+  '  remix db status',
   '  remix doctor',
   '  remix new my-remix-app',
   '  remix new my-remix-app --app-name "My Remix App"',
@@ -73,9 +78,10 @@ const DOCTOR_COMMAND_HELP_TEXT = [
   'Check project environment and Remix app conventions for the current project.',
   '',
   'Options:',
-  '  --json    Print doctor findings as JSON',
-  '  --strict  Exit with status 1 when warning-level findings are present',
-  '  --fix     Apply low-risk project and action fixes',
+  '  --json       Print doctor findings as JSON',
+  '  --strict     Exit with status 1 when warning-level findings are present',
+  '  --no-strict  Do not exit with status 1 when warning-level findings are present',
+  '  --fix        Apply available low-risk fixes',
   '',
   'Examples:',
   '  remix doctor',
@@ -93,7 +99,9 @@ const HELP_COMMAND_HELP_TEXT = [
   '',
   'Examples:',
   '  remix help',
+  '  remix help assets',
   '  remix help completion',
+  '  remix help db',
   '  remix help doctor',
   '  remix help new',
   '  remix help routes',
@@ -296,7 +304,7 @@ describe('run', () => {
 
       let test = await captureOutput(() => run(['test', '--help']))
       assert.equal(test.exitCode, 0)
-      assert.equal(test.stdout, `${TEST_COMMAND_HELP_TEXT}\n`)
+      assert.equal(test.stdout, TEST_COMMAND_HELP_TEXT)
       assert.equal(test.stderr, '')
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
@@ -320,6 +328,7 @@ describe('run', () => {
   })
 
   it('prints command help from the help command', async () => {
+    let assetsHelp = await captureOutput(() => run(['help', 'assets']))
     let doctorHelp = await captureOutput(() => run(['help', 'doctor']))
     let completionHelp = await captureOutput(() => run(['help', 'completion']))
     let newHelp = await captureOutput(() => run(['help', 'new']))
@@ -328,6 +337,9 @@ describe('run', () => {
     let testHelp = await captureOutput(() => run(['help', 'test']))
     let versionHelp = await captureOutput(() => run(['help', 'version']))
 
+    assert.equal(assetsHelp.exitCode, 0)
+    assert.match(assetsHelp.stdout, /remix assets inspect <url-or-file>/)
+    assert.equal(assetsHelp.stderr, '')
     assert.equal(doctorHelp.exitCode, 0)
     assert.equal(doctorHelp.stdout, DOCTOR_COMMAND_HELP_TEXT)
     assert.equal(doctorHelp.stderr, '')
@@ -395,6 +407,43 @@ describe('run', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('runs commands that do not read the config despite an invalid remix.json', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-broken-config-'))
+
+    try {
+      await fs.writeFile(path.join(projectDir, 'remix.json'), '{ "test": nope }', 'utf8')
+
+      let help = await captureOutput(() => run(['--help'], { cwd: projectDir }))
+      let version = await captureOutput(() =>
+        run(['version'], { cwd: projectDir, remixVersion: '9.9.9' }),
+      )
+
+      assert.equal(help.exitCode, 0)
+      assert.equal(help.stdout, ROOT_HELP_TEXT)
+      assert.equal(version.exitCode, 0)
+      assert.equal(version.stdout, '9.9.9\n')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('validates an explicitly selected config for every command', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-explicit-config-'))
+
+    try {
+      await fs.writeFile(path.join(projectDir, 'remix.json'), '{ "test": nope }', 'utf8')
+
+      let result = await captureOutput(() =>
+        run(['--config', 'remix.json', 'version'], { cwd: projectDir, remixVersion: '9.9.9' }),
+      )
+
+      assert.equal(result.exitCode, 1)
+      assert.match(result.stderr, /Error \[RMX_INVALID_CONFIG\]/)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('fails for unknown commands', async () => {
     let result = await captureOutput(() => run(['unknown']))
 
@@ -451,11 +500,14 @@ describe('run', () => {
       }
       let agentsGuide = await fs.readFile(path.join(appDir, 'AGENTS.md'), 'utf8')
       let readme = await fs.readFile(path.join(appDir, 'README.md'), 'utf8')
+      let hmr = await fs.readFile(path.join(appDir, 'hmr.ts'), 'utf8')
       let server = await fs.readFile(path.join(appDir, 'server.ts'), 'utf8')
       let assets = await fs.readFile(path.join(appDir, 'app', 'assets.ts'), 'utf8')
       let router = await fs.readFile(path.join(appDir, 'app', 'router.ts'), 'utf8')
-      let routes = await fs.readFile(path.join(appDir, 'app', 'routes.ts'), 'utf8')
-      let entry = await fs.readFile(path.join(appDir, 'app', 'assets', 'entry.ts'), 'utf8')
+      let entry = await fs.readFile(
+        path.join(appDir, 'app', 'actions', 'public', 'entry.ts'),
+        'utf8',
+      )
       let controller = await fs.readFile(
         path.join(appDir, 'app', 'actions', 'controller.tsx'),
         'utf8',
@@ -468,48 +520,51 @@ describe('run', () => {
       assert.equal(packageJson.engines.node, '>=24.3.0')
       assert.match(packageJson.scripts.dev, /NODE_ENV=development/)
       assert.match(packageJson.scripts.dev, /node --watch/)
+      assert.match(packageJson.scripts.hmr, /NODE_ENV=development/)
+      assert.match(packageJson.scripts.hmr, /node hmr\.ts/)
       assert.match(packageJson.scripts.start, /NODE_ENV=production/)
       assert.match(packageJson.scripts.test, /NODE_ENV=test/)
       assert.match(agentsGuide, /^# My App Agent Guide/m)
       assert.match(agentsGuide, /This starter intentionally begins small/)
       assert.match(agentsGuide, /Put top-level route actions in `app\/actions\/controller\.tsx`/)
       assert.match(readme, /^# My App/m)
-      assert.doesNotMatch(readme, /auth page/)
+      assert.match(hmr, /createHmrReadyFetch/)
+      assert.match(hmr, /run\('server\.ts'/)
       assert.match(server, /import \* as http from 'node:http'/)
       assert.match(server, /import \{ createRequestListener \} from 'remix\/node-fetch-server'/)
       assert.match(server, /http\.createServer/)
       assert.match(server, /createRequestListener/)
-      assert.doesNotMatch(server, /remix\/node-serve/)
+      assert.match(server, /emitServerReady/)
       assert.doesNotMatch(assets, /remix-template:remove-/)
+      assert.doesNotMatch(assets, /\bmounts\s*:/)
       assert.doesNotMatch(assets, /\.\.\/packages/)
-      assert.doesNotMatch(assets, /usesWorkspaceRemix/)
-      assert.doesNotMatch(assets, /workspacePackagesDir/)
-      assert.doesNotMatch(assets, /deny:/)
-      assert.doesNotMatch(assets, /define:/)
-      assert.match(assets, /watch: false/)
-      assert.doesNotMatch(router, /compression/)
+      assert.match(assets, /allowFiles: \['app\/routes\.ts', 'app\/\*\*\/public\/\*\*'\]/)
+      assert.match(assets, /denyFiles: \['app\/\*\*\/\*\.test\.\*'\]/)
+      assert.match(assets, /const entry = 'app\/actions\/public\/entry\.ts'/)
+      assert.match(assets, /getHref\(entry\)/)
+      assert.match(assets, /getPreloads\(entry\)/)
+      assert.match(assets, /createBrowserHmrChannel/)
+      assert.match(assets, /scripts: \{ loaders: isHmr \? \[uiHmr\(\)\] : undefined \}/)
+      assert.match(assets, /watch: isDevelopment/)
+      assert.match(router, /staticFiles\('\.\/public'/)
       assert.match(router, /import \{ render \} from 'remix\/middleware\/render'/)
       assert.match(router, /render\(\{ assets \}\)/)
-      assert.doesNotMatch(routes, /auth/)
       assert.match(entry, /loadModule/)
       assert.match(entry, /resolveFrame/)
-      assert.doesNotMatch(entry, /X-Remix-Frame/)
+      assert.match(entry, /server:update/)
       assert.match(controller, /context\.render\(<HomePage \/>/)
-      assert.doesNotMatch(controller, /AuthPage/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
+      await assertPathExists(path.join(appDir, 'hmr.ts'))
       await assertPathExists(path.join(appDir, 'app', 'assets.ts'))
-      await assertPathExists(path.join(appDir, 'app', 'assets', 'prompt-button.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'document.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'home-page.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'public', 'prompt-button.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'public', 'entry.ts'))
       await assertPathMissing(path.join(appDir, 'app', 'middleware', 'render.tsx'))
       await assertPathExists(path.join(appDir, 'public', 'favicon.svg'))
       await assertPathExists(path.join(appDir, '.gitignore'))
       await assertPathMissing(path.join(appDir, 'gitignore'))
-      await assertPathMissing(path.join(appDir, 'app', 'actions', 'assets.ts'))
-      await assertPathMissing(path.join(appDir, 'app', 'actions', 'render.tsx'))
-      await assertPathMissing(path.join(appDir, 'app', 'actions', 'home.tsx'))
-      await assertPathMissing(path.join(appDir, 'app', 'actions', 'auth.tsx'))
-      await assertPathMissing(path.join(appDir, 'app', 'actions', 'about.tsx'))
-      await assertPathMissing(path.join(appDir, 'app', 'ui', 'prompt-button.tsx'))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -559,9 +614,12 @@ describe('run', () => {
 
       assert.equal(result.exitCode, 0)
 
-      let documentSource = await fs.readFile(path.join(appDir, 'app', 'ui', 'document.tsx'), 'utf8')
-      let scaffoldHomePageSource = await fs.readFile(
-        path.join(appDir, 'app', 'ui', 'scaffold-home-page.tsx'),
+      let documentSource = await fs.readFile(
+        path.join(appDir, 'app', 'actions', 'document.tsx'),
+        'utf8',
+      )
+      let homePageSource = await fs.readFile(
+        path.join(appDir, 'app', 'actions', 'home-page.tsx'),
         'utf8',
       )
       let encodedAppName = encodeURIComponent(appName)
@@ -570,8 +628,8 @@ describe('run', () => {
         documentSource,
         new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
       )
-      assert.ok(!scaffoldHomePageSource.includes('readAppDisplayName'))
-      assert.ok(!scaffoldHomePageSource.includes(encodedAppName))
+      assert.ok(!homePageSource.includes('readAppDisplayName'))
+      assert.ok(!homePageSource.includes(encodedAppName))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }

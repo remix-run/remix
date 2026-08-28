@@ -6,6 +6,8 @@ This app was scaffolded with `remix new`. Use these conventions when continuing 
 
 ```sh
 npm i
+npm run dev
+npm run hmr
 npm run start
 npm test
 npm run typecheck
@@ -18,12 +20,13 @@ Refer to ./.agents/skills/remix/SKILL.md
 ## Starter Layout
 
 - `app/actions/controller.tsx` owns the top-level route actions
-- `app/routes.ts` defines the route contract
+- `app/actions/home-page.tsx` and `app/actions/document.tsx` render the route-owned starter UI
+- `app/actions/public/` contains the browser runtime entry and interactive prompt button
+- `app/routes.ts` defines the shared route contract used by server and browser modules for type-safe hrefs
 - `app/router.ts` wires routes to route handlers
 - `app/router.ts` installs the standard Remix UI renderer used by actions
-- `app/ui/` holds the shared document shell and home page UI
 - `app/assets.ts` owns the server-side asset pipeline used by the asset route and render middleware
-- `public/` contains static files served from the app root
+- Root `public/` contains static files served unchanged from the app root
 
 ## Route Ownership
 

@@ -1,6 +1,7 @@
 {
   "include": ["index.ts", "../../global.d.ts"],
   "compilerOptions": {
+    "types": ["bun"],
     "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "NodeNext",

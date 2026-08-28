@@ -132,7 +132,19 @@ interface Operation {
   teardown?: (page: Page) => Promise<void>
 }
 
-const EVENT_TIMING_TIMEOUT_MS = 5000
+const MEASUREMENT_TIMEOUT_MS = 5000
+
+// Reuse a single CDP session for profiling. Creating one per click leaks
+// sessions (they cannot be detached mid-run without breaking Event Timing
+// entries for subsequent measurements).
+let profilerSession: Awaited<ReturnType<ReturnType<Page['context']>['newCDPSession']>> | null = null
+
+async function getProfilerSession(page: Page) {
+  if (!profilerSession) {
+    profilerSession = await page.context().newCDPSession(page)
+  }
+  return profilerSession
+}
 
 // Click an element and measure time until next paint using Event Timing API
 // Also captures Chrome DevTools Profiler data for detailed function-level analysis
@@ -141,33 +153,60 @@ async function clickAndMeasure(
   selector: string,
   operationName?: string,
 ): Promise<TimingResult> {
-  // Set up the observer before clicking (using string to avoid tsx transformation issues)
+  // Set up in-page instrumentation before clicking (using a string to avoid
+  // tsx transformation issues).
+  //
+  // We measure with window click listeners instead of the Event Timing API:
+  // Event Timing never reports clicks faster than 16ms (the spec clamps
+  // durationThreshold) and quantizes durations to 8ms buckets, so fast
+  // frameworks would be measured on a different, coarser scale than slow ones.
+  //
+  // - scripting: capture-phase listener records the start; a microtask queued
+  //   from the bubble listener runs after the framework's flush microtask
+  //   (which was queued earlier, during target dispatch).
+  // - total: rAF fires before style/layout/paint, so a task scheduled from
+  //   within it runs right after the frame is produced, including that
+  //   rendering work like Event Timing's duration did.
   await page.evaluate(`
     window.__benchResult = null;
-    window.__benchObserver = new PerformanceObserver(function(list) {
-      var entries = list.getEntries();
-      for (var i = 0; i < entries.length; i++) {
-        var entry = entries[i];
-        if (entry.entryType === 'event' && entry.name === 'click') {
-          window.__benchResult = {
-            scripting: entry.processingEnd - entry.processingStart,
-            total: entry.duration
-          };
-          window.__benchObserver.disconnect();
-          return;
-        }
-      }
-    });
-    window.__benchObserver.observe({ type: 'event', buffered: false, durationThreshold: 0 });
+    (function() {
+      var start = null;
+      var captureListener = function(event) {
+        if (!event.isTrusted) return;
+        start = performance.now();
+      };
+      var bubbleListener = function(event) {
+        if (!event.isTrusted || start === null) return;
+        var t0 = start;
+        start = null;
+        queueMicrotask(function() {
+          var scripting = performance.now() - t0;
+          requestAnimationFrame(function() {
+            setTimeout(function() {
+              window.__benchResult = {
+                scripting: scripting,
+                total: performance.now() - t0
+              };
+            }, 0);
+          });
+        });
+      };
+      window.addEventListener('click', captureListener, true);
+      window.addEventListener('click', bubbleListener, false);
+      window.__benchCleanup = function() {
+        window.removeEventListener('click', captureListener, true);
+        window.removeEventListener('click', bubbleListener, false);
+      };
+    })();
   `)
 
-  // Start Chrome DevTools Profiler
-  let cdp = await page.context().newCDPSession(page)
-  if (showProfile) {
+  // Start Chrome DevTools Profiler (only open a CDP session when profiling)
+  let cdp = showProfile || showAllocProfile ? await getProfilerSession(page) : null
+  if (cdp && showProfile) {
     await cdp.send('Profiler.enable')
     await cdp.send('Profiler.start')
   }
-  if (showAllocProfile) {
+  if (cdp && showAllocProfile) {
     await cdp.send('HeapProfiler.enable')
     await cdp.send('HeapProfiler.startSampling', {
       samplingInterval: 32768,
@@ -186,28 +225,35 @@ async function clickAndMeasure(
     let operationLabel = operationName ?? 'unknown'
     timing = (await page.evaluate(`
       new Promise(function(resolve, reject) {
-        var timeoutMs = ${EVENT_TIMING_TIMEOUT_MS}
+        var timeoutMs = ${MEASUREMENT_TIMEOUT_MS}
         var selector = ${JSON.stringify(selector)}
         var operationName = ${JSON.stringify(operationLabel)}
-        var timeoutId = setTimeout(function() {
-          if (window.__benchObserver) {
-            window.__benchObserver.disconnect()
+        var start = performance.now()
+
+        function cleanup() {
+          if (window.__benchCleanup) {
+            window.__benchCleanup()
+            window.__benchCleanup = null
           }
-          reject(new Error(
-            'Timed out waiting for Event Timing click entry after ' +
-            timeoutMs +
-            'ms (selector="' +
-            selector +
-            '", operation="' +
-            operationName +
-            '")'
-          ))
-        }, timeoutMs)
+        }
 
         function check() {
           if (window.__benchResult !== null) {
-            clearTimeout(timeoutId)
+            cleanup()
             resolve(window.__benchResult)
+            return
+          }
+          if (performance.now() - start > timeoutMs) {
+            cleanup()
+            reject(new Error(
+              'Timed out waiting for click measurement after ' +
+              timeoutMs +
+              'ms (selector="' +
+              selector +
+              '", operation="' +
+              operationName +
+              '")'
+            ))
             return
           }
           requestAnimationFrame(check)
@@ -217,13 +263,15 @@ async function clickAndMeasure(
       })
     `)) as TimingResult
   } finally {
-    if (showProfile) {
-      cpuProfileResult = await cdp.send('Profiler.stop').catch(() => null)
-      await cdp.send('Profiler.disable').catch(() => undefined)
-    }
-    if (showAllocProfile) {
-      allocProfileResult = await cdp.send('HeapProfiler.stopSampling').catch(() => null)
-      await cdp.send('HeapProfiler.disable').catch(() => undefined)
+    if (cdp) {
+      if (showProfile) {
+        cpuProfileResult = await cdp.send('Profiler.stop').catch(() => null)
+        await cdp.send('Profiler.disable').catch(() => undefined)
+      }
+      if (showAllocProfile) {
+        allocProfileResult = await cdp.send('HeapProfiler.stopSampling').catch(() => null)
+        await cdp.send('HeapProfiler.disable').catch(() => undefined)
+      }
     }
   }
 
@@ -485,12 +533,22 @@ function getFrameworks(): string[] {
     .sort()
 }
 
-// Save remix results to file for comparison with next run
+// Save remix results to file for comparison with next run. Merge by
+// operation so a filtered run (-b create1k) doesn't wipe out saved results
+// for the operations it didn't measure.
 function saveRemixResults(results: BenchmarkResult[]): void {
   let remixResults = results.filter((r) => r.framework === 'remix')
-  if (remixResults.length > 0) {
-    fs.writeFileSync(REMIX_RESULTS_FILE, JSON.stringify(remixResults, null, 2))
+  if (remixResults.length === 0) return
+
+  let merged = new Map<string, BenchmarkResult>()
+  for (let prev of loadPreviousRemixResults()) {
+    merged.set(prev.operation, { ...prev, framework: 'remix' })
   }
+  for (let result of remixResults) {
+    merged.set(result.operation, result)
+  }
+
+  fs.writeFileSync(REMIX_RESULTS_FILE, JSON.stringify([...merged.values()], null, 2))
 }
 
 // Load previous remix results if they exist
@@ -538,10 +596,16 @@ function calcStats(times: number[]) {
   return {
     times,
     mean: times.reduce((a, b) => a + b, 0) / times.length,
-    median: sorted[Math.floor(sorted.length / 2)],
+    median: medianOfSorted(sorted),
     min: sorted[0],
     max: sorted[sorted.length - 1],
   }
+}
+
+function medianOfSorted(sorted: number[]): number {
+  let mid = sorted.length >> 1
+  if (sorted.length % 2 === 1) return sorted[mid]
+  return (sorted[mid - 1] + sorted[mid]) / 2
 }
 
 // Aggregate profiling data and calculate medians
@@ -972,8 +1036,10 @@ async function main(): Promise<void> {
 
     // Add previous remix results to display only when remix is the only framework
     // (When comparing against other frameworks, we don't need to show previous remix)
+    // Only show previous results for operations measured in this run.
     if (previousRemixResults.length > 0 && frameworks.length === 1) {
-      allResults.push(...previousRemixResults)
+      let measuredOps = new Set(allResults.map((r) => r.operation))
+      allResults.push(...previousRemixResults.filter((r) => measuredOps.has(r.operation)))
     }
 
     // Print aggregated profiling tables first

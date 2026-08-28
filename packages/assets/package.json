@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/assets",
-  "version": "0.4.4",
+  "version": "0.5.0",
   "description": "Fetch-based server for compiling browser JS/TS and CSS assets on demand",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -20,6 +20,9 @@
   "type": "module",
   "exports": {
     ".": "./src/assets.ts",
+    "./types/hmr": {
+      "types": "./src/types/hmr.d.ts"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -28,15 +31,17 @@
         "types": "./dist/assets.d.ts",
         "default": "./dist/assets.js"
       },
+      "./types/hmr": {
+        "types": "./dist/types/hmr.d.ts"
+      },
       "./package.json": "./package.json"
     }
   },
   "dependencies": {
     "@oxc-project/runtime": "^0.121.0",
-    "@remix-run/file-storage": "workspace:*",
-    "@remix-run/headers": "workspace:*",
-    "@remix-run/mime": "workspace:*",
-    "@remix-run/route-pattern": "workspace:*",
+    "@remix-run/file-storage": "workspace:^",
+    "@remix-run/headers": "workspace:^",
+    "@remix-run/mime": "workspace:^",
     "chokidar": "^5.0.0",
     "es-module-lexer": "^2.0.0",
     "get-tsconfig": "^4.13.6",
@@ -51,19 +56,22 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@remix-run/node-hmr": "workspace:^",
+    "@remix-run/node-tsx": "workspace:^",
     "@remix-run/test": "workspace:*",
+    "@remix-run/ui": "workspace:*",
     "@types/node": "catalog:",
     "@types/picomatch": "^4.0.3",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
     "bench": "pnpm --dir ./bench run bench",
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test",
-    "test:bun": "bun x --bun remix-test",
-    "typecheck": "tsgo --noEmit"
+    "test": "remix test",
+    "test:bun": "bun x --bun remix test --type server",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "remix",

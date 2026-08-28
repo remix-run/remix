@@ -29,6 +29,112 @@ function createCodeError(code: string, message: string): Error & { code: string 
 }
 
 describe('createRelease', () => {
+  it('marks prerelease versions as GitHub prereleases', async () => {
+    await withGitHubToken(async () => {
+      let releaseOptions: Record<string, unknown> | undefined
+      let githubRequest: GitHubRequest = async (route, options) => {
+        if (route === 'GET /repos/{owner}/{repo}/releases/tags/{tag}') {
+          throw createHttpError(404, 'Not Found')
+        }
+
+        if (route === 'POST /repos/{owner}/{repo}/releases') {
+          releaseOptions = options
+          return {
+            data: {
+              html_url: 'https://github.com/remix-run/remix/releases/tag/remix%403.0.0-beta.6',
+            },
+          }
+        }
+
+        throw new Error(`Unexpected route: ${route}`)
+      }
+
+      await createRelease('remix', '3.0.0-beta.6', { request: githubRequest })
+
+      assert.equal(releaseOptions?.prerelease, true)
+      assert.equal(releaseOptions?.make_latest, 'false')
+    })
+  })
+
+  it('does not make stable subpackage releases the latest GitHub release', async () => {
+    await withGitHubToken(async () => {
+      let releaseOptions: Record<string, unknown> | undefined
+      let githubRequest: GitHubRequest = async (route, options) => {
+        if (route === 'GET /repos/{owner}/{repo}/releases/tags/{tag}') {
+          throw createHttpError(404, 'Not Found')
+        }
+
+        if (route === 'POST /repos/{owner}/{repo}/releases') {
+          releaseOptions = options
+          return {
+            data: {
+              html_url: 'https://github.com/remix-run/remix/releases/tag/test%400.4.2',
+            },
+          }
+        }
+
+        throw new Error(`Unexpected route: ${route}`)
+      }
+
+      await createRelease('@remix-run/test', '0.4.2', { request: githubRequest })
+
+      assert.equal(releaseOptions?.prerelease, false)
+      assert.equal(releaseOptions?.make_latest, 'false')
+    })
+  })
+
+  it('makes stable Remix versions the latest GitHub release', async () => {
+    await withGitHubToken(async () => {
+      let releaseOptions: Record<string, unknown> | undefined
+      let githubRequest: GitHubRequest = async (route, options) => {
+        if (route === 'GET /repos/{owner}/{repo}/releases/tags/{tag}') {
+          throw createHttpError(404, 'Not Found')
+        }
+
+        if (route === 'POST /repos/{owner}/{repo}/releases') {
+          releaseOptions = options
+          return {
+            data: {
+              html_url: 'https://github.com/remix-run/remix/releases/tag/remix%403.0.0',
+            },
+          }
+        }
+
+        throw new Error(`Unexpected route: ${route}`)
+      }
+
+      await createRelease('remix', '3.0.0', { request: githubRequest })
+
+      assert.equal(releaseOptions?.prerelease, false)
+      assert.equal(releaseOptions?.make_latest, 'true')
+    })
+  })
+
+  it('uses release notes supplied by the publisher', async () => {
+    await withGitHubToken(async () => {
+      let releaseOptions: Record<string, unknown> | undefined
+      let githubRequest: GitHubRequest = async (route, options) => {
+        if (route === 'GET /repos/{owner}/{repo}/releases/tags/{tag}') {
+          throw createHttpError(404, 'Not Found')
+        }
+
+        if (route === 'POST /repos/{owner}/{repo}/releases') {
+          releaseOptions = options
+          return { data: {} }
+        }
+
+        throw new Error(`Unexpected route: ${route}`)
+      }
+
+      await createRelease('remix', '3.0.0-beta.9', {
+        body: 'Changes since beta.6',
+        request: githubRequest,
+      })
+
+      assert.equal(releaseOptions?.body, 'Changes since beta.6')
+    })
+  })
+
   it('treats a failed create response as success when the release exists afterward', async () => {
     await withGitHubToken(async () => {
       let calls: MockCall[] = []

@@ -53,10 +53,6 @@ let app = run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, signal) {
-    let res = await fetch(src, { headers: { Accept: 'text/html' }, signal })
-    return res.body ?? (await res.text())
-  },
 })
 
 await app.ready()
@@ -65,12 +61,14 @@ await app.ready()
 ### `run` options
 
 - **`loadModule(moduleUrl, exportName)`** (required) - Called for each client entry found in the page. Return the component function. Typically uses dynamic `import()`.
-- **`resolveFrame(src, signal, target)`** (optional) - Called when a `<Frame>` needs to load or reload content. The examples here only use `src` and `signal`, but `target` is also available when frame targeting matters. If omitted, Remix UI uses a placeholder HTML response (`<p>resolve frame unimplemented</p>`). See [Frames](./frames.md) for details.
+- **`resolveFrame(src, options)`** (optional) - Overrides the default `fetch()` resolver when a `<Frame>` needs to load or reload content and when a link or form performs a frame navigation. `options` may contain `signal` and `target`; non-GET forms also provide `formData`, `method`, and `encType`. GET form values are already encoded in `src`. See [Frames](./frames.md#form-navigation) for request encoding, targeting, and opt-outs.
 
-### `app` methods
+### `app` properties
 
 - **`app.ready()`** - Returns a promise that resolves when all initial client entries have been hydrated.
 - **`app.flush()`** - Synchronously flushes all pending updates.
+- **`app.frames.top`** - The top-level frame for the app.
+- **`app.frames.get(name)`** - Returns a frame handle, if one exists.
 - **`app.dispose()`** - Tears down all hydrated components and cleans up.
 
 `app` is also an `EventTarget`. You can listen for errors from any hydrated component:
@@ -104,7 +102,7 @@ This means:
 - The page is fully rendered and interactive as soon as modules load. No blank flash.
 - Only marked components ship JavaScript. Static content stays static.
 - Client entries can appear anywhere in the tree, including inside frames.
-- Client entries inside `rmx-preserve-dom` hydrate during initial boot, but future frame reloads will not patch new server-rendered children or props through that preserved host. See [Preserving client-owned DOM](./frames.md#preserving-client-owned-dom).
+- Client entries inside `data-rmx-preserve-dom` hydrate during initial boot, but future frame reloads will not patch new server-rendered children or props through that preserved host. See [Preserving client-owned DOM](./frames.md#preserving-client-owned-dom).
 
 ## See Also
 

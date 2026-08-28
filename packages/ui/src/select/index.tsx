@@ -30,10 +30,10 @@ export type SelectOptionProps = Props<'div'> & {
 }
 
 const selectTriggerShadow =
-  '0 2px 3px -1px rgba(0, 0, 0, 0.04), 0 3px 4px -1.5px rgba(0, 0, 0, 0.04), 0 4px 5px -2px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.12)'
+  '0 2px 3px -1px rgba(0, 0, 0, 0.04), 0 3px 4px -1.5px rgba(0, 0, 0, 0.04), 0 4px 5px -2px rgba(0, 0, 0, 0.04), 0 0 0 1px light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.2))'
 
 const selectTriggerFocusShadow =
-  '0 2px 3px -1px rgba(0, 0, 0, 0.04), 0 3px 4px -1.5px rgba(0, 0, 0, 0.04), 0 4px 5px -2px rgba(0, 0, 0, 0.04), 0 0 0 1px #3573F6, 0 0 0 4px rgba(53, 115, 246, 0.1), 0 6px 32px 4px rgba(53, 115, 246, 0.08), inset 0 0 8px 1px rgba(53, 115, 246, 0.05)'
+  '0 2px 3px -1px rgba(0, 0, 0, 0.04), 0 3px 4px -1.5px rgba(0, 0, 0, 0.04), 0 4px 5px -2px rgba(0, 0, 0, 0.04), 0 0 0 1px light-dark(#3573F6, #6eaaff), 0 0 0 4px light-dark(rgba(53, 115, 246, 0.1), rgba(110, 170, 255, 0.18)), 0 6px 32px 4px light-dark(rgba(53, 115, 246, 0.08), rgba(110, 170, 255, 0.14)), inset 0 0 8px 1px light-dark(rgba(53, 115, 246, 0.05), rgba(110, 170, 255, 0.1))'
 
 const selectTriggerCss: CSSMixinDescriptor = css({
   appearance: 'none',
@@ -51,9 +51,9 @@ const selectTriggerCss: CSSMixinDescriptor = css({
   gap: '6px',
   border: 0,
   borderRadius: '8px',
-  background: '#FFFFFF',
+  background: 'light-dark(#FFFFFF, #1a1a1a)',
   boxShadow: selectTriggerShadow,
-  color: '#101010',
+  color: 'light-dark(#101010, #ececec)',
   fontFamily: '"Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
   fontStyle: 'normal',
   fontWeight: 400,
@@ -62,15 +62,15 @@ const selectTriggerCss: CSSMixinDescriptor = css({
   fontFeatureSettings: '"ss01" on, "cv01" on',
   letterSpacing: 0,
   textAlign: 'left',
-  textShadow: '0 1px 0 #FFFFFF',
+  textShadow: '0 1px 0 light-dark(#FFFFFF, rgb(0 0 0 / 0.35))',
   whiteSpace: 'nowrap',
   '&:hover, &:focus-visible, &[aria-expanded="true"], &[aria-expanded="true"]:hover, &[aria-expanded="true"]:focus-visible':
     {
-      background: '#FFFFFF',
-      color: '#101010',
+      background: 'light-dark(#FFFFFF, #1a1a1a)',
+      color: 'light-dark(#101010, #ececec)',
     },
   '&:active': {
-    background: '#FFFFFF',
+    background: 'light-dark(#FFFFFF, #1a1a1a)',
   },
   '&:focus-visible': {
     outline: 0,
@@ -99,7 +99,7 @@ const triggerIconCss: CSSMixinDescriptor = css({
   justifyContent: 'center',
   width: '16px',
   height: '16px',
-  color: '#707070',
+  color: 'light-dark(#707070, #b3b3b3)',
   flex: 'none',
   '& > svg': {
     display: 'block',

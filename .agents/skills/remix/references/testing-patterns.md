@@ -70,28 +70,29 @@ try {
 
 ## Test Runner Config
 
-Configure discovery and coverage in `remix-test.config.ts` or with CLI flags:
+Configure discovery and coverage in the `test` section of `remix.json` or with CLI flags:
 
-```ts
-export default {
-  glob: {
-    test: '**/*.test{,.e2e}.{ts,tsx}',
-    e2e: '**/*.test.e2e.{ts,tsx}',
-    exclude: 'node_modules/**',
-  },
-  coverage: {
-    dir: '.coverage',
-    include: ['app/**/*.{ts,tsx}'],
-    exclude: ['app/**/*.test.{ts,tsx}'],
-    statements: 80,
-    lines: 80,
-    branches: 70,
-    functions: 80,
+```jsonc
+{
+  "$schema": "https://remix.run/schemas/remix.json",
+  "test": {
+    "files": ["**/*.test{,.e2e}.{ts,tsx}"],
+    "e2eFiles": ["**/*.test.e2e.{ts,tsx}"],
+    "exclude": ["node_modules/**"],
+    "coverage": {
+      "dir": ".coverage",
+      "include": ["app/**/*.{ts,tsx}"],
+      "exclude": ["app/**/*.test.{ts,tsx}"],
+      "statements": 80,
+      "lines": 80,
+      "branches": 70,
+      "functions": 80,
+    },
   },
 }
 ```
 
-Use `remix test --coverage` to enable coverage with defaults. Use `glob.exclude` when discovery would otherwise enter generated output, symlinked workspaces, or other paths that should not produce tests.
+Use `remix test --coverage` to enable coverage with defaults. Use `exclude` when discovery would otherwise enter generated output, symlinked workspaces, or other paths that should not produce tests.
 
 ## Component Tests
 

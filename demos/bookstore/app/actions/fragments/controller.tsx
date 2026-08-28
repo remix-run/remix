@@ -1,8 +1,8 @@
 import { createController } from 'remix/router'
 import { css } from 'remix/ui'
 
-import { CartButton } from '../../assets/cart-button.tsx'
-import { CartItems } from '../../assets/cart-items.tsx'
+import { CartButton } from './public/cart-button.tsx'
+import { CartItems } from './public/cart-items.tsx'
 import { books } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { getCartTotal } from '../../utils/cart.ts'

@@ -12,6 +12,11 @@ const requiredReadmePaths = [
   'package/src/ui/popover/README.md',
 ]
 
+const requiredTypeExportPaths = [
+  'package/dist/assets/types/hmr.d.ts',
+  'package/dist/node-hmr/types.d.ts',
+]
+
 const packDir = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-pack-'))
 
 try {
@@ -43,7 +48,19 @@ try {
     )
   }
 
-  console.log('Verified generated README mirrors in the remix package tarball.')
+  let missingTypeExports = requiredTypeExportPaths.filter(
+    (typeExportPath) => !packedFiles.has(typeExportPath),
+  )
+  if (missingTypeExports.length > 0) {
+    throw new Error(
+      [
+        'The remix package tarball is missing declaration-only exports:',
+        ...missingTypeExports.map((typeExportPath) => `- ${typeExportPath}`),
+      ].join('\n'),
+    )
+  }
+
+  console.log('Verified generated README mirrors and declaration-only exports in the tarball.')
 } finally {
   fs.rmSync(packDir, { recursive: true, force: true })
 }

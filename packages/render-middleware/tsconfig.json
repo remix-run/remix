@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
+    "types": ["node"],
     "strict": true,
-    "lib": ["ES2024", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ESNext",
@@ -9,8 +10,7 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
-    "isolatedModules": true,
-    "skipLibCheck": true
+    "isolatedModules": true
   },
   "exclude": ["dist"]
 }

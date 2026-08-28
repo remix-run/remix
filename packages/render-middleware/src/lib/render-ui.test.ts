@@ -76,7 +76,10 @@ describe('render', () => {
           'Content-Length': '2',
           'Content-Type': 'application/json',
           Cookie: 'session=abc',
+          'Sec-Fetch-Dest': 'document',
           'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'same-origin',
+          'Sec-Fetch-User': '?1',
           'X-Session-Token': 'token',
         },
         body: '{}',
@@ -96,7 +99,10 @@ describe('render', () => {
     assert.equal(frameRequestHeaders[0]?.get('X-Remix-Target'), 'outer')
     assert.equal(frameRequestHeaders[0]?.get('Content-Length'), null)
     assert.equal(frameRequestHeaders[0]?.get('Content-Type'), null)
+    assert.equal(frameRequestHeaders[0]?.get('Sec-Fetch-Dest'), null)
     assert.equal(frameRequestHeaders[0]?.get('Sec-Fetch-Mode'), null)
+    assert.equal(frameRequestHeaders[0]?.get('Sec-Fetch-Site'), null)
+    assert.equal(frameRequestHeaders[0]?.get('Sec-Fetch-User'), null)
     assert.equal(frameRequestHeaders[1]?.get('X-Remix-Target'), 'inner')
   })
 
@@ -188,10 +194,15 @@ describe('render', () => {
 
   it('resolves source client entries through the asset server', async () => {
     let resolvedEntries: string[] = []
+    let preloadedEntries: string[] = []
     let assets = {
       async getHref(source: string) {
         resolvedEntries.push(source)
         return '/assets/counter-123.js'
+      },
+      async getPreloads(source: string | readonly string[]) {
+        preloadedEntries.push(...(typeof source === 'string' ? [source] : source))
+        return ['/assets/shared-456.js']
       },
     }
     let middleware = render({ assets })
@@ -226,7 +237,12 @@ describe('render', () => {
     let html = await response.text()
 
     assert.deepEqual(resolvedEntries, ['file:///app/counter.ts', 'file:///app/named-entry.ts'])
+    assert.deepEqual(preloadedEntries, ['file:///app/counter.ts', 'file:///app/named-entry.ts'])
     assert.match(html, /\/assets\/counter-123\.js/)
+    assert.match(
+      html,
+      /<link data-rmx-module-preload rel="modulepreload" href="\/assets\/shared-456\.js" \/>/,
+    )
     assert.match(html, /"exportName":"Counter"/)
     assert.match(html, /"exportName":"NamedEntry"/)
     assert.match(html, /\/public\/widget\.js/)

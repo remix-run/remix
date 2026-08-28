@@ -24,19 +24,23 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
   return formatHelpText(
     {
       commands: [
+        { description: 'List or inspect browser-reachable assets', label: 'assets [command]' },
         { description: 'Print shell completion scripts for Remix', label: 'completion' },
         { description: 'Show help for Remix commands', label: 'help [command]' },
         { description: 'Create a new Remix project', label: 'new <name>' },
+        { description: 'Manage the current app database', label: 'db <command>' },
         { description: 'Check project health for the current project', label: 'doctor' },
         { description: 'Show the route tree for the current project', label: 'routes' },
         { description: 'Run tests for the current project', label: 'test [glob]' },
         { description: 'Show the current Remix version', label: 'version' },
       ],
       examples: [
+        'remix assets',
         'remix completion bash',
         'remix help',
         'remix help completion',
         'remix help doctor',
+        'remix db status',
         'remix doctor',
         'remix new my-remix-app',
         'remix new my-remix-app --app-name "My Remix App"',
@@ -45,6 +49,7 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
         'remix version',
       ],
       options: [
+        { description: 'Use a custom Remix config file', label: '--config <path>' },
         { description: 'Show help', label: '-h, --help' },
         { description: 'Disable ANSI color output', label: '--no-color' },
         { description: 'Show version', label: '-v, --version' },
@@ -61,7 +66,9 @@ export function getHelpCommandHelpText(target: NodeJS.WriteStream = process.stdo
       description: 'Show help for Remix commands.',
       examples: [
         'remix help',
+        'remix help assets',
         'remix help completion',
+        'remix help db',
         'remix help doctor',
         'remix help new',
         'remix help routes',
@@ -90,6 +97,11 @@ async function getCommandHelpText(argv: string[]): Promise<string> {
     return getNewCommandHelpText()
   }
 
+  if (command === 'assets' && rest.length === 0) {
+    let { getAssetsCommandHelpText } = await import('./assets.ts')
+    return getAssetsCommandHelpText()
+  }
+
   if (command === 'completion' && rest.length === 0) {
     let { getCompletionCommandHelpText } = await import('./completion.ts')
     return getCompletionCommandHelpText()
@@ -100,6 +112,11 @@ async function getCommandHelpText(argv: string[]): Promise<string> {
     return getDoctorCommandHelpText()
   }
 
+  if (command === 'db' && rest.length === 0) {
+    let { getDbCommandHelpText } = await import('./db.ts')
+    return getDbCommandHelpText()
+  }
+
   if (command === 'routes' && rest.length === 0) {
     let { getRoutesCommandHelpText } = await import('./routes.ts')
     return getRoutesCommandHelpText()
@@ -107,7 +124,7 @@ async function getCommandHelpText(argv: string[]): Promise<string> {
 
   if (command === 'test' && rest.length === 0) {
     let { getTestCommandHelpText } = await import('./test.ts')
-    return await getTestCommandHelpText()
+    return getTestCommandHelpText()
   }
 
   if (command === 'version' && rest.length === 0) {

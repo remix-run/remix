@@ -1561,10 +1561,10 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
    * Preserve the current element attributes and children during frame DOM reconciliation.
    *
    * Server rendering and initial hydration still process this element and its children. On later
-   * frame reloads, a matched element with `rmx-preserve-dom` keeps its live DOM so custom elements
-   * and imperative widgets can own their subtree.
+   * frame reloads, a matched element with `data-rmx-preserve-dom` keeps its live DOM so custom
+   * elements and imperative widgets can own their subtree.
    */
-  'rmx-preserve-dom'?: Trackable<boolean | '' | undefined>
+  'data-rmx-preserve-dom'?: Trackable<boolean | '' | undefined>
 
   // RDFa Attributes
   /** The `about` HTML attribute. */
@@ -1786,12 +1786,16 @@ export interface PartialAnchorHTMLProps<
   referrerPolicy?: Trackable<HTMLAttributeReferrerPolicy | undefined>
 
   // Non-standard Attributes
-  /** The `rmx-target` HTML attribute. */
-  'rmx-target'?: Trackable<string | undefined>
-  /** The `rmx-src` HTML attribute. */
-  'rmx-src'?: Trackable<string | undefined>
-  /** The `rmx-reset-scroll` HTML attribute. */
-  'rmx-reset-scroll'?: Trackable<string | undefined>
+  /** The `data-rmx-document` HTML attribute. */
+  'data-rmx-document'?: Trackable<boolean | '' | undefined>
+  /** The `data-rmx-target` HTML attribute. */
+  'data-rmx-target'?: Trackable<string | undefined>
+  /** The `data-rmx-src` HTML attribute. */
+  'data-rmx-src'?: Trackable<string | undefined>
+  /** Controls how activating this anchor updates the current history entry. */
+  'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
+  /** The `data-rmx-reset-scroll` HTML attribute. */
+  'data-rmx-reset-scroll'?: Trackable<string | undefined>
 }
 
 export type AnchorAriaRoles =
@@ -2293,6 +2297,18 @@ export interface FormHTMLProps<
   role?: Trackable<'form' | 'none' | 'presentation' | 'search' | undefined>
   /** The `target` HTML attribute. */
   target?: Trackable<string | undefined>
+
+  // Non-standard Attributes
+  /** The `data-rmx-document` HTML attribute. */
+  'data-rmx-document'?: Trackable<boolean | '' | undefined>
+  /** The `data-rmx-target` HTML attribute. */
+  'data-rmx-target'?: Trackable<string | undefined>
+  /** The `data-rmx-src` HTML attribute. */
+  'data-rmx-src'?: Trackable<string | undefined>
+  /** Overrides how submitting this form updates the current history entry. */
+  'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
+  /** The `data-rmx-reset-scroll` HTML attribute. */
+  'data-rmx-reset-scroll'?: Trackable<string | undefined>
 }
 
 /**

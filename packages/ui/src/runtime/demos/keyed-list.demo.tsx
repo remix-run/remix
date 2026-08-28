@@ -64,7 +64,7 @@ export default function App(handle: Handle) {
 
   return () => (
     <div>
-      <div className="controls">
+      <div class="controls">
         <button mix={[on('click', reverse)]}>Reverse List</button>
         <button mix={[on('click', shuffle)]}>Shuffle List</button>
         <button mix={[on('click', toggleAutoShuffle)]}>
@@ -73,7 +73,7 @@ export default function App(handle: Handle) {
       </div>
 
       {items.map((item, index) => (
-        <div key={item.id} className="list-item">
+        <div key={item.id} class="list-item">
           <input type="text" placeholder={item.label} defaultValue={item.label} />
           <button
             // disabled={index === 0}
