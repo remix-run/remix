@@ -32,6 +32,7 @@ describe('link mixin', () => {
           target: 'auth',
           history: 'replace',
           resetScroll: false,
+          viewTransition: true,
         })}
       >
         Login
@@ -45,6 +46,7 @@ describe('link mixin', () => {
     expect(anchor.getAttribute('data-rmx-src')).toBe('/partials/login')
     expect(anchor.getAttribute('data-rmx-history')).toBe('replace')
     expect(anchor.getAttribute('data-rmx-reset-scroll')).toBe('false')
+    expect(anchor.getAttribute('data-rmx-view-transition')).toBe('')
     expect(anchor.getAttribute('role')).toBeNull()
   })
 
@@ -84,6 +86,7 @@ describe('link mixin', () => {
     expect(anchor.getAttribute('data-rmx-target')).toBeNull()
     expect(anchor.getAttribute('data-rmx-src')).toBeNull()
     expect(anchor.getAttribute('data-rmx-history')).toBeNull()
+    expect(anchor.getAttribute('data-rmx-view-transition')).toBeNull()
   })
 
   it('navigates on plain click for non-anchor hosts', (t) => {

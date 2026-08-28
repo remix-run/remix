@@ -1796,6 +1796,8 @@ export interface PartialAnchorHTMLProps<
   'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
   /** The `data-rmx-reset-scroll` HTML attribute. */
   'data-rmx-reset-scroll'?: Trackable<string | undefined>
+  /** Runs this navigation inside a same-document view transition when supported. */
+  'data-rmx-view-transition'?: Trackable<boolean | '' | undefined>
 }
 
 export type AnchorAriaRoles =
@@ -2309,6 +2311,8 @@ export interface FormHTMLProps<
   'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
   /** The `data-rmx-reset-scroll` HTML attribute. */
   'data-rmx-reset-scroll'?: Trackable<string | undefined>
+  /** Runs this submission inside a same-document view transition when supported. */
+  'data-rmx-view-transition'?: Trackable<boolean | '' | undefined>
 }
 
 /**

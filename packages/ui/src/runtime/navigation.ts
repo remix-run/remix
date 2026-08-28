@@ -15,6 +15,7 @@ type NavigationState = {
   target: string | undefined
   src: string
   resetScroll: boolean
+  viewTransition?: boolean
   $rmx: true
 }
 
@@ -46,6 +47,8 @@ const frameRedirectNavigationInfoType = 'frame-redirect'
  * Options for client-side frame-aware navigation.
  */
 export type NavigationOptions = {
+  /** Runs the frame reload inside a same-document view transition when supported. */
+  viewTransition?: boolean
   src?: string
   target?: string
   history?: 'push' | 'replace'
@@ -63,6 +66,7 @@ export async function navigate(href: string, options?: NavigationOptions) {
     target: options?.target,
     src: options?.src ?? href,
     resetScroll: options?.resetScroll !== false,
+    ...(options?.viewTransition === true ? { viewTransition: true } : {}),
     $rmx: true,
   } satisfies NavigationState
   let transition = window.navigation.navigate(href, { state, history: options?.history })
@@ -146,10 +150,15 @@ export function startNavigationListenerImpl(
 
         topFrame.src = event.destination.url
         if (frame !== topFrame) frame.src = state.src
-        let { redirectedTo } = await options.reloadFrame(frame, {
-          ...submission,
-          signal: event.signal,
-        })
+        let redirectedTo: string | undefined
+        let update = async () => {
+          let result = await options.reloadFrame(frame, {
+            ...submission,
+            signal: event.signal,
+          })
+          redirectedTo = result.redirectedTo
+        }
+        await (state.viewTransition ? updateWithViewTransition(update) : update())
 
         if (redirectedTo && frame === topFrame) {
           frame.src = redirectedTo
@@ -217,6 +226,15 @@ export function startNavigationListenerImpl(
     },
     { signal },
   )
+}
+
+async function updateWithViewTransition(update: () => Promise<void>): Promise<void> {
+  if (typeof document.startViewTransition !== 'function') {
+    await update()
+    return
+  }
+
+  await document.startViewTransition(update).updateCallbackDone
 }
 
 function isRuntimeNavigation(info: unknown): info is NavigationState {
@@ -348,6 +366,7 @@ function getSourceElementNavigation(
         target: linkElement.getAttribute('data-rmx-target') ?? undefined,
         src: linkElement.getAttribute('data-rmx-src') ?? event.destination.url,
         resetScroll: linkElement.getAttribute('data-rmx-reset-scroll') !== 'false',
+        ...(linkElement.hasAttribute('data-rmx-view-transition') ? { viewTransition: true } : {}),
         $rmx: true,
       },
       replaceHistory: getReplaceHistory(linkElement.getAttribute('data-rmx-history'), false),
@@ -366,6 +385,7 @@ function getSourceElementNavigation(
       target: formNavigation.getAttribute('data-rmx-target') ?? undefined,
       src: formNavigation.getAttribute('data-rmx-src') ?? event.destination.url,
       resetScroll: formNavigation.getAttribute('data-rmx-reset-scroll') !== 'false',
+      ...(formNavigation.hasAttribute('data-rmx-view-transition') ? { viewTransition: true } : {}),
       $rmx: true,
     },
     replaceHistory: getReplaceHistory(

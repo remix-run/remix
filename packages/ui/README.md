@@ -150,6 +150,9 @@ CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass 
 response policy.
 
 Add `data-rmx-document` to a link or form to leave its navigation to the browser.
+Add `data-rmx-view-transition` to run an enhanced navigation inside
+`document.startViewTransition()` when the browser supports it. The equivalent `navigate()` and
+`link()` option is `{ viewTransition: true }`.
 
 The default resolver rejects non-OK responses with an error containing their status and status text.
 A custom `resolveFrame` may return a `Response` with any status when it wants Remix UI to render the

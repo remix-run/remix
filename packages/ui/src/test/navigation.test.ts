@@ -27,20 +27,26 @@ function stubGlobalMethod(t: TestContext, api: string, method: string, impl: any
   return t.mock.method((globalThis as any)[api], method, impl)
 }
 
-// Replaces a property on `globalThis` and returns a function that restores the
-// previous value. Used for tests that swap `navigation` for a fake instance.
+// Replaces a property on `globalThis` and restores the previous value after the test.
+// Used for tests that swap `navigation` for a fake instance.
 function stubGlobalField(t: TestContext, name: string, value: unknown): void {
-  let key = name as keyof typeof globalThis
-  let hadOwn = Object.prototype.hasOwnProperty.call(globalThis, name)
-  let previous = (globalThis as any)[key]
-  ;(globalThis as any)[key] = value
+  stubObjectField(t, globalThis, name, value)
+}
+
+function stubObjectField(t: TestContext, object: object, name: string, value: unknown): void {
+  let hadOwn = Object.prototype.hasOwnProperty.call(object, name)
+  let previous = Reflect.get(object, name)
+  Reflect.set(object, name, value)
   t.after(() => {
-    if (hadOwn) (globalThis as any)[key] = previous
-    else delete (globalThis as any)[key]
+    if (hadOwn) Reflect.set(object, name, previous)
+    else Reflect.deleteProperty(object, name)
   })
 }
 
-function startStubNavigationListener(t: TestContext): (event: Event) => void {
+function startStubNavigationListener(
+  t: TestContext,
+  options: Parameters<typeof startNavigationListenerImpl>[1] = stubFrames,
+): (event: Event) => void {
   let navigateListener: EventListener | undefined
   let stubNavigation = {
     updateCurrentEntry: mock.fn(),
@@ -51,7 +57,7 @@ function startStubNavigationListener(t: TestContext): (event: Event) => void {
   stubGlobalField(t, 'navigation', stubNavigation)
 
   let controller = new AbortController()
-  startNavigationListenerImpl(controller.signal, stubFrames)
+  startNavigationListenerImpl(controller.signal, options)
   t.after(() => controller.abort())
 
   return (event) => {
@@ -74,10 +80,17 @@ describe('navigate', () => {
       src: '/partials/login',
       target: 'auth',
       history: 'replace',
+      viewTransition: true,
     })
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: 'auth', src: '/partials/login', resetScroll: true, $rmx: true },
+      state: {
+        target: 'auth',
+        src: '/partials/login',
+        resetScroll: true,
+        viewTransition: true,
+        $rmx: true,
+      },
       history: 'replace',
     })
   })
@@ -95,6 +108,59 @@ describe('navigate', () => {
       state: { target: undefined, src: '/login', resetScroll: false, $rmx: true },
       history: undefined,
     })
+  })
+
+  it('runs opted-in frame reloads inside a view transition when supported', async (t) => {
+    let events: string[] = []
+    let startViewTransition = mock.fn((update: ViewTransitionUpdateCallback) => {
+      events.push('transition')
+      let updateCallbackDone = Promise.resolve().then(async () => {
+        events.push('update')
+        await update()
+      })
+      return { updateCallbackDone }
+    })
+    stubObjectField(t, document, 'startViewTransition', startViewTransition)
+
+    let topFrame = { src: '' } as FrameHandle
+    let reloadFrame = mock.fn(async () => {
+      events.push('reload')
+      return { signal: new AbortController().signal }
+    })
+    let dispatchNavigation = startStubNavigationListener(t, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame,
+    })
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+    let handler = intercept.mock.calls[0]?.arguments[0]?.handler
+    if (!handler) throw new Error('Expected navigation interception handler')
+    await handler()
+
+    anchor.setAttribute('data-rmx-view-transition', '')
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+
+    handler = intercept.mock.calls[1]?.arguments[0]?.handler
+    if (!handler) throw new Error('Expected navigation interception handler')
+    await handler()
+
+    expect(startViewTransition).toHaveBeenCalledTimes(1)
+    expect(reloadFrame).toHaveBeenCalledTimes(2)
+    expect(events).toEqual(['reload', 'transition', 'update', 'reload'])
   })
 
   it('leaves default scrolling to the browser', async (t) => {
@@ -567,6 +633,40 @@ describe('navigate', () => {
 describe('form navigation', () => {
   afterEach(() => {
     document.body.textContent = ''
+  })
+
+  it('runs opted-in form reloads inside a view transition when supported', async (t) => {
+    let startViewTransition = mock.fn((update: ViewTransitionUpdateCallback) => {
+      let updateCallbackDone = Promise.resolve().then(async () => {
+        await update()
+      })
+      return { updateCallbackDone }
+    })
+    stubObjectField(t, document, 'startViewTransition', startViewTransition)
+
+    let reloadFrame = mock.fn(async () => ({ signal: new AbortController().signal }))
+    let dispatchNavigation = startStubNavigationListener(t, {
+      getTopFrame: () => stubFrame,
+      getNamedFrame: () => stubFrame,
+      reloadFrame,
+    })
+    let form = document.createElement('form')
+    form.setAttribute('data-rmx-view-transition', '')
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createFormNavigateEvent(form, {
+        intercept,
+        destinationUrl: new URL('/account', window.location.origin).href,
+      }),
+    )
+
+    let handler = intercept.mock.calls[0]?.arguments[0]?.handler
+    if (!handler) throw new Error('Expected navigation interception handler')
+    await handler()
+
+    expect(startViewTransition).toHaveBeenCalledTimes(1)
+    expect(reloadFrame).toHaveBeenCalledTimes(1)
   })
 
   it('replaces same-location POST submission history before commit when supported', async () => {

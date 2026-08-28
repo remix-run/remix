@@ -701,6 +701,7 @@ the `link(...)` and `navigate(...)` options:
 - `data-rmx-src` provides the URL to fetch for that frame while `href` remains the browser's destination.
 - `data-rmx-history="push|replace"` controls how the navigation updates history, including overriding a form's default.
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
+- `data-rmx-view-transition` runs the frame reload inside a same-document view transition when the browser supports it. Pass `viewTransition: true` to `link(...)` or `navigate(...)` for the same behavior.
 - `data-rmx-document` opts out of interception and lets the browser perform a full-document navigation.
 
 [Streaming UI with Frames](/streaming-ui-with-frames/) shows these attributes with named frames and

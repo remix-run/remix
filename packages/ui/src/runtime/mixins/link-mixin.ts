@@ -38,6 +38,7 @@ export const link: MixinFactory<
           ...(options?.src == null ? {} : { 'data-rmx-src': options.src }),
           ...(options?.history == null ? {} : { 'data-rmx-history': options.history }),
           ...(options?.resetScroll === false ? { 'data-rmx-reset-scroll': 'false' } : {}),
+          ...(options?.viewTransition === true ? { 'data-rmx-view-transition': '' } : {}),
         })
       }
 

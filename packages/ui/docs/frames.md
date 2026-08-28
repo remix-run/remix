@@ -246,9 +246,10 @@ Eligible same-origin anchor navigations reload `handle.frames.top` through the f
 - `data-rmx-src="/frame"` overrides the URL resolved into that frame while `href` remains the navigation destination.
 - `data-rmx-history="push|replace"` controls how the navigation updates history.
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
+- `data-rmx-view-transition` runs the frame reload inside a same-document view transition when supported.
 - `data-rmx-document` leaves the link as a normal document navigation.
 
-The `link(href, { history })` mixin adds the corresponding `data-rmx-history` value when its host is a native anchor. Download links, cross-origin links, and links marked with `data-rmx-document` are left to the browser.
+The `link(href, { history, viewTransition })` mixin adds the corresponding runtime attributes when its host is a native anchor. Download links, cross-origin links, and links marked with `data-rmx-document` are left to the browser.
 
 ## Form navigation
 
@@ -259,6 +260,7 @@ Eligible same-origin form submissions use the same frame navigation path as link
 - `data-rmx-src="/frame"` overrides the URL resolved into that frame while the form action remains the navigation destination.
 - `data-rmx-history="push|replace"` overrides how the navigation updates history.
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
+- `data-rmx-view-transition` runs the frame reload inside a same-document view transition when supported.
 - `data-rmx-document` leaves the submission as a normal document navigation.
 - Submitter overrides such as `formmethod`, `formenctype`, and `formtarget` take precedence over the form attributes.
 - Cross-origin submissions, `method="dialog"`, and `target="_blank"` are left to the browser.
