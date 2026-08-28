@@ -190,6 +190,28 @@ describe('render', () => {
     assert.equal(errors.length, 1)
   })
 
+  it('rejects failed frame responses without UI', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+
+    router.get('/', (context) => context.render(createElement(Frame, { src: '/missing' })))
+    router.get(
+      '/missing',
+      () =>
+        new Response(null, {
+          status: 404,
+          statusText: 'Not Found',
+          headers: { 'Content-Type': 'text/html' },
+        }),
+    )
+
+    let response = await router.fetch('https://remix.run/')
+
+    await assert.rejects(response.text(), /Failed to resolve frame: 404 Not Found/)
+    assert.equal(errors.length, 1)
+  })
+
   it('renders frame bodies from context.render() in place without a leaked doctype', async () => {
     let middleware = render()
     let router = createRouter({ middleware: [middleware] as const })
@@ -224,6 +246,7 @@ describe('render', () => {
   })
 
   it('resolves source client entries through the asset server', async () => {
+    let errors: unknown[] = []
     let resolvedEntries: string[] = []
     let preloadedEntries: string[] = []
     let assets = {
@@ -236,7 +259,7 @@ describe('render', () => {
         return ['/assets/shared-456.js']
       },
     }
-    let middleware = render({ assets })
+    let middleware = render({ assets, onError: (error) => errors.push(error) })
     let router = createRouter({ middleware: [middleware] as const })
     let Counter = clientEntry('file:///app/counter.ts#Counter', function () {
       return () => createElement('button', {}, 'Count')
@@ -249,6 +272,9 @@ describe('render', () => {
     })
     let CdnEntry = clientEntry('https://cdn.example/widget.js#CdnEntry', function () {
       return () => createElement('p', {}, 'CDN')
+    })
+    let MissingExportEntry = clientEntry('file:///app/missing-export.ts', function () {
+      return () => createElement('p', {}, 'Missing export')
     })
 
     router.get('/', (context) =>
@@ -263,6 +289,7 @@ describe('render', () => {
         ),
       ),
     )
+    router.get('/missing-export', (context) => context.render(createElement(MissingExportEntry)))
 
     let response = await router.fetch('https://remix.run/')
     let html = await response.text()
@@ -278,6 +305,13 @@ describe('render', () => {
     assert.match(html, /"exportName":"NamedEntry"/)
     assert.match(html, /\/public\/widget\.js/)
     assert.match(html, /https:\/\/cdn\.example\/widget\.js/)
+
+    let missingExportResponse = await router.fetch('https://remix.run/missing-export')
+    await assert.rejects(
+      missingExportResponse.text(),
+      /entry ID \(e\.g\., import\.meta\.url \+ "#ExportName"\)/,
+    )
+    assert.equal(errors.length, 1)
   })
 
   it('uses the UI renderer client entry rules when no asset server is configured', async () => {
@@ -287,11 +321,17 @@ describe('render', () => {
     let PublicEntry = clientEntry('/assets/public.js#PublicEntry', function () {
       return () => createElement('p', {}, 'Public')
     })
-    let SourceEntry = clientEntry('file:///Users/alice/private/source.ts#SourceEntry', function () {
+    let MissingPublicExportEntry = clientEntry('/assets/missing-export.js', function () {
+      return () => createElement('p', {}, 'Missing public export')
+    })
+    let SourceEntry = clientEntry('file:///Users/alice/private/source.ts', function () {
       return () => createElement('p', {}, 'Source')
     })
 
     router.get('/', (context) => context.render(createElement(PublicEntry)))
+    router.get('/missing-public-export', (context) =>
+      context.render(createElement(MissingPublicExportEntry)),
+    )
     router.get('/source', (context) => context.render(createElement(SourceEntry)))
 
     let response = await router.fetch('https://remix.run/')
@@ -300,12 +340,19 @@ describe('render', () => {
     assert.match(html, /\/assets\/public\.js/)
     assert.match(html, /"exportName":"PublicEntry"/)
 
+    let missingPublicExportResponse = await router.fetch('https://remix.run/missing-public-export')
+    await assert.rejects(
+      missingPublicExportResponse.text(),
+      /entry ID \(e\.g\., "\/js\/module\.js#ExportName"\)/,
+    )
+    assert.doesNotMatch(String(errors[0]), /import\.meta\.url/)
+
     let sourceResponse = await router.fetch('https://remix.run/source')
     await assert.rejects(
       sourceResponse.text(),
       /file: source entry ID without an asset server.*render\(\{ assets \}\)/,
     )
-    assert.doesNotMatch(String(errors[0]), /Users\/alice/)
+    assert.doesNotMatch(String(errors[1]), /Users\/alice/)
   })
 
   it('emits generated styles and reports rendering errors', async () => {

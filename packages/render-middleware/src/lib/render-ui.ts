@@ -113,7 +113,7 @@ async function resolveFrame(
   }
   if (response.ok) return ''
 
-  return `<pre>Frame error: ${response.status} ${escapeHtml(response.statusText)}</pre>`
+  throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
 }
 
 function createFrameRequestHeaders(
@@ -200,36 +200,37 @@ async function resolveClientEntry(
   let explicitExportName = hashIndex === -1 ? '' : entryId.slice(hashIndex + 1)
   let exportName = explicitExportName || component.name
 
-  if (!exportName) {
-    throw new Error(
-      `clientEntry() requires either an export name in the entry ID (e.g., import.meta.url + "#ExportName") or a named component function. Received "${entryId}".`,
-    )
+  if (sourceId.startsWith('file:')) {
+    if (assets == null) {
+      throw new Error(
+        'clientEntry() cannot use a file: source entry ID without an asset server. Pass the asset server to render({ assets }).',
+      )
+    }
+    if (!exportName) throw createMissingExportNameError(entryId, true)
+
+    let [href, preloads] = await Promise.all([
+      assets.getHref(sourceId),
+      assets.getPreloads(sourceId),
+    ])
+
+    return { href, exportName, preloads }
   }
 
-  if (!sourceId.startsWith('file:')) return { href: sourceId, exportName }
+  if (!exportName) throw createMissingExportNameError(entryId, assets != null)
 
-  if (assets == null) {
-    throw new Error(
-      'clientEntry() cannot use a file: source entry ID without an asset server. Pass the asset server to render({ assets }).',
-    )
-  }
+  return { href: sourceId, exportName }
+}
 
-  let [href, preloads] = await Promise.all([assets.getHref(sourceId), assets.getPreloads(sourceId)])
+function createMissingExportNameError(entryId: string, hasAssets: boolean): Error {
+  let example = hasAssets ? 'import.meta.url + "#ExportName"' : '"/js/module.js#ExportName"'
 
-  return { href, exportName, preloads }
+  return new Error(
+    `clientEntry() requires either an export name in the entry ID (e.g., ${example}) or a named component function. Received "${entryId}".`,
+  )
 }
 
 function isHtmlResponse(response: Response): boolean {
   return (
     response.headers.get('Content-Type')?.split(';', 1)[0]?.trim().toLowerCase() === 'text/html'
   )
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
 }
