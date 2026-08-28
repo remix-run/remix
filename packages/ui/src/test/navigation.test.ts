@@ -101,11 +101,13 @@ describe('navigate', () => {
     let originalUrl = window.location.href
     let destination = new URL(originalUrl)
     destination.hash = 'document-navigation-fallback'
+    let originalHistoryLength = window.history.length
     stubGlobalField(t, 'navigation', undefined)
 
     try {
       await navigate(destination.href)
       expect(window.location.href).toBe(destination.href)
+      expect(window.history.length).toBe(originalHistoryLength + 1)
     } finally {
       let wentBack = new Promise<void>((resolve) => {
         window.addEventListener('popstate', () => resolve(), { once: true })
