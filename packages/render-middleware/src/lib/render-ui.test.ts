@@ -106,7 +106,7 @@ describe('render', () => {
     assert.equal(frameRequestHeaders[1]?.get('X-Remix-Target'), 'inner')
   })
 
-  it('follows frame redirects and preserves non-successful response content', async () => {
+  it('follows frame redirects and preserves non-successful HTML response content', async () => {
     let middleware = render()
     let router = createRouter({ middleware: [middleware] as const })
     let crossOriginHeaders: Headers | undefined
@@ -118,20 +118,38 @@ describe('render', () => {
           {},
           createElement(Frame, { src: '/redirect' }),
           createElement(Frame, { src: '/invalid' }),
-          createElement(Frame, { src: '/empty' }),
-          createElement(Frame, { src: '/no-content' }),
+          createElement(Frame, { src: '/not-a-redirect' }),
           createElement(Frame, { src: 'https://other.example/cross-origin' }),
         ),
       ),
     )
     router.get('/redirect', () => new Response(null, { status: 302, headers: { Location: '/ok' } }))
-    router.get('/ok', () => new Response('<strong>Redirected</strong>'))
-    router.get('/invalid', () => new Response('<p>Validation failed</p>', { status: 422 }))
-    router.get('/empty', () => new Response(null, { status: 404, statusText: 'Not Found' }))
-    router.get('/no-content', () => new Response(null, { status: 204 }))
+    router.get(
+      '/ok',
+      () =>
+        new Response('<strong>Redirected</strong>', { headers: { 'Content-Type': 'text/html' } }),
+    )
+    router.get(
+      '/invalid',
+      () =>
+        new Response('<p>Validation failed</p>', {
+          status: 422,
+          headers: { 'Content-Type': 'text/html' },
+        }),
+    )
+    router.get(
+      '/not-a-redirect',
+      () =>
+        new Response('<p>Multiple choices</p>', {
+          status: 300,
+          headers: { 'Content-Type': 'text/html', Location: '/ok' },
+        }),
+    )
     router.get('/cross-origin', (context) => {
       crossOriginHeaders = context.request.headers
-      return new Response('<span>Cross origin</span>')
+      return new Response('<span>Cross origin</span>', {
+        headers: { 'Content-Type': 'text/html' },
+      })
     })
 
     let response = await router.fetch(
@@ -148,8 +166,7 @@ describe('render', () => {
 
     assert.match(html, /<strong>Redirected<\/strong>/)
     assert.match(html, /<p>Validation failed<\/p>/)
-    assert.match(html, /<pre>Frame error: 404 Not Found<\/pre>/)
-    assert.doesNotMatch(html, /Frame error: 204/)
+    assert.match(html, /<p>Multiple choices<\/p>/)
     assert.match(html, /<span>Cross origin<\/span>/)
     assert.equal(crossOriginHeaders?.get('Authorization'), null)
     assert.equal(crossOriginHeaders?.get('Cookie'), null)
@@ -157,6 +174,20 @@ describe('render', () => {
     assert.equal(crossOriginHeaders?.get('X-Session-Token'), null)
     assert.equal(crossOriginHeaders?.get('X-Remix-Top-Frame-Src'), null)
     assert.equal(crossOriginHeaders?.get('X-Remix-Frame'), 'true')
+  })
+
+  it('rejects non-HTML frame responses', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+
+    router.get('/', (context) => context.render(createElement(Frame, { src: '/text' })))
+    router.get('/text', () => new Response('Not UI'))
+
+    let response = await router.fetch('https://remix.run/')
+
+    await assert.rejects(response.text(), /Frame response must have a text\/html Content-Type/)
+    assert.equal(errors.length, 1)
   })
 
   it('renders frame bodies from context.render() in place without a leaked doctype', async () => {
@@ -250,19 +281,31 @@ describe('render', () => {
   })
 
   it('uses the UI renderer client entry rules when no asset server is configured', async () => {
-    let middleware = render()
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
     let router = createRouter({ middleware: [middleware] as const })
     let PublicEntry = clientEntry('/assets/public.js#PublicEntry', function () {
       return () => createElement('p', {}, 'Public')
     })
+    let SourceEntry = clientEntry('file:///Users/alice/private/source.ts#SourceEntry', function () {
+      return () => createElement('p', {}, 'Source')
+    })
 
     router.get('/', (context) => context.render(createElement(PublicEntry)))
+    router.get('/source', (context) => context.render(createElement(SourceEntry)))
 
     let response = await router.fetch('https://remix.run/')
     let html = await response.text()
 
     assert.match(html, /\/assets\/public\.js/)
     assert.match(html, /"exportName":"PublicEntry"/)
+
+    let sourceResponse = await router.fetch('https://remix.run/source')
+    await assert.rejects(
+      sourceResponse.text(),
+      /file: source entry ID without an asset server.*render\(\{ assets \}\)/,
+    )
+    assert.doesNotMatch(String(errors[0]), /Users\/alice/)
   })
 
   it('emits generated styles and reports rendering errors', async () => {
@@ -334,5 +377,67 @@ describe('render', () => {
     controller.abort(new Error('Request cancelled'))
     await frameAborted
     await body
+  })
+
+  it('cancels returned frame streams with the original request', async () => {
+    let middleware = render()
+    let router = createRouter({ middleware: [middleware] as const })
+    let frameStreamStartedResolve: (() => void) | undefined
+    let frameStreamStarted = new Promise<void>((resolve) => {
+      frameStreamStartedResolve = resolve
+    })
+    let frameStreamCancelledResolve: ((reason: unknown) => void) | undefined
+    let frameStreamCancelled = new Promise<unknown>((resolve) => {
+      frameStreamCancelledResolve = resolve
+    })
+
+    router.get('/', (context) => context.render(createElement(Frame, { src: '/stream' })))
+    router.get(
+      '/stream',
+      () =>
+        new Response(
+          new ReadableStream({
+            pull() {
+              frameStreamStartedResolve?.()
+            },
+            cancel(reason) {
+              frameStreamCancelledResolve?.(reason)
+            },
+          }),
+          { headers: { 'Content-Type': 'text/html' } },
+        ),
+    )
+
+    let controller = new AbortController()
+    let response = await router.fetch(
+      new Request('https://remix.run/', { signal: controller.signal }),
+    )
+    let body = response.text().catch(() => '')
+    let reason = new Error('Request cancelled')
+
+    await frameStreamStarted
+    controller.abort(reason)
+
+    assert.equal(await frameStreamCancelled, reason)
+    await body
+  })
+
+  it('reports nested frame render errors once', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken child component')
+
+    function Broken() {
+      throw renderError
+    }
+
+    router.get('/', (context) => context.render(createElement(Frame, { src: '/child' })))
+    router.get('/child', (context) => context.render(createElement(Broken)))
+
+    let response = await router.fetch('https://remix.run/')
+    await response.text().catch(() => '')
+
+    assert.deepEqual(errors, [renderError])
   })
 })

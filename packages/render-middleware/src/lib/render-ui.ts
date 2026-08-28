@@ -12,6 +12,7 @@ const FRAME_HEADER = 'X-Remix-Frame'
 const FRAME_TARGET_HEADER = 'X-Remix-Target'
 const TOP_FRAME_SRC_HEADER = 'X-Remix-Top-Frame-Src'
 const MAX_FRAME_REDIRECTS = 20
+const FRAME_REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 const FRAME_REQUEST_HEADERS_TO_REMOVE = [
   'Connection',
   'Content-Encoding',
@@ -65,22 +66,18 @@ export function render(
   return renderWith((context) => {
     let request = context.request
     let topFrameSrc = getTopFrameSrc(request)
-    let assets = options.assets
+    let onError = request.headers.get(FRAME_HEADER) === 'true' ? () => {} : options.onError
 
     return function render(node: RemixNode, init?: ResponseInit): Response {
       let stream = renderToStream(node, {
         frameSrc: request.url,
         topFrameSrc,
         signal: request.signal,
-        onError: options.onError,
+        onError,
         resolveFrame: (src, target, frameContext) =>
           resolveFrame(context, src, target, frameContext),
-        ...(assets == null
-          ? {}
-          : {
-              resolveClientEntry: (entryId: string, component: { readonly name: string }) =>
-                resolveClientEntry(assets, entryId, component),
-            }),
+        resolveClientEntry: (entryId, component) =>
+          resolveClientEntry(options.assets, entryId, component),
       })
 
       return createHtmlResponse(stream, init)
@@ -105,7 +102,15 @@ async function resolveFrame(
   let headers = createFrameRequestHeaders(context.headers, target, topFrameSrc)
   let response = await followFrameRedirects(context, frameUrl, headers)
 
-  if (response.body != null) return response.body
+  if (!isHtmlResponse(response)) {
+    throw new Error('Frame response must have a text/html Content-Type')
+  }
+
+  if (response.body != null) {
+    return response.body.pipeThrough(new TransformStream(), {
+      signal: context.request.signal,
+    })
+  }
   if (response.ok) return ''
 
   return `<pre>Frame error: ${response.status} ${escapeHtml(response.statusText)}</pre>`
@@ -160,7 +165,7 @@ async function followFrameRedirects(
     )
     let location = response.headers.get('Location')
 
-    if (location == null || response.status < 300 || response.status >= 400) {
+    if (location == null || !FRAME_REDIRECT_STATUSES.has(response.status)) {
       return response
     }
     if (redirectCount === MAX_FRAME_REDIRECTS) {
@@ -186,7 +191,7 @@ function createCrossOriginFrameHeaders(headers: Headers): Headers {
 }
 
 async function resolveClientEntry(
-  assets: Pick<AssetServer, 'getHref' | 'getPreloads'>,
+  assets: Pick<AssetServer, 'getHref' | 'getPreloads'> | undefined,
   entryId: string,
   component: { readonly name: string },
 ): Promise<{ href: string; exportName: string; preloads?: string[] }> {
@@ -203,9 +208,21 @@ async function resolveClientEntry(
 
   if (!sourceId.startsWith('file:')) return { href: sourceId, exportName }
 
+  if (assets == null) {
+    throw new Error(
+      'clientEntry() cannot use a file: source entry ID without an asset server. Pass the asset server to render({ assets }).',
+    )
+  }
+
   let [href, preloads] = await Promise.all([assets.getHref(sourceId), assets.getPreloads(sourceId)])
 
   return { href, exportName, preloads }
+}
+
+function isHtmlResponse(response: Response): boolean {
+  return (
+    response.headers.get('Content-Type')?.split(';', 1)[0]?.trim().toLowerCase() === 'text/html'
+  )
 }
 
 function escapeHtml(value: string): string {

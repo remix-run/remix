@@ -74,13 +74,13 @@ export default createController(routes, {
 Use `getHref()` when you need the public URL for one module, and `getPreloads()` when you want `<link rel="modulepreload">` tags or `Link` headers for one or more entrypoints and their dependencies.
 
 ```typescript
-let entryHref = await assetServer.getHref('app/actions/public/entry.ts')
-let entryPreloads = await assetServer.getPreloads('app/actions/public/entry.ts')
+let entryHref = await assets.getHref('app/actions/public/entry.ts')
+let entryPreloads = await assets.getPreloads('app/actions/public/entry.ts')
 ```
 
 Use this when rendering documents or layouts that boot browser behavior with a known client entry.
 
-For normal Remix applications, pass the asset server to `render({ assets: assetServer })` from `remix/middleware/render`. The middleware resolves source entry IDs from `clientEntry(import.meta.url, ...)` with `getHref()` and `getPreloads()` and applies the UI renderer's explicit-hash or named-component export rules. Use a custom `resolveClientEntry` callback only when building a custom rendering pipeline.
+For normal Remix applications, pass the asset server to `render({ assets })` from `remix/middleware/render`. The middleware resolves source entry IDs from `clientEntry(import.meta.url, ...)` with `getHref()` and `getPreloads()` and applies the UI renderer's explicit-hash or named-component export rules. Use a custom `resolveClientEntry` callback only when building a custom rendering pipeline.
 
 ## Development vs Deployment
 
@@ -146,4 +146,4 @@ Do not nest shared compiler options under `scripts`. Use top-level `minify`, `so
 
 ## Lifecycle
 
-If the asset server is long-lived and watching the file system, call `await assets.close()` when shutting down dev servers or disposing tests.
+If the asset server is long-lived and watching the file system, call `await assetServer.close()` when shutting down dev servers or disposing tests.
