@@ -421,17 +421,16 @@ export class MultipartParser {
       }
 
       if (this.#state === MultipartParserStateStart) {
-        if (chunkLength < this.#openingBoundaryLength) {
-          this.#buffer = chunk
+        let boundaryIndex = this.#findOpeningBoundary(chunk)
+        if (boundaryIndex === -1) {
+          // RFC 2046 preamble: keep a tail so the opening boundary can be
+          // split across chunks.
+          let keep = this.#openingBoundaryLength - 1
+          this.#buffer = chunkLength <= keep ? chunk : chunk.subarray(chunkLength - keep)
           break
         }
 
-        if (this.#findOpeningBoundary(chunk) !== 0) {
-          throw new MultipartParseError('Invalid multipart stream: missing initial boundary')
-        }
-
-        index = this.#openingBoundaryLength
-
+        index = boundaryIndex + this.#openingBoundaryLength
         this.#state = MultipartParserStateAfterBoundary
       }
     }

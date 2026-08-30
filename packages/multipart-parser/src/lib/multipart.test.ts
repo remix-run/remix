@@ -130,6 +130,42 @@ describe('parseMultipart', async () => {
     ])
   })
 
+  it('ignores a textual RFC 2046 preamble before the initial boundary', () => {
+    let preamble = new TextEncoder().encode('This is a MIME preamble.\r\n')
+    let message = createMultipartMessage(boundary, { field: 'hello' })
+    let body = new Uint8Array(preamble.length + message.length)
+    body.set(preamble, 0)
+    body.set(message, preamble.length)
+
+    let parts = Array.from(parseMultipart(body, { boundary }))
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, 'hello')
+  })
+
+  it('ignores a leading CRLF before the initial boundary', () => {
+    let preamble = new TextEncoder().encode('\r\n')
+    let message = createMultipartMessage(boundary, { field: 'hello' })
+    let body = new Uint8Array(preamble.length + message.length)
+    body.set(preamble, 0)
+    body.set(message, preamble.length)
+
+    let parts = Array.from(parseMultipart(body, { boundary }))
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, 'hello')
+  })
+
+  it('finds an opening boundary split across chunks after a preamble', () => {
+    let preamble = new TextEncoder().encode('This is a MIME preamble.\r\n')
+    let message = createMultipartMessage(boundary, { field: 'hello' })
+    let body = new Uint8Array(preamble.length + message.length)
+    body.set(preamble, 0)
+    body.set(message, preamble.length)
+
+    let parts = Array.from(parseMultipart(createChunkedIterable(body, 3), { boundary }))
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, 'hello')
+  })
+
   it('throws when the number of parts exceeds maxParts', () => {
     let message = createMultipartMessage(boundary, {
       field1: 'value1',
