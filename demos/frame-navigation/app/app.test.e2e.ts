@@ -11,7 +11,7 @@ import { routes } from './routes.ts'
 declare global {
   interface Window {
     __frameNavigationTestDocument?: string
-    __overflowAnchorTimeline?: string[]
+    __scrollAfterNavigationShift?: number
   }
 }
 
@@ -61,7 +61,7 @@ describe('frame navigation', () => {
     await assertDocumentPreserved(page, documentMarker)
   })
 
-  it('suppresses Chromium scroll anchoring before interception', async (t) => {
+  it('prevents scroll anchoring while navigation layout settles', async (t) => {
     let server = await createTestServer(router.fetch)
     let page = await t.serve(server)
     await page.setViewportSize({ width: 800, height: 400 })
@@ -69,42 +69,44 @@ describe('frame navigation', () => {
     await page.goto(routes.main.index.href())
     await waitForNavigationRuntime(page)
     await page.evaluate(() => {
-      let overflowAnchorTimeline: string[] = []
-      window.__overflowAnchorTimeline = overflowAnchorTimeline
-      let recordOverflowAnchor = () => {
-        overflowAnchorTimeline.push(getComputedStyle(document.documentElement).overflowAnchor)
-      }
       window.navigation.addEventListener(
         'navigate',
-        () => {
-          recordOverflowAnchor()
-          window.navigation.addEventListener(
-            'navigatesuccess',
-            () => {
-              recordOverflowAnchor()
-              requestAnimationFrame(() => {
-                recordOverflowAnchor()
-                requestAnimationFrame(recordOverflowAnchor)
-              })
+        (event) => {
+          if (!event.canIntercept) return
+          event.intercept({
+            async handler() {
+              let nextFrame = () =>
+                new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+              while (!document.querySelector('#courses-heading')) await nextFrame()
+              await nextFrame()
+              // Chromium does not select an anchor at the exact scroll boundary. Moving one pixel
+              // exposes reconciliation-driven anchoring without moving the destination visibly.
+              window.scrollTo(0, 1)
+              await nextFrame()
+
+              let spacer = document.createElement('div')
+              spacer.style.height = '400px'
+              document.body.prepend(spacer)
+              await nextFrame()
+              await nextFrame()
+              window.__scrollAfterNavigationShift = window.scrollY
+              spacer.remove()
             },
-            { once: true },
-          )
+          })
         },
         { once: true },
       )
     })
 
-    await page.getByRole('link', { name: 'Courses', exact: true }).dispatchEvent('click')
-    await page.locator('#courses-heading').waitFor()
-    await page.waitForFunction(() => window.__overflowAnchorTimeline?.length === 4)
+    await page.getByRole('link', { name: 'Courses', exact: true }).click()
+    await page.waitForFunction(() => window.__scrollAfterNavigationShift !== undefined)
 
-    assert.deepEqual(await page.evaluate(() => window.__overflowAnchorTimeline), [
-      'none',
-      'none',
-      'none',
-      'auto',
-    ])
-    assert.equal(await page.evaluate(() => window.scrollY), 0)
+    let scrollPosition = await page.evaluate(() => window.__scrollAfterNavigationShift)
+    assert.equal(
+      scrollPosition,
+      1,
+      `Expected navigation layout changes to preserve scroll position 1, got ${scrollPosition}`,
+    )
   })
 
   it('replaces history when filtering courses', async (t) => {
