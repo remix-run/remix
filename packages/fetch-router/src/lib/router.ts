@@ -205,19 +205,6 @@ export type RouterContext<router extends RouteBuilder<any>> =
   router extends RouteBuilder<infer context> ? context : never
 
 /**
- * A handler that runs when one or more routes match the request URL, but none of them are
- * registered for the request method.
- */
-export interface MethodNotAllowedHandler<context extends AnyContext = RequestContext> {
-  /**
-   * @param context The request context
-   * @param allowedMethods The request methods that routes are registered for at this URL, in a
-   * format suitable for an `Allow` response header
-   */
-  (context: context, allowedMethods: RequestMethod[]): Response | Promise<Response>
-}
-
-/**
  * Options for creating a router.
  */
 export interface RouterOptions<
@@ -229,13 +216,6 @@ export interface RouterOptions<
    * Defaults to a 404 `Not Found` response.
    */
   defaultHandler?: RequestHandler<MiddlewareContext<middleware, context>>
-  /**
-   * The handler that runs when one or more routes match the request URL, but none of them are
-   * registered for the request method. Receives the request methods that are allowed for the
-   * URL, suitable for an `Allow` response header.
-   * Defaults to a 405 `Method Not Allowed` response with an `Allow` header.
-   */
-  methodNotAllowedHandler?: MethodNotAllowedHandler<MiddlewareContext<middleware, context>>
   /**
    * The matcher to use for matching routes.
    *
@@ -386,8 +366,6 @@ export function createRouter<
   type RouterContext = MiddlewareContext<middleware, context>
 
   let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any>
-  let methodNotAllowedHandler = (options?.methodNotAllowedHandler ??
-    noMethodMatchHandler) as MethodNotAllowedHandler<any>
   let matcher = options?.matcher ?? createMultiMatcher<MatchData>()
   let routerMiddleware = normalizeMiddleware(options?.middleware)
 
@@ -442,7 +420,7 @@ export function createRouter<
       )
 
       return raceRequestAbort(
-        Promise.resolve(methodNotAllowedHandler(context, allow)),
+        Promise.resolve(noMethodMatchHandler(context, allow)),
         context.request,
       )
     }

@@ -254,18 +254,7 @@ let response = await router.fetch('https://remix.run/users/1', { method: 'DELETE
 // Allow: GET, HEAD, PUT
 ```
 
-Use the `methodNotAllowedHandler` option to customize this response:
-
-```ts
-let router = createRouter({
-  methodNotAllowedHandler({ method }, allowedMethods) {
-    return new Response(`"${method}" is not supported here`, {
-      status: 405,
-      headers: { Allow: allowedMethods.join(', ') },
-    })
-  },
-})
-```
+If you want a handler to receive every request method at a given URL instead, register an `ANY` route for it.
 
 #### HEAD Requests
 

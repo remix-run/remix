@@ -947,34 +947,8 @@ describe('405 handling', () => {
     assert.equal(response.status, 404)
   })
 
-  it('supports a custom methodNotAllowedHandler', async () => {
-    let router = createRouter({
-      methodNotAllowedHandler({ method }, allowedMethods) {
-        return new Response(`Custom 405: ${method}, try ${allowedMethods.join('/')}`, {
-          status: 405,
-          headers: { 'X-Custom': 'true' },
-        })
-      },
-    })
-
-    router.put('/posts/1', () => new Response('Updated'))
-
-    let response = await router.fetch('https://remix.run/posts/1', { method: 'DELETE' })
-
-    assert.equal(response.status, 405)
-    assert.equal(await response.text(), 'Custom 405: DELETE, try PUT')
-    assert.equal(response.headers.get('X-Custom'), 'true')
-  })
-
-  it('does not call methodNotAllowedHandler when a matching route handles the request', async () => {
-    let methodNotAllowedCalls = 0
-    let router = createRouter({
-      methodNotAllowedHandler() {
-        methodNotAllowedCalls++
-        return new Response('Method Not Allowed', { status: 405 })
-      },
-    })
-
+  it('lets an ANY catch-all route handle mismatched methods without a 405', async () => {
+    let router = createRouter()
     router.get('/home', () => new Response('Home'))
     router.route('ANY', '/*rest', () => new Response('Catch-all'))
 
@@ -982,7 +956,6 @@ describe('405 handling', () => {
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Catch-all')
-    assert.equal(methodNotAllowedCalls, 0)
   })
 })
 
