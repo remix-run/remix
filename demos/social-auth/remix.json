@@ -1,5 +1,5 @@
 {
-  "$schema": "../../node_modules/remix/schema/remix.json",
+  "$schema": "node_modules/remix/schema/remix.json",
   "db": {
     "adapter": {
       "type": "sqlite",

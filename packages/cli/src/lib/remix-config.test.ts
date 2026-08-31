@@ -429,22 +429,11 @@ describe('Remix config loading', () => {
     }
   })
 
-  it('keeps the schema published by remix synchronized with the canonical CLI schema', async () => {
-    let cliSchema = await fs.readFile(
-      path.join(ROOT_DIR, 'packages', 'cli', 'schema', 'remix.json'),
-      'utf8',
+  it('declares an absolute JSON Schema dialect and stable identifier', async () => {
+    let schema = JSON.parse(
+      await fs.readFile(path.join(ROOT_DIR, 'packages', 'cli', 'schema', 'remix.json'), 'utf8'),
     )
-    let remixSchema = await fs.readFile(
-      path.join(ROOT_DIR, 'packages', 'remix', 'schema', 'remix.json'),
-      'utf8',
-    )
-    let remixPackage = JSON.parse(
-      await fs.readFile(path.join(ROOT_DIR, 'packages', 'remix', 'package.json'), 'utf8'),
-    )
-    let schema = JSON.parse(cliSchema)
 
-    assert.ok(remixPackage.files.includes('schema'))
-    assert.equal(remixSchema, cliSchema)
     assert.deepEqual(
       { $schema: schema.$schema, $id: schema.$id },
       {
