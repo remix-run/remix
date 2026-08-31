@@ -238,7 +238,23 @@ Because this function defines the trust boundary for frame HTML, only return con
 
 ## Link navigation
 
-Eligible same-origin anchor navigations reload `handle.frames.top` through the frame resolver instead of performing a full document navigation.
+Calling `run()` represents the current document as `handle.frames.top` and starts a Navigation API
+listener. Eligible same-origin anchor navigations reload that top frame through the frame resolver
+instead of performing a full document navigation. This soft-navigation behavior applies even when
+the page does not render an explicit `<Frame>`.
+
+A soft navigation fetches the destination HTML and reconciles it into the existing document. The
+browser therefore does not run behavior tied to loading a new document, including cross-document
+view transitions.
+
+In browsers that support same-document view transitions, wrap an imperative soft navigation with
+`document.startViewTransition()`:
+
+```ts
+import { navigate } from 'remix/ui'
+
+document.startViewTransition(() => navigate('/dashboard'))
+```
 
 - `data-rmx-target="name"` reloads a named frame.
 - `data-rmx-src="/frame"` overrides the URL resolved into that frame while `href` remains the navigation destination.
@@ -247,6 +263,18 @@ Eligible same-origin anchor navigations reload `handle.frames.top` through the f
 - `data-rmx-document` leaves the link as a normal document navigation.
 
 The `link(href, { history })` mixin adds the corresponding `data-rmx-history` value when its host is a native anchor. Download links, cross-origin links, and links marked with `data-rmx-document` are left to the browser.
+
+To keep every link and form as a document navigation while still hydrating client entries and using
+explicit frames, register a Navigation API listener before calling `run()`:
+
+```ts
+window.navigation?.addEventListener('navigate', (event) => {
+  event.stopImmediatePropagation()
+})
+```
+
+This prevents Remix from receiving navigation events, including events for `data-rmx-target` and
+imperative `navigate()` calls. Explicit reloads such as `handle.frame.reload()` continue to work.
 
 ## Form navigation
 

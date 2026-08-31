@@ -81,8 +81,10 @@ function Actions() {
 
 ## Frame Navigation
 
-`run()` progressively enhances same-origin links and forms using a default `resolveFrame` that
-fetches the frame source:
+Calling `run()` starts both hydration and frame navigation. It represents the current document as
+`app.frames.top` and intercepts eligible same-origin links and forms through the browser's
+Navigation API. Those navigations fetch HTML with the frame resolver and update the existing
+document in place instead of loading a new document:
 
 ```tsx
 import { run } from 'remix/ui'
@@ -96,6 +98,10 @@ let app = run({
 
 await app.ready()
 ```
+
+This soft-navigation behavior applies even when the page only uses `clientEntry()` and does not
+render an explicit `<Frame>`. Because the browser keeps the current document, behavior that depends
+on loading a new document, including cross-document view transitions, does not run.
 
 The default resolver is equivalent to:
 
@@ -149,7 +155,18 @@ CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass 
 `resolveFrame` when the server requires additional headers, another body encoding, or a different
 response policy.
 
-Add `data-rmx-document` to a link or form to leave its navigation to the browser.
+Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
+and forms as document navigations while still hydrating client entries and using explicit frames,
+register a listener before calling `run()`:
+
+```ts
+window.navigation?.addEventListener('navigate', (event) => {
+  event.stopImmediatePropagation()
+})
+```
+
+This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as
+`handle.frame.reload()` continue to use the frame resolver.
 
 The default resolver rejects non-OK responses with an error containing their status and status text.
 A custom `resolveFrame` may return a `Response` with any status when it wants Remix UI to render the
