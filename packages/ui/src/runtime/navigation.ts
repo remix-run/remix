@@ -325,6 +325,7 @@ function suppressChromiumScrollAnchoring(
         overflow-anchor: none !important;
       }
     `,
+    true,
   )
 }
 
@@ -360,17 +361,24 @@ function installNavigationScrollStylesheet(
   navigation: Navigation,
   event: NavigateEvent,
   cssText: string,
+  cleanupAfterPaint = false,
 ): void {
   let stylesheet = new CSSStyleSheet()
   stylesheet.replaceSync(cssText)
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet]
 
   let cleanedUp = false
-  let cleanup = () => {
+  function cleanupAfterSuccess() {
+    if (!cleanupAfterPaint) return cleanup()
+    // Keep anchoring disabled through the first post-navigation paint. The first callback runs
+    // before that paint; the second removes the stylesheet before the following frame.
+    requestAnimationFrame(() => requestAnimationFrame(cleanup))
+  }
+  function cleanup() {
     if (cleanedUp) return
     cleanedUp = true
     event.signal.removeEventListener('abort', cleanup)
-    navigation.removeEventListener('navigatesuccess', cleanup)
+    navigation.removeEventListener('navigatesuccess', cleanupAfterSuccess)
     navigation.removeEventListener('navigateerror', cleanup)
     document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
       (current) => current !== stylesheet,
@@ -378,7 +386,7 @@ function installNavigationScrollStylesheet(
   }
 
   event.signal.addEventListener('abort', cleanup, { once: true })
-  navigation.addEventListener('navigatesuccess', cleanup, { once: true })
+  navigation.addEventListener('navigatesuccess', cleanupAfterSuccess, { once: true })
   navigation.addEventListener('navigateerror', cleanup, { once: true })
 }
 

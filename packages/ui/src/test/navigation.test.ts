@@ -193,6 +193,11 @@ describe('navigate', () => {
     let scroll = mock.fn()
     let intercept = mock.fn()
     let adoptedStyleSheetCount = document.adoptedStyleSheets.length
+    let animationFrameCallbacks: FrameRequestCallback[] = []
+    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+      animationFrameCallbacks.push(callback)
+      return animationFrameCallbacks.length
+    })
 
     dispatchNavigation(
       createAnchorNavigateEvent(anchor, {
@@ -217,6 +222,12 @@ describe('navigate', () => {
     expect(scroll).toHaveBeenCalledTimes(1)
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
     dispatchNavigation(new Event('navigatesuccess'))
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+
+    animationFrameCallbacks[0]?.(0)
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+
+    animationFrameCallbacks[1]?.(0)
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
     expect(scrollTo).not.toHaveBeenCalled()
   })

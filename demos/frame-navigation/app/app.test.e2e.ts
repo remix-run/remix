@@ -11,7 +11,7 @@ import { routes } from './routes.ts'
 declare global {
   interface Window {
     __frameNavigationTestDocument?: string
-    __overflowAnchorDuringNavigate?: string
+    __overflowAnchorTimeline?: string[]
   }
 }
 
@@ -69,12 +69,26 @@ describe('frame navigation', () => {
     await page.goto(routes.main.index.href())
     await waitForNavigationRuntime(page)
     await page.evaluate(() => {
+      let overflowAnchorTimeline: string[] = []
+      window.__overflowAnchorTimeline = overflowAnchorTimeline
+      let recordOverflowAnchor = () => {
+        overflowAnchorTimeline.push(getComputedStyle(document.documentElement).overflowAnchor)
+      }
       window.navigation.addEventListener(
         'navigate',
         () => {
-          window.__overflowAnchorDuringNavigate = getComputedStyle(
-            document.documentElement,
-          ).overflowAnchor
+          recordOverflowAnchor()
+          window.navigation.addEventListener(
+            'navigatesuccess',
+            () => {
+              recordOverflowAnchor()
+              requestAnimationFrame(() => {
+                recordOverflowAnchor()
+                requestAnimationFrame(recordOverflowAnchor)
+              })
+            },
+            { once: true },
+          )
         },
         { once: true },
       )
@@ -82,9 +96,14 @@ describe('frame navigation', () => {
 
     await page.getByRole('link', { name: 'Courses', exact: true }).dispatchEvent('click')
     await page.locator('#courses-heading').waitFor()
-    await page.waitForFunction(() => window.navigation.transition === null)
+    await page.waitForFunction(() => window.__overflowAnchorTimeline?.length === 4)
 
-    assert.equal(await page.evaluate(() => window.__overflowAnchorDuringNavigate), 'none')
+    assert.deepEqual(await page.evaluate(() => window.__overflowAnchorTimeline), [
+      'none',
+      'none',
+      'none',
+      'auto',
+    ])
     assert.equal(await page.evaluate(() => window.scrollY), 0)
   })
 
