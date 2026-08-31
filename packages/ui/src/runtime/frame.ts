@@ -105,6 +105,7 @@ type FrameReloadResult = {
 }
 
 type FrameReloadTransition = {
+  signal: AbortSignal
   committed: Promise<void>
   finished: Promise<FrameReloadResult>
 }
@@ -726,7 +727,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     // Settle committed when a reload is aborted or fails before rendering any content.
     void finished.then(() => committed.resolve(), committed.reject)
 
-    return { committed: committed.promise, finished }
+    return { signal: controller.signal, committed: committed.promise, finished }
   }
 
   function startReload(signal?: AbortSignal): AbortController {

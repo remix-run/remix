@@ -139,7 +139,7 @@ export function startNavigationListenerImpl(
       if (isFrameRedirectNavigationInfo(event.info)) {
         interceptNavigation(navigation, event, event.info.resetScroll, {
           async handler() {},
-          scroll: event.info.resetScroll === false ? 'manual' : undefined,
+          scroll: 'manual',
         })
         return
       }
@@ -175,7 +175,7 @@ export function startNavigationListenerImpl(
           signal: event.signal,
         })
         await reload.committed
-        if (event.signal.aborted) return
+        if (event.signal.aborted || reload.signal.aborted) return
         if (state.resetScroll) event.scroll()
 
         let { redirectedTo } = await reload.finished

@@ -12,8 +12,9 @@ import { withResolvers } from './utils.ts'
 type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }
 
 function createReloadTransition(result: StubFrameReloadResult | Promise<StubFrameReloadResult>) {
-  let finished = Promise.resolve(result)
-  return { committed: finished.then(() => {}), finished }
+  let signal = new AbortController().signal
+  let finished = Promise.resolve(result).then((result) => ({ ...result, signal }))
+  return { signal, committed: finished.then(() => {}), finished }
 }
 
 // Stand-in frame the navigation handler can call without dragging in the
@@ -84,7 +85,10 @@ type StubNavigationTransition = {
   succeed(): Promise<void>
 }
 
-function startStubNavigationListener(t: TestContext): (event: Event) => StubNavigationTransition {
+function startStubNavigationListener(
+  t: TestContext,
+  options: Parameters<typeof startNavigationListenerImpl>[1] = stubFrames,
+): (event: Event) => StubNavigationTransition {
   let stubNavigation = Object.assign(new EventTarget(), {
     updateCurrentEntry: mock.fn(),
     transition: null as NavigationTransition | null,
@@ -92,7 +96,7 @@ function startStubNavigationListener(t: TestContext): (event: Event) => StubNavi
   stubGlobalField(t, 'navigation', stubNavigation)
 
   let controller = new AbortController()
-  startNavigationListenerImpl(controller.signal, stubFrames)
+  startNavigationListenerImpl(controller.signal, options)
   t.after(() => controller.abort())
 
   return (event) => {
@@ -239,6 +243,42 @@ describe('navigate', () => {
     expect(interceptOptions?.scroll).toBe(undefined)
     await interceptOptions?.handler?.()
     expect(scroll).toHaveBeenCalledTimes(1)
+    await transition.succeed()
+  })
+
+  it('does not scroll for a superseded frame reload', async (t) => {
+    stubNavigatorUserAgent(t, 'Mozilla/5.0 Gecko/20100101 Firefox/142.0')
+    let reloadController = new AbortController()
+    let [committed, resolveCommitted] = withResolvers<void>()
+    let [finished, resolveFinished] = withResolvers<StubFrameReloadResult>()
+    let frame = { src: '' } as FrameHandle
+    let dispatchNavigation = startStubNavigationListener(t, {
+      getTopFrame: () => frame,
+      getNamedFrame: () => frame,
+      reloadFrame() {
+        return { signal: reloadController.signal, committed, finished }
+      },
+    })
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let scroll = mock.fn()
+    let transition = dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept: mock.fn(),
+        destinationUrl: new URL('/login', window.location.origin).href,
+        info: { resetScroll: true },
+        scroll,
+      }),
+    )
+
+    let handler = transition.runHandler()
+    await Promise.resolve()
+    reloadController.abort()
+    resolveCommitted()
+    resolveFinished({ signal: reloadController.signal })
+    await handler
+
+    expect(scroll).not.toHaveBeenCalled()
     await transition.succeed()
   })
 
@@ -398,6 +438,28 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
+  it('does not scroll again when synchronizing a frame redirect URL', (t) => {
+    stubNavigatorUserAgent(t, 'Mozilla/5.0 Gecko/20100101 Firefox/142.0')
+    let dispatchNavigation = startStubNavigationListener(t)
+    let eventController = new AbortController()
+    let intercept = mock.fn()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      navigationType: 'replace',
+      signal: eventController.signal,
+      destination: {
+        url: new URL('/redirected', window.location.origin).href,
+      },
+      info: { type: 'frame-redirect', resetScroll: true },
+      intercept,
+    })
+
+    dispatchNavigation(event)
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    eventController.abort()
+  })
+
   it('leaves traversal restoration to the browser after frame reconciliation', async (t) => {
     let navigateListener: EventListener | undefined
     let [transitionFinished, resolveTransitionFinished] = withResolvers<void>()
@@ -418,7 +480,7 @@ describe('navigate', () => {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
       reloadFrame() {
-        return { committed, finished }
+        return { signal: eventController.signal, committed, finished }
       },
     })
 
