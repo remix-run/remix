@@ -100,8 +100,7 @@ await app.ready()
 ```
 
 This soft-navigation behavior applies even when the page only uses `clientEntry()` and does not
-render an explicit `<Frame>`. Because the browser keeps the current document, behavior that depends
-on loading a new document, including cross-document view transitions, does not run.
+render an explicit `<Frame>`.
 
 The default resolver is equivalent to:
 
@@ -160,9 +159,7 @@ and forms as document navigations while still hydrating client entries and using
 register a listener before calling `run()`:
 
 ```ts
-window.navigation?.addEventListener('navigate', (event) => {
-  event.stopImmediatePropagation()
-})
+window.navigation?.addEventListener('navigate', (e) => e.stopImmediatePropagation())
 ```
 
 This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as

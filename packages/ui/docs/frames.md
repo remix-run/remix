@@ -232,29 +232,19 @@ additional headers, another body encoding, or a different response policy. Custo
 The default resolver rejects non-OK responses. A custom resolver may return a `Response` with any
 status when it wants Remix UI to render the response body.
 
-A client resolver may return frame content directly or return the fetched `Response`. Returning the response lets Remix stream its body. When `fetch()` followed a redirect during a top-frame navigation, the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`; other frames render the response without changing either URL.
+A client resolver may return frame content directly or return the fetched `Response`. Returning the
+response lets Remix stream its body. When `fetch()` followed a redirect during a top-frame navigation,
+the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`;
+other frames render the response without changing either URL.
 
 Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
 
 ## Link navigation
 
 Calling `run()` represents the current document as `handle.frames.top` and starts a Navigation API
-listener. Eligible same-origin anchor navigations reload that top frame through the frame resolver
-instead of performing a full document navigation. This soft-navigation behavior applies even when
-the page does not render an explicit `<Frame>`.
-
-A soft navigation fetches the destination HTML and reconciles it into the existing document. The
-browser therefore does not run behavior tied to loading a new document, including cross-document
-view transitions.
-
-In browsers that support same-document view transitions, wrap an imperative soft navigation with
-`document.startViewTransition()`:
-
-```ts
-import { navigate } from 'remix/ui'
-
-document.startViewTransition(() => navigate('/dashboard'))
-```
+listener. Eligible same-origin anchor navigations reload top frame HTML through the frame resolver
+and reconcile it into the existing document instead of performing a full document navigation. This
+soft-navigation behavior applies even when the page does not render an explicit `<Frame>`.
 
 - `data-rmx-target="name"` reloads a named frame.
 - `data-rmx-src="/frame"` overrides the URL resolved into that frame while `href` remains the navigation destination.
@@ -262,15 +252,12 @@ document.startViewTransition(() => navigate('/dashboard'))
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
 - `data-rmx-document` leaves the link as a normal document navigation.
 
-The `link(href, { history })` mixin adds the corresponding `data-rmx-history` value when its host is a native anchor. Download links, cross-origin links, and links marked with `data-rmx-document` are left to the browser.
-
-To keep every link and form as a document navigation while still hydrating client entries and using
-explicit frames, register a Navigation API listener before calling `run()`:
+To keep links/forms as a document navigations while still hydrating client entries and using explicit
+frames, you can cancel the built-in `navigate` event behavior with your own listener before calling
+`run()`:
 
 ```ts
-window.navigation?.addEventListener('navigate', (event) => {
-  event.stopImmediatePropagation()
-})
+window.navigation?.addEventListener('navigate', (e) => event.stopImmediatePropagation())
 ```
 
 This prevents Remix from receiving navigation events, including events for `data-rmx-target` and
