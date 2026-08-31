@@ -429,18 +429,13 @@ describe('Remix config loading', () => {
     }
   })
 
-  it('declares an absolute JSON Schema dialect and stable identifier', async () => {
+  it('declares its JSON Schema dialect without an unpublished identifier', async () => {
     let schema = JSON.parse(
       await fs.readFile(path.join(ROOT_DIR, 'packages', 'cli', 'schema', 'remix.json'), 'utf8'),
     )
 
-    assert.deepEqual(
-      { $schema: schema.$schema, $id: schema.$id },
-      {
-        $schema: 'https://json-schema.org/draft/2020-12/schema',
-        $id: 'https://remix.run/schemas/remix.json',
-      },
-    )
+    assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema')
+    assert.equal('$id' in schema, false)
   })
 })
 
