@@ -710,23 +710,18 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   function startReloadTransition(options?: FrameReloadOptions): FrameReloadTransition {
     let controller = startReload(options?.signal)
-    let resolveCommitted!: () => void
-    let rejectCommitted!: (error: unknown) => void
-    let committed = new Promise<void>((resolve, reject) => {
-      resolveCommitted = resolve
-      rejectCommitted = reject
-    })
+    let committed = Promise.withResolvers<void>()
     let commitStarted = false
     let finished = resolveAndRenderReload(controller, options, (ready) => {
       if (commitStarted) return
       commitStarted = true
-      void ready.then(resolveCommitted, rejectCommitted)
+      void ready.then(committed.resolve, committed.reject)
     })
 
     // Settle committed when a reload is aborted or fails before rendering any content.
-    void finished.then(resolveCommitted, rejectCommitted)
+    void finished.then(() => committed.resolve(), committed.reject)
 
-    return { committed, finished }
+    return { committed: committed.promise, finished }
   }
 
   function startReload(signal?: AbortSignal): AbortController {
