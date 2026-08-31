@@ -226,12 +226,12 @@ describe('navigate', () => {
   })
 
   it('uses browser scrolling after the frame content commits', async (t) => {
-    stubNavigatorUserAgent(t, 'Mozilla/5.0 Gecko/20100101 Firefox/142.0')
     let dispatchNavigation = startStubNavigationListener(t)
     let anchor = document.createElement('a')
     anchor.href = '/login'
     let scroll = mock.fn()
     let intercept = mock.fn()
+    let eventController = new AbortController()
 
     let transition = dispatchNavigation(
       createAnchorNavigateEvent(anchor, {
@@ -239,6 +239,7 @@ describe('navigate', () => {
         destinationUrl: new URL('/login', window.location.origin).href,
         info: { resetScroll: true },
         scroll,
+        signal: eventController.signal,
       }),
     )
 
@@ -247,9 +248,11 @@ describe('navigate', () => {
     await interceptOptions?.handler?.()
     expect(scroll).toHaveBeenCalledTimes(1)
     await transition.succeed()
+    eventController.abort()
   })
 
-  it('suppresses Chromium scroll anchoring through the first navigation paint', async (t) => {
+  it('suppresses scroll anchoring through the first navigation paint', async (t) => {
+    stubNavigatorUserAgent(t, 'Mozilla/5.0 Gecko/20100101 Firefox/142.0')
     let dispatchNavigation = startStubNavigationListener(t)
     let anchor = document.createElement('a')
     anchor.href = '/login'
@@ -286,7 +289,7 @@ describe('navigate', () => {
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
   })
 
-  it('does not suppress Chromium scroll anchoring for fragment destinations', async (t) => {
+  it('does not suppress scroll anchoring for fragment destinations', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let anchor = document.createElement('a')
     anchor.href = '/login#details'
@@ -304,7 +307,7 @@ describe('navigate', () => {
     await transition.succeed()
   })
 
-  it('scopes Chromium scroll anchoring styles to each navigation transition', async (t) => {
+  it('scopes scroll anchoring styles to each navigation transition', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let anchor = document.createElement('a')
     anchor.href = '/login'
@@ -342,7 +345,7 @@ describe('navigate', () => {
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
   })
 
-  it('removes Chromium scroll anchoring styles when navigation aborts', async (t) => {
+  it('removes scroll anchoring styles when navigation aborts', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let anchor = document.createElement('a')
     anchor.href = '/login'
@@ -378,11 +381,13 @@ describe('navigate', () => {
     })
     let anchor = document.createElement('a')
     anchor.href = '/login'
+    let eventController = new AbortController()
 
     let transition = dispatchNavigation(
       createAnchorNavigateEvent(anchor, {
         intercept: mock.fn(),
         destinationUrl: new URL('/login', window.location.origin).href,
+        signal: eventController.signal,
       }),
     )
     expect(scrollTo).not.toHaveBeenCalled()
@@ -404,6 +409,7 @@ describe('navigate', () => {
       left: 0,
       top: 0,
     })
+    eventController.abort()
   })
 
   it('preserves scrolling that occurs after WebKit scroll resynchronization', async (t) => {
@@ -421,11 +427,13 @@ describe('navigate', () => {
     })
     let anchor = document.createElement('a')
     anchor.href = '/login'
+    let eventController = new AbortController()
 
     let transition = dispatchNavigation(
       createAnchorNavigateEvent(anchor, {
         intercept: mock.fn(),
         destinationUrl: new URL('/login', window.location.origin).href,
+        signal: eventController.signal,
       }),
     )
     await transition.runHandler()
@@ -437,6 +445,7 @@ describe('navigate', () => {
     animationFrameCallback(0)
 
     expect(scrollTo).toHaveBeenCalledTimes(1)
+    eventController.abort()
   })
 
   it('does not resynchronize WebKit scroll state for fragment navigations', async (t) => {

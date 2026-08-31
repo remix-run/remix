@@ -35,13 +35,12 @@ const frameRedirectNavigationInfoType = 'frame-redirect'
 
 function resyncWebKitScrollAfterNavigation(
   event: NavigateEvent,
-  resetScroll: boolean,
   transition: NavigationTransition,
 ): void {
   let userAgent = navigator.userAgent
-  if (!userAgent.includes('AppleWebKit') || isChromiumUserAgent(userAgent)) return
-  if (!resetScroll || (event.navigationType !== 'push' && event.navigationType !== 'replace'))
-    return
+  if (!userAgent.includes('AppleWebKit')) return
+  if (userAgent.includes('Chrome') || userAgent.includes('Chromium')) return
+  if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
   if (new URL(event.destination.url).hash) return
 
   void transition.finished.then(
@@ -287,142 +286,79 @@ function interceptNavigation(
   resetScroll: boolean,
   options: NavigationInterceptOptions,
 ): void {
-  let scrollStyles = getNavigationScrollStyles(event, resetScroll)
-  let removeScrollStyles = scrollStyles
-    ? installNavigationScrollStylesheet(scrollStyles.cssText, event.signal)
-    : undefined
-
-  let transitionBound = false
-  function bindTransition() {
-    if (transitionBound) return
-    if (event.signal.aborted) return removeScrollStyles?.()
-
-    // The Navigation API creates the transition before running interception handlers.
-    let transition = navigation.transition
-    if (!transition) return removeScrollStyles?.()
-    transitionBound = true
-
-    resyncWebKitScrollAfterNavigation(event, resetScroll, transition)
-    if (scrollStyles && removeScrollStyles) {
-      scheduleNavigationScrollCleanup(transition, removeScrollStyles, scrollStyles.cleanup)
-    }
-  }
-
-  let interceptOptions: NavigationInterceptOptions = {
-    ...options,
-    handler() {
-      bindTransition()
-      return options.handler?.()
-    },
-  }
-  let precommitHandler = options.precommitHandler
-  if (precommitHandler) {
-    interceptOptions.precommitHandler = function precommit(controller) {
-      bindTransition()
-      return precommitHandler(controller)
-    }
-  }
+  let removeScrollStyles = resetScroll ? preserveNavigationScroll(event) : undefined
 
   try {
-    event.intercept(interceptOptions)
+    event.intercept({
+      ...options,
+      handler() {
+        let transition = navigation.transition
+        if (resetScroll && transition) {
+          resyncWebKitScrollAfterNavigation(event, transition)
+          if (removeScrollStyles) {
+            void transition.finished.then(() => {
+              if (event.navigationType === 'traverse') return removeScrollStyles()
+              // Keep the stylesheet through the first post-navigation paint.
+              requestAnimationFrame(() => requestAnimationFrame(removeScrollStyles))
+            }, removeScrollStyles)
+          }
+        } else {
+          removeScrollStyles?.()
+        }
+        return options.handler?.()
+      },
+    })
   } catch (error) {
     removeScrollStyles?.()
     throw error
   }
 }
 
-type NavigationScrollStyles = {
-  cssText: string
-  cleanup: 'finished' | 'after-paint'
-}
+function preserveNavigationScroll(event: NavigateEvent): (() => void) | undefined {
+  if (event.signal.aborted) return
 
-function getNavigationScrollStyles(
-  event: NavigateEvent,
-  resetScroll: boolean,
-): NavigationScrollStyles | undefined {
-  if (!resetScroll) return
+  let cssText: string
 
   if (event.navigationType === 'traverse') {
-    // Full-document reconciliation can temporarily shrink the page or trigger scroll anchoring
-    // before the Navigation API performs its deferred restoration. Preserve the starting scroll
-    // range and position until the navigation finishes so native restoration remains authoritative.
-    // Root scroll height includes page-level effects such as body padding.
-
-    // We think this is a bug in Chromium where they are incorrectly classifying a
-    // DOM-modification-driven scroll change as a user scroll action, causing it to skip restoration
-    // after the transition. The intended user-scroll behavior is tested here:
-    // https://github.com/web-platform-tests/wpt/blob/master/navigation-api/scroll-behavior/after-transition-skips-restore-when-scrolled.html
+    // Reconciliation can temporarily shrink the document before the browser restores its scroll.
+    // Keep the starting scroll range stable until restoration finishes.
     let { scrollHeight, clientHeight } = document.documentElement
-    return {
-      cssText: `
-        html {
-          min-height: ${scrollHeight + clientHeight}px !important;
-          overflow-anchor: none !important;
-        }
+    cssText = `
+      html {
+        min-height: ${scrollHeight + clientHeight}px !important;
+        overflow-anchor: none !important;
+      }
 
-        body {
-          overflow-anchor: none !important;
-        }
-      `,
-      cleanup: 'finished',
-    }
-  }
+      body {
+        overflow-anchor: none !important;
+      }
+    `
+  } else {
+    if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
+    if (new URL(event.destination.url).hash) return
 
-  if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
-  if (new URL(event.destination.url).hash) return
-  if (!isChromiumUserAgent(navigator.userAgent)) return
-
-  // Chromium can treat reconciliation-driven scroll anchoring as user scrolling and preserve an
-  // offset after NavigateEvent.scroll() resets the destination. Suppress anchoring before
-  // interception and keep it disabled through the first post-navigation paint.
-  return {
-    cssText: `
+    // Keep later reconciliation from anchoring away from the browser's destination scroll.
+    cssText = `
       html,
       body {
         overflow-anchor: none !important;
       }
-    `,
-    cleanup: 'after-paint',
+    `
   }
-}
 
-function isChromiumUserAgent(userAgent: string): boolean {
-  return userAgent.includes('Chrome') || userAgent.includes('Chromium')
-}
-
-function installNavigationScrollStylesheet(cssText: string, signal: AbortSignal): () => void {
   let stylesheet = new CSSStyleSheet()
   stylesheet.replaceSync(cssText)
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet]
 
-  let removed = false
   function remove() {
-    signal.removeEventListener('abort', remove)
-    if (removed) return
-    removed = true
+    event.signal.removeEventListener('abort', remove)
     document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
       (current) => current !== stylesheet,
     )
   }
 
-  if (signal.aborted) remove()
-  else signal.addEventListener('abort', remove, { once: true })
+  event.signal.addEventListener('abort', remove, { once: true })
   return remove
-}
-
-function scheduleNavigationScrollCleanup(
-  transition: NavigationTransition,
-  removeScrollStyles: () => void,
-  cleanup: NavigationScrollStyles['cleanup'],
-): void {
-  function removeAfterSuccess() {
-    if (cleanup === 'finished') return removeScrollStyles()
-    // The first callback runs before the first post-navigation paint. The second removes the
-    // stylesheet before the following frame.
-    requestAnimationFrame(() => requestAnimationFrame(removeScrollStyles))
-  }
-
-  void transition.finished.then(removeAfterSuccess, removeScrollStyles)
 }
 
 function getRuntimeNavigation(
