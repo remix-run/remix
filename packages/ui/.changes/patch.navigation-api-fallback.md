@@ -1,1 +1,1 @@
-Gracefully degrade to document navigations for browsers that do not support the Navigation API (see #11665).
+`run()` no longer throws on browsers without the Navigation API. Skip listener setup and fall back to `location.assign` / `location.replace` for `navigate()` (see #11641).

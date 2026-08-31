@@ -7,6 +7,7 @@ import {
 } from '../runtime/navigation.ts'
 import type { FrameHandle } from '../runtime/component.ts'
 import type { ResolveFrameOptions } from '../runtime/frame.ts'
+import { run } from '../runtime/run.ts'
 import { withResolvers } from './utils.ts'
 
 // Stand-in frame the navigation handler can call without dragging in the
@@ -171,10 +172,26 @@ describe('navigate', () => {
     let addDocumentListener = t.mock.method(document, 'addEventListener')
     let controller = new AbortController()
 
-    startNavigationListener(controller.signal)
+    expect(() => startNavigationListener(controller.signal)).not.toThrow()
 
     expect(addDocumentListener).not.toHaveBeenCalled()
     controller.abort()
+  })
+
+  it('lets run() return when the Navigation API is unavailable', (t) => {
+    stubGlobalField(t, 'navigation', undefined)
+    let afterRun = false
+
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+
+    // Application code sequenced after run() must still execute, including error reporting.
+    app.addEventListener('error', () => {})
+    afterRun = true
+
+    expect(afterRun).toBe(true)
+    expect(typeof app.ready).toBe('function')
+    expect(typeof app.dispose).toBe('function')
   })
 
   it('leaves default scrolling to the browser', async (t) => {

@@ -42,7 +42,11 @@ interface FrameRedirectNavigationInfo {
 const formSubmissionNavigationInfoType = 'frame-form-submission'
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
-function resyncWebKitScrollAfterNavigation(event: NavigateEvent, resetScroll: boolean): void {
+function resyncWebKitScrollAfterNavigation(
+  navigation: Navigation,
+  event: NavigateEvent,
+  resetScroll: boolean,
+): void {
   let userAgent = navigator.userAgent
   if (!userAgent.includes('AppleWebKit')) return
   if (userAgent.includes('Chrome') || userAgent.includes('Chromium')) return
@@ -50,7 +54,7 @@ function resyncWebKitScrollAfterNavigation(event: NavigateEvent, resetScroll: bo
     return
   if (new URL(event.destination.url).hash) return
 
-  window.navigation.addEventListener(
+  navigation.addEventListener(
     'navigatesuccess',
     () => {
       // WebKit can reset its internal scroll position without synchronizing the visual viewport.
@@ -77,7 +81,10 @@ export type NavigationOptions = {
 }
 
 /**
- * Performs a Navigation API transition understood by Remix frame runtime state.
+ * Performs a frame-aware navigation.
+ *
+ * Uses the Navigation API when it is available. On browsers without that API, falls back to
+ * `location.assign` or `location.replace` so `run()` and `navigate()` still complete.
  *
  * @param href Destination URL.
  * @param options Navigation options.
@@ -105,6 +112,8 @@ export async function navigate(href: string, options?: NavigationOptions) {
 
 /**
  * Starts listening for Navigation API transitions and routes them through frame reloads.
+ *
+ * Does nothing on browsers that do not implement the Navigation API.
  *
  * @param signal Abort signal used to remove the listener.
  * @returns void
@@ -144,7 +153,7 @@ export function startNavigationListenerImpl(
       if (!event.canIntercept || isCrossOriginDestination(event)) return
 
       if (isFrameRedirectNavigationInfo(event.info)) {
-        resyncWebKitScrollAfterNavigation(event, event.info.resetScroll)
+        resyncWebKitScrollAfterNavigation(navigation, event, event.info.resetScroll)
         event.intercept({
           async handler() {},
           scroll: event.info.resetScroll === false ? 'manual' : undefined,
@@ -161,7 +170,7 @@ export function startNavigationListenerImpl(
         : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
-      resyncWebKitScrollAfterNavigation(event, state.resetScroll)
+      resyncWebKitScrollAfterNavigation(navigation, event, state.resetScroll)
 
       let topFrame = options.getTopFrame()
       let namedFrame = state.target ? options.getNamedFrame(state.target) : undefined
