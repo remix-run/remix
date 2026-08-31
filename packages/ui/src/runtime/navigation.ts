@@ -145,7 +145,7 @@ export function startNavigationListenerImpl(
 
       if (isFrameRedirectNavigationInfo(event.info)) {
         resyncWebKitScrollAfterNavigation(event, event.info.resetScroll)
-        event.intercept({
+        interceptNavigation(navigation, event, event.info.resetScroll, {
           async handler() {},
           scroll: event.info.resetScroll === false ? 'manual' : undefined,
         })
@@ -221,7 +221,7 @@ export function startNavigationListenerImpl(
 
           // Modern browsers allow you to update the in-flight navigation entry before it's committed
           if (supportsPrecommit) {
-            event.intercept({
+            interceptNavigation(navigation, event, state.resetScroll, {
               ...interceptOptions,
               precommitHandler(controller) {
                 controller.redirect(event.destination.url, { history: 'replace' })
@@ -246,14 +246,14 @@ export function startNavigationListenerImpl(
           }
         }
 
-        event.intercept(interceptOptions)
+        interceptNavigation(navigation, event, state.resetScroll, interceptOptions)
       } else {
         // <a>/<form method="get"> navigations
         if (runtimeNavigation.replaceHistory && event.cancelable) {
           event.preventDefault()
           navigation.navigate(event.destination.url, { history: 'replace', state })
         } else {
-          event.intercept(interceptOptions)
+          interceptNavigation(navigation, event, state.resetScroll, interceptOptions)
         }
       }
     },
@@ -294,6 +294,40 @@ function isCrossOriginDestination(event: NavigateEvent): boolean {
   return destination.origin !== window.location.origin
 }
 
+function interceptNavigation<options extends NavigationInterceptOptions>(
+  navigation: Navigation,
+  event: NavigateEvent,
+  resetScroll: boolean,
+  options: options,
+): void {
+  suppressChromiumScrollAnchoring(navigation, event, resetScroll)
+  event.intercept(options)
+}
+
+function suppressChromiumScrollAnchoring(
+  navigation: Navigation,
+  event: NavigateEvent,
+  resetScroll: boolean,
+): void {
+  if (!resetScroll || (event.navigationType !== 'push' && event.navigationType !== 'replace'))
+    return
+  if (!navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Chromium')) return
+
+  // Chromium can treat reconciliation-driven scroll anchoring as user scrolling and preserve an
+  // offset after NavigateEvent.scroll() resets the destination. Suppress anchoring before
+  // interception and keep it disabled until all navigation reconciliation finishes.
+  installNavigationScrollStylesheet(
+    navigation,
+    event,
+    `
+      html,
+      body {
+        overflow-anchor: none !important;
+      }
+    `,
+  )
+}
+
 function preserveStartingDocumentScrollState(navigation: Navigation, event: NavigateEvent): void {
   // Full-document reconciliation can temporarily shrink the page or trigger scroll anchoring
   // before the Navigation API performs its deferred restoration. Preserve the starting scroll
@@ -306,17 +340,29 @@ function preserveStartingDocumentScrollState(navigation: Navigation, event: Navi
   // https://github.com/web-platform-tests/wpt/blob/master/navigation-api/scroll-behavior/after-transition-skips-restore-when-scrolled.html
 
   let { scrollHeight, clientHeight } = document.documentElement
-  let stylesheet = new CSSStyleSheet()
-  stylesheet.replaceSync(`
-    html {
-      min-height: ${scrollHeight + clientHeight}px !important;
-      overflow-anchor: none !important;
-    }
+  installNavigationScrollStylesheet(
+    navigation,
+    event,
+    `
+      html {
+        min-height: ${scrollHeight + clientHeight}px !important;
+        overflow-anchor: none !important;
+      }
 
-    body {
-      overflow-anchor: none !important;
-    }
-  `)
+      body {
+        overflow-anchor: none !important;
+      }
+    `,
+  )
+}
+
+function installNavigationScrollStylesheet(
+  navigation: Navigation,
+  event: NavigateEvent,
+  cssText: string,
+): void {
+  let stylesheet = new CSSStyleSheet()
+  stylesheet.replaceSync(cssText)
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet]
 
   let cleanedUp = false

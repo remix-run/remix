@@ -192,6 +192,7 @@ describe('navigate', () => {
     anchor.href = '/login'
     let scroll = mock.fn()
     let intercept = mock.fn()
+    let adoptedStyleSheetCount = document.adoptedStyleSheets.length
 
     dispatchNavigation(
       createAnchorNavigateEvent(anchor, {
@@ -204,9 +205,19 @@ describe('navigate', () => {
 
     let interceptOptions = intercept.mock.calls[0]?.arguments[0]
     expect(interceptOptions?.scroll).toBe(undefined)
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+    let stylesheet = document.adoptedStyleSheets[adoptedStyleSheetCount]
+    let anchorRule = stylesheet?.cssRules[0]
+    if (!(anchorRule instanceof CSSStyleRule)) throw new Error('Expected scroll anchoring rule')
+    expect(anchorRule.selectorText).toBe('html, body')
+    expect(anchorRule.style.overflowAnchor).toBe('none')
+    expect(anchorRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
+
     await interceptOptions?.handler?.()
     expect(scroll).toHaveBeenCalledTimes(1)
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
     dispatchNavigation(new Event('navigatesuccess'))
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
     expect(scrollTo).not.toHaveBeenCalled()
   })
 
@@ -311,6 +322,7 @@ describe('navigate', () => {
     anchor.href = '/login'
     anchor.setAttribute('data-rmx-reset-scroll', 'false')
     let intercept = mock.fn()
+    let adoptedStyleSheetCount = document.adoptedStyleSheets.length
 
     dispatchNavigation(
       createAnchorNavigateEvent(anchor, {
@@ -320,6 +332,7 @@ describe('navigate', () => {
     )
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
   })
 
   it('opts out of browser scroll restoration on traverse navigations', (t) => {
@@ -571,18 +584,12 @@ describe('navigate', () => {
   })
 
   it('intercepts anchors when sourceElement is a nested svg node', (t) => {
-    let navigateListener: EventListener | undefined
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
     let updateCurrentEntryMock = mock.fn()
-    let stubNavigation = {
+    let stubNavigation = Object.assign(new EventTarget(), {
       navigate: navigateMethodMock,
       updateCurrentEntry: updateCurrentEntryMock,
-      addEventListener(type: string, listener: EventListener) {
-        if (type === 'navigate') {
-          navigateListener = listener
-        }
-      },
-    }
+    })
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
@@ -596,9 +603,12 @@ describe('navigate', () => {
     anchor.append(svg)
 
     let intercept = mock.fn()
+    let eventController = new AbortController()
+    let adoptedStyleSheetCount = document.adoptedStyleSheets.length
     let event = Object.assign(new Event('navigate'), {
       canIntercept: true,
       navigationType: 'push',
+      signal: eventController.signal,
       sourceElement: path,
       destination: {
         url: new URL('/logo', window.location.origin).href,
@@ -608,10 +618,13 @@ describe('navigate', () => {
       intercept,
     })
 
-    navigateListener?.(event)
+    stubNavigation.dispatchEvent(event)
 
     expect(intercept).toHaveBeenCalledTimes(1)
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
 
+    eventController.abort()
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
     controller.abort()
   })
 

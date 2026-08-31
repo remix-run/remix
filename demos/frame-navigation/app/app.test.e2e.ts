@@ -11,6 +11,7 @@ import { routes } from './routes.ts'
 declare global {
   interface Window {
     __frameNavigationTestDocument?: string
+    __overflowAnchorDuringNavigate?: string
   }
 }
 
@@ -58,6 +59,33 @@ describe('frame navigation', () => {
 
     assert.equal(new URL(page.url()).pathname, routes.main.index.href())
     await assertDocumentPreserved(page, documentMarker)
+  })
+
+  it('suppresses Chromium scroll anchoring before interception', async (t) => {
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
+    await page.setViewportSize({ width: 800, height: 400 })
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(routes.main.index.href())
+    await waitForNavigationRuntime(page)
+    await page.evaluate(() => {
+      window.navigation.addEventListener(
+        'navigate',
+        () => {
+          window.__overflowAnchorDuringNavigate = getComputedStyle(
+            document.documentElement,
+          ).overflowAnchor
+        },
+        { once: true },
+      )
+    })
+
+    await page.getByRole('link', { name: 'Courses', exact: true }).dispatchEvent('click')
+    await page.locator('#courses-heading').waitFor()
+    await page.waitForFunction(() => window.navigation.transition === null)
+
+    assert.equal(await page.evaluate(() => window.__overflowAnchorDuringNavigate), 'none')
+    assert.equal(await page.evaluate(() => window.scrollY), 0)
   })
 
   it('replaces history when filtering courses', async (t) => {
