@@ -176,7 +176,11 @@ export type FrameRuntime = {
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
   serverFrameReload:
-    | { signal: AbortSignal; reconciliationTracker?: ReconciliationTracker }
+    | {
+        signal: AbortSignal
+        reconciliationTracker?: ReconciliationTracker
+        blockingFrameTracker?: ReconciliationTracker
+      }
     | undefined
   reloadForNavigation?: (options?: FrameReloadOptions) => FrameReloadTransition
 }
@@ -269,6 +273,8 @@ export type Frame = {
 type RenderOptions = {
   flushKind?: FlushKind
   reconciliationTracker?: ReconciliationTracker
+  blockingFrameTracker?: ReconciliationTracker
+  onCommit?: () => void
   signal?: AbortSignal
   contentStatus?: 'pending' | 'resolved'
   data?: RmxData
@@ -402,12 +408,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         runtime.serverFrameReload = {
           signal: options.signal,
           reconciliationTracker: options.reconciliationTracker,
+          blockingFrameTracker: options.blockingFrameTracker,
         }
       }
 
       try {
         contentRoot.render(content)
         await new Promise<void>((resolve) => context.scheduler.enqueueCommitPhase([resolve]))
+        options.onCommit?.()
       } finally {
         runtime.serverFrameReload = previousServerFrameReload
       }
@@ -481,7 +489,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         options.reconciliationTracker,
         options.signal,
       )
-      await createSubFrames(bodyContainer.childNodes, responseContext, options)
+      let subFramesReady = createSubFrames(bodyContainer.childNodes, responseContext, options)
+      options.onCommit?.()
+      await subFramesReady
       if (isRenderAborted(options.signal)) return
       displayedContentStatus = options.contentStatus ?? 'resolved'
       return
@@ -519,7 +529,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       options.reconciliationTracker,
       options.signal,
     )
-    await createSubFrames(container.childNodes, responseContext, options)
+    let subFramesReady = createSubFrames(container.childNodes, responseContext, options)
+    options.onCommit?.()
+    await subFramesReady
     if (isRenderAborted(options.signal)) return
     displayedContentStatus = options.contentStatus ?? 'resolved'
   }
@@ -704,7 +716,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       resolveCommitted = resolve
       rejectCommitted = reject
     })
-    let finished = resolveAndRenderReload(controller, options, resolveCommitted)
+    let commitStarted = false
+    let finished = resolveAndRenderReload(controller, options, (ready) => {
+      if (commitStarted) return
+      commitStarted = true
+      void ready.then(resolveCommitted, rejectCommitted)
+    })
 
     // Settle committed when a reload is aborted or fails before rendering any content.
     void finished.then(resolveCommitted, rejectCommitted)
@@ -771,7 +788,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   async function resolveAndRenderReload(
     controller: AbortController,
     options?: FrameReloadOptions,
-    onCommit?: () => void,
+    resolveCommit?: (ready: Promise<void>) => void,
   ): Promise<FrameReloadResult> {
     try {
       let resolution = await init.resolveFrame(frame.src, {
@@ -787,11 +804,19 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         return { signal: controller.signal }
       }
       let reconciliationTracker = createReconciliationTracker()
+      let blockingFrameTracker = createReconciliationTracker()
+      let commitStarted = false
       await render(content, {
         signal: controller.signal,
         reconciliationTracker,
+        blockingFrameTracker,
+        onCommit() {
+          if (commitStarted) return
+          commitStarted = true
+          blockingFrameTracker.finalize()
+          resolveCommit?.(blockingFrameTracker.ready())
+        },
       })
-      onCommit?.()
       reconciliationTracker.finalize()
       await reconciliationTracker.ready()
       return {

@@ -1188,6 +1188,10 @@ function resolveClientFrame(
   }
   let resolveController = reload?.controller ?? new AbortController()
   state.resolveController = resolveController
+  let commitFrame!: () => void
+  let frameCommitted = new Promise<void>((resolve) => {
+    commitFrame = resolve
+  })
 
   let resolve = Promise.resolve()
     .then(() =>
@@ -1206,6 +1210,8 @@ function resolveClientFrame(
       await instance.render(nextContent, {
         signal: resolveController.signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
+        blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
+        onCommit: commitFrame,
       })
       if (state.resolveToken !== token || resolveController.signal.aborted) return
       state.resolved = true
@@ -1216,6 +1222,7 @@ function resolveClientFrame(
       }
     })
     .finally(() => {
+      commitFrame()
       reload?.complete()
       if (state.resolveController === resolveController) {
         state.resolveController = undefined
@@ -1224,6 +1231,9 @@ function resolveClientFrame(
 
   if (serverFrameReload?.reconciliationTracker && !node.props.fallback) {
     serverFrameReload.reconciliationTracker.waitFor(resolve)
+  }
+  if (serverFrameReload?.blockingFrameTracker && !node.props.fallback) {
+    serverFrameReload.blockingFrameTracker.waitFor(frameCommitted)
   }
 }
 
