@@ -319,7 +319,7 @@ The default discovery rules are enough for the file names used in this chapter. 
 
 ```jsonc filename=remix.json
 {
-  "$schema": "https://raw.githubusercontent.com/remix-run/remix/main/packages/cli/schema/remix.json",
+  "$schema": "./node_modules/remix/schema/remix.json",
   "test": {
     "exclude": ["node_modules/**", "tmp/**"],
     "setup": "./test/setup.ts",

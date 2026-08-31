@@ -101,7 +101,7 @@ trailing commas. Every top-level field is optional:
 
 ```jsonc
 {
-  "$schema": "https://raw.githubusercontent.com/remix-run/remix/main/packages/cli/schema/remix.json",
+  "$schema": "./node_modules/remix/schema/remix.json",
 
   "assets": {
     "rootDir": ".",
@@ -177,6 +177,8 @@ trailing commas. Every top-level field is optional:
   },
 }
 ```
+
+The local `$schema` association uses the schema shipped with the directly installed `remix` package, so editor validation matches that version and remains available offline. It intentionally does not reference the transitive `@remix-run/cli` package, which may not be linked at the project root by package managers such as pnpm.
 
 Explicit command flags and positional arguments override configured values. Repeated flags replace
 configured arrays, while nested Playwright and coverage settings merge by field. Relative paths and

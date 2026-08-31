@@ -429,16 +429,13 @@ describe('Remix config loading', () => {
     }
   })
 
-  it('publishes the schema with its raw GitHub URL as its ID', async () => {
-    let packageSchema = await fs.readFile(
-      path.join(ROOT_DIR, 'packages', 'cli', 'schema', 'remix.json'),
-      'utf8',
+  it('declares its JSON Schema dialect without an unpublished identifier', async () => {
+    let schema = JSON.parse(
+      await fs.readFile(path.join(ROOT_DIR, 'packages', 'cli', 'schema', 'remix.json'), 'utf8'),
     )
 
-    assert.equal(
-      JSON.parse(packageSchema).$id,
-      'https://raw.githubusercontent.com/remix-run/remix/main/packages/cli/schema/remix.json',
-    )
+    assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema')
+    assert.equal('$id' in schema, false)
   })
 })
 
