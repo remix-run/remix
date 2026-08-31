@@ -11,6 +11,7 @@ import { routes } from './routes.ts'
 declare global {
   interface Window {
     __frameNavigationTestDocument?: string
+    __scrollAfterNavigationShift?: number
   }
 }
 
@@ -58,6 +59,54 @@ describe('frame navigation', () => {
 
     assert.equal(new URL(page.url()).pathname, routes.main.index.href())
     await assertDocumentPreserved(page, documentMarker)
+  })
+
+  it('prevents scroll anchoring while navigation layout settles', async (t) => {
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
+    await page.setViewportSize({ width: 800, height: 400 })
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(routes.main.index.href())
+    await waitForNavigationRuntime(page)
+    await page.evaluate(() => {
+      window.navigation.addEventListener(
+        'navigate',
+        (event) => {
+          if (!event.canIntercept) return
+          event.intercept({
+            async handler() {
+              let nextFrame = () =>
+                new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+              while (!document.querySelector('#courses-heading')) await nextFrame()
+              await nextFrame()
+              // Chromium does not select an anchor at the exact scroll boundary. Moving one pixel
+              // exposes reconciliation-driven anchoring without moving the destination visibly.
+              window.scrollTo(0, 1)
+              await nextFrame()
+
+              let spacer = document.createElement('div')
+              spacer.style.height = '400px'
+              document.body.prepend(spacer)
+              await nextFrame()
+              await nextFrame()
+              window.__scrollAfterNavigationShift = window.scrollY
+              spacer.remove()
+            },
+          })
+        },
+        { once: true },
+      )
+    })
+
+    await page.getByRole('link', { name: 'Courses', exact: true }).click()
+    await page.waitForFunction(() => window.__scrollAfterNavigationShift !== undefined)
+
+    let scrollPosition = await page.evaluate(() => window.__scrollAfterNavigationShift)
+    assert.equal(
+      scrollPosition,
+      1,
+      `Expected navigation layout changes to preserve scroll position 1, got ${scrollPosition}`,
+    )
   })
 
   it('replaces history when filtering courses', async (t) => {

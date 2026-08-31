@@ -227,6 +227,7 @@ export type FrameContext = {
   signal?: AbortSignal
   isActiveModulePreload?: (node: Node) => boolean
   reconciliationTracker?: ReconciliationTracker
+  blockingFrameTracker?: ReconciliationTracker
 }
 
 type FrameInit = {
@@ -458,6 +459,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         ...context,
         data: responseData,
         reconciliationTracker: options.reconciliationTracker,
+        blockingFrameTracker: options.blockingFrameTracker,
       }
       context.styleManager.adoptServerStyles(
         collectFrameServerStyleTags(createElementContainer(parsed)),
@@ -510,6 +512,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       ...context,
       data: responseData,
       reconciliationTracker: options.reconciliationTracker,
+      blockingFrameTracker: options.blockingFrameTracker,
     }
 
     let nextContainer = createContainer(fragment)
@@ -705,7 +708,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   async function reload(options?: FrameReloadOptions): Promise<FrameReloadResult> {
-    return await startReloadTransition(options).finished
+    let transition = startReloadTransition(options)
+    void transition.committed.catch(() => {})
+    return await transition.finished
   }
 
   function startReloadTransition(options?: FrameReloadOptions): FrameReloadTransition {
@@ -1331,6 +1336,7 @@ function hydrateRegion(
     frameRuntime.serverFrameReload = {
       signal,
       reconciliationTracker: context.reconciliationTracker,
+      blockingFrameTracker: context.blockingFrameTracker,
     }
     try {
       root.render(vElement)
