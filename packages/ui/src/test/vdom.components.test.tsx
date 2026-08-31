@@ -15,6 +15,44 @@ describe('vnode rendering', () => {
   describe('components', () => {
     it.todo('warns when render is called after component is removed')
 
+    it('allows handle.update() during setup and the first render', async () => {
+      let container = document.createElement('div')
+      let capturedUpdate = () => Promise.resolve(AbortSignal.abort())
+      let initialUpdates: Array<Promise<AbortSignal>> = []
+
+      function App(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        initialUpdates.push(handle.update())
+
+        let renderCount = 0
+        return () => {
+          renderCount++
+          if (renderCount === 1) {
+            initialUpdates.push(handle.update())
+          }
+          return <p>{renderCount}</p>
+        }
+      }
+
+      let root = createRoot(container)
+      root.render(<App />)
+
+      // Both updates coalesce into the in-flight first render rather than
+      // scheduling an additional render.
+      expect(container.innerHTML).toBe('<p>1</p>')
+
+      root.flush()
+      await Promise.all(initialUpdates)
+
+      // Once the first commit has initialized the scheduling target, updates
+      // continue to schedule real re-renders.
+      let update = capturedUpdate()
+      root.flush()
+      await update
+
+      expect(container.innerHTML).toBe('<p>2</p>')
+    })
+
     it('inserts a component', () => {
       let container = document.createElement('div')
       function App() {

@@ -279,10 +279,13 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
   #updateDomParent: ParentNode | undefined
   #scheduleUpdate = (): void => {
     let queue = this.#updateQueue
-    if (!queue) throw new Error('scheduleUpdate not implemented')
     let vnode = this.#updateVNode
     let domParent = this.#updateDomParent
-    if (!vnode || !domParent) throw new Error('scheduleUpdate target not initialized')
+
+    // Updates during setup or the first render are already reflected by the
+    // in-flight render. Their tasks will be enqueued after the first commit.
+    if (!queue || !vnode || !domParent) return
+
     queue.enqueue(vnode, domParent)
   }
   #tasks: Task[] = []
