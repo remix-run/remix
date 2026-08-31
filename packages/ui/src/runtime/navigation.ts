@@ -2,15 +2,6 @@ import { getTopFrame, getNamedFrame } from './run.ts'
 import { reloadFrameForNavigation } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
 
-interface NavigationPrecommitControllerLike {
-  redirect(url: string, options: { history: 'replace' }): void
-}
-
-interface NavigationInterceptOptionsWithPrecommit extends NavigationInterceptOptions {
-  handler(): Promise<void>
-  precommitHandler(controller: NavigationPrecommitControllerLike): void
-}
-
 type NavigationState = {
   target: string | undefined
   src: string
@@ -42,16 +33,17 @@ interface FrameRedirectNavigationInfo {
 const formSubmissionNavigationInfoType = 'frame-form-submission'
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
-function resyncWebKitScrollAfterNavigation(event: NavigateEvent, resetScroll: boolean): void {
+function resyncWebKitScrollAfterNavigation(
+  event: NavigateEvent,
+  transition: NavigationTransition,
+): void {
   let userAgent = navigator.userAgent
   if (!userAgent.includes('AppleWebKit')) return
   if (userAgent.includes('Chrome') || userAgent.includes('Chromium')) return
-  if (!resetScroll || (event.navigationType !== 'push' && event.navigationType !== 'replace'))
-    return
+  if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
   if (new URL(event.destination.url).hash) return
 
-  window.navigation.addEventListener(
-    'navigatesuccess',
+  void transition.finished.then(
     () => {
       // WebKit can reset its internal scroll position without synchronizing the visual viewport.
       // https://bugs.webkit.org/show_bug.cgi?id=309542
@@ -62,7 +54,7 @@ function resyncWebKitScrollAfterNavigation(event: NavigateEvent, resetScroll: bo
         window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
       })
     },
-    { once: true, signal: event.signal },
+    () => {},
   )
 }
 
@@ -144,8 +136,7 @@ export function startNavigationListenerImpl(
       if (!event.canIntercept || isCrossOriginDestination(event)) return
 
       if (isFrameRedirectNavigationInfo(event.info)) {
-        resyncWebKitScrollAfterNavigation(event, event.info.resetScroll)
-        event.intercept({
+        interceptNavigation(navigation, event, event.info.resetScroll, {
           async handler() {},
           scroll: event.info.resetScroll === false ? 'manual' : undefined,
         })
@@ -161,7 +152,6 @@ export function startNavigationListenerImpl(
         : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
-      resyncWebKitScrollAfterNavigation(event, state.resetScroll)
 
       let topFrame = options.getTopFrame()
       let namedFrame = state.target ? options.getNamedFrame(state.target) : undefined
@@ -169,10 +159,6 @@ export function startNavigationListenerImpl(
 
       let handler = async () => {
         if (event.signal.aborted) return
-
-        if (event.navigationType === 'traverse' && state.resetScroll) {
-          preserveStartingDocumentScrollState(navigation, event)
-        }
 
         let submission = await runtimeNavigation.getSubmission?.()
         if (event.signal.aborted) return
@@ -221,7 +207,7 @@ export function startNavigationListenerImpl(
 
           // Modern browsers allow you to update the in-flight navigation entry before it's committed
           if (supportsPrecommit) {
-            event.intercept({
+            interceptNavigation(navigation, event, state.resetScroll, {
               ...interceptOptions,
               precommitHandler(controller) {
                 controller.redirect(event.destination.url, { history: 'replace' })
@@ -246,14 +232,14 @@ export function startNavigationListenerImpl(
           }
         }
 
-        event.intercept(interceptOptions)
+        interceptNavigation(navigation, event, state.resetScroll, interceptOptions)
       } else {
         // <a>/<form method="get"> navigations
         if (runtimeNavigation.replaceHistory && event.cancelable) {
           event.preventDefault()
           navigation.navigate(event.destination.url, { history: 'replace', state })
         } else {
-          event.intercept(interceptOptions)
+          interceptNavigation(navigation, event, state.resetScroll, interceptOptions)
         }
       }
     },
@@ -294,46 +280,85 @@ function isCrossOriginDestination(event: NavigateEvent): boolean {
   return destination.origin !== window.location.origin
 }
 
-function preserveStartingDocumentScrollState(navigation: Navigation, event: NavigateEvent): void {
-  // Full-document reconciliation can temporarily shrink the page or trigger scroll anchoring
-  // before the Navigation API performs its deferred restoration. Preserve the starting scroll
-  // range and position until the navigation finishes so native restoration remains authoritative.
-  // Root scroll height includes page-level effects such as body padding.
+function interceptNavigation(
+  navigation: Navigation,
+  event: NavigateEvent,
+  resetScroll: boolean,
+  options: NavigationInterceptOptions,
+): void {
+  let removeScrollStyles = resetScroll ? preserveNavigationScroll(event) : undefined
 
-  // We think this is a bug in Chromium where they are incorrectly classifying a
-  // DOM-modification-driven scroll change as a user scroll action, causing it to skip restoration
-  // after the transition. The intended user-scroll behavior is tested here:
-  // https://github.com/web-platform-tests/wpt/blob/master/navigation-api/scroll-behavior/after-transition-skips-restore-when-scrolled.html
+  try {
+    event.intercept({
+      ...options,
+      handler() {
+        let transition = navigation.transition
+        if (resetScroll && transition) {
+          resyncWebKitScrollAfterNavigation(event, transition)
+          if (removeScrollStyles) {
+            void transition.finished.then(() => {
+              if (event.navigationType === 'traverse') return removeScrollStyles()
+              // Keep the stylesheet through the first post-navigation paint.
+              requestAnimationFrame(() => requestAnimationFrame(removeScrollStyles))
+            }, removeScrollStyles)
+          }
+        } else {
+          removeScrollStyles?.()
+        }
+        return options.handler?.()
+      },
+    })
+  } catch (error) {
+    removeScrollStyles?.()
+    throw error
+  }
+}
 
-  let { scrollHeight, clientHeight } = document.documentElement
+function preserveNavigationScroll(event: NavigateEvent): (() => void) | undefined {
+  if (event.signal.aborted) return
+
+  let cssText: string
+
+  if (event.navigationType === 'traverse') {
+    // Reconciliation can temporarily shrink the document before the browser restores its scroll.
+    // Keep the starting scroll range stable until restoration finishes.
+    let { scrollHeight, clientHeight } = document.documentElement
+    cssText = `
+      html {
+        min-height: ${scrollHeight + clientHeight}px !important;
+        overflow-anchor: none !important;
+      }
+
+      body {
+        overflow-anchor: none !important;
+      }
+    `
+  } else {
+    if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
+    if (new URL(event.destination.url).hash) return
+
+    // Keep later reconciliation from anchoring away from the browser's destination scroll.
+    cssText = `
+      html,
+      body {
+        overflow-anchor: none !important;
+      }
+    `
+  }
+
   let stylesheet = new CSSStyleSheet()
-  stylesheet.replaceSync(`
-    html {
-      min-height: ${scrollHeight + clientHeight}px !important;
-      overflow-anchor: none !important;
-    }
-
-    body {
-      overflow-anchor: none !important;
-    }
-  `)
+  stylesheet.replaceSync(cssText)
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet]
 
-  let cleanedUp = false
-  let cleanup = () => {
-    if (cleanedUp) return
-    cleanedUp = true
-    event.signal.removeEventListener('abort', cleanup)
-    navigation.removeEventListener('navigatesuccess', cleanup)
-    navigation.removeEventListener('navigateerror', cleanup)
+  function remove() {
+    event.signal.removeEventListener('abort', remove)
     document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
       (current) => current !== stylesheet,
     )
   }
 
-  event.signal.addEventListener('abort', cleanup, { once: true })
-  navigation.addEventListener('navigatesuccess', cleanup, { once: true })
-  navigation.addEventListener('navigateerror', cleanup, { once: true })
+  event.signal.addEventListener('abort', remove, { once: true })
+  return remove
 }
 
 function getRuntimeNavigation(
