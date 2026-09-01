@@ -4,7 +4,7 @@ Command-line interface for creating and managing Remix projects.
 
 ## Features
 
-- Create new Remix projects with `npx remix@next new` or installed `remix new`, defaulting to `my-remix-app`
+- Create new Remix projects with `npx remix@next new` or installed `remix new`
 - List browser-reachable files and inspect URL mappings with `remix assets`
 - Print shell completion scripts with `remix completion`
 - Check project environment and Remix app conventions with `remix doctor`
@@ -19,7 +19,7 @@ Command-line interface for creating and managing Remix projects.
 
 ## Installation
 
-Use `npx remix@next new` to scaffold a new Remix app in `my-remix-app`, or pass a target directory. Install `remix` when you want the local `remix` command:
+Use `npx remix@next new [target-dir]` to scaffold a new Remix app (defaults to `./my-remix-app`).  Install `remix` when you want the local `remix` command:
 
 ```sh
 npm i remix
