@@ -54,6 +54,12 @@ import {
   type MixinRuntimeState,
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
+import {
+  FRAME_END_MARKER_DATA,
+  findFrameEndMarker as findFrameEndComment,
+  frameStartMarkerData,
+  isFrameStartMarker as isFrameStartComment,
+} from './core/markers.ts'
 import { createComponentErrorEvent } from './error-event.ts'
 import { componentStalenessCheck } from './refresh.ts'
 
@@ -1118,8 +1124,8 @@ function insertFrame(
     }
   }
 
-  let start = document.createComment(` rmx:f:${randomFrameId()} `)
-  let end = document.createComment(' /rmx:f ')
+  let start = document.createComment(frameStartMarkerData(randomFrameId()))
+  let end = document.createComment(FRAME_END_MARKER_DATA)
   let doInsert = anchor
     ? (dom: Node) => domParent.insertBefore(dom, anchor)
     : (dom: Node) => domParent.appendChild(dom)
@@ -1332,34 +1338,6 @@ function skipCommentsExceptFrameStart(cursor: Node | null): Node | null {
     cursor = cursor.nextSibling
   }
   return cursor
-}
-
-function isFrameStartComment(node: Node | null | undefined): node is Comment {
-  return isCommentNode(node) && node.data.trim().startsWith('rmx:f:')
-}
-
-function isFrameEndComment(node: Node | null | undefined): node is Comment {
-  return isCommentNode(node) && node.data.trim() === '/rmx:f'
-}
-
-function isCommentNode(node: Node | null | undefined): node is Comment {
-  return node?.nodeType === Node.COMMENT_NODE
-}
-
-function findFrameEndComment(start: Comment): Comment | null {
-  let depth = 1
-  let node: Node | null = start.nextSibling
-
-  while (node) {
-    if (isFrameStartComment(node)) depth++
-    else if (isFrameEndComment(node)) {
-      depth--
-      if (depth === 0) return node
-    }
-    node = node.nextSibling
-  }
-
-  return null
 }
 
 export function renderComponent(

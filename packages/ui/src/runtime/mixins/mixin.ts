@@ -6,6 +6,7 @@ import type { SchedulerPhaseEvent } from '../scheduler.ts'
 import { jsx } from '../jsx.ts'
 import { TypedEventTarget } from '../typed-event-target.ts'
 import { invariant } from '../invariant.ts'
+import { composeMixedProps, isMixinElementFunction } from '../core/mix.ts'
 
 type RebindNode<value, baseNode, boundNode> = value extends (
   ...args: infer fnArgs
@@ -288,9 +289,9 @@ export function createMixin<
 
 export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPropsOutput {
   let state = input.state ?? createMixinRuntimeState()
-  let handle = state.handle as ScopedAnyMixinHandle | undefined
-  if (!handle) {
-    handle = createMixinHandle({
+  let scopedHandle = state.handle as ScopedAnyMixinHandle | undefined
+  if (!scopedHandle) {
+    scopedHandle = createMixinHandle({
       id: state.id,
       hostType: input.hostType,
       frame: input.frame,
@@ -299,16 +300,12 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
       getRuntimeSignal: () => getMixinRuntimeSignal(state),
       getBinding: () => state.binding,
     }) as ScopedAnyMixinHandle
-    state.handle = handle
+    state.handle = scopedHandle
   }
+  let handle = scopedHandle
   let hostType = input.hostType
-  let descriptors = resolveMixDescriptors(input.props)
-  let composedProps = withoutMix(input.props)
-  let mixinProps = withoutMixinTreeProps(composedProps)
-  let maxDescriptors = 1024
 
-  for (let index = 0; index < descriptors.length && index < maxDescriptors; index++) {
-    let descriptor = descriptors[index]
+  let { props, descriptorCount } = composeMixedProps(hostType, input.props, (descriptor, index) => {
     let entry = state.runners[index]
     if (!entry || entry.type !== descriptor.type) {
       if (entry) {
@@ -332,46 +329,16 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
       }
     }
 
-    handle.setActiveScope(entry.scope)
-    let result = entry.runner(...descriptor.args, mixinProps)
-    handle.setActiveScope(undefined)
-    if (!result) continue
-    if (isMixinElement(result)) continue
-
-    let returnedDescriptors = resolveReturnedMixDescriptors(result)
-    if (returnedDescriptors) {
-      for (let returned of returnedDescriptors) descriptors.push(returned)
-      continue
+    let resolved = entry
+    return (mixinProps) => {
+      handle.setActiveScope(resolved.scope)
+      let result = resolved.runner(...(descriptor.args as unknown[]), mixinProps)
+      handle.setActiveScope(undefined)
+      return result
     }
+  })
 
-    if (!isRemixElement(result)) {
-      console.error(new Error('mixins must return a remix element'))
-      continue
-    }
-
-    let resultType =
-      typeof result.type === 'string'
-        ? result.type
-        : isMixinElement(result.type)
-          ? result.type.__rmxMixinElementType
-          : null
-    if (resultType !== hostType) {
-      console.error(new Error('mixins must return an element with the same host type'))
-      continue
-    }
-
-    if (result.type !== resultType) {
-      result = { ...result, type: resultType }
-    }
-
-    let nextProps = sanitizeReturnedMixinProps(result.props)
-    let nestedDescriptors = resolveMixDescriptors(nextProps)
-    for (let nested of nestedDescriptors) descriptors.push(nested)
-    composedProps = composeMixinProps(composedProps, withoutMix(nextProps))
-    mixinProps = withoutMixinTreeProps(composedProps)
-  }
-
-  for (let index = descriptors.length; index < state.runners.length; index++) {
+  for (let index = descriptorCount; index < state.runners.length; index++) {
     let entry = state.runners[index]
     if (entry) {
       handle.dispatchScopedEvent(entry.scope, new Event('remove'))
@@ -379,18 +346,11 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
     }
   }
 
-  if (state.runners.length > descriptors.length) {
-    state.runners.length = descriptors.length
+  if (state.runners.length > descriptorCount) {
+    state.runners.length = descriptorCount
   }
 
-  let nextMix = input.props.mix
-  return {
-    state,
-    props: {
-      ...composedProps,
-      ...(nextMix === undefined ? {} : { mix: nextMix }),
-    },
-  }
+  return { state, props }
 }
 
 export function teardownMixins(state?: MixinRuntimeState) {
@@ -847,96 +807,8 @@ function isBindingInUpdateScope(binding: MixinRuntimeBinding, parents: ParentNod
   return false
 }
 
-function resolveMixDescriptors(props: ElementProps): AnyMixinDescriptor[] {
-  let mix = props.mix
-  if (!mix) return []
-  if (Array.isArray(mix)) {
-    if (mix.length === 0) return []
-    return mix.filter(Boolean) as AnyMixinDescriptor[]
-  }
-  return [mix] as AnyMixinDescriptor[]
-}
-
-function withoutMix(props: ElementProps): ElementProps {
-  if (!('mix' in props)) return props
-  let output = { ...props }
-  delete output.mix
-  return output
-}
-
-function withoutMixinTreeProps(props: ElementProps): ElementProps {
-  if (!('children' in props) && !('innerHTML' in props)) return props
-  let output = { ...props }
-  delete output.children
-  delete output.innerHTML
-  return output
-}
-
-function sanitizeReturnedMixinProps(props: ElementProps): ElementProps {
-  if (!('children' in props) && !('innerHTML' in props)) return props
-  console.error(new Error('mixins must not return children or innerHTML'))
-  return withoutMixinTreeProps(props)
-}
-
-function composeMixinProps(previous: ElementProps, next: ElementProps): ElementProps {
-  return { ...previous, ...next }
-}
-
-function resolveReturnedMixDescriptors(value: unknown): AnyMixinDescriptor[] | null {
-  let descriptors: AnyMixinDescriptor[] = []
-  if (!collectReturnedMixDescriptors(value, descriptors)) {
-    return null
-  }
-
-  return descriptors
-}
-
-function collectReturnedMixDescriptors(
-  value: unknown,
-  output: AnyMixinDescriptor[],
-): value is MixInput<Element, ElementProps> {
-  if (!value) {
-    return true
-  }
-
-  if (Array.isArray(value)) {
-    for (let item of value) {
-      if (!collectReturnedMixDescriptors(item, output)) {
-        return false
-      }
-    }
-    return true
-  }
-
-  if (!isMixinDescriptor(value)) {
-    return false
-  }
-
-  output.push(value)
-  return true
-}
-
-function isRemixElement(value: unknown): value is RemixElement {
-  if (!value || typeof value !== 'object') return false
-  return (value as { $rmx?: unknown }).$rmx === true
-}
-
-export function isMixinDescriptor(value: unknown): value is AnyMixinDescriptor {
-  if (!value || typeof value !== 'object' || isRemixElement(value)) {
-    return false
-  }
-
-  let descriptor = value as { type?: unknown; args?: unknown }
-  return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
-}
-
-function isMixinElement(value: unknown): value is MixinElement<Element, ElementProps> {
-  if (typeof value !== 'function') return false
-  return '__rmxMixinElementType' in value
-}
-
 function normalizeMixinRunner(result: AnyMixinSetupResult, handle: AnyMixinHandle): AnyMixinRunner {
-  if (typeof result === 'function' && !isMixinElement(result)) {
+  if (typeof result === 'function' && !isMixinElementFunction(result)) {
     return result as AnyMixinRunner
   }
   if (result === undefined) {

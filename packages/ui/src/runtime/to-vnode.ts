@@ -5,7 +5,7 @@ import { isEmptyChild, isPrimitiveChild, isRemixNode, normalizeChildren } from '
 import type { RemixNode } from './jsx.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameProps } from './component.ts'
-import { isMixinDescriptor } from './mixins/mixin.ts'
+import { isMixinDescriptor } from './core/mix.ts'
 import {
   isRemixElement,
   NON_RENDER_NODE,
