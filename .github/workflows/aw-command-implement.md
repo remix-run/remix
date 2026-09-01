@@ -1,6 +1,6 @@
 ---
 name: /implement
-emoji: '🛠️'
+emoji: '🤖'
 description: Implement an accepted Proposal Discussion after an administrator requests it
 on:
   roles: [admin]

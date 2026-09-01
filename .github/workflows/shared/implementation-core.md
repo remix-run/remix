@@ -4,6 +4,9 @@ import-schema:
   max-patch-files:
     type: number
     required: true
+runtimes:
+  node:
+    version: '24'
 tools:
   bash: true
   edit: true
@@ -15,6 +18,12 @@ tools:
 network:
   allowed: [defaults, github, node, playwright, local]
 steps:
+  - name: Confirm Node.js 24 runtime
+    run: |
+      case "$(node --version)" in
+        v24.*) ;;
+        *) echo "Expected Node.js 24, found $(node --version)" >&2; exit 1 ;;
+      esac
   - name: Set up pnpm
     uses: pnpm/action-setup@v4
     with:
@@ -116,6 +125,9 @@ passes.
   `pnpm install --frozen-lockfile` when installation is necessary.
 - Use the smallest relevant package test, typecheck, and build commands while
   iterating.
+- The Playwright CLI bootstrap creates `.claude/skills/playwright-cli/` as
+  transient runner tooling. Remove that directory after browser testing and
+  before the final validation loop; never include it in the diff.
 - Before creating a pull request, run the repository's fast validation loop:
   `pnpm run validate-package-meta`, `pnpm run lint`,
   `pnpm run format:check`, `pnpm run test:changed`, and
