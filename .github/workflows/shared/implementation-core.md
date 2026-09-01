@@ -35,6 +35,7 @@ safe-outputs:
     auto-close-issue: ${{ github.event_name == 'issue_comment' }}
     fallback-as-issue: true
     allowed-files:
+      - README.md
       - packages/**
       - demos/**
       - docs/**
@@ -61,7 +62,10 @@ safe-outputs:
       - 'packages/remix/manifest.json'
       - 'packages/remix/schema/**'
       - 'packages/remix/src/**'
-    protected-files: fallback-to-issue
+    protected-files:
+      policy: fallback-to-issue
+      exclude:
+        - README.md
     max-patch-files: ${{ github.aw.import-inputs.max-patch-files }}
   threat-detection:
     continue-on-error: false
