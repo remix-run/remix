@@ -1,5 +1,9 @@
 ---
 description: Shared Remix implementation agent configuration and instructions
+import-schema:
+  max-patch-files:
+    type: number
+    required: true
 tools:
   bash: true
   edit: true
@@ -55,7 +59,7 @@ safe-outputs:
       - 'packages/remix/schema/**'
       - 'packages/remix/src/**'
     protected-files: fallback-to-issue
-    max-patch-files: 8
+    max-patch-files: ${{ github.aw.import-inputs.max-patch-files }}
   threat-detection:
     continue-on-error: false
 ---

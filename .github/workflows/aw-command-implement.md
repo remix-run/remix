@@ -31,7 +31,9 @@ tools:
     mode: gh-proxy
     toolsets: [repos, issues, pull_requests, actions, discussions]
 imports:
-  - shared/implementation-core.md
+  - uses: shared/implementation-core.md
+    with:
+      max-patch-files: 20
 safe-outputs:
   add-comment:
     max: 1

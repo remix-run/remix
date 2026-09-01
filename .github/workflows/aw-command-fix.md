@@ -25,7 +25,9 @@ engine:
     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_SHOPIFY }}
 strict: true
 imports:
-  - shared/implementation-core.md
+  - uses: shared/implementation-core.md
+    with:
+      max-patch-files: 10
 safe-outputs:
   add-comment:
     max: 1
