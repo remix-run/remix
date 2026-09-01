@@ -1,7 +1,10 @@
 import { invariant } from '../invariant.ts'
 
-// Single owner of the comment-marker grammar shared by the server renderer
-// and the client engines (reconciler, DOM differ, frame runtime).
+// Single owner of the region comment-marker grammar shared by the server
+// renderer and the client engines (reconciler, DOM differ, frame runtime).
+// Non-region comments live elsewhere: the `rmx:flush` stream directive
+// belongs to core/stream-protocol.ts and the reconciler's `rmx:replace`
+// placeholder is never parsed.
 //
 // Frame regions:     <!-- rmx:f:<id> --> ... <!-- /rmx:f -->
 // Hydration regions: <!-- rmx:h:<id> --> ... <!-- /rmx:h -->
@@ -11,6 +14,10 @@ const FRAME_START_PREFIX = 'rmx:f:'
 const FRAME_END_TEXT = '/rmx:f'
 const HYDRATION_START_PREFIX = 'rmx:h:'
 const HYDRATION_END_TEXT = '/rmx:h'
+
+// Node.COMMENT_NODE, inlined so calling this module's predicates never
+// touches a DOM global (server code imports this module).
+const COMMENT_NODE = 8
 
 export function frameStartMarkerData(frameId: string): string {
   return ` ${FRAME_START_PREFIX}${frameId} `
@@ -31,7 +38,7 @@ export function hydrationStartMarkerHtml(instanceId: string): string {
 export const HYDRATION_END_MARKER_HTML = `<!-- ${HYDRATION_END_TEXT} -->`
 
 export function isCommentNode(node: Node | null | undefined): node is Comment {
-  return node?.nodeType === Node.COMMENT_NODE
+  return node?.nodeType === COMMENT_NODE
 }
 
 export function isFrameStartMarker(node: Node | null | undefined): node is Comment {
@@ -94,6 +101,30 @@ export function findFrameEndMarker(start: Comment): Comment | null {
  */
 export function findHydrationEndMarker(start: Comment): Comment | null {
   return findEndMarker(start, isHydrationStartMarker, isHydrationEndMarker)
+}
+
+/**
+ * Throwing variant of `findFrameEndMarker` for regions that must be closed.
+ *
+ * @param start Frame start marker to search from.
+ * @returns The matching end marker.
+ */
+export function getFrameEndMarker(start: Comment): Comment {
+  let end = findFrameEndMarker(start)
+  if (!end) throw new Error('Frame end marker not found')
+  return end
+}
+
+/**
+ * Throwing variant of `findHydrationEndMarker` for regions that must be closed.
+ *
+ * @param start Hydration start marker to search from.
+ * @returns The matching end marker.
+ */
+export function getHydrationEndMarker(start: Comment): Comment {
+  let end = findHydrationEndMarker(start)
+  if (!end) throw new Error('Hydration end marker not found')
+  return end
 }
 
 /**

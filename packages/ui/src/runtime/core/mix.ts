@@ -14,56 +14,45 @@ export interface MixDescriptor {
 }
 
 /**
- * Environment hook that turns a descriptor into an invocable runner.
+ * Environment hook that runs one descriptor and returns the mixin's raw
+ * result.
  *
- * The client resolves runners against persistent per-element state (scopes,
- * lifecycle events); the server creates a one-shot runner per descriptor.
- * Returning `null` skips the descriptor. The returned function receives the
- * mixin-visible props for the current composition step and returns the
- * mixin's raw result.
+ * The client runs descriptors against persistent per-element state (scopes,
+ * lifecycle events) and lets mixin errors propagate; the server creates a
+ * one-shot runner per descriptor and isolates errors. Returning a falsy value
+ * skips the descriptor.
  */
-export type MixRunnerResolver = (
+export type MixDescriptorRunner = (
   descriptor: MixDescriptor,
   index: number,
-) => ((mixinProps: ElementProps) => unknown) | null
-
-export interface ComposedMixedProps {
-  props: ElementProps
-  /**
-   * Number of descriptors processed, including descriptors appended during
-   * composition by mixins that returned more mixins.
-   */
-  descriptorCount: number
-}
+  mixinProps: ElementProps,
+) => unknown
 
 /**
  * Composes an element's `mix` descriptors into its final props.
  *
- * This is the single owner of mixin composition semantics: descriptor
- * expansion, host type validation, returned-prop sanitization, and prop
- * merge order. Both the client reconciler and the server renderer run this
- * loop, supplying their own `resolveRunner`.
+ * This is the owner of mixin composition semantics: descriptor expansion,
+ * host type validation, returned-prop sanitization, and prop merge order.
+ * Both the client reconciler and the server renderer run this loop, supplying
+ * their own `runDescriptor`. (The one exception is the reconciler's all-`on()`
+ * fast path, which applies event-listener-only mixes without composing.)
  *
  * @param hostType Host element tag name the mixins are composed for.
  * @param props Original element props, including `mix`.
- * @param resolveRunner Environment hook that turns each descriptor into an invocable runner.
- * @returns The composed props and the number of descriptors processed.
+ * @param runDescriptor Environment hook that runs each descriptor.
+ * @returns The composed props.
  */
 export function composeMixedProps(
   hostType: string,
   props: ElementProps,
-  resolveRunner: MixRunnerResolver,
-): ComposedMixedProps {
+  runDescriptor: MixDescriptorRunner,
+): ElementProps {
   let descriptors = resolveMixDescriptors(props)
   let composedProps = withoutMix(props)
   let mixinProps = withoutMixinTreeProps(composedProps)
 
   for (let index = 0; index < descriptors.length && index < MAX_MIX_DESCRIPTORS; index++) {
-    let descriptor = descriptors[index]
-    let runner = resolveRunner(descriptor, index)
-    if (!runner) continue
-
-    let result = runner(mixinProps)
+    let result = runDescriptor(descriptors[index], index, mixinProps)
     if (!result) continue
     if (isMixinElementFunction(result)) continue
 
@@ -97,14 +86,14 @@ export function composeMixedProps(
 
   let nextMix = props.mix
   return {
-    descriptorCount: descriptors.length,
-    props: {
-      ...composedProps,
-      ...(nextMix === undefined ? {} : { mix: nextMix }),
-    },
+    ...composedProps,
+    ...(nextMix === undefined ? {} : { mix: nextMix }),
   }
 }
 
+// Reads descriptors back out of a `mix` prop already normalized by jsx-time
+// element creation (`normalizeElementProps` in core/vnode.ts); the falsy
+// filtering here must stay in sync with the nesting/falsy rules there.
 export function resolveMixDescriptors(props: ElementProps): MixDescriptor[] {
   let mix = props.mix
   if (!mix) return []
@@ -115,14 +104,14 @@ export function resolveMixDescriptors(props: ElementProps): MixDescriptor[] {
   return [mix] as MixDescriptor[]
 }
 
-export function withoutMix(props: ElementProps): ElementProps {
+function withoutMix(props: ElementProps): ElementProps {
   if (!('mix' in props)) return props
   let output = { ...props }
   delete output.mix
   return output
 }
 
-export function withoutMixinTreeProps(props: ElementProps): ElementProps {
+function withoutMixinTreeProps(props: ElementProps): ElementProps {
   if (!('children' in props) && !('innerHTML' in props)) return props
   let output = { ...props }
   delete output.children
@@ -152,6 +141,9 @@ export function isMixinElementFunction(
   return '__rmxMixinElementType' in value
 }
 
+// Deliberately looser than `isRemixElement` in core/vnode.ts: composition
+// only needs the `$rmx` brand here because the loop above validates the
+// element's type itself before using its props.
 function isRemixElementResult(value: unknown): value is RemixElement {
   if (!value || typeof value !== 'object') return false
   return (value as { $rmx?: unknown }).$rmx === true

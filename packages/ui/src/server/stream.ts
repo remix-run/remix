@@ -638,18 +638,18 @@ function resolveSsrMixedProps(
 ): ElementProps {
   if (resolveMixDescriptors(initialProps).length === 0) return initialProps
 
-  return composeMixedProps(hostType, initialProps, (descriptor) => {
+  return composeMixedProps(hostType, initialProps, (descriptor, _index, mixinProps) => {
     let runner = resolveSsrMixinRunner(hostType, descriptor, context, frameState)
-    if (!runner) return null
-    return (mixinProps) => {
-      try {
-        return runner(...descriptor.args, mixinProps)
-      } catch (error) {
-        console.error(error)
-        return undefined
-      }
+    if (!runner) return undefined
+    // Unlike the client runtime, a throwing mixin is isolated here so a
+    // single bad mixin cannot take down the whole stream.
+    try {
+      return runner(...descriptor.args, mixinProps)
+    } catch (error) {
+      console.error(error)
+      return undefined
     }
-  }).props
+  })
 }
 
 function resolveSsrMixinRunner(

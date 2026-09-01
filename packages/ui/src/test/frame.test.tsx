@@ -469,7 +469,7 @@ describe('run', () => {
     let readyError = await app.ready().catch((error) => error)
 
     expect(readyError).toBeInstanceOf(Error)
-    expect((readyError as Error).message).toBe('End marker not found')
+    expect((readyError as Error).message).toBe('Hydration end marker not found')
     expect(forwarded).toBe(readyError)
 
     app.dispose()

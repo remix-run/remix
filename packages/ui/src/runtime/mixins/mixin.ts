@@ -305,7 +305,9 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
   let handle = scopedHandle
   let hostType = input.hostType
 
-  let { props, descriptorCount } = composeMixedProps(hostType, input.props, (descriptor, index) => {
+  let runnerCount = 0
+  let props = composeMixedProps(hostType, input.props, (descriptor, index, mixinProps) => {
+    runnerCount = index + 1
     let entry = state.runners[index]
     if (!entry || entry.type !== descriptor.type) {
       if (entry) {
@@ -329,16 +331,15 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
       }
     }
 
-    let resolved = entry
-    return (mixinProps) => {
-      handle.setActiveScope(resolved.scope)
-      let result = resolved.runner(...(descriptor.args as unknown[]), mixinProps)
-      handle.setActiveScope(undefined)
-      return result
-    }
+    // Unlike the server renderer, mixin errors are not isolated here: a
+    // throwing mixin aborts the client render.
+    handle.setActiveScope(entry.scope)
+    let result = entry.runner(...descriptor.args, mixinProps)
+    handle.setActiveScope(undefined)
+    return result
   })
 
-  for (let index = descriptorCount; index < state.runners.length; index++) {
+  for (let index = runnerCount; index < state.runners.length; index++) {
     let entry = state.runners[index]
     if (entry) {
       handle.dispatchScopedEvent(entry.scope, new Event('remove'))
@@ -346,8 +347,8 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
     }
   }
 
-  if (state.runners.length > descriptorCount) {
-    state.runners.length = descriptorCount
+  if (state.runners.length > runnerCount) {
+    state.runners.length = runnerCount
   }
 
   return { state, props }

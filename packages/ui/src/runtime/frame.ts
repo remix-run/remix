@@ -19,13 +19,13 @@ import {
   type ClientEntryIdentity,
 } from './client-entry-boundary.ts'
 import {
-  findFrameEndMarker,
-  findHydrationEndMarker,
-  getFrameMarkerId as getFrameId,
+  getFrameEndMarker,
+  getFrameMarkerId,
+  getHydrationEndMarker,
   isCommentNode,
-  isFrameStartMarker as isFrameStart,
-  isHydrationEndMarker as isHydrationEnd,
-  isHydrationStartMarker as isHydrationStart,
+  isFrameStartMarker,
+  isHydrationEndMarker,
+  isHydrationStartMarker,
   parseHydrationMarkerId,
 } from './core/markers.ts'
 
@@ -843,8 +843,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
       let node = nodes[i]
 
-      if (isFrameStart(node)) {
-        let end = findFrameEnd(node)
+      if (isFrameStartMarker(node)) {
+        let end = getFrameEndMarker(node)
         context.frameInstances.get(node)?.startInheritedReload(signal)
         i = findMarkerRangeEndIndex(nodes, end, i)
         continue
@@ -1059,8 +1059,8 @@ function collectOwnedServerStyleTags(nodes: Node[], styles: HTMLStyleElement[]):
   for (let i = 0; i < nodes.length; i++) {
     let node = nodes[i]
 
-    if (isFrameStart(node)) {
-      let end = findFrameEnd(node)
+    if (isFrameStartMarker(node)) {
+      let end = getFrameEndMarker(node)
       i = findMarkerRangeEndIndex(nodes, end, i)
       continue
     }
@@ -1338,10 +1338,10 @@ async function createSubFrames(
 
     let node = nodes[i]
 
-    if (isFrameStart(node)) {
-      let end = findFrameEnd(node)
+    if (isFrameStartMarker(node)) {
+      let end = getFrameEndMarker(node)
       let existingFrame = context.frameInstances.get(node)
-      let id = getFrameId(node)
+      let id = getFrameMarkerId(node)
       let marker = context.data.f?.[id]
 
       if (existingFrame) {
@@ -1394,7 +1394,7 @@ function isHydrationMarkerLive(marker: HydrationMarker, context: FrameContext): 
   if (marker.start.parentNode !== marker.end.parentNode) return false
 
   if (parseHydrationMarkerId(marker.start) !== marker.id) return false
-  if (!isHydrationEnd(marker.end)) return false
+  if (!isHydrationEndMarker(marker.end)) return false
 
   let parent = marker.start.parentNode
   if (!parent) return false
@@ -1414,8 +1414,8 @@ function removeVirtualRoots(nodes: Node[]): void {
   for (let i = 0; i < nodes.length; i++) {
     let node = nodes[i]
 
-    if (isCommentNode(node) && isHydrationStart(node) && disposeClientEntryBoundary(node)) {
-      let end = findHydrationEnd(node)
+    if (isCommentNode(node) && isHydrationStartMarker(node) && disposeClientEntryBoundary(node)) {
+      let end = getHydrationEndMarker(node)
       i = findMarkerRangeEndIndex(nodes, end, i)
       continue
     }
@@ -1430,8 +1430,8 @@ function disposeSubFrames(nodes: Node[], context: FrameContext): void {
   for (let i = 0; i < nodes.length; i++) {
     let node = nodes[i]
 
-    if (isFrameStart(node)) {
-      let end = findFrameEnd(node)
+    if (isFrameStartMarker(node)) {
+      let end = getFrameEndMarker(node)
       let subFrame = context.frameInstances.get(node)
       if (subFrame) {
         subFrame.dispose()
@@ -1760,7 +1760,7 @@ function findHydrationMarkers(container: FrameContainer): HydrationMarker[] {
     let id = parseHydrationMarkerId(comment)
     if (id === undefined) return
 
-    let end = findHydrationEnd(comment)
+    let end = getHydrationEndMarker(comment)
     results.push({ id, start: comment, end })
   })
 
@@ -1777,8 +1777,8 @@ function walkCommentsInNodes(nodes: Node[], cb: (comment: Comment) => void): voi
 
     // Frame ownership boundary: hydration markers inside nested frame regions
     // are discovered and hydrated by the nested frame instance only.
-    if (isFrameStart(node)) {
-      let end = findFrameEnd(node)
+    if (isFrameStartMarker(node)) {
+      let end = getFrameEndMarker(node)
       i = findMarkerRangeEndIndex(nodes, end, i)
       continue
     }
@@ -1793,18 +1793,6 @@ function walkCommentsInNodes(nodes: Node[], cb: (comment: Comment) => void): voi
 function findMarkerRangeEndIndex(nodes: Node[], end: Comment, startIndex: number): number {
   // The snapshot may not contain an end marker moved by a DOM update.
   return Math.max(startIndex, nodes.indexOf(end))
-}
-
-function findFrameEnd(start: Comment): Comment {
-  let end = findFrameEndMarker(start)
-  if (!end) throw new Error('End marker not found')
-  return end
-}
-
-function findHydrationEnd(start: Comment): Comment {
-  let end = findHydrationEndMarker(start)
-  if (!end) throw new Error('End marker not found')
-  return end
 }
 
 function isDocumentNode(node: Node): node is Document {

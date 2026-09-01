@@ -56,9 +56,9 @@ import {
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import {
   FRAME_END_MARKER_DATA,
-  findFrameEndMarker as findFrameEndComment,
+  findFrameEndMarker,
   frameStartMarkerData,
-  isFrameStartMarker as isFrameStartComment,
+  isFrameStartMarker,
 } from './core/markers.ts'
 import { createComponentErrorEvent } from './error-event.ts'
 import { componentStalenessCheck } from './refresh.ts'
@@ -1082,9 +1082,9 @@ function insertFrame(
 
   // Hydration path: adopt server-rendered frame markers and reuse the existing
   // frame instance created during createSubFrames().
-  if (isFrameStartComment(cursor?.current)) {
+  if (isFrameStartMarker(cursor?.current)) {
     let start = cursor.current
-    let end = findFrameEndComment(start)
+    let end = findFrameEndMarker(start)
     if (end) {
       let instance = runtime.frameInstances.get(start)
       let src = instance?.handle.src ?? getFrameSrc(node)
@@ -1334,7 +1334,7 @@ function randomFrameId(): string {
 
 function skipCommentsExceptFrameStart(cursor: Node | null): Node | null {
   while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
-    if (isFrameStartComment(cursor)) return cursor
+    if (isFrameStartMarker(cursor)) return cursor
     cursor = cursor.nextSibling
   }
   return cursor

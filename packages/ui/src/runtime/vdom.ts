@@ -55,7 +55,7 @@ export { resetStyleState }
 
 function getHydrationComponentIdFromRangeStart(start: Node): string | undefined {
   let id = parseHydrationMarkerId(start)
-  return id ? id : undefined
+  return id || undefined
 }
 
 /**
