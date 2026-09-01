@@ -18,12 +18,6 @@ tools:
 network:
   allowed: [defaults, github, node, playwright, local]
 steps:
-  - name: Confirm Node.js 24 runtime
-    run: |
-      case "$(node --version)" in
-        v24.*) ;;
-        *) echo "Expected Node.js 24, found $(node --version)" >&2; exit 1 ;;
-      esac
   - name: Set up pnpm
     uses: pnpm/action-setup@v4
     with:
@@ -78,7 +72,7 @@ safe-outputs:
 Implement the authorized request from the trusted default branch and create at
 most one draft pull request. Do not create a pull request until the requested
 behavior is clear, the implementation is focused, and relevant validation
-passes.
+passes or is blocked solely by the sandbox Node.js version as described below.
 
 ## Trust boundaries
 
@@ -135,17 +129,25 @@ passes.
 - Run `pnpm run changes:validate` when a change file is added. Run full
   `pnpm test` and `pnpm run typecheck` when the change is broad or affects
   multiple workspaces.
+- The sandbox may use Node.js 22 even though the repository requires Node.js 24.
+  Do not treat an `Unsupported engine` warning or a command failure explicitly
+  caused by the unavailable Node.js 24 runtime as a blocker to creating the
+  draft pull request. Continue all validation that can run, record the exact
+  affected commands and results in the pull request body, and rely on pull
+  request CI for authoritative Node.js 24 validation. All failures not caused
+  solely by the runtime mismatch remain blockers.
 - Use Playwright CLI with Chromium only when browser behavior materially
   improves the evidence.
 - Review the complete diff, scan it for secrets, and confirm every changed file
   is necessary. Do not weaken or remove tests to make validation pass.
-- If relevant validation fails, do not create a pull request. Comment with the
-  exact failing command and a concise explanation instead.
+- If relevant validation fails for any reason other than the sandbox Node.js
+  exception above, do not create a pull request. Comment with the exact failing
+  command and a concise explanation instead.
 
 ## Draft pull request
 
 - Create at most one draft pull request targeting `main` after validation
-  passes.
+  passes or is blocked solely by the sandbox Node.js exception above.
 - Use a concise imperative title without automation or agent attribution.
 - In the body, link the triggering issue or Proposal Discussion and summarize
   the request, implementation, tests, change file when applicable, and exact
