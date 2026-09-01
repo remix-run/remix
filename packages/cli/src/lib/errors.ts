@@ -85,11 +85,6 @@ export const CLI_ERROR_DEFINITIONS = {
     title: 'Missing option value',
     fix: 'Pass a value immediately after the option.',
   },
-  missingTargetDirectory: {
-    code: 'RMX_MISSING_TARGET_DIRECTORY',
-    title: 'Missing target directory',
-    fix: 'Pass a target directory, for example `remix new my-remix-app`.',
-  },
   projectRootNotFound: {
     code: 'RMX_PROJECT_ROOT_NOT_FOUND',
     title: 'Could not find a project root',
@@ -274,12 +269,6 @@ export function missingOptionValue(option: string): UsageError {
   return createUsageError(CLI_ERROR_DEFINITIONS.missingOptionValue, {
     context: { option },
     message: `${option} requires a value.`,
-  })
-}
-
-export function missingTargetDirectory(): UsageError {
-  return createUsageError(CLI_ERROR_DEFINITIONS.missingTargetDirectory, {
-    message: 'A target directory is required.',
   })
 }
 

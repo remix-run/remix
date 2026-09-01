@@ -30,7 +30,7 @@ const ROOT_HELP_TEXT = [
   '  assets [command]  List or inspect browser-reachable assets',
   '  completion        Print shell completion scripts for Remix',
   '  help [command]    Show help for Remix commands',
-  '  new <name>        Create a new Remix project',
+  '  new [name]        Create a new Remix project',
   '  db <command>      Manage the current app database',
   '  doctor            Check project health for the current project',
   '  routes            Show the route tree for the current project',
@@ -112,11 +112,12 @@ const HELP_COMMAND_HELP_TEXT = [
 
 const NEW_COMMAND_HELP_TEXT = [
   'Usage:',
-  '  remix new <target-dir> [--app-name <name>] [--force]',
+  '  remix new [target-dir] [--app-name <name>] [--force]',
   '',
-  'Create a new Remix project in the target directory.',
+  'Create a new Remix project in the target directory (default: my-remix-app).',
   '',
   'Examples:',
+  '  remix new',
   '  remix new ./my-remix-app',
   '  remix new ./my-remix-app --app-name "My Remix App"',
   '  remix new ./my-remix-app --force',
@@ -264,7 +265,7 @@ describe('run', () => {
       let rootHelp = await captureOutput(() => run(['--help']))
       assert.equal(rootHelp.exitCode, 0)
       assert.match(rootHelp.stdout, /Commands:/)
-      assert.match(rootHelp.stdout, /new <name>\s+Create a new Remix project/)
+      assert.match(rootHelp.stdout, /new \[name\]\s+Create a new Remix project/)
 
       let commandHelp = await captureOutput(() => run(['help', 'routes']))
       assert.equal(commandHelp.exitCode, 0)
@@ -313,14 +314,6 @@ describe('run', () => {
 
   it('prints new command help', async () => {
     let result = await captureOutput(() => run(['new', '--help']))
-
-    assert.equal(result.exitCode, 0)
-    assert.equal(result.stdout, NEW_COMMAND_HELP_TEXT)
-    assert.equal(result.stderr, '')
-  })
-
-  it('prints new command help when no additional arguments are provided', async () => {
-    let result = await captureOutput(() => run(['new']))
 
     assert.equal(result.exitCode, 0)
     assert.equal(result.stdout, NEW_COMMAND_HELP_TEXT)
@@ -565,6 +558,24 @@ describe('run', () => {
       await assertPathExists(path.join(appDir, 'public', 'favicon.svg'))
       await assertPathExists(path.join(appDir, '.gitignore'))
       await assertPathMissing(path.join(appDir, 'gitignore'))
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('creates my-remix-app when no target directory is specified', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-default-target-'))
+    try {
+      let appDir = path.join(tmpDir, 'my-remix-app')
+      let result = await captureOutput(() => run(['new'], { cwd: tmpDir }))
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.match(result.stdout, /Created My Remix App at my-remix-app/)
+
+      let packageJson = JSON.parse(
+        await fs.readFile(path.join(appDir, 'package.json'), 'utf8'),
+      ) as { name: string }
+      assert.equal(packageJson.name, 'my-remix-app')
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }

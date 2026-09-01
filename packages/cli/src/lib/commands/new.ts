@@ -7,7 +7,7 @@ import type {
 } from '../bootstrap-project.ts'
 import { bootstrapProject } from '../bootstrap-project.ts'
 import type { CliContext } from '../cli-context.ts'
-import { renderCliError, missingTargetDirectory, toCliError } from '../errors.ts'
+import { renderCliError, toCliError } from '../errors.ts'
 import { getDisplayPath } from '../display-path.ts'
 import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
@@ -24,7 +24,7 @@ const NEW_PROGRESS_LABELS = {
 } satisfies Record<BootstrapProjectPhase, string>
 
 export async function runNewCommand(argv: string[], context: CliContext): Promise<number> {
-  if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
+  if (argv.includes('-h') || argv.includes('--help')) {
     process.stdout.write(getNewCommandHelpText())
     return 0
   }
@@ -65,13 +65,14 @@ export async function runNewCommand(argv: string[], context: CliContext): Promis
 export function getNewCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
   return formatHelpText(
     {
-      description: 'Create a new Remix project in the target directory.',
+      description: 'Create a new Remix project in the target directory (default: my-remix-app).',
       examples: [
+        'remix new',
         'remix new ./my-remix-app',
         'remix new ./my-remix-app --app-name "My Remix App"',
         'remix new ./my-remix-app --force',
       ],
-      usage: ['remix new <target-dir> [--app-name <name>] [--force]'],
+      usage: ['remix new [target-dir] [--app-name <name>] [--force]'],
     },
     target,
   )
@@ -86,16 +87,11 @@ function parseNewCommandArgs(argv: string[]): BootstrapProjectOptions {
     },
     { maxPositionals: 1 },
   )
-  let targetDir = parsed.positionals[0] ?? null
-
-  if (targetDir == null) {
-    throw missingTargetDirectory()
-  }
 
   return {
     appName: parsed.options.appName ?? null,
     force: parsed.options.force,
-    targetDir,
+    targetDir: parsed.positionals[0] ?? 'my-remix-app',
   }
 }
 
