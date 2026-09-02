@@ -6,6 +6,7 @@ tools:
   edit: false
   github:
     mode: local
+    min-integrity: none
     toolsets: [repos, issues, pull_requests]
 network:
   allowed: [defaults, github]
