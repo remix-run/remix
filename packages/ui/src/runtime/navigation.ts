@@ -2,15 +2,6 @@ import { getTopFrame, getNamedFrame } from './run.ts'
 import { reloadFrameForNavigation } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
 
-interface NavigationPrecommitControllerLike {
-  redirect(url: string, options: { history: 'replace' }): void
-}
-
-interface NavigationInterceptOptionsWithPrecommit extends NavigationInterceptOptions {
-  handler(): Promise<void>
-  precommitHandler(controller: NavigationPrecommitControllerLike): void
-}
-
 type NavigationState = {
   target: string | undefined
   src: string
@@ -41,30 +32,6 @@ interface FrameRedirectNavigationInfo {
 
 const formSubmissionNavigationInfoType = 'frame-form-submission'
 const frameRedirectNavigationInfoType = 'frame-redirect'
-
-function resyncWebKitScrollAfterNavigation(event: NavigateEvent, resetScroll: boolean): void {
-  let userAgent = navigator.userAgent
-  if (!userAgent.includes('AppleWebKit')) return
-  if (userAgent.includes('Chrome') || userAgent.includes('Chromium')) return
-  if (!resetScroll || (event.navigationType !== 'push' && event.navigationType !== 'replace'))
-    return
-  if (new URL(event.destination.url).hash) return
-
-  window.navigation.addEventListener(
-    'navigatesuccess',
-    () => {
-      // WebKit can reset its internal scroll position without synchronizing the visual viewport.
-      // https://bugs.webkit.org/show_bug.cgi?id=309542
-      if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 0) return
-      window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
-      requestAnimationFrame(() => {
-        if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 1) return
-        window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
-      })
-    },
-    { once: true, signal: event.signal },
-  )
-}
 
 /**
  * Options for client-side frame-aware navigation.
@@ -137,6 +104,32 @@ export function startNavigationListenerImpl(
   }
   signal.addEventListener('abort', releasePendingScrollRestoration, { once: true })
 
+  // Every interception uses the same scroll option and browser workarounds.
+  function interceptNavigation(
+    event: NavigateEvent,
+    resetScroll: boolean,
+    options: Pick<NavigationInterceptOptions, 'precommitHandler'> & {
+      handler: NonNullable<NavigationInterceptOptions['handler']>
+    },
+  ): void {
+    event.intercept({
+      ...options,
+      scroll: resetScroll ? undefined : 'manual',
+      handler() {
+        if (event.signal.aborted) return
+        releaseScrollRestoration = holdScrollRestorationUntilLoaded(event)
+
+        // The Navigation API assigns `navigation.transition` before it runs handlers.
+        let transition = navigation.transition
+        if (resetScroll && transition) {
+          preserveTraversalScrollRange(event, transition)
+          resyncWebKitScrollAfterNavigation(event, transition)
+        }
+        return options.handler()
+      },
+    })
+  }
+
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, resetScroll: true, $rmx: true },
   })
@@ -148,21 +141,17 @@ export function startNavigationListenerImpl(
       releasePendingScrollRestoration()
 
       // Safari seems to incorrectly set canIntercept to true for sub-domain navigations, so
-      // we do a host check ourselves/. The spec is clear that a different host should prevent
+      // we do a host check ourselves. The spec is clear that a different host should prevent
       // interception so this is likely a bug in Safari:
       // https://html.spec.whatwg.org/multipage/nav-history-apis.html#can-have-its-url-rewritten
       if (!event.canIntercept || isCrossOriginDestination(event)) return
 
       if (isFrameRedirectNavigationInfo(event.info)) {
         let { resetScroll } = event.info
-        resyncWebKitScrollAfterNavigation(event, resetScroll)
-        event.intercept({
+        interceptNavigation(event, resetScroll, {
           async handler() {
-            if (event.signal.aborted) return
-            releaseScrollRestoration = holdScrollRestorationUntilLoaded(event)
             if (resetScroll) scrollToDestination(event)
           },
-          scroll: resetScroll ? undefined : 'manual',
         })
         return
       }
@@ -176,7 +165,6 @@ export function startNavigationListenerImpl(
         : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
-      resyncWebKitScrollAfterNavigation(event, state.resetScroll)
 
       let topFrame = options.getTopFrame()
       let namedFrame = state.target ? options.getNamedFrame(state.target) : undefined
@@ -184,11 +172,6 @@ export function startNavigationListenerImpl(
 
       let handler = async () => {
         if (event.signal.aborted) return
-        releaseScrollRestoration = holdScrollRestorationUntilLoaded(event)
-
-        if (event.navigationType === 'traverse' && state.resetScroll) {
-          preserveStartingDocumentScrollState(navigation, event)
-        }
 
         let submission = await runtimeNavigation.getSubmission?.()
         if (event.signal.aborted) return
@@ -224,11 +207,6 @@ export function startNavigationListenerImpl(
         }
       }
 
-      let interceptOptions = {
-        handler,
-        scroll: state.resetScroll === false ? 'manual' : undefined,
-      } satisfies NavigationInterceptOptions
-
       if (runtimeNavigation.getSubmission) {
         // <form method="post"> navigations
         if (runtimeNavigation.replaceHistory && replayedSubmission == null) {
@@ -237,8 +215,8 @@ export function startNavigationListenerImpl(
 
           // Modern browsers allow you to update the in-flight navigation entry before it's committed
           if (supportsPrecommit) {
-            event.intercept({
-              ...interceptOptions,
+            interceptNavigation(event, state.resetScroll, {
+              handler,
               precommitHandler(controller) {
                 controller.redirect(event.destination.url, { history: 'replace' })
               },
@@ -262,14 +240,14 @@ export function startNavigationListenerImpl(
           }
         }
 
-        event.intercept(interceptOptions)
+        interceptNavigation(event, state.resetScroll, { handler })
       } else {
         // <a>/<form method="get"> navigations
         if (runtimeNavigation.replaceHistory && event.cancelable) {
           event.preventDefault()
           navigation.navigate(event.destination.url, { history: 'replace', state })
         } else {
-          event.intercept(interceptOptions)
+          interceptNavigation(event, state.resetScroll, { handler })
         }
       }
     },
@@ -310,22 +288,12 @@ function isCrossOriginDestination(event: NavigateEvent): boolean {
   return destination.origin !== window.location.origin
 }
 
-// Scrolls to the destination the way the browser would after the transition, but as soon as the
-// destination DOM is committed rather than after every client entry and frame has settled.
-function scrollToDestination(event: NavigateEvent): void {
-  event.scroll()
-
-  // Chromium < 149 ignores the spec'd scroll-to-top for push and replace destinations without a
-  // fragment, both here and in its after-transition default: https://crbug.com/479874917
-  if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
-  if (new URL(event.destination.url).hash) return
-  if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0)
-}
-
 // Chromium keeps retrying scroll restoration for a reloaded or history-loaded document until it
-// finishes loading. A push or replace that commits before `load` can inherit that pending
-// restoration and jump to the previous page's saved position. Keep the new entry opted out until
-// Chromium's final retry has run.
+// finishes loading, with a final retry right after the `load` event, and same-document navigations
+// inherit that pending restoration. A push or replace that commits before `load` is therefore
+// scrolled to the previous page's saved offset once loading completes. Opt the committed entry out
+// of restoration until that final retry has run, then hand restoration back for later traversals.
+// See `FrameLoader::DidFinishNavigation` and `DocumentLoader::SetHistoryItemStateForCommit`.
 function holdScrollRestorationUntilLoaded(event: NavigateEvent): (() => void) | undefined {
   if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
   if (document.readyState === 'complete' || history.scrollRestoration !== 'auto') return
@@ -345,7 +313,24 @@ function holdScrollRestorationUntilLoaded(event: NavigateEvent): (() => void) | 
   return release
 }
 
-function preserveStartingDocumentScrollState(navigation: Navigation, event: NavigateEvent): void {
+// Scrolls to the destination the way the browser would after the transition, but as soon as the
+// destination DOM is committed rather than after every client entry and frame has settled.
+function scrollToDestination(event: NavigateEvent): void {
+  event.scroll()
+
+  // Chromium < 149 ignores the spec'd scroll-to-top for push and replace destinations without a
+  // fragment, both here and in its after-transition default: https://crbug.com/479874917
+  if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
+  if (new URL(event.destination.url).hash) return
+  if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0)
+}
+
+function preserveTraversalScrollRange(
+  event: NavigateEvent,
+  transition: NavigationTransition,
+): void {
+  if (event.navigationType !== 'traverse') return
+
   // Full-document reconciliation can temporarily shrink the page or trigger scroll anchoring
   // before the Navigation API performs its deferred restoration. Preserve the starting scroll
   // range and position until the navigation finishes so native restoration remains authoritative.
@@ -370,21 +355,38 @@ function preserveStartingDocumentScrollState(navigation: Navigation, event: Navi
   `)
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet]
 
-  let cleanedUp = false
-  let cleanup = () => {
-    if (cleanedUp) return
-    cleanedUp = true
-    event.signal.removeEventListener('abort', cleanup)
-    navigation.removeEventListener('navigatesuccess', cleanup)
-    navigation.removeEventListener('navigateerror', cleanup)
+  // `finished` settles on success, error, and abort.
+  let remove = () => {
     document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
       (current) => current !== stylesheet,
     )
   }
+  void transition.finished.then(remove, remove)
+}
 
-  event.signal.addEventListener('abort', cleanup, { once: true })
-  navigation.addEventListener('navigatesuccess', cleanup, { once: true })
-  navigation.addEventListener('navigateerror', cleanup, { once: true })
+function resyncWebKitScrollAfterNavigation(
+  event: NavigateEvent,
+  transition: NavigationTransition,
+): void {
+  let userAgent = navigator.userAgent
+  if (!userAgent.includes('AppleWebKit')) return
+  if (userAgent.includes('Chrome') || userAgent.includes('Chromium')) return
+  if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
+  if (new URL(event.destination.url).hash) return
+
+  void transition.finished.then(
+    () => {
+      // WebKit can reset its internal scroll position without synchronizing the visual viewport.
+      // https://bugs.webkit.org/show_bug.cgi?id=309542
+      if (window.scrollX !== 0 || window.scrollY !== 0) return
+      window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
+      requestAnimationFrame(() => {
+        if (window.scrollX !== 0 || window.scrollY !== 1) return
+        window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
+      })
+    },
+    () => {},
+  )
 }
 
 function getRuntimeNavigation(
