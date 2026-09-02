@@ -68,12 +68,6 @@ function extractFixtureRecord(lcov: string): string {
   return fixture.trim()
 }
 
-function assertAccurateFixtureCoverage(fixture: string): void {
-  assert.match(fixture, /^FNDA:0,uncalledFunction$/m)
-  assert.match(fixture, /^DA:23,0$/m)
-  assert.match(fixture, /^BRDA:\d+,\d+,\d+,0$/m)
-}
-
 describe('coverage parity', () => {
   // The bun test job only runs `--type server`, so it can't spawn browser/e2e
   // sub-runs (Playwright is Node-only). The Node test job covers parity.
@@ -100,7 +94,11 @@ describe('coverage parity', () => {
 
       assert.equal(browser, server, 'browser fixture coverage differs from server')
       assert.equal(e2e, server, 'e2e fixture coverage differs from server')
-      assertAccurateFixtureCoverage(server)
+
+      // Ensure the runners agree on uncovered code instead of the same inaccurate result.
+      assert.match(server, /^FNDA:0,uncalledFunction$/m)
+      assert.match(server, /^DA:23,0$/m)
+      assert.match(server, /^BRDA:\d+,\d+,\d+,0$/m)
     },
   )
 })
