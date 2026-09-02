@@ -68,28 +68,39 @@ function extractFixtureRecord(lcov: string): string {
   return fixture.trim()
 }
 
+function assertAccurateFixtureCoverage(fixture: string): void {
+  assert.match(fixture, /^FNDA:0,uncalledFunction$/m)
+  assert.match(fixture, /^DA:23,0$/m)
+  assert.match(fixture, /^BRDA:\d+,\d+,\d+,0$/m)
+}
+
 describe('coverage parity', () => {
   // The bun test job only runs `--type server`, so it can't spawn browser/e2e
   // sub-runs (Playwright is Node-only). The Node test job covers parity.
-  it('all three runners produce identical coverage for the fixture', { skip: IS_BUN }, async () => {
-    await fsp.rm(PARITY_DIR, { recursive: true, force: true })
+  it(
+    'all three runners produce identical, accurate coverage for the fixture',
+    { skip: IS_BUN },
+    async () => {
+      await fsp.rm(PARITY_DIR, { recursive: true, force: true })
 
-    let records = new Map(
-      await Promise.all(
-        RUNS.map(async (spec) => {
-          let dir = path.join(PARITY_DIR, spec.type)
-          await runWithCoverage(spec, dir)
-          let lcov = await fsp.readFile(path.join(dir, 'lcov.info'), 'utf-8')
-          return [spec.type, extractFixtureRecord(lcov)] as const
-        }),
-      ),
-    )
+      let records = new Map(
+        await Promise.all(
+          RUNS.map(async (spec) => {
+            let dir = path.join(PARITY_DIR, spec.type)
+            await runWithCoverage(spec, dir)
+            let lcov = await fsp.readFile(path.join(dir, 'lcov.info'), 'utf-8')
+            return [spec.type, extractFixtureRecord(lcov)] as const
+          }),
+        ),
+      )
 
-    let server = records.get('server')!
-    let browser = records.get('browser')!
-    let e2e = records.get('e2e')!
+      let server = records.get('server')!
+      let browser = records.get('browser')!
+      let e2e = records.get('e2e')!
 
-    assert.equal(browser, server, 'browser fixture coverage differs from server')
-    assert.equal(e2e, server, 'e2e fixture coverage differs from server')
-  })
+      assert.equal(browser, server, 'browser fixture coverage differs from server')
+      assert.equal(e2e, server, 'e2e fixture coverage differs from server')
+      assertAccurateFixtureCoverage(server)
+    },
+  )
 })
