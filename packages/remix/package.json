@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "3.0.0-beta.10",
+  "version": "3.0.0-rc.1",
   "description": "The Remix web framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -14,6 +14,7 @@
     "LICENSE",
     "README.md",
     "dist",
+    "schema",
     "src"
   ],
   "type": "module",
@@ -695,10 +696,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
     "clean": "git clean -fdX",
-    "postpack": "pnpm run sync-readmes -- --clean",
-    "prepack": "pnpm run sync-readmes",
+    "postpack": "pnpm run sync-package-files -- --clean",
+    "prepack": "pnpm run sync-package-files",
     "prepublishOnly": "pnpm run build",
-    "sync-readmes": "node ../../scripts/sync-remix-readmes.ts",
+    "sync-package-files": "node ../../scripts/sync-remix-package-files.ts",
     "test": "remix test",
     "typecheck": "tsc --noEmit"
   },

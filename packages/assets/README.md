@@ -60,7 +60,7 @@ server and Remix CLI use the same configuration:
 
 ```jsonc
 {
-  "$schema": "https://raw.githubusercontent.com/remix-run/remix/main/packages/cli/schema/remix.json",
+  "$schema": "./node_modules/remix/schema/remix.json",
   "assets": {
     "basePath": "/assets",
     "mounts": {
