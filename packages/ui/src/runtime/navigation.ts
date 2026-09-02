@@ -129,6 +129,13 @@ export function startNavigationListenerImpl(
   let navigation = window.navigation
   if (!navigation) return
   let resolveFormNavigation = createFormNavigationResolver(signal)
+  let releaseScrollRestoration: (() => void) | undefined
+  let releasePendingScrollRestoration = () => {
+    let release = releaseScrollRestoration
+    releaseScrollRestoration = undefined
+    release?.()
+  }
+  signal.addEventListener('abort', releasePendingScrollRestoration, { once: true })
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, resetScroll: true, $rmx: true },
@@ -137,6 +144,9 @@ export function startNavigationListenerImpl(
   navigation.addEventListener(
     'navigate',
     (event) => {
+      // Hand scroll restoration back to the entry we are leaving before the next one commits.
+      releasePendingScrollRestoration()
+
       // Safari seems to incorrectly set canIntercept to true for sub-domain navigations, so
       // we do a host check ourselves/. The spec is clear that a different host should prevent
       // interception so this is likely a bug in Safari:
@@ -148,6 +158,8 @@ export function startNavigationListenerImpl(
         resyncWebKitScrollAfterNavigation(event, resetScroll)
         event.intercept({
           async handler() {
+            if (event.signal.aborted) return
+            releaseScrollRestoration = holdScrollRestorationUntilLoaded(event)
             if (resetScroll) scrollToDestination(event)
           },
           scroll: resetScroll ? undefined : 'manual',
@@ -172,6 +184,7 @@ export function startNavigationListenerImpl(
 
       let handler = async () => {
         if (event.signal.aborted) return
+        releaseScrollRestoration = holdScrollRestorationUntilLoaded(event)
 
         if (event.navigationType === 'traverse' && state.resetScroll) {
           preserveStartingDocumentScrollState(navigation, event)
@@ -307,6 +320,29 @@ function scrollToDestination(event: NavigateEvent): void {
   if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
   if (new URL(event.destination.url).hash) return
   if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0)
+}
+
+// Chromium keeps retrying scroll restoration for a reloaded or history-loaded document until it
+// finishes loading. A push or replace that commits before `load` can inherit that pending
+// restoration and jump to the previous page's saved position. Keep the new entry opted out until
+// Chromium's final retry has run.
+function holdScrollRestorationUntilLoaded(event: NavigateEvent): (() => void) | undefined {
+  if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
+  if (document.readyState === 'complete' || history.scrollRestoration !== 'auto') return
+
+  history.scrollRestoration = 'manual'
+  let active = true
+  function release() {
+    if (!active) return
+    active = false
+    window.removeEventListener('load', onLoad)
+    history.scrollRestoration = 'auto'
+  }
+  function onLoad() {
+    requestAnimationFrame(release)
+  }
+  window.addEventListener('load', onLoad, { once: true })
+  return release
 }
 
 function preserveStartingDocumentScrollState(navigation: Navigation, event: NavigateEvent): void {

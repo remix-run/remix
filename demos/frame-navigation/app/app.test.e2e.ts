@@ -77,6 +77,55 @@ describe('frame navigation', () => {
     assert.equal(await page.evaluate(() => window.scrollY), 0)
   })
 
+  it('stays at the top when the reloaded document finishes loading after a navigation', async (t) => {
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
+    await page.setViewportSize({ width: 800, height: 300 })
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(routes.main.index.href())
+    await waitForNavigationRuntime(page)
+    let startingPosition = await scrollToBottom(page)
+    assert.ok(startingPosition > 0, `Expected a scrollable starting page, got ${startingPosition}`)
+
+    // Keep the reloaded document loading until after the navigation so the browser still has a
+    // pending scroll restoration for the reload when the new entry commits.
+    let { promise: imageReleased, resolve: releaseImage } = Promise.withResolvers<void>()
+    await page.route('**/slow-image', async (route) => {
+      await imageReleased
+      await route.fulfill({ status: 404 })
+    })
+    await page.addInitScript(() => {
+      addEventListener('DOMContentLoaded', () => {
+        let image = document.createElement('img')
+        image.src = '/slow-image'
+        document.body.append(image)
+      })
+    })
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await waitForNavigationRuntime(page)
+    assert.equal(await page.evaluate(() => document.readyState), 'interactive')
+
+    await page.getByRole('link', { name: 'Courses', exact: true }).click()
+    await page.locator('#courses-heading').waitFor()
+    await waitForNavigationSettled(page)
+    assert.equal(await page.evaluate(() => window.scrollY), 0)
+
+    let scrollEvents = page.evaluate(
+      () =>
+        new Promise<number>((resolve) => {
+          let count = 0
+          addEventListener('scroll', () => count++)
+          addEventListener('load', () =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve(count))),
+          )
+        }),
+    )
+    releaseImage()
+    assert.equal(await scrollEvents, 0)
+    assert.equal(await page.evaluate(() => window.scrollY), 0)
+    assert.equal(await page.evaluate(() => history.scrollRestoration), 'auto')
+  })
+
   it('resets scroll to the top after a frame redirect', async (t) => {
     let server = await createTestServer(router.fetch)
     let page = await t.serve(server)

@@ -79,7 +79,37 @@ function stubWindowScrollPosition(t: TestContext) {
   }
 }
 
-function startStubNavigationListener(t: TestContext): (event: Event) => void {
+function stubDocumentReadyState(t: TestContext, readyState: DocumentReadyState): void {
+  let descriptor = Object.getOwnPropertyDescriptor(document, 'readyState')
+  Object.defineProperty(document, 'readyState', { configurable: true, get: () => readyState })
+  t.after(() => {
+    if (descriptor) Object.defineProperty(document, 'readyState', descriptor)
+    else Reflect.deleteProperty(document, 'readyState')
+  })
+}
+
+function trackScrollRestoration(t: TestContext): void {
+  let initial = history.scrollRestoration
+  t.after(() => {
+    history.scrollRestoration = initial
+  })
+}
+
+function stubAnimationFrames(t: TestContext): () => void {
+  let callbacks: FrameRequestCallback[] = []
+  t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+    callbacks.push(callback)
+    return callbacks.length
+  })
+  return () => {
+    let pending = callbacks.splice(0)
+    for (let callback of pending) callback(performance.now())
+  }
+}
+
+type StubNavigationDispatcher = ((event: Event) => void) & { abort(): void }
+
+function startStubNavigationListener(t: TestContext): StubNavigationDispatcher {
   let stubNavigation = Object.assign(new EventTarget(), {
     updateCurrentEntry: mock.fn(),
   })
@@ -89,9 +119,11 @@ function startStubNavigationListener(t: TestContext): (event: Event) => void {
   startNavigationListenerImpl(controller.signal, stubFrames)
   t.after(() => controller.abort())
 
-  return (event) => {
-    stubNavigation.dispatchEvent(event)
-  }
+  return Object.assign((event: Event) => stubNavigation.dispatchEvent(event), {
+    abort() {
+      controller.abort()
+    },
+  })
 }
 
 describe('navigate', () => {
@@ -257,6 +289,113 @@ describe('navigate', () => {
     expect(scrollTo).not.toHaveBeenCalled()
   })
 
+  it('holds scroll restoration until the starting document finishes loading', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    stubDocumentReadyState(t, 'interactive')
+    trackScrollRestoration(t)
+    let runAnimationFrames = stubAnimationFrames(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+    expect(history.scrollRestoration).toBe('auto')
+
+    await intercept.mock.calls[0]?.arguments[0]?.handler?.()
+    expect(history.scrollRestoration).toBe('manual')
+
+    window.dispatchEvent(new Event('load'))
+    expect(history.scrollRestoration).toBe('manual')
+    runAnimationFrames()
+    expect(history.scrollRestoration).toBe('auto')
+  })
+
+  it('leaves scroll restoration alone once the document has loaded', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    trackScrollRestoration(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let intercept = mock.fn()
+
+    expect(document.readyState).toBe('complete')
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+    await intercept.mock.calls[0]?.arguments[0]?.handler?.()
+
+    expect(history.scrollRestoration).toBe('auto')
+  })
+
+  it('does not override manual scroll restoration chosen by the app', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    stubDocumentReadyState(t, 'interactive')
+    trackScrollRestoration(t)
+    history.scrollRestoration = 'manual'
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+    await intercept.mock.calls[0]?.arguments[0]?.handler?.()
+
+    expect(history.scrollRestoration).toBe('manual')
+  })
+
+  it('hands scroll restoration back before a non-interceptable navigation', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    stubDocumentReadyState(t, 'interactive')
+    trackScrollRestoration(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+    await intercept.mock.calls[0]?.arguments[0]?.handler?.()
+    expect(history.scrollRestoration).toBe('manual')
+
+    dispatchNavigation(Object.assign(new Event('navigate'), { canIntercept: false }))
+    expect(history.scrollRestoration).toBe('auto')
+  })
+
+  it('hands scroll restoration back when the listener stops', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    stubDocumentReadyState(t, 'interactive')
+    trackScrollRestoration(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login', window.location.origin).href,
+      }),
+    )
+    await intercept.mock.calls[0]?.arguments[0]?.handler?.()
+    expect(history.scrollRestoration).toBe('manual')
+
+    dispatchNavigation.abort()
+    expect(history.scrollRestoration).toBe('auto')
+  })
+
   it('resynchronizes WebKit scroll state after a navigation scroll reset', (t) => {
     stubNavigatorUserAgent(
       t,
@@ -369,8 +508,10 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
-  it('opts out of browser scroll restoration on traverse navigations', (t) => {
+  it('opts out of browser scroll restoration on traverse navigations', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
+    stubDocumentReadyState(t, 'interactive')
+    trackScrollRestoration(t)
     let intercept = mock.fn()
     let event = Object.assign(new Event('navigate'), {
       canIntercept: true,
@@ -390,7 +531,10 @@ describe('navigate', () => {
 
     dispatchNavigation(event)
 
-    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    let interceptOptions = intercept.mock.calls[0]?.arguments[0]
+    expect(interceptOptions?.scroll).toBe('manual')
+    await interceptOptions?.handler?.()
+    expect(history.scrollRestoration).toBe('auto')
   })
 
   it('preserves manual scrolling across frame redirects', async (t) => {
@@ -1287,7 +1431,7 @@ function createAnchorNavigateEvent(
       key: 'next',
       getState: () => undefined,
     },
-    scroll: options.scroll,
+    scroll: options.scroll ?? (() => {}),
     intercept: options.intercept,
   })
 }
