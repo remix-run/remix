@@ -1,0 +1,1 @@
+Scroll to the top after push and replace navigations in Chromium versions that ignore the Navigation API scroll reset for destinations without a fragment (Chrome 148 and earlier, see [crbug 479874917](https://crbug.com/479874917)). Navigating from a scrolled position no longer leaves the page scrolled.

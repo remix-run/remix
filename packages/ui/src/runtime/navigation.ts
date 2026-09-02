@@ -144,10 +144,13 @@ export function startNavigationListenerImpl(
       if (!event.canIntercept || isCrossOriginDestination(event)) return
 
       if (isFrameRedirectNavigationInfo(event.info)) {
-        resyncWebKitScrollAfterNavigation(event, event.info.resetScroll)
+        let { resetScroll } = event.info
+        resyncWebKitScrollAfterNavigation(event, resetScroll)
         event.intercept({
-          async handler() {},
-          scroll: event.info.resetScroll === false ? 'manual' : undefined,
+          async handler() {
+            if (resetScroll) scrollToDestination(event)
+          },
+          scroll: resetScroll ? undefined : 'manual',
         })
         return
       }
@@ -189,7 +192,7 @@ export function startNavigationListenerImpl(
         })
         await reload.committed
         if (event.signal.aborted) return
-        if (state.resetScroll) event.scroll()
+        if (state.resetScroll) scrollToDestination(event)
 
         let { redirectedTo } = await reload.finished
 
@@ -292,6 +295,18 @@ function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNa
 function isCrossOriginDestination(event: NavigateEvent): boolean {
   let destination = new URL(event.destination.url)
   return destination.origin !== window.location.origin
+}
+
+// Scrolls to the destination the way the browser would after the transition, but as soon as the
+// destination DOM is committed rather than after every client entry and frame has settled.
+function scrollToDestination(event: NavigateEvent): void {
+  event.scroll()
+
+  // Chromium < 149 ignores the spec'd scroll-to-top for push and replace destinations without a
+  // fragment, both here and in its after-transition default: https://crbug.com/479874917
+  if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
+  if (new URL(event.destination.url).hash) return
+  if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0)
 }
 
 function preserveStartingDocumentScrollState(navigation: Navigation, event: NavigateEvent): void {

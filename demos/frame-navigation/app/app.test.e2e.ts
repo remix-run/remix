@@ -60,6 +60,41 @@ describe('frame navigation', () => {
     await assertDocumentPreserved(page, documentMarker)
   })
 
+  it('resets scroll to the top when navigating from a scrolled position', async (t) => {
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
+    await page.setViewportSize({ width: 800, height: 300 })
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(routes.main.index.href())
+    await waitForNavigationRuntime(page)
+    let startingPosition = await scrollToBottom(page)
+    assert.ok(startingPosition > 0, `Expected a scrollable starting page, got ${startingPosition}`)
+
+    await page.getByRole('link', { name: 'Courses', exact: true }).click()
+    await page.locator('#courses-heading').waitFor()
+    await waitForNavigationSettled(page)
+
+    assert.equal(await page.evaluate(() => window.scrollY), 0)
+  })
+
+  it('resets scroll to the top after a frame redirect', async (t) => {
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
+    await page.setViewportSize({ width: 800, height: 300 })
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(routes.main.index.href())
+    await waitForNavigationRuntime(page)
+    let startingPosition = await scrollToBottom(page)
+    assert.ok(startingPosition > 0, `Expected a scrollable starting page, got ${startingPosition}`)
+
+    await page.getByRole('link', { name: 'Settings', exact: true }).click()
+    await page.waitForURL((url) => url.pathname === routes.settings.overview.href())
+    await page.getByRole('heading', { name: 'Settings overview' }).waitFor()
+    await waitForNavigationSettled(page)
+
+    assert.equal(await page.evaluate(() => window.scrollY), 0)
+  })
+
   it('replaces history when filtering courses', async (t) => {
     let server = await createTestServer(router.fetch)
     let page = await t.serve(server)
@@ -173,6 +208,17 @@ async function waitForNavigationRuntime(page: Page): Promise<void> {
   await page.waitForFunction(() => {
     let state = window.navigation.currentEntry?.getState()
     return typeof state === 'object' && state != null && '$rmx' in state
+  })
+}
+
+async function waitForNavigationSettled(page: Page): Promise<void> {
+  await page.waitForFunction(() => window.navigation.transition === null)
+}
+
+async function scrollToBottom(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    window.scrollTo(0, document.documentElement.scrollHeight)
+    return window.scrollY
   })
 }
 

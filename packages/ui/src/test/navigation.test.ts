@@ -188,16 +188,17 @@ describe('navigate', () => {
   it('uses browser scrolling after the frame content commits', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+    let setScrollPosition = stubWindowScrollPosition(t)
+    setScrollPosition(0, 200)
     let anchor = document.createElement('a')
     anchor.href = '/login'
-    let scroll = mock.fn()
+    let scroll = mock.fn(() => setScrollPosition(0, 0))
     let intercept = mock.fn()
 
     dispatchNavigation(
       createAnchorNavigateEvent(anchor, {
         intercept,
         destinationUrl: new URL('/login', window.location.origin).href,
-        info: { resetScroll: true },
         scroll,
       }),
     )
@@ -207,6 +208,52 @@ describe('navigate', () => {
     await interceptOptions?.handler?.()
     expect(scroll).toHaveBeenCalledTimes(1)
     dispatchNavigation(new Event('navigatesuccess'))
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('scrolls to the top when the browser skips the navigation scroll reset', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+    let setScrollPosition = stubWindowScrollPosition(t)
+    setScrollPosition(0, 200)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let scroll = mock.fn()
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login', window.location.origin).href,
+        scroll,
+      }),
+    )
+
+    await intercept.mock.calls[0]?.arguments[0]?.handler?.()
+    expect(scroll).toHaveBeenCalledTimes(1)
+    expect(scrollTo).toHaveBeenCalledWith(0, 0)
+  })
+
+  it('leaves fragment destination scrolling to the browser', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+    let setScrollPosition = stubWindowScrollPosition(t)
+    setScrollPosition(0, 200)
+    let anchor = document.createElement('a')
+    anchor.href = '/login#details'
+    let scroll = mock.fn()
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: new URL('/login#details', window.location.origin).href,
+        scroll,
+      }),
+    )
+
+    await intercept.mock.calls[0]?.arguments[0]?.handler?.()
+    expect(scroll).toHaveBeenCalledTimes(1)
     expect(scrollTo).not.toHaveBeenCalled()
   })
 
@@ -346,21 +393,50 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
-  it('preserves manual scrolling across frame redirects', (t) => {
+  it('preserves manual scrolling across frame redirects', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
+    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+    let scroll = mock.fn()
     let intercept = mock.fn()
-    let event = Object.assign(new Event('navigate'), {
-      canIntercept: true,
-      destination: {
-        url: new URL('/redirected', window.location.origin).href,
-      },
-      info: { type: 'frame-redirect', resetScroll: false },
-      intercept,
-    })
 
-    dispatchNavigation(event)
+    dispatchNavigation(
+      createFrameRedirectNavigateEvent({
+        intercept,
+        destinationUrl: new URL('/redirected', window.location.origin).href,
+        resetScroll: false,
+        scroll,
+      }),
+    )
 
-    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    let interceptOptions = intercept.mock.calls[0]?.arguments[0]
+    expect(interceptOptions?.scroll).toBe('manual')
+    await interceptOptions?.handler?.()
+    expect(scroll).not.toHaveBeenCalled()
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('resets scroll after a frame redirect', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+    let setScrollPosition = stubWindowScrollPosition(t)
+    setScrollPosition(0, 200)
+    let scroll = mock.fn()
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createFrameRedirectNavigateEvent({
+        intercept,
+        destinationUrl: new URL('/redirected', window.location.origin).href,
+        resetScroll: true,
+        scroll,
+      }),
+    )
+
+    let interceptOptions = intercept.mock.calls[0]?.arguments[0]
+    expect(interceptOptions?.scroll).toBe(undefined)
+    await interceptOptions?.handler?.()
+    expect(scroll).toHaveBeenCalledTimes(1)
+    expect(scrollTo).toHaveBeenCalledWith(0, 0)
   })
 
   it('leaves traversal restoration to the browser after frame reconciliation', async (t) => {
@@ -401,6 +477,9 @@ describe('navigate', () => {
       },
     })
 
+    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+    let setScrollPosition = stubWindowScrollPosition(t)
+    setScrollPosition(0, 200)
     let scroll = mock.fn()
     let intercept = mock.fn()
     let event = Object.assign(new Event('navigate'), {
@@ -458,6 +537,7 @@ describe('navigate', () => {
 
       expect(handlerSettled).toBe(false)
       expect(scroll).toHaveBeenCalledTimes(1)
+      expect(scrollTo).not.toHaveBeenCalled()
 
       resolveFinished({ signal: event.signal })
       await handler
@@ -1208,6 +1288,23 @@ function createAnchorNavigateEvent(
       getState: () => undefined,
     },
     scroll: options.scroll,
+    intercept: options.intercept,
+  })
+}
+
+function createFrameRedirectNavigateEvent(options: {
+  intercept: (options?: NavigationInterceptOptions) => void
+  destinationUrl: string
+  resetScroll: boolean
+  scroll?: () => void
+}): Event {
+  return Object.assign(new Event('navigate'), {
+    canIntercept: true,
+    navigationType: 'replace',
+    info: { type: 'frame-redirect', resetScroll: options.resetScroll },
+    signal: new AbortController().signal,
+    destination: { url: options.destinationUrl },
+    scroll: options.scroll ?? (() => {}),
     intercept: options.intercept,
   })
 }
