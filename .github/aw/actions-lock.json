@@ -4,11 +4,6 @@
       "repo": "github/gh-aw-actions/setup",
       "version": "v0.87.10",
       "sha": "bc8c008a419c5b7a29df6f5641edd35fd1c6ea85"
-    },
-    "pnpm/action-setup@v4": {
-      "repo": "pnpm/action-setup",
-      "version": "v4",
-      "sha": "b906affcce14559ad1aafd4ab0e942779e9f58b1"
     }
   }
 }
