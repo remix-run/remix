@@ -18,7 +18,9 @@
     "!src/**/*.demo.ts",
     "!src/**/*.demo.tsx",
     "!src/**/*.test.ts",
-    "!src/**/*.test.tsx"
+    "!src/**/*.test.tsx",
+    "!src/**/*.test.e2e.ts",
+    "!src/**/*.test.e2e.tsx"
   ],
   "type": "module",
   "sideEffects": false,
@@ -240,9 +242,11 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:^",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "esbuild": "^0.27.1",
     "playwright": "catalog:",
     "typescript": "^5.9.3"
   },

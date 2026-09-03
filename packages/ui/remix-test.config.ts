@@ -11,9 +11,9 @@ export default {
       }
     : false,
   glob: {
-    test: '**/*.test.{ts,tsx}',
-    // Same glob - all test files are browser test files
+    test: ['**/*.test.{ts,tsx}', '**/*.test.e2e.{ts,tsx}'],
     browser: '**/*.test.{ts,tsx}',
+    e2e: '**/*.test.e2e.{ts,tsx}',
   },
   playwrightConfig: {
     projects: [

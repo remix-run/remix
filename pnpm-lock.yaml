@@ -1837,6 +1837,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../node-fetch-server
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
@@ -1846,6 +1849,9 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.7
       playwright:
         specifier: 'catalog:'
         version: 1.60.0
