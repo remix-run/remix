@@ -61,14 +61,14 @@ steps:
 safe-outputs:
   footer: false
   add-comment:
-    github-token: ${{ secrets.GH_REMIX_PAT }}
+    github-token: ${{ secrets.GH_REMIX_PAT_AW }}
     max: 1
     target: triggering
     issues: true
     pull-requests: false
     discussions: true
   create-pull-request:
-    github-token: ${{ secrets.GH_REMIX_PAT }}
+    github-token: ${{ secrets.GH_REMIX_PAT_AW }}
     branch-prefix: '${{ github.actor }}/'
     draft: true
     base-branch: main

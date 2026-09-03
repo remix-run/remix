@@ -80,7 +80,7 @@ safe-outputs:
             EXPECTED_REPOSITORY: remix-run/remix
             EXPECTED_BOT_MENTION: '@remix-run-bot'
           with:
-            github-token: ${{ secrets.GH_REMIX_PAT }}
+            github-token: ${{ secrets.GH_REMIX_PAT_AW }}
             script: |
               const crypto = require('crypto')
               const fs = require('fs')

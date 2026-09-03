@@ -78,18 +78,18 @@ safe-outputs:
   footer: false
   max-patch-files: 20
   add-comment:
-    github-token: ${{ secrets.GH_REMIX_PAT }}
+    github-token: ${{ secrets.GH_REMIX_PAT_AW }}
     max: 1
     target: triggering
     issues: false
     pull-requests: true
     discussions: false
   push-to-pull-request-branch:
-    github-token: ${{ secrets.GH_REMIX_PAT }}
+    github-token: ${{ secrets.GH_REMIX_PAT_AW }}
     target: triggering
     head-repo: ${{ env.ITERATE_PUSH_HEAD_REPOSITORY }}
     allowed-repos: [remix-run/remix, remix-run-bot/remix]
-    head-github-token: ${{ secrets.GH_REMIX_PAT }}
+    head-github-token: ${{ secrets.GH_REMIX_PAT_AW }}
     fallback-as-pull-request: false
     signed-commits: false
     check-branch-protection: false
@@ -105,11 +105,11 @@ safe-outputs:
       exclude:
         - README.md
   create-pull-request:
-    github-token: ${{ secrets.GH_REMIX_PAT }}
+    github-token: ${{ secrets.GH_REMIX_PAT_AW }}
     target-repo: remix-run/remix
     head-repo: remix-run-bot/remix
     allowed-repos: [remix-run/remix, remix-run-bot/remix]
-    head-github-token: ${{ secrets.GH_REMIX_PAT }}
+    head-github-token: ${{ secrets.GH_REMIX_PAT_AW }}
     branch-prefix: remix-run-bot/
     draft: true
     base-branch: main
@@ -151,7 +151,7 @@ safe-outputs:
             EXPECTED_HEAD_REPOSITORY: remix-run-bot/remix
             CREATED_PR_NUMBER: ${{ needs.safe_outputs.outputs.created_pr_number }}
           with:
-            github-token: ${{ secrets.GH_REMIX_PAT }}
+            github-token: ${{ secrets.GH_REMIX_PAT_AW }}
             script: |
               const fs = require('fs')
 
@@ -387,7 +387,7 @@ Use this path only when the head repository is neither `remix-run/remix` nor
    replacement.
 7. Do not push the branch directly. Call `create_pull_request` exactly once;
    its safe-output job pushes the committed local branch to
-   `remix-run-bot/remix` using `GH_REMIX_PAT` and opens a draft against
+   `remix-run-bot/remix` using `GH_REMIX_PAT_AW` and opens a draft against
    `remix-run/remix:main`. The title must describe the change without automation
    attribution. The body must summarize the original change and iteration, list
    validation as deferred to pull request CI, link the original pull request,

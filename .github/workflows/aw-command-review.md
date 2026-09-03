@@ -49,7 +49,7 @@ network:
   allowed: [defaults, github]
 safe-outputs:
   add-comment:
-    github-token: ${{ secrets.GH_REMIX_PAT }}
+    github-token: ${{ secrets.GH_REMIX_PAT_AW }}
     max: 1
     target: triggering
     issues: false
