@@ -37,6 +37,6 @@ For motion content, `pauseAnimationsWhenInactive` adds a zero-margin observer. `
 - [`app/middleware/demo-latency.ts`](app/middleware/demo-latency.ts) reads the latency cookie, exposes its state through typed request context, and applies the delay across the middleware stack.
 - [`app/actions/frames/controller.tsx`](app/actions/frames/controller.tsx) shows the three response strategies behind one typed route map. Plain HTML routes use `openLazyFile()` and `createFileResponse()` to stream files from [`app/actions/frames/html`](app/actions/frames/html). [`edition-orbit.html`](app/actions/frames/html/edition-orbit.html) models a motion-pipeline artifact with scoped inline CSS, prefixed keyframes, and a reduced-motion fallback.
 - [`app/actions/frames/public/frame-playground.tsx`](app/actions/frames/public/frame-playground.tsx) is loaded only when an interactive frame arrives. Its local count survives a containing-frame reload.
-- [`app/app.test.e2e.ts`](app/app.test.e2e.ts) verifies eager SSR versus lazy browser delivery, root-level theming without refetching, viewport-driven motion pausing, one-request retention, and hydration of client components inserted by a Frame.
+- [`app/app.test.e2e.ts`](app/app.test.e2e.ts) verifies lazy browser delivery, viewport-driven motion pausing, one-request retention, and theme changes without refetching.
 
 Run `pnpm test` and `pnpm typecheck` to validate the demo.
