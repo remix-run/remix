@@ -711,10 +711,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   function startReloadTransition(options?: FrameReloadOptions): FrameReloadTransition {
     let controller = startReload(options?.signal)
     let committed = Promise.withResolvers<void>()
-    let commitStarted = false
     let finished = resolveAndRenderReload(controller, options, (ready) => {
-      if (commitStarted) return
-      commitStarted = true
       void ready.then(committed.resolve, committed.reject)
     })
 

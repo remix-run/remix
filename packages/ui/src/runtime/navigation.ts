@@ -341,11 +341,11 @@ function preserveTraversalScrollRange(
   // after the transition. The intended user-scroll behavior is tested here:
   // https://github.com/web-platform-tests/wpt/blob/master/navigation-api/scroll-behavior/after-transition-skips-restore-when-scrolled.html
 
-  let { scrollHeight, clientHeight } = document.documentElement
+  let { scrollHeight } = document.documentElement
   let stylesheet = new CSSStyleSheet()
   stylesheet.replaceSync(`
     html {
-      min-height: ${scrollHeight + clientHeight}px !important;
+      min-height: ${scrollHeight}px !important;
       overflow-anchor: none !important;
     }
 
