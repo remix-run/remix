@@ -1,4 +1,4 @@
-import { css, addEventListeners, createMixin, on, ref, type Handle } from 'remix/ui'
+import { css, createMixin, on, ref, type Handle } from 'remix/ui'
 import { Drummer } from './drummer.ts'
 import { tempoEvents } from './tempo-interaction.tsx'
 import {
@@ -32,17 +32,21 @@ export function App(handle: Handle<{}, Drummer>) {
   handle.context.set(drummer)
 
   handle.queueTask(() => {
-    document.addEventListener('keydown', (event) => {
-      if (event.key === ' ') {
-        drummer.toggle()
-      }
-      if (event.key === 'ArrowUp') {
-        drummer.setTempo(drummer.bpm + 1)
-      }
-      if (event.key === 'ArrowDown') {
-        drummer.setTempo(drummer.bpm - 1)
-      }
-    })
+    document.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key === ' ') {
+          drummer.toggle()
+        }
+        if (event.key === 'ArrowUp') {
+          drummer.setTempo(drummer.bpm + 1)
+        }
+        if (event.key === 'ArrowDown') {
+          drummer.setTempo(drummer.bpm - 1)
+        }
+      },
+      { signal: handle.signal },
+    )
   })
 
   return () => (
@@ -66,11 +70,9 @@ export function Equalizer(handle: Handle) {
   let snare = createVoice()
   let hat = createVoice()
 
-  addEventListeners(drummer, handle.signal, {
-    kick: () => kick.trigger(1),
-    snare: () => snare.trigger(1),
-    hat: () => hat.trigger(1),
-  })
+  drummer.addEventListener('kick', () => kick.trigger(1), { signal: handle.signal })
+  drummer.addEventListener('snare', () => snare.trigger(1), { signal: handle.signal })
+  drummer.addEventListener('hat', () => hat.trigger(1), { signal: handle.signal })
 
   return () => {
     // get values from all the generators
@@ -104,11 +106,7 @@ function DrumControls(handle: Handle) {
   let stop: HTMLButtonElement
   let play: HTMLButtonElement
 
-  addEventListeners(drummer, handle.signal, {
-    change: () => {
-      handle.update()
-    },
-  })
+  drummer.addEventListener('change', () => handle.update(), { signal: handle.signal })
 
   return () => (
     <ControlGroup>

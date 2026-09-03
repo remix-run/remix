@@ -2,12 +2,522 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-rc.1
+
+### Pre-release Changes
+
+- BREAKING CHANGE: In `createAssetServer()` from `remix/assets`, replace the `fileMap` option with optional directory-based `mounts`. Mounts recursively preserve the path beneath each public and filesystem root, keeping module URLs aligned with the filesystem hierarchy used for package resolution.
+
+  When `mounts` is omitted, the asset server uses `{ app: 'app', npm: 'node_modules' }`.
+
+  To migrate an app whose `fileMap` is equivalent to the new defaults, remove the `fileMap` option entirely:
+
+  ```ts
+  // before
+  createAssetServer({
+    basePath: '/assets',
+    fileMap: {
+      '/app/*path': 'app/*path',
+      '/npm/*path': 'node_modules/*path',
+    },
+    // ...
+  })
+
+  // after
+  createAssetServer({
+    basePath: '/assets',
+    // ...
+  })
+  ```
+
+  To migrate custom `fileMap` rules that preserve directory hierarchy, remove the trailing wildcard from both sides and rename `fileMap` to `mounts`:
+
+  ```ts
+  // before
+  createAssetServer({
+    basePath: '/assets',
+    fileMap: {
+      '/source/*path': 'app/*path',
+      '/vendor/*path': 'node_modules/*path',
+    },
+    // ...
+  })
+
+  // after
+  createAssetServer({
+    basePath: '/assets',
+    mounts: {
+      source: 'app',
+      vendor: 'node_modules',
+    },
+    // ...
+  })
+  ```
+
+- BREAKING CHANGE: Remove the built-in Atmosphere auth provider and its DPoP-specific types from `remix/auth`. Use `OAuthTokens` in place of `OAuthStandardTokens`. Custom provider packages can use `createOAuthProvider()` and extend `OAuthTokens` with protocol-specific data. Applications using the Atmosphere provider must remove it or move their atproto authentication to a separate package.
+
+- BREAKING CHANGE: Remove `addEventListeners()` from `remix/ui`. Use native `target.addEventListener(type, listener, { signal })` instead. If a listener used the helper's second callback argument, create an `AbortController` and abort it when the listener runs again or its lifetime signal aborts.
+
+- BREAKING CHANGE: Remix UI framework-owned DOM attributes now consistently use the `data-rmx-*` namespace. Update navigation, DOM preservation, and reconciliation key attributes to their new `data-rmx-*` names.
+
+- BREAKING CHANGE: During server rendering through `remix/ui`, script elements with non-string children previously serialized those children as escaped HTML text. They now render empty and report an error. Pass a single string child to preserve script content without HTML entity escaping; script-tag sequences that could terminate the element remain escaped.
+
+- Add `remix db rollback` for reverting applied migrations with step, target, and dry-run bounds (see #11723).
+
+- Add shared asset configuration and inspection through `remix/cli` and `remix/assets`, including `loadConfig()`, `remix assets`, `remix assets inspect <url-or-file>`, `assetServer.getAssets()`, and `assetServer.getAssetDetails()` (see #11726).
+
+- Add the `runRemixDb()` rollback command through `remix/data-table/cli` (see #11723).
+
+- Add a `package.json` export:
+  - `remix/spa` to expose SPA render middleware and the client runtime from `@remix-run/spa`
+
+- Add the conventional Remix UI `render()` middleware to `remix/middleware/render`, including built-in frame and client-entry asset integration (see #11607).
+
+- Ship the `remix.json` JSON Schema at `remix/schema/remix.json` so projects can use version-matched editor validation without a network connection.
+
+- Move Remix 3 from beta to its first release candidate, `3.0.0-rc.1`.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.6.0`](https://github.com/remix-run/remix/releases/tag/assets@0.6.0)
+  - [`auth@0.3.0`](https://github.com/remix-run/remix/releases/tag/auth@0.3.0)
+  - [`cli@0.6.0`](https://github.com/remix-run/remix/releases/tag/cli@0.6.0)
+  - [`data-table@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.5.0)
+  - [`data-table-mysql@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.1)
+  - [`data-table-postgres@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.1)
+  - [`data-table-sqlite@0.6.1`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.1)
+  - [`render-middleware@0.2.0`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.2.0)
+  - [`spa@0.1.0`](https://github.com/remix-run/remix/releases/tag/spa@0.1.0)
+  - [`ui@0.8.0`](https://github.com/remix-run/remix/releases/tag/ui@0.8.0)
+
+## v3.0.0-beta.10
+
+### Pre-release Changes
+
+- BREAKING CHANGE: Beta.10 supersedes beta.6 through beta.9 and consolidates their changes into one supported prerelease. Legacy package-aligned `remix/*` aliases have been removed in favor of canonical entrypoints that group related APIs together. Update imports when moving from beta.5 to beta.10:
+
+  ```diff
+  - import { requireAuth } from 'remix/auth-middleware'
+  - import { createPostgresDatabase } from 'remix/data-table-postgres'
+  - import { createRouter } from 'remix/fetch-router'
+  + import { requireAuth } from 'remix/middleware/auth'
+  + import { createPostgresDatabase } from 'remix/data-table/postgres'
+  + import { createRouter } from 'remix/router'
+  ```
+
+  The same canonical structure applies to the other entrypoints: middleware lives under `remix/middleware/*`, database dialects under `remix/data-table/*`, storage adapters under `remix/file-storage/*` and `remix/session-storage/*`, and route definitions move from `remix/fetch-router/routes` to `remix/routes`.
+
+- BREAKING CHANGE: `createAssetServer()` from `remix/assets` now uses `allowFiles` and `denyFiles` instead of `allow` and `deny` for file path access rules:
+
+  ```diff
+   import { createAssetServer } from 'remix/assets'
+
+   export const assetServer = createAssetServer({
+  -  allow: ['app/routes.ts', 'app/**/public/**'],
+  -  deny: ['app/**/*.test.*'],
+  +  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  +  denyFiles: ['app/**/*.test.*'],
+   })
+  ```
+
+- BREAKING CHANGE: `remix/cookie` now treats custom `encode` and `decode` functions as the complete cookie value codec. Custom encoded values are signed and serialized as-is instead of being wrapped in Remix's default base64 encoding. The default codec keeps the existing base64-safe representation.
+
+- BREAKING CHANGE: Route patterns now use delimiter-bounded params. Params stop at raw `/` and `.`, but not `-`, so a pattern such as `/:year-:month` must become one inseparable param such as `/:date`, or place the captures in separate path segments. Ambiguous adjacent captures are now rejected, and matching work is bounded to prevent pathological patterns (see #11651).
+
+- BREAKING CHANGE: Href helpers from `remix/route-pattern/href` and `remix/routes` now take search parameters in a `searchParams` options property:
+
+  ```diff
+  - const href = userRoute.href({ id: '123' }, { tab: 'settings' })
+  + const href = userRoute.href(
+  +   { id: '123' },
+  +   { searchParams: { tab: 'settings' } },
+  + )
+  ```
+
+  The options object also accepts a `baseURL` for generating path-relative same-origin hrefs. Route matching accepts the same option for relative URL strings, and `searchParams` accepts both typed objects and `URLSearchParams`.
+
+- BREAKING CHANGE: `remix/middleware/session` now makes session cookies HTTP-only when `httpOnly` is omitted. Set `httpOnly: false` explicitly if client-side JavaScript must read the cookie. `Cookie.httpOnly` from `remix/cookie` now returns `boolean | undefined` so omitted and explicitly disabled settings can be distinguished.
+
+- BREAKING CHANGE: Run tests with `remix test` instead of the removed `remix-test` executable, and move settings from `remix-test.config.ts` or `.js` into the `test` property of `remix.json`:
+
+  ```diff
+  - remix-test --type server --concurrency 1
+  + remix test --type server --concurrency 1
+  ```
+
+  ```jsonc
+  {
+    "$schema": "./node_modules/remix/schema/remix.json",
+    "test": {
+      "type": ["server"],
+      "concurrency": 1,
+      "quiet": true,
+    },
+  }
+  ```
+
+  The programmatic `runRemixTest()` API from `remix/test/cli` now accepts typed runner options instead of raw command-line arguments. The test runner also adds `--only` for matching suite or test names, `--quiet` for omitting skipped tests, and defaults `NODE_ENV` to `test` when it is not already set (see #11623, #11628).
+
+- BREAKING CHANGE: Browser frame resolvers now receive one options object instead of positional `signal` and `target` arguments:
+
+  ```diff
+  - async function resolveFrame(src, signal, target) {
+  + async function resolveFrame(src, options) {
+  +   const { signal, target } = options ?? {}
+      // ...
+    }
+  ```
+
+- Add an `allowPackages` option to `createAssetServer()` from `remix/assets`. This allows a package and its dependencies to be served without listing every file the package may load:
+
+  ```ts
+  import { createAssetServer } from 'remix/assets'
+
+  export const assetServer = createAssetServer({
+    allowFiles: ['app/routes.ts', 'app/**/public/**'],
+    allowPackages: ['remix'],
+  })
+  ```
+
+- Added a new `remix db` workflow for inspecting migration status, migrating, seeding, wiping, and resetting the current app database. Configure a built-in SQLite, PostgreSQL, or MySQL database in `remix.json`; for example:
+
+  ```jsonc
+  {
+    "$schema": "./node_modules/remix/schema/remix.json",
+    "db": {
+      "adapter": {
+        "type": "sqlite",
+        "filename": "./db/app.sqlite",
+      },
+      "migrations": {
+        "directory": "./db/migrations",
+      },
+      "seed": "./db/seed.sql",
+    },
+  }
+  ```
+
+  The same configuration then powers the complete local database lifecycle:
+
+  ```sh
+  remix db status
+  remix db migrate
+  remix db seed
+  remix db reset --force
+  ```
+
+  Command flags override configured values, database commands work from project subdirectories by finding the nearest `remix.json`, and destructive `wipe` and `reset` commands require `--force` (see #11608, #11639).
+
+- Added an optional JSONC `remix.json` file for shared `remix db`, `remix test`, and `remix doctor` settings. Relative paths and globs resolve from the configuration file, command-line options take precedence, and the global `remix --config <path>` option selects a different file (see #11628, #11638, #11639).
+
+- Added complete `createPostgresDatabase()`, `createMysqlDatabase()`, and `createSqliteDatabase()` factories through `remix/data-table/postgres`, `remix/data-table/mysql`, and `remix/data-table/sqlite`. These return the `Database` used for queries and lifecycle operations such as `migrate()`, `migrationStatus()`, `reset()`, `wipe()`, and `close()` (see #11608, #11639).
+
+  BREAKING CHANGE: Replace the removed adapter and migration-runner APIs with a concrete database and its lifecycle methods:
+
+  ```diff
+  - import { createDatabase } from 'remix/data-table'
+  - import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
+  + import { createPostgresDatabase } from 'remix/data-table/postgres'
+  - const db = createDatabase(
+  -   createPostgresDatabaseAdapter({ connectionString: process.env.DATABASE_URL }),
+  - )
+  + const db = createPostgresDatabase({
+  +   connectionString: process.env.DATABASE_URL,
+  + })
+  - await migrationRunner.migrate()
+  + await db.migrate(migrations)
+  ```
+
+  Applications should use a dialect factory; database integration packages can extend `Database` with a composed `DatabaseDriver` from `remix/data-table`.
+
+- Beta.10 includes an integrated full-stack hot module replacement workflow. Run `npm run hmr` in a newly generated project to reload server modules and update compatible UI components in place while preserving their state.
+
+  New projects include the script and a complete `hmr.ts` runner. The core setup looks like this:
+
+  ```json
+  {
+    "scripts": {
+      "hmr": "NODE_ENV=development node hmr.ts"
+    }
+  }
+  ```
+
+  ```ts
+  // hmr.ts (excerpt)
+  import { run } from 'remix/node-hmr'
+
+  const hmrRunner = run('server.ts', {
+    nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
+    browserHmrChannel: { port: 44101 },
+  })
+  ```
+
+  `remix/node-hmr`, `remix/ui-hmr`, and `remix/assets` coordinate server and browser updates through the standard `import.meta.hot` API. Browser-reachable source is scaffolded in colocated `public/` directories so the server/browser boundary remains explicit.
+
+- Remix UI navigation now progressively enhances same-origin forms into frame navigations. Forms support `rmx-target`, `rmx-document`, and `rmx-history="push|replace"`; resolvers receive native submission data and may return a `Response`, including redirected responses whose final URL becomes the top frame's canonical location. The new `rmx-preserve-dom` attribute protects client-owned subtrees such as custom elements during reloads, and `run()` exposes `app.frames` for inspecting the current frame collection.
+
+- `run()` from `remix/ui` now fetches frame HTML by default, so apps no longer need a custom `resolveFrame` just to enable frame reloads and same-origin link and form navigation:
+
+  ```diff
+   let app = run({
+     loadModule,
+  -  resolveFrame: (src, options) => fetch(src, { signal: options?.signal }),
+   })
+  ```
+
+  Keep a custom resolver when the app needs custom request headers, body encoding, response handling, or error UI. Add `rmx-document` to a link or form to leave that navigation to the browser (see #11693).
+
+- Allow `resolveClientEntry()` in `remix/ui` to return module preload hrefs so client entries can preload their browser module graphs.
+
+- This beta also improves runtime reliability across the stack. UI hydration, document navigation, and frame reloads no longer stall, lose newly rendered siblings, retain stale server-rendered content, or reload the wrong top-frame URL in the fixed edge cases. Styled components adapt to dark color schemes, and server-rendered CSS safely escapes values that could close a `<style>` element. Node handlers now receive native `Request` instances, response compression varies caches correctly by `Accept-Encoding`, proxied responses discard stale encoding and framing headers, and multipart parsing rejects overlong boundaries without stalling non-Node runtimes.
+
+- Fixed fresh Remix projects failing type checking when `staticFiles()` and other router middleware are used together. `remix/middleware/static` continues to use `@remix-run/static-middleware`, now with the same `@remix-run/fetch-router` dependency as `remix/router`, so package managers do not install incompatible `RequestContext` types.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`static-middleware@0.4.14`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.14)
+
+## v3.0.0-beta.9
+
+### Pre-release Changes
+
+- `run()` from `remix/ui` now fetches frame HTML by default, so apps no longer need a custom `resolveFrame` just to enable frame reloads and same-origin link and form navigation:
+
+  ```diff
+   let app = run({
+     loadModule,
+  -  resolveFrame: (src, options) => fetch(src, { signal: options?.signal }),
+   })
+  ```
+
+  Keep a custom resolver when the app needs custom request headers, body encoding, response handling, or error UI. Add `rmx-document` to a link or form to leave that navigation to the browser (see #11693).
+
+- Bumped `@remix-run/*` dependencies:
+  - [`ui@0.7.0`](https://github.com/remix-run/remix/releases/tag/ui@0.7.0)
+
+## v3.0.0-beta.8
+
+### Pre-release Changes
+
+- Fixed fresh Remix projects failing type checking when `staticFiles()` and other router middleware were used together. `remix/middleware/static` now uses the same router dependency as `remix/router`, preventing incompatible `RequestContext` types from being installed.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`static-files-middleware@0.1.0`](https://github.com/remix-run/remix/releases/tag/static-files-middleware@0.1.0)
+
+## v3.0.0-beta.7
+
+### Pre-release Changes
+
+- Allow `resolveClientEntry()` in `remix/ui` to return module preload hrefs so client entries can preload their browser module graphs
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cli@0.5.0`](https://github.com/remix-run/remix/releases/tag/cli@0.5.0)
+  - [`ui@0.6.0`](https://github.com/remix-run/remix/releases/tag/ui@0.6.0)
+
+## v3.0.0-beta.6
+
+### Pre-release Changes
+
+- BREAKING CHANGE: Legacy package-aligned `remix/*` aliases have been removed in favor of canonical entrypoints that group related APIs together. Update imports when moving from beta.5 to beta.6:
+
+  ```diff
+  - import { requireAuth } from 'remix/auth-middleware'
+  - import { createPostgresDatabase } from 'remix/data-table-postgres'
+  - import { createRouter } from 'remix/fetch-router'
+  + import { requireAuth } from 'remix/middleware/auth'
+  + import { createPostgresDatabase } from 'remix/data-table/postgres'
+  + import { createRouter } from 'remix/router'
+  ```
+
+  The same canonical structure applies to the other entrypoints: middleware lives under `remix/middleware/*`, database dialects under `remix/data-table/*`, storage adapters under `remix/file-storage/*` and `remix/session-storage/*`, and route definitions move from `remix/fetch-router/routes` to `remix/routes`.
+
+- BREAKING CHANGE: `createAssetServer()` from `remix/assets` now uses `allowFiles` and `denyFiles` instead of `allow` and `deny` for file path access rules:
+
+  ```diff
+   import { createAssetServer } from 'remix/assets'
+
+   export const assetServer = createAssetServer({
+  -  allow: ['app/routes.ts', 'app/**/public/**'],
+  -  deny: ['app/**/*.test.*'],
+  +  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  +  denyFiles: ['app/**/*.test.*'],
+   })
+  ```
+
+- BREAKING CHANGE: `remix/cookie` now treats custom `encode` and `decode` functions as the complete cookie value codec. Custom encoded values are signed and serialized as-is instead of being wrapped in Remix's default base64 encoding. The default codec keeps the existing base64-safe representation.
+
+- BREAKING CHANGE: Route patterns now use delimiter-bounded params. Params stop at raw `/` and `.`, but not `-`, so a pattern such as `/:year-:month` must become one inseparable param such as `/:date`, or place the captures in separate path segments. Ambiguous adjacent captures are now rejected, and matching work is bounded to prevent pathological patterns (see #11651).
+
+- BREAKING CHANGE: Href helpers from `remix/route-pattern/href` and `remix/routes` now take search parameters in a `searchParams` options property:
+
+  ```diff
+  - const href = userRoute.href({ id: '123' }, { tab: 'settings' })
+  + const href = userRoute.href(
+  +   { id: '123' },
+  +   { searchParams: { tab: 'settings' } },
+  + )
+  ```
+
+  The options object also accepts a `baseURL` for generating path-relative same-origin hrefs. Route matching accepts the same option for relative URL strings, and `searchParams` accepts both typed objects and `URLSearchParams`.
+
+- BREAKING CHANGE: `remix/middleware/session` now makes session cookies HTTP-only when `httpOnly` is omitted. Set `httpOnly: false` explicitly if client-side JavaScript must read the cookie. `Cookie.httpOnly` from `remix/cookie` now returns `boolean | undefined` so omitted and explicitly disabled settings can be distinguished.
+
+- BREAKING CHANGE: Run tests with `remix test` instead of the removed `remix-test` executable, and move settings from `remix-test.config.ts` or `.js` into the `test` property of `remix.json`:
+
+  ```diff
+  - remix-test --type server --concurrency 1
+  + remix test --type server --concurrency 1
+  ```
+
+  ```jsonc
+  {
+    "$schema": "./node_modules/remix/schema/remix.json",
+    "test": {
+      "type": ["server"],
+      "concurrency": 1,
+      "quiet": true,
+    },
+  }
+  ```
+
+  The programmatic `runRemixTest()` API from `remix/test/cli` now accepts typed runner options instead of raw command-line arguments. The test runner also adds `--only` for matching suite or test names, `--quiet` for omitting skipped tests, and defaults `NODE_ENV` to `test` when it is not already set (see #11623, #11628).
+
+- BREAKING CHANGE: Browser frame resolvers now receive one options object instead of positional `signal` and `target` arguments:
+
+  ```diff
+  - async function resolveFrame(src, signal, target) {
+  + async function resolveFrame(src, options) {
+  +   const { signal, target } = options ?? {}
+      // ...
+    }
+  ```
+
+- Add an `allowPackages` option to `createAssetServer()` from `remix/assets`. This allows a package and its dependencies to be served without listing every file the package may load:
+
+  ```ts
+  import { createAssetServer } from 'remix/assets'
+
+  export const assetServer = createAssetServer({
+    allowFiles: ['app/routes.ts', 'app/**/public/**'],
+    allowPackages: ['remix'],
+  })
+  ```
+
+- Added a new `remix db` workflow for inspecting migration status, migrating, seeding, wiping, and resetting the current app database. Configure a built-in SQLite, PostgreSQL, or MySQL database in `remix.json`; for example:
+
+  ```jsonc
+  {
+    "$schema": "./node_modules/remix/schema/remix.json",
+    "db": {
+      "adapter": {
+        "type": "sqlite",
+        "filename": "./db/app.sqlite",
+      },
+      "migrations": {
+        "directory": "./db/migrations",
+      },
+      "seed": "./db/seed.sql",
+    },
+  }
+  ```
+
+  The same configuration then powers the complete local database lifecycle:
+
+  ```sh
+  remix db status
+  remix db migrate
+  remix db seed
+  remix db reset --force
+  ```
+
+  Command flags override configured values, database commands work from project subdirectories by finding the nearest `remix.json`, and destructive `wipe` and `reset` commands require `--force` (see #11608, #11639).
+
+- Added an optional JSONC `remix.json` file for shared `remix db`, `remix test`, and `remix doctor` settings. Relative paths and globs resolve from the configuration file, command-line options take precedence, and the global `remix --config <path>` option selects a different file (see #11628, #11638, #11639).
+
+- Added complete `createPostgresDatabase()`, `createMysqlDatabase()`, and `createSqliteDatabase()` factories through `remix/data-table/postgres`, `remix/data-table/mysql`, and `remix/data-table/sqlite`. These return the `Database` used for queries and lifecycle operations such as `migrate()`, `migrationStatus()`, `reset()`, `wipe()`, and `close()` (see #11608, #11639).
+
+  BREAKING CHANGE: Replace the removed adapter and migration-runner APIs with a concrete database and its lifecycle methods:
+
+  ```diff
+  - import { createDatabase } from 'remix/data-table'
+  - import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
+  + import { createPostgresDatabase } from 'remix/data-table/postgres'
+  - const db = createDatabase(
+  -   createPostgresDatabaseAdapter({ connectionString: process.env.DATABASE_URL }),
+  - )
+  + const db = createPostgresDatabase({
+  +   connectionString: process.env.DATABASE_URL,
+  + })
+  - await migrationRunner.migrate()
+  + await db.migrate(migrations)
+  ```
+
+  Applications should use a dialect factory; database integration packages can extend `Database` with a composed `DatabaseDriver` from `remix/data-table`.
+
+- Beta.6 adds an integrated full-stack hot module replacement workflow. Run `npm run hmr` in a newly generated project to reload server modules and update compatible UI components in place while preserving their state.
+
+  New projects include the script and a complete `hmr.ts` runner. The core setup looks like this:
+
+  ```json
+  {
+    "scripts": {
+      "hmr": "NODE_ENV=development node hmr.ts"
+    }
+  }
+  ```
+
+  ```ts
+  // hmr.ts (excerpt)
+  import { run } from 'remix/node-hmr'
+
+  const hmrRunner = run('server.ts', {
+    nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
+    browserHmrChannel: { port: 44101 },
+  })
+  ```
+
+  `remix/node-hmr`, `remix/ui-hmr`, and `remix/assets` coordinate server and browser updates through the standard `import.meta.hot` API. Browser-reachable source is scaffolded in colocated `public/` directories so the server/browser boundary remains explicit.
+
+- Remix UI navigation now progressively enhances same-origin forms into frame navigations. Forms support `rmx-target`, `rmx-document`, and `rmx-history="push|replace"`; resolvers receive native submission data and may return a `Response`, including redirected responses whose final URL becomes the top frame's canonical location. The new `rmx-preserve-dom` attribute protects client-owned subtrees such as custom elements during reloads, and `run()` exposes `app.frames` for inspecting the current frame collection.
+
+- This beta also improves runtime reliability across the stack. UI hydration, document navigation, and frame reloads no longer stall, lose newly rendered siblings, retain stale server-rendered content, or reload the wrong top-frame URL in the fixed edge cases. Styled components adapt to dark color schemes, and server-rendered CSS safely escapes values that could close a `<style>` element. Node handlers now receive native `Request` instances, response compression varies caches correctly by `Accept-Encoding`, proxied responses discard stale encoding and framing headers, and multipart parsing rejects overlong boundaries without stalling non-Node runtimes.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.5.0`](https://github.com/remix-run/remix/releases/tag/assets@0.5.0)
+  - [`async-context-middleware@0.3.5`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.3.5)
+  - [`auth@0.2.7`](https://github.com/remix-run/remix/releases/tag/auth@0.2.7)
+  - [`auth-middleware@0.2.5`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.2.5)
+  - [`cli@0.4.0`](https://github.com/remix-run/remix/releases/tag/cli@0.4.0)
+  - [`compression-middleware@0.1.13`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.13)
+  - [`cookie@0.6.0`](https://github.com/remix-run/remix/releases/tag/cookie@0.6.0)
+  - [`cop-middleware@0.1.8`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.8)
+  - [`cors-middleware@0.1.8`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.1.8)
+  - [`csrf-middleware@0.1.8`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.8)
+  - [`data-table@0.4.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.4.0)
+  - [`data-table-mysql@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.0)
+  - [`data-table-postgres@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.0)
+  - [`data-table-sqlite@0.6.0`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.0)
+  - [`fetch-proxy@0.8.5`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@0.8.5)
+  - [`fetch-router@0.21.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.21.0)
+  - [`form-data-middleware@0.3.5`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.3.5)
+  - [`form-data-parser@0.17.5`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.5)
+  - [`logger-middleware@0.3.5`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.3.5)
+  - [`method-override-middleware@0.1.13`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.13)
+  - [`multipart-parser@0.16.4`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.4)
+  - [`node-fetch-server@0.14.1`](https://github.com/remix-run/remix/releases/tag/node-fetch-server@0.14.1)
+  - [`node-hmr@0.1.0`](https://github.com/remix-run/remix/releases/tag/node-hmr@0.1.0)
+  - [`render-middleware@0.1.5`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.1.5)
+  - [`response@0.3.8`](https://github.com/remix-run/remix/releases/tag/response@0.3.8)
+  - [`route-pattern@0.24.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.24.0)
+  - [`session-middleware@0.4.0`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.4.0)
+  - [`static-middleware@0.4.13`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.13)
+  - [`test@0.6.0`](https://github.com/remix-run/remix/releases/tag/test@0.6.0)
+  - [`ui@0.5.0`](https://github.com/remix-run/remix/releases/tag/ui@0.5.0)
+  - [`ui-hmr@0.1.0`](https://github.com/remix-run/remix/releases/tag/ui-hmr@0.1.0)
+
 ## v3.0.0-beta.5
 
 ### Pre-release Changes
 
 - Added `package.json` `exports`:
-
   - `remix/ui/accordion` to re-export APIs from `@remix-run/ui/accordion`
   - `remix/ui/accordion/primitives` to re-export APIs from `@remix-run/ui/accordion/primitives`
   - `remix/ui/anchor` to re-export APIs from `@remix-run/ui/anchor`
@@ -30,7 +540,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   - `remix/ui/toggle/primitives` to re-export APIs from `@remix-run/ui/toggle/primitives`
 
   Removed helper re-exports from `remix/ui`:
-
   - `flashAttribute`
   - `hiddenTypeahead`
   - `matchNextItemBySearchText`
@@ -40,13 +549,11 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   - `waitForCssTransition`
 
   Updated `remix/route-pattern` exports for the `RoutePattern` API:
-
   - Added `getRoutePatternCaptures`, `RoutePatternCapture`, and `RoutePatternJSON` to `remix/route-pattern`
   - Added `CreateHrefErrorDetails` to `remix/route-pattern/href`
   - Added `MatchParamMeta` to `remix/route-pattern/match`
 
   Removed `package.json` `exports`:
-
   - `remix/components/accordion`
   - `remix/components/accordion/primitives`
   - `remix/components/anchor`
@@ -162,7 +669,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 ### Pre-release Changes
 
 - Added `package.json` `exports`:
-
   - `remix/headers/accept` to re-export APIs from `@remix-run/headers/accept`
   - `remix/headers/accept-encoding` to re-export APIs from `@remix-run/headers/accept-encoding`
   - `remix/headers/accept-language` to re-export APIs from `@remix-run/headers/accept-language`
@@ -350,7 +856,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   Previously, `remix/route-pattern` bundled URL generation, matching, and specificity helpers into one entrypoint. A typical Remix app does not do any client-side matching, but all the matching logic would ship to the browser anyway, causing JS bloat.
 
   Now, route pattern features are organized into separate subpath exports, so even without a bundler, only the code you need ends up in the browser:
-
   - `remix/route-pattern/href` generates hrefs for patterns with type-safe params.
   - `remix/route-pattern/match` matches against one pattern with type inference for params, or against many patterns with deterministic ranking and attached data.
   - `remix/route-pattern/join` combines two patterns into one, including protocol, hostname, port, pathname, and search constraints.
@@ -365,7 +870,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 - Updated the `remix` package with domain-oriented exports, no longer only mapping 1:1 to underlying `@remix-run/*` packages. Existing 1:1 package exports remain available during the beta migration and will be removed before a Remix 3.0.0 stable release.
 
   Preferred package mappings:
-
   - `remix/async-context-middleware` → `remix/middleware/async-context`
   - `remix/auth-middleware` → `remix/middleware/auth`
   - `remix/compression-middleware` → `remix/middleware/compression`
@@ -471,18 +975,15 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 - BREAKING CHANGE: Removed the deprecated `remix/component`, `remix/component/jsx-runtime`, `remix/component/jsx-dev-runtime`, and `remix/component/server` package exports. Import the consolidated UI runtime from `remix/ui`, `remix/ui/jsx-runtime`, `remix/ui/jsx-dev-runtime`, and `remix/ui/server` instead.
 
   Removed `package.json` `bin` commands:
-
   - `remix-test`
 
   Added `package.json` `exports`:
-
   - `remix/node-fetch-server/test` to re-export APIs from `@remix-run/node-fetch-server/test`
   - `remix/node-serve` to re-export APIs from `@remix-run/node-serve`
   - `remix/terminal` to re-export APIs from `@remix-run/terminal`
   - `remix/test/cli` to re-export APIs from `@remix-run/test/cli`
 
   Added `package.json` `exports` for the consolidated UI runtime:
-
   - `remix/ui` to re-export APIs from `@remix-run/ui`
   - `remix/ui/jsx-runtime` to re-export APIs from `@remix-run/ui/jsx-runtime`
   - `remix/ui/jsx-dev-runtime` to re-export APIs from `@remix-run/ui/jsx-dev-runtime`
@@ -540,17 +1041,14 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 - BREAKING CHANGE: Removed the deprecated `remix/component`, `remix/component/jsx-runtime`, `remix/component/jsx-dev-runtime`, and `remix/component/server` package exports. Import the consolidated UI runtime from `remix/ui`, `remix/ui/jsx-runtime`, `remix/ui/jsx-dev-runtime`, and `remix/ui/server` instead.
 
   Removed `package.json` `bin` commands:
-
   - `remix-test`
 
   Added `package.json` `exports`:
-
   - `remix/node-fetch-server/test` to re-export APIs from `@remix-run/node-fetch-server/test`
   - `remix/terminal` to re-export APIs from `@remix-run/terminal`
   - `remix/test/cli` to re-export APIs from `@remix-run/test/cli`
 
   Added `package.json` `exports` for the consolidated UI runtime:
-
   - `remix/ui` to re-export APIs from `@remix-run/ui`
   - `remix/ui/jsx-runtime` to re-export APIs from `@remix-run/ui/jsx-runtime`
   - `remix/ui/jsx-dev-runtime` to re-export APIs from `@remix-run/ui/jsx-dev-runtime`
@@ -572,7 +1070,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   - `remix/ui/test` to re-export APIs from `@remix-run/ui/test`
 
 - Added `package.json` exports and binaries for the Remix CLI:
-
   - `remix/cli` to expose the Remix CLI programmatic API
   - `remix` as a `package.json` `bin` command that delegates to `@remix-run/cli`
 
@@ -607,12 +1104,10 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 ### Pre-release Changes
 
 - Added `package.json` `exports`:
-
   - `remix/assert` to re-export APIs from `@remix-run/assert`
   - `remix/test` to re-export APIs from `@remix-run/test`
 
   Added `package.json` `bin` commands:
-
   - `remix-test` delegating to `@remix-run/test`
 
 - Bumped `@remix-run/*` dependencies:
@@ -655,7 +1150,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   The incidental `QueryMethod` type export has also been removed; use `Database['query']` or `QueryForTable<table>` when you need that type shape.
 
   Added `package.json` `exports`:
-
   - `remix/auth-middleware` to re-export APIs from `@remix-run/auth-middleware`
   - `remix/auth` to re-export APIs from `@remix-run/auth`
 
@@ -666,7 +1160,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   `remix/ui` now exposes `navigate(href, { src, target, history })`, `link(href, { src, target, history })`, `run({ loadModule, resolveFrame })`, and the `handle.frames.top` and `handle.frames.get(name)` helpers, while `remix/ui/server` re-exports the SSR frame source APIs including `frameSrc`, `topFrameSrc`, and `ResolveFrameContext`.
 
 - Add browser-origin and CSRF protection middleware APIs to `remix`.
-
   - `remix/cop-middleware` exposes `cop(options)` for browser-focused cross-origin protection using `Sec-Fetch-Site` with `Origin` fallback, trusted origins, and configurable bypasses.
   - `remix/csrf-middleware` exposes `csrf(options)` and `getCsrfToken(context)` for session-backed CSRF tokens plus origin validation.
   - Apps can use either middleware independently or layer `cop()`, `session()`, and `csrf()` together when they want both browser-origin filtering and token-backed protection.
@@ -700,7 +1193,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 ### Pre-release Changes
 
 - Added `package.json` `exports`:
-
   - `remix/data-schema` to re-export APIs from `@remix-run/data-schema`
   - `remix/data-schema/checks` to re-export APIs from `@remix-run/data-schema/checks`
   - `remix/data-schema/coerce` to re-export APIs from `@remix-run/data-schema/coerce`
@@ -746,7 +1238,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 ### Pre-release Changes
 
 - Added `package.json` `exports`:
-
   - `remix/route-pattern/specificity` to re-export APIs from `@remix-run/route-pattern/specificity`
 
 - Bumped `@remix-run/*` dependencies:

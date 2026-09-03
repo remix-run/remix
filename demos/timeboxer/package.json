@@ -10,9 +10,13 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
+    "db:migrate": "node --env-file-if-exists=.env scripts/remix.js db migrate",
+    "db:reset": "node --env-file-if-exists=.env scripts/remix.js db reset --force",
+    "db:rollback": "node --env-file-if-exists=.env scripts/remix.js db rollback",
+    "db:status": "node --env-file-if-exists=.env scripts/remix.js db status",
     "dev": "NODE_ENV=development node --env-file-if-exists=.env --watch --import remix/node-tsx server.ts",
     "start": "node --env-file-if-exists=.env --import remix/node-tsx server.ts",
     "test": "NODE_ENV=test remix test",

@@ -82,6 +82,7 @@ export interface ParseMultipartOptions {
   /**
    * The boundary string used to separate parts in the multipart message,
    * e.g. the `boundary` parameter in the `Content-Type` header.
+   * Boundaries may not exceed 70 characters.
    */
   boundary: string
   /**
@@ -202,6 +203,9 @@ const findDoubleNewline = createSearch('\r\n\r\n')
 
 const oneKb = 1024
 const oneMb = 1024 * oneKb
+// RFC 2046 limits boundary values to 70 characters:
+// https://www.rfc-editor.org/rfc/rfc2046#section-5.1.1
+const maxBoundaryLength = 70
 const defaultMaxParts = 1000
 const defaultMaxTotalSizePartAllowance = 20
 
@@ -254,6 +258,12 @@ export class MultipartParser {
    * @param options Options for the parser
    */
   constructor(boundary: string, options?: MultipartParserOptions) {
+    if (boundary.length > maxBoundaryLength) {
+      throw new MultipartParseError(
+        `Multipart boundary exceeds maximum length of ${maxBoundaryLength} characters`,
+      )
+    }
+
     this.boundary = boundary
     this.maxHeaderSize = options?.maxHeaderSize ?? 8 * oneKb
     this.maxFileSize = options?.maxFileSize ?? 2 * oneMb

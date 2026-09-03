@@ -5,6 +5,7 @@ import { formData } from 'remix/middleware/form-data'
 import type { Cookie } from 'remix/cookie'
 import { logger } from 'remix/middleware/logger'
 import { methodOverride } from 'remix/middleware/method-override'
+import { render } from 'remix/middleware/render'
 import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/middleware/session'
 import { staticFiles } from 'remix/middleware/static'
@@ -32,10 +33,10 @@ import fragmentsController from './actions/fragments/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
-import { render } from './middleware/render.tsx'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
+import { assets } from './utils/assets.ts'
 
 type AppContext = MiddlewareContext<
   [
@@ -83,7 +84,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   middleware.push(loadDatabase())
   middleware.push(loadAssetEntry())
   middleware.push(loadAuth())
-  middleware.push(render())
+  middleware.push(render({ assets }))
 
   let router = createRouter<AppContext>({ middleware })
 

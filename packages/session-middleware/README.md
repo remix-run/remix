@@ -24,7 +24,6 @@ import { session } from 'remix/middleware/session'
 
 let sessionCookie = createCookie('__session', {
   secrets: ['s3cr3t'], // session cookies must be signed!
-  httpOnly: true,
   secure: true,
   sameSite: 'lax',
 })
@@ -50,21 +49,24 @@ The middleware:
 Use `context.session` (or `context.get(Session)`) for normal session reads and writes.
 
 Note: The session cookie must be signed for security. This prevents tampering with the session data on the client.
+Session cookies are HTTP-only by default.
 
 ### Login/Logout Flow
 
 A basic login/logout flow could look like this:
 
 ```ts
-import * as res from 'remix/router/response-helpers'
+import { html } from 'remix/html-template'
+import { createHtmlResponse } from 'remix/response/html'
+import { redirect } from 'remix/response/redirect'
 
 router.get('/login', ({ session }) => {
   let error = session.get('error')
-  return res.html(`
+  return createHtmlResponse(html`
     <html>
       <body>
         <h1>Login</h1>
-        ${typeof error === 'string' ? <div class="error">${error}</div> : null}
+        ${typeof error === 'string' ? html`<div class="error">${error}</div>` : null}
         <form method="POST" action="/login">
           <input type="text" name="username" placeholder="Username" />
           <input type="password" name="password" placeholder="Password" />
@@ -83,18 +85,18 @@ router.post('/login', ({ get, session }) => {
   let user = authenticateUser(username, password)
   if (!user) {
     session.flash('error', 'Invalid username or password')
-    return res.redirect('/login')
+    return redirect('/login')
   }
 
   session.regenerateId()
   session.set('userId', user.id)
 
-  return res.redirect('/dashboard')
+  return redirect('/dashboard')
 })
 
 router.post('/logout', ({ session }) => {
   session.destroy()
-  return res.redirect('/')
+  return redirect('/')
 })
 ```
 

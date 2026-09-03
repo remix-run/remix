@@ -1,5 +1,6 @@
 import { getTableName, getTablePrimaryKey } from '@remix-run/data-table'
-import type { DataManipulationOperation, Predicate, SqlStatement } from '@remix-run/data-table'
+import type { Predicate, SqlStatement } from '@remix-run/data-table'
+import type { DataManipulationOperation } from '@remix-run/data-table'
 import {
   collectColumns as collectColumnsHelper,
   normalizeJoinType as normalizeJoinTypeHelper,
@@ -43,8 +44,8 @@ export function compileSqliteOperation(operation: DataManipulationOperation): Sq
         compileGroupByClause(operation.groupBy) +
         compileHavingClause(operation.having, context) +
         compileOrderByClause(operation.orderBy) +
-        compileLimitClause(operation.limit) +
-        compileOffsetClause(operation.offset),
+        compileLimitClause(operation.limit, context) +
+        compileOffsetClause(operation.offset, context),
       values: context.values,
     }
   }
@@ -309,20 +310,20 @@ function compileOrderByClause(orderBy: { column: string; direction: 'asc' | 'des
   )
 }
 
-function compileLimitClause(limit: number | undefined): string {
+function compileLimitClause(limit: number | undefined, context: CompileContext): string {
   if (limit === undefined) {
     return ''
   }
 
-  return ' limit ' + String(limit)
+  return ' limit ' + pushValue(context, limit)
 }
 
-function compileOffsetClause(offset: number | undefined): string {
+function compileOffsetClause(offset: number | undefined, context: CompileContext): string {
   if (offset === undefined) {
     return ''
   }
 
-  return ' offset ' + String(offset)
+  return ' offset ' + pushValue(context, offset)
 }
 
 function compileReturningClause(returning: '*' | string[] | undefined): string {

@@ -159,6 +159,43 @@ describe('hydration', () => {
       expect(container.querySelector('span')).toBe(null)
     })
 
+    it('keeps an earlier island styled when a second island is created before the first renders', async () => {
+      // Two independently hydrated islands on one page. Creating the root for
+      // the second island must not release the server styles adopted for the
+      // first island — hydration adoption is additive, not a replacement of
+      // the whole document's styles.
+      let island1 = await renderToString(<div mix={[css({ color: 'rgb(120, 30, 40)' })]}>One</div>)
+      let island2 = await renderToString(<div mix={[css({ color: 'rgb(50, 60, 70)' })]}>Two</div>)
+
+      let container2 = document.createElement('div')
+      document.body.appendChild(container2)
+      container.innerHTML = island1
+      container2.innerHTML = island2
+
+      let root1 = createRoot(container)
+      let root2 = createRoot(container2)
+
+      let div1 = container.querySelector('div')
+      let div2 = container2.querySelector('div')
+      invariant(div1)
+      invariant(div2)
+
+      // Neither island has rendered yet — the SSR markup must stay styled.
+      expect(getComputedStyle(div1).color).toBe('rgb(120, 30, 40)')
+      expect(getComputedStyle(div2).color).toBe('rgb(50, 60, 70)')
+
+      root1.render(<div mix={[css({ color: 'rgb(120, 30, 40)' })]}>One</div>)
+      root1.flush()
+      root2.render(<div mix={[css({ color: 'rgb(50, 60, 70)' })]}>Two</div>)
+      root2.flush()
+
+      expect(getComputedStyle(div1).color).toBe('rgb(120, 30, 40)')
+      expect(getComputedStyle(div2).color).toBe('rgb(50, 60, 70)')
+
+      root1.dispose()
+      root2.dispose()
+    })
+
     it('adds css mixin during hydration when server had none', async () => {
       let html = await renderToString(<div>Hello</div>)
       container.innerHTML = html

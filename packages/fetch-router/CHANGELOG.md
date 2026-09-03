@@ -2,6 +2,19 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## v0.21.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `Route.href(params, searchParams)` now accepts an options object as its second argument. Move existing search parameters to `Route.href(params, { searchParams })`.
+
+  `Route.href()` also accepts a `baseURL` option for generating path-relative same-origin hrefs, and its `searchParams` option accepts both typed plain objects and `URLSearchParams`.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`route-pattern@0.24.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.24.0)
+
 ## v0.20.1
 
 ### Patch Changes
@@ -612,7 +625,6 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   ```
 
   Summary of changes:
-
   - `RouteHandlers` type => `Controller`
   - `RouteHandler` type => `Action`
   - `BuildRouteHandler` type => `BuildAction`

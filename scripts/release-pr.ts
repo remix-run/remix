@@ -8,7 +8,7 @@
  *   GITHUB_TOKEN - Required (unless --preview)
  */
 import { parseAllChangeFiles, generateCommitMessage } from './utils/changes.ts'
-import { generatePrBody } from './utils/release-pr.ts'
+import { generatePrBody, generatePrTitle } from './utils/release-pr.ts'
 import { logAndExec } from './utils/process.ts'
 import { findOpenPr, createPr, updatePr, closePr } from './utils/github.ts'
 
@@ -17,7 +17,6 @@ const preview = args.includes('--preview')
 
 const baseBranch = 'main'
 const prBranch = 'release-pr/main'
-const prTitle = 'Release'
 
 async function main() {
   console.log(preview ? '🔍 PREVIEW MODE\n' : '')
@@ -63,6 +62,7 @@ async function main() {
 
   // Generate content
   let commitMessage = generateCommitMessage(releases)
+  let prTitle = generatePrTitle(releases)
   let prBody = generatePrBody(releases)
 
   if (preview) {

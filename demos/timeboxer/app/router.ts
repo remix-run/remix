@@ -1,12 +1,15 @@
-import { csrf } from 'remix/csrf-middleware'
-import { createRouter, type RouterContext } from 'remix/fetch-router'
-import { formData } from 'remix/form-data-middleware'
-import { session } from 'remix/session-middleware'
+import { createRouter, type RouterContext } from 'remix/router'
+import { csrf } from 'remix/middleware/csrf'
+import { formData } from 'remix/middleware/form-data'
+import { render } from 'remix/middleware/render'
+import { session } from 'remix/middleware/session'
 
-import { assets } from './controllers/assets.ts'
-import { auth, authLogin, authSignup } from './controllers/auth/controller.tsx'
-import { home } from './controllers/home/controller.tsx'
-import { schedulesController } from './controllers/schedules/controller.tsx'
+import { assets, assetServer } from './actions/assets/controller.ts'
+import { auth } from './actions/auth/controller.tsx'
+import { authLogin } from './actions/auth/login/controller.tsx'
+import { authSignup } from './actions/auth/signup/controller.tsx'
+import { home } from './actions/home/controller.tsx'
+import { schedulesController } from './actions/schedules/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
@@ -19,11 +22,12 @@ export const router = createRouter({
     csrf(),
     loadDatabase(),
     loadAuth(),
+    render({ assets: assetServer }),
   ],
 })
 type AppContext = RouterContext<typeof router>
 
-declare module 'remix/fetch-router' {
+declare module 'remix/router' {
   interface RouterTypes {
     context: AppContext
   }

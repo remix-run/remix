@@ -554,17 +554,21 @@ export function resolveServedFileOrThrow(filePath: string, args: ResolveArgs): R
   }
 
   if (!args.isAllowed(identityPath)) {
-    throw createAssetServerCompilationError(`File is not allowed: ${identityPath}`, {
-      code: 'FILE_NOT_ALLOWED',
-    })
+    throw createAssetServerCompilationError(
+      `File "${identityPath}" is not allowed by the asset server access configuration. ` +
+        `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles rule.`,
+      {
+        code: 'FILE_NOT_ALLOWED',
+      },
+    )
   }
 
   let stableUrlPathname = args.routes.toUrlPathname(identityPath)
   if (!stableUrlPathname) {
     throw createAssetServerCompilationError(
-      `File ${identityPath} is outside all configured fileMap entries.`,
+      `File ${identityPath} is outside all configured mounts.`,
       {
-        code: 'FILE_OUTSIDE_FILE_MAP',
+        code: 'FILE_OUTSIDE_MOUNTS',
       },
     )
   }

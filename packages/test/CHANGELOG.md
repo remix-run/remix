@@ -1,3 +1,37 @@
+## v0.6.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Removed executable `remix-test.config.ts` and `remix-test.config.js` discovery, along with the `config` path option from `runRemixTest()`. The programmatic `@remix-run/test/cli` API now accepts structured invocation options only. For CLI usage, move static test settings under `remix.json#test`; the main Remix CLI owns JSONC loading, path resolution, validation, and precedence before invoking the test runner (see #11628).
+
+- BREAKING CHANGE: Removed the standalone `remix-test` executable. Use `remix test` for command-line test runs. `runRemixTest()` from `@remix-run/test/cli` now accepts typed runner options such as `type`, `glob`, and `concurrency` instead of an `argv` array, and it no longer reads `process.argv` or handles CLI help (see #11623). The `getRemixTestHelpText()` export was removed along with CLI help handling; `remix test -h` prints the equivalent help text. `@remix-run/test/cli` now exports `remixTestPools` (the supported `pool` values), and `coverage.enabled` accepts `'inherit'` to defer coverage enablement to the config file while still refining other coverage settings.
+
+  ```diff
+  - remix-test --type server --concurrency 1
+  + remix test --type server --concurrency 1
+  ```
+
+  ```diff
+   import { runRemixTest } from '@remix-run/test/cli'
+
+   let exitCode = await runRemixTest({
+  -  argv: ['--type', 'server', '--concurrency', '1'],
+     cwd: process.cwd(),
+  +  type: ['server'],
+  +  concurrency: 1,
+   })
+  ```
+
+- Added a `--only` CLI flag and `only` config option to focus tests by matching suite names or full test names without editing source files to add `.only` modifiers.
+
+- Added a `--quiet`/`-q` CLI flag to omit skipped tests from reporter output.
+
+### Patch Changes
+
+- `remix test` now defaults `NODE_ENV` to `test` when it is not already set, so app modules loaded by test files can reliably select test-only resources such as in-memory databases. An explicitly set `NODE_ENV` is preserved (see #11608).
+
+- Fixed `.only` filtering so focused tests and suites apply across the entire test module instead of only within the nearest `describe` block. When `describe.only` and `it.only` are both present, the runner now executes the union of focused suites and focused tests.
+
 ## v0.5.0
 
 ### Minor Changes
@@ -65,7 +99,6 @@
 - Add `FakeTimers#advanceAsync(ms)` to `t.useFakeTimers()`. Like `advance`, it walks pending timers in time order and fires them, but yields to microtasks between each firing so promise continuations (and any timers they schedule) can settle before the next firing is processed. Use it when a fake-timer-driven callback awaits work that itself depends on the fake clock.
 
 - Accept arrays for `glob.{test,browser,e2e,exclude}`, `project`, `type`, and `coverage.{include,exclude}` config fields
-
   - The matching CLI flags (`--glob.test`, `--project`, `--type`, etc.) can be repeated
   - Positional arguments after `remix-test` now collect into `glob.test`, so `remix-test "src/**/*.test.ts" "tests/**/*.test.tsx"` works.
   - `type`'s default is now `["server", "browser", "e2e"]` instead of `"server,browser,e2e"`.
@@ -85,7 +118,6 @@
 - Add `glob.exclude` config for filtering paths during test discovery (defaults to `node_modules/**`)
 
 - Add code coverage reporting to `remix-test`
-
   - You can enable coverage with default settings vis `remix-test --coverage` or setting `coverage:true` in your `remix-test.config.ts`
   - Or you can specify individual coverage settings via the following config fields:
     - `coverage.dir`: Directory to store coverage information (default `.coverage`)
@@ -101,7 +133,6 @@
 ### Patch Changes
 
 - Internal refactor to test discovery to better support test execution in `bun`.
-
   - Unlike Node, Bun's `fs.promises.glob` _follows_ symbolic links and does not prune traversal via the `exclude` option, which can cause the test runner to enter `node_modules` symlink cycles in pnpm workspaces
   - Refactored the internal test discovery logic to detect and use Bun's native `Glob` class when running under the Bun runtime. Bun's `Glob#scan` does not follow symlinks by default, avoiding the cycle.
   - The Node runtime continues to use `fs.promises.glob`
@@ -116,7 +147,6 @@
 ### Minor Changes
 
 - Initial release of `@remix-run/test`, a test framework for Remix applications.
-
   - `describe`/`it` test structure with `before`/`after`/`beforeEach`/`afterEach` hooks
   - `TestContext` (`t`) per test: `t.mock.fn()`, `t.mock.method()`, `t.after()` for cleanup
   - Playwright E2E testing via `t.serve()`

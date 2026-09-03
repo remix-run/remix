@@ -43,8 +43,8 @@ Use this skill to scaffold and standardize packages so they look and behave like
   - `build`: `tsgo -p tsconfig.build.json`
   - `clean`: `git clean -fdX`
   - `prepublishOnly`: `pnpm run build`
-  - `test`: `remix-test`
-  - `test:bun`: `bun x --bun remix-test`
+  - `test`: `remix test`
+  - `test:bun`: `bun x --bun remix test`
   - `typecheck`: `tsgo --noEmit`
 - Use baseline dev dependencies:
   - `"@remix-run/assert": "workspace:^"`
@@ -62,6 +62,9 @@ Use this skill to scaffold and standardize packages so they look and behave like
   - `default`: `./dist/<entry>.js`
 - Rule: every export must have a `src` file that re-exports from `src/lib`.
   - Example: export `./foo` -> `src/foo.ts` -> `export { ... } from './lib/foo.ts'`
+- Type-only exports may map only a `types` condition to `src/*.d.ts` and `dist/*.d.ts`.
+- Runtime-specific exports may use package conditions before `default` when the runtime owns that condition, such as `node-hmr` for `remix/node-hmr/runtime`.
+- If a package has type-only exports, add `node ../../scripts/copy-package-type-only-exports.ts .` to the package build script after `tsgo`.
 
 4. Add TypeScript config files with shared defaults.
 
@@ -158,6 +161,7 @@ npm i remix <peer-dependency>
 - Do not hand-edit `packages/remix/package.json` or `packages/remix/src/*`; run the generator when generated output is required.
 - **When adding a new package**, add it to `packages/remix/manifest.json` before running the generator:
   - Add one entry per export: `"remix/<canonical-path>": "@remix-run/<package-name>"`,`"remix/<canonical-path>/foo": "@remix-run/<package-name>/foo"`.
+  - Include type-only and runtime-condition exports that should be reachable through `remix/...`, such as `remix/<canonical-path>/types`.
   - Choose a domain-oriented canonical path (e.g. `remix/middleware/logger`, not `remix/logger-middleware`).
 - If user asks for full surfacing, you can still update root `README.md` package list when applicable.
 

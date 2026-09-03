@@ -107,14 +107,12 @@ function MyComponent(handle: Handle<Props>) {
 When a component is rendered:
 
 1. **First Render**:
-
    - The component function is called with `handle`
    - The returned render function is stored
    - The render function is called after `handle.props` is populated
    - Any tasks queued via `handle.queueTask()` are executed after rendering
 
 2. **Subsequent Updates**:
-
    - Only the render function is called
    - Setup phase is skipped, and the closure persists for the lifetime of the component instance
    - `handle.props` is updated before the render function is called
@@ -122,7 +120,7 @@ When a component is rendered:
 
 3. **Component Removal**:
    - `handle.signal` is aborted
-   - Listeners registered with `addEventListeners(..., handle.signal, ...)` are automatically cleaned up
+   - Event listeners registered with `{ signal: handle.signal }` are removed automatically
    - Any queued tasks are executed with an aborted signal
 
 ### Props On The Handle
@@ -352,24 +350,30 @@ function Clock(handle: Handle) {
 }
 ```
 
-### `addEventListeners(target, handle.signal, listeners)`
+### Native Event Listeners
 
-Listen to an `EventTarget` with automatic cleanup when the component disconnects. Ideal for global event targets like `document` and `window`.
+Use `on(...)` for element events. For browser globals such as `window` or `document`, schedule setup with `handle.queueTask()` and pass `handle.signal` to `addEventListener()` so the listener is removed when the component disconnects.
 
 ```tsx
-import { addEventListeners, type Handle } from 'remix/ui'
+import type { Handle } from 'remix/ui'
 
-function KeyboardTracker(handle: Handle) {
-  let keys: string[] = []
+function ViewportWidth(handle: Handle) {
+  let width: number | undefined
 
-  addEventListeners(document, handle.signal, {
-    keydown(event) {
-      keys.push(event.key)
-      handle.update()
-    },
+  handle.queueTask(() => {
+    width = window.innerWidth
+    window.addEventListener(
+      'resize',
+      () => {
+        width = window.innerWidth
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
+    handle.update()
   })
 
-  return () => <div>Keys: {keys.join(', ')}</div>
+  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
 }
 ```
 
@@ -956,7 +960,7 @@ function CardWithJSState(handle: Handle<{ children: RemixNode }>) {
         border: `1px solid ${isHovered ? 'blue' : '#ddd'}`,
       }}
     >
-      <div className="title" style={{ color: isHovered ? 'blue' : '#333' }}>
+      <div class="title" style={{ color: isHovered ? 'blue' : '#333' }}>
         Title
       </div>
     </div>
@@ -995,7 +999,7 @@ function Card(handle: Handle<{ children: RemixNode }>) {
         }),
       ]}
     >
-      <div className="title">Title</div>
+      <div class="title">Title</div>
     </div>
   )
 }
@@ -1145,7 +1149,7 @@ function ProductCard(handle: Handle<{ title: string; price: number; image: strin
         ]}
       />
       <div
-        className="content"
+        class="content"
         mix={[
           css({
             padding: '16px',
@@ -1156,7 +1160,7 @@ function ProductCard(handle: Handle<{ title: string; price: number; image: strin
         ]}
       >
         <h3
-          className="title"
+          class="title"
           mix={[
             css({
               fontSize: '18px',
@@ -1170,7 +1174,7 @@ function ProductCard(handle: Handle<{ title: string; price: number; image: strin
           {handle.props.title}
         </h3>
         <div
-          className="price"
+          class="price"
           mix={[
             css({
               fontSize: '20px',
@@ -1440,7 +1444,7 @@ Context lookup is keyed by component identity. `handle.context.get(Component)` r
 For better performance, use `TypedEventTarget` to avoid updating the entire subtree:
 
 ```tsx
-import { TypedEventTarget, addEventListeners } from 'remix/ui'
+import { TypedEventTarget } from 'remix/ui'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
   #value: 'light' | 'dark' = 'light'
@@ -1480,11 +1484,7 @@ function ThemedContent(handle: Handle) {
   let theme = handle.context.get(ThemeProvider)
 
   // Subscribe to granular updates
-  addEventListeners(theme, handle.signal, {
-    change() {
-      handle.update()
-    },
-  })
+  theme.addEventListener('change', () => handle.update(), { signal: handle.signal })
 
   return () => (
     <div
@@ -1567,38 +1567,41 @@ class DataEmitter extends TypedEventTarget<{ data: DataEvent }> {
 
 function EventListener(handle: Handle<{ emitter: DataEmitter }>) {
   // Set up listeners once with automatic cleanup
-  addEventListeners(handle.props.emitter, handle.signal, {
-    data(event) {
+  handle.props.emitter.addEventListener(
+    'data',
+    (event) => {
       // Handle data
       handle.update()
     },
-  })
+    { signal: handle.signal },
+  )
 
   return () => <div>Listening for events...</div>
 }
 ```
 
-#### Window/Document Event Handling
+#### Window Resize Events
+
+A resize event applies to the whole viewport, so register it on `window` after the first client render. Pass `handle.signal` so the listener is removed when the component disconnects:
 
 ```tsx
-function WindowResizeTracker(handle: Handle) {
-  let width = window.innerWidth
-  let height = window.innerHeight
+function ViewportWidth(handle: Handle) {
+  let width: number | undefined
 
-  // Set up global listeners once
-  addEventListeners(window, handle.signal, {
-    resize() {
-      width = window.innerWidth
-      height = window.innerHeight
-      handle.update()
-    },
+  handle.queueTask(() => {
+    width = window.innerWidth
+    window.addEventListener(
+      'resize',
+      () => {
+        width = window.innerWidth
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
+    handle.update()
   })
 
-  return () => (
-    <div>
-      Window size: {width} × {height}
-    </div>
-  )
+  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
 }
 ```
 

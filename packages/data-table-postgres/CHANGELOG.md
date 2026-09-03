@@ -2,6 +2,30 @@
 
 This is the changelog for [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.5.0)
+
+## v0.5.0
+
+### Minor Changes
+
+- Added `createPostgresDatabase()` with config-backed construction, connection-scoped migration locking, database wiping for `remix db`, and `close()` for releasing an internally created pool. Existing `pg` pools and clients remain supported for applications that own the driver lifecycle, but wiping requires config-backed construction (see #11608, #11639).
+
+  `wipe()` throws when no database name can be resolved from the connection config or `PGDATABASE` instead of guessing `postgres`. Migration lock acquisition is bounded by a 60 second `lock_timeout` and fails with an error instead of waiting forever. Failed migration runs and failed transaction startup destroy the reserved connection instead of returning a dirty session to the pool, and nested lock acquisition throws instead of deadlocking.
+
+  BREAKING CHANGE: Removed `PostgresDatabaseAdapter` and `createPostgresDatabaseAdapter()` from the public entry point. Use `PostgresDatabase` and `createPostgresDatabase()` to get a complete PostgreSQL-backed `Database`; `PostgresDatabaseAdapterOptions` was renamed to `PostgresDatabaseOptions`.
+
+### Patch Changes
+
+- Use bound parameters for compiled `limit` and `offset` clauses.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.4.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.4.0)
+
 ## v0.4.0
 
 ### Minor Changes
@@ -31,7 +55,6 @@ This is the changelog for [`data-table-postgres`](https://github.com/remix-run/r
 - BREAKING CHANGE: Removed adapter options
 
   **Affected APIs**
-
   - `PostgresDatabaseAdapterOptions` type: removed
   - `createPostgresDatabaseAdapter` function: `options` arg removed
   - `PostgresDatabaseAdapter` constructor: `options` arg removed

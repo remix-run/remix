@@ -2,6 +2,20 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.24.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Route matching now uses delimiter-bounded params and a bounded state compiler (see #11651). Pathname params possessively capture through hyphens but stop at raw `/` or `.`, so UUIDs remain intact and `createHref()` percent-encodes dots in param values for round-tripping. Patterns such as `/:year-:month` must migrate to one inseparable param such as `/:date`, or place captures in separate delimiter-bounded segments.
+
+  Patterns may contain any number of separated wildcards and optional groups without eagerly expanding variants or using backtracking regular expressions. Adjacent wildcards, empty optionals, params followed by non-delimiter text, and ambiguous adjacent optional capture schemas now throw `ParseError`. Repeated capture names remain valid: the last participating capture wins in `params`, while `paramsMeta` retains every capture in source order.
+
+  Static pattern text is decoded during matching, while raw and percent-encoded `/` and `.` retain distinct structural meaning. Matchers also accept configurable pattern-size, matcher-size, and match-work limits through `MatcherOptions.limits`; exceeding a limit throws `MatcherResourceError` with structured details.
+
+- BREAKING CHANGE: `createHref(pattern, params, searchParams)` now accepts an options object as its third argument. Move existing search parameters to `createHref(pattern, params, { searchParams })`.
+
+  Matchers now accept relative URL strings when an absolute `baseURL` is provided to `match()` or `matchAll()`. `createHref()` accepts the same `baseURL` option and returns path-relative references for same-origin targets while leaving cross-origin targets absolute. The `searchParams` option accepts both typed plain objects and `URLSearchParams`; repeated `URLSearchParams` entries retain their order.
+
 ## v0.23.0
 
 ### Minor Changes
@@ -170,7 +184,6 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   To achieve this, we've reworked our core APIs to be simpler and more independently useful. So instead of a single `RoutePattern` class that does it all (`.href`, `.match`, ...), the new `RoutePattern` class is a thin layer around the parsed pattern that includes `RoutePattern.parse` static method for parsing and `.source`, `.toString()` and `.toJSON()` for serialization.
 
   The rest of the functionality comes from dedicated subpath exports:
-
   - **remix/route-pattern/href** : Generate hrefs for patterns with type safe params.
   - **remix/route-pattern/match** : Match against one pattern with type inference for params. Or match against many patterns with deterministic ranking and attached data.
   - **remix/route-pattern/join** : Combine two patterns into one. Override protocol, hostname, port. Join pathnames. Merge search constraints.
@@ -409,7 +422,6 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   `RoutePattern.ignoreCase` field has been removed and `ignoreCase` now only applies to `pathname` (no longer applies to `search`)
 
   Case sensitivity is now determined only when matching.
-
   - `RoutePattern.match` now accept `ignoreCase` option
   - `Matcher` constructors now accept `ignoreCase` option
 
@@ -782,7 +794,6 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - Add `Matcher` and `MatchResult` interfaces. These are new public APIs for matching sets of patterns.
 - Add `RegExpMatcher` and `TrieMatcher` concrete implementations of the `Matcher` interface
-
   - `RegExpMatcher` is a simple array-based matcher that compiles route patterns to regular expressions.
   - `TrieMatcher` is a trie-based matcher optimized for large route sets and long-running server applications.
 

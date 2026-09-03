@@ -2,6 +2,12 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
+## v0.8.5
+
+### Patch Changes
+
+- Stop forwarding incoming `Accept-Encoding` headers to proxy targets, strip `Content-Encoding` and related `Content-Length` headers from proxied responses with a body, and strip `Transfer-Encoding` and related `Content-Length` headers from proxied responses.
+
 ## v0.8.4
 
 ### Patch Changes
