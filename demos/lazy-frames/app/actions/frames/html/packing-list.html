@@ -1,0 +1,17 @@
+<article class="plain-frame">
+  <header class="plain-frame__header">
+    <p class="plain-frame__label">Static HTML fragment</p>
+    <p class="plain-frame__time">packing-list.html</p>
+  </header>
+  <h3>The file route keeps its input and response policy explicit.</h3>
+  <ul>
+    <li>Known IDs map to checked-in files.</li>
+    <li>Unknown IDs return a 404 response.</li>
+    <li><code>openLazyFile()</code> opens the selected file lazily.</li>
+    <li><code>createFileResponse()</code> handles the response body and headers.</li>
+    <li>Byte-range requests are disabled for these small fragments.</li>
+  </ul>
+  <p class="plain-frame__note">
+    The explicit ID map prevents route parameters from becoming arbitrary filesystem paths.
+  </p>
+</article>

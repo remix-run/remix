@@ -130,6 +130,25 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
+  demos/lazy-frames:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      playwright:
+        specifier: 'catalog:'
+        version: 1.60.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
   demos/social-auth:
     dependencies:
       remix:
