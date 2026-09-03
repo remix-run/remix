@@ -137,7 +137,7 @@ function normalizeMountUrlRoot(urlRoot: string): string {
   return url.pathname.replace(/\/+$/, '') || '/'
 }
 
-function resolveMountFileRoot(rootDir: string, fileRoot: string): string {
+export function resolveMountFileRoot(rootDir: string, fileRoot: string): string {
   let resolvedRoot = resolveFilePath(rootDir, fileRoot)
 
   try {
