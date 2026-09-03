@@ -1,7 +1,7 @@
 <article class="plain-frame">
-  <header class="plain-frame__header">
-    <p class="plain-frame__label">Static HTML fragment</p>
-    <p class="plain-frame__time">field-notes.html</p>
+  <header>
+    <p>Static HTML fragment</p>
+    <p>field-notes.html</p>
   </header>
   <h3>This route returns a file, not a rendered component.</h3>
   <ul>
@@ -9,7 +9,7 @@
     <li>The route streams it from disk without calling the Remix UI renderer.</li>
     <li>The parent document styles it after the Frame inserts it.</li>
   </ul>
-  <p class="plain-frame__note">
+  <p>
     The route uses <code>openLazyFile()</code> and <code>createFileResponse()</code> to create the
     response.
   </p>

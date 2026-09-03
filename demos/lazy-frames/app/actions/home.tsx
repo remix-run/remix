@@ -147,23 +147,9 @@ function DeliveryComparison() {
               <LazyFrame
                 src={frameHref}
                 pauseAnimationsWhenInactive
-                fallback={
-                  <div class="frame-status frame-status--fetching">
-                    <span class="frame-status__dot" aria-hidden="true" />
-                    <span>
-                      <strong>Request in progress</strong>
-                      <small>The motion response has not arrived yet.</small>
-                    </span>
-                  </div>
-                }
+                fallback={<FrameStatus phase="fetching" />}
               >
-                <div class="frame-status frame-status--waiting">
-                  <span class="frame-status__dot" aria-hidden="true" />
-                  <span>
-                    <strong>Not requested</strong>
-                    <small>The browser has not requested the motion route.</small>
-                  </span>
-                </div>
+                <FrameStatus phase="waiting" />
               </LazyFrame>
             </div>
           </article>
@@ -193,29 +179,32 @@ function ExhibitSection(handle: Handle<{ exhibit: Exhibit; index: number }>) {
           </header>
 
           <div mix={frameShellStyle}>
-            <LazyFrame
-              src={frameHref}
-              fallback={
-                <div class="frame-status frame-status--fetching">
-                  <span class="frame-status__dot" aria-hidden="true" />
-                  <span>
-                    <strong>Request in progress</strong>
-                    <small>The Frame response has not arrived yet.</small>
-                  </span>
-                </div>
-              }
-            >
-              <div class="frame-status frame-status--waiting">
-                <span class="frame-status__dot" aria-hidden="true" />
-                <span>
-                  <strong>Not requested</strong>
-                  <small>The browser will request it inside the preload margin.</small>
-                </span>
-              </div>
+            <LazyFrame src={frameHref} fallback={<FrameStatus phase="fetching" />}>
+              <FrameStatus phase="waiting" />
             </LazyFrame>
           </div>
         </div>
       </section>
+    )
+  }
+}
+
+function FrameStatus(handle: Handle<{ phase: 'waiting' | 'fetching' }>) {
+  return () => {
+    let fetching = handle.props.phase === 'fetching'
+
+    return (
+      <p>
+        <span aria-hidden="true" />
+        <span>
+          <strong>{fetching ? 'Request in progress' : 'Not requested'}</strong>
+          <small>
+            {fetching
+              ? 'The Frame response has not arrived yet.'
+              : 'The browser will request this Frame inside the preload margin.'}
+          </small>
+        </span>
+      </p>
     )
   }
 }
@@ -613,39 +602,38 @@ const frameShellStyle = css({
   borderRadius: '10px',
   padding: '6px',
   backgroundColor: 'var(--frame-shell-bg)',
-  '& .frame-status': {
+  // Placeholder mixins cannot cross the LazyFrame client boundary, so style its fixed structure
+  // from the server-rendered shell.
+  '& > div > p': {
     minHeight: '304px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '14px',
+    margin: 0,
     border: '1px dashed var(--placeholder-border)',
     borderRadius: '6px',
     padding: '24px',
     backgroundColor: 'var(--placeholder-bg)',
     color: 'var(--placeholder-text)',
   },
-  '& .frame-status__dot': {
+  '& > div > p > span:first-child': {
     flex: '0 0 auto',
     width: '10px',
     height: '10px',
     borderRadius: '50%',
     backgroundColor: 'var(--placeholder-dot)',
   },
-  '& .frame-status strong': {
+  '& > div > p strong': {
     display: 'block',
     fontSize: '13px',
     color: 'var(--placeholder-heading)',
   },
-  '& .frame-status small': {
+  '& > div > p small': {
     display: 'block',
     marginTop: '4px',
     fontSize: '11px',
     lineHeight: 1.5,
-  },
-  '& .frame-status--fetching .frame-status__dot': {
-    backgroundColor: '#d4543f',
-    boxShadow: '0 0 0 6px rgba(212, 84, 63, 0.12)',
   },
   '& .plain-frame': {
     minHeight: '304px',
@@ -655,13 +643,13 @@ const frameShellStyle = css({
     backgroundColor: 'var(--plain-bg)',
     color: 'var(--plain-text)',
   },
-  '& .plain-frame__header': {
+  '& .plain-frame > header': {
     display: 'flex',
     justifyContent: 'space-between',
     gap: '24px',
     marginBottom: '28px',
   },
-  '& .plain-frame__label, & .plain-frame__time': {
+  '& .plain-frame > header p': {
     margin: 0,
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
     fontSize: '11px',
@@ -685,7 +673,7 @@ const frameShellStyle = css({
     lineHeight: 1.5,
     color: 'var(--plain-list)',
   },
-  '& .plain-frame__note': {
+  '& .plain-frame > p:last-child': {
     margin: 0,
     borderTop: '1px solid var(--plain-rule)',
     paddingTop: '16px',

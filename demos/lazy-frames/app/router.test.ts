@@ -12,11 +12,11 @@ describe('lazy frame routes', () => {
     let document = await response.text()
 
     assert.equal(response.status, 200)
-    assert.equal(count(document, 'class="frame-status frame-status--waiting"'), exhibits.length + 1)
+    assert.equal(count(document, '>Not requested<'), exhibits.length + 1)
     assert.equal(count(document, `data-motion-artifact="${motionArtifact.id}"`), 1)
     assert.equal(count(document, '@keyframes lazy-frames-motion-orbit'), 1)
     assert.equal(document.includes('class="plain-frame"'), false)
-    assert.match(document, /The browser will request it inside the preload margin/)
+    assert.match(document, /The browser will request this Frame inside the preload margin/)
   })
 
   it('server-renders the saved color theme', async () => {
