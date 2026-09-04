@@ -58,6 +58,16 @@ function stubNavigatorUserAgent(t: TestContext, userAgent: string): void {
   })
 }
 
+function stubNavigateEventSourceElementSupport(t: TestContext, supported: boolean): void {
+  class StubNavigateEvent {
+    get sourceElement(): Element | null {
+      return null
+    }
+  }
+  if (!supported) Reflect.deleteProperty(StubNavigateEvent.prototype, 'sourceElement')
+  stubGlobalField(t, 'NavigateEvent', StubNavigateEvent)
+}
+
 function stubWindowScrollPosition(t: TestContext) {
   let x = 0
   let y = 0
@@ -751,6 +761,141 @@ describe('navigate', () => {
     controller.abort()
   })
 
+  it('intercepts anchors when sourceElement is unavailable', (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    anchor.setAttribute('data-rmx-reset-scroll', 'false')
+    let child = document.createElement('span')
+    anchor.append(child)
+    document.body.append(anchor)
+
+    child.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    let intercept = mock.fn()
+    let event = createAnchorNavigateEvent(anchor, {
+      intercept,
+      destinationUrl: anchor.href,
+    })
+    Reflect.deleteProperty(event, 'sourceElement')
+    dispatchNavigation(event)
+
+    expect(intercept).toHaveBeenCalledTimes(1)
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+  })
+
+  it('does not use a captured anchor when sourceElement is explicitly null', (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    document.body.append(anchor)
+    anchor.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    let intercept = mock.fn()
+    let event = createAnchorNavigateEvent(anchor, {
+      intercept,
+      destinationUrl: anchor.href,
+    })
+    Reflect.set(event, 'sourceElement', null)
+    dispatchNavigation(event)
+
+    expect(intercept).not.toHaveBeenCalled()
+  })
+
+  it('does not use a canceled click source for a state-less navigation', (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    document.body.append(anchor)
+
+    let intercept = mock.fn()
+    let navigationEvent = createAnchorNavigateEvent(anchor, {
+      intercept,
+      destinationUrl: new URL('/profile', window.location.origin).href,
+    })
+    Reflect.deleteProperty(navigationEvent, 'sourceElement')
+    anchor.addEventListener('click', (event) => {
+      event.preventDefault()
+      dispatchNavigation(navigationEvent)
+    })
+
+    anchor.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    expect(intercept).not.toHaveBeenCalled()
+  })
+
+  it('does not use a captured anchor after its click task', async (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    document.body.append(anchor)
+    anchor.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await Promise.resolve()
+
+    let intercept = mock.fn()
+    let event = createAnchorNavigateEvent(anchor, {
+      intercept,
+      destinationUrl: anchor.href,
+    })
+    Reflect.deleteProperty(event, 'sourceElement')
+    dispatchNavigation(event)
+
+    expect(intercept).not.toHaveBeenCalled()
+  })
+
+  it('prefers explicit runtime state over a captured anchor', (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    anchor.setAttribute('data-rmx-reset-scroll', 'false')
+    document.body.append(anchor)
+    anchor.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    let intercept = mock.fn()
+    let event = createAnchorNavigateEvent(anchor, {
+      intercept,
+      destinationUrl: anchor.href,
+    })
+    Reflect.deleteProperty(event, 'sourceElement')
+    Reflect.set(event, 'destination', {
+      url: anchor.href,
+      key: 'next',
+      getState: () => ({
+        target: undefined,
+        src: anchor.href,
+        resetScroll: true,
+        $rmx: true,
+      }),
+    })
+    dispatchNavigation(event)
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe(undefined)
+  })
+
+  it('does not capture anchors when sourceElement is supported', (t) => {
+    stubNavigateEventSourceElementSupport(t, true)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    document.body.append(anchor)
+    anchor.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    let intercept = mock.fn()
+    let event = createAnchorNavigateEvent(anchor, {
+      intercept,
+      destinationUrl: anchor.href,
+    })
+    Reflect.deleteProperty(event, 'sourceElement')
+    dispatchNavigation(event)
+
+    expect(intercept).not.toHaveBeenCalled()
+  })
+
   it('replaces marked anchor history without precommit support', async (t) => {
     stubGlobalField(t, 'NavigationPrecommitController', undefined)
 
@@ -1249,6 +1394,59 @@ describe('form navigation', () => {
 
     expect(intercept).not.toHaveBeenCalled()
     controller.abort()
+  })
+
+  it('intercepts forms when sourceElement is unavailable', (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/login'
+    form.method = 'post'
+    form.setAttribute('data-rmx-reset-scroll', 'false')
+    let button = document.createElement('button')
+    form.append(button)
+    document.body.append(form)
+
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+
+    let intercept = mock.fn()
+    let event = createFormNavigateEvent(form, {
+      intercept,
+      destinationUrl: form.action,
+    })
+    Reflect.deleteProperty(event, 'sourceElement')
+    dispatchNavigation(event)
+
+    expect(intercept).toHaveBeenCalledTimes(1)
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+  })
+
+  it('does not use a canceled submit source for a state-less navigation', (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/login'
+    form.method = 'post'
+    let button = document.createElement('button')
+    form.append(button)
+    document.body.append(form)
+
+    let intercept = mock.fn()
+    let navigationEvent = createFormNavigateEvent(form, {
+      intercept,
+      destinationUrl: new URL('/profile', window.location.origin).href,
+    })
+    Reflect.deleteProperty(navigationEvent, 'sourceElement')
+    form.addEventListener('submit', (event) => {
+      event.preventDefault()
+      dispatchNavigation(navigationEvent)
+    })
+
+    form.dispatchEvent(
+      new SubmitEvent('submit', { bubbles: true, cancelable: true, submitter: button }),
+    )
+
+    expect(intercept).not.toHaveBeenCalled()
   })
 
   it('does not intercept dialog forms or forms submitted to a new browsing context', (t) => {

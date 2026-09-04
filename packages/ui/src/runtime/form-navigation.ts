@@ -15,6 +15,16 @@ type PendingFormSubmission = {
   removeFormDataListener(): void
 }
 
+type PendingNavigationSource = {
+  activationEvent: Event
+  element: Element
+}
+
+interface NavigationSource {
+  sourceElement: Element | undefined
+  formNavigation: FormNavigation | undefined
+}
+
 /** Browser-provided data for an intercepted form submission. */
 export interface FormSubmission {
   /** Submitted form entries for non-GET submissions, when available. */
@@ -46,7 +56,53 @@ const PENDING_FORM_SUBMISSION_TIMEOUT = 1000
 export function createFormNavigationResolver(
   signal: AbortSignal,
 ): (event: NavigateEvent) => FormNavigation | undefined {
+  let resolveNavigationSource = createNavigationSourceResolver(signal)
+  return (event) => resolveNavigationSource(event).formNavigation
+}
+
+/**
+ * Tracks native activation events and resolves their corresponding Navigation API source.
+ *
+ * @param signal Signal used to stop tracking activation events.
+ * @returns A function that resolves source and form metadata for a navigation event.
+ */
+export function createNavigationSourceResolver(
+  signal: AbortSignal,
+): (event: NavigateEvent) => NavigationSource {
+  let needsSourceElementFallback =
+    typeof NavigateEvent === 'undefined' || !('sourceElement' in NavigateEvent.prototype)
   let pendingFormSubmissions = new WeakMap<HTMLFormElement, PendingFormSubmission>()
+  let pendingNavigationSource: PendingNavigationSource | undefined
+
+  let setPendingNavigationSource = (activationEvent: Event, element: Element) => {
+    let pending = { activationEvent, element }
+    pendingNavigationSource = pending
+    queueMicrotask(() => {
+      if (pendingNavigationSource === pending) pendingNavigationSource = undefined
+    })
+  }
+
+  if (needsSourceElementFallback) {
+    document.addEventListener(
+      'click',
+      (event) => {
+        if (
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        ) {
+          return
+        }
+        let target = event.target
+        if (!(target instanceof Element)) return
+        let link = target.closest('a, area')
+        if (link) setPendingNavigationSource(event, link)
+      },
+      { capture: true, signal },
+    )
+  }
 
   // Cache the authoritative submitter for the matching `navigate` event and, for Chromium's
   // non-POST-to-POST override case, the later `formdata` event. Unmatched submits expire.
@@ -67,6 +123,7 @@ export function createFormNavigationResolver(
         eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
           ? eventSubmitter
           : null
+      if (needsSourceElementFallback) setPendingNavigationSource(event, submitter ?? form)
       let removeFormDataListener = () => {}
       let method = getFormMethod(form, submitter).toLowerCase()
       // Chromium omits formData from the `navigate` event when a submitter overrides a non-POST form
@@ -96,18 +153,30 @@ export function createFormNavigationResolver(
   )
 
   return (event) => {
-    let sourceElement = (event as SourceElementNavigateEvent).sourceElement
-    if (!(sourceElement instanceof Element)) return
+    let sourceEvent = event as SourceElementNavigateEvent
+    let fallbackSourceElement =
+      pendingNavigationSource?.activationEvent.defaultPrevented === false
+        ? pendingNavigationSource.element
+        : undefined
+    let sourceElement =
+      'sourceElement' in sourceEvent
+        ? sourceEvent.sourceElement instanceof Element
+          ? sourceEvent.sourceElement
+          : undefined
+        : fallbackSourceElement
+    pendingNavigationSource = undefined
 
-    let form = getSourceForm(sourceElement)
-    if (!form) return
+    let form = sourceElement ? getSourceForm(sourceElement) : undefined
+    if (!form) return { sourceElement, formNavigation: undefined }
 
     let pending = pendingFormSubmissions.get(form)
     let submitter = pending?.submitter ?? null
     let method = getFormMethod(form, submitter)
     let encType = getFormEncType(form, submitter)
     let target = getSubmissionAttribute(form, submitter, 'target', 'formtarget')
-    if (method === 'dialog' || target?.toLowerCase() === '_blank') return
+    if (method === 'dialog' || target?.toLowerCase() === '_blank') {
+      return { sourceElement, formNavigation: undefined }
+    }
 
     let formEvent = event as FormNavigateEvent
     let clearPending = () => {
@@ -135,7 +204,7 @@ export function createFormNavigationResolver(
         }
       }
     }
-    return {
+    let formNavigation = {
       hasAttribute(name) {
         return submitter?.hasAttribute(name) === true || form.hasAttribute(name)
       },
@@ -143,7 +212,8 @@ export function createFormNavigationResolver(
         return getSubmissionAttribute(form, submitter, name, submitterName)
       },
       getSubmission,
-    }
+    } satisfies FormNavigation
+    return { sourceElement, formNavigation }
   }
 }
 

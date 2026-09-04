@@ -1,16 +1,12 @@
 import { getTopFrame, getNamedFrame } from './run.ts'
 import { reloadFrameForNavigation } from './frame.ts'
-import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
+import { createNavigationSourceResolver, type FormSubmission } from './form-navigation.ts'
 
 type NavigationState = {
   target: string | undefined
   src: string
   resetScroll: boolean
   $rmx: true
-}
-
-type SourceElementNavigateEvent = NavigateEvent & {
-  sourceElement?: Element | null
 }
 
 type RuntimeNavigation = {
@@ -121,7 +117,7 @@ export function startNavigationListenerImpl(
 ) {
   let navigation = window.navigation
   if (!navigation) return
-  let resolveFormNavigation = createFormNavigationResolver(signal)
+  let resolveNavigationSource = createNavigationSourceResolver(signal)
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, resetScroll: true, $rmx: true },
@@ -150,7 +146,7 @@ export function startNavigationListenerImpl(
             state: replayedSubmission.state,
             getSubmission: replayedSubmission.getSubmission,
           }
-        : getRuntimeNavigation(navigation, event, resolveFormNavigation)
+        : getRuntimeNavigation(navigation, event, resolveNavigationSource)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
 
@@ -440,18 +436,17 @@ function scheduleNavigationScrollCleanup(
 function getRuntimeNavigation(
   navigation: Navigation,
   event: NavigateEvent,
-  resolveFormNavigation: ReturnType<typeof createFormNavigationResolver>,
+  resolveNavigationSource: ReturnType<typeof createNavigationSourceResolver>,
 ): RuntimeNavigation | undefined {
   if (event.navigationType === 'traverse') {
     let state = getTraverseNavigationState(navigation, event)
     return state ? { state } : undefined
   }
 
-  let sourceNavigation = getSourceElementNavigation(navigation, event, resolveFormNavigation)
-  if (sourceNavigation) return sourceNavigation
-
   let destinationState = event.destination.getState()
   if (isRuntimeNavigation(destinationState)) return { state: destinationState }
+
+  return getSourceElementNavigation(navigation, event, resolveNavigationSource)
 }
 
 function getTraverseNavigationState(
@@ -479,13 +474,11 @@ function getTraverseNavigationState(
 function getSourceElementNavigation(
   navigation: Navigation,
   event: NavigateEvent,
-  resolveFormNavigation: ReturnType<typeof createFormNavigationResolver>,
+  resolveNavigationSource: ReturnType<typeof createNavigationSourceResolver>,
 ): RuntimeNavigation | undefined {
-  let sourceEvent = event as SourceElementNavigateEvent
-  let sourceElement = sourceEvent.sourceElement
-  if (!(sourceElement instanceof Element)) return
+  let { sourceElement, formNavigation } = resolveNavigationSource(event)
 
-  let linkElement = sourceElement.closest('a, area')
+  let linkElement = sourceElement?.closest('a, area')
   if (linkElement instanceof Element) {
     if (linkElement.hasAttribute('data-rmx-document')) return
     if (linkElement.hasAttribute('download')) return
@@ -501,7 +494,6 @@ function getSourceElementNavigation(
     }
   }
 
-  let formNavigation = resolveFormNavigation(event)
   if (!formNavigation || formNavigation.hasAttribute('data-rmx-document')) return
 
   let replaceHistoryByDefault =
