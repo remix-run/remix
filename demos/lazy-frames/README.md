@@ -12,7 +12,7 @@ pnpm start
 
 Visit [http://localhost:44100](http://localhost:44100) and scroll through the page. Use the browser network panel to see frame requests begin only as their sections approach. The fixed controls can switch the entire document between light and dark themes without refetching Frames, or enable a cookie-backed 520 ms delay on every router request, including pages, frames, and browser modules.
 
-For server restarts while editing, run `pnpm dev`.
+`pnpm start` runs in production mode. Frame responses are publicly cacheable for five minutes and may be served stale while revalidating for one hour. Run `pnpm dev` to use the watch server and send `Cache-Control: no-store` from Frame routes. Switching between the commands makes the cache behavior visible in the network panel without changing application code.
 
 ## One Shared Document
 

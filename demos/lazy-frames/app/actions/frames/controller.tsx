@@ -21,7 +21,7 @@ export const framesController = createController(routes.frames, {
       if (filename === undefined) return notFound()
 
       return createFileResponse(openLazyFile(filename), request, {
-        cacheControl: 'no-cache',
+        cacheControl: frameCacheControl,
         acceptRanges: false,
       })
     },
@@ -30,7 +30,10 @@ export const framesController = createController(routes.frames, {
       let exhibit = getExhibit(params.id)
       if (exhibit?.kind !== 'ui') return notFound()
 
-      return render(<MetricFrame exhibit={exhibit} servedAt={formatTime(new Date())} />, noStore)
+      return render(
+        <MetricFrame exhibit={exhibit} servedAt={formatTime(new Date())} />,
+        frameResponseInit,
+      )
     },
 
     async interactive({ params, render }) {
@@ -39,7 +42,7 @@ export const framesController = createController(routes.frames, {
 
       return render(
         <InteractiveFrame exhibit={exhibit} servedAt={formatTime(new Date())} />,
-        noStore,
+        frameResponseInit,
       )
     },
   },
@@ -119,8 +122,13 @@ const htmlFrameFiles = new Map([
   ['reading-list', fileURLToPath(new URL('./html/reading-list.html', import.meta.url))],
 ])
 
-const noStore = {
-  headers: { 'Cache-Control': 'no-store' },
+const frameCacheControl =
+  process.env.NODE_ENV === 'production'
+    ? 'public, max-age=300, stale-while-revalidate=3600'
+    : 'no-store'
+
+const frameResponseInit = {
+  headers: { 'Cache-Control': frameCacheControl },
 } satisfies ResponseInit
 
 const uiFrameStyle = css({
