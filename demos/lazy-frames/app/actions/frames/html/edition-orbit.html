@@ -1,0 +1,185 @@
+<style>
+  [data-motion-artifact='edition-orbit'] {
+    --motion-coral: var(--theme-motion-coral, #ff785a);
+    --motion-cream: var(--theme-motion-cream, #fff7e8);
+    --motion-lime: var(--theme-motion-lime, #c9f27b);
+    --motion-bg-start: var(--theme-motion-bg-start, #1c3942);
+    --motion-bg-end: var(--theme-motion-bg-end, #182c35);
+    --motion-glow: var(--theme-motion-glow, rgba(201, 242, 123, 0.2));
+    --motion-border: var(--theme-motion-border, rgba(255, 247, 232, 0.22));
+    --motion-ring: var(--theme-motion-ring, rgba(255, 247, 232, 0.34));
+    --motion-ring-soft: var(--theme-motion-ring-soft, rgba(255, 247, 232, 0.2));
+    --motion-caption: var(--theme-motion-caption, rgba(255, 247, 232, 0.7));
+    position: relative;
+    min-height: 304px;
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--motion-border);
+    border-radius: 6px;
+    background:
+      radial-gradient(circle at 18% 14%, var(--motion-glow), transparent 31%),
+      linear-gradient(145deg, var(--motion-bg-start), var(--motion-bg-end));
+    color: var(--motion-cream);
+    isolation: isolate;
+  }
+
+  [data-motion-artifact='edition-orbit'] .edition-orbit__copy {
+    position: relative;
+    z-index: 2;
+    width: min(58%, 320px);
+    padding: clamp(28px, 5vw, 48px);
+  }
+
+  [data-motion-artifact='edition-orbit'] h3 {
+    margin: 0;
+    font:
+      720 clamp(28px, 5vw, 54px) / 0.92 ui-sans-serif,
+      system-ui,
+      sans-serif;
+    letter-spacing: -0.055em;
+  }
+
+  [data-motion-artifact='edition-orbit'] figcaption {
+    margin-top: 20px;
+    font:
+      500 12px/1.6 ui-sans-serif,
+      system-ui,
+      sans-serif;
+    color: var(--motion-caption);
+  }
+
+  [data-motion-artifact='edition-orbit'] .edition-orbit__stage {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    right: clamp(-108px, -9vw, -36px);
+    width: clamp(230px, 42vw, 390px);
+    aspect-ratio: 1;
+    transform: translateY(-50%);
+  }
+
+  [data-motion-artifact='edition-orbit'] .edition-orbit__ring {
+    position: absolute;
+    inset: 11%;
+    border: 1px solid var(--motion-ring);
+    border-radius: 50%;
+  }
+
+  [data-motion-artifact='edition-orbit'] .edition-orbit__ring::before,
+  [data-motion-artifact='edition-orbit'] .edition-orbit__ring::after {
+    position: absolute;
+    inset: 17%;
+    border: 1px solid var(--motion-ring-soft);
+    border-radius: inherit;
+    content: '';
+  }
+
+  [data-motion-artifact='edition-orbit'] .edition-orbit__ring::after {
+    inset: 35%;
+    background: var(--motion-coral);
+    border-color: transparent;
+    box-shadow: 0 0 52px color-mix(in srgb, var(--motion-coral) 40%, transparent);
+    animation: lazy-frames-motion-breathe 2.8s ease-in-out infinite alternate;
+  }
+
+  [data-motion-artifact='edition-orbit'] .edition-orbit__orbit {
+    position: absolute;
+    inset: 0;
+    animation: lazy-frames-motion-orbit 7s linear infinite;
+  }
+
+  [data-motion-artifact='edition-orbit'] .edition-orbit__satellite {
+    position: absolute;
+    top: 5%;
+    left: 50%;
+    width: 18%;
+    aspect-ratio: 1;
+    border-radius: 35%;
+    background: var(--motion-lime);
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--motion-lime) 22%, transparent);
+    transform: translateX(-50%) rotate(18deg);
+  }
+
+  [data-motion-artifact='edition-orbit'] .edition-orbit__ticker {
+    position: absolute;
+    right: 14%;
+    bottom: 14%;
+    display: grid;
+    grid-template-columns: repeat(3, 7px);
+    gap: 5px;
+  }
+
+  [data-motion-artifact='edition-orbit'] .edition-orbit__ticker span {
+    height: 7px;
+    border-radius: 999px;
+    background: var(--motion-cream);
+    opacity: 0.32;
+    animation: lazy-frames-motion-signal 1.4s ease-in-out infinite alternate;
+  }
+
+  [data-motion-artifact='edition-orbit'] .edition-orbit__ticker span:nth-child(2) {
+    animation-delay: 180ms;
+  }
+
+  [data-motion-artifact='edition-orbit'] .edition-orbit__ticker span:nth-child(3) {
+    animation-delay: 360ms;
+  }
+
+  @keyframes lazy-frames-motion-orbit {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  @keyframes lazy-frames-motion-breathe {
+    to {
+      transform: scale(1.18);
+      box-shadow: 0 0 76px color-mix(in srgb, var(--motion-coral) 58%, transparent);
+    }
+  }
+
+  @keyframes lazy-frames-motion-signal {
+    to {
+      opacity: 1;
+      transform: translateY(-5px);
+    }
+  }
+
+  @media (max-width: 560px) {
+    [data-motion-artifact='edition-orbit'] .edition-orbit__copy {
+      width: 72%;
+    }
+
+    [data-motion-artifact='edition-orbit'] .edition-orbit__stage {
+      right: -120px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-motion-artifact='edition-orbit'] .edition-orbit__orbit,
+    [data-motion-artifact='edition-orbit'] .edition-orbit__ring::after,
+    [data-motion-artifact='edition-orbit'] .edition-orbit__ticker span {
+      animation: none;
+    }
+  }
+</style>
+
+<figure data-motion-artifact="edition-orbit">
+  <div class="edition-orbit__copy">
+    <h3>Markup, styles,<br />and keyframes.</h3>
+    <figcaption>
+      This checked-in response inserts scoped CSS and motion into the parent document.
+    </figcaption>
+  </div>
+  <div class="edition-orbit__stage" aria-hidden="true">
+    <div class="edition-orbit__ring"></div>
+    <div class="edition-orbit__orbit">
+      <span class="edition-orbit__satellite"></span>
+    </div>
+    <div class="edition-orbit__ticker">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </div>
+</figure>
