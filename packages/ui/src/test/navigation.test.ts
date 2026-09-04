@@ -246,6 +246,52 @@ describe('navigate', () => {
     await transition.succeed()
   })
 
+  it('suppresses Chromium scroll anchoring until after a push navigation paints', async (t) => {
+    stubNavigatorUserAgent(t, 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36')
+    let animationFrameCallbacks: FrameRequestCallback[] = []
+    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+      animationFrameCallbacks.push(callback)
+      return animationFrameCallbacks.length
+    })
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let eventController = new AbortController()
+    t.after(() => eventController.abort())
+
+    let adoptedStyleSheetCount = document.adoptedStyleSheets.length
+    let transition = dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept: mock.fn(),
+        destinationUrl: new URL('/login', window.location.origin).href,
+        info: { resetScroll: true },
+        signal: eventController.signal,
+      }),
+    )
+
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+    let stylesheet = document.adoptedStyleSheets[adoptedStyleSheetCount]
+    let overflowRule = stylesheet?.cssRules[0]
+    if (!(overflowRule instanceof CSSStyleRule)) {
+      throw new Error('Expected a scroll anchoring rule')
+    }
+    expect(overflowRule.selectorText).toBe('html, body')
+    expect(overflowRule.style.overflowAnchor).toBe('none')
+    expect(overflowRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
+
+    await transition.runHandler()
+    await transition.succeed()
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+    expect(animationFrameCallbacks).toHaveLength(1)
+
+    animationFrameCallbacks.shift()?.(0)
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+    expect(animationFrameCallbacks).toHaveLength(1)
+
+    animationFrameCallbacks.shift()?.(0)
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
+  })
+
   it('does not scroll for a superseded frame reload', async (t) => {
     stubNavigatorUserAgent(t, 'Mozilla/5.0 Gecko/20100101 Firefox/142.0')
     let reloadController = new AbortController()

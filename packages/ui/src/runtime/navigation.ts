@@ -287,24 +287,25 @@ function interceptNavigation(
   resetScroll: boolean,
   options: NavigationInterceptOptions,
 ): void {
-  let scrollStyles = getNavigationScrollStyles(event, resetScroll)
-  let removeScrollStyles = scrollStyles
-    ? installNavigationScrollStylesheet(scrollStyles.cssText, event.signal)
-    : undefined
+  let scrollStyleWorkarounds = installNavigationScrollStyleWorkarounds(event, resetScroll)
 
   let transitionBound = false
   function bindTransition() {
     if (transitionBound) return
-    if (event.signal.aborted) return removeScrollStyles?.()
+    if (event.signal.aborted) return scrollStyleWorkarounds?.remove()
 
     // The Navigation API creates the transition before running interception handlers.
     let transition = navigation.transition
-    if (!transition) return removeScrollStyles?.()
+    if (!transition) return scrollStyleWorkarounds?.remove()
     transitionBound = true
 
     resyncWebKitScrollAfterNavigation(event, resetScroll, transition)
-    if (scrollStyles && removeScrollStyles) {
-      scheduleNavigationScrollCleanup(transition, removeScrollStyles, scrollStyles.cleanup)
+    if (scrollStyleWorkarounds) {
+      scheduleNavigationScrollCleanup(
+        transition,
+        scrollStyleWorkarounds.remove,
+        scrollStyleWorkarounds.cleanup,
+      )
     }
   }
 
@@ -326,7 +327,7 @@ function interceptNavigation(
   try {
     event.intercept(interceptOptions)
   } catch (error) {
-    removeScrollStyles?.()
+    scrollStyleWorkarounds?.remove()
     throw error
   }
 }
@@ -390,14 +391,25 @@ function isChromiumUserAgent(userAgent: string): boolean {
   return userAgent.includes('Chrome') || userAgent.includes('Chromium')
 }
 
-function installNavigationScrollStylesheet(cssText: string, signal: AbortSignal): () => void {
+type NavigationScrollStylesheet = {
+  remove(): void
+  cleanup: NavigationScrollStyles['cleanup']
+}
+
+function installNavigationScrollStyleWorkarounds(
+  event: NavigateEvent,
+  resetScroll: boolean,
+): NavigationScrollStylesheet | undefined {
+  let scrollStyles = getNavigationScrollStyles(event, resetScroll)
+  if (!scrollStyles) return
+
   let stylesheet = new CSSStyleSheet()
-  stylesheet.replaceSync(cssText)
+  stylesheet.replaceSync(scrollStyles.cssText)
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet]
 
   let removed = false
   function remove() {
-    signal.removeEventListener('abort', remove)
+    event.signal.removeEventListener('abort', remove)
     if (removed) return
     removed = true
     document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
@@ -405,15 +417,15 @@ function installNavigationScrollStylesheet(cssText: string, signal: AbortSignal)
     )
   }
 
-  if (signal.aborted) remove()
-  else signal.addEventListener('abort', remove, { once: true })
-  return remove
+  if (event.signal.aborted) remove()
+  else event.signal.addEventListener('abort', remove, { once: true })
+  return { remove, cleanup: scrollStyles.cleanup }
 }
 
 function scheduleNavigationScrollCleanup(
   transition: NavigationTransition,
   removeScrollStyles: () => void,
-  cleanup: NavigationScrollStyles['cleanup'],
+  cleanup: NavigationScrollStylesheet['cleanup'],
 ): void {
   function removeAfterSuccess() {
     if (cleanup === 'finished') return removeScrollStyles()
