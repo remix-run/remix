@@ -37,11 +37,6 @@ export function withResolvers<T = unknown>(): [
   (value: T) => void,
   (error: unknown) => void,
 ] {
-  let resolve!: (value: T) => void
-  let reject!: (error: unknown) => void
-  let promise = new Promise<T>((res, rej) => {
-    resolve = res
-    reject = rej
-  })
+  let { promise, resolve, reject } = Promise.withResolvers<T>()
   return [promise, resolve, reject]
 }

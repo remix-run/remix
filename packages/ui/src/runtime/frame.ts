@@ -954,19 +954,12 @@ function createReconciliationTracker(): ReconciliationTracker {
   let failed = false
   let failure: unknown
 
-  let resolveReady: (() => void) | undefined
-  let rejectReady: ((error: unknown) => void) | undefined
-  let readyPromise = new Promise<void>((resolve, reject) => {
-    resolveReady = resolve
-    rejectReady = reject
-  })
+  let ready = Promise.withResolvers<void>()
 
   function maybeSettle() {
     if (!finalized || pending !== 0) return
-    if (failed) rejectReady?.(failure)
-    else resolveReady?.()
-    resolveReady = undefined
-    rejectReady = undefined
+    if (failed) ready.reject(failure)
+    else ready.resolve()
   }
 
   function track(): () => void {
@@ -997,7 +990,7 @@ function createReconciliationTracker(): ReconciliationTracker {
       maybeSettle()
     },
     ready() {
-      return readyPromise
+      return ready.promise
     },
   }
 }
