@@ -102,8 +102,13 @@ safe-outputs:
               const actor = comment?.user?.login
               const body = comment?.body ?? ''
               const mention = process.env.EXPECTED_BOT_MENTION.slice(1)
-              if (!actor || !new RegExp(`@${mention}(?![a-z0-9-])`, 'i').test(body)) {
-                core.setFailed('The triggering comment does not contain the required bot mention')
+              if (
+                !actor ||
+                !Number.isSafeInteger(comment?.id) ||
+                typeof comment.updated_at !== 'string' ||
+                !new RegExp(`@${mention}(?![a-z0-9-])`, 'i').test(body)
+              ) {
+                core.setFailed('The triggering comment is not a valid routed administrator request')
                 return
               }
 
@@ -215,7 +220,7 @@ safe-outputs:
                 })
               }
 
-              const awContext = {
+              const commentRouterContext = {
                 version: 1,
                 repository: process.env.EXPECTED_REPOSITORY,
                 router_workflow: '.github/workflows/aw-comment-router.lock.yml',
@@ -225,6 +230,7 @@ safe-outputs:
                 item_number: itemNumber,
                 comment_id: comment.id,
                 comment_node_id: isDiscussion ? comment.node_id : null,
+                comment_updated_at: comment.updated_at,
                 comment_body_sha256: crypto.createHash('sha256').update(body, 'utf8').digest('hex'),
                 actor,
                 workflow: item.workflow,
@@ -238,7 +244,7 @@ safe-outputs:
                   ...context.repo,
                   workflow_id: route.workflowFile,
                   ref: context.payload.repository.default_branch,
-                  inputs: { aw_context: JSON.stringify(awContext) },
+                  inputs: { aw_context: JSON.stringify(commentRouterContext) },
                 })
               } finally {
                 if (label) {
