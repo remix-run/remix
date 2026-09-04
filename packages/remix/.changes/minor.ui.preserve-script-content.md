@@ -1,1 +1,0 @@
-BREAKING CHANGE: During server rendering through `remix/ui`, script elements with non-string children previously serialized those children as escaped HTML text. They now render empty and report an error. Pass a single string child to preserve script content without HTML entity escaping; script-tag sequences that could terminate the element remain escaped.

@@ -2,6 +2,14 @@
 
 This is the changelog for [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remove the built-in Atmosphere auth provider and the DPoP model that was coupled to it. This removes `createAtmosphereAuthProvider()`, the `Atmosphere*` and `OAuthDpop*` types, and `OAuthStandardTokens`.
+
+  Use `OAuthTokens` in place of `OAuthStandardTokens`. Custom provider packages can extend `OAuthTokens` with protocol-specific fields and preserve that type through `OAuthProvider`, `OAuthResult`, `finishExternalAuth()`, and `refreshExternalAuth()`. Use the new public `createOAuthProvider()` factory and `OAuthProviderRuntime` contract to integrate providers that are not built into Remix. Applications using the Atmosphere provider must remove it or move their atproto authentication to a separate package.
+
 ## v0.2.7
 
 ### Patch Changes

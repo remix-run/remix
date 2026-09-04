@@ -1,1 +1,0 @@
-BREAKING CHANGE: Remove `addEventListeners()` from `remix/ui`. Use native `target.addEventListener(type, listener, { signal })` instead. If a listener used the helper's second callback argument, create an `AbortController` and abort it when the listener runs again or its lifetime signal aborts.

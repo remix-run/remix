@@ -1,1 +1,0 @@
-Add `assetServer.getAssets()` for listing browser-reachable files and `assetServer.getAssetDetails(urlOrFile)` for inspecting URL mappings, file types, access rules, and reachability status. These APIs use the asset server's configured mapping and access policy, so diagnostic results match request handling (see #11726).
