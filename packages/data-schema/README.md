@@ -473,7 +473,7 @@ Search['~standard'].jsonSchema.output({ target: 'draft-2020-12' })
 
 ## Schemas that cannot be represented
 
-Some schemas have no sound JSON Schema representation. Rather than silently dropping a constraint, `toJSONSchema()` throws a `JSONSchemaError` naming the schema and the path where it was found. This covers `bigint`, `symbol`, `undefined_`, `map`, `set`, `instanceof_`, `.refine()`, `.transform()` on output, and recursive schemas.
+Some schemas have no sound JSON Schema representation. Rather than silently dropping a constraint, `toJSONSchema()` throws a `JSONSchemaError` naming the schema and the path where it was found. This covers `bigint`, `symbol`, `undefined_`, `map`, `set`, `instanceof_`, `coerce.date()`, `.refine()`, `.transform()` on output, and recursive schemas.
 
 Pass an explicit fragment through `.meta()` to describe such a schema yourself. The fragment is merged last, so it wins over anything the emitter derives:
 
@@ -487,6 +487,10 @@ let Slug = string()
 
 toJSONSchema(Slug) // { type: 'string', pattern: '^[a-z-]+$' }
 ```
+
+`coerce.date()` throws because `new Date(value)` accepts a host-defined set of strings with no grammar to emit. The other coercions constrain the strings they accept, so `coerce.boolean()` emits a pattern matching `"true"` and `"false"` rather than accepting every string.
+
+One limitation cuts across all of this: JSON Schema cannot express that a number is finite. `number()` emits `{ "type": "number" }`, which accepts the `Infinity` that `JSON.parse('1e1000')` produces, while `parse()` rejects it. The same applies to `coerce.number()` and `coerce.bigint()`. This is the one place an emitted schema is broader than the schema itself.
 
 ## Introspecting schemas
 

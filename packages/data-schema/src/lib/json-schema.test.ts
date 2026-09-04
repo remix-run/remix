@@ -4,7 +4,7 @@ import type { StandardJSONSchemaV1 } from '@standard-schema/spec'
 import { Ajv2020 } from 'ajv/dist/2020.js'
 
 import { email, max, maxLength, min, minLength, url } from './checks.ts'
-import { coerceDate, coerceNumber } from './coerce.ts'
+import { coerceBigint, coerceBoolean, coerceDate, coerceNumber, coerceString } from './coerce.ts'
 import { JSONSchemaError, toJSONSchema } from './json-schema.ts'
 import { lazy } from './lazy.ts'
 import {
@@ -361,12 +361,53 @@ describe('toJSONSchema input and output', () => {
     assert.throws(() => toJSONSchema(schema, { io: 'output' }), JSONSchemaError)
   })
 
-  it('describes what a coercion accepts and produces', () => {
-    assert.deepEqual(toJSONSchema(coerceNumber(), { io: 'input' }), {
-      type: ['number', 'string'],
-    })
+  it('describes what a coercion produces', () => {
     assert.deepEqual(toJSONSchema(coerceNumber(), { io: 'output' }), { type: 'number' })
+    assert.deepEqual(toJSONSchema(coerceBoolean(), { io: 'output' }), { type: 'boolean' })
+    assert.deepEqual(toJSONSchema(coerceString(), { io: 'output' }), { type: 'string' })
+  })
+})
+
+describe('toJSONSchema coercions', () => {
+  it('constrains the strings coerceNumber accepts', () => {
+    assert.deepEqual(toJSONSchema(coerceNumber()), {
+      type: ['number', 'string'],
+      pattern:
+        '^\\s*([+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)?|0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+)\\s*$',
+    })
+  })
+
+  it('constrains the strings coerceBoolean accepts', () => {
+    assert.deepEqual(toJSONSchema(coerceBoolean()), {
+      type: ['boolean', 'string'],
+      pattern: '^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee])\\s*$',
+    })
+  })
+
+  it('constrains coerceBigint to integers and the strings BigInt accepts', () => {
+    assert.deepEqual(toJSONSchema(coerceBigint()), {
+      type: ['integer', 'string'],
+      pattern: '^\\s*([+-]?[0-9]+|0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+)\\s*$',
+    })
+  })
+
+  it('describes what coerceString accepts', () => {
+    assert.deepEqual(toJSONSchema(coerceString()), { type: ['string', 'number', 'boolean'] })
+  })
+
+  it('throws for coerceDate in both directions', () => {
+    assert.throws(() => toJSONSchema(coerceDate(), { io: 'input' }), JSONSchemaError)
     assert.throws(() => toJSONSchema(coerceDate(), { io: 'output' }), JSONSchemaError)
+  })
+
+  it('throws for the output of coerceBigint', () => {
+    assert.throws(() => toJSONSchema(coerceBigint(), { io: 'output' }), JSONSchemaError)
+  })
+
+  it('emits coerceDate when given an explicit fragment', () => {
+    let schema = coerceDate().meta({ jsonSchema: { type: 'string', format: 'date-time' } })
+
+    assert.deepEqual(toJSONSchema(schema), { type: 'string', format: 'date-time' })
   })
 })
 
@@ -634,6 +675,77 @@ describe('agreement with a JSON Schema validator', () => {
       [{ user: { name: 'a' } }, true],
       [{ user: { name: '' } }, false],
       [{ user: {} }, false],
+      [{}, false],
+    ])
+  })
+
+  it('agrees for coerceNumber', () => {
+    assertAgrees(coerceNumber(), [
+      [1, true],
+      [1.5, true],
+      ['1', true],
+      ['  7 ', true],
+      ['0x10', true],
+      ['0b101', true],
+      ['0o17', true],
+      ['1e5', true],
+      ['.5', true],
+      ['5.', true],
+      ['+1', true],
+      ['-1', true],
+      ['abc', false],
+      ['Infinity', false],
+      ['', false],
+      ['  ', false],
+      [true, false],
+      [null, false],
+    ])
+  })
+
+  it('agrees for coerceBoolean', () => {
+    assertAgrees(coerceBoolean(), [
+      [true, true],
+      [false, true],
+      ['true', true],
+      ['TRUE', true],
+      [' True ', true],
+      ['false', true],
+      ['yes', false],
+      ['tru', false],
+      ['1', false],
+      ['', false],
+      [1, false],
+    ])
+  })
+
+  it('agrees for coerceBigint', () => {
+    assertAgrees(coerceBigint(), [
+      [1, true],
+      ['12', true],
+      ['+12', true],
+      ['-12', true],
+      ['  9  ', true],
+      ['0x10', true],
+      ['0b101', true],
+      ['0o17', true],
+      ['999999999999999999999999', true],
+      [1.5, false],
+      ['1.0', false],
+      ['1e5', false],
+      ['-0x10', false],
+      ['1_000', false],
+      ['', false],
+      [true, false],
+    ])
+  })
+
+  it('agrees for coerceString', () => {
+    assertAgrees(coerceString(), [
+      ['a', true],
+      [1, true],
+      [true, true],
+      [null, false],
+      [[], false],
       [{}, false],
     ])
   })

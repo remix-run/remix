@@ -51,6 +51,13 @@ export class JSONSchemaError extends Error {
   }
 }
 
+// The strings each coercion accepts, as `String.prototype.trim` plus the grammar the
+// underlying conversion uses. Regex `\s` matches exactly what `trim` strips.
+const COERCE_NUMBER_PATTERN =
+  '^\\s*([+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)?|0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+)\\s*$'
+const COERCE_BIGINT_PATTERN = '^\\s*([+-]?[0-9]+|0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+)\\s*$'
+const COERCE_BOOLEAN_PATTERN = '^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee])\\s*$'
+
 type JSONSchemaNode = Record<string, unknown>
 
 type Context = {
@@ -328,10 +335,17 @@ function emitCoerce(
   to: 'bigint' | 'boolean' | 'date' | 'number' | 'string',
   context: Context,
 ): JSONSchemaNode {
+  if (to === 'date') {
+    throw new JSONSchemaError(
+      'Cannot emit JSON Schema for `coerce.date`, because `new Date(value)` accepts a host-defined set of strings',
+      context.path,
+    )
+  }
+
   if (context.io === 'output') {
-    if (to === 'bigint' || to === 'date') {
+    if (to === 'bigint') {
       throw new JSONSchemaError(
-        'Cannot emit an output JSON Schema for `coerce.' + to + '`, because it is not JSON data',
+        'Cannot emit an output JSON Schema for `coerce.bigint`, because JSON has no bigint type',
         context.path,
       )
     }
@@ -339,17 +353,17 @@ function emitCoerce(
     return { type: to }
   }
 
+  // A coercion accepts a specific set of strings, so the emitted schema has to constrain
+  // them. `pattern` is ignored for instances that are not strings.
   switch (to) {
     case 'number':
-      return { type: ['number', 'string'] }
+      return { type: ['number', 'string'], pattern: COERCE_NUMBER_PATTERN }
     case 'boolean':
-      return { type: ['boolean', 'string'] }
+      return { type: ['boolean', 'string'], pattern: COERCE_BOOLEAN_PATTERN }
+    case 'bigint':
+      return { type: ['integer', 'string'], pattern: COERCE_BIGINT_PATTERN }
     case 'string':
       return { type: ['string', 'number', 'boolean'] }
-    case 'bigint':
-      return { type: ['number', 'string'] }
-    case 'date':
-      return { type: 'string', format: 'date-time' }
   }
 }
 
