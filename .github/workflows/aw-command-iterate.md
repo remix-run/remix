@@ -122,7 +122,6 @@ safe-outputs:
       - decisions/**
       - template/**
     protected-files:
-      policy: blocked
       exclude:
         - README.md
   create-pull-request:
@@ -146,7 +145,6 @@ safe-outputs:
       - decisions/**
       - template/**
     protected-files:
-      policy: blocked
       exclude:
         - README.md
   jobs:

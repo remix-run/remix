@@ -82,29 +82,7 @@ safe-outputs:
       - docs/**
       - decisions/**
       - template/**
-    excluded-files:
-      - '**/node_modules/**'
-      - '**/package.json'
-      - '**/tsconfig.json'
-      - '**/tsconfig.*.json'
-      - '**/*.config.*'
-      - '**/*.lock'
-      - '**/.gitignore'
-      - '**/CHANGELOG.md'
-      - '**/AGENTS.md'
-      - '**/CLAUDE.md'
-      - '**/GEMINI.md'
-      - '.github/**'
-      - '.agents/**'
-      - '.codex/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'packages/remix/README.md'
-      - 'packages/remix/manifest.json'
-      - 'packages/remix/schema/**'
-      - 'packages/remix/src/**'
     protected-files:
-      policy: fallback-to-issue
       exclude:
         - README.md
     max-patch-files: 20
