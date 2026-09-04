@@ -171,7 +171,7 @@ the router's temporary label from starting a second run.
 
 The workflows require these repository secrets:
 
-- `OPENAI_API_KEY_SHOPIFY` provides model access through `https://proxy.shopify.ai/v1`.
+- `SHOPIFY_AI_PROXY` provides model access through `https://proxy.shopify.ai/v1`.
 - `GH_REMIX_PAT_AW` authenticates as `remix-run-bot`. It needs Actions write access to dispatch command
   workflows, Issues write access to manage temporary labels and post issue or pull request comments,
   Discussions write access to reply to Discussions, and Contents and Pull requests write access to
