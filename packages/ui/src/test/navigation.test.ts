@@ -650,6 +650,29 @@ describe('navigate', () => {
     expect(intercept).not.toHaveBeenCalled()
   })
 
+  it('does not use a canceled click source for a state-less navigation', (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    document.body.append(anchor)
+
+    let intercept = mock.fn()
+    let navigationEvent = createAnchorNavigateEvent(anchor, {
+      intercept,
+      destinationUrl: new URL('/profile', window.location.origin).href,
+    })
+    Reflect.deleteProperty(navigationEvent, 'sourceElement')
+    anchor.addEventListener('click', (event) => {
+      event.preventDefault()
+      dispatchNavigation(navigationEvent)
+    })
+
+    anchor.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    expect(intercept).not.toHaveBeenCalled()
+  })
+
   it('does not use a captured anchor after its click task', async (t) => {
     stubNavigateEventSourceElementSupport(t, false)
     let dispatchNavigation = startStubNavigationListener(t)
@@ -1237,6 +1260,34 @@ describe('form navigation', () => {
 
     expect(intercept).toHaveBeenCalledTimes(1)
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+  })
+
+  it('does not use a canceled submit source for a state-less navigation', (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/login'
+    form.method = 'post'
+    let button = document.createElement('button')
+    form.append(button)
+    document.body.append(form)
+
+    let intercept = mock.fn()
+    let navigationEvent = createFormNavigateEvent(form, {
+      intercept,
+      destinationUrl: new URL('/profile', window.location.origin).href,
+    })
+    Reflect.deleteProperty(navigationEvent, 'sourceElement')
+    form.addEventListener('submit', (event) => {
+      event.preventDefault()
+      dispatchNavigation(navigationEvent)
+    })
+
+    form.dispatchEvent(
+      new SubmitEvent('submit', { bubbles: true, cancelable: true, submitter: button }),
+    )
+
+    expect(intercept).not.toHaveBeenCalled()
   })
 
   it('does not intercept dialog forms or forms submitted to a new browsing context', (t) => {

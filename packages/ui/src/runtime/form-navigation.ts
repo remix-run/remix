@@ -16,6 +16,7 @@ type PendingFormSubmission = {
 }
 
 type PendingNavigationSource = {
+  activationEvent: Event
   element: Element
 }
 
@@ -73,8 +74,8 @@ export function createNavigationSourceResolver(
   let pendingFormSubmissions = new WeakMap<HTMLFormElement, PendingFormSubmission>()
   let pendingNavigationSource: PendingNavigationSource | undefined
 
-  let setPendingNavigationSource = (element: Element) => {
-    let pending = { element }
+  let setPendingNavigationSource = (activationEvent: Event, element: Element) => {
+    let pending = { activationEvent, element }
     pendingNavigationSource = pending
     queueMicrotask(() => {
       if (pendingNavigationSource === pending) pendingNavigationSource = undefined
@@ -97,7 +98,7 @@ export function createNavigationSourceResolver(
         let target = event.target
         if (!(target instanceof Element)) return
         let link = target.closest('a, area')
-        if (link) setPendingNavigationSource(link)
+        if (link) setPendingNavigationSource(event, link)
       },
       { capture: true, signal },
     )
@@ -122,7 +123,7 @@ export function createNavigationSourceResolver(
         eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
           ? eventSubmitter
           : null
-      if (needsSourceElementFallback) setPendingNavigationSource(submitter ?? form)
+      if (needsSourceElementFallback) setPendingNavigationSource(event, submitter ?? form)
       let removeFormDataListener = () => {}
       let method = getFormMethod(form, submitter).toLowerCase()
       // Chromium omits formData from the `navigate` event when a submitter overrides a non-POST form
@@ -153,12 +154,16 @@ export function createNavigationSourceResolver(
 
   return (event) => {
     let sourceEvent = event as SourceElementNavigateEvent
+    let fallbackSourceElement =
+      pendingNavigationSource?.activationEvent.defaultPrevented === false
+        ? pendingNavigationSource.element
+        : undefined
     let sourceElement =
       'sourceElement' in sourceEvent
         ? sourceEvent.sourceElement instanceof Element
           ? sourceEvent.sourceElement
           : undefined
-        : pendingNavigationSource?.element
+        : fallbackSourceElement
     pendingNavigationSource = undefined
 
     let form = sourceElement ? getSourceForm(sourceElement) : undefined
