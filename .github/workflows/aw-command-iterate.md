@@ -317,6 +317,10 @@ merge or approve a pull request.
   recent agentic review as supporting data and address its concrete findings.
 - If the request or applicable findings are ambiguous, conflict with each
   other, or require a design choice, post one concise clarification and stop.
+- Never finish with only a prose response. If a tool, checkout, or runtime
+  limitation prevents completion, call `report_incomplete` with the specific
+  reason and stop. If the request is complete but requires no visible action,
+  call `noop` with a concise explanation.
 
 ## Trust boundaries
 
@@ -344,10 +348,13 @@ Use read-only GitHub APIs and git plumbing to record:
 1. The triggering pull request number and URL.
 2. Its exact base SHA and head SHA.
 3. Its base and head repository full names and head branch.
-4. The exact current SHA of `remix-run/remix` `main` after one explicit fetch.
+4. The exact current SHA of `remix-run/remix` `main` from the GitHub API.
 
-Verify that the workspace head matches the snapshotted pull request head. Do
-not act on another pull request, branch, or repository.
+Verify that the workspace head matches the snapshotted pull request head and
+that the snapshotted `main` commit is already available in the full checkout.
+Do not perform network Git operations. If either commit is unavailable, call
+`report_incomplete` and stop. Do not act on another pull request, branch, or
+repository.
 
 ## Same-repository pull request
 
@@ -358,8 +365,9 @@ Use this path only when the head repository is `remix-run/remix`.
 2. Inspect the complete diff and use only non-executing checks such as
    `git diff --check`. Do not run repository code.
 3. Commit the focused changes without automation attribution.
-4. Re-fetch the remote head branch and verify it still equals the snapshotted
-   head SHA. If it changed, comment that the administrator must rerun and stop.
+4. Re-read the triggering pull request with the GitHub API and verify its head
+   still equals the snapshotted head SHA. If it changed, comment that the
+   administrator must rerun and stop.
 5. Call `push_to_pull_request_branch` exactly once. Do not call
    `create_pull_request` or `supersede_community_pull_request`.
 
@@ -375,9 +383,9 @@ Use this path only when the head repository is `remix-run-bot/remix`.
 2. Inspect the complete diff and use only non-executing checks such as
    `git diff --check`. Do not run repository code.
 3. Commit the focused changes without automation attribution.
-4. Re-fetch the triggering branch directly from `remix-run-bot/remix` and
-   verify it still equals the snapshotted head SHA. If it changed, comment that
-   the administrator must rerun and stop.
+4. Re-read the triggering pull request with the GitHub API and verify its head
+   still equals the snapshotted head SHA. If it changed, comment that the
+   administrator must rerun and stop.
 5. Call `push_to_pull_request_branch` exactly once. Do not call
    `create_pull_request` or `supersede_community_pull_request`.
 
@@ -402,9 +410,9 @@ Use this path only when the head repository is neither `remix-run/remix` nor
 5. Inspect the complete branch diff against the pinned `main` SHA. Confirm it
    contains the contributor's intended changes plus only the requested
    iteration, touches no protected or disallowed file, and contains no secrets.
-6. Re-fetch the original contributor branch and verify its head still equals
-   the snapshotted head SHA. If it changed, comment and stop without creating a
-   replacement.
+6. Re-read the triggering pull request with the GitHub API and verify its head
+   still equals the snapshotted head SHA. If it changed, comment and stop
+   without creating a replacement.
 7. Do not push the branch directly. Call `create_pull_request` exactly once;
    its safe-output job pushes the committed local branch to
    `remix-run-bot/remix` using `GH_REMIX_PAT_AW` and opens a draft against
