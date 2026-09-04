@@ -2,6 +2,13 @@
 
 This is the changelog for [`render-middleware`](https://github.com/remix-run/remix/tree/main/packages/render-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`ui@0.8.1`](https://github.com/remix-run/remix/releases/tag/ui@0.8.1)
+
 ## v0.2.0
 
 ### Minor Changes

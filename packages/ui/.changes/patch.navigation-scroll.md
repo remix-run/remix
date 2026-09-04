@@ -1,1 +1,0 @@
-Reset or restore scroll after the destination DOM and each blocking frame's first commit, without waiting for remaining frame streams or client-entry hydration. Prevent Chromium scroll anchoring, superseded reloads, and redirect URL synchronization from applying stale or duplicate scroll changes, and avoid a duplicate unhandled rejection when a public frame reload fails.
