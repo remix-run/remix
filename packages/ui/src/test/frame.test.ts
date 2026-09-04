@@ -134,7 +134,7 @@ describe('frames', () => {
 
     try {
       await frame.ready()
-      let reload = reloadFrameForNavigation(frame.handle)
+      let reload = reloadFrameForNavigation(frame.handle).finished
       await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(document.getElementById('initial')?.textContent).toBe('Initial')
@@ -144,6 +144,50 @@ describe('frames', () => {
 
       expect(document.getElementById('initial')).toBeNull()
       expect(document.getElementById('next')?.textContent).toBe('Next')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('commits streamed reload content before the response stream finishes', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    let streamController!: ReadableStreamDefaultController<Uint8Array>
+    let responseStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        streamController = controller
+      },
+    })
+    let frame = createTestFrame(root, {
+      resolveFrame: () => responseStream,
+    })
+
+    try {
+      await frame.ready()
+      let committed = false
+      let finished = false
+      let reload = reloadFrameForNavigation(frame.handle)
+      void reload.committed.then(() => {
+        committed = true
+      })
+      void reload.finished.then(() => {
+        finished = true
+      })
+
+      streamController.enqueue(
+        new TextEncoder().encode(appendFlushMarker('<p id="next">Next</p>', 'fragment')),
+      )
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(document.getElementById('next')?.textContent).toBe('Next')
+      expect(committed).toBe(true)
+      expect(finished).toBe(false)
+
+      streamController.close()
+      await reload.finished
     } finally {
       frame.dispose()
     }
@@ -170,15 +214,22 @@ describe('frames', () => {
 
     try {
       await frame.ready()
-      let reloadSettled = false
-      let reload = reloadFrameForNavigation(frame.handle).then(() => {
-        reloadSettled = true
+      let committed = false
+      let finished = false
+      let reload = reloadFrameForNavigation(frame.handle)
+      void reload.committed.then(() => {
+        committed = true
+      })
+      void reload.finished.then(() => {
+        finished = true
       })
       await new Promise((resolve) => setTimeout(resolve, 0))
 
-      expect(reloadSettled).toBe(false)
+      expect(document.getElementById('reloaded')?.textContent).toBe('Server')
+      expect(committed).toBe(true)
+      expect(finished).toBe(false)
       resolveModule(ReloadedEntry)
-      await reload
+      await reload.finished
 
       expect(document.getElementById('reloaded')?.textContent).toBe('Hydrated')
     } finally {
@@ -216,7 +267,7 @@ describe('frames', () => {
     try {
       await frame.ready()
       let reloadSettled = false
-      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+      let reload = reloadFrameForNavigation(frame.handle).finished.then(() => {
         reloadSettled = true
       })
       await new Promise((resolve) => setTimeout(resolve, 0))
@@ -255,7 +306,7 @@ describe('frames', () => {
     try {
       await frame.ready()
       let reloadSettled = false
-      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+      let reload = reloadFrameForNavigation(frame.handle).finished.then(() => {
         reloadSettled = true
       })
       await new Promise((resolve) => setTimeout(resolve, 0))
@@ -273,29 +324,49 @@ describe('frames', () => {
   it('waits for blocking frames rendered from RemixNode content', async () => {
     document.body.innerHTML = '<p id="initial">Initial</p>'
 
-    let [collectionPromise, resolveCollection] = withResolvers<string>()
+    let streamController!: ReadableStreamDefaultController<Uint8Array>
+    let collectionStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        streamController = controller
+      },
+    })
     let frame = createTestFrame(document, {
       resolveFrame(src) {
-        if (src === '/collection') return collectionPromise
+        if (src === '/collection') return collectionStream
         return jsx(Frame, { src: '/collection' })
       },
     })
 
     try {
       await frame.ready()
-      let reloadSettled = false
-      let reload = reloadFrameForNavigation(frame.handle).then(() => {
-        reloadSettled = true
+      let committed = false
+      let finished = false
+      let reload = reloadFrameForNavigation(frame.handle)
+      void reload.committed.then(() => {
+        committed = true
+      })
+      void reload.finished.then(() => {
+        finished = true
       })
       await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(document.getElementById('initial')).toBeNull()
-      expect(reloadSettled).toBe(false)
+      expect(committed).toBe(false)
+      expect(finished).toBe(false)
 
-      resolveCollection('<p id="collection">Collection</p>')
-      await reload
+      streamController.enqueue(
+        new TextEncoder().encode(
+          appendFlushMarker('<p id="collection">Collection</p>', 'fragment'),
+        ),
+      )
+      await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(document.getElementById('collection')?.textContent).toBe('Collection')
+      expect(committed).toBe(true)
+      expect(finished).toBe(false)
+
+      streamController.close()
+      await reload.finished
     } finally {
       frame.dispose()
     }
@@ -320,7 +391,7 @@ describe('frames', () => {
     try {
       await frame.ready()
       let reloadSettled = false
-      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+      let reload = reloadFrameForNavigation(frame.handle).finished.then(() => {
         reloadSettled = true
       })
 
@@ -371,7 +442,7 @@ describe('frames', () => {
 
     try {
       await frame.ready()
-      await reloadFrameForNavigation(frame.handle)
+      await reloadFrameForNavigation(frame.handle).finished
 
       expect(document.getElementById('loading')?.textContent).toBe('Loading')
       resolveCollection('<p id="collection">Collection</p>')
@@ -382,7 +453,7 @@ describe('frames', () => {
     }
   })
 
-  it('waits for blocking child frames before a reload resolves', async () => {
+  it('commits server-rendered blocking child frames before hydration finishes', async () => {
     let root = document.createElement('div')
     root.innerHTML = '<p id="initial">Initial</p>'
     document.body.append(root)
@@ -420,15 +491,22 @@ describe('frames', () => {
 
     try {
       await frame.ready()
-      let reloadSettled = false
-      let reload = reloadFrameForNavigation(frame.handle).then(() => {
-        reloadSettled = true
+      let committed = false
+      let finished = false
+      let reload = reloadFrameForNavigation(frame.handle)
+      void reload.committed.then(() => {
+        committed = true
+      })
+      void reload.finished.then(() => {
+        finished = true
       })
       await new Promise((resolve) => setTimeout(resolve, 0))
 
-      expect(reloadSettled).toBe(false)
+      expect(document.getElementById('blocking-entry')?.textContent).toBe('Server')
+      expect(committed).toBe(true)
+      expect(finished).toBe(false)
       resolveModule(BlockingEntry)
-      await reload
+      await reload.finished
 
       expect(document.getElementById('blocking-entry')?.textContent).toBe('Hydrated blocking frame')
     } finally {
@@ -498,7 +576,7 @@ describe('frames', () => {
     try {
       await frame.ready()
       let reloadSettled = false
-      let reload = reloadFrameForNavigation(frame.handle).then(() => {
+      let reload = reloadFrameForNavigation(frame.handle).finished.then(() => {
         reloadSettled = true
       })
       await new Promise((resolve) => setTimeout(resolve, 0))
@@ -539,7 +617,7 @@ describe('frames', () => {
 
     try {
       await frame.ready()
-      await reloadFrameForNavigation(frame.handle)
+      await reloadFrameForNavigation(frame.handle).finished
 
       expect(document.getElementById('pending-fallback')?.textContent).toBe('Loading')
     } finally {
@@ -662,7 +740,7 @@ describe('frames', () => {
 
     try {
       await frame.ready()
-      let result = await reloadFrameForNavigation(frame.handle)
+      let result = await reloadFrameForNavigation(frame.handle).finished
 
       expect(document.getElementById('result')?.textContent).toBe('Settings overview')
       expect(frame.handle.src).toBe(frameSrc)
@@ -778,7 +856,7 @@ describe('frames', () => {
         formData,
         method: 'post',
         encType: 'multipart/form-data',
-      })
+      }).finished
 
       expect(resolvedOptions?.formData).toBe(formData)
       expect(resolvedOptions?.method).toBe('post')
@@ -823,7 +901,8 @@ describe('frames', () => {
       await frame.ready()
       let reload = reloadFrameForNavigation(frame.handle, { signal: controller.signal })
       controller.abort()
-      let result = await reload
+      await reload.committed
+      let result = await reload.finished
 
       expect(result.signal.aborted).toBe(true)
       expect(resolverSignal?.aborted).toBe(true)
@@ -866,7 +945,7 @@ describe('frames', () => {
       let reload = reloadFrameForNavigation(frame.handle, { signal: controller.signal })
       await streamRead
       controller.abort()
-      let result = await reload
+      let result = await reload.finished
 
       expect(result.signal.aborted).toBe(true)
       expect(document.getElementById('initial')?.textContent).toBe('Initial')
