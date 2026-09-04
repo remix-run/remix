@@ -2,6 +2,15 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-rc.2
+
+### Pre-release Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`render-middleware@0.2.1`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.2.1)
+  - [`spa@0.1.1`](https://github.com/remix-run/remix/releases/tag/spa@0.1.1)
+  - [`ui@0.8.1`](https://github.com/remix-run/remix/releases/tag/ui@0.8.1)
+
 ## v3.0.0-rc.1
 
 ### Pre-release Changes

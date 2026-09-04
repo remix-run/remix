@@ -2,6 +2,12 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.8.1
+
+### Patch Changes
+
+- Reset or restore scroll after the destination DOM and each blocking frame's first commit, without waiting for remaining frame streams or client-entry hydration. Prevent Chromium scroll anchoring, superseded reloads, and redirect URL synchronization from applying stale or duplicate scroll changes, and avoid a duplicate unhandled rejection when a public frame reload fails.
+
 ## v0.8.0
 
 ### Minor Changes
