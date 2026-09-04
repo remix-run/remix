@@ -6,6 +6,8 @@ The `Handle` object provides the component's interface to the framework.
 
 Schedules a component update and returns a promise that resolves with an `AbortSignal` after the update completes.
 
+Call `handle.update()` from event handlers, queued tasks, subscriptions, timers, or other work that runs after the component commits. Calling it before the initial commit or during rendering throws an error; use `handle.queueTask()` when render discovers work that should run after the commit.
+
 ```tsx
 function Counter(handle: Handle) {
   let count = 0

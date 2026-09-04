@@ -211,6 +211,11 @@ props.
 Calling `handle.update()` schedules work and returns a promise. Await it when the next step needs the
 updated DOM:
 
+Call it from an event handler, queued task, subscription, timer, or other work that runs after the
+component commits. Calling it before the initial commit or during rendering throws an error. If
+rendering discovers work that should run after the commit, schedule that work with
+`handle.queueTask()`.
+
 ```tsx
 import { on, ref } from "remix/ui";
 import type { Handle } from "remix/ui";

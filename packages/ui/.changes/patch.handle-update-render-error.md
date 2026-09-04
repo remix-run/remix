@@ -1,0 +1,1 @@
+Report a descriptive component error when `handle.update()` is called before the initial commit or during rendering instead of surfacing an unhandled `scheduleUpdate not implemented` promise rejection (see #11642).
