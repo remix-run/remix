@@ -19,7 +19,7 @@ Command-line interface for creating and managing Remix projects.
 
 ## Installation
 
-Use `npx remix@next new <target-dir>` to scaffold a new Remix app. Install `remix` when you want the local `remix` command:
+Use `npx remix@next new [target-dir]` to scaffold a new Remix app (defaults to `./my-remix-app`).  Install `remix` when you want the local `remix` command:
 
 ```sh
 npm i remix
@@ -41,12 +41,12 @@ remix completion zsh >> ~/.zshrc
 
 ## Usage
 
-Use `npx remix@next new my-remix-app` to scaffold a new Remix app. After installing Remix, the equivalent local command is `remix new my-remix-app`.
+Use `npx remix@next new` to scaffold a new Remix app in `my-remix-app`. After installing Remix, the equivalent local command is `remix new`. Pass a target directory to use a different folder and application name.
 
 The rest of the CLI is available through the installed `remix` command:
 
 ```sh
-remix new my-remix-app
+remix new
 remix assets
 remix assets inspect /assets/app/actions/public/entry.ts
 remix completion bash >> ~/.bashrc
