@@ -15,6 +15,31 @@ describe('vnode rendering', () => {
   describe('components', () => {
     it.todo('warns when render is called after component is removed')
 
+    it('updates from a task queued during the initial render', () => {
+      let container = document.createElement('div')
+
+      function App(handle: Handle) {
+        let value = 'initial'
+        let queued = false
+        return () => {
+          if (!queued) {
+            queued = true
+            handle.queueTask(() => {
+              value = 'updated'
+              handle.update()
+            })
+          }
+          return <p>{value}</p>
+        }
+      }
+
+      let root = createRoot(container)
+      root.render(<App />)
+      root.flush()
+
+      expect(container.innerHTML).toBe('<p>updated</p>')
+    })
+
     it('inserts a component', () => {
       let container = document.createElement('div')
       function App() {

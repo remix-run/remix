@@ -32,10 +32,13 @@ export interface Handle<Props = Record<string, never>, ContextValue = NoContext>
 
   /**
    * Schedules an update for the component to render again. Returns a promise
-   * that resolves with an AbortSignal after the update completes. The signal
-   * is aborted when the component re-renders or is removed.
+   * that resolves with an AbortSignal after the update completes. Call this
+   * from an event handler, queued task, or other work that runs after the
+   * component commits. The signal is aborted when the component re-renders or
+   * is removed.
    *
    * @returns A promise that resolves with an AbortSignal after the update
+   * @throws If called before the initial commit or during rendering
    */
   update(): Promise<AbortSignal>
 
@@ -272,6 +275,7 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
   #renderController: AbortController | undefined
   #renderFn: RenderFn | undefined
   #removed = false
+  #phase: 'idle' | 'setup' | 'render' = 'idle'
   // The schedule target is stored as fields (updated each render) rather than
   // a closure so re-renders don't allocate a new function per component.
   #updateQueue: UpdateQueue | undefined
@@ -306,7 +310,13 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
 
     if (renderFn === undefined) {
       let initialize = this.#config.type as unknown as (handle: Handle<ElementProps, C>) => unknown
-      let result = initialize(this.#handle)
+      let result: unknown
+      this.#phase = 'setup'
+      try {
+        result = initialize(this.#handle)
+      } finally {
+        this.#phase = 'idle'
+      }
 
       if (!isRenderFn(result)) {
         let name = this.#config.type.name || 'Anonymous'
@@ -317,7 +327,15 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
       this.#renderFn = renderFn
     }
 
-    return [renderFn(), this.#dequeueTasks()]
+    let element: RemixNode
+    this.#phase = 'render'
+    try {
+      element = renderFn()
+    } finally {
+      this.#phase = 'idle'
+    }
+
+    return [element, this.#dequeueTasks()]
   }
 
   remove = (): Array<() => void> => {
@@ -352,16 +370,26 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
     return {
       id: this.#config.id,
       props: this.#props,
-      update: () =>
-        new Promise((resolve) => {
-          if (component.#removed) {
-            resolve(AbortSignal.abort())
-            return
-          }
+      update: () => {
+        if (component.#removed) return Promise.resolve(AbortSignal.abort())
 
+        let name = component.#config.type.name || 'Anonymous'
+        if (component.#phase !== 'idle') {
+          throw new Error(
+            `Cannot call handle.update() while ${name} is running its ${component.#phase} function. Call it from an event handler or handle.queueTask() instead.`,
+          )
+        }
+        if (component.#updateQueue === undefined) {
+          throw new Error(
+            `Cannot call handle.update() before ${name}'s initial render commits. Call it from an event handler or handle.queueTask() instead.`,
+          )
+        }
+
+        return new Promise((resolve) => {
           this.#tasks.push((signal) => resolve(signal))
           this.#scheduleUpdate()
-        }),
+        })
+      },
       queueTask: (task: Task) => {
         this.#tasks.push(task)
       },

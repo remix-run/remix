@@ -94,6 +94,50 @@ describe('vdom error handling', () => {
       expect(errorHandler).toHaveBeenCalledTimes(1)
       expect((errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error).toBe(error)
     })
+
+    it('reports handle.update() calls during setup', (t) => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let errorHandler = t.mock.fn()
+      root.addEventListener('error', errorHandler)
+
+      function SetupUpdate(handle: Handle) {
+        handle.update()
+        return () => <div>ok</div>
+      }
+
+      root.render(<SetupUpdate />)
+
+      expect(errorHandler).toHaveBeenCalledTimes(1)
+      let error = (errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error as Error
+      expect(error.message).toBe(
+        'Cannot call handle.update() while SetupUpdate is running its setup function. Call it from an event handler or handle.queueTask() instead.',
+      )
+    })
+
+    it("reports updates to a parent before the parent's initial render commits", (t) => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let errorHandler = t.mock.fn()
+      root.addEventListener('error', errorHandler)
+
+      function Child(handle: Handle<{ updateParent(): void }>) {
+        handle.props.updateParent()
+        return () => null
+      }
+
+      function Parent(handle: Handle) {
+        return () => <Child updateParent={() => handle.update()} />
+      }
+
+      root.render(<Parent />)
+
+      expect(errorHandler).toHaveBeenCalledTimes(1)
+      let error = (errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error as Error
+      expect(error.message).toBe(
+        "Cannot call handle.update() before Parent's initial render commits. Call it from an event handler or handle.queueTask() instead.",
+      )
+    })
   })
 
   describe('render errors', () => {
@@ -144,6 +188,28 @@ describe('vdom error handling', () => {
 
       expect(errorHandler).toHaveBeenCalledTimes(1)
       expect((errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error).toBe(error)
+    })
+
+    it('reports handle.update() calls during render', (t) => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let errorHandler = t.mock.fn()
+      root.addEventListener('error', errorHandler)
+
+      function RenderUpdate(handle: Handle) {
+        return () => {
+          handle.update()
+          return <div>ok</div>
+        }
+      }
+
+      root.render(<RenderUpdate />)
+
+      expect(errorHandler).toHaveBeenCalledTimes(1)
+      let error = (errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error as Error
+      expect(error.message).toBe(
+        'Cannot call handle.update() while RenderUpdate is running its render function. Call it from an event handler or handle.queueTask() instead.',
+      )
     })
   })
 
@@ -364,13 +430,14 @@ describe('vdom error handling', () => {
   })
 
   describe('cascading updates protection', () => {
-    it('dispatches error when handle.update() is called during render', async (t) => {
+    it('dispatches error for a cascading queued update loop', async (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
       let errorHandler = t.mock.fn()
       root.addEventListener('error', errorHandler)
 
       let renderCount = 0
+      let shouldLoop = false
       let triggerUpdate: () => void
 
       function InfiniteLoop(handle: Handle) {
@@ -379,8 +446,8 @@ describe('vdom error handling', () => {
         }
         return () => {
           renderCount++
-          if (renderCount > 1) {
-            handle.update()
+          if (shouldLoop) {
+            handle.queueTask(() => handle.update())
           }
           return <div>count: {renderCount}</div>
         }
@@ -391,6 +458,7 @@ describe('vdom error handling', () => {
       expect(container.innerHTML).toBe('<div>count: 1</div>')
       expect(renderCount).toBe(1)
 
+      shouldLoop = true
       triggerUpdate!()
       await new Promise((resolve) => setTimeout(resolve, 10))
 
