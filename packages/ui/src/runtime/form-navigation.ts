@@ -68,6 +68,8 @@ export function createFormNavigationResolver(
 export function createNavigationSourceResolver(
   signal: AbortSignal,
 ): (event: NavigateEvent) => NavigationSource {
+  let needsSourceElementFallback =
+    typeof NavigateEvent === 'undefined' || !('sourceElement' in NavigateEvent.prototype)
   let pendingFormSubmissions = new WeakMap<HTMLFormElement, PendingFormSubmission>()
   let pendingNavigationSource: PendingNavigationSource | undefined
 
@@ -79,19 +81,27 @@ export function createNavigationSourceResolver(
     })
   }
 
-  document.addEventListener(
-    'click',
-    (event) => {
-      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-        return
-      }
-      let target = event.target
-      if (!(target instanceof Element)) return
-      let link = target.closest('a, area')
-      if (link) setPendingNavigationSource(link)
-    },
-    { capture: true, signal },
-  )
+  if (needsSourceElementFallback) {
+    document.addEventListener(
+      'click',
+      (event) => {
+        if (
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        ) {
+          return
+        }
+        let target = event.target
+        if (!(target instanceof Element)) return
+        let link = target.closest('a, area')
+        if (link) setPendingNavigationSource(link)
+      },
+      { capture: true, signal },
+    )
+  }
 
   // Cache the authoritative submitter for the matching `navigate` event and, for Chromium's
   // non-POST-to-POST override case, the later `formdata` event. Unmatched submits expire.
@@ -112,7 +122,7 @@ export function createNavigationSourceResolver(
         eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
           ? eventSubmitter
           : null
-      setPendingNavigationSource(submitter ?? form)
+      if (needsSourceElementFallback) setPendingNavigationSource(submitter ?? form)
       let removeFormDataListener = () => {}
       let method = getFormMethod(form, submitter).toLowerCase()
       // Chromium omits formData from the `navigate` event when a submitter overrides a non-POST form

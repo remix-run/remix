@@ -49,6 +49,16 @@ function stubNavigatorUserAgent(t: TestContext, userAgent: string): void {
   })
 }
 
+function stubNavigateEventSourceElementSupport(t: TestContext, supported: boolean): void {
+  class StubNavigateEvent {
+    get sourceElement(): Element | null {
+      return null
+    }
+  }
+  if (!supported) Reflect.deleteProperty(StubNavigateEvent.prototype, 'sourceElement')
+  stubGlobalField(t, 'NavigateEvent', StubNavigateEvent)
+}
+
 function stubWindowScrollPosition(t: TestContext) {
   let x = 0
   let y = 0
@@ -598,6 +608,7 @@ describe('navigate', () => {
   })
 
   it('intercepts anchors when sourceElement is unavailable', (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
     let dispatchNavigation = startStubNavigationListener(t)
     let anchor = document.createElement('a')
     anchor.href = '/login'
@@ -621,6 +632,7 @@ describe('navigate', () => {
   })
 
   it('does not use a captured anchor when sourceElement is explicitly null', (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
     let dispatchNavigation = startStubNavigationListener(t)
     let anchor = document.createElement('a')
     anchor.href = '/login'
@@ -639,6 +651,7 @@ describe('navigate', () => {
   })
 
   it('does not use a captured anchor after its click task', async (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
     let dispatchNavigation = startStubNavigationListener(t)
     let anchor = document.createElement('a')
     anchor.href = '/login'
@@ -658,6 +671,7 @@ describe('navigate', () => {
   })
 
   it('prefers explicit runtime state over a captured anchor', (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
     let dispatchNavigation = startStubNavigationListener(t)
     let anchor = document.createElement('a')
     anchor.href = '/login'
@@ -684,6 +698,25 @@ describe('navigate', () => {
     dispatchNavigation(event)
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe(undefined)
+  })
+
+  it('does not capture anchors when sourceElement is supported', (t) => {
+    stubNavigateEventSourceElementSupport(t, true)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    document.body.append(anchor)
+    anchor.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    let intercept = mock.fn()
+    let event = createAnchorNavigateEvent(anchor, {
+      intercept,
+      destinationUrl: anchor.href,
+    })
+    Reflect.deleteProperty(event, 'sourceElement')
+    dispatchNavigation(event)
+
+    expect(intercept).not.toHaveBeenCalled()
   })
 
   it('replaces marked anchor history without precommit support', async (t) => {
@@ -1182,6 +1215,7 @@ describe('form navigation', () => {
   })
 
   it('intercepts forms when sourceElement is unavailable', (t) => {
+    stubNavigateEventSourceElementSupport(t, false)
     let dispatchNavigation = startStubNavigationListener(t)
     let form = document.createElement('form')
     form.action = '/login'
