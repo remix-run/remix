@@ -1,0 +1,8 @@
+@import '../../../../shared/styles/public/tokens.css';
+@import '../../../../shared/styles/public/base.css';
+@import '../../../../shared/styles/public/shell.css';
+@import '../../../../shared/styles/public/search.css';
+@import './index.css';
+@import './chapters-nav.css';
+@import '../../../../shared/styles/public/article.css';
+@import '../../../../shared/styles/public/markdown.css';

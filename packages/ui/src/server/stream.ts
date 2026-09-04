@@ -1,5 +1,6 @@
 import type { ComponentHandle, FrameHandle, Key, RemixNode } from '../runtime/component.ts'
 import type { ElementType, ElementProps, RemixElement } from '../runtime/jsx.ts'
+import type { ElementFunction } from '../runtime/element-function.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
@@ -76,6 +77,8 @@ interface UnresolvedHydrationData {
 interface ResolvedClientEntry {
   href: string
   exportName: string
+  /** Browser module hrefs to begin preloading before hydrating this entry. */
+  preloads?: readonly string[]
 }
 
 interface FrameData {
@@ -89,7 +92,6 @@ interface RenderContext {
   onError: (error: unknown) => void
   parentVNode?: VNode
   styleCache: Map<string, { selector: string; css: string }>
-  emittedStyles: Set<string>
   resolveFrame: (
     src: string,
     target?: string,
@@ -99,6 +101,7 @@ interface RenderContext {
   hydrationData: Map<string, HydrationData>
   unresolvedHydrationData: Map<string, UnresolvedHydrationData>
   frameData: Map<string, FrameData>
+  modulePreloadTags: Set<string>
   blockingFrameTails: ReadableStream<Uint8Array>[]
   signal: AbortSignal
   flushKind: FlushKind
@@ -203,11 +206,11 @@ export function renderToStream(
     onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
     styleCache: new Map(),
-    emittedStyles: new Set(),
     pendingFrames: [],
     hydrationData: new Map(),
     unresolvedHydrationData: new Map(),
     frameData: new Map(),
+    modulePreloadTags: new Set(),
     blockingFrameTails: [],
     signal: renderAbortController.signal,
     flushKind: 'fragment',
@@ -436,7 +439,7 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
       return buildElementSegment(tag, props, context, frameState)
     }
 
-    if (typeof type === 'function') {
+    if (isElementFunction(type)) {
       if (type === Frame) {
         return buildFrameSegment(node, context, frameState)
       }
@@ -489,15 +492,19 @@ function buildFrameSegment(
     framePromise.catch(() => {})
     context.pendingFrames.push({ frameId, promise: framePromise })
   } else {
-    seg.pending = Promise.resolve(
+    let framePromise = Promise.resolve(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
     ).then(async (resolved) => {
       let { html, tail } = await resolveFrameHtml(resolved)
+      html = hoistModulePreloadsFromFrameHead(html, context)
       seg.content = staticSeg(html)
       if (tail) {
         context.blockingFrameTails.push(tail)
       }
     })
+    // An earlier blocking frame may reject before this promise is awaited.
+    framePromise.catch(() => {})
+    seg.pending = framePromise
   }
 
   return seg
@@ -529,6 +536,16 @@ function buildElementSegment(
 
   if (props.innerHTML) {
     return staticSeg(`<${tag}${attrs}>${props.innerHTML}</${tag}>`)
+  }
+
+  if (tag === 'script') {
+    if (typeof props.children === 'string') {
+      return staticSeg(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
+    }
+    if (props.children != null) {
+      console.error(new Error('script elements with children must have a single string child'))
+    }
+    return staticSeg(`<${tag}${attrs}></${tag}>`)
   }
 
   let open = staticSeg(`<${tag}${attrs}>`)
@@ -788,8 +805,8 @@ function sanitizeReturnedSsrMixinProps(props: ElementProps): ElementProps {
 
 function resolveReturnedSsrMixDescriptors(
   value: unknown,
-): Array<{ type: Function; args: unknown[] }> | null {
-  let descriptors: Array<{ type: Function; args: unknown[] }> = []
+): Array<{ type: ElementFunction; args: unknown[] }> | null {
+  let descriptors: Array<{ type: ElementFunction; args: unknown[] }> = []
   if (!collectReturnedSsrMixDescriptors(value, descriptors)) {
     return null
   }
@@ -799,7 +816,7 @@ function resolveReturnedSsrMixDescriptors(
 
 function collectReturnedSsrMixDescriptors(
   value: unknown,
-  output: Array<{ type: Function; args: unknown[] }>,
+  output: Array<{ type: ElementFunction; args: unknown[] }>,
 ): boolean {
   if (!value) {
     return true
@@ -829,7 +846,11 @@ function isSsrMixinElement(
   return '__rmxMixinElementType' in value
 }
 
-function isSsrMixinDescriptor(value: unknown): value is { type: Function; args: unknown[] } {
+function isElementFunction(value: unknown): value is ElementFunction {
+  return typeof value === 'function'
+}
+
+function isSsrMixinDescriptor(value: unknown): value is { type: ElementFunction; args: unknown[] } {
   if (!value || typeof value !== 'object' || isRemixElement(value)) {
     return false
   }
@@ -839,7 +860,7 @@ function isSsrMixinDescriptor(value: unknown): value is { type: Function; args: 
 }
 
 function buildComponentSegment(
-  type: Function,
+  type: ElementFunction,
   props: any,
   context: RenderContext,
   componentId: string,
@@ -923,7 +944,7 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
     }
 
     // Component function: render synchronously, then unwrap its result
-    if (typeof type === 'function') {
+    if (isElementFunction(type)) {
       let vnode = createVNode(type, props)
       if (context.parentVNode) {
         vnode._parent = context.parentVNode
@@ -1070,6 +1091,10 @@ async function resolveClientEntries(
       moduleUrl: resolvedEntry.href,
       props,
     })
+
+    for (let preload of resolvedEntry.preloads ?? []) {
+      context.modulePreloadTags.add(createModulePreloadTag(preload))
+    }
   }
 
   context.unresolvedHydrationData.clear()
@@ -1091,6 +1116,19 @@ function validateResolvedClientEntry(
 
   if (!resolvedEntry.exportName) {
     throw new Error(`resolveClientEntry must return a non-empty exportName. Received "${entryId}".`)
+  }
+
+  if (resolvedEntry.preloads !== undefined) {
+    if (!Array.isArray(resolvedEntry.preloads)) {
+      throw new Error(`resolveClientEntry preloads must be an array. Received "${entryId}".`)
+    }
+    for (let preload of resolvedEntry.preloads) {
+      if (typeof preload !== 'string' || preload.length === 0) {
+        throw new Error(
+          `resolveClientEntry preloads must contain non-empty strings. Received "${entryId}".`,
+        )
+      }
+    }
   }
 }
 
@@ -1149,6 +1187,16 @@ function escapeTemplateContent(html: string): string {
   return html.replace(/<\/template/gi, '<\\/template')
 }
 
+const SCRIPT_TAG_PATTERN = /(<\/|<)(s)(cript)/gi
+
+function escapeScriptTextContent(value: string): string {
+  return value.replace(
+    SCRIPT_TAG_PATTERN,
+    (_match, prefix: string, firstLetter: string, suffix: string) =>
+      `${prefix}${firstLetter === 's' ? '\\u0073' : '\\u0053'}${suffix}`,
+  )
+}
+
 function transformAttributeName(name: string, isSvg: boolean): string {
   return normalizeAttributeName(name, isSvg).attr
 }
@@ -1156,9 +1204,10 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 function finalizeHtml(html: string, context: RenderContext): string {
   let hasHtmlRoot = context.flushKind === 'document'
 
+  let preloads = collectModulePreloadTags(context)
   let styles = collectStyleTags(context)
-  if (styles) {
-    let headContent = styles
+  if (preloads || styles) {
+    let headContent = preloads + styles
     if (hasHtmlRoot) {
       // For HTML root, inject into existing head or create one
       let headCloseIndex = html.indexOf('</head>')
@@ -1179,8 +1228,6 @@ function finalizeHtml(html: string, context: RenderContext): string {
       html = `<head>${headContent}</head>${html}`
     }
   }
-
-  html = dedupeServerStyleTagsInHtml(html, context.emittedStyles)
 
   // Append aggregated hydration/frame data script at the end
   let rmxData = buildRmxDataScript(context)
@@ -1204,6 +1251,52 @@ function finalizeHtml(html: string, context: RenderContext): string {
   }
 
   return html
+}
+
+const FRAME_HEAD_OPEN_TAG = '<head>'
+const FRAME_HEAD_CLOSE_TAG = '</head>'
+const MARKED_MODULE_PRELOAD_START = '<link data-rmx-module-preload rel="modulepreload" href="'
+const MODULE_PRELOAD_END = '" />'
+
+function createModulePreloadTag(href: string): string {
+  return `${MARKED_MODULE_PRELOAD_START}${escapeHtml(href)}${MODULE_PRELOAD_END}`
+}
+
+function collectModulePreloadTags(context: RenderContext): string {
+  return Array.from(context.modulePreloadTags).join('')
+}
+
+function hoistModulePreloadsFromFrameHead(html: string, context: RenderContext): string {
+  if (!html.startsWith(FRAME_HEAD_OPEN_TAG)) return html
+
+  let tags: string[] = []
+  let remainingHeadStart = FRAME_HEAD_OPEN_TAG.length
+  while (html.startsWith(MARKED_MODULE_PRELOAD_START, remainingHeadStart)) {
+    let tagEnd = html.indexOf(
+      MODULE_PRELOAD_END,
+      remainingHeadStart + MARKED_MODULE_PRELOAD_START.length,
+    )
+    if (tagEnd === -1) return html
+
+    tagEnd += MODULE_PRELOAD_END.length
+    tags.push(html.slice(remainingHeadStart, tagEnd))
+    remainingHeadStart = tagEnd
+  }
+
+  if (tags.length === 0) return html
+
+  let headClose = html.indexOf(FRAME_HEAD_CLOSE_TAG, remainingHeadStart)
+  if (headClose === -1) return html
+
+  for (let tag of tags) {
+    context.modulePreloadTags.add(tag)
+  }
+
+  if (remainingHeadStart === headClose) {
+    return html.slice(headClose + FRAME_HEAD_CLOSE_TAG.length)
+  }
+
+  return FRAME_HEAD_OPEN_TAG + html.slice(remainingHeadStart)
 }
 
 function processStyleProps(props: any): any {
@@ -1252,24 +1345,12 @@ function renderStyleTag(
 ): string {
   let wrappedCss = wrapStyleForLayer(selector, css, layer)
   if (!wrappedCss) return ''
-  return `<style data-rmx="${escapeHtml(selector)}">${wrappedCss}</style>`
+  return `<style data-rmx-style="${escapeHtml(selector)}">${escapeStyleText(wrappedCss)}</style>`
 }
 
-function readStyleTagAttribute(attrs: string, name: string): string | null {
-  let match = attrs.match(new RegExp(`\\b${name}=(?:"([^"]*)"|'([^']*)')`))
-  if (!match) return null
-  return match[1] ?? match[2] ?? null
-}
-
-function dedupeServerStyleTagsInHtml(html: string, seenStyles: Set<string>): string {
-  return html.replace(/<style\b([^>]*)>[\s\S]*?<\/style>/gi, (match, attrs) => {
-    let selector = readStyleTagAttribute(attrs, 'data-rmx')
-    if (!selector) return match
-
-    if (seenStyles.has(selector)) return ''
-    seenStyles.add(selector)
-    return match
-  })
+function escapeStyleText(css: string): string {
+  // Only neutralize literal style end tags. Escaping every '<' breaks valid range media queries.
+  return css.replace(/<\/style/gi, '\\3C/style')
 }
 
 function buildRmxDataScript(context: RenderContext): string {
@@ -1303,6 +1384,12 @@ function escapeScriptJson(json: string): string {
 // the handler's `finalizeHtml` emits selector-addressed `<style>` tags in its HTML, and on the client,
 // the `adoptServerStyleTag` MutationObserver (stylesheet.ts) picks it up anywhere in the
 // document and adopts the CSS into an adopted stylesheet.
+//
+// Style tags are intentionally NOT deduped across frame boundaries: each frame
+// owns its style rules independently on the client (per-frame refcounted
+// adoption), so every frame's HTML must carry the full set of style tags its
+// content references — even when a sibling frame or the enclosing document
+// already emitted the same selector.
 async function streamPendingFrames(
   context: RenderContext,
   controller: ReadableStreamDefaultController,
@@ -1323,7 +1410,6 @@ async function streamPendingFrames(
         try {
           let { html, tail } = await promise
           if (context.signal.aborted) return
-          html = dedupeServerStyleTagsInHtml(html, context.emittedStyles)
 
           // Stream as a template element (first chunk only)
           let templateHtml = `<template id="${frameId}">${escapeTemplateContent(html)}</template>`

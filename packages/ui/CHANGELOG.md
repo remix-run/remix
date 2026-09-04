@@ -2,6 +2,106 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.8.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remix UI framework-owned DOM attributes now consistently use the `data-rmx-*` namespace. Rename `rmx-document`, `rmx-target`, `rmx-src`, `rmx-history`, `rmx-reset-scroll`, `rmx-preserve-dom`, and `data-key` to `data-rmx-document`, `data-rmx-target`, `data-rmx-src`, `data-rmx-history`, `data-rmx-reset-scroll`, `data-rmx-preserve-dom`, and `data-rmx-key`. Generated style and module preload markers now use `data-rmx-style` and `data-rmx-module-preload` instead of `data-rmx`.
+
+- BREAKING CHANGE: During server rendering, script elements with non-string children previously serialized those children as escaped HTML text. They now render empty and report an error. Pass a single string child, such as `JSON.stringify(value)`, to embed script content without HTML entity escaping. Script-tag sequences that could terminate the element remain escaped.
+
+- BREAKING CHANGE: Remove `addEventListeners()`. Use native `target.addEventListener(type, listener, { signal })` instead. If a listener used the helper's second callback argument, create an `AbortController` and abort it when the listener runs again or its lifetime signal aborts.
+
+- Added a browser-only SPA response protocol to `remix/ui` for associating bodyless route responses with Remix UI nodes. Application code uses the higher-level `render()` and `run()` APIs from `remix/spa`.
+
+### Patch Changes
+
+- Prevent aborted `renderToStream` requests with multiple blocking `Frame`s from producing unhandled promise rejections that can crash Node servers.
+
+- Changed the scheduler's cascading update guard to warn when many component updates happen in one event-loop turn and only throw the infinite-loop error when a single component instance repeatedly updates itself. This keeps large `clientEntry` hydration bursts interactive while still surfacing component names and counts for diagnosis.
+
+- Fixed `mix` prop types to accept argument-bearing mixins authored for a base element type on compatible subtype elements.
+
+- Gracefully degrade to document navigations for browsers that do not support the Navigation API (see #11665).
+
+- Fix `data-rmx-reset-scroll="false"` and `navigate(..., { resetScroll: false })` to preserve the current scroll position. Default navigations now leave scroll resets and history restoration to the browser.
+
+- Adjust CSS escaping to preserve CSS range media queries such as `@media (width < 900px)` in server-rendered `css()` output while continuing to neutralize literal closing `</style>` tags.
+
+- Restore saved scroll positions for intercepted back and forward navigations when client entry reconciliation temporarily shrinks the document or triggers scroll anchoring, while continuing to wait for nested blocking frames before the Navigation API restores scrolling.
+
+- Prevent Safari Navigation API scroll resets from desynchronizing page hit testing after intercepted push and replace navigations (see [WebKit bug 309542](https://bugs.webkit.org/show_bug.cgi?id=309542)).
+
+## v0.7.0
+
+### Minor Changes
+
+- `run()` now uses a default browser frame resolver when `resolveFrame` is omitted. Apps that supplied a resolver only to fetch frame HTML can remove it:
+
+  ```diff
+   let app = run({
+     loadModule,
+  -  resolveFrame(src, options) {
+  -    return fetch(src, {
+  -      headers: { Accept: 'text/html' },
+  -      signal: options?.signal,
+  -    })
+  -  },
+   })
+  ```
+
+  All `run()` calls now enable frame reloads and same-origin link and form navigation through the Navigation API. The default resolver submits the requested method, encoding, and form data, and rejects non-OK responses. Keep a custom `resolveFrame` when the app needs custom request headers, body encoding, response handling, or error UI. Add `rmx-document` to a link or form to leave that navigation to the browser (see #11693).
+
+## v0.6.0
+
+### Minor Changes
+
+- Allow `resolveClientEntry()` to return module preload hrefs so client entries can preload their browser module graphs
+
+## v0.5.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Browser `resolveFrame` callbacks now receive a single options object instead of positional signal and target arguments. Update `resolveFrame(src, signal, target)` implementations to use `resolveFrame(src, options)` and read `options?.signal` and `options?.target`.
+
+- Added `frames` to the `app` object returned from `run()`, mirroring the existing `handle.frames` API
+
+- Added `@remix-run/ui/dev/refresh` for development tooling that needs to reconcile mounted roots after component modules update.
+
+- Same-origin forms now progressively enhance into frame navigations when `run({ resolveFrame })` is configured. Native constraint validation runs before interception, submissions target the top frame by default, `rmx-target` selects a named frame, and `rmx-document` opts back into document navigation. For non-GET submissions, resolvers receive the browser's native `FormData` plus the selected method and encoding, and remain responsible for request encoding and `_method` conventions. Non-GET submissions to the current URL replace its history entry without retaining their `FormData`; submissions to a different URL and GET submissions push a new entry.
+
+- Browser frame resolvers may now return a `Response`. Its body is streamed into the frame, and when a top-frame navigation follows a redirect, the final response URL replaces the current navigation entry and becomes the frame's canonical `src` without loading the frame a second time. Direct reloads and named-frame navigations render the redirected response without replacing their canonical `src` with the final response URL.
+
+- Add an `rmx-history="push|replace"` attribute for anchors and forms that overrides the history behavior of enhanced frame navigations. Native anchors using `link(href, { history })` emit the corresponding attribute value automatically.
+
+- Add an `rmx-preserve-dom` attribute that tells the DOM reconciler to preserve a matching element's current attributes and children during reloads, allowing client-owned subtrees such as custom elements to manage their own DOM.
+
+### Patch Changes
+
+- Allow element-wide mixins such as `css()` to be used on subtype hosts like `<select>` without TypeScript assignability errors.
+
+- Built-in styled components now use adaptive `light-dark(...)` colors for their internal surfaces, text, borders, focus rings, and control states so they render correctly in dark color schemes.
+
+- Escape less-than characters in server-rendered `css()` output so style values cannot terminate the generated `<style>` element.
+
+- Fix hydrated component updates that could lose content when adding elements before existing content in a fragment
+
+- Prevent navigation and reloads from hanging when a nested `Frame` marker moves outside a frame region while the DOM is being updated.
+
+- Preserve client entry and frame state only for live boundaries with matching semantic identities, while replacing pending client entry SSR during reloads and releasing temporary response metadata after hydration or cancellation.
+
+- Prevent client-side document navigation and `Frame` updates from stalling after navigating between pages with different `Frame` layouts. A frame's end marker could be reused as the start marker of an incoming frame, which left the frame's region bounds and instance pointing at the wrong nodes.
+
+- Preserve resolved client-created frame content when its parent rerenders while the frame is still pending (see #11659).
+
+- Prevent document and frame reloads from dropping newly rendered sibling elements when client entries from the previous content are disposed.
+
+- Reload frames rendered within preserved client entries during ancestor frame reloads
+
+- Show complete destination server-rendered client entry content during document and frame reloads while replacement modules load, instead of retaining only positionally matched source content.
+
+- Fix top frame reloads using the previous URL after navigation targets a named frame.
+
 ## v0.4.0
 
 ### Minor Changes

@@ -45,13 +45,13 @@ export class Route<
   }
 
   /**
-   * Build a URL href for this route using the given parameters.
+   * Build a URL href for this route using the given route params and href options.
    *
-   * @param args The parameters to use for building the href
+   * @param args Route params and href options
    * @returns The built URL href
    */
   href(...args: CreateHrefArgs<pattern>): string {
-    return createHref(this.pattern, ...(args as any))
+    return createHref(this.pattern, ...args)
   }
 }
 

@@ -9,10 +9,10 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/tmp": "^0.2.6",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
     "start": "node server.js",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   }
 }

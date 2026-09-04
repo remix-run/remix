@@ -4,9 +4,9 @@ import { createController } from 'remix/router'
 import { routes } from '../routes.ts'
 import { assetServer } from '../utils/assets.ts'
 
-const entryFilePath = path.resolve(import.meta.dirname, '../client/entry.ts')
-const styleFilePath = path.resolve(import.meta.dirname, '../client/styles/app.css')
-const imageFilePath = path.resolve(import.meta.dirname, '../client/images/image.svg')
+const entryFilePath = path.resolve(import.meta.dirname, './public/entry.ts')
+const styleFilePath = path.resolve(import.meta.dirname, './public/styles/app.css')
+const imageFilePath = path.resolve(import.meta.dirname, './public/images/image.svg')
 
 export default createController(routes, {
   actions: {
@@ -44,8 +44,9 @@ export default createController(routes, {
         transformed-output caching.
       </p>
       <p>
-        Try editing <code>app/client/entry.ts</code>, <code>app/client/styles/app.css</code>,
-        or <code>app/client/images/image.svg</code>. You can also tweak the transforms in
+        Try editing <code>app/actions/public/entry.ts</code>,
+        <code>app/actions/public/styles/app.css</code>, or
+        <code>app/actions/public/images/image.svg</code>. You can also tweak the transforms in
         <code>app/utils/assets.ts</code>.
       </p>
       <div id="app-root" class="app" aria-live="polite">

@@ -1,0 +1,1169 @@
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
+import { column, Database, table, eq, ilike, inList } from '@remix-run/data-table'
+import mysql from 'mysql2/promise'
+
+import { MysqlDatabaseDriver } from './driver.ts'
+
+function createMysqlTestDatabase(
+  ...args: ConstructorParameters<typeof MysqlDatabaseDriver>
+): MysqlDatabaseDriver {
+  return new MysqlDatabaseDriver(...args)
+}
+
+function createDatabase(driver: MysqlDatabaseDriver): Database {
+  return new Database(driver)
+}
+
+const accounts = table({
+  name: 'accounts',
+  columns: {
+    id: column.integer(),
+    email: column.text(),
+  },
+})
+
+const projects = table({
+  name: 'projects',
+  columns: {
+    id: column.integer(),
+    account_id: column.integer(),
+    name: column.text(),
+  },
+})
+
+const invoices = table({
+  name: 'billing.invoices',
+  columns: {
+    id: column.integer(),
+    account_id: column.integer(),
+  },
+})
+
+const accountProjects = table({
+  name: 'account_projects',
+  columns: {
+    account_id: column.integer(),
+    project_id: column.integer(),
+    email: column.text(),
+  },
+  primaryKey: ['account_id', 'project_id'],
+})
+
+describe('mysql driver', () => {
+  it('runs migration work on the pool connection that owns the lock', async () => {
+    let statements: string[] = []
+    let releaseCalls = 0
+    let destroyCalls = 0
+    let connection = {
+      async query(text: string) {
+        statements.push(text)
+
+        if (text.includes('get_lock')) {
+          return [[{ acquired: 1, lock_name: 'hashed-lock-name' }], []]
+        }
+
+        if (text.includes('release_lock')) {
+          return [[{ released: 1 }], []]
+        }
+
+        return [[], []]
+      },
+      async beginTransaction() {
+        statements.push('begin')
+      },
+      async commit() {
+        statements.push('commit')
+      },
+      async rollback() {
+        statements.push('rollback')
+      },
+      release() {
+        releaseCalls += 1
+      },
+      destroy() {
+        destroyCalls += 1
+      },
+    }
+    let pool = {
+      async query() {
+        throw new Error('migration work must not use the pool')
+      },
+      async getConnection() {
+        return connection
+      },
+      async end() {},
+    }
+    let driver = createMysqlTestDatabase(pool as never)
+
+    let result = await driver.withMigrationLock('app_migrations', async (lockedDriver) => {
+      assert.notEqual(lockedDriver, driver)
+      await lockedDriver.executeScript('create table users (id integer)')
+      let transaction = await lockedDriver.beginTransaction()
+      await lockedDriver.executeScript('insert into users values (1)', transaction)
+      await lockedDriver.commitTransaction(transaction)
+      return 'done'
+    })
+
+    assert.equal(result, 'done')
+    assert.equal(statements.length, 6)
+    assert.match(statements[0], /get_lock/)
+    assert.equal(statements[1], 'create table users (id integer)')
+    assert.equal(statements[2], 'begin')
+    assert.equal(statements[3], 'insert into users values (1)')
+    assert.equal(statements[4], 'commit')
+    assert.match(statements[5], /release_lock/)
+    assert.equal(releaseCalls, 1)
+    assert.equal(destroyCalls, 0)
+  })
+
+  it('rejects a failed migration lock acquisition and destroys the pooled connection', async () => {
+    let releaseCalls = 0
+    let destroyCalls = 0
+    let callbackCalls = 0
+    let connection = {
+      async query() {
+        return [[{ acquired: 0, lock_name: 'hashed-lock-name' }], []]
+      },
+      release() {
+        releaseCalls += 1
+      },
+      destroy() {
+        destroyCalls += 1
+      },
+    }
+    let pool = {
+      async query() {
+        throw new Error('not used')
+      },
+      async getConnection() {
+        return connection
+      },
+      async end() {},
+    }
+    let driver = createMysqlTestDatabase(pool as never)
+
+    await assert.rejects(
+      () =>
+        driver.withMigrationLock('app_migrations', async () => {
+          callbackCalls += 1
+        }),
+      /migration lock could not be acquired/,
+    )
+    assert.equal(callbackCalls, 0)
+    assert.equal(releaseCalls, 0)
+    assert.equal(destroyCalls, 1)
+  })
+
+  it('destroys the reserved connection when migration work fails', async () => {
+    let releaseCalls = 0
+    let destroyCalls = 0
+    let connection = {
+      async query(text: string) {
+        if (text.includes('get_lock')) {
+          return [[{ acquired: 1, lock_name: 'hashed-lock-name' }], []]
+        }
+
+        return [[{ released: 1 }], []]
+      },
+      release() {
+        releaseCalls += 1
+      },
+      destroy() {
+        destroyCalls += 1
+      },
+    }
+    let pool = {
+      async query() {
+        throw new Error('not used')
+      },
+      async getConnection() {
+        return connection
+      },
+      async end() {},
+    }
+    let driver = createMysqlTestDatabase(pool as never)
+
+    await assert.rejects(
+      () =>
+        driver.withMigrationLock('app_migrations', async () => {
+          throw new Error('migration failed')
+        }),
+      /migration failed/,
+    )
+    assert.equal(releaseCalls, 0)
+    assert.equal(destroyCalls, 1)
+  })
+
+  it('throws instead of deadlocking when migration work re-enters the lock', async () => {
+    let connection = {
+      async query(text: string) {
+        if (text.includes('get_lock')) {
+          return [[{ acquired: 1, lock_name: 'hashed-lock-name' }], []]
+        }
+
+        return [[{ released: 1 }], []]
+      },
+    }
+    let driver = createMysqlTestDatabase(connection as never)
+
+    await assert.rejects(
+      () =>
+        driver.withMigrationLock('app_migrations', () =>
+          driver.withMigrationLock('app_migrations', async () => undefined),
+        ),
+      /migration lock is already held by this database/,
+    )
+  })
+
+  it('runs migration work directly on client-backed connections', async () => {
+    let statements: string[] = []
+    let connection = {
+      async query(text: string) {
+        statements.push(text)
+
+        if (text.includes('get_lock')) {
+          return [[{ acquired: true, lock_name: 'hashed-lock-name' }], []]
+        }
+
+        return [[{ released: 'true' }], []]
+      },
+    }
+    let driver = createMysqlTestDatabase(connection as never)
+
+    let result = await driver.withMigrationLock('app_migrations', async (lockedDriver) => {
+      assert.equal(lockedDriver, driver)
+      return 'done'
+    })
+
+    assert.equal(result, 'done')
+    assert.equal(statements.length, 2)
+    assert.match(statements[0], /get_lock/)
+    assert.match(statements[1], /release_lock/)
+  })
+
+  it('serializes migration locks on the same driver', async () => {
+    let lifecycle: string[] = []
+    let signalFirstMigrationStarted: () => void = () => undefined
+    let firstMigrationStarted = new Promise<void>((resolve) => {
+      signalFirstMigrationStarted = resolve
+    })
+    let releaseFirstMigration: () => void = () => undefined
+    let firstMigrationCanFinish = new Promise<void>((resolve) => {
+      releaseFirstMigration = resolve
+    })
+    let connection = {
+      async query(text: string) {
+        lifecycle.push(text.includes('get_lock') ? 'lock' : 'unlock')
+        return text.includes('get_lock')
+          ? [[{ acquired: 1n, lock_name: 'hashed-lock-name' }], []]
+          : [[{ released: 1 }], []]
+      },
+    }
+    let driver = createMysqlTestDatabase(connection as never)
+
+    let firstMigration = driver.withMigrationLock('app_migrations', async () => {
+      lifecycle.push('first:start')
+      signalFirstMigrationStarted()
+      await firstMigrationCanFinish
+      lifecycle.push('first:end')
+    })
+    let secondMigration = driver.withMigrationLock('app_migrations', async () => {
+      lifecycle.push('second')
+    })
+
+    await firstMigrationStarted
+    assert.deepEqual(lifecycle, ['lock', 'first:start'])
+
+    releaseFirstMigration()
+    await Promise.all([firstMigration, secondMigration])
+
+    assert.deepEqual(lifecycle, [
+      'lock',
+      'first:start',
+      'first:end',
+      'unlock',
+      'lock',
+      'second',
+      'unlock',
+    ])
+  })
+
+  it('preserves migration errors when releasing the lock also fails', async () => {
+    let migrationError = new Error('migration failed')
+    let connection = {
+      async query(text: string) {
+        if (text.includes('get_lock')) {
+          return [[{ acquired: '1', lock_name: 'hashed-lock-name' }], []]
+        }
+
+        throw new Error('lock cleanup failed')
+      },
+    }
+    let driver = createMysqlTestDatabase(connection as never)
+
+    await assert.rejects(
+      () =>
+        driver.withMigrationLock('app_migrations', async () => {
+          throw migrationError
+        }),
+      (error: unknown) => error === migrationError,
+    )
+  })
+
+  it('reports lock release failures after successful migration work', async () => {
+    let connection = {
+      async query(text: string) {
+        return text.includes('get_lock')
+          ? [[{ acquired: 1, lock_name: 'hashed-lock-name' }], []]
+          : [{ released: 1 }, []]
+      },
+    }
+    let driver = createMysqlTestDatabase(connection as never)
+
+    await assert.rejects(
+      () => driver.withMigrationLock('app_migrations', async () => 'done'),
+      /migration lock was not held by the reserved connection/,
+    )
+  })
+
+  it('rejects malformed migration lock results', async () => {
+    let connection = {
+      async query() {
+        return [[{ acquired: null, lock_name: 'hashed-lock-name' }], []]
+      },
+    }
+    let driver = createMysqlTestDatabase(connection as never)
+
+    await assert.rejects(
+      () => driver.withMigrationLock('app_migrations', async () => undefined),
+      /migration lock could not be acquired/,
+    )
+  })
+
+  it('wipes URI-configured databases through a server connection', async (t) => {
+    let maintenanceConfig: unknown
+    let statements: string[] = []
+    let maintenanceConnection = {
+      async query(statement: string) {
+        statements.push(statement)
+        return [[], []]
+      },
+      async end() {},
+    }
+
+    t.mock.method(
+      mysql,
+      'createConnection',
+      async (config: Parameters<typeof mysql.createConnection>[0]) => {
+        maintenanceConfig = config
+        return maintenanceConnection as never
+      },
+    )
+
+    let driver = createMysqlTestDatabase(
+      {
+        uri: 'mysql://user:password@localhost/app?ssl=false',
+        connectionLimit: 5,
+        maxIdle: 5,
+        idleTimeout: 1000,
+        queueLimit: 10,
+        waitForConnections: true,
+      },
+      {
+        characterSet: 'utf8mb4',
+        collation: 'utf8mb4_unicode_ci',
+      },
+    )
+
+    await driver.wipe()
+
+    assert.ok(typeof maintenanceConfig === 'object' && maintenanceConfig !== null)
+    assert.ok('uri' in maintenanceConfig && typeof maintenanceConfig.uri === 'string')
+    assert.equal(new URL(maintenanceConfig.uri).pathname, '/')
+    assert.equal('connectionLimit' in maintenanceConfig, false)
+    assert.equal('maxIdle' in maintenanceConfig, false)
+    assert.equal('idleTimeout' in maintenanceConfig, false)
+    assert.equal('queueLimit' in maintenanceConfig, false)
+    assert.equal('waitForConnections' in maintenanceConfig, false)
+    assert.deepEqual(statements, [
+      'drop database if exists `app`',
+      'create database `app` character set `utf8mb4` collate `utf8mb4_unicode_ci`',
+    ])
+  })
+
+  it('requires a database name for wipe() even when MYSQL_DATABASE is set', async () => {
+    let previousEnv = process.env.MYSQL_DATABASE
+    process.env.MYSQL_DATABASE = 'env_db'
+
+    try {
+      let driver = createMysqlTestDatabase({ host: 'localhost', user: 'root' })
+
+      await assert.rejects(() => driver.wipe(), /MySQL database config requires a database name/)
+    } finally {
+      if (previousEnv === undefined) {
+        delete process.env.MYSQL_DATABASE
+      } else {
+        process.env.MYSQL_DATABASE = previousEnv
+      }
+    }
+  })
+
+  it('preserves client-backed connections when wipe is unavailable', async () => {
+    let endCalls = 0
+    let connection = {
+      async query() {
+        return [[], []]
+      },
+      async end() {
+        endCalls += 1
+      },
+    }
+    let driver = createMysqlTestDatabase(connection as never)
+
+    await assert.rejects(
+      () => driver.wipe(),
+      /MySQL database wipe\(\) requires config-based construction/,
+    )
+    assert.equal(endCalls, 0)
+  })
+
+  it('checks table and column existence through driver introspection hooks', async () => {
+    let statements: Array<{ text: string; values: unknown[] | undefined }> = []
+
+    let connection = {
+      async query(text: string, values?: unknown[]) {
+        statements.push({ text, values })
+        return [[{ exists: 1 }], []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let driver = new MysqlDatabaseDriver(connection as never)
+    let hasTable = await driver.hasTable({ schema: 'app', name: 'users' })
+    let hasColumn = await driver.hasColumn({ name: 'users' }, 'email')
+
+    assert.equal(hasTable, true)
+    assert.equal(hasColumn, true)
+    assert.equal(
+      statements[0]?.text,
+      'select exists(select 1 from information_schema.tables where table_schema = ? and table_name = ?) as `exists`',
+    )
+    assert.deepEqual(statements[0]?.values, ['app', 'users'])
+    assert.equal(
+      statements[1]?.text,
+      'select exists(select 1 from information_schema.columns where table_schema = database() and table_name = ? and column_name = ?) as `exists`',
+    )
+    assert.deepEqual(statements[1]?.values, ['users', 'email'])
+  })
+
+  it('routes introspection through transaction connections when a token is provided', async () => {
+    let rootQueries = 0
+    let connectionStatements: string[] = []
+
+    let connection = {
+      async query(text: string) {
+        connectionStatements.push(text)
+        return [[{ exists: 1 }], []]
+      },
+      async beginTransaction() {
+        connectionStatements.push('begin')
+      },
+      async commit() {
+        connectionStatements.push('commit')
+      },
+      async rollback() {
+        connectionStatements.push('rollback')
+      },
+      release() {},
+    }
+
+    let pool = {
+      async query() {
+        rootQueries += 1
+        return [[], []]
+      },
+      async getConnection() {
+        return connection
+      },
+    }
+
+    let driver = new MysqlDatabaseDriver(pool as never)
+    let token = await driver.beginTransaction()
+
+    await driver.hasTable({ name: 'users' }, token)
+    await driver.hasColumn({ name: 'users' }, 'email', token)
+    await driver.commitTransaction(token)
+
+    assert.equal(rootQueries, 0)
+    assert.deepEqual(connectionStatements, [
+      'begin',
+      'select exists(select 1 from information_schema.tables where table_schema = database() and table_name = ?) as `exists`',
+      'select exists(select 1 from information_schema.columns where table_schema = database() and table_name = ? and column_name = ?) as `exists`',
+      'commit',
+    ])
+  })
+
+  it('short-circuits insertMany([]) and returns empty rows for returning queries', async () => {
+    let calls = 0
+
+    let connection = {
+      async query() {
+        calls += 1
+        return [{ affectedRows: 0, insertId: undefined }, []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let driver = new MysqlDatabaseDriver(connection as never)
+
+    let result = await driver.execute({
+      operation: {
+        kind: 'insertMany',
+        table: accounts,
+        values: [],
+        returning: ['id'],
+      },
+      transaction: undefined,
+    })
+
+    assert.deepEqual(result, {
+      affectedRows: 0,
+      insertId: undefined,
+      rows: [],
+    })
+    assert.equal(calls, 0)
+  })
+
+  it('compiles ilike() with lower() and parses count results', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+
+    let connection = {
+      async query(text: string, values: unknown[] = []) {
+        statements.push({ text, values })
+
+        return [[{ count: '3' }], []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+
+    let count = await db.query(accounts).where(ilike('email', '%EXAMPLE%')).count()
+
+    assert.equal(count, 3)
+    assert.match(statements[0].text, /lower\(`email`\) like lower\(\?\)/)
+    assert.deepEqual(statements[0].values, ['%EXAMPLE%'])
+  })
+
+  it('starts and commits transactions on pooled connections', async () => {
+    let lifecycle: string[] = []
+
+    let poolConnection = {
+      async query() {
+        return [{ affectedRows: 1, insertId: 1 }, []]
+      },
+      async beginTransaction() {
+        lifecycle.push('begin')
+      },
+      async commit() {
+        lifecycle.push('commit')
+      },
+      async rollback() {
+        lifecycle.push('rollback')
+      },
+      release() {
+        lifecycle.push('release')
+      },
+    }
+
+    let pool = {
+      async query() {
+        throw new Error('unexpected root query')
+      },
+      async getConnection() {
+        lifecycle.push('getConnection')
+        return poolConnection
+      },
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(pool as never))
+
+    await db.transaction(async (transactionDatabase) => {
+      await transactionDatabase.query(accounts).insert({ id: 1, email: 'a@example.com' })
+    })
+
+    assert.deepEqual(lifecycle, ['getConnection', 'begin', 'commit', 'release'])
+  })
+
+  it('destroys a pooled connection when transaction startup fails', async () => {
+    let lifecycle: string[] = []
+    let poolConnection = {
+      async query() {},
+      async beginTransaction() {
+        throw new Error('begin failed')
+      },
+      async commit() {},
+      async rollback() {},
+      destroy() {
+        lifecycle.push('destroy')
+      },
+    }
+    let pool = {
+      async query() {},
+      async getConnection() {
+        lifecycle.push('getConnection')
+        return poolConnection
+      },
+    }
+    let driver = new MysqlDatabaseDriver(pool as never)
+
+    await assert.rejects(() => driver.beginTransaction(), /begin failed/)
+    assert.deepEqual(lifecycle, ['getConnection', 'destroy'])
+  })
+
+  it('destroys a pooled connection when commit fails', async () => {
+    let lifecycle: string[] = []
+    let poolConnection = {
+      async query() {},
+      async beginTransaction() {
+        lifecycle.push('begin')
+      },
+      async commit() {
+        lifecycle.push('commit')
+        throw new Error('commit failed')
+      },
+      async rollback() {},
+      destroy() {
+        lifecycle.push('destroy')
+      },
+    }
+    let pool = {
+      async query() {},
+      async getConnection() {
+        lifecycle.push('getConnection')
+        return poolConnection
+      },
+    }
+    let database = new MysqlDatabaseDriver(pool as never)
+    let token = await database.beginTransaction()
+
+    await assert.rejects(() => database.commitTransaction(token), /commit failed/)
+    assert.deepEqual(lifecycle, ['getConnection', 'begin', 'commit', 'destroy'])
+  })
+
+  it('destroys a pooled connection when rollback fails', async () => {
+    let lifecycle: string[] = []
+    let poolConnection = {
+      async query() {},
+      async beginTransaction() {
+        lifecycle.push('begin')
+      },
+      async commit() {},
+      async rollback() {
+        lifecycle.push('rollback')
+        throw new Error('rollback failed')
+      },
+      destroy() {
+        lifecycle.push('destroy')
+      },
+    }
+    let pool = {
+      async query() {},
+      async getConnection() {
+        lifecycle.push('getConnection')
+        return poolConnection
+      },
+    }
+    let database = new MysqlDatabaseDriver(pool as never)
+    let token = await database.beginTransaction()
+
+    await assert.rejects(() => database.rollbackTransaction(token), /rollback failed/)
+    assert.deepEqual(lifecycle, ['getConnection', 'begin', 'rollback', 'destroy'])
+  })
+
+  it('supports pooled transactions when getConnection() omits release()', async () => {
+    let lifecycle: string[] = []
+
+    let poolConnection = {
+      async query() {
+        return [{ affectedRows: 1, insertId: 1 }, []]
+      },
+      async beginTransaction() {
+        lifecycle.push('begin')
+      },
+      async commit() {
+        lifecycle.push('commit')
+      },
+      async rollback() {
+        lifecycle.push('rollback')
+      },
+    }
+
+    let pool = {
+      async query() {
+        throw new Error('unexpected root query')
+      },
+      async getConnection() {
+        lifecycle.push('getConnection')
+        return poolConnection
+      },
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(pool as never))
+
+    await db.transaction(async (transactionDatabase) => {
+      await transactionDatabase.query(accounts).insert({ id: 1, email: 'a@example.com' })
+    })
+
+    assert.deepEqual(lifecycle, ['getConnection', 'begin', 'commit'])
+  })
+
+  it('applies transaction options when provided', async () => {
+    let lifecycle: string[] = []
+
+    let connection = {
+      async query(text: string) {
+        lifecycle.push(text)
+        return [{ affectedRows: 0, insertId: undefined }, []]
+      },
+      async beginTransaction() {
+        lifecycle.push('begin')
+      },
+      async commit() {
+        lifecycle.push('commit')
+      },
+      async rollback() {
+        lifecycle.push('rollback')
+      },
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+
+    await db.transaction(async () => undefined, {
+      isolationLevel: 'serializable',
+      readOnly: true,
+    })
+
+    assert.deepEqual(lifecycle, [
+      'set transaction isolation level serializable',
+      'set transaction read only',
+      'begin',
+      'commit',
+    ])
+  })
+
+  it('applies read write transaction mode when readOnly is false', async () => {
+    let lifecycle: string[] = []
+
+    let connection = {
+      async query(text: string) {
+        lifecycle.push(text)
+        return [{ affectedRows: 0, insertId: undefined }, []]
+      },
+      async beginTransaction() {
+        lifecycle.push('begin')
+      },
+      async commit() {
+        lifecycle.push('commit')
+      },
+      async rollback() {
+        lifecycle.push('rollback')
+      },
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+
+    await db.transaction(async () => undefined, { readOnly: false })
+
+    assert.deepEqual(lifecycle, ['set transaction read write', 'begin', 'commit'])
+  })
+
+  it('rolls back transactions and releases pooled connections', async () => {
+    let lifecycle: string[] = []
+
+    let poolConnection = {
+      async query() {
+        return [{ affectedRows: 0, insertId: undefined }, []]
+      },
+      async beginTransaction() {
+        lifecycle.push('begin')
+      },
+      async commit() {
+        lifecycle.push('commit')
+      },
+      async rollback() {
+        lifecycle.push('rollback')
+      },
+      release() {
+        lifecycle.push('release')
+      },
+    }
+
+    let pool = {
+      async query() {
+        throw new Error('unexpected root query')
+      },
+      async getConnection() {
+        lifecycle.push('getConnection')
+        return poolConnection
+      },
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(pool as never))
+
+    await assert.rejects(
+      () =>
+        db.transaction(async () => {
+          throw new Error('force rollback')
+        }),
+      /force rollback/,
+    )
+
+    assert.deepEqual(lifecycle, ['getConnection', 'begin', 'rollback', 'release'])
+  })
+
+  it('rolls back pooled transactions when getConnection() omits release()', async () => {
+    let lifecycle: string[] = []
+
+    let poolConnection = {
+      async query() {
+        return [{ affectedRows: 0, insertId: undefined }, []]
+      },
+      async beginTransaction() {
+        lifecycle.push('begin')
+      },
+      async commit() {
+        lifecycle.push('commit')
+      },
+      async rollback() {
+        lifecycle.push('rollback')
+      },
+    }
+
+    let pool = {
+      async query() {
+        throw new Error('unexpected root query')
+      },
+      async getConnection() {
+        lifecycle.push('getConnection')
+        return poolConnection
+      },
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(pool as never))
+
+    await assert.rejects(
+      () =>
+        db.transaction(async () => {
+          throw new Error('force rollback')
+        }),
+      /force rollback/,
+    )
+
+    assert.deepEqual(lifecycle, ['getConnection', 'begin', 'rollback'])
+  })
+
+  it('supports savepoint lifecycle and escapes savepoint names', async () => {
+    let statements: string[] = []
+
+    let connection = {
+      async query(text: string) {
+        statements.push(text)
+        return [{ affectedRows: 0, insertId: undefined }, []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let driver = new MysqlDatabaseDriver(connection as never)
+    let token = await driver.beginTransaction()
+
+    await driver.createSavepoint(token, 'sp`0')
+    await driver.rollbackToSavepoint(token, 'sp`0')
+    await driver.releaseSavepoint(token, 'sp`0')
+    await driver.commitTransaction(token)
+
+    assert.deepEqual(statements, [
+      'savepoint `sp``0`',
+      'rollback to savepoint `sp``0`',
+      'release savepoint `sp``0`',
+    ])
+  })
+
+  it('throws for unknown transaction tokens', async () => {
+    let connection = {
+      async query() {
+        return [{ affectedRows: 0, insertId: undefined }, []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let driver = new MysqlDatabaseDriver(connection as never)
+
+    await assert.rejects(
+      () => driver.commitTransaction({ id: 'tx_missing' }),
+      /Unknown transaction token: tx_missing/,
+    )
+    await assert.rejects(
+      () => driver.rollbackTransaction({ id: 'tx_missing' }),
+      /Unknown transaction token: tx_missing/,
+    )
+    await assert.rejects(
+      () => driver.createSavepoint({ id: 'tx_missing' }, 'sp'),
+      /Unknown transaction token: tx_missing/,
+    )
+  })
+
+  it('compiles column-to-column comparisons from string references', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+
+    let connection = {
+      async query(text: string, values: unknown[] = []) {
+        statements.push({ text, values })
+        return [[{ count: '0' }], []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+
+    await db
+      .query(accounts)
+      .join(projects, eq('accounts.id', 'projects.account_id'))
+      .where(eq('accounts.email', 'ops@example.com'))
+      .count()
+
+    assert.match(statements[0].text, /`accounts`\.`id`\s*=\s*`projects`\.`account_id`/)
+    assert.match(statements[0].text, /`accounts`\.`email`\s*=\s*\?/)
+    assert.deepEqual(statements[0].values, ['ops@example.com'])
+  })
+
+  it('compiles cross-schema table references in joins', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+
+    let connection = {
+      async query(text: string, values: unknown[] = []) {
+        statements.push({ text, values })
+        return [[{ count: '0' }], []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+
+    await db.query(invoices).join(accounts, eq(accounts.id, invoices.account_id)).count()
+
+    assert.match(statements[0].text, /from `billing`\.`invoices`/)
+    assert.match(statements[0].text, /join `accounts`/)
+    assert.match(statements[0].text, /`accounts`\.`id`\s*=\s*`billing`\.`invoices`\.`account_id`/)
+  })
+
+  it('treats dotted select aliases as single identifiers', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+
+    let connection = {
+      async query(text: string, values: unknown[] = []) {
+        statements.push({ text, values })
+        return [[], []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+
+    await db.query(accounts).select({ 'account.email': accounts.email }).all()
+
+    assert.match(statements[0].text, /as `account\.email`/)
+  })
+
+  it('does not create dangling bind parameters for inList predicates', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+
+    let connection = {
+      async query(text: string, values: unknown[] = []) {
+        statements.push({ text, values })
+        return [[{ count: '0' }], []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+
+    await db
+      .query(accounts)
+      .where(inList('id', [1, 3]))
+      .count()
+
+    assert.match(statements[0].text, /`id`\s+in\s+\(\?,\s*\?\)/)
+    assert.deepEqual(statements[0].values, [1, 3])
+  })
+
+  it('loads the inserted row for create({ returnRow: true }) without RETURNING support', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+    let calls = 0
+
+    let connection = {
+      async query(text: string, values: unknown[] = []) {
+        statements.push({ text, values })
+        calls += 1
+
+        if (calls === 1) {
+          return [{ affectedRows: 1, insertId: 2 }, []]
+        }
+
+        if (calls === 2) {
+          return [[{ id: 2, email: 'fallback@example.com' }], []]
+        }
+
+        throw new Error('unexpected query call')
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+
+    let created = await db.create(
+      accounts,
+      {
+        email: 'fallback@example.com',
+      },
+      { returnRow: true },
+    )
+
+    assert.equal(created.id, 2)
+    assert.equal(created.email, 'fallback@example.com')
+    assert.equal(statements.length, 2)
+    assert.match(statements[0].text, /^insert into `accounts`/)
+    assert.match(statements[1].text, /^select \* from `accounts`/)
+    assert.match(statements[1].text, /where \(\(`id` = \?\)\)/)
+    assert.deepEqual(statements[1].values, [2, 1])
+  })
+
+  it('normalizes bigint count rows', async () => {
+    let connection = {
+      async query() {
+        return [[{ count: 5n }], []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+    let count = await db.query(accounts).count()
+
+    assert.equal(count, 5)
+  })
+
+  it('defaults write metadata when mysql returns a non-object header', async () => {
+    let connection = {
+      async query() {
+        return [0, []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+    let result = await db.query(accounts).insert({ id: 1, email: 'a@example.com' })
+
+    assert.equal(result.affectedRows, 0)
+    assert.equal(result.insertId, undefined)
+  })
+
+  it('does not expose insertId for composite primary keys', async () => {
+    let connection = {
+      async query() {
+        return [{ affectedRows: 1, insertId: 123 }, []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+    let result = await db.query(accountProjects).insert({
+      account_id: 1,
+      project_id: 2,
+      email: 'team@example.com',
+    })
+
+    assert.equal(result.affectedRows, 1)
+    assert.equal(result.insertId, undefined)
+  })
+
+  it('preserves numeric count values without coercion', async () => {
+    let connection = {
+      async query() {
+        return [[{ count: 7 }], []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+    let count = await db.query(accounts).count()
+
+    assert.equal(count, 7)
+  })
+
+  it('does not expose insertId for non-insert writes', async () => {
+    let connection = {
+      async query() {
+        return [{ affectedRows: 1, insertId: 99 }, []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+    let result = await db.updateMany(
+      accounts,
+      { email: 'updated@example.com' },
+      { where: { id: 1 } },
+    )
+
+    assert.equal(result.affectedRows, 1)
+    assert.equal(result.insertId, undefined)
+  })
+
+  it('executeScript forwards the script through query()', async () => {
+    let calls: Array<{ text: string; values: unknown[] | undefined }> = []
+    let connection = {
+      async query(text: string, values?: unknown[]) {
+        calls.push({ text, values })
+        return [[], []]
+      },
+    }
+
+    let driver = new MysqlDatabaseDriver(connection as never)
+    await driver.executeScript('create table widgets (id int); insert into widgets values (1);')
+
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].text, 'create table widgets (id int); insert into widgets values (1);')
+    assert.equal(calls[0].values, undefined)
+  })
+})

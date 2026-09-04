@@ -1,12 +1,12 @@
 import { css, type Handle } from 'remix/ui'
-import { theme } from '../../ui/design.ts'
+import { theme } from '../../ui/public/design.ts'
 
 import type { ScheduleDocument } from '../../data/schedules.ts'
 import type { Schedule } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { Document } from '../../ui/document.tsx'
-import { ScheduleGrid, type GridScheduleDocument } from '../../ui/schedule-grid.tsx'
-import { ScheduleSidebar } from '../../ui/schedule-sidebar.tsx'
+import { ScheduleGrid, type GridScheduleDocument } from './public/schedule-grid.tsx'
+import { ScheduleSidebar } from './public/schedule-sidebar.tsx'
 
 type SchedulePageProps = {
   activeScheduleId?: number

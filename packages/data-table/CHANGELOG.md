@@ -2,6 +2,30 @@
 
 This is the changelog for [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- Add a `rollback` command to `runRemixDb()`.
+
+  Reverts applied migrations newest first, bounded by `step` (default `1`) or `to` (inclusive), with optional `dryRun`. This is what backs `remix db rollback`, and it gives hosts embedding the data-table CLI the same command (see #11723).
+
+### Patch Changes
+
+- Allow `and()` and `or()` to compose object shorthand filters, matching the documented `where: or({ status: 'pending' }, { status: 'processing' })` usage.
+
+## v0.4.0
+
+### Minor Changes
+
+- Added `Database.wipe()`, `Database.migrate()`, `Database.migrationStatus()`, `Database.reset()`, and `Database.close()` along with the typed `runRemixDb()` API from `remix/data-table/cli`. `Database.migrate()` supports forward and backward directions, mutually exclusive `to` and `step` bounds, dry runs, and custom journal tables. Migration status reports applied journal entries missing from the current migration set without creating an absent journal table; forward runs reject missing applied migrations before executing SQL, while backward runs skip orphaned journal entries so migrations that are still present can be rolled back. Concrete databases release internally owned connections with `close()`, and `loadSeed()` from `remix/data-table/migrations/node` loads a SQL seed file as a `Seed` function (see #11608, #11639).
+
+  BREAKING CHANGE: `runRemixDb()` now accepts resolved `Database`, `Migrations`, and `Seed` values in a command-discriminated options union. The public `createMigrationRunner()`, `MigrationRunner`, `MigrationRunnerOptions`, and `GetMigrations` APIs were removed; use `Database.migrate()` and `Database.migrationStatus()`. `MigrateOptions` was replaced by `DatabaseMigrateOptions`, with `DatabaseMigrationStatusOptions` and `DatabaseResetOptions` covering the other lifecycle methods.
+
+  BREAKING CHANGE: Replaced public adapter classes and factories with concrete database factories. Use `createPostgresDatabase()`, `createMysqlDatabase()`, or `createSqliteDatabase()` instead of `createDatabase(create*DatabaseAdapter())`. `Database` is now the canonical public class and instance type. Integration packages extend `Database`, implement a composed `DatabaseDriver`, and pass that private driver to `super()`. The database object exposes its dialect, immutable capabilities, table checks, and column checks directly. The `DatabaseAdapter`, `AdapterCapabilities`, and `AdapterCapabilityOverrides` types were replaced by `DatabaseDriver`, which requires `wipe()` and an idempotent `close()`. The `createDatabase()` helper, built-in adapter exports, and `db.adapter` escape hatch were removed. Individual operation types such as `SelectOperation` and `InsertOperation` are no longer exported; derive them from the exported union instead, for example `Extract<DataManipulationOperation, { kind: 'select' }>`. `DataTableAdapterError` was renamed to `DataTableDatabaseError` to match the new API.
+
+  Database integration packages can import `Database`, `DatabaseDriver`, and the supporting driver protocol types directly from `remix/data-table`; applications should use a concrete dialect factory.
+
 ## v0.3.0
 
 ### Minor Changes

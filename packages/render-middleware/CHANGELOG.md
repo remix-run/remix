@@ -2,6 +2,25 @@
 
 This is the changelog for [`render-middleware`](https://github.com/remix-run/remix/tree/main/packages/render-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.0
+
+### Minor Changes
+
+- Add `render({ assets?, onError? })`, the conventional request-scoped Remix UI renderer. It returns typed HTML responses through `context.render(node, init)`, resolves nested and targeted frames through the current router with safe request headers and cancellation, preserves frame error bodies, and optionally resolves source-based client entries through an asset server (see #11607).
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.6.0`](https://github.com/remix-run/remix/releases/tag/assets@0.6.0)
+  - [`ui@0.8.0`](https://github.com/remix-run/remix/releases/tag/ui@0.8.0)
+
+## v0.1.5
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.21.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.21.0)
+
 ## v0.1.4
 
 ### Patch Changes

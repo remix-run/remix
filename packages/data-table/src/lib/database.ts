@@ -2,13 +2,19 @@ import type {
   ColumnDefinition,
   DataManipulationOperation,
   DataManipulationResult,
-  DatabaseAdapter,
+  DatabaseCapabilities,
+  DatabaseDriver,
+  TableRef,
   TransactionOptions,
   TransactionToken,
-} from './adapter.ts'
+} from './driver.ts'
 import type { ColumnBuilder } from './column.ts'
-import { DataTableAdapterError, DataTableQueryError } from './errors.ts'
-import { executeOperation, type QueryExecutionContext } from './database/execution-context.ts'
+import { DataTableDatabaseError, DataTableQueryError } from './errors.ts'
+import {
+  executeOperation,
+  runInTransaction,
+  type QueryExecutionContext,
+} from './database/execution-context.ts'
 import {
   asQueryTableInput,
   getPrimaryKeyWhere,
@@ -26,6 +32,15 @@ import type {
 } from './query.ts'
 import { bindQueryRuntime, query as createQuery } from './query.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
+import type {
+  DatabaseMigrateOptions,
+  DatabaseMigrationStatusOptions,
+  DatabaseResetOptions,
+  MigrateResult,
+  Migrations,
+  MigrationStatusEntry,
+} from './migrations.ts'
+import { createMigrationRunner } from './migrations/runner.ts'
 import type { SqlStatement } from './sql.ts'
 import { isSqlStatement, rawSql } from './sql.ts'
 import type {
@@ -327,7 +342,9 @@ type SavepointCounter = {
   value: number
 }
 
-type DatabaseOptions = {
+/** Options shared by database instances. */
+export interface DatabaseOptions {
+  /** Clock function used for auto-managed timestamps. */
   now?: () => unknown
 }
 
@@ -336,39 +353,168 @@ type DatabaseInternalState = {
   savepointCounter: SavepointCounter
 }
 
-const createInternalDatabase = Symbol('createInternalDatabase')
-
 /**
- * High-level database runtime used to build and execute data manipulation operations.
+ * High-level database runtime used to query and manage a database.
  *
- * Create instances directly with `new Database(adapter, options)` or use
- * `createDatabase(adapter, options)` as a thin wrapper.
+ * Database dialects extend this class and provide a {@link DatabaseDriver} to the constructor.
+ * The driver owns SQL execution, transactions, and connection lifecycle while this class provides
+ * the shared query, persistence, and migration APIs.
  */
-export class Database implements QueryExecutionContext {
-  #adapter: DatabaseAdapter
+export class Database<dialect extends string = string> {
+  #driver: DatabaseDriver<dialect>
+  #executionContext: QueryExecutionContext<dialect>
   #token?: TransactionToken
   #now: () => unknown
   #savepointCounter: SavepointCounter
 
-  constructor(adapter: DatabaseAdapter, options?: DatabaseOptions) {
-    this.#adapter = adapter
+  /**
+   * Creates a database backed by a driver.
+   * @param driver Low-level database engine integration.
+   * @param options Database runtime options.
+   */
+  constructor(driver: DatabaseDriver<dialect>, options?: DatabaseOptions) {
+    this.#driver = driver
     this.#now = options?.now ?? defaultNow
     this.#savepointCounter = { value: 0 }
+
+    let database = this
+    this.#executionContext = {
+      get capabilities() {
+        return database.capabilities
+      },
+      now() {
+        return database.now()
+      },
+      [executeOperation](operation) {
+        return database.#executeOperation(operation)
+      },
+      [runInTransaction](callback, transactionOptions) {
+        return database.#runInTransaction(
+          (transactionDatabase) => callback(transactionDatabase.#executionContext),
+          transactionOptions,
+        )
+      },
+    }
   }
 
-  static [createInternalDatabase](
-    adapter: DatabaseAdapter,
+  static #createInternalDatabase<dialect extends string>(
+    driver: DatabaseDriver<dialect>,
     options: DatabaseOptions | undefined,
     internal: DatabaseInternalState,
-  ): Database {
-    let database = new Database(adapter, options)
+  ): Database<dialect> {
+    let database = new Database(driver, options)
     database.#token = internal.token
     database.#savepointCounter = internal.savepointCounter
     return database
   }
 
-  get adapter(): DatabaseAdapter {
-    return this.#adapter
+  /** Stable identifier for the SQL dialect. */
+  get dialect(): dialect {
+    return this.#driver.dialect
+  }
+
+  /** Immutable feature flags used by shared query and migration behavior. */
+  get capabilities(): DatabaseCapabilities {
+    return this.#driver.capabilities
+  }
+
+  /**
+   * Executes a migration or raw multi-statement SQL script.
+   * @param sql SQL script to execute.
+   * @returns A promise that resolves when execution completes.
+   */
+  executeScript(sql: string): Promise<void> {
+    return this.#driver.executeScript(sql, this.#token)
+  }
+
+  /**
+   * Reports whether a table exists.
+   * @param table Table to inspect.
+   * @returns A promise that resolves to `true` when the table exists.
+   */
+  hasTable(table: TableRef): Promise<boolean> {
+    return this.#driver.hasTable(table, this.#token)
+  }
+
+  /**
+   * Reports whether a column exists on a table.
+   * @param table Table to inspect.
+   * @param column Column name to inspect.
+   * @returns A promise that resolves to `true` when the column exists.
+   */
+  hasColumn(table: TableRef, column: string): Promise<boolean> {
+    return this.#driver.hasColumn(table, column, this.#token)
+  }
+
+  /**
+   * Closes resources owned by this database.
+   * @returns A promise that resolves when owned resources have been released.
+   */
+  async close(): Promise<void> {
+    this.#assertLifecycleOperationAllowed('close')
+    await this.#driver.close()
+  }
+
+  /**
+   * Destructively recreates the configured database.
+   * @returns A promise that resolves when the database is ready for use.
+   */
+  async wipe(): Promise<void> {
+    this.#assertLifecycleOperationAllowed('wipe')
+    await this.#driver.wipe()
+  }
+
+  /**
+   * Applies or reverts migrations in order.
+   *
+   * @param migrations Migration descriptors or registry to apply.
+   * @param options Migration direction, bound, dry-run, and journal configuration.
+   * @returns The migrations applied or reverted by this run and their SQL scripts.
+   */
+  async migrate(migrations: Migrations, options?: DatabaseMigrateOptions): Promise<MigrateResult> {
+    this.#assertLifecycleOperationAllowed('migrate')
+    let { direction = 'up', journalTable, ...migrateOptions } = options ?? {}
+    let runner = createMigrationRunner(this.#driver, migrations, { journalTable })
+    return direction === 'up' ? runner.up(migrateOptions) : runner.down(migrateOptions)
+  }
+
+  /**
+   * Reports the current state of the provided migrations.
+   *
+   * @param migrations Migration descriptors or registry to inspect.
+   * @param options Migration journal configuration.
+   * @returns Status entries for the provided migrations.
+   */
+  async migrationStatus(
+    migrations: Migrations,
+    options: DatabaseMigrationStatusOptions = {},
+  ): Promise<MigrationStatusEntry[]> {
+    this.#assertLifecycleOperationAllowed('migrationStatus')
+    let runner = createMigrationRunner(this.#driver, migrations, options)
+    return runner.status()
+  }
+
+  /**
+   * Wipes the database, applies migrations, and optionally seeds data.
+   *
+   * @param options Migrations and optional seed function used to rebuild the database.
+   * @returns A promise that resolves when the database has been rebuilt.
+   */
+  async reset(options: DatabaseResetOptions): Promise<void> {
+    this.#assertLifecycleOperationAllowed('reset')
+    await this.wipe()
+    await this.migrate(options.migrations, { journalTable: options.journalTable })
+    await options.seed?.(this)
+  }
+
+  #assertLifecycleOperationAllowed(
+    method: 'close' | 'migrate' | 'migrationStatus' | 'reset' | 'wipe',
+  ): void {
+    if (this.#token) {
+      throw new DataTableQueryError(
+        'Cannot call ' + method + '() from a transaction-scoped database',
+      )
+    }
   }
 
   now(): unknown {
@@ -423,7 +569,7 @@ export class Database implements QueryExecutionContext {
       return toWriteResult(result)
     }
 
-    if (this.#adapter.capabilities.returning) {
+    if (this.capabilities.returning) {
       let result = (await query.insert(values, {
         returning: '*',
         touch,
@@ -485,9 +631,9 @@ export class Database implements QueryExecutionContext {
     let query: QueryForTable<table> = this.query(asQueryTableInput(table))
 
     if (options?.returnRows === true) {
-      if (!this.#adapter.capabilities.returning) {
+      if (!this.capabilities.returning) {
         throw new DataTableQueryError(
-          'createMany({ returnRows: true }) is not supported by this adapter',
+          'createMany({ returnRows: true }) is not supported by this database',
         )
       }
 
@@ -616,7 +762,7 @@ export class Database implements QueryExecutionContext {
   ): Promise<TableRowWith<table, LoadedRelationMap<relations>>> {
     let where = getPrimaryKeyWhere(table, value)
 
-    if (this.#adapter.capabilities.returning) {
+    if (this.capabilities.returning) {
       let updateResult = (await this.query(asQueryTableInput(table)).where(where).update(changes, {
         touch: options?.touch,
         returning: '*',
@@ -729,23 +875,30 @@ export class Database implements QueryExecutionContext {
         ? statementOrInput
         : rawSql(statementOrInput, values)
 
-      return this[executeOperation]({
+      return this.#executeOperation({
         kind: 'raw',
         sql: sqlStatement,
       })
     }
 
-    return executeQuery(this, statementOrInput)
+    return executeQuery(this.#executionContext, statementOrInput)
   }
 
   async transaction<result>(
-    callback: (database: Database) => Promise<result>,
+    callback: (database: Database<dialect>) => Promise<result>,
+    options?: TransactionOptions,
+  ): Promise<result> {
+    return this.#runInTransaction(callback, options)
+  }
+
+  async #runInTransaction<result>(
+    callback: (database: Database<dialect>) => Promise<result>,
     options?: TransactionOptions,
   ): Promise<result> {
     if (!this.#token) {
-      let token = await this.#adapter.beginTransaction(options)
-      let tx = Database[createInternalDatabase](
-        this.#adapter,
+      let token = await this.#driver.beginTransaction(options)
+      let tx = Database.#createInternalDatabase(
+        this.#driver,
         { now: this.#now },
         {
           token,
@@ -753,102 +906,76 @@ export class Database implements QueryExecutionContext {
         },
       )
 
+      let result: result
       try {
-        let result = await callback(tx)
-        await this.#adapter.commitTransaction(token)
-        return result
+        result = await callback(tx)
       } catch (error) {
-        await this.#adapter.rollbackTransaction(token)
+        try {
+          await this.#driver.rollbackTransaction(token)
+        } catch (rollbackError) {
+          throw new AggregateError(
+            [error, rollbackError],
+            'Database transaction and rollback both failed',
+            { cause: error },
+          )
+        }
         throw error
       }
+
+      await this.#driver.commitTransaction(token)
+      return result
     }
 
-    if (!this.#adapter.capabilities.savepoints) {
-      throw new DataTableQueryError('Nested transactions require adapter savepoint support')
+    if (!this.capabilities.savepoints) {
+      throw new DataTableQueryError('Nested transactions require database savepoint support')
     }
 
     let savepointName = 'sp_' + String(this.#savepointCounter.value)
     this.#savepointCounter.value += 1
 
-    await this.#adapter.createSavepoint(this.#token, savepointName)
+    await this.#driver.createSavepoint(this.#token, savepointName)
 
+    let result: result
     try {
-      let result = await callback(this)
-      await this.#adapter.releaseSavepoint(this.#token, savepointName)
-      return result
+      result = await callback(this)
     } catch (error) {
-      await this.#adapter.rollbackToSavepoint(this.#token, savepointName)
-      await this.#adapter.releaseSavepoint(this.#token, savepointName)
+      let failures: unknown[] = [error]
+      try {
+        await this.#driver.rollbackToSavepoint(this.#token, savepointName)
+      } catch (rollbackError) {
+        failures.push(rollbackError)
+      }
+      try {
+        await this.#driver.releaseSavepoint(this.#token, savepointName)
+      } catch (releaseError) {
+        failures.push(releaseError)
+      }
+      if (failures.length > 1) {
+        throw new AggregateError(failures, 'Nested transaction cleanup failed', { cause: error })
+      }
       throw error
     }
+
+    await this.#driver.releaseSavepoint(this.#token, savepointName)
+    return result
   }
 
-  async [executeOperation](operation: DataManipulationOperation): Promise<DataManipulationResult> {
+  async #executeOperation(operation: DataManipulationOperation): Promise<DataManipulationResult> {
     try {
-      return await this.#adapter.execute({
+      return await this.#driver.execute({
         operation,
         transaction: this.#token,
       })
     } catch (error) {
-      throw new DataTableAdapterError('Adapter execution failed', {
+      throw new DataTableDatabaseError('Database execution failed', {
         cause: error,
         metadata: {
-          dialect: this.#adapter.dialect,
+          dialect: this.dialect,
           operationKind: operation.kind,
         },
       })
     }
   }
-}
-
-/**
- * Creates a database runtime from an adapter.
- * Thin wrapper around `new Database(adapter, options)`.
- * @param adapter Adapter implementation responsible for SQL execution.
- * @param options Optional runtime options.
- * @param options.now Clock function used for auto-managed timestamps.
- * @returns A {@link Database} API instance.
- * @example
- * ```ts
- * import { column as c, createDatabase, table } from 'remix/data-table'
- *
- * let users = table({
- *   name: 'users',
- *   columns: {
- *     id: c.integer(),
- *     email: c.varchar(255),
- *   },
- * })
- *
- * let db = createDatabase(adapter)
- * let rows = await db.query(users).where({ id: 1 }).all()
- * ```
- */
-export function createDatabase(
-  adapter: DatabaseAdapter,
-  options?: { now?: () => unknown },
-): Database {
-  return new Database(adapter, options)
-}
-
-/**
- * Creates a database runtime bound to an existing adapter transaction token.
- * This is an internal helper used by the migration runner.
- * @param adapter Adapter implementation responsible for SQL execution.
- * @param token Active adapter transaction token.
- * @param options Optional runtime options.
- * @param options.now Clock function used for auto-managed timestamps.
- * @returns A {@link Database} API instance bound to the provided transaction.
- */
-export function createDatabaseWithTransaction(
-  adapter: DatabaseAdapter,
-  token: TransactionToken,
-  options?: { now?: () => unknown },
-): Database {
-  return Database[createInternalDatabase](adapter, options, {
-    token,
-    savepointCounter: { value: 0 },
-  })
 }
 
 function defaultNow(): Date {

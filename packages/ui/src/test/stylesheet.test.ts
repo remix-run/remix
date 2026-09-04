@@ -213,23 +213,19 @@ describe('createStyleManager', () => {
   it('adopts server-rendered style tag', () => {
     // Simulate server-rendered style tag
     let serverStyle = document.createElement('style')
-    serverStyle.setAttribute('data-rmx', 'rmxc-server1')
+    serverStyle.setAttribute('data-rmx-style', 'rmxc-server1')
     serverStyle.textContent = '@layer rmx { .rmxc-server1 { color: blue; } }'
     document.head.appendChild(serverStyle)
-    expect(document.querySelector('style[data-rmx]')).not.toBeNull()
+    expect(document.querySelector('style[data-rmx-style]')).not.toBeNull()
 
     // Create manager and adopt server styles for its frame
     let mgr = createStyleManager('rmx')
     mgr.adoptServerStyles(document)
 
     // Tag should be removed after adoption
-    expect(document.querySelector('style[data-rmx]')).toBeNull()
+    expect(document.querySelector('style[data-rmx-style]')).toBeNull()
 
-    // Server-rendered selector should be recognized as existing (count: 1)
-    expect(mgr.has('rmxc-server1')).toBe(true)
-
-    // Inserting the same selector should increment count from 1 to 2
-    mgr.insert('rmxc-server1', '.rmxc-server1 { color: blue; }')
+    // Server-rendered selector should be recognized as existing
     expect(mgr.has('rmxc-server1')).toBe(true)
 
     // Ensure the adopted stylesheet content exists in constructed sheets
@@ -241,14 +237,12 @@ describe('createStyleManager', () => {
     })
     expect(hasAdoptedRule).toBe(true)
 
-    // First remove decrements count from 2 to 1, still exists
+    // Server-adopted rules are pinned: mixin insert/remove cycles (e.g. a
+    // hydrated element mounting and later unmounting) never drop the rule.
+    mgr.insert('rmxc-server1', '.rmxc-server1 { color: blue; }')
+    mgr.remove('rmxc-server1')
     mgr.remove('rmxc-server1')
     expect(mgr.has('rmxc-server1')).toBe(true)
-
-    // Second remove decrements count from 1 to 0, no longer tracked
-    // (rule stays in the shared server stylesheet, but ruleMap entry is removed)
-    mgr.remove('rmxc-server1')
-    expect(mgr.has('rmxc-server1')).toBe(false)
 
     // cleanup
     mgr.dispose()
@@ -257,7 +251,7 @@ describe('createStyleManager', () => {
   it('does not start transitions when adopting server-rendered styles', async () => {
     let host = document.createElement('div')
     let serverStyle = document.createElement('style')
-    serverStyle.setAttribute('data-rmx', 'rmxc-adopt-transition')
+    serverStyle.setAttribute('data-rmx-style', 'rmxc-adopt-transition')
     serverStyle.textContent = `
       @layer rmx-test.rmxc-adopt-transition {
         .rmxc-adopt-transition {
@@ -316,13 +310,13 @@ describe('createStyleManager', () => {
     let mgr = createStyleManager('rmx')
 
     let streamedStyle = document.createElement('style')
-    streamedStyle.setAttribute('data-rmx', 'rmxc-stream1')
+    streamedStyle.setAttribute('data-rmx-style', 'rmxc-stream1')
     streamedStyle.textContent = '@layer rmx { .rmxc-stream1 { color: green; } }'
     document.head.appendChild(streamedStyle)
 
     mgr.adoptServerStyles(document)
 
-    expect(document.querySelector('style[data-rmx]')).toBeNull()
+    expect(document.querySelector('style[data-rmx-style]')).toBeNull()
     expect(mgr.has('rmxc-stream1')).toBe(true)
 
     mgr.dispose()
@@ -333,7 +327,7 @@ describe('createStyleManager', () => {
 
     function appendStreamedStyle() {
       let streamedStyle = document.createElement('style')
-      streamedStyle.setAttribute('data-rmx', 'rmxc-stream1')
+      streamedStyle.setAttribute('data-rmx-style', 'rmxc-stream1')
       streamedStyle.textContent = '@layer rmx { .rmxc-stream1 { color: green; } }'
       document.head.appendChild(streamedStyle)
     }
@@ -354,7 +348,7 @@ describe('createStyleManager', () => {
     appendStreamedStyle()
     mgr.adoptServerStyles(document)
 
-    expect(document.querySelectorAll('style[data-rmx="rmxc-stream1"]')).toHaveLength(0)
+    expect(document.querySelectorAll('style[data-rmx-style="rmxc-stream1"]')).toHaveLength(0)
     expect(countRules('rmxc-stream1')).toBe(1)
     expect(mgr.has('rmxc-stream1')).toBe(true)
 
@@ -367,7 +361,7 @@ describe('createStyleManager', () => {
 
     for (let selector of ['rmxc-base', 'rmxc-trigger', 'rmxc-user']) {
       let style = document.createElement('style')
-      style.setAttribute('data-rmx', selector)
+      style.setAttribute('data-rmx-style', selector)
       style.textContent = `@layer rmx { .${selector} { color: red; } }`
       container.appendChild(style)
     }
@@ -382,7 +376,7 @@ describe('createStyleManager', () => {
 
     expect(cssText.indexOf('.rmxc-base')).toBeLessThan(cssText.indexOf('.rmxc-trigger'))
     expect(cssText.indexOf('.rmxc-trigger')).toBeLessThan(cssText.indexOf('.rmxc-user'))
-    expect(container.querySelector('style[data-rmx]')).toBeNull()
+    expect(container.querySelector('style[data-rmx-style]')).toBeNull()
 
     container.remove()
     mgr.dispose()
@@ -422,7 +416,7 @@ describe('createStyleManager', () => {
     let container = document.createElement('div')
     for (let selector of ['rmxc-first', 'rmxc-second']) {
       let style = document.createElement('style')
-      style.setAttribute('data-rmx', selector)
+      style.setAttribute('data-rmx-style', selector)
       style.textContent = `@layer rmx-test { .${selector} { color: red; } }`
       container.appendChild(style)
     }
@@ -434,7 +428,7 @@ describe('createStyleManager', () => {
     // Re-adopting the same selector returns it in the set even when the rule
     // is short-circuited as a duplicate.
     let duplicateStyle = document.createElement('style')
-    duplicateStyle.setAttribute('data-rmx', 'rmxc-first')
+    duplicateStyle.setAttribute('data-rmx-style', 'rmxc-first')
     duplicateStyle.textContent = '@layer rmx-test { .rmxc-first { color: red; } }'
     container.appendChild(duplicateStyle)
 
@@ -456,14 +450,14 @@ describe('createStyleManager', () => {
     mgr.dispose()
   })
 
-  it('replaceServerStyles drops prior-only adoption-refed selectors immediately', () => {
+  it('keeps server-adopted rules across later adoptions (pinning)', () => {
     let mgr = createStyleManager('rmx-test')
 
     // First page: adopts A and shared
     let first = document.createElement('div')
     for (let selector of ['rmxc-only-first', 'rmxc-shared']) {
       let style = document.createElement('style')
-      style.setAttribute('data-rmx', selector)
+      style.setAttribute('data-rmx-style', selector)
       style.textContent = `@layer rmx-test { .${selector} { color: red; } }`
       first.appendChild(style)
     }
@@ -474,57 +468,62 @@ describe('createStyleManager', () => {
     expect(mgr.has('rmxc-only-first')).toBe(true)
     expect(mgr.has('rmxc-shared')).toBe(true)
 
-    // Navigate: second page adopts B and shared
+    // Navigate: second page adopts B and shared. Adoption is additive — rules
+    // are content-addressed so a prior page's rules can never become wrong,
+    // and DOM preserved across the transition keeps its styling.
     let second = document.createElement('div')
     for (let selector of ['rmxc-only-second', 'rmxc-shared']) {
       let style = document.createElement('style')
-      style.setAttribute('data-rmx', selector)
+      style.setAttribute('data-rmx-style', selector)
       style.textContent = `@layer rmx-test { .${selector} { color: blue; } }`
       second.appendChild(style)
     }
     document.body.appendChild(second)
-    mgr.replaceServerStyles([second])
+    mgr.adoptServerStyles([second])
     second.remove()
 
-    // Prior-only with no live mixin ref → dropped.
-    expect(mgr.has('rmxc-only-first')).toBe(false)
-    // Shared → still present.
+    expect(mgr.has('rmxc-only-first')).toBe(true)
     expect(mgr.has('rmxc-shared')).toBe(true)
-    // New → adopted.
     expect(mgr.has('rmxc-only-second')).toBe(true)
 
     mgr.dispose()
   })
 
-  it('replaceServerStyles preserves prior-only selectors held by an active mixin ref', () => {
+  it('pins a client-inserted rule when a server tag for the same selector is adopted', () => {
     let mgr = createStyleManager('rmx-test')
 
-    // Adopt a server style, then simulate an active css-mixin holding a ref by
-    // calling insert (which short-circuits on the existing entry and bumps count
-    // to 2 — the same path the css mixin takes during hydration).
+    // A client-side css mixin inserts first (e.g. transient UI state), then a
+    // streamed fragment arrives carrying the same selector.
+    mgr.insert('rmxc-upgrade', '.rmxc-upgrade { color: red; }')
+
     let host = document.createElement('div')
     let style = document.createElement('style')
-    style.setAttribute('data-rmx', 'rmxc-keepalive')
-    style.textContent = '@layer rmx-test { .rmxc-keepalive { color: red; } }'
+    style.setAttribute('data-rmx-style', 'rmxc-upgrade')
+    style.textContent = '@layer rmx-test { .rmxc-upgrade { color: red; } }'
     host.appendChild(style)
     document.body.appendChild(host)
     mgr.adoptServerStyles([host])
     host.remove()
-    mgr.insert('rmxc-keepalive', '.rmxc-keepalive { color: red; }')
 
-    // Navigate to a page that does NOT include rmxc-keepalive.
-    let empty = document.createElement('div')
-    document.body.appendChild(empty)
-    mgr.replaceServerStyles([empty])
-    empty.remove()
+    // The mixin unmounting no longer drops the rule — server DOM may still
+    // reference it.
+    mgr.remove('rmxc-upgrade')
+    expect(mgr.has('rmxc-upgrade')).toBe(true)
 
-    // The mixin still holds a ref → rule stays.
-    expect(mgr.has('rmxc-keepalive')).toBe(true)
+    mgr.dispose()
+  })
 
-    // When the mixin eventually removes (e.g. its element is torn down by the
-    // hydration re-render), the refcount finally drops to 0.
-    mgr.remove('rmxc-keepalive')
-    expect(mgr.has('rmxc-keepalive')).toBe(false)
+  it('drops client-only rules when their last ref is removed', () => {
+    let mgr = createStyleManager('rmx-test')
+
+    // Dynamic styles mint a new class per value; rules that never came from
+    // the server must be released so they cannot accumulate.
+    mgr.insert('rmxc-dynamic', '.rmxc-dynamic { width: 41px; }')
+    mgr.insert('rmxc-dynamic', '.rmxc-dynamic { width: 41px; }')
+    mgr.remove('rmxc-dynamic')
+    expect(mgr.has('rmxc-dynamic')).toBe(true)
+    mgr.remove('rmxc-dynamic')
+    expect(mgr.has('rmxc-dynamic')).toBe(false)
 
     mgr.dispose()
   })

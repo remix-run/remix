@@ -1,4 +1,4 @@
-import type { TableRef } from './adapter.ts'
+import type { TableRef } from './driver.ts'
 
 /**
  * Function used to quote SQL identifiers for a dialect.

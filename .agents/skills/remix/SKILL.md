@@ -1,6 +1,6 @@
 ---
 name: remix
-description: Build and review Remix 3 applications using the `remix` npm package and subpath imports. Use when working on Remix app structure, routes, controllers, middleware, validation, data access, auth, sessions, file uploads, server setup, UI components, hydration, navigation, or tests.
+description: Build and review Remix 3 applications using the `remix` npm package and subpath imports. Use when working on Remix app structure, routes, controllers, middleware, validation, data access, auth, sessions, file uploads, server setup, UI components, hydration, HMR, navigation, or tests.
 ---
 
 # Build a Remix App
@@ -42,19 +42,19 @@ Classify the task first, then load the smallest useful reference set. Each refer
 
 Use the table below to find candidates. Loading more than two or three files at once is usually a sign that the task hasn't been narrowed enough yet.
 
-| Task involves...                                                              | Start with                                  |
-| ----------------------------------------------------------------------------- | ------------------------------------------- |
-| Defining URLs, writing controllers and actions, returning responses           | `references/routing-and-controllers.md`     |
-| Composing the request lifecycle, ordering middleware, bridging to a server    | `references/middleware-and-server.md`       |
-| Compiling and serving browser modules, asset URL namespaces, preloads         | `references/assets-and-browser-modules.md`  |
-| Parsing input, validating with schemas, defining tables, querying, migrations | `references/data-and-validation.md`         |
-| Per-browser state, login flows, route protection, identity                    | `references/auth-and-sessions.md`           |
-| Component setup, state, lifecycle, updates, `queueTask`, context              | `references/component-model.md`             |
-| Event handlers, styles, refs, click/key behavior, simple animations           | `references/mixins-styling-events.md`       |
-| `clientEntry`, `run`, `<Frame>`, navigation, `<head>`                         | `references/hydration-frames-navigation.md` |
-| Router tests, component tests, test isolation                                 | `references/testing-patterns.md`            |
-| Spring physics, tweens, layout transitions                                    | `references/animate-elements.md`            |
-| Authoring custom reusable mixins                                              | `references/create-mixins.md`               |
+| Task involves...                                                                            | Start with                                  |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Defining URLs, writing controllers and actions, returning responses                         | `references/routing-and-controllers.md`     |
+| Composing the request lifecycle, ordering middleware, bridging to a server, development HMR | `references/middleware-and-server.md`       |
+| Compiling and serving browser modules, asset URL namespaces, preloads, browser HMR          | `references/assets-and-browser-modules.md`  |
+| Parsing input, validating with schemas, defining tables, querying, migrations               | `references/data-and-validation.md`         |
+| Per-browser state, login flows, route protection, identity                                  | `references/auth-and-sessions.md`           |
+| Component setup, state, lifecycle, updates, `queueTask`, context                            | `references/component-model.md`             |
+| Event handlers, styles, refs, click/key behavior, simple animations                         | `references/mixins-styling-events.md`       |
+| `clientEntry`, `run`, `<Frame>`, navigation, browser HMR update handling, `<head>`          | `references/hydration-frames-navigation.md` |
+| Router tests, component tests, test isolation                                               | `references/testing-patterns.md`            |
+| Spring physics, tweens, layout transitions                                                  | `references/animate-elements.md`            |
+| Authoring custom reusable mixins                                                            | `references/create-mixins.md`               |
 
 Common bundles:
 
@@ -62,6 +62,7 @@ Common bundles:
 - **Protected area** -> auth and sessions, routing, testing
 - **Interactive widget** -> component model, mixins and styling; add hydration only if it runs in the browser
 - **Browser asset pipeline** -> assets and browser modules, hydration, middleware and server
+- **Development HMR** -> middleware and server, assets and browser modules, hydration
 - **File upload** -> middleware and server, data and validation, testing
 - **Navigation or frames** -> hydration, frames, navigation
 
@@ -83,19 +84,19 @@ Use these root directories consistently:
 
 - `app/` for runtime application code
 - `db/` for migrations and local database files
-- `public/` for static assets served as-is
+- root `public/` for static assets served as-is from the app root
 - `test/` for shared helpers, fixtures, and integration coverage
 - `tmp/` for uploads, caches, local session files, and other scratch data
 
 Inside `app/`, organize by responsibility:
 
-- `assets/` for client entrypoints and client-owned browser behavior
 - `actions/` for controller-owned route handlers, route-local response rendering, and route-local UI/helpers that are not shared across route areas
 - `data/` for schema, queries, persistence setup, migrations, and runtime data initialization
 - `middleware/` for request lifecycle concerns such as auth, sessions, uploads, and database injection
+- `public/` directories inside the narrowest owner for browser-reachable source code, with the browser runtime entrypoint at `app/actions/public/entry.ts`
 - `ui/` for shared cross-route UI primitives
 - `utils/` only for genuinely cross-layer helpers that do not clearly belong elsewhere
-- `routes.ts` for the route contract
+- `routes.ts` for the shared server-and-browser route contract and type-safe href generation
 - `router.ts` for router setup and wiring
 
 ### Placement Precedence
@@ -121,8 +122,9 @@ When code could live in multiple places:
 
 ### Response Rendering And Utilities
 
-- Treat response rendering as action-layer code: modules that return `Response`, choose HTTP status or headers, call `redirect(...)`, or call the local `render(...)` helper belong in `app/actions`
-- Keep `app/actions/render.tsx` small; it should adapt `remix/ui/server` output to `createHtmlResponse(...)`. Route-specific response assembly can live in flat action modules, but directories under `app/actions/` must still match route-map keys
+- Install `render()` from `remix/middleware/render` in the router middleware stack for normal Remix UI applications. Pass `render({ assets })` when source-based `clientEntry()` modules need browser URLs
+- Render UI responses at the action boundary with `context.render(node, init)`. Status, headers, and other response policy remain explicit in the action
+- Use `renderWith(...)`, `renderToStream(...)`, and `createHtmlResponse(...)` only when an application intentionally owns a custom renderer contract or replaces the standard UI response pipeline
 - Put pure support code in focused `app/utils/<topic>.ts` modules. Formatting, MIME classification, path parsing, sorting, and normalization should be testable without a router, request context, or `Response`, and should not import from `app/actions`, `remix/ui/server`, or `remix/response/*`
 - Do not introduce page-data intermediary shapes only to keep route-specific renderers away from `render(...)`; keep response assembly in actions and extract only the pure helpers
 
@@ -147,10 +149,11 @@ When code could live in multiple places:
 - Model HTTP behavior explicitly. Status codes, headers, redirects, cache rules, and content types are part of the route contract
 - Make the server route correct first. A POST should already return the right HTML, redirect, or error response on its own before `clientEntry(...)` layers interactivity on top
 - Validate input at the boundary using `remix/data-schema` (and `remix/data-schema/form-data` for forms). `parseSafe` makes the failure path a return value instead of an exception
-- Derive `AppContext` from the middleware stack so `get(Database)`, `get(Session)`, `get(Auth)`, and similar keys stay typed. If the controller never reads from context, it doesn't need the harness
+- Derive `AppContext` from the middleware stack so `get(databaseContext)`, `get(Session)`, `get(Auth)`, and similar keys stay typed. If the controller never reads from context, it doesn't need the harness
 - Outside actions and controllers, only use `getContext()` when `asyncContext()` is in the middleware stack
 - Remix Component is not React: write `function Name(handle: Handle<Props>) { return () => ... }`, read props from `handle.props`, keep state in setup-scope variables, call `handle.update()` explicitly, and do DOM-sensitive work in event handlers or `queueTask(...)`, not in render
 - Prefer host-element mixins via `mix={mixin(...)}` for behavior and styling instead of inventing custom host prop conventions. Use `mix={[...]}` only when composing multiple mixins
+- Keep short, one-off static styles inline with `mix={css(...)}`. Extract a module-scoped style descriptor when it forms a reused visual recipe, has substantial selectors, media queries, or keyframes, or is large enough to obscure the component. Export a style descriptor only after multiple modules need the same visual recipe; otherwise keep it with its narrowest owner
 - Hydrated `clientEntry(...)` props must be serializable. Do not pass functions, class instances, or opaque runtime objects
 
 ## Security And Session Defaults
@@ -205,7 +208,11 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/router` — the router itself. Use for `createRouter`, controllers, middleware types, and registering routes
 - `remix/routes` — declarative route builders. Use for `route`, `get`, `post`, `put`, `del`, `form`, `resources` when defining `app/routes.ts`
 - `remix/node-fetch-server` — default Node adapter for new apps. Use `createRequestListener` with `node:http`, `node:https`, or `node:http2` in `server.ts` when booting the template-style app
-- `remix/assets` — browser asset server. Use for `createAssetServer` when serving compiled scripts and styles, getting public hrefs, and emitting preloads. Configure a `basePath`, and keep `fileMap` URL patterns relative to it. Shared compiler options such as `target`, `sourceMaps`, `sourceMapSourcePaths`, and `minify` live at the top level
+- `remix/node-hmr` — optional development Node HMR runner for rapid UI edits. Use `run` in `hmr.ts` to supervise `server.ts` behind an `hmr` script, and use `createHmrReadyFetch` when a stable public proxy should wait for child server readiness during updates
+- `remix/node-hmr/runtime` — child-process runtime API for code running under `remix/node-hmr`. Use to create browser HMR channels for asset servers and to emit server readiness after the child server starts listening
+- `remix/node-hmr/types` — type-only entry for `import.meta.hot` in Node modules
+- `remix/assets` — browser asset server. Use for `createAssetServer` when serving compiled scripts and styles, getting public hrefs, emitting preloads, and wiring browser HMR. Configure a `basePath`; use optional directory `mounts` configuration when the default mounts that serve `app` at `app` and `node_modules` at `npm` are not enough; use `allowFiles`/`denyFiles` for path and glob rules; and use exact package names in `allowPackages` for package-level access. Shared compiler options such as `target`, `sourceMaps`, `sourceMapSourcePaths`, and `minify` live at the top level
+- `remix/assets/types/hmr` — type-only entry for `import.meta.hot` in browser modules compiled by `remix/assets`
 - `remix/headers` — `SuperHeaders` plus typed header parsers and builders. Use the default export when you want a `Headers` subclass with typed accessors like `headers.contentType`, `headers.cacheControl`, and `headers.setCookie`; use named classes such as `CacheControl`, `ContentDisposition`, and `Vary` when working with individual header values
 - `remix/response/redirect` — `redirect(href, status?)`. Use for the canonical "POST then redirect" pattern and other location changes
 - `remix/response/html` — `createHtmlResponse`. Use when you need an HTML `Response` from a string or stream without rendering through `remix/ui`
@@ -222,12 +229,12 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/data-schema/coerce` — coercion helpers for strings, numbers, booleans, dates, and ids. Use when input arrives as a string but should be a typed value
 - `remix/data-schema/form-data` — `f.object` and `f.field` for parsing `FormData` directly. Use in actions that read browser forms
 - `remix/data-schema/lazy` — recursive or mutually-referential schemas. Use when a schema needs to refer to itself or another schema that is declared later
-- `remix/data-table` — typed tables and a `Database` interface. Use for `table`, `column`, `createDatabase` when modeling persisted data
-- `remix/data-table/sqlite`, `remix/data-table/postgres`, `remix/data-table/mysql` — adapters. Use to back `createDatabase` with a real engine. SQLite accepts Node, Bun, and compatible synchronous clients with the shared `prepare`/`exec` surface
-- `remix/data-table/migrations` — migration authoring and runners. Use for `createMigration`, `createMigrationRunner`
+- `remix/data-table` — typed tables and the shared `Database` API. Use `table` and `column` when modeling persisted data, then create a concrete database from the matching dialect package. Integration packages can implement `DatabaseDriver` and extend `Database` to add another SQL dialect
+- `remix/data-table/sqlite`, `remix/data-table/postgres`, `remix/data-table/mysql` — concrete database integrations. Use `createSqliteDatabase`, `createPostgresDatabase`, or `createMysqlDatabase`. SQLite accepts Node, Bun, and compatible synchronous clients with the shared `prepare`/`exec` surface
+- `remix/data-table/migrations` — migration authoring and registries. Use for `createMigration` and `createMigrationRegistry`; run migrations with `Database.migrate()`
 - `remix/data-table/migrations/node` — `loadMigrations` from disk. Use in startup scripts that apply migrations
 - `remix/data-table/operators` — query operators such as `inList(...)`. Use when `where` clauses need set or comparison logic
-- `remix/data-table/sql-helpers` — SQL helper utilities for adapter or advanced query work. Avoid this in normal app code unless you are intentionally working below the table/query API
+- `remix/data-table/sql-helpers` — SQL helper utilities for database integrations or advanced query work. Avoid this in normal app code unless you are intentionally working below the table/query API
 
 ### Auth, Sessions, and Cookies
 
@@ -237,13 +244,17 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/session-storage/redis` — Redis-backed storage. Use for multi-process or multi-host deployments
 - `remix/session-storage/memcache` — Memcache-backed storage. Same multi-host use case as Redis
 - `remix/cookie` — `createCookie` for plain signed/unsigned cookies. Use for non-sensitive preferences where the client is allowed to control the value (theme, locale, dismissed banner). For state where tampering matters, prefer `remix/session`
-- `remix/auth` — credentials, OAuth, OIDC, and Atmosphere providers. Use to define how identity is verified, start/finish external login, and refresh stored OAuth/OIDC token bundles with `refreshExternalAuth(...)`
+- `remix/auth` — credentials, OAuth, and OIDC providers. Use to define how identity is verified, start/finish external login, and refresh stored OAuth/OIDC token bundles with `refreshExternalAuth(...)`
 - `remix/middleware/auth` — `auth({ schemes })`, `requireAuth`, the `Auth` context key. Use to resolve identity into the request context and to gate routes
 
 ### UI, Hydration, and Browser Behavior
 
 - `remix/ui` — the component runtime: components, core mixins, `clientEntry`, `run`, `<Frame>`, navigation helpers, and `createRoot`. Use for app UI behavior
-- `remix/ui/server` — server rendering: `renderToStream`, `renderToString`. Use in the `app/actions/render.tsx` helper that returns HTML responses
+- `remix/ui/server` — low-level server rendering with `renderToStream` and `renderToString`. Normal apps should install `render()` from `remix/middleware/render`; use this subpath for custom pipelines and static string rendering
+- `remix/ui-hmr` — direct Remix UI component HMR transforms. Use only when writing a custom module hook or build integration
+- `remix/ui-hmr/node` — Node import hook for Remix UI component HMR. Use with `--import remix/ui-hmr/node` in development servers that run through `remix/node-hmr`
+- `remix/ui-hmr/assets` — `remix/assets` loader for Remix UI component HMR. Use `uiHmr()` in `createAssetServer({ scripts: { loaders } })` during development
+- `remix/ui/dev/refresh` — development refresh support used by HMR tooling, not normal application code
 - `remix/ui/animation` — animation APIs: `animateEntrance`, `animateExit`, `animateLayout`, `spring`, `tween`, and `easings`
 - `remix/ui/<primitive>` — UI primitives, mixins, and component helpers. Current subpaths include `remix/ui/accordion`, `remix/ui/anchor`, `remix/ui/button`, `remix/ui/checkbox`, `remix/ui/combobox`, `remix/ui/input`, `remix/ui/listbox`, `remix/ui/menu`, `remix/ui/popover`, and `remix/ui/select`
 - `remix/ui/test` — component test rendering helpers such as `render`
@@ -254,6 +265,7 @@ Use this map to find the right package quickly. Each entry says what the package
 
 ### Middleware
 
+- `remix/middleware/render` — `render({ assets?, onError? })` for the standard Remix UI renderer and `renderWith(factory)` for custom request-scoped renderers. Normal UI actions return `context.render(node, init)`
 - `remix/middleware/static` — `staticFiles(dir)`. Use to serve files from `public/` exactly as they exist on disk
 - `remix/middleware/form-data` — `formData()`. Use to parse `FormData` once and expose it via `get(FormData)` instead of calling `await request.formData()` in each action
 - `remix/form-data-parser` — lower-level `parseFormData`, `FileUpload`. Use when implementing custom upload handlers. Upload handler errors propagate directly
@@ -309,17 +321,18 @@ export const routes = route({
 ```typescript
 import { createController } from 'remix/router'
 
+import { databaseContext } from '../middleware/database.ts'
 import { routes } from '../routes.ts'
 
 export default createController(routes.books, {
   actions: {
     async index({ get }) {
-      let db = get(Database)
+      let db = get(databaseContext)
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
       return render(<BooksIndexPage allBooks={allBooks} />)
     },
     async show({ get, params }) {
-      let db = get(Database)
+      let db = get(databaseContext)
       let book = await db.findOne(books, { where: { slug: params.slug } })
       if (!book) return new Response('Not Found', { status: 404 })
       return render(<BookShowPage book={book} />)
@@ -384,8 +397,8 @@ import { redirect } from 'remix/response/redirect'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Session } from 'remix/session'
-import { Database } from 'remix/data-table'
 
+import { databaseContext } from '../middleware/database.ts'
 import { routes } from '../routes.ts'
 
 let bookSchema = f.object({
@@ -401,7 +414,7 @@ export default createController(routes.books, {
         return render(<NewBookPage errors={parsed.issues} />, { status: 400 })
       }
 
-      let db = get(Database)
+      let db = get(databaseContext)
       let book = await db.create(books, parsed.value)
 
       let session = get(Session)

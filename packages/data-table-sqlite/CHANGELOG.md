@@ -2,6 +2,32 @@
 
 This is the changelog for [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite). It follows [semantic versioning](https://semver.org/).
 
+## v0.6.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.5.0)
+
+## v0.6.0
+
+### Minor Changes
+
+- Added `SqliteDatabase.close()` to release the connection and file handle owned by a config-backed database. Supplied clients remain caller-owned. Config-backed databases keep the database file locked on Windows until closed, so callers that need to move or delete the file should call `await db.close()` first.
+
+- Added `createSqliteDatabase()` with filename-based construction, optional persistent foreign key enforcement, and database wiping for `remix db`. Existing synchronous SQLite clients remain supported for applications that own the driver lifecycle, but wiping requires config-backed construction (see #11608, #11639).
+
+  Config-backed databases make the `foreignKeys` option authoritative on every runtime: enforcement defaults to off, including on Node.js where `node:sqlite` would otherwise enable it by default. They also apply a default `busy_timeout` of 5000ms (override with the new `busyTimeout` option), and `wipe()` removes `-wal`/`-shm`/`-journal` sidecar files along with the main database file. The runtime SQLite driver loads lazily on config-backed construction, so client-backed databases work in environments that cannot resolve `node:sqlite` or `bun:sqlite` at import time.
+
+  BREAKING CHANGE: Removed `SqliteDatabaseAdapter` and `createSqliteDatabaseAdapter()` from the public entry point. Use `SqliteDatabase` and `createSqliteDatabase()` to get a complete SQLite-backed `Database`. `SqliteDatabaseAdapterConfig` was renamed to `SqliteDatabaseConfig`, and the former `SqliteDatabase` client interface was renamed to `SqliteDatabaseClient`. Call `await db.close()` to release file handles opened from configuration; supplied clients remain caller-owned.
+
+### Patch Changes
+
+- Use bound parameters for compiled `limit` and `offset` clauses.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.4.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.4.0)
+
 ## v0.5.1
 
 ### Patch Changes

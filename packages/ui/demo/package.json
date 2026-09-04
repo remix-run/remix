@@ -9,7 +9,7 @@
   "devDependencies": {
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:",
     "esbuild": "^0.25.10",
     "node-html-parser": "^7.0.2"
   },

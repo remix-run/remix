@@ -19,6 +19,7 @@ export type BumpType = (typeof bumpTypes)[number]
 // Changes configuration (from packages/*/.changes/config.json)
 export interface ChangesConfig {
   prereleaseChannel: string
+  prereleaseStart?: number
 }
 
 export type ParsedChangesConfig =
@@ -56,6 +57,7 @@ export function readChangesConfig(
 
   let obj = content as Record<string, unknown>
 
+  let prereleaseChannel = ''
   if ('prereleaseChannel' in obj) {
     if (typeof obj.prereleaseChannel !== 'string' || obj.prereleaseChannel.trim().length === 0) {
       return {
@@ -64,14 +66,36 @@ export function readChangesConfig(
         error: '.changes/config.json "prereleaseChannel" must be a non-empty string',
       }
     }
+    prereleaseChannel = obj.prereleaseChannel.trim()
+  }
+
+  if ('prereleaseStart' in obj) {
+    if (
+      typeof obj.prereleaseStart !== 'number' ||
+      !Number.isInteger(obj.prereleaseStart) ||
+      obj.prereleaseStart < 0
+    ) {
+      return {
+        exists: true,
+        valid: false,
+        error: '.changes/config.json "prereleaseStart" must be a non-negative integer',
+      }
+    }
+    if (prereleaseChannel.length === 0) {
+      return {
+        exists: true,
+        valid: false,
+        error: '.changes/config.json "prereleaseStart" requires "prereleaseChannel"',
+      }
+    }
     return {
       exists: true,
       valid: true,
-      config: { prereleaseChannel: obj.prereleaseChannel.trim() },
+      config: { prereleaseChannel, prereleaseStart: obj.prereleaseStart },
     }
   }
 
-  return { exists: true, valid: true, config: { prereleaseChannel: '' } }
+  return { exists: true, valid: true, config: { prereleaseChannel } }
 }
 
 /**
@@ -118,7 +142,7 @@ export function getNextVersion(
         throw new Error(`Invalid version increment: ${currentVersion} + ${bumpType}`)
       }
 
-      return `${baseVersion}-${targetChannel}.0`
+      return `${baseVersion}-${targetChannel}.${changesConfig.prereleaseStart ?? 0}`
     }
   } else {
     // Not in prerelease mode
@@ -812,42 +836,61 @@ export function generateCommitMessage(releases: PackageRelease[]): string {
 // CHANGELOG.md parsing utilities (for reading already-released changes)
 // =============================================================================
 
-interface ChangelogEntry {
+export interface ChangelogEntry {
   version: string
   date?: Date
   body: string
 }
 
-type AllChangelogEntries = Record<string, ChangelogEntry>
+/**
+ * Parses changelog content and returns its version entries in document order.
+ */
+export function parseChangelog(changelog: string): ChangelogEntry[] {
+  let headingParser = /^## ([^\n]+)$/gm
+  let versionParser =
+    /^v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)(?: \(([^)]+)\))?$/
+  let entries: ChangelogEntry[] = []
+
+  let match
+  while ((match = headingParser.exec(changelog))) {
+    let heading = match[1]
+    let lastIndex = headingParser.lastIndex
+    let nextMatch = headingParser.exec(changelog)
+    let body = changelog.slice(lastIndex, nextMatch ? nextMatch.index : undefined).trim()
+    headingParser.lastIndex = lastIndex
+
+    let versionMatch = versionParser.exec(heading)
+    if (versionMatch === null) {
+      continue
+    }
+
+    let [_, version, dateString] = versionMatch
+    let date = dateString ? new Date(dateString) : undefined
+    entries.push({ version, date, body })
+  }
+
+  return entries
+}
 
 /**
- * Parses a package's CHANGELOG.md and returns all version entries
+ * Gets every version entry from a package's CHANGELOG.md in document order.
  */
-function parseChangelog(packageDirName: string): AllChangelogEntries | null {
-  let changelogPath = getPackageFile(packageDirName, 'CHANGELOG.md')
+export function getChangelogEntries({
+  packageName,
+}: {
+  packageName: string
+}): ChangelogEntry[] | null {
+  let dirName = packageNameToDirectoryName(packageName)
+  if (dirName === null) {
+    return null
+  }
 
+  let changelogPath = getPackageFile(dirName, 'CHANGELOG.md')
   if (!fileExists(changelogPath)) {
     return null
   }
 
-  let changelog = readFile(changelogPath)
-  let parser = /^## ([a-z\d.-]+)(?: \(([^)]+)\))?$/gim
-
-  let result: AllChangelogEntries = {}
-
-  let match
-  while ((match = parser.exec(changelog))) {
-    let [_, versionString, dateString] = match
-    let lastIndex = parser.lastIndex
-    let version = versionString.startsWith('v') ? versionString.slice(1) : versionString
-    let date = dateString ? new Date(dateString) : undefined
-    let nextMatch = parser.exec(changelog)
-    let body = changelog.slice(lastIndex, nextMatch ? nextMatch.index : undefined).trim()
-    result[version] = { version, date, body }
-    parser.lastIndex = lastIndex
-  }
-
-  return result
+  return parseChangelog(readFile(changelogPath))
 }
 
 /**
@@ -861,15 +904,5 @@ export function getChangelogEntry({
   packageName: string
   version: string
 }): ChangelogEntry | null {
-  let dirName = packageNameToDirectoryName(packageName)
-  if (dirName === null) {
-    return null
-  }
-
-  let allEntries = parseChangelog(dirName)
-  if (allEntries !== null) {
-    return allEntries[version] ?? null
-  }
-
-  return null
+  return getChangelogEntries({ packageName })?.find((entry) => entry.version === version) ?? null
 }

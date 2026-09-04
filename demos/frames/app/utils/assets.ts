@@ -5,13 +5,15 @@ import { assetsBase } from '../routes.ts'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 
-export const assetServer = createAssetServer({
+export const assets = createAssetServer({
   basePath: assetsBase,
   rootDir: path.resolve(import.meta.dirname, '../../../..'),
-  allow: ['demos/frames/app/assets/**', 'demos/frames/app/routes.ts', 'packages/*/src/**'],
-  fileMap: {
-    '/app/*path': 'demos/frames/app/*path',
-    '/packages/*path': 'packages/*path',
+  allowFiles: ['demos/frames/app/routes.ts', 'demos/frames/app/**/public/**'],
+  allowPackages: ['remix'],
+  denyFiles: ['demos/frames/app/**/*.test.*'],
+  mounts: {
+    app: 'demos/frames/app',
+    packages: 'packages',
   },
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,

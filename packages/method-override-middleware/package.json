@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/method-override-middleware",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Middleware for overriding HTTP request methods from form data",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -37,18 +37,18 @@
     "@remix-run/form-data-middleware": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "dependencies": {
     "@remix-run/fetch-router": "workspace:^"
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test",
-    "test:bun": "bun x --bun remix-test",
-    "typecheck": "tsgo --noEmit"
+    "test": "remix test",
+    "test:bun": "bun x --bun remix test",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "fetch",

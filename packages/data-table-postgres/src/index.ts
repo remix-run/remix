@@ -1,1 +1,3 @@
-export { createPostgresDatabaseAdapter, PostgresDatabaseAdapter } from './lib/adapter.ts'
+export { createPostgresDatabase, PostgresDatabase } from './lib/database.ts'
+export type { PostgresDatabaseOptions } from './lib/database.ts'
+export type { PostgresDatabaseInput } from './lib/driver.ts'

@@ -1,4 +1,4 @@
-import type { Handle, RemixNode } from 'remix/ui'
+import { css, type Handle, type RemixNode } from 'remix/ui'
 
 import { getAssetEntry } from '../middleware/asset-entry.ts'
 
@@ -24,19 +24,22 @@ export function Document(handle: Handle<DocumentProps>) {
           ))}
           <script async type="module" src={scriptSrc} />
         </head>
-        <body
-          style={{
-            fontFamily:
-              'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
-            margin: 0,
-            padding: 24,
-            background: '#0b1020',
-            color: '#e9eefc',
-          }}
-        >
-          <div style={{ maxWidth, margin: '0 auto' }}>{children}</div>
+        <body mix={bodyStyle}>
+          {/* `maxWidth` is caller-driven, so it stays an inline style. */}
+          <div mix={css({ margin: '0 auto' })} style={{ maxWidth }}>
+            {children}
+          </div>
         </body>
       </html>
     )
   }
 }
+
+const bodyStyle = css({
+  fontFamily:
+    'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
+  margin: 0,
+  padding: 24,
+  background: '#0b1020',
+  color: '#e9eefc',
+})

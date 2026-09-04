@@ -1,15 +1,15 @@
-import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as process from 'node:process'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
+import { findAppRoot } from './app-root.ts'
 import {
   ROOT_ROUTE_NAME,
   inspectControllerOwnership,
   type ControllerOwnership,
   type OwnedSubtree,
-  type RouteDirectoryPlan,
+  type RouteDirectory,
 } from './controller-ownership.ts'
 import {
   routeMapLoaderFailed,
@@ -152,29 +152,17 @@ function decorateRouteTree(
     ownership.routeDirectories.map((directory) => [directory.routeName, directory]),
   )
 
-  return decorateRouteTreeWithLookup(
-    rawTree,
-    subtreesByRouteName,
-    directoriesByRouteName,
-    ownership.scan.routeDirectoryPaths,
-  )
+  return decorateRouteTreeWithLookup(rawTree, subtreesByRouteName, directoriesByRouteName)
 }
 
 function decorateRouteTreeWithLookup(
   rawTree: RawRouteTreeNode[],
   subtreesByRouteName: Map<string, OwnedSubtree>,
-  directoriesByRouteName: Map<string, RouteDirectoryPlan>,
-  actualRouteDirectories: Set<string>,
+  directoriesByRouteName: Map<string, RouteDirectory>,
   parentSegments: string[] = [],
 ): RouteTreeNode[] {
   return rawTree.map((rawNode) => {
-    let owner = getRouteOwner(
-      rawNode,
-      parentSegments,
-      subtreesByRouteName,
-      directoriesByRouteName,
-      actualRouteDirectories,
-    )
+    let owner = getRouteOwner(rawNode, parentSegments, subtreesByRouteName, directoriesByRouteName)
     let nextParentSegments =
       rawNode.kind === 'group' ? [...parentSegments, rawNode.key] : parentSegments
 
@@ -185,7 +173,6 @@ function decorateRouteTreeWithLookup(
               rawNode.children,
               subtreesByRouteName,
               directoriesByRouteName,
-              actualRouteDirectories,
               nextParentSegments,
             )
           : [],
@@ -203,8 +190,7 @@ function getRouteOwner(
   rawNode: RawRouteTreeNode,
   parentSegments: string[],
   subtreesByRouteName: Map<string, OwnedSubtree>,
-  directoriesByRouteName: Map<string, RouteDirectoryPlan>,
-  actualRouteDirectories: Set<string>,
+  directoriesByRouteName: Map<string, RouteDirectory>,
 ): RouteTreeOwner {
   let ownerRouteName =
     rawNode.kind === 'group'
@@ -230,7 +216,7 @@ function getRouteOwner(
     }
 
     return {
-      exists: actualRouteDirectories.has(directory.directoryPath),
+      exists: directory.exists,
       kind: 'directory',
       path: directory.directoryPath,
     }
@@ -296,36 +282,13 @@ function assertRawRouteTreeNode(value: unknown): RawRouteTreeNode {
 }
 
 async function findRemixAppRoot(startDir: string): Promise<string> {
-  let currentDir = path.resolve(startDir)
+  let appRoot = await findAppRoot(startDir, 'app/routes.ts')
 
-  while (true) {
-    if (await pathExists(path.join(currentDir, 'app', 'routes.ts'))) {
-      return currentDir
-    }
-
-    let parentDir = path.dirname(currentDir)
-    if (parentDir === currentDir) {
-      break
-    }
-
-    currentDir = parentDir
+  if (appRoot == null) {
+    throw routesFileNotFound(startDir)
   }
 
-  throw routesFileNotFound(startDir)
-}
-
-async function pathExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath)
-    return true
-  } catch (error) {
-    let nodeError = error as NodeJS.ErrnoException
-    if (nodeError.code === 'ENOENT') {
-      return false
-    }
-
-    throw error
-  }
+  return appRoot
 }
 
 function getRouteMapWorkerPath(): string {

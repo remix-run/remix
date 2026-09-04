@@ -4,13 +4,14 @@ Typed relational query toolkit for JavaScript runtimes.
 
 ## Features
 
-- **One API Across Databases**: Same query and relation APIs across PostgreSQL, MySQL, and SQLite adapters
+- **One API Across Databases**: Same query and relation APIs across PostgreSQL, MySQL, and SQLite
 - **One Query API**: Build reusable `Query` objects with `query(table)` and execute them with `db.exec(...)`, or use `db.query(table)` as shorthand
 - **Type-Safe Reads**: Typed `select`, relation loading, and predicate keys
 - **Optional Runtime Validation**: Add `validate(context)` at the table level for create/update validation and coercion
 - **Relation-First Queries**: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`, and nested eager loading
 - **Safe Scoped Writes**: `update`/`delete` with `orderBy`/`limit` run safely in a transaction
 - **First-Class Migrations**: Plain SQL `up.sql`/`down.sql` files with a journaling runner and dry-run planning
+- **Database Lifecycle Commands**: Wipe, migrate, rollback, inspect, seed, and reset through `remix db`
 - **Raw SQL Escape Hatch**: Execute SQL directly with `db.exec(sql\`...\`)`
 
 `data-table` gives you two complementary APIs:
@@ -33,12 +34,11 @@ npm i mysql2
 
 ## Setup
 
-Define tables once, then create a database with an adapter.
+Define tables once, then create a database for your SQL dialect.
 
 ```ts
-import { Pool } from 'pg'
-import { column as c, createDatabase, hasMany, query, table } from 'remix/data-table'
-import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
+import { column as c, hasMany, query, table } from 'remix/data-table'
+import { createPostgresDatabase } from 'remix/data-table/postgres'
 
 let users = table({
   name: 'users',
@@ -63,8 +63,7 @@ let orders = table({
 
 let userOrders = hasMany(users, orders)
 
-let pool = new Pool({ connectionString: process.env.DATABASE_URL })
-let db = createDatabase(createPostgresDatabaseAdapter(pool))
+let db = createPostgresDatabase({ connectionString: process.env.DATABASE_URL })
 ```
 
 ## Query Objects
@@ -201,7 +200,7 @@ let createManyResult = await db.createMany(orders, [
   { id: 'o_102', user_id: 'u_003', status: 'pending', total: 48.5, created_at: Date.now() },
 ])
 
-// Return inserted rows (requires adapter RETURNING support)
+// Return inserted rows (requires database RETURNING support)
 let insertedRows = await db.createMany(
   orders,
   [{ id: 'o_103', user_id: 'u_003', status: 'pending', total: 12, created_at: Date.now() }],
@@ -343,7 +342,7 @@ await db.transaction(async (tx) => {
 
 ## Migrations
 
-`data-table` ships a SQL-first migration system under `remix/data-table/migrations`. Each migration is a directory containing hand-written `up.sql` and (optionally) `down.sql`. The runner journals applied migrations, detects checksum drift, and wraps each migration in a transaction when the adapter supports transactional DDL.
+`data-table` ships a SQL-first migration system under `remix/data-table/migrations`. Each migration is a directory containing hand-written `up.sql` and (optionally) `down.sql`. The runner journals applied migrations, detects checksum drift and missing applied migrations, and wraps each migration in a transaction when the database supports transactional DDL.
 
 ### Example Setup
 
@@ -357,7 +356,7 @@ app/
       20260301113000_add_user_status/
         up.sql
         down.sql
-    migrate.ts
+  db.ts
 ```
 
 - Keep migration directories in one parent directory (for example `app/db/migrations`).
@@ -388,90 +387,133 @@ drop table if exists users;
 
 ### Multi-Statement Driver Configuration
 
-The runner sends each migration to the adapter as a single multi-statement script. Make sure the underlying driver accepts multiple statements:
+The runner sends each migration to the database as a single multi-statement script. Make sure the underlying driver accepts multiple statements:
 
 - `better-sqlite3`: works out of the box (`db.exec`).
 - `pg`: works out of the box when no parameter array is passed.
 - `mysql2`: requires `multipleStatements: true` on the connection/pool.
 
 ```ts
-import { createPool } from 'mysql2/promise'
+import { createMysqlDatabase } from 'remix/data-table/mysql'
 
-let pool = createPool({
+let db = createMysqlDatabase({
   uri: process.env.DATABASE_URL,
   multipleStatements: true,
 })
 ```
 
-### Runner Script Example
+### Database Command Configuration
 
-In `app/db/migrate.ts`:
+Configure `remix db` statically in `remix.json`. Connection secrets are read from the named
+environment variable at command runtime, and paths are resolved relative to `remix.json`:
 
-```ts
-import path from 'node:path'
-import { Pool } from 'pg'
-import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
-import { createMigrationRunner } from 'remix/data-table/migrations'
-import { loadMigrations } from 'remix/data-table/migrations/node'
-
-let directionArg = process.argv[2] ?? 'up'
-let direction = directionArg === 'down' ? 'down' : 'up'
-let to = process.argv[3]
-
-let pool = new Pool({ connectionString: process.env.DATABASE_URL })
-let adapter = createPostgresDatabaseAdapter(pool)
-let migrations = await loadMigrations(path.resolve('app/db/migrations'))
-let runner = createMigrationRunner(adapter, migrations)
-
-try {
-  let result = direction === 'up' ? await runner.up({ to }) : await runner.down({ to })
-  console.log(direction + ' complete', {
-    applied: result.applied.map((entry) => entry.id),
-    reverted: result.reverted.map((entry) => entry.id),
-  })
-} finally {
-  await pool.end()
+```jsonc
+{
+  "$schema": "./node_modules/remix/schema/remix.json",
+  "db": {
+    "adapter": {
+      "type": "postgres",
+      "connectionString": { "env": "DATABASE_URL" },
+    },
+    "migrations": {
+      "directory": "./db/migrations",
+      "journalTable": "app_migrations",
+    },
+    "seed": "./db/seed.sql",
+  },
 }
 ```
 
-Use `journalTable` if you want a custom migrations journal table name:
+Application runtime setup remains application-owned. It does not need to expose any special
+exports for the CLI.
 
-```ts
-let runner = createMigrationRunner(adapter, migrations, {
-  journalTable: 'app_migrations',
-})
-```
-
-Run it with your runtime, for example:
+Run lifecycle commands through the Remix CLI:
 
 ```sh
-node ./app/db/migrate.ts up
-node ./app/db/migrate.ts up 20260301113000
-node ./app/db/migrate.ts down
-node ./app/db/migrate.ts down 20260228090000
+remix db status
+remix db migrate
+remix db migrate --to 20260301113000_add_user_status
+remix db rollback
+remix db rollback --step 2
+remix db rollback --to 20260301113000_add_user_status
+remix db rollback --dry-run
+remix db seed
+remix db reset --force
+remix db wipe --force
 ```
 
-Use `step` for bounded rollforward/rollback behavior instead of a target id:
+`rollback` reverts the most recently applied migration by default. Bound it with either `--step <count>` or `--to <migration>`, which reverts through the target migration inclusively. Migration targets accept a bare migration id (`20260301113000`) or the full directory name (`20260301113000_add_user_status`). Use `--dry-run` to report what would be reverted without changing the database.
+
+`remix db status` reports applied migrations whose files are no longer present as `missing`. If the journal table does not exist, it reports every migration as pending without creating the table. Forward migration runs stop before executing SQL when an applied journal entry is missing from the current migration set. Rollbacks skip those orphaned journal entries so migrations that are still present can be reverted.
+
+`wipe` and `reset` are destructive. They require a config-backed database so it can close, recreate, and reconnect to the configured database.
+
+### Programmatic Migrations
+
+Load migrations and pass the resolved collection directly to the database:
 
 ```ts
-await runner.up({ step: 1 })
-await runner.down({ step: 1 })
+import { loadMigrations } from 'remix/data-table/migrations/node'
+
+let migrations = await loadMigrations('./db/migrations')
+await db.migrate(migrations)
 ```
 
-`to` and `step` are mutually exclusive within a single run.
-
-Use `dryRun` to inspect the SQL plan without applying or journaling anything:
+`Database.migrate()` supports forward and backward directions, a target or step bound, dry runs,
+and a custom journal table:
 
 ```ts
-let plan = await runner.up({ dryRun: true })
-for (let script of plan.sql) {
-  console.log(script)
-}
+await db.migrate(migrations)
+await db.migrate(migrations, { to: '20260301113000_add_user_status' })
+await db.migrate(migrations, { step: 1 })
+await db.migrate(migrations, { direction: 'down' })
+await db.migrate(migrations, { direction: 'down', to: '20260301113000' })
+await db.migrate(migrations, { direction: 'down', step: 1 })
+await db.migrate(migrations, { journalTable: 'app_migrations' })
+
+let plan = await db.migrate(migrations, { dryRun: true })
+for (let script of plan.sql) console.log(script)
+```
+
+`to` and `step` are mutually exclusive. Omit `journalTable` to use `data_table_migrations`.
+
+Hosts that embed the database CLI can invoke the same rollback behavior through `runRemixDb()`:
+
+```ts
+import { runRemixDb } from 'remix/data-table/cli'
+
+await runRemixDb({ command: 'rollback', db, migrations })
+await runRemixDb({ command: 'rollback', db, migrations, step: 2, dryRun: true })
+```
+
+Database drivers with migration locking run the complete migration and journal lifecycle through the
+connection that owns the lock. This keeps advisory locks correctly paired when the driver uses a
+connection pool, including pools configured with a single connection.
+
+Read status separately, or rebuild a database with migrations and an optional seed. A seed is a
+function that receives the database; `loadSeed()` builds one from a SQL file:
+
+```ts
+import { loadSeed } from 'remix/data-table/migrations/node'
+
+let seed = await loadSeed('./db/seed.sql')
+
+let status = await db.migrationStatus(migrations, { journalTable: 'app_migrations' })
+await db.reset({ migrations })
+await db.reset({ migrations, seed })
+await db.reset({ migrations, seed, journalTable: 'app_migrations' })
+```
+
+When a lifecycle command is the last thing a process does, close database-owned connections so
+the process can exit:
+
+```ts
+await db.close()
 ```
 
 ### Transaction Modes
 
-By default each migration is wrapped in a transaction when the adapter supports transactional DDL. Override per migration with a directive on the first non-blank line of `up.sql`:
+By default each migration is wrapped in a transaction when the database supports transactional DDL. Override per migration with a directive on the first non-blank line of `up.sql`:
 
 ```sql
 -- data-table/transaction: none
@@ -480,8 +522,8 @@ create index concurrently users_email_active_idx on users (email) where status =
 
 Supported modes:
 
-- `auto` (default): wrap when the adapter supports transactional DDL.
-- `required`: wrap; the runner throws if the adapter cannot support it.
+- `auto` (default): wrap when the database supports transactional DDL.
+- `required`: wrap; the runner throws if the database cannot support it.
 - `none`: never wrap. Use this for statements like postgres `CREATE INDEX CONCURRENTLY` that cannot run inside a transaction.
 
 You can also set `transaction` directly on a `MigrationDescriptor` when registering migrations programmatically.
@@ -491,7 +533,7 @@ You can also set `transaction` directly on a `MigrationDescriptor` when register
 For non-filesystem runtimes, register migrations directly:
 
 ```ts
-import { createMigrationRegistry, createMigrationRunner } from 'remix/data-table/migrations'
+import { createMigrationRegistry } from 'remix/data-table/migrations'
 
 let registry = createMigrationRegistry()
 registry.register({
@@ -501,8 +543,7 @@ registry.register({
   down: 'drop table users;',
 })
 
-let runner = createMigrationRunner(adapter, registry)
-await runner.up()
+await db.migrate(registry)
 ```
 
 ## Raw SQL Escape Hatch
@@ -530,14 +571,120 @@ let result = await db.exec(sql`
 `)
 ```
 
-`sql` keeps values parameterized per adapter dialect, so you can avoid manual string concatenation.
+`sql` keeps values parameterized for the database dialect, so you can avoid manual string concatenation.
+
+## Custom Database Drivers
+
+Applications normally use one of the concrete SQLite, PostgreSQL, or MySQL factories. Integration
+packages can add another dialect by implementing `DatabaseDriver` and extending `Database`. This
+complete skeleton assumes the underlying client exposes the operations needed by the driver:
+
+```ts
+import {
+  Database,
+  type DatabaseDriver,
+  type DataManipulationRequest,
+  type DataManipulationResult,
+  type DatabaseOptions,
+  type TableRef,
+  type TransactionOptions,
+  type TransactionToken,
+} from 'remix/data-table'
+import type { AcmeClient } from 'acme-database'
+
+class AcmeDriver implements DatabaseDriver<'acme'> {
+  readonly dialect = 'acme'
+  readonly capabilities = {
+    returning: true,
+    savepoints: true,
+    upsert: true,
+    transactionalDdl: true,
+    migrationLock: false,
+  } as const
+
+  #client: AcmeClient
+
+  constructor(client: AcmeClient) {
+    this.#client = client
+  }
+
+  execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
+    return this.#client.execute(request)
+  }
+
+  executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
+    return this.#client.executeScript(sql, transaction)
+  }
+
+  beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
+    return this.#client.beginTransaction(options)
+  }
+
+  commitTransaction(transaction: TransactionToken): Promise<void> {
+    return this.#client.commitTransaction(transaction)
+  }
+
+  rollbackTransaction(transaction: TransactionToken): Promise<void> {
+    return this.#client.rollbackTransaction(transaction)
+  }
+
+  hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
+    return this.#client.hasTable(table, transaction)
+  }
+
+  hasColumn(table: TableRef, column: string, transaction?: TransactionToken): Promise<boolean> {
+    return this.#client.hasColumn(table, column, transaction)
+  }
+
+  createSavepoint(transaction: TransactionToken, name: string): Promise<void> {
+    return this.#client.createSavepoint(transaction, name)
+  }
+
+  rollbackToSavepoint(transaction: TransactionToken, name: string): Promise<void> {
+    return this.#client.rollbackToSavepoint(transaction, name)
+  }
+
+  releaseSavepoint(transaction: TransactionToken, name: string): Promise<void> {
+    return this.#client.releaseSavepoint(transaction, name)
+  }
+
+  wipe(): Promise<void> {
+    return this.#client.wipe()
+  }
+
+  close(): void | Promise<void> {
+    return this.#client.close()
+  }
+}
+
+export class AcmeDatabase extends Database<'acme'> {
+  constructor(client: AcmeClient, options?: DatabaseOptions) {
+    super(new AcmeDriver(client), options)
+  }
+}
+```
+
+`Database` supplies queries, CRUD helpers, relations, transactions, and migrations. The private
+driver owns SQL execution and connection lifecycle. A driver provides:
+
+- `dialect` and an immutable `capabilities` object
+- `execute()` and `executeScript()`
+- `hasTable()`, `hasColumn()`, `wipe()`, and idempotent `close()`
+- transaction and savepoint lifecycle methods using opaque `TransactionToken` values
+
+Drivers whose capabilities report `migrationLock: true` also implement `withMigrationLock()` and
+run its callback with a `DatabaseDriver` bound to the connection that owns the lock.
+
+`Database`, `DatabaseDriver`, and the supporting driver protocol types are all exported directly
+from `remix/data-table`. Transaction callbacks receive a transaction-scoped `Database`, so custom
+subclass methods are intentionally unavailable inside the callback.
 
 ## Related Packages
 
 - [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Optional schema parsing you can use inside table-level `validate(...)` hooks
-- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL adapter
-- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL adapter
-- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite adapter
+- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database integration
+- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database integration
+- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database integration
 
 ## License
 

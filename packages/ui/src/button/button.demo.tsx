@@ -72,7 +72,7 @@ const toneLabelCss = css({
   lineHeight: '14px',
   fontWeight: 600,
   letterSpacing: 0,
-  color: 'rgba(16, 16, 16, 0.58)',
+  color: 'light-dark(rgb(16 16 16 / 0.58), rgb(236 236 236 / 0.58))',
 })
 
 const buttonRowCss = css({
