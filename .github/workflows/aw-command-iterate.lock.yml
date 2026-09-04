@@ -1,5 +1,5 @@
-# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"ffaf67f5088e8865bb0c6815d72975275062c7229e5f4cd0dc414e4859a29918","body_hash":"d320dc8d4011d4f9809507094d908d41e0520d2ff50788ca9b635a8160fd32ce","compiler_version":"v0.88.2","strict":true,"agent_id":"codex","agent_model":"gpt-5.6-sol","engine_versions":{"codex":"0.150.1"}}
-# gh-aw-manifest: {"version":1,"secrets":["CODEX_API_KEY","COPILOT_GITHUB_TOKEN","GH_AW_CI_TRIGGER_TOKEN","GH_AW_DEFAULT_OTLP_HEADERS","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GH_REMIX_PAT_AW","GITHUB_TOKEN","OPENAI_API_KEY","SHOPIFY_AI_PROXY"],"actions":[{"repo":"actions/cache/restore","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/cache/save","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/checkout","sha":"3d3c42e5aac5ba805825da76410c181273ba90b1","version":"v7.0.1"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"820762786026740c76f36085b0efc47a31fe5020","version":"v7.0.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"9271a1804551c0dc4fb0085a97979950aa2f8489","version":"v0.88.2"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.28.12","digest":"sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.28.12@sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12","digest":"sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12@sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.28.12","digest":"sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.28.12@sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.4.15","digest":"sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.4.15@sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e"},{"image":"ghcr.io/github/gh-aw-node","digest":"sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e","pinned_image":"ghcr.io/github/gh-aw-node@sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e"},{"image":"ghcr.io/github/github-mcp-server:v1.11.0","digest":"sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699","pinned_image":"ghcr.io/github/github-mcp-server:v1.11.0@sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699"}],"mcp_servers":[{"name":"github","tools":["actions_get","actions_list","get_commit","get_file_contents","get_job_logs","get_latest_release","get_pull_request","get_pull_request_comments","get_pull_request_diff","get_pull_request_files","get_pull_request_review_comments","get_pull_request_reviews","get_pull_request_status","get_release_by_tag","get_tag","issue_read","list_branches","list_commits","list_issue_types","list_issues","list_pull_requests","list_releases","list_starred_repositories","list_tags","pull_request_read","search_code","search_issues","search_pull_requests","search_repositories"]},{"name":"safeoutputs","tools":["add_comment","create_pull_request","missing_data","missing_tool","noop","push_to_pull_request_branch","supersede_community_pull_request"]}]}
+# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"f3b959395a711fe424148cde5214110ecf96ba2d6193273b0ee67d9a2c75f7a8","body_hash":"56a1f630bb47ff3d919563b17f9a4569e7c65be5543b29a7f1e825d89e14099d","compiler_version":"v0.88.2","strict":true,"agent_id":"codex","agent_model":"gpt-5.6-sol","engine_versions":{"codex":"0.150.1"}}
+# gh-aw-manifest: {"version":1,"secrets":["CODEX_API_KEY","COPILOT_GITHUB_TOKEN","GH_AW_CI_TRIGGER_TOKEN","GH_AW_DEFAULT_OTLP_HEADERS","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GH_REMIX_PAT_AW","GITHUB_TOKEN","OPENAI_API_KEY","SHOPIFY_AI_PROXY"],"actions":[{"repo":"actions/cache/restore","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/cache/save","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/checkout","sha":"3d3c42e5aac5ba805825da76410c181273ba90b1","version":"v7.0.1"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"820762786026740c76f36085b0efc47a31fe5020","version":"v7.0.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"9271a1804551c0dc4fb0085a97979950aa2f8489","version":"v0.88.2"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.28.12","digest":"sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.28.12@sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12","digest":"sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12@sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.28.12","digest":"sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.28.12@sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.4.15","digest":"sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.4.15@sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e"},{"image":"ghcr.io/github/gh-aw-node","digest":"sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e","pinned_image":"ghcr.io/github/gh-aw-node@sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e"},{"image":"ghcr.io/github/github-mcp-server:v1.11.0","digest":"sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699","pinned_image":"ghcr.io/github/github-mcp-server:v1.11.0@sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699"}],"mcp_servers":[{"name":"github","tools":["actions_get","actions_list","get_commit","get_file_contents","get_job_logs","get_latest_release","get_pull_request","get_pull_request_comments","get_pull_request_diff","get_pull_request_files","get_pull_request_review_comments","get_pull_request_reviews","get_pull_request_status","get_release_by_tag","get_tag","issue_read","list_branches","list_commits","list_issue_types","list_issues","list_pull_requests","list_releases","list_starred_repositories","list_tags","pull_request_read","search_code","search_issues","search_pull_requests","search_repositories"]},{"name":"safeoutputs","tools":["add_comment","missing_data","missing_tool","noop","push_to_pull_request_branch"]}]}
 # This file was automatically generated by gh-aw (v0.88.2). DO NOT EDIT. To debug this workflow, load the skill at https://github.com/github/gh-aw/blob/main/debug.md
 #
 #    ___                   _   _
@@ -340,7 +340,7 @@ jobs:
           GH_AW_ACTIONS_DIR: ${{ runner.temp }}/gh-aw/actions
           GH_AW_PROMPT: ${{ runner.temp }}/gh-aw/aw-prompts/prompt.txt
           GH_AW_SAFE_OUTPUTS: ${{ runner.temp }}/gh-aw/safeoutputs/outputs.jsonl
-          GH_AW_PROMPT_CONFIG: "{\"items\":[{\"content_env\":\"GH_AW_PROMPT_CONTENT_0000\"},{\"file\":\"xpia.md\"},{\"file\":\"temp_folder_prompt.md\"},{\"file\":\"markdown.md\"},{\"file\":\"safe_outputs_prompt.md\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0001\"},{\"file\":\"safe_outputs_create_pull_request.md\"},{\"file\":\"safe_outputs_push_to_pr_branch.md\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0002\"},{\"file\":\"mcp_cli_tools_with_safeoutputs_prompt.md\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0003\"},{\"file\":\"github_mcp_tools_with_safeoutputs_prompt.md\"},{\"file\":\"pr_context_prompt.md\",\"condition_env\":\"GH_AW_INCLUDE_PR_CONTEXT\"},{\"file\":\"pr_context_push_to_pr_branch_guidance.md\",\"condition_env\":\"GH_AW_INCLUDE_PR_CONTEXT\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0004\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0005\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0006\"}]}"
+          GH_AW_PROMPT_CONFIG: "{\"items\":[{\"content_env\":\"GH_AW_PROMPT_CONTENT_0000\"},{\"file\":\"xpia.md\"},{\"file\":\"temp_folder_prompt.md\"},{\"file\":\"markdown.md\"},{\"file\":\"safe_outputs_prompt.md\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0001\"},{\"file\":\"safe_outputs_push_to_pr_branch.md\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0002\"},{\"file\":\"mcp_cli_tools_with_safeoutputs_prompt.md\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0003\"},{\"file\":\"github_mcp_tools_with_safeoutputs_prompt.md\"},{\"file\":\"pr_context_prompt.md\",\"condition_env\":\"GH_AW_INCLUDE_PR_CONTEXT\"},{\"file\":\"pr_context_push_to_pr_branch_guidance.md\",\"condition_env\":\"GH_AW_INCLUDE_PR_CONTEXT\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0004\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0005\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0006\"}]}"
           GH_AW_EXPR_1A3A194A: ${{ github.event.discussion.number || (fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_type == 'discussion' && fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_number) }}
           GH_AW_EXPR_463A214A: ${{ github.event.pull_request.number || (fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_type == 'pull_request' && fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_number) }}
           GH_AW_EXPR_802A9F6A: ${{ github.event.issue.number || (fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_type == 'issue' && fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_number) }}
@@ -353,7 +353,7 @@ jobs:
           GH_AW_INCLUDE_PR_CONTEXT: ${{ (github.event_name == 'issue_comment' && github.event.issue.pull_request != null) || github.event_name == 'pull_request_review_comment' || github.event_name == 'pull_request_review' }}
           GH_AW_STEPS_SANITIZED_OUTPUTS_TEXT: ${{ steps.sanitized.outputs.text }}
           GH_AW_PROMPT_CONTENT_0000: "<system>\n"
-          GH_AW_PROMPT_CONTENT_0001: "<safe-output-tools>\nTools: add_comment, create_pull_request, push_to_pull_request_branch, missing_tool, missing_data, noop, supersede_community_pull_request\n"
+          GH_AW_PROMPT_CONTENT_0001: "<safe-output-tools>\nTools: add_comment, push_to_pull_request_branch, missing_tool, missing_data, noop\n"
           GH_AW_PROMPT_CONTENT_0002: "</safe-output-tools>\n"
           GH_AW_PROMPT_CONTENT_0003: "<github-context>\nThe following GitHub context information is available for this workflow:\n{{#if github.actor}}\n- **actor**: __GH_AW_GITHUB_ACTOR__\n{{/if}}\n{{#if github.repository}}\n- **repository**: __GH_AW_GITHUB_REPOSITORY__\n{{/if}}\n{{#if github.workspace}}\n- **workspace**: __GH_AW_GITHUB_WORKSPACE__\n{{/if}}\n{{#if github.event.issue.number || (github.aw.context.item_type == 'issue' && github.aw.context.item_number)}}\n- **issue-number**: #__GH_AW_EXPR_802A9F6A__\n{{/if}}\n{{#if github.event.discussion.number || (github.aw.context.item_type == 'discussion' && github.aw.context.item_number)}}\n- **discussion-number**: #__GH_AW_EXPR_1A3A194A__\n{{/if}}\n{{#if github.event.pull_request.number || (github.aw.context.item_type == 'pull_request' && github.aw.context.item_number)}}\n- **pull-request-number**: #__GH_AW_EXPR_463A214A__\n{{/if}}\n{{#if github.event.comment.id || github.aw.context.comment_id}}\n- **comment-id**: __GH_AW_EXPR_FF1D34CE__\n{{/if}}\n{{#if github.run_id}}\n- **workflow-run-id**: __GH_AW_GITHUB_RUN_ID__\n{{/if}}\n- **checkouts**: The following repositories have been checked out and are available in the workspace:\n  - repo `__GH_AW_GITHUB_REPOSITORY__` → `$GITHUB_WORKSPACE` (cwd) [full history, all branches available as remote-tracking refs]\n  - **Note**: If a branch you need is not in the list above and is not listed as an additional fetched ref, it has NOT been checked out. For private repositories you cannot fetch it. If the branch is required and not available, exit with an error and ask the user to add it to the `fetch:` option of the `checkout:` configuration (e.g., `fetch: [\"refs/pulls/open/*\"]` for all open PR refs, or `fetch: [\"main\", \"feature/my-branch\"]` for specific branches).\n  - **Warning: No git credentials are available to the agent.** Credentials are\n    intentionally removed after the checkout step for security. This means any git\n    operation that needs to authenticate to the remote will fail. In private repositories, that includes:\n    - `git fetch`, `git pull`, `git clone`, and `git push` (direct push, not via safe-output tools)\n    - Checking out or switching to a remote branch that is not already fetched\n    - Deepening a shallow clone (`git fetch --unshallow`)\n    - On-demand blob fetches in partial/blobless clones (operations on files not in the initial checkout)\n    Do NOT attempt to configure credentials, run `git credential fill`, or modify `.gitconfig` —\n    authentication will not succeed. If you encounter credential prompts or authentication errors,\n    stop immediately and report the limitation rather than spending turns trying to work around it.\n</github-context>\n\n"
           GH_AW_PROMPT_CONTENT_0004: "</system>\n"
@@ -461,8 +461,12 @@ jobs:
           retention-days: 1
 
   agent:
-    needs: activation
-    if: needs.activation.outputs.daily_ai_credits_exceeded != 'true'
+    needs:
+      - activation
+      - report_unpushable_target
+      - resolve_iteration_target
+    if: >
+      (needs.activation.outputs.daily_ai_credits_exceeded != 'true') && (needs.resolve_iteration_target.outputs.can-push == 'true')
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -565,13 +569,6 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0 (source v9)
         with:
           script: "const crypto = require('crypto')\nconst botLogin = process.env.BOT_LOGIN.toLowerCase()\nconst expectedRepository = process.env.EXPECTED_REPOSITORY.toLowerCase()\nconst workflowByName = {\n  '/triage': { workflow: 'triage', label: 'aw:triage', itemTypes: ['issue'] },\n  '/review': { workflow: 'review', label: 'aw:review', itemTypes: ['pull_request'] },\n  '/implement': {\n    workflow: 'implement',\n    label: 'aw:implement',\n    itemTypes: ['issue', 'discussion'],\n  },\n  '/iterate': { workflow: 'iterate', label: 'aw:iterate', itemTypes: ['pull_request'] },\n}\n\nfunction hasExactBotMention(body) {\n  return new RegExp(`@${botLogin}(?![a-z0-9-])`, 'i').test(body)\n}\n\nfunction bodyHash(body) {\n  return crypto.createHash('sha256').update(body, 'utf8').digest('hex')\n}\n\nasync function isRepositoryAdmin(login) {\n  if (!login) return false\n  try {\n    const response = await github.rest.repos.getCollaboratorPermissionLevel({\n      ...context.repo,\n      username: login,\n    })\n    return response.data.permission === 'admin'\n  } catch (error) {\n    if (error.status === 404) return false\n    throw error\n  }\n}\n\nif (context.eventName === 'workflow_dispatch') {\n  if ((context.actor ?? process.env.GITHUB_ACTOR)?.toLowerCase() !== botLogin) {\n    core.setFailed('Only remix-run-bot may dispatch a routed workflow')\n    return\n  }\n\n  let commentRouterContext\n  try {\n    commentRouterContext = JSON.parse(context.payload.inputs?.aw_context ?? '')\n  } catch {\n    core.setFailed('The comment router context is not valid JSON')\n    return\n  }\n\n  const expectedWorkflow = workflowByName[context.workflow]\n  if (!expectedWorkflow) {\n    core.setFailed('The dispatched workflow is not a supported agentic command')\n    return\n  }\n\n  const validBaseContext =\n    commentRouterContext?.version === 1 &&\n    commentRouterContext.repository?.toLowerCase() === expectedRepository &&\n    commentRouterContext.router_workflow === process.env.ROUTER_WORKFLOW &&\n    Number.isSafeInteger(commentRouterContext.router_run_id) &&\n    ['issue_comment', 'discussion_comment'].includes(commentRouterContext.event_type) &&\n    expectedWorkflow.itemTypes.includes(commentRouterContext.item_type) &&\n    Number.isSafeInteger(commentRouterContext.item_number) &&\n    commentRouterContext.item_number > 0 &&\n    Number.isSafeInteger(commentRouterContext.comment_id) &&\n    commentRouterContext.comment_id > 0 &&\n    typeof commentRouterContext.actor === 'string' &&\n    commentRouterContext.workflow === expectedWorkflow.workflow &&\n    commentRouterContext.label ===\n      (commentRouterContext.item_type === 'discussion' ? null : expectedWorkflow.label) &&\n    typeof commentRouterContext.comment_updated_at === 'string' &&\n    !Number.isNaN(Date.parse(commentRouterContext.comment_updated_at)) &&\n    /^[0-9a-f]{64}$/.test(commentRouterContext.comment_body_sha256 ?? '')\n  if (!validBaseContext) {\n    core.setFailed('The comment router context does not match this command')\n    return\n  }\n\n  if (\n    (commentRouterContext.event_type === 'discussion_comment') !==\n    (commentRouterContext.item_type === 'discussion')\n  ) {\n    core.setFailed('The routed event type does not match the triggering item')\n    return\n  }\n\n  const routerRun = await github.rest.actions.getWorkflowRun({\n    ...context.repo,\n    run_id: commentRouterContext.router_run_id,\n  })\n  const run = routerRun.data\n  if (\n    run.repository?.full_name?.toLowerCase() !== expectedRepository ||\n    run.path !== process.env.ROUTER_WORKFLOW ||\n    run.event !== commentRouterContext.event_type ||\n    run.actor?.login?.toLowerCase() !== commentRouterContext.actor.toLowerCase()\n  ) {\n    core.setFailed('The comment router context does not match its router run')\n    return\n  }\n\n  let sourceComment\n  if (commentRouterContext.item_type === 'discussion') {\n    if (typeof commentRouterContext.comment_node_id !== 'string') {\n      core.setFailed('The routed Discussion comment node ID is missing')\n      return\n    }\n    const response = await github.graphql(\n      `query($id: ID!) {\n        node(id: $id) {\n          ... on DiscussionComment {\n            id\n            databaseId\n            body\n            updatedAt\n            author { login }\n            discussion {\n              number\n              repository { nameWithOwner }\n              category { slug }\n            }\n          }\n        }\n      }`,\n      { id: commentRouterContext.comment_node_id }\n    )\n    const comment = response.node\n    if (\n      comment?.id !== commentRouterContext.comment_node_id ||\n      comment.databaseId !== commentRouterContext.comment_id ||\n      comment.discussion?.number !== commentRouterContext.item_number ||\n      comment.discussion.repository?.nameWithOwner?.toLowerCase() !== expectedRepository ||\n      comment.discussion.category?.slug !== 'proposals'\n    ) {\n      core.setFailed('The routed comment is not on the expected Proposal Discussion')\n      return\n    }\n    sourceComment = comment\n  } else {\n    const [commentResponse, issueResponse] = await Promise.all([\n      github.rest.issues.getComment({\n        ...context.repo,\n        comment_id: commentRouterContext.comment_id,\n      }),\n      github.rest.issues.get({\n        ...context.repo,\n        issue_number: commentRouterContext.item_number,\n      }),\n    ])\n    const comment = commentResponse.data\n    const issuePath = new URL(comment.issue_url).pathname.toLowerCase()\n    const expectedIssuePath =\n      `/repos/${expectedRepository}/issues/${commentRouterContext.item_number}`\n    const isPullRequest = Boolean(issueResponse.data.pull_request)\n    if (\n      issuePath !== expectedIssuePath ||\n      isPullRequest !== (commentRouterContext.item_type === 'pull_request')\n    ) {\n      core.setFailed('The routed comment is not on the expected issue or pull request')\n      return\n    }\n    sourceComment = comment\n  }\n\n  const author = sourceComment.author?.login ?? sourceComment.user?.login\n  const body = sourceComment.body ?? ''\n  if (\n    author?.toLowerCase() !== commentRouterContext.actor.toLowerCase() ||\n    !(await isRepositoryAdmin(author)) ||\n    !hasExactBotMention(body) ||\n    (sourceComment.updatedAt ?? sourceComment.updated_at) !==\n      commentRouterContext.comment_updated_at ||\n    bodyHash(body) !== commentRouterContext.comment_body_sha256\n  ) {\n    core.setFailed('The routed administrator comment is no longer valid')\n    return\n  }\n\n  return\n}\n\nif (context.eventName === 'issue_comment' || context.eventName === 'discussion_comment') {\n  return\n}\n\nif (context.payload.action !== 'labeled') {\n  core.setFailed('Expected a slash-command comment, labeled event, or routed dispatch')\n  return\n}\n\nconst labelName = context.payload.label?.name\nconst sender = context.payload.sender?.login\nif (!labelName?.startsWith('aw:') || !sender) {\n  core.setFailed('The labeled event is missing its agentic-workflow label or sender')\n  return\n}\nif (sender.toLowerCase() === botLogin) {\n  core.setFailed('Labels applied by remix-run-bot cannot activate agentic workflows')\n  return\n}\nif (!(await isRepositoryAdmin(sender))) {\n  core.setFailed('Only a repository administrator may apply this label')\n  return\n}\n"
-      - env:
-          EXPECTED_BOT_REPOSITORY: remix-run-bot/remix
-          EXPECTED_REPOSITORY: remix-run/remix
-        name: Configure the allowed iteration destination
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0 (source v9)
-        with:
-          script: "let commentRouterContext\nif (context.eventName === 'workflow_dispatch') {\n  try {\n    commentRouterContext = JSON.parse(context.payload.inputs?.aw_context ?? '')\n  } catch {\n    core.setFailed('The comment router context is not valid JSON')\n    return\n  }\n}\n\nconst pullNumber =\n  commentRouterContext?.item_type === 'pull_request'\n    ? commentRouterContext.item_number\n    : context.payload.pull_request?.number ??\n      (context.payload.issue?.pull_request ? context.payload.issue.number : undefined)\nif (!Number.isSafeInteger(pullNumber) || pullNumber <= 0) {\n  core.setFailed('The trusted pull request number is missing')\n  return\n}\n\nconst response = await github.rest.pulls.get({\n  ...context.repo,\n  pull_number: pullNumber,\n})\nconst headRepository = response.data.head.repo?.full_name?.toLowerCase()\nif (!headRepository) {\n  core.setFailed('The trusted pull request head repository is missing')\n  return\n}\n\nconst allowedRepositories = new Map([\n  [process.env.EXPECTED_REPOSITORY.toLowerCase(), process.env.EXPECTED_REPOSITORY],\n  [process.env.EXPECTED_BOT_REPOSITORY.toLowerCase(), process.env.EXPECTED_BOT_REPOSITORY],\n])\n\ncore.exportVariable(\n  'ITERATE_PUSH_HEAD_REPOSITORY',\n  allowedRepositories.get(headRepository) ?? ''\n)"
 
       - name: Configure Git credentials
         env:
@@ -643,7 +640,7 @@ jobs:
         env:
           GH_AW_FILE_ROOT: "${{ runner.temp }}/gh-aw"
           GH_AW_FILE_CONFIG: "{\"files\":[{\"path\":\"safeoutputs/config.json\",\"content_env\":\"GH_AW_SAFE_OUTPUTS_CONFIG\"}]}"
-          GH_AW_SAFE_OUTPUTS_CONFIG: "{\"add_comment\":{\"discussions\":false,\"footer\":false,\"github-token\":\"${GH_AW_SECRET_GH_REMIX_PAT_AW}\",\"max\":1,\"target\":\"triggering\"},\"create_pull_request\":{\"allowed_files\":[\"README.md\",\"packages/**\",\"demos/**\",\"docs/**\",\"decisions/**\",\"template/**\"],\"allowed_repos\":[\"remix-run/remix\",\"remix-run-bot/remix\"],\"auto_close_issue\":false,\"base_branch\":\"main\",\"branch_prefix\":\"remix-run-bot/\",\"draft\":true,\"fallback_as_issue\":false,\"footer\":false,\"github-token\":\"${GH_AW_SECRET_GH_REMIX_PAT_AW}\",\"head-github-token\":\"${GH_AW_SECRET_GH_REMIX_PAT_AW}\",\"head-repo\":\"remix-run-bot/remix\",\"max\":1,\"max_patch_files\":20,\"max_patch_size\":4096,\"protect_top_level_dot_folders\":true,\"protected_files\":[\"package.json\",\"bun.lockb\",\"bunfig.toml\",\"deno.json\",\"deno.jsonc\",\"deno.lock\",\"global.json\",\"NuGet.Config\",\"Directory.Packages.props\",\"mix.exs\",\"mix.lock\",\"go.mod\",\"go.sum\",\"stack.yaml\",\"stack.yaml.lock\",\"pom.xml\",\"build.gradle\",\"build.gradle.kts\",\"settings.gradle\",\"settings.gradle.kts\",\"gradle.properties\",\"package-lock.json\",\"yarn.lock\",\"pnpm-lock.yaml\",\"npm-shrinkwrap.json\",\"requirements.txt\",\"Pipfile\",\"Pipfile.lock\",\"pyproject.toml\",\"setup.py\",\"setup.cfg\",\"Gemfile\",\"Gemfile.lock\",\"uv.lock\",\"CODEOWNERS\",\"DESIGN.md\",\"CONTRIBUTING.md\",\"CHANGELOG.md\",\"SECURITY.md\",\"CODE_OF_CONDUCT.md\",\"AGENTS.md\"],\"protected_files_policy\":\"request_review\",\"signed_commits\":false,\"stacked\":false,\"target-repo\":\"remix-run/remix\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"push_to_pull_request_branch\":{\"allowed_files\":[\"README.md\",\"packages/**\",\"demos/**\",\"docs/**\",\"decisions/**\",\"template/**\"],\"allowed_repos\":[\"remix-run/remix\",\"remix-run-bot/remix\"],\"check_branch_protection\":false,\"fallback_as_pull_request\":false,\"github-token\":\"${GH_AW_SECRET_GH_REMIX_PAT_AW}\",\"head-github-token\":\"${GH_AW_SECRET_GH_REMIX_PAT_AW}\",\"head-repo\":\"${{ env.ITERATE_PUSH_HEAD_REPOSITORY }}\",\"if_no_changes\":\"warn\",\"max_patch_size\":4096,\"protect_top_level_dot_folders\":true,\"protected_files\":[\"package.json\",\"bun.lockb\",\"bunfig.toml\",\"deno.json\",\"deno.jsonc\",\"deno.lock\",\"global.json\",\"NuGet.Config\",\"Directory.Packages.props\",\"mix.exs\",\"mix.lock\",\"go.mod\",\"go.sum\",\"stack.yaml\",\"stack.yaml.lock\",\"pom.xml\",\"build.gradle\",\"build.gradle.kts\",\"settings.gradle\",\"settings.gradle.kts\",\"gradle.properties\",\"package-lock.json\",\"yarn.lock\",\"pnpm-lock.yaml\",\"npm-shrinkwrap.json\",\"requirements.txt\",\"Pipfile\",\"Pipfile.lock\",\"pyproject.toml\",\"setup.py\",\"setup.cfg\",\"Gemfile\",\"Gemfile.lock\",\"uv.lock\",\"CODEOWNERS\",\"DESIGN.md\",\"CONTRIBUTING.md\",\"CHANGELOG.md\",\"SECURITY.md\",\"CODE_OF_CONDUCT.md\",\"AGENTS.md\"],\"signed_commits\":false,\"target\":\"triggering\"},\"report_incomplete\":{},\"supersede-community-pull-request\":{\"description\":\"After creating a bot-owned replacement for a community pull request, link and explicitly close only the triggering pull request\",\"inputs\":{\"expected_head_sha\":{\"default\":null,\"description\":\"The triggering pull request head SHA snapshotted before editing\",\"required\":true,\"type\":\"string\"}},\"output\":\"Original community pull request superseded\"}}"
+          GH_AW_SAFE_OUTPUTS_CONFIG: "{\"add_comment\":{\"discussions\":false,\"footer\":false,\"github-token\":\"${GH_AW_SECRET_GH_REMIX_PAT_AW}\",\"max\":1,\"target\":\"triggering\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"push_to_pull_request_branch\":{\"allowed_files\":[\"README.md\",\"packages/**\",\"demos/**\",\"docs/**\",\"decisions/**\",\"template/**\"],\"allowed_repos\":[\"remix-run/remix\",\"${{ needs.resolve_iteration_target.outputs.head-repository }}\"],\"check_branch_protection\":false,\"fallback_as_pull_request\":false,\"github-token\":\"${GH_AW_SECRET_GH_REMIX_PAT_AW}\",\"head-github-token\":\"${GH_AW_SECRET_GH_REMIX_PAT_AW}\",\"head-repo\":\"${{ needs.resolve_iteration_target.outputs.head-repository }}\",\"if_no_changes\":\"warn\",\"max_patch_size\":4096,\"protect_top_level_dot_folders\":true,\"protected_files\":[\"package.json\",\"bun.lockb\",\"bunfig.toml\",\"deno.json\",\"deno.jsonc\",\"deno.lock\",\"global.json\",\"NuGet.Config\",\"Directory.Packages.props\",\"mix.exs\",\"mix.lock\",\"go.mod\",\"go.sum\",\"stack.yaml\",\"stack.yaml.lock\",\"pom.xml\",\"build.gradle\",\"build.gradle.kts\",\"settings.gradle\",\"settings.gradle.kts\",\"gradle.properties\",\"package-lock.json\",\"yarn.lock\",\"pnpm-lock.yaml\",\"npm-shrinkwrap.json\",\"requirements.txt\",\"Pipfile\",\"Pipfile.lock\",\"pyproject.toml\",\"setup.py\",\"setup.cfg\",\"Gemfile\",\"Gemfile.lock\",\"uv.lock\",\"CODEOWNERS\",\"DESIGN.md\",\"CONTRIBUTING.md\",\"CHANGELOG.md\",\"SECURITY.md\",\"CODE_OF_CONDUCT.md\",\"AGENTS.md\"],\"signed_commits\":false,\"target\":\"triggering\"},\"report_incomplete\":{}}"
           GH_AW_SECRET_GH_REMIX_PAT_AW: ${{ secrets.GH_REMIX_PAT_AW }}
         with:
           script: |
@@ -658,38 +655,15 @@ jobs:
           GH_AW_TOOLS_META_JSON: |
             {
               "description_suffixes": {
-                "add_comment": " CONSTRAINTS: Maximum 1 comment(s) can be added. Target: triggering. Supports reply_to_id for discussion threading.",
-                "create_pull_request": " CONSTRAINTS: Maximum 1 pull request(s) can be created. Branch name will be prefixed with \"remix-run-bot/\". PRs will be created as drafts."
+                "add_comment": " CONSTRAINTS: Maximum 1 comment(s) can be added. Target: triggering. Supports reply_to_id for discussion threading."
               },
               "repo_params": {
-                "create_pull_request": {
-                  "description": "Target repository for this operation in 'owner/repo' format. Default is \"remix-run/remix\". Must be the target-repo or in the allowed-repos list.",
-                  "type": "string"
-                },
                 "push_to_pull_request_branch": {
                   "description": "Target repository for this operation in 'owner/repo' format. Must be the target-repo or in the allowed-repos list.",
                   "type": "string"
                 }
               },
-              "dynamic_tools": [
-                {
-                  "description": "After creating a bot-owned replacement for a community pull request, link and explicitly close only the triggering pull request",
-                  "inputSchema": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "expected_head_sha": {
-                        "description": "The triggering pull request head SHA snapshotted before editing",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "expected_head_sha"
-                    ],
-                    "type": "object"
-                  },
-                  "name": "supersede_community_pull_request"
-                }
-              ]
+              "dynamic_tools": []
             }
           GH_AW_VALIDATION_JSON: |
             {
@@ -731,65 +705,6 @@ jobs:
                   "temporary_id": {
                     "type": "string",
                     "pattern": "^#?aw_[A-Za-z0-9_]{3,12}$"
-                  }
-                }
-              },
-              "create_pull_request": {
-                "defaultMax": 1,
-                "fields": {
-                  "base": {
-                    "type": "string",
-                    "sanitize": true,
-                    "maxLength": 128
-                  },
-                  "body": {
-                    "required": true,
-                    "type": "string",
-                    "sanitize": true,
-                    "maxLength": 65000
-                  },
-                  "branch": {
-                    "required": true,
-                    "type": "string",
-                    "sanitize": true,
-                    "maxLength": 256
-                  },
-                  "dependencies": {
-                    "type": "array",
-                    "itemType": "string",
-                    "itemSanitize": true,
-                    "itemMaxLength": 256
-                  },
-                  "draft": {
-                    "type": "boolean"
-                  },
-                  "labels": {
-                    "type": "array",
-                    "itemType": "string",
-                    "itemSanitize": true,
-                    "itemMaxLength": 128
-                  },
-                  "repo": {
-                    "type": "string",
-                    "maxLength": 256
-                  },
-                  "stack_position": {
-                    "optionalPositiveInteger": true
-                  },
-                  "stack_root": {
-                    "type": "string",
-                    "sanitize": true,
-                    "maxLength": 256
-                  },
-                  "temporary_id": {
-                    "type": "string",
-                    "pattern": "^#?aw_[A-Za-z0-9_]{3,12}$"
-                  },
-                  "title": {
-                    "required": true,
-                    "type": "string",
-                    "sanitize": true,
-                    "maxLength": 128
                   }
                 }
               },
@@ -1368,8 +1283,9 @@ jobs:
       - activation
       - agent
       - detection
+      - report_unpushable_target
+      - resolve_iteration_target
       - safe_outputs
-      - supersede_community_pull_request
     if: >
       always() && (needs.agent.result != 'skipped' || needs.activation.outputs.lockdown_check_failed == 'true' ||
       needs.activation.outputs.oauth_token_check_failed == 'true' || needs.activation.outputs.stale_lock_file_failed == 'true' ||
@@ -1987,12 +1903,150 @@ jobs:
             const { main } = require(path.join(actionsDir, 'check_skip_bots.cjs'));
             await main();
 
+  report_unpushable_target:
+    name: Explain why the pull request cannot be updated
+    needs: resolve_iteration_target
+    if: needs.resolve_iteration_target.outputs.can-push == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    steps:
+      - name: Configure GH_HOST for enterprise compatibility
+        id: ghes-host-config
+        shell: bash
+        run: | # zizmor: ignore[github-env] - GITHUB_SERVER_URL is set by GitHub Actions, not user input.
+          # Derive GH_HOST from GITHUB_SERVER_URL so the gh CLI targets the correct
+          # GitHub instance (GHES/GHEC). On github.com this is a harmless no-op.
+          GH_HOST="${GITHUB_SERVER_URL#https://}"
+          GH_HOST="${GH_HOST#http://}"
+          echo "GH_HOST=${GH_HOST}" >> "$GITHUB_ENV"
+      - name: Ask the contributor to allow maintainer edits
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0 (source v9)
+        env:
+          EXPECTED_HEAD_REPOSITORY: ${{ needs.resolve_iteration_target.outputs.head-repository }}
+          EXPECTED_PULL_NUMBER: ${{ needs.resolve_iteration_target.outputs.pull-number }}
+          EXPECTED_REPOSITORY: remix-run/remix
+        with:
+          github-token: ${{ secrets.GH_REMIX_PAT_AW }}
+          script: |
+            const pullNumber = Number.parseInt(process.env.EXPECTED_PULL_NUMBER, 10)
+            const { data: pullRequest } = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: pullNumber,
+            })
+            if (
+              pullRequest.state !== 'open' ||
+              pullRequest.base.repo.full_name !== process.env.EXPECTED_REPOSITORY ||
+              pullRequest.head.repo?.full_name !== process.env.EXPECTED_HEAD_REPOSITORY
+            ) {
+              core.setFailed('The pull request destination changed before feedback could be posted')
+              return
+            }
+
+            const instruction = pullRequest.maintainer_can_modify
+              ? 'Maintainer edits were enabled after this run started. Please rerun `/iterate`.'
+              : 'Please enable **Allow edits and access to secrets by maintainers**, then rerun `/iterate`.'
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: pullNumber,
+              body: `I cannot update this community-fork branch yet. ${instruction}`,
+            })
+
+  resolve_iteration_target:
+    name: Resolve the exact pull request write target
+    needs: activation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      can-push: ${{ steps.target.outputs.can-push }}
+      head-ref: ${{ steps.target.outputs.head-ref }}
+      head-repository: ${{ steps.target.outputs.head-repository }}
+      head-sha: ${{ steps.target.outputs.head-sha }}
+      pull-number: ${{ steps.target.outputs.pull-number }}
+    steps:
+      - name: Configure GH_HOST for enterprise compatibility
+        id: ghes-host-config
+        shell: bash
+        run: | # zizmor: ignore[github-env] - GITHUB_SERVER_URL is set by GitHub Actions, not user input.
+          # Derive GH_HOST from GITHUB_SERVER_URL so the gh CLI targets the correct
+          # GitHub instance (GHES/GHEC). On github.com this is a harmless no-op.
+          GH_HOST="${GITHUB_SERVER_URL#https://}"
+          GH_HOST="${GH_HOST#http://}"
+          echo "GH_HOST=${GH_HOST}" >> "$GITHUB_ENV"
+      - name: Resolve target from the triggering pull request
+        id: target
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0 (source v9)
+        env:
+          EXPECTED_BOT_REPOSITORY: remix-run-bot/remix
+          EXPECTED_REPOSITORY: remix-run/remix
+        with:
+          script: |
+            if (context.repo.owner + '/' + context.repo.repo !== process.env.EXPECTED_REPOSITORY) {
+              core.setFailed('This workflow is restricted to remix-run/remix')
+              return
+            }
+
+            let commentRouterContext
+            if (context.eventName === 'workflow_dispatch') {
+              try {
+                commentRouterContext = JSON.parse(context.payload.inputs?.aw_context ?? '')
+              } catch {
+                core.setFailed('The comment router context is not valid JSON')
+                return
+              }
+            }
+
+            const pullNumber =
+              commentRouterContext?.item_type === 'pull_request'
+                ? commentRouterContext.item_number
+                : context.payload.pull_request?.number ??
+                  (context.payload.issue?.pull_request ? context.payload.issue.number : undefined)
+            if (!Number.isSafeInteger(pullNumber) || pullNumber <= 0) {
+              core.setFailed('The trusted pull request number is missing')
+              return
+            }
+
+            const { data: pullRequest } = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: pullNumber,
+            })
+            const headRepository = pullRequest.head.repo?.full_name
+            if (
+              pullRequest.state !== 'open' ||
+              pullRequest.base.repo.full_name !== process.env.EXPECTED_REPOSITORY ||
+              !headRepository ||
+              !pullRequest.head.ref ||
+              !/^[0-9a-f]{40}$/.test(pullRequest.head.sha)
+            ) {
+              core.setFailed('The triggering pull request is not a valid open Remix pull request')
+              return
+            }
+
+            const normalizedHeadRepository = headRepository.toLowerCase()
+            const isCommunityFork =
+              normalizedHeadRepository !== process.env.EXPECTED_REPOSITORY.toLowerCase() &&
+              normalizedHeadRepository !== process.env.EXPECTED_BOT_REPOSITORY.toLowerCase()
+            const canPush = !isCommunityFork || pullRequest.maintainer_can_modify === true
+
+            core.setOutput('pull-number', String(pullNumber))
+            core.setOutput('head-repository', headRepository)
+            core.setOutput('head-ref', pullRequest.head.ref)
+            core.setOutput('head-sha', pullRequest.head.sha)
+            core.setOutput('can-push', String(canPush))
+
   safe_outputs:
     needs:
       - activation
       - agent
       - detection
-    if: (!cancelled()) && needs.agent.result != 'skipped' && needs.detection.result == 'success'
+      - resolve_iteration_target
+    if: >
+      ((!cancelled()) && needs.agent.result != 'skipped' && needs.detection.result == 'success') &&
+      (needs.resolve_iteration_target.outputs.can-push == 'true')
     runs-on: ubuntu-slim
     permissions:
       contents: write
@@ -2024,8 +2078,6 @@ jobs:
       comment_url: ${{ steps.process_safe_outputs.outputs.comment_url }}
       create_discussion_error_count: ${{ steps.process_safe_outputs.outputs.create_discussion_error_count }}
       create_discussion_errors: ${{ steps.process_safe_outputs.outputs.create_discussion_errors }}
-      created_pr_number: ${{ steps.process_safe_outputs.outputs.created_pr_number }}
-      created_pr_url: ${{ steps.process_safe_outputs.outputs.created_pr_url }}
       process_safe_outputs_items_applied: ${{ steps.process_safe_outputs.outputs.items_applied }}
       process_safe_outputs_items_cancelled: ${{ steps.process_safe_outputs.outputs.items_cancelled }}
       process_safe_outputs_items_deferred: ${{ steps.process_safe_outputs.outputs.items_deferred }}
@@ -2053,6 +2105,37 @@ jobs:
           GH_AW_INFO_VERSION: "0.150.1"
           GH_AW_INFO_AWF_VERSION: "v0.28.12"
           GH_AW_INFO_ENGINE_ID: "codex"
+      - name: Revalidate the pull request immediately before writing
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0 (source v9)
+        env:
+          EXPECTED_BOT_REPOSITORY: remix-run-bot/remix
+          EXPECTED_HEAD_REF: ${{ needs.resolve_iteration_target.outputs.head-ref }}
+          EXPECTED_HEAD_REPOSITORY: ${{ needs.resolve_iteration_target.outputs.head-repository }}
+          EXPECTED_HEAD_SHA: ${{ needs.resolve_iteration_target.outputs.head-sha }}
+          EXPECTED_PULL_NUMBER: ${{ needs.resolve_iteration_target.outputs.pull-number }}
+          EXPECTED_REPOSITORY: remix-run/remix
+        with:
+          github-token: ${{ secrets.GH_REMIX_PAT_AW }}
+          script: |
+            const pullNumber = Number.parseInt(process.env.EXPECTED_PULL_NUMBER, 10)
+            const { data: pullRequest } = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: pullNumber,
+            })
+            const headRepository = pullRequest.head.repo?.full_name
+            const isCommunityFork =
+              headRepository?.toLowerCase() !== process.env.EXPECTED_REPOSITORY.toLowerCase() &&
+              headRepository?.toLowerCase() !== process.env.EXPECTED_BOT_REPOSITORY.toLowerCase()
+            if (
+              pullRequest.state !== 'open' ||
+              pullRequest.base.repo.full_name !== process.env.EXPECTED_REPOSITORY ||
+              headRepository !== process.env.EXPECTED_HEAD_REPOSITORY ||
+              pullRequest.head.ref !== process.env.EXPECTED_HEAD_REF ||
+              pullRequest.head.sha !== process.env.EXPECTED_HEAD_SHA ||
+              (isCommunityFork && pullRequest.maintainer_can_modify !== true)
+            ) {
+              core.setFailed('The pull request destination changed or no longer permits the requested push')
+            }
       - name: Mask OTLP telemetry headers
         run: bash "${RUNNER_TEMP}/gh-aw/actions/mask_otlp_headers.sh"
       - name: Download agent output artifact
@@ -2079,14 +2162,14 @@ jobs:
           name: agent
           path: /tmp/gh-aw/
       - name: Checkout repository
-        if: (!cancelled()) && needs.agent.result != 'skipped' && contains(needs.agent.outputs.output_types, 'create_pull_request') || (!cancelled()) && needs.agent.result != 'skipped' && contains(needs.agent.outputs.output_types, 'push_to_pull_request_branch')
+        if: (!cancelled()) && needs.agent.result != 'skipped' && contains(needs.agent.outputs.output_types, 'push_to_pull_request_branch')
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: true
           fetch-depth: 0
           token: ${{ secrets.GH_REMIX_PAT_AW }}
       - name: Configure Git credentials
-        if: (!cancelled()) && needs.agent.result != 'skipped' && contains(needs.agent.outputs.output_types, 'create_pull_request') || (!cancelled()) && needs.agent.result != 'skipped' && contains(needs.agent.outputs.output_types, 'push_to_pull_request_branch')
+        if: (!cancelled()) && needs.agent.result != 'skipped' && contains(needs.agent.outputs.output_types, 'push_to_pull_request_branch')
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SERVER_URL: ${{ github.server_url }}
@@ -2110,8 +2193,7 @@ jobs:
           GH_AW_ALLOWED_DOMAINS: "*.githubusercontent.com,api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,codeload.github.com,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,docs.github.com,github-cloud.githubusercontent.com,github-cloud.s3.amazonaws.com,github.blog,github.com,github.githubassets.com,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,lfs.github.com,objects.githubusercontent.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,patch-diff.githubusercontent.com,patchdiff.githubusercontent.com,ppa.launchpad.net,raw.githubusercontent.com,s.symcb.com,s.symcd.com,security.ubuntu.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.googleapis.com"
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_API_URL: ${{ github.api_url }}
-          GH_AW_SAFE_OUTPUT_JOBS: "{\"supersede_community_pull_request\":\"\"}"
-          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"add_comment\":{\"discussions\":false,\"footer\":false,\"github-token\":\"${{ secrets.GH_REMIX_PAT_AW }}\",\"max\":1,\"target\":\"triggering\"},\"create_pull_request\":{\"allowed_files\":[\"README.md\",\"packages/**\",\"demos/**\",\"docs/**\",\"decisions/**\",\"template/**\"],\"allowed_repos\":[\"remix-run/remix\",\"remix-run-bot/remix\"],\"auto_close_issue\":false,\"base_branch\":\"main\",\"branch_prefix\":\"remix-run-bot/\",\"draft\":true,\"fallback_as_issue\":false,\"footer\":false,\"github-token\":\"${{ secrets.GH_REMIX_PAT_AW }}\",\"head-github-token\":\"${{ secrets.GH_REMIX_PAT_AW }}\",\"head-repo\":\"remix-run-bot/remix\",\"max\":1,\"max_patch_files\":20,\"max_patch_size\":4096,\"protect_top_level_dot_folders\":true,\"protected_files\":[\"package.json\",\"bun.lockb\",\"bunfig.toml\",\"deno.json\",\"deno.jsonc\",\"deno.lock\",\"global.json\",\"NuGet.Config\",\"Directory.Packages.props\",\"mix.exs\",\"mix.lock\",\"go.mod\",\"go.sum\",\"stack.yaml\",\"stack.yaml.lock\",\"pom.xml\",\"build.gradle\",\"build.gradle.kts\",\"settings.gradle\",\"settings.gradle.kts\",\"gradle.properties\",\"package-lock.json\",\"yarn.lock\",\"pnpm-lock.yaml\",\"npm-shrinkwrap.json\",\"requirements.txt\",\"Pipfile\",\"Pipfile.lock\",\"pyproject.toml\",\"setup.py\",\"setup.cfg\",\"Gemfile\",\"Gemfile.lock\",\"uv.lock\",\"CODEOWNERS\",\"DESIGN.md\",\"CONTRIBUTING.md\",\"CHANGELOG.md\",\"SECURITY.md\",\"CODE_OF_CONDUCT.md\",\"AGENTS.md\"],\"protected_files_policy\":\"request_review\",\"signed_commits\":false,\"stacked\":false,\"target-repo\":\"remix-run/remix\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"push_to_pull_request_branch\":{\"allowed_files\":[\"README.md\",\"packages/**\",\"demos/**\",\"docs/**\",\"decisions/**\",\"template/**\"],\"allowed_repos\":[\"remix-run/remix\",\"remix-run-bot/remix\"],\"check_branch_protection\":false,\"fallback_as_pull_request\":false,\"github-token\":\"${{ secrets.GH_REMIX_PAT_AW }}\",\"head-github-token\":\"${{ secrets.GH_REMIX_PAT_AW }}\",\"head-repo\":\"${{ env.ITERATE_PUSH_HEAD_REPOSITORY }}\",\"if_no_changes\":\"warn\",\"max_patch_size\":4096,\"protect_top_level_dot_folders\":true,\"protected_files\":[\"package.json\",\"bun.lockb\",\"bunfig.toml\",\"deno.json\",\"deno.jsonc\",\"deno.lock\",\"global.json\",\"NuGet.Config\",\"Directory.Packages.props\",\"mix.exs\",\"mix.lock\",\"go.mod\",\"go.sum\",\"stack.yaml\",\"stack.yaml.lock\",\"pom.xml\",\"build.gradle\",\"build.gradle.kts\",\"settings.gradle\",\"settings.gradle.kts\",\"gradle.properties\",\"package-lock.json\",\"yarn.lock\",\"pnpm-lock.yaml\",\"npm-shrinkwrap.json\",\"requirements.txt\",\"Pipfile\",\"Pipfile.lock\",\"pyproject.toml\",\"setup.py\",\"setup.cfg\",\"Gemfile\",\"Gemfile.lock\",\"uv.lock\",\"CODEOWNERS\",\"DESIGN.md\",\"CONTRIBUTING.md\",\"CHANGELOG.md\",\"SECURITY.md\",\"CODE_OF_CONDUCT.md\",\"AGENTS.md\"],\"signed_commits\":false,\"target\":\"triggering\"},\"report_incomplete\":{}}"
+          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"add_comment\":{\"discussions\":false,\"footer\":false,\"github-token\":\"${{ secrets.GH_REMIX_PAT_AW }}\",\"max\":1,\"target\":\"triggering\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"push_to_pull_request_branch\":{\"allowed_files\":[\"README.md\",\"packages/**\",\"demos/**\",\"docs/**\",\"decisions/**\",\"template/**\"],\"allowed_repos\":[\"remix-run/remix\",\"${{ needs.resolve_iteration_target.outputs.head-repository }}\"],\"check_branch_protection\":false,\"fallback_as_pull_request\":false,\"github-token\":\"${{ secrets.GH_REMIX_PAT_AW }}\",\"head-github-token\":\"${{ secrets.GH_REMIX_PAT_AW }}\",\"head-repo\":\"${{ needs.resolve_iteration_target.outputs.head-repository }}\",\"if_no_changes\":\"warn\",\"max_patch_size\":4096,\"protect_top_level_dot_folders\":true,\"protected_files\":[\"package.json\",\"bun.lockb\",\"bunfig.toml\",\"deno.json\",\"deno.jsonc\",\"deno.lock\",\"global.json\",\"NuGet.Config\",\"Directory.Packages.props\",\"mix.exs\",\"mix.lock\",\"go.mod\",\"go.sum\",\"stack.yaml\",\"stack.yaml.lock\",\"pom.xml\",\"build.gradle\",\"build.gradle.kts\",\"settings.gradle\",\"settings.gradle.kts\",\"gradle.properties\",\"package-lock.json\",\"yarn.lock\",\"pnpm-lock.yaml\",\"npm-shrinkwrap.json\",\"requirements.txt\",\"Pipfile\",\"Pipfile.lock\",\"pyproject.toml\",\"setup.py\",\"setup.cfg\",\"Gemfile\",\"Gemfile.lock\",\"uv.lock\",\"CODEOWNERS\",\"DESIGN.md\",\"CONTRIBUTING.md\",\"CHANGELOG.md\",\"SECURITY.md\",\"CODE_OF_CONDUCT.md\",\"AGENTS.md\"],\"signed_commits\":false,\"target\":\"triggering\"},\"report_incomplete\":{}}"
           GH_AW_CI_TRIGGER_TOKEN: ${{ secrets.GH_AW_CI_TRIGGER_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GH_REMIX_PAT_AW }}
         with:
@@ -2133,155 +2215,3 @@ jobs:
             /tmp/gh-aw/temporary-id-map.json
             /tmp/gh-aw/safe-output-errors.json
           if-no-files-found: ignore
-
-  supersede_community_pull_request:
-    needs:
-      - agent
-      - detection
-      - safe_outputs
-    if: >
-      (!cancelled()) && needs.agent.result != 'skipped' && contains(needs.agent.outputs.output_types, 'supersede_community_pull_request')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Download agent output artifact
-        continue-on-error: true
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: "{agent,agent-output-fallback}"
-          merge-multiple: true
-          path: ${{ runner.temp }}/gh-aw/safe-jobs/
-      - name: Link and close the original pull request
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0 (source v9)
-        env:
-          CREATED_PR_NUMBER: ${{ needs.safe_outputs.outputs.created_pr_number }}
-          EXPECTED_HEAD_REPOSITORY: remix-run-bot/remix
-          EXPECTED_REPOSITORY: remix-run/remix
-          GH_AW_AGENT_OUTPUT: ${{ runner.temp }}/gh-aw/safe-jobs/agent_output.json
-        with:
-          github-token: ${{ secrets.GH_REMIX_PAT_AW }}
-          script: |
-            const fs = require('fs')
-
-            if (process.env.GITHUB_REPOSITORY !== process.env.EXPECTED_REPOSITORY) {
-              core.setFailed('This output is restricted to remix-run/remix')
-              return
-            }
-
-            const outputPath = process.env.GH_AW_AGENT_OUTPUT
-            if (!outputPath || !fs.existsSync(outputPath)) {
-              core.setFailed('Agent output was not found')
-              return
-            }
-
-            const output = JSON.parse(fs.readFileSync(outputPath, 'utf8'))
-            const items = output.items.filter(
-              (item) => item.type === 'supersede_community_pull_request'
-            )
-            if (items.length === 0) return
-            if (items.length !== 1) {
-              core.setFailed('Only one community pull request may be superseded')
-              return
-            }
-
-            let commentRouterContext
-            if (context.eventName === 'workflow_dispatch') {
-              try {
-                commentRouterContext = JSON.parse(context.payload.inputs?.aw_context ?? '')
-              } catch {
-                core.setFailed('The comment router context is not valid JSON')
-                return
-              }
-            }
-
-            const originalNumber =
-              commentRouterContext?.item_type === 'pull_request'
-                ? commentRouterContext.item_number
-                : context.payload.pull_request?.number ??
-                  (context.payload.issue?.pull_request
-                    ? context.payload.issue.number
-                    : undefined)
-            const replacementNumber = Number.parseInt(process.env.CREATED_PR_NUMBER, 10)
-            const expectedHeadSha = items[0].expected_head_sha
-            if (
-              !Number.isSafeInteger(originalNumber) ||
-              originalNumber <= 0 ||
-              !replacementNumber ||
-              !/^[0-9a-f]{40}$/.test(expectedHeadSha)
-            ) {
-              core.setFailed('The original pull request or replacement metadata is invalid')
-              return
-            }
-
-            const originalResponse = await github.rest.pulls.get({
-              ...context.repo,
-              pull_number: originalNumber,
-            })
-            const original = originalResponse.data
-            const originalHeadRepository = original.head.repo?.full_name?.toLowerCase()
-            if (
-              original.state !== 'open' ||
-              original.number === replacementNumber ||
-              original.head.sha !== expectedHeadSha ||
-              originalHeadRepository === process.env.EXPECTED_REPOSITORY.toLowerCase() ||
-              originalHeadRepository === process.env.EXPECTED_HEAD_REPOSITORY.toLowerCase()
-            ) {
-              core.setFailed('The original is not an open community pull request')
-              return
-            }
-
-            const replacementResponse = await github.rest.pulls.get({
-              ...context.repo,
-              pull_number: replacementNumber,
-            })
-            const replacement = replacementResponse.data
-            if (
-              replacement.state !== 'open' ||
-              !replacement.draft ||
-              replacement.base.repo.full_name !== process.env.EXPECTED_REPOSITORY ||
-              replacement.base.ref !== 'main' ||
-              replacement.head.repo?.full_name !== process.env.EXPECTED_HEAD_REPOSITORY
-            ) {
-              core.setFailed('The replacement is not the expected open draft bot-owned pull request')
-              return
-            }
-            const replacementUrl = replacement.html_url
-
-            const supersedes = `Supersedes #${originalNumber}`
-            if (!replacement.body?.includes(supersedes)) {
-              await github.rest.pulls.update({
-                ...context.repo,
-                pull_number: replacementNumber,
-                body: `${replacement.body ?? ''}\n\n${supersedes}`.trim(),
-              })
-            }
-
-            if (original.head.sha !== expectedHeadSha) {
-              await github.rest.issues.createComment({
-                ...context.repo,
-                issue_number: originalNumber,
-                body: `The pull request changed while the replacement was being prepared. ${replacementUrl} was left as a draft, and this pull request remains open. Re-run \`/iterate\` against the latest head.`,
-              })
-              core.setFailed('The original pull request head changed during iteration')
-              return
-            }
-
-            await github.rest.pulls.update({
-              ...context.repo,
-              pull_number: originalNumber,
-              state: 'closed',
-            })
-            await github.rest.issues.createComment({
-              ...context.repo,
-              issue_number: originalNumber,
-              body: `Superseded by ${replacementUrl}.`,
-            })
-
-            const [closedOriginal, openReplacement] = await Promise.all([
-              github.rest.pulls.get({ ...context.repo, pull_number: originalNumber }),
-              github.rest.pulls.get({ ...context.repo, pull_number: replacementNumber }),
-            ])
-            if (closedOriginal.data.state !== 'closed' || openReplacement.data.state !== 'open') {
-              core.setFailed('Could not verify the final pull request states')
-            }
