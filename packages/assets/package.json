@@ -19,29 +19,20 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/assets.ts",
+    ".": {
+      "types": "./dist/assets.d.ts",
+      "default": "./dist/assets.js"
+    },
     "./types/hmr": {
-      "types": "./src/types/hmr.d.ts"
+      "types": "./dist/types/hmr.d.ts"
     },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/assets.d.ts",
-        "default": "./dist/assets.js"
-      },
-      "./types/hmr": {
-        "types": "./dist/types/hmr.d.ts"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
     "@oxc-project/runtime": "^0.121.0",
-    "@remix-run/file-storage": "workspace:^",
-    "@remix-run/headers": "workspace:^",
-    "@remix-run/mime": "workspace:^",
+    "@remix-run/file-storage": "remix-run/remix#preview/pr-11790&path:packages/file-storage",
+    "@remix-run/headers": "remix-run/remix#preview/pr-11790&path:packages/headers",
+    "@remix-run/mime": "remix-run/remix#preview/pr-11790&path:packages/mime",
     "chokidar": "^5.0.0",
     "es-module-lexer": "^2.0.0",
     "get-tsconfig": "^4.13.6",
