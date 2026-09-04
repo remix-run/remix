@@ -36,7 +36,7 @@ engine:
   id: codex
   env:
     OPENAI_BASE_URL: https://proxy.shopify.ai/v1
-    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_SHOPIFY }}
+    OPENAI_API_KEY: ${{ secrets.SHOPIFY_AI_PROXY }}
 strict: true
 imports:
   - shared/resolve-command-request.md
@@ -82,29 +82,7 @@ safe-outputs:
       - docs/**
       - decisions/**
       - template/**
-    excluded-files:
-      - '**/node_modules/**'
-      - '**/package.json'
-      - '**/tsconfig.json'
-      - '**/tsconfig.*.json'
-      - '**/*.config.*'
-      - '**/*.lock'
-      - '**/.gitignore'
-      - '**/CHANGELOG.md'
-      - '**/AGENTS.md'
-      - '**/CLAUDE.md'
-      - '**/GEMINI.md'
-      - '.github/**'
-      - '.agents/**'
-      - '.codex/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'packages/remix/README.md'
-      - 'packages/remix/manifest.json'
-      - 'packages/remix/schema/**'
-      - 'packages/remix/src/**'
     protected-files:
-      policy: fallback-to-issue
       exclude:
         - README.md
     max-patch-files: 20

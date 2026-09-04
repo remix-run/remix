@@ -35,7 +35,7 @@ engine:
   id: codex
   env:
     OPENAI_BASE_URL: https://proxy.shopify.ai/v1
-    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_SHOPIFY }}
+    OPENAI_API_KEY: ${{ secrets.SHOPIFY_AI_PROXY }}
 strict: true
 imports:
   - shared/resolve-command-request.md
@@ -122,7 +122,6 @@ safe-outputs:
       - decisions/**
       - template/**
     protected-files:
-      policy: blocked
       exclude:
         - README.md
   create-pull-request:
@@ -146,7 +145,6 @@ safe-outputs:
       - decisions/**
       - template/**
     protected-files:
-      policy: blocked
       exclude:
         - README.md
   jobs:

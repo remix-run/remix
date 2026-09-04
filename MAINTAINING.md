@@ -124,7 +124,7 @@ flowchart LR
 | ------------ | ------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/triage`    | Issue                                 | Comment beginning with `/triage`, or apply `aw:triage`                          | Investigates the report and duplicates. It may ask for information, explain a likely fix, or comment and close only a clear duplicate, proposal, support request, spam, or out-of-scope issue. It never edits code.                                             |
 | `/review`    | Pull request                          | Comment beginning with `/review`, or apply `aw:review`                          | Posts one read-only review comment with high-confidence P1-P3 findings. It never checks out or executes contributor code, edits the pull request, approves it, or merges it.                                                                                    |
-| `/implement` | Issue or accepted Proposal Discussion | Comment beginning with `/implement`; `aw:implement` is also available on issues | Implements a focused change from trusted `main`, validates it, and opens at most one draft pull request. If protected or disallowed files are required, it falls back to an issue instead.                                                                      |
+| `/implement` | Issue or accepted Proposal Discussion | Comment beginning with `/implement`; `aw:implement` is also available on issues | Implements a focused change from trusted `main`, validates it, and opens at most one draft pull request. Protected changes remain visible in the draft for review; if changes outside the allowed paths are required, it falls back to an issue instead.        |
 | `/iterate`   | Pull request                          | Comment beginning with `/iterate`, or apply `aw:iterate`                        | Applies administrator feedback. It can update a branch in `remix-run/remix` or `remix-run-bot/remix`; for any other fork it creates a bot-owned replacement draft and closes the original only after verifying both pull requests. It never merges or approves. |
 
 Slash-command comments may include instructions after the command. For example:
@@ -171,7 +171,7 @@ the router's temporary label from starting a second run.
 
 The workflows require these repository secrets:
 
-- `OPENAI_API_KEY_SHOPIFY` provides model access through `https://proxy.shopify.ai/v1`.
+- `SHOPIFY_AI_PROXY` provides model access through `https://proxy.shopify.ai/v1`.
 - `GH_REMIX_PAT_AW` authenticates as `remix-run-bot`. It needs Actions write access to dispatch command
   workflows, Issues write access to manage temporary labels and post issue or pull request comments,
   Discussions write access to reply to Discussions, and Contents and Pull requests write access to
@@ -182,9 +182,10 @@ only to safe-output and router jobs that need to write, and is not available to 
 Every agent output is inspected by a detection job before the output jobs run. Built-in safe-output
 processing requires detection to succeed.
 
-The workflows intentionally limit the files that `/implement` and `/iterate` may change. Protected
-workflow, configuration, generated, and agent-instruction files cannot be changed. Root `README.md`
-is an explicit exception to the default protected-file policy. `/implement` can execute trusted
+The workflows intentionally limit the files that `/implement` and `/iterate` may change. Changes
+outside the allowed paths are rejected. Changes to protected workflow, configuration, generated, and
+agent-instruction files remain visible in a reviewable pull request under the default `request_review`
+policy. Root `README.md` is an explicit exception to that policy. `/implement` can execute trusted
 repository code and focused validation from `main`; `/iterate` does not execute contributor code and
 relies on normal pull request CI for final validation.
 
