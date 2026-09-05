@@ -54,6 +54,12 @@ import {
   type MixinRuntimeState,
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
+import {
+  FRAME_END_MARKER_DATA,
+  findFrameEndMarker,
+  frameStartMarkerData,
+  isFrameStartMarker,
+} from './core/markers.ts'
 import { createComponentErrorEvent } from './error-event.ts'
 import { componentStalenessCheck } from './refresh.ts'
 
@@ -1076,9 +1082,9 @@ function insertFrame(
 
   // Hydration path: adopt server-rendered frame markers and reuse the existing
   // frame instance created during createSubFrames().
-  if (isFrameStartComment(cursor?.current)) {
+  if (isFrameStartMarker(cursor?.current)) {
     let start = cursor.current
-    let end = findFrameEndComment(start)
+    let end = findFrameEndMarker(start)
     if (end) {
       let instance = runtime.frameInstances.get(start)
       let src = instance?.handle.src ?? getFrameSrc(node)
@@ -1118,8 +1124,8 @@ function insertFrame(
     }
   }
 
-  let start = document.createComment(` rmx:f:${randomFrameId()} `)
-  let end = document.createComment(' /rmx:f ')
+  let start = document.createComment(frameStartMarkerData(randomFrameId()))
+  let end = document.createComment(FRAME_END_MARKER_DATA)
   let doInsert = anchor
     ? (dom: Node) => domParent.insertBefore(dom, anchor)
     : (dom: Node) => domParent.appendChild(dom)
@@ -1335,38 +1341,10 @@ function randomFrameId(): string {
 
 function skipCommentsExceptFrameStart(cursor: Node | null): Node | null {
   while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
-    if (isFrameStartComment(cursor)) return cursor
+    if (isFrameStartMarker(cursor)) return cursor
     cursor = cursor.nextSibling
   }
   return cursor
-}
-
-function isFrameStartComment(node: Node | null | undefined): node is Comment {
-  return isCommentNode(node) && node.data.trim().startsWith('rmx:f:')
-}
-
-function isFrameEndComment(node: Node | null | undefined): node is Comment {
-  return isCommentNode(node) && node.data.trim() === '/rmx:f'
-}
-
-function isCommentNode(node: Node | null | undefined): node is Comment {
-  return node?.nodeType === Node.COMMENT_NODE
-}
-
-function findFrameEndComment(start: Comment): Comment | null {
-  let depth = 1
-  let node: Node | null = start.nextSibling
-
-  while (node) {
-    if (isFrameStartComment(node)) depth++
-    else if (isFrameEndComment(node)) {
-      depth--
-      if (depth === 0) return node
-    }
-    node = node.nextSibling
-  }
-
-  return null
 }
 
 export function renderComponent(

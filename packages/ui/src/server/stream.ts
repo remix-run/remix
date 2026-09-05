@@ -11,6 +11,13 @@ import {
   shouldStringifyBooleanAttribute,
 } from '../runtime/core/attributes.ts'
 import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
+import { composeMixedProps, resolveMixDescriptors } from '../runtime/core/mix.ts'
+import {
+  FRAME_END_MARKER_HTML,
+  HYDRATION_END_MARKER_HTML,
+  frameStartMarkerHtml,
+  hydrationStartMarkerHtml,
+} from '../runtime/core/markers.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 
 interface VNode {
@@ -629,74 +636,25 @@ function resolveSsrMixedProps(
   context: RenderContext,
   frameState: SsrFrameState,
 ): ElementProps {
-  let descriptors = resolveSsrMixDescriptors(initialProps)
-  if (descriptors.length === 0) return initialProps
+  if (resolveMixDescriptors(initialProps).length === 0) return initialProps
 
-  let composedProps = withoutSsrMix(initialProps)
-  let mixinProps = withoutSsrMixinTreeProps(composedProps)
-  let maxDescriptors = 1024
-
-  for (let index = 0; index < descriptors.length && index < maxDescriptors; index++) {
-    let descriptor = descriptors[index]
+  return composeMixedProps(hostType, initialProps, (descriptor, _index, mixinProps) => {
     let runner = resolveSsrMixinRunner(hostType, descriptor, context, frameState)
-    if (!runner) continue
-
-    let result: unknown
+    if (!runner) return undefined
+    // Unlike the client runtime, a throwing mixin is isolated here so a
+    // single bad mixin cannot take down the whole stream.
     try {
-      result = runner(...descriptor.args, mixinProps)
+      return runner(...descriptor.args, mixinProps)
     } catch (error) {
       console.error(error)
-      continue
+      return undefined
     }
-
-    if (!result) continue
-    if (isSsrMixinElement(result)) continue
-
-    let returnedDescriptors = resolveReturnedSsrMixDescriptors(result)
-    if (returnedDescriptors) {
-      for (let returned of returnedDescriptors) descriptors.push(returned)
-      continue
-    }
-
-    if (!isRemixElement(result)) {
-      console.error(new Error('mixins must return a remix element'))
-      continue
-    }
-    let remixResult = result
-
-    let resultType =
-      typeof remixResult.type === 'string'
-        ? remixResult.type
-        : isSsrMixinElement(remixResult.type)
-          ? remixResult.type.__rmxMixinElementType
-          : null
-
-    if (resultType !== hostType) {
-      console.error(new Error('mixins must return an element with the same host type'))
-      continue
-    }
-
-    if (remixResult.type !== resultType) {
-      remixResult = { ...remixResult, type: resultType }
-    }
-
-    let nextProps = sanitizeReturnedSsrMixinProps(remixResult.props as ElementProps)
-    let nestedDescriptors = resolveSsrMixDescriptors(nextProps)
-    for (let nested of nestedDescriptors) descriptors.push(nested)
-    composedProps = { ...composedProps, ...withoutSsrMix(nextProps) }
-    mixinProps = withoutSsrMixinTreeProps(composedProps)
-  }
-
-  let nextMix = initialProps.mix
-  return {
-    ...composedProps,
-    ...(nextMix === undefined ? {} : { mix: nextMix }),
-  }
+  })
 }
 
 function resolveSsrMixinRunner(
   hostType: string,
-  descriptor: { type?: unknown; args?: unknown[] },
+  descriptor: { type?: unknown; args?: readonly unknown[] },
   context: RenderContext,
   frameState: SsrFrameState,
 ): ((...args: unknown[]) => unknown) | null {
@@ -772,91 +730,8 @@ function createSsrMixinHandle(
   }
 }
 
-function resolveSsrMixDescriptors(props: ElementProps): Array<{ type: any; args: unknown[] }> {
-  let mix = props.mix
-  if (!mix) return []
-  if (Array.isArray(mix)) {
-    if (mix.length === 0) return []
-    return mix.filter(Boolean) as Array<{ type: any; args: unknown[] }>
-  }
-  return [mix] as Array<{ type: any; args: unknown[] }>
-}
-
-function withoutSsrMix(props: ElementProps): ElementProps {
-  if (!('mix' in props)) return props
-  let output = { ...props }
-  delete output.mix
-  return output
-}
-
-function withoutSsrMixinTreeProps(props: ElementProps): ElementProps {
-  if (!('children' in props) && !('innerHTML' in props)) return props
-  let output = { ...props }
-  delete output.children
-  delete output.innerHTML
-  return output
-}
-
-function sanitizeReturnedSsrMixinProps(props: ElementProps): ElementProps {
-  if (!('children' in props) && !('innerHTML' in props)) return props
-  console.error(new Error('mixins must not return children or innerHTML'))
-  return withoutSsrMixinTreeProps(props)
-}
-
-function resolveReturnedSsrMixDescriptors(
-  value: unknown,
-): Array<{ type: ElementFunction; args: unknown[] }> | null {
-  let descriptors: Array<{ type: ElementFunction; args: unknown[] }> = []
-  if (!collectReturnedSsrMixDescriptors(value, descriptors)) {
-    return null
-  }
-
-  return descriptors
-}
-
-function collectReturnedSsrMixDescriptors(
-  value: unknown,
-  output: Array<{ type: ElementFunction; args: unknown[] }>,
-): boolean {
-  if (!value) {
-    return true
-  }
-
-  if (Array.isArray(value)) {
-    for (let item of value) {
-      if (!collectReturnedSsrMixDescriptors(item, output)) {
-        return false
-      }
-    }
-    return true
-  }
-
-  if (!isSsrMixinDescriptor(value)) {
-    return false
-  }
-
-  output.push(value)
-  return true
-}
-
-function isSsrMixinElement(
-  value: unknown,
-): value is ((...args: unknown[]) => unknown) & { __rmxMixinElementType: string } {
-  if (typeof value !== 'function') return false
-  return '__rmxMixinElementType' in value
-}
-
 function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
-}
-
-function isSsrMixinDescriptor(value: unknown): value is { type: ElementFunction; args: unknown[] } {
-  if (!value || typeof value !== 'object' || isRemixElement(value)) {
-    return false
-  }
-
-  let descriptor = value as { type?: unknown; args?: unknown }
-  return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
 }
 
 function buildComponentSegment(
@@ -1031,8 +906,8 @@ function buildEntrySegment(
     props: JSON.parse(JSON.stringify(props, replacer)),
   })
 
-  let start = staticSeg(`<!-- rmx:h:${instanceId} -->`)
-  let end = staticSeg('<!-- /rmx:h -->')
+  let start = staticSeg(hydrationStartMarkerHtml(instanceId))
+  let end = staticSeg(HYDRATION_END_MARKER_HTML)
   return compositeSeg([start, rendered, end])
 }
 
@@ -1165,9 +1040,7 @@ function serializeSegment(seg: Segment): string {
   if (seg.kind === 'composite') return seg.parts.map(serializeSegment).join('')
   // frame
   let inner = seg.content ? serializeSegment(seg.content) : ''
-  let start = `<!-- rmx:f:${seg.frameId} -->`
-  let end = `<!-- /rmx:f -->`
-  return start + inner + end
+  return frameStartMarkerHtml(seg.frameId) + inner + FRAME_END_MARKER_HTML
 }
 
 function escapeHtml(str: string): string {
