@@ -78,7 +78,8 @@
           "oneOf": [
             { "$ref": "#/$defs/dbSqliteAdapter" },
             { "$ref": "#/$defs/dbPostgresAdapter" },
-            { "$ref": "#/$defs/dbMysqlAdapter" }
+            { "$ref": "#/$defs/dbMysqlAdapter" },
+            { "$ref": "#/$defs/dbModuleAdapter" }
           ]
         },
         "migrations": {
@@ -124,6 +125,27 @@
         "connectionString": { "$ref": "#/$defs/dbString" },
         "maintenanceDatabase": { "type": "string" },
         "template": { "type": "string" }
+      }
+    },
+    "dbModuleAdapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "module"],
+      "properties": {
+        "type": { "const": "module" },
+        "module": {
+          "type": "string",
+          "description": "Module specifier exporting a database factory. Relative paths resolve from this file."
+        },
+        "export": {
+          "type": "string",
+          "description": "Name of the exported factory. Defaults to the default export."
+        },
+        "connection": { "$ref": "#/$defs/dbString" },
+        "options": {
+          "type": "object",
+          "description": "Values passed through to the database factory."
+        }
       }
     },
     "dbMysqlAdapter": {

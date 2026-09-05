@@ -427,6 +427,38 @@ environment variable at command runtime, and paths are resolved relative to `rem
 Application runtime setup remains application-owned. It does not need to expose any special
 exports for the CLI.
 
+To run `remix db` against a database this package does not ship an adapter for, such as Turso/libSQL
+or Cloudflare D1, point `db.adapter` at a module that creates it:
+
+```jsonc
+{
+  "db": {
+    "adapter": {
+      "type": "module",
+      "module": "./app/database.ts",
+      "export": "createDatabase",
+      "connection": { "env": "DATABASE_URL" },
+    },
+    "migrations": { "directory": "./db/migrations" },
+  },
+}
+```
+
+```ts
+import type { RemixDbModuleFactory } from 'remix/cli'
+
+export const createDatabase: RemixDbModuleFactory = ({ connection }) =>
+  createMyDatabase({ url: connection })
+```
+
+The factory receives `{ configDir, connection, options }`, where `connection` comes from
+`db.adapter.connection` or `--connection-env` and `options` is passed through from
+`db.adapter.options`. The CLI closes the returned database when the command finishes.
+
+Build such a database from your own `DatabaseDriver` implementation: `new Database(driver)`. Both are
+exported from this package. The SQLite adapter cannot stand in for these databases because its client
+interface is synchronous, while Turso and D1 clients are async.
+
 Run lifecycle commands through the Remix CLI:
 
 ```sh
