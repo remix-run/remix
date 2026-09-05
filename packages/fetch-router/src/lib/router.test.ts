@@ -903,6 +903,138 @@ describe('404 handling', () => {
   })
 })
 
+describe('405 handling', () => {
+  it('returns a 405 response when routes match the URL but not the method', async () => {
+    let router = createRouter()
+    router.get('/home', () => new Response('Home'))
+
+    let response = await router.fetch('https://remix.run/home', { method: 'POST' })
+
+    assert.equal(response.status, 405)
+    assert.equal(response.headers.get('Allow'), 'GET, HEAD')
+    assert.equal(await response.text(), 'Method Not Allowed: POST')
+  })
+
+  it('includes every method allowed for the URL in the Allow header', async () => {
+    let router = createRouter()
+    router.get('/posts/:id', () => new Response('Show'))
+    router.put('/posts/:id', () => new Response('Update'))
+    router.delete('/posts/:id', () => new Response('Destroy'))
+
+    let response = await router.fetch('https://remix.run/posts/1', { method: 'POST' })
+
+    assert.equal(response.status, 405)
+    assert.equal(response.headers.get('Allow'), 'GET, HEAD, PUT, DELETE')
+  })
+
+  it('falls through to a less specific route that allows the method', async () => {
+    let router = createRouter()
+    router.get('/posts/featured', () => new Response('Featured'))
+    router.route('ANY', '/posts/:id', () => new Response('Any post'))
+
+    let response = await router.fetch('https://remix.run/posts/featured', { method: 'POST' })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Any post')
+  })
+
+  it('does not return 405 when no route matches the URL', async () => {
+    let router = createRouter()
+    router.get('/home', () => new Response('Home'))
+
+    let response = await router.fetch('https://remix.run/missing', { method: 'POST' })
+
+    assert.equal(response.status, 404)
+  })
+
+  it('lets an ANY catch-all route handle mismatched methods without a 405', async () => {
+    let router = createRouter()
+    router.get('/home', () => new Response('Home'))
+    router.route('ANY', '/*rest', () => new Response('Catch-all'))
+
+    let response = await router.fetch('https://remix.run/home', { method: 'POST' })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Catch-all')
+  })
+})
+
+describe('HEAD request handling', () => {
+  it('serves HEAD requests with a GET route and strips the response body', async () => {
+    let router = createRouter()
+    router.get(
+      '/file',
+      () =>
+        new Response('content', {
+          headers: { 'Content-Type': 'text/plain', 'X-Extra': 'yes' },
+        }),
+    )
+
+    let response = await router.fetch('https://remix.run/file', { method: 'HEAD' })
+
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('Content-Type'), 'text/plain')
+    assert.equal(response.headers.get('X-Extra'), 'yes')
+    assert.equal(response.body, null)
+  })
+
+  it('prefers an explicit HEAD route over a GET route for the same pattern', async () => {
+    let router = createRouter()
+    router.get('/file', () => new Response('content'))
+    router.head('/file', () => new Response(null, { headers: { 'X-Head': 'explicit' } }))
+
+    let response = await router.fetch('https://remix.run/file', { method: 'HEAD' })
+
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('X-Head'), 'explicit')
+  })
+
+  it('prefers a more specific GET route over a less specific HEAD route', async () => {
+    let router = createRouter()
+    router.head('/*rest', () => new Response(null, { headers: { 'X-Head': 'catch-all' } }))
+    router.get('/file', () => new Response('content', { headers: { 'X-Get': 'specific' } }))
+
+    let response = await router.fetch('https://remix.run/file', { method: 'HEAD' })
+
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('X-Get'), 'specific')
+    assert.equal(response.body, null)
+  })
+
+  it('runs action middleware when a GET route serves a HEAD request', async () => {
+    let requestLog: string[] = []
+    let router = createRouter()
+    router.get('/file', {
+      middleware: [
+        (_, next) => {
+          requestLog.push('middleware')
+          return next()
+        },
+      ],
+      handler() {
+        requestLog.push('handler')
+        return new Response('content')
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/file', { method: 'HEAD' })
+
+    assert.equal(response.status, 200)
+    assert.equal(response.body, null)
+    assert.deepEqual(requestLog, ['middleware', 'handler'])
+  })
+
+  it('returns a 405 response for HEAD requests when only other methods match', async () => {
+    let router = createRouter()
+    router.post('/submit', () => new Response('Submitted'))
+
+    let response = await router.fetch('https://remix.run/submit', { method: 'HEAD' })
+
+    assert.equal(response.status, 405)
+    assert.equal(response.headers.get('Allow'), 'POST')
+  })
+})
+
 describe('error handling', () => {
   it('propagates errors thrown in request handlers', async () => {
     let router = createRouter()
