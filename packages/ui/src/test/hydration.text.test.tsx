@@ -132,5 +132,35 @@ describe('hydration', () => {
       expect(container.querySelector('div')).toBe(existingDiv)
       expect(existingDiv.textContent).toBe('')
     })
+
+    it('consolidates parser-split server text nodes', async () => {
+      let lineCount = 10000
+      let largeText = Array.from({ length: lineCount }, (_, i) => `row-${i}`).join('\n')
+      expect(largeText.length).toBeGreaterThan(65536)
+
+      let html = await renderToString(<pre>{largeText}</pre>)
+      container.innerHTML = html
+
+      let existingPre = container.querySelector('pre')
+      invariant(existingPre)
+
+      let splitOffset = 65536
+      let firstTextNode = document.createTextNode(largeText.slice(0, splitOffset))
+      let secondTextNode = document.createTextNode(largeText.slice(splitOffset))
+      existingPre.replaceChildren(firstTextNode, secondTextNode)
+      expect(existingPre.childNodes.length).toBe(2)
+
+      let root = createRoot(container)
+      root.render(<pre>{largeText}</pre>)
+      root.flush()
+
+      let hydratedPre = container.querySelector('pre')
+      invariant(hydratedPre)
+      expect(hydratedPre).toBe(existingPre)
+      expect(hydratedPre.firstChild).toBe(firstTextNode)
+      expect(hydratedPre.childNodes.length).toBe(1)
+      expect(hydratedPre.textContent).toBe(largeText)
+      expect(hydratedPre.textContent.split('\n').length).toBe(lineCount)
+    })
   })
 })
