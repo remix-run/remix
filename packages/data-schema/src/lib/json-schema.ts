@@ -77,6 +77,10 @@ type Context = {
  * dropping the constraint. Attach an explicit fragment with `schema.meta({ jsonSchema })` to
  * describe such a schema yourself.
  *
+ * JSON Schema cannot express that a number is finite, so a schema emitted for `number()` or
+ * for a numeric coercion accepts the `Infinity` that `JSON.parse('1e1000')` produces, which
+ * `parse` rejects.
+ *
  * @param schema The schema to convert
  * @param options Controls the dialect and whether to describe input or output values
  * @returns A JSON Schema object
