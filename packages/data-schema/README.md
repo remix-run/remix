@@ -411,6 +411,83 @@ function latLng(): Schema<unknown, [number, number]> {
 
 The validator function receives the raw value and a context with the current `path` and `options`. Return `{ value }` on success or `{ issues: [...] }` on failure. The returned schema is fully Standard Schema v1-compatible and supports `.pipe()` and `.refine()` out of the box.
 
+A custom schema is opaque to `toJSONSchema()` unless you describe it. Pass a definition as the second argument to `createSchema`, or attach an explicit fragment with `.meta({ jsonSchema })`.
+
+## Describing schemas with `.meta()`
+
+Attach a title and a description to any schema. Both survive `.pipe()`, `.refine()`, and `.transform()`.
+
+```ts
+import { object, string } from 'remix/data-schema'
+
+let User = object({
+  email: string().meta({ title: 'Email', description: 'Where we send receipts.' }),
+})
+```
+
+## JSON Schema
+
+Publish a schema to consumers that speak [JSON Schema](https://json-schema.org), so one declaration both validates input and documents it.
+
+```ts
+import { defaulted, enum_, number, object, optional, string } from 'remix/data-schema'
+import { max, maxLength, min, minLength } from 'remix/data-schema/checks'
+import { toJSONSchema } from 'remix/data-schema/json-schema'
+
+let Search = object({
+  query: string().pipe(minLength(1), maxLength(200)).meta({ description: 'Words to look for.' }),
+  kind: optional(enum_(['article', 'tutorial'])),
+  limit: defaulted(number().pipe(min(1), max(50)), 10),
+})
+
+toJSONSchema(Search)
+// {
+//   type: 'object',
+//   properties: {
+//     query: { type: 'string', minLength: 1, maxLength: 200, description: 'Words to look for.' },
+//     kind: { type: 'string', enum: ['article', 'tutorial'] },
+//     limit: { type: 'number', minimum: 1, maximum: 50, default: 10 },
+//   },
+//   required: ['query'],
+// }
+```
+
+Checks become constraints, `optional` and `defaulted` keys are omitted from `required`, and `nullable` adds `"null"` to the type. Pass `io: 'output'` to describe what a schema produces rather than what it accepts, or `target: 'draft-07'` to emit that dialect. Schemas also implement [Standard JSON Schema](https://standardschema.dev/json-schema) through `~standard.jsonSchema`, so other libraries can convert them without depending on this package.
+
+## Schemas that cannot be represented
+
+Some schemas have no JSON Schema representation, including `map`, `set`, `instanceof_`, `coerce.date()`, `.refine()`, and recursive schemas. Those throw a `JSONSchemaError` naming the path instead of quietly dropping the constraint. Describe one yourself with `.meta({ jsonSchema })`:
+
+```ts
+import { string } from 'remix/data-schema'
+import { toJSONSchema } from 'remix/data-schema/json-schema'
+
+let Slug = string()
+  .refine((value) => /^[a-z-]+$/.test(value))
+  .meta({ jsonSchema: { pattern: '^[a-z-]+$' } })
+
+toJSONSchema(Slug) // { type: 'string', pattern: '^[a-z-]+$' }
+```
+
+## Introspecting schemas
+
+Read how a schema was built from its `~def`, without running the validator. This is what `toJSONSchema()` uses, and it is there for your own tooling.
+
+```ts
+import { object, optional, string } from 'remix/data-schema'
+import { minLength } from 'remix/data-schema/checks'
+
+let def = object({ name: string(), nickname: optional(string()) })['~def']
+
+def.kind // 'object'
+Object.keys(def.entries) // ['name', 'nickname']
+def.entries.nickname['~def'].kind // 'optional'
+
+string().pipe(minLength(1))['~def'].checks // [{ code: 'string.min_length', values: { min: 1 }, ... }]
+```
+
+`kind` reports the constructor underneath, so `.pipe()`, `.refine()`, and `.transform()` do not hide it. What they added is reported as `checks`, `refined`, and `transformed`.
+
 ## License
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

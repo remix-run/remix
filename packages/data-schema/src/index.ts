@@ -37,6 +37,9 @@ export type {
   Issue,
   ParseOptions,
   Schema,
+  SchemaDef,
+  SchemaDefInit,
+  SchemaMeta,
   ValidationOptions,
   ValidationResult,
 } from './lib/schema.ts'
