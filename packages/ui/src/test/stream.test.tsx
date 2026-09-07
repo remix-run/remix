@@ -2068,6 +2068,9 @@ describe('stream', () => {
                   imports: {
                     '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
                   },
+                  integrity: {
+                    '/assets/app/entry.@abc123.tsx': 'sha256-entry',
+                  },
                 }}
               />
               <title>Counter</title>
@@ -2095,6 +2098,9 @@ describe('stream', () => {
                     pkg: '/assets/app/node_modules/pkg/index.@fedcba.ts',
                   },
                 },
+                integrity: {
+                  '/assets/app/components/counter.@def456.tsx': 'sha256-counter',
+                },
               },
             }
           },
@@ -2115,6 +2121,10 @@ describe('stream', () => {
           '/assets/app/components/': {
             pkg: '/assets/app/node_modules/pkg/index.@fedcba.ts',
           },
+        },
+        integrity: {
+          '/assets/app/entry.@abc123.tsx': 'sha256-entry',
+          '/assets/app/components/counter.@def456.tsx': 'sha256-counter',
         },
       })
       expect(html.indexOf('<meta')).toBeLessThan(html.indexOf('id="app-import-map"'))
@@ -2313,6 +2323,41 @@ describe('stream', () => {
       )
     })
 
+    it('rejects conflicting client entry import map integrity metadata', async () => {
+      let First = clientEntry('file:///app/first.tsx', function First() {
+        return () => <div>First</div>
+      })
+      let Second = clientEntry('file:///app/second.tsx', function Second() {
+        return () => <div>Second</div>
+      })
+
+      let stream = renderToStream(
+        <>
+          <First />
+          <Second />
+        </>,
+        {
+          resolveClientEntry(entryId) {
+            return {
+              href: entryId,
+              exportName: 'default',
+              importMap: {
+                integrity: {
+                  '/assets/shared.js': entryId.endsWith('/first.tsx')
+                    ? 'sha256-first'
+                    : 'sha256-second',
+                },
+              },
+            }
+          },
+        },
+      )
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Conflicting framework import map integrity entry for "/assets/shared.js"',
+      )
+    })
+
     it('emits preloads and import maps returned from the same resolved client entry', async () => {
       let Counter = clientEntry(
         'file:///app/components/counter.tsx',
@@ -2498,6 +2543,9 @@ describe('stream', () => {
                     '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
                     '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
                   },
+                  integrity: {
+                    '/assets/app/shared.@def456.ts': 'sha256-shared',
+                  },
                 })}
               </script>
               <link rel="modulepreload" href="/assets/app/shared.@def456.ts" />
@@ -2522,6 +2570,10 @@ describe('stream', () => {
                       pkg: '/assets/app/node_modules/pkg/index.@fedcba.ts',
                     },
                   },
+                  integrity: {
+                    '/assets/app/shared.@def456.ts': 'sha256-shared',
+                    '/assets/app/components/counter.@def456.tsx': 'sha256-counter',
+                  },
                 },
               }
             },
@@ -2534,11 +2586,11 @@ describe('stream', () => {
       let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
       expect(importMapScripts).toHaveLength(2)
       expect(importMapScripts[0]?.textContent).toBe(
-        '{"imports":{"/assets/app/entry.tsx":"/assets/app/entry.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}',
+        '{"imports":{"/assets/app/entry.tsx":"/assets/app/entry.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"},"integrity":{"/assets/app/shared.@def456.ts":"sha256-shared"}}',
       )
       expect(importMapScripts[0]?.hasAttribute('data-rmx-import-map')).toBe(false)
       expect(importMapScripts[1]?.textContent).toBe(
-        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@def456.tsx"},"scopes":{"/assets/app/components/":{"pkg":"/assets/app/node_modules/pkg/index.@fedcba.ts"}}}',
+        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@def456.tsx"},"scopes":{"/assets/app/components/":{"pkg":"/assets/app/node_modules/pkg/index.@fedcba.ts"}},"integrity":{"/assets/app/components/counter.@def456.tsx":"sha256-counter"}}',
       )
       expect(importMapScripts[1]?.hasAttribute('data-rmx-import-map')).toBe(true)
     })
@@ -2869,6 +2921,9 @@ describe('stream', () => {
                   imports: {
                     '/assets/app/shared.ts': '/assets/app/shared.@old.ts',
                   },
+                  integrity: {
+                    '/assets/app/shared.@old.ts': 'sha256-old',
+                  },
                 })}
               </script>
             </head>
@@ -2886,6 +2941,10 @@ describe('stream', () => {
                     '/assets/app/shared.ts': '/assets/app/shared.@new.ts',
                     '/assets/app/added.ts': '/assets/app/added.@new.ts',
                   },
+                  integrity: {
+                    '/assets/app/shared.@old.ts': 'sha256-new',
+                    '/assets/app/added.@new.ts': 'sha256-added',
+                  },
                 },
               }
             },
@@ -2893,10 +2952,14 @@ describe('stream', () => {
         ),
       )
 
-      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn).toHaveBeenCalledTimes(2)
       expect(warn.mock.calls[0]?.arguments[0]).toBe(
         '[remix] Ignoring conflicting import map entry for "/assets/app/shared.ts": ' +
           '"/assets/app/shared.@old.ts" is already authored, but the discovered map points to "/assets/app/shared.@new.ts"',
+      )
+      expect(warn.mock.calls[1]?.arguments[0]).toBe(
+        '[remix] Ignoring conflicting import map integrity entry for "/assets/app/shared.@old.ts": ' +
+          '"sha256-old" is already authored, but the discovered map points to "sha256-new"',
       )
       let shelf = document.createElement('template')
       shelf.innerHTML = html
@@ -2905,6 +2968,9 @@ describe('stream', () => {
       expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
         imports: {
           '/assets/app/added.ts': '/assets/app/added.@new.ts',
+        },
+        integrity: {
+          '/assets/app/added.@new.ts': 'sha256-added',
         },
       })
     })

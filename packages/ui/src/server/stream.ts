@@ -95,6 +95,8 @@ export interface ImportMapData {
   imports?: ImportMapImports
   /** Module specifier mappings scoped by URL. */
   scopes?: Record<string, ImportMapImports>
+  /** Subresource integrity metadata keyed by module URL. */
+  integrity?: Record<string, string>
 }
 
 type ImportMapAddress = string | null
@@ -108,7 +110,10 @@ type ManagedImportMap = {
   value: ImportMapData
 }
 
-export type ImportMapProps = Omit<Props<'script'>, 'children' | 'innerHTML' | 'src' | 'type'> & {
+export type ImportMapProps = Omit<
+  Props<'script'>,
+  'children' | 'innerHTML' | 'integrity' | 'src' | 'type'
+> & {
   /** Initial import map entries to render and merge with resolved client entries. */
   value: ImportMapData
 }
@@ -151,6 +156,7 @@ interface RenderContext {
   unresolvedHydrationData: Map<string, UnresolvedHydrationData>
   authoredImportMapImports: AuthoredImportMapEntries
   authoredImportMapScopes: Map<string, AuthoredImportMapScope>
+  authoredImportMapIntegrity: Map<string, string>
   managedImportMaps: ManagedImportMap[]
   frameData: Map<string, FrameData>
   clientEntryHeadResources: ClientEntryHeadResources
@@ -263,6 +269,7 @@ export function renderToStream(
     unresolvedHydrationData: new Map(),
     authoredImportMapImports: new Map(),
     authoredImportMapScopes: new Map(),
+    authoredImportMapIntegrity: new Map(),
     managedImportMaps: [],
     frameData: new Map(),
     clientEntryHeadResources: { modulePreloadTags: new Set() },
@@ -660,6 +667,13 @@ function collectAuthoredImportMap(
         context.authoredImportMapScopes.set(scope, authoredScope)
       }
       collectAuthoredImportMapEntries(authoredScope.imports, imports)
+    }
+  }
+  if (importMap.integrity) {
+    for (let [url, integrity] of Object.entries(importMap.integrity)) {
+      if (!context.authoredImportMapIntegrity.has(url)) {
+        context.authoredImportMapIntegrity.set(url, integrity)
+      }
     }
   }
 }
@@ -1573,11 +1587,15 @@ function getImportMapDelta(
     let importsDelta = getImportMapImportsDelta(authoredImports, scopedImports, scope)
     if (importsDelta) scopes[scope] = importsDelta
   }
+  let integrity = importMap.integrity
+    ? getImportMapIntegrityDelta(context.authoredImportMapIntegrity, importMap.integrity)
+    : undefined
 
-  if (!imports && Object.keys(scopes).length === 0) return null
+  if (!imports && Object.keys(scopes).length === 0 && !integrity) return null
   return {
     ...(imports ? { imports } : null),
     ...(Object.keys(scopes).length > 0 ? { scopes } : null),
+    ...(integrity ? { integrity } : null),
   }
 }
 
@@ -1606,6 +1624,29 @@ function getImportMapImportsDelta(
   return Object.keys(delta).length > 0 ? delta : undefined
 }
 
+function getImportMapIntegrityDelta(
+  authoredIntegrity: Map<string, string>,
+  discoveredIntegrity: Record<string, string>,
+): Record<string, string> | undefined {
+  let delta: Record<string, string> = {}
+  for (let [url, integrity] of Object.entries(discoveredIntegrity)) {
+    if (!authoredIntegrity.has(url)) {
+      delta[url] = integrity
+      continue
+    }
+
+    let authoredIntegrityValue = authoredIntegrity.get(url)
+    if (authoredIntegrityValue === integrity) continue
+
+    console.warn(
+      `[remix] Ignoring conflicting import map integrity entry for "${url}": ` +
+        `"${authoredIntegrityValue}" is already authored, but the discovered map points to "${integrity}"`,
+    )
+  }
+
+  return Object.keys(delta).length > 0 ? delta : undefined
+}
+
 function parseAuthoredImportMap(json: string): ImportMapData | null {
   let value: unknown
   try {
@@ -1628,6 +1669,14 @@ function parseAuthoredImportMap(json: string): ImportMapData | null {
       scopes.push([scope, parseAuthoredImportMapImports(imports)])
     }
     importMap.scopes = Object.fromEntries(scopes)
+  }
+  if (value.integrity !== undefined) {
+    if (!isObjectRecord(value.integrity)) return null
+    importMap.integrity = Object.fromEntries(
+      Object.entries(value.integrity).filter(
+        (entry): entry is [string, string] => typeof entry[1] === 'string',
+      ),
+    )
   }
   return importMap
 }
@@ -1663,12 +1712,18 @@ function isImportMap(value: unknown): value is ImportMapData {
       if (!isImportMapImports(imports)) return false
     }
   }
+  if (value.integrity !== undefined && !isImportMapIntegrity(value.integrity)) return false
   return true
 }
 
 function isImportMapImports(value: unknown): value is ImportMapImports {
   if (!isObjectRecord(value)) return false
   return Object.values(value).every((address) => address === null || typeof address === 'string')
+}
+
+function isImportMapIntegrity(value: unknown): value is Record<string, string> {
+  if (!isObjectRecord(value)) return false
+  return Object.values(value).every((integrity) => typeof integrity === 'string')
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -1688,6 +1743,10 @@ function mergeImportMap(resources: ClientEntryHeadResources, source: ImportMapDa
       mergeImportMapImports(targetImports, imports, scope)
     }
   }
+  if (source.integrity) {
+    target.integrity ??= {}
+    mergeImportMapIntegrity(target.integrity, source.integrity)
+  }
 }
 
 function mergeImportMapImports(
@@ -1705,6 +1764,21 @@ function mergeImportMapImports(
       throw new Error(
         `Conflicting framework import map entry for "${specifier}"${scopeDescription}`,
       )
+    }
+  }
+}
+
+function mergeImportMapIntegrity(
+  target: Record<string, string>,
+  source: Record<string, string>,
+): void {
+  for (let [url, integrity] of Object.entries(source)) {
+    if (!Object.hasOwn(target, url)) {
+      target[url] = integrity
+      continue
+    }
+    if (target[url] !== integrity) {
+      throw new Error(`Conflicting framework import map integrity entry for "${url}"`)
     }
   }
 }

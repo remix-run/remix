@@ -1,6 +1,7 @@
 type ImportMap = {
   imports?: ImportMapImports
   scopes?: Record<string, ImportMapImports>
+  integrity?: Record<string, string>
 }
 
 type ImportMapAddress = string | null
@@ -10,6 +11,7 @@ type InstalledImportMapEntry = { href: ImportMapAddress; normalizedHref: ImportM
 type InstalledImportMap = {
   imports: Map<string, InstalledImportMapEntry>
   scopes: Map<string, Map<string, InstalledImportMapEntry>>
+  integrity: Map<string, string>
 }
 
 interface ImportMapManager {
@@ -77,6 +79,7 @@ function createInstalledImportMap(): InstalledImportMap {
   return {
     imports: new Map(),
     scopes: new Map(),
+    integrity: new Map(),
   }
 }
 
@@ -87,10 +90,16 @@ function getImportMapDelta(
 ): ImportMap | undefined {
   let imports = getImportMapImportsDelta(installedImportMap.imports, importMap.imports, baseUrl)
   let scopes = getImportMapScopesDelta(installedImportMap, importMap.scopes, baseUrl)
-  if (!imports && !scopes) return undefined
+  let integrity = getImportMapIntegrityDelta(
+    installedImportMap.integrity,
+    importMap.integrity,
+    baseUrl,
+  )
+  if (!imports && !scopes && !integrity) return undefined
   return {
     ...(imports ? { imports } : null),
     ...(scopes ? { scopes } : null),
+    ...(integrity ? { integrity } : null),
   }
 }
 
@@ -142,6 +151,32 @@ function getImportMapScopesDelta(
   return Object.keys(delta).length > 0 ? delta : undefined
 }
 
+function getImportMapIntegrityDelta(
+  installedIntegrity: Map<string, string>,
+  integrity: Record<string, string> | undefined,
+  baseUrl: string,
+): Record<string, string> | undefined {
+  if (!integrity) return undefined
+
+  let delta: Record<string, string> = {}
+  for (let [url, metadata] of Object.entries(integrity)) {
+    let normalizedUrl = normalizeImportMapUrl(url, baseUrl)
+    if (normalizedUrl === null) continue
+    let installedMetadata = installedIntegrity.get(normalizedUrl)
+    if (installedMetadata === metadata) continue
+    if (installedMetadata !== undefined) {
+      console.warn(
+        `[remix] Ignoring conflicting import map integrity entry for "${url}": ` +
+          `"${installedMetadata}" is already installed, but the new map points to "${metadata}"`,
+      )
+      continue
+    }
+    delta[url] = metadata
+  }
+
+  return Object.keys(delta).length > 0 ? delta : undefined
+}
+
 function mergeInstalledImportMap(
   installedImportMap: InstalledImportMap,
   importMap: ImportMap,
@@ -178,6 +213,14 @@ function mergeInstalledImportMap(
           normalizedHref: normalizeImportMapAddress(href, baseUrl),
         })
       }
+    }
+  }
+
+  if (importMap.integrity) {
+    for (let [url, metadata] of Object.entries(importMap.integrity)) {
+      let normalizedUrl = normalizeImportMapUrl(url, baseUrl)
+      if (normalizedUrl === null || installedImportMap.integrity.has(normalizedUrl)) continue
+      installedImportMap.integrity.set(normalizedUrl, metadata)
     }
   }
 }
@@ -219,6 +262,12 @@ function parseImportMap(json: string): ImportMap | null {
     importMap.scopes = scopes
   }
 
+  if ('integrity' in parsed) {
+    let integrity = parsed.integrity
+    if (!isImportMapIntegrity(integrity)) return null
+    importMap.integrity = integrity
+  }
+
   return importMap
 }
 
@@ -230,6 +279,11 @@ function isImportMapImports(value: unknown): value is ImportMapImports {
 function isScopedImportMapRecord(value: unknown): value is Record<string, ImportMapImports> {
   if (!value || typeof value !== 'object') return false
   return Object.values(value).every(isImportMapImports)
+}
+
+function isImportMapIntegrity(value: unknown): value is Record<string, string> {
+  if (!value || typeof value !== 'object') return false
+  return Object.values(value).every((entry) => typeof entry === 'string')
 }
 
 function normalizeImportMapSpecifier(specifier: string, baseUrl: string): string | null {

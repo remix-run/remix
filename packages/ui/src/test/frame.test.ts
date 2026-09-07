@@ -1191,6 +1191,7 @@ describe('frames', () => {
       importMapScript({
         imports: { '/a.js': '/a.hash.js' },
         scopes: { '/scope/': { pkg: '/pkg.hash.js' } },
+        integrity: { '/a.hash.js': 'sha256-a' },
       }),
       '</head>',
       '<body></body>',
@@ -1208,6 +1209,10 @@ describe('frames', () => {
           other: '/other.hash.js',
         },
       },
+      integrity: {
+        '/a.hash.js': 'sha256-a',
+        '/b.hash.js': 'sha256-b',
+      },
     }
 
     try {
@@ -1219,6 +1224,7 @@ describe('frames', () => {
       expect(parseImportMapScript(scripts[1]!)).toEqual({
         imports: { '/b.js': '/b.hash.js' },
         scopes: { '/scope/': { other: '/other.hash.js' } },
+        integrity: { '/b.hash.js': 'sha256-b' },
       })
       expect(scripts[1]?.hasAttribute('data-rmx-import-map')).toBe(true)
       expect(document.body.querySelector('head')).toBeNull()
@@ -1407,6 +1413,41 @@ describe('frames', () => {
         scopes: { '/conflict-scope/': { addedPkg: '/added-pkg.hash.js' } },
       })
       expect(document.querySelector('main')?.textContent).toBe('Loaded')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('warns and ignores conflicting late import map integrity metadata', async (t) => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      importMapScript({ integrity: { '/shared.js': 'sha256-old' } }),
+      '</head>',
+      '<body></body>',
+    ].join('')
+
+    let frame = createClientEntryResourceTestFrame()
+    let warn = t.mock.method(console, 'warn', () => {})
+
+    try {
+      await frame.ready()
+      await frame.render(
+        `${remixImportMapHead({
+          integrity: {
+            '/shared.js': 'sha256-new',
+            '/added.js': 'sha256-added',
+          },
+        })}<main>Loaded</main>`,
+      )
+
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0]?.arguments[0]).toBe(
+        '[remix] Ignoring conflicting import map integrity entry for "/shared.js": ' +
+          '"sha256-old" is already installed, but the new map points to "sha256-new"',
+      )
+      expect(parseImportMapScript(getImportMapScripts()[1]!)).toEqual({
+        integrity: { '/added.js': 'sha256-added' },
+      })
     } finally {
       frame.dispose()
     }
@@ -1766,6 +1807,7 @@ function createClientEntryResourceTestFrame(): ReturnType<typeof createFrame> {
 function importMapScript(importMap: {
   imports?: Record<string, string | null>
   scopes?: Record<string, Record<string, string | null>>
+  integrity?: Record<string, string>
 }): string {
   return `<script type="importmap">${JSON.stringify(importMap)}</script>`
 }
@@ -1773,6 +1815,7 @@ function importMapScript(importMap: {
 function remixImportMapHead(importMap: {
   imports?: Record<string, string | null>
   scopes?: Record<string, Record<string, string | null>>
+  integrity?: Record<string, string>
 }): string {
   return `<head><script data-rmx-import-map type="importmap">${JSON.stringify(importMap)}</script></head>`
 }
@@ -1780,6 +1823,7 @@ function remixImportMapHead(importMap: {
 function remixImportMapScript(importMap: {
   imports?: Record<string, string | null>
   scopes?: Record<string, Record<string, string | null>>
+  integrity?: Record<string, string>
 }): string {
   return `<script data-rmx-import-map type="importmap">${JSON.stringify(importMap)}</script>`
 }
