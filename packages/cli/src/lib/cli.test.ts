@@ -504,6 +504,7 @@ describe('run', () => {
       let server = await fs.readFile(path.join(appDir, 'server.ts'), 'utf8')
       let assets = await fs.readFile(path.join(appDir, 'app', 'assets.ts'), 'utf8')
       let router = await fs.readFile(path.join(appDir, 'app', 'router.ts'), 'utf8')
+      let document = await fs.readFile(path.join(appDir, 'app', 'actions', 'document.tsx'), 'utf8')
       let entry = await fs.readFile(
         path.join(appDir, 'app', 'actions', 'public', 'entry.ts'),
         'utf8',
@@ -547,10 +548,15 @@ describe('run', () => {
       assert.match(assets, /const entry = 'app\/actions\/public\/entry\.ts'/)
       assert.match(assets, /getScriptEntry\(entry\)/)
       assert.match(assets, /createBrowserHmrChannel/)
+      assert.match(assets, /moduleImporter: 'remix\/multiple-import-maps-polyfill'/)
       assert.match(assets, /scripts: \{ loaders: isHmr \? \[uiHmr\(\)\] : undefined \}/)
       assert.match(assets, /watch: isDevelopment/)
       assert.match(router, /staticFiles\('\.\/public'/)
+      assert.match(document, /import \{ ImportMap \} from 'remix\/ui\/server'/)
+      assert.match(document, /<ImportMap value=\{importMap\} \/>/)
       assert.match(entry, /loadModule/)
+      assert.match(entry, /detectMultipleImportMapSupport/)
+      assert.match(entry, /processClientEntryPreloads/)
       assert.match(entry, /resolveFrame/)
       assert.match(entry, /server:update/)
       assert.match(renderMiddleware, /resolveClientEntry/)

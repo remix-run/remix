@@ -430,6 +430,9 @@ importers:
       '@types/picomatch':
         specifier: ^4.0.3
         version: 4.0.3
+      playwright:
+        specifier: 'catalog:'
+        version: 1.60.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -1406,6 +1409,31 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
+  packages/multiple-import-maps-polyfill:
+    dependencies:
+      es-module-lexer:
+        specifier: ^2.0.0
+        version: 2.0.0
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../node-fetch-server
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20260707.2
+      playwright:
+        specifier: 'catalog:'
+        version: 1.60.0
+
   packages/node-fetch-server:
     devDependencies:
       '@types/node':
@@ -1580,6 +1608,9 @@ importers:
       '@remix-run/multipart-parser':
         specifier: workspace:^
         version: link:../multipart-parser
+      '@remix-run/multiple-import-maps-polyfill':
+        specifier: workspace:^
+        version: link:../multiple-import-maps-polyfill
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:../node-fetch-server
@@ -2088,6 +2119,9 @@ importers:
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
+      playwright:
+        specifier: 'catalog:'
+        version: 1.60.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2

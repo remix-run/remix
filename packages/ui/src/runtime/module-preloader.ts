@@ -2,10 +2,12 @@ const SERVER_MODULE_PRELOAD_SELECTOR = 'link[data-rmx-module-preload][rel~="modu
 
 interface ModulePreloader {
   adoptInitialPreloadLinks(source: ParentNode): void
-  consumePreloadLinks(source: ParentNode): void
+  consumePreloadLinks(source: ParentNode, process?: ProcessClientEntryPreloads): Promise<void>
   hasActivePreloads(): boolean
   isActivePreload(node: Node): boolean
 }
+
+export type ProcessClientEntryPreloads = (preloads: string[]) => string[] | Promise<string[]>
 
 const modulePreloaders = new WeakMap<Document, ModulePreloader>()
 
@@ -96,14 +98,15 @@ function createModulePreloader(doc: Document): ModulePreloader {
         doc.head.append(observerLink)
       }
     },
-    consumePreloadLinks(source) {
+    async consumePreloadLinks(source, process) {
       let hrefs: string[] = []
       for (let link of source.querySelectorAll<HTMLLinkElement>(SERVER_MODULE_PRELOAD_SELECTOR)) {
         let href = link.getAttribute('href')
         link.remove()
         if (href) hrefs.push(href)
       }
-      for (let href of hrefs) preload(href)
+      let processedHrefs = process ? await process(hrefs) : hrefs
+      for (let href of processedHrefs) preload(href)
     },
     hasActivePreloads() {
       return activeLinkCount > 0

@@ -181,18 +181,18 @@ frames with fallbacks arrive after the initial HTML.
 ## Resolve frames in the browser
 
 A blocking frame resolves before the browser receives the page. A frame with a fallback may still
-be pending, and any frame can reload later. Add `resolveFrame` to the browser's `run()` options for
-those requests:
+be pending, and any frame can reload later. Back in `app/actions/public/entry.ts`, add `resolveFrame`
+to the existing `run()` options for those requests:
 
-```ts filename=app/actions/public/entry.ts
+```ts filename=app/actions/public/entry.ts lines=[1,9-27,29-39]
 import type { ResolveFrameOptions } from "remix/ui";
 import { run } from "remix/ui";
 
+// ...
+
 let app = run({
-  async loadModule(moduleUrl, exportName) {
-    let module = await import(moduleUrl);
-    return module[exportName];
-  },
+  // ...
+
   async resolveFrame(src, options) {
     let headers = new Headers({ Accept: "text/html", "X-Remix-Frame": "true" });
     if (options?.target) headers.set("X-Remix-Target", options.target);
@@ -224,10 +224,6 @@ function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
   }
   return body;
 }
-
-app.addEventListener("error", (event) => {
-  console.error(event.error);
-});
 ```
 
 Only return trusted HTML from `resolveFrame`. Same-origin route URLs are the normal choice. Pass

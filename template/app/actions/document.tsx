@@ -1,5 +1,6 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
 
 import { scriptEntry } from '../assets.ts'
 
@@ -25,7 +26,7 @@ export function Document(handle: Handle<DocumentProps>) {
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <title>{title}</title>
           {head}
-          <script type="importmap">{JSON.stringify(importMap)}</script>
+          <ImportMap value={importMap} />
           {preloads.map((preloadHref) => (
             <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}

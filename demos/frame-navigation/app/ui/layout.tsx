@@ -1,5 +1,6 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
 
 import { getAssetEntry } from '../middleware/asset-entry.ts'
 import { routes } from '../routes.ts'
@@ -33,7 +34,7 @@ export function Layout(handle: Handle<LayoutProps>) {
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>{title} | LMS</title>
-          <script type="importmap">{JSON.stringify(importMap)}</script>
+          <ImportMap value={importMap} />
           {preloads.map((preloadHref) => (
             <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}

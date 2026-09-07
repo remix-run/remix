@@ -7,6 +7,7 @@ import type { ComponentErrorEvent } from './error-event.ts'
 import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame.ts'
 import { startNavigationListener } from './navigation.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
+import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 
 /**
  * Options for starting the client runtime with {@link run}.
@@ -27,6 +28,9 @@ export interface RunInit {
    * method, encoding, and abort signal.
    */
   resolveFrame?: ResolveFrame
+
+  /** Processes module preloads discovered in late client entry responses before activation. */
+  processClientEntryPreloads?: ProcessClientEntryPreloads
 }
 
 /**
@@ -145,6 +149,7 @@ export function run(init: RunInit): AppRuntime {
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
     namedFrames,
+    processClientEntryPreloads: init.processClientEntryPreloads,
   })
 
   let appController = new AbortController()

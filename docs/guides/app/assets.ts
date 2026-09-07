@@ -20,6 +20,7 @@ export const assetServer = createAssetServer({
   mounts: {
     app: 'docs/guides/app',
     'docs-shared': 'docs/shared',
+    npm: 'node_modules',
     packages: 'packages',
   },
   sourceMaps: isDevelopment ? 'external' : undefined,
@@ -43,3 +44,7 @@ export const stylesheetPreloads = await assetServer.getPreloads(stylesheetEntry)
 export const devRefreshScript = isProduction
   ? undefined
   : await assetServer.getScriptEntry(devRefreshScriptEntry)
+export const importMap = await assetServer.getImportMap([
+  scriptEntryPath,
+  ...(isProduction ? [] : [devRefreshScriptEntry]),
+])

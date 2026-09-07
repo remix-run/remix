@@ -1,7 +1,14 @@
 import type { Handle, RemixNode } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
 import { PagefindElements } from 'remix-docs-shared/search'
 
-import { devRefreshScript, scriptEntry, stylesheetHref, stylesheetPreloads } from '../assets.ts'
+import {
+  devRefreshScript,
+  importMap,
+  scriptEntry,
+  stylesheetHref,
+  stylesheetPreloads,
+} from '../assets.ts'
 
 export interface DocumentProps {
   children?: RemixNode
@@ -12,10 +19,11 @@ export interface DocumentProps {
 }
 
 const DEFAULT_TITLE = 'Remix Docs'
+
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { children, head, title = DEFAULT_TITLE, description, searchEnabled } = handle.props
-    let { href, importMap, preloads } = scriptEntry
+    let { href, preloads } = scriptEntry
 
     return (
       <html lang="en">
@@ -30,10 +38,7 @@ export function Document(handle: Handle<DocumentProps>) {
             <link rel="stylesheet" href="/assets/pagefind/pagefind-component-ui.css" />
           ) : null}
           <link rel="stylesheet" href={stylesheetHref} />
-          <script type="importmap">{JSON.stringify(importMap)}</script>
-          {devRefreshScript ? (
-            <script type="importmap">{JSON.stringify(devRefreshScript.importMap)}</script>
-          ) : null}
+          <ImportMap value={importMap} />
           {preloads.map((preloadHref) => (
             <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}

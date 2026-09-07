@@ -114,6 +114,37 @@ describe('module preloader', () => {
     expect(doc.head.querySelector('link[rel="modulepreload"]')).toBeNull()
   })
 
+  it('can asynchronously discard late framework preloads before activating them', async () => {
+    let doc = createTestDocument()
+    let preloader = getDocumentModulePreloader(doc)
+    let response = doc.createElement('template')
+    response.innerHTML =
+      '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />'
+
+    await preloader.consumePreloadLinks(response.content, async () => [])
+
+    expect(response.content.querySelector('link')).toBeNull()
+    expect(doc.head.querySelector('link[rel="modulepreload"]')).toBeNull()
+  })
+
+  it('can asynchronously process late framework preloads before activating them', async () => {
+    let doc = createTestDocument()
+    let preloader = getDocumentModulePreloader(doc)
+    let response = doc.createElement('template')
+    response.innerHTML = [
+      '<link data-rmx-module-preload rel="modulepreload" href="/assets/keep.js" />',
+      '<link data-rmx-module-preload rel="modulepreload" href="/assets/drop.js" />',
+    ].join('')
+
+    await preloader.consumePreloadLinks(response.content, async (preloads) =>
+      preloads.filter((preload) => preload.endsWith('/keep.js')),
+    )
+
+    let links = doc.head.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"]')
+    expect(links).toHaveLength(1)
+    expect(links[0]?.href).toBe('https://example.com/assets/keep.js')
+  })
+
   it('leaves authored document preloads outside framework deduplication', () => {
     let doc = createTestDocument()
     doc.head.innerHTML = '<link rel="modulepreload" href="/assets/shared.js" />'

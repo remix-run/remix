@@ -2,6 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 
 import { Frame, type Handle } from '../runtime/component.ts'
+import { clientEntry } from '../runtime/client-entries.ts'
 import {
   consumeFrameTemplate,
   createFrame,
@@ -14,8 +15,9 @@ import { jsx } from '../runtime/jsx.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
 import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
+import { ImportMap, renderToStream } from '../server/stream.ts'
 import { createStyleManager } from '../style/index.ts'
-import { withResolvers } from './utils.ts'
+import { drain, withResolvers } from './utils.ts'
 
 const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'
 
@@ -188,6 +190,55 @@ describe('frames', () => {
       })
       expect(scripts[3]?.hasAttribute('data-rmx-import-map')).toBe(true)
       expect(document.head.lastElementChild).toBe(scripts[3])
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('keeps import maps introduced by document reloads after existing module scripts', async () => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      '<title>Initial</title>',
+      '<script type="module" src="/initial-entry.js"></script>',
+      '</head>',
+      '<body><main>Initial</main></body>',
+    ].join('')
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([
+          appendFlushMarker(
+            [
+              '<!doctype html><html><head><title>Next</title>',
+              remixImportMapScript({ imports: { '/late.js': '/late.hash.js' } }),
+              '<script type="module" src="/next-entry.js"></script>',
+              '</head><body><main>Next</main></body></html>',
+            ].join(''),
+            'document',
+          ),
+        ])
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      let children = Array.from(document.head.children)
+      let moduleScriptIndex = children.findIndex(
+        (element) => element instanceof HTMLScriptElement && element.type === 'module',
+      )
+      let importMapIndex = children.findIndex(
+        (element) =>
+          element instanceof HTMLScriptElement &&
+          element.matches('script[data-rmx-import-map][type="importmap"]'),
+      )
+      expect(moduleScriptIndex).toBeGreaterThanOrEqual(0)
+      expect(importMapIndex).toBeGreaterThanOrEqual(0)
+      expect(moduleScriptIndex).toBeLessThan(importMapIndex)
+      expect(parseImportMapScript(getImportMapScripts()[0]!)).toEqual({
+        imports: { '/late.js': '/late.hash.js' },
+      })
     } finally {
       frame.dispose()
     }
@@ -966,6 +1017,95 @@ describe('frames', () => {
     }
   })
 
+  it('installs merged managed and client entry import maps from fresh frame content', async () => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      importMapScript({ imports: { shared: '/shared.hash.js' } }),
+      '</head>',
+      '<body></body>',
+    ].join('')
+
+    let Counter = clientEntry('file:///app/counter.tsx', function Counter() {
+      return () => jsx('main', { children: 'Loaded' })
+    })
+    let frameHtml = await drain(
+      renderToStream(
+        jsx('html', {
+          children: [
+            jsx('head', {
+              children: jsx(ImportMap, {
+                value: {
+                  imports: {
+                    shared: '/shared.hash.js',
+                    authored: '/authored.hash.js',
+                  },
+                },
+              }),
+            }),
+            jsx('body', { children: jsx(Counter, {}) }),
+          ],
+        }),
+        {
+          resolveClientEntry() {
+            return {
+              href: '/counter.hash.js',
+              exportName: 'Counter',
+              importMap: {
+                imports: {
+                  shared: '/shared.hash.js',
+                  clientEntry: '/counter.hash.js',
+                },
+              },
+            }
+          },
+        },
+      ),
+    )
+
+    let rendered = new DOMParser().parseFromString(frameHtml, 'text/html')
+    let renderedImportMaps = rendered.querySelectorAll<HTMLScriptElement>(
+      'script[data-rmx-import-map][type="importmap"]',
+    )
+    expect(renderedImportMaps).toHaveLength(1)
+    expect(parseImportMapScript(renderedImportMaps[0]!)).toEqual({
+      imports: {
+        shared: '/shared.hash.js',
+        authored: '/authored.hash.js',
+        clientEntry: '/counter.hash.js',
+      },
+    })
+
+    let start = document.createComment('frame:start')
+    let end = document.createComment('frame:end')
+    document.body.append(start, end)
+    let frame = createTestFrame([start, end], {
+      resolveFrame() {
+        return ''
+      },
+      loadModule() {
+        return Counter
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.render(frameHtml)
+
+      let installedImportMaps = getImportMapScripts()
+      expect(installedImportMaps).toHaveLength(2)
+      expect(parseImportMapScript(installedImportMaps[1]!)).toEqual({
+        imports: {
+          authored: '/authored.hash.js',
+          clientEntry: '/counter.hash.js',
+        },
+      })
+      expect(document.body.querySelector('script[type="importmap"]')).toBeNull()
+      expect(document.querySelector('main')?.textContent).toBe('Loaded')
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('installs only new entries from late Remix import maps', async () => {
     document.documentElement.innerHTML = [
       '<head>',
@@ -1008,6 +1148,35 @@ describe('frames', () => {
 
       expect(getImportMapScripts()).toHaveLength(2)
       expect(document.body.querySelector('head')).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('applies the initial Remix import map nonce to late Remix import maps', async () => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      '<script data-rmx-import-map type="importmap" nonce="nonce-value">',
+      '{"imports":{"/initial.js":"/initial.hash.js"}}',
+      '</script>',
+      '</head>',
+      '<body></body>',
+    ].join('')
+
+    let frame = createClientEntryResourceTestFrame()
+
+    try {
+      await frame.ready()
+      await frame.render(
+        `${remixImportMapHead({ imports: { '/late.js': '/late.hash.js' } })}<main>Loaded</main>`,
+      )
+
+      let scripts = getImportMapScripts()
+      expect(scripts).toHaveLength(2)
+      expect(scripts[1]?.nonce).toBe('nonce-value')
+      expect(parseImportMapScript(scripts[1]!)).toEqual({
+        imports: { '/late.js': '/late.hash.js' },
+      })
     } finally {
       frame.dispose()
     }
@@ -1248,6 +1417,58 @@ describe('frames', () => {
       await frame.handle.reload()
       expect(preloadWasPresent).toBe(true)
       expect(document.querySelector(managedModulePreloadSelector)).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for async preload processing before hydrating client entries', async () => {
+    document.documentElement.innerHTML = '<head><title>Initial</title></head><body></body>'
+
+    function StreamingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('section', { children: handle.props.label })
+    }
+
+    let [includePreload, resolveIncludePreload] = withResolvers<boolean>()
+    let [processingStarted, resolveProcessingStarted] = withResolvers<void>()
+    let moduleLoaded = false
+    let frame = createTestFrame(document, {
+      loadModule() {
+        moduleLoaded = true
+        return StreamingEntry
+      },
+      processClientEntryPreloads(preloads) {
+        expect(preloads).toEqual(['/entry.js'])
+        resolveProcessingStarted()
+        return includePreload.then((include) => (include ? preloads : []))
+      },
+      resolveFrame() {
+        return appendFlushMarker(
+          [
+            '<!doctype html><html><head><title>Next</title>',
+            '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
+            '</head><body><!-- rmx:h:h1 --><section>next</section><!-- /rmx:h -->',
+            rmxDataScript('next'),
+            '</body></html>',
+          ].join(''),
+          'document',
+        )
+      },
+    })
+
+    try {
+      await frame.ready()
+      let reload = frame.handle.reload()
+      await processingStarted
+
+      expect(moduleLoaded).toBe(false)
+      resolveIncludePreload(true)
+      await reload
+
+      expect(moduleLoaded).toBe(true)
+      document.head
+        .querySelector<HTMLLinkElement>(managedModulePreloadSelector)
+        ?.dispatchEvent(new Event('load'))
     } finally {
       frame.dispose()
     }

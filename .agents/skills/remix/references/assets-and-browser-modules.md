@@ -77,7 +77,7 @@ Use `getScriptEntry()` when rendering a browser script entry. Scripts keep JavaS
 let { href, importMap, preloads } = await assetServer.getScriptEntry('app/actions/public/entry.ts')
 ```
 
-Use this when rendering documents or layouts that boot browser behavior with a known client entry.
+Render `importMap` with `ImportMap` from `remix/ui/server` before the modulepreload links and module script. This combines its mappings with import maps from blocking client entries.
 
 Use `getHref()` directly when you need the public URL for a non-script asset, and `getPreloads()` when you need lower-level preload control for one or more entrypoints.
 
@@ -92,6 +92,7 @@ In development:
 - Enable source maps when debugging browser code
 - Use `hmr` only when the app is running under `remix/node-hmr`
 - Use `scripts.loaders` for development-only browser transforms such as `uiHmr()`
+- Configure `hmr.moduleImporter` with `remix/multiple-import-maps-polyfill` when HMR must support browsers without native support for multiple import maps. HMR appends updated mappings in additional `<script type="importmap">` elements
 
 In deployment:
 
@@ -120,7 +121,10 @@ const assetServer = createAssetServer({
   denyFiles: ['app/**/*.test.*'],
   watch: isDevelopment,
   hmr: isHmr
-    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+    ? {
+        channel: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
+        moduleImporter: 'remix/multiple-import-maps-polyfill',
+      }
     : undefined,
   scripts: {
     loaders: isHmr ? [uiHmr()] : undefined,

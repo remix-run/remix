@@ -1,5 +1,12 @@
-import type { ComponentHandle, FrameHandle, Key, RemixNode } from '../runtime/component.ts'
-import type { ElementType, ElementProps, RemixElement } from '../runtime/jsx.ts'
+import type {
+  ComponentHandle,
+  FrameHandle,
+  Handle,
+  Key,
+  RemixNode,
+  RenderFn,
+} from '../runtime/component.ts'
+import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/jsx.ts'
 import type { ElementFunction } from '../runtime/element-function.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
@@ -91,6 +98,28 @@ type ImportMapAddress = string | null
 type ImportMapImports = Record<string, ImportMapAddress>
 type AuthoredImportMapEntries = Map<string, ImportMapAddress>
 type AuthoredImportMapScope = { imports: AuthoredImportMapEntries }
+type StaticSegment = { kind: 'static'; html: string }
+type ManagedImportMap = {
+  attrs: string
+  segment: StaticSegment
+  value: ImportMap
+}
+
+export type ImportMapProps = Omit<Props<'script'>, 'children' | 'innerHTML' | 'src' | 'type'> & {
+  /** Initial import map entries to render and merge with resolved client entries. */
+  value: ImportMap
+}
+
+/**
+ * Renders the document import map and merges maps from server-resolved client entries.
+ *
+ * @param handle Server component handle containing the initial import map and script attributes.
+ * @returns This component is handled directly by the server renderer.
+ */
+export function ImportMap(handle: Handle<ImportMapProps>): RenderFn {
+  void handle
+  return () => null
+}
 
 interface ClientEntryHeadResources {
   modulePreloadTags: Set<string>
@@ -119,6 +148,7 @@ interface RenderContext {
   unresolvedHydrationData: Map<string, UnresolvedHydrationData>
   authoredImportMapImports: AuthoredImportMapEntries
   authoredImportMapScopes: Map<string, AuthoredImportMapScope>
+  managedImportMaps: ManagedImportMap[]
   frameData: Map<string, FrameData>
   clientEntryHeadResources: ClientEntryHeadResources
   blockingFrameTails: ReadableStream<Uint8Array>[]
@@ -139,7 +169,7 @@ interface SsrFrameState {
 }
 
 type Segment =
-  | { kind: 'static'; html: string }
+  | StaticSegment
   | { kind: 'composite'; parts: Segment[] }
   | {
       kind: 'frame'
@@ -230,6 +260,7 @@ export function renderToStream(
     unresolvedHydrationData: new Map(),
     authoredImportMapImports: new Map(),
     authoredImportMapScopes: new Map(),
+    managedImportMaps: [],
     frameData: new Map(),
     clientEntryHeadResources: { modulePreloadTags: new Set() },
     blockingFrameTails: [],
@@ -261,6 +292,7 @@ export function renderToStream(
         await resolveClientEntries(context, options?.resolveClientEntry)
         if (closeIfCancelled(controller, context)) return
         validateClientEntriesForHydration(context)
+        finalizeManagedImportMap(context)
         let html = serializeSegment(root)
         let finalHtml = finalizeHtml(html, context)
         let bytes = encoder.encode(appendFlushMarker(finalHtml, context.flushKind))
@@ -418,7 +450,7 @@ function isRemixElement(node: unknown): node is RemixElement {
   return typeof node === 'object' && node !== null && '$rmx' in node
 }
 
-function staticSeg(html: string): Segment {
+function staticSeg(html: string): StaticSegment {
   return { kind: 'static', html }
 }
 
@@ -464,6 +496,9 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
     }
 
     if (isElementFunction(type)) {
+      if (type === ImportMap) {
+        return buildImportMapSegment(props, context)
+      }
       if (type === Frame) {
         return buildFrameSegment(node, context, frameState)
       }
@@ -633,6 +668,25 @@ function collectAuthoredImportMapEntries(
   for (let [specifier, address] of Object.entries(source)) {
     if (!target.has(specifier)) target.set(specifier, address)
   }
+}
+
+function buildImportMapSegment(props: ElementProps, context: RenderContext): Segment {
+  if (context.flushKind !== 'document' || !context.insideHead) {
+    throw new Error('ImportMap must be rendered inside a document head')
+  }
+  if (context.managedImportMaps.length > 0) {
+    throw new Error('Only one ImportMap can be rendered per document')
+  }
+  let value = props.value
+  if (!isImportMap(value)) {
+    throw new TypeError('ImportMap value must be a valid import map')
+  }
+
+  let { value: _value, ...scriptProps } = props
+  let attrs = renderAttributes(scriptProps, false)
+  let segment = staticSeg('')
+  context.managedImportMaps.push({ attrs, segment, value })
+  return segment
 }
 
 function renderInputAttributes(props: any): string {
@@ -1474,9 +1528,9 @@ function buildRmxDataScript(context: RenderContext): string {
   return `<script type="application/json" id="rmx-data">${serializedData}</script>`
 }
 
-function buildImportMapScript(importMap: ImportMap): string {
+function buildImportMapScript(importMap: ImportMap, attrs: string = ''): string {
   let serializedData = escapeScriptJson(JSON.stringify(importMap))
-  return `<script data-rmx-import-map type="importmap">${serializedData}</script>`
+  return `<script data-rmx-import-map type="importmap"${attrs}>${serializedData}</script>`
 }
 
 function collectImportMapScript(
@@ -1485,6 +1539,19 @@ function collectImportMapScript(
 ): string {
   let importMap = getImportMapDelta(context, resources.importMap)
   return importMap ? buildImportMapScript(importMap) : ''
+}
+
+function finalizeManagedImportMap(context: RenderContext): void {
+  let managed = context.managedImportMaps[0]
+  if (!managed) return
+
+  let resources: ClientEntryHeadResources = { modulePreloadTags: new Set() }
+  mergeImportMap(resources, managed.value)
+  if (context.clientEntryHeadResources.importMap) {
+    mergeImportMap(resources, context.clientEntryHeadResources.importMap)
+  }
+  managed.segment.html = buildImportMapScript(resources.importMap ?? {}, managed.attrs)
+  context.clientEntryHeadResources.importMap = undefined
 }
 
 function getImportMapDelta(

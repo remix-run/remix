@@ -2,6 +2,7 @@ import * as path from 'node:path'
 
 import type { ScriptEntry } from 'remix/assets'
 import type { Handle, RemixNode } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
 import { PagefindElements, shouldLoadPagefind } from 'remix-docs-shared/search'
 import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
@@ -161,7 +162,7 @@ function Head(
           />
         ) : null}
         <link data-rmx-key="docs-stylesheet" rel="stylesheet" href={stylesheetHref} />
-        <script type="importmap">{JSON.stringify(importMap)}</script>
+        <ImportMap value={importMap} />
         {preloads.map((preloadHref) => (
           <link key={preloadHref} rel="modulepreload" href={preloadHref} />
         ))}

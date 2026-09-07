@@ -3305,25 +3305,28 @@ describe('asset-server', () => {
     )
   })
 
-  it('includes statically analyzable dynamic import graphs in entry preloads', async () => {
+  it('excludes statically analyzable dynamic import graphs from entry preloads', async () => {
     await write(
       dir,
       'app/features/lazy.ts',
       'import { value } from "./dep.ts"\nexport const lazy = value',
     )
     await write(dir, 'app/features/dep.ts', 'export const value = 1')
+    await write(dir, 'app/static.ts', 'import { value } from "./static-dep.ts"\nexport { value }')
+    await write(dir, 'app/static-dep.ts', 'export const value = 2')
     await write(
       dir,
       'app/entry.ts',
-      'export let load = () => import("./features/lazy.ts").then((mod) => mod.lazy)',
+      'import "./static.ts"\nexport let load = () => import("./features/lazy.ts").then((mod) => mod.lazy)',
     )
     let assetServer = createTestServer(dir, { fingerprint: true })
 
     let preloads = await assetServer.getPreloads('app/entry.ts')
 
     assert.match(preloads[0] ?? '', /\/assets\/app\/entry\.@.*\.ts/)
-    assert.match(preloads[1] ?? '', /\/assets\/app\/features\/lazy\.@.*\.ts/)
-    assert.match(preloads[2] ?? '', /\/assets\/app\/features\/dep\.@.*\.ts/)
+    assert.match(preloads[1] ?? '', /\/assets\/app\/static\.@.*\.ts/)
+    assert.match(preloads[2] ?? '', /\/assets\/app\/static-dep\.@.*\.ts/)
+    assert.equal(preloads.length, 3)
   })
 
   it('maps re-exported package specifiers', async () => {
@@ -4092,6 +4095,54 @@ describe('asset-server', () => {
       } finally {
         await assetServer.close()
       }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('serves an HMR client with a configured browser module importer', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/module-importer.ts',
+        'export async function importModule(specifier) { return import(specifier) }',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: {
+          channel: createTestBrowserHmrChannel,
+          moduleImporter: './app/module-importer.ts',
+        },
+      })
+
+      try {
+        let clientResponse = await get(assetServer, '/assets/__remix_hmr/client.js')
+        assert.ok(clientResponse)
+        assert.match(
+          await clientResponse.text(),
+          /import \{ importModule as __remixImport \} from "\/assets\/app\/module-importer\.ts"/,
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects an empty HMR browser module importer', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      assert.throws(
+        () =>
+          createWatchedTestServer(caseDir, {
+            hmr: {
+              channel: createTestBrowserHmrChannel,
+              moduleImporter: '  ',
+            },
+          }),
+        /hmr\.moduleImporter must be a non-empty string/,
+      )
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }

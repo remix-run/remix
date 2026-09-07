@@ -8,7 +8,7 @@ import * as http from 'node:http'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { watch, type FSWatcher } from 'chokidar'
-import { createAssetServer, type AssetServer } from '@remix-run/assets'
+import { createAssetServer, type AssetServer, type BrowserHmrChannel } from '@remix-run/assets'
 import { uiHmr } from '../src/assets.ts'
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -29,7 +29,7 @@ const nodeTsxImportUrl = pathToFileURL(
 const uiHmrNodeImportUrl = pathToFileURL(path.resolve(packageDir, 'src/node.ts')).href
 const isBun = 'Bun' in globalThis
 const consoleMessageTimeout = 5000
-const hmrConnectionTimeout = process.platform === 'win32' ? 15_000 : consoleMessageTimeout
+const hmrConnectionTimeout = 15_000
 
 declare global {
   var __counterInitialValue: number
@@ -406,16 +406,19 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
     let page = await t.serve(await createHmrTestServer(fixture))
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+    let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
     await page.goto('/')
     await connected
+    await hydrated
     await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
 
     let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
     let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
 
+    let failedUpdate = waitForConsoleMessage(page, '[remix] HMR update failed')
     await fs.writeFile(clientFieldPath, clientFieldSource.replace("'Client: before'", "'Client:"))
-    await waitForConsoleMessage(page, '[remix] HMR update failed')
+    await failedUpdate
     await page.waitForTimeout(100)
 
     await fs.writeFile(
@@ -433,16 +436,19 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     let server = await createHmrTestServer(fixture)
     let page = await t.serve(server)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+    let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
     await page.goto('/')
     await connected
+    await hydrated
     await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
 
     let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
     let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
 
+    let failedUpdate = waitForConsoleMessage(page, '[remix] HMR update failed')
     await fs.writeFile(clientFieldPath, clientFieldSource.replace("'Client: before'", "'Client:"))
-    await waitForConsoleMessage(page, '[remix] HMR update failed')
+    await failedUpdate
 
     let lostConnection = waitForConsoleMessage(page, '[remix] HMR connection lost')
     await server.restartAssets()
@@ -468,9 +474,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
 
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
@@ -1180,6 +1188,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
 type HmrFixture = {
   close(): Promise<void>
+  importMapPolyfill?: boolean
   renderDocument?: (assetServer: AssetServer) => Promise<ReadableStream<Uint8Array>>
   rootDir: string
 }
@@ -1438,7 +1447,7 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
       },
     }),
   )
-  await writeWorkspacePackageLinks(rootDir, ['@remix-run/ui', '@remix-run/ui-hmr'])
+  await writeWorkspacePackageLinks(rootDir, ['@remix-run/ui', '@remix-run/ui-hmr', 'remix'])
   await write(rootDir, 'server-message.txt', 'Server: before')
   await write(
     rootDir,
@@ -1471,11 +1480,16 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
     rootDir,
     'app/entry.tsx',
     [
+      "import { detectMultipleImportMapSupport, importShim, preloadShim } from 'remix/multiple-import-maps-polyfill'",
       "import { run } from '@remix-run/ui'",
+      '',
+      'const supportsMultipleImportMapsPromise = detectMultipleImportMapSupport()',
       '',
       'let app = run({',
       '  async loadModule(moduleUrl: string, exportName: string) {',
-      '    let mod = (await import(moduleUrl)) as Record<string, unknown>',
+      '    let mod = (await supportsMultipleImportMapsPromise)',
+      '      ? await import(moduleUrl)',
+      '      : await importShim(moduleUrl)',
       '    let Component = mod[exportName]',
       '    if (typeof Component !== "function") {',
       '      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)',
@@ -1486,6 +1500,11 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
       '    let response = await fetch(src, { headers: { Accept: "text/html" }, signal: options.signal })',
       '    if (!response.ok) return `<pre>Frame error: ${response.status}</pre>`',
       '    return response.body ?? response.text()',
+      '  },',
+      '  async processClientEntryPreloads(preloads) {',
+      '    if (await supportsMultipleImportMapsPromise) return preloads',
+      '    void preloadShim(preloads)',
+      '    return []',
       '  },',
       '})',
       '',
@@ -1508,6 +1527,7 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
   )
 
   return {
+    importMapPolyfill: true,
     async renderDocument(assetServer) {
       let message = await fs.readFile(path.join(rootDir, 'server-message.txt'), 'utf-8')
       let { href, importMap, preloads } = await assetServer.getScriptEntry(
@@ -1585,6 +1605,7 @@ async function createNodeHmrFixture(
     '@remix-run/node-tsx',
     '@remix-run/ui',
     '@remix-run/ui-hmr',
+    'remix',
   ])
   await write(
     rootDir,
@@ -1613,11 +1634,16 @@ async function createNodeHmrFixture(
     rootDir,
     'app/entry.tsx',
     [
+      "import { detectMultipleImportMapSupport, importShim, preloadShim } from 'remix/multiple-import-maps-polyfill'",
       "import { run } from '@remix-run/ui'",
+      '',
+      'const supportsMultipleImportMapsPromise = detectMultipleImportMapSupport()',
       '',
       'const app = run({',
       '  async loadModule(moduleUrl: string, exportName: string) {',
-      '    let mod = (await import(moduleUrl)) as Record<string, unknown>',
+      '    let mod = (await supportsMultipleImportMapsPromise)',
+      '      ? await import(moduleUrl)',
+      '      : await importShim(moduleUrl)',
       '    let Component = mod[exportName]',
       '    if (typeof Component !== "function") {',
       '      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)',
@@ -1628,6 +1654,11 @@ async function createNodeHmrFixture(
       '    let response = await fetch(src, { headers: { Accept: "text/html" }, signal: options.signal })',
       '    if (!response.ok) return `<pre>Frame error: ${response.status}</pre>`',
       '    return response.body ?? response.text()',
+      '  },',
+      '  async processClientEntryPreloads(preloads) {',
+      '    if (await supportsMultipleImportMapsPromise) return preloads',
+      '    void preloadShim(preloads)',
+      '    return []',
       '  },',
       '})',
       '',
@@ -1786,6 +1817,7 @@ function getNodeHmrServerSource(
   } = {},
 ): string {
   let appDir = path.relative(workspaceDir, path.join(rootDir, 'app'))
+  let npmDir = path.relative(workspaceDir, path.join(rootDir, 'node_modules'))
 
   return [
     "import { createServer } from 'node:http'",
@@ -1807,12 +1839,18 @@ function getNodeHmrServerSource(
     'void sideEffect',
     'let assetServer = createAssetServer({',
     `  allowFiles: [${JSON.stringify(`${appDir}/**`)}, 'packages/remix/**', 'packages/ui/**', 'packages/ui-hmr/**'],`,
+    "  allowPackages: ['remix'],",
     "  basePath: '/assets',",
     '  mounts: {',
     `    app: ${JSON.stringify(appDir)},`,
+    `    fixtureNpm: ${JSON.stringify(npmDir)},`,
+    "    npm: 'node_modules',",
     "    packages: 'packages',",
     '  },',
-    '  hmr: createBrowserHmrChannel,',
+    '  hmr: {',
+    '    channel: createBrowserHmrChannel,',
+    "    moduleImporter: 'remix/multiple-import-maps-polyfill',",
+    '  },',
     '  onError(error) {',
     '    console.error(error)',
     '  },',
@@ -2018,31 +2056,42 @@ function createTestClientEntry<component extends (handle: unknown) => unknown>(
 
 async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> {
   let appDir = path.relative(workspaceDir, path.join(fixture.rootDir, 'app'))
+  let npmDir = path.relative(workspaceDir, path.join(fixture.rootDir, 'node_modules'))
   let hmrEventStream: ReturnType<typeof createTestHmrEventStream> | undefined
   let browserHmrFileEventHandlers = new Set<BrowserHmrFileEventHandler>()
   let browserHmrWatcher: FSWatcher | undefined
 
+  let createTestBrowserHmrChannel = (): BrowserHmrChannel => ({
+    close() {
+      browserHmrFileEventHandlers.clear()
+    },
+    onFileEvents(handler) {
+      browserHmrFileEventHandlers.add(handler)
+      return () => {
+        browserHmrFileEventHandlers.delete(handler)
+      }
+    },
+    updateWatchedFiles() {},
+    url: '/hmr/events',
+  })
+
   let createCurrentAssetServer = () =>
     createAssetServer({
       allowFiles: [`${appDir}/**`, 'packages/remix/**', 'packages/ui/**', 'packages/ui-hmr/**'],
+      allowPackages: fixture.importMapPolyfill ? ['remix'] : undefined,
       basePath: '/assets',
       mounts: {
         app: appDir,
+        fixtureNpm: npmDir,
+        npm: 'node_modules',
         packages: 'packages',
       },
-      hmr: () => ({
-        close() {
-          browserHmrFileEventHandlers.clear()
-        },
-        onFileEvents(handler) {
-          browserHmrFileEventHandlers.add(handler)
-          return () => {
-            browserHmrFileEventHandlers.delete(handler)
+      hmr: fixture.importMapPolyfill
+        ? {
+            channel: createTestBrowserHmrChannel,
+            moduleImporter: 'remix/multiple-import-maps-polyfill',
           }
-        },
-        updateWatchedFiles() {},
-        url: '/hmr/events',
-      }),
+        : createTestBrowserHmrChannel,
       onError() {},
       rootDir: workspaceDir,
       scripts: {

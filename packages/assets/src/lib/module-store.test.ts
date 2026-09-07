@@ -66,6 +66,7 @@ function createResolvedModule(
     rawCode: 'export const value = 1',
     resolvedPath: identityPath,
     sourceMap: null,
+    staticDeps: [],
     stableUrlPathname: `/assets${identityPath}`,
   }
 }

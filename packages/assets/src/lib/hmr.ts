@@ -43,8 +43,18 @@ export type HmrPayload =
       type: 'browser:reload'
     }
 
-export function createHmrClientSource(options: { dataKey: string; eventPathname: string }): string {
+export function createHmrClientSource(options: {
+  dataKey: string
+  eventPathname: string
+  moduleImporter: string | null
+}): string {
   return `
+${
+  options.moduleImporter
+    ? `import { importModule as __remixImport } from ${JSON.stringify(options.moduleImporter)}`
+    : 'const __remixImport = (specifier) => import(specifier)'
+}
+
 const contexts = new Map()
 const dataByPath = new Map()
 
@@ -257,7 +267,7 @@ async function updateJavaScriptModule(path, acceptedPath, timestamp) {
       await callback(previousContext.data)
     }
 
-    let updatedModule = await import(withTimestamp(path, timestamp))
+    let updatedModule = await __remixImport(withTimestamp(path, timestamp), import.meta.url)
     previousContext.invalidated = false
     previousContext.updating = true
     try {
@@ -280,7 +290,7 @@ async function updateJavaScriptModule(path, acceptedPath, timestamp) {
     }
   }
 
-  let updatedModule = await import(withTimestamp(acceptedPath, timestamp))
+  let updatedModule = await __remixImport(withTimestamp(acceptedPath, timestamp), import.meta.url)
   previousContext.invalidated = false
   previousContext.updating = true
   try {
@@ -311,7 +321,7 @@ async function propagateInvalidatedJavaScriptModule(path, timestamp) {
       await callback(importerContext.data)
     }
 
-    let updatedModule = await import(withTimestamp(path, timestamp))
+    let updatedModule = await __remixImport(withTimestamp(path, timestamp), import.meta.url)
     importerContext.invalidated = false
     importerContext.updating = true
     try {

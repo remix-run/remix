@@ -74,13 +74,14 @@ export type ResolveModuleResult = {
 }
 
 type UnresolvedImport = {
+  dynamic: boolean
   end: number
   quote?: '"' | "'" | '`'
   specifier: string
   start: number
 }
 
-type HmrAcceptedDependency = UnresolvedImport
+type HmrAcceptedDependency = Omit<UnresolvedImport, 'dynamic'>
 
 export type TransformedModule = {
   hmr: {
@@ -802,6 +803,7 @@ async function getUnresolvedImportsFromLexer(rawCode: string): Promise<Unresolve
     let specifier = getStaticImportSpecifier(rawCode, imported)
     if (specifier == null || isBrowserExternalModuleUrl(specifier)) continue
     unresolvedImports.push({
+      dynamic: imported.d !== -1,
       specifier,
       start: imported.s,
       end: imported.e,

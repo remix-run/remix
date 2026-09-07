@@ -79,10 +79,9 @@ function Actions() {
 }
 ```
 
-## Frame Navigation
+## Client Entry Loading
 
-`run()` progressively enhances same-origin links and forms using a default `resolveFrame` that
-fetches the frame source:
+`run()` hydrates client entries by calling `loadModule` for each component module:
 
 ```tsx
 import { run } from 'remix/ui'
@@ -96,6 +95,42 @@ let app = run({
 
 await app.ready()
 ```
+
+Client entries introduced after the initial document may depend on import maps added at runtime.
+When targeting browsers without native support for multiple import maps, use
+`remix/multiple-import-maps-polyfill` to load these modules and process their preloads:
+
+```tsx
+import {
+  detectMultipleImportMapSupport,
+  importShim,
+  preloadShim,
+} from 'remix/multiple-import-maps-polyfill'
+
+let supportsMultipleImportMapsPromise = detectMultipleImportMapSupport()
+
+let app = run({
+  async loadModule(moduleUrl, exportName) {
+    let module = (await supportsMultipleImportMapsPromise)
+      ? await import(moduleUrl)
+      : await importShim(moduleUrl)
+    return module[exportName]
+  },
+  async processClientEntryPreloads(preloads) {
+    if (await supportsMultipleImportMapsPromise) return preloads
+
+    preloadShim(preloads)
+    return []
+  },
+})
+```
+
+## Frame Navigation
+
+The same runtime represents the current document as `app.frames.top` and intercepts eligible
+same-origin links and forms through the browser's Navigation API. Those navigations fetch HTML with
+the frame resolver and update the existing document in place instead of loading a new document.
+This applies even when the page only uses `clientEntry()` and does not render an explicit `<Frame>`.
 
 The default resolver is equivalent to:
 
@@ -149,7 +184,16 @@ CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass 
 `resolveFrame` when the server requires additional headers, another body encoding, or a different
 response policy.
 
-Add `data-rmx-document` to a link or form to leave its navigation to the browser.
+Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
+and forms as document navigations while still hydrating client entries and using explicit frames,
+register a listener before calling `run()`:
+
+```ts
+window.navigation?.addEventListener('navigate', (e) => e.stopImmediatePropagation())
+```
+
+This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as
+`handle.frame.reload()` continue to use the frame resolver.
 
 The default resolver rejects non-OK responses with an error containing their status and status text.
 A custom `resolveFrame` may return a `Response` with any status when it wants Remix UI to render the

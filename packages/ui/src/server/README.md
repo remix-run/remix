@@ -95,6 +95,28 @@ function ProductPage() {
 
 Components using the `css(...)` mixin through `mix` have their styles collected during rendering and emitted as a single `<style>` tag in the `<head>`. No client-side style injection is needed for server-rendered content.
 
+### Import maps
+
+Use `<ImportMap>` when the document needs one initial import map containing both authored mappings and mappings from blocking client entries. The server merges these mappings into the component before sending the initial HTML.
+
+Regular `<script type="importmap">` elements remain supported. The server leaves them unchanged and emits any additional client entry mappings separately, omitting entries already present in authored maps.
+
+```tsx
+import type { Handle, RemixNode } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
+
+function Document(handle: Handle<{ children: RemixNode }>) {
+  return () => (
+    <html>
+      <head>
+        <ImportMap value={scriptEntry.importMap} />
+      </head>
+      <body>{handle.props.children}</body>
+    </html>
+  )
+}
+```
+
 ## See Also
 
 - [Hydration](https://github.com/remix-run/remix/blob/main/packages/ui/docs/hydration.md) - Making server-rendered components interactive on the client

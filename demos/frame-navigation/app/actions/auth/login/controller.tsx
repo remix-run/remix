@@ -1,5 +1,6 @@
 import { createController } from 'remix/router'
 import { css } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
 import { redirect } from 'remix/response/redirect'
 
 import { getAssetEntry } from '../../../middleware/asset-entry.ts'
@@ -22,7 +23,7 @@ export default createController(routes.auth.login, {
             <meta charSet="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
             <title>Sign in | LMS</title>
-            <script type="importmap">{JSON.stringify(importMap)}</script>
+            <ImportMap value={importMap} />
             {preloads.map((preloadHref) => (
               <link key={preloadHref} rel="modulepreload" href={preloadHref} />
             ))}

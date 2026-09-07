@@ -13,6 +13,7 @@ export const assetServer = createAssetServer({
   denyFiles: ['demos/frames/app/**/*.test.*'],
   mounts: {
     app: 'demos/frames/app',
+    npm: 'node_modules',
     packages: 'packages',
   },
   sourceMaps: isDevelopment ? 'external' : undefined,

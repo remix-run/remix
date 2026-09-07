@@ -4,7 +4,7 @@ import type { Handle, RemixNode } from '../runtime/component.ts'
 import { createMixin, css, on } from '../index.ts'
 import { createElement } from '../runtime/create-element.ts'
 
-import { renderToStream, renderToString } from '../server/stream.ts'
+import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 import { Frame } from '../runtime/component.ts'
@@ -2051,6 +2051,133 @@ describe('stream', () => {
       })
     })
 
+    it('merges resolved client entry maps into a managed import map in place', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+      function Document() {
+        return () => (
+          <html>
+            <head>
+              <meta charSet="utf-8" />
+              <ImportMap
+                id="app-import-map"
+                nonce="nonce-value"
+                data-source="document"
+                value={{
+                  imports: {
+                    '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
+                  },
+                }}
+              />
+              <title>Counter</title>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>
+        )
+      }
+
+      let html = await drain(
+        renderToStream(<Document />, {
+          resolveClientEntry() {
+            return {
+              href: '/assets/app/components/counter.tsx',
+              exportName: 'Counter',
+              importMap: {
+                imports: {
+                  '/assets/app/components/counter.tsx':
+                    '/assets/app/components/counter.@def456.tsx',
+                },
+                scopes: {
+                  '/assets/app/components/': {
+                    pkg: '/assets/app/node_modules/pkg/index.@fedcba.ts',
+                  },
+                },
+              },
+            }
+          },
+        }),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let script = shelf.content.querySelector<HTMLScriptElement>('#app-import-map')
+      expect(script?.nonce).toBe('nonce-value')
+      expect(script?.dataset.source).toBe('document')
+      expect(JSON.parse(script?.textContent ?? '{}')).toEqual({
+        imports: {
+          '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
+          '/assets/app/components/counter.tsx': '/assets/app/components/counter.@def456.tsx',
+        },
+        scopes: {
+          '/assets/app/components/': {
+            pkg: '/assets/app/node_modules/pkg/index.@fedcba.ts',
+          },
+        },
+      })
+      expect(html.indexOf('<meta')).toBeLessThan(html.indexOf('id="app-import-map"'))
+      expect(html.indexOf('id="app-import-map"')).toBeLessThan(html.indexOf('<title>'))
+    })
+
+    it('rejects managed import maps outside a document head', async () => {
+      await expect(renderToString(<ImportMap value={{}} />)).rejects.toThrow(
+        'ImportMap must be rendered inside a document head',
+      )
+    })
+
+    it('rejects multiple managed import maps in one document', async () => {
+      await expect(
+        renderToString(
+          <html>
+            <head>
+              <ImportMap value={{}} />
+              <ImportMap value={{}} />
+            </head>
+          </html>,
+        ),
+      ).rejects.toThrow('Only one ImportMap can be rendered per document')
+    })
+
+    it('does not merge resolved client entry maps into authored import maps', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+      let authoredMap = { imports: { pkg: '/assets/pkg.@abc.ts' } }
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="importmap">{JSON.stringify(authoredMap)}</script>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: { imports: { added: '/assets/added.@abc.ts' } },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let scripts = shelf.content.querySelectorAll<HTMLScriptElement>('script[type="importmap"]')
+      expect(scripts).toHaveLength(2)
+      expect(JSON.parse(scripts[0]?.textContent ?? '{}')).toEqual(authoredMap)
+      expect(JSON.parse(scripts[1]?.textContent ?? '{}')).toEqual({
+        imports: { added: '/assets/added.@abc.ts' },
+      })
+    })
+
     it('emits import maps returned from resolved client entries', async () => {
       let Counter = clientEntry(
         'file:///app/components/counter.tsx',
@@ -3163,6 +3290,11 @@ describe('stream', () => {
         renderToStream(
           <html>
             <head>
+              <ImportMap
+                value={{
+                  imports: { '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx' },
+                }}
+              />
               <title>Frame import map</title>
             </head>
             <body>
@@ -3216,6 +3348,7 @@ describe('stream', () => {
       let importMapScript = shelf.content.querySelector('script[type="importmap"]')
       expect(JSON.parse(importMapScript?.textContent ?? '{}')).toEqual({
         imports: {
+          '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
           '/assets/app/components/counter.tsx': '/assets/app/components/counter.@abc123.tsx',
           '/assets/app/shared.ts': '/assets/app/shared.@abc123.ts',
           '/assets/app/outer.tsx': '/assets/app/outer.@abc123.tsx',

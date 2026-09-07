@@ -224,6 +224,7 @@ This can be used when rendering a document shell:
 
 ```tsx
 import type { Handle, RemixNode } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
 import { assetServer } from './assets.ts'
 
 let { href, importMap, preloads } = await assetServer.getScriptEntry('app/assets/entry.tsx')
@@ -233,7 +234,7 @@ export function Document(handle: Handle<{ children: RemixNode }>) {
     <html>
       <head>
         {/* ... */}
-        <script type="importmap">{JSON.stringify(importMap)}</script>
+        <ImportMap value={importMap} />
         {preloads.map((preload) => (
           <link rel="modulepreload" href={preload} />
         ))}
@@ -708,11 +709,35 @@ let isDevelopment = process.env.NODE_ENV === 'development'
 let assetServer = createAssetServer({
   basePath: '/assets',
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
-  denyFiles: ['app/**/*.test.*'],
+  allowPackages: ['remix'],
   hmr: isDevelopment
     ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
     : undefined,
   watch: isDevelopment,
+})
+```
+
+Use `moduleImporter` to customize how HMR dynamically imports updated browser modules. It is resolved relative to the asset server's root directory and must point to a browser module exporting:
+
+```ts
+export function importModule(specifier: string, parentUrl: string): Promise<Record<string, unknown>>
+```
+
+HMR appends mappings for updated modules to the document in additional `<script type="importmap">` elements. Use `remix/multiple-import-maps-polyfill` when these updates must work in browsers without native support for multiple import maps:
+
+```ts
+import { createAssetServer } from 'remix/assets'
+import { createBrowserHmrChannel } from 'remix/node-hmr/runtime'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  allowPackages: ['remix'],
+  hmr: {
+    channel: createBrowserHmrChannel,
+    moduleImporter: 'remix/multiple-import-maps-polyfill',
+  },
+  watch: true,
 })
 ```
 

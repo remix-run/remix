@@ -70,6 +70,7 @@ export type ResolvedModule = {
   rawCode: string
   resolvedPath: string
   sourceMap: string | null
+  staticDeps: string[]
   stableUrlPathname: string
 }
 
@@ -136,6 +137,7 @@ export async function resolveModule(
   let pendingBareImportScopes: PendingBareImportScope[] = []
   let acceptedDepsWithPaths: ResolvedHmrAcceptedDependency[] = []
   let deps = new Set<string>()
+  let staticDeps = new Set<string>()
 
   for (let unresolved of transformed.unresolvedImports) {
     let displaySpecifier = getDisplayImportSpecifier(unresolved.specifier)
@@ -213,6 +215,7 @@ export async function resolveModule(
     }
 
     deps.add(resolvedImport.identityPath)
+    if (!unresolved.dynamic) staticDeps.add(resolvedImport.identityPath)
 
     if (transformed.packageSpecifiers.includes(unresolved.specifier)) {
       let packageJsonPath =
@@ -400,6 +403,7 @@ export async function resolveModule(
       rawCode: transformed.rawCode,
       resolvedPath: transformed.resolvedPath,
       sourceMap: transformed.sourceMap,
+      staticDeps: [...staticDeps],
       stableUrlPathname: transformed.stableUrlPathname,
     },
   }

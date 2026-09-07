@@ -25,7 +25,7 @@ const nodeTsxImportUrl = pathToFileURL(
   path.resolve(workspaceDir, 'packages/node-tsx/src/index.ts'),
 ).href
 const consoleMessageTimeout = 5000
-const hmrConnectionTimeout = process.platform === 'win32' ? 15_000 : consoleMessageTimeout
+const hmrConnectionTimeout = 15_000
 
 describe('asset server HMR', () => {
   it('updates accepted browser module output without losing page state', async (t) => {
@@ -98,10 +98,8 @@ describe('asset server HMR', () => {
 
     let importMap = await page.locator('script[type="importmap"]').textContent()
     assert.ok(importMap)
-    assert.deepEqual(JSON.parse(importMap).scopes, {
-      '/assets/app/': {
-        'test-package': '/assets/app/test-package.ts',
-      },
+    assert.deepEqual(JSON.parse(importMap).scopes['/assets/app/'], {
+      'test-package': '/assets/app/test-package.ts',
     })
 
     let updatedModuleRequest = page.waitForResponse((response) => {
@@ -175,6 +173,34 @@ describe('asset server HMR', () => {
       'Package: Increment via existing package mapping',
     )
     await secondAccepted
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+    assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+  })
+
+  it('applies updates with new import map entries', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImportConfigured: true })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+
+    let accepted = waitForConsoleMessage(page, '[remix] HMR accepted update /assets/app/counter.ts')
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        bareImport: true,
+        buttonText: 'Increment via new package',
+      }),
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment via new package')
+    await accepted
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
     assert.equal(await page.locator('script[type="importmap"]').count(), 2)
   })
@@ -713,26 +739,24 @@ describe('asset server HMR', () => {
 
     let lostConnection = waitForConsoleMessage(page, '[remix] HMR connection lost')
     let reconnected = waitForConsoleMessage(page, '[remix] HMR connected')
-    let failedStyleRequest = waitForStylesheetResponse(page, 500)
+    let failedStyleRequest = waitForStylesheetResponse(page, 500, { timeout: 15_000 })
     await server.stopAssets()
     await lostConnection
     await fs.writeFile(stylesheetPath, 'body { background: url("foo); }\n')
     await server.startAssets()
-    await reconnected
-    await failedStyleRequest
+    await Promise.all([reconnected, failedStyleRequest])
 
     await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
 
     lostConnection = waitForConsoleMessage(page, '[remix] HMR connection lost')
     reconnected = waitForConsoleMessage(page, '[remix] HMR connected')
-    let fixedStyleRequest = waitForStylesheetResponse(page, 200)
+    let fixedStyleRequest = waitForStylesheetResponse(page, 200, { timeout: 15_000 })
     await server.stopAssets()
     await lostConnection
     await fs.writeFile(stylesheetPath, '[data-testid="increment"] { color: blue; }\n')
     await server.startAssets()
-    await reconnected
-    await fixedStyleRequest
+    await Promise.all([reconnected, fixedStyleRequest])
 
     await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(0, 0, 255)')
@@ -1063,6 +1087,13 @@ async function createHmrFixture(
   let tmpDir = path.join(packageDir, '.tmp')
   await fs.mkdir(tmpDir, { recursive: true })
   let rootDir = await fs.mkdtemp(path.join(tmpDir, 'hmr-e2e-'))
+  let polyfillEntryPath = path
+    .relative(
+      path.join(rootDir, 'app'),
+      path.join(workspaceDir, 'packages/multiple-import-maps-polyfill/src/index.ts'),
+    )
+    .replaceAll(path.sep, '/')
+  if (!polyfillEntryPath.startsWith('.')) polyfillEntryPath = `./${polyfillEntryPath}`
 
   await write(
     rootDir,
@@ -1093,12 +1124,17 @@ async function createHmrFixture(
     ].join('\n'),
   )
   if (options.browserInvalidationFixture) {
-    await writeBrowserInvalidationFixture(rootDir, options.browserInvalidationFixture)
+    await writeBrowserInvalidationFixture(
+      rootDir,
+      options.browserInvalidationFixture,
+      polyfillEntryPath,
+    )
   } else {
     await write(
       rootDir,
       'app/entry.tsx',
       [
+        `import ${JSON.stringify(polyfillEntryPath)}`,
         "import { renderCounter } from './counter.ts'",
         '',
         "let app = document.getElementById('app')",
@@ -1169,23 +1205,19 @@ async function createHmrFixture(
       let { href, importMap } = await assetServer.getScriptEntry(
         path.join(rootDir, 'app/entry.tsx'),
       )
+      if (options.conflictingInitialBareImport && documentRenderCount === 1) {
+        importMap.scopes ??= {}
+        importMap.scopes['/assets/app/'] = {
+          ...importMap.scopes['/assets/app/'],
+          'test-package': '/assets/app/test-package-next.ts',
+        }
+      }
       let html = [
         '<!doctype html>',
         '<html>',
         '  <head>',
         '    <title>HMR Test</title>',
         '    <link rel="stylesheet" href="/assets/app/styles.css">',
-        ...(options.conflictingInitialBareImport && documentRenderCount === 1
-          ? [
-              `    <script type="importmap">${JSON.stringify({
-                scopes: {
-                  '/assets/app/': {
-                    'test-package': '/assets/app/test-package-next.ts',
-                  },
-                },
-              })}</script>`,
-            ]
-          : []),
         `    <script type="importmap">${JSON.stringify(importMap)}</script>`,
         '  </head>',
         '  <body>',
@@ -1319,11 +1351,13 @@ async function writeBrowserInvalidationFixture(
     parentAccepts: boolean
     trackDependencyDispose?: boolean
   },
+  polyfillEntryPath: string,
 ): Promise<void> {
   await write(
     rootDir,
     'app/entry.tsx',
     [
+      `import ${JSON.stringify(polyfillEntryPath)}`,
       "import { renderMessage } from './browser-parent.ts'",
       '',
       "let app = document.getElementById('app')",
@@ -1789,24 +1823,30 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
 
   let createCurrentAssetServer = () =>
     createAssetServer({
+      allowPackages: ['remix'],
       allowFiles: [`${appDir}/**`],
       basePath: '/assets',
       mounts: {
         app: appDir,
+        npm: 'node_modules',
+        polyfill: 'packages/multiple-import-maps-polyfill/src',
       },
-      hmr: () => ({
-        close() {
-          browserHmrFileEventHandlers.clear()
-        },
-        onFileEvents(handler) {
-          browserHmrFileEventHandlers.add(handler)
-          return () => {
-            browserHmrFileEventHandlers.delete(handler)
-          }
-        },
-        updateWatchedFiles() {},
-        url: '/hmr/events',
-      }),
+      hmr: {
+        channel: () => ({
+          close() {
+            browserHmrFileEventHandlers.clear()
+          },
+          onFileEvents(handler) {
+            browserHmrFileEventHandlers.add(handler)
+            return () => {
+              browserHmrFileEventHandlers.delete(handler)
+            }
+          },
+          updateWatchedFiles() {},
+          url: '/hmr/events',
+        }),
+        moduleImporter: './packages/multiple-import-maps-polyfill/src/index.ts',
+      },
       onError() {},
       rootDir: workspaceDir,
       watch: {

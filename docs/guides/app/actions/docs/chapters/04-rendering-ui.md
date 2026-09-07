@@ -225,6 +225,7 @@ Pages should render a complete document through one shared component. The defaul
 
 ```tsx filename=app/actions/document.tsx
 import type { Handle, RemixNode } from "remix/ui";
+import { ImportMap } from "remix/ui/server";
 
 import { scriptEntry } from "../assets.ts";
 
@@ -247,7 +248,7 @@ export function Document(handle: Handle<DocumentProps>) {
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <title>{title}</title>
           {head}
-          <script type="importmap">{JSON.stringify(importMap)}</script>
+          <ImportMap value={importMap} />
           {preloads.map((preloadHref) => (
             <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}
@@ -259,6 +260,9 @@ export function Document(handle: Handle<DocumentProps>) {
   };
 }
 ```
+
+`<ImportMap>` combines the script entry's map with mappings from blocking client entries so the
+initial document contains one complete import map.
 
 Put `title`, `meta`, `link`, and `style` elements inside the document's explicit `<head>`, along with
 global stylesheets, module preloads, icons, and the browser entry script. Resolve the entry href and

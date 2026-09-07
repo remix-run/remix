@@ -10,7 +10,7 @@ import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
 import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
-import { getDocumentModulePreloader } from './module-preloader.ts'
+import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './frame-resolution.ts'
 import {
   disposeClientEntryBoundary,
@@ -171,6 +171,7 @@ export type FrameRuntime = {
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
+  processClientEntryPreloads?: ProcessClientEntryPreloads
   serverFrameReload:
     | { signal: AbortSignal; reconciliationTracker?: ReconciliationTracker }
     | undefined
@@ -213,6 +214,7 @@ export type FrameContext = {
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
+  processClientEntryPreloads?: ProcessClientEntryPreloads
   lifecycleSignal: AbortSignal
   regionTailRef?: ChildNode | null
   regionParent?: ParentNode | null
@@ -237,6 +239,7 @@ type FrameInit = {
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
+  processClientEntryPreloads?: ProcessClientEntryPreloads
 }
 
 export type Frame = {
@@ -296,11 +299,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let disposed = false
   let lifecycleController = new AbortController()
 
-  function consumeClientEntryResources(source: ParentNode): void {
+  async function consumeClientEntryResources(source: ParentNode): Promise<void> {
     importMapManager.consumeImportMaps(source)
-    modulePreloader.consumePreloadLinks(source)
+    await modulePreloader.consumePreloadLinks(source, init.processClientEntryPreloads)
   }
 
+  let initialClientEntryResources: Promise<void> | undefined
   function shouldPreserveManagedHeadNode(node: Node): boolean {
     return (
       importMapManager.shouldPreserveHeadNode(node) ||
@@ -311,7 +315,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   if (isDocumentNode(container.root)) {
     modulePreloader.adoptInitialPreloadLinks(container.root)
   } else {
-    consumeClientEntryResources(container.root)
+    initialClientEntryResources = consumeClientEntryResources(container.root)
   }
 
   // Merge any rmx-data found in the current document once at startup.
@@ -348,6 +352,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     moduleLoads: init.moduleLoads,
     frameInstances: init.frameInstances,
     namedFrames: init.namedFrames,
+    processClientEntryPreloads: init.processClientEntryPreloads,
     lifecycleSignal: lifecycleController.signal,
     regionTailRef: container.regionTailRef,
     regionParent: container.regionParent,
@@ -448,7 +453,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
-      consumeClientEntryResources(parsed)
+      await consumeClientEntryResources(parsed)
+      if (isRenderAborted(options.signal)) return
       let responseData = options.data
       mergeRmxDataFromDocument(responseData, parsed)
       let responseContext = {
@@ -492,7 +498,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       htmlContent !== undefined ? createFragmentFromString(container.doc, htmlContent) : content
-    consumeClientEntryResources(fragment)
+    await consumeClientEntryResources(fragment)
+    if (isRenderAborted(options.signal)) return
     context.styleManager.adoptServerStyles(
       collectFrameServerStyleTags(createElementContainer(fragment)),
     )
@@ -571,6 +578,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   async function hydrateInitial(): Promise<void> {
     let reconciliationTracker = createReconciliationTracker()
 
+    await initialClientEntryResources
+    if (disposed || context.lifecycleSignal.aborted) return
     context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
     let subFramesReady = createSubFrames(container.childNodes, context)
     scheduleHydrationInContainer(container, context, reconciliationTracker)
@@ -933,6 +942,7 @@ export function createFrameRuntime(init: {
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: Map<string, FrameHandle>
+  processClientEntryPreloads?: ProcessClientEntryPreloads
   reloadForNavigation?: (options?: FrameReloadOptions) => Promise<FrameReloadResult>
 }): FrameRuntime {
   return {
@@ -948,6 +958,7 @@ export function createFrameRuntime(init: {
     moduleLoads: init.moduleLoads,
     frameInstances: init.frameInstances,
     namedFrames: init.namedFrames,
+    processClientEntryPreloads: init.processClientEntryPreloads,
     serverFrameReload: undefined,
     reloadForNavigation: init.reloadForNavigation,
   }
@@ -1371,6 +1382,7 @@ async function createSubFrames(
             moduleLoads: context.moduleLoads,
             frameInstances: context.frameInstances,
             namedFrames: context.namedFrames,
+            processClientEntryPreloads: context.processClientEntryPreloads,
           })
           context.frameInstances.set(node, subFrame)
           if (frameMarker.status === 'resolved') {

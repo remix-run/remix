@@ -1,14 +1,29 @@
 import type { FrameContent } from 'remix/ui'
 import { run } from 'remix/ui'
+import {
+  detectMultipleImportMapSupport,
+  importShim,
+  preloadShim,
+} from 'remix/multiple-import-maps-polyfill'
 import { closePagefindSearch, startPagefindSearch } from 'remix-docs-shared/search/browser'
 
 startNavigationGuard()
 startPagefindSearch()
 
+const supportsMultipleImportMapsPromise = detectMultipleImportMapSupport()
+
 const app = run({
   async loadModule(moduleUrl, exportName) {
-    let mod = await import(moduleUrl)
+    let mod = (await supportsMultipleImportMapsPromise)
+      ? await import(moduleUrl)
+      : await importShim(moduleUrl)
     return mod[exportName]
+  },
+  async processClientEntryPreloads(preloads) {
+    if (await supportsMultipleImportMapsPromise) return preloads
+
+    preloadShim(preloads)
+    return []
   },
   async resolveFrame(src, options): Promise<FrameContent> {
     let headers = new Headers({

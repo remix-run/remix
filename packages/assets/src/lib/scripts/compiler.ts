@@ -96,6 +96,7 @@ type ScriptCompiler = {
   getPreloadLayers(filePath: string | readonly string[]): Promise<string[][]>
   getImportMap(filePath: string | readonly string[]): Promise<ScriptImportMap>
   getHref(filePath: string): Promise<string>
+  resolveSpecifierFromRoot(specifier: string): Promise<string>
   classifyHmrFileEvent(filePath: string, event: ModuleWatchEvent): Promise<ScriptHmrUpdate[]>
   invalidateFileEvent(filePath: string, event: ModuleWatchEvent): void
   parseRequestPathname(pathname: string): ParsedRequestPathname | null
@@ -240,7 +241,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         for (let resolvedModule of resolvedModules) {
           layer.push(await getServedUrl(resolvedModule.identityPath))
 
-          for (let dep of resolvedModule.deps) {
+          for (let dep of resolvedModule.staticDeps) {
             if (visited.has(dep)) continue
             visited.add(dep)
             queue.push(dep)
@@ -318,6 +319,20 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
     async getHref(filePath) {
       let resolvedModule = resolveServedScriptOrThrow(resolveInputFilePath(filePath))
+      return getServedUrl(resolvedModule.identityPath)
+    },
+
+    async resolveSpecifierFromRoot(specifier) {
+      let importerPath = path.join(resolvedOptions.rootDir, '__remix_virtual_entry__.js')
+      let resolutionResult = await resolverFactory.resolveFileAsync(importerPath, specifier)
+      if (resolutionResult.error || !resolutionResult.path) {
+        throw createAssetServerCompilationError(
+          `Failed to resolve browser module "${specifier}" from asset server root.`,
+          { code: 'IMPORT_RESOLUTION_FAILED' },
+        )
+      }
+
+      let resolvedModule = resolveServedScriptOrThrow(resolutionResult.path)
       return getServedUrl(resolvedModule.identityPath)
     },
 

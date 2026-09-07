@@ -1,4 +1,5 @@
 import { css, type Handle, type RemixNode } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
 
 import { getAssetEntry } from '../middleware/asset-entry.ts'
 
@@ -20,7 +21,7 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>{title}</title>
-          <script type="importmap">{JSON.stringify(importMap)}</script>
+          <ImportMap value={importMap} />
           {preloads.map((preloadHref) => (
             <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}

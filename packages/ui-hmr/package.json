@@ -68,6 +68,7 @@
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
     "chokidar": "^5.0.0",
+    "playwright": "catalog:",
     "typescript": "catalog:"
   },
   "scripts": {

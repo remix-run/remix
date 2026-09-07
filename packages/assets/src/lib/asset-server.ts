@@ -90,6 +90,18 @@ export type BrowserHmrChannelFactory = () =>
   | undefined
   | Promise<BrowserHmrChannel | undefined>
 
+/** Browser HMR integration options. */
+export interface BrowserHmrOptions {
+  /** Creates the channel that delivers browser HMR events. */
+  channel: BrowserHmrChannelFactory
+  /**
+   * Module specifier resolved relative to the asset server's root directory. It must point to a
+   * browser module exporting `importModule(specifier, parentUrl)` for evaluating JavaScript updates.
+   * The module and its dependencies must be allowed and reachable through configured mounts.
+   */
+  moduleImporter?: string
+}
+
 /**
  * Converts a watcher batch into ordered browser update or reload events.
  *
@@ -250,7 +262,7 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
    * HMR requires `watch` to be enabled. The factory is called once for this asset server. Returning
    * `undefined` leaves HMR inactive; a returned channel is closed by `assetServer.close()`.
    */
-  hmr?: BrowserHmrChannelFactory
+  hmr?: BrowserHmrChannelFactory | BrowserHmrOptions
   /**
    * Enable filesystem-backed cache invalidation for long-lived server instances.
    * Enabled by default. Pass `true` to use the default watcher options, an options
@@ -345,6 +357,7 @@ type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
   files: ResolvedAssetServerFilesOptions
   fingerprintAssets: boolean
   hmr: BrowserHmrChannelFactory | null
+  hmrModuleImporter: string | null
   minify: boolean
   loaders: readonly ModuleLoader[]
   onError: NonNullable<AssetServerOptions['onError']>
@@ -657,7 +670,13 @@ export function createAssetServer<const transforms extends AssetRequestTransform
         if (requestPathname === hmrPathnames.client) {
           let browserHmrChannel = await browserHmrChannelPromise
           assertBrowserEventUrl(browserHmrChannel?.url)
-          return createHmrClientResponse(browserHmrChannel.url, hmrDataKey, request.method)
+          return await createHmrClientResponse(
+            browserHmrChannel.url,
+            hmrDataKey,
+            resolvedOptions.hmrModuleImporter,
+            request.method,
+            scriptCompiler,
+          )
         }
       }
 
@@ -977,9 +996,20 @@ function getHmrPathnames(basePath: string): { client: string; events: string } {
   }
 }
 
-function createHmrClientResponse(eventPathname: string, dataKey: string, method: string): Response {
+async function createHmrClientResponse(
+  eventPathname: string,
+  dataKey: string,
+  moduleImporter: string | null,
+  method: string,
+  scriptCompiler: ReturnType<typeof createScriptCompiler>,
+): Promise<Response> {
+  let moduleImporterHref = moduleImporter
+    ? await scriptCompiler.resolveSpecifierFromRoot(moduleImporter)
+    : null
   return new Response(
-    method === 'HEAD' ? null : createHmrClientSource({ dataKey, eventPathname }),
+    method === 'HEAD'
+      ? null
+      : createHmrClientSource({ dataKey, eventPathname, moduleImporter: moduleImporterHref }),
     {
       headers: {
         'Cache-Control': 'no-cache',
@@ -1116,10 +1146,10 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
     watch: options.watch,
   })
   let watchOptions = normalizeWatchOptions(options.watch)
-  let hmrFactory = normalizeHmrFactory(options.hmr)
+  let hmr = normalizeHmrOptions(options.hmr)
   let mounts = options.mounts ?? defaultMounts
 
-  if (hmrFactory && watchOptions === null) {
+  if (hmr.channel && watchOptions === null) {
     throw new TypeError('hmr requires watch mode')
   }
   if (Object.keys(mounts).length === 0) {
@@ -1134,7 +1164,8 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
     external: scriptOptions.external ?? [],
     files: normalizeFilesOptions(options.files),
     fingerprintAssets,
-    hmr: hmrFactory,
+    hmr: hmr.channel,
+    hmrModuleImporter: hmr.moduleImporter,
     minify: options.minify ?? false,
     mounts,
     loaders: scriptOptions.loaders ?? [],
@@ -1155,14 +1186,22 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
   }
 }
 
-function normalizeHmrFactory(factory: AssetServerOptions['hmr']): BrowserHmrChannelFactory | null {
-  if (factory === undefined) return null
-
-  if (typeof factory !== 'function') {
-    throw new TypeError('hmr must be a function')
+function normalizeHmrOptions(options: AssetServerOptions['hmr']): {
+  channel: BrowserHmrChannelFactory | null
+  moduleImporter: string | null
+} {
+  if (options === undefined) return { channel: null, moduleImporter: null }
+  if (typeof options === 'function') return { channel: options, moduleImporter: null }
+  if (!options || typeof options !== 'object' || typeof options.channel !== 'function') {
+    throw new TypeError('hmr must be a function or an object with a channel function')
   }
-
-  return factory
+  if (
+    options.moduleImporter !== undefined &&
+    (typeof options.moduleImporter !== 'string' || options.moduleImporter.trim().length === 0)
+  ) {
+    throw new TypeError('hmr.moduleImporter must be a non-empty string')
+  }
+  return { channel: options.channel, moduleImporter: options.moduleImporter ?? null }
 }
 
 function createBrowserHmrChannel(

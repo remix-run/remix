@@ -21,6 +21,8 @@ const MANAGED_IMPORT_MAP_SELECTOR = 'script[data-rmx-import-map][type="importmap
 const IMPORT_MAP_SELECTOR = 'script[type="importmap"]'
 
 export function getDocumentImportMapManager(doc: Document): ImportMapManager {
+  let nonce = doc.head.querySelector<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR)?.nonce
+
   return {
     consumeImportMaps(source) {
       let scripts = Array.from(
@@ -38,7 +40,7 @@ export function getDocumentImportMapManager(doc: Document): ImportMapManager {
         let baseUrl = doc.baseURI
         let importMapDelta = getImportMapDelta(installedImportMap, importMap, baseUrl)
         if (importMapDelta) {
-          appendImportMapScript(doc, importMapDelta)
+          appendImportMapScript(doc, importMapDelta, nonce)
           mergeInstalledImportMap(installedImportMap, importMapDelta, baseUrl)
         }
 
@@ -180,10 +182,15 @@ function mergeInstalledImportMap(
   }
 }
 
-function appendImportMapScript(doc: Document, importMap: ImportMap): HTMLScriptElement {
+function appendImportMapScript(
+  doc: Document,
+  importMap: ImportMap,
+  nonce: string | undefined,
+): HTMLScriptElement {
   let script = doc.createElement('script')
   script.setAttribute('data-rmx-import-map', '')
   script.type = 'importmap'
+  if (nonce) script.nonce = nonce
   script.textContent = JSON.stringify(importMap)
   doc.head.appendChild(script)
   return script

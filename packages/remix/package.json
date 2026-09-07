@@ -67,6 +67,7 @@
     "./headers/set-cookie": "./src/headers/set-cookie.ts",
     "./headers/vary": "./src/headers/vary.ts",
     "./html-template": "./src/html-template.ts",
+    "./multiple-import-maps-polyfill": "./src/multiple-import-maps-polyfill.ts",
     "./lazy-file": "./src/lazy-file.ts",
     "./middleware/async-context": "./src/async-context-middleware.ts",
     "./middleware/auth": "./src/auth-middleware.ts",
@@ -324,6 +325,10 @@
       "./html-template": {
         "types": "./dist/html-template.d.ts",
         "default": "./dist/html-template.js"
+      },
+      "./multiple-import-maps-polyfill": {
+        "types": "./dist/multiple-import-maps-polyfill.d.ts",
+        "default": "./dist/multiple-import-maps-polyfill.js"
       },
       "./lazy-file": {
         "types": "./dist/lazy-file.d.ts",
@@ -690,7 +695,8 @@
     "@remix-run/node-hmr": "workspace:^",
     "@remix-run/ui-hmr": "workspace:^",
     "@remix-run/spa": "workspace:^",
-    "@remix-run/static-middleware": "workspace:^"
+    "@remix-run/static-middleware": "workspace:^",
+    "@remix-run/multiple-import-maps-polyfill": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
