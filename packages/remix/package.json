@@ -68,7 +68,6 @@
     "./headers/set-cookie": "./src/headers/set-cookie.ts",
     "./headers/vary": "./src/headers/vary.ts",
     "./html-template": "./src/html-template.ts",
-    "./multiple-import-maps-polyfill": "./src/multiple-import-maps-polyfill.ts",
     "./lazy-file": "./src/lazy-file.ts",
     "./middleware/async-context": "./src/async-context-middleware.ts",
     "./middleware/auth": "./src/auth-middleware.ts",
@@ -85,6 +84,7 @@
     "./mime": "./src/mime.ts",
     "./multipart-parser": "./src/multipart-parser.ts",
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
+    "./multiple-import-maps-polyfill": "./src/multiple-import-maps-polyfill.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
     "./node-hmr": "./src/node-hmr.ts",
@@ -327,10 +327,6 @@
         "types": "./dist/html-template.d.ts",
         "default": "./dist/html-template.js"
       },
-      "./multiple-import-maps-polyfill": {
-        "types": "./dist/multiple-import-maps-polyfill.d.ts",
-        "default": "./dist/multiple-import-maps-polyfill.js"
-      },
       "./lazy-file": {
         "types": "./dist/lazy-file.d.ts",
         "default": "./dist/lazy-file.js"
@@ -394,6 +390,10 @@
       "./multipart-parser/node": {
         "types": "./dist/multipart-parser/node.d.ts",
         "default": "./dist/multipart-parser/node.js"
+      },
+      "./multiple-import-maps-polyfill": {
+        "types": "./dist/multiple-import-maps-polyfill.d.ts",
+        "default": "./dist/multiple-import-maps-polyfill.js"
       },
       "./node-fetch-server": {
         "types": "./dist/node-fetch-server.d.ts",
