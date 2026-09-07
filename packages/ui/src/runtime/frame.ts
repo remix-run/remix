@@ -147,18 +147,16 @@ function stripDoctypeMarkup(html: string): string {
 }
 
 function syncElementAttributes(target: Element, source: Element) {
-  for (let attribute of Array.from(target.attributes)) {
-    if (!source.hasAttribute(attribute.name)) {
-      target.removeAttribute(attribute.name)
-    }
-  }
-
   for (let attribute of Array.from(source.attributes)) {
     if (target.getAttribute(attribute.name) !== attribute.value) {
       target.setAttribute(attribute.name, attribute.value)
     }
   }
 }
+
+// Exported for tests only. Not part of the public API.
+// @internal
+export { syncElementAttributes }
 
 const FRAME_RUNTIME = Symbol('FrameRuntime')
 

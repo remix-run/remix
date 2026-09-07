@@ -7,6 +7,7 @@ import {
   createFrame,
   publishFrameTemplate,
   reloadFrameForNavigation,
+  syncElementAttributes,
   type LoadModule,
   type ResolveFrameOptions,
 } from '../runtime/frame.ts'
@@ -1189,6 +1190,39 @@ describe('frames', () => {
       activePreload?.dispatchEvent(new Event('load'))
       expect(document.head.querySelector(managedModulePreloadSelector)).toBeNull()
     } finally {
+      frame.dispose()
+    }
+  })
+
+  it('preserves client-set attributes on the root element across a top-frame reload', async () => {
+    // Client sets `class="dark"` (and `data-color-scheme`) on <html> after
+    // hydration. The server-rendered HTML for the next navigation has no
+    // class on <html>. The sync must NOT remove the client attributes.
+    let frame = createTestFrame(document.body, {
+      resolveFrame: () => null,
+    })
+    try {
+      document.documentElement.setAttribute('class', 'dark')
+      document.documentElement.setAttribute('data-color-scheme', 'dark')
+
+      // Simulate a server reply whose <html> doesn't carry class or data-color-scheme.
+      let serverDoc = new DOMParser().parseFromString(
+        '<!DOCTYPE html><html><head></head><body><main>Hello</main></body></html>',
+        'text/html',
+      )
+      let serverHtml = serverDoc.documentElement
+
+      // The function under test is internal to the runtime module — exposed
+      // only for testing via `@internal` export. The production path calls it
+      // from `reloadFrameForNavigation` on top-frame navigations.
+      syncElementAttributes(document.documentElement, serverHtml)
+
+      expect(document.documentElement.getAttribute('class')).toBe('dark')
+      expect(document.documentElement.getAttribute('data-color-scheme')).toBe('dark')
+    } finally {
+      // Reset to keep the suite clean.
+      document.documentElement.removeAttribute('class')
+      document.documentElement.removeAttribute('data-color-scheme')
       frame.dispose()
     }
   })
