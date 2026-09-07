@@ -86,11 +86,14 @@ interface ResolvedClientEntry {
   exportName: string
   /** Browser module hrefs to begin preloading before hydrating this entry. */
   preloads?: readonly string[]
-  importMap?: ImportMap
+  importMap?: ImportMapData
 }
 
-export interface ImportMap {
+/** Import map data accepted by the server renderer. */
+export interface ImportMapData {
+  /** Top-level module specifier mappings. */
   imports?: ImportMapImports
+  /** Module specifier mappings scoped by URL. */
   scopes?: Record<string, ImportMapImports>
 }
 
@@ -102,12 +105,12 @@ type StaticSegment = { kind: 'static'; html: string }
 type ManagedImportMap = {
   attrs: string
   segment: StaticSegment
-  value: ImportMap
+  value: ImportMapData
 }
 
 export type ImportMapProps = Omit<Props<'script'>, 'children' | 'innerHTML' | 'src' | 'type'> & {
   /** Initial import map entries to render and merge with resolved client entries. */
-  value: ImportMap
+  value: ImportMapData
 }
 
 /**
@@ -123,7 +126,7 @@ export function ImportMap(handle: Handle<ImportMapProps>): RenderFn {
 
 interface ClientEntryHeadResources {
   modulePreloadTags: Set<string>
-  importMap?: ImportMap
+  importMap?: ImportMapData
 }
 
 interface FrameData {
@@ -1418,7 +1421,7 @@ function hoistClientEntryResourcesFromFrameHead(
   if (headClose === -1) return html
 
   let preloadTags: string[] = []
-  let importMaps: ImportMap[] = []
+  let importMaps: ImportMapData[] = []
   let cursor = FRAME_HEAD_OPEN_TAG.length
   if (html.startsWith(MANAGED_IMPORT_MAP_START, cursor)) {
     let contentStart = cursor + MANAGED_IMPORT_MAP_START.length
@@ -1528,7 +1531,7 @@ function buildRmxDataScript(context: RenderContext): string {
   return `<script type="application/json" id="rmx-data">${serializedData}</script>`
 }
 
-function buildImportMapScript(importMap: ImportMap, attrs: string = ''): string {
+function buildImportMapScript(importMap: ImportMapData, attrs: string = ''): string {
   let serializedData = escapeScriptJson(JSON.stringify(importMap))
   return `<script data-rmx-import-map type="importmap"${attrs}>${serializedData}</script>`
 }
@@ -1556,8 +1559,8 @@ function finalizeManagedImportMap(context: RenderContext): void {
 
 function getImportMapDelta(
   context: RenderContext,
-  importMap: ImportMap | undefined,
-): ImportMap | null {
+  importMap: ImportMapData | undefined,
+): ImportMapData | null {
   if (!importMap) return null
 
   let imports = importMap.imports
@@ -1603,7 +1606,7 @@ function getImportMapImportsDelta(
   return Object.keys(delta).length > 0 ? delta : undefined
 }
 
-function parseAuthoredImportMap(json: string): ImportMap | null {
+function parseAuthoredImportMap(json: string): ImportMapData | null {
   let value: unknown
   try {
     value = JSON.parse(json)
@@ -1612,7 +1615,7 @@ function parseAuthoredImportMap(json: string): ImportMap | null {
   }
   if (!isObjectRecord(value)) return null
 
-  let importMap: ImportMap = {}
+  let importMap: ImportMapData = {}
   if (value.imports !== undefined) {
     if (!isObjectRecord(value.imports)) return null
     importMap.imports = parseAuthoredImportMapImports(value.imports)
@@ -1638,7 +1641,7 @@ function parseAuthoredImportMapImports(value: Record<string, unknown>): ImportMa
   )
 }
 
-function parseFrameworkImportMap(json: string): ImportMap {
+function parseFrameworkImportMap(json: string): ImportMapData {
   let value: unknown
   try {
     value = JSON.parse(json)
@@ -1651,7 +1654,7 @@ function parseFrameworkImportMap(json: string): ImportMap {
   return value
 }
 
-function isImportMap(value: unknown): value is ImportMap {
+function isImportMap(value: unknown): value is ImportMapData {
   if (!isObjectRecord(value)) return false
   if (value.imports !== undefined && !isImportMapImports(value.imports)) return false
   if (value.scopes !== undefined) {
@@ -1672,7 +1675,7 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-function mergeImportMap(resources: ClientEntryHeadResources, source: ImportMap): void {
+function mergeImportMap(resources: ClientEntryHeadResources, source: ImportMapData): void {
   let target = (resources.importMap ??= {})
   if (source.imports) {
     target.imports ??= {}

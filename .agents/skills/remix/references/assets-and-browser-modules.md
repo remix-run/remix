@@ -81,7 +81,7 @@ Render `importMap` with `ImportMap` from `remix/ui/server` before the moduleprel
 
 Use `getHref()` directly when you need the public URL for a non-script asset, and `getPreloads()` when you need lower-level preload control for one or more entrypoints.
 
-For normal Remix applications, pass the asset server to `render({ assets })` from `remix/middleware/render`. The middleware resolves source entry IDs from `clientEntry(import.meta.url, ...)` and applies the UI renderer's explicit-hash or named-component export rules. Use a custom `resolveClientEntry` callback only when building a custom rendering pipeline.
+For normal Remix applications, pass the asset server to `render({ assets })` from `remix/middleware/render`. The middleware resolves source entry IDs from `clientEntry(import.meta.url, ...)` with `getScriptEntry()`, includes their import maps, and applies the UI renderer's explicit-hash or named-component export rules. Use a custom `resolveClientEntry` callback only when building a custom rendering pipeline.
 
 ## Development vs Deployment
 

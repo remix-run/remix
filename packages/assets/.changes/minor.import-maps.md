@@ -4,9 +4,9 @@ To migrate an app created from the Remix app template, replace the separate entr
 
 ```diff
  const entry = 'app/actions/public/entry.ts'
--export const entryHref = await assetServer.getHref(entry)
--export const entryPreloads = await assetServer.getPreloads(entry)
-+export const scriptEntry = await assetServer.getScriptEntry(entry)
+-export const entryHref = await assets.getHref(entry)
+-export const entryPreloads = await assets.getPreloads(entry)
++export const scriptEntry = await assets.getScriptEntry(entry)
 ```
 
 Render the script entry's import map before its preloads and module script in `app/actions/document.tsx`:
@@ -46,10 +46,10 @@ Resolve client entries with `getScriptEntry()` and include their `importMap` in 
  let stream = renderToStream(node, {
    async resolveClientEntry(entryId, component) {
 -    let [href, preloads] = await Promise.all([
--      assetServer.getHref(entryId),
--      assetServer.getPreloads(entryId),
+-      assets.getHref(entryId),
+-      assets.getPreloads(entryId),
 -    ])
-+    let { href, importMap, preloads } = await assetServer.getScriptEntry(entryId)
++    let { href, importMap, preloads } = await assets.getScriptEntry(entryId)
 
      return {
        href,
@@ -61,6 +61,6 @@ Resolve client entries with `getScriptEntry()` and include their `importMap` in 
  })
 ```
 
-`assetServer.getImportMap()` creates a combined import map for multiple script roots or custom graph-level behavior. The corresponding public types are available as `ScriptEntry` and `ScriptImportMap`.
+`assets.getImportMap()` creates a combined import map for multiple script roots or custom graph-level behavior. The corresponding public types are available as `ScriptEntry` and `ScriptImportMap`.
 
 In development, HMR installs any new import map entries required by an accepted module graph before evaluating the update and reloads the page if an installed mapping would need to change.

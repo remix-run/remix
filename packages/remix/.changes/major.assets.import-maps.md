@@ -6,15 +6,15 @@ To migrate an app created from the Remix app template:
 
 ```diff
  const entry = 'app/actions/public/entry.ts'
--export const entryHref = await assetServer.getHref(entry)
--export const entryPreloads = await assetServer.getPreloads(entry)
-+export const scriptEntry = await assetServer.getScriptEntry(entry)
+-export const entryHref = await assets.getHref(entry)
+-export const entryPreloads = await assets.getPreloads(entry)
++export const scriptEntry = await assets.getScriptEntry(entry)
 ```
 
 HMR appends mappings for updated modules to the document in additional `<script type="importmap">` elements. When HMR must support browsers without native support for multiple import maps, configure `remix/multiple-import-maps-polyfill` as its module importer:
 
 ```diff
- export const assetServer = createAssetServer({
+ export const assets = createAssetServer({
    // ...
    hmr: isHmr
 -    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
@@ -61,26 +61,7 @@ HMR appends mappings for updated modules to the document in additional `<script 
 
 `<ImportMap>` combines the entry map with mappings from blocking client entries so the initial document contains a single complete import map. Regular `<script type="importmap">` elements remain supported when this behavior is not needed.
 
-Resolve each client entry with `getScriptEntry()` and include its import map in the returned metadata:
-
-```diff
- let stream = renderToStream(node, {
-   async resolveClientEntry(entryId, component) {
--    let [href, preloads] = await Promise.all([
--      assetServer.getHref(entryId),
--      assetServer.getPreloads(entryId),
--    ])
-+    let { href, importMap, preloads } = await assetServer.getScriptEntry(entryId)
-
-     return {
-       href,
-+      importMap,
-       exportName: component.name,
-       preloads,
-     }
-   },
- })
-```
+The standard `render({ assets })` middleware resolves client entries with `getScriptEntry()` and includes their import maps in rendered documents and frame responses. Custom rendering pipelines must include the returned `importMap` in their `resolveClientEntry()` metadata.
 
 3. If `app/actions/public/entry.tsx` calls `run()` to hydrate client entries, use the same support detection to select native imports or the polyfill and to process late preloads:
 

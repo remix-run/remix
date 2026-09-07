@@ -87,7 +87,7 @@ HMR appends mappings for updated modules to the document in additional `<script 
 import { createAssetServer } from 'remix/assets'
 import { createBrowserHmrChannel } from 'remix/node-hmr/runtime'
 
-let assetServer = createAssetServer({
+let assets = createAssetServer({
   hmr: {
     channel: createBrowserHmrChannel,
     moduleImporter: 'remix/multiple-import-maps-polyfill',
