@@ -23,10 +23,11 @@ npm i remix
 
 ### Server
 
-Render a full page to a streaming response:
+Install the standard render middleware and render a full page from an action:
 
 ```tsx
-import { renderToStream } from 'remix/ui/server'
+import { render } from 'remix/middleware/render'
+import { createRouter } from 'remix/router'
 import { Frame } from 'remix/ui'
 import { Counter } from './assets/counter.tsx'
 
@@ -46,19 +47,10 @@ function App() {
   )
 }
 
-let stream = renderToStream(<App />, {
-  resolveFrame(src, target, context) {
-    let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
-    if (target) headers.set('X-Remix-Target', target)
-    return fetch(new URL(src, context?.currentFrameSrc ?? request.url), { headers }).then((res) =>
-      res.text(),
-    )
-  },
-})
+let router = createRouter({ middleware: [render()] })
 
-return new Response(stream, {
-  headers: { 'Content-Type': 'text/html' },
-})
+router.get('/', (context) => context.render(<App />))
+router.get('/sidebar', (context) => context.render(<nav>Sidebar</nav>))
 ```
 
 ### Client Entry
@@ -113,9 +105,11 @@ let app = run({
 await app.ready()
 ```
 
-`run()` fetches frame sources by default, including the submitted method, encoding, and `FormData`.
-Provide `resolveFrame` only when the app needs custom request headers, body encoding, or response
-policy. Add `data-rmx-document` to a link or form to leave its navigation to the browser.
+`run()` hydrates client entries and makes the current document the top-level frame. Eligible
+same-origin links and forms then soft-navigate by fetching HTML and updating that frame in place,
+even when the page does not render an explicit `<Frame>`. Provide `resolveFrame` only when the app
+needs custom request headers, body encoding, or response policy. See
+[Link navigation](./frames.md#link-navigation) for document-navigation effects and opt-outs.
 
 ### Frames
 

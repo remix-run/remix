@@ -58,7 +58,7 @@ trailing commas are allowed:
 
 ```jsonc
 {
-  "$schema": "https://remix.run/schemas/remix.json",
+  "$schema": "./node_modules/remix/schema/remix.json",
   "test": {
     "files": ["**/*.test{,.browser,.e2e}.{ts,tsx}"],
     "browserFiles": ["**/*.test.browser.{ts,tsx}"],

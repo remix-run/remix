@@ -220,7 +220,7 @@ describe('run', () => {
         formData,
         method: 'post',
         signal,
-      })
+      }).finished
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       let [src, init] = fetchMock.mock.calls[0]!.arguments
@@ -237,6 +237,14 @@ describe('run', () => {
 
   it('rejects non-OK responses from the default resolver without replacing frame content', async (t) => {
     document.body.innerHTML = '<main id="initial">Initial</main>'
+    let unhandledRejections: unknown[] = []
+    let onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      event.preventDefault()
+      unhandledRejections.push(event.reason)
+    }
+    window.addEventListener('unhandledrejection', onUnhandledRejection)
+    t.after(() => window.removeEventListener('unhandledrejection', onUnhandledRejection))
+
     let fetchMock = t.mock.method(
       globalThis,
       'fetch',
@@ -260,8 +268,10 @@ describe('run', () => {
       await expect(app.frames.top.reload()).rejects.toThrow(
         'Failed to resolve frame: 404 Not Found',
       )
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(unhandledRejections).toEqual([])
       expect(reportedError).toBeInstanceOf(Error)
       expect((reportedError as Error).message).toBe('Failed to resolve frame: 404 Not Found')
       expect(document.getElementById('initial')?.textContent).toBe('Initial')
@@ -293,7 +303,7 @@ describe('run', () => {
         encType: 'application/x-www-form-urlencoded',
         formData,
         method: 'post',
-      })
+      }).finished
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       let [, init] = fetchMock.mock.calls[0]!.arguments
@@ -327,7 +337,7 @@ describe('run', () => {
         encType: 'text/plain',
         formData,
         method: 'post',
-      })
+      }).finished
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       let [, init] = fetchMock.mock.calls[0]!.arguments
@@ -2458,12 +2468,33 @@ describe('run', () => {
     await navigate(detailUrl)
     expect(document.getElementById('scroll-detail-page')?.textContent).toContain('Detail')
 
+    let didScroll = false
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        let scroll = event.scroll.bind(event)
+        Object.defineProperty(event, 'scroll', {
+          value() {
+            didScroll = true
+            scroll()
+          },
+        })
+      },
+      { once: true },
+    )
+
     let backNavigation = window.navigation.back().finished
     await deferredListItemsRequested
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    )
+
+    expect(didScroll).toBe(false)
+
     resolveDeferredListItems(listItemsContent)
     await backNavigation
 
+    expect(didScroll).toBe(true)
     expect(document.getElementById('scroll-list-items')).not.toBe(null)
     expect(window.scrollY).toBe(2500)
   })

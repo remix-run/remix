@@ -130,7 +130,8 @@ let app = run({
 The same runtime represents the current document as `app.frames.top` and intercepts eligible
 same-origin links and forms through the browser's Navigation API. Those navigations fetch HTML with
 the frame resolver and update the existing document in place instead of loading a new document.
-This applies even when the page only uses `clientEntry()` and does not render an explicit `<Frame>`.
+This soft-navigation behavior applies even when the page only uses `clientEntry()` and does not
+render an explicit `<Frame>`.
 
 The default resolver is equivalent to:
 

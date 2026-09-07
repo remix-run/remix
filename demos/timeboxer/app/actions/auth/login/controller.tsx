@@ -8,7 +8,6 @@ import { Session } from 'remix/session'
 
 import { credentialsSchema, passwordProvider } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
-import { render } from '../../../utils/render.tsx'
 import { issuesToErrors } from '../form-errors.ts'
 import { LoginPage } from '../pages.tsx'
 
@@ -24,9 +23,8 @@ export const authLogin = createController(routes.auth.login, {
       let session = context.get(Session)
       let error = session.get('auth:error')
 
-      return render(
+      return context.render(
         <LoginPage csrfToken={getCsrfToken(context)} error={stringOrUndefined(error)} />,
-        context.request,
       )
     },
 
@@ -34,9 +32,8 @@ export const authLogin = createController(routes.auth.login, {
       let parsed = s.parseSafe(credentialsSchema, context.get(FormData))
 
       if (!parsed.success) {
-        return render(
+        return context.render(
           <LoginPage csrfToken={getCsrfToken(context)} errors={issuesToErrors(parsed.issues)} />,
-          context.request,
           { status: 400 },
         )
       }

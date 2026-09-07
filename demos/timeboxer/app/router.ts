@@ -1,9 +1,10 @@
 import { createRouter, type RouterContext } from 'remix/router'
 import { csrf } from 'remix/middleware/csrf'
 import { formData } from 'remix/middleware/form-data'
+import { render } from 'remix/middleware/render'
 import { session } from 'remix/middleware/session'
 
-import { assets } from './actions/assets/controller.ts'
+import { assets, assetServer } from './actions/assets/controller.ts'
 import { auth } from './actions/auth/controller.tsx'
 import { authLogin } from './actions/auth/login/controller.tsx'
 import { authSignup } from './actions/auth/signup/controller.tsx'
@@ -21,6 +22,7 @@ export const router = createRouter({
     csrf(),
     loadDatabase(),
     loadAuth(),
+    render({ assets: assetServer }),
   ],
 })
 type AppContext = RouterContext<typeof router>

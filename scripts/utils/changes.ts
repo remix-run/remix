@@ -19,6 +19,7 @@ export type BumpType = (typeof bumpTypes)[number]
 // Changes configuration (from packages/*/.changes/config.json)
 export interface ChangesConfig {
   prereleaseChannel: string
+  prereleaseStart?: number
 }
 
 export type ParsedChangesConfig =
@@ -56,6 +57,7 @@ export function readChangesConfig(
 
   let obj = content as Record<string, unknown>
 
+  let prereleaseChannel = ''
   if ('prereleaseChannel' in obj) {
     if (typeof obj.prereleaseChannel !== 'string' || obj.prereleaseChannel.trim().length === 0) {
       return {
@@ -64,14 +66,36 @@ export function readChangesConfig(
         error: '.changes/config.json "prereleaseChannel" must be a non-empty string',
       }
     }
+    prereleaseChannel = obj.prereleaseChannel.trim()
+  }
+
+  if ('prereleaseStart' in obj) {
+    if (
+      typeof obj.prereleaseStart !== 'number' ||
+      !Number.isInteger(obj.prereleaseStart) ||
+      obj.prereleaseStart < 0
+    ) {
+      return {
+        exists: true,
+        valid: false,
+        error: '.changes/config.json "prereleaseStart" must be a non-negative integer',
+      }
+    }
+    if (prereleaseChannel.length === 0) {
+      return {
+        exists: true,
+        valid: false,
+        error: '.changes/config.json "prereleaseStart" requires "prereleaseChannel"',
+      }
+    }
     return {
       exists: true,
       valid: true,
-      config: { prereleaseChannel: obj.prereleaseChannel.trim() },
+      config: { prereleaseChannel, prereleaseStart: obj.prereleaseStart },
     }
   }
 
-  return { exists: true, valid: true, config: { prereleaseChannel: '' } }
+  return { exists: true, valid: true, config: { prereleaseChannel } }
 }
 
 /**
@@ -118,7 +142,7 @@ export function getNextVersion(
         throw new Error(`Invalid version increment: ${currentVersion} + ${bumpType}`)
       }
 
-      return `${baseVersion}-${targetChannel}.0`
+      return `${baseVersion}-${targetChannel}.${changesConfig.prereleaseStart ?? 0}`
     }
   } else {
     // Not in prerelease mode

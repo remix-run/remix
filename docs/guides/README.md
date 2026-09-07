@@ -15,7 +15,7 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/actions/docs/examples/` — frame handlers used by chapters. Each chapter group's `public/` directory contains its browser-hydrated demo modules and their local dependencies.
 - `app/actions/public/` — root-owned browser entrypoint, development refresh module, and stylesheets.
 - `app/assets.ts` — the source asset server and root entry hrefs/preloads, configured around colocated `public/` directories.
-- `app/middleware/render.ts` — the request-scoped `render()` helper and frame resolver.
+- `app/router.ts` — installs the standard `render()` middleware with the asset server.
 - `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.
 - `app/ui/` — shared UI used across routes.
 - `public/` — guides-only static files served as-is by the static middleware. Shared docs assets live in `../shared/assets/`.

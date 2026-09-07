@@ -2,6 +2,93 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-rc.1
+
+### Pre-release Changes
+
+- BREAKING CHANGE: In `createAssetServer()` from `remix/assets`, replace the `fileMap` option with optional directory-based `mounts`. Mounts recursively preserve the path beneath each public and filesystem root, keeping module URLs aligned with the filesystem hierarchy used for package resolution.
+
+  When `mounts` is omitted, the asset server uses `{ app: 'app', npm: 'node_modules' }`.
+
+  To migrate an app whose `fileMap` is equivalent to the new defaults, remove the `fileMap` option entirely:
+
+  ```ts
+  // before
+  createAssetServer({
+    basePath: '/assets',
+    fileMap: {
+      '/app/*path': 'app/*path',
+      '/npm/*path': 'node_modules/*path',
+    },
+    // ...
+  })
+
+  // after
+  createAssetServer({
+    basePath: '/assets',
+    // ...
+  })
+  ```
+
+  To migrate custom `fileMap` rules that preserve directory hierarchy, remove the trailing wildcard from both sides and rename `fileMap` to `mounts`:
+
+  ```ts
+  // before
+  createAssetServer({
+    basePath: '/assets',
+    fileMap: {
+      '/source/*path': 'app/*path',
+      '/vendor/*path': 'node_modules/*path',
+    },
+    // ...
+  })
+
+  // after
+  createAssetServer({
+    basePath: '/assets',
+    mounts: {
+      source: 'app',
+      vendor: 'node_modules',
+    },
+    // ...
+  })
+  ```
+
+- BREAKING CHANGE: Remove the built-in Atmosphere auth provider and its DPoP-specific types from `remix/auth`. Use `OAuthTokens` in place of `OAuthStandardTokens`. Custom provider packages can use `createOAuthProvider()` and extend `OAuthTokens` with protocol-specific data. Applications using the Atmosphere provider must remove it or move their atproto authentication to a separate package.
+
+- BREAKING CHANGE: Remove `addEventListeners()` from `remix/ui`. Use native `target.addEventListener(type, listener, { signal })` instead. If a listener used the helper's second callback argument, create an `AbortController` and abort it when the listener runs again or its lifetime signal aborts.
+
+- BREAKING CHANGE: Remix UI framework-owned DOM attributes now consistently use the `data-rmx-*` namespace. Update navigation, DOM preservation, and reconciliation key attributes to their new `data-rmx-*` names.
+
+- BREAKING CHANGE: During server rendering through `remix/ui`, script elements with non-string children previously serialized those children as escaped HTML text. They now render empty and report an error. Pass a single string child to preserve script content without HTML entity escaping; script-tag sequences that could terminate the element remain escaped.
+
+- Add `remix db rollback` for reverting applied migrations with step, target, and dry-run bounds (see #11723).
+
+- Add shared asset configuration and inspection through `remix/cli` and `remix/assets`, including `loadConfig()`, `remix assets`, `remix assets inspect <url-or-file>`, `assetServer.getAssets()`, and `assetServer.getAssetDetails()` (see #11726).
+
+- Add the `runRemixDb()` rollback command through `remix/data-table/cli` (see #11723).
+
+- Add a `package.json` export:
+  - `remix/spa` to expose SPA render middleware and the client runtime from `@remix-run/spa`
+
+- Add the conventional Remix UI `render()` middleware to `remix/middleware/render`, including built-in frame and client-entry asset integration (see #11607).
+
+- Ship the `remix.json` JSON Schema at `remix/schema/remix.json` so projects can use version-matched editor validation without a network connection.
+
+- Move Remix 3 from beta to its first release candidate, `3.0.0-rc.1`.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.6.0`](https://github.com/remix-run/remix/releases/tag/assets@0.6.0)
+  - [`auth@0.3.0`](https://github.com/remix-run/remix/releases/tag/auth@0.3.0)
+  - [`cli@0.6.0`](https://github.com/remix-run/remix/releases/tag/cli@0.6.0)
+  - [`data-table@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.5.0)
+  - [`data-table-mysql@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.1)
+  - [`data-table-postgres@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.1)
+  - [`data-table-sqlite@0.6.1`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.1)
+  - [`render-middleware@0.2.0`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.2.0)
+  - [`spa@0.1.0`](https://github.com/remix-run/remix/releases/tag/spa@0.1.0)
+  - [`ui@0.8.0`](https://github.com/remix-run/remix/releases/tag/ui@0.8.0)
+
 ## v3.0.0-beta.10
 
 ### Pre-release Changes
@@ -59,7 +146,7 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
   ```jsonc
   {
-    "$schema": "https://remix.run/schemas/remix.json",
+    "$schema": "./node_modules/remix/schema/remix.json",
     "test": {
       "type": ["server"],
       "concurrency": 1,
@@ -95,7 +182,7 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
   ```jsonc
   {
-    "$schema": "https://remix.run/schemas/remix.json",
+    "$schema": "./node_modules/remix/schema/remix.json",
     "db": {
       "adapter": {
         "type": "sqlite",
@@ -282,7 +369,7 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
   ```jsonc
   {
-    "$schema": "https://remix.run/schemas/remix.json",
+    "$schema": "./node_modules/remix/schema/remix.json",
     "test": {
       "type": ["server"],
       "concurrency": 1,
@@ -318,7 +405,7 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
   ```jsonc
   {
-    "$schema": "https://remix.run/schemas/remix.json",
+    "$schema": "./node_modules/remix/schema/remix.json",
     "db": {
       "adapter": {
         "type": "sqlite",

@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/spa",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Client-rendered application routing for Remix",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

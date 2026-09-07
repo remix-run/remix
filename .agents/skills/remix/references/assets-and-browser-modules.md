@@ -29,7 +29,7 @@ export const routes = route({
   assets: get('/assets/*path'),
 })
 
-let assetServer = createAssetServer({
+let assets = createAssetServer({
   basePath: '/assets',
   rootDir: process.cwd(),
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
@@ -48,7 +48,7 @@ let assetServer = createAssetServer({
 export default createController(routes, {
   actions: {
     async assets({ request }) {
-      return (await assetServer.fetch(request)) ?? new Response('Not Found', { status: 404 })
+      return (await assets.fetch(request)) ?? new Response('Not Found', { status: 404 })
     },
   },
 })
@@ -74,14 +74,14 @@ export default createController(routes, {
 Use `getScriptEntry()` when rendering a browser script entry. Scripts keep JavaScript imports as authored, so a rendered script entry needs its public URL, modulepreload hints, and an import map.
 
 ```typescript
-let { href, importMap, preloads } = await assetServer.getScriptEntry('app/actions/public/entry.ts')
+let { href, importMap, preloads } = await assets.getScriptEntry('app/actions/public/entry.ts')
 ```
 
 Render `importMap` with `ImportMap` from `remix/ui/server` before the modulepreload links and module script. This combines its mappings with import maps from blocking client entries.
 
 Use `getHref()` directly when you need the public URL for a non-script asset, and `getPreloads()` when you need lower-level preload control for one or more entrypoints.
 
-When resolving hydrated client entries during server rendering, pass the source entry ID from `clientEntry(import.meta.url, ...)` to `getScriptEntry()` inside `resolveClientEntry`, then return the destructured `href`, `importMap`, and `preloads`. Keep export-name resolution in that render helper, and avoid hard-coding public asset URLs in source-owned component modules.
+For normal Remix applications, pass the asset server to `render({ assets })` from `remix/middleware/render`. The middleware resolves source entry IDs from `clientEntry(import.meta.url, ...)` and applies the UI renderer's explicit-hash or named-component export rules. Use a custom `resolveClientEntry` callback only when building a custom rendering pipeline.
 
 ## Development vs Deployment
 

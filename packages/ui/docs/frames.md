@@ -42,21 +42,19 @@ The presence of a `fallback` prop determines streaming behavior:
 
 ## Resolving frame content
 
-On the server, `renderToStream` calls your `resolveFrame` function to get the HTML for each frame:
+In a Remix app, install `render()` once. It resolves nested and targeted frames through the current router, carries request credentials and top-frame state, follows redirects, and preserves non-successful response content:
 
 ```tsx
-import { renderToStream } from 'remix/ui/server'
+import { render } from 'remix/middleware/render'
+import { createRouter } from 'remix/router'
 
-let stream = renderToStream(<App />, {
-  frameSrc: request.url,
-  async resolveFrame(src, _target, context) {
-    let res = await fetch(new URL(src, context?.currentFrameSrc ?? request.url))
-    return res.body // or res.text() for a string
-  },
-})
+let router = createRouter({ middleware: [render()] })
+
+router.get('/', (context) => context.render(<App />))
+router.get('/recommendations', (context) => context.render(<Recommendations />))
 ```
 
-`resolveFrame` can return:
+For a fully custom rendering pipeline, `renderToStream({ resolveFrame })` accepts frame content as:
 
 - A string of HTML
 - A `ReadableStream<Uint8Array>`
@@ -234,13 +232,19 @@ additional headers, another body encoding, or a different response policy. Custo
 The default resolver rejects non-OK responses. A custom resolver may return a `Response` with any
 status when it wants Remix UI to render the response body.
 
-A client resolver may return frame content directly or return the fetched `Response`. Returning the response lets Remix stream its body. When `fetch()` followed a redirect during a top-frame navigation, the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`; other frames render the response without changing either URL.
+A client resolver may return frame content directly or return the fetched `Response`. Returning the
+response lets Remix stream its body. When `fetch()` followed a redirect during a top-frame navigation,
+the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`;
+other frames render the response without changing either URL.
 
 Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
 
 ## Link navigation
 
-Eligible same-origin anchor navigations reload `handle.frames.top` through the frame resolver instead of performing a full document navigation.
+Calling `run()` represents the current document as `handle.frames.top` and starts a Navigation API
+listener. Eligible same-origin anchor navigations reload top frame HTML through the frame resolver
+and reconcile it into the existing document instead of performing a full document navigation. This
+soft-navigation behavior applies even when the page does not render an explicit `<Frame>`.
 
 - `data-rmx-target="name"` reloads a named frame.
 - `data-rmx-src="/frame"` overrides the URL resolved into that frame while `href` remains the navigation destination.
@@ -248,7 +252,16 @@ Eligible same-origin anchor navigations reload `handle.frames.top` through the f
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
 - `data-rmx-document` leaves the link as a normal document navigation.
 
-The `link(href, { history })` mixin adds the corresponding `data-rmx-history` value when its host is a native anchor. Download links, cross-origin links, and links marked with `data-rmx-document` are left to the browser.
+To keep links/forms as a document navigations while still hydrating client entries and using explicit
+frames, you can cancel the built-in `navigate` event behavior with your own listener before calling
+`run()`:
+
+```ts
+window.navigation?.addEventListener('navigate', (e) => event.stopImmediatePropagation())
+```
+
+This prevents Remix from receiving navigation events, including events for `data-rmx-target` and
+imperative `navigate()` calls. Explicit reloads such as `handle.frame.reload()` continue to work.
 
 ## Form navigation
 

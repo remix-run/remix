@@ -24,6 +24,7 @@ import { compression } from 'remix/middleware/compression'
 import { formData } from 'remix/middleware/form-data'
 import { logger } from 'remix/middleware/logger'
 import { methodOverride } from 'remix/middleware/method-override'
+import { render } from 'remix/middleware/render'
 import { session } from 'remix/middleware/session'
 import { staticFiles } from 'remix/middleware/static'
 import { asyncContext } from 'remix/middleware/async-context'
@@ -42,6 +43,7 @@ middleware.push(session(cookie, storage))
 middleware.push(asyncContext())
 middleware.push(loadDatabase())
 middleware.push(loadAuth())
+middleware.push(render({ assets }))
 
 let router = createRouter({ middleware })
 ```
@@ -62,6 +64,7 @@ let router = createRouter({ middleware })
 | `asyncContext()`           | `remix/middleware/async-context`   | Helpers outside handlers need request context via `getContext()`              | Add before helpers rely on it                                  |
 | `auth({ schemes })`        | `remix/middleware/auth`            | Resolve auth state into `context.get(Auth)`                                   | Run after `session()` for session-backed auth                  |
 | `requireAuth()`            | `remix/middleware/auth`            | A controller or action must reject anonymous access                           | Usually controller middleware or action middleware             |
+| `render({ assets? })`      | `remix/middleware/render`          | Actions render Remix UI through `context.render(node, init)`                  | Pass the asset server for source-based client entries          |
 
 ### Static files vs browser modules
 
@@ -79,7 +82,7 @@ let router = createRouter({ middleware })
 
 ### Common stacks
 
-- **Session-backed HTML app** -> `compression()`, `staticFiles()`, optional `cop()`, `formData()`, `methodOverride()`, `session()`, optional `csrf()`, `asyncContext()`, `auth({ schemes })`
+- **Session-backed HTML app** -> `compression()`, `staticFiles()`, optional `cop()`, `formData()`, `methodOverride()`, `session()`, optional `csrf()`, `asyncContext()`, `auth({ schemes })`, `render({ assets })`
 - **Cross-origin API** -> `compression()`, `cors()`, optional `asyncContext()`, optional `auth({ schemes })`
 - **Upload flow** -> `compression()`, `staticFiles()`, `formData({ uploadHandler })`, then sessions, auth, and data-loading middleware as needed
 - **Optional development HMR** -> keep `server.ts` as the child app server, add `hmr.ts` for `remix/node-hmr`, and proxy public requests through `createHmrReadyFetch()`

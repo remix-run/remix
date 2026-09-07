@@ -429,18 +429,13 @@ describe('Remix config loading', () => {
     }
   })
 
-  it('publishes the same schema with the CLI package and Remix website', async () => {
-    let packageSchema = await fs.readFile(
-      path.join(ROOT_DIR, 'packages', 'cli', 'schema', 'remix.json'),
-      'utf8',
-    )
-    let websiteSchema = await fs.readFile(
-      path.join(ROOT_DIR, 'docs', 'guides', 'public', 'schemas', 'remix.json'),
-      'utf8',
+  it('declares its JSON Schema dialect without an unpublished identifier', async () => {
+    let schema = JSON.parse(
+      await fs.readFile(path.join(ROOT_DIR, 'packages', 'cli', 'schema', 'remix.json'), 'utf8'),
     )
 
-    assert.equal(packageSchema, websiteSchema)
-    assert.equal(JSON.parse(packageSchema).$id, 'https://remix.run/schemas/remix.json')
+    assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema')
+    assert.equal('$id' in schema, false)
   })
 })
 

@@ -5,7 +5,6 @@ import { redirect } from 'remix/response/redirect'
 import { Session } from 'remix/session'
 
 import { routes } from '../../routes.ts'
-import { render } from '../../utils/render.tsx'
 import { AuthStatusPage } from './pages.tsx'
 
 export const auth = createController(routes.auth, {
@@ -14,9 +13,8 @@ export const auth = createController(routes.auth, {
       let auth = context.get(Auth)
 
       if (auth.ok) {
-        return render(
+        return context.render(
           <AuthStatusPage csrfToken={getCsrfToken(context)} username={auth.identity.username} />,
-          context.request,
         )
       }
 

@@ -74,7 +74,7 @@ Configure discovery and coverage in the `test` section of `remix.json` or with C
 
 ```jsonc
 {
-  "$schema": "https://remix.run/schemas/remix.json",
+  "$schema": "./node_modules/remix/schema/remix.json",
   "test": {
     "files": ["**/*.test{,.e2e}.{ts,tsx}"],
     "e2eFiles": ["**/*.test.e2e.{ts,tsx}"],

@@ -3,6 +3,8 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { syncRemixSchema } from './utils/remix-schema.ts'
+
 const PLAYWRIGHT_CLI_PATH = fileURLToPath(
   new URL('../packages/ui/node_modules/playwright/cli.js', import.meta.url),
 )
@@ -11,6 +13,8 @@ const PLAYWRIGHT_INSTALL_ARGS = ['install', '--only-shell', 'chromium', 'firefox
 const INSTALL_TIMEOUT_MS = 5 * 60 * 1000
 
 async function main() {
+  await syncRemixSchema()
+
   if (process.env.CI) {
     return
   }

@@ -58,6 +58,14 @@ let app = run({
 await app.ready()
 ```
 
+`run()` also creates `app.frames.top` for the current document and starts listening for Navigation
+API events. Eligible same-origin links and forms then use soft navigation: Remix fetches their HTML
+through the frame resolver and updates the existing document instead of loading a new one. This
+happens even when the page only uses `clientEntry()` and does not render an explicit `<Frame>`.
+
+See [Link navigation](./frames.md#link-navigation) for the document-level effects of soft navigation
+and how to opt out for one navigation or the whole app.
+
 ### `run` options
 
 - **`loadModule(moduleUrl, exportName)`** (required) - Called for each client entry found in the page. Return the component function. Typically uses dynamic `import()`.

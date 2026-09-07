@@ -21,7 +21,7 @@ export type AnyRenderer = Renderer<never, never>
 
 /**
  * Context key used to read the current request renderer with `context.get(Renderer)`.
- * The `renderWith()` middleware also installs the renderer as `context.render`.
+ * Both `render()` and `renderWith()` also install the renderer as `context.render`.
  */
 export const Renderer: { defaultValue?: AnyRenderer } = createContextKey<AnyRenderer>()
 
