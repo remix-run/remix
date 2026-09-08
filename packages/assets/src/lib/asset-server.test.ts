@@ -2458,7 +2458,7 @@ describe('asset-server', () => {
     assert.equal(mismatch, null)
   })
 
-  it('supports content-based script fingerprints without a build id via import maps', async () => {
+  it('resolves content-fingerprinted script dependencies via import maps', async () => {
     await write(dir, 'app/entry.ts', 'import { dep } from "./dep.ts"\nexport const entry = dep')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     let assetServer = createTestServer(dir, { fingerprint: true })
@@ -8220,7 +8220,7 @@ describe('asset-server', () => {
     assert.throws(
       () =>
         createTestServer(dir, {
-          fingerprint: { buildId: 'legacy' } as never,
+          fingerprint: {} as never,
         }),
       /fingerprint must be a boolean/,
     )
