@@ -20,7 +20,7 @@ on:
   reaction: eyes
   status-comment: false
   skip-bots: [dependabot, renovate, github-actions, copilot]
-if: ${{ github.event_name == 'workflow_dispatch' || github.event.action != 'labeled' || github.event.sender.login != 'remix-run-bot' }}
+if: ${{ github.event_name == 'workflow_dispatch' || github.event.action != 'labeled' || (github.event.label.name == 'aw:iterate' && github.event.sender.login != 'remix-run-bot') }}
 concurrency:
   job-discriminator: ${{ github.run_id }}
 permissions:

@@ -20,7 +20,7 @@ on:
   reaction: eyes
   status-comment: false
   skip-bots: [dependabot, renovate, github-actions, copilot]
-if: ${{ github.event_name == 'workflow_dispatch' || github.event.action != 'labeled' || github.event.sender.login != 'remix-run-bot' }}
+if: ${{ github.event_name == 'workflow_dispatch' || github.event.action != 'labeled' || (github.event.label.name == 'aw:review' && github.event.sender.login != 'remix-run-bot') }}
 concurrency:
   job-discriminator: ${{ github.run_id }}
 permissions:
@@ -54,6 +54,12 @@ safe-outputs:
     issues: true
     pull-requests: false
     discussions: false
+  add-labels:
+    github-token: ${{ secrets.GH_REMIX_PAT_AW }}
+    allowed: [aw:implement-bot]
+    create-if-missing: true
+    max: 1
+    target: triggering
   close-issue:
     max: 1
     target: triggering
@@ -160,7 +166,28 @@ contains no actionable report or request, or is an obvious test/spam issue.
 - Comment with one concise explanation.
 - Close with state reason not_planned.
 
-### Valid issue with an identified fix
+### Valid issue with a high-confidence fix
+
+Use this outcome only when all of the following are true:
+
+- Default-branch source and the reported reproduction establish the root cause.
+- The minimal fix is clear and needs no unresolved API, product, or design decision.
+- You can describe focused regression coverage that proves the reported behavior.
+- The fix fits `/implement`'s allowed paths and restrictions; it does not require
+  dependency, configuration, workflow, or agent-instruction changes.
+- No open pull request already addresses the same fix.
+- The administrator has not limited this to a read-only assessment or asked to
+  avoid implementation.
+
+Post one concise, source-backed review comment with the root cause, minimum
+fix, and focused regression coverage. Link the original administrator request
+when there is one, and state that you are requesting implementation. Then use
+`add_labels` to add only `aw:implement-bot` to the triggering issue. This invokes
+the normal implementation workflow, which removes the label, independently
+verifies the fix, and completes its normal validation before creating a draft
+PR. Do not post a `/implement` command, dispatch a workflow, or close the issue.
+
+### Valid issue with a likely fix that needs more investigation
 
 - Comment with a short root-cause and minimum-fix overview.
 - Mention the focused regression coverage that should accompany the fix.
@@ -177,4 +204,5 @@ contains no actionable report or request, or is an obvious test/spam issue.
 - Never close for low confidence, issue tone, or because a report is difficult.
 - Do not demand a separate reproduction repository when the report is a
   documentation issue or this repository itself is a sufficient reproduction.
-- Use no more than one comment and one closure.
+- Use no more than one comment, with either one closure or the `aw:implement-bot` label.
+- Add `aw:implement-bot` only for the high-confidence fix outcome above.

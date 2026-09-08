@@ -202,12 +202,31 @@ steps:
 
         const labelName = context.payload.label?.name
         const sender = context.payload.sender?.login
-        if (!labelName?.startsWith('aw:') || !sender) {
-          core.setFailed('The labeled event is missing its agentic-workflow label or sender')
+        const expectedWorkflow = workflowByName[context.workflow]
+        const itemType = context.payload.issue?.pull_request || context.payload.pull_request
+          ? 'pull_request'
+          : 'issue'
+        const isReviewHandoff = context.workflow === '/implement' && labelName === 'aw:implement-bot'
+        if (
+          !expectedWorkflow ||
+          (!isReviewHandoff && labelName !== `aw:${expectedWorkflow.workflow}`) ||
+          !expectedWorkflow.itemTypes.includes(itemType) ||
+          !sender
+        ) {
+          core.setFailed('The trigger label and item type must match this command')
+          return
+        }
+        if (isReviewHandoff) {
+          if (
+            sender.toLowerCase() !== botLogin || context.eventName !== 'issues' ||
+            itemType !== 'issue' || context.payload.issue?.state !== 'open'
+          ) {
+            core.setFailed('Only remix-run-bot may request a reviewed implementation of an open issue')
+          }
           return
         }
         if (sender.toLowerCase() === botLogin) {
-          core.setFailed('Labels applied by remix-run-bot cannot activate agentic workflows')
+          core.setFailed('Bot-added command labels are acknowledgments, not triggers')
           return
         }
         if (!(await isRepositoryAdmin(sender))) {

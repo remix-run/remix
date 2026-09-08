@@ -204,6 +204,8 @@ safe-outputs:
               }
 
               const label = isDiscussion ? null : `aw:${item.workflow}`
+              // Bot-added command labels acknowledge the route without triggering it.
+              // Issue review uses the separate aw:implement-bot label for handoffs.
               if (label) {
                 await github.rest.issues.addLabels({
                   ...context.repo,

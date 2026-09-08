@@ -117,17 +117,19 @@ flowchart LR
   Command --> Request[Resolve trusted request]
   Request --> GH[Run agent, Threat detection, Safe outputs]
   GH --> Result[Comment, close issue, draft PR, or update PR branch]
+  GH -->|Issue review: aw:implement-bot label| Implement[Run /implement]
+  Implement --> Request
 ```
 
 ### Available Commands
 
-| Command      | Where                                 | Direct triggers                                                                 | Result                                                                                                                                                                                                                                                   |
-| ------------ | ------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/review`    | Issue                                 | Comment beginning with `/review`, or apply `aw:review`                          | Investigates the report and duplicates. It may ask for information, explain a likely fix, or comment and close only a clear duplicate, proposal, support request, spam, or out-of-scope issue. It never edits code.                                      |
-| `/review`    | Pull request                          | Comment beginning with `/review`, or apply `aw:review`                          | Posts one read-only review comment with high-confidence P1-P3 findings. It never executes contributor code, edits the pull request, approves it, or merges it.                                                                                           |
-| `/review`    | Proposal Discussion                   | Comment beginning with `/review`                                                | Posts one design assessment with actionable concerns, open questions, and next steps. It never accepts, implements, closes, or locks the proposal.                                                                                                       |
-| `/implement` | Issue or accepted Proposal Discussion | Comment beginning with `/implement`; `aw:implement` is also available on issues | Implements a focused change from trusted `main`, validates it, and opens at most one draft pull request. Protected changes remain visible in the draft for review; if changes outside the allowed paths are required, it falls back to an issue instead. |
-| `/iterate`   | Pull request                          | Comment beginning with `/iterate`, or apply `aw:iterate`                        | Applies administrator feedback directly to the triggering branch. Community forks require maintainer edits. It never creates a replacement pull request, merges, or approves.                                                                            |
+| Command      | Where                                 | Direct triggers                                                                 | Result                                                                                                                                                                                                                                                                     |
+| ------------ | ------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/review`    | Issue                                 | Comment beginning with `/review`, or apply `aw:review`                          | Investigates the report and duplicates. It may ask for information, explain a likely fix, or comment and close only a clear duplicate, proposal, support request, spam, or out-of-scope issue. It can queue a high-confidence fix for implementation. It never edits code. |
+| `/review`    | Pull request                          | Comment beginning with `/review`, or apply `aw:review`                          | Posts one read-only review comment with high-confidence P1-P3 findings. It never executes contributor code, edits the pull request, approves it, or merges it.                                                                                                             |
+| `/review`    | Proposal Discussion                   | Comment beginning with `/review`                                                | Posts one design assessment with actionable concerns, open questions, and next steps. It never accepts, implements, closes, or locks the proposal.                                                                                                                         |
+| `/implement` | Issue or accepted Proposal Discussion | Comment beginning with `/implement`; `aw:implement` is also available on issues | Implements a focused change from trusted `main`, validates it, and opens at most one draft pull request. Protected changes remain visible in the draft for review; if changes outside the allowed paths are required, it falls back to an issue instead.                   |
+| `/iterate`   | Pull request                          | Comment beginning with `/iterate`, or apply `aw:iterate`                        | Applies administrator feedback directly to the triggering branch. Community forks require maintainer edits. It never creates a replacement pull request, merges, or approves.                                                                                              |
 
 Use `/review` on an issue, pull request, or Proposal Discussion. The `aw:review` label is available
 on issues and pull requests; Discussions use comments. The triggering item selects one of three
@@ -139,7 +141,22 @@ and proposal reviews in
 [`aw-command-review-proposal.md`](https://github.com/remix-run/remix/blob/main/.github/workflows/aw-command-review-proposal.md).
 Each workflow has its own prompt, model, timeout, tools, permissions, and output limits. The event
 filters ensure that only the matching workflow handles a `/review` comment or `aw:review` label.
-Only the issue review workflow can close an issue.
+Only the issue review workflow can close an issue or hand a fix to `/implement`.
+
+When an issue review establishes the root cause, a small fix, and focused regression coverage
+with high confidence, it can automatically request `/implement` for that same issue. It posts its
+diagnosis and adds `aw:implement-bot`, starting the normal implementation workflow. The label
+is removed when that workflow starts; no `/implement` comment or extra workflow dispatch is needed.
+This applies to issue reviews started by `/review`, `aw:review`, or the comment router. An explicit
+request for a read-only assessment or no implementation prevents the handoff. Unresolved design
+choices, insufficient evidence, changes outside the implementation workflow's scope, and an existing
+PR for the fix also prevent it.
+
+Only issue review has permission to add `aw:implement-bot`, restricted to its triggering issue.
+The label is created automatically if missing. The implementation workflow accepts it only from
+`remix-run-bot` on open issues and cannot add another command label. It uses the review and linked
+administrator request as context, independently confirms the fix, runs the usual validation, and
+opens at most one draft PR. Pull request and proposal reviews cannot initiate implementation.
 
 Slash-command comments may include instructions after the command. For example:
 
@@ -150,6 +167,8 @@ Slash-command comments may include instructions after the command. For example:
 Applying an `aw:*` label carries no instructions. It invokes the command's default behavior, and
 the label is removed after triggering (per `gh-aw` `label_command` trigger). For `/iterate`, the
 default label behavior uses the most recent agentic review as supporting data.
+Both the activation filter and request validator require the exact label and applicable item type;
+`aw:review` cannot directly activate `/implement`.
 
 ### Comment Router
 
@@ -185,25 +204,31 @@ current repository as evidence. They do not require a pull request or implementa
 accept the proposal or authorize implementation. Use `/review` or a mention such as
 `@remix-run-bot review this proposal` in a Proposal Discussion.
 
-The router briefly applies the matching `aw:*` label to issues and pull requests, queues the command
-with `workflow_dispatch`, and removes the label without waiting for the command run to finish.
-Discussions do not use a label. The dispatched command revalidates the router run, original target,
-comment ID and hash, administrator identity, exact bot mention, and expected command before it
-trusts the comment. Editing the source comment after it was routed invalidates the request; post a
-new comment instead.
+For issues and pull requests, the router briefly applies the matching `aw:*` label to show its
+chosen command, queues the command with `workflow_dispatch`, and removes the label without waiting
+for the command run to finish. These label changes appear as `remix-run-bot` in the timeline.
+Bot-added `aw:review`, `aw:implement`, and `aw:iterate` labels do not trigger workflows, so the
+dispatch starts the command once and preserves the original administrator comment as context.
+The separate `aw:implement-bot` label is reserved for issue-review handoffs and is never
+applied by the router. Discussions do not use a label. The dispatched command revalidates the router
+run, original target, comment ID and hash, administrator identity, exact bot mention, and expected
+command before it trusts the comment. Editing the source comment after it was routed invalidates
+the request; post a new comment instead.
 
 ### Trust and Credentials
 
 Repository administrators are the only authorized callers. Slash commands and labels are
 restricted by the workflow trigger, and the router and manual-label path independently verify
-administrator permission. Labels applied by `remix-run-bot` cannot trigger a command; this prevents
-the router's temporary label from starting a second run.
+administrator permission. Labels applied by `remix-run-bot` cannot trigger a command except for
+`aw:implement-bot` on an open issue. Only issue review can emit that label. Administrator-added
+`aw:implement` labels continue to start implementation; administrator-added `aw:implement-bot`
+labels are rejected. Other bot-added labels remain blocked to prevent loops and duplicate runs.
 
 The workflows require these repository secrets:
 
 - `SHOPIFY_AI_PROXY` provides model access through `https://proxy.shopify.ai/v1`.
 - `GH_REMIX_PAT_AW` authenticates as `remix-run-bot`. It needs Actions write access to dispatch command
-  workflows, Issues write access to manage temporary labels and post issue or pull request comments,
+  workflows, Issues write access to manage labels and post issue or pull request comments,
   Discussions write access to reply to Discussions, and Contents and Pull requests write access to
   create or update pull requests.
 
