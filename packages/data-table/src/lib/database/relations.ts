@@ -186,15 +186,13 @@ async function loadHasManyThroughValues(
 
   let relatedRows = await loadRowsWithRelationsForQuery(database, targetQuery)
   let sourceKeysByThroughKey = new Map<string, Set<string>>()
-  let outputRowsBySourceKey = new Map<string, Record<string, unknown>[]>()
-  let seenTargetRowsBySourceKey = new Map<string, Set<string>>()
+  let outputRowsBySourceKey = new Map<string, Map<string, Record<string, unknown>>>()
 
   for (let sourceRow of sourceRows) {
     let sourceKey = getCompositeKey(sourceRow, throughRelation.sourceKey)
     let matchedThroughRows = pagedThroughRowsBySource.get(sourceKey) ?? []
 
-    outputRowsBySourceKey.set(sourceKey, [])
-    seenTargetRowsBySourceKey.set(sourceKey, new Set())
+    outputRowsBySourceKey.set(sourceKey, new Map())
 
     for (let throughRow of matchedThroughRows) {
       let throughKey = getCompositeKey(throughRow, through.throughSourceKey)
@@ -222,21 +220,19 @@ async function loadHasManyThroughValues(
     let rowIdentity = getCompositeKey(row, targetPrimaryKey)
 
     for (let sourceKey of sourceKeys) {
-      let seenTargetRows = seenTargetRowsBySourceKey.get(sourceKey)
       let outputRows = outputRowsBySourceKey.get(sourceKey)
 
-      if (!seenTargetRows || !outputRows || seenTargetRows.has(rowIdentity)) {
+      if (!outputRows || outputRows.has(rowIdentity)) {
         continue
       }
 
-      seenTargetRows.add(rowIdentity)
-      outputRows.push(row)
+      outputRows.set(rowIdentity, row)
     }
   }
 
   return sourceRows.map((sourceRow) => {
     let sourceKey = getCompositeKey(sourceRow, throughRelation.sourceKey)
-    let outputRows = outputRowsBySourceKey.get(sourceKey) ?? []
+    let outputRows = Array.from(outputRowsBySourceKey.get(sourceKey)?.values() ?? [])
 
     return applyPagination(outputRows, relation.modifiers.limit, relation.modifiers.offset)
   })
