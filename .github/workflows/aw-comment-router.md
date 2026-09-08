@@ -290,7 +290,28 @@ Choose exactly one outcome:
 - `iterate`: the administrator asks to make changes to the current pull
   request based on feedback or a prior review.
 - `clarify`: the intent is ambiguous, requests multiple workflows, conflicts
-  with the target type, or lacks enough direction to choose safely.
+  with the target type, or lacks enough direction to choose safely after
+  applying the defaults below.
+
+When the comment is only a bot mention or asks for general feedback without
+requesting a specific action, choose `triage` for an issue or `review` for a
+pull request. This includes "What do you think?", "How does this look?",
+"Thoughts?", "Can you take a look?", and similar wording. Do not ask for
+clarification just because these comments do not name a workflow.
+
+For example:
+
+| Administrator comment                 | On an issue | On a pull request |
+| ------------------------------------- | ----------- | ----------------- |
+| `@remix-run-bot`                      | `triage`    | `review`          |
+| `@remix-run-bot - what do you think?` | `triage`    | `review`          |
+| `@remix-run-bot how does this look?`  | `triage`    | `review`          |
+
+Explicit requests take precedence over these defaults. Never infer `implement`
+or `iterate` from a bare mention or general feedback request. Use `clarify`
+for conflicting or unsupported requests, multiple requested workflows, or
+requests whose intent remains unclear. Discussions have no default route;
+use `clarify` for bare mentions or general feedback requests on Discussions.
 
 Call `route_agent_workflow` exactly once. For `triage`, `review`, `implement`,
 or `iterate`, leave `clarification` empty; the router will dispatch the exact

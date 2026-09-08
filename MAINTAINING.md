@@ -155,6 +155,13 @@ routes are:
 - Pull request: `review` or `iterate`
 - Proposal Discussion: `implement`
 
+A bare `@remix-run-bot` mention or a general feedback request such as
+`@remix-run-bot - what do you think?` or `@remix-run-bot how does this look?` defaults to `triage`
+on an issue and `review` on a pull request. Explicit requests take precedence. The router asks for
+clarification for conflicting or unsupported requests, multiple requested workflows, or intent
+that remains unclear. Discussions have no default route, so a bare mention or general feedback
+request there prompts a clarification question.
+
 The router briefly applies the matching `aw:*` label to issues and pull requests, queues the command
 with `workflow_dispatch`, and removes the label without waiting for the command run to finish.
 Discussions do not use a label. The dispatched command revalidates the router run, original target,
