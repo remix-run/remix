@@ -899,6 +899,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
       let reloaded = waitForNavigation(page)
+      recordPageDiagnostic(page, 'writing export-removal update')
       await fs.writeFile(
         clientFieldPath,
         clientFieldSource
@@ -910,8 +911,10 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
             '',
           ),
       )
+      recordPageDiagnostic(page, 'finished writing export-removal update')
 
       await reloaded
+      recordPageDiagnostic(page, 'observed reload navigation')
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: after export removal')
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
@@ -1287,6 +1290,8 @@ type PageDiagnostics = {
   pageErrors: string[]
   requestFailures: string[]
   responseFailures: string[]
+  startedAt: number
+  timeline: string[]
 }
 
 const pageDiagnostics = new WeakMap<TestPage, PageDiagnostics>()
@@ -1311,8 +1316,14 @@ function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): 
     pageErrors: [],
     requestFailures: [],
     responseFailures: [],
+    startedAt: Date.now(),
+    timeline: [],
   }
   pageDiagnostics.set(page, diagnostics)
+
+  let record = (message: string) => {
+    diagnostics.timeline.push(`${Date.now() - diagnostics.startedAt}ms ${message}`)
+  }
 
   page.on('console', (message) => {
     diagnostics.consoleMessages.push(`${message.type()}: ${message.text()}`)
@@ -1323,14 +1334,45 @@ function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): 
   page.on('framenavigated', (frame) => {
     if (frame.parentFrame() !== null) return
     diagnostics.navigations.push(frame.url())
+    record(`main frame navigated: ${frame.url()}`)
+  })
+  page.on('domcontentloaded', () => {
+    record(`DOMContentLoaded: ${page.url()}`)
+  })
+  page.on('load', () => {
+    record(`load: ${page.url()}`)
+  })
+  page.on('close', () => {
+    record('page closed')
+  })
+  page.on('crash', () => {
+    record('page crashed')
+  })
+  page.on('request', (request) => {
+    if (request.resourceType() !== 'document') return
+    record(`document request: ${request.method()} ${request.url()}`)
+  })
+  page.on('requestfinished', (request) => {
+    if (request.resourceType() !== 'document') return
+    record(`document request finished: ${request.method()} ${request.url()}`)
   })
   page.on('requestfailed', (request) => {
     let failureText = request.failure()?.errorText
     diagnostics.requestFailures.push(
       `${request.method()} ${request.url()}${failureText ? ` (${failureText})` : ''}`,
     )
+    if (request.resourceType() === 'document') {
+      record(
+        `document request failed: ${request.method()} ${request.url()}${failureText ? ` (${failureText})` : ''}`,
+      )
+    }
   })
   page.on('response', (response) => {
+    if (response.request().resourceType() === 'document') {
+      record(
+        `document response: ${response.status()} ${response.url()} (${response.headers()['content-type'] ?? 'no content type'})`,
+      )
+    }
     if (response.status() < 400) return
     diagnostics.responseFailures.push(`${response.status()} ${response.url()}`)
   })
@@ -1338,9 +1380,15 @@ function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): 
   return diagnostics
 }
 
+function recordPageDiagnostic(page: TestPage, message: string): void {
+  let diagnostics = attachPageDiagnostics(page)
+  diagnostics.timeline.push(`${Date.now() - diagnostics.startedAt}ms test: ${message}`)
+}
+
 function formatPageDiagnostics(page: TestPage): string {
   let diagnostics = attachPageDiagnostics(page)
   let sections = [
+    formatDiagnosticsSection('timeline', diagnostics.timeline),
     formatDiagnosticsSection('console', diagnostics.consoleMessages),
     formatDiagnosticsSection('pageerror', diagnostics.pageErrors),
     formatDiagnosticsSection('navigation', diagnostics.navigations),
@@ -1959,6 +2007,12 @@ function getNodeHmrServerSource(
     "    let url = new URL(request.url ?? '/', `http://${host}`)",
     '',
     "    if (url.pathname === '/') {",
+    '      let requestStartedAt = Date.now()',
+    "      let requestLabel = `${request.method ?? 'GET'} ${request.url ?? '/'}`",
+    '      console.log(`[diagnostic] ${requestLabel} started`)',
+    "      response.once('finish', () => console.log(`[diagnostic] ${requestLabel} finished ${response.statusCode} in ${Date.now() - requestStartedAt}ms`))",
+    "      response.once('close', () => console.log(`[diagnostic] ${requestLabel} closed ${response.writableFinished ? 'after finish' : 'before finish'} in ${Date.now() - requestStartedAt}ms`))",
+    "      request.once('aborted', () => console.log(`[diagnostic] ${requestLabel} aborted in ${Date.now() - requestStartedAt}ms`))",
     '      await delay(slowDocumentMs)',
     '      await writeFetchResponse(',
     '        response,',
@@ -2662,12 +2716,28 @@ async function waitForText(page: TestPage, selector: string, text: string): Prom
       .locator('body')
       .textContent({ timeout: 100 })
       .catch(() => '<missing body>')
+    let documentState = await page
+      .evaluate(() => ({
+        body: Boolean(document.body),
+        head: Boolean(document.head),
+        html: Boolean(document.documentElement),
+        href: location.href,
+        readyState: document.readyState,
+      }))
+      .then((state) => JSON.stringify(state))
+      .catch(
+        (stateError: unknown) =>
+          `unavailable: ${stateError instanceof Error ? stateError.message : String(stateError)}`,
+      )
     let message = error instanceof Error ? error.message : String(error)
     throw new Error(
       [
         `Timed out waiting for text: ${selector} = ${JSON.stringify(text)}`,
         `Actual text: ${JSON.stringify(actualText?.trim())}`,
         `Body text: ${JSON.stringify(bodyText?.trim().slice(0, 1000))}`,
+        `Page URL: ${page.url()}`,
+        `Page closed: ${page.isClosed()}`,
+        `Document state: ${documentState}`,
         message,
         formatPageDiagnostics(page),
       ].join('\n'),
