@@ -14,11 +14,16 @@ steps:
         const botLogin = process.env.BOT_LOGIN.toLowerCase()
         const expectedRepository = process.env.EXPECTED_REPOSITORY.toLowerCase()
         const workflowByName = {
-          '/triage': { workflow: 'triage', label: 'aw:triage', itemTypes: ['issue'] },
-          '/review': {
+          'Review issues': { workflow: 'review', label: 'aw:review', itemTypes: ['issue'] },
+          'Review pull requests': {
             workflow: 'review',
             label: 'aw:review',
-            itemTypes: ['pull_request', 'discussion'],
+            itemTypes: ['pull_request'],
+          },
+          'Review proposals': {
+            workflow: 'review',
+            label: 'aw:review',
+            itemTypes: ['discussion'],
           },
           '/implement': {
             workflow: 'implement',

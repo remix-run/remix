@@ -66,7 +66,7 @@ safe-outputs:
           description: The workflow to route to, or clarify when the request is ambiguous
           required: true
           type: choice
-          options: [triage, review, implement, iterate, clarify]
+          options: [review, implement, iterate, clarify]
         clarification:
           description: A concise question; required only when workflow is clarify
           required: false
@@ -135,28 +135,6 @@ safe-outputs:
               }
 
               const item = items[0]
-              const routes = {
-                triage: {
-                  label: 'aw:triage',
-                  workflowFile: 'aw-command-triage.lock.yml',
-                  itemTypes: ['issue'],
-                },
-                review: {
-                  label: 'aw:review',
-                  workflowFile: 'aw-command-review.lock.yml',
-                  itemTypes: ['pull_request', 'discussion'],
-                },
-                implement: {
-                  label: 'aw:implement',
-                  workflowFile: 'aw-command-implement.lock.yml',
-                  itemTypes: ['issue', 'discussion'],
-                },
-                iterate: {
-                  label: 'aw:iterate',
-                  workflowFile: 'aw-command-iterate.lock.yml',
-                  itemTypes: ['pull_request'],
-                },
-              }
               const isDiscussion = context.eventName === 'discussion_comment'
               const issue = context.payload.issue
               const discussion = context.payload.discussion
@@ -166,6 +144,20 @@ safe-outputs:
                   ? 'pull_request'
                   : 'issue'
               const itemNumber = isDiscussion ? discussion?.number : issue?.number
+              const routes = {
+                review: {
+                  issue: 'aw-command-review-issue.lock.yml',
+                  pull_request: 'aw-command-review.lock.yml',
+                  discussion: 'aw-command-review-proposal.lock.yml',
+                },
+                implement: {
+                  issue: 'aw-command-implement.lock.yml',
+                  discussion: 'aw-command-implement.lock.yml',
+                },
+                iterate: {
+                  pull_request: 'aw-command-iterate.lock.yml',
+                },
+              }
 
               if (item.workflow === 'clarify') {
                 const clarification = item.clarification?.trim() ?? ''
@@ -201,8 +193,8 @@ safe-outputs:
                 return
               }
 
-              const route = routes[item.workflow]
-              if (!route || item.clarification || !route.itemTypes.includes(itemType)) {
+              const workflowFile = routes[item.workflow]?.[itemType]
+              if (!workflowFile || item.clarification) {
                 core.setFailed('Invalid routing output for the triggering item')
                 return
               }
@@ -211,7 +203,7 @@ safe-outputs:
                 return
               }
 
-              const label = isDiscussion ? null : route.label
+              const label = isDiscussion ? null : `aw:${item.workflow}`
               if (label) {
                 await github.rest.issues.addLabels({
                   ...context.repo,
@@ -242,7 +234,7 @@ safe-outputs:
                 // wait for the command run.
                 await github.rest.actions.createWorkflowDispatch({
                   ...context.repo,
-                  workflow_id: route.workflowFile,
+                  workflow_id: workflowFile,
                   ref: context.payload.repository.default_branch,
                   inputs: { aw_context: JSON.stringify(commentRouterContext) },
                 })
@@ -282,9 +274,9 @@ reading that data.
 
 Choose exactly one outcome:
 
-- `triage`: the administrator asks to triage the current issue.
-- `review`: the administrator asks for a read-only review of the current pull
-  request or Proposal Discussion.
+- `review`: the administrator asks to assess the current issue, pull request,
+  or Proposal Discussion. For an issue, this includes investigating the
+  report, checking duplicates, and determining next steps.
 - `implement`: the administrator asks to implement the current issue or an
   accepted Proposal Discussion.
 - `iterate`: the administrator asks to make changes to the current pull
@@ -297,39 +289,36 @@ Only these workflows are applicable to each target:
 
 | Triggering item     | Valid workflows       |
 | ------------------- | --------------------- |
-| Issue               | `triage`, `implement` |
+| Issue               | `review`, `implement` |
 | Pull request        | `review`, `iterate`   |
 | Proposal Discussion | `review`, `implement` |
 
-Other Discussion categories have no supported workflows. `review` and `iterate`
-are not issue workflows; `triage` and `implement` are not pull request workflows.
+Other Discussion categories have no supported workflows. `iterate` applies only
+on pull requests; `implement` applies only on issues or accepted Proposal Discussions.
 
 Interpret natural-language requests in the context of the triggering item.
-On an issue, "review this issue" means `triage`. On a pull request, "triage this
-PR" means `review`. Do not ask for clarification just because the administrator
-uses a different workflow's name to request assessment of the current item.
+For `review`, the router selects the issue, pull request, or proposal review
+workflow from the verified triggering item type.
 
 When the comment is only a bot mention or asks for general feedback without
-requesting a specific action, choose `triage` for an issue or `review` for a
-pull request or Proposal Discussion. This includes "What do you think?",
-"How does this look?", "Thoughts?", "Can you take a look?", and similar wording. Do not ask for
+requesting a specific action, choose `review` for an issue, pull request, or
+Proposal Discussion. This includes "What do you think?", "How does this look?",
+"Thoughts?", "Can you take a look?", and similar wording. Do not ask for
 clarification just because these comments do not name a workflow.
 
-For example:
+For example, each of these selects `review` on any supported target:
 
-| Administrator comment                 | On an issue | On a pull request or Proposal Discussion |
-| ------------------------------------- | ----------- | ---------------------------------------- |
-| `@remix-run-bot`                      | `triage`    | `review`                                 |
-| `@remix-run-bot - what do you think?` | `triage`    | `review`                                 |
-| `@remix-run-bot how does this look?`  | `triage`    | `review`                                 |
+- `@remix-run-bot`
+- `@remix-run-bot - what do you think?`
+- `@remix-run-bot how does this look?`
 
 Explicit requests take precedence over these defaults. Never infer `implement`
 or `iterate` from a bare mention or general feedback request. Use `clarify`
 for conflicting or unsupported requests, multiple requested workflows, or
 requests whose intent remains unclear after applying the wording guidance.
 
-Call `route_agent_workflow` exactly once. For `triage`, `review`, `implement`,
-or `iterate`, leave `clarification` empty; the router will dispatch the exact
+Call `route_agent_workflow` exactly once. For `review`, `implement`, or
+`iterate`, leave `clarification` empty; the router will dispatch the exact
 administrator comment. For `clarify`, ask one concise question that names the
 plausible choices supported by the triggering item. Never offer an unsupported
 workflow or suggest switching to a different issue or pull request. Do not
