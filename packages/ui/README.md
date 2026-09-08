@@ -117,7 +117,8 @@ async function resolveFrame(src, options) {
     signal: options?.signal,
   })
 
-  if (!response.ok) {
+  let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
+  if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
     throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
   }
 
@@ -169,9 +170,7 @@ window.navigation?.addEventListener('navigate', (e) => e.stopImmediatePropagatio
 This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as
 `handle.frame.reload()` continue to use the frame resolver.
 
-The default resolver rejects non-OK responses with an error containing their status and status text.
-A custom `resolveFrame` may return a `Response` with any status when it wants Remix UI to render the
-response body.
+The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom `resolveFrame` may return a `Response` with any status when it wants Remix UI to render the response body.
 
 Forms remain ordinary HTML forms before the runtime starts. Add `data-rmx-target` to reload a named frame, or `data-rmx-document` to require a full-document submission:
 
