@@ -15,7 +15,6 @@ import { TypedEventTarget } from './typed-event-target.ts'
 import { ROOT_VNODE, type CommittedVNode, type ReconcileContext, type RootVNode } from './vnode.ts'
 import { resetStyleState, defaultStyleManager } from './diff-props.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
-import { parseHydrationMarkerId } from './core/markers.ts'
 import type { StyleManager } from '../style/index.ts'
 
 /**
@@ -54,8 +53,11 @@ export { diffVNodes, toVNode }
 export { resetStyleState }
 
 function getHydrationComponentIdFromRangeStart(start: Node): string | undefined {
-  let id = parseHydrationMarkerId(start)
-  return id || undefined
+  if (!(start instanceof Comment)) return undefined
+  let marker = start.data.trim()
+  if (!marker.startsWith('rmx:h:')) return undefined
+  let id = marker.slice('rmx:h:'.length)
+  return id.length > 0 ? id : undefined
 }
 
 /**

@@ -1,28 +1,14 @@
 import type { ElementProps, RemixElement } from '../jsx.ts'
 
-// Composition stops processing descriptors past this bound so a mixin that
-// returns itself cannot expand forever.
-export const MAX_MIX_DESCRIPTORS = 1024
+// Stop mixins that return themselves from expanding forever.
+const MAX_MIX_DESCRIPTORS = 1024
 
-/**
- * Structural shape of a mixin descriptor as stored in the `mix` prop, shared
- * by the client runtime and the server renderer.
- */
-export interface MixDescriptor {
+interface MixDescriptor {
   type: (...args: any[]) => unknown
   args: readonly unknown[]
 }
 
-/**
- * Environment hook that runs one descriptor and returns the mixin's raw
- * result.
- *
- * The client runs descriptors against persistent per-element state (scopes,
- * lifecycle events) and lets mixin errors propagate; the server creates a
- * one-shot runner per descriptor and isolates errors. Returning a falsy value
- * skips the descriptor.
- */
-export type MixDescriptorRunner = (
+type MixDescriptorRunner = (
   descriptor: MixDescriptor,
   index: number,
   mixinProps: ElementProps,
@@ -31,15 +17,9 @@ export type MixDescriptorRunner = (
 /**
  * Composes an element's `mix` descriptors into its final props.
  *
- * This is the owner of mixin composition semantics: descriptor expansion,
- * host type validation, returned-prop sanitization, and prop merge order.
- * Both the client reconciler and the server renderer run this loop, supplying
- * their own `runDescriptor`. (The one exception is the reconciler's all-`on()`
- * fast path, which applies event-listener-only mixes without composing.)
- *
  * @param hostType Host element tag name the mixins are composed for.
  * @param props Original element props, including `mix`.
- * @param runDescriptor Environment hook that runs each descriptor.
+ * @param runDescriptor Runs each mixin using the caller's state and error handling.
  * @returns The composed props.
  */
 export function composeMixedProps(
@@ -91,9 +71,7 @@ export function composeMixedProps(
   }
 }
 
-// Reads descriptors back out of a `mix` prop already normalized by jsx-time
-// element creation (`normalizeElementProps` in core/vnode.ts); the falsy
-// filtering here must stay in sync with the nesting/falsy rules there.
+// JSX creation flattens nested mix arrays before composition.
 export function resolveMixDescriptors(props: ElementProps): MixDescriptor[] {
   let mix = props.mix
   if (!mix) return []
@@ -141,9 +119,7 @@ export function isMixinElementFunction(
   return '__rmxMixinElementType' in value
 }
 
-// Deliberately looser than `isRemixElement` in core/vnode.ts: composition
-// only needs the `$rmx` brand here because the loop above validates the
-// element's type itself before using its props.
+// The composition loop checks the returned element's host type separately.
 function isRemixElementResult(value: unknown): value is RemixElement {
   if (!value || typeof value !== 'object') return false
   return (value as { $rmx?: unknown }).$rmx === true

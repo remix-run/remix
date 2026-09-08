@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { RemixNode } from '../runtime/component.ts'
 import { createMixin } from '../index.ts'
-import { MAX_MIX_DESCRIPTORS } from '../runtime/core/mix.ts'
+import type { MixinDescriptor } from '../index.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -10,13 +10,15 @@ import { invariant } from '../runtime/invariant.ts'
 function getClientAttributes(element: RemixNode): Record<string, string> {
   let container = document.createElement('div')
   let root = createRoot(container)
-  root.render(element)
-  root.flush()
-  let div = container.querySelector('div')
-  invariant(div)
-  let attributes = collectAttributes(div)
-  root.dispose()
-  return attributes
+  try {
+    root.render(element)
+    root.flush()
+    let div = container.querySelector('div')
+    invariant(div)
+    return collectAttributes(div)
+  } finally {
+    root.dispose()
+  }
 }
 
 async function getServerAttributes(element: RemixNode): Promise<Record<string, string>> {
@@ -87,6 +89,7 @@ describe('mixin composition ssr/client parity', () => {
     })
 
     await expectParity(<div mix={[inspect()]}>child</div>, {})
+    await expectParity(<div mix={[inspect()]} innerHTML="child" />, {})
     expect(sawTreeProps).toBe(false)
   })
 
@@ -95,7 +98,7 @@ describe('mixin composition ssr/client parity', () => {
       <handle.element {...props} title={title} />
     ))
 
-    await expectParity(<div mix={[null, false, withTitle('kept')] as any} />, { title: 'kept' })
+    await expectParity(<div mix={[null, false, withTitle('kept')]} />, { title: 'kept' })
   })
 
   it('treats an unused mixin element function result as a no-op on both sides', async (t) => {
@@ -121,9 +124,14 @@ describe('mixin composition ssr/client parity', () => {
 
   it('drops a mixin result that is not a remix element on both sides', async (t) => {
     let errorSpy = t.mock.method(console, 'error', () => {})
-    let wrongResult = createMixin(() => () => ({ title: 'bad' }) as any)
+    let wrongResult = {
+      type() {
+        return () => ({ title: 'bad' })
+      },
+      args: [],
+    }
 
-    await expectParity(<div id="host" mix={[wrongResult()]} />, { id: 'host' })
+    await expectParity(<div id="host" mix={[wrongResult]} />, { id: 'host' })
     expect(errorSpy).toHaveBeenCalledTimes(2)
     for (let call of errorSpy.mock.calls) {
       let error = call.arguments[0]
@@ -133,22 +141,20 @@ describe('mixin composition ssr/client parity', () => {
   })
 
   it('caps runaway descriptor expansion identically on both sides', async () => {
-    let clientRuns = 0
-    let recurse: () => any = null as never
-    let recursiveMixin = createMixin(() => () => {
-      clientRuns++
-      return [recurse()]
+    let runs = 0
+    let recursiveMixin = createMixin(() => (): MixinDescriptor[] => {
+      runs++
+      return [recursiveMixin()]
     })
-    recurse = () => recursiveMixin()
 
     let element = <div mix={[recursiveMixin()]} />
 
     getClientAttributes(element)
-    expect(clientRuns).toBe(MAX_MIX_DESCRIPTORS)
+    expect(runs).toBe(1024)
 
-    clientRuns = 0
+    runs = 0
     await getServerAttributes(element)
-    expect(clientRuns).toBe(MAX_MIX_DESCRIPTORS)
+    expect(runs).toBe(1024)
   })
 
   it('isolates a throwing mixin during ssr but aborts the render on the client', async (t) => {
@@ -162,16 +168,12 @@ describe('mixin composition ssr/client parity', () => {
 
     let element = <div mix={[boom(), withTitle('ok')]} />
 
-    // The server isolates the failure so one bad mixin cannot take down the
-    // stream; mixins after it still apply.
     expect(await getServerAttributes(element)).toEqual({ title: 'ok' })
     expect(errorSpy).toHaveBeenCalledTimes(1)
     let error = errorSpy.mock.calls[0]?.arguments[0]
     invariant(error instanceof Error)
     expect(error.message).toBe('mixin boom')
 
-    // The client deliberately does not: the error aborts the element's
-    // render and surfaces through the root error event.
     let container = document.createElement('div')
     let root = createRoot(container)
     let forwarded: unknown
@@ -181,11 +183,11 @@ describe('mixin composition ssr/client parity', () => {
     try {
       root.render(element)
       root.flush()
+      invariant(forwarded instanceof Error)
+      expect(forwarded.message).toBe('mixin boom')
+      expect(container.querySelector('div[title="ok"]')).toBe(null)
     } finally {
       root.dispose()
     }
-    invariant(forwarded instanceof Error)
-    expect(forwarded.message).toBe('mixin boom')
-    expect(container.querySelector('div[title="ok"]')).toBe(null)
   })
 })

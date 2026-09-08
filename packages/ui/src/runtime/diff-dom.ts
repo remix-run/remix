@@ -1,21 +1,8 @@
 import { invariant } from './invariant.ts'
 import type { FrameContext } from './frame.ts'
 import { disposeClientEntryBoundary, getClientEntryBoundaryOwner } from './client-entry-boundary.ts'
-import {
-  findFrameEndMarkerIndex,
-  findHydrationEndMarkerIndex,
-  getFrameEndMarker,
-  getFrameMarkerId,
-  getHydrationEndMarker,
-  getHydrationMarkerId,
-  isCommentNode,
-  isFrameEndMarker,
-  isFrameStartMarker,
-  isHydrationEndMarker,
-  isHydrationStartMarker,
-} from './core/markers.ts'
 
-type MarkerKind = 'frame-start' | 'frame-end' | 'hydration-start' | 'hydration-end'
+type MarkerKind = 'frame-start' | 'frame-end' | 'virtual-root-start' | 'virtual-root-end'
 
 type CommentMarkerRangeReplacement = {
   currentStart: Comment
@@ -65,13 +52,13 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   }
 
   // Hydration marker range -> Hydration marker range
-  if (isHydrationStartMarker(current) && isHydrationStartMarker(next)) {
+  if (isVirtualRootStartMarker(current) && isVirtualRootStartMarker(next)) {
     let nextData = next.data
     if (current.data !== nextData) {
       current.data = nextData
     }
 
-    let end = getHydrationEndMarker(next)
+    let end = findHydrationEndMarker(next)
     // Fast-forward across this hydrated region.
     return end
   }
@@ -91,10 +78,10 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
         let nextMarkerData = getFrameMarkerData(next, context)
         if (frame && nextMarkerData) {
           if (nextMarkerData.status === 'resolved') {
-            let nextEnd = getFrameEndMarker(next)
+            let nextEnd = findFrameEndMarker(next)
             let nextContent = collectFrameContentFragment(current.ownerDocument, next, nextEnd)
             let render = frame.renderMarkerContent(
-              { ...nextMarkerData, id: getFrameMarkerId(next) },
+              { ...nextMarkerData, id: getFrameId(next) },
               nextContent,
               {
                 data: context.data,
@@ -108,7 +95,7 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
           }
 
           if (frame.isDisplayingResolvedContent()) {
-            return getFrameEndMarker(next)
+            return findFrameEndMarker(next)
           }
         }
       } else if (current.data !== newData) {
@@ -432,18 +419,18 @@ function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
 
   for (let i = 0; i < nodes.length; i++) {
     let node = nodes[i]
-    if (isHydrationStartMarker(node)) {
-      let endIndex = findHydrationEndMarkerIndex(nodes, i)
+    if (isVirtualRootStartMarker(node)) {
+      let endIndex = findHydrationEndIndex(nodes, i)
       invariant(endIndex > i, 'Hydration end marker not found')
       let end = nodes[endIndex]
-      invariant(isHydrationEndMarker(end), 'Expected hydration end marker')
+      invariant(isVirtualRootEndMarker(end), 'Expected hydration end marker')
       units.push({ kind: 'hydration', start: node, end, startIndex: i, endIndex })
       i = endIndex
       continue
     }
 
     if (isFrameStartMarker(node)) {
-      let endIndex = findFrameEndMarkerIndex(nodes, i)
+      let endIndex = findFrameEndIndex(nodes, i)
       invariant(endIndex > i, 'Frame end marker not found')
       let end = nodes[endIndex]
       invariant(isFrameEndMarker(end), 'Expected frame end marker')
@@ -452,7 +439,7 @@ function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
       continue
     }
 
-    invariant(!isHydrationEndMarker(node), 'Unexpected hydration end marker')
+    invariant(!isVirtualRootEndMarker(node), 'Unexpected hydration end marker')
     invariant(!isFrameEndMarker(node), 'Unexpected frame end marker')
     units.push({ kind: 'node', node, startIndex: i, endIndex: i })
   }
@@ -538,13 +525,80 @@ function getMarkerKind(node: Node): MarkerKind | undefined {
   if (!isCommentNode(node)) return undefined
   if (isFrameStartMarker(node)) return 'frame-start'
   if (isFrameEndMarker(node)) return 'frame-end'
-  if (isHydrationStartMarker(node)) return 'hydration-start'
-  if (isHydrationEndMarker(node)) return 'hydration-end'
+  if (isVirtualRootStartMarker(node)) return 'virtual-root-start'
+  if (isVirtualRootEndMarker(node)) return 'virtual-root-end'
   return undefined
 }
 
 function markerKindsMatch(a: Node, b: Node): boolean {
   return getMarkerKind(a) === getMarkerKind(b)
+}
+
+function isHydrationEndComment(node: Node): node is Comment {
+  return isCommentNode(node) && node.data.trim() === '/rmx:h'
+}
+
+function findHydrationEndMarker(start: Comment): Comment {
+  let node: Node | null = start.nextSibling
+  let depth = 1
+
+  while (node) {
+    if (isCommentNode(node)) {
+      if (isVirtualRootStartMarker(node)) depth++
+      if (isVirtualRootEndMarker(node)) {
+        depth--
+        if (depth === 0) return node
+      }
+    }
+    node = node.nextSibling
+  }
+
+  throw new Error('Hydration end marker not found')
+}
+
+function findHydrationEndIndex(nodes: Node[], startIdx: number): number {
+  let depth = 1
+
+  for (let j = startIdx + 1; j < nodes.length; j++) {
+    let node = nodes[j]
+    if (isVirtualRootStartMarker(node)) depth++
+    if (isHydrationEndComment(node)) {
+      depth--
+      if (depth === 0) return j
+    }
+  }
+  return startIdx
+}
+
+function findFrameEndMarker(start: Comment): Comment {
+  let node: Node | null = start.nextSibling
+  let depth = 1
+
+  while (node) {
+    if (isFrameStartMarker(node)) depth++
+    if (isFrameEndMarker(node)) {
+      depth--
+      if (depth === 0) return node
+    }
+    node = node.nextSibling
+  }
+
+  throw new Error('Frame end marker not found')
+}
+
+function findFrameEndIndex(nodes: Node[], startIdx: number): number {
+  let depth = 1
+
+  for (let j = startIdx + 1; j < nodes.length; j++) {
+    let node = nodes[j]
+    if (isFrameStartMarker(node)) depth++
+    if (isFrameEndMarker(node)) {
+      depth--
+      if (depth === 0) return j
+    }
+  }
+
+  return startIdx
 }
 
 function isTextNode(node: Node): node is Text {
@@ -553,6 +607,18 @@ function isTextNode(node: Node): node is Text {
 
 function isElement(node: Node): node is Element {
   return node.nodeType === Node.ELEMENT_NODE
+}
+
+function isCommentNode(node: Node): node is Comment {
+  return node.nodeType === Node.COMMENT_NODE
+}
+
+function isFrameStartMarker(node: Node): node is Comment {
+  return node instanceof Comment && node.data.trim().startsWith('rmx:f:')
+}
+
+function isFrameEndMarker(node: Node): node is Comment {
+  return node instanceof Comment && node.data.trim() === '/rmx:f'
 }
 
 function shouldPreserveFrameStartMarker(
@@ -577,7 +643,7 @@ function shouldPreserveHydrationStartMarker(
   next: Comment,
   context: FrameContext,
 ): boolean {
-  if (!isHydrationStartMarker(next)) return false
+  if (!isVirtualRootStartMarker(next)) return false
 
   let currentOwner = getClientEntryBoundaryOwner(current)
   let nextData = getHydrationMarkerData(next, context)
@@ -610,33 +676,45 @@ function getCommentMarkerRangeReplacement(
     return {
       currentStart: current,
       nextStart: next,
-      currentEndIndex: findFrameEndMarkerIndex(currentNodes, currentIndex),
-      nextEndIndex: findFrameEndMarkerIndex(nextNodes, nextIndex),
+      currentEndIndex: findFrameEndIndex(currentNodes, currentIndex),
+      nextEndIndex: findFrameEndIndex(nextNodes, nextIndex),
     }
   }
 
   if (
-    isHydrationStartMarker(current) &&
-    isHydrationStartMarker(next) &&
+    isVirtualRootStartMarker(current) &&
+    isVirtualRootStartMarker(next) &&
     !shouldPreserveHydrationStartMarker(current, next, context)
   ) {
     return {
       currentStart: current,
       nextStart: next,
-      currentEndIndex: findHydrationEndMarkerIndex(currentNodes, currentIndex),
-      nextEndIndex: findHydrationEndMarkerIndex(nextNodes, nextIndex),
+      currentEndIndex: findHydrationEndIndex(currentNodes, currentIndex),
+      nextEndIndex: findHydrationEndIndex(nextNodes, nextIndex),
     }
   }
 }
 
 function getHydrationMarkerData(marker: Comment, context: FrameContext) {
-  let id = getHydrationMarkerId(marker)
+  let id = getHydrationId(marker)
   return context.data.h?.[id]
 }
 
+function getHydrationId(marker: Comment): string {
+  let trimmed = marker.data.trim()
+  invariant(trimmed.startsWith('rmx:h:'), 'Invalid hydration start marker')
+  return trimmed.slice('rmx:h:'.length)
+}
+
 function getFrameMarkerData(marker: Comment, context: FrameContext) {
-  let id = getFrameMarkerId(marker)
+  let id = getFrameId(marker)
   return context.data.f?.[id]
+}
+
+function getFrameId(marker: Comment): string {
+  let trimmed = marker.data.trim()
+  invariant(trimmed.startsWith('rmx:f:'), 'Invalid frame start marker')
+  return trimmed.slice('rmx:f:'.length)
 }
 
 function replaceCommentMarkerRange(
@@ -659,8 +737,8 @@ function replaceCommentMarkerRange(
 }
 
 function findCommentMarkerRangeEnd(start: Comment): Comment {
-  if (isFrameStartMarker(start)) return getFrameEndMarker(start)
-  if (isHydrationStartMarker(start)) return getHydrationEndMarker(start)
+  if (isFrameStartMarker(start)) return findFrameEndMarker(start)
+  if (isVirtualRootStartMarker(start)) return findHydrationEndMarker(start)
   throw new Error('Comment marker range start not found')
 }
 
@@ -709,7 +787,7 @@ function disposeRemovedVirtualRoots(node: Node): void {
     let next = stack.pop()
     if (!next) continue
 
-    if (isHydrationStartMarker(next) && disposeClientEntryBoundary(next)) {
+    if (isVirtualRootStartMarker(next) && disposeClientEntryBoundary(next)) {
       continue
     }
 
@@ -741,4 +819,12 @@ function disposeFrameStartMarker(marker: Comment, context: FrameContext): void {
     subFrame.dispose()
     context.frameInstances.delete(marker)
   }
+}
+
+function isVirtualRootStartMarker(node: Node): node is Comment {
+  return isCommentNode(node) && node.data.trim().startsWith('rmx:h:')
+}
+
+function isVirtualRootEndMarker(node: Node): node is Comment {
+  return isCommentNode(node) && node.data.trim() === '/rmx:h'
 }

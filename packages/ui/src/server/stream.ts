@@ -12,12 +12,6 @@ import {
 } from '../runtime/core/attributes.ts'
 import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
 import { composeMixedProps, resolveMixDescriptors } from '../runtime/core/mix.ts'
-import {
-  FRAME_END_MARKER_HTML,
-  HYDRATION_END_MARKER_HTML,
-  frameStartMarkerHtml,
-  hydrationStartMarkerHtml,
-} from '../runtime/core/markers.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 
 interface VNode {
@@ -906,8 +900,8 @@ function buildEntrySegment(
     props: JSON.parse(JSON.stringify(props, replacer)),
   })
 
-  let start = staticSeg(hydrationStartMarkerHtml(instanceId))
-  let end = staticSeg(HYDRATION_END_MARKER_HTML)
+  let start = staticSeg(`<!-- rmx:h:${instanceId} -->`)
+  let end = staticSeg('<!-- /rmx:h -->')
   return compositeSeg([start, rendered, end])
 }
 
@@ -1040,7 +1034,9 @@ function serializeSegment(seg: Segment): string {
   if (seg.kind === 'composite') return seg.parts.map(serializeSegment).join('')
   // frame
   let inner = seg.content ? serializeSegment(seg.content) : ''
-  return frameStartMarkerHtml(seg.frameId) + inner + FRAME_END_MARKER_HTML
+  let start = `<!-- rmx:f:${seg.frameId} -->`
+  let end = `<!-- /rmx:f -->`
+  return start + inner + end
 }
 
 function escapeHtml(str: string): string {
