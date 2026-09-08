@@ -48,7 +48,7 @@ export const header = css({
   alignItems: 'center',
   minHeight: '64px',
   padding: '16px 0',
-  borderBottom: '1px solid light-dark(#e5e7eb, #2a2a30)',
+  borderBlockEnd: '1px solid light-dark(#e5e7eb, #2a2a30)',
   flexWrap: 'wrap',
   gap: '16px',
 })
@@ -88,7 +88,9 @@ export const switcherForm = css({
 
 export const select = css({
   height: '36px',
-  padding: '0 32px 0 12px',
+  paddingBlock: 0,
+  paddingInlineStart: '12px',
+  paddingInlineEnd: '32px',
   border: '1px solid light-dark(#d1d5db, #3f3f46)',
   borderRadius: '8px',
   color: 'light-dark(#1b1b1f, #e7e7ea)',
@@ -203,7 +205,7 @@ export const quickSwitchContainer = css({
 })
 
 export const quickSwitchLabel = css({
-  marginRight: '4px',
+  marginInlineEnd: '4px',
   color: 'light-dark(#6b7280, #9aa0aa)',
   fontSize: '13px',
   fontWeight: 500,
@@ -356,7 +358,7 @@ export const demoValue = css({
   fontSize: '13px',
   fontWeight: 600,
   overflowWrap: 'anywhere',
-  textAlign: 'right',
+  textAlign: 'end',
 })
 
 export const srOnly = css({
@@ -373,7 +375,7 @@ export const srOnly = css({
 
 export const footer = css({
   padding: '28px 0 0',
-  borderTop: '1px solid light-dark(#e5e7eb, #2a2a30)',
+  borderBlockStart: '1px solid light-dark(#e5e7eb, #2a2a30)',
   color: 'light-dark(#6b7280, #9aa0aa)',
   fontFamily: monoFont,
   fontSize: '12px',

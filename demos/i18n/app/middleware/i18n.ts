@@ -75,6 +75,7 @@ export function i18nMiddleware(): Middleware<{
       requestI18n,
       {
         locale,
+        direction: instance.dir(locale),
         detectionSource: source,
         t: instance.getFixedT(locale),
       },

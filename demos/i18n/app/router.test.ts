@@ -37,6 +37,33 @@ describe('i18n app', () => {
     assert.equal(explicitResponse.headers.get('Vary'), null)
   })
 
+  it('renders concurrent requests with localized metadata and plural forms', async () => {
+    let router = createAppRouter()
+    let locales = ['ja', 'ar', 'fr', 'es'] as const
+    let [japanese, arabic, french, spanish] = await Promise.all(
+      locales.map(async (locale) => {
+        let response = await router.fetch(new Request(origin + routes.home.href({ locale })))
+        assert.equal(response.status, 200)
+        assert.equal(response.headers.get('Content-Language'), locale)
+        return response.text()
+      }),
+    )
+
+    assert.match(japanese, /<html lang="ja" dir="ltr">/)
+    assert.match(japanese, /<title>Remix i18n デモ<\/title>/)
+    assert.match(japanese, /1 件の保留中タスクがあります/)
+    assert.match(arabic, /<html lang="ar" dir="rtl">/)
+    assert.match(arabic, /<title>مثال التدويل في Remix<\/title>/)
+    assert.match(arabic, /ليس لديك مهام معلقة/)
+    assert.match(arabic, /لديك مهمة واحدة معلقة/)
+    assert.match(arabic, /لديك مهمتان معلقتان/)
+    assert.match(arabic, /لديك 5 مهام معلقة/)
+    assert.match(arabic, /لديك 11 مهمة معلقة/)
+    assert.match(arabic, /لديك 100 مهمة معلقة/)
+    assert.match(french, /Vous avez 1000000 tâches en attente/)
+    assert.match(spanish, /Tienes 1000000 tareas pendientes/)
+  })
+
   it('serves the browser entry', async () => {
     let response = await createAppRouter().fetch(new Request(origin + scriptSrc))
 

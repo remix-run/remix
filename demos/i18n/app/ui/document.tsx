@@ -5,6 +5,7 @@ import * as styles from './styles.ts'
 
 interface DocumentProps {
   lang: string
+  dir: 'ltr' | 'rtl'
   title: string
   children: RemixNode
 }
@@ -12,7 +13,7 @@ interface DocumentProps {
 /** HTML document shell with explicit localized metadata. */
 export function Document(handle: Handle<DocumentProps>) {
   return () => (
-    <html lang={handle.props.lang}>
+    <html lang={handle.props.lang} dir={handle.props.dir}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
