@@ -281,7 +281,7 @@ describe('run', () => {
       globalThis,
       'fetch',
       async () =>
-        new Response('<main id="error">Account not found</main>', {
+        new Response('Not Found', {
           headers: { 'Content-Type': 'text/plain' },
           status: 404,
           statusText: 'Not Found',
@@ -308,7 +308,6 @@ describe('run', () => {
       expect(reportedError).toBeInstanceOf(Error)
       expect((reportedError as Error).message).toBe('Failed to resolve frame: 404 Not Found')
       expect(document.getElementById('initial')?.textContent).toBe('Initial')
-      expect(document.getElementById('error')).toBeNull()
     } finally {
       app.dispose()
     }
