@@ -34,7 +34,6 @@ function createEmittedModule(): EmittedModule {
       fingerprint: 'code',
     },
     fingerprint: null,
-    importUrls: [],
     sourceMap: null,
   }
 }

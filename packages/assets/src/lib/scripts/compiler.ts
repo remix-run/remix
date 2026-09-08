@@ -215,17 +215,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     },
 
     async getPreloadLayers(filePath) {
-      let resolvedEntries: string[] = []
-      let seen = new Set<string>()
-
-      for (let resolvedModule of (Array.isArray(filePath) ? filePath : [filePath]).map((nextPath) =>
-        resolveServedScriptOrThrow(resolveInputFilePath(nextPath)),
-      )) {
-        if (seen.has(resolvedModule.identityPath)) continue
-        seen.add(resolvedModule.identityPath)
-        resolvedEntries.push(resolvedModule.identityPath)
-      }
-
+      let resolvedEntries = resolveInputScriptRoots(filePath)
       let visited = new Set(resolvedEntries)
       let queue = [...resolvedEntries]
       let layers: string[][] = []

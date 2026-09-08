@@ -15,7 +15,7 @@ type InstalledImportMap = {
 }
 
 interface ImportMapManager {
-  consumeImportMaps(source: ParentNode, onConflict: () => void): boolean
+  consumeImportMaps(source: ParentNode): 'ready' | 'conflict' | 'blocked'
   disconnect(): void
   shouldPreserveHeadNode(node: Node): boolean
 }
@@ -77,14 +77,14 @@ function createImportMapManager(doc: Document): ImportMapManager {
   processImportMaps()
 
   return {
-    consumeImportMaps(source, onConflict) {
-      if (conflicted) return false
+    consumeImportMaps(source) {
+      if (conflicted) return 'blocked'
       processMutations(observer.takeRecords())
       processImportMaps()
       let scripts = Array.from(
         source.querySelectorAll<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR),
       )
-      if (scripts.length === 0) return true
+      if (scripts.length === 0) return 'ready'
 
       let pendingImportMap: InstalledImportMap = {
         imports: new Map(installedImportMap.imports),
@@ -109,17 +109,16 @@ function createImportMapManager(doc: Document): ImportMapManager {
         if (!(error instanceof ImportMapConflictError)) throw error
         console.warn(error.message)
         conflicted = true
-        onConflict()
-        return false
+        return 'conflict'
       }
 
       for (let delta of deltas) {
         let installedScript = appendImportMapScript(doc, delta, nonce)
         processedScripts.add(installedScript)
-        mergeInstalledImportMap(installedImportMap, delta, baseUrl)
       }
+      installedImportMap = pendingImportMap
       for (let script of scripts) script.remove()
-      return true
+      return 'ready'
     },
     disconnect() {
       observer.disconnect()
@@ -239,17 +238,7 @@ function mergeInstalledImportMap(
   importMap: ImportMap,
   baseUrl: string,
 ): void {
-  if (importMap.imports) {
-    for (let [specifier, href] of Object.entries(importMap.imports)) {
-      let normalizedSpecifier = normalizeImportMapSpecifier(specifier, baseUrl)
-      if (normalizedSpecifier === null) continue
-      if (installedImportMap.imports.has(normalizedSpecifier)) continue
-      installedImportMap.imports.set(normalizedSpecifier, {
-        href,
-        normalizedHref: normalizeImportMapAddress(href, baseUrl),
-      })
-    }
-  }
+  mergeInstalledImports(installedImportMap.imports, importMap.imports, baseUrl)
 
   if (importMap.scopes) {
     for (let [scope, imports] of Object.entries(importMap.scopes)) {
@@ -261,15 +250,7 @@ function mergeInstalledImportMap(
         installedImportMap.scopes.set(normalizedScope, installedScopeImports)
       }
 
-      for (let [specifier, href] of Object.entries(imports)) {
-        let normalizedSpecifier = normalizeImportMapSpecifier(specifier, baseUrl)
-        if (normalizedSpecifier === null) continue
-        if (installedScopeImports.has(normalizedSpecifier)) continue
-        installedScopeImports.set(normalizedSpecifier, {
-          href,
-          normalizedHref: normalizeImportMapAddress(href, baseUrl),
-        })
-      }
+      mergeInstalledImports(installedScopeImports, imports, baseUrl)
     }
   }
 
@@ -279,6 +260,21 @@ function mergeInstalledImportMap(
       if (normalizedUrl === null || installedImportMap.integrity.has(normalizedUrl)) continue
       installedImportMap.integrity.set(normalizedUrl, metadata)
     }
+  }
+}
+
+function mergeInstalledImports(
+  installed: Map<string, InstalledImportMapEntry>,
+  imports: ImportMapImports | undefined,
+  baseUrl: string,
+): void {
+  for (let [specifier, href] of Object.entries(imports ?? {})) {
+    let normalizedSpecifier = normalizeImportMapSpecifier(specifier, baseUrl)
+    if (normalizedSpecifier === null || installed.has(normalizedSpecifier)) continue
+    installed.set(normalizedSpecifier, {
+      href,
+      normalizedHref: normalizeImportMapAddress(href, baseUrl),
+    })
   }
 }
 

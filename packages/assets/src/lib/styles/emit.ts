@@ -18,7 +18,6 @@ export type EmittedAsset = {
 export type EmittedStyle = {
   code: EmittedAsset
   fingerprint: string | null
-  importUrls: string[]
   sourceMap: EmittedAsset | null
 }
 
@@ -47,9 +46,6 @@ export async function emitResolvedStyle(
   },
 ): Promise<EmitResult> {
   try {
-    let importUrls = await Promise.all(
-      resolvedStyle.deps.map((depPath) => options.getServedUrl(depPath)),
-    )
     let rewriteResult = await rewriteDependencies(resolvedStyle, options)
     let finalCode = rewriteResult.code
     let sourceMap = rewriteResult.sourceMap
@@ -75,7 +71,6 @@ export async function emitResolvedStyle(
       value: {
         code,
         fingerprint: options.fingerprintAssets ? code.fingerprint : null,
-        importUrls,
         sourceMap,
       },
     }

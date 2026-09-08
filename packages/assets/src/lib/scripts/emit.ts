@@ -18,7 +18,6 @@ export type EmittedAsset = {
 export type EmittedModule = {
   code: EmittedAsset
   fingerprint: string | null
-  importUrls: string[]
   sourceMap: EmittedAsset | null
 }
 
@@ -50,7 +49,6 @@ export async function emitResolvedModule(
   },
 ): Promise<EmitResult> {
   try {
-    let importUrls: string[] = []
     let rewriteResult = await rewriteImports(resolvedModule, options)
     let finalCode = prependHmrContext(resolvedModule, rewriteResult.code, options)
     let sourceMap = rewriteResult.sourceMap
@@ -76,7 +74,6 @@ export async function emitResolvedModule(
       value: {
         code,
         fingerprint: options.fingerprintAssets ? code.fingerprint : null,
-        importUrls,
         sourceMap,
       },
     }
@@ -97,20 +94,22 @@ async function rewriteImports(
 
   for (let imported of resolvedModule.imports) {
     let hmrImportTimestamp = options.getHmrImportTimestamp(imported.depPath)
-    let url =
-      hmrImportTimestamp === null
-        ? imported.compiledSpecifier === imported.specifier
-          ? null
-          : imported.specifier
-        : addTimestampQuery(await options.getServedUrl(imported.depPath), hmrImportTimestamp)
-
-    if (url === null) {
+    let replacementSpecifier = imported.specifier
+    if (hmrImportTimestamp !== null) {
+      replacementSpecifier = addTimestampQuery(
+        await options.getServedUrl(imported.depPath),
+        hmrImportTimestamp,
+      )
+    } else if (imported.compiledSpecifier === imported.specifier) {
       continue
     }
+
     rewrittenSource.overwrite(
       imported.start,
       imported.end,
-      imported.quote ? `${imported.quote}${url}${imported.quote}` : url,
+      imported.quote
+        ? `${imported.quote}${replacementSpecifier}${imported.quote}`
+        : replacementSpecifier,
     )
     changed = true
   }

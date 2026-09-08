@@ -1,26 +1,22 @@
 import {
   detectMultipleImportMapSupport,
-  importShim,
+  importModule,
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
 import { run } from 'remix/ui'
 import { closePagefindSearch, startPagefindSearch } from 'remix-docs-shared/search/browser'
 
-const supportsMultipleImportMapsPromise = detectMultipleImportMapSupport()
-
 let app = run({
   async loadModule(moduleUrl: string, exportName: string) {
-    let module = (await supportsMultipleImportMapsPromise)
-      ? await import(moduleUrl)
-      : await importShim(moduleUrl)
+    let module = await importModule(moduleUrl)
     let Component = module[exportName]
-    if (!Component) {
+    if (typeof Component !== 'function') {
       throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
     }
     return Component
   },
   async processClientEntryPreloads(preloads) {
-    if (await supportsMultipleImportMapsPromise) return preloads
+    if (await detectMultipleImportMapSupport()) return preloads
 
     preloadShim(preloads)
     return []

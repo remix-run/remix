@@ -68,23 +68,22 @@ The standard `render({ assets })` middleware resolves client entries with `getSc
 ```ts
 import {
   detectMultipleImportMapSupport,
-  importShim,
+  importModule,
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
 import { run } from 'remix/ui'
 
-let supportsMultipleImportMapsPromise = detectMultipleImportMapSupport()
-
 run({
   async loadModule(moduleUrl, exportName) {
-    let module = (await supportsMultipleImportMapsPromise)
-      ? await import(moduleUrl)
-      : await importShim(moduleUrl)
-
-    return module[exportName]
+    let module = await importModule(moduleUrl)
+    let Component = module[exportName]
+    if (typeof Component !== 'function') {
+      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+    }
+    return Component
   },
   async processClientEntryPreloads(preloads) {
-    if (await supportsMultipleImportMapsPromise) return preloads
+    if (await detectMultipleImportMapSupport()) return preloads
 
     preloadShim(preloads)
     return []

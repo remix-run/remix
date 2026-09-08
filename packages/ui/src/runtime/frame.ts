@@ -318,10 +318,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     source: ParentNode,
     documentHref?: string,
   ): Promise<boolean> {
-    if (
-      !importMapManager.consumeImportMaps(source, () => reloadDocument(container.doc, documentHref))
-    ) {
+    let importMapStatus = importMapManager.consumeImportMaps(source)
+    if (importMapStatus !== 'ready') {
       lifecycleController.abort()
+      if (importMapStatus === 'conflict') reloadDocument(container.doc, documentHref)
       return false
     }
     await modulePreloader.consumePreloadLinks(source, init.processClientEntryPreloads)

@@ -103,21 +103,21 @@ When targeting browsers without native support for multiple import maps, use
 ```tsx
 import {
   detectMultipleImportMapSupport,
-  importShim,
+  importModule,
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
 
-let supportsMultipleImportMapsPromise = detectMultipleImportMapSupport()
-
 let app = run({
   async loadModule(moduleUrl, exportName) {
-    let module = (await supportsMultipleImportMapsPromise)
-      ? await import(moduleUrl)
-      : await importShim(moduleUrl)
-    return module[exportName]
+    let module = await importModule(moduleUrl)
+    let Component = module[exportName]
+    if (typeof Component !== 'function') {
+      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+    }
+    return Component
   },
   async processClientEntryPreloads(preloads) {
-    if (await supportsMultipleImportMapsPromise) return preloads
+    if (await detectMultipleImportMapSupport()) return preloads
 
     preloadShim(preloads)
     return []

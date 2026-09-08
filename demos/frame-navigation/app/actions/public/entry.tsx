@@ -2,7 +2,7 @@ import type { Handle, RemixNode, ResolveFrameOptions } from 'remix/ui'
 import { createRoot, css, on, run } from 'remix/ui'
 import {
   detectMultipleImportMapSupport,
-  importShim,
+  importModule,
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
 
@@ -10,13 +10,9 @@ import { animateEntrance, spring } from 'remix/ui/animation'
 
 import { routes } from '../../routes.ts'
 
-const supportsMultipleImportMapsPromise = detectMultipleImportMapSupport()
-
 const app = run({
   async loadModule(moduleUrl, exportName) {
-    let mod = (await supportsMultipleImportMapsPromise)
-      ? await import(moduleUrl)
-      : await importShim(moduleUrl)
+    let mod = await importModule(moduleUrl)
     let exp = (mod as any)[exportName]
     if (typeof exp !== 'function') {
       throw new Error(`Export "${exportName}" from "${moduleUrl}" is not a function`)
@@ -24,7 +20,7 @@ const app = run({
     return exp
   },
   async processClientEntryPreloads(preloads) {
-    if (await supportsMultipleImportMapsPromise) return preloads
+    if (await detectMultipleImportMapSupport()) return preloads
 
     preloadShim(preloads)
     return []

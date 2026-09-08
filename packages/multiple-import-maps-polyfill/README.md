@@ -34,28 +34,27 @@ feature.openSearch()
 
 `importModule` uses native `import()` when the browser supports multiple import maps. In other browsers, it loads the module through the polyfill using every import map currently installed in the document.
 
-For integrations that manage dynamic module loading and preloading separately, use `detectMultipleImportMapSupport`, `importShim`, and `preloadShim`. For example, configure Remix UI to load client entries discovered during navigation:
+Use `detectMultipleImportMapSupport` and `preloadShim` when an integration also manages module preloads. For example, configure Remix UI to load client entries discovered during navigation:
 
 ```ts
 import {
   detectMultipleImportMapSupport,
-  importShim,
+  importModule,
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
 import { run } from 'remix/ui'
 
-let supportsMultipleImportMapsPromise = detectMultipleImportMapSupport()
-
 run({
   async loadModule(moduleUrl, exportName) {
-    let module = (await supportsMultipleImportMapsPromise)
-      ? await import(moduleUrl)
-      : await importShim(moduleUrl)
-
-    return module[exportName]
+    let module = await importModule(moduleUrl)
+    let Component = module[exportName]
+    if (typeof Component !== 'function') {
+      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+    }
+    return Component
   },
   async processClientEntryPreloads(preloads) {
-    if (await supportsMultipleImportMapsPromise) return preloads
+    if (await detectMultipleImportMapSupport()) return preloads
 
     preloadShim(preloads)
     return []

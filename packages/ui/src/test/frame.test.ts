@@ -1492,11 +1492,13 @@ describe('frames', () => {
     ].join('')
 
     let frame = createClientEntryResourceTestFrame()
+    let otherFrame = createClientEntryResourceTestFrame()
     let warn = t.mock.method(console, 'warn', () => {})
     let navigate = mockDocumentNavigation(t)
 
     try {
       await frame.ready()
+      await otherFrame.ready()
       await frame.render(
         `${remixImportMapHead({
           imports: {
@@ -1518,10 +1520,12 @@ describe('frames', () => {
       expect(getImportMapScripts()).toHaveLength(1)
       expect(document.querySelector('main')).toBeNull()
       await frame.render('<main>Another chunk</main>')
+      await otherFrame.render('<main>Another frame</main>')
       expect(navigate).toHaveBeenCalledTimes(1)
       expect(document.querySelector('main')).toBeNull()
     } finally {
       frame.dispose()
+      otherFrame.dispose()
     }
   })
 

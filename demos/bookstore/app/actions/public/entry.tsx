@@ -1,17 +1,13 @@
 import { run } from 'remix/ui'
 import {
   detectMultipleImportMapSupport,
-  importShim,
+  importModule,
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
 
-const supportsMultipleImportMapsPromise = detectMultipleImportMapSupport()
-
 const app = run({
   async loadModule(moduleUrl: string, exportName: string) {
-    let mod = (await supportsMultipleImportMapsPromise)
-      ? await import(moduleUrl)
-      : await importShim(moduleUrl)
+    let mod = await importModule(moduleUrl)
     let Component = mod[exportName]
     if (typeof Component !== 'function') {
       throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
@@ -19,7 +15,7 @@ const app = run({
     return Component
   },
   async processClientEntryPreloads(preloads) {
-    if (await supportsMultipleImportMapsPromise) {
+    if (await detectMultipleImportMapSupport()) {
       return preloads
     }
 

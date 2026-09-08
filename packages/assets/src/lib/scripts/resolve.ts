@@ -247,10 +247,8 @@ export async function resolveModule(
       pendingBareImportScopes.push({
         imported,
         resolvedIdentityPath: resolvedImport.identityPath,
-        specifier: normalizedSpecifierForDirectoryResolution(
-          unresolved.specifier,
-          transformed.resolvedPath,
-        ),
+        specifier: normalizeSpecifierResolution(unresolved.specifier, transformed.resolvedPath)
+          .specifier,
         trackedResolution,
       })
     }
@@ -511,13 +509,6 @@ async function getBareImportScopePathname(args: {
   }
 
   return ensureTrailingSlash(broadestScopePathname)
-}
-
-function normalizedSpecifierForDirectoryResolution(
-  specifier: string,
-  importerPath: string,
-): string {
-  return normalizeSpecifierResolution(specifier, importerPath).specifier
 }
 
 function ensureTrailingSlash(value: string): string {
