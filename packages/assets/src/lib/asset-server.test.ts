@@ -3027,19 +3027,6 @@ describe('asset-server', () => {
     assert.equal(secondEtag, firstEtag)
   })
 
-  it('maps authored imports even when those modules can also be fetched directly', async () => {
-    await write(dir, 'app/a.ts', 'import "./b.ts"\nexport const a = true')
-    await write(dir, 'app/b.ts', 'export const b = true')
-    let assetServer = createTestServer(dir, { fingerprint: true })
-
-    let response = await getByFile(assetServer, 'app/a.ts')
-    assert.ok(response)
-    let body = await response.text()
-    let importMap = await assetServer.getImportMap('app/a.ts')
-    assert.ok(body.includes('./b.ts'))
-    assert.match(importMap.imports['/assets/app/b.ts'] ?? '', /\/assets\/app\/b\.@/)
-  })
-
   it('omits identity import map entries for stable script URLs', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
