@@ -518,7 +518,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
   })
 
   it('handles component, stylesheet, and server updates through node-hmr', async (t) => {
-    let fixture = await createNodeHmrFixture()
+    let fixture = await createNodeHmrFixture({ debugNodeHmr: true })
     let server: NodeHmrTestServer | undefined
 
     try {
@@ -539,6 +539,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
+      server.debug('writing app/ClientField.tsx')
       await fs.writeFile(
         clientFieldPath,
         clientFieldSource.replace('<ClientMessage />', 'Client: component update'),
@@ -1108,7 +1109,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
   })
 
   it('updates a node-hmr module imported by a client entry', async (t) => {
-    let fixture = await createNodeHmrFixture({ debugNodeHmr: true })
+    let fixture = await createNodeHmrFixture()
     let server: NodeHmrTestServer | undefined
 
     try {
@@ -1121,7 +1122,6 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before update')
 
-      server.debug('writing app/client-message.tsx')
       await write(
         fixture.rootDir,
         'app/client-message.tsx',
