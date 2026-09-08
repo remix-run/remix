@@ -1,6 +1,6 @@
 import { getTopFrame, getNamedFrame } from './run.ts'
 import { reloadFrameForNavigation } from './frame.ts'
-import { createNavigationSourceResolver, type FormSubmission } from './form-navigation.ts'
+import { createNavigationSourceResolver, type FormSubmission } from './navigation-source.ts'
 
 interface NavigationPrecommitControllerLike {
   redirect(url: string, options: { history: 'replace' }): void

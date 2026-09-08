@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
+import { createFormNavigationResolver, type FormSubmission } from './navigation-source.ts'
 
 describe('form navigation', () => {
   it('resolves browser form data and submitter overrides', async () => {
