@@ -1,1 +1,1 @@
-Use document navigations instead of frame-aware client navigation when the browser does not support `NavigateEvent.sourceElement`
+Browsers without `NavigateEvent.sourceElement` support now use full document navigation, so links and forms keep working when frame navigation is unavailable (see #11820).

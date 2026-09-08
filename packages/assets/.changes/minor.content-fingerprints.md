@@ -1,4 +1,4 @@
-BREAKING CHANGE: Fingerprinted assets now use hashes of their final emitted bytes instead of per-build source hashes. Replace `createAssetServer({ fingerprint: { buildId } })` with `createAssetServer({ fingerprint: true })`.
+BREAKING CHANGE: Fingerprinted assets now use hashes of their final emitted bytes instead of per-build source hashes. Replace `createAssetServer({ fingerprint: { buildId } })` with `createAssetServer({ fingerprint: true })` (see #11706).
 
 If you enabled fingerprinting in `app/assets.ts`, update the option:
 

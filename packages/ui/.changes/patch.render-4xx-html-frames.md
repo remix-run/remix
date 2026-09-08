@@ -1,1 +1,1 @@
-Render `3xx` and `4xx` HTML responses from the default frame resolver so progressively enhanced form validation and error pages update the frame. Match HTML content types regardless of case (see #11823).
+Frames now render HTML responses with `3xx` and `4xx` status codes, so form validation messages and error pages appear in the frame when using the default resolver. HTML content types are now recognized regardless of case (see #11823).
