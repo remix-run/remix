@@ -1,1 +1,1 @@
-Report a descriptive component error when `handle.update()` is called before the initial commit or during rendering instead of surfacing an unhandled `scheduleUpdate not implemented` promise rejection (see #11642).
+Warn and skip the extra render when `handle.update()` is called during setup, and report a descriptive component error when it is called during rendering or before the initial commit from outside setup (see #11642).

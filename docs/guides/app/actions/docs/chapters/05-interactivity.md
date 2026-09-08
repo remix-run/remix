@@ -212,9 +212,10 @@ Calling `handle.update()` schedules work and returns a promise. Await it when th
 updated DOM:
 
 Call it from an event handler, queued task, subscription, timer, or other work that runs after the
-component commits. Calling it before the initial commit or during rendering throws an error. If
-rendering discovers work that should run after the commit, schedule that work with
-`handle.queueTask()`.
+component commits. Calling it during setup warns and skips the extra render because the initial
+render follows setup. Calling it during rendering, or before the initial commit from outside setup,
+throws an error. If rendering discovers work that should run after the commit, schedule that work
+with `handle.queueTask()`.
 
 ```tsx
 import { on, ref } from "remix/ui";

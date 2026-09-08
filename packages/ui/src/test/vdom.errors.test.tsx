@@ -95,24 +95,31 @@ describe('vdom error handling', () => {
       expect((errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error).toBe(error)
     })
 
-    it('reports handle.update() calls during setup', (t) => {
+    it('warns and ignores handle.update() calls during setup', async (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
       let errorHandler = t.mock.fn()
+      let warnSpy = t.mock.method(console, 'warn', () => {})
       root.addEventListener('error', errorHandler)
+      let updatePromise: Promise<AbortSignal> | undefined
 
       function SetupUpdate(handle: Handle) {
-        handle.update()
+        updatePromise = handle.update()
         return () => <div>ok</div>
       }
 
       root.render(<SetupUpdate />)
 
-      expect(errorHandler).toHaveBeenCalledTimes(1)
-      let error = (errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error as Error
-      expect(error.message).toBe(
-        'Cannot call handle.update() while SetupUpdate is running its setup function. Call it from an event handler or handle.queueTask() instead.',
+      expect(errorHandler).not.toHaveBeenCalled()
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+      expect(warnSpy.mock.calls[0]?.arguments[0]).toBe(
+        'Ignored handle.update() while SetupUpdate is running its setup function. The initial render includes setup changes.',
       )
+      expect(container.innerHTML).toBe('<div>ok</div>')
+
+      if (updatePromise === undefined) throw new Error('Expected setup update promise')
+      let signal = await updatePromise
+      expect(signal.aborted).toBe(false)
     })
 
     it("reports updates to a parent before the parent's initial render commits", (t) => {

@@ -35,10 +35,11 @@ export interface Handle<Props = Record<string, never>, ContextValue = NoContext>
    * that resolves with an AbortSignal after the update completes. Call this
    * from an event handler, queued task, or other work that runs after the
    * component commits. The signal is aborted when the component re-renders or
-   * is removed.
+   * is removed. Calling this during setup warns and skips the extra render;
+   * the promise resolves after the initial commit.
    *
    * @returns A promise that resolves with an AbortSignal after the update
-   * @throws If called before the initial commit or during rendering
+   * @throws If called during rendering or before the initial commit outside setup
    */
   update(): Promise<AbortSignal>
 
@@ -374,6 +375,14 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
         if (component.#removed) return Promise.resolve(AbortSignal.abort())
 
         let name = component.#config.type.name || 'Anonymous'
+        if (component.#phase === 'setup') {
+          console.warn(
+            `Ignored handle.update() while ${name} is running its setup function. The initial render includes setup changes.`,
+          )
+          return new Promise((resolve) => {
+            this.#tasks.push((signal) => resolve(signal))
+          })
+        }
         if (component.#phase !== 'idle') {
           throw new Error(
             `Cannot call handle.update() while ${name} is running its ${component.#phase} function. Call it from an event handler or handle.queueTask() instead.`,
