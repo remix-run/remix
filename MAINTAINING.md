@@ -100,11 +100,12 @@ pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
 
 ## Agentic Workflows
 
-Remix has a handful of administrator-only [agentic workflows](https://github.github.com/gh-aw/) and
-an agentic [comment-driven router workflow](./.github/workflows/aw-comment-router.md)
-to provide natural language routing to relevant workflows. Workflows can do things such as triage
-an issue, review a pull request, implement an issue or accepted Proposal Discussion, or iterate on
-a pull request.
+Remix provides three administrator-only commands through
+[agentic workflows](https://github.github.com/gh-aw/): `/review`, `/implement`, and `/iterate`.
+Use a slash-command comment, an applicable `aw:*` label, or mention `@remix-run-bot` with a natural
+language request. The
+[`comment router`](https://github.com/remix-run/remix/blob/main/.github/workflows/aw-comment-router.md)
+selects the command from the mention and its triggering item.
 
 ```mermaid
 flowchart LR
@@ -122,10 +123,23 @@ flowchart LR
 
 | Command      | Where                                 | Direct triggers                                                                 | Result                                                                                                                                                                                                                                                   |
 | ------------ | ------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/triage`    | Issue                                 | Comment beginning with `/triage`, or apply `aw:triage`                          | Investigates the report and duplicates. It may ask for information, explain a likely fix, or comment and close only a clear duplicate, proposal, support request, spam, or out-of-scope issue. It never edits code.                                      |
-| `/review`    | Pull request                          | Comment beginning with `/review`, or apply `aw:review`                          | Posts one read-only review comment with high-confidence P1-P3 findings. It never checks out or executes contributor code, edits the pull request, approves it, or merges it.                                                                             |
+| `/review`    | Issue                                 | Comment beginning with `/review`, or apply `aw:review`                          | Investigates the report and duplicates. It may ask for information, explain a likely fix, or comment and close only a clear duplicate, proposal, support request, spam, or out-of-scope issue. It never edits code.                                      |
+| `/review`    | Pull request                          | Comment beginning with `/review`, or apply `aw:review`                          | Posts one read-only review comment with high-confidence P1-P3 findings. It never executes contributor code, edits the pull request, approves it, or merges it.                                                                                           |
+| `/review`    | Proposal Discussion                   | Comment beginning with `/review`                                                | Posts one design assessment with actionable concerns, open questions, and next steps. It never accepts, implements, closes, or locks the proposal.                                                                                                       |
 | `/implement` | Issue or accepted Proposal Discussion | Comment beginning with `/implement`; `aw:implement` is also available on issues | Implements a focused change from trusted `main`, validates it, and opens at most one draft pull request. Protected changes remain visible in the draft for review; if changes outside the allowed paths are required, it falls back to an issue instead. |
 | `/iterate`   | Pull request                          | Comment beginning with `/iterate`, or apply `aw:iterate`                        | Applies administrator feedback directly to the triggering branch. Community forks require maintainer edits. It never creates a replacement pull request, merges, or approves.                                                                            |
+
+Use `/review` on an issue, pull request, or Proposal Discussion. The `aw:review` label is available
+on issues and pull requests; Discussions use comments. The triggering item selects one of three
+review workflows. Issue reviews
+run in [`aw-command-review-issue.md`](https://github.com/remix-run/remix/blob/main/.github/workflows/aw-command-review-issue.md),
+pull request reviews in
+[`aw-command-review-pull-request.md`](https://github.com/remix-run/remix/blob/main/.github/workflows/aw-command-review-pull-request.md),
+and proposal reviews in
+[`aw-command-review-proposal.md`](https://github.com/remix-run/remix/blob/main/.github/workflows/aw-command-review-proposal.md).
+Each workflow has its own prompt, model, timeout, tools, permissions, and output limits. The event
+filters ensure that only the matching workflow handles a `/review` comment or `aw:review` label.
+Only the issue review workflow can close an issue.
 
 Slash-command comments may include instructions after the command. For example:
 
@@ -134,26 +148,42 @@ Slash-command comments may include instructions after the command. For example:
 ```
 
 Applying an `aw:*` label carries no instructions. It invokes the command's default behavior, and
-the label is removed after triggering (per `gh-aw` `label_command` trigger). For `/iterate`, the default label behavior uses the most recent agentic review as supporting data.
+the label is removed after triggering (per `gh-aw` `label_command` trigger). For `/iterate`, the
+default label behavior uses the most recent agentic review as supporting data.
 
 ### Comment Router
 
 An administrator can use natural language instead of choosing a command by mentioning
-`@remix-run-bot` in a new issue, pull request, or Discussion comment. For example:
+`@remix-run-bot` in a new issue, pull request, or Proposal Discussion comment. For example:
 
 ```text
 @remix-run-bot review this pull request, focusing on the new cache invalidation behavior.
 ```
 
 The
-[`comment router`](./.github/workflows/aw-comment-router.md)
+[`comment router`](https://github.com/remix-run/remix/blob/main/.github/workflows/aw-comment-router.md)
 reads only the sanitized administrator comment and whether its target is an issue, pull request, or
-Discussion. It chooses exactly one command or asks one concise clarification question. The valid
-routes are:
+Discussion, including the Discussion category. It chooses exactly one command or asks one concise
+clarification question. The valid routes are:
 
-- Issue: `triage` or `implement`
+- Issue: `review` or `implement`
 - Pull request: `review` or `iterate`
-- Proposal Discussion: `implement`
+- Proposal Discussion: `review` or `implement`
+
+The router interprets natural language in the context of the triggering item. For `review`, the
+verified item type selects the issue, pull request, or proposal review workflow. Clarification
+questions offer only workflows supported by the triggering item.
+
+A bare `@remix-run-bot` mention or a general feedback request such as
+`@remix-run-bot - what do you think?` or `@remix-run-bot how does this look?` defaults to `review`
+on an issue, pull request, or Proposal Discussion. Explicit requests take precedence. The router
+asks for clarification for conflicting or unsupported requests, multiple requested workflows, or
+intent that remains unclear. Other Discussion categories have no supported workflows.
+
+Proposal reviews assess the design, API fit, tradeoffs, and open questions using the proposal and
+current repository as evidence. They do not require a pull request or implementation, and do not
+accept the proposal or authorize implementation. Use `/review` or a mention such as
+`@remix-run-bot review this proposal` in a Proposal Discussion.
 
 The router briefly applies the matching `aw:*` label to issues and pull requests, queues the command
 with `workflow_dispatch`, and removes the label without waiting for the command run to finish.
@@ -202,8 +232,9 @@ upgrades, and revert the workflow if the guarded push no longer works.
 In GitHub, open the repository's **Actions** tab and select one of these workflows:
 
 - [Remix bot comment router](https://github.com/remix-run/remix/actions/workflows/aw-comment-router.lock.yml)
-- [/triage](https://github.com/remix-run/remix/actions/workflows/aw-command-triage.lock.yml)
-- [/review](https://github.com/remix-run/remix/actions/workflows/aw-command-review.lock.yml)
+- [/review issue](https://github.com/remix-run/remix/actions/workflows/aw-command-review-issue.lock.yml)
+- [/review pull request](https://github.com/remix-run/remix/actions/workflows/aw-command-review-pull-request.lock.yml)
+- [/review proposal](https://github.com/remix-run/remix/actions/workflows/aw-command-review-proposal.lock.yml)
 - [/implement](https://github.com/remix-run/remix/actions/workflows/aw-command-implement.lock.yml)
 - [/iterate](https://github.com/remix-run/remix/actions/workflows/aw-command-iterate.lock.yml)
 
@@ -216,7 +247,9 @@ The same information is available with `gh`:
 ```sh
 # Find recent router or command runs
 gh run list --workflow aw-comment-router.lock.yml --limit 10
-gh run list --workflow aw-command-review.lock.yml --limit 10
+gh run list --workflow aw-command-review-issue.lock.yml --limit 10
+gh run list --workflow aw-command-review-pull-request.lock.yml --limit 10
+gh run list --workflow aw-command-review-proposal.lock.yml --limit 10
 
 # Inspect the job results, failed steps, or complete log
 gh run view <run-id> --json jobs,conclusion,url
@@ -231,9 +264,9 @@ agentic_run_dir="$(mktemp -d)"
 gh run download <run-id> --dir "$agentic_run_dir"
 ```
 
-Skipped runs are expected. The underlying workflows receive common issue or pull request events,
-then their generated conditions discard comments, labels, targets, actors, and commands that do not
-match.
+Skipped runs are expected. The underlying workflows receive issue, pull request, or Discussion
+events, then their generated conditions discard comments, labels, targets, categories, actors,
+and commands that do not match.
 
 ### Debugging Failed Runs
 
@@ -257,10 +290,20 @@ The human-authored sources are the Markdown files under `.github/workflows/`, in
 [`resolve-command-request.md`](https://github.com/remix-run/remix/blob/main/.github/workflows/shared/resolve-command-request.md)
 import. The `.lock.yml` files are generated. Never edit them by hand.
 
-After changing a source, regenerate affected workflow, for example:
+After changing a source, regenerate its workflow, for example:
 
 ```sh
 gh aw compile aw-comment-router --strict --validate --actionlint --shellcheck --poutine
+```
+
+Changes to `shared/resolve-command-request.md` affect all five command workflows. To regenerate
+the router and every command workflow together, run:
+
+```sh
+gh aw compile aw-comment-router \
+  aw-command-review-issue aw-command-review-pull-request aw-command-review-proposal \
+  aw-command-implement aw-command-iterate \
+  --strict --validate --actionlint --shellcheck --poutine
 ```
 
 Review both the Markdown source and generated lock-file diff. Use `--approve` only when intentionally

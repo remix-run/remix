@@ -1,5 +1,5 @@
-# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"a38529a133c6a2d4296301f8822b294a47a976c55f86c9ad7fa04c765ea2e037","body_hash":"6af4cfccd4be0801b625a45cb74a2dc284a2f58daefdbeea3dbaf58fe83f0a78","compiler_version":"v0.88.2","strict":true,"agent_id":"codex","agent_model":"gpt-5.6-terra","engine_versions":{"codex":"0.150.1"}}
-# gh-aw-manifest: {"version":1,"secrets":["CODEX_API_KEY","COPILOT_GITHUB_TOKEN","GH_AW_DEFAULT_OTLP_HEADERS","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GH_REMIX_PAT_AW","GITHUB_TOKEN","OPENAI_API_KEY","SHOPIFY_AI_PROXY"],"actions":[{"repo":"actions/cache/restore","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/cache/save","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/checkout","sha":"3d3c42e5aac5ba805825da76410c181273ba90b1","version":"v7.0.1"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"820762786026740c76f36085b0efc47a31fe5020","version":"v7.0.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"9271a1804551c0dc4fb0085a97979950aa2f8489","version":"v0.88.2"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.28.12","digest":"sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.28.12@sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12","digest":"sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12@sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.28.12","digest":"sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.28.12@sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.4.15","digest":"sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.4.15@sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e"},{"image":"ghcr.io/github/gh-aw-node","digest":"sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e","pinned_image":"ghcr.io/github/gh-aw-node@sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e"}],"mcp_servers":[{"name":"safeoutputs","tools":["missing_data","missing_tool","noop","route_agent_workflow"]}]}
+# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"bef839f1c64020b25b509ad2bb1c435ca9399646c6d488cb09d95af512f39900","body_hash":"f168a033d183cefa80e6ccfca390b1a704c40e2387f1e856c0b00e7b5dc20203","compiler_version":"v0.88.2","strict":true,"agent_id":"codex","agent_model":"gpt-5.6-sol","engine_versions":{"codex":"0.150.1"}}
+# gh-aw-manifest: {"version":1,"secrets":["CODEX_API_KEY","COPILOT_GITHUB_TOKEN","GH_AW_DEFAULT_OTLP_HEADERS","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GH_REMIX_PAT_AW","GITHUB_TOKEN","OPENAI_API_KEY","SHOPIFY_AI_PROXY"],"actions":[{"repo":"actions/cache/restore","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/cache/save","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/checkout","sha":"3d3c42e5aac5ba805825da76410c181273ba90b1","version":"v7.0.1"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"820762786026740c76f36085b0efc47a31fe5020","version":"v7.0.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"9271a1804551c0dc4fb0085a97979950aa2f8489","version":"v0.88.2"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.28.12","digest":"sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.28.12@sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12","digest":"sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12@sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.28.12","digest":"sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.28.12@sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.4.15","digest":"sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.4.15@sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e"},{"image":"ghcr.io/github/gh-aw-node","digest":"sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e","pinned_image":"ghcr.io/github/gh-aw-node@sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e"},{"image":"ghcr.io/github/github-mcp-server:v1.11.0","digest":"sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699","pinned_image":"ghcr.io/github/github-mcp-server:v1.11.0@sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699"}],"mcp_servers":[{"name":"github","tools":["get_commit","get_discussion","get_discussion_comments","get_file_contents","get_latest_release","get_pull_request","get_pull_request_comments","get_pull_request_diff","get_pull_request_files","get_pull_request_review_comments","get_pull_request_reviews","get_pull_request_status","get_release_by_tag","get_tag","issue_read","list_branches","list_commits","list_discussion_categories","list_discussions","list_issue_types","list_issues","list_pull_requests","list_releases","list_starred_repositories","list_tags","pull_request_read","search_code","search_issues","search_pull_requests","search_repositories"]},{"name":"safeoutputs","tools":["add_comment","missing_data","missing_tool","noop"]}]}
 # This file was automatically generated by gh-aw (v0.88.2). DO NOT EDIT. To debug this workflow, load the skill at https://github.com/github/gh-aw/blob/main/debug.md
 #
 #    ___                   _   _
@@ -23,7 +23,11 @@
 #
 # For more information: https://github.github.com/gh-aw/introduction/overview/
 #
-# Route administrator mentions to an agentic workflow
+# Perform an admin-requested read-only review of a pull request
+#
+# Resolved workflow manifest:
+#   Imports:
+#     - shared/resolve-command-request.md
 #
 # Secrets used:
 #   - CODEX_API_KEY
@@ -53,36 +57,45 @@
 #   - ghcr.io/github/gh-aw-firewall/squid:0.28.12@sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f
 #   - ghcr.io/github/gh-aw-mcpg:v0.4.15@sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e
 #   - ghcr.io/github/gh-aw-node@sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e
+#   - ghcr.io/github/github-mcp-server:v1.11.0@sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699
 
-name: "Remix bot comment router"
+name: "/review pull request"
 on:
-  discussion_comment:
-    types:
-      - created
+  # bots: # Bots processed as bot check in pre-activation job
+  # - remix-run-bot # Bots processed as bot check in pre-activation job
   issue_comment:
     types:
       - created
-# roles: # Roles processed as role check in pre-activation job
-# - admin # Roles processed as role check in pre-activation job
-# skip-bots: # Skip-bots processed as bot check in pre-activation job
-# - dependabot # Skip-bots processed as bot check in pre-activation job
-# - renovate # Skip-bots processed as bot check in pre-activation job
-# - github-actions # Skip-bots processed as bot check in pre-activation job
-# - copilot # Skip-bots processed as bot check in pre-activation job
-# - remix-run-bot # Skip-bots processed as bot check in pre-activation job
+      - edited
+  pull_request:
+    types:
+      - labeled
+  # roles: # Roles processed as role check in pre-activation job
+  # - admin # Roles processed as role check in pre-activation job
+  # skip-bots: # Skip-bots processed as bot check in pre-activation job
+  # - dependabot # Skip-bots processed as bot check in pre-activation job
+  # - renovate # Skip-bots processed as bot check in pre-activation job
+  # - github-actions # Skip-bots processed as bot check in pre-activation job
+  # - copilot # Skip-bots processed as bot check in pre-activation job
+  workflow_dispatch:
+    inputs:
+      aw_context:
+        description: Immutable context from the Remix bot comment router
+        required: false
+        type: string
 
 permissions: {}
 
 concurrency:
-  group: "gh-aw-${{ github.workflow }}-${{ github.event.issue.number || github.event.discussion.number || github.run_id }}"
+  group: "gh-aw-${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}"
   queue: max
 
-run-name: "Remix bot comment router"
+run-name: "/review pull request"
 
 env:
   OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.GH_AW_DEFAULT_OTLP_ENDPOINT }}
-  OTEL_SERVICE_NAME: gh-aw.aw-comment-router
-  OTEL_RESOURCE_ATTRIBUTES: 'gh-aw.workflow.name=Remix%20bot%20comment%20router,gh-aw.repository=${{ github.repository }},gh-aw.run.id=${{ github.run_id }},github.run_id=${{ github.run_id }},gh-aw.engine.id=codex'
+  OTEL_SERVICE_NAME: gh-aw.aw-command-review-pull-request
+  OTEL_RESOURCE_ATTRIBUTES: 'gh-aw.workflow.name=%2Freview%20pull%20request,gh-aw.repository=${{ github.repository }},gh-aw.run.id=${{ github.run_id }},github.run_id=${{ github.run_id }},gh-aw.engine.id=codex'
   OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.GH_AW_DEFAULT_OTLP_HEADERS }}
   GH_AW_OTLP_ENDPOINTS: '[{"url":"${{ vars.GH_AW_DEFAULT_OTLP_ENDPOINT }}","headers":"${{ secrets.GH_AW_DEFAULT_OTLP_HEADERS }}"}]'
   GH_AW_OTLP_IF_MISSING: ignore
@@ -90,12 +103,11 @@ env:
 jobs:
   activation:
     needs: pre_activation
-    if: needs.pre_activation.outputs.activated == 'true' && (contains(github.event.comment.body, '@remix-run-bot'))
+    if: "needs.pre_activation.outputs.activated == 'true' && ((github.event_name == 'workflow_dispatch' || github.event.action != 'labeled' || github.event.sender.login != 'remix-run-bot') && ((github.event_name == 'issue_comment') && (github.event_name == 'issue_comment' && (startsWith(github.event.comment.body, '/review ') || startsWith(github.event.comment.body, '/review\n') || github.event.comment.body == '/review') && github.event.issue.pull_request != null) || !(github.event_name == 'issue_comment') || github.event_name == 'pull_request' && github.event.label.name == 'aw:review'))"
     runs-on: ubuntu-slim
     permissions:
       actions: read
       contents: read
-      discussions: write
       issues: write
       pull-requests: write
     env:
@@ -110,6 +122,7 @@ jobs:
       daily_ai_credits_threshold: ${{ steps.daily-effective-workflow-guardrail.outputs.daily_ai_credits_threshold || '' }}
       daily_ai_credits_total_effective_tokens: ${{ steps.daily-effective-workflow-guardrail.outputs.daily_ai_credits_total_effective_tokens || '' }}
       engine_id: ${{ steps.generate_aw_info.outputs.engine_id }}
+      label_command: ${{ steps.remove_trigger_label.outputs.label_name }}
       lockdown_check_failed: ${{ steps.generate_aw_info.outputs.lockdown_check_failed == 'true' }}
       model: ${{ steps.generate_aw_info.outputs.model }}
       oauth_token_check_failed: ${{ steps.check-oauth-tokens.outputs.oauth_token_check_failed == 'true' }}
@@ -117,6 +130,7 @@ jobs:
       setup-parent-span-id: ${{ steps.setup.outputs.parent-span-id || steps.setup.outputs.span-id }}
       setup-span-id: ${{ steps.setup.outputs.span-id }}
       setup-trace-id: ${{ steps.setup.outputs.trace-id }}
+      slash_command: ${{ needs.pre_activation.outputs.matched_command }}
       stale_lock_file_failed: ${{ steps.check-lock-file.outputs.stale_lock_file_failed == 'true' }}
       text: ${{ steps.sanitized.outputs.text }}
       title: ${{ steps.sanitized.outputs.title }}
@@ -131,8 +145,8 @@ jobs:
           parent-span-id: ${{ needs.pre_activation.outputs.setup-parent-span-id || needs.pre_activation.outputs.setup-span-id }}
           safe-output-artifact-client: ${{ env.GH_AW_MAX_DAILY_AI_CREDITS != '' }}
         env:
-          GH_AW_SETUP_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/aw-comment-router.lock.yml@${{ github.ref }}
+          GH_AW_SETUP_WORKFLOW_NAME: "/review pull request"
+          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/aw-command-review-pull-request.lock.yml@${{ github.ref }}
           GH_AW_INFO_VERSION: "0.150.1"
           GH_AW_INFO_AWF_VERSION: "v0.28.12"
           GH_AW_INFO_ENGINE_ID: "codex"
@@ -143,15 +157,15 @@ jobs:
         env:
           GH_AW_INFO_ENGINE_ID: "codex"
           GH_AW_INFO_ENGINE_NAME: "Codex"
-          GH_AW_INFO_MODEL: "gpt-5.6-terra"
+          GH_AW_INFO_MODEL: "gpt-5.6-sol"
           GH_AW_INFO_VERSION: "0.150.1"
           GH_AW_INFO_AGENT_VERSION: "0.150.1"
           GH_AW_INFO_CLI_VERSION: "v0.88.2"
-          GH_AW_INFO_WORKFLOW_NAME: "Remix bot comment router"
+          GH_AW_INFO_WORKFLOW_NAME: "/review pull request"
           GH_AW_INFO_EXPERIMENTAL: "false"
           GH_AW_INFO_SUPPORTS_TOOLS_ALLOWLIST: "true"
           GH_AW_INFO_STAGED: "false"
-          GH_AW_INFO_ALLOWED_DOMAINS: '["defaults"]'
+          GH_AW_INFO_ALLOWED_DOMAINS: '["defaults","github"]'
           GH_AW_INFO_FIREWALL_ENABLED: "true"
           GH_AW_INFO_AWF_VERSION: "v0.28.12"
           GH_AW_INFO_AWMG_VERSION: ""
@@ -174,8 +188,8 @@ jobs:
         continue-on-error: true
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          key: agentic-workflow-usage-awcommentrouter-${{ github.run_id }}
-          restore-keys: agentic-workflow-usage-awcommentrouter-
+          key: agentic-workflow-usage-awcommandreviewpullrequest-${{ github.run_id }}
+          restore-keys: agentic-workflow-usage-awcommandreviewpullrequest-
           path: /tmp/gh-aw/agentic-workflow-usage-cache.jsonl
       - name: Restore daily AIC usage cache (artifact fallback)
         id: restore-daily-aic-cache-fallback
@@ -199,12 +213,12 @@ jobs:
         if: ${{ env.GH_AW_MAX_DAILY_AI_CREDITS != '' }}
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          GH_AW_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_WORKFLOW_ID: "aw-comment-router"
+          GH_AW_WORKFLOW_NAME: "/review pull request"
+          GH_AW_WORKFLOW_ID: "aw-command-review-pull-request"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_WORKFLOW_DISPATCH_AW_CONTEXT: ${{ github.event.inputs.aw_context || '' }}
-          GH_AW_HAS_SLASH_COMMAND: "false"
-          GH_AW_HAS_LABEL_COMMAND: "false"
+          GH_AW_HAS_SLASH_COMMAND: "true"
+          GH_AW_HAS_LABEL_COMMAND: "true"
           GH_AW_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_AW_MAX_DAILY_AI_CREDITS: "100"
         with:
@@ -267,7 +281,7 @@ jobs:
         id: check-lock-file
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          GH_AW_WORKFLOW_FILE: "aw-comment-router.lock.yml"
+          GH_AW_WORKFLOW_FILE: "aw-command-review-pull-request.lock.yml"
           GH_AW_CONTEXT_WORKFLOW_REF: "${{ github.workflow_ref }}"
         with:
           script: |
@@ -293,7 +307,8 @@ jobs:
         id: sanitized
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          GH_AW_ALLOWED_DOMAINS: "api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,ppa.launchpad.net,s.symcb.com,s.symcd.com,security.ubuntu.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.googleapis.com"
+          GH_AW_ALLOWED_BOTS: "remix-run-bot"
+          GH_AW_ALLOWED_DOMAINS: "*.githubusercontent.com,api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,codeload.github.com,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,docs.github.com,github-cloud.githubusercontent.com,github-cloud.s3.amazonaws.com,github.blog,github.com,github.githubassets.com,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,lfs.github.com,objects.githubusercontent.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,patch-diff.githubusercontent.com,patchdiff.githubusercontent.com,ppa.launchpad.net,raw.githubusercontent.com,s.symcb.com,s.symcd.com,security.ubuntu.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.googleapis.com"
         with:
           script: |
             const path = require('path');
@@ -301,6 +316,19 @@ jobs:
             const { setupGlobals } = require(path.join(actionsDir, 'setup_globals.cjs'));
             setupGlobals(core, github, context, exec, io, getOctokit);
             const { main } = require(path.join(actionsDir, 'compute_text.cjs'));
+            await main();
+      - name: Remove trigger label
+        id: remove_trigger_label
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          GH_AW_LABEL_NAMES: "[\"aw:review\"]"
+        with:
+          script: |
+            const path = require('path');
+            const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');
+            const { setupGlobals } = require(path.join(actionsDir, 'setup_globals.cjs'));
+            setupGlobals(core, github, context, exec, io, getOctokit);
+            const { main } = require(path.join(actionsDir, 'remove_trigger_label.cjs'));
             await main();
       - name: Log runtime features
         if: ${{ contains(toJSON(vars), '"GH_AW_RUNTIME_FEATURES":') }}
@@ -311,13 +339,24 @@ jobs:
           GH_AW_ACTIONS_DIR: ${{ runner.temp }}/gh-aw/actions
           GH_AW_PROMPT: ${{ runner.temp }}/gh-aw/aw-prompts/prompt.txt
           GH_AW_SAFE_OUTPUTS: ${{ runner.temp }}/gh-aw/safeoutputs/outputs.jsonl
-          GH_AW_PROMPT_CONFIG: "{\"items\":[{\"content_env\":\"GH_AW_PROMPT_CONTENT_0000\"},{\"file\":\"xpia.md\"},{\"file\":\"temp_folder_prompt.md\"},{\"file\":\"markdown.md\"},{\"file\":\"safe_outputs_prompt.md\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0001\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0002\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0003\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0004\"}]}"
+          GH_AW_PROMPT_CONFIG: "{\"items\":[{\"content_env\":\"GH_AW_PROMPT_CONTENT_0000\"},{\"file\":\"xpia.md\"},{\"file\":\"temp_folder_prompt.md\"},{\"file\":\"markdown.md\"},{\"file\":\"safe_outputs_prompt.md\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0001\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0002\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0003\"},{\"file\":\"github_mcp_tools_with_safeoutputs_prompt.md\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0004\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0005\"},{\"content_env\":\"GH_AW_PROMPT_CONTENT_0006\"}]}"
+          GH_AW_EXPR_1A3A194A: ${{ github.event.discussion.number || (fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_type == 'discussion' && fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_number) }}
+          GH_AW_EXPR_463A214A: ${{ github.event.pull_request.number || (fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_type == 'pull_request' && fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_number) }}
+          GH_AW_EXPR_802A9F6A: ${{ github.event.issue.number || (fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_type == 'issue' && fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_number) }}
+          GH_AW_EXPR_FF1D34CE: ${{ github.event.comment.id || fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').comment_id }}
+          GH_AW_GITHUB_ACTOR: ${{ github.actor }}
+          GH_AW_GITHUB_EVENT_INPUTS_AW_CONTEXT: ${{ github.event.inputs.aw_context }}
+          GH_AW_GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_AW_GITHUB_RUN_ID: ${{ github.run_id }}
+          GH_AW_GITHUB_WORKSPACE: ${{ github.workspace }}
           GH_AW_STEPS_SANITIZED_OUTPUTS_TEXT: ${{ steps.sanitized.outputs.text }}
           GH_AW_PROMPT_CONTENT_0000: "<system>\n"
-          GH_AW_PROMPT_CONTENT_0001: "<safe-output-tools>\nTools: missing_tool, missing_data, noop, route_agent_workflow\n"
+          GH_AW_PROMPT_CONTENT_0001: "<safe-output-tools>\nTools: add_comment, missing_tool, missing_data, noop\n"
           GH_AW_PROMPT_CONTENT_0002: "</safe-output-tools>\n"
-          GH_AW_PROMPT_CONTENT_0003: "</system>\n"
-          GH_AW_PROMPT_CONTENT_0004: "{{#runtime-import .github/workflows/aw-comment-router.md}}\n"
+          GH_AW_PROMPT_CONTENT_0003: "<github-context>\nThe following GitHub context information is available for this workflow:\n{{#if github.actor}}\n- **actor**: __GH_AW_GITHUB_ACTOR__\n{{/if}}\n{{#if github.repository}}\n- **repository**: __GH_AW_GITHUB_REPOSITORY__\n{{/if}}\n{{#if github.workspace}}\n- **workspace**: __GH_AW_GITHUB_WORKSPACE__\n{{/if}}\n{{#if github.event.issue.number || (github.aw.context.item_type == 'issue' && github.aw.context.item_number)}}\n- **issue-number**: #__GH_AW_EXPR_802A9F6A__\n{{/if}}\n{{#if github.event.discussion.number || (github.aw.context.item_type == 'discussion' && github.aw.context.item_number)}}\n- **discussion-number**: #__GH_AW_EXPR_1A3A194A__\n{{/if}}\n{{#if github.event.pull_request.number || (github.aw.context.item_type == 'pull_request' && github.aw.context.item_number)}}\n- **pull-request-number**: #__GH_AW_EXPR_463A214A__\n{{/if}}\n{{#if github.event.comment.id || github.aw.context.comment_id}}\n- **comment-id**: __GH_AW_EXPR_FF1D34CE__\n{{/if}}\n{{#if github.run_id}}\n- **workflow-run-id**: __GH_AW_GITHUB_RUN_ID__\n{{/if}}\n</github-context>\n\n"
+          GH_AW_PROMPT_CONTENT_0004: "</system>\n"
+          GH_AW_PROMPT_CONTENT_0005: "{{#runtime-import .github/workflows/shared/resolve-command-request.md}}\n"
+          GH_AW_PROMPT_CONTENT_0006: "{{#runtime-import .github/workflows/aw-command-review-pull-request.md}}\n"
         with:
           script: |
             const { setupGlobals } = require(process.env.GH_AW_ACTIONS_DIR + '/setup_globals.cjs');
@@ -329,6 +368,7 @@ jobs:
         env:
           GH_AW_PROMPT: ${{ runner.temp }}/gh-aw/aw-prompts/prompt.txt
           GH_AW_ENGINE_ID: "codex"
+          GH_AW_GITHUB_EVENT_INPUTS_AW_CONTEXT: ${{ github.event.inputs.aw_context }}
           GH_AW_STEPS_SANITIZED_OUTPUTS_TEXT: ${{ steps.sanitized.outputs.text }}
         with:
           script: |
@@ -342,7 +382,17 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GH_AW_PROMPT: ${{ runner.temp }}/gh-aw/aw-prompts/prompt.txt
+          GH_AW_EXPR_1A3A194A: ${{ github.event.discussion.number || (fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_type == 'discussion' && fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_number) }}
+          GH_AW_EXPR_463A214A: ${{ github.event.pull_request.number || (fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_type == 'pull_request' && fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_number) }}
+          GH_AW_EXPR_802A9F6A: ${{ github.event.issue.number || (fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_type == 'issue' && fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').item_number) }}
+          GH_AW_EXPR_FF1D34CE: ${{ github.event.comment.id || fromJSON(github.event.inputs.aw_context || github.event.client_payload.aw_context || '{}').comment_id }}
+          GH_AW_GITHUB_ACTOR: ${{ github.actor }}
+          GH_AW_GITHUB_EVENT_INPUTS_AW_CONTEXT: ${{ github.event.inputs.aw_context }}
+          GH_AW_GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_AW_GITHUB_RUN_ID: ${{ github.run_id }}
+          GH_AW_GITHUB_WORKSPACE: ${{ github.workspace }}
           GH_AW_NEEDS_PRE_ACTIVATION_OUTPUTS_ACTIVATED: ${{ needs.pre_activation.outputs.activated }}
+          GH_AW_NEEDS_PRE_ACTIVATION_OUTPUTS_MATCHED_COMMAND: ${{ needs.pre_activation.outputs.matched_command }}
           GH_AW_STEPS_SANITIZED_OUTPUTS_TEXT: ${{ steps.sanitized.outputs.text }}
         with:
           script: |
@@ -357,7 +407,17 @@ jobs:
             return await substitutePlaceholders({
               file: process.env.GH_AW_PROMPT,
               substitutions: {
+                GH_AW_EXPR_1A3A194A: process.env.GH_AW_EXPR_1A3A194A,
+                GH_AW_EXPR_463A214A: process.env.GH_AW_EXPR_463A214A,
+                GH_AW_EXPR_802A9F6A: process.env.GH_AW_EXPR_802A9F6A,
+                GH_AW_EXPR_FF1D34CE: process.env.GH_AW_EXPR_FF1D34CE,
+                GH_AW_GITHUB_ACTOR: process.env.GH_AW_GITHUB_ACTOR,
+                GH_AW_GITHUB_EVENT_INPUTS_AW_CONTEXT: process.env.GH_AW_GITHUB_EVENT_INPUTS_AW_CONTEXT,
+                GH_AW_GITHUB_REPOSITORY: process.env.GH_AW_GITHUB_REPOSITORY,
+                GH_AW_GITHUB_RUN_ID: process.env.GH_AW_GITHUB_RUN_ID,
+                GH_AW_GITHUB_WORKSPACE: process.env.GH_AW_GITHUB_WORKSPACE,
                 GH_AW_NEEDS_PRE_ACTIVATION_OUTPUTS_ACTIVATED: process.env.GH_AW_NEEDS_PRE_ACTIVATION_OUTPUTS_ACTIVATED,
+                GH_AW_NEEDS_PRE_ACTIVATION_OUTPUTS_MATCHED_COMMAND: process.env.GH_AW_NEEDS_PRE_ACTIVATION_OUTPUTS_MATCHED_COMMAND,
                 GH_AW_STEPS_SANITIZED_OUTPUTS_TEXT: process.env.GH_AW_STEPS_SANITIZED_OUTPUTS_TEXT
               }
             });
@@ -399,6 +459,7 @@ jobs:
     if: needs.activation.outputs.daily_ai_credits_exceeded != 'true'
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       discussions: read
       issues: read
@@ -417,7 +478,7 @@ jobs:
       GH_AW_PR_HEAD_BASE_SHA: ""
       GH_AW_PR_HEAD_REPO: ""
       GH_AW_RUNTIME_FEATURES: ${{ vars.GH_AW_RUNTIME_FEATURES }}
-      GH_AW_WORKFLOW_ID_SANITIZED: awcommentrouter
+      GH_AW_WORKFLOW_ID_SANITIZED: awcommandreviewpullrequest
     outputs:
       agentic_engine_timeout: ${{ steps.detect-agent-errors.outputs.agentic_engine_timeout || 'false' }}
       ai_credits_rate_limit_error: ${{ steps.parse-mcp-gateway.outputs.ai_credits_rate_limit_error || 'false' }}
@@ -451,8 +512,8 @@ jobs:
           trace-id: ${{ needs.activation.outputs.setup-trace-id }}
           parent-span-id: ${{ needs.activation.outputs.setup-parent-span-id || needs.activation.outputs.setup-span-id }}
         env:
-          GH_AW_SETUP_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/aw-comment-router.lock.yml@${{ github.ref }}
+          GH_AW_SETUP_WORKFLOW_NAME: "/review pull request"
+          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/aw-command-review-pull-request.lock.yml@${{ github.ref }}
           GH_AW_INFO_VERSION: "0.150.1"
           GH_AW_INFO_AWF_VERSION: "v0.28.12"
           GH_AW_INFO_ENGINE_ID: "codex"
@@ -484,10 +545,15 @@ jobs:
         with:
           name: activation
           path: /tmp/gh-aw
-      - name: Write triggering item type
+      - env:
+          BOT_LOGIN: remix-run-bot
+          EXPECTED_REPOSITORY: remix-run/remix
+          ROUTER_WORKFLOW: .github/workflows/aw-comment-router.lock.yml
+        id: trusted-request
+        name: Validate trusted administrator request
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0 (source v9)
         with:
-          script: "const fs = require('fs')\nconst isDiscussion = context.eventName === 'discussion_comment'\nfs.mkdirSync('/tmp/gh-aw/agent', { recursive: true })\nfs.writeFileSync(\n  '/tmp/gh-aw/agent/router-context.json',\n  JSON.stringify({\n    targetType: isDiscussion\n      ? 'discussion'\n      : context.payload.issue?.pull_request\n        ? 'pull_request'\n        : 'issue',\n    discussionCategory: isDiscussion ? context.payload.discussion?.category?.slug : null,\n  }),\n  { encoding: 'utf8', mode: 0o600 }\n)"
+          script: "const crypto = require('crypto')\nconst botLogin = process.env.BOT_LOGIN.toLowerCase()\nconst expectedRepository = process.env.EXPECTED_REPOSITORY.toLowerCase()\nconst workflowByName = {\n  '/review issue': { workflow: 'review', itemTypes: ['issue'] },\n  '/review pull request': { workflow: 'review', itemTypes: ['pull_request'] },\n  '/review proposal': { workflow: 'review', itemTypes: ['discussion'] },\n  '/implement': { workflow: 'implement', itemTypes: ['issue', 'discussion'] },\n  '/iterate': { workflow: 'iterate', itemTypes: ['pull_request'] },\n}\n\nfunction hasExactBotMention(body) {\n  return new RegExp(`@${botLogin}(?![a-z0-9-])`, 'i').test(body)\n}\n\nfunction bodyHash(body) {\n  return crypto.createHash('sha256').update(body, 'utf8').digest('hex')\n}\n\nasync function isRepositoryAdmin(login) {\n  if (!login) return false\n  try {\n    const response = await github.rest.repos.getCollaboratorPermissionLevel({\n      ...context.repo,\n      username: login,\n    })\n    return response.data.permission === 'admin'\n  } catch (error) {\n    if (error.status === 404) return false\n    throw error\n  }\n}\n\nif (context.eventName === 'workflow_dispatch') {\n  if ((context.actor ?? process.env.GITHUB_ACTOR)?.toLowerCase() !== botLogin) {\n    core.setFailed('Only remix-run-bot may dispatch a routed workflow')\n    return\n  }\n\n  let commentRouterContext\n  try {\n    commentRouterContext = JSON.parse(context.payload.inputs?.aw_context ?? '')\n  } catch {\n    core.setFailed('The comment router context is not valid JSON')\n    return\n  }\n\n  const expectedWorkflow = workflowByName[context.workflow]\n  if (!expectedWorkflow) {\n    core.setFailed('The dispatched workflow is not a supported agentic command')\n    return\n  }\n\n  const validBaseContext =\n    commentRouterContext?.version === 1 &&\n    commentRouterContext.repository?.toLowerCase() === expectedRepository &&\n    commentRouterContext.router_workflow === process.env.ROUTER_WORKFLOW &&\n    Number.isSafeInteger(commentRouterContext.router_run_id) &&\n    ['issue_comment', 'discussion_comment'].includes(commentRouterContext.event_type) &&\n    expectedWorkflow.itemTypes.includes(commentRouterContext.item_type) &&\n    Number.isSafeInteger(commentRouterContext.item_number) &&\n    commentRouterContext.item_number > 0 &&\n    Number.isSafeInteger(commentRouterContext.comment_id) &&\n    commentRouterContext.comment_id > 0 &&\n    typeof commentRouterContext.actor === 'string' &&\n    commentRouterContext.workflow === expectedWorkflow.workflow &&\n    commentRouterContext.label ===\n      (commentRouterContext.item_type === 'discussion'\n        ? null\n        : `aw:${expectedWorkflow.workflow}`) &&\n    typeof commentRouterContext.comment_updated_at === 'string' &&\n    !Number.isNaN(Date.parse(commentRouterContext.comment_updated_at)) &&\n    /^[0-9a-f]{64}$/.test(commentRouterContext.comment_body_sha256 ?? '')\n  if (!validBaseContext) {\n    core.setFailed('The comment router context does not match this command')\n    return\n  }\n\n  if (\n    (commentRouterContext.event_type === 'discussion_comment') !==\n    (commentRouterContext.item_type === 'discussion')\n  ) {\n    core.setFailed('The routed event type does not match the triggering item')\n    return\n  }\n\n  const routerRun = await github.rest.actions.getWorkflowRun({\n    ...context.repo,\n    run_id: commentRouterContext.router_run_id,\n  })\n  const run = routerRun.data\n  if (\n    run.repository?.full_name?.toLowerCase() !== expectedRepository ||\n    run.path !== process.env.ROUTER_WORKFLOW ||\n    run.event !== commentRouterContext.event_type ||\n    run.actor?.login?.toLowerCase() !== commentRouterContext.actor.toLowerCase()\n  ) {\n    core.setFailed('The comment router context does not match its router run')\n    return\n  }\n\n  let sourceComment\n  if (commentRouterContext.item_type === 'discussion') {\n    if (typeof commentRouterContext.comment_node_id !== 'string') {\n      core.setFailed('The routed Discussion comment node ID is missing')\n      return\n    }\n    const response = await github.graphql(\n      `query($id: ID!) {\n        node(id: $id) {\n          ... on DiscussionComment {\n            id\n            databaseId\n            body\n            updatedAt\n            author { login }\n            discussion {\n              number\n              repository { nameWithOwner }\n              category { slug }\n            }\n          }\n        }\n      }`,\n      { id: commentRouterContext.comment_node_id }\n    )\n    const comment = response.node\n    if (\n      comment?.id !== commentRouterContext.comment_node_id ||\n      comment.databaseId !== commentRouterContext.comment_id ||\n      comment.discussion?.number !== commentRouterContext.item_number ||\n      comment.discussion.repository?.nameWithOwner?.toLowerCase() !== expectedRepository ||\n      comment.discussion.category?.slug !== 'proposals'\n    ) {\n      core.setFailed('The routed comment is not on the expected Proposal Discussion')\n      return\n    }\n    sourceComment = comment\n  } else {\n    const [commentResponse, issueResponse] = await Promise.all([\n      github.rest.issues.getComment({\n        ...context.repo,\n        comment_id: commentRouterContext.comment_id,\n      }),\n      github.rest.issues.get({\n        ...context.repo,\n        issue_number: commentRouterContext.item_number,\n      }),\n    ])\n    const comment = commentResponse.data\n    const issuePath = new URL(comment.issue_url).pathname.toLowerCase()\n    const expectedIssuePath =\n      `/repos/${expectedRepository}/issues/${commentRouterContext.item_number}`\n    const isPullRequest = Boolean(issueResponse.data.pull_request)\n    if (\n      issuePath !== expectedIssuePath ||\n      isPullRequest !== (commentRouterContext.item_type === 'pull_request')\n    ) {\n      core.setFailed('The routed comment is not on the expected issue or pull request')\n      return\n    }\n    sourceComment = comment\n  }\n\n  const author = sourceComment.author?.login ?? sourceComment.user?.login\n  const body = sourceComment.body ?? ''\n  if (\n    author?.toLowerCase() !== commentRouterContext.actor.toLowerCase() ||\n    !(await isRepositoryAdmin(author)) ||\n    !hasExactBotMention(body) ||\n    (sourceComment.updatedAt ?? sourceComment.updated_at) !==\n      commentRouterContext.comment_updated_at ||\n    bodyHash(body) !== commentRouterContext.comment_body_sha256\n  ) {\n    core.setFailed('The routed administrator comment is no longer valid')\n    return\n  }\n\n  return\n}\n\nif (context.eventName === 'issue_comment' || context.eventName === 'discussion_comment') {\n  return\n}\n\nif (context.payload.action !== 'labeled') {\n  core.setFailed('Expected a slash-command comment, labeled event, or routed dispatch')\n  return\n}\n\nconst labelName = context.payload.label?.name\nconst sender = context.payload.sender?.login\nif (!labelName?.startsWith('aw:') || !sender) {\n  core.setFailed('The labeled event is missing its agentic-workflow label or sender')\n  return\n}\nif (sender.toLowerCase() === botLogin) {\n  core.setFailed('Labels applied by remix-run-bot cannot activate agentic workflows')\n  return\n}\nif (!(await isRepositoryAdmin(sender))) {\n  core.setFailed('Only a repository administrator may apply this label')\n  return\n}\n"
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -498,6 +564,18 @@ jobs:
         run: npm install --ignore-scripts -g @openai/codex@0.150.1
       - name: Install AWF binary
         run: bash "${RUNNER_TEMP}/gh-aw/actions/install_awf_binary.sh" v0.28.12 --rootless
+      - name: Determine automatic lockdown mode for GitHub MCP Server
+        id: determine-automatic-lockdown
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0 (source v9)
+        env:
+          GH_AW_GITHUB_TOKEN: ${{ secrets.GH_AW_GITHUB_TOKEN }}
+          GH_AW_GITHUB_MCP_SERVER_TOKEN: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN }}
+        with:
+          script: |
+            const path = require('path');
+            const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');
+            const determineAutomaticLockdown = require(path.join(actionsDir, 'determine_automatic_lockdown.cjs'));
+            await determineAutomaticLockdown(github, context, core);
       - name: Restore inline sub-agents from activation artifact
         env:
           GH_AW_SUB_AGENT_DIR: ".codex/agents"
@@ -508,7 +586,7 @@ jobs:
           GH_AW_SKILL_DIR: ".codex/skills"
         run: bash "${RUNNER_TEMP}/gh-aw/actions/restore_inline_skills.sh"
       - name: Download container images
-        run: bash "${RUNNER_TEMP}/gh-aw/actions/download_docker_images.sh" ghcr.io/github/gh-aw-firewall/agent:0.28.12@sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202 ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12@sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32 ghcr.io/github/gh-aw-firewall/squid:0.28.12@sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f ghcr.io/github/gh-aw-mcpg:v0.4.15@sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e ghcr.io/github/gh-aw-node@sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e
+        run: bash "${RUNNER_TEMP}/gh-aw/actions/download_docker_images.sh" ghcr.io/github/gh-aw-firewall/agent:0.28.12@sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202 ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12@sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32 ghcr.io/github/gh-aw-firewall/squid:0.28.12@sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f ghcr.io/github/gh-aw-mcpg:v0.4.15@sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e ghcr.io/github/gh-aw-node@sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e ghcr.io/github/github-mcp-server:v1.11.0@sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699
       - name: Prepare Safe Outputs Directories
         run: |
           mkdir -p "${RUNNER_TEMP}/gh-aw/safeoutputs"
@@ -519,7 +597,8 @@ jobs:
         env:
           GH_AW_FILE_ROOT: "${{ runner.temp }}/gh-aw"
           GH_AW_FILE_CONFIG: "{\"files\":[{\"path\":\"safeoutputs/config.json\",\"content_env\":\"GH_AW_SAFE_OUTPUTS_CONFIG\"}]}"
-          GH_AW_SAFE_OUTPUTS_CONFIG: "{\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"report_incomplete\":{},\"route-agent-workflow\":{\"description\":\"Queue exactly one agentic workflow with immutable comment context, or post one clarification question\",\"inputs\":{\"clarification\":{\"description\":\"A concise question; required only when workflow is clarify\",\"required\":false,\"type\":\"string\"},\"workflow\":{\"default\":null,\"description\":\"The workflow to route to, or clarify when the request is ambiguous\",\"options\":[\"review\",\"implement\",\"iterate\",\"clarify\"],\"required\":true,\"type\":\"choice\"}},\"output\":\"Request queued\"}}"
+          GH_AW_SAFE_OUTPUTS_CONFIG: "{\"add_comment\":{\"discussions\":false,\"github-token\":\"${GH_AW_SECRET_GH_REMIX_PAT_AW}\",\"max\":1,\"target\":\"triggering\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"report_incomplete\":{}}"
+          GH_AW_SECRET_GH_REMIX_PAT_AW: ${{ secrets.GH_REMIX_PAT_AW }}
         with:
           script: |
             const path = require('path');
@@ -532,41 +611,55 @@ jobs:
         env:
           GH_AW_TOOLS_META_JSON: |
             {
-              "description_suffixes": {},
+              "description_suffixes": {
+                "add_comment": " CONSTRAINTS: Maximum 1 comment(s) can be added. Target: triggering. Supports reply_to_id for discussion threading."
+              },
               "repo_params": {},
-              "dynamic_tools": [
-                {
-                  "description": "Queue exactly one agentic workflow with immutable comment context, or post one clarification question",
-                  "inputSchema": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "clarification": {
-                        "default": "",
-                        "description": "A concise question; required only when workflow is clarify",
-                        "type": "string"
-                      },
-                      "workflow": {
-                        "description": "The workflow to route to, or clarify when the request is ambiguous",
-                        "enum": [
-                          "review",
-                          "implement",
-                          "iterate",
-                          "clarify"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "workflow"
-                    ],
-                    "type": "object"
-                  },
-                  "name": "route_agent_workflow"
-                }
-              ]
+              "dynamic_tools": []
             }
           GH_AW_VALIDATION_JSON: |
             {
+              "add_comment": {
+                "defaultMax": 1,
+                "fields": {
+                  "body": {
+                    "required": true,
+                    "type": "string",
+                    "sanitize": true,
+                    "maxLength": 65000
+                  },
+                  "comment_id": {
+                    "optionalPositiveInteger": true
+                  },
+                  "item_number": {
+                    "issueOrPRNumber": true
+                  },
+                  "pr": {
+                    "issueOrPRNumber": true
+                  },
+                  "pr_number": {
+                    "issueOrPRNumber": true
+                  },
+                  "reply_to_id": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "repo": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "target": {
+                    "type": "string",
+                    "enum": [
+                      "status"
+                    ]
+                  },
+                  "temporary_id": {
+                    "type": "string",
+                    "pattern": "^#?aw_[A-Za-z0-9_]{3,12}$"
+                  }
+                }
+              },
               "missing_data": {
                 "defaultMax": 20,
                 "fields": {
@@ -658,6 +751,10 @@ jobs:
           GH_AW_SAFE_OUTPUTS: ${{ steps.set-runtime-paths.outputs.GH_AW_SAFE_OUTPUTS }}
           GH_AW_SAFE_OUTPUTS_CONFIG_PATH: ${{ steps.set-runtime-paths.outputs.GH_AW_SAFE_OUTPUTS_CONFIG_PATH }}
           GH_AW_SAFE_OUTPUTS_TOOLS_PATH: ${{ steps.set-runtime-paths.outputs.GH_AW_SAFE_OUTPUTS_TOOLS_PATH }}
+          GH_AW_SINK_VISIBILITY: ${{ steps.determine-automatic-lockdown.outputs.visibility }}
+          GITHUB_MCP_GUARD_MIN_INTEGRITY: ${{ steps.determine-automatic-lockdown.outputs.min_integrity }}
+          GITHUB_MCP_GUARD_REPOS: ${{ steps.determine-automatic-lockdown.outputs.repos }}
+          GITHUB_MCP_SERVER_TOKEN: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -eo pipefail
@@ -693,13 +790,21 @@ jobs:
           source "${RUNNER_TEMP}/gh-aw/actions/resolve_docker_socket_gid.sh"
           export MCP_GATEWAY_DOCKER_COMMAND='docker run -i --rm --network bridge -p 127.0.0.1:'"${MCP_GATEWAY_PORT}"':'"${MCP_GATEWAY_PORT}"' --name awmg-mcpg --add-host host.docker.internal:host-gateway --user '"${MCP_GATEWAY_UID}"':'"${MCP_GATEWAY_GID}"' --group-add '"${DOCKER_SOCK_GID}"' -v '"${DOCKER_SOCK_PATH}"':/var/run/docker.sock -e MCP_GATEWAY_PORT -e MCP_GATEWAY_DOMAIN -e MCP_GATEWAY_AGENT_ID -e MCP_GATEWAY_PAYLOAD_DIR -e MCP_GATEWAY_PAYLOAD_SIZE_THRESHOLD -e DOCKER_HOST=unix:///var/run/docker.sock -e DEBUG -e MCP_GATEWAY_LOG_DIR -e GH_AW_MCP_LOG_DIR -e GH_AW_SAFE_OUTPUTS -e GH_AW_SAFE_OUTPUTS_CONFIG_PATH -e GH_AW_SAFE_OUTPUTS_TOOLS_PATH -e GH_AW_PR_HEAD_BASE_BRANCH -e GH_AW_PR_HEAD_BASE_SHA -e GH_AW_PR_HEAD_BASE_REPO -e GH_AW_PR_HEAD_BASE_PR_NUMBER -e GH_AW_PR_HEAD_BASE_REF -e GH_AW_PR_HEAD_REPO -e GH_AW_POLICY_ALLOW_CREATE_PULL_REQUEST -e GH_AW_ASSETS_BRANCH -e GH_AW_ASSETS_MAX_SIZE_KB -e GH_AW_ASSETS_ALLOWED_EXTS -e DEFAULT_BRANCH -e GITHUB_MCP_SERVER_TOKEN -e GITHUB_MCP_GUARD_MIN_INTEGRITY -e GITHUB_MCP_GUARD_REPOS -e GH_AW_SINK_VISIBILITY -e GITHUB_REPOSITORY -e GITHUB_SERVER_URL -e GITHUB_SHA -e GITHUB_WORKSPACE -e GITHUB_TOKEN -e GITHUB_RUN_ID -e GITHUB_RUN_NUMBER -e GITHUB_RUN_ATTEMPT -e GITHUB_JOB -e GITHUB_ACTION -e GITHUB_EVENT_NAME -e GITHUB_EVENT_PATH -e GITHUB_ACTOR -e GITHUB_ACTOR_ID -e GITHUB_TRIGGERING_ACTOR -e GITHUB_WORKFLOW -e GITHUB_WORKFLOW_REF -e GITHUB_WORKFLOW_SHA -e GITHUB_REF -e GITHUB_REF_NAME -e GITHUB_REF_TYPE -e GITHUB_HEAD_REF -e GITHUB_BASE_REF -e RUNNER_TEMP -e RUNNER_TOOL_CACHE -e MCP_GATEWAY_ALLOWED_MOUNT_ROOTS -e GITHUB_AW_OTEL_TRACE_ID -e GITHUB_AW_OTEL_PARENT_SPAN_ID -e OTEL_EXPORTER_OTLP_HEADERS -e CODEX_HOME -v /tmp/gh-aw/mcp-payloads:/tmp/gh-aw/mcp-payloads:rw -v /opt:/opt:ro -v /tmp:/tmp:rw -v '"${GITHUB_WORKSPACE}"':'"${GITHUB_WORKSPACE}"':rw -v '"${RUNNER_TEMP}"'/gh-aw/safeoutputs:'"${RUNNER_TEMP}"'/gh-aw/safeoutputs:rw ghcr.io/github/gh-aw-mcpg:v0.4.15'
 
-          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_be40569f03f23cd5_EOF
+          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_348c54252ffb608f_EOF
           [history]
           persistence = "none"
 
           [shell_environment_policy]
           inherit = "core"
-          include_only = ["^CODEX_API_KEY$", "^GH_AW_ASSETS_ALLOWED_EXTS$", "^GH_AW_ASSETS_BRANCH$", "^GH_AW_ASSETS_MAX_SIZE_KB$", "^GH_AW_SAFE_OUTPUTS$", "^GITHUB_REPOSITORY$", "^GITHUB_SERVER_URL$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
+          include_only = ["^CODEX_API_KEY$", "^GH_AW_ASSETS_ALLOWED_EXTS$", "^GH_AW_ASSETS_BRANCH$", "^GH_AW_ASSETS_MAX_SIZE_KB$", "^GH_AW_SAFE_OUTPUTS$", "^GITHUB_PERSONAL_ACCESS_TOKEN$", "^GITHUB_REPOSITORY$", "^GITHUB_SERVER_URL$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
+
+          [mcp_servers.github]
+          user_agent = "review-pull-request"
+          startup_timeout_sec = 120
+          tool_timeout_sec = 60
+          container = "ghcr.io/github/github-mcp-server:v1.11.0"
+          env = { "GITHUB_FEATURES" = "fields_param", "GITHUB_HOST" = "$GITHUB_SERVER_URL", "GITHUB_PERSONAL_ACCESS_TOKEN" = "$GH_AW_GITHUB_TOKEN", "GITHUB_READ_ONLY" = "1", "GITHUB_TOOLSETS" = "repos,issues,pull_requests,discussions" }
+          env_vars = ["GITHUB_FEATURES", "GITHUB_HOST", "GITHUB_PERSONAL_ACCESS_TOKEN", "GITHUB_READ_ONLY", "GITHUB_TOOLSETS"]
 
           [mcp_servers.safeoutputs]
           container = "ghcr.io/github/gh-aw-node"
@@ -708,13 +813,35 @@ jobs:
           entrypoint = "sh"
           entrypointArgs = ["-c", "sh ${RUNNER_TEMP}/gh-aw/safeoutputs/start_safe_outputs_mcp.sh"]
           env_vars = ["DEBUG", "DEFAULT_BRANCH", "GH_AW_ASSETS_ALLOWED_EXTS", "GH_AW_ASSETS_BRANCH", "GH_AW_ASSETS_MAX_SIZE_KB", "GH_AW_MCP_LOG_DIR", "GH_AW_SAFE_OUTPUTS", "GH_AW_SAFE_OUTPUTS_CONFIG_PATH", "GH_AW_SAFE_OUTPUTS_TOOLS_PATH", "GH_AW_POLICY_ALLOW_CREATE_PULL_REQUEST", "GH_AW_PR_HEAD_BASE_BRANCH", "GH_AW_PR_HEAD_BASE_SHA", "GH_AW_PR_HEAD_BASE_REPO", "GH_AW_PR_HEAD_BASE_PR_NUMBER", "GH_AW_PR_HEAD_BASE_REF", "GH_AW_PR_HEAD_REPO", "GITHUB_EVENT_NAME", "GITHUB_EVENT_PATH", "GITHUB_REPOSITORY", "GITHUB_SHA", "GITHUB_TOKEN", "GITHUB_WORKSPACE", "RUNNER_TEMP"]
-          GH_AW_MCP_CONFIG_be40569f03f23cd5_EOF
+
+          [mcp_servers.safeoutputs."guard-policies"]
+
+          [mcp_servers.safeoutputs."guard-policies".write-sink]
+          accept = ["*"]
+          sink-visibility = "${GH_AW_SINK_VISIBILITY}"
+          GH_AW_MCP_CONFIG_348c54252ffb608f_EOF
 
           # Generate JSON config for MCP gateway
           GH_AW_NODE=$(which node 2>/dev/null || command -v node 2>/dev/null || echo node)
-          cat << GH_AW_MCP_CONFIG_9cbe498171296524_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
+          cat << GH_AW_MCP_CONFIG_69fac7cbca0f3bb8_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
           {
             "mcpServers": {
+              "github": {
+                "container": "ghcr.io/github/github-mcp-server:v1.11.0",
+                "env": {
+                  "GITHUB_FEATURES": "fields_param",
+                  "GITHUB_HOST": "$GITHUB_SERVER_URL",
+                  "GITHUB_PERSONAL_ACCESS_TOKEN": "$GITHUB_MCP_SERVER_TOKEN",
+                  "GITHUB_READ_ONLY": "1",
+                  "GITHUB_TOOLSETS": "repos,issues,pull_requests,discussions"
+                },
+                "guard-policies": {
+                  "allow-only": {
+                    "min-integrity": "$GITHUB_MCP_GUARD_MIN_INTEGRITY",
+                    "repos": "$GITHUB_MCP_GUARD_REPOS"
+                  }
+                }
+              },
               "safeoutputs": {
                 "container": "ghcr.io/github/gh-aw-node",
                 "mounts": ["\${GITHUB_WORKSPACE}:\${GITHUB_WORKSPACE}:rw", "${RUNNER_TEMP}/gh-aw/safeoutputs:${RUNNER_TEMP}/gh-aw/safeoutputs:rw", "/tmp/gh-aw:/tmp/gh-aw:rw"],
@@ -745,6 +872,14 @@ jobs:
                   "GITHUB_TOKEN": "\${GITHUB_TOKEN}",
                   "GITHUB_WORKSPACE": "\${GITHUB_WORKSPACE}",
                   "RUNNER_TEMP": "\${RUNNER_TEMP}"
+                },
+                "guard-policies": {
+                  "write-sink": {
+                    "accept": [
+                      "*"
+                    ],
+                    "sink-visibility": "${GH_AW_SINK_VISIBILITY}"
+                  }
                 }
               }
             },
@@ -761,11 +896,11 @@ jobs:
               }
             }
           }
-          GH_AW_MCP_CONFIG_9cbe498171296524_EOF
+          GH_AW_MCP_CONFIG_69fac7cbca0f3bb8_EOF
 
           # Sync converter output to writable CODEX_HOME for Codex
           mkdir -p /tmp/gh-aw/mcp-config
-          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_79e3d2e6e6d538cf_EOF
+          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_1291c5e46fe06428_EOF
 
           model_provider = "openai-proxy"
 
@@ -780,8 +915,8 @@ jobs:
           plugins = false
           [shell_environment_policy]
           inherit = "core"
-          include_only = ["^CODEX_API_KEY$", "^GH_AW_ASSETS_ALLOWED_EXTS$", "^GH_AW_ASSETS_BRANCH$", "^GH_AW_ASSETS_MAX_SIZE_KB$", "^GH_AW_SAFE_OUTPUTS$", "^GITHUB_REPOSITORY$", "^GITHUB_SERVER_URL$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
-          GH_AW_CODEX_SHELL_POLICY_79e3d2e6e6d538cf_EOF
+          include_only = ["^CODEX_API_KEY$", "^GH_AW_ASSETS_ALLOWED_EXTS$", "^GH_AW_ASSETS_BRANCH$", "^GH_AW_ASSETS_MAX_SIZE_KB$", "^GH_AW_SAFE_OUTPUTS$", "^GITHUB_PERSONAL_ACCESS_TOKEN$", "^GITHUB_REPOSITORY$", "^GITHUB_SERVER_URL$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
+          GH_AW_CODEX_SHELL_POLICY_1291c5e46fe06428_EOF
           awk '
             BEGIN { skip_openai_proxy = 0 }
             /^[[:space:]]*model_provider[[:space:]]*=/ { next }
@@ -818,7 +953,7 @@ jobs:
         run: bash "${RUNNER_TEMP}/gh-aw/actions/audit_pre_agent_workspace.sh"
       - name: Execute Codex CLI
         id: agentic_execution
-        timeout-minutes: 5
+        timeout-minutes: 15
         run: |
           set -o pipefail
           trap 'gh_aw_exit_code=$?; mkdir -p /tmp/gh-aw >/dev/null 2>&1 || true; printf "%s" "$gh_aw_exit_code" > /tmp/gh-aw/agent_execution_exit_code.txt || true; if [ "$gh_aw_exit_code" -ne 0 ]; then echo "::error::Agent execution exited with code $gh_aw_exit_code"; fi' EXIT
@@ -829,7 +964,7 @@ jobs:
           if [[ ! "$GH_AW_MAX_AI_CREDITS" =~ ^[0-9]+$ ]]; then
             GH_AW_MAX_AI_CREDITS="1000"
           fi
-          printf '%s\n' "{\"\$schema\":\"https://github.com/github/gh-aw-firewall/releases/download/v0.28.12/awf-config.schema.json\",\"network\":{\"allowDomains\":[\"api.snapcraft.io\",\"archive.ubuntu.com\",\"azure.archive.ubuntu.com\",\"crl.geotrust.com\",\"crl.globalsign.com\",\"crl.identrust.com\",\"crl.sectigo.com\",\"crl.thawte.com\",\"crl.usertrust.com\",\"crl.verisign.com\",\"crl3.digicert.com\",\"crl4.digicert.com\",\"crls.ssl.com\",\"json-schema.org\",\"json.schemastore.org\",\"keyserver.ubuntu.com\",\"ocsp.digicert.com\",\"ocsp.geotrust.com\",\"ocsp.globalsign.com\",\"ocsp.identrust.com\",\"ocsp.sectigo.com\",\"ocsp.ssl.com\",\"ocsp.thawte.com\",\"ocsp.usertrust.com\",\"ocsp.verisign.com\",\"packagecloud.io\",\"packages.cloud.google.com\",\"packages.microsoft.com\",\"ppa.launchpad.net\",\"s.symcb.com\",\"s.symcd.com\",\"security.ubuntu.com\",\"ts-crl.ws.symantec.com\",\"ts-ocsp.ws.symantec.com\",\"www.googleapis.com\"],\"isolation\":true,\"topologyAttach\":[\"awmg-mcpg\"]},\"apiProxy\":{\"enabled\":true,\"enableTokenSteering\":true,\"maxRuns\":500,\"maxAiCredits\":${GH_AW_MAX_AI_CREDITS},\"maxCacheMisses\":5,\"modelFallback\":{\"enabled\":false},\"targets\":{\"openai\":{\"host\":\"proxy.shopify.ai\"}},\"models\":{\"agent\":[\"sonnet-6x\",\"gpt-5.4\",\"gpt-5.5\",\"gpt-5.6\",\"gpt-5.3\",\"gemini-pro\",\"any\"],\"antigravity\":[\"copilot/antigravity*\",\"google/antigravity*\",\"gemini/antigravity*\"],\"any\":[\"copilot/*\",\"anthropic/*\",\"openai/*\",\"google/*\",\"gemini/*\"],\"auto\":[\"copilot/auto\",\"large\"],\"claude\":[\"agent\"],\"codex\":[\"agent\"],\"coding\":[\"copilot/gpt-5*codex*\",\"openai/gpt-5*codex*\",\"gpt-5-codex\",\"kimi\"],\"computer-use\":[\"copilot/*computer-use*\",\"google/*computer-use*\",\"gemini/*computer-use*\",\"openai/*computer-use*\"],\"copilot\":[\"agent\"],\"deep-research\":[\"copilot/deep-research*\",\"copilot/o3-deep-research*\",\"copilot/o4-mini-deep-research*\",\"google/deep-research*\",\"gemini/deep-research*\",\"openai/o3-deep-research*\",\"openai/o4-mini-deep-research*\"],\"detection\":[\"small\"],\"evals\":[\"small\"],\"fable\":[\"copilot/*fable*\",\"anthropic/*fable*\"],\"gemini\":[\"agent\"],\"gemini-3-flash\":[\"copilot/gemini-3*flash*\",\"google/gemini-3*flash*\",\"gemini/gemini-3*flash*\"],\"gemini-3-pro\":[\"copilot/gemini-3*pro*\",\"google/gemini-3*pro*\",\"google/nano-banana*\",\"gemini/gemini-3*pro*\"],\"gemini-3.1-flash\":[\"copilot/gemini-3.1*flash*\",\"google/gemini-3.1*flash*\",\"gemini/gemini-3.1*flash*\"],\"gemini-3.1-pro\":[\"copilot/gemini-3.1*pro*\",\"google/gemini-3.1*pro*\",\"gemini/gemini-3.1*pro*\"],\"gemini-3.5-flash\":[\"copilot/gemini-3.5*flash*\",\"google/gemini-3.5*flash*\",\"gemini/gemini-3.5*flash*\"],\"gemini-3.6-flash\":[\"copilot/gemini-3.6*flash*\",\"google/gemini-3.6*flash*\",\"gemini/gemini-3.6*flash*\"],\"gemini-3.7-flash\":[\"copilot/gemini-3.7*flash*\",\"google/gemini-3.7*flash*\",\"gemini/gemini-3.7*flash*\"],\"gemini-flash\":[\"copilot/gemini-*flash*\",\"google/gemini-*flash*\",\"gemini/gemini-*flash*\"],\"gemini-flash-lite\":[\"copilot/gemini-*flash*lite*\",\"google/gemini-*flash*lite*\",\"gemini/gemini-*flash*lite*\"],\"gemini-omni\":[\"copilot/gemini-omni*\",\"google/gemini-omni*\",\"gemini/gemini-omni*\"],\"gemini-pro\":[\"copilot/gemini-*pro*\",\"google/gemini-*pro*\",\"gemini/gemini-*pro*\"],\"gemma\":[\"copilot/gemma*\",\"google/gemma*\",\"gemini/gemma*\"],\"gpt-5\":[\"copilot/gpt-5*\",\"openai/gpt-5*\"],\"gpt-5-codex\":[\"copilot/gpt-5*codex*\",\"openai/gpt-5*codex*\"],\"gpt-5-mini\":[\"copilot/gpt-5*mini*\",\"openai/gpt-5*mini*\"],\"gpt-5-nano\":[\"copilot/gpt-5*nano*\",\"openai/gpt-5*nano*\"],\"gpt-5-pro\":[\"copilot/gpt-5*pro*\",\"openai/gpt-5*pro*\"],\"gpt-5.1\":[\"copilot/gpt-5.1*\",\"openai/gpt-5.1*\"],\"gpt-5.2\":[\"copilot/gpt-5.2*\",\"openai/gpt-5.2*\"],\"gpt-5.3\":[\"copilot/gpt-5.3*\",\"openai/gpt-5.3*\"],\"gpt-5.4\":[\"copilot/gpt-5.4*\",\"openai/gpt-5.4*\"],\"gpt-5.5\":[\"copilot/gpt-5.5*\",\"openai/gpt-5.5*\"],\"gpt-5.6\":[\"copilot/gpt-5.6*\",\"openai/gpt-5.6*\"],\"grok\":[\"copilot/*grok*\",\"openai/*grok*\"],\"haiku\":[\"copilot/*haiku*\",\"anthropic/*haiku*\"],\"image-generation\":[\"copilot/gpt-image*\",\"openai/gpt-image*\",\"openai/chatgpt-image*\",\"copilot/gemini-*image*\",\"google/gemini-*image*\",\"gemini/gemini-*image*\",\"google/imagen*\"],\"kimi\":[\"copilot/kimi*\",\"openai/kimi*\"],\"kiwi\":[\"copilot/kiwi*\",\"openai/kiwi*\"],\"large\":[\"sonnet\",\"gpt-5-pro\",\"gpt-5\",\"gemini-pro\"],\"lyria\":[\"google/lyria*\",\"gemini/lyria*\",\"copilot/lyria*\"],\"mai-code\":[\"copilot/MAI-Code*\",\"copilot/mai-code*\",\"openai/MAI-Code*\"],\"mai-code-1-flash-picker\":[\"copilot/MAI-Code-1-Flash-picker*\",\"copilot/mai-code-1-flash-picker*\",\"openai/MAI-Code-1-Flash-picker*\"],\"mini\":[\"haiku\",\"gpt-5-mini\",\"gpt-5-nano\",\"gemini-flash-lite\"],\"nano-banana\":[\"copilot/nano-banana*\",\"google/nano-banana*\",\"gemini/nano-banana*\"],\"opus\":[\"copilot/*opus*\",\"anthropic/*opus*\"],\"opusplan\":[\"opus?effort=high\"],\"raptor-mini\":[\"copilot/raptor*\",\"openai/raptor*\"],\"reasoning\":[\"copilot/o1*\",\"copilot/o3*\",\"copilot/o4*\",\"openai/o1*\",\"openai/o3*\",\"openai/o4*\"],\"robotics\":[\"copilot/*robotics*\",\"google/*robotics*\",\"gemini/*robotics*\"],\"small\":[\"mini\"],\"small-agent\":[\"haiku\",\"gpt-5-mini\",\"gemini-flash\"],\"sonnet\":[\"copilot/*sonnet*\",\"anthropic/*sonnet*\"],\"sonnet-6x\":[\"copilot/*sonnet-4.5*\",\"copilot/*sonnet-4.6*\",\"copilot/*sonnet-5*\",\"copilot/*sonnet-4-5-*\",\"anthropic/*sonnet-4-5-*\",\"copilot/*sonnet-4-6*\",\"anthropic/*sonnet-4-6*\",\"anthropic/*sonnet-5*\"],\"summarization\":[\"haiku\",\"gpt-5-mini\",\"gemini-flash-lite\",\"mini\"],\"veo\":[\"google/veo*\",\"gemini/veo*\"],\"vision\":[\"copilot/gemini-*image*\",\"google/gemini-*image*\",\"gemini/gemini-*image*\",\"copilot/gemini-*flash*\",\"google/gemini-*flash*\",\"gemini/gemini-*flash*\"]}},\"container\":{\"imageTag\":\"0.28.12,squid=sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f,agent=sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202,api-proxy=sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32,cli-proxy=sha256:5250629d48eaedfedf2e948785228e8da29eec2a83cbab58ea0751c14a7b021d\"},\"logging\":{\"proxyLogsDir\":\"/tmp/gh-aw/sandbox/firewall/logs\",\"auditDir\":\"/tmp/gh-aw/sandbox/firewall/audit\"}}" > "${RUNNER_TEMP}/gh-aw/awf-config.json"
+          printf '%s\n' "{\"\$schema\":\"https://github.com/github/gh-aw-firewall/releases/download/v0.28.12/awf-config.schema.json\",\"network\":{\"allowDomains\":[\"*.githubusercontent.com\",\"api.snapcraft.io\",\"archive.ubuntu.com\",\"azure.archive.ubuntu.com\",\"codeload.github.com\",\"crl.geotrust.com\",\"crl.globalsign.com\",\"crl.identrust.com\",\"crl.sectigo.com\",\"crl.thawte.com\",\"crl.usertrust.com\",\"crl.verisign.com\",\"crl3.digicert.com\",\"crl4.digicert.com\",\"crls.ssl.com\",\"docs.github.com\",\"github-cloud.githubusercontent.com\",\"github-cloud.s3.amazonaws.com\",\"github.blog\",\"github.com\",\"github.githubassets.com\",\"json-schema.org\",\"json.schemastore.org\",\"keyserver.ubuntu.com\",\"lfs.github.com\",\"objects.githubusercontent.com\",\"ocsp.digicert.com\",\"ocsp.geotrust.com\",\"ocsp.globalsign.com\",\"ocsp.identrust.com\",\"ocsp.sectigo.com\",\"ocsp.ssl.com\",\"ocsp.thawte.com\",\"ocsp.usertrust.com\",\"ocsp.verisign.com\",\"packagecloud.io\",\"packages.cloud.google.com\",\"packages.microsoft.com\",\"patch-diff.githubusercontent.com\",\"patchdiff.githubusercontent.com\",\"ppa.launchpad.net\",\"raw.githubusercontent.com\",\"s.symcb.com\",\"s.symcd.com\",\"security.ubuntu.com\",\"ts-crl.ws.symantec.com\",\"ts-ocsp.ws.symantec.com\",\"www.googleapis.com\"],\"isolation\":true,\"topologyAttach\":[\"awmg-mcpg\"]},\"apiProxy\":{\"enabled\":true,\"enableTokenSteering\":true,\"maxRuns\":500,\"maxAiCredits\":${GH_AW_MAX_AI_CREDITS},\"maxCacheMisses\":5,\"modelFallback\":{\"enabled\":false},\"targets\":{\"openai\":{\"host\":\"proxy.shopify.ai\"}},\"models\":{\"agent\":[\"sonnet-6x\",\"gpt-5.4\",\"gpt-5.5\",\"gpt-5.6\",\"gpt-5.3\",\"gemini-pro\",\"any\"],\"antigravity\":[\"copilot/antigravity*\",\"google/antigravity*\",\"gemini/antigravity*\"],\"any\":[\"copilot/*\",\"anthropic/*\",\"openai/*\",\"google/*\",\"gemini/*\"],\"auto\":[\"copilot/auto\",\"large\"],\"claude\":[\"agent\"],\"codex\":[\"agent\"],\"coding\":[\"copilot/gpt-5*codex*\",\"openai/gpt-5*codex*\",\"gpt-5-codex\",\"kimi\"],\"computer-use\":[\"copilot/*computer-use*\",\"google/*computer-use*\",\"gemini/*computer-use*\",\"openai/*computer-use*\"],\"copilot\":[\"agent\"],\"deep-research\":[\"copilot/deep-research*\",\"copilot/o3-deep-research*\",\"copilot/o4-mini-deep-research*\",\"google/deep-research*\",\"gemini/deep-research*\",\"openai/o3-deep-research*\",\"openai/o4-mini-deep-research*\"],\"detection\":[\"small\"],\"evals\":[\"small\"],\"fable\":[\"copilot/*fable*\",\"anthropic/*fable*\"],\"gemini\":[\"agent\"],\"gemini-3-flash\":[\"copilot/gemini-3*flash*\",\"google/gemini-3*flash*\",\"gemini/gemini-3*flash*\"],\"gemini-3-pro\":[\"copilot/gemini-3*pro*\",\"google/gemini-3*pro*\",\"google/nano-banana*\",\"gemini/gemini-3*pro*\"],\"gemini-3.1-flash\":[\"copilot/gemini-3.1*flash*\",\"google/gemini-3.1*flash*\",\"gemini/gemini-3.1*flash*\"],\"gemini-3.1-pro\":[\"copilot/gemini-3.1*pro*\",\"google/gemini-3.1*pro*\",\"gemini/gemini-3.1*pro*\"],\"gemini-3.5-flash\":[\"copilot/gemini-3.5*flash*\",\"google/gemini-3.5*flash*\",\"gemini/gemini-3.5*flash*\"],\"gemini-3.6-flash\":[\"copilot/gemini-3.6*flash*\",\"google/gemini-3.6*flash*\",\"gemini/gemini-3.6*flash*\"],\"gemini-3.7-flash\":[\"copilot/gemini-3.7*flash*\",\"google/gemini-3.7*flash*\",\"gemini/gemini-3.7*flash*\"],\"gemini-flash\":[\"copilot/gemini-*flash*\",\"google/gemini-*flash*\",\"gemini/gemini-*flash*\"],\"gemini-flash-lite\":[\"copilot/gemini-*flash*lite*\",\"google/gemini-*flash*lite*\",\"gemini/gemini-*flash*lite*\"],\"gemini-omni\":[\"copilot/gemini-omni*\",\"google/gemini-omni*\",\"gemini/gemini-omni*\"],\"gemini-pro\":[\"copilot/gemini-*pro*\",\"google/gemini-*pro*\",\"gemini/gemini-*pro*\"],\"gemma\":[\"copilot/gemma*\",\"google/gemma*\",\"gemini/gemma*\"],\"gpt-5\":[\"copilot/gpt-5*\",\"openai/gpt-5*\"],\"gpt-5-codex\":[\"copilot/gpt-5*codex*\",\"openai/gpt-5*codex*\"],\"gpt-5-mini\":[\"copilot/gpt-5*mini*\",\"openai/gpt-5*mini*\"],\"gpt-5-nano\":[\"copilot/gpt-5*nano*\",\"openai/gpt-5*nano*\"],\"gpt-5-pro\":[\"copilot/gpt-5*pro*\",\"openai/gpt-5*pro*\"],\"gpt-5.1\":[\"copilot/gpt-5.1*\",\"openai/gpt-5.1*\"],\"gpt-5.2\":[\"copilot/gpt-5.2*\",\"openai/gpt-5.2*\"],\"gpt-5.3\":[\"copilot/gpt-5.3*\",\"openai/gpt-5.3*\"],\"gpt-5.4\":[\"copilot/gpt-5.4*\",\"openai/gpt-5.4*\"],\"gpt-5.5\":[\"copilot/gpt-5.5*\",\"openai/gpt-5.5*\"],\"gpt-5.6\":[\"copilot/gpt-5.6*\",\"openai/gpt-5.6*\"],\"grok\":[\"copilot/*grok*\",\"openai/*grok*\"],\"haiku\":[\"copilot/*haiku*\",\"anthropic/*haiku*\"],\"image-generation\":[\"copilot/gpt-image*\",\"openai/gpt-image*\",\"openai/chatgpt-image*\",\"copilot/gemini-*image*\",\"google/gemini-*image*\",\"gemini/gemini-*image*\",\"google/imagen*\"],\"kimi\":[\"copilot/kimi*\",\"openai/kimi*\"],\"kiwi\":[\"copilot/kiwi*\",\"openai/kiwi*\"],\"large\":[\"sonnet\",\"gpt-5-pro\",\"gpt-5\",\"gemini-pro\"],\"lyria\":[\"google/lyria*\",\"gemini/lyria*\",\"copilot/lyria*\"],\"mai-code\":[\"copilot/MAI-Code*\",\"copilot/mai-code*\",\"openai/MAI-Code*\"],\"mai-code-1-flash-picker\":[\"copilot/MAI-Code-1-Flash-picker*\",\"copilot/mai-code-1-flash-picker*\",\"openai/MAI-Code-1-Flash-picker*\"],\"mini\":[\"haiku\",\"gpt-5-mini\",\"gpt-5-nano\",\"gemini-flash-lite\"],\"nano-banana\":[\"copilot/nano-banana*\",\"google/nano-banana*\",\"gemini/nano-banana*\"],\"opus\":[\"copilot/*opus*\",\"anthropic/*opus*\"],\"opusplan\":[\"opus?effort=high\"],\"raptor-mini\":[\"copilot/raptor*\",\"openai/raptor*\"],\"reasoning\":[\"copilot/o1*\",\"copilot/o3*\",\"copilot/o4*\",\"openai/o1*\",\"openai/o3*\",\"openai/o4*\"],\"robotics\":[\"copilot/*robotics*\",\"google/*robotics*\",\"gemini/*robotics*\"],\"small\":[\"mini\"],\"small-agent\":[\"haiku\",\"gpt-5-mini\",\"gemini-flash\"],\"sonnet\":[\"copilot/*sonnet*\",\"anthropic/*sonnet*\"],\"sonnet-6x\":[\"copilot/*sonnet-4.5*\",\"copilot/*sonnet-4.6*\",\"copilot/*sonnet-5*\",\"copilot/*sonnet-4-5-*\",\"anthropic/*sonnet-4-5-*\",\"copilot/*sonnet-4-6*\",\"anthropic/*sonnet-4-6*\",\"anthropic/*sonnet-5*\"],\"summarization\":[\"haiku\",\"gpt-5-mini\",\"gemini-flash-lite\",\"mini\"],\"veo\":[\"google/veo*\",\"gemini/veo*\"],\"vision\":[\"copilot/gemini-*image*\",\"google/gemini-*image*\",\"gemini/gemini-*image*\",\"copilot/gemini-*flash*\",\"google/gemini-*flash*\",\"gemini/gemini-*flash*\"]}},\"container\":{\"imageTag\":\"0.28.12,squid=sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f,agent=sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202,api-proxy=sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32,cli-proxy=sha256:5250629d48eaedfedf2e948785228e8da29eec2a83cbab58ea0751c14a7b021d\"},\"logging\":{\"proxyLogsDir\":\"/tmp/gh-aw/sandbox/firewall/logs\",\"auditDir\":\"/tmp/gh-aw/sandbox/firewall/audit\"}}" > "${RUNNER_TEMP}/gh-aw/awf-config.json"
           cp "${RUNNER_TEMP}/gh-aw/awf-config.json" /tmp/gh-aw/awf-config.json
           export GH_AW_MODELS_JSON_PATH="/tmp/gh-aw/models.json"
           GH_AW_DOCKER_HOST=""
@@ -852,7 +987,7 @@ jobs:
           GH_AW_AWF_LOG_FILE=/tmp/gh-aw/agent-stdio.log \
           GH_AW_AWF_ATTEMPT_LOG_NAME=codex \
           bash "${RUNNER_TEMP}/gh-aw/actions/run_awf_with_startup_retries.sh" -- \
-            awf --config "${RUNNER_TEMP}/gh-aw/awf-config.json" --container-workdir "${GITHUB_WORKSPACE}" --mount "${RUNNER_TEMP}/gh-aw:${RUNNER_TEMP}/gh-aw:ro" --mount "${RUNNER_TEMP}/gh-aw:/host${RUNNER_TEMP}/gh-aw:ro" ${GH_AW_TOOL_CACHE_MOUNT:+--mount "$GH_AW_TOOL_CACHE_MOUNT"} ${GH_AW_DOCKER_HOST:+--docker-host "$GH_AW_DOCKER_HOST"} --env-all --exclude-env ACTIONS_ID_TOKEN_REQUEST_TOKEN --exclude-env ACTIONS_ID_TOKEN_REQUEST_URL --exclude-env CODEX_API_KEY --exclude-env COPILOT_GITHUB_TOKEN --exclude-env MCP_GATEWAY_AGENT_ID --exclude-env OPENAI_API_KEY --mount /tmp/gh-aw:/tmp/gh-aw:rw --log-level info --skip-pull --openai-api-base-path /v1 \
+            awf --config "${RUNNER_TEMP}/gh-aw/awf-config.json" --container-workdir "${GITHUB_WORKSPACE}" --mount "${RUNNER_TEMP}/gh-aw:${RUNNER_TEMP}/gh-aw:ro" --mount "${RUNNER_TEMP}/gh-aw:/host${RUNNER_TEMP}/gh-aw:ro" ${GH_AW_TOOL_CACHE_MOUNT:+--mount "$GH_AW_TOOL_CACHE_MOUNT"} ${GH_AW_DOCKER_HOST:+--docker-host "$GH_AW_DOCKER_HOST"} --env-all --exclude-env ACTIONS_ID_TOKEN_REQUEST_TOKEN --exclude-env ACTIONS_ID_TOKEN_REQUEST_URL --exclude-env CODEX_API_KEY --exclude-env COPILOT_GITHUB_TOKEN --exclude-env GITHUB_MCP_SERVER_TOKEN --exclude-env MCP_GATEWAY_AGENT_ID --exclude-env OPENAI_API_KEY --mount /tmp/gh-aw:/tmp/gh-aw:rw --log-level info --skip-pull --openai-api-base-path /v1 \
             -- /bin/bash -c 'set +o histexpand; export PATH="${RUNNER_TEMP}/gh-aw/mcp-cli/bin:$PATH" && : "${RUNNER_TOOL_CACHE:?RUNNER_TOOL_CACHE must be set}"; GH_AW_TOOL_CACHE="$RUNNER_TOOL_CACHE"; export PATH="$(find "$GH_AW_TOOL_CACHE" -maxdepth 5 -type d -name bin 2>/dev/null | tr '\''\n'\'' '\'':'\'')$PATH"; [ -n "$GOROOT" ] && export PATH="$GOROOT/bin:$PATH" || true; [ -n "$ERLANG_HOME" ] && export PATH="$ERLANG_HOME/bin:$PATH" || true && GH_AW_NODE_EXEC="${GH_AW_NODE_BIN:-}"; if [ -z "$GH_AW_NODE_EXEC" ] || [ ! -x "$GH_AW_NODE_EXEC" ]; then GH_AW_NODE_EXEC="$(command -v node 2>/dev/null || true)"; fi; if [ -z "$GH_AW_NODE_EXEC" ]; then echo "node runtime missing on this runner — check runtimes.node in workflow YAML" >&2; exit 127; fi; GH_AW_NPM_GLOBAL_ROOT="$(npm root -g 2>/dev/null || true)"; if [ -n "$GH_AW_NPM_GLOBAL_ROOT" ]; then export NODE_PATH="${GH_AW_NPM_GLOBAL_ROOT}${NODE_PATH:+:${NODE_PATH}}"; fi; "$GH_AW_NODE_EXEC" ${RUNNER_TEMP}/gh-aw/actions/codex_harness.cjs codex exec${GH_AW_MODEL_AGENT_CODEX:+ --model "$GH_AW_MODEL_AGENT_CODEX"} -c web_search="disabled" -c fetch="disabled" -c features.shell_tool=false --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check  --prompt-file /tmp/gh-aw/aw-prompts/prompt.txt'
         env:
           AWF_REFLECT_ENABLED: 1
@@ -862,7 +997,7 @@ jobs:
           GH_AW_MAX_AI_CREDITS: ${{ vars.GH_AW_DEFAULT_MAX_AI_CREDITS || '1000' }}
           GH_AW_MAX_TURNS: ${{ vars.GH_AW_DEFAULT_MAX_TURNS || '' }}
           GH_AW_MCP_CONFIG: ${{ runner.temp }}/gh-aw/mcp-config/config.toml
-          GH_AW_MODEL_AGENT_CODEX: gpt-5.6-terra
+          GH_AW_MODEL_AGENT_CODEX: gpt-5.6-sol
           GH_AW_PHASE: agent
           GH_AW_PROMPT: /tmp/gh-aw/aw-prompts/prompt.txt
           GH_AW_SAFE_OUTPUTS: ${{ steps.set-runtime-paths.outputs.GH_AW_SAFE_OUTPUTS }}
@@ -884,7 +1019,7 @@ jobs:
         continue-on-error: true
         env:
           GH_AW_AGENTIC_EXECUTION_OUTCOME: ${{ steps.agentic_execution.outcome }}
-          GH_AW_ENGINE_STEP_TIMEOUT_MINUTES: 5
+          GH_AW_ENGINE_STEP_TIMEOUT_MINUTES: 15
           GH_AW_ENGINE_INTERNAL_LOGS_DIR: /tmp/gh-aw/mcp-config/logs
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
@@ -916,8 +1051,11 @@ jobs:
             const { main } = require(path.join(actionsDir, 'redact_secrets.cjs'));
             await main();
         env:
-          GH_AW_SECRET_NAMES: 'CODEX_API_KEY,GITHUB_TOKEN,OPENAI_API_KEY,SHOPIFY_AI_PROXY'
+          GH_AW_SECRET_NAMES: 'CODEX_API_KEY,GH_AW_GITHUB_MCP_SERVER_TOKEN,GH_AW_GITHUB_TOKEN,GH_REMIX_PAT_AW,GITHUB_TOKEN,OPENAI_API_KEY,SHOPIFY_AI_PROXY'
           SECRET_CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
+          SECRET_GH_AW_GITHUB_MCP_SERVER_TOKEN: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN }}
+          SECRET_GH_AW_GITHUB_TOKEN: ${{ secrets.GH_AW_GITHUB_TOKEN }}
+          SECRET_GH_REMIX_PAT_AW: ${{ secrets.GH_REMIX_PAT_AW }}
           SECRET_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SECRET_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SECRET_SHOPIFY_AI_PROXY: ${{ secrets.SHOPIFY_AI_PROXY }}
@@ -937,9 +1075,11 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GH_AW_SAFE_OUTPUTS: ${{ steps.set-runtime-paths.outputs.GH_AW_SAFE_OUTPUTS }}
-          GH_AW_ALLOWED_DOMAINS: "api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,ppa.launchpad.net,s.symcb.com,s.symcd.com,security.ubuntu.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.googleapis.com"
+          GH_AW_ALLOWED_DOMAINS: "*.githubusercontent.com,api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,codeload.github.com,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,docs.github.com,github-cloud.githubusercontent.com,github-cloud.s3.amazonaws.com,github.blog,github.com,github.githubassets.com,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,lfs.github.com,objects.githubusercontent.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,patch-diff.githubusercontent.com,patchdiff.githubusercontent.com,ppa.launchpad.net,raw.githubusercontent.com,s.symcb.com,s.symcd.com,security.ubuntu.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.googleapis.com"
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_API_URL: ${{ github.api_url }}
+          GH_AW_COMMANDS: "[\"review\"]"
+          GH_AW_LABEL_COMMANDS: "[\"aw:review\"]"
         with:
           script: |
             const path = require('path');
@@ -1066,7 +1206,6 @@ jobs:
       - activation
       - agent
       - detection
-      - route_agent_workflow
       - safe_outputs
     if: >
       always() && (needs.agent.result != 'skipped' || needs.activation.outputs.lockdown_check_failed == 'true' ||
@@ -1076,8 +1215,9 @@ jobs:
     permissions:
       actions: read
       issues: write
+      pull-requests: write
     concurrency:
-      group: "gh-aw-conclusion-aw-comment-router"
+      group: "gh-aw-conclusion-aw-command-review-pull-request-${{ github.run_id }}"
       cancel-in-progress: false
       queue: max
     env:
@@ -1097,8 +1237,8 @@ jobs:
           trace-id: ${{ needs.activation.outputs.setup-trace-id }}
           parent-span-id: ${{ needs.activation.outputs.setup-parent-span-id || needs.activation.outputs.setup-span-id }}
         env:
-          GH_AW_SETUP_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/aw-comment-router.lock.yml@${{ github.ref }}
+          GH_AW_SETUP_WORKFLOW_NAME: "/review pull request"
+          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/aw-command-review-pull-request.lock.yml@${{ github.ref }}
           GH_AW_INFO_VERSION: "0.150.1"
           GH_AW_INFO_AWF_VERSION: "v0.28.12"
           GH_AW_INFO_ENGINE_ID: "codex"
@@ -1165,8 +1305,8 @@ jobs:
         continue-on-error: true
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          key: agentic-workflow-usage-awcommentrouter-${{ github.run_id }}
-          restore-keys: agentic-workflow-usage-awcommentrouter-
+          key: agentic-workflow-usage-awcommandreviewpullrequest-${{ github.run_id }}
+          restore-keys: agentic-workflow-usage-awcommandreviewpullrequest-
           path: /tmp/gh-aw/agentic-workflow-usage-cache.jsonl
       - name: Write daily AIC usage cache entry
         id: write-daily-aic-cache
@@ -1188,7 +1328,7 @@ jobs:
         continue-on-error: true
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          key: agentic-workflow-usage-awcommentrouter-${{ github.run_id }}
+          key: agentic-workflow-usage-awcommandreviewpullrequest-${{ github.run_id }}
           path: /tmp/gh-aw/agentic-workflow-usage-cache.jsonl
       - name: Upload daily AIC usage cache artifact
         id: upload-daily-aic-cache
@@ -1206,15 +1346,15 @@ jobs:
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
           GH_AW_NOOP_MAX: "1"
-          GH_AW_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-comment-router.md"
+          GH_AW_WORKFLOW_NAME: "/review pull request"
+          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-command-review-pull-request.md"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_AGENT_CONCLUSION: ${{ needs.agent.result }}
           GH_AW_NOOP_REPORT_AS_ISSUE: "false"
           GH_AW_AIC: ${{ needs.agent.outputs.aic }}
           GH_AW_THREAT_DETECTION_AIC: ${{ needs.detection.outputs.aic }}
           GH_AW_AMBIENT_CONTEXT: ${{ needs.agent.outputs.ambient_context }}
-          GH_AW_WORKFLOW_ID: "aw-comment-router"
+          GH_AW_WORKFLOW_ID: "aw-command-review-pull-request"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -1229,8 +1369,8 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-comment-router.md"
+          GH_AW_WORKFLOW_NAME: "/review pull request"
+          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-command-review-pull-request.md"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_DETECTION_CONCLUSION: ${{ needs.detection.outputs.detection_conclusion }}
           GH_AW_DETECTION_REASON: ${{ needs.detection.outputs.detection_reason }}
@@ -1249,8 +1389,8 @@ jobs:
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
           GH_AW_MISSING_TOOL_CREATE_ISSUE: "true"
-          GH_AW_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-comment-router.md"
+          GH_AW_WORKFLOW_NAME: "/review pull request"
+          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-command-review-pull-request.md"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -1266,8 +1406,8 @@ jobs:
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
           GH_AW_REPORT_INCOMPLETE_CREATE_ISSUE: "true"
-          GH_AW_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-comment-router.md"
+          GH_AW_WORKFLOW_NAME: "/review pull request"
+          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-command-review-pull-request.md"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -1283,11 +1423,11 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-comment-router.md"
+          GH_AW_WORKFLOW_NAME: "/review pull request"
+          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-command-review-pull-request.md"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_AGENT_CONCLUSION: ${{ needs.agent.result }}
-          GH_AW_WORKFLOW_ID: "aw-comment-router"
+          GH_AW_WORKFLOW_ID: "aw-command-review-pull-request"
           GH_AW_ACTION_FAILURE_ISSUE_EXPIRES_HOURS: "0"
           GH_AW_ENGINE_ID: "codex"
           GH_AW_SECRET_VERIFICATION_RESULT: ${{ needs.activation.outputs.secret_verification_result }}
@@ -1317,7 +1457,7 @@ jobs:
           GH_AW_FAILURE_REPORT_AS_ISSUE: "true"
           GH_AW_MISSING_TOOL_REPORT_AS_FAILURE: "true"
           GH_AW_MISSING_DATA_REPORT_AS_FAILURE: "true"
-          GH_AW_TIMEOUT_MINUTES: "5"
+          GH_AW_TIMEOUT_MINUTES: "15"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -1333,8 +1473,8 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-comment-router.md"
+          GH_AW_WORKFLOW_NAME: "/review pull request"
+          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-command-review-pull-request.md"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_REPORT_FAILED_JOBS: "true"
         with:
@@ -1373,8 +1513,8 @@ jobs:
           trace-id: ${{ needs.activation.outputs.setup-trace-id }}
           parent-span-id: ${{ needs.activation.outputs.setup-parent-span-id || needs.activation.outputs.setup-span-id }}
         env:
-          GH_AW_SETUP_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/aw-comment-router.lock.yml@${{ github.ref }}
+          GH_AW_SETUP_WORKFLOW_NAME: "/review pull request"
+          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/aw-command-review-pull-request.lock.yml@${{ github.ref }}
           GH_AW_INFO_VERSION: "0.150.1"
           GH_AW_INFO_AWF_VERSION: "v0.28.12"
           GH_AW_INFO_ENGINE_ID: "codex"
@@ -1441,10 +1581,10 @@ jobs:
         if: always() && steps.detection_guard.outputs.run_detection == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          WORKFLOW_NAME: "Remix bot comment router"
-          WORKFLOW_DESCRIPTION: "Route administrator mentions to an agentic workflow"
+          WORKFLOW_NAME: "/review pull request"
+          WORKFLOW_DESCRIPTION: "Perform an admin-requested read-only review of a pull request"
           HAS_PATCH: ${{ needs.agent.outputs.has_patch }}
-          GH_AW_DETECTION_CONTINUE_ON_ERROR: "true"
+          GH_AW_DETECTION_CONTINUE_ON_ERROR: "false"
           GH_AW_DETECTION_SKIP_PROMPT_SUMMARY: "true"
         with:
           script: |
@@ -1494,7 +1634,6 @@ jobs:
           chmod 600 "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" "/tmp/gh-aw/mcp-config/config.toml"
       - name: Install threat-detect binary
         if: always() && steps.detection_guard.outputs.run_detection == 'true'
-        continue-on-error: true
         run: |
           bash "${RUNNER_TEMP}/gh-aw/actions/install_threat_detect_binary.sh" v0.5.1
       - name: Execute threat detection with AWF
@@ -1511,7 +1650,7 @@ jobs:
           GH_AW_MAX_AI_CREDITS: ${{ vars.GH_AW_DEFAULT_DETECTION_MAX_AI_CREDITS || '400' }}
           GH_AW_MAX_TURNS: ${{ vars.GH_AW_DEFAULT_MAX_TURNS || '' }}
           GH_AW_MCP_CONFIG: ${{ runner.temp }}/gh-aw/mcp-config/config.toml
-          GH_AW_MODEL_DETECTION_CODEX: gpt-5.6-terra
+          GH_AW_MODEL_DETECTION_CODEX: gpt-5.6-sol
           GH_AW_PHASE: detection
           GH_AW_PROMPT: /tmp/gh-aw/aw-prompts/prompt.txt
           GH_AW_VERSION: v0.88.2
@@ -1526,10 +1665,10 @@ jobs:
           RUNNER_TEMP: ${{ runner.temp }}
           RUST_LOG: ${{ runner.debug == 1 && 'trace,hyper_util=info,mio=info,reqwest=info,os_info=info,codex_otel=warn,codex_core=debug,codex_exec=debug' || 'warn' }}
           TRACEPARENT: ${{ env.GITHUB_AW_OTEL_TRACE_ID != '' && env.GITHUB_AW_OTEL_PARENT_SPAN_ID != '' && format('00-{0}-{1}-01', env.GITHUB_AW_OTEL_TRACE_ID, env.GITHUB_AW_OTEL_PARENT_SPAN_ID) || '' }}
-          WORKFLOW_NAME: "Remix bot comment router"
-          WORKFLOW_DESCRIPTION: "Route administrator mentions to an agentic workflow"
+          WORKFLOW_NAME: "/review pull request"
+          WORKFLOW_DESCRIPTION: "Perform an admin-requested read-only review of a pull request"
           HAS_PATCH: ${{ needs.agent.outputs.has_patch }}
-          GH_AW_DETECTION_CONTINUE_ON_ERROR: "true"
+          GH_AW_DETECTION_CONTINUE_ON_ERROR: "false"
         run: |
           set -o pipefail
           printf '%s' "$(date +%s%3N)" > /tmp/gh-aw/agent_cli_start_ms.txt
@@ -1606,24 +1745,21 @@ jobs:
       - name: Conclude threat detection
         id: detection_conclusion
         if: always()
-        continue-on-error: true
         env:
           RUN_DETECTION: ${{ steps.detection_guard.outputs.run_detection }}
           DETECTION_AGENTIC_EXECUTION_OUTCOME: ${{ steps.detection_agentic_execution.outcome }}
-          GH_AW_DETECTION_CONTINUE_ON_ERROR: "true"
+          GH_AW_DETECTION_CONTINUE_ON_ERROR: "false"
         run: |
           bash "${RUNNER_TEMP}/gh-aw/actions/conclude_threat_detection.sh" /tmp/gh-aw/threat-detection/detection_result.json
 
   pre_activation:
-    if: >
-      (github.event_name != 'issue_comment' || contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) &&
-      (contains(github.event.comment.body, '@remix-run-bot'))
+    if: "(github.event_name != 'issue_comment' || contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), github.event.comment.author_association) || github.actor == 'remix-run-bot') && ((github.event_name == 'workflow_dispatch' || github.event.action != 'labeled' || github.event.sender.login != 'remix-run-bot') && ((github.event_name == 'issue_comment') && (github.event_name == 'issue_comment' && (startsWith(github.event.comment.body, '/review ') || startsWith(github.event.comment.body, '/review\n') || github.event.comment.body == '/review') && github.event.issue.pull_request != null) || !(github.event_name == 'issue_comment') || github.event_name == 'pull_request' && github.event.label.name == 'aw:review'))"
     runs-on: ubuntu-slim
     env:
       GH_AW_RUNTIME_FEATURES: ${{ vars.GH_AW_RUNTIME_FEATURES }}
     outputs:
-      activated: ${{ steps.check_membership.outputs.is_team_member == 'true' && steps.check_skip_bots.outputs.skip_bots_ok == 'true' }}
-      matched_command: ''
+      activated: ${{ steps.check_membership.outputs.is_team_member == 'true' && steps.check_skip_bots.outputs.skip_bots_ok == 'true' && steps.check_command_position.outputs.command_position_ok == 'true' }}
+      matched_command: ${{ steps.check_command_position.outputs.matched_command }}
       setup-parent-span-id: ${{ steps.setup.outputs.parent-span-id || steps.setup.outputs.span-id }}
       setup-span-id: ${{ steps.setup.outputs.span-id }}
       setup-trace-id: ${{ steps.setup.outputs.trace-id }}
@@ -1635,16 +1771,31 @@ jobs:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
         env:
-          GH_AW_SETUP_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/aw-comment-router.lock.yml@${{ github.ref }}
+          GH_AW_SETUP_WORKFLOW_NAME: "/review pull request"
+          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/aw-command-review-pull-request.lock.yml@${{ github.ref }}
           GH_AW_INFO_VERSION: "0.150.1"
           GH_AW_INFO_AWF_VERSION: "v0.28.12"
           GH_AW_INFO_ENGINE_ID: "codex"
-      - name: Check team membership for workflow
+      - name: Check command position
+        id: check_command_position
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          GH_AW_COMMANDS: "[\"review\"]"
+        with:
+          script: |
+            const path = require('path');
+            const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');
+            const { setupGlobals } = require(path.join(actionsDir, 'setup_globals.cjs'));
+            setupGlobals(core, github, context, exec, io, getOctokit);
+            const { main } = require(path.join(actionsDir, 'check_command_position.cjs'));
+            await main();
+      - name: Check team membership for command workflow
         id: check_membership
+        if: steps.check_command_position.outputs.command_position_ok == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GH_AW_REQUIRED_ROLES: "admin"
+          GH_AW_ALLOWED_BOTS: "remix-run-bot"
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -1658,8 +1809,8 @@ jobs:
         id: check_skip_bots
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          GH_AW_SKIP_BOTS: "dependabot,renovate,github-actions,copilot-swe-agent,Copilot,copilot,@app/copilot-swe-agent,remix-run-bot"
-          GH_AW_WORKFLOW_NAME: "Remix bot comment router"
+          GH_AW_SKIP_BOTS: "dependabot,renovate,github-actions,copilot-swe-agent,Copilot,copilot,@app/copilot-swe-agent"
+          GH_AW_WORKFLOW_NAME: "/review pull request"
         with:
           script: |
             const path = require('path');
@@ -1668,202 +1819,6 @@ jobs:
             setupGlobals(core, github, context, exec, io, getOctokit);
             const { main } = require(path.join(actionsDir, 'check_skip_bots.cjs'));
             await main();
-
-  route_agent_workflow:
-    needs:
-      - agent
-      - detection
-    if: (!cancelled()) && needs.agent.result != 'skipped' && contains(needs.agent.outputs.output_types, 'route_agent_workflow')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Download agent output artifact
-        continue-on-error: true
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: "{agent,agent-output-fallback}"
-          merge-multiple: true
-          path: ${{ runner.temp }}/gh-aw/safe-jobs/
-      - name: Queue the route or request clarification
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0 (source v9)
-        env:
-          EXPECTED_BOT_MENTION: "@remix-run-bot"
-          EXPECTED_REPOSITORY: remix-run/remix
-          GH_AW_AGENT_OUTPUT: ${{ runner.temp }}/gh-aw/safe-jobs/agent_output.json
-        with:
-          github-token: ${{ secrets.GH_REMIX_PAT_AW }}
-          script: |
-            const crypto = require('crypto')
-            const fs = require('fs')
-
-            if (
-              !['issue_comment', 'discussion_comment'].includes(context.eventName) ||
-              context.payload.action !== 'created'
-            ) {
-              core.setFailed('This output is restricted to newly created comments')
-              return
-            }
-
-            if (process.env.GITHUB_REPOSITORY !== process.env.EXPECTED_REPOSITORY) {
-              core.setFailed('This output is restricted to remix-run/remix')
-              return
-            }
-
-            const comment = context.payload.comment
-            const actor = comment?.user?.login
-            const body = comment?.body ?? ''
-            const mention = process.env.EXPECTED_BOT_MENTION.slice(1)
-            if (
-              !actor ||
-              !Number.isSafeInteger(comment?.id) ||
-              typeof comment.updated_at !== 'string' ||
-              !new RegExp(`@${mention}(?![a-z0-9-])`, 'i').test(body)
-            ) {
-              core.setFailed('The triggering comment is not a valid routed administrator request')
-              return
-            }
-
-            const permission = await github.rest.repos.getCollaboratorPermissionLevel({
-              ...context.repo,
-              username: actor,
-            })
-            if (permission.data.permission !== 'admin') {
-              core.setFailed('Only repository administrators may route agentic workflows')
-              return
-            }
-
-            const outputPath = process.env.GH_AW_AGENT_OUTPUT
-            if (!outputPath || !fs.existsSync(outputPath)) {
-              core.setFailed('Agent output was not found')
-              return
-            }
-
-            const output = JSON.parse(fs.readFileSync(outputPath, 'utf8'))
-            const items = output.items.filter((item) => item.type === 'route_agent_workflow')
-            if (items.length !== 1) {
-              core.setFailed('The router must produce exactly one routing decision')
-              return
-            }
-
-            const item = items[0]
-            const isDiscussion = context.eventName === 'discussion_comment'
-            const issue = context.payload.issue
-            const discussion = context.payload.discussion
-            const itemType = isDiscussion
-              ? 'discussion'
-              : issue?.pull_request
-                ? 'pull_request'
-                : 'issue'
-            const itemNumber = isDiscussion ? discussion?.number : issue?.number
-            const routes = {
-              review: {
-                issue: 'aw-command-review-issue.lock.yml',
-                pull_request: 'aw-command-review-pull-request.lock.yml',
-                discussion: 'aw-command-review-proposal.lock.yml',
-              },
-              implement: {
-                issue: 'aw-command-implement.lock.yml',
-                discussion: 'aw-command-implement.lock.yml',
-              },
-              iterate: {
-                pull_request: 'aw-command-iterate.lock.yml',
-              },
-            }
-
-            if (item.workflow === 'clarify') {
-              const clarification = item.clarification?.trim() ?? ''
-              if (!clarification || clarification.length > 1000) {
-                core.setFailed('A clarification must contain between 1 and 1000 characters')
-                return
-              }
-
-              if (isDiscussion) {
-                await github.graphql(
-                  `mutation($discussionId: ID!, $replyToId: ID!, $body: String!) {
-                    addDiscussionComment(input: {
-                      discussionId: $discussionId
-                      replyToId: $replyToId
-                      body: $body
-                    }) {
-                      comment { id }
-                    }
-                  }`,
-                  {
-                    discussionId: discussion.node_id,
-                    replyToId: comment.node_id,
-                    body: clarification,
-                  }
-                )
-              } else {
-                await github.rest.issues.createComment({
-                  ...context.repo,
-                  issue_number: issue.number,
-                  body: clarification,
-                })
-              }
-              return
-            }
-
-            const workflowFile = routes[item.workflow]?.[itemType]
-            if (!workflowFile || item.clarification) {
-              core.setFailed('Invalid routing output for the triggering item')
-              return
-            }
-            if (isDiscussion && discussion?.category?.slug !== 'proposals') {
-              core.setFailed('Discussion mention routing is restricted to Proposal Discussions')
-              return
-            }
-
-            const label = isDiscussion ? null : `aw:${item.workflow}`
-            if (label) {
-              await github.rest.issues.addLabels({
-                ...context.repo,
-                issue_number: itemNumber,
-                labels: [label],
-              })
-            }
-
-            const commentRouterContext = {
-              version: 1,
-              repository: process.env.EXPECTED_REPOSITORY,
-              router_workflow: '.github/workflows/aw-comment-router.lock.yml',
-              router_run_id: Number(process.env.GITHUB_RUN_ID),
-              event_type: context.eventName,
-              item_type: itemType,
-              item_number: itemNumber,
-              comment_id: comment.id,
-              comment_node_id: isDiscussion ? comment.node_id : null,
-              comment_updated_at: comment.updated_at,
-              comment_body_sha256: crypto.createHash('sha256').update(body, 'utf8').digest('hex'),
-              actor,
-              workflow: item.workflow,
-              label,
-            }
-
-            try {
-              // workflow_dispatch returns after GitHub accepts the event. Do not look up or
-              // wait for the command run.
-              await github.rest.actions.createWorkflowDispatch({
-                ...context.repo,
-                workflow_id: workflowFile,
-                ref: context.payload.repository.default_branch,
-                inputs: { aw_context: JSON.stringify(commentRouterContext) },
-              })
-            } finally {
-              if (label) {
-                try {
-                  await github.rest.issues.removeLabel({
-                    ...context.repo,
-                    issue_number: itemNumber,
-                    name: label,
-                  })
-                } catch (error) {
-                  if (error.status !== 404) throw error
-                }
-              }
-            }
-            return
 
   safe_outputs:
     needs:
@@ -1874,26 +1829,31 @@ jobs:
     runs-on: ubuntu-slim
     permissions:
       issues: write
+      pull-requests: write
     timeout-minutes: 45
     env:
       GH_AW_AGENT_AIC: ${{ needs.agent.outputs.aic }}
       GH_AW_AIC: ${{ needs.agent.outputs.aic }}
       GH_AW_AMBIENT_CONTEXT: ${{ needs.agent.outputs.ambient_context }}
-      GH_AW_CALLER_WORKFLOW_ID: "${{ github.repository }}/aw-comment-router"
+      GH_AW_CALLER_WORKFLOW_ID: "${{ github.repository }}/aw-command-review-pull-request"
+      GH_AW_COMMANDS: "[\"review\"]"
       GH_AW_DETECTION_CONCLUSION: ${{ needs.detection.outputs.detection_conclusion }}
       GH_AW_DETECTION_REASON: ${{ needs.detection.outputs.detection_reason }}
       GH_AW_EFFECTIVE_TOKENS: ${{ needs.agent.outputs.effective_tokens }}
       GH_AW_ENGINE_ID: "codex"
-      GH_AW_ENGINE_MODEL: "gpt-5.6-terra"
+      GH_AW_ENGINE_MODEL: "gpt-5.6-sol"
+      GH_AW_LABEL_COMMANDS: "[\"aw:review\"]"
       GH_AW_RUNTIME_FEATURES: ${{ vars.GH_AW_RUNTIME_FEATURES }}
       GH_AW_THREAT_DETECTION_AIC: ${{ needs.detection.outputs.aic }}
       GH_AW_WORKFLOW_EMOJI: "🤖"
-      GH_AW_WORKFLOW_ID: "aw-comment-router"
-      GH_AW_WORKFLOW_NAME: "Remix bot comment router"
-      GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-comment-router.md"
+      GH_AW_WORKFLOW_ID: "aw-command-review-pull-request"
+      GH_AW_WORKFLOW_NAME: "/review pull request"
+      GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/aw-command-review-pull-request.md"
     outputs:
       code_push_failure_count: ${{ steps.process_safe_outputs.outputs.code_push_failure_count }}
       code_push_failure_errors: ${{ steps.process_safe_outputs.outputs.code_push_failure_errors }}
+      comment_id: ${{ steps.process_safe_outputs.outputs.comment_id }}
+      comment_url: ${{ steps.process_safe_outputs.outputs.comment_url }}
       create_discussion_error_count: ${{ steps.process_safe_outputs.outputs.create_discussion_error_count }}
       create_discussion_errors: ${{ steps.process_safe_outputs.outputs.create_discussion_errors }}
       process_safe_outputs_items_applied: ${{ steps.process_safe_outputs.outputs.items_applied }}
@@ -1916,8 +1876,8 @@ jobs:
           trace-id: ${{ needs.activation.outputs.setup-trace-id }}
           parent-span-id: ${{ needs.activation.outputs.setup-parent-span-id || needs.activation.outputs.setup-span-id }}
         env:
-          GH_AW_SETUP_WORKFLOW_NAME: "Remix bot comment router"
-          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/aw-comment-router.lock.yml@${{ github.ref }}
+          GH_AW_SETUP_WORKFLOW_NAME: "/review pull request"
+          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/aw-command-review-pull-request.lock.yml@${{ github.ref }}
           GH_AW_INFO_VERSION: "0.150.1"
           GH_AW_INFO_AWF_VERSION: "v0.28.12"
           GH_AW_INFO_ENGINE_ID: "codex"
@@ -1955,11 +1915,10 @@ jobs:
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
           GH_AW_COMMENT_ID: ${{ needs.activation.outputs.comment_id }}
-          GH_AW_ALLOWED_DOMAINS: "api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,ppa.launchpad.net,s.symcb.com,s.symcd.com,security.ubuntu.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.googleapis.com"
+          GH_AW_ALLOWED_DOMAINS: "*.githubusercontent.com,api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,codeload.github.com,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,docs.github.com,github-cloud.githubusercontent.com,github-cloud.s3.amazonaws.com,github.blog,github.com,github.githubassets.com,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,lfs.github.com,objects.githubusercontent.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,patch-diff.githubusercontent.com,patchdiff.githubusercontent.com,ppa.launchpad.net,raw.githubusercontent.com,s.symcb.com,s.symcd.com,security.ubuntu.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.googleapis.com"
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_API_URL: ${{ github.api_url }}
-          GH_AW_SAFE_OUTPUT_JOBS: "{\"route_agent_workflow\":\"\"}"
-          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"report_incomplete\":{}}"
+          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"add_comment\":{\"discussions\":false,\"github-token\":\"${{ secrets.GH_REMIX_PAT_AW }}\",\"max\":1,\"target\":\"triggering\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"report_incomplete\":{}}"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
