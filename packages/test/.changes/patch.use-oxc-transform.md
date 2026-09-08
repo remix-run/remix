@@ -1,0 +1,1 @@
+Use Oxc instead of esbuild for TypeScript transforms while preserving accurate code coverage across server, browser, and E2E test runs (see [oxc-project/oxc#22001](https://github.com/oxc-project/oxc/pull/22001)).

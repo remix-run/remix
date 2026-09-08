@@ -160,7 +160,7 @@ async function writeIstanbulReports(coverageMap: CoverageMap, cwd: string, outDi
 // returns it on each entry, including the inline source map), we hand it
 // straight to v8-to-istanbul so the offsets line up exactly. The server path
 // uses Node's `NODE_V8_COVERAGE` JSON, which doesn't include source — there we
-// re-derive by re-running our esbuild transform on the original TS file.
+// re-derive by re-running our Oxc transform on the original TS file.
 async function addV8EntryToCoverageMap(
   coverageMap: CoverageMap,
   filePath: string,
@@ -230,7 +230,7 @@ export async function collectServerCoverageMap(
       try {
         // For server unit tests, we transform the TS with a module loader and V8 tracks
         // coverage using byte offsets from the transformed JS. Re-transform with the
-        // same `esbuild` call here so offsets align, then pass the result with its
+        // same Oxc transform here so offsets align, then pass the result with its
         // inline source map to v8-to-istanbul.
         let tsSource = await fsp.readFile(filePath, 'utf-8')
         let { code } = await transformTypeScript(tsSource, filePath)

@@ -48,7 +48,7 @@
   },
   "dependencies": {
     "get-tsconfig": "^4.13.6",
-    "oxc-transform": "^0.121.0"
+    "oxc-transform": "^0.130.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",
