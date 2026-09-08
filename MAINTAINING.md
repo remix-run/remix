@@ -120,12 +120,12 @@ flowchart LR
 
 ### Available Commands
 
-| Command      | Where                                 | Direct triggers                                                                 | Result                                                                                                                                                                                                                                                          |
-| ------------ | ------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/triage`    | Issue                                 | Comment beginning with `/triage`, or apply `aw:triage`                          | Investigates the report and duplicates. It may ask for information, explain a likely fix, or comment and close only a clear duplicate, proposal, support request, spam, or out-of-scope issue. It never edits code.                                             |
-| `/review`    | Pull request                          | Comment beginning with `/review`, or apply `aw:review`                          | Posts one read-only review comment with high-confidence P1-P3 findings. It never checks out or executes contributor code, edits the pull request, approves it, or merges it.                                                                                    |
-| `/implement` | Issue or accepted Proposal Discussion | Comment beginning with `/implement`; `aw:implement` is also available on issues | Implements a focused change from trusted `main`, validates it, and opens at most one draft pull request. Protected changes remain visible in the draft for review; if changes outside the allowed paths are required, it falls back to an issue instead.        |
-| `/iterate`   | Pull request                          | Comment beginning with `/iterate`, or apply `aw:iterate`                        | Applies administrator feedback. It can update a branch in `remix-run/remix` or `remix-run-bot/remix`; for any other fork it creates a bot-owned replacement draft and closes the original only after verifying both pull requests. It never merges or approves. |
+| Command      | Where                                 | Direct triggers                                                                 | Result                                                                                                                                                                                                                                                   |
+| ------------ | ------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/triage`    | Issue                                 | Comment beginning with `/triage`, or apply `aw:triage`                          | Investigates the report and duplicates. It may ask for information, explain a likely fix, or comment and close only a clear duplicate, proposal, support request, spam, or out-of-scope issue. It never edits code.                                      |
+| `/review`    | Pull request                          | Comment beginning with `/review`, or apply `aw:review`                          | Posts one read-only review comment with high-confidence P1-P3 findings. It never checks out or executes contributor code, edits the pull request, approves it, or merges it.                                                                             |
+| `/implement` | Issue or accepted Proposal Discussion | Comment beginning with `/implement`; `aw:implement` is also available on issues | Implements a focused change from trusted `main`, validates it, and opens at most one draft pull request. Protected changes remain visible in the draft for review; if changes outside the allowed paths are required, it falls back to an issue instead. |
+| `/iterate`   | Pull request                          | Comment beginning with `/iterate`, or apply `aw:iterate`                        | Applies administrator feedback directly to the triggering branch. Community forks require maintainer edits. It never creates a replacement pull request, merges, or approves.                                                                            |
 
 Slash-command comments may include instructions after the command. For example:
 
@@ -188,6 +188,14 @@ agent-instruction files remain visible in a reviewable pull request under the de
 policy. Root `README.md` is an explicit exception to that policy. `/implement` can execute trusted
 repository code and focused validation from `main`; `/iterate` does not execute contributor code and
 relies on normal pull request CI for final validation.
+
+`/iterate` pushes changes directly to the triggering pull request branch. Community-fork pull
+requests are eligible only when the author enables **Allow edits and access to secrets by
+maintainers**. The workflow snapshots the exact pull request repository, branch, and head SHA, then
+revalidates them immediately before the bot PAT is used. This relies on dynamically binding gh-aw's
+`head-repo` to that verified repository even though gh-aw documents arbitrary contributor forks as
+unsupported. Revalidate this behavior with a disposable community-fork pull request after gh-aw
+upgrades, and revert the workflow if the guarded push no longer works.
 
 ### Viewing Runs and Logs
 
