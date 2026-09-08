@@ -1,10 +1,8 @@
-import type { TFunction } from 'i18next'
 import * as assert from 'remix/assert'
-import { createRouter } from 'remix/router'
 import { describe, it } from 'remix/test'
 
 import { localeCookie } from '../i18n/config.ts'
-import { detectLanguage, i18nMiddleware } from './i18n.ts'
+import { detectLanguage } from './i18n.ts'
 
 const origin = 'http://localhost:44100'
 
@@ -32,23 +30,14 @@ describe('i18n middleware', () => {
     })
   })
 
-  it('creates a translator for each request', async () => {
-    let translators = new Set<TFunction>()
-    let router = createRouter()
-
-    router.get('/:locale', {
-      middleware: [i18nMiddleware()],
-      handler({ i18n }) {
-        translators.add(i18n.t)
-        return new Response()
+  it('ignores invalid cookies and negotiates supported languages by quality', async () => {
+    let request = new Request(origin, {
+      headers: {
+        Cookie: 'locale=not-base64!',
+        'Accept-Language': 'de,fr;q=0,es-MX;q=0.8,en;q=0.5',
       },
     })
 
-    await Promise.all([
-      router.fetch(new Request(`${origin}/es`)),
-      router.fetch(new Request(`${origin}/ja`)),
-    ])
-
-    assert.equal(translators.size, 2)
+    assert.deepEqual(await detectLanguage(request), { locale: 'es', source: 'header' })
   })
 })

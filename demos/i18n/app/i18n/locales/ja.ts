@@ -13,10 +13,10 @@ export default {
     welcome_user: 'お帰りなさい、{{name}} さん！',
   },
   switcher: {
-    label: '言語を選択',
-    button: '変更',
+    label: '優先する言語',
+    button: '設定を保存',
     clear_preference: '保存した設定をクリア',
-    quick_switch: 'クイック切り替え',
+    quick_switch: 'このページの表示言語',
   },
   detection: {
     title: '言語検出の優先順位',
@@ -24,6 +24,7 @@ export default {
     step_path: '1. ローカライズされた URL パス (/:locale)',
     step_cookie: '2. ユーザー設定クッキー (locale=...)',
     step_header: '3. ブラウザーの言語設定 (Accept-Language)',
+    step_fallback: '4. デフォルト言語 (en)',
     active_source: '検出元',
     active_badge: '使用中',
     source_path: 'ローカライズされた URL パス (/:locale)',
@@ -35,10 +36,8 @@ export default {
     title: '複数形とカウント',
     description: 'i18next がアクティブな言語ルールに基づいて複数形を処理します：',
     tasks_zero: '保留中のタスクはありません',
-    tasks_one: '1 件の保留中タスクがあります',
     tasks_other: '{{count}} 件の保留中タスクがあります',
     cart_zero: 'カートは空です',
-    cart_one: 'カートに 1 個の商品があります',
     cart_other: 'カートに {{count}} 個の商品があります',
   },
   formatting: {
@@ -49,8 +48,12 @@ export default {
     number_label: '数値 (Intl.NumberFormat)',
     currency_label: 'USD の値 (Intl.NumberFormat)',
     relative_time_label: '相対時間 (Intl.RelativeTimeFormat)',
+    preview_description:
+      'このブラウザー側のウィジェットには、翻訳関数ではなく翻訳済みラベルと言語を渡します。言語リンクで切り替えても値は保持され、ラベルと数値の書式が更新されます。',
+    preview_button: '値を増やす',
+    preview_value: 'ブラウザーで整形した値',
   },
   footer: {
     note: 'Remix v3 • Web 標準と i18next で構築',
   },
-} satisfies Translation
+} satisfies Translation<'other'>

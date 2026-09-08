@@ -4,7 +4,9 @@ import { languageNames, supportedLanguages, type I18nState } from '../i18n/confi
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import * as styles from '../ui/styles.ts'
+import { NumberPreview } from './public/number-preview.tsx'
 
+const taskCounts = [0, 1, 2, 5, 11, 100, 1_000_000]
 const demoDate = new Date(Date.UTC(2026, 3, 15, 14, 30))
 const demoCurrency = 'USD'
 
@@ -14,7 +16,7 @@ interface HomePageProps {
 
 export function HomePage(handle: Handle<HomePageProps>) {
   return () => {
-    let { locale, t, detectionSource } = handle.props.i18n
+    let { locale, direction, t, detectionSource } = handle.props.i18n
     let formattedDate = new Intl.DateTimeFormat(locale, {
       dateStyle: 'full',
       timeStyle: 'short',
@@ -30,7 +32,7 @@ export function HomePage(handle: Handle<HomePageProps>) {
     }).format(-3, 'day')
 
     return (
-      <Document lang={locale} title={t('common.title')}>
+      <Document lang={locale} dir={direction} title={t('common.title')}>
         <div mix={styles.pageWrapper}>
           <header mix={styles.header}>
             <a href={routes.home.href()} mix={styles.brandGroup}>
@@ -40,7 +42,13 @@ export function HomePage(handle: Handle<HomePageProps>) {
               <span mix={styles.brandTitle}>{t('common.brand')}</span>
             </a>
 
-            <form method="POST" action={routes.language.href()} mix={styles.switcherForm}>
+            {/* A document submission resets unsaved selections even when the locale stays the same. */}
+            <form
+              method="POST"
+              action={routes.language.href()}
+              data-rmx-document
+              mix={styles.switcherForm}
+            >
               <label htmlFor="locale-select" mix={styles.srOnly}>
                 {t('switcher.label')}
               </label>
@@ -131,6 +139,15 @@ export function HomePage(handle: Handle<HomePageProps>) {
                       <span mix={styles.activeBadge}>{t('detection.active_badge')}</span>
                     )}
                   </li>
+                  <li
+                    mix={styles.stepItem}
+                    data-active={detectionSource === 'fallback' ? 'true' : undefined}
+                  >
+                    <span>{t('detection.step_fallback')}</span>
+                    {detectionSource === 'fallback' && (
+                      <span mix={styles.activeBadge}>{t('detection.active_badge')}</span>
+                    )}
+                  </li>
                 </ol>
 
                 <div mix={styles.demoRow}>
@@ -149,24 +166,24 @@ export function HomePage(handle: Handle<HomePageProps>) {
                 <p mix={styles.cardDescription}>{t('pluralization.description')}</p>
 
                 <div mix={styles.demoRows}>
+                  {taskCounts.map((count) => (
+                    <div key={count} mix={styles.demoRow}>
+                      <span mix={styles.demoLabel} dir="ltr">
+                        count = {count}
+                      </span>
+                      <span mix={styles.demoValue}>{t('pluralization.tasks', { count })}</span>
+                    </div>
+                  ))}
                   <div mix={styles.demoRow}>
-                    <span mix={styles.demoLabel}>count = 0</span>
-                    <span mix={styles.demoValue}>{t('pluralization.tasks', { count: 0 })}</span>
-                  </div>
-                  <div mix={styles.demoRow}>
-                    <span mix={styles.demoLabel}>count = 1</span>
-                    <span mix={styles.demoValue}>{t('pluralization.tasks', { count: 1 })}</span>
-                  </div>
-                  <div mix={styles.demoRow}>
-                    <span mix={styles.demoLabel}>count = 5</span>
-                    <span mix={styles.demoValue}>{t('pluralization.tasks', { count: 5 })}</span>
-                  </div>
-                  <div mix={styles.demoRow}>
-                    <span mix={styles.demoLabel}>cart = 0</span>
+                    <span mix={styles.demoLabel} dir="ltr">
+                      cart = 0
+                    </span>
                     <span mix={styles.demoValue}>{t('pluralization.cart', { count: 0 })}</span>
                   </div>
                   <div mix={styles.demoRow}>
-                    <span mix={styles.demoLabel}>cart = 3</span>
+                    <span mix={styles.demoLabel} dir="ltr">
+                      cart = 3
+                    </span>
                     <span mix={styles.demoValue}>{t('pluralization.cart', { count: 3 })}</span>
                   </div>
                 </div>
@@ -201,6 +218,18 @@ export function HomePage(handle: Handle<HomePageProps>) {
                     <span mix={styles.demoValue}>{formattedRelativeTime}</span>
                   </div>
                 </div>
+              </section>
+
+              <section mix={styles.card}>
+                <div mix={styles.cardHeader}>
+                  <h2 mix={styles.cardTitle}>{t('formatting.preview_value')}</h2>
+                </div>
+                <p mix={styles.cardDescription}>{t('formatting.preview_description')}</p>
+                <NumberPreview
+                  locale={locale}
+                  buttonLabel={t('formatting.preview_button')}
+                  valueLabel={t('formatting.preview_value')}
+                />
               </section>
             </div>
           </main>

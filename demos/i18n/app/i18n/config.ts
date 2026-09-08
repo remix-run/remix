@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next'
 import { createCookie } from 'remix/cookie'
 
+import ar from './locales/ar.ts'
 import en, { type Translation } from './locales/en.ts'
 import es from './locales/es.ts'
 import fr from './locales/fr.ts'
@@ -10,12 +11,12 @@ declare module 'i18next' {
   interface CustomTypeOptions {
     defaultNS: 'translation'
     resources: {
-      translation: Translation
+      translation: typeof en
     }
   }
 }
 
-export const supportedLanguages = ['en', 'es', 'fr', 'ja'] as const
+export const supportedLanguages = ['en', 'es', 'fr', 'ja', 'ar'] as const
 export type SupportedLanguage = (typeof supportedLanguages)[number]
 
 export type DetectionSource = 'path' | 'cookie' | 'header' | 'fallback'
@@ -27,6 +28,7 @@ export interface DetectionResult {
 
 export interface I18nState {
   locale: SupportedLanguage
+  direction: 'ltr' | 'rtl'
   detectionSource: DetectionSource
   t: TFunction
 }
@@ -38,6 +40,7 @@ export const languageNames = {
   es: 'Español',
   fr: 'Français',
   ja: '日本語',
+  ar: 'العربية',
 } satisfies Record<SupportedLanguage, string>
 
 export const resources = {
@@ -45,7 +48,8 @@ export const resources = {
   es: { translation: es },
   fr: { translation: fr },
   ja: { translation: ja },
-} satisfies Record<SupportedLanguage, { translation: Translation }>
+  ar: { translation: ar },
+} satisfies Record<SupportedLanguage, { translation: Translation<'other'> }>
 
 // The locale is a non-sensitive preference, so this cookie does not need a signature.
 export const localeCookie = createCookie('locale', {

@@ -11,10 +11,10 @@ const en = {
     welcome_user: 'Welcome back, {{name}}!',
   },
   switcher: {
-    label: 'Select language',
-    button: 'Switch',
+    label: 'Preferred language',
+    button: 'Save preference',
     clear_preference: 'Clear saved preference',
-    quick_switch: 'Quick switch',
+    quick_switch: 'View this page in',
   },
   detection: {
     title: 'Language detection order',
@@ -22,6 +22,7 @@ const en = {
     step_path: '1. Localized URL path (/:locale)',
     step_cookie: '2. Preference cookie (locale=...)',
     step_header: '3. Browser language preference (Accept-Language)',
+    step_fallback: '4. Default language (en)',
     active_source: 'Active detection source',
     active_badge: 'Active',
     source_path: 'Localized URL path (/:locale)',
@@ -47,12 +48,20 @@ const en = {
     number_label: 'Number (Intl.NumberFormat)',
     currency_label: 'USD value (Intl.NumberFormat)',
     relative_time_label: 'Relative time (Intl.RelativeTimeFormat)',
+    preview_description:
+      'This browser widget receives translated labels and a locale, not a translator. Its value survives language links; its labels and number format update.',
+    preview_button: 'Increase value',
+    preview_value: 'Browser-formatted value',
   },
   footer: {
     note: 'Remix v3 • Built with Web Standards & i18next',
   },
 }
 
-export type Translation = typeof en
+// Plural categories belong to each language; _zero is also an i18next override for zero counts.
+export type Translation<category extends Intl.LDMLPluralRule> = Omit<typeof en, 'pluralization'> & {
+  pluralization: Pick<typeof en.pluralization, 'title' | 'description'> &
+    Record<`${'tasks' | 'cart'}_${category | 'zero'}`, string>
+}
 
 export default en
