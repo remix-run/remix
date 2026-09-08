@@ -580,9 +580,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
       await page.locator('[data-testid="document-field"]').fill('state before entry update')
 
@@ -611,9 +613,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
       await page.locator('[data-testid="document-field"]').fill('preserved browser state')
 
@@ -654,9 +658,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
@@ -740,9 +746,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
@@ -779,9 +787,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
@@ -824,9 +834,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before update')
       await page.locator('[data-testid="document-field"]').fill('document before update')
@@ -875,9 +887,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
@@ -915,9 +929,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
@@ -958,9 +974,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
@@ -996,9 +1014,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
@@ -1040,9 +1060,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before update')
       await page.locator('[data-testid="document-field"]').fill('document before update')
@@ -1082,9 +1104,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
@@ -1117,9 +1141,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before update')
 
@@ -1154,9 +1180,11 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+      let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
       await page.goto('/')
       await connected
+      await hydrated
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
