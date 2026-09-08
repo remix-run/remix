@@ -147,7 +147,7 @@ safe-outputs:
               const routes = {
                 review: {
                   issue: 'aw-command-review-issue.lock.yml',
-                  pull_request: 'aw-command-review.lock.yml',
+                  pull_request: 'aw-command-review-pull-request.lock.yml',
                   discussion: 'aw-command-review-proposal.lock.yml',
                 },
                 implement: {

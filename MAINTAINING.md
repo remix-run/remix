@@ -134,7 +134,7 @@ on issues and pull requests; Discussions use comments. The triggering item selec
 review workflows. Issue reviews
 run in [`aw-command-review-issue.md`](https://github.com/remix-run/remix/blob/main/.github/workflows/aw-command-review-issue.md),
 pull request reviews in
-[`aw-command-review.md`](https://github.com/remix-run/remix/blob/main/.github/workflows/aw-command-review.md),
+[`aw-command-review-pull-request.md`](https://github.com/remix-run/remix/blob/main/.github/workflows/aw-command-review-pull-request.md),
 and proposal reviews in
 [`aw-command-review-proposal.md`](https://github.com/remix-run/remix/blob/main/.github/workflows/aw-command-review-proposal.md).
 Each workflow has its own prompt, model, timeout, tools, permissions, and output limits. The event
@@ -233,7 +233,7 @@ In GitHub, open the repository's **Actions** tab and select one of these workflo
 
 - [Remix bot comment router](https://github.com/remix-run/remix/actions/workflows/aw-comment-router.lock.yml)
 - [Review issues](https://github.com/remix-run/remix/actions/workflows/aw-command-review-issue.lock.yml)
-- [Review pull requests](https://github.com/remix-run/remix/actions/workflows/aw-command-review.lock.yml)
+- [Review pull requests](https://github.com/remix-run/remix/actions/workflows/aw-command-review-pull-request.lock.yml)
 - [Review proposals](https://github.com/remix-run/remix/actions/workflows/aw-command-review-proposal.lock.yml)
 - [/implement](https://github.com/remix-run/remix/actions/workflows/aw-command-implement.lock.yml)
 - [/iterate](https://github.com/remix-run/remix/actions/workflows/aw-command-iterate.lock.yml)
@@ -248,7 +248,7 @@ The same information is available with `gh`:
 # Find recent router or command runs
 gh run list --workflow aw-comment-router.lock.yml --limit 10
 gh run list --workflow aw-command-review-issue.lock.yml --limit 10
-gh run list --workflow aw-command-review.lock.yml --limit 10
+gh run list --workflow aw-command-review-pull-request.lock.yml --limit 10
 gh run list --workflow aw-command-review-proposal.lock.yml --limit 10
 
 # Inspect the job results, failed steps, or complete log
@@ -301,7 +301,7 @@ the router and every command workflow together, run:
 
 ```sh
 gh aw compile aw-comment-router \
-  aw-command-review-issue aw-command-review aw-command-review-proposal \
+  aw-command-review-issue aw-command-review-pull-request aw-command-review-proposal \
   aw-command-implement aw-command-iterate \
   --strict --validate --actionlint --shellcheck --poutine
 ```
