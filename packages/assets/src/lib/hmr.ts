@@ -58,6 +58,10 @@ ${
 const contexts = new Map()
 const dataByPath = new Map()
 
+function debugHmr(message, data) {
+  console.debug('[remix HMR debug]', Date.now(), message, JSON.stringify(data))
+}
+
 class RemixHmrContext {
   constructor(path) {
     this.path = path
@@ -116,6 +120,7 @@ class RemixHmrContext {
 }
 
 export function createHotContext(path) {
+  debugHmr('createHotContext', { path })
   let context = new RemixHmrContext(path)
   contexts.set(path, context)
   return context
@@ -151,8 +156,10 @@ events.onerror = () => {
 
 events.onmessage = (event) => {
   let payload = JSON.parse(event.data)
+  debugHmr('event received', payload)
   if (payload.type === 'browser:update') {
     let update = payload.data?.[${JSON.stringify(options.dataKey)}]
+    debugHmr('asset update selected', { update })
     if (!update) return
     handleBrowserUpdate(update).catch((error) => {
       console.error('[remix] HMR update failed', error)
@@ -180,6 +187,7 @@ async function handlePayload(payload) {
 }
 
 async function handleBrowserUpdate(payload) {
+  debugHmr('handling browser update', payload)
   for (let update of payload.updates) {
     if (update.type === 'css') {
       let updated = await queueStylesheetUpdate(update.path, payload.timestamp)
@@ -249,7 +257,15 @@ function getTimestamp(data) {
 
 async function updateJavaScriptModule(path, acceptedPath, timestamp) {
   let previousContext = contexts.get(path)
-  if (!previousContext) return false
+  debugHmr('looking up update context', {
+    acceptedPath,
+    contextPaths: Array.from(contexts.keys()),
+    path,
+  })
+  if (!previousContext) {
+    debugHmr('update context missing', { path })
+    return false
+  }
 
   let isSelfUpdate = path === acceptedPath
   let dependencyCallbacks = getAcceptDependencyCallbacks(previousContext, acceptedPath)
@@ -267,12 +283,16 @@ async function updateJavaScriptModule(path, acceptedPath, timestamp) {
       await callback(previousContext.data)
     }
 
+    debugHmr('importing self update', { path, timestamp })
     let updatedModule = await __remixImport(withTimestamp(path, timestamp), import.meta.url)
+    debugHmr('imported self update', { path, timestamp })
     previousContext.invalidated = false
     previousContext.updating = true
     try {
       for (let callback of previousContext.acceptCallbacks) {
+        debugHmr('calling self accept callback', { path })
         await callback(updatedModule)
+        debugHmr('called self accept callback', { path })
       }
     } finally {
       previousContext.updating = false
