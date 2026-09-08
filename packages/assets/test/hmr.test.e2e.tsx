@@ -232,7 +232,57 @@ describe('asset server HMR', () => {
     assert.equal(await page.locator('script[type="importmap"]').count(), 2)
   })
 
-  it('logs and reloads when an update conflicts with an installed import map', async (t) => {
+  it('logs and reloads when an update conflicts with a removed late import map', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImportConfigured: true })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('reload me')
+    await page.evaluate(async () => {
+      let script = document.createElement('script')
+      script.type = 'importmap'
+      script.textContent = JSON.stringify({
+        scopes: {
+          '/assets/app/': {
+            'test-package': '/assets/app/test-package-next.ts',
+          },
+        },
+      })
+      document.head.appendChild(script)
+      await new Promise((resolve) => setTimeout(resolve))
+      script.remove()
+    })
+
+    let warned = waitForConsoleMessage(
+      page,
+      '[remix] HMR reloading page after import map conflict for "test-package" in scope "/assets/app/"',
+    )
+    let reloaded = waitForNavigation(page)
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        bareImport: true,
+        buttonText: 'Increment after import map conflict',
+      }),
+    )
+
+    await warned
+    await reloaded
+    await waitForText(
+      page,
+      '[data-testid="increment"]',
+      'Package: Increment after import map conflict',
+    )
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
+  })
+
+  it('logs and reloads when an update conflicts with a mutated import map', async (t) => {
     let fixture = await createHmrFixture({
       conflictingInitialBareImport: true,
       counterBareImportConfigured: true,
@@ -246,6 +296,12 @@ describe('asset server HMR', () => {
     await connected
     await waitForText(page, '[data-testid="increment"]', 'Increment')
     await page.locator('[data-testid="field"]').fill('reload me')
+    await page.locator('script[type="importmap"]').evaluate((script) => {
+      script.textContent = (script.textContent ?? '').replace(
+        '/assets/app/test-package-next.ts',
+        '/assets/app/test-package.ts',
+      )
+    })
 
     let warned = waitForConsoleMessage(
       page,

@@ -126,6 +126,13 @@ let reconnectPending = false
 let pageReloadTimer
 let failedJavaScriptUpdates = new Map()
 let stylesheetUpdatePromise = Promise.resolve()
+let installedImportMap = { imports: new Map(), scopes: new Map() }
+let processedScripts = new WeakSet()
+
+let observer = new MutationObserver(processMutations)
+observer.observe(document, { childList: true })
+observer.observe(document.head, { childList: true })
+processImportMaps()
 
 let events = new EventSource(${JSON.stringify(options.eventPathname)})
 
@@ -410,8 +417,9 @@ function withTimestamp(path, timestamp) {
 }
 
 function installImportMap(importMap) {
-  let installed = readInstalledImportMap()
-  let delta = getImportMapDelta(installed, importMap)
+  processMutations(observer.takeRecords())
+  processImportMaps()
+  let delta = getImportMapDelta(installedImportMap, importMap)
   if (delta === null) {
     reloadPage()
     return false
@@ -423,22 +431,40 @@ function installImportMap(importMap) {
   script.type = 'importmap'
   script.textContent = JSON.stringify(delta)
   document.head.appendChild(script)
+  processedScripts.add(script)
+  mergeImportMap(installedImportMap, delta)
   return true
 }
 
-function readInstalledImportMap() {
-  let installed = { imports: new Map(), scopes: new Map() }
-  for (let script of document.querySelectorAll('script[type="importmap"]')) {
-    let importMap
-    try {
-      importMap = JSON.parse(script.textContent ?? '')
-    } catch {
-      continue
-    }
-    if (!importMap || typeof importMap !== 'object') continue
-    mergeImportMap(installed, importMap)
+function processImportMap(script) {
+  if (processedScripts.has(script)) return
+  processedScripts.add(script)
+
+  let importMap
+  try {
+    importMap = JSON.parse(script.textContent ?? '')
+  } catch {
+    return
   }
-  return installed
+  if (!importMap || typeof importMap !== 'object') return
+  mergeImportMap(installedImportMap, importMap)
+}
+
+function processImportMaps() {
+  for (let script of document.querySelectorAll('script[type="importmap"]')) {
+    processImportMap(script)
+  }
+}
+
+function processMutations(mutations) {
+  for (let mutation of mutations) {
+    if (mutation.type !== 'childList') continue
+    for (let node of mutation.addedNodes) {
+      if (node instanceof HTMLScriptElement && node.matches('script[type="importmap"]')) {
+        processImportMap(node)
+      }
+    }
+  }
 }
 
 function getImportMapDelta(installed, importMap) {
