@@ -32,8 +32,7 @@ if (
     typeof trustedTypesGlobal.TrustedTypes !== 'undefined')
 ) {
   try {
-    let trustedTypes = trustedTypesGlobal.trustedTypes || trustedTypesGlobal.TrustedTypes
-    if (!trustedTypes) throw new Error('Trusted Types are unavailable')
+    let trustedTypes = (trustedTypesGlobal.trustedTypes || trustedTypesGlobal.TrustedTypes)!
     policy = trustedTypes.createPolicy('remix/multiple-import-maps-polyfill', {
       createHTML: (html) => html,
       createScript: (script) => script,

@@ -1,4 +1,4 @@
-import { hasDocument, nonce } from './env.ts'
+import { hasDocument, nonce, version } from './env.ts'
 import { maybeTrustedInnerHTML, maybeTrustedScript, policy } from './trusted-types.ts'
 
 const supports = hasDocument ? HTMLScriptElement.supports : undefined
@@ -11,30 +11,28 @@ export let supportsMultipleImportMaps = false
 export const featureDetectionPromise: Promise<void> = (async function () {
   if (!hasDocument || !supportsImportMaps) return
 
-  let msgTag = `remix-import-map-test-${Date.now()}-${Math.random()}`
+  let msgTag = `s${version}`
   return new Promise<void>((resolve) => {
     let iframe = document.createElement('iframe')
     iframe.style.display = 'none'
     iframe.setAttribute('nonce', nonce)
-    let timeout: ReturnType<typeof setTimeout> | undefined
     let settled = false
-
-    function finish(supported: boolean) {
+    let timeout = setTimeout(done, 1000)
+    function done() {
       if (settled) return
       settled = true
       clearTimeout(timeout)
-      supportsMultipleImportMaps = supported
-      iframe.remove()
+      if (iframe.parentNode === document.head) document.head.removeChild(iframe)
       window.removeEventListener('message', cb, false)
       resolve()
     }
 
-    function cb({ data, source }: MessageEvent<unknown>) {
-      if (source !== iframe.contentWindow || !Array.isArray(data) || data[0] !== msgTag) return
-      finish(data[1] === true && data[2] === true)
+    function cb({ data }: MessageEvent<unknown>) {
+      if (!Array.isArray(data) || data[0] !== msgTag) return
+      supportsMultipleImportMaps = data[2] === true
+      done()
     }
     window.addEventListener('message', cb, false)
-    timeout = setTimeout(() => finish(false), 1000)
 
     let importMapTest = `<script nonce=${nonce || ''}>${
       policy
@@ -42,9 +40,10 @@ export const featureDetectionPromise: Promise<void> = (async function () {
         : ''
     }b=s=>URL.createObjectURL(new Blob([s],{type:'text/javascript'}));c=u=>import(u).then(()=>true,()=>false);i=innerText=>document.head.appendChild(Object.assign(document.createElement('script'),{type:'importmap',nonce:"${nonce}",text:${
       policy ? 't.createScript(innerText)' : 'innerText'
-    }}));i(\`{"imports":{"x":"\${b('')}"}}\`);i(\`{"imports":{"y":"\${b('')}"}}\`);Promise.all([c('x'),c('y')]).then(a=>parent.postMessage(['${msgTag}'].concat(a),'*'))<${''}/script>`
+    }}));i(\`{"imports":{"x":"\${b('')}"}}\`);i(\`{"imports":{"y":"\${b('')}"}}\`);Promise.all([true,c('y')]).then(a=>parent.postMessage(['${msgTag}'].concat(a),'*'))<${''}/script>`
 
-    // Safari can call onload eagerly on head injection, before srcdoc is assigned.
+    // Safari will call onload eagerly on head injection, but we don't want the Wechat
+    // path to trigger before setting srcdoc, therefore we track the timing
     let readyForOnload = false,
       onloadCalledWhileNotReady = false
     function doOnload() {
@@ -52,6 +51,8 @@ export const featureDetectionPromise: Promise<void> = (async function () {
         onloadCalledWhileNotReady = true
         return
       }
+      // WeChat browser doesn't support setting srcdoc scripts
+      // But iframe sandboxes don't support contentDocument so we do this as a fallback
       let doc = iframe.contentDocument
       if (doc && doc.head.childNodes.length === 0) {
         let script = doc.createElement('script')
@@ -64,11 +65,16 @@ export const featureDetectionPromise: Promise<void> = (async function () {
     }
 
     iframe.onload = doOnload
+    // WeChat browser requires append before setting srcdoc
     document.head.appendChild(iframe)
 
+    // setting srcdoc is not supported in React native webviews on iOS
+    // setting src to a blob URL results in a navigation event in webviews
+    // document.write gives usability warnings
     readyForOnload = true
-    if (typeof iframe.srcdoc === 'string') iframe.srcdoc = maybeTrustedInnerHTML(importMapTest)
-    else iframe.contentDocument?.write(importMapTest)
+    if ('srcdoc' in (iframe as object)) iframe.srcdoc = maybeTrustedInnerHTML(importMapTest)
+    else iframe.contentDocument!.write(importMapTest)
+    // retrigger onload for Safari only if necessary
     if (onloadCalledWhileNotReady) doOnload()
   })
 })().catch(() => {})

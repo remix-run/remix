@@ -154,9 +154,8 @@ const loadAll = async (load: Load, seen: Seen): Promise<void> => {
   await Promise.all(
     load.d.map(({ l: dep, s: sourcePhase }) => {
       if (dep.b || seen[dep.u]) return
-      if (!('r' in dep)) throw new Error(`Missing native module URL for ${dep.u}`)
-      if (sourcePhase) return dep.f
-      return loadAll(dep, seen)
+      if (sourcePhase) return (dep as Load).f
+      return loadAll(dep as Load, seen)
     }),
   )
 }
@@ -176,14 +175,15 @@ const attachMutationObserver = () => {
     for (let mutation of mutations) {
       if (mutation.type !== 'childList') continue
       for (let node of mutation.addedNodes) {
-        if (node instanceof HTMLScriptElement && node.type === 'importmap') processImportMap(node)
-        else if (node instanceof Element)
-          for (let script of node.querySelectorAll<HTMLScriptElement>('script[type=importmap]'))
-            processImportMap(script)
+        if ((node as Element).tagName === 'SCRIPT') {
+          let script = node as HTMLScriptElement
+          if (script.type === 'importmap') processImportMap(script)
+        }
       }
     }
   })
-  observer.observe(document, { childList: true, subtree: true })
+  observer.observe(document, { childList: true })
+  observer.observe(document.head, { childList: true })
   processImportMaps()
 }
 
@@ -201,7 +201,10 @@ async function topLevelLoad(
   await importMapPromise
   url = (await resolve(url, parentUrl)).r
 
+  // we mock import('./x.css', { with: { type: 'css' }}) support via an inline static reexport
+  // because we can't syntactically pass through to dynamic import with a second argument
   if (sourceType === 'css' || sourceType === 'json') {
+    // Direct reexport for hot reloading skipped due to Firefox bug https://bugzilla.mozilla.org/show_bug.cgi?id=1965620
     source = `import m from'${url}'with{type:"${sourceType}"};export default m;`
     url += '?entry'
   }
@@ -212,22 +215,11 @@ async function topLevelLoad(
   let seen: Seen = {}
   await loadAll(load, seen)
   resolveDeps(load, seen)
-  let module: ModuleNamespace = await (load.n || load.N
-    ? dynamicImport(getBlobUrl(load))
-    : import(load.u))
+  let module: ModuleNamespace = await (load.n || load.N ? dynamicImport(load.b!) : import(load.u))
   // if the top-level load is a shell, run its update function
-  if (load.s) {
-    let update = (await dynamicImport(load.s)).u$_
-    if (typeof update !== 'function') throw new Error(`Missing cycle update for ${load.u}`)
-    update(module)
-  }
+  if (load.s) ((await dynamicImport(load.s)).u$_ as (module: ModuleNamespace) => void)(module)
   revokeObjectURLs(Object.keys(seen))
   return module
-}
-
-const getBlobUrl = (load: Load): string => {
-  if (!load.b) throw new Error(`Missing compiled module URL for ${load.u}`)
-  return load.b
 }
 
 const revokeObjectURLs = (registryKeys: string[]): void => {
@@ -251,14 +243,12 @@ const urlJsString = (url: string): string => `'${url.replace(/'/g, "\\'")}'`
 let resolvedSource = ''
 let lastIndex = 0
 const pushStringTo = (load: Load, originalIndex: number, dynamicImportEndStack: number[]) => {
-  let source = getLoadSource(load)
   while (dynamicImportEndStack[dynamicImportEndStack.length - 1] < originalIndex) {
-    let dynamicImportEnd = dynamicImportEndStack.pop()
-    if (dynamicImportEnd === undefined) break
-    resolvedSource += `${source.slice(lastIndex, dynamicImportEnd)}, ${urlJsString(load.r)}`
+    let dynamicImportEnd = dynamicImportEndStack.pop()!
+    resolvedSource += `${load.S!.slice(lastIndex, dynamicImportEnd)}, ${urlJsString(load.r)}`
     lastIndex = dynamicImportEnd
   }
-  resolvedSource += source.slice(lastIndex, originalIndex)
+  resolvedSource += load.S!.slice(lastIndex, originalIndex)
   lastIndex = originalIndex
 }
 
@@ -268,11 +258,10 @@ const pushSourceURL = (
   commentStart: number,
   dynamicImportEndStack: number[],
 ) => {
-  let source = getLoadSource(load)
   let urlStart = commentStart + commentPrefix.length
-  let commentEnd = source.indexOf('\n', urlStart)
-  let urlEnd = commentEnd !== -1 ? commentEnd : source.length
-  let sourceUrl = source.slice(urlStart, urlEnd)
+  let commentEnd = load.S!.indexOf('\n', urlStart)
+  let urlEnd = commentEnd !== -1 ? commentEnd : load.S!.length
+  let sourceUrl = load.S!.slice(urlStart, urlEnd)
   try {
     sourceUrl = new URL(sourceUrl, load.r).href
   } catch (e) {}
@@ -281,19 +270,13 @@ const pushSourceURL = (
   lastIndex = urlEnd
 }
 
-const getLoadSource = (load: Load): string => {
-  if (load.S === undefined) throw new Error(`Missing module source for ${load.u}`)
-  return load.S
-}
-
 const resolveDeps = (load: Load, seen: Seen): void => {
   if (load.b || !seen[load.u]) return
   seen[load.u] = 0
 
   for (let { l: dep, s: sourcePhase } of load.d) {
     if (!sourcePhase && !dep.b) {
-      if (!('r' in dep)) throw new Error(`Missing native module URL for ${dep.u}`)
-      resolveDeps(dep, seen)
+      resolveDeps(dep as Load, seen)
     }
   }
 
@@ -311,7 +294,7 @@ const resolveDeps = (load: Load, seen: Seen): void => {
   let [imports, exports] = load.a
 
   // "execution"
-  let source = getLoadSource(load),
+  let source = load.S!,
     depIndex = 0,
     dynamicImportEndStack: number[] = []
 
@@ -329,6 +312,7 @@ const resolveDeps = (load: Load, seen: Seen): void => {
     t,
     a,
   } of imports) {
+    // source phase
     if (t === 4) {
       let { l: depLoad } = load.d[depIndex++]
       pushStringTo(load, start - 1, dynamicImportEndStack)
@@ -344,21 +328,23 @@ const resolveDeps = (load: Load, seen: Seen): void => {
         blobUrl = depLoad.b,
         cycleShell = !blobUrl
       if (cycleShell) {
-        if (!('r' in depLoad)) throw new Error(`Missing native module URL for ${depLoad.u}`)
+        let cycleLoad = depLoad as Load
         // circular shell creation
-        if (!(blobUrl = depLoad.s)) {
-          blobUrl = depLoad.s = createBlob(
-            `export function u$_(m){${depLoad.a[1]
+        if (!(blobUrl = cycleLoad.s)) {
+          blobUrl = cycleLoad.s = createBlob(
+            `export function u$_(m){${cycleLoad.a[1]
               .map(({ s, e }, i) => {
-                let depSource = getLoadSource(depLoad)
+                let depSource = cycleLoad.S!
                 let q = depSource[s] === '"' || depSource[s] === "'"
                 return `e$_${i}=m${q ? `[` : '.'}${depSource.slice(s, e)}${q ? `]` : ''}`
               })
               .join(',')}}${
-              depLoad.a[1].length ? `let ${depLoad.a[1].map((_, i) => `e$_${i}`).join(',')};` : ''
-            }export {${depLoad.a[1]
-              .map(({ s, e }, i) => `e$_${i} as ${getLoadSource(depLoad).slice(s, e)}`)
-              .join(',')}}\n//# sourceURL=${depLoad.r}?cycle`,
+              cycleLoad.a[1].length
+                ? `let ${cycleLoad.a[1].map((_, i) => `e$_${i}`).join(',')};`
+                : ''
+            }export {${cycleLoad.a[1]
+              .map(({ s, e }, i) => `e$_${i} as ${cycleLoad.S!.slice(s, e)}`)
+              .join(',')}}\n//# sourceURL=${cycleLoad.r}?cycle`,
           )
         }
       }
@@ -449,7 +435,7 @@ const doFetch = async (url: string, fetchOpts: RequestInit, parent?: string): Pr
   try {
     res = await fetch(url, fetchOpts)
   } catch (e) {
-    let error = e instanceof Error ? e : new Error(String(e))
+    let error = e as Error
     error.message =
       `Unable to fetch ${url}${fromParent(parent)} - see network log for details.\n` + error.message
     throw error
@@ -499,23 +485,28 @@ const getOrCreateLoad = (
   parent?: string,
   source?: string,
 ): Load => {
+  if (source && registry[url]) {
+    let i = 0
+    while (registry[url + '#' + ++i]) {}
+    url += '#' + i
+  }
   let load = registry[url]
   if (load) return load
   registry[url] = load = {
     // url
     u: url,
     // response url
-    r: url,
+    r: source ? url : undefined!,
     // fetchPromise
-    f: Promise.resolve().then(() => load),
+    f: undefined!,
     // source
     S: source,
     // linkPromise
     L: undefined,
     // analysis
-    a: [[], [], false, false],
+    a: undefined!,
     // deps
-    d: [],
+    d: undefined!,
     // blobUrl
     b: undefined,
     // shellUrl
@@ -534,7 +525,7 @@ const getOrCreateLoad = (
         fetchModule(url, fetchOpts, parent)))
     }
     try {
-      load.a = lexer.parse(getLoadSource(load), load.u)
+      load.a = lexer.parse(load.S!, load.u)
     } catch (e) {
       throwError(e)
       load.a = [[], [], false, false]
@@ -547,6 +538,7 @@ const getOrCreateLoad = (
 const linkLoad = (load: Load, fetchOpts: RequestInit): void => {
   if (load.L) return
   load.L = load.f.then(() => {
+    let childFetchOpts = fetchOpts
     let dependencies = load.a[0].map(({ n, d, t, a, se }): Dependency | undefined => {
       let phaseImport = t >= 4
       let sourcePhase = phaseImport && t < 6
@@ -564,19 +556,22 @@ const linkLoad = (load: Load, fetchOpts: RequestInit): void => {
       if (resolved.N) load.N = true
       let source = sourcePhase ? '' : undefined
       if (a > 0) {
-        let assertion = getLoadSource(load).slice(a, se - 1)
+        let assertion = load.S!.slice(a, se - 1)
+        // no need to fetch JSON/CSS if supported, since it's a leaf node, we'll just strip the assertion syntax
         if (assertion.includes('json') || assertion.includes('css')) source = ''
       }
       // The ESM wrapper lazily imports this core. Loading the wrapper through the core would
       // recurse and create a second copy of modules that import the wrapper.
       if (nativeModules.has(resolved.r)) return { l: { u: resolved.r, b: resolved.r }, s: false }
-      let childFetchOpts = fetchOpts.integrity ? { ...fetchOpts, integrity: undefined } : fetchOpts
+      if (childFetchOpts.integrity) childFetchOpts = { ...childFetchOpts, integrity: undefined }
       let child = {
         l: getOrCreateLoad(resolved.r, childFetchOpts, load.r, source),
         s: sourcePhase,
       }
+      // assertion case -> inline the CSS / JSON URL directly
       if (source === '') child.l.b = child.l.u
-      if (!child.s) linkLoad(child.l, childFetchOpts)
+      if (!child.s) linkLoad(child.l, fetchOpts)
+      // load, sourcePhase
       return child
     })
     load.d = dependencies.filter((dependency): dependency is Dependency => dependency !== undefined)
@@ -593,13 +588,13 @@ const processImportMaps = () => {
 const processImportMap = (script: HTMLScriptElement): void => {
   if (processedImportMaps.has(script)) return
   processedImportMaps.add(script)
-  // External import maps are not supported natively and remain outside this polyfill's scope.
+  // we dont currently support external import maps in polyfill mode to match native
   if (script.src) return
   importMapPromise = importMapPromise
     .then(() => {
       composedImportMap = resolveAndComposeImportMap(
         JSON.parse(script.innerHTML),
-        script.baseURI,
+        pageBaseUrl,
         composedImportMap,
       )
     })

@@ -355,7 +355,7 @@ suite('Source maps', () => {
     let moduleBlobURL = getLoad(moduleURL)!.b
     let blobContent = await fetch(moduleBlobURL).then((r) => r.text())
     let sourceURL = new URL('module.ts', moduleURL).href
-    assert(blobContent.trimEnd().endsWith(`//# sourceURL=${sourceURL}`))
+    assert(blobContent.endsWith(`//# sourceURL=${sourceURL}`))
     // Should not touch any other occurrences of `//# sourceURL=` in the code.
     assert(blobContent.includes('//# sourceURL=i-should-not-be-affected.no'))
   })
@@ -367,8 +367,9 @@ suite('Source maps', () => {
     let moduleBlobURL = getLoad(moduleURL)!.b
     let blobContent = await fetch(moduleBlobURL).then((r) => r.text())
     let sourceMappingURL = new URL('./with-relative-source-mapping-url.js.map', moduleURL).href
-    assert(blobContent.includes(`//# sourceMappingURL=${sourceMappingURL}`))
-    assert(blobContent.trimEnd().endsWith(`//# sourceURL=${moduleURL}`))
+    assert(
+      blobContent.endsWith(`//# sourceMappingURL=${sourceMappingURL}\n//# sourceURL=${moduleURL}`),
+    )
 
     // Should not touch any other occurrences of `//# sourceMappingURL=` in the code.
     assert(blobContent.includes('//# sourceMappingURL=i-should-not-be-affected.no'))
@@ -380,8 +381,11 @@ suite('Source maps', () => {
     await importShimmed(moduleURL)
     let moduleBlobURL = getLoad(moduleURL)!.b
     let blobContent = await fetch(moduleBlobURL).then((r) => r.text())
-    assert(blobContent.includes('//# sourceMappingURL=https://example.com/module.js.map'))
-    assert(blobContent.trimEnd().endsWith(`//# sourceURL=${moduleURL}`))
+    assert(
+      blobContent.endsWith(
+        `//# sourceMappingURL=https://example.com/module.js.map\n//# sourceURL=${moduleURL}`,
+      ),
+    )
 
     // Should not touch any other occurrences of `//# sourceMappingURL=` in the code.
     assert(blobContent.includes('//# sourceMappingURL=i-should-not-be-affected.no'))
@@ -396,11 +400,9 @@ suite('Source maps', () => {
     let moduleBlobURL = getLoad(moduleURL)!.b
     let blobContent = await fetch(moduleBlobURL).then((r) => r.text())
     assert(
-      blobContent
-        .trimEnd()
-        .endsWith(
-          `//# sourceURL=${new URL('/with-source-url-and-source-mapping-url.js', window.location.origin)}\n//# sourceMappingURL=https://example.com/module.js.map`,
-        ),
+      blobContent.endsWith(
+        `//# sourceURL=${new URL('/with-source-url-and-source-mapping-url.js', window.location.origin)}\n//# sourceMappingURL=https://example.com/module.js.map`,
+      ),
     )
 
     // Should not touch any other occurrences of `//# sourceURL=` in the code.

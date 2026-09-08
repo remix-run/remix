@@ -19,7 +19,7 @@ The upstream-derived implementation is in `src/lib/core.ts`, `env.ts`, `features
 
 The corresponding `*.test.browser.ts` files replace upstream's HTML and Mocha setup with the Remix test runner, then import the adjacent upstream-derived test module to register its suites. `test/polyfill-errors.test.e2e.ts` and `test/shim-errors.test.e2e.ts` contain the three retained upstream tests that intentionally return HTTP errors. They require the e2e server because the browser test harness rejects failed requests. `test/polyfill.test.e2e.ts` contains Remix-specific coverage and does not mirror an upstream test file.
 
-The browser runner starts a module graph before each TypeScript test entry can configure the document. The URL-mapping test in `polyfill.ts`, scoped-mapping test in `shim.ts`, and blob-revocation test therefore append their import maps inside the test instead of receiving them from the initial HTML document as they do upstream. Fixture imports that must remain dynamic use non-literal specifiers so the browser test server does not rewrite them before the polyfill sees them.
+The browser runner starts a module graph before each TypeScript test entry can configure the document. The URL-mapping test in `polyfill.ts`, scoped-mapping test in `shim.ts`, and blob-revocation test therefore append their import maps inside the test instead of receiving them from the initial HTML document as they do upstream. Fixture imports that must remain dynamic use non-literal specifiers so the browser test server does not rewrite them before the polyfill sees them. The `import.meta.resolve` and source-map fixtures contain a dormant non-literal dynamic import so those tests exercise the rewritten module path in browsers that can otherwise load the late mapping natively. Fixtures with source directives at EOF and `es6-dep.js` preserve upstream's missing final newline because their tests depend on that exact input.
 
 ## Why this fork exists
 
@@ -29,10 +29,13 @@ The fork keeps ES Module Shims' graph fetching, parsing, resolution, rewriting, 
 
 ## Intentional differences
 
-- The upstream JavaScript implementation and executable tests are maintained as strict TypeScript without restructuring their runtime logic. Fixture modules remain JavaScript.
+- The upstream JavaScript implementation and executable tests are maintained as strict TypeScript without restructuring their runtime logic. Fixture modules remain JavaScript, use repository formatting, and retain upstream runtime behavior apart from declaration changes required by repository lint rules and the documented browser-runner adaptations.
+- The internal `version` constant uniquely identifies each iframe feature detector so different package instances cannot consume each other's `postMessage` responses. It retains upstream's name and usage but combines the package name, current timestamp, and a random value instead of using a package version. It is not exposed from the package entry point.
 - The runtime is an ES module with explicit `importShim` and `preloadShim` exports. `preloadShim` accepts one or more module specifiers, exposes upstream's `processPreload` fetch-cache path without requiring declarative preload links, and ignores preload failures at the public wrapper boundary.
 - Rewritten dynamic imports use a private symbol-keyed bridge instead of a public `globalThis.importShim` API.
+- Multiple import map detection retains upstream's iframe feature test and resolves conservatively after one second when the test cannot complete, such as when blocked by Content Security Policy.
 - Import maps are read from standard `<script type="importmap">` elements, including maps appended at runtime.
+- Processed import map elements are tracked in a `WeakSet` instead of writing upstream's shared `ep` marker onto the elements.
 - Declarative module scripts and module preload elements are not intercepted.
 - Shim mode, legacy module support, initialization options, customization hooks, and hot reloading are removed.
 - Module transforms for CSS, JSON, Wasm, and TypeScript are removed. Native JSON and CSS import attributes and static Wasm source-phase imports retain upstream's URL-rewriting structure but delegate module loading to the browser.

@@ -2,15 +2,17 @@ import { self } from './self.ts'
 
 export const hasDocument = typeof document !== 'undefined'
 
+export const dynamicImport = (u: string): Promise<Record<string, unknown>> => import(u)
+
+export const defaultFetchOpts = { credentials: 'same-origin' } satisfies RequestInit
+
+export const version = `remix/multiple-import-maps-polyfill:${Date.now()}:${Math.random()}`
+
 export let nonce = ''
 if (hasDocument) {
   let nonceElement = document.querySelector<HTMLScriptElement>('script[nonce]')
   if (nonceElement) nonce = nonceElement.nonce || nonceElement.getAttribute('nonce') || ''
 }
-
-export const dynamicImport = (u: string): Promise<Record<string, unknown>> => import(u)
-
-export const defaultFetchOpts = { credentials: 'same-origin' } satisfies RequestInit
 
 export const baseUrl = hasDocument
   ? document.baseURI

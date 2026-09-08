@@ -18,14 +18,10 @@ export const asURL = (url: string): string | undefined => {
   } catch (_) {}
 }
 
-export const resolveUrl = (relUrl: string, parentUrl: string): string => {
-  let resolved =
-    resolveIfNotPlainOrUrl(relUrl, parentUrl) ||
+export const resolveUrl = (relUrl: string, parentUrl: string): string =>
+  (resolveIfNotPlainOrUrl(relUrl, parentUrl) ||
     asURL(relUrl) ||
-    resolveIfNotPlainOrUrl('./' + relUrl, parentUrl)
-  if (!resolved) throw new TypeError(`Unable to resolve "${relUrl}" from ${parentUrl}`)
-  return resolved
-}
+    resolveIfNotPlainOrUrl('./' + relUrl, parentUrl))!
 
 export const resolveIfNotPlainOrUrl = (relUrl: string, parentUrl: string): string | undefined => {
   let hIdx = parentUrl.indexOf('#'),
@@ -51,6 +47,9 @@ export const resolveIfNotPlainOrUrl = (relUrl: string, parentUrl: string): strin
         `Failed to resolve module specifier "${relUrl}". Invalid relative url or base scheme isn't hierarchical.`,
       )
     }
+    // Disabled, but these cases will give inconsistent results for deep backtracking
+    //if (parentUrl[parentProtocol.length] !== '/')
+    //  throw new Error('Cannot resolve');
     // read pathname from parent URL
     // pathname taken to be part after leading "/"
     let pathname
@@ -165,15 +164,17 @@ export const resolveImportMap = (
   importMap: ImportMap,
   resolvedOrPlain: string,
   parentUrl: string,
-): string | undefined => {
+): string | false | undefined => {
   let scopeUrl = parentUrl && getMatch(parentUrl, importMap.scopes)
   while (scopeUrl) {
     let packageResolution = applyPackages(resolvedOrPlain, importMap.scopes[scopeUrl])
     if (packageResolution) return packageResolution
     scopeUrl = getMatch(scopeUrl.slice(0, scopeUrl.lastIndexOf('/')), importMap.scopes)
   }
-  let packageResolution = applyPackages(resolvedOrPlain, importMap.imports)
-  return packageResolution || (resolvedOrPlain.indexOf(':') !== -1 ? resolvedOrPlain : undefined)
+  return (
+    applyPackages(resolvedOrPlain, importMap.imports) ||
+    (resolvedOrPlain.indexOf(':') !== -1 && resolvedOrPlain)
+  )
 }
 
 const resolveAndComposePackages = (
