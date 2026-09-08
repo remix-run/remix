@@ -1108,7 +1108,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
   })
 
   it('updates a node-hmr module imported by a client entry', async (t) => {
-    let fixture = await createNodeHmrFixture()
+    let fixture = await createNodeHmrFixture({ debugNodeHmr: true })
     let server: NodeHmrTestServer | undefined
 
     try {
@@ -1121,6 +1121,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       await page.locator('[data-testid="server-client-field"]').fill('typed before update')
 
+      server.debug('writing app/client-message.tsx')
       await write(
         fixture.rootDir,
         'app/client-message.tsx',
@@ -1196,6 +1197,7 @@ type HmrFixture = {
 
 type NodeHmrFixture = {
   close(): Promise<void>
+  debugNodeHmr: boolean
   devProxy: boolean
   rootDir: string
 }
@@ -1243,6 +1245,7 @@ type BrowserHmrFileEventHandler = (
 type NodeHmrTestServer = {
   baseUrl: string
   close(): Promise<void>
+  debug(message: string): void
   output: string
   readyCount: number
   waitForReady(index: number): Promise<{ pid: number; port: number }>
@@ -1590,6 +1593,7 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
 async function createNodeHmrFixture(
   options: {
     clientFieldExtraExports?: string
+    debugNodeHmr?: boolean
     devProxy?: boolean
     serverImportsClientField?: boolean
     slowAssetMs?: number
@@ -1696,6 +1700,7 @@ async function createNodeHmrFixture(
   )
 
   return {
+    debugNodeHmr: options.debugNodeHmr === true,
     devProxy: options.devProxy === true,
     rootDir,
     async close() {
@@ -2232,6 +2237,7 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     env: {
       ...env,
       NODE_ENV: 'development',
+      ...(fixture.debugNodeHmr ? { REMIX_NODE_HMR_DEBUG: '1' } : {}),
       ...(fixture.devProxy ? { CHILD_PORT_FILE: childPortFile, TEST_CHILD_SERVER_PORT: '0' } : {}),
       TEST_SERVER_PORT: '0',
       TEST_SERVER_PORT_FILE: path.join(fixture.rootDir, 'server-port.txt'),
@@ -2289,6 +2295,9 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     async close() {
       closePromise ??= stopProcess(child)
       await closePromise
+    },
+    debug(message) {
+      processOutput += `[ui-hmr debug] ${Date.now()} ${message}\n`
     },
     get output() {
       return processOutput
