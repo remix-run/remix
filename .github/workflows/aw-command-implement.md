@@ -56,8 +56,8 @@ network:
 steps:
   - name: Enable pnpm with Corepack
     run: corepack enable pnpm
-  - name: Verify pnpm
-    run: pnpm --version
+  - name: Install dependencies
+    run: pnpm install --frozen-lockfile
 safe-outputs:
   footer: false
   add-comment:
@@ -157,6 +157,9 @@ takes precedence over conflicting issue or discussion details.
 
 - Inspect the relevant repository code and history before editing. Establish
   the current behavior and the smallest coherent implementation.
+- Keep terminal output bounded to the relevant files and line ranges. Prefer
+  targeted searches and reads over dumping large files, broad diffs, or
+  unbounded repository-wide results into the agent context.
 - Keep the change limited to the authorized request. Do not redesign adjacent
   systems or make unrelated cleanup changes.
 - Do not add or update dependencies, package manifests, lockfiles, workspace or
@@ -175,10 +178,15 @@ takes precedence over conflicting issue or discussion details.
 
 ## Validate
 
-- Install only from the committed lockfile with
-  `pnpm install --frozen-lockfile` when installation is necessary.
-- Use the smallest relevant package test, typecheck, and build commands while
-  iterating.
+- Dependencies are installed from the committed lockfile before the agent
+  starts. Do not run another dependency installation.
+- Use the smallest relevant test file or scoped test name while iterating, and
+  keep rerunning that focused regression until it passes. For example:
+  `pnpm --filter @remix-run/<package> run test --quiet src/**/<filename>.test.ts --only '<suite-or-test-regex>'`.
+- After focused tests pass and the implementation diff is final, test and
+  typecheck the affected packages with `pnpm run test:changed` and
+  `pnpm run typecheck:changed`. Let pull request CI run the full repository
+  test and typecheck suites.
 - The Playwright CLI bootstrap creates `.claude/skills/playwright-cli/` as
   transient runner tooling. Remove that directory after browser testing and
   before the final validation loop; never include it in the diff.
@@ -186,9 +194,7 @@ takes precedence over conflicting issue or discussion details.
   `pnpm run validate-package-meta`, `pnpm run lint`,
   `pnpm run format:check`, `pnpm run test:changed`, and
   `pnpm run typecheck:changed`.
-- Run `pnpm run changes:validate` when a change file is added. Run full
-  `pnpm test` and `pnpm run typecheck` when the change is broad or affects
-  multiple workspaces.
+- Run `pnpm run changes:validate` when a change file is added.
 - The sandbox may use Node.js 22 even though the repository requires Node.js 24.
   Do not treat an `Unsupported engine` warning or a command failure explicitly
   caused by the unavailable Node.js 24 runtime as a blocker to creating the
