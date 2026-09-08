@@ -313,6 +313,45 @@ describe('run', () => {
     }
   })
 
+  it('rejects 5xx HTML responses from the default resolver', async (t) => {
+    document.body.innerHTML = '<main id="initial">Initial</main>'
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response('<main id="error">Internal Server Error</main>', {
+          headers: { 'Content-Type': 'text/html' },
+          status: 500,
+          statusText: 'Internal Server Error',
+        }),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    let reportedError: unknown
+    app.addEventListener('error', (event) => {
+      reportedError = event.error
+    })
+
+    try {
+      await app.ready()
+      app.frames.top.src = '/account'
+
+      await expect(app.frames.top.reload()).rejects.toThrow(
+        'Failed to resolve frame: 500 Internal Server Error',
+      )
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(reportedError).toBeInstanceOf(Error)
+      expect((reportedError as Error).message).toBe(
+        'Failed to resolve frame: 500 Internal Server Error',
+      )
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+      expect(document.getElementById('error')).toBeNull()
+    } finally {
+      app.dispose()
+    }
+  })
+
   it('encodes urlencoded form data with URLSearchParams by default', async (t) => {
     let formData = new FormData()
     formData.set('name', 'Ada Lovelace')
