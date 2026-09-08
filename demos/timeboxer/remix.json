@@ -5,6 +5,7 @@
     "basePath": "/assets",
     "mounts": {
       "app": "demos/timeboxer/app",
+      "npm": "node_modules",
       "packages": "packages"
     },
     "allowFiles": ["demos/timeboxer/app/routes.ts", "demos/timeboxer/app/**/public/**"],

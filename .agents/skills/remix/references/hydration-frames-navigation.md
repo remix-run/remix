@@ -88,6 +88,42 @@ The resolved `preloads` array contains browser module hrefs. During server rende
 
 Use `run` to start the client runtime. It scans the document for client entry markers, loads modules, and hydrates each one:
 
+Client entries introduced by later frame responses may depend on import map entries that were not in the initial document. Browsers without native support for multiple import maps cannot resolve those modules with `import()`. Apps that use asset server import maps and target these browsers can opt into `remix/multiple-import-maps-polyfill`:
+
+```tsx
+import {
+  detectMultipleImportMapSupport,
+  importModule,
+  preloadShim,
+} from 'remix/multiple-import-maps-polyfill'
+import { run } from 'remix/ui'
+
+const app = run({
+  async loadModule(moduleUrl, exportName) {
+    let mod = await importModule(moduleUrl)
+    let Component = mod[exportName]
+    if (typeof Component !== 'function') {
+      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+    }
+    return Component
+  },
+  async processClientEntryPreloads(preloads) {
+    if (await detectMultipleImportMapSupport()) return preloads
+
+    preloadShim(preloads)
+    return []
+  },
+})
+
+app.addEventListener('error', (event) => {
+  console.error('Component error:', event.error)
+})
+
+await app.ready()
+```
+
+The support check keeps native imports and modulepreload links in browsers that support multiple import maps. Other browsers use the polyfill for late client entries and their preloads. Apps that do not need this compatibility can use `import()` directly in `loadModule` and omit `processClientEntryPreloads`.
+
 ```tsx
 import { run } from 'remix/ui'
 

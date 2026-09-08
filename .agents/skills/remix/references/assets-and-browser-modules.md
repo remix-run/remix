@@ -5,7 +5,7 @@
 How to serve browser scripts and styles from source. Read this when the task involves:
 
 - Configuring `createAssetServer` (`basePath`, `mounts`, `allowFiles`, `allowPackages`, `denyFiles`, fingerprinting, compiler options)
-- Choosing between `staticFiles()` for already-built files and `createAssetServer()` for source assets that need import rewriting, preloads, or fingerprinted URLs
+- Choosing between `staticFiles()` for already-built files and `createAssetServer()` for source assets that need dependency resolution, preloads, or fingerprinted URLs
 - Generating script URLs or `<link rel="modulepreload">` tags for a client entry
 - Enabling browser HMR for source-served modules
 - Keeping files such as tests out of the browser via `denyFiles` rules
@@ -16,7 +16,7 @@ For routing the URL namespace itself, see `routing-and-controllers.md`. For clie
 
 Use `remix/assets` when the app serves browser JavaScript, TypeScript, or CSS from source files. This is the right tool for client entrypoints, browser-only helpers, styles, and monorepo code that should be compiled and served under a public URL namespace.
 
-Use `staticFiles()` for files that already exist on disk exactly as they should be served. Use `createAssetServer()` for source scripts or styles that need rewriting, dependency scanning, preloads, sourcemaps, or fingerprinted URLs.
+Use `staticFiles()` for files that already exist on disk exactly as they should be served. Use `createAssetServer()` for source scripts or styles that need compilation, dependency scanning, preloads, sourcemaps, or fingerprinted URLs.
 
 ## Default Pattern
 
@@ -71,16 +71,17 @@ export default createController(routes, {
 
 ## Rendering HTML
 
-Use `getHref()` when you need the public URL for one module, and `getPreloads()` when you want `<link rel="modulepreload">` tags or `Link` headers for one or more entrypoints and their dependencies.
+Use `getScriptEntry()` when rendering a browser script entry. Scripts keep JavaScript imports as authored, so a rendered script entry needs its public URL, modulepreload hints, and an import map.
 
 ```typescript
-let entryHref = await assets.getHref('app/actions/public/entry.ts')
-let entryPreloads = await assets.getPreloads('app/actions/public/entry.ts')
+let { href, importMap, preloads } = await assets.getScriptEntry('app/actions/public/entry.ts')
 ```
 
-Use this when rendering documents or layouts that boot browser behavior with a known client entry.
+Render `importMap` with `ImportMap` from `remix/ui/server` before the modulepreload links and module script. This combines its mappings with import maps from blocking client entries.
 
-For normal Remix applications, pass the asset server to `render({ assets })` from `remix/middleware/render`. The middleware resolves source entry IDs from `clientEntry(import.meta.url, ...)` with `getHref()` and `getPreloads()` and applies the UI renderer's explicit-hash or named-component export rules. Use a custom `resolveClientEntry` callback only when building a custom rendering pipeline.
+Use `getHref()` directly when you need the public URL for a non-script asset, and `getPreloads()` when you need lower-level preload control for one or more entrypoints.
+
+For normal Remix applications, pass the asset server to `render({ assets })` from `remix/middleware/render`. The middleware resolves source entry IDs from `clientEntry(import.meta.url, ...)` with `getScriptEntry()`, includes their import maps, and applies the UI renderer's explicit-hash or named-component export rules. Use a custom `resolveClientEntry` callback only when building a custom rendering pipeline.
 
 ## Development vs Deployment
 
@@ -91,12 +92,15 @@ In development:
 - Enable source maps when debugging browser code
 - Use `hmr` only when the app is running under `remix/node-hmr`
 - Use `scripts.loaders` for development-only browser transforms such as `uiHmr()`
+- Configure `hmr.moduleImporter` with `remix/multiple-import-maps-polyfill` when HMR must support browsers without native support for multiple import maps. HMR appends updated mappings in additional `<script type="importmap">` elements
 
 In deployment:
 
 - Set `watch: false`
-- Use `fingerprint: { buildId }` for long-lived immutable caching
-- Make sure `buildId` changes for each deploy
+- Use `fingerprint: true` for content-based fingerprints and long-lived immutable caching
+- Render the script import map before modulepreload links and module scripts
+- Keep bare-import resolution uniform for files in the same directory; different directories may use
+  different resolutions through more-specific import map scopes
 
 Fingerprinting assumes files on disk are stable and requires `watch: false`.
 
@@ -117,7 +121,10 @@ const assetServer = createAssetServer({
   denyFiles: ['app/**/*.test.*'],
   watch: isDevelopment,
   hmr: isHmr
-    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+    ? {
+        channel: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
+        moduleImporter: 'remix/multiple-import-maps-polyfill',
+      }
     : undefined,
   scripts: {
     loaders: isHmr ? [uiHmr()] : undefined,

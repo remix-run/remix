@@ -26,13 +26,12 @@ export function createAssetServer(version?: string): DocsAssetServer {
       app: 'docs/api/app',
       demos: 'docs/api/build/demos',
       'docs-shared': 'docs/shared',
+      npm: 'node_modules',
       packages: 'packages',
     },
     sourceMaps: isDevelopment ? 'external' : undefined,
     minify: isProduction,
-    fingerprint: isProduction
-      ? { buildId: process.env.GITHUB_SHA || String(Date.now()) }
-      : undefined,
+    fingerprint: isProduction,
     watch: false,
     scripts: {
       define: {

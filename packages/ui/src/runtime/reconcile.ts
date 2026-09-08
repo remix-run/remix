@@ -1097,6 +1097,7 @@ function insertFrame(
           moduleLoads: runtime.moduleLoads,
           frameInstances: runtime.frameInstances,
           namedFrames: runtime.namedFrames,
+          processClientEntryPreloads: runtime.processClientEntryPreloads,
         })
         runtime.frameInstances.set(start, instance)
       }
@@ -1147,6 +1148,7 @@ function insertFrame(
     moduleLoads: runtime.moduleLoads,
     frameInstances: runtime.frameInstances,
     namedFrames: runtime.namedFrames,
+    processClientEntryPreloads: runtime.processClientEntryPreloads,
   })
   runtime.frameInstances.set(start, instance)
 

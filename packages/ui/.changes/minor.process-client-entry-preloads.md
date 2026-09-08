@@ -1,0 +1,1 @@
+`run()` now accepts `processClientEntryPreloads` for processing module preloads discovered in late client entry responses before they are added to the document. Apps can use the hook to preload modules through a custom module runtime and return an empty array to skip native modulepreload links.

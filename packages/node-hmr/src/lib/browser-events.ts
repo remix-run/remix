@@ -4,45 +4,35 @@ import { hasNodeHmrParentProcess } from './process-state.ts'
 
 export const defaultBrowserHmrPathname = '/hmr'
 
+/** Value that can be serialized as JSON for delivery to browser HMR clients. */
+export type BrowserHmrData =
+  | null
+  | boolean
+  | number
+  | string
+  | BrowserHmrData[]
+  | { [key: string]: BrowserHmrData }
+
 /**
  * Event payload sent to browser HMR clients.
  */
 export interface HmrEventPayload {
   /** Event type string consumed by browser HMR clients. */
   type: string
-  [key: string]: unknown
+  [key: string]: BrowserHmrData
 }
-
-/** JavaScript or CSS module update sent to a browser HMR client. */
-export type HmrBrowserUpdate =
-  | {
-      /** Importing module whose dependency-accept handler accepts this update. */
-      acceptedPath?: string
-      /** Public URL of the changed JavaScript module. */
-      path: string
-      /** Identifies a JavaScript module update. */
-      type: 'js'
-    }
-  | {
-      /** Public URL of the changed stylesheet. */
-      path: string
-      /** Identifies a stylesheet update. */
-      type: 'css'
-    }
 
 /**
  * Browser HMR event emitted to connected clients.
  */
 export type BrowserHmrEvent =
   | {
+      /** Consumer-owned data keyed by a stable, versioned namespace. */
+      data: Record<string, BrowserHmrData>
       /** Absolute source file paths that triggered this update. */
       files?: string[]
-      /** Update timestamp used to bust module and stylesheet caches. */
-      timestamp: number
       /** Browser update event. */
       type: 'update'
-      /** JavaScript and CSS updates for the browser to apply. */
-      updates: HmrBrowserUpdate[]
     }
   | {
       /** Absolute source file paths that could not be handled in place. */

@@ -9,7 +9,6 @@ import type { TransformedModule } from './scripts/transform.ts'
 
 function createTransformedModule(): TransformedModule {
   return {
-    fingerprint: null,
     hmr: {
       acceptedDeps: [],
       selfAccepting: false,
@@ -32,9 +31,9 @@ function createEmittedModule(): EmittedModule {
     code: {
       content: 'export const value = 1',
       etag: 'W/"code"',
+      fingerprint: 'code',
     },
     fingerprint: null,
-    importUrls: [],
     sourceMap: null,
   }
 }
@@ -50,11 +49,12 @@ function createResolvedModule(
 
   return {
     deps: options.deps ?? [],
-    fingerprint: null,
     hmr: {
       acceptedDeps: (options.acceptedDeps ?? []).map((depPath, index) => ({
+        compiledSpecifier: depPath,
         depPath,
         end: index,
+        specifier: depPath,
         start: index,
       })),
       selfAccepting: false,
@@ -66,6 +66,7 @@ function createResolvedModule(
     rawCode: 'export const value = 1',
     resolvedPath: identityPath,
     sourceMap: null,
+    staticDeps: [],
     stableUrlPathname: `/assets${identityPath}`,
   }
 }

@@ -64,7 +64,7 @@ export function DemoDocument(handle: Handle<{ DemoComponent: any; demo: DemoFile
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <script async type="module" src="/assets/entry.js" />
+          <script type="module" src="/assets/entry.js" />
           <title>{`${demo.title} | Remix Interface Demo`}</title>
         </head>
         <body mix={bodyCss}>

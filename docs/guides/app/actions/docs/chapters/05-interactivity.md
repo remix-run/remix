@@ -118,12 +118,27 @@ browser-safe values it needs to handle its part of the page.
 The document shell loads `app/actions/public/entry.ts`. That module calls `run()` once:
 
 ```ts filename=app/actions/public/entry.ts
+import {
+  detectMultipleImportMapSupport,
+  importModule,
+  preloadShim,
+} from "remix/multiple-import-maps-polyfill";
 import { run } from "remix/ui";
 
 let app = run({
   async loadModule(moduleUrl, exportName) {
-    let module = await import(moduleUrl);
-    return module[exportName];
+    let module = await importModule(moduleUrl);
+    let Component = module[exportName];
+    if (typeof Component !== "function") {
+      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`);
+    }
+    return Component;
+  },
+  async processClientEntryPreloads(preloads) {
+    if (await detectMultipleImportMapSupport()) return preloads;
+
+    preloadShim(preloads);
+    return [];
   },
 });
 
@@ -134,7 +149,9 @@ app.addEventListener("error", (event) => {
 await app.ready();
 ```
 
-`loadModule` imports the named component for every client entry discovered in the document.
+`loadModule` imports the named component for every client entry discovered in the document. Browsers
+with multiple import map support use native imports and preloads. Browsers without that support use
+the polyfill when later frame responses introduce new mappings.
 
 The returned app runtime has three lifecycle methods:
 

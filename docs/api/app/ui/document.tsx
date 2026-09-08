@@ -1,6 +1,8 @@
 import * as path from 'node:path'
 
+import type { ScriptEntry } from 'remix/assets'
 import type { Handle, RemixNode } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
 import { PagefindElements, shouldLoadPagefind } from 'remix-docs-shared/search'
 import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
@@ -34,12 +36,7 @@ export function Document(
 ) {
   return () => {
     let { registry, versions, activeVersion, slug, sourceUrl, headings, children } = handle.props
-    let {
-      scriptSrc: entryHref,
-      scriptPreloads: entryPreloads,
-      stylesheetHref,
-      stylesheetPreloads,
-    } = getAssetEntry()
+    let { scriptEntry, stylesheetHref, stylesheetPreloads } = getAssetEntry()
     let searchEnabled = shouldLoadPagefind(pagefindModulePath)
     let page = slug
       ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
@@ -56,8 +53,7 @@ export function Document(
         <Head
           page={page}
           activeVersion={activeVersion}
-          entryHref={entryHref}
-          entryPreloads={entryPreloads}
+          scriptEntry={scriptEntry}
           stylesheetHref={stylesheetHref}
           stylesheetPreloads={stylesheetPreloads}
           searchEnabled={searchEnabled}
@@ -110,23 +106,16 @@ function Head(
   handle: Handle<{
     page: PageDefinition
     activeVersion?: string
-    entryHref: string
-    entryPreloads: readonly string[]
+    scriptEntry: ScriptEntry
     stylesheetHref: string
     stylesheetPreloads: readonly string[]
     searchEnabled: boolean
   }>,
 ) {
   return () => {
-    let {
-      page,
-      activeVersion,
-      entryHref,
-      entryPreloads,
-      stylesheetHref,
-      stylesheetPreloads,
-      searchEnabled,
-    } = handle.props
+    let { page, activeVersion, scriptEntry, stylesheetHref, stylesheetPreloads, searchEnabled } =
+      handle.props
+    let { href, importMap, preloads } = scriptEntry
     let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
 
     return (
@@ -161,14 +150,6 @@ function Head(
             title={`Markdown docs for ${page.docFile.name ?? page.title}`}
           />
         ) : null}
-        {[
-          ...new Set([
-            ...entryPreloads,
-            ...(page.docFile?.kind === 'demo' ? page.docFile.preloads : []),
-          ]),
-        ].map((href) => (
-          <link key={href} rel="modulepreload" href={href} />
-        ))}
         {/* Keep styles after variable head content so frame diffs do not reload them. */}
         {searchEnabled ? (
           <link
@@ -181,7 +162,11 @@ function Head(
           />
         ) : null}
         <link data-rmx-key="docs-stylesheet" rel="stylesheet" href={stylesheetHref} />
-        <script data-rmx-key="docs-client-entry" type="module" src={entryHref} />
+        <ImportMap value={importMap} />
+        {preloads.map((preloadHref) => (
+          <link key={preloadHref} rel="modulepreload" href={preloadHref} />
+        ))}
+        <script data-rmx-key="docs-client-entry" type="module" src={href} />
         {searchEnabled ? (
           <script
             data-rmx-key="docs-pagefind-client-entry"

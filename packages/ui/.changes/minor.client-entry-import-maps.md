@@ -1,0 +1,3 @@
+Hydrated client entries can now provide import maps through `resolveClientEntry()`. The server-only `<ImportMap>` component combines authored mappings with mappings from blocking client entries so the initial document contains one complete import map. Later frame responses carry new mappings in a leading `<head>` for the client runtime to install. Regular `<script type="importmap">` elements remain supported when this managed behavior is not needed.
+
+When a frame response changes an installed import mapping or integrity value, Remix loads a fresh document before applying that response so navigation across deployments cannot mix old and new modules.

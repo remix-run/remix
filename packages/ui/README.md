@@ -79,12 +79,9 @@ function Actions() {
 }
 ```
 
-## Frame Navigation
+## Client Entry Loading
 
-Calling `run()` starts both hydration and frame navigation. It represents the current document as
-`app.frames.top` and intercepts eligible same-origin links and forms through the browser's
-Navigation API. Those navigations fetch HTML with the frame resolver and update the existing
-document in place instead of loading a new document:
+`run()` hydrates client entries by calling `loadModule` for each component module:
 
 ```tsx
 import { run } from 'remix/ui'
@@ -99,6 +96,40 @@ let app = run({
 await app.ready()
 ```
 
+Client entries introduced after the initial document may depend on import maps added at runtime.
+When targeting browsers without native support for multiple import maps, use
+`remix/multiple-import-maps-polyfill` to load these modules and process their preloads:
+
+```tsx
+import {
+  detectMultipleImportMapSupport,
+  importModule,
+  preloadShim,
+} from 'remix/multiple-import-maps-polyfill'
+
+let app = run({
+  async loadModule(moduleUrl, exportName) {
+    let module = await importModule(moduleUrl)
+    let Component = module[exportName]
+    if (typeof Component !== 'function') {
+      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+    }
+    return Component
+  },
+  async processClientEntryPreloads(preloads) {
+    if (await detectMultipleImportMapSupport()) return preloads
+
+    preloadShim(preloads)
+    return []
+  },
+})
+```
+
+## Frame Navigation
+
+The same runtime represents the current document as `app.frames.top` and intercepts eligible
+same-origin links and forms through the browser's Navigation API. Those navigations fetch HTML with
+the frame resolver and update the existing document in place instead of loading a new document.
 This soft-navigation behavior applies even when the page only uses `clientEntry()` and does not
 render an explicit `<Frame>`.
 

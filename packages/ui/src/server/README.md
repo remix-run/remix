@@ -33,12 +33,10 @@ let stream = renderToStream(<App />, {
     return fetchHtml(frameUrl)
   },
   async resolveClientEntry(entryId, component) {
-    let [href, preloads] = await Promise.all([
-      assetServer.getHref(entryId),
-      assetServer.getPreloads(entryId),
-    ])
+    let { href, importMap, preloads } = await assetServer.getScriptEntry(entryId)
     return {
       href,
+      importMap,
       exportName: entryId.split('#')[1] || component.name,
       preloads,
     }
@@ -59,7 +57,7 @@ return new Response(stream, {
 - **`topFrameSrc`** - Overrides the root frame URL used for `handle.frames.top.src`. This is mainly useful when calling `renderToStream()` from inside `resolveFrame()` for a nested frame render.
 - **`signal`** - Cancels pending server rendering work. Pass `request.signal` so client disconnects can stop unresolved frame work without invoking `onError` for the disconnect itself.
 - **`resolveFrame(src, target, context)`** - Called when a `<Frame>` needs its content. Return a string of HTML, a `ReadableStream<Uint8Array>`, or a promise of either. `context.currentFrameSrc` is the URL for the frame that contains the `<Frame>`, and `context.topFrameSrc` is the outer document URL. Required if your component tree contains `<Frame>` elements.
-- **`resolveClientEntry(entryId, component)`** - Resolves the public module URL, export name, and optional module preload hrefs for a hydrated client entry.
+- **`resolveClientEntry(entryId, component)`** - Resolves the public module URL, export name, optional import map, and optional module preload hrefs for a hydrated client entry.
 - **`onError(error)`** - Called when a rendering error occurs. If not provided, the stream rejects with the error.
 
 When you render nested frame responses with `renderToStream()` inside `resolveFrame()`, pass `frameSrc` for the frame being rendered and carry `topFrameSrc` forward from the parent context. That preserves `handle.frames.top.src` across the whole SSR frame tree.
@@ -96,6 +94,28 @@ function ProductPage() {
 ## CSS
 
 Components using the `css(...)` mixin through `mix` have their styles collected during rendering and emitted as a single `<style>` tag in the `<head>`. No client-side style injection is needed for server-rendered content.
+
+### Import maps
+
+Use `<ImportMap>` when the document needs one initial import map containing both authored mappings and mappings from blocking client entries. The server merges these mappings into the component before sending the initial HTML.
+
+Regular `<script type="importmap">` elements remain supported. The server leaves them unchanged and emits any additional client entry mappings separately, omitting entries already present in authored maps.
+
+```tsx
+import type { Handle, RemixNode } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
+
+function Document(handle: Handle<{ children: RemixNode }>) {
+  return () => (
+    <html>
+      <head>
+        <ImportMap value={scriptEntry.importMap} />
+      </head>
+      <body>{handle.props.children}</body>
+    </html>
+  )
+}
+```
 
 ## See Also
 

@@ -1,7 +1,7 @@
 import type { AssetServer } from '@remix-run/assets'
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 import { createHtmlResponse } from '@remix-run/response/html'
-import { renderToStream, type ResolveFrameContext } from '@remix-run/ui/server'
+import { renderToStream, type ImportMapData, type ResolveFrameContext } from '@remix-run/ui/server'
 
 import { renderWith, type Renderer } from './render.ts'
 
@@ -45,8 +45,8 @@ const CROSS_ORIGIN_FRAME_HEADERS = [
 
 /** Options for the standard Remix UI renderer. */
 export interface RenderOptions {
-  /** Asset server used to turn source-based client entry IDs into browser module and preload URLs. */
-  assets?: Pick<AssetServer, 'getHref' | 'getPreloads'>
+  /** Asset server used to turn source-based client entry IDs into browser module metadata. */
+  assets?: Pick<AssetServer, 'getScriptEntry'>
   /** Error hook invoked when server rendering fails. */
   onError?: (error: unknown) => void
 }
@@ -191,10 +191,10 @@ function createCrossOriginFrameHeaders(headers: Headers): Headers {
 }
 
 async function resolveClientEntry(
-  assets: Pick<AssetServer, 'getHref' | 'getPreloads'> | undefined,
+  assets: Pick<AssetServer, 'getScriptEntry'> | undefined,
   entryId: string,
   component: { readonly name: string },
-): Promise<{ href: string; exportName: string; preloads?: string[] }> {
+): Promise<{ href: string; importMap?: ImportMapData; exportName: string; preloads?: string[] }> {
   let hashIndex = entryId.lastIndexOf('#')
   let sourceId = hashIndex === -1 ? entryId : entryId.slice(0, hashIndex)
   let explicitExportName = hashIndex === -1 ? '' : entryId.slice(hashIndex + 1)
@@ -208,12 +208,9 @@ async function resolveClientEntry(
     }
     if (!exportName) throw createMissingExportNameError(entryId, true)
 
-    let [href, preloads] = await Promise.all([
-      assets.getHref(sourceId),
-      assets.getPreloads(sourceId),
-    ])
+    let { href, importMap, preloads } = await assets.getScriptEntry(sourceId)
 
-    return { href, exportName, preloads }
+    return { href, importMap, exportName, preloads }
   }
 
   if (!exportName) throw createMissingExportNameError(entryId, assets != null)

@@ -1,5 +1,10 @@
 import type { FrameContent } from 'remix/ui'
 import { run } from 'remix/ui'
+import {
+  detectMultipleImportMapSupport,
+  importModule,
+  preloadShim,
+} from 'remix/multiple-import-maps-polyfill'
 import { closePagefindSearch, startPagefindSearch } from 'remix-docs-shared/search/browser'
 
 startNavigationGuard()
@@ -7,8 +12,18 @@ startPagefindSearch()
 
 const app = run({
   async loadModule(moduleUrl, exportName) {
-    let mod = await import(moduleUrl)
-    return mod[exportName]
+    let mod = await importModule(moduleUrl)
+    let Component = mod[exportName]
+    if (typeof Component !== 'function') {
+      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+    }
+    return Component
+  },
+  async processClientEntryPreloads(preloads) {
+    if (await detectMultipleImportMapSupport()) return preloads
+
+    preloadShim(preloads)
+    return []
   },
   async resolveFrame(src, options): Promise<FrameContent> {
     let headers = new Headers({

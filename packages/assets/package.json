@@ -62,6 +62,7 @@
     "@remix-run/ui": "workspace:*",
     "@types/node": "catalog:",
     "@types/picomatch": "^4.0.3",
+    "playwright": "catalog:",
     "typescript": "catalog:"
   },
   "scripts": {
