@@ -187,7 +187,11 @@ async function resolveFrame(src, options) {
     signal: options?.signal,
   })
 
-  if (!response.ok) {
+  if (
+    response.status >= 500 ||
+    (response.status >= 300 &&
+      !response.headers.get('Content-Type')?.toLowerCase().includes('text/html'))
+  ) {
     throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
   }
 
@@ -229,8 +233,7 @@ submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-
 additional headers, another body encoding, or a different response policy. Custom resolvers receive
 `signal` and `target`; non-GET form submissions also provide `formData`, `method`, and `encType`.
 
-The default resolver rejects non-OK responses. A custom resolver may return a `Response` with any
-status when it wants Remix UI to render the response body.
+The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom resolver may return a `Response` with any status when it wants Remix UI to render the response body.
 
 A client resolver may return frame content directly or return the fetched `Response`. Returning the
 response lets Remix stream its body. When `fetch()` followed a redirect during a top-frame navigation,

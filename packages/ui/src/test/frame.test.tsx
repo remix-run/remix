@@ -332,6 +332,34 @@ describe('run', () => {
     }
   })
 
+  it('renders 4xx HTML responses with a mixed-case content type from the default resolver', async (t) => {
+    t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><p role="alert">Name is required</p></body></html><!-- rmx:flush document -->',
+          {
+            headers: { 'Content-Type': 'Text/HTML; charset=utf-8' },
+            status: 422,
+            statusText: 'Unprocessable Content',
+          },
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    await reloadFrameForNavigation(app.frames.top, {
+      formData: new FormData(),
+      method: 'post',
+    }).finished
+
+    expect(document.querySelector('[role="alert"]')?.textContent).toBe('Name is required')
+  })
+
   it('rejects non-HTML 4xx responses from the default resolver', async (t) => {
     document.body.innerHTML = '<main id="initial">Initial</main>'
     let unhandledRejections: unknown[] = []
