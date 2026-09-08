@@ -1,1 +1,0 @@
-Fixed redirect handling during frame navigation in generated apps. Existing apps can get the same fix by removing the custom `resolveFrame` callback from `run()` in `app/actions/public/entry.ts` to use the default resolver (see #11821).

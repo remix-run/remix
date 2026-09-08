@@ -1,3 +1,0 @@
-BREAKING CHANGE: Browser scripts served by `remix/assets` now use import maps to resolve imports. Replace separate `getHref()` and `getPreloads()` calls with `getScriptEntry()`, and render `<ImportMap value={importMap} />` from `remix/ui/server` before the entry's preloads and module script.
-
-Apps with client entries or HMR should also configure `remix/multiple-import-maps-polyfill` for browsers that need support for import maps added at runtime. New apps include this setup. Existing apps should follow the [asset server migration steps](https://github.com/remix-run/remix/blob/main/packages/assets/CHANGELOG.md#v070), including changes to custom rendering integrations (see #11706).

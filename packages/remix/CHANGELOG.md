@@ -2,6 +2,54 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-rc.2
+
+### Pre-release Changes
+
+- BREAKING CHANGE: Asset fingerprints from `remix/assets` now use hashes of the final file contents. Replace `fingerprint: { buildId }` with `fingerprint: true`. If you use a persistent `files.cache`, move the build identifier to `files.cacheKey` to keep reusing cached files across server restarts. See the [asset server migration steps](https://github.com/remix-run/remix/blob/main/packages/assets/CHANGELOG.md#v070) (see #11706).
+
+- BREAKING CHANGE: Browser scripts served by `remix/assets` now use import maps to resolve imports. Replace separate `getHref()` and `getPreloads()` calls with `getScriptEntry()`, and render `<ImportMap value={importMap} />` from `remix/ui/server` before the entry's preloads and module script.
+
+  Apps with client entries or HMR should also configure `remix/multiple-import-maps-polyfill` for browsers that need support for import maps added at runtime. New apps include this setup. Existing apps should follow the [asset server migration steps](https://github.com/remix-run/remix/blob/main/packages/assets/CHANGELOG.md#v070), including changes to custom rendering integrations (see #11706).
+
+- BREAKING CHANGE: `remix/router` now returns `405 Method Not Allowed` with an `Allow` header when a URL matches a route but the request method does not. These requests previously reached `defaultHandler`, which returned 404 by default. Register an `ANY` route if you need a custom handler for every method at that URL.
+
+  `GET` routes now also serve `HEAD` requests with the same status and headers and an empty body. Explicit `HEAD` routes still take precedence. See the [router release notes](https://github.com/remix-run/remix/blob/main/packages/fetch-router/CHANGELOG.md#v0220) (see #11767).
+
+- BREAKING CHANGE: Custom browser HMR events from `remix/assets` and `remix/node-hmr` now carry update data in a `data` record. Replace top-level `timestamp` and `updates` fields with a named entry such as `data: { 'my-tool@1': { timestamp, updates } }`.
+
+  Apps using the standard asset server and `createBrowserHmrChannel()` integration need no changes to their event handling. See the [HMR migration example](https://github.com/remix-run/remix/blob/main/packages/node-hmr/CHANGELOG.md#v020) (see #11706).
+
+- Added `remix/multiple-import-maps-polyfill` to load and preload JavaScript modules that depend on import maps added at runtime. `importModule()` uses native imports in browsers with support and the polyfill in other browsers. See the [usage guide](https://github.com/remix-run/remix/tree/main/packages/multiple-import-maps-polyfill#usage) (see #11706).
+
+- Fixed scroll timing during frame navigation and history restoration in `remix/ui`. Frames now show HTML validation and error responses with `3xx` or `4xx` status codes, and browsers without `NavigateEvent.sourceElement` support fall back to full document navigation. See the [UI release notes](https://github.com/remix-run/remix/blob/main/packages/ui/CHANGELOG.md#v090).
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.7.0`](https://github.com/remix-run/remix/releases/tag/assets@0.7.0)
+  - [`async-context-middleware@0.3.6`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.3.6)
+  - [`auth@0.3.1`](https://github.com/remix-run/remix/releases/tag/auth@0.3.1)
+  - [`auth-middleware@0.2.6`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.2.6)
+  - [`cli@0.7.0`](https://github.com/remix-run/remix/releases/tag/cli@0.7.0)
+  - [`compression-middleware@0.1.14`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.14)
+  - [`cop-middleware@0.1.9`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.9)
+  - [`cors-middleware@0.1.9`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.1.9)
+  - [`csrf-middleware@0.1.9`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.9)
+  - [`data-table@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table@0.5.1)
+  - [`data-table-mysql@0.5.2`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.2)
+  - [`data-table-postgres@0.5.2`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.2)
+  - [`data-table-sqlite@0.6.2`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.2)
+  - [`fetch-router@0.22.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.0)
+  - [`form-data-middleware@0.3.6`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.3.6)
+  - [`logger-middleware@0.3.6`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.3.6)
+  - [`method-override-middleware@0.1.14`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.14)
+  - [`multiple-import-maps-polyfill@0.1.0`](https://github.com/remix-run/remix/releases/tag/multiple-import-maps-polyfill@0.1.0)
+  - [`node-hmr@0.2.0`](https://github.com/remix-run/remix/releases/tag/node-hmr@0.2.0)
+  - [`render-middleware@0.3.0`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.3.0)
+  - [`session-middleware@0.4.1`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.4.1)
+  - [`spa@0.1.1`](https://github.com/remix-run/remix/releases/tag/spa@0.1.1)
+  - [`static-middleware@0.4.15`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.15)
+  - [`ui@0.9.0`](https://github.com/remix-run/remix/releases/tag/ui@0.9.0)
+
 ## v3.0.0-rc.1
 
 ### Pre-release Changes

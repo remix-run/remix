@@ -2,6 +2,14 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## v0.22.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Requests that match one or more route patterns, but no route registered for the request method, now receive a `405 Method Not Allowed` response with an `Allow` header listing the methods registered for that URL. Previously these requests fell through to the router's `defaultHandler` and produced a `404 Not Found` by default. Matching still falls through to less specific routes that can handle the method (including `ANY` routes) before the 405 applies, so catch-all routes keep handling these requests. Register an `ANY` route if you want a handler to receive every method at a given URL (see #11767).
+
+- Routes registered for `GET` now serve `HEAD` requests automatically. The `GET` handler runs as usual and the router strips the body from its response, so `HEAD` requests observe the same status and headers as the equivalent `GET` request. Previously a `HEAD` request only matched routes explicitly registered for `HEAD` or `ANY`. An explicit `HEAD` route for the same pattern still takes precedence over the `GET` route (see #11767).
+
 ## v0.21.0
 
 ### Minor Changes

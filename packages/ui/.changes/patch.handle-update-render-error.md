@@ -1,1 +1,0 @@
-`handle.update()` now warns and skips the extra render when called during component setup. Calls during rendering, or before the initial commit from outside setup, report a clear component error. Move these updates into an event handler or a `handle.queueTask()` callback (see #11795).

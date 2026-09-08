@@ -1,1 +1,0 @@
-Frames now render HTML responses with `3xx` and `4xx` status codes, so form validation messages and error pages appear in the frame when using the default resolver. HTML content types are now recognized regardless of case (see #11823).

@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/multiple-import-maps-polyfill",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Polyfill for dynamic JavaScript imports that depend on import maps added at runtime",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
