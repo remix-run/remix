@@ -258,10 +258,12 @@ describe('navigate', () => {
     }
     stubGlobalField(t, 'navigation', navigation)
     stubGlobalField(t, 'NavigateEvent', class extends Event {})
+    let addDocumentListener = t.mock.method(document, 'addEventListener')
     let controller = new AbortController()
 
     startNavigationListener(controller.signal)
 
+    expect(addDocumentListener).not.toHaveBeenCalled()
     expect(navigation.updateCurrentEntry).not.toHaveBeenCalled()
     expect(navigation.addEventListener).not.toHaveBeenCalled()
     controller.abort()
