@@ -114,7 +114,7 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
 
   if (
     response.status >= 500 ||
-    (response.status >= 400 && !response.headers.get('Content-Type')?.includes('text/html'))
+    (response.status >= 300 && !response.headers.get('Content-Type')?.includes('text/html'))
   ) {
     throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
   }

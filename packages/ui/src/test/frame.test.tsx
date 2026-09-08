@@ -235,6 +235,71 @@ describe('run', () => {
     }
   })
 
+  it('renders 3xx HTML responses from the default resolver', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="choices">Multiple choices</main></body></html><!-- rmx:flush document -->',
+          {
+            headers: { 'Content-Type': 'text/html' },
+            status: 300,
+            statusText: 'Multiple Choices',
+          },
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/choices'
+
+    try {
+      await app.frames.top.reload()
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(document.getElementById('choices')?.textContent).toBe('Multiple choices')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('rejects non-HTML 3xx responses from the default resolver', async (t) => {
+    document.body.innerHTML = '<main id="initial">Initial</main>'
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response('{"next":"/account"}', {
+          headers: { 'Content-Type': 'application/json' },
+          status: 300,
+          statusText: 'Multiple Choices',
+        }),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    let reportedError: unknown
+    app.addEventListener('error', (event) => {
+      reportedError = event.error
+    })
+
+    try {
+      await app.ready()
+      app.frames.top.src = '/choices'
+
+      await expect(app.frames.top.reload()).rejects.toThrow(
+        'Failed to resolve frame: 300 Multiple Choices',
+      )
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(reportedError).toBeInstanceOf(Error)
+      expect((reportedError as Error).message).toBe('Failed to resolve frame: 300 Multiple Choices')
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+    } finally {
+      app.dispose()
+    }
+  })
+
   it('renders 4xx HTML responses from the default resolver', async (t) => {
     let fetchMock = t.mock.method(
       globalThis,
