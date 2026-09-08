@@ -137,25 +137,29 @@ describe('navigate', () => {
     let originalUrl = window.location.href
     let destination = new URL(originalUrl)
     destination.hash = 'document-navigation-fallback'
-    let originalHistoryLength = window.history.length
     stubGlobalField(t, 'navigation', undefined)
 
     try {
+      let navigated = new Promise<void>((resolve) => {
+        window.addEventListener('hashchange', () => resolve(), { once: true })
+      })
       await navigate(destination.href)
+      await navigated
       expect(window.location.href).toBe(destination.href)
-      expect(window.history.length).toBe(originalHistoryLength + 1)
     } finally {
       let wentBack = new Promise<void>((resolve) => {
         window.addEventListener('popstate', () => resolve(), { once: true })
       })
       window.history.back()
       await wentBack
+      expect(window.location.href).toBe(originalUrl)
 
       let wentForward = new Promise<void>((resolve) => {
         window.addEventListener('popstate', () => resolve(), { once: true })
       })
       window.history.forward()
       await wentForward
+      expect(window.location.href).toBe(destination.href)
       window.history.replaceState(window.history.state, '', originalUrl)
     }
   })
@@ -168,7 +172,11 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', undefined)
 
     try {
+      let navigated = new Promise<void>((resolve) => {
+        window.addEventListener('hashchange', () => resolve(), { once: true })
+      })
       await navigate(destination.href, { history: 'replace' })
+      await navigated
       expect(window.location.href).toBe(destination.href)
       expect(window.history.length).toBe(originalHistoryLength)
     } finally {
