@@ -82,7 +82,7 @@ export async function navigate(href: string, options?: NavigationOptions) {
     resetScroll: options?.resetScroll !== false,
     $rmx: true,
   } satisfies NavigationState
-  let navigation = window.navigation
+  let navigation = getInterceptableNavigation()
   if (!navigation) {
     if (options?.history === 'replace') {
       window.location.replace(href)
@@ -119,7 +119,7 @@ export function startNavigationListenerImpl(
     reloadFrame: typeof reloadFrameForNavigation
   },
 ) {
-  let navigation = window.navigation
+  let navigation = getInterceptableNavigation()
   if (!navigation) return
   let resolveFormNavigation = createFormNavigationResolver(signal)
 
@@ -246,6 +246,18 @@ export function startNavigationListenerImpl(
     },
     { signal },
   )
+}
+
+function getInterceptableNavigation(): Navigation | undefined {
+  let navigation = window.navigation
+  if (
+    !navigation ||
+    typeof NavigateEvent === 'undefined' ||
+    !('sourceElement' in NavigateEvent.prototype)
+  ) {
+    return
+  }
+  return navigation
 }
 
 function isRuntimeNavigation(info: unknown): info is NavigationState {

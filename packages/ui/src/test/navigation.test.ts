@@ -172,25 +172,50 @@ describe('navigate', () => {
     let originalUrl = window.location.href
     let destination = new URL(originalUrl)
     destination.hash = 'document-navigation-fallback'
-    let originalHistoryLength = window.history.length
     stubGlobalField(t, 'navigation', undefined)
 
     try {
+      let navigated = new Promise<void>((resolve) => {
+        window.addEventListener('hashchange', () => resolve(), { once: true })
+      })
       await navigate(destination.href)
+      await navigated
       expect(window.location.href).toBe(destination.href)
-      expect(window.history.length).toBe(originalHistoryLength + 1)
     } finally {
       let wentBack = new Promise<void>((resolve) => {
         window.addEventListener('popstate', () => resolve(), { once: true })
       })
       window.history.back()
       await wentBack
+      expect(window.location.href).toBe(originalUrl)
 
       let wentForward = new Promise<void>((resolve) => {
         window.addEventListener('popstate', () => resolve(), { once: true })
       })
       window.history.forward()
       await wentForward
+      expect(window.location.href).toBe(destination.href)
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('falls back to document navigation when sourceElement is unavailable', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.hash = 'source-element-fallback'
+    let navigation = { navigate: mock.fn() }
+    stubGlobalField(t, 'navigation', navigation)
+    stubGlobalField(t, 'NavigateEvent', class extends Event {})
+
+    try {
+      let navigated = new Promise<void>((resolve) => {
+        window.addEventListener('hashchange', () => resolve(), { once: true })
+      })
+      await navigate(destination.href, { history: 'replace' })
+      await navigated
+      expect(window.location.href).toBe(destination.href)
+      expect(navigation.navigate).not.toHaveBeenCalled()
+    } finally {
       window.history.replaceState(window.history.state, '', originalUrl)
     }
   })
@@ -203,7 +228,11 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', undefined)
 
     try {
+      let navigated = new Promise<void>((resolve) => {
+        window.addEventListener('hashchange', () => resolve(), { once: true })
+      })
       await navigate(destination.href, { history: 'replace' })
+      await navigated
       expect(window.location.href).toBe(destination.href)
       expect(window.history.length).toBe(originalHistoryLength)
     } finally {
@@ -219,6 +248,22 @@ describe('navigate', () => {
     startNavigationListener(controller.signal)
 
     expect(addDocumentListener).not.toHaveBeenCalled()
+    controller.abort()
+  })
+
+  it('skips navigation listeners when sourceElement is unavailable', (t) => {
+    let navigation = {
+      updateCurrentEntry: mock.fn(),
+      addEventListener: mock.fn(),
+    }
+    stubGlobalField(t, 'navigation', navigation)
+    stubGlobalField(t, 'NavigateEvent', class extends Event {})
+    let controller = new AbortController()
+
+    startNavigationListener(controller.signal)
+
+    expect(navigation.updateCurrentEntry).not.toHaveBeenCalled()
+    expect(navigation.addEventListener).not.toHaveBeenCalled()
     controller.abort()
   })
 
