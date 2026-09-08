@@ -310,17 +310,11 @@ export function installNodeHmrRuntime(
         for (let file of delta.remove) {
           watchedFiles.delete(file)
         }
-        let message = {
+        process.send?.({
           id,
           delta,
           type: 'node-hmr:child:browser-hmr-watch-files-changed',
-        } as const
-        process.send?.(message)
-        if (process.env.REMIX_NODE_HMR_DEBUG === '1') {
-          console.error(
-            `[node-hmr debug] ${Date.now()} child sent browser watch delta ${JSON.stringify(message)}`,
-          )
-        }
+        })
       }
 
       return {

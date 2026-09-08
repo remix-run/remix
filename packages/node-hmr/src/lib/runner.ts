@@ -364,11 +364,6 @@ export function createHmrSupervisor(options: {
     }
 
     if (message.type === 'node-hmr:child:browser-hmr-watch-files-changed') {
-      if (process.env.REMIX_NODE_HMR_DEBUG === '1') {
-        console.error(
-          `[node-hmr debug] ${Date.now()} parent received browser watch delta ${JSON.stringify(message)}`,
-        )
-      }
       updateBrowserWatchedFiles(message.id, message.delta)
       return
     }
@@ -538,31 +533,10 @@ export function createHmrSupervisor(options: {
 
     activeWatchedDirectories = nextWatchedDirectories
     browserWatchedFilePaths = nextBrowserWatchedFilePaths
-
-    if (process.env.REMIX_NODE_HMR_DEBUG === '1') {
-      console.error(
-        `[node-hmr debug] ${Date.now()} synced browser watch files ${JSON.stringify({
-          directoriesToAdd,
-          directoriesToRemove,
-          files: [...browserWatchedFilePaths],
-        })}`,
-      )
-    }
   }
 
   function handleWatchEvent(event: string, changedPath: string, stats?: Stats) {
     let filePath = resolve(options.cwd, changedPath)
-
-    if (process.env.REMIX_NODE_HMR_DEBUG === '1') {
-      console.error(
-        `[node-hmr debug] ${Date.now()} chokidar event ${JSON.stringify({
-          event,
-          filePath,
-          watchedByBrowserHmr: browserWatchedFilePaths.has(normalizeBrowserHmrFilePath(filePath)),
-          watchedByNodeHmr: watchedFilePaths.has(filePath),
-        })}`,
-      )
-    }
 
     if (event === 'change') {
       let normalizedFilePath = normalizeBrowserHmrFilePath(filePath)
@@ -603,14 +577,6 @@ export function createHmrSupervisor(options: {
 
       let browserFileEvents = getBrowserHmrFileEvents(changedPaths, restartPathEvents)
       let browserHmrEvents = await requestBrowserHmrEvents(browserFileEvents)
-      if (process.env.REMIX_NODE_HMR_DEBUG === '1') {
-        console.error(
-          `[node-hmr debug] ${Date.now()} processed browser events ${JSON.stringify({
-            browserFileEvents,
-            browserHmrEvents,
-          })}`,
-        )
-      }
       for (let event of browserHmrEvents) {
         queueBrowserHmrEvent(event, { schedule: false })
       }
@@ -928,16 +894,10 @@ export function createHmrSupervisor(options: {
     pendingBrowserHmrEvents = []
     for (let event of events) {
       if (event.type === 'update') {
-        let payload = {
+        browserHmrEventChannel?.send({
           data: event.data,
           type: 'browser:update',
-        } as const
-        browserHmrEventChannel?.send(payload)
-        if (process.env.REMIX_NODE_HMR_DEBUG === '1') {
-          console.error(
-            `[node-hmr debug] ${Date.now()} sent browser update ${JSON.stringify(payload)}`,
-          )
-        }
+        })
       }
     }
     return 'events'
