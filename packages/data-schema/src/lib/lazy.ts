@@ -14,11 +14,18 @@ export function lazy<schema extends Schema<any, any>>(
 ): Schema<InferInput<schema>, InferOutput<schema>> {
   let cached: schema | undefined
 
-  return createSchema(function validate(value, context) {
+  function resolve(): schema {
     if (!cached) {
       cached = getSchema()
     }
 
-    return cached['~run'](value, context)
-  })
+    return cached
+  }
+
+  return createSchema(
+    function validate(value, context) {
+      return resolve()['~run'](value, context)
+    },
+    { kind: 'lazy', resolve },
+  )
 }
