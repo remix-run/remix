@@ -4,6 +4,7 @@ import { describe, it } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
 import { renderToStream } from '@remix-run/ui/server'
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
+import { once } from 'node:events'
 import * as fs from 'node:fs/promises'
 import * as http from 'node:http'
 import * as path from 'node:path'
@@ -2773,7 +2774,10 @@ async function stopProcess(child: ChildProcess): Promise<void> {
 
   if (process.platform === 'win32' && child.pid !== undefined) {
     // Windows does not run SIGTERM handlers, so stop the child server as well as its parent.
-    await promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F'])
+    await Promise.all([
+      once(child, 'exit'),
+      promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F']),
+    ])
     return
   }
 

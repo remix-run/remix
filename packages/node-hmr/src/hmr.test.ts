@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
+import { once } from 'node:events'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 
@@ -2304,7 +2305,10 @@ async function stopProcess(child: ChildProcess): Promise<void> {
 
   if (isWindows && child.pid !== undefined) {
     // Windows does not run SIGTERM handlers, so stop the child server as well as its parent.
-    await promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F'])
+    await Promise.all([
+      once(child, 'exit'),
+      promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F']),
+    ])
     return
   }
 
