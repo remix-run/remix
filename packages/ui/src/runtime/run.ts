@@ -112,11 +112,8 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
     signal: options?.signal,
   })
 
-  if (
-    response.status >= 500 ||
-    (response.status >= 300 &&
-      !response.headers.get('Content-Type')?.toLowerCase().includes('text/html'))
-  ) {
+  let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
+  if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
     throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
   }
 
