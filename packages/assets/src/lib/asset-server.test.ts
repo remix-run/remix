@@ -232,11 +232,12 @@ async function assertImportMapScopeImport(
   scope: string,
   specifier: string,
   pattern: RegExp,
-): Promise<void> {
+): Promise<string> {
   let importMap = await assetServer.getImportMap(filePath)
   let mappedUrl = importMap.scopes?.[scope]?.[specifier]
   assert.ok(mappedUrl, `Expected import map entry for ${specifier} in scope ${scope}`)
   assert.match(mappedUrl, pattern)
+  return mappedUrl
 }
 
 async function assertNoImportMapImport(
@@ -7659,11 +7660,17 @@ describe('asset-server', () => {
         rootDir: projectDir,
       })
 
-      let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-      assert.ok(
-        servedUrls.has(`/assets/__@remix/virtual-store/${virtualStorePackageUrlPath}`),
-        `Expected the store package to be served, got ${[...servedUrls].join(', ')}`,
+      let packageUrl = await assertImportMapScopeImport(
+        assetServer,
+        'app/entry.ts',
+        '/assets/app/',
+        '@remix-run/__allowed-package',
+        /\/assets\/__@remix\/virtual-store\//,
       )
+      assert.equal(packageUrl, `/assets/__@remix/virtual-store/${virtualStorePackageUrlPath}`)
+      let packageResponse = await get(assetServer, packageUrl)
+      assert.ok(packageResponse)
+      assert.equal(packageResponse.status, 200)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
       await fs.rm(storeDir, { recursive: true, force: true })
@@ -7685,11 +7692,17 @@ describe('asset-server', () => {
         rootDir: projectDir,
       })
 
-      let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-      assert.ok(
-        servedUrls.has(`/assets/__@remix/virtual-store/${virtualStorePackageUrlPath}`),
-        `Expected the store package to be served, got ${[...servedUrls].join(', ')}`,
+      let packageUrl = await assertImportMapScopeImport(
+        assetServer,
+        'app/entry.ts',
+        '/assets/app/',
+        '@remix-run/__allowed-package',
+        /\/assets\/__@remix\/virtual-store\//,
       )
+      assert.equal(packageUrl, `/assets/__@remix/virtual-store/${virtualStorePackageUrlPath}`)
+      let packageResponse = await get(assetServer, packageUrl)
+      assert.ok(packageResponse)
+      assert.equal(packageResponse.status, 200)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
       await fs.rm(storeDir, { recursive: true, force: true })
@@ -7737,11 +7750,17 @@ describe('asset-server', () => {
         rootDir: projectDir,
       })
 
-      let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-      assert.ok(
-        servedUrls.has(`/assets/npm/.pnpm/${virtualStorePackageUrlPath}`),
-        `Expected the store package to be served from the npm mount, got ${[...servedUrls].join(', ')}`,
+      let packageUrl = await assertImportMapScopeImport(
+        assetServer,
+        'app/entry.ts',
+        '/assets/app/',
+        '@remix-run/__allowed-package',
+        /\/assets\/npm\/\.pnpm\//,
       )
+      assert.equal(packageUrl, `/assets/npm/.pnpm/${virtualStorePackageUrlPath}`)
+      let packageResponse = await get(assetServer, packageUrl)
+      assert.ok(packageResponse)
+      assert.equal(packageResponse.status, 200)
       assert.equal(
         await get(assetServer, `/assets/__@remix/virtual-store/${virtualStorePackageUrlPath}`),
         null,
