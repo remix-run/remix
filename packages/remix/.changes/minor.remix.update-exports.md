@@ -1,3 +1,1 @@
-Added a `package.json` export:
-
-- `remix/multiple-import-maps-polyfill` for dynamic JavaScript imports that depend on import maps added after the document's initial import map
+Added `remix/multiple-import-maps-polyfill` to load and preload JavaScript modules that depend on import maps added at runtime. `importModule()` uses native imports in browsers with support and the polyfill in other browsers. See the [usage guide](https://github.com/remix-run/remix/tree/main/packages/multiple-import-maps-polyfill#usage) (see #11706).

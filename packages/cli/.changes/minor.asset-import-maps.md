@@ -1,1 +1,1 @@
-Update the default `remix new` app template to resolve script entries with `getScriptEntry()` and render their import maps before modulepreload links and module scripts.
+Updated the default `remix new` app template to use import maps for browser scripts, client entries, and HMR. Generated apps include the multiple import maps polyfill for browsers that need it. For existing apps, follow the [asset server migration steps](https://github.com/remix-run/remix/blob/main/packages/assets/CHANGELOG.md#v070) (see #11706).

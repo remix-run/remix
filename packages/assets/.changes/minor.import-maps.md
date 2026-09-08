@@ -1,6 +1,8 @@
-BREAKING CHANGE: Browser scripts now keep JavaScript imports as authored and use import maps for resolution. Apps must render each script entry's import map before its modulepreload links and module script.
+BREAKING CHANGE: Browser scripts now use import maps to resolve imports instead of rewriting import specifiers to asset URLs (see #11706). Apps must render each script entry's import map before its modulepreload links and module script.
 
-To migrate an app created from the Remix app template, replace the separate entry href and preload calls with `getScriptEntry()` in `app/assets.ts`:
+To migrate an app created from the Remix app template:
+
+In `app/assets.ts`, replace the separate entry href and preload calls with `getScriptEntry()`:
 
 ```diff
  const entry = 'app/actions/public/entry.ts'
@@ -9,7 +11,24 @@ To migrate an app created from the Remix app template, replace the separate entr
 +export const scriptEntry = await assets.getScriptEntry(entry)
 ```
 
-Render the script entry's import map before its preloads and module script in `app/actions/document.tsx`:
+HMR appends mappings for updated modules to the document in additional `<script type="importmap">` elements. When HMR must support browsers without native support for multiple import maps, configure `remix/multiple-import-maps-polyfill` as its module importer:
+
+```diff
+ export const assets = createAssetServer({
+   // ...
+   hmr: isHmr
+-    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
++    ? {
++        channel: async () =>
++          (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
++        moduleImporter: 'remix/multiple-import-maps-polyfill',
++      }
+     : undefined,
+   scripts: { loaders: isHmr ? [uiHmr()] : undefined },
+ })
+```
+
+In `app/actions/document.tsx`, render the managed import map before the entry's preloads and module script:
 
 ```diff
  import type { Handle, RemixNode } from 'remix/ui'
@@ -40,7 +59,43 @@ Render the script entry's import map before its preloads and module script in `a
          {/* ... */}
 ```
 
-Resolve client entries with `getScriptEntry()` and include their `importMap` in the object returned from `resolveClientEntry()`:
+`<ImportMap>` combines the entry map with mappings from blocking client entries so the initial document contains a single complete import map. Regular `<script type="importmap">` elements remain supported when this behavior is not needed.
+
+The standard `render({ assets })` middleware resolves client entries with `getScriptEntry()` and includes their import maps in rendered documents and frame responses. Custom rendering pipelines must include the returned `importMap` in their `resolveClientEntry()` metadata.
+
+In `app/actions/public/entry.ts`, use `importModule()` to load client entries and `processClientEntryPreloads` to preload them in browsers that need the polyfill:
+
+```ts
+import {
+  detectMultipleImportMapSupport,
+  importModule,
+  preloadShim,
+} from 'remix/multiple-import-maps-polyfill'
+import { run } from 'remix/ui'
+
+run({
+  async loadModule(moduleUrl, exportName) {
+    let module = await importModule(moduleUrl)
+    let Component = module[exportName]
+    if (typeof Component !== 'function') {
+      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+    }
+    return Component
+  },
+  async processClientEntryPreloads(preloads) {
+    if (await detectMultipleImportMapSupport()) return preloads
+
+    preloadShim(preloads)
+    return []
+  },
+})
+```
+
+Modules referenced by dynamic `import()` expressions are now fetched when the import runs, instead of being preloaded with the entry script. Imports with static specifiers still have entries in the import map.
+
+The HMR module importer must be included in the initial import map. Importing it from the main client entry, as shown above, meets this requirement. If your app sets a Content Security Policy, follow the [polyfill CSP requirements](https://github.com/remix-run/remix/tree/main/packages/multiple-import-maps-polyfill#content-security-policy).
+
+If you call `renderToStream()` directly, resolve client entries with `getScriptEntry()` and include their `importMap` in the object returned from `resolveClientEntry()`:
 
 ```diff
  let stream = renderToStream(node, {
@@ -61,6 +116,6 @@ Resolve client entries with `getScriptEntry()` and include their `importMap` in 
  })
 ```
 
-`assets.getImportMap()` creates a combined import map for multiple script roots or custom graph-level behavior. The corresponding public types are available as `ScriptEntry` and `ScriptImportMap`.
+`assets.getImportMap()` combines import maps for multiple script entries. The public types are `ScriptEntry` and `ScriptImportMap`.
 
-In development, HMR installs any new import map entries required by an accepted module graph before evaluating the update and reloads the page if an installed mapping would need to change.
+In development, HMR installs new import map entries before loading an update. If an existing mapping would change, it reloads the page. Custom HMR importers can use `hmr.moduleImporter`, a module specifier resolved relative to the asset server root. That module must export `importModule(specifier, parentUrl)`.
