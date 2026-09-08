@@ -650,7 +650,7 @@ describe('navigate', () => {
     expect(intercept).not.toHaveBeenCalled()
   })
 
-  it('does not use a canceled click source for a state-less navigation', (t) => {
+  it('does not use a click source while its activation is dispatching', (t) => {
     stubNavigateEventSourceElementSupport(t, false)
     let dispatchNavigation = startStubNavigationListener(t)
     let anchor = document.createElement('a')
@@ -664,8 +664,8 @@ describe('navigate', () => {
     })
     Reflect.deleteProperty(navigationEvent, 'sourceElement')
     anchor.addEventListener('click', (event) => {
-      event.preventDefault()
       dispatchNavigation(navigationEvent)
+      event.preventDefault()
     })
 
     anchor.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
@@ -1262,7 +1262,7 @@ describe('form navigation', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
-  it('does not use a canceled submit source for a state-less navigation', (t) => {
+  it('does not use a submit source while its activation is dispatching', (t) => {
     stubNavigateEventSourceElementSupport(t, false)
     let dispatchNavigation = startStubNavigationListener(t)
     let form = document.createElement('form')
@@ -1279,8 +1279,8 @@ describe('form navigation', () => {
     })
     Reflect.deleteProperty(navigationEvent, 'sourceElement')
     form.addEventListener('submit', (event) => {
-      event.preventDefault()
       dispatchNavigation(navigationEvent)
+      event.preventDefault()
     })
 
     form.dispatchEvent(

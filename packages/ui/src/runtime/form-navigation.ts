@@ -155,7 +155,8 @@ export function createNavigationSourceResolver(
   return (event) => {
     let sourceEvent = event as SourceElementNavigateEvent
     let fallbackSourceElement =
-      pendingNavigationSource?.activationEvent.defaultPrevented === false
+      pendingNavigationSource?.activationEvent.eventPhase === Event.NONE &&
+      pendingNavigationSource.activationEvent.defaultPrevented === false
         ? pendingNavigationSource.element
         : undefined
     let sourceElement =
