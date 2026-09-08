@@ -32,6 +32,7 @@ export const supportedScriptExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', 
 const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
 
 type ResolvedImport = {
+  compiledSpecifier: string
   depPath: string
   end: number
   quote?: '"' | "'" | '`'
@@ -233,6 +234,7 @@ export async function resolveModule(
     }
 
     let imported: ResolvedImport = {
+      compiledSpecifier: unresolved.specifier,
       depPath: resolvedImport.identityPath,
       end: unresolved.end,
       quote: unresolved.quote,
@@ -379,6 +381,7 @@ export async function resolveModule(
     }
 
     acceptedDepsWithPaths.push({
+      compiledSpecifier: unresolved.specifier,
       depPath: resolvedImport.identityPath,
       end: unresolved.end,
       quote: unresolved.quote,

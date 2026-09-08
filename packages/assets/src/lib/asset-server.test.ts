@@ -7990,7 +7990,11 @@ describe('asset-server', () => {
     let body = await response.text()
     let importMap = await assetServer.getImportMap('app/entry.ts')
 
-    assert.match(body, /from ["']@oxc-project\/runtime/)
+    assert.doesNotMatch(body, /~oxc-project\/runtime/)
+    assert.match(
+      body,
+      /from ["']@oxc-project\/runtime\/src\/helpers\/esm\/classPrivateMethodInitSpec\.js["']/,
+    )
     assert.equal(
       importMap.scopes?.['/assets/app/']?.[
         '@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js'

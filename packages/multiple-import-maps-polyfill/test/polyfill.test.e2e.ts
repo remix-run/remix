@@ -15,6 +15,65 @@ declare global {
 }
 
 describe('multiple import map polyfill', () => {
+  it('resolves relative paths and scoped imports using the supplied parent URL', async (t) => {
+    let requests = new Set<string>()
+    let sources: Record<string, string> = {
+      '/app/relative.js': 'export let value = "document"',
+      '/feature/relative.js': 'export let value = "parent"',
+      '/app/shared.js': 'export let value = "app"',
+      '/feature/shared.js': 'export let value = "feature"',
+      '/feature/late.js': 'export let value = "late"',
+    }
+    let page = await t.serve(
+      await createTestServer(async (request) => {
+        let url = new URL(request.url)
+        requests.add(url.pathname)
+        if (url.pathname === '/')
+          return html(`<!doctype html><html><head>
+        <base href="/app/">
+        <script type="importmap">${JSON.stringify({
+          imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' },
+          scopes: {
+            '/app/': { shared: '/app/shared.js' },
+            '/feature/': { shared: '/feature/shared.js' },
+          },
+        })}</script></head><body><script type="module">
+        import { importModule, detectMultipleImportMapSupport } from '/dist/index.js'
+        try {
+          let parent = new URL('/feature/entry.js', location.href).href
+          let lateMap = document.createElement('script')
+          lateMap.type = 'importmap'
+          lateMap.textContent = JSON.stringify({ scopes: { '/feature/': { late: '/feature/late.js' } } })
+          document.head.append(lateMap)
+          let results = await Promise.all([
+            importModule('./relative.js'),
+            importModule('./relative.js', parent),
+            importModule('shared'),
+            importModule('shared', parent),
+            importModule('late', parent),
+          ])
+          document.body.textContent = results.map(result => result.value).join(',')
+          document.body.dataset.native = String(await detectMultipleImportMapSupport())
+        } catch (error) {
+          document.body.textContent = String(error)
+        }
+        document.body.dataset.ready = 'true'
+        </script></body></html>`)
+        if (url.pathname.startsWith('/dist/')) return file(url.pathname.slice(1))
+        if (url.pathname === '/vendor/es-module-lexer.js')
+          return javascript(await fs.readFile(lexerPath, 'utf8'))
+        return javascript(sources[url.pathname] ?? 'throw new Error("Unexpected module")')
+      }),
+    )
+    await page.goto('/')
+    await page.locator('body[data-ready="true"]').waitFor()
+    assert.equal(await page.locator('body').textContent(), 'document,parent,app,feature,late')
+    if ((await page.locator('body').getAttribute('data-native')) === 'true') {
+      assert.equal(requests.has('/dist/lib/core.js'), false)
+      assert.equal(requests.has('/vendor/es-module-lexer.js'), false)
+    }
+  })
+
   it('preloads only the requested modules and reuses their fetches', async (t) => {
     let requests = new Map<string, number>()
     let page = await t.serve(

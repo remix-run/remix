@@ -52,6 +52,7 @@ function createResolvedModule(
     deps: options.deps ?? [],
     hmr: {
       acceptedDeps: (options.acceptedDeps ?? []).map((depPath, index) => ({
+        compiledSpecifier: depPath,
         depPath,
         end: index,
         specifier: depPath,

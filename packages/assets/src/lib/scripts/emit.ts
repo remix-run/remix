@@ -5,7 +5,6 @@ import {
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
 import { formatFingerprintedPathname, hashContent } from '../fingerprint.ts'
-import { restoreAuthoredInjectedPackageSpecifier } from '../injected-packages.ts'
 import type { ResolvedModule } from './resolve.ts'
 import { composeSourceMaps } from '../source-maps.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
@@ -100,7 +99,9 @@ async function rewriteImports(
     let hmrImportTimestamp = options.getHmrImportTimestamp(imported.depPath)
     let url =
       hmrImportTimestamp === null
-        ? restoreAuthoredInjectedPackageSpecifier(imported.specifier)
+        ? imported.compiledSpecifier === imported.specifier
+          ? null
+          : imported.specifier
         : addTimestampQuery(await options.getServedUrl(imported.depPath), hmrImportTimestamp)
 
     if (url === null) {

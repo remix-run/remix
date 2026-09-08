@@ -1,4 +1,5 @@
 import { featureDetectionPromise, supportsMultipleImportMaps } from './features.ts'
+import { resolveModuleUrl } from './native-resolve.ts'
 
 type ModuleNamespace = Record<string, unknown>
 
@@ -40,7 +41,7 @@ export async function importModule(
   specifier: string,
   parentUrl: string = document.baseURI,
 ): Promise<ModuleNamespace> {
-  if (await detectMultipleImportMapSupport()) return import(specifier)
+  if (await detectMultipleImportMapSupport()) return import(resolveModuleUrl(specifier, parentUrl))
   return importShim(specifier, parentUrl)
 }
 
