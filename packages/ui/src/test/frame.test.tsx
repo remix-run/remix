@@ -235,7 +235,39 @@ describe('run', () => {
     }
   })
 
-  it('rejects non-OK responses from the default resolver without replacing frame content', async (t) => {
+  it('renders 4xx HTML responses from the default resolver', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><p role="alert">Name is required</p></body></html><!-- rmx:flush document -->',
+          {
+            headers: { 'Content-Type': 'text/html' },
+            status: 422,
+            statusText: 'Unprocessable Content',
+          },
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        formData: new FormData(),
+        method: 'post',
+      }).finished
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(document.querySelector('[role="alert"]')?.textContent).toBe('Name is required')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('rejects non-HTML 4xx responses from the default resolver', async (t) => {
     document.body.innerHTML = '<main id="initial">Initial</main>'
     let unhandledRejections: unknown[] = []
     let onUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -250,6 +282,7 @@ describe('run', () => {
       'fetch',
       async () =>
         new Response('<main id="error">Account not found</main>', {
+          headers: { 'Content-Type': 'text/plain' },
           status: 404,
           statusText: 'Not Found',
         }),
