@@ -144,7 +144,7 @@ safe-outputs:
                 review: {
                   label: 'aw:review',
                   workflowFile: 'aw-command-review.lock.yml',
-                  itemTypes: ['pull_request'],
+                  itemTypes: ['pull_request', 'discussion'],
                 },
                 implement: {
                   label: 'aw:implement',
@@ -207,7 +207,7 @@ safe-outputs:
                 return
               }
               if (isDiscussion && discussion?.category?.slug !== 'proposals') {
-                core.setFailed('Implement mention routing is restricted to Proposal Discussions')
+                core.setFailed('Discussion mention routing is restricted to Proposal Discussions')
                 return
               }
 
@@ -284,36 +284,53 @@ Choose exactly one outcome:
 
 - `triage`: the administrator asks to triage the current issue.
 - `review`: the administrator asks for a read-only review of the current pull
-  request.
+  request or Proposal Discussion.
 - `implement`: the administrator asks to implement the current issue or an
   accepted Proposal Discussion.
 - `iterate`: the administrator asks to make changes to the current pull
   request based on feedback or a prior review.
 - `clarify`: the intent is ambiguous, requests multiple workflows, conflicts
   with the target type, or lacks enough direction to choose safely after
-  applying the defaults below.
+  applying the wording guidance and defaults below.
+
+Only these workflows are applicable to each target:
+
+| Triggering item     | Valid workflows       |
+| ------------------- | --------------------- |
+| Issue               | `triage`, `implement` |
+| Pull request        | `review`, `iterate`   |
+| Proposal Discussion | `review`, `implement` |
+
+Other Discussion categories have no supported workflows. `review` and `iterate`
+are not issue workflows; `triage` and `implement` are not pull request workflows.
+
+Interpret natural-language requests in the context of the triggering item.
+On an issue, "review this issue" means `triage`. On a pull request, "triage this
+PR" means `review`. Do not ask for clarification just because the administrator
+uses a different workflow's name to request assessment of the current item.
 
 When the comment is only a bot mention or asks for general feedback without
 requesting a specific action, choose `triage` for an issue or `review` for a
-pull request. This includes "What do you think?", "How does this look?",
-"Thoughts?", "Can you take a look?", and similar wording. Do not ask for
+pull request or Proposal Discussion. This includes "What do you think?",
+"How does this look?", "Thoughts?", "Can you take a look?", and similar wording. Do not ask for
 clarification just because these comments do not name a workflow.
 
 For example:
 
-| Administrator comment                 | On an issue | On a pull request |
-| ------------------------------------- | ----------- | ----------------- |
-| `@remix-run-bot`                      | `triage`    | `review`          |
-| `@remix-run-bot - what do you think?` | `triage`    | `review`          |
-| `@remix-run-bot how does this look?`  | `triage`    | `review`          |
+| Administrator comment                 | On an issue | On a pull request or Proposal Discussion |
+| ------------------------------------- | ----------- | ---------------------------------------- |
+| `@remix-run-bot`                      | `triage`    | `review`                                 |
+| `@remix-run-bot - what do you think?` | `triage`    | `review`                                 |
+| `@remix-run-bot how does this look?`  | `triage`    | `review`                                 |
 
 Explicit requests take precedence over these defaults. Never infer `implement`
 or `iterate` from a bare mention or general feedback request. Use `clarify`
 for conflicting or unsupported requests, multiple requested workflows, or
-requests whose intent remains unclear. Discussions have no default route;
-use `clarify` for bare mentions or general feedback requests on Discussions.
+requests whose intent remains unclear after applying the wording guidance.
 
 Call `route_agent_workflow` exactly once. For `triage`, `review`, `implement`,
 or `iterate`, leave `clarification` empty; the router will dispatch the exact
 administrator comment. For `clarify`, ask one concise question that names the
-plausible choices. Do not request a label or workflow dispatch directly.
+plausible choices supported by the triggering item. Never offer an unsupported
+workflow or suggest switching to a different issue or pull request. Do not
+request a label or workflow dispatch directly.

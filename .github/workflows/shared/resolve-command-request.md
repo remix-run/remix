@@ -15,7 +15,11 @@ steps:
         const expectedRepository = process.env.EXPECTED_REPOSITORY.toLowerCase()
         const workflowByName = {
           '/triage': { workflow: 'triage', label: 'aw:triage', itemTypes: ['issue'] },
-          '/review': { workflow: 'review', label: 'aw:review', itemTypes: ['pull_request'] },
+          '/review': {
+            workflow: 'review',
+            label: 'aw:review',
+            itemTypes: ['pull_request', 'discussion'],
+          },
           '/implement': {
             workflow: 'implement',
             label: 'aw:implement',

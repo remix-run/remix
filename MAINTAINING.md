@@ -103,8 +103,8 @@ pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
 Remix has a handful of administrator-only [agentic workflows](https://github.github.com/gh-aw/) and
 an agentic [comment-driven router workflow](./.github/workflows/aw-comment-router.md)
 to provide natural language routing to relevant workflows. Workflows can do things such as triage
-an issue, review a pull request, implement an issue or accepted Proposal Discussion, or iterate on
-a pull request.
+an issue, review a pull request or Proposal Discussion, implement an issue or accepted Proposal
+Discussion, or iterate on a pull request.
 
 ```mermaid
 flowchart LR
@@ -120,12 +120,12 @@ flowchart LR
 
 ### Available Commands
 
-| Command      | Where                                 | Direct triggers                                                                 | Result                                                                                                                                                                                                                                                   |
-| ------------ | ------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/triage`    | Issue                                 | Comment beginning with `/triage`, or apply `aw:triage`                          | Investigates the report and duplicates. It may ask for information, explain a likely fix, or comment and close only a clear duplicate, proposal, support request, spam, or out-of-scope issue. It never edits code.                                      |
-| `/review`    | Pull request                          | Comment beginning with `/review`, or apply `aw:review`                          | Posts one read-only review comment with high-confidence P1-P3 findings. It never checks out or executes contributor code, edits the pull request, approves it, or merges it.                                                                             |
-| `/implement` | Issue or accepted Proposal Discussion | Comment beginning with `/implement`; `aw:implement` is also available on issues | Implements a focused change from trusted `main`, validates it, and opens at most one draft pull request. Protected changes remain visible in the draft for review; if changes outside the allowed paths are required, it falls back to an issue instead. |
-| `/iterate`   | Pull request                          | Comment beginning with `/iterate`, or apply `aw:iterate`                        | Applies administrator feedback directly to the triggering branch. Community forks require maintainer edits. It never creates a replacement pull request, merges, or approves.                                                                            |
+| Command      | Where                                 | Direct triggers                                                                  | Result                                                                                                                                                                                                                                                   |
+| ------------ | ------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/triage`    | Issue                                 | Comment beginning with `/triage`, or apply `aw:triage`                           | Investigates the report and duplicates. It may ask for information, explain a likely fix, or comment and close only a clear duplicate, proposal, support request, spam, or out-of-scope issue. It never edits code.                                      |
+| `/review`    | Pull request or Proposal Discussion   | Comment beginning with `/review`; `aw:review` is also available on pull requests | Posts one read-only review comment: high-confidence P1-P3 findings for a pull request, or a design assessment for a proposal. It never executes contributor code, edits the target, approves it, or merges it.                                           |
+| `/implement` | Issue or accepted Proposal Discussion | Comment beginning with `/implement`; `aw:implement` is also available on issues  | Implements a focused change from trusted `main`, validates it, and opens at most one draft pull request. Protected changes remain visible in the draft for review; if changes outside the allowed paths are required, it falls back to an issue instead. |
+| `/iterate`   | Pull request                          | Comment beginning with `/iterate`, or apply `aw:iterate`                         | Applies administrator feedback directly to the triggering branch. Community forks require maintainer edits. It never creates a replacement pull request, merges, or approves.                                                                            |
 
 Slash-command comments may include instructions after the command. For example:
 
@@ -153,14 +153,23 @@ routes are:
 
 - Issue: `triage` or `implement`
 - Pull request: `review` or `iterate`
-- Proposal Discussion: `implement`
+- Proposal Discussion: `review` or `implement`
+
+The router interprets natural language in the context of the triggering item:
+`@remix-run-bot review this issue` selects `triage`, and `@remix-run-bot triage this PR` selects
+`review`. Issues cannot use the `review` or `iterate` workflows; pull requests cannot use `triage`
+or `implement`. Clarification questions offer only workflows supported by the triggering item.
 
 A bare `@remix-run-bot` mention or a general feedback request such as
 `@remix-run-bot - what do you think?` or `@remix-run-bot how does this look?` defaults to `triage`
-on an issue and `review` on a pull request. Explicit requests take precedence. The router asks for
-clarification for conflicting or unsupported requests, multiple requested workflows, or intent
-that remains unclear. Discussions have no default route, so a bare mention or general feedback
-request there prompts a clarification question.
+on an issue and `review` on a pull request or Proposal Discussion. Explicit requests take precedence.
+The router asks for clarification for conflicting or unsupported requests, multiple requested
+workflows, or intent that remains unclear. Other Discussion categories have no supported workflows.
+
+Proposal reviews assess the design, API fit, tradeoffs, and open questions using the proposal and
+current repository as evidence. They do not require a pull request or implementation, and do not
+accept the proposal or authorize implementation. Use `/review` or a mention such as
+`@remix-run-bot review this proposal` in a Proposal Discussion.
 
 The router briefly applies the matching `aw:*` label to issues and pull requests, queues the command
 with `workflow_dispatch`, and removes the label without waiting for the command run to finish.
