@@ -24,16 +24,13 @@ function createMockAnimation(
   keyframes: Keyframe[],
   options: KeyframeAnimationOptions,
 ): MockAnimation {
-  let resolveFinished!: () => void
-  let finished = new Promise<Animation>((_resolve) => {
-    resolveFinished = () => _resolve({} as Animation)
-  })
+  let finished = Promise.withResolvers<Animation>()
   return {
     keyframes,
     options,
     currentTime: 0,
     playState: 'running',
-    finished,
+    finished: finished.promise,
     pause() {
       this.playState = 'paused'
     },
@@ -43,7 +40,7 @@ function createMockAnimation(
     commitStyles() {},
     cancel() {
       this.playState = 'idle'
-      resolveFinished()
+      finished.resolve({} as Animation)
     },
   }
 }

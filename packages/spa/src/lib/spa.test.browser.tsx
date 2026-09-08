@@ -109,8 +109,8 @@ describe('run', () => {
   })
 
   it('renders an interactive fallback while the initial route loads', async (t) => {
-    let [routeResponse, resolveRouteResponse] = withResolvers<Response>()
-    let [requestStarted, resolveRequestStarted] = withResolvers<void>()
+    let routeResponse = Promise.withResolvers<Response>()
+    let requestStarted = Promise.withResolvers<void>()
     let sawReloadStart = false
     let fallbackAtRequest: string | undefined
     let reloadStartedAtRequest = false
@@ -144,8 +144,8 @@ describe('run', () => {
     let fetch = mock.fn(async () => {
       fallbackAtRequest = document.querySelector('button')?.textContent ?? undefined
       reloadStartedAtRequest = sawReloadStart
-      resolveRequestStarted()
-      return await routeResponse
+      requestStarted.resolve()
+      return await routeResponse.promise
     })
     let app = run({ fetch }, { fallback: <Fallback /> })
 
@@ -154,7 +154,7 @@ describe('run', () => {
     let readyPromise = app.ready().then(() => {
       ready = true
     })
-    await requestStarted
+    await requestStarted.promise
 
     expect(ready).toBe(false)
     expect(fallbackAtRequest).toBe('Loading: 0')
@@ -164,7 +164,7 @@ describe('run', () => {
     app.flush()
     expect(button?.textContent).toBe('Loading: 1')
 
-    resolveRouteResponse(spaResponse.create(<h1>Ready</h1>))
+    routeResponse.resolve(spaResponse.create(<h1>Ready</h1>))
     await readyPromise
 
     expect(ready).toBe(true)
@@ -173,7 +173,7 @@ describe('run', () => {
   })
 
   it('encodes text/plain form submissions with normalized line breaks', async (t) => {
-    let [submittedRequest, resolveSubmittedRequest] = withResolvers<Request>()
+    let submittedRequest = Promise.withResolvers<Request>()
     let requestCount = 0
     let router: Router = {
       async fetch(input, init) {
@@ -190,7 +190,7 @@ describe('run', () => {
           )
         }
 
-        resolveSubmittedRequest(request)
+        submittedRequest.resolve(request)
         return spaResponse.create(<h1>Submitted</h1>)
       },
     }
@@ -204,7 +204,7 @@ describe('run', () => {
     if (!form) throw new Error('Expected a form')
     form.requestSubmit()
 
-    let request = await submittedRequest
+    let request = await submittedRequest.promise
     expect(request.headers.get('Content-Type')).toBe('text/plain')
     expect(await request.text()).toBe('note=first\r\nsecond\r\ncity=Paris\r\n')
   })
@@ -243,11 +243,3 @@ describe('run', () => {
     expect(document.querySelector('h1')?.textContent).toBe('Redirected')
   })
 })
-
-function withResolvers<value>(): [Promise<value>, (value: value) => void] {
-  let resolve: (value: value) => void = () => {}
-  let promise = new Promise<value>((promiseResolve) => {
-    resolve = promiseResolve
-  })
-  return [promise, resolve]
-}
