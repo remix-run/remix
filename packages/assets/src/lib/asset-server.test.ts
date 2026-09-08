@@ -24,6 +24,10 @@ import type { ModuleLoader } from './loaders.ts'
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
 
 const packageRoot = path.resolve(import.meta.dirname, '../..')
+const virtualStorePackageDir =
+  '@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package'
+const virtualStorePackageUrlPath =
+  '%40remix-run%2B__allowed-package%401.0.0/node_modules/%40remix-run/__allowed-package/index.ts'
 
 function createAssetServerForTest(
   options: Omit<AssetServerOptions<AssetRequestTransformMap>, 'basePath'> & {
@@ -307,6 +311,28 @@ async function withTsconfigTransformCase(
 
     await fs.rm(caseDir, { recursive: true, force: true })
   }
+}
+
+// Links the only copy of a package into `projectDir` from a store directory, the way a package
+// manager's virtual store does.
+async function writeVirtualStorePackage(projectDir: string, storeDir: string): Promise<void> {
+  await writeJson(storeDir, `${virtualStorePackageDir}/package.json`, {
+    name: '@remix-run/__allowed-package',
+    type: 'module',
+    exports: {
+      '.': './index.ts',
+    },
+  })
+  await write(storeDir, `${virtualStorePackageDir}/index.ts`, 'export const value = true')
+  await symlinkDirectory(
+    path.join(storeDir, virtualStorePackageDir),
+    path.join(projectDir, 'node_modules/@remix-run/__allowed-package'),
+  )
+  await write(
+    projectDir,
+    'app/entry.ts',
+    'import { value } from "@remix-run/__allowed-package"\nexport { value }',
+  )
 }
 
 describe('asset-server', () => {
@@ -6488,6 +6514,118 @@ describe('asset-server', () => {
         '/assets/app/node_modules/.pnpm/%40remix-run%2B__allowed-package%401.0.0/node_modules/%40remix-run/__allowed-package/index.ts',
       ),
     )
+  })
+
+  it('serves a virtual store outside rootDir listed in node_modules/.modules.yaml', async () => {
+    let projectDir = await makeTmpDir()
+    let storeDir = await makeTmpDir()
+    try {
+      await writeVirtualStorePackage(projectDir, storeDir)
+      let relativeStoreDir = normalizeWindowsPath(
+        path.relative(path.join(projectDir, 'node_modules'), storeDir),
+      )
+      await write(
+        projectDir,
+        'node_modules/.modules.yaml',
+        `hoistPattern:\n  - '*'\nvirtualStoreDir: ${relativeStoreDir}\nvirtualStoreDirMaxLength: 120\n`,
+      )
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/entry.ts'],
+        allowPackages: ['@remix-run/__allowed-package'],
+        rootDir: projectDir,
+      })
+
+      let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+      assert.ok(
+        servedUrls.has(`/assets/__@remix/virtual-store/${virtualStorePackageUrlPath}`),
+        `Expected the store package to be served, got ${[...servedUrls].join(', ')}`,
+      )
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+      await fs.rm(storeDir, { recursive: true, force: true })
+    }
+  })
+
+  it('reads an absolute virtual store directory from a JSON node_modules/.modules.yaml', async () => {
+    let projectDir = await makeTmpDir()
+    let storeDir = await makeTmpDir()
+    try {
+      await writeVirtualStorePackage(projectDir, storeDir)
+      await writeJson(projectDir, 'node_modules/.modules.yaml', {
+        virtualStoreDir: storeDir,
+        virtualStoreDirMaxLength: 120,
+      })
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/entry.ts'],
+        allowPackages: ['@remix-run/__allowed-package'],
+        rootDir: projectDir,
+      })
+
+      let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+      assert.ok(
+        servedUrls.has(`/assets/__@remix/virtual-store/${virtualStorePackageUrlPath}`),
+        `Expected the store package to be served, got ${[...servedUrls].join(', ')}`,
+      )
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+      await fs.rm(storeDir, { recursive: true, force: true })
+    }
+  })
+
+  it('leaves a package outside every mount unserved without a node_modules/.modules.yaml', async () => {
+    let projectDir = await makeTmpDir()
+    let storeDir = await makeTmpDir()
+    try {
+      await writeVirtualStorePackage(projectDir, storeDir)
+      let receivedError: unknown
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/entry.ts'],
+        allowPackages: ['@remix-run/__allowed-package'],
+        rootDir: projectDir,
+        onError(error) {
+          receivedError = error
+        },
+      })
+
+      let response = await get(assetServer, '/assets/app/entry.ts')
+      assert.ok(response)
+      await assertInternalServerError(response)
+      assert.ok(isAssetServerCompilationError(receivedError))
+      assert.equal(receivedError.code, 'IMPORT_OUTSIDE_MOUNTS')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+      await fs.rm(storeDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not mount a virtual store that a configured mount already covers', async () => {
+    let projectDir = await makeTmpDir()
+    try {
+      await writeVirtualStorePackage(projectDir, path.join(projectDir, 'node_modules/.pnpm'))
+      await write(
+        projectDir,
+        'node_modules/.modules.yaml',
+        'virtualStoreDir: .pnpm\nvirtualStoreDirMaxLength: 120\n',
+      )
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/entry.ts'],
+        allowPackages: ['@remix-run/__allowed-package'],
+        rootDir: projectDir,
+      })
+
+      let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+      assert.ok(
+        servedUrls.has(`/assets/npm/.pnpm/${virtualStorePackageUrlPath}`),
+        `Expected the store package to be served from the npm mount, got ${[...servedUrls].join(', ')}`,
+      )
+      assert.equal(
+        await get(assetServer, `/assets/__@remix/virtual-store/${virtualStorePackageUrlPath}`),
+        null,
+        'Expected no virtual store mount for a store the npm mount already covers',
+      )
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
   })
 
   it('does not allow other installed copies of transitive dependencies by package name', async () => {
