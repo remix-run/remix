@@ -237,6 +237,45 @@ router.map(routes.contact, {
 })
 ```
 
+#### Method Not Allowed Responses
+
+When a request URL matches one or more route patterns, but none of those routes are registered for the request method, the router first falls through to any less specific route that can handle the method (including `ANY` routes). If no route can handle the request, the router responds with `405 Method Not Allowed` and an [`Allow` header](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Allow) listing the methods that are registered for that URL, instead of treating the request as a 404.
+
+```ts
+import { createRouter } from 'remix/router'
+
+let router = createRouter()
+
+router.get('/users/:id', ({ params }) => new Response(`User ${params.id}`))
+router.put('/users/:id', ({ params }) => new Response(`Updated ${params.id}`))
+
+let response = await router.fetch('https://remix.run/users/1', { method: 'DELETE' })
+// 405 Method Not Allowed
+// Allow: GET, HEAD, PUT
+```
+
+If you want a handler to receive every request method at a given URL instead, register an `ANY` route for it.
+
+#### HEAD Requests
+
+Routes registered for `GET` also serve `HEAD` requests. The `GET` handler runs as usual, and the router strips the body from its response, so a `HEAD` request observes the same status and headers as the equivalent `GET` request.
+
+```ts
+let router = createRouter()
+
+router.get(
+  '/report',
+  () => new Response('report data', { headers: { 'Content-Type': 'text/csv' } }),
+)
+
+let response = await router.fetch('https://remix.run/report', { method: 'HEAD' })
+// 200 OK
+// Content-Type: text/csv
+// (empty body)
+```
+
+If you register an explicit `HEAD` route for the same pattern, it takes precedence over the `GET` route for `HEAD` requests.
+
 ### Composing Route Groups
 
 As applications grow, it is useful to let one file own the routes for a specific area of the app while the top-level router decides where that area is mounted. Use `router.mount()` with a route installer to register a group of routes under a route pattern prefix.
