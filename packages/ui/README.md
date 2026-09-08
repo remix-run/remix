@@ -102,6 +102,10 @@ await app.ready()
 This soft-navigation behavior applies even when the page only uses `clientEntry()` and does not
 render an explicit `<Frame>`.
 
+Frame navigation requires both `window.navigation` and `NavigateEvent.sourceElement`. Browsers
+missing either capability use document navigation for links, forms, and `navigate()`. Hydration and
+explicit frame reloads still work.
+
 The default resolver is equivalent to:
 
 ```js
