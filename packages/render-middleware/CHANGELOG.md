@@ -2,6 +2,32 @@
 
 This is the changelog for [`render-middleware`](https://github.com/remix-run/remix/tree/main/packages/render-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `render({ assets })` now uses `assets.getScriptEntry()` to resolve client entries from source files so their import maps are included in rendered documents and frame responses. Custom asset server implementations must provide `getScriptEntry()` instead of `getHref()` and `getPreloads()`. It must return a `Promise` resolving to the following `ScriptEntry` shape:
+
+  ```ts
+  interface ScriptEntry {
+    href: string
+    preloads: string[]
+    importMap: {
+      imports: Record<string, string>
+      scopes?: Record<string, Record<string, string>>
+    }
+  }
+  ```
+
+  Apps using `createAssetServer()` receive this integration automatically. Custom rendering setups can follow the [asset server migration steps](https://github.com/remix-run/remix/blob/main/packages/assets/CHANGELOG.md#v070) (see #11706).
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.7.0`](https://github.com/remix-run/remix/releases/tag/assets@0.7.0)
+  - [`fetch-router@0.22.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.0)
+  - [`ui@0.9.0`](https://github.com/remix-run/remix/releases/tag/ui@0.9.0)
+
 ## v0.2.0
 
 ### Minor Changes

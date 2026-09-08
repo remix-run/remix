@@ -1,1 +1,0 @@
-Fixed `IMPORT_OUTSIDE_MOUNTS` errors when serving dependencies installed in pnpm's global virtual store outside `rootDir`. The asset server now finds the store automatically, without requiring an extra mount in your configuration (see #11814).

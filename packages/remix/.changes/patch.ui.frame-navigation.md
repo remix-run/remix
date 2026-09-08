@@ -1,1 +1,0 @@
-Fixed scroll timing during frame navigation and history restoration in `remix/ui`. Frames now show HTML validation and error responses with `3xx` or `4xx` status codes, and browsers without `NavigateEvent.sourceElement` support fall back to full document navigation. See the [UI release notes](https://github.com/remix-run/remix/blob/main/packages/ui/CHANGELOG.md#v090).

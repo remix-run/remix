@@ -1,3 +1,0 @@
-Client entries can now provide import maps through `resolveClientEntry()`. The `<ImportMap>` component from `remix/ui/server` combines your mappings with those from blocking client entries so the initial document contains one complete import map. New mappings from later frame responses are installed before their client entries load. Plain `<script type="importmap">` elements remain supported when you do not need to combine mappings (see #11706).
-
-When a frame response changes an installed import mapping or integrity value, Remix loads a fresh document so navigation after a deployment cannot mix old and new modules.

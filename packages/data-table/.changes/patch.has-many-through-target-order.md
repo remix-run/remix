@@ -1,1 +1,0 @@
-Fixed `hasManyThrough` eager loads with `orderBy(...).limit(...)` returning the wrong related rows when a parent has multiple through records. Related rows are now sorted before pagination is applied for each parent (see #11453).

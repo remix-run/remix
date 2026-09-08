@@ -2,6 +2,12 @@
 
 This is the changelog for [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.1
+
+### Patch Changes
+
+- Fixed `hasManyThrough` eager loads with `orderBy(...).limit(...)` returning the wrong related rows when a parent has multiple through records. Related rows are now sorted before pagination is applied for each parent (see #11453).
+
 ## v0.5.0
 
 ### Minor Changes
