@@ -69,6 +69,7 @@ function createImportMapManager(doc: Document): ImportMapManager {
   }
 
   let observer = new MutationObserver(processMutations)
+  observer.observe(doc, { childList: true })
   observer.observe(doc.head, { childList: true })
   processImportMaps()
 
