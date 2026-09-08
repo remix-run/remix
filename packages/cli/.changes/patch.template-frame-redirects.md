@@ -1,1 +1,1 @@
-Generated apps now preserve redirect metadata during enhanced form submissions, so the browser URL updates to the redirect destination.
+Updated the template so generated apps use the default `resolveFrame` implementation, allowing proper redirect handling
