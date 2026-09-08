@@ -555,7 +555,7 @@ describe('run', () => {
       assert.match(entry, /loadModule/)
       assert.match(entry, /detectMultipleImportMapSupport/)
       assert.match(entry, /processClientEntryPreloads/)
-      assert.match(entry, /resolveFrame/)
+      assert.doesNotMatch(entry, /resolveFrame/)
       assert.match(entry, /server:update/)
       assert.match(controller, /context\.render\(<HomePage \/>/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))

@@ -1,0 +1,1 @@
+Warn and skip the extra render when `handle.update()` is called during setup, and report a descriptive component error when it is called during rendering or before the initial commit from outside setup (see #11642).

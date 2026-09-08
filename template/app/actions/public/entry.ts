@@ -20,20 +20,6 @@ const app = run({
     preloadShim(preloads)
     return []
   },
-  async resolveFrame(src, options) {
-    let response = await fetch(src, {
-      headers: { Accept: 'text/html' },
-      method: options?.method,
-      body: getRequestBody(options?.formData, options?.method, options?.encType),
-      signal: options?.signal,
-    })
-    if (!response.ok) {
-      return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
-    }
-
-    if (response.body) return response.body
-    return await response.text()
-  },
 })
 
 if (import.meta.hot) {
@@ -45,19 +31,4 @@ if (import.meta.hot) {
       console.error('Error reloading top frame on server update', error)
     }
   })
-}
-
-function getRequestBody(
-  formData?: FormData,
-  method?: string,
-  encType?: string,
-): BodyInit | undefined {
-  if (!formData || method?.toLowerCase() === 'get') return
-  if (encType !== 'application/x-www-form-urlencoded') return formData
-
-  let body = new URLSearchParams()
-  for (let [name, value] of formData) {
-    body.append(name, typeof value === 'string' ? value : value.name)
-  }
-  return body
 }
