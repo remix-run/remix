@@ -1,7 +1,9 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { execFile, spawn, type ChildProcess } from 'node:child_process'
+import { once } from 'node:events'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { promisify } from 'node:util'
 
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
@@ -15,6 +17,25 @@ const waitForTimeout = 5_000
 const fixtureServerReadyTimeout = isWindows ? 15_000 : waitForTimeout
 
 describe('node-hmr', () => {
+  it('stops the fixture child server during cleanup', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getServerSource('./message.ts', 'getMessage()'),
+      'message.ts': 'export function getMessage() { return "hello" }',
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'hello')
+
+      await server.stop()
+
+      assert.throws(() => process.kill(ready.pid, 0), { code: 'ESRCH' })
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('hot updates self-accepting modules without restarting the server', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),
@@ -2281,6 +2302,15 @@ function parseHmrUrlEvent(line: string): { pid: number; url: string } | null {
 
 async function stopProcess(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) return
+
+  if (isWindows && child.pid !== undefined) {
+    // Windows does not run SIGTERM handlers, so stop the child server as well as its parent.
+    await Promise.all([
+      once(child, 'exit'),
+      promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F']),
+    ])
+    return
+  }
 
   await new Promise<void>((resolve) => {
     // The HMR runner gives its child five seconds to exit before force-killing it.
