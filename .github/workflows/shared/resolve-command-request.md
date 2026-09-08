@@ -14,14 +14,11 @@ steps:
         const botLogin = process.env.BOT_LOGIN.toLowerCase()
         const expectedRepository = process.env.EXPECTED_REPOSITORY.toLowerCase()
         const workflowByName = {
-          '/triage': { workflow: 'triage', label: 'aw:triage', itemTypes: ['issue'] },
-          '/review': { workflow: 'review', label: 'aw:review', itemTypes: ['pull_request'] },
-          '/implement': {
-            workflow: 'implement',
-            label: 'aw:implement',
-            itemTypes: ['issue', 'discussion'],
-          },
-          '/iterate': { workflow: 'iterate', label: 'aw:iterate', itemTypes: ['pull_request'] },
+          '/review issue': { workflow: 'review', itemTypes: ['issue'] },
+          '/review pull request': { workflow: 'review', itemTypes: ['pull_request'] },
+          '/review proposal': { workflow: 'review', itemTypes: ['discussion'] },
+          '/implement': { workflow: 'implement', itemTypes: ['issue', 'discussion'] },
+          '/iterate': { workflow: 'iterate', itemTypes: ['pull_request'] },
         }
 
         function hasExactBotMention(body) {
@@ -80,7 +77,9 @@ steps:
             typeof commentRouterContext.actor === 'string' &&
             commentRouterContext.workflow === expectedWorkflow.workflow &&
             commentRouterContext.label ===
-              (commentRouterContext.item_type === 'discussion' ? null : expectedWorkflow.label) &&
+              (commentRouterContext.item_type === 'discussion'
+                ? null
+                : `aw:${expectedWorkflow.workflow}`) &&
             typeof commentRouterContext.comment_updated_at === 'string' &&
             !Number.isNaN(Date.parse(commentRouterContext.comment_updated_at)) &&
             /^[0-9a-f]{64}$/.test(commentRouterContext.comment_body_sha256 ?? '')

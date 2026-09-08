@@ -164,6 +164,8 @@ let assetServer = createAssetServer({
 })
 ```
 
+Package managers that install outside `rootDir`, such as pnpm's global virtual store, are handled without configuration: the asset server reads the store location from the nearest `node_modules/.modules.yaml` and mounts it internally so those package files still resolve to public URLs. A store that a configured mount already covers, such as pnpm's default `node_modules/.pnpm`, is left alone.
+
 ### File watching
 
 The file system is watched by default so source changes are picked up without requiring a server restart.

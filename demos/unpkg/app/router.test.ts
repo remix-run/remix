@@ -102,10 +102,11 @@ describe('router', () => {
   })
 
   describe('POST requests', () => {
-    it('returns 404 for non-GET requests', async () => {
+    it('returns 405 for non-GET requests', async () => {
       let response = await router.fetch(new Request('http://localhost/', { method: 'POST' }))
 
-      assert.equal(response.status, 404)
+      assert.equal(response.status, 405)
+      assert.equal(response.headers.get('Allow'), 'GET, HEAD')
     })
   })
 

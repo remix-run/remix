@@ -31,6 +31,7 @@ import type { AssetTarget, ResolvedScriptTarget, ResolvedStyleTarget } from './t
 import { createAssetServerWatcher } from './watch.ts'
 import { createAssetInspector, type AssetDetails } from './inspection.ts'
 import type { AssetServerWatcher, ChokidarWatcher } from './watch.ts'
+import { getVirtualStoreMountConfigs } from './virtual-store.ts'
 
 interface AssetServerWatchOptions {
   /**
@@ -1177,6 +1178,7 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
         rootDir,
       },
       ...getInjectedPackageMountConfigs(),
+      ...getVirtualStoreMountConfigs({ mounts, rootDir }),
     ]),
     sourceMapSourcePaths: options.sourceMapSourcePaths ?? 'url',
     sourceMaps: options.sourceMaps,
