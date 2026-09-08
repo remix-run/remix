@@ -1,5 +1,5 @@
 ---
-name: Review pull requests
+name: /review pull request
 emoji: '🤖'
 description: Perform an admin-requested read-only review of a pull request
 on:

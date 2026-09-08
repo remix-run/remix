@@ -1,5 +1,5 @@
 ---
-name: Review proposals
+name: /review proposal
 emoji: '🤖'
 description: Perform an admin-requested read-only review of a Proposal Discussion
 on:

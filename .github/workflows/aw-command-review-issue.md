@@ -1,5 +1,5 @@
 ---
-name: Review issues
+name: /review issue
 emoji: '🤖'
 description: Review an issue after an administrator requests it
 on:

@@ -14,13 +14,13 @@ steps:
         const botLogin = process.env.BOT_LOGIN.toLowerCase()
         const expectedRepository = process.env.EXPECTED_REPOSITORY.toLowerCase()
         const workflowByName = {
-          'Review issues': { workflow: 'review', label: 'aw:review', itemTypes: ['issue'] },
-          'Review pull requests': {
+          '/review issue': { workflow: 'review', label: 'aw:review', itemTypes: ['issue'] },
+          '/review pull request': {
             workflow: 'review',
             label: 'aw:review',
             itemTypes: ['pull_request'],
           },
-          'Review proposals': {
+          '/review proposal': {
             workflow: 'review',
             label: 'aw:review',
             itemTypes: ['discussion'],

@@ -232,9 +232,9 @@ upgrades, and revert the workflow if the guarded push no longer works.
 In GitHub, open the repository's **Actions** tab and select one of these workflows:
 
 - [Remix bot comment router](https://github.com/remix-run/remix/actions/workflows/aw-comment-router.lock.yml)
-- [Review issues](https://github.com/remix-run/remix/actions/workflows/aw-command-review-issue.lock.yml)
-- [Review pull requests](https://github.com/remix-run/remix/actions/workflows/aw-command-review-pull-request.lock.yml)
-- [Review proposals](https://github.com/remix-run/remix/actions/workflows/aw-command-review-proposal.lock.yml)
+- [/review issue](https://github.com/remix-run/remix/actions/workflows/aw-command-review-issue.lock.yml)
+- [/review pull request](https://github.com/remix-run/remix/actions/workflows/aw-command-review-pull-request.lock.yml)
+- [/review proposal](https://github.com/remix-run/remix/actions/workflows/aw-command-review-proposal.lock.yml)
 - [/implement](https://github.com/remix-run/remix/actions/workflows/aw-command-implement.lock.yml)
 - [/iterate](https://github.com/remix-run/remix/actions/workflows/aw-command-iterate.lock.yml)
 
