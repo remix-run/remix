@@ -550,7 +550,7 @@ describe('run', () => {
       assert.match(router, /import \{ render \} from 'remix\/middleware\/render'/)
       assert.match(router, /render\(\{ assets \}\)/)
       assert.match(entry, /loadModule/)
-      assert.match(entry, /resolveFrame/)
+      assert.doesNotMatch(entry, /resolveFrame/)
       assert.match(entry, /server:update/)
       assert.match(controller, /context\.render\(<HomePage \/>/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))

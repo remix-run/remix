@@ -54,15 +54,15 @@ tools:
   github:
     mode: gh-proxy
     toolsets: [repos, issues, pull_requests, actions, discussions]
-  playwright:
-    mode: cli
 network:
-  allowed: [defaults, github, node, playwright, local]
+  allowed: [defaults, github, node, playwright]
 steps:
   - name: Enable pnpm with Corepack
     run: corepack enable pnpm
   - name: Install dependencies
     run: pnpm install --frozen-lockfile
+  - name: Install Chromium for repository tests
+    run: pnpm --filter @remix-run/test exec playwright install --with-deps chromium
 safe-outputs:
   footer: false
   add-comment:
@@ -200,9 +200,6 @@ takes precedence over conflicting issue or discussion details.
   typecheck the affected packages with `pnpm run test:changed` and
   `pnpm run typecheck:changed`. Let pull request CI run the full repository
   test and typecheck suites.
-- The Playwright CLI bootstrap creates `.claude/skills/playwright-cli/` as
-  transient runner tooling. Remove that directory after browser testing and
-  before the final validation loop; never include it in the diff.
 - Before creating a pull request, run the repository's fast validation loop:
   `pnpm run validate-package-meta`, `pnpm run lint`,
   `pnpm run format:check`, `pnpm run test:changed`, and
@@ -215,8 +212,8 @@ takes precedence over conflicting issue or discussion details.
   affected commands and results in the pull request body, and rely on pull
   request CI for authoritative Node.js 24 validation. All failures not caused
   solely by the runtime mismatch remain blockers.
-- Use Playwright CLI with Chromium only when browser behavior materially
-  improves the evidence.
+- Run repository-owned Playwright tests headlessly when browser behavior
+  materially improves the evidence.
 - Review the complete diff, scan it for secrets, and confirm every changed file
   is necessary. Do not weaken or remove tests to make validation pass.
 - If relevant validation fails for any reason other than the sandbox Node.js
