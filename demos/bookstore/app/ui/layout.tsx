@@ -1,4 +1,5 @@
-import type { RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
+import { css } from 'remix/ui'
 
 import { routes } from '../routes.ts'
 import { getCurrentUserSafely } from '../utils/context.ts'
@@ -9,8 +10,9 @@ export interface LayoutProps {
   children?: RemixNode
 }
 
-export function Layout() {
-  return ({ title, children }: LayoutProps) => {
+export function Layout(handle: Handle<LayoutProps>) {
+  return () => {
+    let { title, children } = handle.props
     let user = getCurrentUserSafely()
 
     return (
@@ -33,9 +35,13 @@ export function Layout() {
                   <form
                     method="POST"
                     action={routes.auth.logout.href()}
-                    style={{ display: 'inline' }}
+                    mix={css({ display: 'inline' })}
                   >
-                    <button type="submit" class="btn btn-secondary" style="margin-left: 1rem;">
+                    <button
+                      type="submit"
+                      class="btn btn-secondary"
+                      mix={css({ marginLeft: '1rem' })}
+                    >
                       Logout
                     </button>
                   </form>

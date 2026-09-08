@@ -36,19 +36,6 @@ export function loadAuth() {
 
 export const requireAuth = requireAuthenticated<FrameAuthIdentity>({
   onFailure(context) {
-    let isFrameRequest = context.request.headers.get('X-Remix-Frame') === 'true'
-    if (isFrameRequest) {
-      return new Response(
-        '<div><h1>Not authorized</h1><p>Refresh the page to sign in again.</p></div>',
-        {
-          status: 401,
-          headers: {
-            'Content-Type': 'text/html; charset=UTF-8',
-          },
-        },
-      )
-    }
-
     return redirect(routes.auth.login.index.href())
   },
 })

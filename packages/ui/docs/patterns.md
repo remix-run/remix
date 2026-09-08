@@ -182,38 +182,41 @@ class DataEmitter extends TypedEventTarget<{ data: DataEvent }> {
 
 function EventListener(handle: Handle<{ emitter: DataEmitter }>) {
   // Set up listeners once with automatic cleanup
-  addEventListeners(handle.props.emitter, handle.signal, {
-    data(event) {
+  handle.props.emitter.addEventListener(
+    'data',
+    (event) => {
       // Handle data
       handle.update()
     },
-  })
+    { signal: handle.signal },
+  )
 
   return () => <div>Listening for events...</div>
 }
 ```
 
-### Window/Document Event Handling
+### Window Resize Events
+
+A resize event applies to the whole viewport, so register it on `window` after the first client render. Pass `handle.signal` so the listener is removed when the component disconnects:
 
 ```tsx
-function WindowResizeTracker(handle: Handle) {
-  let width = window.innerWidth
-  let height = window.innerHeight
+function ViewportWidth(handle: Handle) {
+  let width: number | undefined
 
-  // Set up global listeners once
-  addEventListeners(window, handle.signal, {
-    resize() {
-      width = window.innerWidth
-      height = window.innerHeight
-      handle.update()
-    },
+  handle.queueTask(() => {
+    width = window.innerWidth
+    window.addEventListener(
+      'resize',
+      () => {
+        width = window.innerWidth
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
+    handle.update()
   })
 
-  return () => (
-    <div>
-      Window size: {width} x {height}
-    </div>
-  )
+  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
 }
 ```
 

@@ -77,9 +77,9 @@ export class DataTableQueryError extends DataTableError {
 }
 
 /**
- * Thrown when adapter execution fails.
+ * Thrown when database execution fails.
  */
-export class DataTableAdapterError extends DataTableError {
+export class DataTableDatabaseError extends DataTableError {
   constructor(
     message: string,
     options?: {
@@ -88,12 +88,12 @@ export class DataTableAdapterError extends DataTableError {
     },
   ) {
     super(message, {
-      code: 'DATA_TABLE_ADAPTER_ERROR',
+      code: 'DATA_TABLE_DATABASE_ERROR',
       cause: options?.cause,
       metadata: options?.metadata,
     })
 
-    this.name = 'DataTableAdapterError'
+    this.name = 'DataTableDatabaseError'
   }
 }
 

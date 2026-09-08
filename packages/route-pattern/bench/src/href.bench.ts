@@ -101,6 +101,6 @@ describe('complex (8 variants), no optionals', () => {
 describe('with search params', () => {
   let pattern = RoutePattern.parse('/posts/:id?tag=featured&tag=popular')
   bench(benchName, () => {
-    createHref(pattern, { id: '123' }, { tag: 'tutorial' })
+    createHref(pattern, { id: '123' }, { searchParams: { tag: 'tutorial' } })
   })
 })

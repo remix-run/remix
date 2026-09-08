@@ -11,11 +11,12 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
     "dev": "NODE_ENV=development node --import remix/node-tsx server.ts",
     "start": "node --import remix/node-tsx server.ts",
-    "typecheck": "tsgo --noEmit"
+    "test": "NODE_ENV=test remix test",
+    "typecheck": "tsc --noEmit"
   }
 }

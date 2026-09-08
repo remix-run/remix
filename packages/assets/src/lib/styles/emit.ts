@@ -105,7 +105,7 @@ async function rewriteDependencies(
       dependency.kind === 'external'
         ? dependency.replacement
         : dependency.kind === 'style'
-          ? `${await options.getServedUrl(dependency.depPath)}${dependency.suffix}`
+          ? appendUrlSuffix(await options.getServedUrl(dependency.depPath), dependency.suffix)
           : appendUrlSuffix(
               await getServedFileUrl(options, resolvedStyle.identityPath, dependency.depPath, {
                 transform: dependency.requestTransform,

@@ -153,7 +153,7 @@ describe('abort signal support', () => {
           controller.abort()
           await sleep(10)
         },
-      ],
+      ] as any,
     })
 
     router.get('/', () => new Response('Home'))
@@ -185,7 +185,7 @@ describe('abort signal support', () => {
         async () => {
           downstreamMiddlewareCalled = true
         },
-      ],
+      ] as any,
     })
 
     // Handler that should NOT be called

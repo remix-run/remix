@@ -76,6 +76,24 @@ describe('createRoutes', () => {
     assert.deepEqual(routes.posts, new Route('ANY', '/posts'))
     assert.deepEqual(routes.editPost, new Route('ANY', '/posts/:slug/edit'))
   })
+
+  it('builds hrefs with search params and a base URL', () => {
+    let routes = route({ users: '/users/:id' })
+
+    assert.equal(
+      routes.users.href(
+        { id: '123' },
+        {
+          baseURL: 'https://example.com/admin/settings',
+          searchParams: new URLSearchParams([
+            ['tab', 'profile'],
+            ['tab', 'security'],
+          ]),
+        },
+      ),
+      '../users/123?tab=profile&tab=security',
+    )
+  })
 })
 
 const categoriesRoutes = route('categories', {

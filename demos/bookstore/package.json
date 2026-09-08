@@ -11,11 +11,17 @@
   "devDependencies": {
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:",
     "playwright": "catalog:"
   },
   "scripts": {
+    "db:migrate": "remix db migrate",
+    "db:reset": "remix db reset --force",
+    "db:rollback": "remix db rollback",
+    "db:seed": "remix db seed",
+    "db:status": "remix db status",
     "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "hmr": "NODE_ENV=development node hmr.ts",
     "start": "node --import remix/node-tsx server.ts",
     "test": "NODE_ENV=test remix test",
     "typecheck": "tsc --noEmit"

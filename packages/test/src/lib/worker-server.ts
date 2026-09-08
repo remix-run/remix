@@ -1,5 +1,5 @@
 import * as mod from 'node:module'
-import { IS_RUNNING_FROM_SRC } from './config.ts'
+import { IS_RUNNING_FROM_SRC, type SerializedOnlyPattern } from './config.ts'
 import { importModule } from './import-module.ts'
 import type { CoverageConfig } from './coverage.ts'
 import type { TestResults } from './reporters/results.ts'
@@ -10,6 +10,7 @@ import { createFailedResults } from './worker-results.ts'
 export interface ServerTestWorkerData {
   file: string
   coverage?: CoverageConfig
+  only?: SerializedOnlyPattern[]
 }
 
 export async function runServerTestFile(value: unknown): Promise<TestResults> {
@@ -31,7 +32,7 @@ export async function runServerTestFile(value: unknown): Promise<TestResults> {
       await importModule(workerData.file, import.meta)
     }
 
-    let results = await runTests()
+    let results = await runTests({ only: workerData.only })
     await takeCoverage(workerData.coverage)
     return results
   } catch (error) {
@@ -55,6 +56,7 @@ function parseServerTestWorkerData(value: unknown): ServerTestWorkerData {
   return {
     file: value.file,
     coverage: parseCoverageConfig(value.coverage),
+    only: parseOnlyPatterns(value.only),
   }
 }
 
@@ -89,6 +91,23 @@ export function parseCoverageConfig(value: unknown): CoverageConfig | undefined 
   if (functions !== undefined) coverage.functions = functions
 
   return coverage
+}
+
+export function parseOnlyPatterns(value: unknown): SerializedOnlyPattern[] | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error('Invalid server test worker only patterns')
+  }
+
+  return value.map((item) => {
+    if (!isRecord(item) || typeof item.source !== 'string' || typeof item.flags !== 'string') {
+      throw new Error('Invalid server test worker only pattern')
+    }
+    return { source: item.source, flags: item.flags }
+  })
 }
 
 function parseStringArray(value: unknown, name: string): string[] | undefined {

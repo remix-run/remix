@@ -14,6 +14,7 @@ This demo shows how to combine `remix/auth`, `remix/middleware/auth`, `remix/dat
 cd demos/social-auth
 cp .env.example .env
 pnpm install
+pnpm db:reset
 pnpm start
 ```
 
@@ -60,7 +61,9 @@ If you configure the external providers locally, use these callback URLs:
 
 ## Data Storage
 
-The demo keeps its runtime schema and setup code in `demos/social-auth/app/data/`, its SQLite files and migrations in `demos/social-auth/db/`, and its session files in `demos/social-auth/tmp/`.
+The demo keeps its runtime schema in `app/data/`, its SQLite database and migrations in `db/`, and its session files in `tmp/`. The database connection, migrations, and seed file are configured in [`remix.json`](remix.json).
+
+Use `pnpm db:status` to inspect migrations, `pnpm db:migrate` to apply them, `pnpm db:rollback` to revert the latest one, and `pnpm db:seed` to reload the demo accounts. Run `pnpm db:reset` whenever you want a fresh database.
 
 On successful external login, the demo:
 

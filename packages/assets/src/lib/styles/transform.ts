@@ -99,9 +99,9 @@ export async function transformStyle(
     let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
     if (!stableUrlPathname) {
       throw createAssetServerCompilationError(
-        `File ${record.identityPath} is outside all configured fileMap entries.`,
+        `File ${record.identityPath} is outside all configured mounts.`,
         {
-          code: 'FILE_OUTSIDE_FILE_MAP',
+          code: 'FILE_OUTSIDE_MOUNTS',
         },
       )
     }

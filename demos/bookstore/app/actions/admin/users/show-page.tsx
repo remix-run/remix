@@ -1,3 +1,4 @@
+import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
 
 import type { User } from '../../../data/schema.ts'
@@ -14,41 +15,45 @@ export function AdminUserNotFoundPage() {
   )
 }
 
-export function AdminUserShowPage() {
-  return ({ user }: { user: User }) => (
-    <Layout>
-      <h1>User Details</h1>
+export function AdminUserShowPage(handle: Handle<{ user: User }>) {
+  return () => {
+    let { user } = handle.props
 
-      <div class="card">
-        <p>
-          <strong>Name:</strong> {user.name}
-        </p>
-        <p>
-          <strong>Email:</strong> {user.email}
-        </p>
-        <p>
-          <strong>Role:</strong>{' '}
-          <span class={`badge ${user.role === 'admin' ? 'badge-info' : 'badge-success'}`}>
-            {user.role}
-          </span>
-        </p>
-        <p>
-          <strong>Created:</strong> {new Date(user.created_at).toLocaleDateString()}
-        </p>
+    return (
+      <Layout>
+        <h1>User Details</h1>
 
-        <div mix={css({ marginTop: '2rem' })}>
-          <a href={routes.admin.users.edit.href({ userId: user.id })} class="btn">
-            Edit
-          </a>
-          <a
-            href={routes.admin.users.index.href()}
-            class="btn btn-secondary"
-            mix={css({ marginLeft: '0.5rem' })}
-          >
-            Back to List
-          </a>
+        <div class="card">
+          <p>
+            <strong>Name:</strong> {user.name}
+          </p>
+          <p>
+            <strong>Email:</strong> {user.email}
+          </p>
+          <p>
+            <strong>Role:</strong>{' '}
+            <span class={`badge ${user.role === 'admin' ? 'badge-info' : 'badge-success'}`}>
+              {user.role}
+            </span>
+          </p>
+          <p>
+            <strong>Created:</strong> {new Date(user.created_at).toLocaleDateString()}
+          </p>
+
+          <div mix={css({ marginTop: '2rem' })}>
+            <a href={routes.admin.users.edit.href({ userId: user.id })} class="btn">
+              Edit
+            </a>
+            <a
+              href={routes.admin.users.index.href()}
+              class="btn btn-secondary"
+              mix={css({ marginLeft: '0.5rem' })}
+            >
+              Back to List
+            </a>
+          </div>
         </div>
-      </div>
-    </Layout>
-  )
+      </Layout>
+    )
+  }
 }

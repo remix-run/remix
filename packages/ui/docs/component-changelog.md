@@ -2,8 +2,7 @@
 
 This is the changelog for [`component`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
-Historical examples below may show legacy component APIs from the release being described. Current
-components read props from `handle.props` and return a zero-argument render function.
+Historical examples below may show legacy component APIs from the release being described. Current components read props from `handle.props` and return a zero-argument render function.
 
 ## v0.7.0
 
@@ -52,7 +51,6 @@ components read props from `handle.props` and return a zero-argument render func
 - BREAKING CHANGE: remove legacy host-element `on` prop support in `@remix-run/ui`.
 
   Use the `on()` mixin instead:
-
   - Old: `<button on={{ click() {} }} />`
   - New: `<button mix={[on('click', () => {})]} />`
 
@@ -61,7 +59,6 @@ components read props from `handle.props` and return a zero-argument render func
 - BREAKING CHANGE: remove legacy host-element `css` prop runtime support in `@remix-run/ui`.
 
   Use the `css(...)` mixin instead:
-
   - Old: `<div css={{ color: 'red' }} />`
   - New: `<div mix={[css({ color: 'red' })]} />`
 
@@ -70,7 +67,6 @@ components read props from `handle.props` and return a zero-argument render func
 - BREAKING CHANGE: remove legacy host-element `animate` prop runtime support in `@remix-run/ui`.
 
   Use animation mixins instead:
-
   - Old: `<div animate={{ enter: true, exit: true, layout: true }} />`
   - New: `<div mix={[animateEntrance(), animateExit(), animateLayout()]} />`
 
@@ -79,7 +75,6 @@ components read props from `handle.props` and return a zero-argument render func
 - BREAKING CHANGE: remove legacy host-element `connect` prop support in `@remix-run/ui`.
 
   Use the `ref(...)` mixin instead:
-
   - Old: `<div connect={(node, signal) => {}} />`
   - New: `<div mix={[ref((node, signal) => {})]} />`
 
@@ -92,7 +87,6 @@ components read props from `handle.props` and return a zero-argument render func
   Before/after migration:
 
   **Interaction package APIs:**
-
   - Before: `defineInteraction(...)`, `createContainer(...)`, `on(target, listeners)` from `@remix-run/interaction`.
   - After: use component APIs (`createMixin(...)`, `on(...)`, `addEventListeners(...)`) from `@remix-run/ui`.
 
@@ -118,7 +112,6 @@ components read props from `handle.props` and return a zero-argument render func
   ```
 
   **Component handle API:**
-
   - Before: `handle.on(target, listeners)`.
   - After: `addEventListeners(target, handle.signal, listeners)`.
 
@@ -147,7 +140,6 @@ components read props from `handle.props` and return a zero-argument render func
   ```
 
   **Custom interaction patterns:**
-
   - Before: `defineInteraction(...)` + interaction setup function.
   - After: event mixins (`createMixin(...)`) that compose `on(...)` listeners and dispatch typed custom events.
 
@@ -221,7 +213,6 @@ components read props from `handle.props` and return a zero-argument render func
 - Add the new host `mix` prop and mixin authoring APIs in `@remix-run/ui`.
 
   New exports include:
-
   - `createMixin`
   - `MixinDescriptor`, `MixinHandle`, `MixinType`, `MixValue`
   - `on(...)`
@@ -231,14 +222,12 @@ components read props from `handle.props` and return a zero-argument render func
   This enables reusable host behaviors and composable element capabilities without bespoke host props.
 
 - Add new interaction mixins for normalized user input events:
-
   - `pressEvents(...)` for pointer/keyboard "press" interactions
   - `keysEvents(...)` for keyboard key state events
 
   These helpers provide a consistent mixin-based interaction model for input handling.
 
 - Add mixin-first animation APIs for host elements:
-
   - `animateEntrance(...)`
   - `animateExit(...)`
   - `animateLayout(...)`
@@ -298,7 +287,6 @@ components read props from `handle.props` and return a zero-argument render func
 ### Minor Changes
 
 - BREAKING CHANGE: `handle.update()` now returns `Promise<AbortSignal>` instead of accepting an optional task callback.
-
   - The promise is resolved when the update is complete (DOM is updated, tasks have run)
   - The signal is aborted when the component updates again or is removed.
 
@@ -325,7 +313,6 @@ components read props from `handle.props` and return a zero-argument render func
 - BREAKING CHANGE: rename virtual root teardown from `remove()` to `dispose()`.
 
   Old -> new:
-
   - `root.remove()` -> `root.dispose()` (for both `createRoot()` and `createRangeRoot()` roots)
   - `app.remove()` -> `app.dispose()` when using `run(...)`
 
@@ -334,7 +321,6 @@ components read props from `handle.props` and return a zero-argument render func
 - Add SSR with out-of-order streaming, selective hydration, async frames, and granular ui refresh
 
   ADDITIONS:
-
   - `<Frame>`
   - `renderToStream(node, { resolveFrame })`
   - `clientEntry`
@@ -359,7 +345,6 @@ components read props from `handle.props` and return a zero-argument render func
 ### Minor Changes
 
 - Add animation prop, spring, and tween utilities
-
   - `animate` prop on host elements enables enter, exit, and layout (FLIP) animations
   - `spring()` function creates spring-based animation iterators with configurable stiffness, damping, and mass
   - `tween()` function creates time-based animation iterators with customizable duration and easing (including `easings` presets)
@@ -380,7 +365,6 @@ components read props from `handle.props` and return a zero-argument render func
 ### Minor Changes
 
 - BREAKING CHANGE: Updated Component API
-
   - Removed stateless components favoring a single component shape
   - Components no longer called with `this` function context
   - Introduced `setup` prop
@@ -494,7 +478,6 @@ components read props from `handle.props` and return a zero-argument render func
   ```
 
   The utility of being able to write `return (` instead of `() => (` has little benefit compared to the risks it created.
-
   - Both `handle` and `props` are optional arguments.
   - All components must return a function, there is no longer a distinction between stateful or stateless components
 
@@ -634,7 +617,6 @@ components read props from `handle.props` and return a zero-argument render func
   ```
 
   This is no longer a concern since props have been removed from the setup scope because:
-
   - If you need `setup` then you are likely stateful
   - If you are stateful you need the handle
   - Therefore `setup` isn't useful without `handle`

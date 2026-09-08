@@ -1,13 +1,19 @@
 import { colors } from '../colors.ts'
 import { normalizeLine } from '../normalize.ts'
-import type { Reporter } from './index.ts'
+import type { Reporter, ReporterOptions } from './index.ts'
 import type { Counts, TestResult, TestResults } from './results.ts'
 
 export class DotReporter implements Reporter {
   #failures: { name: string; error: TestResult['error'] }[] = []
+  #pending: { name: string; status: 'skipped' | 'todo'; reason: string }[] = []
   #dotCount = 0
   #files = new Set<string>()
+  #quiet: boolean
   #suites = new Set<string>()
+
+  constructor(options: ReporterOptions = {}) {
+    this.#quiet = options.quiet === true
+  }
 
   onSectionStart(_label: string) {}
 
@@ -18,15 +24,31 @@ export class DotReporter implements Reporter {
     }
 
     for (let test of results.tests) {
+      if (this.#quiet && test.status === 'skipped') continue
+
       if (test.status === 'passed') {
         process.stdout.write(colors.green('.'))
       } else if (test.status === 'skipped') {
         process.stdout.write(colors.dim('S'))
+        if (test.reason) {
+          this.#pending.push({
+            name: formatFullName(test),
+            status: test.status,
+            reason: test.reason,
+          })
+        }
       } else if (test.status === 'todo') {
         process.stdout.write(colors.dim('T'))
+        if (test.reason) {
+          this.#pending.push({
+            name: formatFullName(test),
+            status: test.status,
+            reason: test.reason,
+          })
+        }
       } else {
         process.stdout.write(colors.red('F'))
-        this.#failures.push({ name: `${test.suiteName} > ${test.name}`, error: test.error })
+        this.#failures.push({ name: formatFullName(test), error: test.error })
       }
       this.#dotCount++
     }
@@ -51,6 +73,12 @@ export class DotReporter implements Reporter {
       }
     }
 
+    for (let pending of this.#pending) {
+      let comment = pending.status === 'skipped' ? '# skipped' : '# todo'
+      let color = pending.status === 'skipped' ? colors.dim : colors.yellow
+      console.log(`\n  ${color(`${pending.name} ${comment}: ${pending.reason}`)}`)
+    }
+
     let { passed, failed, skipped, todo } = counts
     let info = colors.cyan('ℹ')
     console.log()
@@ -64,4 +92,8 @@ export class DotReporter implements Reporter {
     console.log(`${info} duration_ms ${durationMs.toFixed(5)}`)
     console.log()
   }
+}
+
+function formatFullName(test: TestResult): string {
+  return test.name ? `${test.suiteName} > ${test.name}` : test.suiteName
 }

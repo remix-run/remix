@@ -20,7 +20,7 @@ describe('html', () => {
   })
 
   it('flattens arrays and preserves nested escapes', () => {
-    // prettier-ignore
+    // oxfmt-ignore
     let value = html`<ul>${['<li>', html.raw`<b>Hello</b>`, '</li>']}</ul>`
     assert.equal(String(value), '<ul>&lt;li&gt;<b>Hello</b>&lt;/li&gt;</ul>')
   })
@@ -89,6 +89,7 @@ describe('html.raw', () => {
 
   it('flattens arrays without escaping', () => {
     let items = ['<li>A</li>', '<li>B</li>', '<li>C</li>']
+    // oxfmt-ignore
     let value = html.raw`<ul>${items}</ul>`
     assert.equal(String(value), '<ul><li>A</li><li>B</li><li>C</li></ul>')
   })

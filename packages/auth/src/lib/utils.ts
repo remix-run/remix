@@ -5,6 +5,7 @@ import type { OAuthTransaction } from './provider.ts'
 
 const textEncoder = new TextEncoder()
 const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+const returnToBaseURL = 'https://remix.local'
 
 export function createCodeVerifier(): string {
   return createRandomToken(48)
@@ -75,11 +76,22 @@ export function sanitizeReturnTo(value: string | null): string | undefined {
     return
   }
 
-  if (!value.startsWith('/') || value.startsWith('//')) {
+  if (!value.startsWith('/')) {
     return
   }
 
-  return value
+  let url: URL
+  try {
+    url = new URL(value, returnToBaseURL)
+  } catch {
+    return
+  }
+
+  if (url.origin !== returnToBaseURL) {
+    return
+  }
+
+  return url.pathname + url.search + url.hash
 }
 
 function createRandomToken(byteLength: number): string {

@@ -7,7 +7,7 @@ A minimal component system built on JavaScript and DOM primitives. Write compone
 - **JSX Runtime** - Convenient JSX syntax
 - **Component State** - State managed with plain JavaScript variables
 - **Manual Updates** - Explicit control over when components update via `handle.update()`
-- **Real DOM Events** - Events are real DOM events using the `on()` mixin and `addEventListeners()`
+- **Real DOM Events** - Use the `on()` mixin and native `EventTarget` APIs
 - **Inline CSS** - `css(...)` mixin with pseudo-selectors and nested rules
 - **Server Rendering** - Stream full pages or fragments with `renderToStream`
 - **Hydration** - Mark interactive components with `clientEntry` and hydrate them on the client with `run`
@@ -23,10 +23,11 @@ npm i remix
 
 ### Server
 
-Render a full page to a streaming response:
+Install the standard render middleware and render a full page from an action:
 
 ```tsx
-import { renderToStream } from 'remix/ui/server'
+import { render } from 'remix/middleware/render'
+import { createRouter } from 'remix/router'
 import { Frame } from 'remix/ui'
 import { Counter } from './assets/counter.tsx'
 
@@ -46,19 +47,10 @@ function App() {
   )
 }
 
-let stream = renderToStream(<App />, {
-  resolveFrame(src, target, context) {
-    let headers = new Headers({ Accept: 'text/html' })
-    if (target) headers.set('X-Remix-Target', target)
-    return fetch(new URL(src, context?.currentFrameSrc ?? request.url), { headers }).then((res) =>
-      res.text(),
-    )
-  },
-})
+let router = createRouter({ middleware: [render()] })
 
-return new Response(stream, {
-  headers: { 'Content-Type': 'text/html' },
-})
+router.get('/', (context) => context.render(<App />))
+router.get('/sidebar', (context) => context.render(<nav>Sidebar</nav>))
 ```
 
 ### Client Entry
@@ -108,16 +100,16 @@ let app = run({
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src, signal, target) {
-    let headers = new Headers({ Accept: 'text/html' })
-    if (target) headers.set('X-Remix-Target', target)
-    let res = await fetch(src, { headers, signal })
-    return res.body ?? (await res.text())
-  },
 })
 
 await app.ready()
 ```
+
+`run()` hydrates client entries and makes the current document the top-level frame. Eligible
+same-origin links and forms then soft-navigate by fetching HTML and updating that frame in place,
+even when the page does not render an explicit `<Frame>`. Provide `resolveFrame` only when the app
+needs custom request headers, body encoding, or response policy. See
+[Link navigation](./frames.md#link-navigation) for document-navigation effects and opt-outs.
 
 ### Frames
 
@@ -256,20 +248,26 @@ function SearchInput(handle: Handle) {
 }
 ```
 
-You can also listen to global event targets like `document` or `window` using `addEventListeners()` with automatic cleanup on component removal:
+A resize event applies to the whole viewport, so register it on `window` after the first client render. Pass `handle.signal` so the listener is removed when the component disconnects:
 
 ```tsx
-function KeyboardTracker(handle: Handle) {
-  let keys: string[] = []
+function ViewportWidth(handle: Handle) {
+  let width: number | undefined
 
-  addEventListeners(document, handle.signal, {
-    keydown: (event) => {
-      keys.push(event.key)
-      handle.update()
-    },
+  handle.queueTask(() => {
+    width = window.innerWidth
+    window.addEventListener(
+      'resize',
+      () => {
+        width = window.innerWidth
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
+    handle.update()
   })
 
-  return () => <div>Keys: {keys.join(', ')}</div>
+  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
 }
 ```
 
@@ -359,7 +357,7 @@ function Button(handle: Handle) {
         }),
       ]}
     >
-      <span className="icon">★</span>
+      <span class="icon">★</span>
       Click me
     </button>
   )
@@ -429,7 +427,6 @@ Components receive a `Handle` as their first argument with the following API:
 
 - **`handle.update()`** - Schedule an update and await completion to get an `AbortSignal`.
 - **`handle.queueTask(task)`** - Schedule a task to run after the next update. Useful for DOM operations that need to happen after rendering (e.g., moving focus, scrolling, measuring elements, etc.).
-- **`addEventListeners(target, handle.signal, listeners)`** - Listen to an event target with automatic cleanup when the component disconnects.
 - **`handle.signal`** - An `AbortSignal` that's aborted when the component is disconnected. Useful for cleanup.
 - **`handle.id`** - Stable identifier per component instance.
 - **`handle.context`** - Context API for ancestor/descendant communication.
@@ -552,26 +549,30 @@ function Form(handle: Handle) {
 }
 ```
 
-### `addEventListeners(target, handle.signal, listeners)`
+### Native Event Listeners
 
-Listen to an [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) with automatic cleanup when the component disconnects. Ideal for listening to events on global event targets like `document` and `window`.
+Use native [EventTarget.addEventListener()](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener) for targets such as `window` and `document`. Schedule browser-only setup with `handle.queueTask()`, and pass `handle.signal` so the listener is removed when the component disconnects.
 
 ```tsx
-function KeyboardTracker(handle: Handle) {
-  let keys: string[] = []
+function ViewportWidth(handle: Handle) {
+  let width: number | undefined
 
-  addEventListeners(document, handle.signal, {
-    keydown: (event) => {
-      keys.push(event.key)
-      handle.update()
-    },
+  handle.queueTask(() => {
+    width = window.innerWidth
+    window.addEventListener(
+      'resize',
+      () => {
+        width = window.innerWidth
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
+    handle.update()
   })
 
-  return () => <div>Keys: {keys.join(', ')}</div>
+  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
 }
 ```
-
-The listeners are automatically removed when the component is disconnected, so you don't need to manually clean up.
 
 ### `handle.signal`
 
@@ -674,7 +675,7 @@ function ThemedContent(handle: Handle) {
   let theme = handle.context.get(App)
 
   // Subscribe to theme changes and update when it changes
-  addEventListeners(theme, handle.signal, { change: () => handle.update() })
+  theme.addEventListener('change', () => handle.update(), { signal: handle.signal })
 
   return () => (
     <div mix={[css({ backgroundColor: theme.value === 'dark' ? '#000' : '#fff' })]}>

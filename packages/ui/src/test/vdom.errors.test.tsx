@@ -94,6 +94,57 @@ describe('vdom error handling', () => {
       expect(errorHandler).toHaveBeenCalledTimes(1)
       expect((errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error).toBe(error)
     })
+
+    it('warns and ignores handle.update() calls during setup', async (t) => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let errorHandler = t.mock.fn()
+      let warnSpy = t.mock.method(console, 'warn', () => {})
+      root.addEventListener('error', errorHandler)
+      let updatePromise: Promise<AbortSignal> | undefined
+
+      function SetupUpdate(handle: Handle) {
+        updatePromise = handle.update()
+        return () => <div>ok</div>
+      }
+
+      root.render(<SetupUpdate />)
+
+      expect(errorHandler).not.toHaveBeenCalled()
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+      expect(warnSpy.mock.calls[0]?.arguments[0]).toBe(
+        'Ignored handle.update() while SetupUpdate is running its setup function. The initial render includes setup changes.',
+      )
+      expect(container.innerHTML).toBe('<div>ok</div>')
+
+      if (updatePromise === undefined) throw new Error('Expected setup update promise')
+      let signal = await updatePromise
+      expect(signal.aborted).toBe(false)
+    })
+
+    it("reports updates to a parent before the parent's initial render commits", (t) => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let errorHandler = t.mock.fn()
+      root.addEventListener('error', errorHandler)
+
+      function Child(handle: Handle<{ updateParent(): void }>) {
+        handle.props.updateParent()
+        return () => null
+      }
+
+      function Parent(handle: Handle) {
+        return () => <Child updateParent={() => handle.update()} />
+      }
+
+      root.render(<Parent />)
+
+      expect(errorHandler).toHaveBeenCalledTimes(1)
+      let error = (errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error as Error
+      expect(error.message).toBe(
+        "Cannot call handle.update() before Parent's initial render commits. Call it from an event handler or handle.queueTask() instead.",
+      )
+    })
   })
 
   describe('render errors', () => {
@@ -144,6 +195,28 @@ describe('vdom error handling', () => {
 
       expect(errorHandler).toHaveBeenCalledTimes(1)
       expect((errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error).toBe(error)
+    })
+
+    it('reports handle.update() calls during render', (t) => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let errorHandler = t.mock.fn()
+      root.addEventListener('error', errorHandler)
+
+      function RenderUpdate(handle: Handle) {
+        return () => {
+          handle.update()
+          return <div>ok</div>
+        }
+      }
+
+      root.render(<RenderUpdate />)
+
+      expect(errorHandler).toHaveBeenCalledTimes(1)
+      let error = (errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error as Error
+      expect(error.message).toBe(
+        'Cannot call handle.update() while RenderUpdate is running its render function. Call it from an event handler or handle.queueTask() instead.',
+      )
     })
   })
 
@@ -364,13 +437,14 @@ describe('vdom error handling', () => {
   })
 
   describe('cascading updates protection', () => {
-    it('dispatches error when handle.update() is called during render', async (t) => {
+    it('dispatches error for a cascading queued update loop', async (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
       let errorHandler = t.mock.fn()
       root.addEventListener('error', errorHandler)
 
       let renderCount = 0
+      let shouldLoop = false
       let triggerUpdate: () => void
 
       function InfiniteLoop(handle: Handle) {
@@ -379,8 +453,8 @@ describe('vdom error handling', () => {
         }
         return () => {
           renderCount++
-          if (renderCount > 1) {
-            handle.update()
+          if (shouldLoop) {
+            handle.queueTask(() => handle.update())
           }
           return <div>count: {renderCount}</div>
         }
@@ -391,6 +465,7 @@ describe('vdom error handling', () => {
       expect(container.innerHTML).toBe('<div>count: 1</div>')
       expect(renderCount).toBe(1)
 
+      shouldLoop = true
       triggerUpdate!()
       await new Promise((resolve) => setTimeout(resolve, 10))
 
@@ -431,6 +506,51 @@ describe('vdom error handling', () => {
 
       expect(container.innerHTML).toBe('<div>count: 3</div>')
       expect(errorHandler).not.toHaveBeenCalled()
+    })
+
+    it('warns instead of erroring when many component instances update in one event loop turn', (t) => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let errorHandler = t.mock.fn()
+      let warnSpy = t.mock.method(console, 'warn', () => {})
+      root.addEventListener('error', errorHandler)
+
+      let updateCount = 60
+      let counts = Array.from({ length: updateCount }, () => 0)
+      let updates: Array<() => void> = []
+
+      function Counter(handle: Handle<{ index: number }>) {
+        let index = handle.props.index
+        updates[index] = () => {
+          handle.update()
+        }
+        return () => <div data-index={index}>count: {counts[index] ?? 0}</div>
+      }
+
+      root.render(
+        <>
+          {Array.from({ length: updateCount }, (_, index) => (
+            <Counter key={index} index={index} />
+          ))}
+        </>,
+      )
+      root.flush()
+
+      for (let index = 0; index < updateCount; index++) {
+        counts[index] = (counts[index] ?? 0) + 1
+        let update = updates[index]
+        if (!update) throw new Error(`Missing update for component ${index}`)
+        update()
+        root.flush()
+      }
+
+      expect(errorHandler).not.toHaveBeenCalled()
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+      expect(String(warnSpy.mock.calls[0]!.arguments[0])).toContain(
+        '50 cascading component updates',
+      )
+      expect(String(warnSpy.mock.calls[0]!.arguments[0])).toContain('Counter x50')
+      expect(container.querySelector('[data-index="59"]')?.textContent).toBe('count: 1')
     })
   })
 })

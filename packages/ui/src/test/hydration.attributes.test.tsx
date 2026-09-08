@@ -166,6 +166,22 @@ describe('hydration', () => {
       expect(existingDiv.getAttribute('data-value')).toBe('42')
     })
 
+    it('hydrates data-rmx-preserve-dom as a boolean attribute', async () => {
+      let html = await renderToString(<div data-rmx-preserve-dom />)
+      expect(html).toBe('<div data-rmx-preserve-dom></div>')
+      container.innerHTML = html
+
+      let existingDiv = container.querySelector('div')
+      invariant(existingDiv)
+
+      let root = createRoot(container)
+      root.render(<div data-rmx-preserve-dom />)
+      root.flush()
+
+      expect(container.querySelector('div')).toBe(existingDiv)
+      expect(existingDiv.hasAttribute('data-rmx-preserve-dom')).toBe(true)
+    })
+
     it('hydrates SVG xlinkHref as xlink:href', async () => {
       let html = await renderToString(
         <svg>

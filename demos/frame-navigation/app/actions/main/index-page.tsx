@@ -1,6 +1,6 @@
 import { css } from 'remix/ui'
 
-import { DashboardStatGrid } from '../../assets/dashboard-stat-grid.tsx'
+import { DashboardStatGrid } from './public/dashboard-stat-grid.tsx'
 import { routes } from '../../routes.ts'
 
 const statCards = [
@@ -17,7 +17,7 @@ const statCards = [
   {
     label: 'Average grade',
     value: '92%',
-    href: routes.main.account.href(),
+    href: routes.main.account.index.href(),
   },
 ]
 

@@ -43,10 +43,9 @@ describe('joinPatterns', () => {
   })
 
   it('joins port', () => {
-    assertJoin('://:8000', '://', '://:8000')
-    assertJoin('://', '://:8000', '://:8000')
-    assertJoin('://:8000', '://:3000', '://:3000')
+    assertJoin('://example.com:8000', '://', '://example.com:8000')
     assertJoin('://example.com', '://example.com:8000', '://example.com:8000')
+    assertJoin('://example.com:8000', '://example.com:3000', '://example.com:3000')
     assertJoin('http://example.com:4321', '://example.com:8000', 'http://example.com:8000')
   })
 

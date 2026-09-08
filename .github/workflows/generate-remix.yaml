@@ -57,13 +57,10 @@ jobs:
           token: ${{ secrets.GH_REMIX_PAT }}
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

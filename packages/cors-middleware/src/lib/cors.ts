@@ -1,5 +1,5 @@
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
-import { Vary } from '@remix-run/headers'
+import { Vary } from '@remix-run/headers/vary'
 
 const defaultCorsMethods = ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE']
 

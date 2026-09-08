@@ -11,9 +11,14 @@ export async function loadPlaywrightConfig(
   input: string | undefined,
   cwd = process.cwd(),
 ): Promise<PlaywrightTestConfig | undefined> {
-  let candidates = input
-    ? [path.resolve(cwd, input)]
-    : [path.join(cwd, 'playwright.config.ts'), path.join(cwd, 'playwright.config.js')]
+  if (input !== undefined) {
+    let configPath = path.resolve(cwd, input)
+    await fs.access(configPath)
+    let mod = await importModule(configPath, import.meta)
+    return mod.default ?? mod
+  }
+
+  let candidates = [path.join(cwd, 'playwright.config.ts'), path.join(cwd, 'playwright.config.js')]
 
   for (let configPath of candidates) {
     try {

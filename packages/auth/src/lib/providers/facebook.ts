@@ -1,4 +1,4 @@
-import type { OAuthAccount, OAuthProvider, OAuthResult, OAuthStandardTokens } from '../provider.ts'
+import type { OAuthAccount, OAuthProvider, OAuthResult } from '../provider.ts'
 import {
   createAuthorizationURL,
   createOAuthProvider,
@@ -60,7 +60,7 @@ export interface FacebookAuthProfile {
  */
 export function createFacebookAuthProvider(
   options: FacebookAuthProviderOptions,
-): OAuthProvider<FacebookAuthProfile, 'facebook', OAuthStandardTokens> {
+): OAuthProvider<FacebookAuthProfile, 'facebook'> {
   let scopes = options.scopes ?? DEFAULT_FACEBOOK_SCOPES
 
   return createOAuthProvider('facebook', {
@@ -80,7 +80,7 @@ export function createFacebookAuthProvider(
     async handleCallback(
       context,
       transaction,
-    ): Promise<OAuthResult<FacebookAuthProfile, 'facebook', OAuthStandardTokens>> {
+    ): Promise<OAuthResult<FacebookAuthProfile, 'facebook'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: FACEBOOK_TOKEN_ENDPOINT,
         clientId: options.clientId,

@@ -1,0 +1,4 @@
+.env
+.env.local
+/tmp/
+/db/*.sqlite

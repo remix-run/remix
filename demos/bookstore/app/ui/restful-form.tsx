@@ -1,4 +1,4 @@
-import type { Props } from 'remix/ui'
+import type { Handle, Props } from 'remix/ui'
 
 export interface RestfulFormProps extends Props<'form'> {
   /**
@@ -15,8 +15,9 @@ export interface RestfulFormProps extends Props<'form'> {
  * "method override" value that instructs the server to use the specified method when routing
  * the request.
  */
-export function RestfulForm() {
-  return ({ method = 'GET', methodOverrideField = '_method', ...props }: RestfulFormProps) => {
+export function RestfulForm(handle: Handle<RestfulFormProps>) {
+  return () => {
+    let { method = 'GET', methodOverrideField = '_method', ...props } = handle.props
     let upperMethod = method.toUpperCase()
 
     if (upperMethod === 'GET') {

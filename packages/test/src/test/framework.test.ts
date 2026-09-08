@@ -56,6 +56,15 @@ describe('describe', () => {
     assert.equal(s.tests[1].name, 'test two')
   })
 
+  it('registers skip and todo reasons from metadata', () => {
+    let [skipped, todo] = captureRegistration(() => {
+      describe('skipped', { skip: 'needs credentials' }, () => {})
+      describe('todo', { todo: 'needs design' }, () => {})
+    })
+    assert.equal(skipped.skip, 'needs credentials')
+    assert.equal(todo.todo, 'needs design')
+  })
+
   it('flattens nested describes into "Outer > Inner" names', () => {
     let [outer, inner] = captureRegistration(() => {
       describe('outer', () => {
@@ -71,6 +80,11 @@ describe('describe.skip', () => {
   it('marks the suite as skipped', () => {
     let [s] = captureRegistration(() => describe.skip('suite', () => {}))
     assert.equal(s.skip, true)
+  })
+
+  it('accepts a reason', () => {
+    let [s] = captureRegistration(() => describe.skip('suite', 'needs credentials', () => {}))
+    assert.equal(s.skip, 'needs credentials')
   })
 
   it('still calls fn to register tests', () => {
@@ -96,6 +110,19 @@ describe('describe.skip inheritance', () => {
     assert.equal(parent.skip, true)
     assert.equal(child.name, 'parent > child')
     assert.equal(child.skip, true)
+  })
+
+  it('propagates skip reasons to nested describes', () => {
+    let captured = captureRegistration(() =>
+      describe.skip('parent', 'needs credentials', () => {
+        describe('child', () => {
+          it('test', () => {})
+        })
+      }),
+    )
+    let [parent, child] = captured
+    assert.equal(parent.skip, 'needs credentials')
+    assert.equal(child.skip, 'needs credentials')
   })
 
   it('propagates skip through multiple levels of nesting', () => {
@@ -150,6 +177,11 @@ describe('describe.todo', () => {
     assert.equal(s.todo, true)
   })
 
+  it('accepts a reason', () => {
+    let [s] = captureRegistration(() => describe.todo('suite', 'needs design'))
+    assert.equal(s.todo, 'needs design')
+  })
+
   it('registers with no tests', () => {
     let [s] = captureRegistration(() => describe.todo('suite'))
     assert.equal(s.tests.length, 0)
@@ -185,6 +217,40 @@ describe('it', () => {
     assert.equal(s.tests[0].name, 'my test')
     assert.equal(s.tests[0].fn, fn)
   })
+
+  it('registers timeout and signal options', () => {
+    let signal = new AbortController().signal
+    let [s] = captureRegistration(() =>
+      describe('suite', () => {
+        it('my test', { timeout: 100, signal }, () => {})
+      }),
+    )
+    assert.equal(s.tests[0].timeout, 100)
+    assert.equal(s.tests[0].signal, signal)
+  })
+
+  it('registers skip and todo reasons from metadata', () => {
+    let [s] = captureRegistration(() =>
+      describe('suite', () => {
+        it('skipped test', { skip: 'needs credentials' }, () => {})
+        it('todo test', { todo: 'needs design' }, () => {})
+      }),
+    )
+    assert.equal(s.tests[0].skip, 'needs credentials')
+    assert.equal(s.tests[1].todo, 'needs design')
+  })
+
+  it('throws on invalid timeout values', () => {
+    assert.throws(
+      () =>
+        captureRegistration(() =>
+          describe('suite', () => {
+            it('my test', { timeout: -1 }, () => {})
+          }),
+        ),
+      /Test timeout must be a non-negative finite number/,
+    )
+  })
 })
 
 describe('it.skip', () => {
@@ -205,6 +271,18 @@ describe('it.skip', () => {
     )
     assert.equal(s.tests[0].skip, true)
     assert.equal(typeof s.tests[0].fn, 'function')
+  })
+
+  it('accepts a reason with or without a fn', () => {
+    let [s] = captureRegistration(() =>
+      describe('suite', () => {
+        it.skip('with fn', 'needs credentials', () => {})
+        it.skip('without fn', 'blocked')
+      }),
+    )
+    assert.equal(s.tests[0].skip, 'needs credentials')
+    assert.equal(s.tests[1].skip, 'blocked')
+    assert.equal(typeof s.tests[1].fn, 'function')
   })
 })
 
@@ -228,6 +306,15 @@ describe('it.todo', () => {
     )
     assert.equal(s.tests[0].todo, true)
     assert.equal(s.tests[0].name, 'todo test')
+  })
+
+  it('accepts a reason', () => {
+    let [s] = captureRegistration(() =>
+      describe('suite', () => {
+        it.todo('todo test', 'needs design')
+      }),
+    )
+    assert.equal(s.tests[0].todo, 'needs design')
   })
 
   it('can be called outside describe (registers on implicit root suite)', () => {
@@ -318,7 +405,7 @@ describe('lifecycle hooks', () => {
         beforeEach(fn)
       }),
     )
-    assert.equal(s.beforeEach, fn)
+    assert.equal(s.beforeEach[0].fn, fn)
   })
 
   it('afterEach registers on the current suite', () => {
@@ -328,7 +415,7 @@ describe('lifecycle hooks', () => {
         afterEach(fn)
       }),
     )
-    assert.equal(s.afterEach, fn)
+    assert.equal(s.afterEach[0].fn, fn)
   })
 
   it('beforeAll registers on the current suite', () => {
@@ -338,7 +425,7 @@ describe('lifecycle hooks', () => {
         beforeAll(fn)
       }),
     )
-    assert.equal(s.beforeAll, fn)
+    assert.equal(s.beforeAll[0].fn, fn)
   })
 
   it('afterAll registers on the current suite', () => {
@@ -348,7 +435,20 @@ describe('lifecycle hooks', () => {
         afterAll(fn)
       }),
     )
-    assert.equal(s.afterAll, fn)
+    assert.equal(s.afterAll[0].fn, fn)
+  })
+
+  it('registers timeout and signal options for hooks', () => {
+    let signal = new AbortController().signal
+    let fn = () => {}
+    let [s] = captureRegistration(() =>
+      describe('suite', () => {
+        beforeEach(fn, { timeout: 50, signal })
+      }),
+    )
+    assert.equal(s.beforeEach[0].fn, fn)
+    assert.equal(s.beforeEach[0].timeout, 50)
+    assert.equal(s.beforeEach[0].signal, signal)
   })
 
   it('beforeEach can be called outside describe (registers on root hooks)', () => {
@@ -358,7 +458,7 @@ describe('lifecycle hooks', () => {
         beforeEach(() => {})
         describe('suite', () => {})
       })
-      assert.equal(typeof s.beforeEach, 'function')
+      assert.equal(typeof s.beforeEach[0].fn, 'function')
     })
   })
 
@@ -368,7 +468,7 @@ describe('lifecycle hooks', () => {
         afterEach(() => {})
         describe('suite', () => {})
       })
-      assert.equal(typeof s.afterEach, 'function')
+      assert.equal(typeof s.afterEach[0].fn, 'function')
     })
   })
 
@@ -378,7 +478,7 @@ describe('lifecycle hooks', () => {
         beforeAll(() => {})
         describe('suite', () => {})
       })
-      assert.equal(typeof s.beforeAll, 'function')
+      assert.equal(typeof s.beforeAll[0].fn, 'function')
     })
   })
 
@@ -388,7 +488,7 @@ describe('lifecycle hooks', () => {
         afterAll(() => {})
         describe('suite', () => {})
       })
-      assert.equal(typeof s.afterAll, 'function')
+      assert.equal(typeof s.afterAll[0].fn, 'function')
     })
   })
 })

@@ -7,6 +7,8 @@ import { describe, it } from '@remix-run/test'
 import { createMultipartMessage } from '../../test/utils.ts'
 
 import {
+  MultipartParseError,
+  MultipartParser,
   MaxPartsExceededError,
   MaxTotalSizeExceededError,
   parseMultipart,
@@ -40,11 +42,29 @@ function createChunkedStream(body: Uint8Array, chunkSize: number): ReadableStrea
   })
 }
 
+describe('MultipartParser', () => {
+  it('accepts boundaries up to 70 characters', () => {
+    assert.doesNotThrow(() => new MultipartParser('b'.repeat(70)))
+  })
+
+  it('rejects boundaries longer than 70 characters', () => {
+    assert.throws(
+      () => new MultipartParser('b'.repeat(71)),
+      (error: unknown) => {
+        assert.ok(error instanceof MultipartParseError)
+        assert.equal(error.message, 'Multipart boundary exceeds maximum length of 70 characters')
+        return true
+      },
+    )
+  })
+})
+
 describe('parseMultipart', async () => {
   it('does not eagerly use Web Encoding globals while importing and parsing', async () => {
     let moduleUrl = new URL('./multipart.ts', import.meta.url).href
     let script = `
-      await import('@remix-run/headers')
+      await import('@remix-run/headers/content-disposition')
+      await import('@remix-run/headers/content-type')
 
       let TextEncoderConstructor = globalThis.TextEncoder
       let TextDecoderConstructor = globalThis.TextDecoder

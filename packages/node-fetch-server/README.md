@@ -8,7 +8,8 @@ Build Node.js servers with web-standard Fetch API primitives. `node-fetch-server
 - **Node.js HTTP Integration** - Works directly with `node:http`, `node:https`, and `node:http2`
 - **Streaming Support** - Response support with `ReadableStream`
 - **Custom Hostname** - Configuration for deployment flexibility
-- **Client Info** - Access to client connection info (IP address, port)
+- **Proxy Header Support** - Opt in to trusted `Forwarded`, `X-Forwarded-Host`, `X-Forwarded-Proto`, and `X-Forwarded-For` headers
+- **Client Info** - Access to client connection info (IP address, port, and trusted proxy address)
 - **TypeScript** - Full TypeScript support with type definitions
 
 ## Installation
@@ -124,8 +125,7 @@ async function handler(request: Request) {
 
 ### Custom Hostname Configuration
 
-Configure custom hostnames for deployment on VPS or custom environments. `node-fetch-server` uses
-the `host` option when constructing `request.url`.
+Configure custom hostnames for deployment on VPS or custom environments. `node-fetch-server` uses the `host` option when constructing `request.url`.
 
 ```ts
 import * as http from 'node:http'
@@ -147,9 +147,34 @@ let server = http.createServer(createRequestListener(handler, { host: hostname }
 server.listen(3000)
 ```
 
+### Trusted Proxy Headers
+
+If your app runs behind a trusted reverse proxy, Node.js sees the proxy connection instead of the original client connection. Enable `trustProxy` to use trusted proxy headers when constructing `request.url` and client information:
+
+- `Forwarded: proto` and `X-Forwarded-Proto` can provide the original request protocol.
+- `Forwarded: host` and `X-Forwarded-Host` can provide the original request host.
+- `Forwarded: for` and `X-Forwarded-For` can provide the original client address.
+
+Only enable this option when your server is reachable exclusively through a trusted proxy that overwrites these headers. Otherwise, clients can spoof the host, protocol, and client address.
+
+```ts
+import * as http from 'node:http'
+import { createRequestListener } from 'remix/node-fetch-server'
+
+let server = http.createServer(
+  createRequestListener(handler, {
+    trustProxy: true,
+  }),
+)
+
+server.listen(3000)
+```
+
+When `host` or `protocol` are set, those fixed options take precedence over trusted proxy headers.
+
 ### Accessing Client Information
 
-Get client connection details (IP address, port) for logging or security:
+Get client connection details (IP address, port) for logging or security. When `trustProxy` is enabled, `client.address` uses trusted `Forwarded` or `X-Forwarded-For` values when present:
 
 ```ts
 import { type FetchHandler } from 'remix/node-fetch-server'
@@ -309,9 +334,9 @@ pnpm run bench:update-readme
 
 <!-- benchmarks:start -->
 
-Last updated: 2026-04-29T17:19:30.407Z
+Last updated: 2026-07-23T20:29:32.942Z
 
-Environment: Darwin 25.3.0, Apple M1 Pro, Node.js v24.15.0
+Environment: Darwin 25.4.0, Apple M5 Pro, Node.js v24.18.0
 
 Command: `wrk -t12 -c400 -d30s`
 
@@ -321,9 +346,9 @@ Simple HTML response benchmarks without inspecting the incoming request.
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `node:http`               | `24.15.0` |     `47,110` |   `10.66ms` |     `9.66MB` |
-| `remix/node-fetch-server` |  `0.13.0` |     `43,317` |   `11.69ms` |     `8.80MB` |
-| `express`                 |   `5.2.1` |     `39,752` |   `13.69ms` |     `9.59MB` |
+| `node:http`               | `24.18.0` |     `66,594` |    `5.96ms` |    `13.65MB` |
+| `remix/node-fetch-server` |  `0.14.0` |     `61,587` |    `7.88ms` |    `12.51MB` |
+| `express`                 |   `5.2.1` |     `58,424` |    `8.42ms` |    `14.10MB` |
 
 ### Small Body
 
@@ -331,9 +356,9 @@ POST benchmarks that read and print the request method, headers, and a small bod
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `remix/node-fetch-server` |  `0.13.0` |     `25,430` |   `24.25ms` |     `5.17MB` |
-| `node:http`               | `24.15.0` |     `25,088` |   `23.89ms` |     `5.14MB` |
-| `express`                 |   `5.2.1` |     `22,845` |   `27.16ms` |     `5.51MB` |
+| `node:http`               | `24.18.0` |     `35,303` |   `15.60ms` |     `7.24MB` |
+| `express`                 |   `5.2.1` |     `32,614` |   `16.93ms` |     `7.87MB` |
+| `remix/node-fetch-server` |  `0.14.0` |     `29,521` |   `18.98ms` |     `6.00MB` |
 
 ### Large Body
 
@@ -341,9 +366,9 @@ POST benchmarks that read and print the request method, headers, and a 1 MB body
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `remix/node-fetch-server` |  `0.13.0` |      `1,086` |  `217.69ms` |   `225.87KB` |
-| `node:http`               | `24.15.0` |      `1,079` |  `198.67ms` |   `226.54KB` |
-| `express`                 |   `5.2.1` |      `1,022` |  `216.07ms` |   `252.51KB` |
+| `node:http`               | `24.18.0` |      `1,798` |  `206.65ms` |   `377.42KB` |
+| `remix/node-fetch-server` |  `0.14.0` |      `1,752` |  `167.69ms` |   `364.40KB` |
+| `express`                 |   `5.2.1` |      `1,731` |  `223.19ms` |   `427.67KB` |
 
 <!-- benchmarks:end -->
 

@@ -63,6 +63,11 @@ describe('expect.toEqual', () => {
     expectFails(() => expect({ a: 1 }).toEqual({ a: 2 }))
   })
 
+  it('uses strict deep equality for built-in objects', () => {
+    expect(new Date(1)).toEqual(new Date(1))
+    expectFails(() => expect(new Date(1)).toEqual(new Date(2)))
+  })
+
   it('fails when undefined-valued keys are missing', () => {
     expectFails(() => expect({ a: undefined }).toEqual({ b: undefined }))
   })

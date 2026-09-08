@@ -2,6 +2,25 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
+## v0.8.5
+
+### Patch Changes
+
+- Stop forwarding incoming `Accept-Encoding` headers to proxy targets, strip `Content-Encoding` and related `Content-Length` headers from proxied responses with a body, and strip `Transfer-Encoding` and related `Content-Length` headers from proxied responses.
+
+## v0.8.4
+
+### Patch Changes
+
+- Fix proxied requests so the incoming `Host` header is dropped instead of being forwarded to the proxy target (see #10769).
+
+## v0.8.3
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.1`](https://github.com/remix-run/remix/releases/tag/headers@0.21.1)
+
 ## v0.8.2
 
 ### Patch Changes

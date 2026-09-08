@@ -2,10 +2,7 @@ import { createRouter } from 'remix/router'
 import { logger } from 'remix/middleware/logger'
 import { staticFiles } from 'remix/middleware/static'
 
-import apiController from '../app/api/controller.ts'
-import examplesController from '../app/examples/controller.tsx'
-import explorerController from '../app/explorer/controller.tsx'
-import themeBuilderController from '../app/theme-builder-controller.tsx'
+import demosController from '../app/demo-runner/controller.tsx'
 import { routes } from './routes.ts'
 
 const middleware = []
@@ -25,7 +22,4 @@ middleware.push(
 
 export const router = createRouter({ middleware })
 
-router.map(routes.api, apiController)
-router.map(routes.examples, examplesController)
-router.map(routes.themeBuilder, themeBuilderController)
-router.map(routes.explorer, explorerController)
+router.map(routes.demos, demosController)

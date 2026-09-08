@@ -91,4 +91,38 @@ describe('startExternalAuth()', () => {
     assert.equal(typeof transaction.codeVerifier, 'string')
     assert.equal(transaction.returnTo, undefined)
   })
+
+  it('drops backslash returnTo values before persisting the transaction', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createMemorySessionStorage()
+    let provider = createGoogleAuthProvider({
+      clientId: 'google-client-id',
+      clientSecret: 'google-client-secret',
+      redirectUri: 'https://app.example.com/auth/google/callback',
+    })
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+
+    router.get('/login/google', (context) =>
+      startExternalAuth(provider, context, {
+        returnTo: context.url.searchParams.get('returnTo'),
+      }),
+    )
+    router.get('/inspect', ({ get }) => Response.json(get(Session).get('__auth')))
+
+    let response = await router.fetch(
+      'https://app.example.com/login/google?returnTo=%2F%5Cevil.example.com',
+    )
+    let inspectResponse = await router.fetch(
+      createRequest('https://app.example.com/inspect', response),
+    )
+    let transaction = await inspectResponse.json()
+
+    assert.equal(response.status, 302)
+    assert.equal(transaction.provider, 'google')
+    assert.equal(typeof transaction.state, 'string')
+    assert.equal(typeof transaction.codeVerifier, 'string')
+    assert.equal(transaction.returnTo, undefined)
+  })
 })

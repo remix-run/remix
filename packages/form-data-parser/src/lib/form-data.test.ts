@@ -31,6 +31,50 @@ describe('parseFormData', () => {
     assert.equal(formData.get('text'), 'Hello, World!')
   })
 
+  it('throws when urlencoded form data exceeds maxParts', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'field1=value1&field2=value2',
+    })
+
+    await assert.rejects(
+      async () => await parseFormData(request, { maxParts: 1 }),
+      MaxPartsExceededError,
+    )
+  })
+
+  it('throws when urlencoded form data exceeds maxTotalSize', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'field1=value1&field2=value2',
+    })
+
+    await assert.rejects(
+      async () => await parseFormData(request, { maxTotalSize: 1 }),
+      MaxTotalSizeExceededError,
+    )
+  })
+
+  it('preserves repeated urlencoded form fields', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'tag=red&tag=green&tag=blue',
+    })
+
+    let formData = await parseFormData(request)
+
+    assert.deepEqual(formData.getAll('tag'), ['red', 'green', 'blue'])
+  })
+
   it('parses a multipart/form-data request', async () => {
     let fileType = normalizeFileType('text/plain')
     let request = new Request('https://remix.run', {

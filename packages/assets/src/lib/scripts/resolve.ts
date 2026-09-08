@@ -17,7 +17,6 @@ import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ResolveModuleResult, TransformedModule } from './transform.ts'
 import type { EmittedModule } from './emit.ts'
-import { isBareImportSpecifier } from './specifiers.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -38,6 +37,8 @@ type ResolvedImport = {
   start: number
 }
 
+type ResolvedHmrAcceptedDependency = ResolvedImport
+
 type RelativeImportResolution = {
   candidatePaths: readonly string[]
   candidatePrefixes: readonly string[]
@@ -51,6 +52,9 @@ type TrackedResolution = RelativeImportResolution & {
 export type ResolvedModule = {
   deps: string[]
   fingerprint: string | null
+  hmr: Omit<TransformedModule['hmr'], 'acceptedDeps'> & {
+    acceptedDeps: ResolvedHmrAcceptedDependency[]
+  }
   identityPath: string
   imports: ResolvedImport[]
   trackedFiles: string[]
@@ -92,11 +96,6 @@ type NormalizedSpecifierResolution = {
   specifier: string
 }
 
-type SpecifierResolutionImporter = {
-  identityPath: string
-  resolvedPath: string
-}
-
 export async function resolveModule(
   record: ScriptRecord,
   transformed: TransformedModule,
@@ -111,10 +110,7 @@ export async function resolveModule(
       transformed.unresolvedImports.length > 0
         ? await batchResolveSpecifiers(
             getUniqueSpecifiers(transformed.unresolvedImports),
-            {
-              identityPath: transformed.identityPath,
-              resolvedPath: transformed.resolvedPath,
-            },
+            transformed.resolvedPath,
             args.resolverFactory,
           )
         : new Map<string, ResolvedSpec>()
@@ -125,6 +121,7 @@ export async function resolveModule(
   }
 
   let importsWithPaths: ResolvedImport[] = []
+  let acceptedDepsWithPaths: ResolvedHmrAcceptedDependency[] = []
   let deps = new Set<string>()
 
   for (let unresolved of transformed.unresolvedImports) {
@@ -140,7 +137,7 @@ export async function resolveModule(
       return failResolve(
         createAssetServerCompilationError(
           `Failed to resolve import "${displaySpecifier}" in ${transformed.resolvedPath}. ` +
-            `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
+            `Ensure it resolves to a file within a configured asset server mount, or mark it as external.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
           },
@@ -172,8 +169,8 @@ export async function resolveModule(
     if (!args.isAllowed(resolvedImport.identityPath)) {
       return failResolve(
         createAssetServerCompilationError(
-          `Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is not allowed by the asset server allow/deny configuration. ` +
-            `Add a matching allow rule for this file path, remove a conflicting deny rule for this file path, or mark this import as external.`,
+          `Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is not allowed by the asset server access configuration. ` +
+            `Add a matching allowFiles or allowPackages rule, remove a conflicting denyFiles rule, or mark this import as external.`,
           {
             code: 'IMPORT_NOT_ALLOWED',
           },
@@ -189,10 +186,10 @@ export async function resolveModule(
     if (!stableUrlPathname) {
       return failResolve(
         createAssetServerCompilationError(
-          `Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured fileMap entries. ` +
-            `Add a matching fileMap entry for this file path, or mark this import as external.`,
+          `Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured mounts. ` +
+            `Add a matching mount for this file path, or mark this import as external.`,
           {
-            code: 'IMPORT_OUTSIDE_FILE_MAP',
+            code: 'IMPORT_OUTSIDE_MOUNTS',
           },
         ),
         trackedFiles,
@@ -205,10 +202,8 @@ export async function resolveModule(
     deps.add(resolvedImport.identityPath)
 
     if (transformed.packageSpecifiers.includes(unresolved.specifier)) {
-      let packageJsonPath = resolvePackageJsonPath(
-        resolvedSpec.packageJsonPath,
-        resolvedImport.resolvedPath,
-      )
+      let packageJsonPath =
+        resolvedSpec.packageJsonPath ?? findNearestPackageJsonPath(resolvedImport.resolvedPath)
       if (packageJsonPath && !args.isWatchIgnored(packageJsonPath)) {
         trackedFiles.add(packageJsonPath)
       }
@@ -229,12 +224,124 @@ export async function resolveModule(
     })
   }
 
+  for (let unresolved of transformed.hmr.acceptedDeps) {
+    if (isBrowserExternalModuleUrl(unresolved.specifier)) continue
+
+    let displaySpecifier = getDisplayImportSpecifier(unresolved.specifier)
+    let trackedResolution = getTrackedRelativeImportResolution(
+      transformed.importerDir,
+      displaySpecifier,
+      args.isWatchIgnored,
+    )
+
+    let resolvedSpec = resolvedImports.get(unresolved.specifier)
+    if (!resolvedSpec?.absolutePath) {
+      try {
+        resolvedSpec = await batchResolveSpecifiers(
+          [unresolved.specifier],
+          transformed.resolvedPath,
+          args.resolverFactory,
+        ).then((resolved) => resolved.get(unresolved.specifier))
+      } catch (error) {
+        return failResolve(error, trackedFiles, trackedResolutions, transformed.resolvedPath, {
+          isWatchIgnored: args.isWatchIgnored,
+          trackedResolution,
+        })
+      }
+    }
+
+    if (!resolvedSpec?.absolutePath) {
+      return failResolve(
+        createAssetServerCompilationError(
+          `Failed to resolve accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}. ` +
+            `Ensure it resolves to a file within a configured asset server mount, or mark it as external.`,
+          {
+            code: 'IMPORT_RESOLUTION_FAILED',
+          },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
+      )
+    }
+
+    let resolvedImport = args.resolveModulePath(resolvedSpec.absolutePath)
+    if (!resolvedImport) {
+      return failResolve(
+        createAssetServerCompilationError(
+          `Accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedSpec.absolutePath}", is not a supported script file. ` +
+            `Supported extensions are ${supportedScriptExtensions.join(', ')}.`,
+          {
+            code: 'IMPORT_NOT_SUPPORTED',
+          },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
+      )
+    }
+
+    if (!args.isAllowed(resolvedImport.identityPath)) {
+      return failResolve(
+        createAssetServerCompilationError(
+          `Accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is not allowed by the asset server allow/deny configuration. ` +
+            `Add a matching allow rule for this file path, remove a conflicting deny rule for this file path, or mark this import as external.`,
+          {
+            code: 'IMPORT_NOT_ALLOWED',
+          },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
+      )
+    }
+
+    let stableUrlPathname = args.routes.toUrlPathname(resolvedImport.identityPath)
+    if (!stableUrlPathname) {
+      return failResolve(
+        createAssetServerCompilationError(
+          `Accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured mounts. ` +
+            `Add a matching mount for this file path, or mark this import as external.`,
+          {
+            code: 'IMPORT_OUTSIDE_MOUNTS',
+          },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
+      )
+    }
+
+    if (trackedResolution) {
+      trackedResolutions.push({
+        ...trackedResolution,
+        resolvedIdentityPath: resolvedImport.identityPath,
+      })
+    }
+
+    acceptedDepsWithPaths.push({
+      depPath: resolvedImport.identityPath,
+      end: unresolved.end,
+      quote: unresolved.quote,
+      start: unresolved.start,
+    })
+  }
+
   return {
     ok: true,
     tracking: toResolveTracking(trackedFiles, trackedResolutions),
     value: {
       deps: [...deps],
       fingerprint: transformed.fingerprint,
+      hmr: {
+        acceptedDeps: acceptedDepsWithPaths,
+        selfAccepting: transformed.hmr.selfAccepting,
+        usesImportMetaHot: transformed.hmr.usesImportMetaHot,
+      },
       identityPath: record.identityPath,
       imports: importsWithPaths,
       trackedFiles: [...trackedFiles],
@@ -243,25 +350,6 @@ export async function resolveModule(
       sourceMap: transformed.sourceMap,
       stableUrlPathname: transformed.stableUrlPathname,
     },
-  }
-}
-
-function resolvePackageJsonPath(
-  packageJsonPath: string | null,
-  resolvedPath: string,
-): string | null {
-  return (
-    (packageJsonPath ? resolveExistingPath(packageJsonPath) : null) ??
-    findNearestPackageJsonPath(resolvedPath)
-  )
-}
-
-function resolveExistingPath(filePath: string): string | null {
-  try {
-    return normalizeFilePath(fs.realpathSync(filePath))
-  } catch (error) {
-    if (isNoEntityError(error)) return null
-    throw error
   }
 }
 
@@ -278,17 +366,6 @@ function findNearestPackageJsonPath(filePath: string): string | null {
     if (parentDirectory === directory) return null
     directory = parentDirectory
   }
-}
-
-function isNoEntityError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }
 
 function isRelativeImportSpecifier(specifier: string): boolean {
@@ -367,7 +444,7 @@ function resolveCandidateBasePath(importerDir: string, specifier: string): strin
 
 async function batchResolveSpecifiers(
   specifiers: string[],
-  importer: SpecifierResolutionImporter,
+  importerPath: string,
   resolverFactory: ResolveArgs['resolverFactory'],
 ): Promise<Map<string, ResolvedSpec>> {
   let resolvedBySpecifier = new Map<string, ResolvedSpec>()
@@ -375,7 +452,7 @@ async function batchResolveSpecifiers(
 
   try {
     for (let specifier of specifiers) {
-      let normalizedResolution = normalizeSpecifierResolution(specifier, importer)
+      let normalizedResolution = normalizeSpecifierResolution(specifier, importerPath)
       let resolutionResult = await resolverFactory.resolveFileAsync(
         normalizedResolution.importerPath,
         normalizedResolution.specifier,
@@ -385,7 +462,7 @@ async function batchResolveSpecifiers(
           normalizedResolution.importerPath === getInjectedPackageImporterPath()
             ? `Failed to resolve injected import "${specifier}" from asset server.`
             : `Failed to resolve import "${normalizedResolution.specifier}" in ${normalizedResolution.importerPath}. ` +
-                `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
+                `Ensure it resolves to a file within a configured asset server mount, or mark it as external.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
           },
@@ -409,7 +486,7 @@ async function batchResolveSpecifiers(
     }
 
     throw createAssetServerCompilationError(
-      `Failed to resolve imports in ${importer.identityPath}. ${formatUnknownError(error)}`,
+      `Failed to resolve imports in ${importerPath}. ${formatUnknownError(error)}`,
       {
         cause: error,
         code: 'IMPORT_RESOLUTION_FAILED',
@@ -430,12 +507,12 @@ function formatUnknownError(error: unknown): string {
 
 function normalizeSpecifierResolution(
   specifier: string,
-  importer: SpecifierResolutionImporter,
+  importerPath: string,
 ): NormalizedSpecifierResolution {
   let authoredInjectedPackageSpecifier = restoreAuthoredInjectedPackageSpecifier(specifier)
   if (authoredInjectedPackageSpecifier) {
     return {
-      importerPath: getSpecifierImporterPath(authoredInjectedPackageSpecifier, importer),
+      importerPath,
       specifier: authoredInjectedPackageSpecifier,
     }
   }
@@ -448,20 +525,17 @@ function normalizeSpecifierResolution(
   }
 
   return {
-    importerPath: getSpecifierImporterPath(specifier, importer),
+    importerPath,
     specifier,
   }
 }
 
-function getSpecifierImporterPath(
-  specifier: string,
-  importer: SpecifierResolutionImporter,
-): string {
-  return isBareImportSpecifier(specifier) ? importer.resolvedPath : importer.identityPath
-}
-
 function getDisplayImportSpecifier(specifier: string): string {
   return restoreAuthoredInjectedPackageSpecifier(specifier) ?? specifier
+}
+
+function isBrowserExternalModuleUrl(url: string): boolean {
+  return url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')
 }
 
 function failResolve(

@@ -2,6 +2,155 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.24.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Route matching now uses delimiter-bounded params and a bounded state compiler (see #11651). Pathname params possessively capture through hyphens but stop at raw `/` or `.`, so UUIDs remain intact and `createHref()` percent-encodes dots in param values for round-tripping. Patterns such as `/:year-:month` must migrate to one inseparable param such as `/:date`, or place captures in separate delimiter-bounded segments.
+
+  Patterns may contain any number of separated wildcards and optional groups without eagerly expanding variants or using backtracking regular expressions. Adjacent wildcards, empty optionals, params followed by non-delimiter text, and ambiguous adjacent optional capture schemas now throw `ParseError`. Repeated capture names remain valid: the last participating capture wins in `params`, while `paramsMeta` retains every capture in source order.
+
+  Static pattern text is decoded during matching, while raw and percent-encoded `/` and `.` retain distinct structural meaning. Matchers also accept configurable pattern-size, matcher-size, and match-work limits through `MatcherOptions.limits`; exceeding a limit throws `MatcherResourceError` with structured details.
+
+- BREAKING CHANGE: `createHref(pattern, params, searchParams)` now accepts an options object as its third argument. Move existing search parameters to `createHref(pattern, params, { searchParams })`.
+
+  Matchers now accept relative URL strings when an absolute `baseURL` is provided to `match()` or `matchAll()`. `createHref()` accepts the same `baseURL` option and returns path-relative references for same-origin targets while leaving cross-origin targets absolute. The `searchParams` option accepts both typed plain objects and `URLSearchParams`; repeated `URLSearchParams` entries retain their order.
+
+## v0.23.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `RoutePattern` no longer exposes its parsed internals. Construct patterns with `RoutePattern.parse()`, and use `pattern.source`, `pattern.toString()`, or `pattern.toJSON()` instead of reading parsed internals such as `pattern.pathname.tokens`, `pattern.hostname`, or `pattern.search`.
+
+  Added `getRoutePatternCaptures(pattern)` for supported capture introspection. It returns readonly `{ part, type, name, optional }` entries in source order so consumers can inspect the variables (`:name`) and wildcards (`*name`) declared in a pattern without relying on internal parser tokens.
+
+  Exported `RoutePatternCapture` and `RoutePatternJSON` from `@remix-run/route-pattern`, `CreateHrefErrorDetails` from `@remix-run/route-pattern/href`, and `MatchParamMeta` from `@remix-run/route-pattern/match`.
+
+### Patch Changes
+
+- Fixed several route pattern matching and href generation edge cases: `ignoreCase` now applies consistently to pathname matching, key-only search constraints keep generated hrefs matchable, pathname params use `encodeURIComponent` segment encoding, hostname params reject URL-structural and control characters, optional joins no longer generate duplicate slashes, missing-param errors report every missing required param, optional variant duplicates are collapsed, port-only origins are rejected, and protocol/port constraints participate in specificity.
+
+- Fixed route pattern helper types so literal pattern types follow the same grammar as runtime parsing. Invalid literal patterns now evaluate to `never` in `CreateHrefArgs`, `MatchParams`, and `JoinPatterns`, while broad `string` patterns remain usable.
+
+## v0.22.1
+
+### Patch Changes
+
+- Fixed `createHref()` so optional route params set to `null` are omitted instead of serialized as `"null"`, and empty pathname variables throw instead of generating hrefs that cannot match their pattern.
+
+- Fixed route matching so malformed percent-encoded pathnames return no match instead of throwing a `URIError`.
+
+- Fixed route matching for full URL patterns that include explicit default ports such as `http://example.com:80/path` and `https://example.com:443/path` (see #11510).
+
+## v0.22.0
+
+### Minor Changes
+
+- Matchers now normalize percent-encoded pathname during matching
+
+  Pathname matching now uses the URL parser's normalized pathname, splits it into segments, and canonicalizes each segment as percent-encoded text before matching. This allows equivalent path text like `a` and `%61`, or `café` and `caf%C3%A9`, to match consistently:
+
+  ```ts
+  let matcher = createMatcher('/a')
+
+  matcher.match('https://example.com/%61')
+  // before: null
+  // after:  { params: {} }
+  ```
+
+  ```ts
+  let matcher = createMatcher('/café')
+
+  matcher.match('https://example.com/caf%C3%A9')
+  // before: null
+  // after:  { params: {} }
+  ```
+
+  Also keeps encoded path separators like `%2F` inside the segment where they appear instead of treating them as `/` separators during matching:
+
+  ```ts
+  let matcher = createMatcher('/files/:dir/:name')
+
+  matcher.match('https://example.com/files/docs/readme.md')
+  // before: { params: { dir: 'docs', name: 'readme.md' } }
+  // after:  { params: { dir: 'docs', name: 'readme.md' } }
+
+  matcher.match('https://example.com/files/docs%2Freadme.md')
+  // before: { params: { dir: 'docs', name: 'readme.md' } }
+  // after:  null
+  ```
+
+  Matched pathname params are still returned decoded.
+
+  ```ts
+  let matcher = createMatcher('/posts/:slug')
+  let href = createHref('/posts/:slug', { slug: 'hello/world?draft=true#preview' })
+
+  matcher.match(`https://example.com${href}`)
+  // before: null
+  // after:  { params: { slug: 'hello/world?draft=true#preview' } }
+  ```
+
+- `createHref` now encodes pathname params and validates hostname params
+
+  Pathname params now encode characters that would otherwise change URL structure when parsed. Variables encode `/`, `?`, `#`, `%`, and `\\`; wildcards preserve `/` as a path separator but encode the other structural characters.
+
+  ```ts
+  createHref('/posts/:slug', { slug: 'hello/world?draft=true#preview' })
+  // before: '/posts/hello/world?draft=true#preview'
+  // after:  '/posts/hello%2Fworld%3Fdraft=true%23preview'
+
+  createHref('/files/*path', { path: 'docs/@remix-run/ui?raw#v1' })
+  // before: '/files/docs/@remix-run/ui?raw#v1'
+  // after:  '/files/docs/@remix-run/ui%3Fraw%23v1'
+  ```
+
+  Hostname params are now validated so structural URL characters cannot change the URL authority when parsed. Hostname variables reject `.`, `@`, `:`, `/`, `?`, and `#`; hostname wildcards allow `.` to span labels but reject the other structural characters.
+
+  ```ts
+  createHref('://:tenant.example.com/path', { tenant: 'acme.dev' })
+  // before: 'https://acme%2Edev.example.com/path'
+  // after:  throws CreateHrefError
+
+  createHref('://*tenant.example.com/path', { tenant: 'preview.acme' })
+  // before: 'https://preview.acme.example.com/path'
+  // after:  'https://preview.acme.example.com/path'
+
+  createHref('://*tenant.example.com/path', { tenant: 'preview:acme' })
+  // before: 'https://preview%3Aacme.example.com/path'
+  // after:  throws CreateHrefError
+  ```
+
+### Patch Changes
+
+- Route pattern parsing now stores escaped static text without the escape marker
+
+  Escaped pattern characters in static text are now parsed into text tokens that contain the literal character without the leading `\\`. Serialization keeps emitting the escape marker so the pattern string still round-trips as escaped static text.
+
+  ```ts
+  let pattern = RoutePattern.parse('/docs/npm\\:@scope/package')
+
+  pattern.pathname.tokens
+  // before: [{ type: 'text', text: 'docs' }, { type: 'separator' }, { type: 'text', text: 'npm\\:' }, ...]
+  // after:  [{ type: 'text', text: 'docs' }, { type: 'separator' }, { type: 'text', text: 'npm:' }, ...]
+
+  pattern.toString()
+  // before: '/docs/npm\\:@scope/package'
+  // after:  '/docs/npm\\:@scope/package'
+  ```
+
+  ```ts
+  let pattern = RoutePattern.parse('/files/report-\\(final\\).pdf')
+
+  pattern.pathname.tokens
+  // before: text tokens included '\\(' and '\\)'
+  // after:  text tokens include '(' and ')'
+
+  pattern.toString()
+  // before: '/files/report-\\(final\\).pdf'
+  // after:  '/files/report-\\(final\\).pdf'
+  ```
+
 ## v0.21.1
 
 ### Patch Changes
@@ -28,25 +177,20 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - BREAKING CHANGE: New modular APIs and subpath exports
 
-  Previously, this package shipped the default export and a `/specificity` export.
-  A typical Remix app does not do any client-side matching but all the matching logic would ship to the browser anyway causing JS bloat.
+  Previously, this package shipped the default export and a `/specificity` export. A typical Remix app does not do any client-side matching but all the matching logic would ship to the browser anyway causing JS bloat.
 
-  Now, features are organized into separate subpath exports, so even without a bundler, only the code you need ends up in the browser.
-  For example, this reduced JS from `route-pattern` in `demos/bookstore` from 25kB (14.9kB compressed) to 8.8kb (7kB compressed) which amounts to ~65% reduction (~53% reduction compressed).
+  Now, features are organized into separate subpath exports, so even without a bundler, only the code you need ends up in the browser. For example, this reduced JS from `route-pattern` in `demos/bookstore` from 25kB (14.9kB compressed) to 8.8kb (7kB compressed) which amounts to ~65% reduction (~53% reduction compressed).
 
-  To achieve this, we've reworked our core APIs to be simpler and more independently useful.
-  So instead of a single `RoutePattern` class that does it all (`.href`, `.match`, ...), the new `RoutePattern` class is a thin layer around the parsed pattern that includes `RoutePattern.parse` static method for parsing and `.source`, `.toString()` and `.toJSON()` for serialization.
+  To achieve this, we've reworked our core APIs to be simpler and more independently useful. So instead of a single `RoutePattern` class that does it all (`.href`, `.match`, ...), the new `RoutePattern` class is a thin layer around the parsed pattern that includes `RoutePattern.parse` static method for parsing and `.source`, `.toString()` and `.toJSON()` for serialization.
 
   The rest of the functionality comes from dedicated subpath exports:
-
   - **remix/route-pattern/href** : Generate hrefs for patterns with type safe params.
   - **remix/route-pattern/match** : Match against one pattern with type inference for params. Or match against many patterns with deterministic ranking and attached data.
   - **remix/route-pattern/join** : Combine two patterns into one. Override protocol, hostname, port. Join pathnames. Merge search constraints.
 
   **remix/route-pattern/specificity** remains the same as before, providing utilities for ranking matches.
 
-  Additionally, `ArrayMatcher` and `TrieMatcher` have been replaced by `createMultiMatcher` (which is now always backed by trie-based matching).
-  To match against only a single pattern while receiving type safe `params` from the match, use `createMatcher`.
+  Additionally, `ArrayMatcher` and `TrieMatcher` have been replaced by `createMultiMatcher` (which is now always backed by trie-based matching). To match against only a single pattern while receiving type safe `params` from the match, use `createMatcher`.
 
   See the new README for details.
 
@@ -165,9 +309,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   new RoutePattern('?q=').search // ✅ 'q='
   ```
 
-  As a result, `RoutePattern`s can no longer represent a "key and any value" constraint.
-  In practice, this was a niche use-case so we chose correctness and consistency with `URLSearchParams`.
-  If the need for "key and any value" constraints arises, we can later introduce a separate syntax for that without the unintuitive shortcoming of `?q=`.
+  As a result, `RoutePattern`s can no longer represent a "key and any value" constraint. In practice, this was a niche use-case so we chose correctness and consistency with `URLSearchParams`. If the need for "key and any value" constraints arises, we can later introduce a separate syntax for that without the unintuitive shortcoming of `?q=`.
 
   With "key and any value" constraints removed, the `missing-search-param` error type thrown by `RoutePattern.href` was made obsolete and was removed.
 
@@ -269,9 +411,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - Faster type inference for `RoutePattern.href`, `RoutePattern.match`, and `Params`
 
-  Reduced type instantiations for parsing param types, resulting in
-  ~2-5x faster in relevant [type benchmarks](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench/types), but varies depending on your route patterns.
-  May fix `"Type instantiation is excessively deep and possibly infinite" (ts2589)` for some apps.
+  Reduced type instantiations for parsing param types, resulting in ~2-5x faster in relevant [type benchmarks](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench/types), but varies depending on your route patterns. May fix `"Type instantiation is excessively deep and possibly infinite" (ts2589)` for some apps.
 
 ## v0.19.0
 
@@ -282,7 +422,6 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   `RoutePattern.ignoreCase` field has been removed and `ignoreCase` now only applies to `pathname` (no longer applies to `search`)
 
   Case sensitivity is now determined only when matching.
-
   - `RoutePattern.match` now accept `ignoreCase` option
   - `Matcher` constructors now accept `ignoreCase` option
 
@@ -394,13 +533,9 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 ### Patch Changes
 
-- Previously, `href` was throwing an `HrefError` with `missing-params` type when a nameless wildcard was encountered outside of an optional.
-  But that was misleading since nameless optionals aren't something the user should be passing in values for.
-  Instead, `href` now throws an `HrefError` with the correct `nameless-wildcard` type for this case.
+- Previously, `href` was throwing an `HrefError` with `missing-params` type when a nameless wildcard was encountered outside of an optional. But that was misleading since nameless optionals aren't something the user should be passing in values for. Instead, `href` now throws an `HrefError` with the correct `nameless-wildcard` type for this case.
 
-  Error messages have also been improved for many of the `HrefError` types.
-  Notably, the variants shown in `missing-params` were confusing since they leaked internal formatting for params.
-  That has been removed and the resulting error message is now shorter and simpler.
+  Error messages have also been improved for many of the `HrefError` types. Notably, the variants shown in `missing-params` were confusing since they leaked internal formatting for params. That has been removed and the resulting error message is now shorter and simpler.
 
 - Previously, including extra params in `RoutePattern.href` resulted in a type error:
 
@@ -421,8 +556,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   //             ^ autocomplete suggests `id`
   ```
 
-- `ArrayMatcher.match` (optimized for small apps) got ~1.06x faster for our small app benchmark.
-  `TrieMatcher.match` (optimized for large apps) got ~1.17x faster across the board.
+- `ArrayMatcher.match` (optimized for small apps) got ~1.06x faster for our small app benchmark. `TrieMatcher.match` (optimized for large apps) got ~1.17x faster across the board.
 
 - Patterns with omitted port only match URLs with empty port `''`
 
@@ -430,9 +564,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - `paramsMeta` shows a nameless wildcard match for omitted hostname
 
-  An omitted hostname is already coerced to `*` (nameless wildcard) to represent "match any hostname" during matching.
-  Previously, `paramsMeta` did not distinguish between a fully static hostname and an omitted hostname as both had `hostname` set to `[]`.
-  Now, `paramsMeta` returns a nameless wildcard match for the entire hostname when the hostname is omitted.
+  An omitted hostname is already coerced to `*` (nameless wildcard) to represent "match any hostname" during matching. Previously, `paramsMeta` did not distinguish between a fully static hostname and an omitted hostname as both had `hostname` set to `[]`. Now, `paramsMeta` returns a nameless wildcard match for the entire hostname when the hostname is omitted.
 
   Example:
 
@@ -466,8 +598,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - BREAKING CHANGE: Remove `createHrefBuilder`, `type HrefBuilder`, `type HrefBuilderArg`
 
-  `createHrefBuilder` was the original design and implementation of href generation,
-  but with the new `RoutePattern.href` method it is now obsolete.
+  `createHrefBuilder` was the original design and implementation of href generation, but with the new `RoutePattern.href` method it is now obsolete.
 
   Use `HrefArgs` instead of `HrefBuilderArgs`:
 
@@ -586,7 +717,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   ```ts
   import * as Specificity from '@remix-run/route-pattern/specificity'
 
-  Specificity.lessThan(a, b) // `true` when `a` is more specific than `b`. `false` otherwise
+  Specificity.lessThan(a, b) // `true` when `a` is less specific than `b`. `false` otherwise
   Specificity.greaterThan(a, b)
   Specificity.equal(a, b)
 
@@ -634,8 +765,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - BREAKING CHANGE: Remove exports for `TrieMatcher` and `TrieMatcherOptions`
 
-  `TrieMatcher` prototype produces inconsistent matches based on ad hoc scoring.
-  That means that swapping `ArrayMatcher` for `TrieMatcher` could alter which route was picked as the best match for a given URL.
+  `TrieMatcher` prototype produces inconsistent matches based on ad hoc scoring. That means that swapping `ArrayMatcher` for `TrieMatcher` could alter which route was picked as the best match for a given URL.
 
   We'll restore the `TrieMatcher` export after it produces correct, consistent matches.
 
@@ -664,7 +794,6 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - Add `Matcher` and `MatchResult` interfaces. These are new public APIs for matching sets of patterns.
 - Add `RegExpMatcher` and `TrieMatcher` concrete implementations of the `Matcher` interface
-
   - `RegExpMatcher` is a simple array-based matcher that compiles route patterns to regular expressions.
   - `TrieMatcher` is a trie-based matcher optimized for large route sets and long-running server applications.
 
@@ -730,8 +859,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   href('/blog/:slug', { slug: 'my-post' }) // "/blog/my-post"
   ```
 
-- Add `pattern.join(input, options)`, which allows a pattern to be built relative
-  to another pattern
+- Add `pattern.join(input, options)`, which allows a pattern to be built relative to another pattern
 
   ```tsx
   import { RoutePattern } from '@remix-run/route-pattern'

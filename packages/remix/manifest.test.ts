@@ -5,6 +5,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as url from 'node:url'
 import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
+import { getRemixReadmeCopies } from '../../scripts/utils/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '..')
@@ -36,7 +37,12 @@ function exportSpecifier(packageName: string, exportPath: string): string {
   return exportPath === '.' ? packageName : `${packageName}/${exportPath.replace('./', '')}`
 }
 
+function packageRelativePath(filePath: string): string {
+  return path.relative(packagesDir, filePath).split(path.sep).join('/')
+}
+
 const referencedPackages = new Set([...specifierMap.keys()].map(packageNameFromSpecifier))
+const readmeCopies = getRemixReadmeCopies()
 
 // All @remix-run/* packages in the workspace (excluding remix itself).
 const allRemixRunPackages: string[] = fs
@@ -45,7 +51,8 @@ const allRemixRunPackages: string[] = fs
   .flatMap((d) => {
     let pkgJsonPath = path.join(packagesDir, d.name, 'package.json')
     if (!fs.existsSync(pkgJsonPath)) return []
-    let { name } = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'))
+    let { name, private: isPrivate } = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'))
+    if (isPrivate === true) return []
     return name?.startsWith('@remix-run/') ? [name as string] : []
   })
 
@@ -116,7 +123,7 @@ describe('manifest', () => {
     }
   })
 
-  it('every @remix-run/* workspace package is referenced in the manifest', () => {
+  it('every public @remix-run/* workspace package is referenced in the manifest', () => {
     for (let pkgName of allRemixRunPackages) {
       // @remix-run/cli is intentionally excluded from the manifest — it is handled
       // separately by the generate-remix script via the CLI_PACKAGE_NAME constant.
@@ -125,6 +132,20 @@ describe('manifest', () => {
         referencedPackages.has(pkgName),
         `Package "${pkgName}" is not referenced in manifest.json. ` +
           `Add a canonical remix/* entry mapping to "${pkgName}".`,
+      )
+    }
+  })
+
+  it('every remix package export references a generated source file', () => {
+    let packageJson: { exports: Record<string, string | { types: string }> } = JSON.parse(
+      fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'),
+    )
+
+    for (let [exportPath, exportConfig] of Object.entries(packageJson.exports)) {
+      let sourcePath = typeof exportConfig === 'string' ? exportConfig : exportConfig.types
+      assert.ok(
+        fs.existsSync(path.join(__dirname, sourcePath)),
+        `Package export "${exportPath}" references missing source file "${sourcePath}"`,
       )
     }
   })
@@ -142,5 +163,31 @@ describe('manifest', () => {
         `${path.relative(packagesDir, readmePath)} should use "# ${short}" as its H1`,
       )
     }
+  })
+
+  it('generates README mirrors for representative published remix docs', () => {
+    let sourceByMirrorPath = new Map(
+      readmeCopies.map((copy) => [
+        packageRelativePath(copy.remixReadmePath),
+        packageRelativePath(copy.sourceReadmePath),
+      ]),
+    )
+
+    assert.equal(sourceByMirrorPath.get('remix/src/assert/README.md'), 'assert/README.md')
+    assert.equal(
+      sourceByMirrorPath.get('remix/src/fetch-router/README.md'),
+      'fetch-router/README.md',
+    )
+    assert.equal(
+      sourceByMirrorPath.get('remix/src/ui/popover/README.md'),
+      'ui/src/popover/README.md',
+    )
+    assert.equal(sourceByMirrorPath.get('remix/src/ui/button/README.md'), 'ui/src/button/README.md')
+    assert.equal(sourceByMirrorPath.get('remix/src/cli/README.md'), 'cli/README.md')
+  })
+
+  it('generates one README mirror per remix source path', () => {
+    let mirrorPaths = readmeCopies.map((copy) => copy.remixReadmePath)
+    assert.equal(new Set(mirrorPaths).size, mirrorPaths.length)
   })
 })

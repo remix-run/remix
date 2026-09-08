@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import type { MigrationDescriptor } from './migrations.ts'
+import type { MigrationDescriptor, Seed } from './migrations.ts'
 import { parseMigrationDirectoryName } from './migrations/directory-name.ts'
 
 /**
@@ -79,6 +79,28 @@ export async function loadMigrations(directory: string): Promise<MigrationDescri
   }
 
   return migrations
+}
+
+/**
+ * Loads a SQL seed file on Node.js.
+ *
+ * The file may contain multiple SQL statements. Seeds that must be safe to
+ * run against an already-seeded database should use idempotent statements
+ * (for example, `insert or ignore` on SQLite).
+ *
+ * @param filename Absolute or relative path to a SQL seed file.
+ * @returns A seed function that executes the file's SQL script.
+ * @example
+ * ```ts
+ * import { loadSeed } from 'remix/data-table/migrations/node'
+ *
+ * let seed = await loadSeed('./app/data/seed.sql')
+ * await db.reset({ migrations, seed })
+ * ```
+ */
+export async function loadSeed(filename: string): Promise<Seed> {
+  let sql = await fs.readFile(filename, 'utf8')
+  return (db) => db.executeScript(sql)
 }
 
 function isNodeFileNotFoundError(error: unknown): boolean {

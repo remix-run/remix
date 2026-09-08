@@ -2,8 +2,7 @@
 
 ## What This Covers
 
-How to author your own reusable host-element behavior with `createMixin`. Read this when the task
-involves:
+How to author your own reusable host-element behavior with `createMixin`. Read this when the task involves:
 
 - Combining multiple low-level events or DOM hooks into one semantic mixin
 - Dispatching custom DOM events from a host node
@@ -14,9 +13,7 @@ For the built-in mixins most code should use, see `mixins-styling-events.md`.
 
 Use `createMixin` from `remix/ui` to author reusable host-element behavior.
 
-Most app code should use built-in core mixins (`on`, `css`, `ref`, `link`, `attrs`) and animation
-mixins from `remix/ui/animation`. Create custom mixins when combining multiple low-level events
-into one semantic event, or when the pattern is reused across components.
+Most app code should use built-in core mixins (`on`, `css`, `ref`, `link`, `attrs`) and animation mixins from `remix/ui/animation`. Create custom mixins when combining multiple low-level events into one semantic event, or when the pattern is reused across components.
 
 ## Core Semantics
 
@@ -24,8 +21,7 @@ into one semantic event, or when the pattern is reused across components.
 2. `insert` is the host-node availability point for imperative setup.
 3. `remove` is teardown for that same lifecycle.
 4. `queueTask` runs post-commit and receives `(node, signal)` for mixins.
-5. Mixin render functions should stay pure; side effects belong in `insert`, `remove`, or queued
-   work.
+5. Mixin render functions should stay pure; side effects belong in `insert`, `remove`, or queued work.
 
 ```tsx
 import { createMixin } from 'remix/ui'
@@ -71,8 +67,7 @@ let withFocus = createMixin<HTMLElement>((handle) => {
 
 ## Custom Event Mixins
 
-Create event mixins when you combine multiple low-level events into one semantic custom event that
-is reused across components.
+Create event mixins when you combine multiple low-level events into one semantic custom event that is reused across components.
 
 1. Namespace custom event names (`myapp:*`) to avoid collisions.
 2. Extend `Event` with the data consumers need.

@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
 
 import * as styles from './styles.ts'
 
@@ -9,15 +9,19 @@ interface AuthCardProps {
   footer?: RemixNode
 }
 
-export function AuthCard() {
-  return ({ title, subtitle, children, footer }: AuthCardProps) => (
-    <div mix={styles.card}>
-      <div mix={styles.cardHeader}>
-        <h1 mix={styles.heading}>{title}</h1>
-        {subtitle ? <p mix={styles.subtitle}>{subtitle}</p> : null}
+export function AuthCard(handle: Handle<AuthCardProps>) {
+  return () => {
+    let { title, subtitle, children, footer } = handle.props
+
+    return (
+      <div mix={styles.card}>
+        <div mix={styles.cardHeader}>
+          <h1 mix={styles.heading}>{title}</h1>
+          {subtitle ? <p mix={styles.subtitle}>{subtitle}</p> : null}
+        </div>
+        {children}
+        {footer}
       </div>
-      {children}
-      {footer}
-    </div>
-  )
+    )
+  }
 }

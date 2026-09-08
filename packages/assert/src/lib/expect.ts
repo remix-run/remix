@@ -1,4 +1,5 @@
 import { AssertionError } from './assert.ts'
+import { isDeepEqual as isDeepStrictEqual } from './deep-equal.ts'
 
 // Sentinel used by `expect.objectContaining(...)` so `toEqual` can recognize
 // an asymmetric (partial) match instead of a full deep equality check.
@@ -21,36 +22,26 @@ function hasOwn(value: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(value, key)
 }
 
-// Strict deep equality — uses === at primitive leaves (no type coercion).
-// `b` may be a partial matcher (from `expect.objectContaining`), in which case
-// only the keys it specifies are required to match.
-function isDeepEqual(a: any, b: any): boolean {
-  if (isPartialMatcher(b)) return matchesPartial(a, b.expected)
-  if (a === b) return true
-  if (a == null || b == null) return false
-  if (typeof a !== typeof b) return false
+function isPlainObject(value: unknown): value is object {
+  if (value === null || typeof value !== 'object') return false
 
-  if (typeof a === 'object') {
-    if (Array.isArray(a) !== Array.isArray(b)) return false
+  let prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
+}
 
-    let keysA = Object.keys(a)
-    let keysB = Object.keys(b)
-
-    if (keysA.length !== keysB.length) return false
-
-    return keysA.every((key) => hasOwn(b, key) && isDeepEqual(a[key], b[key]))
-  }
-
-  return false
+// Strict deep equality with support for `expect.objectContaining(...)`.
+function isDeepEqual(actual: unknown, expected: unknown): boolean {
+  if (isPartialMatcher(expected)) return matchesPartial(actual, expected.expected)
+  return isDeepStrictEqual(actual, expected)
 }
 
 // Recursive partial match: every key in `expected` must match in `actual`,
 // but `actual` is allowed to have additional keys. Used by both
 // `expect.objectContaining` and `toMatchObject`.
-function matchesPartial(actual: any, expected: any): boolean {
-  if (actual === expected) return true
+function matchesPartial(actual: unknown, expected: unknown): boolean {
+  if (Object.is(actual, expected)) return true
   if (actual == null || expected == null) return false
-  if (typeof expected !== 'object') return Object.is(actual, expected)
+  if (typeof expected !== 'object') return isDeepStrictEqual(actual, expected)
   if (typeof actual !== 'object') return false
 
   if (Array.isArray(expected)) {
@@ -59,8 +50,17 @@ function matchesPartial(actual: any, expected: any): boolean {
     return expected.every((value, index) => matchesPartial(actual[index], value))
   }
 
+  if (!isPlainObject(expected)) {
+    return isDeepStrictEqual(actual, expected)
+  }
+
   return Object.keys(expected).every(
-    (key) => hasOwn(actual, key) && matchesPartial(actual[key], expected[key]),
+    (key) =>
+      hasOwn(actual, key) &&
+      matchesPartial(
+        (actual as Record<string, unknown>)[key],
+        (expected as Record<string, unknown>)[key],
+      ),
   )
 }
 

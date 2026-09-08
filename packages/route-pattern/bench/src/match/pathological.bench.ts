@@ -21,8 +21,9 @@ function generatePatterns(): string[] {
     let depth = (i % 3) + 1
     let pattern = `/optional/${i}`
     for (let j = 0; j < depth; j++) {
-      pattern += `(/:opt${j})`
+      pattern += `(/:opt${j}`
     }
+    pattern += ')'.repeat(depth)
     patterns.push(pattern)
   }
 
@@ -43,10 +44,10 @@ function generatePatterns(): string[] {
   }
 
   patterns.push('/:a/:b/:c/:d/:e/:f/:g/:h/:i/:j')
-  patterns.push('/blog/:year-:month-:day/:slug')
-  patterns.push('/archive/:year/:month/:day/:hour-:minute')
+  patterns.push('/blog/:date/:slug')
+  patterns.push('/archive/:year/:month/:day/:time')
   patterns.push('/api(/v:major(.:minor(.:patch)))/resources/:id(.:format)')
-  patterns.push('/docs(/:lang)(/:version)(/:section)(/:page)')
+  patterns.push('/docs(/:lang(/:version(/:section(/:page))))')
   patterns.push('/*tenant/api/*version/resources/:id')
   patterns.push('://localhost:3000/dev')
   patterns.push('://localhost:8080/api')

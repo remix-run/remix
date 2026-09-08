@@ -7,7 +7,7 @@ import { type BuildRouteMap, createRoutes } from '../route-map.ts'
  */
 export type ResourceMethod = 'new' | 'show' | 'create' | 'edit' | 'update' | 'destroy'
 
-// prettier-ignore
+// oxfmt-ignore
 export const ResourceMethods = ['new', 'show', 'create', 'edit', 'update', 'destroy'] as const
 
 /**

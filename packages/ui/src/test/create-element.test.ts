@@ -22,6 +22,10 @@ describe('createElement', () => {
     expect(element.props.id).toBe('example')
   })
 
+  it('rejects values that cannot be rendered as children', () => {
+    expect(() => createElement('div', {}, { invalid: true })).toThrow('Invalid child node')
+  })
+
   it('normalizes mix to an array or undefined', () => {
     let passthrough = createMixin((_handle) => {})
     let descriptor = passthrough()

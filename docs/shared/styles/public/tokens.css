@@ -1,0 +1,216 @@
+:root {
+  --rmx-space-none: 0px;
+  --rmx-space-px: 1px;
+  --rmx-space-xs: 0.25rem;
+  --rmx-space-sm: 0.5rem;
+  --rmx-space-md: 0.75rem;
+  --rmx-space-lg: 1rem;
+  --rmx-space-xl: 1.5rem;
+  --rmx-space-xxl: 2rem;
+
+  --rmx-radius-none: 0px;
+  --rmx-radius-sm: 4px;
+  --rmx-radius-md: 8px;
+  --rmx-radius-lg: 10px;
+  --rmx-radius-xl: 0.75rem;
+  --rmx-radius-full: 9999px;
+
+  --rmx-font-family-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --rmx-font-family-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --rmx-font-size-xxxs: 0.625rem;
+  --rmx-font-size-xxs: 0.6875rem;
+  --rmx-font-size-xs: 0.8125rem;
+  --rmx-font-size-sm: 0.9375rem;
+  --rmx-font-size-md: 1rem;
+  --rmx-font-size-lg: 1.125rem;
+  --rmx-font-size-xl: 1.5rem;
+  --rmx-font-size-xxl: 1.75rem;
+  --rmx-font-size-page-title: 2.25rem;
+
+  --rmx-line-height-tight: 1.15;
+  --rmx-line-height-normal: 1.45;
+  --rmx-line-height-relaxed: 1.6;
+
+  --rmx-letter-spacing-tight: -0.02em;
+  --rmx-letter-spacing-normal: 0;
+  --rmx-letter-spacing-meta: 0.06em;
+  --rmx-letter-spacing-wide: 0.08em;
+
+  --rmx-font-weight-normal: 400;
+  --rmx-font-weight-medium: 500;
+  --rmx-font-weight-semibold: 600;
+  --rmx-font-weight-bold: 700;
+
+  --rmx-control-height-sm: 28px;
+  --rmx-control-height-md: 32px;
+  --rmx-control-height-lg: 36px;
+
+  --rmx-surface-lvl0: #fff;
+  --rmx-surface-lvl1: #fff;
+  --rmx-surface-lvl2: #f7f7f8;
+  --rmx-surface-lvl3: #f7f7f8;
+  --rmx-surface-lvl4: #eef0f3;
+
+  --rmx-shadow-xs: 0 1px 1px rgb(0 0 0 / 5%);
+  --rmx-shadow-sm: 0 1px 2px rgb(0 0 0 / 7%);
+  --rmx-shadow-md: 0 6px 18px rgb(0 0 0 / 8%);
+  --rmx-shadow-lg: 0 16px 34px rgb(0 0 0 / 10%);
+  --rmx-shadow-xl: 0 24px 52px rgb(0 0 0 / 14%);
+
+  --rmx-color-text-primary: #1b1b1f;
+  --rmx-color-text-secondary: #6b7280;
+  --rmx-color-text-muted: #9ca3af;
+  --rmx-color-text-link: #0578be;
+  --rmx-color-text-link-hover: #022f4b;
+
+  --rmx-color-border-subtle: #e5e7eb;
+  --rmx-color-border-default: #d1d5db;
+  --rmx-color-border-strong: #9ca3af;
+
+  --rmx-color-focus-ring: #0578be;
+  --rmx-color-accent: #0578be;
+  --rmx-color-accent-hover: #022f4b;
+  --rmx-color-eyebrow: #eb2358;
+  --rmx-color-code-highlight: rgb(34 197 94 / 18%);
+
+  --rmx-color-action-primary-background: #1b1b1f;
+  --rmx-color-action-primary-background-hover: #3d3d41;
+  --rmx-color-action-primary-background-active: #2d2d31;
+  --rmx-color-action-primary-foreground: #fff;
+  --rmx-color-action-primary-border: #1b1b1f;
+
+  --rmx-color-action-secondary-background: #fff;
+  --rmx-color-action-secondary-background-hover: #f7f7f8;
+  --rmx-color-action-secondary-background-active: #eef0f3;
+  --rmx-color-action-secondary-foreground: #1b1b1f;
+  --rmx-color-action-secondary-border: #e5e7eb;
+
+  --rmx-color-action-danger-background: #dc2626;
+  --rmx-color-action-danger-background-hover: #b91c1c;
+  --rmx-color-action-danger-background-active: #991b1b;
+  --rmx-color-action-danger-foreground: #fff;
+  --rmx-color-action-danger-border: #dc2626;
+
+  --rmx-layout-max-width: 64rem;
+  --rmx-content-max-width: 48rem;
+  --rmx-page-gutter: calc(var(--rmx-space-xl) + var(--rmx-space-sm));
+
+  --site-header-height: 64px;
+  --docs-shell-background: #f3f5f7;
+  --docs-footer-foreground: #69707b;
+  --docs-footer-link-foreground: #858c98;
+  --docs-chapter-card-background: #f7f7f8;
+  --docs-chapter-card-hover-background: color-mix(
+    in srgb,
+    var(--docs-chapter-card-background) 95%,
+    #000
+  );
+  --docs-nav-duration: 300ms;
+  --docs-nav-easing: ease-in-out;
+  --docs-nav-link: #0074c0;
+  --docs-nav-link-hover: #00304a;
+  --docs-nav-hover-background: rgb(0 0 0 / 5%);
+  --docs-nav-selected-background: rgb(0 0 0 / 10%);
+  --docs-nav-control-border: rgb(0 0 0 / 10%);
+  --docs-sidebar-offset: 288px;
+  --docs-sidebar-inline-start: 24px;
+  --docs-sidebar-content-width: 240px;
+  --docs-collapsed-offset: 24px;
+  --docs-collapsed-content-padding: 220px;
+  --docs-main-padding: 52px;
+  --docs-content-max-width: 1044px;
+
+  --pf-font: var(--rmx-font-family-sans);
+  --pf-input-height: var(--rmx-control-height-md);
+  --pf-input-font-size: var(--rmx-font-size-md);
+  --pf-summary-font-size: var(--rmx-font-size-xxs);
+  --pf-result-title-font-size: var(--rmx-font-size-sm);
+  --pf-result-excerpt-font-size: var(--rmx-font-size-xs);
+  --pf-results-gap: var(--rmx-space-xs);
+  --pf-border-radius: var(--rmx-radius-md);
+  --pf-modal-max-width: 40rem;
+  --pf-modal-max-height: min(calc(100dvh - 6rem), 50rem);
+  --pf-modal-top: calc(var(--site-header-height) + var(--rmx-space-sm));
+  --pf-text: var(--rmx-color-text-primary);
+  --pf-text-secondary: var(--rmx-color-text-secondary);
+  --pf-text-muted: var(--rmx-color-text-muted);
+  --pf-background: var(--rmx-surface-lvl1);
+  --pf-border: var(--rmx-color-border-subtle);
+  --pf-border-focus: var(--rmx-color-border-strong);
+  --pf-skeleton: var(--rmx-surface-lvl3);
+  --pf-skeleton-shine: var(--rmx-surface-lvl4);
+  --pf-hover: var(--rmx-surface-lvl2);
+  --pf-mark: var(--docs-nav-link-hover);
+  --pf-scroll-shadow: light-dark(rgb(0 0 0 / 8%), rgb(255 255 255 / 10%));
+  --pf-shadow-sm: var(--rmx-shadow-sm);
+  --pf-shadow-md: var(--rmx-shadow-md);
+  --pf-shadow-lg: var(--rmx-shadow-lg);
+  --pf-error-bg: light-dark(#fef2f2, #2a1a1a);
+  --pf-error-border: light-dark(#fecaca, #5c2828);
+  --pf-error-text: light-dark(#dc2626, #f87171);
+  --pf-error-text-secondary: light-dark(#b91c1c, #ef4444);
+  --pf-outline-focus: var(--rmx-color-focus-ring);
+  --pf-outline-width: 1px;
+  --pf-modal-backdrop: light-dark(rgb(0 0 0 / 50%), rgb(0 0 0 / 72%));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rmx-surface-lvl0: #0d0d10;
+    --rmx-surface-lvl1: #16161a;
+    --rmx-surface-lvl2: #16161a;
+    --rmx-surface-lvl3: #16161a;
+    --rmx-surface-lvl4: #2a2a30;
+
+    --rmx-color-text-primary: #e7e7ea;
+    --rmx-color-text-secondary: #9aa0aa;
+    --rmx-color-text-muted: #6b7280;
+    --rmx-color-text-link: #2dacf9;
+    --rmx-color-text-link-hover: #63c2fb;
+
+    --rmx-color-focus-ring: #2dacf9;
+    --rmx-color-accent: #2dacf9;
+    --rmx-color-accent-hover: #63c2fb;
+    --rmx-color-eyebrow: #ff5d7a;
+
+    --rmx-color-border-subtle: #2a2a30;
+    --rmx-color-border-default: #3f3f46;
+    --rmx-color-border-strong: #52525b;
+    --rmx-color-code-highlight: rgb(34 197 94 / 22%);
+
+    --rmx-color-action-primary-background: #e7e7ea;
+    --rmx-color-action-primary-background-hover: #cbcbce;
+    --rmx-color-action-primary-background-active: #b9b9bb;
+    --rmx-color-action-primary-foreground: #0d0d10;
+    --rmx-color-action-primary-border: #e7e7ea;
+
+    --rmx-color-action-secondary-background: #16161a;
+    --rmx-color-action-secondary-background-hover: #202026;
+    --rmx-color-action-secondary-background-active: #2a2a30;
+    --rmx-color-action-secondary-foreground: #e7e7ea;
+    --rmx-color-action-secondary-border: #2a2a30;
+
+    --rmx-color-action-danger-background: #f87171;
+    --rmx-color-action-danger-background-hover: #ef4444;
+    --rmx-color-action-danger-background-active: #dc2626;
+    --rmx-color-action-danger-foreground: #0d0d10;
+    --rmx-color-action-danger-border: #f87171;
+
+    --docs-shell-background: #0d0d10;
+    --docs-footer-foreground: #9aa0aa;
+    --docs-footer-link-foreground: #9aa0aa;
+    --docs-chapter-card-background: var(--rmx-surface-lvl2);
+    --docs-chapter-card-hover-background: color-mix(
+      in srgb,
+      var(--docs-chapter-card-background) 95%,
+      #fff
+    );
+    --docs-nav-link: #2dacf9;
+    --docs-nav-link-hover: var(--rmx-color-text-link-hover);
+    --docs-nav-hover-background: var(--rmx-surface-lvl4);
+    --docs-nav-selected-background: var(--rmx-surface-lvl4);
+    --docs-nav-control-border: var(--rmx-color-border-default);
+  }
+}

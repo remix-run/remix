@@ -2,6 +2,7 @@ import { createController } from 'remix/router'
 import { css } from 'remix/ui'
 import { redirect } from 'remix/response/redirect'
 
+import { getAssetEntry } from '../../../middleware/asset-entry.ts'
 import { routes } from '../../../routes.ts'
 import { authCookie } from '../../../middleware/auth.ts'
 
@@ -12,13 +13,18 @@ export default createController(routes.auth.login, {
         return redirect(routes.main.index.href())
       }
 
+      let { scriptSrc, scriptPreloads } = getAssetEntry()
+
       return render(
         <html lang="en">
           <head>
             <meta charSet="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
             <title>Sign in | LMS</title>
-            <script async type="module" src="/assets/entry.js" />
+            {scriptPreloads.map((href) => (
+              <link key={href} rel="modulepreload" href={href} />
+            ))}
+            <script async type="module" src={scriptSrc} />
           </head>
           <body mix={loginBodyStyle}>
             <main mix={loginShellStyle}>

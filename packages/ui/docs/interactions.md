@@ -1,10 +1,8 @@
 # Event Mixins
 
-Build reusable event behavior with mixins that compose normal DOM events into semantic custom
-events.
+Build reusable event behavior with mixins that compose normal DOM events into semantic custom events.
 
-> **Note:** Most app code should stick with `on('click', ...)` and other native events. Reach for
-> custom event mixins when the behavior is complex and reused in multiple places.
+> **Note:** Most app code should stick with `on('click', ...)` and other native events. Reach for custom event mixins when the behavior is complex and reused in multiple places.
 
 ## When to Create an Event Mixin
 

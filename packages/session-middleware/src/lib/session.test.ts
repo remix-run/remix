@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createCookie } from '@remix-run/cookie'
-import { SetCookie } from '@remix-run/headers'
+import { SetCookie } from '@remix-run/headers/set-cookie'
 import { createSession, Session } from '@remix-run/session'
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { createRouter } from '@remix-run/fetch-router'
@@ -23,6 +23,47 @@ function createRequest(fromResponse?: Response): Request {
 }
 
 describe('session middleware', () => {
+  it('defaults session cookies to HTTP-only', async () => {
+    let cookie = createCookie('__sess', { secrets: ['secret1'] })
+    let storage = createCookieSessionStorage()
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+
+    router.map('/', ({ session }) => {
+      session.set('userId', '123')
+      return new Response('ok')
+    })
+
+    let response = await router.fetch('https://remix.run')
+    let setCookie = new SetCookie(response.headers.getSetCookie()[0])
+
+    assert.equal(setCookie.httpOnly, true)
+  })
+
+  it('respects and warns about explicitly disabling HTTP-only', async (t) => {
+    let consoleWarn = t.mock.method(console, 'warn', () => {})
+    let cookie = createCookie('__sess', { secrets: ['secret1'], httpOnly: false })
+    let storage = createCookieSessionStorage()
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+
+    router.map('/', ({ session }) => {
+      session.set('userId', '123')
+      return new Response('ok')
+    })
+
+    let response = await router.fetch('https://remix.run')
+    let setCookie = new SetCookie(response.headers.getSetCookie()[0])
+
+    assert.equal(setCookie.httpOnly, undefined)
+    assert.equal(consoleWarn.mock.calls.length, 1)
+    assert.deepEqual(consoleWarn.mock.calls[0].arguments, [
+      'Session cookie "__sess" is configured with httpOnly: false and may be accessible to client-side JavaScript.',
+    ])
+  })
+
   it('persists session data across requests', async () => {
     let cookie = createCookie('__sess', { secrets: ['secret1'] })
     let storage = createCookieSessionStorage()
@@ -56,7 +97,7 @@ describe('session middleware', () => {
 
     router.map('/', ({ session }) => {
       session.set('count', Number(session.get('count') ?? 0) + 1)
-      return fetch('http://example.com')
+      return fetch('data:text/plain,ok')
     })
 
     let response = await router.fetch('https://remix.run')

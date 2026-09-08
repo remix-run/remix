@@ -3,8 +3,8 @@ import { describe, it } from '@remix-run/test'
 import dedent from 'dedent'
 
 import { ParseError, parsePart, parsePattern } from './parse.ts'
-import { RoutePattern } from '../route-pattern.ts'
-import type { PartPattern } from '../route-pattern.ts'
+import { createRoutePattern, RoutePattern } from '../route-pattern.ts'
+import type { RoutePatternParts, PartPattern } from '../route-pattern.ts'
 
 describe('ParseError', () => {
   it('exposes type, source, and index properties', () => {
@@ -245,7 +245,7 @@ describe('RoutePattern', () => {
   })
 
   it('derives source from parsed parts', () => {
-    let pattern = new RoutePattern({
+    let pattern = createRoutePattern({
       protocol: null,
       hostname: null,
       port: null,
@@ -256,13 +256,66 @@ describe('RoutePattern', () => {
     assert.equal(pattern.source, '/posts/:id')
     assert.equal(pattern.toString(), '/posts/:id')
   })
+
+  it('accepts repeated capture names', () => {
+    assert.doesNotThrow(() => RoutePattern.parse('://:id.example.com/:id/:id'))
+  })
+
+  it('rejects adjacent wildcards', () => {
+    assert.throws(
+      () => RoutePattern.parse('/*left*right'),
+      new ParseError('adjacent wildcards', '/*left*right', 6),
+    )
+  })
+
+  it('rejects wildcards that become adjacent when an optional is omitted', () => {
+    assert.throws(
+      () => RoutePattern.parse('/*left(/middle)*right'),
+      new ParseError('adjacent wildcards', '/*left(/middle)*right', 15),
+    )
+  })
+
+  it('rejects params followed by non-delimiter text', () => {
+    assert.throws(
+      () => RoutePattern.parse('/:year-:month'),
+      new ParseError('invalid param delimiter', '/:year-:month', 6),
+    )
+  })
+
+  it('rejects params followed by non-delimiter text after an optional', () => {
+    assert.throws(
+      () => RoutePattern.parse('/:id(/details)-suffix'),
+      new ParseError('invalid param delimiter', '/:id(/details)-suffix', 14),
+    )
+  })
+
+  it('rejects params followed by non-delimiter text after a nested optional', () => {
+    assert.throws(
+      () => parsePattern('/:id((/details)-suffix)'),
+      new ParseError('invalid param delimiter', '/:id((/details)-suffix)', 15),
+    )
+  })
+
+  it('rejects empty optional groups', () => {
+    assert.throws(
+      () => RoutePattern.parse('/users()'),
+      new ParseError('empty optional', '/users()', 6),
+    )
+  })
+
+  it('rejects optional branches with ambiguous capture schemas', () => {
+    assert.throws(
+      () => RoutePattern.parse('/users(/:id)(/:slug)'),
+      new ParseError('ambiguous optional captures', '/users(/:id)(/:slug)', 12),
+    )
+  })
 })
 
 describe('parsePattern', () => {
   function assertParse(
     source: string,
     expected: {
-      protocol?: RoutePattern['protocol']
+      protocol?: RoutePatternParts['protocol']
       hostname?: string
       port?: string
       pathname?: string
@@ -277,28 +330,19 @@ describe('parsePattern', () => {
         expectedSearch.set(name, value.length === 0 ? new Set() : new Set(value))
       }
     }
-    assert.deepEqual(
-      {
-        protocol: pattern.protocol,
-        hostname: pattern.hostname,
-        port: pattern.port,
-        pathname: pattern.pathname,
-        search: pattern.search,
-      },
-      {
-        protocol: expected.protocol ?? null,
-        hostname: expected.hostname ? parsePart(expected.hostname, { type: 'hostname' }) : null,
-        port: expected.port ?? null,
-        pathname: parsePart(expected.pathname ?? '', { type: 'pathname' }),
-        search: expectedSearch,
-      },
-    )
+    assert.deepEqual(pattern._parts, {
+      protocol: expected.protocol ?? null,
+      hostname: expected.hostname ? parsePart(expected.hostname, { type: 'hostname' }) : null,
+      port: expected.port ?? null,
+      pathname: parsePart(expected.pathname ?? '', { type: 'pathname' }),
+      search: expectedSearch,
+    })
   }
 
   it('parses protocol', () => {
-    assert.equal(parsePattern('http://').protocol, 'http')
-    assert.equal(parsePattern('https://').protocol, 'https')
-    assert.equal(parsePattern('http(s)://').protocol, 'http(s)')
+    assert.equal(parsePattern('http://')._parts.protocol, 'http')
+    assert.equal(parsePattern('https://')._parts.protocol, 'https')
+    assert.equal(parsePattern('http(s)://')._parts.protocol, 'http(s)')
   })
 
   it('parses hostname', () => {
@@ -404,6 +448,17 @@ describe('parsePattern', () => {
     assert.throws(() => parsePattern('http(s)x://example.com'), {
       name: 'ParseError',
       type: 'invalid protocol',
+    })
+  })
+
+  it('throws on port without hostname', () => {
+    assert.throws(() => parsePattern('://:8080/users'), {
+      name: 'ParseError',
+      type: 'missing hostname',
+    })
+    assert.throws(() => parsePattern('http://:80/users'), {
+      name: 'ParseError',
+      type: 'missing hostname',
     })
   })
 

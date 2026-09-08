@@ -11,7 +11,7 @@ export async function applyDoctorFixPlans(
   let appliedFixes: DoctorAppliedFix[] = []
 
   for (let fixPlan of dedupeDoctorFixPlans(fixPlans)) {
-    let absolutePath = resolveDoctorFixPath(appRoot, fixPlan.path)
+    let absolutePath = await resolveDoctorFixPath(appRoot, fixPlan.path)
 
     if (fixPlan.kind === 'create-directory') {
       await fs.mkdir(absolutePath, { recursive: true })
@@ -30,8 +30,7 @@ export async function applyDoctorFixPlans(
     try {
       await fs.writeFile(absolutePath, fixPlan.contents ?? '', { encoding: 'utf8', flag: 'wx' })
     } catch (error) {
-      let nodeError = error as NodeJS.ErrnoException
-      if (nodeError.code !== 'EEXIST') {
+      if (!isErrorWithCode(error, 'EEXIST')) {
         throw error
       }
 
@@ -71,14 +70,64 @@ function toAppliedDoctorFix(fixPlan: DoctorFixPlan): DoctorAppliedFix {
   }
 }
 
-function resolveDoctorFixPath(appRoot: string, fixPath: string): string {
+async function resolveDoctorFixPath(appRoot: string, fixPath: string): Promise<string> {
+  let absolutePath: string
+
   try {
-    return resolveContainedPath(appRoot, fixPath)
+    absolutePath = resolveContainedPath(appRoot, fixPath)
   } catch (error) {
     if (error instanceof Error && error.message.includes('escapes the allowed root')) {
-      throw new Error(`Doctor fix path resolves outside the app root: ${fixPath}`)
+      throwDoctorFixPathOutsideRoot(fixPath)
     }
 
     throw error
   }
+
+  let rootPath = path.resolve(appRoot)
+  let rootRealPath = await fs.realpath(rootPath)
+  let relativePath = path.relative(rootPath, absolutePath)
+  let pathParts = relativePath === '' ? [] : relativePath.split(path.sep)
+  let currentPath = rootPath
+  let currentRealPath = rootRealPath
+
+  for (let [index, pathPart] of pathParts.entries()) {
+    currentPath = path.join(currentPath, pathPart)
+
+    let stats = await lstatIfExists(currentPath)
+    if (stats == null) {
+      return path.join(currentRealPath, ...pathParts.slice(index))
+    }
+
+    currentRealPath = await fs.realpath(currentPath)
+    if (!isPathInsideRoot(rootRealPath, currentRealPath)) {
+      throwDoctorFixPathOutsideRoot(fixPath)
+    }
+  }
+
+  return currentRealPath
+}
+
+async function lstatIfExists(filePath: string) {
+  try {
+    return await fs.lstat(filePath)
+  } catch (error) {
+    if (isErrorWithCode(error, 'ENOENT')) {
+      return null
+    }
+
+    throw error
+  }
+}
+
+function isPathInsideRoot(rootPath: string, filePath: string): boolean {
+  let relativePath = path.relative(rootPath, filePath)
+  return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))
+}
+
+function isErrorWithCode(error: unknown, code: string): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === code
+}
+
+function throwDoctorFixPathOutsideRoot(fixPath: string): never {
+  throw new Error(`Doctor fix path resolves outside the app root: ${fixPath}`)
 }

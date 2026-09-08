@@ -2,38 +2,38 @@
   "name": "remix-the-web",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@10.34.2",
   "dependencies": {
     "@oxlint/plugins": "^1.57.0",
-    "@typescript/native-preview": "catalog:",
     "oxc-parser": "^0.121.0",
+    "oxfmt": "catalog:",
     "oxlint": "^1.57.0",
     "oxlint-tsgolint": "^0.17.4",
-    "prettier": "^3.3.3",
-    "typescript": "catalog:",
-    "typescript-language-server": "catalog:"
+    "remix": "workspace:^",
+    "typescript": "catalog:"
   },
   "engines": {
     "node": ">=24.3.0"
   },
   "scripts": {
-    "postinstall": "test -n \"${CI:-}\" || pnpm --filter @remix-run/ui exec playwright install",
+    "postinstall": "node ./scripts/postinstall.ts",
     "build": "pnpm -r build",
     "changes:preview": "node ./scripts/changes-preview.ts",
     "changes:validate": "node ./scripts/changes-validate.ts",
     "changes:version": "node ./scripts/changes-version.ts",
     "clean": "git clean -fdX -e '!/.env' .",
     "codegen": "pnpm -r run codegen",
-    "docs": "cd docs && pnpm run docs",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "oxfmt . --write",
+    "format:check": "oxfmt . --check",
     "generate-remix": "node ./scripts/generate-remix.ts",
-    "lint": "oxlint . -A all --quiet",
-    "lint:fix": "oxlint . -A all --fix --quiet",
+    "lint": "oxlint . --max-warnings=0",
+    "lint:fix": "oxlint . --fix --max-warnings=0",
     "pr-preview": "node ./scripts/pr-preview.ts",
     "setup-installable-branch": "node ./scripts/setup-installable-branch.ts",
+    "sync-remix-package-files": "node ./scripts/sync-remix-package-files.ts",
+    "validate-remix-package": "node ./scripts/validate-remix-package.ts",
     "validate-package-meta": "node ./scripts/validate-package-meta.ts",
-    "test": "pnpm --parallel run test",
+    "test": "pnpm --recursive --workspace-concurrency=4 --stream run test",
     "test:bun": "pnpm --parallel --if-present run test:bun",
     "test:changed": "node ./scripts/run-changed-workspaces.ts test",
     "typecheck": "pnpm -r typecheck",
@@ -41,13 +41,5 @@
   },
   "workspaces": [
     "packages/*"
-  ],
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@swc/core",
-      "esbuild",
-      "sharp",
-      "workerd"
-    ]
-  }
+  ]
 }

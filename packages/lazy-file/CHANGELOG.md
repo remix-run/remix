@@ -2,6 +2,19 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
+## v5.0.6
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`mime@0.4.2`](https://github.com/remix-run/remix/releases/tag/mime@0.4.2)
+
+## v5.0.5
+
+### Patch Changes
+
+- Fix `LazyBlob.slice()` and `LazyFile.slice()` so slicing an existing slice is calculated relative to the current slice instead of the original source content.
+
 ## v5.0.4
 
 ### Patch Changes
@@ -37,7 +50,6 @@ This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/
   Some runtimes (like Bun) bypass the JavaScript layer when accessing `File`/`Blob` internals, leading to issues with missing content due to the lazy loading behavior. `LazyFile` and `LazyBlob` now implement the same interface as their native counterparts but are standalone classes.
 
   As a result:
-
   - `lazyFile instanceof File` now returns `false`
   - You cannot pass `LazyFile`/`LazyBlob` directly to `new Response(file)` or `formData.append('file', file)`
   - Passing a `LazyFile`/`LazyBlob` directly to `Response` will throw an error with guidance on correct usage
@@ -56,7 +68,6 @@ This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/
   ```
 
   **New methods added:**
-
   - `LazyFile.toFile()`
   - `LazyFile.toBlob()`
   - `LazyBlob.toBlob()`

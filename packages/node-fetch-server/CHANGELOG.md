@@ -2,6 +2,22 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## v0.14.1
+
+### Patch Changes
+
+- Request handlers now receive native `Request` instances instead of lazy request objects that emulated native requests. This fixes compatibility with standard APIs like `new Request(request, init)` that rely on native `Request` internals.
+
+## v0.14.0
+
+### Minor Changes
+
+- Added a `trustProxy` option to `createRequestListener()` and `createRequest()` so apps behind trusted reverse proxies can construct `request.url` from `Forwarded`, `X-Forwarded-Host`, and `X-Forwarded-Proto` headers. `createRequestListener()` also uses trusted `Forwarded` and `X-Forwarded-For` values for handler client address information (see #10874).
+
+### Patch Changes
+
+- Reject request body reads when clients abort uploads, and avoid writing fallback error responses after streaming response headers are already committed (see #11533 and #11534).
+
 ## v0.13.3
 
 ### Patch Changes

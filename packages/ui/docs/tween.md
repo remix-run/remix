@@ -195,8 +195,7 @@ Use `tween` for:
 - Animating non-CSS properties
 - Complex sequenced animations
 
-For most UI animations, prefer animation mixins (`animateEntrance`, `animateExit`, `animateLayout`)
-or CSS transitions with [`spring`](./spring.md).
+For most UI animations, prefer animation mixins (`animateEntrance`, `animateExit`, `animateLayout`) or CSS transitions with [`spring`](./spring.md).
 
 ## See Also
 

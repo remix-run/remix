@@ -1,0 +1,71 @@
+---
+title: Files and Assets
+description: How Remix serves static files and source assets, accepts bounded uploads, stores files, and returns HTTP file responses.
+---
+
+Remix has separate paths for files that already exist in public form, browser source that needs compilation, and user uploads that must cross a trust boundary. Choose that path before configuring caches or storage.
+
+## Static files and source-served assets {#static-files-vs-source-served-assets}
+
+Use `staticFiles()` for files served from the root `public/` directory as-is. Use `createAssetServer()` for TypeScript, JavaScript, CSS, images, or fonts that need import rewriting, compilation, transforms, preloads, or fingerprinted URLs. Source assets live in separate, colocated `public/` directories under `app/`; the shared name communicates browser reachability, while the serving mechanism remains different.
+
+## Configure the asset server boundary {#remix-s-unbundled-asset-server}
+
+Define `rootDir` and the public `basePath`. The default directory mounts serve `app` beneath `/assets/app` and `node_modules` beneath `/assets/npm`, preserving the path below each directory. Allow `app/routes.ts` for type-safe hrefs and `app/**/public/**` for browser source, then deny test files so they can remain beside the modules they exercise:
+
+```ts filename=app/assets.ts
+import { createAssetServer } from "remix/assets";
+
+export const assetServer = createAssetServer({
+  basePath: "/assets",
+  rootDir: process.cwd(),
+  allowFiles: ["app/routes.ts", "app/**/public/**"],
+  allowPackages: ["remix"],
+  denyFiles: ["app/**/*.test.*"],
+});
+```
+
+Map the asset namespace to a controller action that calls `assetServer.fetch(request)`. Treat `allowFiles`, `allowPackages`, and `denyFiles` as a security boundary, not merely compilation configuration.
+
+## Browser modules, CSS, and file assets {#browser-modules-asset-roots-and-package-mounts}
+
+Put browser source beside its narrowest owner, such as `app/actions/cart/public/` or `app/ui/public/`. Every local dependency in that browser module graph must also match `allowFiles`, so keep the graph inside the colocated `public/` directory. Package dependencies are allowed separately with `allowPackages`.
+
+The asset server compiles TypeScript and JavaScript on demand, rewrites imports, follows CSS `@import` and `url()` references, and can serve explicitly configured leaf-file extensions. This keeps the whole browser graph visible without exposing the rest of the app.
+
+## Asset hrefs, client entries, and preloads {#client-entry-hrefs-and-module-preloads}
+
+Use `getHref()` for scripts, styles, and files, and `getPreloads()` for entry dependencies. Resolve stable root entry metadata once in `app/assets.ts`:
+
+```ts filename=app/assets.ts
+const entry = "app/actions/public/entry.ts";
+
+export const entryHref = await assetServer.getHref(entry);
+export const entryPreloads = await assetServer.getPreloads(entry);
+```
+
+Render those preloads and the entry script from the document head. Resolve `clientEntry(import.meta.url, ...)` IDs to `href` and `preloads` through the asset server in the shared renderer instead of hard-coding deployment URLs in components.
+
+## File transforms and transformed-output caches {#asset-file-transforms}
+
+Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits. Use a `FileStorage` cache when transformed output should survive repeated requests or process restarts for the same build.
+
+## Development watching and production fingerprints {#fingerprinting-source-maps-minification}
+
+Choose one development watcher. A long-lived asset server may watch source files itself, while the generated app sets `watch: false` and lets Node's `--watch` restart the process. Close asset-owned watchers during shutdown. In production, disable watching, choose browser targets, source-map and minification policy, and enable fingerprinting with a build ID that changes on every deploy.
+
+## Parse bounded form uploads {#file-uploads}
+
+Configure `formData({ uploadHandler, ...limits })` to parse multipart bodies once and stream file parts to storage. Set limits for headers, files, individual file size, part count, and total size, then translate known parser or storage failures into useful `400` or `413` responses.
+
+## Store files by app-owned keys {#file-storage-memory-filesystem-s3}
+
+Use the common `FileStorage` API with memory, filesystem, or S3-compatible backends. Generate storage keys on the server, validate media type and size, keep original names as metadata rather than trusted paths, and authorize both writes and reads.
+
+## Use the low-level multipart parser only when needed {#multipart-parsing}
+
+`remix/form-data-parser` is the normal streaming upload layer. Reach for `remix/multipart-parser` directly for non-form multipart formats, runtime-specific streams, or custom part processing, and preserve its header, part, and aggregate limits.
+
+## Stream downloads with correct HTTP semantics {#file-downloads-lazy-files-mime-types-and-range-responses}
+
+Open filesystem data as a `LazyFile` or read it from `FileStorage`, then use `createFileResponse()` for content length, MIME type, ETags, conditional requests, HEAD, and ranges. Add `Content-Disposition` for downloads, use `remix/mime` for content types, and avoid buffering large files into native `File` objects.

@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
 
 import * as styles from '../styles.ts'
 
@@ -9,8 +9,10 @@ interface SocialProviderButtonProps {
   disabledReason?: string
 }
 
-export function SocialProviderButton() {
-  return ({ label, icon, href, disabledReason }: SocialProviderButtonProps) => {
+export function SocialProviderButton(handle: Handle<SocialProviderButtonProps>) {
+  return () => {
+    let { label, icon, href, disabledReason } = handle.props
+
     if (href) {
       return (
         <a href={href} mix={styles.socialButton}>

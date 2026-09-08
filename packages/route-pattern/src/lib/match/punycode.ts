@@ -1,4 +1,5 @@
-// Adapted from https://github.com/mathiasbynens/punycode.js/blob/9e1b2cda98d215d3a73fcbfe93c62e021f4ba768/punycode.js
+// Adapted from punycode.js by Mathias Bynens, MIT licensed:
+// https://github.com/mathiasbynens/punycode.js/blob/9e1b2cda98d215d3a73fcbfe93c62e021f4ba768/punycode.js
 
 /** Highest positive signed 32-bit float value */
 const maxInt = 2147483647 // aka. 0x7FFFFFFF or 2^31-1

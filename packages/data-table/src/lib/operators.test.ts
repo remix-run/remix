@@ -2,6 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { column } from './column.ts'
+import type { Predicate } from './operators.ts'
 import {
   and,
   between,
@@ -218,6 +219,36 @@ describe('logical predicates', () => {
     let normalized = normalizeWhereInput(input)
 
     assert.equal(normalized, input)
+  })
+
+  it('normalizes object filters in logical predicates', () => {
+    let input = 'user@example.com'
+    let predicate = or({ username: input }, { email: input })
+    let typedPredicate: Predicate<'username' | 'email'> = predicate
+
+    assert.deepEqual(typedPredicate, {
+      type: 'logical',
+      operator: 'or',
+      predicates: [
+        {
+          type: 'logical',
+          operator: 'and',
+          predicates: [eq('username', input)],
+        },
+        {
+          type: 'logical',
+          operator: 'and',
+          predicates: [eq('email', input)],
+        },
+      ],
+    })
+  })
+
+  it('combines object filters with normalized predicates', () => {
+    let predicate = and({ active: true }, or({ role: 'admin' }, eq('owner_id', 1)))
+    let typedPredicate: Predicate<'active' | 'role' | 'owner_id'> = predicate
+
+    assert.deepEqual(getPredicateColumns(typedPredicate), ['active', 'role', 'owner_id'])
   })
 
   it('filters falsy values when combining logical predicates', () => {

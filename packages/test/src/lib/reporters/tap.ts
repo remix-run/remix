@@ -1,12 +1,17 @@
 import { normalizeLine } from '../normalize.ts'
-import type { Reporter } from './index.ts'
+import type { Reporter, ReporterOptions } from './index.ts'
 import type { Counts, TestResults } from './results.ts'
 
 export class TapReporter implements Reporter {
   #counter = 0
   #total = 0
   #files = new Set<string>()
+  #quiet: boolean
   #suites = new Set<string>()
+
+  constructor(options: ReporterOptions = {}) {
+    this.#quiet = options.quiet === true
+  }
 
   onSectionStart(_label: string) {}
 
@@ -23,6 +28,8 @@ export class TapReporter implements Reporter {
     }
 
     for (let test of results.tests) {
+      if (this.#quiet && test.status === 'skipped') continue
+
       this.#counter++
       this.#total++
       let fullName = test.name
@@ -32,9 +39,9 @@ export class TapReporter implements Reporter {
       if (test.status === 'passed') {
         console.log(`ok ${this.#counter} - ${fullName}`)
       } else if (test.status === 'skipped') {
-        console.log(`ok ${this.#counter} - ${fullName} # SKIP`)
+        console.log(`ok ${this.#counter} - ${fullName} ${formatDirective('SKIP', test.reason)}`)
       } else if (test.status === 'todo') {
-        console.log(`ok ${this.#counter} - ${fullName} # TODO`)
+        console.log(`ok ${this.#counter} - ${fullName} ${formatDirective('TODO', test.reason)}`)
       } else {
         console.log(`not ok ${this.#counter} - ${fullName}`)
         console.log('  ---')
@@ -64,4 +71,8 @@ export class TapReporter implements Reporter {
     if (todo > 0) console.log(`# todo ${todo}`)
     console.log(`# duration_ms ${durationMs.toFixed(5)}`)
   }
+}
+
+function formatDirective(name: 'SKIP' | 'TODO', reason: string | undefined): string {
+  return reason ? `# ${name} ${reason}` : `# ${name}`
 }

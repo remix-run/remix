@@ -7,8 +7,7 @@ description: Safely replace one GitHub pull request with another. Use when a use
 
 ## Overview
 
-Use this skill to handle PR supersession end-to-end.
-Do not rely on `Closes #<number>` to close another PR. GitHub closing keywords close issues, not pull requests.
+Use this skill to handle PR supersession end-to-end. Do not rely on `Closes #<number>` to close another PR. GitHub closing keywords close issues, not pull requests.
 
 ## Workflow
 

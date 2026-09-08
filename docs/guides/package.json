@@ -1,0 +1,30 @@
+{
+  "name": "remix-guides",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "prerender": "pnpm run validate && NODE_ENV=production node --import remix/node-tsx scripts/prerender.ts",
+    "prerender:serve": "npx http-server -p 44100 build/site",
+    "start": "node --import remix/node-tsx server.ts",
+    "test": "NODE_ENV=test remix test",
+    "typecheck": "pnpm -w exec tsc --noEmit -p docs/guides/tsconfig.json",
+    "validate": "node --import remix/node-tsx scripts/validate-docs.ts"
+  },
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "mdast-util-directive": "3.1.0",
+    "remix": "workspace:^",
+    "remix-docs-shared": "workspace:*",
+    "shiki": "catalog:",
+    "unist-util-visit": "5.1.0"
+  },
+  "devDependencies": {
+    "@types/mdast": "4.0.4",
+    "@types/node": "catalog:",
+    "pagefind": "catalog:",
+    "typescript": "6.0.3"
+  }
+}

@@ -2,6 +2,40 @@
 
 This is the changelog for [`static-middleware`](https://github.com/remix-run/remix/tree/main/packages/static-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.14
+
+### Patch Changes
+
+- Fixed `staticFiles()` middleware types being incompatible with other router middleware by updating `@remix-run/fetch-router` to `^0.21.0`. This keeps the established `@remix-run/static-middleware` package compatible with Remix 3 projects without package-manager overrides.
+
+## v0.4.13
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.20.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.1)
+  - [`fs@0.4.6`](https://github.com/remix-run/remix/releases/tag/fs@0.4.6)
+  - [`mime@0.4.2`](https://github.com/remix-run/remix/releases/tag/mime@0.4.2)
+  - [`response@0.3.7`](https://github.com/remix-run/remix/releases/tag/response@0.3.7)
+
+## v0.4.12
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.20.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.0)
+
+## v0.4.11
+
+### Patch Changes
+
+- Prevent `staticFiles()` from serving files outside its configured root through symlinks.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.19.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.2)
+  - [`fs@0.4.5`](https://github.com/remix-run/remix/releases/tag/fs@0.4.5)
+  - [`response@0.3.6`](https://github.com/remix-run/remix/releases/tag/response@0.3.6)
+
 ## v0.4.10
 
 ### Patch Changes

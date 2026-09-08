@@ -12,8 +12,8 @@ export interface BenchFixture {
   id: 'basic' | 'deep-graph'
   label: string
   entryPoint: string
-  assetServer: Pick<AssetServerOptions, 'allow' | 'basePath' | 'fileMap'>
   entryPointUrl: string
+  assetServer: Pick<AssetServerOptions, 'allowFiles' | 'allowPackages' | 'basePath' | 'mounts'>
   expectedEntryUrlSubstrings: string[]
   expectedPreloadUrlSubstrings: string[]
   stats: BenchFixtureStat[]
@@ -81,10 +81,18 @@ async function readDeepGraphFixture(): Promise<BenchFixture> {
     label: 'deep-graph',
     projectRoot,
     packagesRoot,
-    entryPointFile: 'app/entry.tsx',
-    entryPointUrl: '/assets/app/entry.tsx',
+    entryPointFile: 'app/package-entry.tsx',
+    entryPointUrl: '/assets/app/package-entry.tsx',
     expectedEntryUrlSubstrings: [],
-    expectedPreloadUrlSubstrings: ['/assets/bench-packages/ui/', '/assets/packages/ui/'],
+    expectedPreloadUrlSubstrings: [
+      '/assets/bench-packages/ui/',
+      '/assets/packages/ui/',
+      '/assets/node_modules/%40remix-run/__mock-package/',
+      '/assets/node_modules/%40remix-run/__mock-ui/',
+      '/assets/node_modules/%40remix-run/__mock-utils/',
+      '/assets/node_modules/%40remix-run/__mock-optional/',
+      '/assets/node_modules/%40remix-run/__mock-tokens/',
+    ],
     createStats: async () => [
       { label: 'app', value: await countSourceModules(projectRoot) },
       { label: 'benchPackages', value: await countSourceModules(packagesRoot) },
@@ -110,18 +118,21 @@ async function createBenchFixture(options: CreateBenchFixtureOptions): Promise<B
   let repoRoot = path.resolve(import.meta.dirname, '../../..')
   let repoPackagesRoot = path.join(repoRoot, 'packages')
   let entryPoint = path.join(options.projectRoot, options.entryPointFile)
+  let nodeModulesRoot = path.join(path.dirname(options.projectRoot), 'node_modules')
 
   return {
     id: options.id,
     label: options.label,
     entryPoint,
     assetServer: {
-      allow: [options.projectRoot, options.packagesRoot, repoPackagesRoot],
+      allowFiles: [path.join(options.projectRoot, 'app'), options.packagesRoot, repoPackagesRoot],
+      allowPackages: options.id === 'deep-graph' ? ['@remix-run/__mock-package'] : undefined,
       basePath: '/assets',
-      fileMap: {
-        '/app/*path': createFilePattern(repoRoot, path.join(options.projectRoot, 'app')),
-        '/bench-packages/*path': createFilePattern(repoRoot, options.packagesRoot),
-        '/packages/*path': createFilePattern(repoRoot, repoPackagesRoot),
+      mounts: {
+        app: createFileRoot(repoRoot, path.join(options.projectRoot, 'app')),
+        'bench-packages': createFileRoot(repoRoot, options.packagesRoot),
+        node_modules: createFileRoot(repoRoot, nodeModulesRoot),
+        packages: createFileRoot(repoRoot, repoPackagesRoot),
       },
     },
     entryPointUrl: options.entryPointUrl,
@@ -131,9 +142,8 @@ async function createBenchFixture(options: CreateBenchFixtureOptions): Promise<B
   }
 }
 
-function createFilePattern(rootDir: string, directory: string): string {
-  let relativeDirectory = path.relative(rootDir, directory).replace(/\\/g, '/')
-  return `${relativeDirectory.replace(/\/+$/, '')}/*path`
+function createFileRoot(rootDir: string, directory: string): string {
+  return path.relative(rootDir, directory).replace(/\\/g, '/').replace(/\/+$/, '')
 }
 
 async function countSourceModules(directory: string): Promise<number> {

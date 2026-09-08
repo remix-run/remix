@@ -5,7 +5,7 @@ import { ForgotPasswordPage, ForgotPasswordSentPage } from './page.tsx'
 import { getIssueMessage, readField } from '../form-utils.ts'
 import { forgotPasswordSchema } from '../schemas.ts'
 import { normalizeEmail, passwordResetTokens, users } from '../../../data/schema.ts'
-import { getReturnToQuery } from '../../../middleware/auth.ts'
+import { getReturnToHrefOptions } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
 
 export const forgotPasswordController = createController(routes.auth.forgotPassword, {
@@ -13,21 +13,24 @@ export const forgotPasswordController = createController(routes.auth.forgotPassw
     index({ render, url }) {
       return render(
         <ForgotPasswordPage
-          formAction={routes.auth.forgotPassword.action.href(undefined, getReturnToQuery(url))}
-          loginHref={routes.home.href(undefined, getReturnToQuery(url))}
+          formAction={routes.auth.forgotPassword.action.href(
+            undefined,
+            getReturnToHrefOptions(url),
+          )}
+          loginHref={routes.home.href(undefined, getReturnToHrefOptions(url))}
         />,
       )
     },
 
     async action({ db, formData, render, url }) {
-      let returnToQuery = getReturnToQuery(url)
+      let returnToHrefOptions = getReturnToHrefOptions(url)
       let result = s.parseSafe(forgotPasswordSchema, formData)
 
       if (!result.success) {
         return render(
           <ForgotPasswordPage
-            formAction={routes.auth.forgotPassword.action.href(undefined, returnToQuery)}
-            loginHref={routes.home.href(undefined, returnToQuery)}
+            formAction={routes.auth.forgotPassword.action.href(undefined, returnToHrefOptions)}
+            loginHref={routes.home.href(undefined, returnToHrefOptions)}
             error={getIssueMessage(result.issues)}
             email={readField(formData, 'email')}
           />,
@@ -53,7 +56,7 @@ export const forgotPasswordController = createController(routes.auth.forgotPassw
       return render(
         <ForgotPasswordSentPage
           email={emailAddress}
-          loginHref={routes.home.href(undefined, returnToQuery)}
+          loginHref={routes.home.href(undefined, returnToHrefOptions)}
           resetHref={resetHref}
         />,
       )

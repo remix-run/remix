@@ -1,15 +1,14 @@
 # ui
 
-Runtime UI primitives for Remix apps, including the component runtime, server rendering, frame hydration, reusable mixins, first-party components, and theme tokens.
+Runtime UI primitives for Remix apps, including the component runtime, server rendering, frame hydration, reusable mixins, and headless first-party behavior primitives.
 
 ## Features
 
-- Component runtime APIs for rendering, hydration, frame navigation, and JSX
+- Component runtime APIs for rendering, hydration, link and form frame navigation, and JSX
 - Server rendering APIs for streaming Remix UI trees and frames
 - `mix` composition with event, ref, CSS, and animation helpers
-- First-party components such as buttons, menus, listboxes, popovers, and selects
-- Fixed typed `theme` contract whose leaves resolve to `var(--rmx-...)`
-- `createTheme()` and `createGlyphSheet()` utilities for shared app styling and glyphs
+- Headless behavior primitives for controls such as menus, listboxes, popovers, selects, and comboboxes
+- Lower-level utilities for keyboard events, typeahead search, refs, attributes, and CSS transition timing
 
 ## Installation
 
@@ -19,188 +18,228 @@ npm i remix
 
 ## Usage
 
-Define your app theme once:
-
-```tsx
-import { createTheme } from 'remix/ui'
-
-let Theme = createTheme({
-  space: {
-    none: '0px',
-    px: '1px',
-    xs: '2px',
-    sm: '4px',
-    md: '8px',
-    lg: '12px',
-    xl: '16px',
-    xxl: '24px',
-  },
-  radius: {
-    none: '0px',
-    sm: '4px',
-    md: '8px',
-    lg: '12px',
-    xl: '16px',
-    full: '9999px',
-  },
-  fontSize: {
-    xxxs: '10px',
-    xxs: '11px',
-    xs: '12px',
-    sm: '14px',
-    md: '16px',
-    lg: '18px',
-    xl: '20px',
-    xxl: '28px',
-  },
-  lineHeight: {
-    tight: '1.2',
-    normal: '1.5',
-    relaxed: '1.7',
-  },
-  fontWeight: {
-    normal: '400',
-    medium: '500',
-    semibold: '600',
-    bold: '700',
-  },
-  shadow: {
-    xs: '0 1px 2px rgb(0 0 0 / 0.05)',
-    sm: '0 1px 3px rgb(0 0 0 / 0.10)',
-    md: '0 4px 10px rgb(0 0 0 / 0.12)',
-    lg: '0 10px 30px rgb(0 0 0 / 0.16)',
-    xl: '0 20px 50px rgb(0 0 0 / 0.20)',
-  },
-  zIndex: {
-    dropdown: '1000',
-    popover: '1100',
-    sticky: '1200',
-    overlay: '1300',
-    modal: '1400',
-    toast: '1500',
-    tooltip: '1600',
-  },
-  surface: {
-    lvl0: '#ffffff',
-    lvl1: '#f8fafc',
-    lvl2: '#f1f5f9',
-    lvl3: '#e5edf7',
-    lvl4: '#dbe6f4',
-  },
-  colors: {
-    text: {
-      primary: '#111827',
-      secondary: '#374151',
-      muted: '#6b7280',
-      link: '#2563eb',
-    },
-    border: {
-      subtle: '#e5e7eb',
-      default: '#d1d5db',
-      strong: '#9ca3af',
-    },
-    focus: {
-      ring: '#3b82f6',
-    },
-    overlay: {
-      scrim: 'rgb(0 0 0 / 0.45)',
-    },
-    action: {
-      primary: {
-        background: '#2563eb',
-        backgroundHover: '#1d4ed8',
-        backgroundActive: '#1e40af',
-        foreground: '#ffffff',
-        border: '#2563eb',
-      },
-      secondary: {
-        background: '#ffffff',
-        backgroundHover: '#f8fafc',
-        backgroundActive: '#f1f5f9',
-        foreground: '#111827',
-        border: '#d1d5db',
-      },
-      danger: {
-        background: '#dc2626',
-        backgroundHover: '#b91c1c',
-        backgroundActive: '#991b1b',
-        foreground: '#ffffff',
-        border: '#dc2626',
-      },
-    },
-  },
-})
-```
-
-Render the theme once near the top of your document:
-
-```tsx
-import type { Handle, RemixNode } from 'remix/ui'
-
-function Layout(handle: Handle<{ children: RemixNode }>) {
-  return () => (
-    <html>
-      <head>
-        <Theme />
-      </head>
-      <body>{handle.props.children}</body>
-    </html>
-  )
-}
-```
-
-Consume the shared token contract from app code and first-party components:
+Compose behavior primitives with your own markup and styles:
 
 ```tsx
 import { css } from 'remix/ui'
-import { theme } from 'remix/ui'
+import * as popover from 'remix/ui/popover'
 
-let card = css({
-  backgroundColor: theme.surface.lvl0,
-  color: theme.colors.text.primary,
-  border: `1px solid ${theme.colors.border.subtle}`,
-  borderRadius: theme.radius.md,
-  paddingInline: theme.space.md,
-  paddingBlock: theme.space.sm,
+let triggerCss = css({
+  border: '1px solid #d1d5db',
+  borderRadius: '6px',
+  padding: '6px 10px',
 })
 
-<div mix={card} />
-```
+let surfaceCss = css({
+  background: 'white',
+  border: '1px solid #d1d5db',
+  borderRadius: '6px',
+  padding: '8px',
+})
 
-Render shared glyphs separately from the theme styles:
+function ViewOptions() {
+  let open = false
 
-```tsx
-import type { Handle, RemixNode } from 'remix/ui'
-import { Button } from 'remix/ui/button'
-import { Glyph } from 'remix/ui/glyph'
-import { RMX_01, RMX_01_GLYPHS } from 'remix/ui/theme'
-
-function Layout(handle: Handle<{ children: RemixNode }>) {
   return () => (
-    <html>
-      <head>
-        <RMX_01 />
-      </head>
-      <body>
-        <RMX_01_GLYPHS />
-        <Button startIcon={<Glyph name="add" />} tone="primary">
-          New project
-        </Button>
-        {handle.props.children}
-      </body>
-    </html>
+    <popover.Context>
+      <button
+        mix={[triggerCss, popover.anchor({ placement: 'bottom-end' }), popover.focusOnHide()]}
+        onClick={() => {
+          open = true
+        }}
+        type="button"
+      >
+        View options
+      </button>
+      <div
+        mix={[
+          surfaceCss,
+          popover.surface({
+            open,
+            onHide() {
+              open = false
+            },
+          }),
+        ]}
+      >
+        Panel content
+      </div>
+    </popover.Context>
   )
 }
 ```
 
+Button styling is available as a composable mixin:
+
+```tsx
+import button from 'remix/ui/button'
+
+function Actions() {
+  return () => <button mix={button({ tone: 'primary' })}>Create project</button>
+}
+```
+
+## Frame Navigation
+
+Calling `run()` starts both hydration and frame navigation. It represents the current document as
+`app.frames.top` and intercepts eligible same-origin links and forms through the browser's
+Navigation API. Those navigations fetch HTML with the frame resolver and update the existing
+document in place instead of loading a new document:
+
+```tsx
+import { run } from 'remix/ui'
+
+let app = run({
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    return mod[exportName]
+  },
+})
+
+await app.ready()
+```
+
+This soft-navigation behavior applies even when the page only uses `clientEntry()` and does not
+render an explicit `<Frame>`.
+
+The default resolver is equivalent to:
+
+```js
+async function resolveFrame(src, options) {
+  let response = await fetch(src, {
+    body: getRequestBody(options),
+    headers: { Accept: 'text/html' },
+    method: options?.method,
+    signal: options?.signal,
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
+  }
+
+  return response
+}
+
+function getRequestBody(options) {
+  let formData = options?.formData
+  if (!formData || options?.method?.toLowerCase() === 'get') return
+
+  if (options?.encType === 'text/plain') {
+    let body = ''
+    for (let [name, value] of formData) {
+      name = normalizeLineBreaks(name)
+      value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
+      body += `${name}=${value}\r\n`
+    }
+    return new Blob([body], { type: 'text/plain' })
+  }
+
+  if (options?.encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
+}
+
+function normalizeLineBreaks(value) {
+  return value.replace(/\r\n|\r|\n/g, '\r\n')
+}
+```
+
+The default resolver requests HTML. GET form values are already encoded in `src`;
+`application/x-www-form-urlencoded` submissions use `URLSearchParams`, `text/plain` submissions use
+CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass a custom
+`resolveFrame` when the server requires additional headers, another body encoding, or a different
+response policy.
+
+Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
+and forms as document navigations while still hydrating client entries and using explicit frames,
+register a listener before calling `run()`:
+
+```ts
+window.navigation?.addEventListener('navigate', (e) => e.stopImmediatePropagation())
+```
+
+This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as
+`handle.frame.reload()` continue to use the frame resolver.
+
+The default resolver rejects non-OK responses with an error containing their status and status text.
+A custom `resolveFrame` may return a `Response` with any status when it wants Remix UI to render the
+response body.
+
+Forms remain ordinary HTML forms before the runtime starts. Add `data-rmx-target` to reload a named frame, or `data-rmx-document` to require a full-document submission:
+
+```tsx
+import { Frame } from 'remix/ui'
+
+function AccountPage() {
+  return () => (
+    <>
+      <Frame name="account" src="/account/edit" />
+      <form action="/account/edit" method="post" data-rmx-target="account">
+        <label for="display-name">Display name</label>
+        <input id="display-name" name="displayName" required />
+        <button type="submit">Save</button>
+      </form>
+    </>
+  )
+}
+```
+
+Native constraint validation and submitter overrides still apply. GET form values arrive in `src`; non-GET forms provide `formData`, `method`, and `encType` to the resolver. See [Frames](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#form-navigation) for targeting, history behavior, request encoding, opt-outs, and server response guidance.
+
+Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
+
+## Single-page Applications
+
+Use `render` and `run` from `remix/spa` when every route runs in the browser and returns a Remix UI
+tree instead of an HTTP response body. The render middleware keeps the router's standard `Request`
+to `Response` contract while associating the response with a node for the top frame to render:
+
+```tsx
+import { createRouter } from 'remix/router'
+import { render, run } from 'remix/spa'
+
+let router = createRouter({ middleware: [render()] })
+
+router.get('/', ({ render }) => render(<h1>Home</h1>))
+router.get('/about', ({ render }) => render(<h1>About</h1>))
+
+function LoadingPage() {
+  return () => <p role="status">Loading…</p>
+}
+
+let app = run(router, { fallback: <LoadingPage /> })
+await app.ready()
+```
+
+The optional `fallback` is a live Remix node displayed while the initial route loads.
+`app.ready()` resolves after the initial URL has replaced it with the routed node. The runtime then
+reuses frame navigation for same-origin links, forms, history traversal, redirects, cancellation,
+and `rmx-target`.
+
+## Preserving Client-Owned DOM
+
+Use `data-rmx-preserve-dom` on the smallest element whose live DOM should belong to client code after initial render, such as a custom element or third-party widget:
+
+```tsx
+<pagefind-ui data-rmx-key="search" data-rmx-preserve-dom>
+  <button type="button">Search</button>
+</pagefind-ui>
+```
+
+Remix UI still renders the element's children during SSR and still hydrates any initial client entries inside it. On later frame reloads, matched `data-rmx-preserve-dom` elements keep their current attributes and children instead of accepting incoming DOM updates. See [Preserving client-owned DOM](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#preserving-client-owned-dom) for guidance and caveats.
+
 ## Cascade Layers
 
-Remix UI emits its built-in theme reset in `rmx-reset` and generated `css(...)` rules under `rmx`. Unlayered CSS outranks layered component CSS, so use explicit layer order when mixing Remix UI with global styles.
+Remix UI emits generated `css(...)` rules under the `rmx` cascade layer. Unlayered CSS outranks layered CSS, so use explicit layer order when mixing Remix UI with global styles.
 
-Put layers that should lose to Remix UI before `rmx-reset` and `rmx`:
+Put layers that should lose to Remix UI before `rmx`:
 
 ```css
-@layer base, rmx-reset, rmx;
+@layer base, rmx;
 
 @layer base {
   button,

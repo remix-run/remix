@@ -1,3 +1,4 @@
+import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
 
 import { routes } from '../../../routes.ts'
@@ -30,38 +31,42 @@ export function ForgotPasswordPage() {
   )
 }
 
-export function ForgotPasswordSuccessPage() {
-  return ({ token }: { token?: string }) => (
-    <Document>
-      <div class="card" mix={authCardStyle}>
-        <div class="alert alert-success">Password reset link sent! Check your email.</div>
+export function ForgotPasswordSuccessPage(handle: Handle<{ token?: string }>) {
+  return () => {
+    let { token } = handle.props
 
-        {token ? (
-          <div
-            mix={css({
-              marginTop: '1rem',
-              padding: '1rem',
-              background: '#f8f9fa',
-              borderRadius: '4px',
-            })}
-          >
-            <p mix={css({ fontSize: '0.9rem' })}>
-              <strong>Demo Mode:</strong> Click the link below to reset your password
-            </p>
-            <p mix={css({ marginTop: '0.5rem' })}>
-              <a href={routes.auth.resetPassword.index.href({ token })} class="btn btn-secondary">
-                Reset Password
-              </a>
-            </p>
-          </div>
-        ) : null}
+    return (
+      <Document>
+        <div class="card" mix={authCardStyle}>
+          <div class="alert alert-success">Password reset link sent! Check your email.</div>
 
-        <p mix={css({ marginTop: '1.5rem' })}>
-          <a href={routes.auth.login.index.href()} class="btn">
-            Back to Login
-          </a>
-        </p>
-      </div>
-    </Document>
-  )
+          {token ? (
+            <div
+              mix={css({
+                marginTop: '1rem',
+                padding: '1rem',
+                background: '#f8f9fa',
+                borderRadius: '4px',
+              })}
+            >
+              <p mix={css({ fontSize: '0.9rem' })}>
+                <strong>Demo Mode:</strong> Click the link below to reset your password
+              </p>
+              <p mix={css({ marginTop: '0.5rem' })}>
+                <a href={routes.auth.resetPassword.index.href({ token })} class="btn btn-secondary">
+                  Reset Password
+                </a>
+              </p>
+            </div>
+          ) : null}
+
+          <p mix={css({ marginTop: '1.5rem' })}>
+            <a href={routes.auth.login.index.href()} class="btn">
+              Back to Login
+            </a>
+          </p>
+        </div>
+      </Document>
+    )
+  }
 }

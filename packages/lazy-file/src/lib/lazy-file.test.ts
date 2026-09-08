@@ -19,10 +19,10 @@ function createLazyContent(value = ''): LazyContent {
   let buffer = new TextEncoder().encode(value)
   return {
     byteLength: buffer.byteLength,
-    stream() {
+    stream(start = 0, end = buffer.byteLength) {
       return new ReadableStream({
         start(controller) {
-          controller.enqueue(buffer)
+          controller.enqueue(buffer.subarray(start, end))
           controller.close()
         },
       })
@@ -107,6 +107,14 @@ describe('LazyBlob', () => {
       let slice = blob.slice(0, 5)
       assert.equal(slice instanceof LazyBlob, true)
       assert.equal(slice.size, 5)
+    })
+
+    it('slices relative to an existing slice', async () => {
+      let blob = new LazyBlob(createLazyContent('0123456789'), { type: 'text/plain' })
+      let slice = blob.slice(2, 8).slice(1, 4)
+
+      assert.equal(slice.size, 3)
+      assert.equal(await slice.text(), '345')
     })
   })
 
@@ -298,6 +306,15 @@ describe('LazyFile', () => {
       lazyFile.slice(20, 10).stream()
       assert.equal(read.mock.calls.length, 1)
       assert.deepEqual(read.mock.calls[0].arguments, [20, 20])
+    })
+
+    it('calls content.stream() with the correct range when slicing an existing slice', (t) => {
+      let content = createLazyContent('X'.repeat(100))
+      let read = t.mock.method(content, 'stream')
+      let lazyFile = new LazyFile(content, 'example.txt', { type: 'text/plain' })
+      lazyFile.slice(20, 80).slice(-20, -10).stream()
+      assert.equal(read.mock.calls.length, 1)
+      assert.deepEqual(read.mock.calls[0].arguments, [60, 70])
     })
   })
 

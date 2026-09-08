@@ -1,7 +1,7 @@
 import type { Assert, IsEqual } from './utils.ts'
 import type { JoinPatterns } from './join.ts'
 
-// prettier-ignore
+// oxfmt-ignore
 export type Tests = [
   // empty input/base
   Assert<IsEqual<JoinPatterns<'', ''>, '/'>>,
@@ -10,9 +10,11 @@ export type Tests = [
   Assert<IsEqual<JoinPatterns<'', 'hello'>, '/hello'>>,
 
   // input origin overrides base origin
-  Assert<IsEqual<JoinPatterns<'http://example.com:8080', 'https://remix.run'>, 'https://remix.run/'>>,
-  Assert<IsEqual<JoinPatterns<'http://example.com:8080', '://remix.run'>, '://remix.run/'>>,
-  Assert<IsEqual<JoinPatterns<'http://example.com', '://remix.run:8080'>, '://remix.run:8080/'>>,
+  Assert<IsEqual<JoinPatterns<'http://example.com:8080', 'https://remix.run'>, 'https://remix.run:8080/'>>,
+  Assert<IsEqual<JoinPatterns<'http://example.com:8080', '://remix.run'>, 'http://remix.run:8080/'>>,
+  Assert<IsEqual<JoinPatterns<'http://example.com', '://remix.run:8080'>, 'http://remix.run:8080/'>>,
+  Assert<IsEqual<JoinPatterns<'https://example.com:8080/base', 'http:///next'>, 'http://example.com:8080/base/next'>>,
+  Assert<IsEqual<JoinPatterns<'/base', ':proto://example.com/path'>, never>>,
 
   // base origin used when input has none
   Assert<IsEqual<JoinPatterns<'https://remix.run', 'api'>, 'https://remix.run/api'>>,

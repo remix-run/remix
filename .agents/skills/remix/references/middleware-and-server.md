@@ -2,22 +2,19 @@
 
 ## What This Covers
 
-How to compose the request lifecycle and bridge the router to a runtime. Read this when the task
-involves:
+How to compose the request lifecycle and bridge the router to a runtime. Read this when the task involves:
 
-- Choosing or ordering built-in middleware in the root stack
+- Choosing or ordering built-in middleware in the stack
 - Writing custom middleware that sets typed context values
-- Adding fast-exit handling (static files, CORS preflights) versus request-enriching layers
-  (sessions, auth, data loading)
+- Adding fast-exit handling (static files, CORS preflights) versus request-enriching layers (sessions, auth, data loading)
 - Choosing when to keep the generated Node server versus switching server adapters
+- Running the app server under development HMR
 
-For data and persistence specifics, see `data-and-validation.md`. For session and auth specifics,
-see `auth-and-sessions.md`.
+For data and persistence specifics, see `data-and-validation.md`. For session and auth specifics, see `auth-and-sessions.md`. For browser asset HMR, see `assets-and-browser-modules.md`.
 
 ## Middleware Stack
 
-Middleware runs in order for every request. Place fast-exit middleware (static files) early and
-request-enriching middleware (session, auth) later.
+Middleware runs in order for every request. Place fast-exit middleware (static files) early and request-enriching middleware (session, auth) later.
 
 Recommended ordering:
 
@@ -27,6 +24,7 @@ import { compression } from 'remix/middleware/compression'
 import { formData } from 'remix/middleware/form-data'
 import { logger } from 'remix/middleware/logger'
 import { methodOverride } from 'remix/middleware/method-override'
+import { render } from 'remix/middleware/render'
 import { session } from 'remix/middleware/session'
 import { staticFiles } from 'remix/middleware/static'
 import { asyncContext } from 'remix/middleware/async-context'
@@ -45,6 +43,7 @@ middleware.push(session(cookie, storage))
 middleware.push(asyncContext())
 middleware.push(loadDatabase())
 middleware.push(loadAuth())
+middleware.push(render({ assets }))
 
 let router = createRouter({ middleware })
 ```
@@ -54,7 +53,7 @@ let router = createRouter({ middleware })
 | Middleware                 | Import                             | Use when                                                                      | Notes                                                          |
 | -------------------------- | ---------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `staticFiles(dir, opts?)`  | `remix/middleware/static`          | Serve files from `public/` or another directory exactly as they exist on disk | Fast exit; usually near the top                                |
-| `compression()`            | `remix/middleware/compression`     | Compress text-like responses                                                  | Usually global                                                 |
+| `compression()`            | `remix/middleware/compression`     | Compress text-like responses                                                  | Usually app-wide                                               |
 | `logger()`                 | `remix/middleware/logger`          | Log requests and responses                                                    | Often development-only; `colors` can force color output on/off |
 | `cors(opts?)`              | `remix/middleware/cors`            | Endpoints must serve cross-origin browsers or preflight `OPTIONS` requests    | Usually early so preflights can short-circuit                  |
 | `cop(opts?)`               | `remix/middleware/cop`             | Reject unsafe cross-origin browser requests without synchronizer tokens       | Put before session or CSRF when used                           |
@@ -64,33 +63,29 @@ let router = createRouter({ middleware })
 | `csrf(opts?)`              | `remix/middleware/csrf`            | Session-backed form workflows need synchronizer-token CSRF protection         | Requires `session()` before it                                 |
 | `asyncContext()`           | `remix/middleware/async-context`   | Helpers outside handlers need request context via `getContext()`              | Add before helpers rely on it                                  |
 | `auth({ schemes })`        | `remix/middleware/auth`            | Resolve auth state into `context.get(Auth)`                                   | Run after `session()` for session-backed auth                  |
-| `requireAuth()`            | `remix/middleware/auth`            | A controller or action must reject anonymous access                           | Usually controller-level or action-level, not global           |
+| `requireAuth()`            | `remix/middleware/auth`            | A controller or action must reject anonymous access                           | Usually controller middleware or action middleware             |
+| `render({ assets? })`      | `remix/middleware/render`          | Actions render Remix UI through `context.render(node, init)`                  | Pass the asset server for source-based client entries          |
 
 ### Static files vs browser modules
 
-- Use `staticFiles()` for files that should be served directly from disk, such as images, fonts,
-  or already-built assets in `public/`
-- Use `remix/assets` when browser modules should be compiled and served from source files with
-  import rewriting, preloads, or fingerprinted URLs
+- Use `staticFiles()` for files that should be served directly from disk, such as images, fonts, or already-built assets in the root `public/` directory
+- Use `remix/assets` when browser modules should be compiled and served from source files with import rewriting, preloads, or fingerprinted URLs
+- `public/` directories inside `app/` hold browser-reachable source for the asset server
 
 ### Ordering notes
 
 - Put fast exits early: `staticFiles()`, `cors()` preflight handling, and `cop()` when used
-- Parse request bodies before middleware that depends on them, such as `methodOverride()` and form
-  field token extraction in `csrf()`
+- Parse request bodies before middleware that depends on them, such as `methodOverride()` and form field token extraction in `csrf()`
 - Run `session()` before `csrf()` and before session-backed `auth()`
 - Add `asyncContext()` before helpers or shared code call `getContext()`
-- Keep route protection like `requireAuth()` at controller or action scope unless the entire app is
-  private
+- Keep route protection like `requireAuth()` as controller middleware or action middleware unless the entire app is private
 
 ### Common stacks
 
-- **Session-backed HTML app** -> `compression()`, `staticFiles()`, optional `cop()`, `formData()`,
-  `methodOverride()`, `session()`, optional `csrf()`, `asyncContext()`, `auth({ schemes })`
-- **Cross-origin API** -> `compression()`, `cors()`, optional `asyncContext()`, optional
-  `auth({ schemes })`
-- **Upload flow** -> `compression()`, `staticFiles()`, `formData({ uploadHandler })`, then
-  sessions, auth, and data-loading middleware as needed
+- **Session-backed HTML app** -> `compression()`, `staticFiles()`, optional `cop()`, `formData()`, `methodOverride()`, `session()`, optional `csrf()`, `asyncContext()`, `auth({ schemes })`, `render({ assets })`
+- **Cross-origin API** -> `compression()`, `cors()`, optional `asyncContext()`, optional `auth({ schemes })`
+- **Upload flow** -> `compression()`, `staticFiles()`, `formData({ uploadHandler })`, then sessions, auth, and data-loading middleware as needed
+- **Optional development HMR** -> keep `server.ts` as the child app server, add `hmr.ts` for `remix/node-hmr`, and proxy public requests through `createHmrReadyFetch()`
 
 ### Middleware with options
 
@@ -115,14 +110,11 @@ formData({
 })
 ```
 
-Errors thrown or rejected by `uploadHandler` propagate directly. Catch domain-specific upload
-errors at the route boundary when they should become user-facing `Response` objects.
+Errors thrown or rejected by `uploadHandler` propagate directly. Catch domain-specific upload errors at the route boundary when they should become user-facing `Response` objects.
 
 ## Writing Custom Middleware
 
-Middleware is a function that receives `(context, next)`. Return a `Response` to short-circuit, call
-and return `next()` when you need the downstream response, or return nothing when you only set
-context and want the router to continue automatically.
+Middleware is a function that receives `(context, next)`. Return a `Response` to short-circuit, call and return `next()` when you need the downstream response, or return nothing when you only set context and want the router to continue automatically.
 
 ### Setting context values
 
@@ -130,11 +122,11 @@ Use `context.set(key, value)` to add typed values accessible downstream via `con
 
 ```typescript
 import type { Middleware } from 'remix/router'
-import { Database } from 'remix/data-table'
+import { databaseContext } from '~/middleware/database.ts'
 
 export function loadDatabase(): Middleware {
   return async (context, next) => {
-    context.set(Database, db)
+    context.set(databaseContext, db)
     return next()
   }
 }
@@ -158,19 +150,17 @@ export function requireAdmin(): Middleware {
 
 ### Async context for helpers
 
-`asyncContext()` stores the request context in `AsyncLocalStorage` so helpers can reach it
-without the context being threaded through every call. Wrap `getContext()` in app-specific
-helpers:
+`asyncContext()` stores the request context in `AsyncLocalStorage` so helpers can reach it without the context being threaded through every call. Wrap `getContext()` in app-specific helpers:
 
 ```typescript
 // app/utils/context.ts
 import { getContext } from 'remix/middleware/async-context'
 import { Auth } from 'remix/middleware/auth'
-import { Database } from 'remix/data-table'
+import { databaseContext } from '~/middleware/database.ts'
 import { Session } from 'remix/session'
 
 export function getCurrentDb() {
-  return getContext().get(Database)
+  return getContext().get(databaseContext)
 }
 
 export function getCurrentSession() {
@@ -191,17 +181,17 @@ export function getCurrentUserSafely() {
 }
 ```
 
-## Middleware Layers
+## Middleware Types
 
-Middleware can be applied at three levels:
+Middleware has three API-owned forms:
 
-1. **Router-level** — runs for every request:
+1. **Router middleware** — runs for every request:
 
    ```typescript
-   let router = createRouter({ middleware: [...] })
+   let router = createRouter({ middleware: [logger(), session(cookie, storage)] })
    ```
 
-2. **Controller-level** — runs for the direct actions in one controller:
+2. **Controller middleware** — runs for the direct actions in one controller:
 
    ```typescript
    export default createController(routes.account, {
@@ -210,23 +200,82 @@ Middleware can be applied at three levels:
    })
    ```
 
-   Controller middleware does not flow into other controllers. Add the middleware to each
-   controller that needs it.
+   Controller middleware does not flow into other controllers. Add the middleware to each controller that needs it.
 
-3. **Action-level** — runs for a single route:
+3. **Action middleware** — runs for a single action:
+
    ```typescript
    router.get(routes.account.index, {
      middleware: [requireAuth()],
-     handler: accountAction.handler,
+     handler(context) {
+       return render(<AccountPage identity={context.auth.identity} />)
+     },
    })
    ```
 
+Prefer inline arrays for `middleware` options. Use `RouterContext<typeof router>` to derive an app context from a router that uses inline middleware. Use `createMiddleware()` only when a chain is stored in a variable and its exact tuple type needs to be preserved, such as when deriving `MiddlewareContext<typeof rootMiddleware>` without a router value, exporting a reusable chain, or returning a chain from a factory.
+
 ## Node Server Setup
 
-New apps already include a `server.ts` that adapts the app router with
-`remix/node-fetch-server`. Keep that generated server unless the task specifically needs to change
-runtime behavior such as host/protocol handling, TLS, HTTP/2, WebSockets, deployment lifecycle, or
-test-only server setup.
+New apps already include a `server.ts` that adapts the app router with `remix/node-fetch-server`. Keep that generated server unless the task specifically needs to change runtime behavior such as host/protocol handling, TLS, HTTP/2, WebSockets, deployment lifecycle, or test-only server setup.
 
-Use `remix/node-fetch-server` when you want to keep owning a standard Node `http`, `https`, or
-`http2` server directly.
+Use `remix/node-fetch-server` when you want to keep owning a standard Node `http`, `https`, or `http2` server directly.
+
+## Development HMR
+
+Treat HMR as an optional mode for rapid UI edits. Keep HMR supervision out of normal app code:
+put the real app server in `server.ts`, keep the `dev` script running it directly (usually with
+Node's watch mode), then add a development-only `hmr.ts` behind an `hmr` script when the project
+benefits from HMR.
+
+```typescript
+// hmr.ts
+import * as http from 'node:http'
+
+import { createFetchProxy } from 'remix/fetch-proxy'
+import { createHmrReadyFetch, run } from 'remix/node-hmr'
+import { createRequestListener } from 'remix/node-fetch-server'
+
+const hmrProxyPort = 44100
+const hmrEventPort = 44101
+const appPort = 44102
+
+const hmrRunner = run('./server.ts', {
+  env: {
+    ...process.env,
+    PORT: String(appPort),
+    HMR_PROXY_PORT: String(hmrProxyPort),
+  },
+  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
+  browserHmrChannel: { port: hmrEventPort },
+})
+
+let proxyFetch = createFetchProxy(`http://127.0.0.1:${appPort}`, {
+  xForwardedHeaders: true,
+})
+
+let server = http.createServer(createRequestListener(createHmrReadyFetch(hmrRunner, proxyFetch)))
+
+server.listen(hmrProxyPort, '127.0.0.1')
+```
+
+Keep `browserHmrChannel.port` stable so browser HMR clients can reconnect to the same event channel if the dev server is manually restarted.
+
+Use a stable public proxy when browser requests may happen while the child server is restarting. `createHmrReadyFetch()` waits for the active child generation before forwarding requests and retries safe unavailable responses when the child changes during a request.
+
+In the child `server.ts`, report readiness after the server is listening:
+
+```typescript
+server.listen(port, () => {
+  if (process.env.REMIX_NODE_HMR) {
+    import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
+  }
+})
+```
+
+Rules:
+
+- Guard `remix/node-hmr/runtime` imports with `process.env.REMIX_NODE_HMR`.
+- Use `--import remix/ui-hmr/node` only when server-rendered Remix UI component modules should hot update.
+- Keep the default development and production startup paths independent from `hmr.ts`.
+- Close the public server and `hmrRunner` during `SIGINT` and `SIGTERM` shutdown.

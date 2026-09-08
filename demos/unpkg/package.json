@@ -12,12 +12,12 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
     "dev": "node --watch --import remix/node-tsx server.ts",
     "start": "node --import remix/node-tsx server.ts",
     "test": "remix test",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   }
 }

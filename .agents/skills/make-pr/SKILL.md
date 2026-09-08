@@ -7,9 +7,7 @@ description: Create GitHub pull requests with clear, reviewer-friendly descripti
 
 ## Overview
 
-Use this skill to draft and open a PR with consistent, high-signal writing.
-Keep headings sparse and focus on the problem/feature explanation, context links, and practical code examples.
-Optimize for the shortest path to a credible PR, not the fullest possible context-gathering pass.
+Use this skill to draft and open a PR with consistent, high-signal writing. Keep headings sparse and focus on the problem/feature explanation, context links, and practical code examples. Optimize for the shortest path to a credible PR, not the fullest possible context-gathering pass.
 
 ## Workflow
 
@@ -34,7 +32,7 @@ Optimize for the shortest path to a credible PR, not the fullest possible contex
 
 - Do not assume every PR needs one.
 - Before opening the PR, decide whether the change is user-facing enough to require release notes in `packages/*/.changes`.
-- If a change file is needed or likely needed, use the `make-change-file` skill instead of re-deriving that workflow here.
+- If a change file is needed or likely needed, use the `make-changes` skill instead of re-deriving that workflow here.
 
 1. Draft the PR body with minimal structure.
 

@@ -1,13 +1,18 @@
 import * as path from 'node:path'
 import { colors } from '../colors.ts'
 import { normalizeLine } from '../normalize.ts'
-import type { Reporter } from './index.ts'
+import type { Reporter, ReporterOptions } from './index.ts'
 import type { Counts, TestResult, TestResults } from './results.ts'
 
 export class FilesReporter implements Reporter {
   #failures: { suiteName: string; name: string; error: TestResult['error'] }[] = []
   #files = new Set<string>()
+  #quiet: boolean
   #suites = new Set<string>()
+
+  constructor(options: ReporterOptions = {}) {
+    this.#quiet = options.quiet === true
+  }
 
   onSectionStart(_label: string) {}
 
@@ -17,11 +22,16 @@ export class FilesReporter implements Reporter {
       if (test.suiteName) this.#suites.add(test.suiteName)
     }
 
+    let visibleTests = this.#quiet
+      ? results.tests.filter((test) => test.status !== 'skipped')
+      : results.tests
+    if (visibleTests.length === 0) return
+
     let filePath = results.tests[0]?.filePath
     let fileName = filePath ? path.relative(process.cwd(), filePath) : '(unknown)'
     let envLabel = env ? ` ${colors.dim(`[${env}]`)}` : ''
-    let totalDuration = results.tests.reduce((sum, t) => sum + t.duration, 0)
-    let hasFailed = results.tests.some((t) => t.status === 'failed')
+    let totalDuration = visibleTests.reduce((sum, t) => sum + t.duration, 0)
+    let hasFailed = visibleTests.some((t) => t.status === 'failed')
 
     let fileColor = hasFailed ? colors.red : colors.green
     let duration = hasFailed ? '' : ` (${totalDuration.toFixed(2)}ms)`
@@ -29,7 +39,7 @@ export class FilesReporter implements Reporter {
 
     if (hasFailed) {
       // Print failing tests with suite/test nesting using > separators
-      for (let test of results.tests) {
+      for (let test of visibleTests) {
         if (test.status !== 'failed') continue
         let fullName = test.name ? `${test.suiteName} > ${test.name}` : test.suiteName
         console.log(`  ${colors.red('✗')} ${fullName}`)
@@ -45,6 +55,16 @@ export class FilesReporter implements Reporter {
         }
         this.#failures.push({ suiteName: test.suiteName, name: test.name, error: test.error })
       }
+    }
+
+    for (let test of visibleTests) {
+      if ((test.status !== 'skipped' && test.status !== 'todo') || !test.reason) continue
+      let fullName = test.name ? `${test.suiteName} > ${test.name}` : test.suiteName
+      let marker =
+        test.status === 'skipped'
+          ? `${colors.dim('↓')} ${colors.dim(`${fullName} # skipped: ${test.reason}`)}`
+          : `${colors.yellow('…')} ${colors.yellow(`${fullName} # todo: ${test.reason}`)}`
+      console.log(`  ${marker}`)
     }
   }
 

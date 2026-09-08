@@ -3,7 +3,7 @@ import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
 import { resolveExternalAuth } from '../resolve-external-auth.ts'
-import { getReturnToQuery } from '../../../middleware/auth.ts'
+import { getReturnToHrefOptions } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
 import {
   externalProviderRegistry,
@@ -25,7 +25,7 @@ export function createXAuthController(
 
         if (provider == null) {
           session.flash('error', `${label} login is not configured.`)
-          return redirect(routes.home.href(undefined, getReturnToQuery(url)))
+          return redirect(routes.home.href(undefined, getReturnToHrefOptions(url)))
         }
 
         try {
@@ -34,7 +34,7 @@ export function createXAuthController(
           })
         } catch {
           session.flash('error', `We could not start ${label} login.`)
-          return redirect(routes.home.href(undefined, getReturnToQuery(url)))
+          return redirect(routes.home.href(undefined, getReturnToHrefOptions(url)))
         }
       },
 

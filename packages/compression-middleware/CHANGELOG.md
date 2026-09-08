@@ -2,6 +2,38 @@
 
 This is the changelog for [`compression-middleware`](https://github.com/remix-run/remix/tree/main/packages/compression-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.13
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.21.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.21.0)
+  - [`response@0.3.8`](https://github.com/remix-run/remix/releases/tag/response@0.3.8)
+
+## v0.1.12
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.20.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.1)
+  - [`mime@0.4.2`](https://github.com/remix-run/remix/releases/tag/mime@0.4.2)
+  - [`response@0.3.7`](https://github.com/remix-run/remix/releases/tag/response@0.3.7)
+
+## v0.1.11
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.20.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.0)
+
+## v0.1.10
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.19.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.2)
+  - [`response@0.3.6`](https://github.com/remix-run/remix/releases/tag/response@0.3.6)
+
 ## v0.1.9
 
 ### Patch Changes

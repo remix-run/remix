@@ -53,6 +53,31 @@ describe('defineMimeType()', () => {
       assert.equal(detectMimeType('.mdx'), 'text/mdx')
     })
 
+    it('detects multi-part extensions', () => {
+      defineMimeType({
+        extensions: 'pit',
+        mimeType: 'application/x-pit-document',
+      })
+      defineMimeType({
+        extensions: 'be.pit',
+        mimeType: 'application/x-be-pit-document',
+      })
+      defineMimeType({
+        extensions: 'fr.pit',
+        mimeType: 'application/x-fr-pit-document',
+      })
+
+      assert.equal(detectMimeType('filename.pit'), 'application/x-pit-document')
+      assert.equal(detectMimeType('filename.be.pit'), 'application/x-be-pit-document')
+      assert.equal(detectMimeType('filename.fr.pit'), 'application/x-fr-pit-document')
+      assert.equal(detectMimeType('be.pit'), 'application/x-be-pit-document')
+      assert.equal(detectMimeType('.fr.pit'), 'application/x-fr-pit-document')
+      assert.equal(detectMimeType('path/to/be.pit'), 'application/x-be-pit-document')
+      assert.equal(detectMimeType('path/to/.fr.pit'), 'application/x-fr-pit-document')
+      assert.equal(detectMimeType('path/to/pit'), undefined)
+      assert.equal(detectMimeType('PATH/TO/FILENAME.BE.PIT'), 'application/x-be-pit-document')
+    })
+
     it('trims extension whitespace', () => {
       defineMimeType({
         extensions: '  mdx  ',

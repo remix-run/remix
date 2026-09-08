@@ -15,6 +15,31 @@ describe('vnode rendering', () => {
   describe('components', () => {
     it.todo('warns when render is called after component is removed')
 
+    it('updates from a task queued during the initial render', () => {
+      let container = document.createElement('div')
+
+      function App(handle: Handle) {
+        let value = 'initial'
+        let queued = false
+        return () => {
+          if (!queued) {
+            queued = true
+            handle.queueTask(() => {
+              value = 'updated'
+              handle.update()
+            })
+          }
+          return <p>{value}</p>
+        }
+      }
+
+      let root = createRoot(container)
+      root.render(<App />)
+      root.flush()
+
+      expect(container.innerHTML).toBe('<p>updated</p>')
+    })
+
     it('inserts a component', () => {
       let container = document.createElement('div')
       function App() {
@@ -23,6 +48,24 @@ describe('vnode rendering', () => {
       let { render } = createRoot(container)
       render(<App />)
       expect(container.innerHTML).toBe('<div>Hello, world!</div>')
+    })
+
+    it('does not pass props to the component render function', () => {
+      let container = document.createElement('div')
+      let renderArg: unknown = 'unset'
+
+      function App(handle: Handle<{ label: string }>) {
+        return (...args: unknown[]) => {
+          renderArg = args[0]
+          return <div>{handle.props.label}</div>
+        }
+      }
+
+      let { render } = createRoot(container)
+      render(<App label="Count" />)
+
+      expect(container.innerHTML).toBe('<div>Count</div>')
+      expect(renderArg).toBeUndefined()
     })
 
     it('updates a component', () => {

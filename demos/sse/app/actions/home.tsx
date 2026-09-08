@@ -1,6 +1,6 @@
 import { css, type Handle } from 'remix/ui'
 
-import { MessageStream } from '../assets/message-stream.tsx'
+import { MessageStream } from './public/message-stream.tsx'
 import { Layout } from '../ui/layout.tsx'
 
 export function HomePage(handle: Handle<{ limit: number | null }>) {

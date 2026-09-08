@@ -1,5 +1,5 @@
 import type { Assert, IsEqual } from './utils.ts'
-import type { Parse } from './parse.ts'
+import type { Parse, Token } from './parse.ts'
 
 export type Tests = [
   // empty string
@@ -337,18 +337,7 @@ export type Tests = [
       }
     >
   >,
-  Assert<
-    IsEqual<
-      Parse<':protocol\\:'>,
-      {
-        protocol: undefined
-        hostname: undefined
-        port: undefined
-        pathname: [{ type: 'variable'; name: 'protocol' }, { type: 'text'; value: ':' }]
-        search: undefined
-      }
-    >
-  >,
+  Assert<IsEqual<Parse<':protocol\\:'>, never>>,
   Assert<
     IsEqual<
       Parse<'://example.com'>,
@@ -487,9 +476,9 @@ export type Tests = [
   >,
   Assert<
     IsEqual<
-      Parse<':protocol://:subdomain.example.com:8080/api/v:version/users/:id?format=json'>,
+      Parse<'http(s)://:subdomain.example.com:8080/api/v:version/users/:id?format=json'>,
       {
-        protocol: [{ type: 'variable'; name: 'protocol' }]
+        protocol: [{ type: 'text'; value: 'http(s)' }]
         hostname: [
           { type: 'variable'; name: 'subdomain' },
           { type: 'separator' },
@@ -512,6 +501,40 @@ export type Tests = [
       }
     >
   >,
+  Assert<
+    IsEqual<
+      Parse<'http:///path'>,
+      {
+        protocol: [{ type: 'text'; value: 'http' }]
+        hostname: undefined
+        port: undefined
+        pathname: [{ type: 'text'; value: 'path' }]
+        search: undefined
+      }
+    >
+  >,
+  Assert<
+    IsEqual<
+      Parse<'https://'>,
+      {
+        protocol: [{ type: 'text'; value: 'https' }]
+        hostname: undefined
+        port: undefined
+        pathname: undefined
+        search: undefined
+      }
+    >
+  >,
+  Assert<IsEqual<Parse<':protocol://example.com'>, never>>,
+  Assert<IsEqual<Parse<'ftp://example.com'>, never>>,
+  Assert<IsEqual<Parse<'httpx://example.com'>, never>>,
+  Assert<IsEqual<Parse<'://:8080/users'>, never>>,
+  Assert<IsEqual<Parse<'http://:80/users'>, never>>,
+  Assert<IsEqual<Parse<':'>, never>>,
+  Assert<IsEqual<Parse<'/posts/:'>, never>>,
+  Assert<IsEqual<Parse<'/posts/\\'>, never>>,
+  Assert<IsEqual<Parse<'/posts/(new'>, never>>,
+  Assert<IsEqual<Parse<'/posts/new)'>, never>>,
 
   // nested optionals (successful parses)
   Assert<
@@ -619,6 +642,25 @@ export type Tests = [
           ]
           search: undefined
         }
+    >
+  >,
+  Assert<IsEqual<Parse<'*left*right'>, never>>,
+  Assert<IsEqual<Parse<'*left(/middle)*right'>, never>>,
+  Assert<IsEqual<Parse<':year-:month'>, never>>,
+  Assert<IsEqual<Parse<':id(/details)-suffix'>, never>>,
+  Assert<IsEqual<Parse<':id((/details)-suffix)'>, never>>,
+  Assert<IsEqual<Parse<'()'>, never>>,
+  Assert<IsEqual<Parse<'users(/:id)(/:slug)'>, never>>,
+  Assert<
+    IsEqual<
+      Parse<'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'>,
+      {
+        protocol: undefined
+        hostname: undefined
+        port: undefined
+        pathname: Token[]
+        search: undefined
+      }
     >
   >,
 ]

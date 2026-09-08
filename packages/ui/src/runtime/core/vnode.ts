@@ -1,9 +1,9 @@
-import type { ElementProps, ElementType, RemixElement, RemixNode } from '../jsx.ts'
+import type { ElementProps, ElementType, RemixElement } from '../jsx.ts'
 
 export function createRemixElement(
   type: ElementType,
   props: ElementProps | null | undefined,
-  key?: string,
+  key?: any,
 ): RemixElement {
   return {
     $rmx: true,
@@ -13,17 +13,38 @@ export function createRemixElement(
   }
 }
 
-export function isRemixElement(node: RemixNode): node is RemixElement {
-  return typeof node === 'object' && node !== null && '$rmx' in node
+export function isRemixElement(node: unknown): node is RemixElement {
+  if (typeof node !== 'object' || node === null) return false
+  let type = Reflect.get(node, 'type')
+  let props = Reflect.get(node, 'props')
+  return (
+    Reflect.get(node, '$rmx') === true &&
+    (typeof type === 'string' || typeof type === 'function') &&
+    typeof props === 'object' &&
+    props !== null
+  )
 }
 
 function normalizeElementProps(props: ElementProps | null | undefined): ElementProps {
   if (!props) return {}
   if (!('mix' in props)) return props
 
+  // Fast path: `mix={[a, b]}` with flat, truthy entries is already normalized.
+  // Skipping the copy avoids two prop-object spreads per element per render.
+  if (isNormalizedMix(props.mix)) return props
+
   let { mix, ...rest } = props
   let normalizedMix = normalizeMixValue(mix)
   return normalizedMix === undefined ? rest : { ...rest, mix: normalizedMix }
+}
+
+function isNormalizedMix(mix: unknown): boolean {
+  if (!Array.isArray(mix) || mix.length === 0) return false
+  for (let i = 0; i < mix.length; i++) {
+    let item = mix[i]
+    if (!item || Array.isArray(item)) return false
+  }
+  return true
 }
 
 function normalizeMixValue(mix: unknown): unknown[] | undefined {

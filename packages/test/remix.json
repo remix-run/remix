@@ -1,0 +1,8 @@
+{
+  "$schema": "../../node_modules/remix/schema/remix.json",
+  "test": {
+    "playwright": {
+      "configFile": "./playwright.config.ts"
+    }
+  }
+}

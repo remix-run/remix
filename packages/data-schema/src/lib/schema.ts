@@ -525,7 +525,7 @@ export function instanceof_<constructor extends abstract new (...args: any[]) =>
  * @param literalValue The literal value to match
  * @returns A schema that produces the literal type
  */
-export function literal<value>(literalValue: value): Schema<unknown, value> {
+export function literal<const value>(literalValue: value): Schema<unknown, value> {
   return createSchema(function validate(value, context) {
     if (value !== literalValue) {
       return fail('Expected literal value', context.path, {

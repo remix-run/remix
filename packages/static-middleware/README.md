@@ -75,7 +75,7 @@ let router = createRouter({
 
 ## Security
 
-- Prevents path traversal attacks (e.g., `../../../etc/passwd`)
+- Prevents path traversal attacks
 - Only serves files with GET and HEAD requests
 - Respects the configured root directory boundary
 

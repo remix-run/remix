@@ -1,9 +1,15 @@
 import { bench, describe } from 'vitest'
-import type { MultiMatcher } from '@remix-run/route-pattern/match'
+import type { Match, MultiMatcher } from '@remix-run/route-pattern/match'
 
 export type BenchMatcher = {
   name: string
+  supportsDetailedVerification?: boolean
   createMatcher: () => MultiMatcher<unknown>
+}
+
+type BenchData = {
+  index: number
+  pattern: string
 }
 
 type MatchBenchOptions<matcher extends BenchMatcher> = {
@@ -37,10 +43,10 @@ function createMatcher<matcher extends BenchMatcher>(
   matcher: matcher,
   patterns: ReadonlyArray<string>,
 ) {
-  let instance = matcher.createMatcher()
+  let instance = matcher.createMatcher() as MultiMatcher<BenchData>
 
-  for (let pattern of patterns) {
-    instance.add(pattern, null)
+  for (let [index, pattern] of patterns.entries()) {
+    instance.add(pattern, { index, pattern })
   }
 
   return instance
@@ -75,17 +81,104 @@ function verifyMatches<matcher extends BenchMatcher>(options: MatchBenchOptions<
   let matchersByName = createMatcherLookup(options, patternsByMatcherName)
 
   for (let url of options.urls) {
-    let expected = matchersByName[baselineMatcher.name]!.match(url) !== null
+    let expectedMatch = matchersByName[baselineMatcher.name]!.match(url)
+    let expected = expectedMatch !== null
 
     for (let matcher of options.matchers.slice(1)) {
-      let actual = matchersByName[matcher.name]!.match(url) !== null
+      let instance = matchersByName[matcher.name]!
+      let actualMatch = instance.match(url)
+      let actual = actualMatch !== null
 
       if (actual !== expected) {
         throw new Error(
           `Matcher '${matcher.name}' mismatch on '${url.href}': expected ${expected ? 'match' : 'no match'}, but got ${actual ? 'match' : 'no match'}`,
         )
       }
+
+      if (
+        actualMatch &&
+        expectedMatch &&
+        baselineMatcher.supportsDetailedVerification &&
+        matcher.supportsDetailedVerification
+      ) {
+        assertMatchEqual(matcher.name, url, actualMatch, expectedMatch)
+        assertMatchesEqual(
+          matcher.name,
+          url,
+          instance.matchAll(url),
+          matchersByName[baselineMatcher.name]!.matchAll(url),
+        )
+      }
     }
+  }
+}
+
+function assertMatchesEqual(
+  matcherName: string,
+  url: URL,
+  actual: Array<Match<string, BenchData>>,
+  expected: Array<Match<string, BenchData>>,
+) {
+  actual = dedupeMatchesByInsertedPattern(actual)
+  expected = dedupeMatchesByInsertedPattern(expected)
+
+  if (actual.length !== expected.length) {
+    throw new Error(
+      `Matcher '${matcherName}' matchAll mismatch on '${url.href}': expected ${expected.length} matches, but got ${actual.length}`,
+    )
+  }
+
+  for (let index = 0; index < expected.length; index++) {
+    assertMatchEqual(`${matcherName} matchAll[${index}]`, url, actual[index]!, expected[index]!)
+  }
+}
+
+function dedupeMatchesByInsertedPattern(
+  matches: Array<Match<string, BenchData>>,
+): Array<Match<string, BenchData>> {
+  let seen = new Set<number>()
+  let result: Array<Match<string, BenchData>> = []
+
+  for (let match of matches) {
+    if (seen.has(match.data.index)) continue
+    seen.add(match.data.index)
+    result.push(match)
+  }
+
+  return result
+}
+
+function assertMatchEqual(
+  matcherName: string,
+  url: URL,
+  actual: Match<string, BenchData>,
+  expected: Match<string, BenchData>,
+) {
+  let actualPattern = actual.pattern.toString()
+  let expectedPattern = expected.pattern.toString()
+  if (actualPattern !== expectedPattern) {
+    throw new Error(
+      `Matcher '${matcherName}' selected pattern mismatch on '${url.href}': expected '${expectedPattern}', but got '${actualPattern}'`,
+    )
+  }
+
+  assertJsonEqual(matcherName, url, 'params', actual.params, expected.params)
+  assertJsonEqual(matcherName, url, 'data', actual.data, expected.data)
+}
+
+function assertJsonEqual(
+  matcherName: string,
+  url: URL,
+  label: string,
+  actual: unknown,
+  expected: unknown,
+) {
+  let actualJson = JSON.stringify(actual)
+  let expectedJson = JSON.stringify(expected)
+  if (actualJson !== expectedJson) {
+    throw new Error(
+      `Matcher '${matcherName}' ${label} mismatch on '${url.href}': expected ${expectedJson}, but got ${actualJson}`,
+    )
   }
 }
 

@@ -37,7 +37,7 @@ type AnimationState = {
 }
 
 const animatingNodes = new WeakMap<Element, AnimationState>()
-const initialEntranceSeenByParent = new WeakMap<ParentNode, Set<string>>()
+const initialEntranceSeenByParent = new WeakMap<ParentNode, Set<unknown>>()
 
 function extractStyleProps(config: AnimateMixinConfig): Keyframe {
   let result: Keyframe = {}
@@ -152,14 +152,14 @@ function waitForAnimationOrAbort(animation: Animation, signal: AbortSignal): Pro
 }
 
 function shouldSkipInitialEntrance(
-  event: { key?: string; parent: ParentNode },
+  event: { key?: unknown; parent: ParentNode },
   config: AnimateMixinConfig,
 ): boolean {
   if (config.initial !== false) return false
   if (event.key == null) return false
   let seenForParent = initialEntranceSeenByParent.get(event.parent)
   if (!seenForParent) {
-    seenForParent = new Set<string>()
+    seenForParent = new Set<unknown>()
     initialEntranceSeenByParent.set(event.parent, seenForParent)
   }
   if (seenForParent.has(event.key)) return false

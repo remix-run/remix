@@ -4,8 +4,9 @@ The `Handle` object provides the component's interface to the framework.
 
 ## `handle.update()`
 
-Schedules a component update and returns a promise that resolves with an `AbortSignal` after
-the update completes.
+Schedules a component update and returns a promise that resolves with an `AbortSignal` after the update completes.
+
+Call `handle.update()` from event handlers, queued tasks, subscriptions, timers, or other work that runs after the component commits. Calling it during setup warns and skips the extra render because the initial render follows setup. Calling it during rendering, or before the initial commit from outside setup, throws an error. Use `handle.queueTask()` when render discovers work that should run after the commit.
 
 ```tsx
 function Counter(handle: Handle) {
@@ -196,22 +197,28 @@ function Clock(handle: Handle) {
 }
 ```
 
-## `addEventListeners(target, handle.signal, listeners)`
+## Native Event Listeners
 
-Listen to an `EventTarget` with automatic cleanup when the component disconnects. Ideal for global event targets like `document` and `window`.
+Use `on(...)` for element events. For browser globals such as `window` or `document`, schedule setup with `handle.queueTask()` and pass `handle.signal` to `addEventListener()` so the listener is removed when the component disconnects.
 
 ```tsx
-function KeyboardTracker(handle: Handle) {
-  let keys: string[] = []
+function ViewportWidth(handle: Handle) {
+  let width: number | undefined
 
-  addEventListeners(document, handle.signal, {
-    keydown(event) {
-      keys.push(event.key)
-      handle.update()
-    },
+  handle.queueTask(() => {
+    width = window.innerWidth
+    window.addEventListener(
+      'resize',
+      () => {
+        width = window.innerWidth
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
+    handle.update()
   })
 
-  return () => <div>Keys: {keys.join(', ')}</div>
+  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
 }
 ```
 

@@ -3,6 +3,7 @@ import { describe, it } from '@remix-run/test'
 import {
   createAction,
   createController,
+  createMiddleware,
   createRouter,
   type GetContextValue,
   type MiddlewareContext,
@@ -47,13 +48,13 @@ const routes = route({
   },
 })
 
-const routerMiddleware = [typedAuth] as const
-const protectedMiddleware = [requireAuth<APIIdentity>()] as const
+const routerMiddleware = createMiddleware(typedAuth)
+const protectedMiddleware = createMiddleware(requireAuth<APIIdentity>())
 
 type AppContext = MiddlewareContext<typeof routerMiddleware>
 type ProtectedAppContext = MiddlewareContext<typeof protectedMiddleware, AppContext>
 
-type AuthContext = MiddlewareContext<[typeof typedAuth]>
+type AuthContext = MiddlewareContext<typeof routerMiddleware>
 
 const router = createRouter({ middleware: routerMiddleware })
 const fallbackRouter = createRouter()
@@ -101,7 +102,7 @@ router.get(routes.public, (context) => {
   return new Response('Public')
 })
 
-const privateAction = createAction<typeof routes.private, ProtectedAppContext>(routes.private, {
+const privateAction = createAction(routes.private, {
   middleware: protectedMiddleware,
   handler(context) {
     let currentAuth = context.get(Auth)
@@ -123,7 +124,7 @@ const privateAction = createAction<typeof routes.private, ProtectedAppContext>(r
   },
 })
 
-const adminController = createController<typeof routes.admin, ProtectedAppContext>(routes.admin, {
+const adminController = createController(routes.admin, {
   middleware: protectedMiddleware,
   actions: {
     dashboard(context) {
@@ -146,10 +147,10 @@ const adminController = createController<typeof routes.admin, ProtectedAppContex
 })
 
 type SessionIdentity = { kind: 'session'; id: string }
-const sessionAuthMiddleware = [requireAuth<SessionIdentity>()] as const
+const sessionAuthMiddleware = createMiddleware(requireAuth<SessionIdentity>())
 type SessionAuthContext = MiddlewareContext<typeof sessionAuthMiddleware>
 
-const sessionAction = createAction<'/session/:id', SessionAuthContext>('/session/:id', {
+const sessionAction = createAction('/session/:id', {
   middleware: sessionAuthMiddleware,
   handler(context) {
     let currentAuth = context.get(Auth)

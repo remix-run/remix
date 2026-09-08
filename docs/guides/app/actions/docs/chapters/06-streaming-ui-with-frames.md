@@ -1,0 +1,354 @@
+---
+title: Streaming UI with Frames
+description: How to stream and reload route-owned UI with Frame, fallbacks, and server and browser frame resolvers.
+---
+
+The album page from [Rendering UI](/rendering-ui/) returns one component tree, and the enhanced form
+from [Interactivity](/interactivity/) navigates after it saves. Keep those simpler paths until one
+region of a page benefits from its own request.
+
+This chapter moves album recommendations behind a `GET` route, streams them into the page with
+`<Frame>`, and reloads that region without navigating the whole document.
+
+## Use a frame for route-owned UI
+
+A component does not need a frame merely because it is slow or interactive. Start with normal
+component composition. Reach for a frame when a region should have its own route and at least one of
+these behaviors:
+
+- it can arrive after the surrounding page;
+- it needs to reload independently after a mutation;
+- several pages render the same route-owned region; or
+- its data and error response belong to a separate request.
+
+Add a recommendations route next to the album route:
+
+```ts filename=app/routes.ts
+import { form, get, route } from "remix/routes";
+
+export const routes = route({
+  albums: route("/albums", {
+    show: get("/:albumId"),
+    recommendations: get("/:albumId/recommendations"),
+    edit: form("/:albumId/edit"),
+  }),
+});
+```
+
+The action renders only the region the frame needs. It does not include the app's `Document` shell:
+
+```tsx filename=app/actions/albums/controller.tsx
+import { createController } from "remix/router";
+
+import { routes } from "../../routes.ts";
+import { getAlbum, getRecommendations } from "./data.ts";
+import { AlbumRecommendations } from "./recommendations.tsx";
+import { AlbumPage } from "./show-page.tsx";
+
+export default createController(routes.albums, {
+  actions: {
+    async show(context) {
+      let album = await getAlbum(context.params.albumId);
+      if (!album) return new Response("Album not found", { status: 404 });
+
+      return context.render(<AlbumPage album={album} />);
+    },
+
+    async recommendations(context) {
+      let album = await getAlbum(context.params.albumId);
+      if (!album) return new Response("Album not found", { status: 404 });
+
+      let recommendations = await getRecommendations(album);
+      return context.render(<AlbumRecommendations albums={recommendations} />);
+    },
+  },
+});
+```
+
+Now the page can render that route with `Frame`:
+
+```tsx filename=app/actions/albums/show-page.tsx
+import { Frame } from "remix/ui";
+import type { Handle } from "remix/ui";
+
+import { routes } from "../../routes.ts";
+import { Document } from "../document.tsx";
+import type { Album } from "./data.ts";
+
+export function AlbumPage(handle: Handle<{ album: Album }>) {
+  return () => {
+    let { album } = handle.props;
+
+    return (
+      <Document title={`${album.title} — Albums`}>
+        <main>
+          <h1>{album.title}</h1>
+          <Frame src={routes.albums.recommendations.href({ albumId: album.id })} />
+        </main>
+      </Document>
+    );
+  };
+}
+```
+
+Without a `fallback`, the frame is blocking. Remix waits for the recommendations response before it
+sends the initial HTML chunk. The browser still receives one complete page.
+
+## Stream a fallback first {#streaming-and-deferred-rendering}
+
+Add `fallback` when the album page is useful before its recommendations arrive:
+
+```tsx
+<Frame
+  src={routes.albums.recommendations.href({ albumId: album.id })}
+  fallback={<p>Loading recommendations…</p>}
+/>
+```
+
+The fallback is part of the initial HTML. When the recommendations action finishes, Remix streams
+its rendered HTML and replaces the fallback.
+
+Use a fallback for a region that may arrive later without making the surrounding page confusing.
+Keep a frame blocking when the initial page does not make sense without it. A fallback is loading UI,
+not a generic error boundary; the frame resolver and app error handling still decide what happens
+when the request fails.
+
+## Render the response as a stream {#server-rendering-with-rendertostream-and-rendertostring}
+
+Add the standard render middleware to `app/router.ts`. It gives actions `context.render(...)`,
+streams their component trees, and sends frame requests back through the same router:
+
+```ts filename=app/router.ts
+import { render } from "remix/middleware/render";
+import { createRouter } from "remix/router";
+
+import { assets } from "./assets.ts";
+
+export const router = createRouter({
+  middleware: [
+    render({
+      assets,
+      onError(error) {
+        console.error(error);
+      },
+    }),
+  ],
+});
+```
+
+The middleware forwards same-origin request headers needed by frame routes, strips body and
+transport headers from its internal `GET` requests, follows redirects, and cancels pending frame
+work when the outer request is canceled. It also uses the asset server to resolve hydrated client
+entries and their module preloads.
+
+Use `renderWith(...)` from `remix/middleware/render` when an app needs a different renderer or
+response type. Normal HTML actions should use the standard `render()` middleware.
+
+`renderToString()` is the smaller alternative when code needs the complete HTML value before it can
+continue, such as an email preview or a small embedded fragment:
+
+```tsx
+import { renderToString } from "remix/ui/server";
+
+// After loading recommendations:
+let html = await renderToString(<AlbumRecommendations albums={recommendations} />);
+```
+
+Use the app's streaming renderer for normal page responses. It supports client entries and lets
+frames with fallbacks arrive after the initial HTML.
+
+## Resolve frames in the browser
+
+A blocking frame resolves before the browser receives the page. A frame with a fallback may still
+be pending, and any frame can reload later. Add `resolveFrame` to the browser's `run()` options for
+those requests:
+
+```ts filename=app/actions/public/entry.ts
+import type { ResolveFrameOptions } from "remix/ui";
+import { run } from "remix/ui";
+
+let app = run({
+  async loadModule(moduleUrl, exportName) {
+    let module = await import(moduleUrl);
+    return module[exportName];
+  },
+  async resolveFrame(src, options) {
+    let headers = new Headers({ Accept: "text/html", "X-Remix-Frame": "true" });
+    if (options?.target) headers.set("X-Remix-Target", options.target);
+
+    let response = await fetch(src, {
+      body: getRequestBody(options),
+      credentials: "same-origin",
+      headers,
+      method: options?.method,
+      signal: options?.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Frame request failed with status ${response.status}`);
+    }
+
+    return response.body ?? response.text();
+  },
+});
+
+function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+  let formData = options?.formData;
+  if (!formData) return;
+  if (options.encType !== "application/x-www-form-urlencoded") return formData;
+
+  let body = new URLSearchParams();
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === "string" ? value : value.name);
+  }
+  return body;
+}
+
+app.addEventListener("error", (event) => {
+  console.error(event.error);
+});
+```
+
+Only return trusted HTML from `resolveFrame`. Same-origin route URLs are the normal choice. Pass
+`options.signal` to `fetch()` instead of letting a removed or superseded frame request continue.
+GET forms already include their values in `src`. For non-GET forms, the resolver receives the
+browser's `FormData`, method, and encoding. This example preserves URL-encoded and multipart form
+bodies; the resolver remains the place to apply other encoding or `_method` conventions.
+
+## Name and reload frames {#frames-and-partial-server-rendered-ui}
+
+Give a frame a `name` when another client entry needs to find it:
+
+```tsx
+<Frame
+  name="album-recommendations"
+  src={routes.albums.recommendations.href({ albumId: album.id })}
+  fallback={<p>Loading recommendations…</p>}
+/>
+```
+
+A component can reload the frame that contains it or a named frame elsewhere on the page:
+
+```tsx
+// Reload the containing frame.
+await handle.frame.reload();
+
+// Reload a mounted frame by name.
+await handle.frames.get("album-recommendations")?.reload();
+```
+
+`handle.frames.get(name)` returns `undefined` when that frame is not mounted. After a reload, Remix
+updates the region with the route's current HTML. Client entries inside matching content keep their
+setup state and receive current server props.
+
+## Navigate a frame with a form
+
+Once `run({ resolveFrame })` starts, an eligible same-origin form follows the same frame navigation
+path as a link. This GET form reloads the recommendations frame without a client entry or submit
+handler:
+
+```tsx
+<form
+  action={routes.albums.recommendations.href({ albumId: album.id })}
+  method="get"
+  data-rmx-target="album-recommendations"
+>
+  <button type="submit">Refresh recommendations</button>
+</form>
+```
+
+The form remains a normal document navigation before the runtime starts. Native constraint
+validation and the form's `submit` event run before Remix intercepts it. `data-rmx-target` chooses a named
+frame, `data-rmx-src` can provide a different frame request URL, `data-rmx-reset-scroll="false"` preserves the
+current scroll position, and `data-rmx-document` opts out of interception. `data-rmx-history="push|replace"`
+controls how the navigation updates history.
+
+GET controls are already encoded in the destination URL. For non-GET forms, `resolveFrame` receives
+`formData`, `method`, and `encType`. The action should return HTML for the targeted frame when it
+receives a frame request, while keeping its normal document response or redirect for unenhanced
+submissions. Non-GET submissions to the current URL replace that history entry; GET submissions and
+submissions to a different URL push one. The `data-rmx-history` attribute overrides those defaults.
+
+## Coordinate a mutation and a separate frame reload {#coordinating-forms-fetches-frame-reloads-and-navigation}
+
+Start with a form whose action works without browser JavaScript. A client entry can intercept that
+same submission, send its `FormData`, and reload a different route after the action succeeds:
+
+```tsx
+import { on } from "remix/ui";
+
+// Inside a client-entry component's render function:
+<form
+  action={routes.albums.edit.action.href({ albumId: album.id })}
+  method="post"
+  mix={on("submit", async (event, signal) => {
+    let form = event.currentTarget;
+    event.preventDefault();
+
+    let response = await fetch(form.action, {
+      body: new FormData(form),
+      method: form.method,
+      signal,
+    });
+
+    if (signal.aborted) return;
+    if (!response.ok) {
+      // Render the app's validation or request error here.
+      return;
+    }
+
+    await handle.frames.get("album-recommendations")?.reload();
+  })}
+>
+  {/* album fields */}
+</form>;
+```
+
+This custom handler is useful because the mutation response and recommendations frame are two
+different requests. When the form action itself returns the HTML that belongs in the target frame,
+prefer `data-rmx-target` and let the runtime submit it through `resolveFrame`.
+
+The handler above keeps the mutation in its existing action and the recommendations HTML in its
+existing `GET` action. The browser component coordinates the two requests without duplicating either
+server path.
+
+Use a normal navigation when the response should replace the whole page. Fetch JSON when a browser
+component will render the returned data itself. Reload a frame when an existing `GET` action renders
+the HTML for one region and only that region needs to update.
+
+## Target a frame from a link
+
+A link can keep its public destination in `href` while loading a smaller route into a named frame:
+
+```tsx
+// Inside a component that renders an album link:
+<a
+  href={routes.albums.show.href({ albumId: album.id })}
+  data-rmx-src={routes.albums.recommendations.href({ albumId: album.id })}
+  data-rmx-target="album-recommendations"
+  data-rmx-reset-scroll="false"
+>
+  Show recommendations
+</a>
+```
+
+`data-rmx-target` chooses the frame, while `data-rmx-src` chooses the request used to fill it. The address bar
+still moves to `href`. Add `data-rmx-history="replace"` when it should replace the current history entry. Use
+`data-rmx-document` when a same-origin link must perform an ordinary document navigation instead.
+
+## Handle failures and cancellation
+
+The server renderer's `onError` and the browser app's `error` event are reporting hooks. The app's
+frame resolver decides whether a non-success response should become bounded HTML for that region or
+an error reported through those hooks.
+
+If a deferred frame fails after its fallback has been sent, the server cannot replace the whole page
+with a new error response. Keep the fallback useful, report the error, and let the surrounding page
+continue when that is safe.
+
+Pass `request.signal` through server frame work and the browser resolver's signal through `fetch()`.
+[Errors and Cancellation](/errors-and-error-boundaries/) covers reporting policy, while
+[Production](/production/) covers disconnects, compression, and other deployment concerns.
+
+The next chapter, [Animation](/animation/), adds motion to component insertion, removal, and layout
+changes.

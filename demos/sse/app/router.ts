@@ -1,13 +1,17 @@
-import { createRouter, type MiddlewareContext } from 'remix/router'
+import { createMiddleware, createRouter, type MiddlewareContext } from 'remix/router'
+import { asyncContext } from 'remix/middleware/async-context'
 import { compression } from 'remix/middleware/compression'
 import { logger } from 'remix/middleware/logger'
+import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 
 import rootController from './actions/controller.tsx'
-import { render } from './middleware/render.ts'
+import { loadAssetEntry } from './middleware/asset-entry.ts'
 import { routes } from './routes.ts'
+import { assets } from './utils/assets.ts'
 
-type AppContext = MiddlewareContext<[ReturnType<typeof render>]>
+const appMiddleware = createMiddleware(asyncContext(), loadAssetEntry(), render({ assets }))
+type AppContext = MiddlewareContext<typeof appMiddleware>
 
 declare module 'remix/router' {
   interface RouterTypes {
@@ -29,7 +33,7 @@ middleware.push(
     lastModified: false,
   }),
 )
-middleware.push(render())
+middleware.push(...appMiddleware)
 
 export const router = createRouter<AppContext>({ middleware })
 

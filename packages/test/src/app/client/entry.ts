@@ -1,9 +1,11 @@
 import { normalizeLine } from '../../lib/normalize.ts'
+import type { SerializedOnlyPattern } from '../../lib/config.ts'
 import type { TestResult, TestResults } from '../../lib/reporters/results.ts'
 
 interface TestsSetup {
   testPaths: string[]
   baseDir: string
+  only?: SerializedOnlyPattern[]
 }
 
 type FileResults = TestResults & { tests: Array<TestResult & { filePath: string }> }
@@ -162,7 +164,7 @@ function mountTests(host: HTMLElement, setup: TestsSetup): void {
 
   void (async () => {
     for (let testFile of setup.testPaths) {
-      let fileResults = await runInIframe(testFile)
+      let fileResults = await runInIframe(testFile, setup.only)
       await fetch('/file-results', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -181,10 +183,15 @@ function mountTests(host: HTMLElement, setup: TestsSetup): void {
   })()
 }
 
-function runInIframe(testFile: string): Promise<FileResults> {
+function runInIframe(
+  testFile: string,
+  only: SerializedOnlyPattern[] | undefined,
+): Promise<FileResults> {
   return new Promise((resolve) => {
     let iframe = document.createElement('iframe')
-    iframe.src = `/iframe?file=${encodeURIComponent(testFile)}`
+    let params = new URLSearchParams({ file: testFile })
+    if (only) params.set('only', JSON.stringify(only))
+    iframe.src = `/iframe?${params}`
     // Make the iframe as big so we don't get unintentional scrolling in test UIs
     let parentBody = iframe.contentWindow?.document.body
     iframe.width = Math.max(parentBody?.scrollWidth ?? 0, 800).toString()
@@ -243,7 +250,11 @@ function buildSuite(suiteName: string, tests: TestResult[], baseDir: string): HT
         ? 'rt-todo'
         : 'rt-passed'
   let icon = suiteFailed ? '✗' : suiteAllSkipped ? '↓' : suiteAllTodo ? '…' : '✓'
-  let suffix = suiteAllSkipped ? ' # skipped' : suiteAllTodo ? ' # todo' : ''
+  let suffix = suiteAllSkipped
+    ? ` ${formatPendingComment('skipped', getCommonReason(tests))}`
+    : suiteAllTodo
+      ? ` ${formatPendingComment('todo', getCommonReason(tests))}`
+      : ''
 
   let details = el('details', { className: 'rt-suite-details' })
   if (suiteFailed) details.open = true
@@ -297,12 +308,33 @@ function buildTestItem(test: TestResult, baseDir: string): HTMLElement | null {
     return row
   }
   if (test.status === 'skipped' && test.name) {
-    return el('div', { className: 'rt-muted', textContent: `↓ ${test.name} # skipped` })
+    return el('div', {
+      className: 'rt-muted',
+      textContent: `↓ ${test.name} ${formatPendingComment('skipped', test.reason)}`,
+    })
   }
   if (test.status === 'todo' && test.name) {
-    return el('div', { className: 'rt-todo', textContent: `… ${test.name} # todo` })
+    return el('div', {
+      className: 'rt-todo',
+      textContent: `… ${test.name} ${formatPendingComment('todo', test.reason)}`,
+    })
   }
   return null
+}
+
+function formatPendingComment(status: 'skipped' | 'todo', reason: string | undefined): string {
+  let comment = status === 'skipped' ? '# skipped' : '# todo'
+  return reason ? `${comment}: ${reason}` : comment
+}
+
+function getCommonReason(tests: TestResult[]): string | undefined {
+  let reason: string | undefined
+  for (let test of tests) {
+    if (!test.reason) return undefined
+    reason ??= test.reason
+    if (reason !== test.reason) return undefined
+  }
+  return reason
 }
 
 function buildStack(stack: string, baseDir: string): DocumentFragment {

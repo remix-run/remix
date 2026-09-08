@@ -4,7 +4,7 @@ import { createRoot } from '../vdom.ts'
 import { on } from './on-mixin.ts'
 import { invariant } from '../invariant.ts'
 import type { Assert, Equal } from '../../test/utils.ts'
-import type { Dispatched } from '../event-listeners.ts'
+import type { Dispatched } from '../event-types.ts'
 
 describe('on mixin', () => {
   it('updates listeners in place without rebinding when capture is unchanged', (t) => {

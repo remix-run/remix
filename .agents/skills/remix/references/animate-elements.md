@@ -2,23 +2,20 @@
 
 ## What This Covers
 
-How to animate insertion, removal, and layout changes of elements. Read this when the task
-involves:
+How to animate insertion, removal, and layout changes of elements. Read this when the task involves:
 
 - Adding entrance, exit, or shared-layout transitions to UI
 - Choosing between spring physics (`spring(...)`) and time-based easing (`tween`)
 - Coordinating CSS transitions with the same easing as JS animations
 - Imperative animation loops via `requestAnimationFrame`
 
-Import animation APIs from `remix/ui/animation`. For the smaller set of animation helpers that
-show up alongside other mixins, see `mixins-styling-events.md`.
+Import animation APIs from `remix/ui/animation`. For the smaller set of animation helpers that show up alongside other mixins, see `mixins-styling-events.md`.
 
 ## Animation Mixins
 
 ### `animateEntrance(config)`
 
-Animates an element when inserted. Config specifies the **starting** style the element animates
-**from**:
+Animates an element when inserted. Config specifies the **starting** style the element animates **from**:
 
 ```tsx
 <div
@@ -32,8 +29,7 @@ Animates an element when inserted. Config specifies the **starting** style the e
 
 ### `animateExit(config)`
 
-Animates an element when removed. Config specifies the **ending** style the element animates
-**to**. The element stays in the DOM until the animation completes:
+Animates an element when removed. Config specifies the **ending** style the element animates **to**. The element stays in the DOM until the animation completes:
 
 ```tsx
 {
@@ -61,8 +57,7 @@ Animates layout changes (position/size) using FLIP-style transforms:
 }
 ```
 
-Options: `duration` (default 200ms), `easing` (default spring snappy), `size` (default true —
-include scale projection for size changes).
+Options: `duration` (default 200ms), `easing` (default spring snappy), `size` (default true — include scale projection for size changes).
 
 ### Combining mixins
 
@@ -91,8 +86,7 @@ include scale projection for size changes).
 
 ## Spring API
 
-Physics-based spring animation. Returns a `SpringIterator` with `duration`, `easing`, and
-`toString()` for CSS.
+Physics-based spring animation. Returns a `SpringIterator` with `duration`, `easing`, and `toString()` for CSS.
 
 ### Presets
 
@@ -159,9 +153,7 @@ for (let t of spring('bouncy')) {
 
 ## Tween API
 
-Generator-based tween for animating values over time with cubic bezier easing. Prefer animation
-mixins or CSS transitions with `spring` for most UI work. Use `tween` for imperative
-`requestAnimationFrame` loops, canvas/WebGL, or non-CSS properties.
+Generator-based tween for animating values over time with cubic bezier easing. Prefer animation mixins or CSS transitions with `spring` for most UI work. Use `tween` for imperative `requestAnimationFrame` loops, canvas/WebGL, or non-CSS properties.
 
 ```tsx
 import { tween, easings } from 'remix/ui/animation'
@@ -183,8 +175,7 @@ function tick(timestamp: number) {
 requestAnimationFrame(tick)
 ```
 
-Built-in easings: `easings.linear`, `easings.ease`, `easings.easeIn`, `easings.easeOut`,
-`easings.easeInOut`.
+Built-in easings: `easings.linear`, `easings.ease`, `easings.easeIn`, `easings.easeOut`, `easings.easeInOut`.
 
 ## Practical Guidance
 

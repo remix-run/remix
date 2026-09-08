@@ -2,6 +2,26 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
+## v0.17.5
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`multipart-parser@0.16.4`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.4)
+
+## v0.17.4
+
+### Patch Changes
+
+- Apply `maxParts` and `maxTotalSize` limits when parsing `application/x-www-form-urlencoded` requests with `parseFormData()`, so urlencoded submissions can no longer bypass the same field count and total body size protections used for multipart forms.
+
+## v0.17.3
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`multipart-parser@0.16.3`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.3)
+
 ## v0.17.2
 
 ### Patch Changes

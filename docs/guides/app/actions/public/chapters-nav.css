@@ -1,0 +1,89 @@
+.docs-chapters-nav__heading {
+  height: 32px;
+  margin: 0;
+  padding: 8px;
+  color: var(--rmx-color-text-primary);
+  font-family: var(--rmx-font-family-sans);
+  font-size: 12px;
+  font-weight: var(--rmx-font-weight-bold);
+  line-height: normal;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.docs-chapters-nav__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding: 0;
+  overflow: visible;
+  font-size: 14px;
+  list-style: none;
+}
+
+.docs-chapters-nav__list li {
+  flex: none;
+  margin: 0;
+}
+
+.docs-chapters-nav__list a {
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  height: 32px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--docs-nav-link);
+  text-decoration: none;
+  transition:
+    color 150ms ease-in-out,
+    background-color 150ms ease-in-out;
+}
+
+.docs-chapters-nav__list a:hover {
+  color: var(--docs-nav-link-hover);
+  background: var(--docs-nav-hover-background);
+}
+
+.docs-chapters-nav__list a[aria-current='page'] {
+  color: var(--rmx-color-text-primary);
+  background: var(--docs-nav-selected-background);
+}
+
+.docs-chapters-nav__eyebrow {
+  padding: 0;
+  color: inherit;
+  font-family: var(--rmx-font-family-mono);
+  font-size: 14px;
+  line-height: normal;
+}
+
+.docs-chapters-nav__title {
+  min-width: 0;
+  overflow: hidden;
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-height: 715px) and (width >= 900px) {
+  .docs-chapters-nav__heading {
+    height: 28px;
+    padding-block: 6px;
+  }
+
+  .docs-chapters-nav__list {
+    gap: 1px;
+  }
+
+  .docs-chapters-nav__list a {
+    height: 26px;
+    padding-block: 5px;
+    overflow: hidden;
+    line-height: 16px;
+  }
+}

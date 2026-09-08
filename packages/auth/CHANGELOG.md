@@ -2,6 +2,46 @@
 
 This is the changelog for [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remove the built-in Atmosphere auth provider and the DPoP model that was coupled to it. This removes `createAtmosphereAuthProvider()`, the `Atmosphere*` and `OAuthDpop*` types, and `OAuthStandardTokens`.
+
+  Use `OAuthTokens` in place of `OAuthStandardTokens`. Custom provider packages can extend `OAuthTokens` with protocol-specific fields and preserve that type through `OAuthProvider`, `OAuthResult`, `finishExternalAuth()`, and `refreshExternalAuth()`. Use the new public `createOAuthProvider()` factory and `OAuthProviderRuntime` contract to integrate providers that are not built into Remix. Applications using the Atmosphere provider must remove it or move their atproto authentication to a separate package.
+
+## v0.2.7
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.21.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.21.0)
+
+## v0.2.6
+
+### Patch Changes
+
+- Fix `createAtmosphereAuthProvider()` handle resolution so a successful DNS or HTTPS handle lookup can start the OAuth flow immediately instead of waiting for the other lookup branch to finish.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.20.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.1)
+
+## v0.2.5
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.20.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.0)
+
+## v0.2.4
+
+### Patch Changes
+
+- Reject OAuth `returnTo` values that resolve outside the current origin when browsers normalize backslashes in redirect locations.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.19.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.2)
+
 ## v0.2.3
 
 ### Patch Changes
@@ -52,7 +92,6 @@ This is the changelog for [`auth`](https://github.com/remix-run/remix/tree/main/
 - Add `auth`, a high-level browser authentication package for Remix.
 
   Includes:
-
   - generic `oidc()` support for standards-based providers
   - thin `microsoft()`, `okta()`, and `auth0()` wrappers on top of OIDC
   - OAuth provider helpers for Google, GitHub, and Facebook

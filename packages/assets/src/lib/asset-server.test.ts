@@ -5,6 +5,7 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
+import MagicString from 'magic-string'
 import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
@@ -15,11 +16,18 @@ import {
   getInternalChokidarWatcher,
   getInternalWatchTargets,
 } from './asset-server.ts'
-import type { AssetServer, AssetServerOptions } from './asset-server.ts'
+import type { AssetServer, AssetServerOptions, BrowserHmrChannel } from './asset-server.ts'
 import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
+import type { ModuleLoader } from './loaders.ts'
 
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
+
+const packageRoot = path.resolve(import.meta.dirname, '../..')
+const virtualStorePackageDir =
+  '@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package'
+const virtualStorePackageUrlPath =
+  '%40remix-run%2B__allowed-package%401.0.0/node_modules/%40remix-run/__allowed-package/index.ts'
 
 function createAssetServerForTest(
   options: Omit<AssetServerOptions<AssetRequestTransformMap>, 'basePath'> & {
@@ -54,41 +62,6 @@ async function symlinkDirectory(target: string, link: string): Promise<void> {
   await fs.symlink(target, link, process.platform === 'win32' ? 'junction' : 'dir')
 }
 
-async function writePnpmSymlinkedPackageFixture(dir: string): Promise<void> {
-  await writeJson(dir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/package.json', {
-    name: 'remix',
-    type: 'module',
-    exports: {
-      './ui': './dist/ui.js',
-    },
-  })
-  await write(
-    dir,
-    'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/dist/ui.js',
-    'export * from "@remix-run/ui"',
-  )
-  await writeJson(
-    dir,
-    'app/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui/package.json',
-    {
-      name: '@remix-run/ui',
-      type: 'module',
-      exports: {
-        '.': './dist/index.js',
-      },
-    },
-  )
-  await write(
-    dir,
-    'app/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui/dist/index.js',
-    'export const ui = true',
-  )
-  await symlinkDirectory(
-    path.join(dir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix'),
-    path.join(dir, 'app/node_modules/remix'),
-  )
-}
-
 function getLineAndColumn(source: string, search: string): { line: number; column: number } {
   let index = source.indexOf(search)
   assert.notEqual(index, -1, `Expected to find "${search}" in:\n${source}`)
@@ -102,29 +75,8 @@ function getLineAndColumn(source: string, search: string): { line: number; colum
 
 function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions<any>> = {}) {
   return createAssetServerForTest({
-    allow: ['app/**', 'app/node_modules/**'],
+    allowFiles: ['app/**', 'app/node_modules/**'],
     basePath: '/assets',
-    fileMap: {
-      '/app/*path': 'app/*path',
-      '/npm/*path': 'app/node_modules/*path',
-    },
-    rootDir,
-    watch: overrides.watch ?? false,
-    ...overrides,
-  })
-}
-
-function createNodeModulesTestServer(
-  rootDir: string,
-  overrides: Partial<AssetServerOptions<any>> = {},
-) {
-  return createAssetServerForTest({
-    allow: ['app/entry.ts', 'app/node_modules/**'],
-    basePath: '/assets',
-    fileMap: {
-      '/node_modules/*path': 'app/node_modules/*path',
-      '/app/*path': 'app/*path',
-    },
     rootDir,
     watch: overrides.watch ?? false,
     ...overrides,
@@ -173,7 +125,18 @@ async function emitWatchEvent(
   let chokidarWatcher = getInternalChokidarWatcher(assetServer)
   assert.ok(chokidarWatcher)
   chokidarWatcher.emit(event, getWatchEventFilePath(filePath))
-  await Promise.resolve()
+  await new Promise((resolve) => setTimeout(resolve, 25))
+}
+
+function createTestBrowserHmrChannel(): BrowserHmrChannel {
+  return {
+    close() {},
+    onFileEvents() {
+      return () => {}
+    },
+    updateWatchedFiles() {},
+    url: 'http://127.0.0.1:1234/hmr',
+  }
 }
 
 function getWatchEventFilePath(filePath: string): string {
@@ -294,6 +257,30 @@ function decodeInlineSourceMap(source: string): { sources?: string[] } {
   return JSON.parse(decoded) as { sources?: string[] }
 }
 
+function createPrependModuleLoader(prefix: string): ModuleLoader {
+  return (_url, _context, nextLoad) => {
+    let result = nextLoad(_url, _context)
+    if (typeof result.source !== 'string') {
+      throw new TypeError('Expected module loader source to be a string')
+    }
+    let source = stripInlineSourceMap(result.source)
+    let rewritten = new MagicString(source)
+    rewritten.prepend(prefix)
+    let map = rewritten.generateMap({ hires: true }).toString()
+    return {
+      ...result,
+      source: `${rewritten.toString()}\n//# sourceMappingURL=data:application/json;base64,${Buffer.from(map).toString('base64')}`,
+    }
+  }
+}
+
+function stripInlineSourceMap(source: string): string {
+  return source.replace(
+    /(?:\/\/# sourceMappingURL=data:application\/json;base64,[A-Za-z0-9+/=]+|\/\*# sourceMappingURL=data:application\/json;base64,[A-Za-z0-9+/=]+ \*\/)\s*$/g,
+    '',
+  )
+}
+
 async function withTsconfigTransformCase(
   files: Record<string, unknown>,
   callback: (context: {
@@ -326,6 +313,28 @@ async function withTsconfigTransformCase(
   }
 }
 
+// Links the only copy of a package into `projectDir` from a store directory, the way a package
+// manager's virtual store does.
+async function writeVirtualStorePackage(projectDir: string, storeDir: string): Promise<void> {
+  await writeJson(storeDir, `${virtualStorePackageDir}/package.json`, {
+    name: '@remix-run/__allowed-package',
+    type: 'module',
+    exports: {
+      '.': './index.ts',
+    },
+  })
+  await write(storeDir, `${virtualStorePackageDir}/index.ts`, 'export const value = true')
+  await symlinkDirectory(
+    path.join(storeDir, virtualStorePackageDir),
+    path.join(projectDir, 'node_modules/@remix-run/__allowed-package'),
+  )
+  await write(
+    projectDir,
+    'app/entry.ts',
+    'import { value } from "@remix-run/__allowed-package"\nexport { value }',
+  )
+}
+
 describe('asset-server', () => {
   let dir: string
 
@@ -335,6 +344,93 @@ describe('asset-server', () => {
 
   after(async () => {
     await fs.rm(dir, { recursive: true, force: true })
+  })
+
+  it('lists browser-reachable assets using the configured mapping and access policy', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/public/entry.ts', 'export const value = 1')
+      await write(caseDir, 'app/public/styles.css', 'body { color: red }')
+      await write(caseDir, 'app/public/logo.svg', '<svg />')
+      await write(caseDir, 'app/public/entry.test.ts', 'export const test = true')
+      await write(caseDir, 'app/private/secret.ts', 'export const secret = true')
+
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/public/**'],
+        denyFiles: ['app/**/*.test.*'],
+        files: { extensions: ['.svg'] },
+        rootDir: caseDir,
+      })
+
+      try {
+        let assets = await assetServer.getAssets()
+        let appAssets = assets.filter((asset) => asset.url?.startsWith('/assets/app/'))
+        let realCaseDir = nodeFs.realpathSync(caseDir)
+
+        let actual = appAssets.map((asset) => [
+          asset.url,
+          normalizeWindowsPath(path.relative(realCaseDir, asset.filePath ?? '')),
+          asset.type,
+        ])
+        assert.deepEqual(actual, [
+          ['/assets/app/public/entry.ts', 'app/public/entry.ts', 'script'],
+          ['/assets/app/public/logo.svg', 'app/public/logo.svg', 'file'],
+          ['/assets/app/public/styles.css', 'app/public/styles.css', 'style'],
+        ])
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('explains reachable, denied, unsupported, missing, and unmapped assets', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/public/entry.ts', 'export const value = 1')
+      await write(caseDir, 'app/public/entry.test.ts', 'export const test = true')
+      await write(caseDir, 'app/public/readme.txt', 'hello')
+
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/public/**'],
+        denyFiles: ['app/**/*.test.*'],
+        rootDir: caseDir,
+      })
+
+      try {
+        let reachable = await assetServer.getAssetDetails('/assets/app/public/entry.ts')
+        assert.equal(reachable.status, 'reachable')
+        assert.equal(reachable.type, 'script')
+        assert.equal(reachable.fileRoot, 'app')
+        assert.equal(reachable.urlRoot, '/assets/app')
+        assert.deepEqual(reachable.access?.allowedBy, {
+          kind: 'file',
+          value: 'app/public/**',
+        })
+
+        let byFile = await assetServer.getAssetDetails('app/public/entry.ts')
+        assert.equal(byFile.url, '/assets/app/public/entry.ts')
+        assert.equal(byFile.status, 'reachable')
+
+        let denied = await assetServer.getAssetDetails('/assets/app/public/entry.test.ts')
+        assert.equal(denied.status, 'denied')
+        assert.equal(denied.access?.deniedBy, 'app/**/*.test.*')
+
+        let unsupported = await assetServer.getAssetDetails('/assets/app/public/readme.txt')
+        assert.equal(unsupported.status, 'unsupported')
+
+        let missing = await assetServer.getAssetDetails('/assets/app/public/missing.ts')
+        assert.equal(missing.status, 'missing')
+
+        let unmapped = await assetServer.getAssetDetails('/other/entry.ts')
+        assert.equal(unmapped.status, 'unmapped')
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
   })
 
   it('handles GET and HEAD requests but ignores POST', async () => {
@@ -783,11 +879,8 @@ describe('asset-server', () => {
       '<svg xmlns="http://www.w3.org/2000/svg" color="#0EA5E9"><rect fill="currentColor" /></svg>\n',
     )
     let assetServer = createAssetServer({
-      allow: ['app/**'],
+      allowFiles: ['app/**'],
       basePath: '/assets',
-      fileMap: {
-        '/assets/app/*path': 'app/*path',
-      },
       files: {
         extensions: ['.svg'],
         transforms: {
@@ -1231,11 +1324,11 @@ describe('asset-server', () => {
     assert.equal(await firstResponse.text(), 'HELLO\n')
     assert.equal(transformCalls, 1)
 
-    await write(dir, 'app/content/value.txt', 'world\n')
+    await write(dir, 'app/content/value.txt', 'world!\n')
 
     let secondResponse = await get(assetServer, href)
     assert.ok(secondResponse)
-    assert.equal(await secondResponse.text(), 'WORLD\n')
+    assert.equal(await secondResponse.text(), 'WORLD!\n')
     assert.equal(transformCalls, 2)
   })
 
@@ -1257,25 +1350,29 @@ describe('asset-server', () => {
       },
     })
 
-    let href = await assetServer.getHref('app/content/value.txt', {
-      transform: ['upper'],
-    })
+    try {
+      let href = await assetServer.getHref('app/content/value.txt', {
+        transform: ['upper'],
+      })
 
-    let firstResponse = await get(assetServer, href)
-    assert.ok(firstResponse)
-    assert.equal(await firstResponse.text(), 'HELLO\n')
-    assert.equal(transformCalls, 1)
+      let firstResponse = await get(assetServer, href)
+      assert.ok(firstResponse)
+      assert.equal(await firstResponse.text(), 'HELLO\n')
+      assert.equal(transformCalls, 1)
 
-    let filePath = path.join(dir, 'app/content/value.txt')
-    await fs.unlink(filePath)
-    await emitWatchEvent(assetServer, filePath, 'unlink')
-    await write(dir, 'app/content/value.txt', 'world\n')
-    await emitWatchEvent(assetServer, filePath, 'add')
+      let filePath = path.join(dir, 'app/content/value.txt')
+      await fs.unlink(filePath)
+      await emitWatchEvent(assetServer, filePath, 'unlink')
+      await write(dir, 'app/content/value.txt', 'world\n')
+      await emitWatchEvent(assetServer, filePath, 'add')
 
-    let secondResponse = await get(assetServer, href)
-    assert.ok(secondResponse)
-    assert.equal(await secondResponse.text(), 'WORLD\n')
-    assert.equal(transformCalls, 2)
+      let secondResponse = await get(assetServer, href)
+      assert.ok(secondResponse)
+      assert.equal(await secondResponse.text(), 'WORLD\n')
+      assert.equal(transformCalls, 2)
+    } finally {
+      await assetServer.close()
+    }
   })
 
   it('accepts one-item tuples for no-arg transforms and serializes them as strings', async () => {
@@ -2279,6 +2376,34 @@ describe('asset-server', () => {
     assert.equal(depMap.status, 200)
   })
 
+  it('supports external source maps after module loaders transform scripts', async () => {
+    let source = 'let value: number = 1\nconsole.log(value)\n'
+    await write(dir, 'app/entry.ts', source)
+    let assetServer = createTestServer(dir, {
+      scripts: {
+        loaders: [createPrependModuleLoader('console.debug("loader")\n')],
+      },
+      sourceMaps: 'external',
+    })
+    try {
+      let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(
+        assetServer,
+        'app/entry.ts',
+      )
+      let consumer = new SourceMapConsumer(sourceMap)
+
+      let generated = getLineAndColumn(compiledCode, 'console.log(value)')
+      let original = consumer.originalPositionFor(generated)
+      let expected = getLineAndColumn(source, 'console.log(value)')
+
+      assert.equal(original.source, '/assets/app/entry.ts')
+      assert.equal(original.line, expected.line)
+      assert.equal(original.column, expected.column)
+    } finally {
+      await assetServer.close()
+    }
+  })
+
   it('supports inline source maps with absolute source paths', async () => {
     let entryPath = await write(dir, 'app/entry.ts', 'export const entry: number = 1')
     let assetServer = createTestServer(dir, {
@@ -2302,6 +2427,34 @@ describe('asset-server', () => {
       .replace(/\\/g, '/')
       .replace(/^\/([A-Za-z]:\/)/, '$1')
     assert.deepEqual(sourceMap.sources, [expectedSource])
+  })
+
+  it('supports inline source maps after module loaders transform scripts', async () => {
+    let source = 'let value: number = 1\nconsole.log(value)\n'
+    await write(dir, 'app/entry.ts', source)
+    let assetServer = createTestServer(dir, {
+      scripts: {
+        loaders: [createPrependModuleLoader('console.debug("loader")\n')],
+      },
+      sourceMaps: 'inline',
+    })
+    try {
+      let response = await get(assetServer, '/assets/app/entry.ts')
+      assert.ok(response)
+      let compiledCode = await response.text()
+      let sourceMap = decodeInlineSourceMap(compiledCode) as RawSourceMap
+      let consumer = new SourceMapConsumer(sourceMap)
+
+      let generated = getLineAndColumn(compiledCode, 'console.log(value)')
+      let original = consumer.originalPositionFor(generated)
+      let expected = getLineAndColumn(source, 'console.log(value)')
+
+      assert.equal(original.source, '/assets/app/entry.ts')
+      assert.equal(original.line, expected.line)
+      assert.equal(original.column, expected.column)
+    } finally {
+      await assetServer.close()
+    }
   })
 
   it('applies top-level common compiler options to scripts', async () => {
@@ -2393,20 +2546,23 @@ describe('asset-server', () => {
   })
 
   it('rewrites re-exported package specifiers', async () => {
-    await writeJson(dir, 'app/node_modules/example/package.json', {
-      name: 'example',
+    await writeJson(dir, 'app/node_modules/@remix-run/__example/package.json', {
+      name: '@remix-run/__example',
       type: 'module',
       exports: './index.ts',
     })
-    await write(dir, 'app/node_modules/example/index.ts', 'export const value = 1')
-    await write(dir, 'app/bridge.ts', 'export * from "example"')
+    await write(dir, 'app/node_modules/@remix-run/__example/index.ts', 'export const value = 1')
+    await write(dir, 'app/bridge.ts', 'export * from "@remix-run/__example"')
     let assetServer = createTestServer(dir)
 
     let response = await getByFile(assetServer, 'app/bridge.ts')
     assert.ok(response)
     let body = await response.text()
 
-    assert.match(body, /export \* from "\/assets\/app\/node_modules\/example\/index\.ts"/)
+    assert.match(
+      body,
+      /export \* from "\/assets\/app\/node_modules\/%40remix-run\/__example\/index\.ts"/,
+    )
   })
 
   it('leaves variable dynamic imports unchanged', async () => {
@@ -2558,187 +2714,76 @@ describe('asset-server', () => {
     assert.ok(!body.includes('/assets/app/alias/value.@'))
   })
 
-  it('preserves package symlink identity paths for imports through node_modules', async () => {
+  it('uses one canonical URL when app and package imports resolve to the same pnpm package', async () => {
     let caseDir = await makeTmpDir()
     try {
-      await writeJson(caseDir, 'packages/remix/package.json', {
-        name: 'remix',
-        type: 'module',
-        exports: {
-          './ui': './src/ui.ts',
-        },
-      })
-      await write(caseDir, 'packages/remix/src/shared.ts', 'export const shared = "shared"')
-      await write(
+      let uiStorePath = path.join(
         caseDir,
-        'packages/remix/src/ui.ts',
-        'import { shared } from "./shared.ts"\nexport const ui = shared',
+        'app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui',
       )
-      await symlinkDirectory(
-        path.join(caseDir, 'packages/remix'),
-        path.join(caseDir, 'app/node_modules/remix'),
-      )
-      await write(caseDir, 'app/entry.ts', 'import { ui } from "remix/ui"\nexport { ui }')
-
-      let assetServer = createNodeModulesTestServer(caseDir)
-      try {
-        let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-
-        assert.ok(servedUrls.has('/assets/node_modules/remix/src/ui.ts'))
-        assert.ok(servedUrls.has('/assets/node_modules/remix/src/shared.ts'))
-        assert.equal(servedUrls.has('/assets/packages/remix/src/ui.ts'), false)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('serves pnpm symlinked package dependencies from package realpaths', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await writePnpmSymlinkedPackageFixture(caseDir)
-      await write(caseDir, 'app/entry.ts', 'import { ui } from "remix/ui"\nexport { ui }')
-
-      let assetServer = createNodeModulesTestServer(caseDir)
-      try {
-        let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-
-        assert.ok(servedUrls.has('/assets/node_modules/remix/dist/ui.js'))
-        assert.ok(
-          servedUrls.has(
-            '/assets/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui/dist/index.js',
-          ),
-        )
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('keeps arbitrary app symlink escapes blocked', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await write(caseDir, 'private/secret.ts', 'export const secret = true')
-      await fs.mkdir(path.join(caseDir, 'app/assets'), { recursive: true })
-      await fs.symlink(
-        path.join(caseDir, 'private/secret.ts'),
-        path.join(caseDir, 'app/assets/secret.ts'),
+      await writeJson(
+        caseDir,
+        'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/package.json',
+        {
+          dependencies: {
+            '@remix-run/ui': '1.0.0',
+          },
+          name: 'remix',
+          type: 'module',
+          exports: {
+            './ui': './dist/ui.js',
+          },
+        },
       )
       await write(
         caseDir,
-        'app/entry.ts',
-        'import { secret } from "./assets/secret.ts"\nexport { secret }',
+        'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/dist/ui.js',
+        'import { ui } from "@remix-run/ui"\nexport { ui }',
       )
-
-      let assetServer = createAssetServerForTest({
-        allow: ['app/entry.ts', 'app/assets/**'],
-        basePath: '/assets',
-        fileMap: {
-          '/app/*path': 'app/*path',
-        },
-        onError: () => undefined,
-        rootDir: caseDir,
-      })
-      try {
-        let directResponse = await get(assetServer, '/assets/app/assets/secret.ts')
-        assert.equal(directResponse, null)
-
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(entryResponse)
-        await assertInternalServerError(entryResponse)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('respects absolute deny rules for real package symlink targets', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await writeJson(caseDir, 'packages/remix/package.json', {
-        name: 'remix',
-        type: 'module',
-        exports: {
-          './ui': './src/ui.ts',
-        },
-      })
-      let deniedPath = await write(
+      await writeJson(
         caseDir,
-        'packages/remix/src/ui.ts',
-        'export const ui = "blocked"',
+        'app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui/package.json',
+        {
+          name: '@remix-run/ui',
+          type: 'module',
+          exports: {
+            '.': './dist/index.js',
+          },
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui/dist/index.js',
+        'export const ui = true',
       )
       await symlinkDirectory(
-        path.join(caseDir, 'packages/remix'),
+        path.join(caseDir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix'),
         path.join(caseDir, 'app/node_modules/remix'),
       )
-      await write(caseDir, 'app/entry.ts', 'import { ui } from "remix/ui"\nexport { ui }')
-
-      let assetServer = createNodeModulesTestServer(caseDir, {
-        allow: ['app/entry.ts', 'app/node_modules/**', 'packages/remix/**'],
-        deny: [deniedPath],
-        fileMap: {
-          '/app/*path': 'app/*path',
-          '/node_modules/*path': 'app/node_modules/*path',
-          '/packages/*path': 'packages/*path',
-        },
-        onError: () => undefined,
-      })
-      try {
-        let response = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(response)
-        await assertInternalServerError(response)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('keeps distinct package identities that point to the same real file', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await writeJson(caseDir, 'packages/shared/package.json', {
-        name: 'shared',
-        type: 'module',
-        exports: {
-          './ui': './src/ui.ts',
-        },
-      })
-      await write(caseDir, 'packages/shared/src/ui.ts', 'export const ui = "shared"')
+      await symlinkDirectory(uiStorePath, path.join(caseDir, 'app/node_modules/@remix-run/ui'))
       await symlinkDirectory(
-        path.join(caseDir, 'packages/shared'),
-        path.join(caseDir, 'app/node_modules/package-a'),
-      )
-      await symlinkDirectory(
-        path.join(caseDir, 'packages/shared'),
-        path.join(caseDir, 'app/node_modules/package-b'),
+        uiStorePath,
+        path.join(caseDir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui'),
       )
       await write(
         caseDir,
         'app/entry.ts',
         [
-          'import { ui as a } from "package-a/ui"',
-          'import { ui as b } from "package-b/ui"',
-          'export const values = [a, b]',
+          'import { ui as appUi } from "@remix-run/ui"',
+          'import { ui as packageUi } from "remix/ui"',
+          'export const values = [appUi, packageUi]',
         ].join('\n'),
       )
 
-      let assetServer = createNodeModulesTestServer(caseDir)
+      let assetServer = createTestServer(caseDir)
       try {
-        let response = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(response)
-        assert.equal(response.status, 200)
-        let body = await response.text()
+        let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+        let uiUrls = [...servedUrls].filter((url) => url.includes('%40remix-run/ui/dist/index.js'))
 
-        assert.match(body, /\/assets\/node_modules\/package-a\/src\/ui\.ts/)
-        assert.match(body, /\/assets\/node_modules\/package-b\/src\/ui\.ts/)
+        let expectedUiUrls = [
+          '/assets/app/node_modules/.pnpm/%40remix-run%2Bui%401.0.0/node_modules/%40remix-run/ui/dist/index.js',
+        ]
+        assert.deepEqual(uiUrls, expectedUiUrls)
       } finally {
         await assetServer.close()
       }
@@ -2930,20 +2975,22 @@ describe('asset-server', () => {
     )
   })
 
-  it('getHref rejects modules outside configured fileMap entries', async () => {
+  it('getHref rejects modules outside configured mounts', async () => {
     await write(dir, 'other.ts', 'export const value = 1')
     let assetServer = createTestServer(dir)
 
-    await assert.rejects(() => assetServer.getHref('other.ts'), /File is not allowed:/)
+    await assert.rejects(
+      () => assetServer.getHref('other.ts'),
+      /not allowed by the asset server access configuration/,
+    )
   })
 
   it('getPreloads rejects denied modules', async () => {
     await write(dir, 'app/entry.ts', 'export const entry = true')
     let assetServer = createAssetServerForTest({
-      allow: ['app/**'],
-      deny: ['app/entry.ts'],
+      allowFiles: ['app/**'],
+      denyFiles: ['app/entry.ts'],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
     })
 
     await assert.rejects(
@@ -2951,7 +2998,7 @@ describe('asset-server', () => {
       (error: unknown) => {
         assert.ok(isAssetServerCompilationError(error))
         assert.equal(error.code, 'FILE_NOT_ALLOWED')
-        assert.match(error.message, /File is not allowed/)
+        assert.match(error.message, /not allowed by the asset server access configuration/)
         return true
       },
     )
@@ -2981,7 +3028,7 @@ describe('asset-server', () => {
       })
 
       let urls = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(urls.some((url) => url.includes('@remix-run/ui/jsx-runtime.@')))
+      assert.ok(urls.some((url) => url.includes('%40remix-run/ui/jsx-runtime.@')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -3014,8 +3061,8 @@ describe('asset-server', () => {
       let firstServer = createTestServer(caseDir)
 
       let before = await firstServer.getPreloads('app/entry.tsx')
-      assert.ok(before.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
-      assert.ok(!before.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
+      assert.ok(before.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
+      assert.ok(!before.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
 
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
@@ -3025,13 +3072,13 @@ describe('asset-server', () => {
       })
 
       let sameServer = await firstServer.getPreloads('app/entry.tsx')
-      assert.ok(sameServer.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
-      assert.ok(!sameServer.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
+      assert.ok(sameServer.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
+      assert.ok(!sameServer.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
 
       let secondServer = createTestServer(caseDir)
       let afterRestart = await secondServer.getPreloads('app/entry.tsx')
-      assert.ok(afterRestart.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
-      assert.ok(!afterRestart.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
+      assert.ok(afterRestart.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
+      assert.ok(!afterRestart.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -3066,8 +3113,8 @@ describe('asset-server', () => {
       })
 
       let before = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(before.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.@')))
-      assert.ok(!before.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.@')))
+      assert.ok(before.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.@')))
+      assert.ok(!before.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.@')))
 
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
@@ -3077,8 +3124,8 @@ describe('asset-server', () => {
       })
 
       let after = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(after.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.@')))
-      assert.ok(!after.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.@')))
+      assert.ok(after.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.@')))
+      assert.ok(!after.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.@')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -3168,11 +3215,8 @@ describe('asset-server', () => {
     try {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
       let assetServer = createAssetServer({
-        allow: ['app/**'],
+        allowFiles: ['app/**'],
         basePath: '/assets',
-        fileMap: {
-          '/app/*path': 'app/*path',
-        },
         rootDir: caseDir,
       })
 
@@ -3197,6 +3241,498 @@ describe('asset-server', () => {
     }
   })
 
+  it('serves the HMR client and injects import.meta.hot contexts', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 1',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: createTestBrowserHmrChannel,
+      })
+
+      try {
+        let clientResponse = await get(assetServer, '/assets/__remix_hmr/client.js')
+        assert.ok(clientResponse)
+        assert.equal(clientResponse.status, 200)
+        assert.match(await clientResponse.text(), /createHotContext/)
+
+        let eventsResponse = await get(assetServer, '/assets/__remix_hmr/events')
+        assert.equal(eventsResponse, null)
+
+        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(entryResponse)
+        let entryBody = await entryResponse.text()
+
+        assert.match(entryBody, /from "\/assets\/__remix_hmr\/client\.js"/)
+        assert.match(
+          entryBody,
+          /import\.meta\.hot = __remixCreateHotContext\("\/assets\/app\/entry\.ts"\)/,
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('can use an external HMR event stream', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 1',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: createTestBrowserHmrChannel,
+      })
+
+      try {
+        let clientResponse = await get(assetServer, '/assets/__remix_hmr/client.js')
+        assert.ok(clientResponse)
+        assert.match(
+          await clientResponse.text(),
+          /new EventSource\("http:\/\/127\.0\.0\.1:1234\/hmr"\)/,
+        )
+
+        let eventsResponse = await get(assetServer, '/assets/__remix_hmr/events')
+        assert.equal(eventsResponse, null)
+
+        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(entryResponse)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('creates and closes the browser HMR channel with the asset server', async () => {
+    let caseDir = await makeTmpDir()
+    let createCount = 0
+    let unsubscribeCount = 0
+    let closeCount = 0
+    try {
+      let assetServer = createWatchedTestServer(caseDir, {
+        async hmr() {
+          createCount += 1
+          return {
+            close() {
+              closeCount += 1
+            },
+            onFileEvents() {
+              return () => {
+                unsubscribeCount += 1
+              }
+            },
+            updateWatchedFiles() {},
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      let clientResponse = await get(assetServer, '/assets/__remix_hmr/client.js')
+      assert.ok(clientResponse)
+
+      await assetServer.close()
+      await assetServer.close()
+
+      assert.equal(createCount, 1)
+      assert.equal(unsubscribeCount, 1)
+      assert.equal(closeCount, 1)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('closes the browser HMR channel when an async factory resolves after the asset server closes', async () => {
+    let caseDir = await makeTmpDir()
+    let createCount = 0
+    let unsubscribeCount = 0
+    let closeCount = 0
+    let resolveChannel: (channel: BrowserHmrChannel) => void = (_channel) => {
+      throw new Error('Channel promise was not created')
+    }
+    let channelPromise = new Promise<BrowserHmrChannel>((resolve) => {
+      resolveChannel = resolve
+    })
+
+    try {
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr() {
+          createCount += 1
+          return channelPromise
+        },
+      })
+
+      let closePromise = assetServer.close()
+
+      resolveChannel({
+        close() {
+          closeCount += 1
+        },
+        onFileEvents() {
+          return () => {
+            unsubscribeCount += 1
+          }
+        },
+        updateWatchedFiles() {},
+        url: 'http://127.0.0.1:1234/hmr',
+      })
+
+      await closePromise
+
+      assert.equal(createCount, 1)
+      assert.equal(unsubscribeCount, 0)
+      assert.equal(closeCount, 1)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('runs script module loaders before HMR analysis', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: createTestBrowserHmrChannel,
+        scripts: {
+          loaders: [
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: `${result.source}\nif (import.meta.hot) import.meta.hot.accept()`,
+              }
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        let body = await response.text()
+
+        assert.match(body, /import\.meta\.hot\.accept\(/)
+        assert.match(
+          body,
+          /import\.meta\.hot = __remixCreateHotContext\("\/assets\/app\/entry\.ts"\)/,
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('runs script module loaders in configured order', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const values = []')
+      let assetServer = createWatchedTestServer(caseDir, {
+        scripts: {
+          loaders: [
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: `${result.source}\nvalues.push('first')`,
+              }
+            },
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: `${result.source}\nvalues.push('second')`,
+              }
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        let body = await response.text()
+
+        assert.match(body, /values\.push\('first'\)\nvalues\.push\('second'\)/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('passes Node-shaped context to script module loaders', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const dep = 1')
+      await write(caseDir, 'app/entry.ts', "import { dep } from './dep.ts'\nexport { dep }")
+      let seenLoadContext: unknown
+      let assetServer = createTestServer(caseDir, {
+        scripts: {
+          loaders: [
+            (url, context, nextLoad) => {
+              seenLoadContext = context
+              return nextLoad(url, context)
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+
+        assert.ok(seenLoadContext !== null && typeof seenLoadContext === 'object')
+        let loadContext = seenLoadContext as {
+          conditions?: unknown
+          format?: unknown
+          importAttributes?: unknown
+          moduleUrl?: unknown
+        }
+        assert.deepEqual(loadContext.conditions, ['browser', 'import', 'module', 'default'])
+        assert.equal(loadContext.format, 'module')
+        assert.deepEqual(loadContext.importAttributes, {})
+        assert.equal(typeof loadContext.moduleUrl, 'string')
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('loads script source through module loaders', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let assetServer = createTestServer(caseDir, {
+        scripts: {
+          loaders: [
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: new TextEncoder().encode(`${result.source}\nexport const extra = 2`),
+              }
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        let body = await response.text()
+
+        assert.match(body, /export const extra = 2/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module loaders do not return source', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          loaders: [
+            () => ({
+              format: 'module',
+              shortCircuit: true,
+            }),
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'LOADER_FAILED')
+        assert.match(error.message, /did not return source/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module loaders do not call nextLoad or short circuit', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          loaders: [
+            () => ({
+              format: 'module',
+              source: 'export const value = 2',
+            }),
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'LOADER_FAILED')
+        assert.match(error.message, /without calling nextLoad or setting shortCircuit: true/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module loaders change the URL passed to nextLoad', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          loaders: [(url, context, nextLoad) => nextLoad(new URL('./other.ts', url).href, context)],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'LOADER_FAILED')
+        assert.match(error.message, /attempted to change the module URL/)
+        assert.match(error.message, /Loaders cannot change module URLs/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('reports exceptions thrown by script module loaders as loader failures', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let loaderError = new Error('Loader exploded')
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          loaders: [
+            () => {
+              throw loaderError
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'LOADER_FAILED')
+        assert.equal(error.cause, loaderError)
+        assert.match(error.message, /Loader exploded/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module loaders return unsupported formats', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          loaders: [
+            (url, context, nextLoad) => {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                format: 'commonjs',
+              }
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'LOADER_FAILED')
+        assert.match(error.message, /unsupported format "commonjs"/)
+        assert.match(error.message, /Only "module" is supported/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('picks up source changes outside rootDir in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -3208,10 +3744,10 @@ describe('asset-server', () => {
       )
       await fs.mkdir(projectDir, { recursive: true })
       let assetServer = createAssetServer({
-        allow: ['../packages/**'],
+        allowFiles: ['../packages/**'],
         basePath: '/assets',
-        fileMap: {
-          '/packages/*path': '../packages/*path',
+        mounts: {
+          '/packages': '../packages',
         },
         rootDir: projectDir,
       })
@@ -3229,51 +3765,6 @@ describe('asset-server', () => {
         let secondBody = await secondResponse.text()
 
         assert.match(secondBody, /value = 2/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('invalidates package symlink modules from real file watch events', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await writeJson(caseDir, 'packages/remix/package.json', {
-        name: 'remix',
-        type: 'module',
-        exports: {
-          './ui': './src/ui.ts',
-        },
-      })
-      let packageFilePath = await write(
-        caseDir,
-        'packages/remix/src/ui.ts',
-        'export const ui = "one"',
-      )
-      await symlinkDirectory(
-        path.join(caseDir, 'packages/remix'),
-        path.join(caseDir, 'app/node_modules/remix'),
-      )
-      await write(caseDir, 'app/entry.ts', 'import { ui } from "remix/ui"\nexport { ui }')
-      let assetServer = createNodeModulesTestServer(caseDir, { watch: true })
-
-      try {
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(entryResponse)
-        assert.equal(entryResponse.status, 200)
-
-        let firstPackageResponse = await get(assetServer, '/assets/node_modules/remix/src/ui.ts')
-        assert.ok(firstPackageResponse)
-        assert.match(await firstPackageResponse.text(), /ui = "one"/)
-
-        await write(caseDir, 'packages/remix/src/ui.ts', 'export const ui = "two"')
-        await emitWatchEvent(assetServer, packageFilePath, 'change')
-
-        let secondPackageResponse = await get(assetServer, '/assets/node_modules/remix/src/ui.ts')
-        assert.ok(secondPackageResponse)
-        assert.match(await secondPackageResponse.text(), /ui = "two"/)
       } finally {
         await assetServer.close()
       }
@@ -3544,11 +4035,11 @@ describe('asset-server', () => {
       await write(
         caseDir,
         'app/styles/app.css',
-        'body { background-image: url("../assets/images/logo.svg"); }\n',
+        'body { background-image: url("../public/images/logo.svg"); }\n',
       )
       let logoPath = await write(
         caseDir,
-        'app/assets/images/logo.svg',
+        'app/public/images/logo.svg',
         '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n',
       )
       let logoWatchPath = nodeFs.realpathSync(logoPath)
@@ -3568,9 +4059,9 @@ describe('asset-server', () => {
         let before = await get(assetServer, '/assets/app/styles/app.css')
         assert.ok(before)
         assert.equal(before.status, 200)
-        assert.match(await before.text(), /url\("\/assets\/app\/assets\/images\/logo\.svg"\)/)
+        assert.match(await before.text(), /url\("\/assets\/app\/public\/images\/logo\.svg"\)/)
 
-        await fs.rm(path.join(caseDir, 'app/assets'), { recursive: true })
+        await fs.rm(path.join(caseDir, 'app/public'), { recursive: true })
         let chokidarWatcher = getInternalChokidarWatcher(assetServer)
         assert.ok(chokidarWatcher)
         chokidarWatcher.emit('unlink', logoWatchPath)
@@ -3661,7 +4152,7 @@ describe('asset-server', () => {
         imports: {
           '#dep': './app/dep-a.ts',
         },
-        name: 'watch-test',
+        name: '@remix-run/__watch-test',
         type: 'module',
       })
       await write(caseDir, 'app/dep-a.ts', 'export const dep = "a"')
@@ -3678,7 +4169,7 @@ describe('asset-server', () => {
           imports: {
             '#dep': './app/dep-b.ts',
           },
-          name: 'watch-test',
+          name: '@remix-run/__watch-test',
           type: 'module',
         })
         await emitWatchEvent(assetServer, packageJsonPath, 'change')
@@ -3704,7 +4195,7 @@ describe('asset-server', () => {
         imports: {
           '#dep': './app/dep-a.ts',
         },
-        name: 'watch-test',
+        name: '@remix-run/__watch-test',
         type: 'module',
       })
       await write(caseDir, 'app/dep-a.ts', 'export const dep = "a"')
@@ -3725,7 +4216,7 @@ describe('asset-server', () => {
           imports: {
             '#dep': './app/dep-b.ts',
           },
-          name: 'watch-test',
+          name: '@remix-run/__watch-test',
           type: 'module',
         })
         await emitWatchEvent(assetServer, packageJsonPath, 'change')
@@ -3763,7 +4254,7 @@ describe('asset-server', () => {
           imports: {
             '#dep': './app/dep.ts',
           },
-          name: 'watch-test',
+          name: '@remix-run/__watch-test',
           type: 'module',
         })
         await emitWatchEvent(assetServer, packageJsonPath, 'add')
@@ -3788,7 +4279,7 @@ describe('asset-server', () => {
         imports: {
           '#dep': './app/dep.ts',
         },
-        name: 'watch-test',
+        name: '@remix-run/__watch-test',
         type: 'module',
       })
       await write(caseDir, 'app/dep.ts', 'export const dep = "dep"')
@@ -3923,7 +4414,7 @@ describe('asset-server', () => {
         imports: {
           '#dep': './app/dep-a.ts',
         },
-        name: 'watch-test',
+        name: '@remix-run/__watch-test',
         type: 'module',
       })
       await write(caseDir, 'app/dep-a.ts', 'export const dep = "a"')
@@ -3939,7 +4430,7 @@ describe('asset-server', () => {
             imports: {
               '#dep': useA ? './app/dep-a.ts' : './app/dep-b.ts',
             },
-            name: 'watch-test',
+            name: '@remix-run/__watch-test',
             type: 'module',
           })
           await emitWatchEvent(assetServer, packageJsonPath, 'change')
@@ -4084,7 +4575,7 @@ describe('asset-server', () => {
 
       try {
         let before = await assetServer.getPreloads('app/entry.tsx')
-        assert.ok(before.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
+        assert.ok(before.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
 
         let tsconfigPath = await writeJson(caseDir, 'tsconfig.base.json', {
           compilerOptions: {
@@ -4096,8 +4587,8 @@ describe('asset-server', () => {
 
         let after = await assetServer.getPreloads('app/entry.tsx')
 
-        assert.ok(after.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
-        assert.ok(!after.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
+        assert.ok(after.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
+        assert.ok(!after.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
       } finally {
         await assetServer.close()
       }
@@ -4137,7 +4628,7 @@ describe('asset-server', () => {
 
       try {
         let before = await assetServer.getPreloads('app/entry.tsx')
-        assert.ok(before.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
+        assert.ok(before.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
 
         let tsconfigPath = await writeJson(caseDir, 'tsconfig.base.json', {
           compilerOptions: {
@@ -4148,8 +4639,8 @@ describe('asset-server', () => {
         await emitWatchEvent(assetServer, tsconfigPath, 'change')
 
         let after = await assetServer.getPreloads('app/entry.tsx')
-        assert.ok(after.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
-        assert.ok(!after.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
+        assert.ok(after.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
+        assert.ok(!after.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
       } finally {
         await assetServer.close()
       }
@@ -4338,37 +4829,47 @@ describe('asset-server', () => {
   it('picks up package resolution changes in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {
-      await writeJson(caseDir, 'app/node_modules/example/package.json', {
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__example/package.json', {
         exports: {
           '.': './a.ts',
         },
-        name: 'example',
+        name: '@remix-run/__example',
       })
-      await write(caseDir, 'app/node_modules/example/a.ts', 'export const value = "a"')
-      await write(caseDir, 'app/node_modules/example/b.ts', 'export const value = "b"')
-      await write(caseDir, 'app/entry.ts', 'import { value } from "example"\nexport { value }')
+      await write(caseDir, 'app/node_modules/@remix-run/__example/a.ts', 'export const value = "a"')
+      await write(caseDir, 'app/node_modules/@remix-run/__example/b.ts', 'export const value = "b"')
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "@remix-run/__example"\nexport { value }',
+      )
 
-      let assetServer = createWatchedTestServer(caseDir)
+      let assetServer = createWatchedTestServer(caseDir, {
+        allowPackages: ['@remix-run/__example'],
+      })
 
       try {
         let firstResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(firstResponse)
-        assert.match(await firstResponse.text(), /example\/a\.ts/)
+        assert.match(await firstResponse.text(), /%40remix-run\/__example\/a\.ts/)
 
-        let packageJsonPath = await writeJson(caseDir, 'app/node_modules/example/package.json', {
-          exports: {
-            '.': './b.ts',
+        let packageJsonPath = await writeJson(
+          caseDir,
+          'app/node_modules/@remix-run/__example/package.json',
+          {
+            exports: {
+              '.': './b.ts',
+            },
+            name: '@remix-run/__example',
           },
-          name: 'example',
-        })
+        )
         await emitWatchEvent(assetServer, packageJsonPath, 'change')
 
         let secondResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(secondResponse)
         let secondBody = await secondResponse.text()
 
-        assert.match(secondBody, /example\/b\.ts/)
-        assert.doesNotMatch(secondBody, /example\/a\.ts/)
+        assert.match(secondBody, /%40remix-run\/__example\/b\.ts/)
+        assert.doesNotMatch(secondBody, /%40remix-run\/__example\/a\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -4380,29 +4881,39 @@ describe('asset-server', () => {
   it('converges across repeated package exports toggles in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {
-      await writeJson(caseDir, 'app/node_modules/example/package.json', {
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__example/package.json', {
         exports: {
           '.': './a.ts',
         },
-        name: 'example',
+        name: '@remix-run/__example',
       })
-      await write(caseDir, 'app/node_modules/example/a.ts', 'export const value = "a"')
-      await write(caseDir, 'app/node_modules/example/b.ts', 'export const value = "b"')
-      await write(caseDir, 'app/entry.ts', 'import { value } from "example"\nexport { value }')
+      await write(caseDir, 'app/node_modules/@remix-run/__example/a.ts', 'export const value = "a"')
+      await write(caseDir, 'app/node_modules/@remix-run/__example/b.ts', 'export const value = "b"')
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "@remix-run/__example"\nexport { value }',
+      )
 
-      let assetServer = createWatchedTestServer(caseDir)
+      let assetServer = createWatchedTestServer(caseDir, {
+        allowPackages: ['@remix-run/__example'],
+      })
 
       try {
         for (let index = 0; index < 8; index++) {
           let useA = index % 2 === 0
-          let expected = useA ? /example\/a\.ts/ : /example\/b\.ts/
+          let expected = useA ? /%40remix-run\/__example\/a\.ts/ : /%40remix-run\/__example\/b\.ts/
 
-          let packageJsonPath = await writeJson(caseDir, 'app/node_modules/example/package.json', {
-            exports: {
-              '.': useA ? './a.ts' : './b.ts',
+          let packageJsonPath = await writeJson(
+            caseDir,
+            'app/node_modules/@remix-run/__example/package.json',
+            {
+              exports: {
+                '.': useA ? './a.ts' : './b.ts',
+              },
+              name: '@remix-run/__example',
             },
-            name: 'example',
-          })
+          )
           await emitWatchEvent(assetServer, packageJsonPath, 'change')
 
           let response = await get(assetServer, '/assets/app/entry.ts')
@@ -4905,7 +5416,7 @@ describe('asset-server', () => {
     }
   })
 
-  it('supports absolute entry-point patterns', async () => {
+  it('supports absolute entry-point paths', async () => {
     let entryPath = await write(dir, 'app/entry-abs.ts', 'export const abs = true')
     let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
 
@@ -4923,11 +5434,8 @@ describe('asset-server', () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
 
     let assetServer = createAssetServer({
-      allow: ['app/**'],
+      allowFiles: ['app/**'],
       basePath: '',
-      fileMap: {
-        '/app/*path': 'app/*path',
-      },
       rootDir: dir,
       watch: false,
     })
@@ -4941,40 +5449,172 @@ describe('asset-server', () => {
     assert.throws(
       () =>
         createAssetServerForTest({
-          allow: ['app/\0allowed-realpath.ts'],
+          allowFiles: ['app/\0allowed-realpath.ts'],
           rootDir: dir,
-          fileMap: { '/app/*path': 'app/*path' },
         }),
       { code: 'ERR_INVALID_ARG_VALUE' },
     )
   })
 
-  it('rejects absolute file patterns', async () => {
+  it('rejects invalid allowed package names', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['.'],
+          rootDir: dir,
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['..'],
+          rootDir: dir,
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@remix-run/__allowed-package/subpath'],
+          rootDir: dir,
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@scope/.'],
+          rootDir: dir,
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@scope/..'],
+          rootDir: dir,
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['../@remix-run/__allowed-package'],
+          rootDir: dir,
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@remix-run/__allowed-package\\subpath'],
+          rootDir: dir,
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@scope'],
+          rootDir: dir,
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@scope/@remix-run/__allowed-package/subpath'],
+          rootDir: dir,
+        }),
+      /allowPackages values must be package names/,
+    )
+  })
+
+  it('does not treat Node builtin names as installed packages', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['path'],
+          rootDir: dir,
+        }),
+      /Could not resolve allowed package "path"/,
+    )
+  })
+
+  it('rejects invalid allowed package dependency names', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      dependencies: {
+        '..': '1.0.0',
+      },
+    })
+
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@remix-run/__allowed-package'],
+          rootDir: dir,
+        }),
+      /Dependency "\.\." .* must be a package name/,
+    )
+  })
+
+  it('rejects invalid allowed optional package dependency names', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      optionalDependencies: {
+        '@scope/..': '1.0.0',
+      },
+    })
+
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@remix-run/__allowed-package'],
+          rootDir: dir,
+        }),
+      /Optional dependency "@scope\/\.\." .* must be a package name/,
+    )
+  })
+
+  it('rejects absolute mount file roots', async () => {
     await write(dir, 'app/entry.ts', 'export const abs = true')
     assert.throws(
       () =>
         createAssetServerForTest({
-          allow: [path.join(dir, 'app')],
+          allowFiles: [path.join(dir, 'app')],
           rootDir: dir,
-          fileMap: {
-            '/app/*path': `${path.join(dir, 'app')}/*path`,
-          },
+          mounts: { app: path.join(dir, 'app') },
           fingerprint: { buildId: 'build' },
           watch: false,
         }),
-      /must be relative to the asset server root/,
+      /mounts values must be relative to rootDir/,
     )
   })
 
-  it('supports absolute allow rules and deny overrides', async () => {
+  it('supports absolute allowFiles rules and denyFiles overrides', async () => {
     let allowedPath = await write(dir, 'app/allowed.ts', 'export const allowed = true')
     await write(dir, 'app/blocked.ts', 'export const blocked = true')
     await write(dir, 'app/.dotfile.ts', 'export const dotfile = true')
     let assetServer = createAssetServerForTest({
-      allow: [allowedPath, path.join(dir, 'app')],
-      deny: [path.join(dir, 'app/blocked.ts')],
+      allowFiles: [allowedPath, path.join(dir, 'app')],
+      denyFiles: [path.join(dir, 'app/blocked.ts')],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
     })
 
     let allowedResponse = await get(assetServer, '/assets/app/allowed.ts')
@@ -4987,26 +5627,104 @@ describe('asset-server', () => {
     assert.equal(dotfileResponse.status, 200)
   })
 
-  it('rejects unnamed route wildcards because fileMap entries must be reversible', async () => {
+  it('uses app and npm mounts by default', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = true')
+    await write(dir, 'node_modules/pkg/index.ts', 'export const value = true')
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['app/**', 'node_modules/**'],
+      rootDir: dir,
+    })
+
+    assert.equal(await assetServer.getHref('app/entry.ts'), '/assets/app/entry.ts')
+    assert.equal(await assetServer.getHref('node_modules/pkg/index.ts'), '/assets/npm/pkg/index.ts')
+  })
+
+  it('rejects empty mounts during startup', async () => {
     assert.throws(
       () =>
         createAssetServerForTest({
-          allow: ['app/**'],
+          allowFiles: ['app/**'],
           rootDir: dir,
-          fileMap: { '/app/*': 'app/*path' },
+          mounts: {},
         }),
-      /must use named wildcards/,
+      /mounts must include at least one entry/,
     )
   })
 
-  it('supports glob-style allow and deny rules', async () => {
+  it('supports mount URL roots with multiple path segments', async () => {
+    await write(dir, 'packages/runtime/entry.ts', 'export const value = true')
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['packages/runtime/**'],
+      rootDir: dir,
+      mounts: { '/internal/runtime/': 'packages/runtime' },
+    })
+
+    let href = await assetServer.getHref('packages/runtime/entry.ts')
+    assert.equal(href, '/assets/internal/runtime/entry.ts')
+
+    let response = await get(assetServer, href)
+    assert.ok(response)
+    assert.equal(response.status, 200)
+  })
+
+  it('rejects incompatible overlapping mount URL roots during startup', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: ['app/**'],
+          rootDir: dir,
+          mounts: { app: 'app', 'app/routes': 'routes' },
+        }),
+      /mounts keys must not overlap\. Received "app" and "app\/routes"\./,
+    )
+  })
+
+  it('rejects compatible but redundant overlapping mounts during startup', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: ['app/**'],
+          rootDir: dir,
+          mounts: { app: 'app', 'app/vendor': 'app/vendor' },
+        }),
+      /mounts values must not overlap\. Received "app" and "app\/vendor"/,
+    )
+  })
+
+  it('rejects overlapping mount file roots during startup', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: ['app/**'],
+          rootDir: dir,
+          mounts: { app: 'app', routes: 'app/routes' },
+        }),
+      /mounts values must not overlap\. Received "app" and "app\/routes"/,
+    )
+  })
+
+  it('rejects symlinked overlapping mount file roots during startup', async () => {
+    await fs.mkdir(path.join(dir, 'app'), { recursive: true })
+    await symlinkDirectory(path.join(dir, 'app'), path.join(dir, 'alias'))
+
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: ['app/**'],
+          rootDir: dir,
+          mounts: { app: 'app', alias: 'alias' },
+        }),
+      /mounts values must not overlap\. Received "app" and "alias", resolving to/,
+    )
+  })
+
+  it('supports glob-style allowFiles and denyFiles rules', async () => {
     await write(dir, 'app/features/allowed.ts', 'export const allowed = true')
     await write(dir, 'app/features/private/blocked.ts', 'export const blocked = true')
     let assetServer = createAssetServerForTest({
-      allow: ['app/**/*.ts'],
-      deny: ['app/**/private/**'],
+      allowFiles: ['app/**/*.ts'],
+      denyFiles: ['app/**/private/**'],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
     })
 
     let allowedResponse = await get(assetServer, '/assets/app/features/allowed.ts')
@@ -5016,16 +5734,996 @@ describe('asset-server', () => {
     assert.equal(blockedResponse, null)
   })
 
-  it('matches dot-prefixed files and directories in glob-style allow rules', async () => {
+  it('allows package files by package name', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      exports: {
+        '.': './index.ts',
+      },
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__allowed-package/index.ts',
+      'export const value = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package'],
+      rootDir: dir,
+      mounts: { node_modules: 'app/node_modules' },
+    })
+
+    let response = await get(
+      assetServer,
+      '/assets/node_modules/@remix-run/__allowed-package/index.ts',
+    )
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    let details = await assetServer.getAssetDetails(
+      '/assets/node_modules/@remix-run/__allowed-package/index.ts',
+    )
+    assert.deepEqual(details.access?.allowedBy, {
+      kind: 'package',
+      value: '@remix-run/__allowed-package',
+    })
+  })
+
+  it('allows imported package files by package name', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      exports: {
+        '.': './index.ts',
+      },
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__allowed-package/index.ts',
+      'export const value = true',
+    )
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { value } from "@remix-run/__allowed-package"\nexport { value }',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['app/entry.ts'],
+      allowPackages: ['@remix-run/__allowed-package'],
+      rootDir: dir,
+    })
+
+    let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+    assert.ok(servedUrls.has('/assets/app/node_modules/%40remix-run/__allowed-package/index.ts'))
+  })
+
+  it('allows package dependency files by package name without prior importer requests', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      dependencies: {
+        '@remix-run/__dep-of-allowed-package': '1.0.0',
+      },
+      optionalDependencies: {
+        '@remix-run/__optional-dep-of-allowed-package': '1.0.0',
+      },
+      peerDependencies: {
+        '@remix-run/__peer-of-allowed-package': '1.0.0',
+      },
+      devDependencies: {
+        '@remix-run/__dev-dep-of-allowed-package': '1.0.0',
+      },
+    })
+    await writeJson(dir, 'app/node_modules/@remix-run/__dep-of-allowed-package/package.json', {
+      name: '@remix-run/__dep-of-allowed-package',
+      type: 'module',
+      dependencies: {
+        '@remix-run/__nested-dep-of-allowed-package': '1.0.0',
+      },
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+      'export const dep = true',
+    )
+    await writeJson(
+      dir,
+      'app/node_modules/@remix-run/__nested-dep-of-allowed-package/package.json',
+      {
+        name: '@remix-run/__nested-dep-of-allowed-package',
+        type: 'module',
+      },
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__nested-dep-of-allowed-package/index.ts',
+      'export const nestedDep = true',
+    )
+    await writeJson(
+      dir,
+      'app/node_modules/@remix-run/__optional-dep-of-allowed-package/package.json',
+      {
+        name: '@remix-run/__optional-dep-of-allowed-package',
+        type: 'module',
+      },
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      'export const optionalDep = true',
+    )
+    await writeJson(dir, 'app/node_modules/@remix-run/__peer-of-allowed-package/package.json', {
+      name: '@remix-run/__peer-of-allowed-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+      'export const peer = true',
+    )
+    await writeJson(dir, 'app/node_modules/@remix-run/__dev-dep-of-allowed-package/package.json', {
+      name: '@remix-run/__dev-dep-of-allowed-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__dev-dep-of-allowed-package/index.ts',
+      'export const dev = true',
+    )
+
+    let createServer = () =>
+      createAssetServerForTest({
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+        rootDir: dir,
+      })
+
+    let firstAssetServer = createServer()
+    await firstAssetServer.close()
+
+    let restartedAssetServer = createServer()
+    try {
+      let dependencyResponse = await get(
+        restartedAssetServer,
+        '/assets/app/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+      )
+      let nestedDependencyResponse = await get(
+        restartedAssetServer,
+        '/assets/app/node_modules/@remix-run/__nested-dep-of-allowed-package/index.ts',
+      )
+      let optionalDependencyResponse = await get(
+        restartedAssetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      let peerDependencyResponse = await get(
+        restartedAssetServer,
+        '/assets/app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+      )
+      let devDependencyResponse = await get(
+        restartedAssetServer,
+        '/assets/app/node_modules/@remix-run/__dev-dep-of-allowed-package/index.ts',
+      )
+
+      assert.ok(dependencyResponse)
+      assert.equal(dependencyResponse.status, 200)
+      assert.ok(nestedDependencyResponse)
+      assert.equal(nestedDependencyResponse.status, 200)
+      assert.ok(optionalDependencyResponse)
+      assert.equal(optionalDependencyResponse.status, 200)
+      assert.equal(peerDependencyResponse, null)
+      assert.equal(devDependencyResponse, null)
+    } finally {
+      await restartedAssetServer.close()
+    }
+  })
+
+  it('does not allow installed package files outside allowed package dependencies', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+        dependencies: {
+          '@remix-run/__dep-of-allowed-package': '1.0.0',
+        },
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__allowed-package/index.ts',
+        'export const value = true',
+      )
+      await writeJson(
+        caseDir,
+        'app/node_modules/@remix-run/__dep-of-allowed-package/package.json',
+        {
+          name: '@remix-run/__dep-of-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+        'export const dep = true',
+      )
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__non-allowed-package/package.json', {
+        name: '@remix-run/__non-allowed-package',
+        type: 'module',
+        dependencies: {
+          '@remix-run/__dep-of-non-allowed-package': '1.0.0',
+        },
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__non-allowed-package/index.ts',
+        'export const nonAllowed = true',
+      )
+      await writeJson(
+        caseDir,
+        'app/node_modules/@remix-run/__dep-of-non-allowed-package/package.json',
+        {
+          name: '@remix-run/__dep-of-non-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__dep-of-non-allowed-package/index.ts',
+        'export const depOfNonAllowed = true',
+      )
+
+      assetServer = createAssetServerForTest({
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+        rootDir: caseDir,
+      })
+
+      let allowedPackageResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__allowed-package/index.ts',
+      )
+      let allowedDependencyResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+      )
+      let nonAllowedPackageResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__non-allowed-package/index.ts',
+      )
+      let nonAllowedDependencyResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__dep-of-non-allowed-package/index.ts',
+      )
+
+      assert.ok(allowedPackageResponse)
+      assert.equal(allowedPackageResponse.status, 200)
+      assert.ok(allowedDependencyResponse)
+      assert.equal(allowedDependencyResponse.status, 200)
+      assert.equal(nonAllowedPackageResponse, null)
+      assert.equal(nonAllowedDependencyResponse, null)
+      let currentAssetServer = assetServer
+      assert.ok(currentAssetServer)
+      await assert.rejects(
+        () =>
+          currentAssetServer.getHref('app/node_modules/@remix-run/__non-allowed-package/index.ts'),
+        /not allowed by the asset server access configuration/,
+      )
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not allow installed peer dependency files unless they are explicitly allowed', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+        peerDependencies: {
+          '@remix-run/__peer-of-allowed-package': '1.0.0',
+        },
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__allowed-package/index.ts',
+        'import { peer } from "@remix-run/__peer-of-allowed-package"\nexport { peer }',
+      )
+      await writeJson(
+        caseDir,
+        'app/node_modules/@remix-run/__peer-of-allowed-package/package.json',
+        {
+          name: '@remix-run/__peer-of-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+        'export const peer = true',
+      )
+      let errors: unknown[] = []
+
+      assetServer = createAssetServerForTest({
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+        onError(error) {
+          errors.push(error)
+          return new Response('Blocked import', { status: 500 })
+        },
+        rootDir: caseDir,
+      })
+
+      let peerDependencyResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+      )
+      let importerResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__allowed-package/index.ts',
+      )
+
+      assert.equal(peerDependencyResponse, null)
+      assert.ok(importerResponse)
+      assert.equal(importerResponse.status, 500)
+      assert.equal(await importerResponse.text(), 'Blocked import')
+      assert.equal(errors.length, 1)
+      assert.ok(isAssetServerCompilationError(errors[0]))
+      assert.equal(errors[0].code, 'IMPORT_NOT_ALLOWED')
+      assert.match(errors[0].message, /Import "@remix-run\/__peer-of-allowed-package"/)
+      let currentAssetServer = assetServer
+      assert.ok(currentAssetServer)
+      await assert.rejects(
+        () =>
+          currentAssetServer.getHref(
+            'app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+          ),
+        /not allowed by the asset server access configuration/,
+      )
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('allows peer dependency files when they are explicitly allowed by package name', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      peerDependencies: {
+        '@remix-run/__peer-of-allowed-package': '1.0.0',
+      },
+    })
+    await writeJson(dir, 'app/node_modules/@remix-run/__peer-of-allowed-package/package.json', {
+      name: '@remix-run/__peer-of-allowed-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+      'export const peer = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package', '@remix-run/__peer-of-allowed-package'],
+      rootDir: dir,
+    })
+
+    let response = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+    )
+    assert.ok(response)
+    assert.equal(response.status, 200)
+  })
+
+  it('updates allowed package dependencies when workspace lockfiles change in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await write(caseDir, 'pnpm-lock.yaml', 'lockfile')
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__allowed-package/index.ts',
+        'export const value = true',
+      )
+
+      assetServer = createWatchedTestServer(caseDir, {
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+      })
+
+      let beforeResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__new-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(beforeResponse, null)
+
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+        dependencies: {
+          '@remix-run/__new-dep-of-allowed-package': '1.0.0',
+        },
+      })
+      await writeJson(
+        caseDir,
+        'app/node_modules/@remix-run/__new-dep-of-allowed-package/package.json',
+        {
+          name: '@remix-run/__new-dep-of-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__new-dep-of-allowed-package/index.ts',
+        'export const dep = true',
+      )
+      let appPackageJsonPath = await writeJson(caseDir, 'package.json', {
+        dependencies: {
+          '@remix-run/__allowed-package': '1.0.0',
+        },
+      })
+      await emitWatchEvent(assetServer, appPackageJsonPath, 'change')
+
+      let unchangedResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__new-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(unchangedResponse, null)
+
+      let lockfilePath = await write(caseDir, 'pnpm-lock.yaml', 'changed')
+      await emitWatchEvent(assetServer, lockfilePath, 'change')
+
+      let afterResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__new-dep-of-allowed-package/index.ts',
+      )
+      assert.ok(afterResponse)
+      assert.equal(afterResponse.status, 200)
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('watches workspace package state files for allowed packages without watching all of node_modules', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await write(caseDir, 'pnpm-lock.yaml', 'lockfile')
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+      })
+
+      assetServer = createWatchedTestServer(caseDir, {
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+      })
+
+      let targets = getInternalWatchTargets(assetServer).map((target) =>
+        normalizeWindowsPath(target),
+      )
+      assert.ok(targets.includes(normalizeWindowsPath(nodeFs.realpathSync(caseDir))))
+      assert.ok(
+        !targets.includes(
+          normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app/node_modules'))),
+        ),
+      )
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not watch package state files for allowed packages when no package manager root is found', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+      })
+
+      assetServer = createWatchedTestServer(caseDir, {
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+      })
+
+      let targets = getInternalWatchTargets(assetServer).map((target) =>
+        normalizeWindowsPath(target),
+      )
+      assert.ok(!targets.includes(normalizeWindowsPath(nodeFs.realpathSync(caseDir))))
+      assert.ok(
+        !targets.includes(normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app')))),
+      )
+      assert.ok(
+        !targets.includes(
+          normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app/node_modules'))),
+        ),
+      )
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('updates installed optional package dependencies when workspace lockfiles change in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await write(caseDir, 'pnpm-lock.yaml', 'lockfile')
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+        optionalDependencies: {
+          '@remix-run/__optional-dep-of-allowed-package': '1.0.0',
+        },
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__allowed-package/index.ts',
+        'export const value = true',
+      )
+
+      assetServer = createWatchedTestServer(caseDir, {
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+      })
+
+      let beforeResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(beforeResponse, null)
+
+      await writeJson(
+        caseDir,
+        'app/node_modules/@remix-run/__optional-dep-of-allowed-package/package.json',
+        {
+          name: '@remix-run/__optional-dep-of-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+        'export const optionalDep = true',
+      )
+      let installStatePath = await write(caseDir, 'app/node_modules/.install-state', 'changed')
+      await emitWatchEvent(assetServer, installStatePath, 'change')
+
+      let unchangedResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(unchangedResponse, null)
+
+      let lockfilePath = await write(caseDir, 'pnpm-lock.yaml', 'changed')
+      await emitWatchEvent(assetServer, lockfilePath, 'change')
+
+      let afterResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.ok(afterResponse)
+      assert.equal(afterResponse.status, 200)
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('traverses out of a nested asset server root to watch workspace lockfiles', async () => {
+    let caseDir = await makeTmpDir()
+    let workspaceDir = path.join(caseDir, 'workspace')
+    let appDir = path.join(workspaceDir, 'packages/app')
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await write(caseDir, 'workspace/pnpm-lock.yaml', 'lockfile')
+      await writeJson(
+        caseDir,
+        'workspace/packages/app/app/node_modules/@remix-run/__allowed-package/package.json',
+        {
+          name: '@remix-run/__allowed-package',
+          type: 'module',
+          optionalDependencies: {
+            '@remix-run/__optional-dep-of-allowed-package': '1.0.0',
+          },
+        },
+      )
+      await write(
+        caseDir,
+        'workspace/packages/app/app/node_modules/@remix-run/__allowed-package/index.ts',
+        'export const value = true',
+      )
+
+      assetServer = createWatchedTestServer(appDir, {
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+      })
+
+      let targets = getInternalWatchTargets(assetServer).map((target) =>
+        normalizeWindowsPath(target),
+      )
+      assert.ok(targets.includes(normalizeWindowsPath(nodeFs.realpathSync(workspaceDir))))
+      assert.ok(!targets.includes(normalizeWindowsPath(nodeFs.realpathSync(appDir))))
+      assert.ok(
+        !targets.includes(
+          normalizeWindowsPath(nodeFs.realpathSync(path.join(appDir, 'app/node_modules'))),
+        ),
+      )
+
+      let beforeResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(beforeResponse, null)
+
+      await writeJson(
+        caseDir,
+        'workspace/packages/app/app/node_modules/@remix-run/__optional-dep-of-allowed-package/package.json',
+        {
+          name: '@remix-run/__optional-dep-of-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        caseDir,
+        'workspace/packages/app/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+        'export const optionalDep = true',
+      )
+      let appPackageJsonPath = await writeJson(caseDir, 'workspace/packages/app/package.json', {
+        dependencies: {
+          '@remix-run/__allowed-package': '1.0.0',
+        },
+      })
+      await emitWatchEvent(assetServer, appPackageJsonPath, 'change')
+
+      let unchangedResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(unchangedResponse, null)
+
+      let lockfilePath = await write(caseDir, 'workspace/pnpm-lock.yaml', 'changed')
+      await emitWatchEvent(assetServer, lockfilePath, 'change')
+
+      let afterResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.ok(afterResponse)
+      assert.equal(afterResponse.status, 200)
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('applies denyFiles rules to allowed package files', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__allowed-package/public.ts',
+      'export const value = true',
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__allowed-package/private.ts',
+      'export const secret = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package'],
+      denyFiles: ['app/node_modules/@remix-run/__allowed-package/private.ts'],
+      rootDir: dir,
+      mounts: { node_modules: 'app/node_modules' },
+    })
+
+    let publicResponse = await get(
+      assetServer,
+      '/assets/node_modules/@remix-run/__allowed-package/public.ts',
+    )
+    let privateResponse = await get(
+      assetServer,
+      '/assets/node_modules/@remix-run/__allowed-package/private.ts',
+    )
+    assert.ok(publicResponse)
+    assert.equal(publicResponse.status, 200)
+    assert.equal(privateResponse, null)
+  })
+
+  it('applies denyFiles rules to allowed package realpaths', async () => {
+    let packageStoreRelPath =
+      'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package'
+    let packageStoreUrlPath =
+      '/assets/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package'
+    let packageLinkRelPath = 'app/node_modules/@remix-run/__allowed-package'
+    await writeJson(dir, `${packageStoreRelPath}/package.json`, {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+    })
+    await write(dir, `${packageStoreRelPath}/public.ts`, 'export const value = true')
+    await write(dir, `${packageStoreRelPath}/secret.ts`, 'export const secret = true')
+    await symlinkDirectory(path.join(dir, packageStoreRelPath), path.join(dir, packageLinkRelPath))
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package'],
+      denyFiles: ['app/node_modules/**/@remix-run/__allowed-package/secret.ts'],
+      rootDir: dir,
+      mounts: { node_modules: 'app/node_modules' },
+    })
+
+    let publicResponse = await get(assetServer, `${packageStoreUrlPath}/public.ts`)
+    let secretResponse = await get(assetServer, `${packageStoreUrlPath}/secret.ts`)
+
+    assert.ok(publicResponse)
+    assert.equal(publicResponse.status, 200)
+    assert.equal(secretResponse, null)
+  })
+
+  it('allows pnpm package realpaths by package name', async () => {
+    let allowedPackageStorePath = path.join(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package',
+    )
+    await writeJson(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package/package.json',
+      {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+        exports: {
+          '.': './index.ts',
+        },
+      },
+    )
+    await write(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package/index.ts',
+      'export const value = true',
+    )
+    await symlinkDirectory(
+      allowedPackageStorePath,
+      path.join(dir, 'app/node_modules/@remix-run/__allowed-package'),
+    )
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { value } from "@remix-run/__allowed-package"\nexport { value }',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['app/entry.ts'],
+      allowPackages: ['@remix-run/__allowed-package'],
+      rootDir: dir,
+    })
+
+    let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+    assert.ok(
+      servedUrls.has(
+        '/assets/app/node_modules/.pnpm/%40remix-run%2B__allowed-package%401.0.0/node_modules/%40remix-run/__allowed-package/index.ts',
+      ),
+    )
+  })
+
+  it('serves a virtual store outside rootDir listed in node_modules/.modules.yaml', async () => {
+    let projectDir = await makeTmpDir()
+    let storeDir = await makeTmpDir()
+    try {
+      await writeVirtualStorePackage(projectDir, storeDir)
+      let relativeStoreDir = normalizeWindowsPath(
+        path.relative(path.join(projectDir, 'node_modules'), storeDir),
+      )
+      await write(
+        projectDir,
+        'node_modules/.modules.yaml',
+        `hoistPattern:\n  - '*'\nvirtualStoreDir: ${relativeStoreDir}\nvirtualStoreDirMaxLength: 120\n`,
+      )
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/entry.ts'],
+        allowPackages: ['@remix-run/__allowed-package'],
+        rootDir: projectDir,
+      })
+
+      let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+      assert.ok(
+        servedUrls.has(`/assets/__@remix/virtual-store/${virtualStorePackageUrlPath}`),
+        `Expected the store package to be served, got ${[...servedUrls].join(', ')}`,
+      )
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+      await fs.rm(storeDir, { recursive: true, force: true })
+    }
+  })
+
+  it('reads an absolute virtual store directory from a JSON node_modules/.modules.yaml', async () => {
+    let projectDir = await makeTmpDir()
+    let storeDir = await makeTmpDir()
+    try {
+      await writeVirtualStorePackage(projectDir, storeDir)
+      await writeJson(projectDir, 'node_modules/.modules.yaml', {
+        virtualStoreDir: storeDir,
+        virtualStoreDirMaxLength: 120,
+      })
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/entry.ts'],
+        allowPackages: ['@remix-run/__allowed-package'],
+        rootDir: projectDir,
+      })
+
+      let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+      assert.ok(
+        servedUrls.has(`/assets/__@remix/virtual-store/${virtualStorePackageUrlPath}`),
+        `Expected the store package to be served, got ${[...servedUrls].join(', ')}`,
+      )
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+      await fs.rm(storeDir, { recursive: true, force: true })
+    }
+  })
+
+  it('leaves a package outside every mount unserved without a node_modules/.modules.yaml', async () => {
+    let projectDir = await makeTmpDir()
+    let storeDir = await makeTmpDir()
+    try {
+      await writeVirtualStorePackage(projectDir, storeDir)
+      let receivedError: unknown
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/entry.ts'],
+        allowPackages: ['@remix-run/__allowed-package'],
+        rootDir: projectDir,
+        onError(error) {
+          receivedError = error
+        },
+      })
+
+      let response = await get(assetServer, '/assets/app/entry.ts')
+      assert.ok(response)
+      await assertInternalServerError(response)
+      assert.ok(isAssetServerCompilationError(receivedError))
+      assert.equal(receivedError.code, 'IMPORT_OUTSIDE_MOUNTS')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+      await fs.rm(storeDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not mount a virtual store that a configured mount already covers', async () => {
+    let projectDir = await makeTmpDir()
+    try {
+      await writeVirtualStorePackage(projectDir, path.join(projectDir, 'node_modules/.pnpm'))
+      await write(
+        projectDir,
+        'node_modules/.modules.yaml',
+        'virtualStoreDir: .pnpm\nvirtualStoreDirMaxLength: 120\n',
+      )
+      let assetServer = createAssetServerForTest({
+        allowFiles: ['app/entry.ts'],
+        allowPackages: ['@remix-run/__allowed-package'],
+        rootDir: projectDir,
+      })
+
+      let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+      assert.ok(
+        servedUrls.has(`/assets/npm/.pnpm/${virtualStorePackageUrlPath}`),
+        `Expected the store package to be served from the npm mount, got ${[...servedUrls].join(', ')}`,
+      )
+      assert.equal(
+        await get(assetServer, `/assets/__@remix/virtual-store/${virtualStorePackageUrlPath}`),
+        null,
+        'Expected no virtual store mount for a store the npm mount already covers',
+      )
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not allow other installed copies of transitive dependencies by package name', async () => {
+    let depOfAllowedPackageStorePath = path.join(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@1.0.0/node_modules/@remix-run/__dep-of-allowed-package',
+    )
+    let otherDepOfAllowedPackageStorePath = path.join(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@2.0.0/node_modules/@remix-run/__dep-of-allowed-package',
+    )
+    await writeJson(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package/package.json',
+      {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+        dependencies: {
+          '@remix-run/__dep-of-allowed-package': '1.0.0',
+        },
+      },
+    )
+    await writeJson(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@1.0.0/node_modules/@remix-run/__dep-of-allowed-package/package.json',
+      {
+        name: '@remix-run/__dep-of-allowed-package',
+        type: 'module',
+      },
+    )
+    await write(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@1.0.0/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+      'export const allowedDep = true',
+    )
+    await writeJson(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@2.0.0/node_modules/@remix-run/__dep-of-allowed-package/package.json',
+      {
+        name: '@remix-run/__dep-of-allowed-package',
+        type: 'module',
+      },
+    )
+    await write(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@2.0.0/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+      'export const otherDep = true',
+    )
+    await symlinkDirectory(
+      path.join(
+        dir,
+        'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package',
+      ),
+      path.join(dir, 'app/node_modules/@remix-run/__allowed-package'),
+    )
+    await symlinkDirectory(
+      depOfAllowedPackageStorePath,
+      path.join(
+        dir,
+        'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__dep-of-allowed-package',
+      ),
+    )
+    await symlinkDirectory(
+      otherDepOfAllowedPackageStorePath,
+      path.join(dir, 'app/node_modules/@remix-run/__dep-of-allowed-package'),
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package'],
+      rootDir: dir,
+      mounts: { node_modules: 'app/node_modules' },
+    })
+
+    let allowedDependencyResponse = await get(
+      assetServer,
+      '/assets/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@1.0.0/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+    )
+    let otherDependencyResponse = await get(
+      assetServer,
+      '/assets/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@2.0.0/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+    )
+    let appDependencyResponse = await get(
+      assetServer,
+      '/assets/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+    )
+
+    assert.ok(allowedDependencyResponse)
+    assert.equal(allowedDependencyResponse.status, 200)
+    assert.equal(otherDependencyResponse, null)
+    assert.equal(appDependencyResponse, null)
+  })
+
+  it('matches dot-prefixed files and directories in glob-style allowFiles rules', async () => {
     await write(dir, 'app/.dotfile.ts', 'export const dotfile = true')
     await write(dir, 'node_modules/.dotdir/example/index.ts', 'export const dotdir = true')
     let assetServer = createAssetServerForTest({
-      allow: ['app/**/*', 'node_modules/**/*'],
+      allowFiles: ['app/**/*', 'node_modules/**/*'],
       rootDir: dir,
-      fileMap: {
-        '/app/*path': 'app/*path',
-        '/npm/*path': 'node_modules/*path',
-      },
     })
 
     let dotfileResponse = await get(assetServer, '/assets/app/.dotfile.ts')
@@ -5040,10 +6738,9 @@ describe('asset-server', () => {
     await write(dir, 'app/blocked.ts', 'export const blocked = true')
     let receivedError: unknown
     let assetServer = createAssetServerForTest({
-      allow: ['app/**'],
-      deny: ['app/blocked.ts'],
+      allowFiles: ['app/**'],
+      denyFiles: ['app/blocked.ts'],
       rootDir: dir,
-      fileMap: { '/app/*path': 'app/*path' },
       onError(error) {
         receivedError = error
       },
@@ -5138,10 +6835,6 @@ describe('asset-server', () => {
       ].join('\n'),
     )
     let assetServer = createTestServer(dir, {
-      fileMap: {
-        '/npm/*path': 'app/node_modules/*path',
-        '/app/*path': 'app/*path',
-      },
       target: {
         es: '2020',
       },
@@ -5160,7 +6853,7 @@ describe('asset-server', () => {
     assert.doesNotMatch(body, /from ["']@oxc-project\/runtime/)
     assert.ok(
       entryImportSpecifiers.includes(
-        '/assets/npm/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+        '/assets/app/node_modules/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
       ),
     )
     assert.ok(helperPaths.length > 0)
@@ -5173,9 +6866,9 @@ describe('asset-server', () => {
     let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
     assert.ok(
       servedUrls.has(
-        '/assets/npm/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+        '/assets/app/node_modules/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
       ),
-      'expected authored runtime imports to use the consumer fileMap path',
+      'expected authored runtime imports to use the consumer mount path',
     )
     assert.ok(
       servedUrls.has(
@@ -5222,7 +6915,7 @@ describe('asset-server', () => {
         },
         async ({ assetServer }) => {
           let urls = await assetServer.getPreloads('app/entry.tsx')
-          assert.ok(urls.some((url) => url.includes('@remix-run/ui/jsx-runtime.ts')))
+          assert.ok(urls.some((url) => url.includes('%40remix-run/ui/jsx-runtime.ts')))
         },
       )
     })
@@ -5569,16 +7262,29 @@ describe('asset-server', () => {
     assert.throws(
       () =>
         createAssetServer({
-          allow: ['app/**'],
+          allowFiles: ['app/**'],
           basePath: '/assets',
-          fileMap: {
-            '/app/*path': 'app/*path',
-          },
           rootDir: dir,
           fingerprint: { buildId: 'build' },
         }),
       /fingerprint cannot be used with watch mode/,
     )
+  })
+
+  it('rejects browser HMR without watch mode', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    let createCount = 0
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          hmr() {
+            createCount += 1
+            return createTestBrowserHmrChannel()
+          },
+        }),
+      /hmr requires watch mode/,
+    )
+    assert.equal(createCount, 0)
   })
 
   it('rejects files extensions for compiled asset types', async () => {
@@ -6001,7 +7707,9 @@ describe('asset-server', () => {
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
     assert.equal(receivedError.code, 'IMPORT_NOT_ALLOWED')
-    assert.match(receivedError.message, /not allowed by the asset server allow\/deny configuration/)
+    assert.match(receivedError.message, /not allowed by the asset server access configuration/)
+    assert.match(receivedError.message, /allowFiles or allowPackages/)
+    assert.match(receivedError.message, /denyFiles/)
     assert.match(receivedError.message, /"\.\.\/\.\.\/secret\.css"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
     assert.match(normalizeWindowsPath(receivedError.message), /secret\.css/)
@@ -6025,13 +7733,15 @@ describe('asset-server', () => {
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
     assert.equal(receivedError.code, 'URL_NOT_ALLOWED')
-    assert.match(receivedError.message, /not allowed by the asset server allow\/deny configuration/)
+    assert.match(receivedError.message, /not allowed by the asset server access configuration/)
+    assert.match(receivedError.message, /allowFiles or allowPackages/)
+    assert.match(receivedError.message, /denyFiles/)
     assert.match(receivedError.message, /"\.\.\/\.\.\/secret\.svg"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
     assert.match(normalizeWindowsPath(receivedError.message), /secret\.svg/)
   })
 
-  it('calls onError when a CSS import is outside configured fileMap entries', async () => {
+  it('calls onError when a CSS import is outside configured mounts', async () => {
     await write(
       dir,
       'app/styles/app.css',
@@ -6040,7 +7750,7 @@ describe('asset-server', () => {
     await write(dir, 'shared/reset.css', 'body { color: black; }\n')
     let receivedError: unknown
     let assetServer = createTestServer(dir, {
-      allow: ['app/**', 'shared/**'],
+      allowFiles: ['app/**', 'shared/**'],
       onError(error) {
         receivedError = error
       },
@@ -6050,14 +7760,14 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_FILE_MAP')
-    assert.match(receivedError.message, /outside all configured fileMap entries/)
+    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_MOUNTS')
+    assert.match(receivedError.message, /outside all configured mounts/)
     assert.match(receivedError.message, /"\.\.\/\.\.\/shared\/reset\.css"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
     assert.match(normalizeWindowsPath(receivedError.message), /shared\/reset\.css/)
   })
 
-  it('calls onError when a CSS url dependency is outside configured fileMap entries', async () => {
+  it('calls onError when a CSS url dependency is outside configured mounts', async () => {
     await write(
       dir,
       'app/styles/app.css',
@@ -6066,7 +7776,7 @@ describe('asset-server', () => {
     await write(dir, 'shared/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
     let receivedError: unknown
     let assetServer = createTestServer(dir, {
-      allow: ['app/**', 'shared/**'],
+      allowFiles: ['app/**', 'shared/**'],
       files: {
         extensions: ['.svg'],
       },
@@ -6079,8 +7789,8 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'URL_OUTSIDE_FILE_MAP')
-    assert.match(receivedError.message, /outside all configured fileMap entries/)
+    assert.equal(receivedError.code, 'URL_OUTSIDE_MOUNTS')
+    assert.match(receivedError.message, /outside all configured mounts/)
     assert.match(receivedError.message, /"\.\.\/\.\.\/shared\/logo\.svg"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
     assert.match(normalizeWindowsPath(receivedError.message), /shared\/logo\.svg/)
@@ -6121,18 +7831,20 @@ describe('asset-server', () => {
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
     assert.equal(receivedError.code, 'IMPORT_NOT_ALLOWED')
-    assert.match(receivedError.message, /not allowed by the asset server allow\/deny configuration/)
+    assert.match(receivedError.message, /not allowed by the asset server access configuration/)
+    assert.match(receivedError.message, /allowFiles or allowPackages/)
+    assert.match(receivedError.message, /denyFiles/)
     assert.match(receivedError.message, /"\.\.\/secret\.ts"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
     assert.match(normalizeWindowsPath(receivedError.message), /secret\.ts/)
   })
 
-  it('calls onError when an imported module is outside configured fileMap entries', async () => {
+  it('calls onError when an imported module is outside configured mounts', async () => {
     await write(dir, 'app/entry.ts', 'import "../shared/util.ts"\nexport const entry = util')
     await write(dir, 'shared/util.ts', 'export const util = true')
     let receivedError: unknown
     let assetServer = createTestServer(dir, {
-      allow: ['app/**', 'shared/**'],
+      allowFiles: ['app/**', 'shared/**'],
       onError(error) {
         receivedError = error
       },
@@ -6142,8 +7854,8 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_FILE_MAP')
-    assert.match(receivedError.message, /outside all configured fileMap entries/)
+    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_MOUNTS')
+    assert.match(receivedError.message, /outside all configured mounts/)
     assert.match(receivedError.message, /"\.\.\/shared\/util\.ts"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
     assert.match(normalizeWindowsPath(receivedError.message), /shared\/util\.ts/)
@@ -6164,9 +7876,10 @@ describe('asset-server', () => {
     assert.equal(await response.text(), 'Custom build error')
   })
 
-  it('falls back to the default 500 when onError throws', async () => {
+  it('falls back to the default 500 when onError throws', async (t) => {
     await write(dir, 'app/entry.ts', 'import "./broken.ts"\nexport const entry = true')
     await write(dir, 'app/broken.ts', 'export const nope =')
+    let consoleError = t.mock.method(console, 'error', () => {})
     let assetServer = createTestServer(dir, {
       onError() {
         throw new Error('error handler failed')
@@ -6176,6 +7889,8 @@ describe('asset-server', () => {
     let response = await get(assetServer, '/assets/app/entry.ts')
     assert.ok(response)
     await assertInternalServerError(response)
+    assert.equal(consoleError.mock.calls.length, 1)
+    assert.match(String(consoleError.mock.calls[0]?.arguments[0]), /error handler failed/)
   })
 
   it('logs watcher errors', async (t) => {

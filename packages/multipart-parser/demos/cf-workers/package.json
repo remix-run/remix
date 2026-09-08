@@ -8,7 +8,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260511.1",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:",
     "wrangler": "^4.90.1"
   },
   "scripts": {
@@ -16,6 +16,6 @@
     "dev": "wrangler dev --port 44100",
     "start": "wrangler dev --port 44100",
     "cf-typegen": "wrangler types",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   }
 }

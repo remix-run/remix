@@ -1,0 +1,25 @@
+name: Setup Node.js with best-effort pnpm cache
+description: Setup the repository Node.js version and restore the pnpm store without making cache failures fatal.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: 'package.json'
+        package-manager-cache: false
+
+    - name: Get pnpm store path
+      id: pnpm-store
+      shell: bash
+      continue-on-error: true
+      run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache pnpm store
+      if: steps.pnpm-store.outputs.path != ''
+      uses: actions/cache@v5
+      continue-on-error: true
+      with:
+        path: ${{ steps.pnpm-store.outputs.path }}
+        key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}

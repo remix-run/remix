@@ -5,17 +5,23 @@ export interface ClientAddress {
   /**
    * The IP address of the client that sent the request.
    *
+   * When `trustProxy` is enabled, this may come from trusted proxy headers.
+   *
    * [Node.js Reference](https://nodejs.org/api/net.html#socketremoteaddress)
    */
   address: string
   /**
    * The family of the client IP address.
    *
+   * When `trustProxy` is enabled, this may be inferred from trusted proxy headers.
+   *
    * [Node.js Reference](https://nodejs.org/api/net.html#socketremotefamily)
    */
   family: 'IPv4' | 'IPv6'
   /**
    * The remote port of the client that sent the request.
+   *
+   * When `trustProxy` is enabled, this may come from trusted `Forwarded` headers.
    *
    * [Node.js Reference](https://nodejs.org/api/net.html#socketremoteport)
    */

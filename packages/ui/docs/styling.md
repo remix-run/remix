@@ -82,21 +82,14 @@ function ProgressBar(handle: Handle) {
 
 ## Cascade Layers
 
-Generated `css(...)` rules are emitted in native CSS cascade layers under the stable parent layer
-`rmx`. Each generated class gets its own sublayer, so a class such as `rmxc-k4a9f` is emitted as
-`@layer rmx.rmxc-k4a9f { ... }`. This keeps mix ordering stable across roots and frames.
+Generated `css(...)` rules are emitted in native CSS cascade layers under the stable parent layer `rmx`. Each generated class gets its own sublayer, so a class such as `rmxc-k4a9f` is emitted as `@layer rmx.rmxc-k4a9f { ... }`. This keeps mix ordering stable across roots and frames.
 
-Unlayered author CSS outranks normal layered CSS. That means global styles can override generated
-component styles even when Remix UI inserts its rules later.
+Unlayered author CSS outranks normal layered CSS. That means global styles can override generated component styles even when Remix UI inserts its rules later.
 
-The built-in theme reset is emitted in `rmx-reset` and ordered before `rmx`. No extra layer setup is
-needed unless the app adds layers that should sit before or after Remix UI.
-
-Put layers that should lose to Remix UI before `rmx-reset` and `rmx`. The layer can use any
-app-owned name; `base` is a common choice for defaults:
+No extra layer setup is needed unless the app adds layers that should sit before or after Remix UI. Put layers that should provide defaults before `rmx`. The layer can use any app-owned name; `base` is a common choice:
 
 ```css
-@layer base, rmx-reset, rmx;
+@layer base, rmx;
 
 @layer base {
   h1,
@@ -128,7 +121,7 @@ app-owned name; `base` is a common choice for defaults:
 Put layers that should override Remix UI after `rmx`:
 
 ```css
-@layer base, rmx-reset, rmx, app;
+@layer base, rmx, app;
 
 @layer app {
   .marketing-heading {
@@ -140,7 +133,7 @@ Put layers that should override Remix UI after `rmx`:
 For imported styles, use an import layer when your build supports it:
 
 ```css
-@layer base, rmx-reset, rmx;
+@layer base, rmx;
 @import './base.css' layer(base);
 ```
 
@@ -326,7 +319,7 @@ function CardWithJSState(handle: Handle<{ children: RemixNode }>) {
         }),
       ]}
     >
-      <div className="title" mix={[css({ color: isHovered ? 'blue' : '#333' })]}>
+      <div class="title" mix={[css({ color: isHovered ? 'blue' : '#333' })]}>
         Title
       </div>
     </div>
@@ -365,7 +358,7 @@ function Card(handle: Handle<{ children: RemixNode }>) {
         }),
       ]}
     >
-      <div className="title">Title</div>
+      <div class="title">Title</div>
     </div>
   )
 }
@@ -515,7 +508,7 @@ function ProductCard(handle: Handle<{ title: string; price: number; image: strin
         ]}
       />
       <div
-        className="content"
+        class="content"
         mix={[
           css({
             padding: '16px',
@@ -526,7 +519,7 @@ function ProductCard(handle: Handle<{ title: string; price: number; image: strin
         ]}
       >
         <h3
-          className="title"
+          class="title"
           mix={[
             css({
               fontSize: '18px',
@@ -540,7 +533,7 @@ function ProductCard(handle: Handle<{ title: string; price: number; image: strin
           {handle.props.title}
         </h3>
         <div
-          className="price"
+          class="price"
           mix={[
             css({
               fontSize: '20px',

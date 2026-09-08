@@ -1,7 +1,7 @@
 import * as http from 'node:http'
 import type { AddressInfo } from 'node:net'
 
-import { SetCookie } from '@remix-run/headers'
+import { SetCookie } from '@remix-run/headers/set-cookie'
 
 import { createCodeChallenge } from './utils.ts'
 

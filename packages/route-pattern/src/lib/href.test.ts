@@ -4,6 +4,8 @@ import { describe, it } from '@remix-run/test'
 import dedent from 'dedent'
 
 import { CreateHrefError, createHref } from './href.ts'
+import { joinPatterns } from './join.ts'
+import { createMatcher } from './match.ts'
 import { RoutePattern } from './route-pattern.ts'
 
 describe('createHref', () => {
@@ -41,11 +43,6 @@ describe('createHref', () => {
         let pattern = 'http://*host/path' as const
         // @ts-expect-error - missing required param
         assert.throws(() => createHref(pattern), hrefError('missing-params'))
-      })
-
-      it('throws when port specified', () => {
-        let pattern = '://:8080/path' as const
-        assert.throws(() => createHref(pattern), hrefError('missing-hostname'))
       })
     })
 
@@ -95,6 +92,28 @@ describe('createHref', () => {
     it('includes optional with static content', () => {
       assert.equal(createHref('://(www.)example.com/path'), 'https://www.example.com/path')
     })
+
+    it('rejects structural URL chars and `.` in hostname variables', () => {
+      assert.throws(
+        () => createHref('://:tenant.example.com/path', { tenant: 'acme.dev' }),
+        hrefError('invalid-hostname-variable'),
+      )
+      assert.throws(
+        () => createHref('://:tenant.example.com/path', { tenant: 'acme:staging' }),
+        hrefError('invalid-hostname-variable'),
+      )
+    })
+
+    it('allows `.` but rejects structural URL chars in hostname wildcards', () => {
+      assert.equal(
+        createHref('://*tenant.example.com/path', { tenant: 'preview.acme' }),
+        'https://preview.acme.example.com/path',
+      )
+      assert.throws(
+        () => createHref('://*tenant.example.com/path', { tenant: 'preview:acme' }),
+        hrefError('invalid-hostname-wildcard'),
+      )
+    })
   })
 
   describe('port', () => {
@@ -130,6 +149,13 @@ describe('createHref', () => {
 
       it('works with number params', () => {
         assert.equal(createHref('/posts/:id', { id: 123 }), '/posts/123')
+      })
+
+      it('throws when provided an empty string', () => {
+        assert.throws(
+          () => createHref('/posts/:id', { id: '' }),
+          hrefError('invalid-pathname-variable'),
+        )
       })
 
       it('ignores extra params', () => {
@@ -174,6 +200,10 @@ describe('createHref', () => {
       assert.equal(createHref('/files/*path', { path: 123 }), '/files/123')
     })
 
+    it('supports wildcard with empty string param', () => {
+      assert.equal(createHref('/files/*path', { path: '' }), '/files/')
+    })
+
     it('throws for unnamed wildcard', () => {
       let pattern = '/files/*' as const
       // @ts-expect-error - nameless wildcard
@@ -188,6 +218,36 @@ describe('createHref', () => {
           postId: '123',
         }),
         '/en/users/42/en/posts/123',
+      )
+    })
+
+    it('encodes dots in variables so they remain capture data', () => {
+      assert.equal(createHref('/users/:id', { id: 'a.b' }), '/users/a%2Eb')
+    })
+
+    it('uses one value for every repeated capture name', () => {
+      assert.equal(createHref('/:id/:id', { id: 'same' }), '/same/same')
+    })
+
+    it('encodes structural URL chars including `/` for variables', () => {
+      assert.equal(
+        createHref('/posts/:slug', { slug: 'hello/world?draft=true#preview' }),
+        '/posts/hello%2Fworld%3Fdraft%3Dtrue%23preview',
+      )
+    })
+
+    it('encodes wildcard segments with encodeURIComponent semantics', () => {
+      assert.equal(
+        createHref('/files/*path', { path: 'docs/@remix-run/ui?raw#v1' }),
+        '/files/docs/%40remix-run/ui%3Fraw%23v1',
+      )
+    })
+
+    it('encodes pathname params with encodeURIComponent semantics', () => {
+      assert.equal(createHref('/posts/:slug', { slug: 'hello world' }), '/posts/hello%20world')
+      assert.equal(
+        createHref('/files/*path', { path: 'docs/hello world' }),
+        '/files/docs/hello%20world',
       )
     })
   })
@@ -208,6 +268,21 @@ describe('createHref', () => {
       assert.equal(createHref(pattern, {}), '/posts')
       assert.equal(createHref(pattern, null), '/posts')
       assert.equal(createHref(pattern, undefined), '/posts')
+      assert.equal(createHref(pattern, { id: null }), '/posts')
+    })
+
+    it('omits optional joins without creating double slashes', () => {
+      let pattern = joinPatterns('a/(:id)', 'c')
+
+      assert.equal(createHref(pattern), '/a/c')
+      assert.equal(createHref(pattern, { id: 'b' }), '/a/b/c')
+    })
+
+    it('throws for empty optional variable when provided', () => {
+      assert.throws(
+        () => createHref('/posts(/:id)', { id: '' }),
+        hrefError('invalid-pathname-variable'),
+      )
     })
 
     it('includes optional with wildcard when provided', () => {
@@ -223,6 +298,7 @@ describe('createHref', () => {
       assert.equal(createHref(pattern, {}), '/files')
       assert.equal(createHref(pattern, null), '/files')
       assert.equal(createHref(pattern, undefined), '/files')
+      assert.equal(createHref(pattern, { path: null }), '/files')
     })
 
     it('omits optional with nameless wildcard', () => {
@@ -259,6 +335,17 @@ describe('createHref', () => {
         )
       })
 
+      it('omits nested optionals when outer variable is null', () => {
+        assert.equal(
+          createHref('/blog/:year(/:month(/:day))', {
+            year: '2024',
+            month: null,
+            day: '15',
+          }),
+          '/blog/2024',
+        )
+      })
+
       it('omits both when neither provided', () => {
         assert.equal(createHref('/blog/:year(/:month(/:day))', { year: '2024' }), '/blog/2024')
       })
@@ -267,35 +354,53 @@ describe('createHref', () => {
     describe('with multiple optionals', () => {
       it('includes both when both provided', () => {
         assert.equal(
-          createHref('/posts(/:id)(/:action)', { id: '123', action: 'edit' }),
-          '/posts/123/edit',
+          createHref('/posts(/id/:id)(/action/:action)', { id: '123', action: 'edit' }),
+          '/posts/id/123/action/edit',
         )
       })
 
       it('includes only first when second omitted', () => {
-        assert.equal(createHref('/posts(/:id)(/:action)', { id: '123' }), '/posts/123')
+        assert.equal(createHref('/posts(/id/:id)(/action/:action)', { id: '123' }), '/posts/id/123')
       })
 
       it('includes only second when first omitted', () => {
-        assert.equal(createHref('/posts(/:id)(/:action)', { action: 'edit' }), '/posts/edit')
+        assert.equal(
+          createHref('/posts(/id/:id)(/action/:action)', { action: 'edit' }),
+          '/posts/action/edit',
+        )
       })
 
       it('omits both when neither provided', () => {
-        assert.equal(createHref('/posts(/:id)(/:action)'), '/posts')
+        assert.equal(createHref('/posts(/id/:id)(/action/:action)'), '/posts')
       })
     })
 
     it('normalizes to slash when entire pattern is omitted optional', () => {
-      assert.equal(createHref('(/:locale)(/:page)'), '/')
+      assert.equal(createHref('(/locale/:locale)(/page/:page)'), '/')
     })
   })
 
   describe('search params', () => {
     it('works with no constraints', () => {
       assert.equal(
-        createHref('/posts', undefined, { category: ['books', 'electronics'] }),
+        createHref('/posts', undefined, {
+          searchParams: { category: ['books', 'electronics'] },
+        }),
         '/posts?category=books&category=electronics',
       )
+    })
+
+    it('accepts URLSearchParams without losing duplicate order or mutating it', () => {
+      let searchParams = new URLSearchParams([
+        ['tag', 'featured'],
+        ['tag', 'popular'],
+      ])
+
+      assert.equal(
+        createHref('/posts?sort=recent', undefined, { searchParams }),
+        '/posts?tag=featured&tag=popular&sort=recent',
+      )
+      assert.equal(searchParams.toString(), 'tag=featured&tag=popular')
     })
 
     describe('with key-only constraint (?q)', () => {
@@ -305,8 +410,29 @@ describe('createHref', () => {
 
       it('uses user param value', () => {
         assert.equal(
-          createHref('/posts?filter', undefined, { filter: 'active' }),
+          createHref('/posts?filter', undefined, { searchParams: { filter: 'active' } }),
           '/posts?filter=active',
+        )
+      })
+
+      it('keeps the key when user params are nullish or empty', () => {
+        assert.equal(
+          createHref('/posts?filter', undefined, { searchParams: { filter: undefined } }),
+          '/posts?filter=',
+        )
+        assert.equal(
+          createHref('/posts?filter', undefined, { searchParams: { filter: null } }),
+          '/posts?filter=',
+        )
+        assert.equal(
+          createHref('/posts?filter', undefined, { searchParams: { filter: [] } }),
+          '/posts?filter=',
+        )
+        assert.equal(
+          createHref('/posts?filter', undefined, {
+            searchParams: { filter: [null, undefined] },
+          }),
+          '/posts?filter=',
         )
       })
     })
@@ -326,14 +452,16 @@ describe('createHref', () => {
 
       it('prepends user params', () => {
         assert.equal(
-          createHref('/posts?sort=asc', undefined, { sort: 'desc' }),
+          createHref('/posts?sort=asc', undefined, { searchParams: { sort: 'desc' } }),
           '/posts?sort=desc&sort=asc',
         )
       })
 
       it('deduplicates when user matches pattern', () => {
         assert.equal(
-          createHref('/posts?tag=featured', undefined, { tag: 'featured' }),
+          createHref('/posts?tag=featured', undefined, {
+            searchParams: { tag: 'featured' },
+          }),
           '/posts?tag=featured',
         )
       })
@@ -341,7 +469,7 @@ describe('createHref', () => {
       it('deduplicates when user matches one of multiple pattern values', () => {
         assert.equal(
           createHref('/posts?tag=featured&tag=popular', undefined, {
-            tag: 'featured',
+            searchParams: { tag: 'featured' },
           }),
           '/posts?tag=featured&tag=popular',
         )
@@ -350,7 +478,7 @@ describe('createHref', () => {
       it('handles array values', () => {
         assert.equal(
           createHref('/posts?tag=featured&tag=popular', undefined, {
-            tag: ['tutorial', 'beginner'],
+            searchParams: { tag: ['tutorial', 'beginner'] },
           }),
           '/posts?tag=tutorial&tag=beginner&tag=featured&tag=popular',
         )
@@ -359,9 +487,108 @@ describe('createHref', () => {
 
     it('supports additional user params', () => {
       assert.equal(
-        createHref('/posts?sort=asc', undefined, { page: '2' }),
+        createHref('/posts?sort=asc', undefined, { searchParams: { page: '2' } }),
         '/posts?page=2&sort=asc',
       )
+    })
+  })
+
+  describe('base URL', () => {
+    it('requires a base URL that can resolve same-origin targets', () => {
+      assert.throws(() => createHref('/users', undefined, { baseURL: '/admin/settings' }))
+      assert.throws(() => createHref('/users', undefined, { baseURL: 'mailto:user@example.com' }))
+      assert.equal(
+        createHref('https://example.com/users', undefined, {
+          baseURL: 'mailto:user@example.com',
+        }),
+        'https://example.com/users',
+      )
+    })
+
+    it('returns path-relative hrefs for same-origin targets', () => {
+      assert.equal(
+        createHref(
+          '/users/:id',
+          { id: '123' },
+          {
+            baseURL: 'https://example.com/admin/settings',
+          },
+        ),
+        '../users/123',
+      )
+      assert.equal(
+        createHref(
+          '/admin/users/:id',
+          { id: '123' },
+          {
+            baseURL: new URL('https://example.com/admin/settings'),
+          },
+        ),
+        'users/123',
+      )
+      assert.equal(
+        createHref('/admin/', undefined, { baseURL: 'https://example.com/admin/settings' }),
+        './',
+      )
+      assert.equal(
+        createHref('/', undefined, { baseURL: 'https://example.com/admin/settings' }),
+        '../',
+      )
+    })
+
+    it('relativizes explicit same-origin patterns and keeps cross-origin targets absolute', () => {
+      assert.equal(
+        createHref(
+          'https://example.com/users/:id',
+          { id: '123' },
+          {
+            baseURL: 'https://example.com/admin/settings',
+          },
+        ),
+        '../users/123',
+      )
+      assert.equal(
+        createHref(
+          'https://cdn.example.com/users/:id',
+          { id: '123' },
+          {
+            baseURL: 'https://example.com/admin/settings',
+          },
+        ),
+        'https://cdn.example.com/users/123',
+      )
+    })
+
+    it('uses ./ when the first relative path segment could be parsed as a scheme', () => {
+      assert.equal(
+        createHref('/docs\\:latest', undefined, {
+          baseURL: 'https://example.com/current',
+        }),
+        './docs:latest',
+      )
+    })
+
+    it('uses ./ when leading separators could be parsed as an authority', () => {
+      let baseURL = 'https://example.com/current'
+      let slashHref = createHref('/*path', { path: '//files' }, { baseURL })
+      let backslashHref = createHref('/\\\\\\\\host/path', undefined, { baseURL })
+
+      assert.equal(slashHref, './//files')
+      assert.equal(new URL(slashHref, baseURL).href, 'https://example.com///files')
+      assert.equal(backslashHref, './\\\\host/path')
+      assert.equal(new URL(backslashHref, baseURL).href, 'https://example.com///host/path')
+    })
+
+    it('round trips params, search constraints, encoded delimiters, and trailing slashes', () => {
+      let baseURL = 'https://example.com/admin/settings'
+      let pattern = '/files/:name.:ext/?view=full' as const
+      let href = createHref(pattern, { name: 'read/me.v1', ext: 'txt' }, { baseURL })
+
+      assert.equal(href, '../files/read%2Fme%2Ev1.txt/?view=full')
+      assert.deepEqual(createMatcher(pattern).match(href, { baseURL })?.params, {
+        name: 'read/me.v1',
+        ext: 'txt',
+      })
     })
   })
 
@@ -406,7 +633,6 @@ describe('CreateHrefError', () => {
       let error = new CreateHrefError({
         type: 'missing-params',
         pattern,
-        part: pattern.pathname,
         missingParams: ['collection', 'id'],
         params: {},
       })
@@ -418,6 +644,24 @@ describe('CreateHrefError', () => {
           Pattern: https://example.com/:collection/:id
           Params: {}
         `,
+      )
+    })
+
+    it('reports all missing required params', () => {
+      let pattern = String('/:a/:b')
+      let params = {}
+      assert.throws(
+        () => createHref(pattern, params),
+        (error: unknown) => {
+          assert.ok(error instanceof CreateHrefError)
+          assert.deepEqual(error.details, {
+            type: 'missing-params',
+            pattern: RoutePattern.parse('/:a/:b'),
+            missingParams: ['a', 'b'],
+            params,
+          })
+          return true
+        },
       )
     })
   })
@@ -432,6 +676,27 @@ describe('CreateHrefError', () => {
           CreateHrefError: pattern contains nameless wildcard
 
           Pattern: https://example.com/api/*/users
+        `,
+      )
+    })
+  })
+
+  describe('invalid-pathname-variable', () => {
+    it('shows param, pattern, and value', () => {
+      let pattern = RoutePattern.parse('/posts/:id')
+      let error = new CreateHrefError({
+        type: 'invalid-pathname-variable',
+        pattern,
+        paramName: 'id',
+        value: '',
+      })
+      assert.equal(
+        error.toString(),
+        dedent`
+          CreateHrefError: invalid pathname variable param: 'id' cannot be empty
+
+          Pattern: /posts/:id
+          Value: ""
         `,
       )
     })

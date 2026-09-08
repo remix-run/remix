@@ -3,8 +3,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/public/remix-wordmark-racing-darkmode.svg">
-    <img alt="Remix" src="docs/public/remix-wordmark-racing-lightmode.svg" width="400">
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/remix-wordmark-racing-darkmode.svg">
+    <img alt="Remix" src=".github/assets/remix-wordmark-racing-lightmode.svg" width="400">
   </picture>
 </p>
 
@@ -62,9 +62,9 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [csrf-middleware](packages/csrf-middleware): Middleware for CSRF protection in Fetch API servers
 - [data-schema](packages/data-schema): Tiny, standards-aligned schema validation
 - [data-table](packages/data-table): A typed, relational query toolkit for JavaScript
-- [data-table-mysql](packages/data-table-mysql): MySQL adapter for remix/data-table
-- [data-table-postgres](packages/data-table-postgres): PostgreSQL adapter for remix/data-table
-- [data-table-sqlite](packages/data-table-sqlite): SQLite adapter for remix/data-table
+- [data-table-mysql](packages/data-table-mysql): MySQL database implementation for remix/data-table
+- [data-table-postgres](packages/data-table-postgres): PostgreSQL database implementation for remix/data-table
+- [data-table-sqlite](packages/data-table-sqlite): SQLite database implementation for remix/data-table
 - [fetch-proxy](packages/fetch-proxy): An HTTP proxy for the web Fetch API
 - [fetch-router](packages/fetch-router): A minimal, composable router for the web Fetch API
 - [file-storage](packages/file-storage): Key/value storage for JavaScript File objects
@@ -80,6 +80,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [mime](packages/mime): Utilities for working with MIME types
 - [multipart-parser](packages/multipart-parser): A fast, efficient parser for multipart streams in any JavaScript environment
 - [node-fetch-server](packages/node-fetch-server): Build servers for Node.js using the web fetch API
+- [node-hmr](packages/node-hmr): Run Node.js applications with hot module reloading
 - [node-tsx](packages/node-tsx): Run Node.js with TypeScript and JSX syntax support
 - [remix](packages/remix): The Remix web framework
 - [response](packages/response): Response helpers for the web Fetch API
@@ -93,6 +94,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [terminal](packages/terminal): Terminal output utilities for JavaScript libraries and CLIs
 - [test](packages/test): A test framework for JavaScript and TypeScript projects
 - [ui](packages/ui): View layer with reconciler, component model, and first-party UI components
+- [ui-hmr](packages/ui-hmr): Hot module replacement runtime and transforms for Remix UI components
 
 ## Installation
 
@@ -122,9 +124,7 @@ pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
 
 ## Agent Skills For Building Apps
 
-Agents that are starting a Remix 3 app from this repository should use the
-[`remix` app skill](./.agents/skills/remix/SKILL.md). The CLI prepack step copies this skill into
-the app template so generated apps can use the same guidance.
+Agents that are starting a Remix 3 app from this repository should use the [`remix` app skill](./.agents/skills/remix/SKILL.md). The CLI prepack step copies this skill into the app template so generated apps can use the same guidance.
 
 ## Contributing
 

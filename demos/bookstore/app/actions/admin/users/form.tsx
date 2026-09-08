@@ -1,3 +1,4 @@
+import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
 
 import type { User } from '../../../data/schema.ts'
@@ -12,43 +13,47 @@ export interface AdminUserFormPageProps {
   user: User
 }
 
-export function AdminUserFormPage() {
-  return ({ action, cancelHref, submitLabel, title, user }: AdminUserFormPageProps) => (
-    <Layout>
-      <h1>{title}</h1>
+export function AdminUserFormPage(handle: Handle<AdminUserFormPageProps>) {
+  return () => {
+    let { action, cancelHref, submitLabel, title, user } = handle.props
 
-      <div class="card">
-        <RestfulForm method="PUT" action={action}>
-          <div class="form-group">
-            <label for="name">Name</label>
-            <input type="text" id="name" name="name" value={user.name} required />
-          </div>
+    return (
+      <Layout>
+        <h1>{title}</h1>
 
-          <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" value={user.email} required />
-          </div>
+        <div class="card">
+          <RestfulForm method="PUT" action={action}>
+            <div class="form-group">
+              <label for="name">Name</label>
+              <input type="text" id="name" name="name" value={user.name} required />
+            </div>
 
-          <div class="form-group">
-            <label for="role">Role</label>
-            <select id="role" name="role">
-              <option value="customer" selected={user.role === 'customer'}>
-                Customer
-              </option>
-              <option value="admin" selected={user.role === 'admin'}>
-                Admin
-              </option>
-            </select>
-          </div>
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" value={user.email} required />
+            </div>
 
-          <button type="submit" class="btn">
-            {submitLabel}
-          </button>
-          <a href={cancelHref} class="btn btn-secondary" mix={css({ marginLeft: '0.5rem' })}>
-            Cancel
-          </a>
-        </RestfulForm>
-      </div>
-    </Layout>
-  )
+            <div class="form-group">
+              <label for="role">Role</label>
+              <select id="role" name="role">
+                <option value="customer" selected={user.role === 'customer'}>
+                  Customer
+                </option>
+                <option value="admin" selected={user.role === 'admin'}>
+                  Admin
+                </option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn">
+              {submitLabel}
+            </button>
+            <a href={cancelHref} class="btn btn-secondary" mix={css({ marginLeft: '0.5rem' })}>
+              Cancel
+            </a>
+          </RestfulForm>
+        </div>
+      </Layout>
+    )
+  }
 }

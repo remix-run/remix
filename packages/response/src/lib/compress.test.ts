@@ -9,14 +9,16 @@ import {
   createInflate,
 } from 'node:zlib'
 import { promisify } from 'node:util'
-import { Readable } from 'node:stream'
 import { EventEmitter } from 'node:events'
 import { describe, it } from '@remix-run/test'
 
-import { Vary } from '@remix-run/headers'
-import { compressResponse, compressStream, type Encoding } from './compress.ts'
-
-const isWindows = process.platform === 'win32'
+import { Vary } from '@remix-run/headers/vary'
+import {
+  compressResponse,
+  compressStream,
+  createCompressionOptions,
+  type Encoding,
+} from './compress.ts'
 
 const gunzipAsync = promisify(gunzip)
 const brotliDecompressAsync = promisify(brotliDecompress)
@@ -93,35 +95,55 @@ describe('compressResponse()', () => {
     assert.equal(decompressed.toString(), 'Hello, World!')
   })
 
-  it('preserves existing Vary header values when adding Accept-Encoding', async () => {
+  it('selects identity without changing representation headers', async () => {
     let request = new Request('https://remix.run', {
-      headers: { 'Accept-Encoding': 'gzip' },
+      headers: { 'Accept-Encoding': 'identity' },
     })
     let response = new Response('Hello, World!', {
+      status: 201,
+      statusText: 'Created',
       headers: {
-        Vary: 'Accept-Language, User-Agent',
+        'Content-Length': '2048',
+        ETag: '"abc123"',
       },
     })
 
     let compressed = await compressResponse(response, request)
 
-    let varyHeader = compressed.headers.get('Vary') || ''
-    let varyValues = varyHeader
-      .toLowerCase()
-      .split(',')
-      .map((v) => v.trim())
-    assert.ok(varyValues.includes('accept-language'))
-    assert.ok(varyValues.includes('user-agent'))
-    assert.ok(varyValues.includes('accept-encoding'))
+    assert.equal(compressed.status, 201)
+    assert.equal(compressed.statusText, 'Created')
+    assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.equal(compressed.headers.get('Content-Length'), '2048')
+    assert.equal(compressed.headers.get('Accept-Ranges'), null)
+    assert.equal(compressed.headers.get('ETag'), '"abc123"')
+    assert.ok(Vary.from(compressed.headers.get('Vary')).has('Accept-Encoding'))
+    assert.equal(await compressed.text(), 'Hello, World!')
+  })
+
+  it('preserves existing Vary values when identity is selected', async () => {
+    let request = new Request('https://remix.run', {
+      headers: { 'Accept-Encoding': 'identity' },
+    })
+    let response = new Response('Hello, World!', {
+      headers: {
+        Vary: 'Cookie',
+      },
+    })
+
+    let compressed = await compressResponse(response, request)
+    let vary = Vary.from(compressed.headers.get('Vary'))
+
+    assert.ok(vary.has('Cookie'))
+    assert.ok(vary.has('Accept-Encoding'))
   })
 
   it('does not duplicate Accept-Encoding in Vary header', async () => {
     let request = new Request('https://remix.run', {
-      headers: { 'Accept-Encoding': 'gzip' },
+      headers: { 'Accept-Encoding': 'identity' },
     })
     let response = new Response('Hello, World!', {
       headers: {
-        Vary: 'Accept-Encoding, Accept-Language',
+        Vary: 'Cookie, Accept-Encoding',
       },
     })
 
@@ -129,10 +151,11 @@ describe('compressResponse()', () => {
 
     let varyHeader = compressed.headers.get('Vary') || ''
     let encodingMatches = varyHeader.match(/accept-encoding/gi) || []
+    assert.ok(Vary.from(varyHeader).has('Cookie'))
     assert.equal(encodingMatches.length, 1)
   })
 
-  it('does not compress when client does not send Accept-Encoding', async () => {
+  it('selects identity when client does not send Accept-Encoding', async () => {
     let request = new Request('https://remix.run')
     let response = new Response('Hello, World!')
 
@@ -141,6 +164,7 @@ describe('compressResponse()', () => {
     // Per RFC 7231, when no Accept-Encoding header is present,
     // server should use identity (uncompressed) for compatibility
     assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.ok(Vary.from(compressed.headers.get('Vary')).has('Accept-Encoding'))
     assert.equal(await compressed.text(), 'Hello, World!')
   })
 
@@ -167,6 +191,7 @@ describe('compressResponse()', () => {
     let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.equal(compressed.headers.get('Vary'), null)
     assert.equal(await compressed.text(), 'Small')
   })
 
@@ -194,6 +219,7 @@ describe('compressResponse()', () => {
     let compressed = await compressResponse(response, request)
 
     assert.equal(compressed, response)
+    assert.equal(compressed.headers.get('Vary'), null)
   })
 
   it('skips compression when Cache-Control: no-transform is present', async () => {
@@ -207,6 +233,7 @@ describe('compressResponse()', () => {
     let compressed = await compressResponse(response, request)
 
     assert.equal(compressed, response)
+    assert.equal(compressed.headers.get('Vary'), null)
   })
 
   it('skips compression when response has no body', async () => {
@@ -218,6 +245,7 @@ describe('compressResponse()', () => {
     let compressed = await compressResponse(response, request)
 
     assert.equal(compressed, response)
+    assert.equal(compressed.headers.get('Vary'), null)
   })
 
   it('compresses with custom compression level', async () => {
@@ -320,6 +348,7 @@ describe('compressResponse()', () => {
 
     assert.equal(compressed, response)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.equal(compressed.headers.get('Vary'), null)
   })
 
   it('handles quality factors in Accept-Encoding', async () => {
@@ -391,7 +420,8 @@ describe('compressResponse()', () => {
 
     // Should return identity (no compression)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
-    assert.equal(compressed, response) // Should be the same response object
+    assert.ok(Vary.from(compressed.headers.get('Vary')).has('Accept-Encoding'))
+    assert.equal(await compressed.text(), 'Hello, World!')
   })
 
   it('requires compression when identity is explicitly rejected', async () => {
@@ -412,7 +442,9 @@ describe('compressResponse()', () => {
       // Client rejects everything including identity
       headers: { 'Accept-Encoding': 'gzip;q=0, deflate;q=0, br;q=0, identity;q=0' },
     })
-    let response = new Response('Hello, World!')
+    let response = new Response('Hello, World!', {
+      headers: { Vary: 'Cookie' },
+    })
 
     let result = await compressResponse(response, request, {
       encodings: ['gzip', 'deflate', 'br'],
@@ -421,6 +453,9 @@ describe('compressResponse()', () => {
     // Should return 406 Not Acceptable per RFC 7231
     assert.equal(result.status, 406)
     assert.equal(result.statusText, 'Not Acceptable')
+    let vary = Vary.from(result.headers.get('Vary'))
+    assert.ok(vary.has('Cookie'))
+    assert.ok(vary.has('Accept-Encoding'))
   })
 
   it('handles wildcard with quality factor', async () => {
@@ -484,7 +519,8 @@ describe('compressResponse()', () => {
 
     // Should return uncompressed since identity is explicitly acceptable
     assert.equal(compressed.headers.get('Content-Encoding'), null)
-    assert.equal(compressed, response)
+    assert.ok(Vary.from(compressed.headers.get('Vary')).has('Accept-Encoding'))
+    assert.equal(await compressed.text(), 'Hello, World!')
   })
 
   it('handles wildcard with identity rejection', async () => {
@@ -609,6 +645,7 @@ describe('compressResponse()', () => {
 
     assert.equal(compressed, response)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.equal(compressed.headers.get('Vary'), null)
   })
 
   it('skips 206 partial content responses', async () => {
@@ -624,6 +661,7 @@ describe('compressResponse()', () => {
 
     assert.equal(compressed, response)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.equal(compressed.headers.get('Vary'), null)
   })
 
   it('sets compression headers for HEAD requests without compressing', async () => {
@@ -673,8 +711,9 @@ describe('compressResponse()', () => {
 
     let compressed = await compressResponse(response, request)
 
-    assert.equal(compressed, response)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.ok(Vary.from(compressed.headers.get('Vary')).has('Accept-Encoding'))
+    assert.equal(await compressed.text(), content)
   })
 
   it('sets compression headers for HEAD requests even when body is already null', async () => {
@@ -698,25 +737,61 @@ describe('compressResponse()', () => {
   })
 
   describe('Server-Sent Events', () => {
-    async function testSSEFlush(
-      encodingName: Encoding,
-      createDecompressor: () => ReturnType<
-        typeof createBrotliDecompress | typeof createGunzip | typeof createInflate
-      >,
-    ) {
-      let sendEvent: ((data: string) => void) | undefined
-      let controller: ReadableStreamDefaultController<Uint8Array> | undefined
-
-      let stream = new ReadableStream({
-        start(c) {
-          controller = c
-          sendEvent = (data: string) => {
-            controller!.enqueue(new TextEncoder().encode(data))
-          }
+    it('applies flush defaults while preserving custom compression options', () => {
+      let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/event-stream' }), {
+        // Provide custom options without flush. compressResponse() should
+        // automatically apply flush for SSE.
+        zlib: {
+          level: 9,
+        },
+        brotli: {
+          params: {
+            [constants.BROTLI_PARAM_QUALITY]: 11,
+          },
         },
       })
 
-      let response = new Response(stream, {
+      assert.equal(options.zlib?.level, 9)
+      assert.equal(options.zlib?.flush, constants.Z_SYNC_FLUSH)
+      assert.equal(options.brotli?.params?.[constants.BROTLI_PARAM_QUALITY], 11)
+      assert.equal(options.brotli?.flush, constants.BROTLI_OPERATION_FLUSH)
+    })
+
+    it('preserves explicit flush options', () => {
+      let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/event-stream' }), {
+        zlib: {
+          flush: constants.Z_FULL_FLUSH,
+        },
+        brotli: {
+          flush: constants.BROTLI_OPERATION_PROCESS,
+        },
+      })
+
+      assert.equal(options.zlib?.flush, constants.Z_FULL_FLUSH)
+      assert.equal(options.brotli?.flush, constants.BROTLI_OPERATION_PROCESS)
+    })
+
+    it('does not apply flush defaults for non-SSE responses', () => {
+      let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/plain' }), {
+        zlib: {
+          level: 9,
+        },
+        brotli: {
+          params: {
+            [constants.BROTLI_PARAM_QUALITY]: 11,
+          },
+        },
+      })
+
+      assert.equal(options.zlib?.level, 9)
+      assert.equal(options.zlib?.flush, undefined)
+      assert.equal(options.brotli?.params?.[constants.BROTLI_PARAM_QUALITY], 11)
+      assert.equal(options.brotli?.flush, undefined)
+    })
+
+    async function assertSSECompression(encodingName: Encoding) {
+      let body = 'event: message\ndata: test-payload\n\n'
+      let response = new Response(body, {
         headers: { 'Content-Type': 'text/event-stream' },
       })
 
@@ -726,8 +801,6 @@ describe('compressResponse()', () => {
 
       let compressed = await compressResponse(response, request, {
         encodings: [encodingName],
-        // Provide custom options WITHOUT flush
-        // compressResponse() should automatically apply flush for SSE
         zlib: {
           level: 9,
         },
@@ -739,54 +812,28 @@ describe('compressResponse()', () => {
       })
 
       assert.equal(compressed.headers.get('Content-Encoding'), encodingName)
-      assert.ok(compressed.body)
 
-      let decompressor = createDecompressor()
-      let nodeReadable = Readable.fromWeb(compressed.body as any)
-      let decompressed = nodeReadable.pipe(decompressor)
+      let buffer = Buffer.from(await compressed.arrayBuffer())
+      let decompressed =
+        encodingName === 'br'
+          ? await brotliDecompressAsync(buffer)
+          : encodingName === 'gzip'
+            ? await gunzipAsync(buffer)
+            : await inflateAsync(buffer)
 
-      // Test that data arrives before stream closes AND is valid SSE format
-      let receivedData = await new Promise<string>((resolve, reject) => {
-        let timeout = setTimeout(
-          () => {
-            reject(new Error(`Timeout: data not flushed - flush may not be working`))
-          },
-          isWindows ? 2_000 : 500,
-        )
-
-        decompressed.once('data', (chunk) => {
-          clearTimeout(timeout)
-          resolve(chunk.toString())
-        })
-
-        decompressed.resume()
-
-        // Send SSE event - with flush, it should arrive immediately
-        // Without flush, stream stays open and data buffers, causing timeout
-        setImmediate(() => {
-          sendEvent!('event: message\ndata: test-payload\n\n')
-        })
-      })
-
-      // Verify the decompressed data is valid SSE format
-      assert.ok(receivedData.includes('event: message'), 'Missing event type')
-      assert.ok(receivedData.includes('data: test-payload'), 'Missing data payload')
-      assert.ok(receivedData.includes('\n\n'), 'Missing SSE message terminator')
-
-      controller!.close()
-      decompressed.destroy()
+      assert.equal(decompressed.toString(), body)
     }
 
-    it('automatically applies flush for SSE with br', async () => {
-      await testSSEFlush('br', createBrotliDecompress)
+    it('compresses SSE with br', async () => {
+      await assertSSECompression('br')
     })
 
-    it('automatically applies flush for SSE with gzip', async () => {
-      await testSSEFlush('gzip', createGunzip)
+    it('compresses SSE with gzip', async () => {
+      await assertSSECompression('gzip')
     })
 
-    it('automatically applies flush for SSE with deflate', async () => {
-      await testSSEFlush('deflate', createInflate)
+    it('compresses SSE with deflate', async () => {
+      await assertSSECompression('deflate')
     })
   })
 

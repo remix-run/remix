@@ -16,7 +16,7 @@ test('getChangedWorkspaceDirs prefers the most specific nested workspace', () =>
       scripts: ['test', 'typecheck'],
     },
     {
-      dir: 'packages/ui/demos',
+      dir: 'packages/ui/demo',
       name: 'ui-demos',
       dependencies: ['@remix-run/ui'],
       scripts: ['typecheck'],
@@ -24,8 +24,8 @@ test('getChangedWorkspaceDirs prefers the most specific nested workspace', () =>
   ]
 
   assert.deepEqual(
-    [...getChangedWorkspaceDirs(['packages/ui/demos/app/root.tsx'], workspaces)],
-    ['packages/ui/demos'],
+    [...getChangedWorkspaceDirs(['packages/ui/demo/app/root.tsx'], workspaces)],
+    ['packages/ui/demo'],
   )
 })
 
@@ -44,8 +44,8 @@ test('getAffectedWorkspaceDirs includes reverse dependents across workspaces', (
       scripts: ['test', 'typecheck'],
     },
     {
-      dir: 'docs',
-      name: 'remix-the-docs',
+      dir: 'docs/api',
+      name: 'remix-api',
       dependencies: ['remix'],
       scripts: ['typecheck'],
     },
@@ -58,7 +58,7 @@ test('getAffectedWorkspaceDirs includes reverse dependents across workspaces', (
   ]
 
   assert.deepEqual(getAffectedWorkspaceDirs(new Set(['packages/headers']), workspaces), [
-    'docs',
+    'docs/api',
     'packages/cookie',
     'packages/headers',
     'packages/remix',

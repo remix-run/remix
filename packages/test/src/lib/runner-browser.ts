@@ -138,7 +138,11 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       })
       page!.on('requestfailed', (request) => {
         if (isScriptRequest(request)) {
-          reject(new Error(`Failed to load script: ${request.url()}`))
+          let failureText = request.failure()?.errorText
+          if (failureText === 'net::ERR_ABORTED') return
+
+          let reason = failureText ? ` (${failureText})` : ''
+          reject(new Error(`Failed to load script: ${request.url()}${reason}`))
         }
       })
     })
