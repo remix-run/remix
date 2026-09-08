@@ -1,4 +1,5 @@
 import * as assert from '@remix-run/assert'
+import { createHtmlResponse } from '@remix-run/response/html'
 import { describe, it } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
 import { renderToStream } from '@remix-run/ui/server'
@@ -1603,6 +1604,7 @@ async function createNodeHmrFixture(
     '@remix-run/assets',
     '@remix-run/node-hmr',
     '@remix-run/node-tsx',
+    '@remix-run/response',
     '@remix-run/ui',
     '@remix-run/ui-hmr',
     'remix',
@@ -1825,6 +1827,7 @@ function getNodeHmrServerSource(
     "import { createAssetServer } from '@remix-run/assets'",
     "import { uiHmr } from '@remix-run/ui-hmr/assets'",
     "import { createBrowserHmrChannel, emitServerReady } from '@remix-run/node-hmr/runtime'",
+    "import { createHtmlResponse } from '@remix-run/response/html'",
     "import { renderToStream } from '@remix-run/ui/server'",
     "import { serverMessage } from './server-message.ts'",
     "import { sideEffect } from './server-side-effect.ts'",
@@ -1929,7 +1932,7 @@ function getNodeHmrServerSource(
     '      await delay(slowDocumentMs)',
     '      await writeFetchResponse(',
     '        response,',
-    '        new Response(await renderDocument(), {',
+    '        createHtmlResponse(await renderDocument(), {',
     '          headers: {',
     "            'Cache-Control': 'no-cache',",
     "            'Content-Type': 'text/html; charset=utf-8',",
@@ -2345,7 +2348,7 @@ async function handleRequest(
     if (fixture.renderDocument) {
       await writeFetchResponse(
         response,
-        new Response(await fixture.renderDocument(assetServer), { headers }),
+        createHtmlResponse(await fixture.renderDocument(assetServer), { headers }),
       )
       return
     }

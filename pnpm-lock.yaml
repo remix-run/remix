@@ -2113,6 +2113,9 @@ importers:
       '@remix-run/node-tsx':
         specifier: workspace:^
         version: link:../node-tsx
+      '@remix-run/response':
+        specifier: workspace:^
+        version: link:../response
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
