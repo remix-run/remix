@@ -15,7 +15,7 @@ type InstalledImportMap = {
 }
 
 interface ImportMapManager {
-  consumeImportMaps(source: ParentNode): void
+  consumeImportMaps(source: ParentNode, onConflict: () => void): boolean
   disconnect(): void
   shouldPreserveHeadNode(node: Node): boolean
 }
@@ -23,6 +23,8 @@ interface ImportMapManager {
 const MANAGED_IMPORT_MAP_SELECTOR = 'script[data-rmx-import-map][type="importmap"]'
 const IMPORT_MAP_SELECTOR = 'script[type="importmap"]'
 const importMapManagers = new WeakMap<Document, ImportMapManager>()
+
+class ImportMapConflictError extends Error {}
 
 export function getDocumentImportMapManager(doc: Document): ImportMapManager {
   let manager = importMapManagers.get(doc)
@@ -42,6 +44,7 @@ function createImportMapManager(doc: Document): ImportMapManager {
   let nonce = doc.head.querySelector<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR)?.nonce
   let installedImportMap = createInstalledImportMap()
   let processedScripts = new WeakSet<HTMLScriptElement>()
+  let conflicted = false
 
   function processImportMap(script: HTMLScriptElement): void {
     if (processedScripts.has(script)) return
@@ -74,30 +77,49 @@ function createImportMapManager(doc: Document): ImportMapManager {
   processImportMaps()
 
   return {
-    consumeImportMaps(source) {
+    consumeImportMaps(source, onConflict) {
+      if (conflicted) return false
       processMutations(observer.takeRecords())
       processImportMaps()
       let scripts = Array.from(
         source.querySelectorAll<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR),
       )
+      if (scripts.length === 0) return true
 
-      for (let script of scripts) {
-        let importMap = parseImportMap(script.textContent ?? '')
-        if (!importMap) {
-          script.remove()
-          continue
-        }
-
-        let baseUrl = doc.baseURI
-        let importMapDelta = getImportMapDelta(installedImportMap, importMap, baseUrl)
-        if (importMapDelta) {
-          let installedScript = appendImportMapScript(doc, importMapDelta, nonce)
-          processedScripts.add(installedScript)
-          mergeInstalledImportMap(installedImportMap, importMapDelta, baseUrl)
-        }
-
-        script.remove()
+      let pendingImportMap: InstalledImportMap = {
+        imports: new Map(installedImportMap.imports),
+        scopes: new Map(
+          Array.from(installedImportMap.scopes, ([scope, imports]) => [scope, new Map(imports)]),
+        ),
+        integrity: new Map(installedImportMap.integrity),
       }
+      let deltas: ImportMap[] = []
+      let baseUrl = doc.baseURI
+      try {
+        for (let script of scripts) {
+          let importMap = parseImportMap(script.textContent ?? '')
+          if (!importMap) continue
+          let delta = getImportMapDelta(pendingImportMap, importMap, baseUrl)
+          if (delta) {
+            deltas.push(delta)
+            mergeInstalledImportMap(pendingImportMap, delta, baseUrl)
+          }
+        }
+      } catch (error) {
+        if (!(error instanceof ImportMapConflictError)) throw error
+        console.warn(error.message)
+        conflicted = true
+        onConflict()
+        return false
+      }
+
+      for (let delta of deltas) {
+        let installedScript = appendImportMapScript(doc, delta, nonce)
+        processedScripts.add(installedScript)
+        mergeInstalledImportMap(installedImportMap, delta, baseUrl)
+      }
+      for (let script of scripts) script.remove()
+      return true
     },
     disconnect() {
       observer.disconnect()
@@ -157,11 +179,10 @@ function getImportMapImportsDelta(
     if (installedEntry?.normalizedHref === normalizedHref) continue
     if (installedEntry) {
       let scopeDescription = scope ? ` in scope "${scope}"` : ''
-      console.warn(
-        `[remix] Ignoring conflicting import map entry for "${specifier}"${scopeDescription}: ` +
+      throw new ImportMapConflictError(
+        `[remix] Reloading page after import map conflict for "${specifier}"${scopeDescription}: ` +
           `${formatImportMapAddress(installedEntry.href)} is already installed, but the new map points to ${formatImportMapAddress(href)}`,
       )
-      continue
     }
     delta[specifier] = href
   }
@@ -202,11 +223,10 @@ function getImportMapIntegrityDelta(
     let installedMetadata = installedIntegrity.get(normalizedUrl)
     if (installedMetadata === metadata) continue
     if (installedMetadata !== undefined) {
-      console.warn(
-        `[remix] Ignoring conflicting import map integrity entry for "${url}": ` +
+      throw new ImportMapConflictError(
+        `[remix] Reloading page after import map integrity conflict for "${url}": ` +
           `"${installedMetadata}" is already installed, but the new map points to "${metadata}"`,
       )
-      continue
     }
     delta[url] = metadata
   }

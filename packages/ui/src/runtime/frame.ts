@@ -19,6 +19,7 @@ import {
   type ClientEntryIdentity,
 } from './client-entry-boundary.ts'
 import { getDocumentImportMapManager } from './import-map-manager.ts'
+import { reloadDocument } from './document-reload.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -277,6 +278,7 @@ export type Frame = {
 }
 
 type RenderOptions = {
+  documentHref?: string
   flushKind?: FlushKind
   reconciliationTracker?: ReconciliationTracker
   blockingFrameTracker?: ReconciliationTracker
@@ -312,12 +314,21 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let disposed = false
   let lifecycleController = new AbortController()
 
-  async function consumeClientEntryResources(source: ParentNode): Promise<void> {
-    importMapManager.consumeImportMaps(source)
+  async function consumeClientEntryResources(
+    source: ParentNode,
+    documentHref?: string,
+  ): Promise<boolean> {
+    if (
+      !importMapManager.consumeImportMaps(source, () => reloadDocument(container.doc, documentHref))
+    ) {
+      lifecycleController.abort()
+      return false
+    }
     await modulePreloader.consumePreloadLinks(source, init.processClientEntryPreloads)
+    return true
   }
 
-  let initialClientEntryResources: Promise<void> | undefined
+  let initialClientEntryResources: Promise<boolean> | undefined
   function shouldPreserveManagedHeadNode(node: Node): boolean {
     return (
       importMapManager.shouldPreserveHeadNode(node) ||
@@ -472,7 +483,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
-      await consumeClientEntryResources(parsed)
+      if (!(await consumeClientEntryResources(parsed, options.documentHref))) return
       if (isRenderAborted(options.signal)) return
       let responseData = options.data
       mergeRmxDataFromDocument(responseData, parsed)
@@ -520,7 +531,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       htmlContent !== undefined ? createFragmentFromString(container.doc, htmlContent) : content
-    await consumeClientEntryResources(fragment)
+    if (!(await consumeClientEntryResources(fragment, options.documentHref))) return
     if (isRenderAborted(options.signal)) return
     context.styleManager.adoptServerStyles(
       collectFrameServerStyleTags(createElementContainer(fragment)),
@@ -603,7 +614,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   async function hydrateInitial(): Promise<void> {
     let reconciliationTracker = createReconciliationTracker()
 
-    await initialClientEntryResources
+    if ((await initialClientEntryResources) === false) return
     if (disposed || context.lifecycleSignal.aborted) return
     context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
     let subFramesReady = createSubFrames(container.childNodes, context)
@@ -829,6 +840,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let blockingFrameTracker = createReconciliationTracker()
       let commitStarted = false
       await render(content, {
+        documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
         signal: controller.signal,
         reconciliationTracker,
         blockingFrameTracker,

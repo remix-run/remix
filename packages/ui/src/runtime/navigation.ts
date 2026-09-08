@@ -1,6 +1,7 @@
 import { getTopFrame, getNamedFrame } from './run.ts'
 import { reloadFrameForNavigation } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
+import { isDocumentReload } from './document-reload.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -130,6 +131,7 @@ export function startNavigationListenerImpl(
   navigation.addEventListener(
     'navigate',
     (event) => {
+      if (isDocumentReload(event.info)) return
       // Safari seems to incorrectly set canIntercept to true for sub-domain navigations, so
       // we do a host check ourselves/. The spec is clear that a different host should prevent
       // interception so this is likely a bug in Safari:

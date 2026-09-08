@@ -1,5 +1,5 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, describe, it } from '@remix-run/test'
+import { afterEach, describe, it, type TestContext } from '@remix-run/test'
 
 import { Frame, type Handle } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
@@ -1274,6 +1274,7 @@ describe('frames', () => {
 
     let frame = createClientEntryResourceTestFrame()
     let warn = t.mock.method(console, 'warn', () => {})
+    let navigate = mockDocumentNavigation(t)
 
     try {
       await frame.ready()
@@ -1299,18 +1300,13 @@ describe('frames', () => {
       )
 
       let scripts = getImportMapScripts()
-      expect(scripts).toHaveLength(2)
+      expect(scripts).toHaveLength(1)
       expect(scripts[0]).toBe(externalImportMap)
-      expect(Array.from(scripts[1]!.attributes, (attribute) => attribute.name)).toEqual([
-        'data-rmx-import-map',
-        'type',
-      ])
-      expect(parseImportMapScript(scripts[1]!)).toEqual({
-        imports: { '/late.js': '/late.hash.js' },
-      })
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(document.querySelector('main')).toBeNull()
       expect(warn).toHaveBeenCalledTimes(1)
       expect(warn.mock.calls[0]?.arguments[0]).toBe(
-        '[remix] Ignoring conflicting import map entry for "/conflict.js": ' +
+        '[remix] Reloading page after import map conflict for "/conflict.js": ' +
           '"/old.hash.js" is already installed, but the new map points to "/new.hash.js"',
       )
     } finally {
@@ -1405,6 +1401,7 @@ describe('frames', () => {
 
     let frame = createClientEntryResourceTestFrame()
     let warn = t.mock.method(console, 'warn', () => {})
+    let navigate = mockDocumentNavigation(t)
 
     try {
       await frame.ready()
@@ -1420,9 +1417,10 @@ describe('frames', () => {
       )
 
       expect(getImportMapScripts()).toHaveLength(1)
+      expect(navigate).toHaveBeenCalledTimes(1)
       expect(warn).toHaveBeenCalledTimes(1)
       expect(warn.mock.calls[0]?.arguments[0]).toBe(
-        '[remix] Ignoring conflicting import map entry for "/installed.js": ' +
+        '[remix] Reloading page after import map conflict for "/installed.js": ' +
           '"/installed.hash.js" is already installed, but the new map points to "/changed.hash.js"',
       )
     } finally {
@@ -1482,7 +1480,7 @@ describe('frames', () => {
     }
   })
 
-  it('warns and ignores conflicting late Remix import map entries', async (t) => {
+  it('reloads without applying any maps or content when a late import map conflicts', async (t) => {
     document.documentElement.innerHTML = [
       '<head>',
       importMapScript({
@@ -1495,6 +1493,7 @@ describe('frames', () => {
 
     let frame = createClientEntryResourceTestFrame()
     let warn = t.mock.method(console, 'warn', () => {})
+    let navigate = mockDocumentNavigation(t)
 
     try {
       await frame.ready()
@@ -1513,26 +1512,84 @@ describe('frames', () => {
         })}<main>Loaded</main>`,
       )
 
-      expect(warn).toHaveBeenCalledTimes(2)
-      expect(warn.mock.calls[0]?.arguments[0]).toBe(
-        '[remix] Ignoring conflicting import map entry for "/conflict.js": ' +
-          '"/old.hash.js" is already installed, but the new map points to "/new.hash.js"',
-      )
-      expect(warn.mock.calls[1]?.arguments[0]).toBe(
-        '[remix] Ignoring conflicting import map entry for "scopedPkg" in scope "/conflict-scope/": ' +
-          '"/old-pkg.hash.js" is already installed, but the new map points to "/new-pkg.hash.js"',
-      )
-      expect(parseImportMapScript(getImportMapScripts()[1]!)).toEqual({
-        imports: { '/added.js': '/added.hash.js' },
-        scopes: { '/conflict-scope/': { addedPkg: '/added-pkg.hash.js' } },
-      })
-      expect(document.querySelector('main')?.textContent).toBe('Loaded')
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(navigate.mock.calls[0]?.arguments[0]).toBe(document.location.href)
+      expect(getImportMapScripts()).toHaveLength(1)
+      expect(document.querySelector('main')).toBeNull()
+      await frame.render('<main>Another chunk</main>')
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(document.querySelector('main')).toBeNull()
     } finally {
       frame.dispose()
     }
   })
 
-  it('warns and ignores conflicting late import map integrity metadata', async (t) => {
+  it('checks every incoming map before installing any of them', async (t) => {
+    document.head.innerHTML = importMapScript({
+      scopes: { '/app/': { shared: '/shared.old.js' } },
+    })
+    let frame = createClientEntryResourceTestFrame()
+    let navigate = mockDocumentNavigation(t)
+    t.mock.method(console, 'warn', () => {})
+    try {
+      await frame.ready()
+      await frame.render(
+        remixImportMapHead({ imports: { added: '/added.js' } }) +
+          remixImportMapHead({ scopes: { '/app/': { shared: '/shared.new.js' } } }) +
+          '<main>New content</main>',
+      )
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(getImportMapScripts()).toHaveLength(1)
+      expect(document.querySelector('main')).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('loads the redirected document after an import map conflict without preloading or hydrating', async (t) => {
+    document.head.innerHTML = importMapScript({ imports: { shared: '/shared.old.js' } })
+    document.body.innerHTML = '<main>Old content</main>'
+    let navigate = mockDocumentNavigation(t)
+    let processPreloads = t.mock.fn((preloads: string[]) => preloads)
+    let loadModule = t.mock.fn(() => () => () => null)
+    t.mock.method(console, 'warn', () => {})
+    let destination = new URL('/redirected', document.location.href).href
+    let frame = createTestFrame(document, {
+      src: new URL('/next', document.location.href).href,
+      loadModule,
+      processClientEntryPreloads: processPreloads,
+      resolveFrame() {
+        let response = new Response(
+          appendFlushMarker(
+            '<!doctype html><html>' +
+              remixImportMapHead({ imports: { shared: '/shared.new.js' } }) +
+              '<body><main>New content</main></body></html>',
+            'document',
+          ),
+        )
+        Object.defineProperties(response, {
+          redirected: { value: true },
+          url: { value: destination },
+        })
+        return response
+      },
+    })
+    try {
+      await frame.ready()
+      await reloadFrameForNavigation(frame.handle, { method: 'POST', formData: new FormData() })
+        .finished
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(navigate.mock.calls[0]?.arguments[0]).toBe(destination)
+      expect(document.querySelector('main')?.textContent).toBe('Old content')
+      expect(processPreloads).not.toHaveBeenCalled()
+      expect(loadModule).not.toHaveBeenCalled()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads when late import map integrity metadata conflicts', async (t) => {
     document.documentElement.innerHTML = [
       '<head>',
       importMapScript({ integrity: { '/shared.js': 'sha256-old' } }),
@@ -1542,6 +1599,7 @@ describe('frames', () => {
 
     let frame = createClientEntryResourceTestFrame()
     let warn = t.mock.method(console, 'warn', () => {})
+    let navigate = mockDocumentNavigation(t)
 
     try {
       await frame.ready()
@@ -1556,12 +1614,12 @@ describe('frames', () => {
 
       expect(warn).toHaveBeenCalledTimes(1)
       expect(warn.mock.calls[0]?.arguments[0]).toBe(
-        '[remix] Ignoring conflicting import map integrity entry for "/shared.js": ' +
+        '[remix] Reloading page after import map integrity conflict for "/shared.js": ' +
           '"sha256-old" is already installed, but the new map points to "sha256-new"',
       )
-      expect(parseImportMapScript(getImportMapScripts()[1]!)).toEqual({
-        integrity: { '/added.js': 'sha256-added' },
-      })
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(getImportMapScripts()).toHaveLength(1)
+      expect(document.querySelector('main')).toBeNull()
     } finally {
       frame.dispose()
     }
@@ -1888,6 +1946,15 @@ describe('frames', () => {
     }
   })
 })
+
+function mockDocumentNavigation(t: TestContext) {
+  let entry = window.navigation.currentEntry
+  if (!entry) throw new Error('Expected a current navigation entry')
+  return t.mock.method(window.navigation, 'navigate', () => ({
+    committed: Promise.resolve(entry),
+    finished: Promise.resolve(entry),
+  }))
+}
 
 function createClientEntryResourceTestFrame(): ReturnType<typeof createFrame> {
   let errorTarget = new EventTarget()

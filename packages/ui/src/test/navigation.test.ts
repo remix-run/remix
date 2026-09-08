@@ -8,6 +8,7 @@ import {
 import type { FrameHandle } from '../runtime/component.ts'
 import type { ResolveFrameOptions } from '../runtime/frame.ts'
 import { withResolvers } from './utils.ts'
+import { reloadDocument } from '../runtime/document-reload.ts'
 
 type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }
 
@@ -134,6 +135,35 @@ function startStubNavigationListener(
 describe('navigate', () => {
   afterEach(() => {
     document.body.textContent = ''
+  })
+
+  it('loads a fresh document without intercepting the replacement navigation', (t) => {
+    let intercept = mock.fn()
+    let navigation = Object.assign(new EventTarget(), {
+      updateCurrentEntry: mock.fn(),
+      navigate: mock.fn((href: string, options: NavigationNavigateOptions) => {
+        navigation.dispatchEvent(
+          Object.assign(new Event('navigate'), {
+            canIntercept: true,
+            info: options.info,
+            destination: { url: href },
+            intercept,
+          }),
+        )
+      }),
+    })
+    stubGlobalField(t, 'navigation', navigation)
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    startNavigationListenerImpl(controller.signal, stubFrames)
+
+    let destination = new URL('/next', document.location.href).href
+    reloadDocument(document, destination)
+
+    expect(navigation.navigate).toHaveBeenCalledTimes(1)
+    expect(navigation.navigate.mock.calls[0]?.arguments[0]).toBe(destination)
+    expect(navigation.navigate.mock.calls[0]?.arguments[1].history).toBe('replace')
+    expect(intercept).not.toHaveBeenCalled()
   })
 
   it('passes runtime state via navigate history state', async (t) => {
