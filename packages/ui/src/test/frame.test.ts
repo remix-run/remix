@@ -12,9 +12,10 @@ import {
   type ResolveFrameOptions,
 } from '../runtime/frame.ts'
 import { jsx } from '../runtime/jsx.ts'
+import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
+import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
-import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { ImportMap, renderToStream } from '../server/stream.ts'
 import { createStyleManager } from '../style/index.ts'
 import { drain, withResolvers } from './utils.ts'
@@ -42,6 +43,7 @@ function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestF
 
 describe('frames', () => {
   afterEach(() => {
+    resetDocumentImportMapManager(document)
     document.documentElement.innerHTML = '<head></head><body></body>'
   })
 
@@ -1310,6 +1312,118 @@ describe('frames', () => {
       expect(warn.mock.calls[0]?.arguments[0]).toBe(
         '[remix] Ignoring conflicting import map entry for "/conflict.js": ' +
           '"/old.hash.js" is already installed, but the new map points to "/new.hash.js"',
+      )
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('compares late Remix import maps with maps added outside the head after startup', async () => {
+    document.documentElement.innerHTML = '<head></head><body></body>'
+
+    let frame = createClientEntryResourceTestFrame()
+
+    try {
+      await frame.ready()
+
+      let container = document.createElement('section')
+      document.body.appendChild(container)
+      let externalImportMap = document.createElement('script')
+      externalImportMap.type = 'importmap'
+      externalImportMap.textContent = JSON.stringify({
+        imports: { '/external.js': '/external.hash.js' },
+      })
+      container.appendChild(externalImportMap)
+
+      await frame.render(
+        `${remixImportMapHead({
+          imports: {
+            '/external.js': '/external.hash.js',
+            '/late.js': '/late.hash.js',
+          },
+        })}<main>Loaded</main>`,
+      )
+
+      let scripts = getImportMapScripts()
+      expect(scripts).toHaveLength(1)
+      expect(parseImportMapScript(scripts[0]!)).toEqual({
+        imports: { '/late.js': '/late.hash.js' },
+      })
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('retains import map state after its script and owning frame are removed', async () => {
+    document.documentElement.innerHTML = '<head></head><body></body>'
+
+    let initialFrame = createClientEntryResourceTestFrame()
+
+    try {
+      await initialFrame.ready()
+      let installedScript = document.createElement('script')
+      installedScript.type = 'importmap'
+      installedScript.textContent = JSON.stringify({
+        imports: { '/installed.js': '/installed.hash.js' },
+      })
+      document.head.appendChild(installedScript)
+      installedScript.remove()
+    } finally {
+      initialFrame.dispose()
+    }
+
+    let nextFrame = createClientEntryResourceTestFrame()
+
+    try {
+      await nextFrame.ready()
+      await nextFrame.render(
+        `${remixImportMapHead({
+          imports: {
+            '/installed.js': '/installed.hash.js',
+            '/late.js': '/late.hash.js',
+          },
+        })}<main>Loaded</main>`,
+      )
+
+      let scripts = getImportMapScripts()
+      expect(scripts).toHaveLength(1)
+      expect(parseImportMapScript(scripts[0]!)).toEqual({
+        imports: { '/late.js': '/late.hash.js' },
+      })
+    } finally {
+      nextFrame.dispose()
+    }
+  })
+
+  it('retains import map state after an installed script is changed', async (t) => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      importMapScript({ imports: { '/installed.js': '/installed.hash.js' } }),
+      '</head>',
+      '<body></body>',
+    ].join('')
+
+    let frame = createClientEntryResourceTestFrame()
+    let warn = t.mock.method(console, 'warn', () => {})
+
+    try {
+      await frame.ready()
+      let installedScript = getImportMapScripts()[0]!
+      installedScript.textContent = JSON.stringify({
+        imports: { '/installed.js': '/changed.hash.js' },
+      })
+
+      await frame.render(
+        `${remixImportMapHead({
+          imports: { '/installed.js': '/changed.hash.js' },
+        })}<main>Loaded</main>`,
+      )
+
+      expect(getImportMapScripts()).toHaveLength(1)
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0]?.arguments[0]).toBe(
+        '[remix] Ignoring conflicting import map entry for "/installed.js": ' +
+          '"/installed.hash.js" is already installed, but the new map points to "/changed.hash.js"',
       )
     } finally {
       frame.dispose()

@@ -16,21 +16,69 @@ type InstalledImportMap = {
 
 interface ImportMapManager {
   consumeImportMaps(source: ParentNode): void
+  disconnect(): void
   shouldPreserveHeadNode(node: Node): boolean
 }
 
 const MANAGED_IMPORT_MAP_SELECTOR = 'script[data-rmx-import-map][type="importmap"]'
 const IMPORT_MAP_SELECTOR = 'script[type="importmap"]'
+const importMapManagers = new WeakMap<Document, ImportMapManager>()
 
 export function getDocumentImportMapManager(doc: Document): ImportMapManager {
+  let manager = importMapManagers.get(doc)
+  if (!manager) {
+    manager = createImportMapManager(doc)
+    importMapManagers.set(doc, manager)
+  }
+  return manager
+}
+
+export function resetDocumentImportMapManager(doc: Document): void {
+  importMapManagers.get(doc)?.disconnect()
+  importMapManagers.delete(doc)
+}
+
+function createImportMapManager(doc: Document): ImportMapManager {
   let nonce = doc.head.querySelector<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR)?.nonce
+  let installedImportMap = createInstalledImportMap()
+  let processedScripts = new WeakSet<HTMLScriptElement>()
+
+  function processImportMap(script: HTMLScriptElement): void {
+    if (processedScripts.has(script)) return
+    processedScripts.add(script)
+
+    let importMap = parseImportMap(script.textContent ?? '')
+    if (importMap) mergeInstalledImportMap(installedImportMap, importMap, script.baseURI)
+  }
+
+  function processImportMaps(): void {
+    for (let script of doc.querySelectorAll<HTMLScriptElement>(IMPORT_MAP_SELECTOR)) {
+      processImportMap(script)
+    }
+  }
+
+  function processMutations(mutations: MutationRecord[]): void {
+    for (let mutation of mutations) {
+      if (mutation.type !== 'childList') continue
+      for (let node of mutation.addedNodes) {
+        if (node instanceof HTMLScriptElement && node.matches(IMPORT_MAP_SELECTOR)) {
+          processImportMap(node)
+        }
+      }
+    }
+  }
+
+  let observer = new MutationObserver(processMutations)
+  observer.observe(doc.head, { childList: true })
+  processImportMaps()
 
   return {
     consumeImportMaps(source) {
+      processMutations(observer.takeRecords())
+      processImportMaps()
       let scripts = Array.from(
         source.querySelectorAll<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR),
       )
-      let installedImportMap = readInstalledImportMap(doc, new Set(scripts))
 
       for (let script of scripts) {
         let importMap = parseImportMap(script.textContent ?? '')
@@ -42,12 +90,16 @@ export function getDocumentImportMapManager(doc: Document): ImportMapManager {
         let baseUrl = doc.baseURI
         let importMapDelta = getImportMapDelta(installedImportMap, importMap, baseUrl)
         if (importMapDelta) {
-          appendImportMapScript(doc, importMapDelta, nonce)
+          let installedScript = appendImportMapScript(doc, importMapDelta, nonce)
+          processedScripts.add(installedScript)
           mergeInstalledImportMap(installedImportMap, importMapDelta, baseUrl)
         }
 
         script.remove()
       }
+    },
+    disconnect() {
+      observer.disconnect()
     },
     shouldPreserveHeadNode(node) {
       return (
@@ -57,22 +109,6 @@ export function getDocumentImportMapManager(doc: Document): ImportMapManager {
       )
     },
   }
-}
-
-function readInstalledImportMap(
-  doc: Document,
-  transportScripts: Set<HTMLScriptElement>,
-): InstalledImportMap {
-  let installedImportMap = createInstalledImportMap()
-  let baseUrl = doc.baseURI
-
-  for (let script of doc.querySelectorAll<HTMLScriptElement>(IMPORT_MAP_SELECTOR)) {
-    if (transportScripts.has(script)) continue
-    let importMap = parseImportMap(script.textContent ?? '')
-    if (importMap) mergeInstalledImportMap(installedImportMap, importMap, baseUrl)
-  }
-
-  return installedImportMap
 }
 
 function createInstalledImportMap(): InstalledImportMap {
