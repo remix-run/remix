@@ -15,7 +15,15 @@ export const TEXT_NODE = Symbol('TEXT_NODE')
 export const NON_RENDER_NODE = Symbol('NON_RENDER_NODE')
 export const ROOT_VNODE = Symbol('ROOT_VNODE')
 
-export type VNodeKind = 'root' | 'empty' | 'text' | 'fragment' | 'host' | 'component' | 'frame'
+export type VNodeKind =
+  | 'root'
+  | 'empty'
+  | 'text'
+  | 'fragment'
+  | 'host'
+  | 'component'
+  | 'client-entry'
+  | 'frame'
 
 export type RuntimeElementProps = {
   [name: string]: unknown
@@ -140,6 +148,12 @@ export type CommittedComponentNode = MountingComponentNode & {
   _content: CommittedVNode
 }
 
+export type CommittedClientEntryNode = CommittedNodeBase<'client-entry', ElementFunction> & {
+  props: RuntimeElementProps
+  _rangeStart: Comment
+  _rangeEnd: Comment
+}
+
 export interface FrameFallbackRoot {
   render(element: RemixNode): void
   dispose(): void
@@ -166,6 +180,7 @@ export type CommittedVNode =
   | CommittedFragmentNode
   | CommittedHostNode
   | CommittedComponentNode
+  | CommittedClientEntryNode
   | CommittedFrameNode
 
 export type RootVNode = {
@@ -226,6 +241,10 @@ export function isComponentNode(
 
 export function isCommittedComponentNode(node: VNode): node is CommittedComponentNode {
   return node.kind === 'component' && '_content' in node
+}
+
+export function isCommittedClientEntryNode(node: CommittedVNode): node is CommittedClientEntryNode {
+  return node.kind === 'client-entry'
 }
 
 export function isFrameNode(node: VNode): node is FrameNode | CommittedFrameNode {

@@ -9,6 +9,7 @@ import type {
   CommittedFrameNode,
   CommittedNonRenderNode,
   ComponentNode,
+  CommittedClientEntryNode,
   CommittedComponentNode,
   CommittedHostNode,
   CommittedTextNode,
@@ -27,6 +28,7 @@ import type {
 } from './vnode.ts'
 import {
   isCommittedComponentNode,
+  isCommittedClientEntryNode,
   isCommittedHostNode,
   isCommittedTextNode,
   isFragmentNode,
@@ -56,6 +58,9 @@ import {
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { createComponentErrorEvent } from './error-event.ts'
 import { componentStalenessCheck } from './refresh.ts'
+import { jsx } from './jsx.ts'
+import { isEntry } from './client-entries.ts'
+import { disposeClientEntryBoundary, getClientEntryBoundaryOwner } from './client-entry-boundary.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -487,6 +492,10 @@ export function diffVNodes(
     return insert(next, domParent, vParent, context, anchor, cursor)
   }
 
+  if (isCommittedClientEntryNode(curr) && next.kind === 'component' && isEntry(next.type)) {
+    return diffClientEntryBoundary(curr, next, vParent, context)
+  }
+
   if (
     componentStalenessCheck !== null &&
     curr.kind === 'component' &&
@@ -788,6 +797,24 @@ function insert(
   // Check BEFORE skipComments to prevent escaping range root markers
   if (hydrationNode && anchor && hydrationNode === anchor) {
     hydrationNode = null
+  }
+
+  if (
+    vParent.kind !== 'root' &&
+    node.kind === 'component' &&
+    isEntry(node.type) &&
+    hydrationNode instanceof Comment
+  ) {
+    let runtime = getFrameRuntime(frame)
+    let pending = runtime?.pendingClientEntries.get(hydrationNode)
+    let owner = getClientEntryBoundaryOwner(hydrationNode)
+    let end = pending?.[0] ?? owner?.end
+    if (end) {
+      let committed = commitClientEntryBoundary(node, vParent, svg, hydrationNode, end)
+      updateClientEntryBoundary(committed, context)
+      if (cursor) cursor.current = end.nextSibling
+      return committed
+    }
   }
 
   // Preserve frame-start markers for non-Frame nodes too, so a following <Frame>
@@ -1334,8 +1361,10 @@ function createAbortableReadableStream(
 }
 
 function removeFrameDomRange(node: CommittedFrameNode, domParent: ParentNode): void {
-  let start = node._rangeStart
-  let end = node._rangeEnd
+  removeDomRange(node._rangeStart, node._rangeEnd, domParent)
+}
+
+function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
   let cursor: Node | null = start
   while (cursor) {
     let nextSibling: Node | null = cursor.nextSibling
@@ -1466,6 +1495,67 @@ function diffComponent(
   return renderComponent(curr._content, mounting, domParent, context, anchor, cursor)
 }
 
+function commitClientEntryBoundary(
+  node: ComponentNode,
+  parent: VNodeParent,
+  svg: boolean,
+  start: Comment,
+  end: Comment,
+): CommittedClientEntryNode {
+  return {
+    kind: 'client-entry',
+    type: node.type,
+    key: node.key,
+    props: node.props,
+    _parent: parent,
+    _svg: svg,
+    _rangeStart: start,
+    _rangeEnd: end,
+  }
+}
+
+function updateClientEntryBoundary(
+  node: CommittedClientEntryNode,
+  context: ReconcileContext,
+): void {
+  let element = jsx(node.type, node.props, node.key)
+  let owner = getClientEntryBoundaryOwner(node._rangeStart)
+  if (owner) {
+    owner.root.render(element)
+    return
+  }
+
+  let runtime = getFrameRuntime(context.frame)
+  let pending = runtime?.pendingClientEntries.get(node._rangeStart)
+  invariant(runtime && pending?.[0] === node._rangeEnd, 'Expected pending client entry boundary')
+  runtime.pendingClientEntries.set(node._rangeStart, [node._rangeEnd, element])
+}
+
+function diffClientEntryBoundary(
+  curr: CommittedClientEntryNode,
+  next: ComponentNode,
+  parent: VNodeParent,
+  context: ReconcileContext,
+): CommittedClientEntryNode {
+  let committed = commitClientEntryBoundary(
+    next,
+    parent,
+    curr._svg,
+    curr._rangeStart,
+    curr._rangeEnd,
+  )
+  updateClientEntryBoundary(committed, context)
+  return committed
+}
+
+function disposeCommittedClientEntryBoundary(
+  node: CommittedClientEntryNode,
+  context: ReconcileContext,
+): void {
+  getFrameRuntime(context.frame)?.pendingClientEntries.delete(node._rangeStart)
+  disposeClientEntryBoundary(node._rangeStart)
+}
+
 // Cleanup without DOM removal - used for descendants when parent DOM node is removed
 function cleanupDescendants(node: CommittedVNode, context: ReconcileContext): void {
   let { scheduler } = context
@@ -1497,6 +1587,11 @@ function cleanupDescendants(node: CommittedVNode, context: ReconcileContext): vo
     cleanupDescendants(node._content, context)
     let tasks = node._handle.remove()
     scheduler.enqueueTasks(tasks)
+    return
+  }
+
+  if (isCommittedClientEntryNode(node)) {
+    disposeCommittedClientEntryBoundary(node, context)
     return
   }
 
@@ -1550,6 +1645,12 @@ export function remove(
     remove(node._content, domParent, context)
     let tasks = node._handle.remove()
     scheduler.enqueueTasks(tasks)
+    return
+  }
+
+  if (isCommittedClientEntryNode(node)) {
+    disposeCommittedClientEntryBoundary(node, context)
+    removeDomRange(node._rangeStart, node._rangeEnd, domParent)
     return
   }
 
@@ -2015,6 +2116,7 @@ export function findFirstDomAnchor(node: CommittedVNode | null | undefined): Nod
   if (isCommittedTextNode(node)) return node._dom
   if (isCommittedHostNode(node)) return node._dom
   if (isCommittedComponentNode(node)) return findFirstDomAnchor(node._content)
+  if (isCommittedClientEntryNode(node)) return node._rangeStart
   if (node.kind === 'frame') return node._rangeStart
   if (isFragmentNode(node)) {
     let children = node._children
@@ -2031,6 +2133,7 @@ export function findLastDomAnchor(node: CommittedVNode | null | undefined): Node
   if (isCommittedTextNode(node)) return node._dom
   if (isCommittedHostNode(node)) return node._dom
   if (isCommittedComponentNode(node)) return findLastDomAnchor(node._content)
+  if (isCommittedClientEntryNode(node)) return node._rangeEnd
   if (node.kind === 'frame') return node._rangeEnd
   if (isFragmentNode(node)) {
     for (let i = node._children.length - 1; i >= 0; i--) {
