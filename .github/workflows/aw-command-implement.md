@@ -61,8 +61,8 @@ steps:
     run: corepack enable pnpm
   - name: Install dependencies
     run: pnpm install --frozen-lockfile
-  - name: Install Chromium for repository tests
-    run: pnpm --filter @remix-run/test exec playwright install --with-deps chromium
+  - name: Install browsers for repository tests
+    run: pnpm --filter @remix-run/test exec playwright install --with-deps chromium firefox
 safe-outputs:
   footer: false
   add-comment:
@@ -199,11 +199,22 @@ takes precedence over conflicting issue or discussion details.
 - After focused tests pass and the implementation diff is final, test and
   typecheck the affected packages with `pnpm run test:changed` and
   `pnpm run typecheck:changed`. Let pull request CI run the full repository
-  test and typecheck suites.
+  test and typecheck suites. Use the Chromium-only substitution below when
+  changed tests include a Firefox project.
 - Before creating a pull request, run the repository's fast validation loop:
   `pnpm run validate-package-meta`, `pnpm run lint`,
   `pnpm run format:check`, `pnpm run test:changed`, and
-  `pnpm run typecheck:changed`.
+  `pnpm run typecheck:changed`, again using the Chromium-only substitution when
+  needed.
+- Browser tests in this workflow are Chromium-only by default. Pass
+  `--project chromium` to focused and affected-workspace browser test commands.
+  If `pnpm run test:changed` would also run a configured Firefox project,
+  replace that aggregate command with equivalent affected-workspace test
+  commands that select Chromium, such as
+  `pnpm --filter <workspace> run test --project chromium`. Firefox is available,
+  but run it only when the authorized request concerns Firefox-specific behavior
+  or cross-browser behavior is material to the fix. Otherwise, leave Firefox
+  coverage to pull request CI.
 - Run `pnpm run changes:validate` when a change file is added.
 - The sandbox may use Node.js 22 even though the repository requires Node.js 24.
   Do not treat an `Unsupported engine` warning or a command failure explicitly
