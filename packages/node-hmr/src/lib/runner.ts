@@ -895,9 +895,8 @@ export function createHmrSupervisor(options: {
     for (let event of events) {
       if (event.type === 'update') {
         browserHmrEventChannel?.send({
-          timestamp: event.timestamp,
+          data: event.data,
           type: 'browser:update',
-          updates: event.updates,
         })
       }
     }
@@ -1348,12 +1347,7 @@ function isBrowserHmrEvent(event: unknown): event is BrowserHmrEvent {
 
   if (event.type === 'update') {
     return (
-      isOptionalStringArrayProperty(event, 'files') &&
-      'timestamp' in event &&
-      typeof event.timestamp === 'number' &&
-      'updates' in event &&
-      Array.isArray(event.updates) &&
-      event.updates.every(isHmrBrowserUpdate)
+      'data' in event && isJsonObject(event.data) && isOptionalStringArrayProperty(event, 'files')
     )
   }
 
@@ -1364,22 +1358,30 @@ function isBrowserHmrEvent(event: unknown): event is BrowserHmrEvent {
   return false
 }
 
-function isHmrBrowserUpdate(update: unknown): boolean {
-  if (typeof update !== 'object' || update === null || !('type' in update)) return false
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return isJsonValue(value) && typeof value === 'object' && value !== null && !Array.isArray(value)
+}
 
-  if (update.type === 'js') {
-    return (
-      'path' in update &&
-      typeof update.path === 'string' &&
-      (!('acceptedPath' in update) || typeof update.acceptedPath === 'string')
-    )
+function isJsonValue(value: unknown, ancestors = new Set<object>()): boolean {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'boolean' ||
+    (typeof value === 'number' && Number.isFinite(value))
+  ) {
+    return true
   }
+  if (typeof value !== 'object') return false
 
-  if (update.type === 'css') {
-    return 'path' in update && typeof update.path === 'string'
-  }
+  let prototype = Object.getPrototypeOf(value)
+  if (!Array.isArray(value) && prototype !== Object.prototype && prototype !== null) return false
+  if (ancestors.has(value)) return false
 
-  return false
+  ancestors.add(value)
+  let values = Array.isArray(value) ? value : Object.values(value)
+  let valid = values.every((item) => isJsonValue(item, ancestors))
+  ancestors.delete(value)
+  return valid
 }
 
 function isOptionalStringArrayProperty(value: object, property: string): boolean {

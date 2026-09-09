@@ -38,7 +38,6 @@ type ResolvedDependency =
 export type ResolvedStyle = {
   dependencies: ResolvedDependency[]
   deps: string[]
-  fingerprint: string | null
   identityPath: string
   rawCode: string
   resolvedPath: string
@@ -131,7 +130,6 @@ export async function resolveStyle(
     value: {
       dependencies,
       deps: [...deps],
-      fingerprint: transformed.fingerprint,
       identityPath: record.identityPath,
       rawCode: transformed.rawCode,
       resolvedPath: transformed.resolvedPath,

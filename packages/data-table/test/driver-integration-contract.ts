@@ -170,6 +170,52 @@ export function runDriverIntegrationContract(options: IntegrationContractOptions
     assert.equal(accountRows[1].tasks[0].id, 2000)
   })
 
+  it('orders hasManyThrough target rows before per-parent limit and offset', async function () {
+    let db = options.createDatabase()
+
+    await db.query(accounts).insertMany([
+      { id: 1, email: 'a@example.com', status: 'active', nickname: null },
+      { id: 2, email: 'b@example.com', status: 'active', nickname: null },
+    ])
+    await db.query(projects).insertMany([
+      { id: 100, account_id: 1, name: 'A-1', archived: false },
+      { id: 101, account_id: 1, name: 'A-2', archived: false },
+      { id: 200, account_id: 2, name: 'B-1', archived: false },
+      { id: 201, account_id: 2, name: 'B-2', archived: false },
+    ])
+    await db.query(tasks).insertMany([
+      { id: 1000, project_id: 100, title: 'Zulu', state: 'open' },
+      { id: 1001, project_id: 101, title: 'Alpha', state: 'open' },
+      { id: 2000, project_id: 200, title: 'Delta', state: 'open' },
+      { id: 2001, project_id: 201, title: 'Beta', state: 'open' },
+    ])
+
+    let orderedTasks = hasManyThrough(accounts, tasks, {
+      through: accountProjects.orderBy('id', 'asc'),
+    }).orderBy('title', 'asc')
+
+    let accountRows = await db
+      .query(accounts)
+      .orderBy('id', 'asc')
+      .with({
+        firstTasks: orderedTasks.limit(1),
+        secondTasks: orderedTasks.offset(1).limit(1),
+      })
+      .all()
+
+    assert.deepEqual(
+      accountRows.map((account) => ({
+        id: account.id,
+        firstTasks: account.firstTasks.map((task) => task.title),
+        secondTasks: account.secondTasks.map((task) => task.title),
+      })),
+      [
+        { id: 1, firstTasks: ['Alpha'], secondTasks: ['Zulu'] },
+        { id: 2, firstTasks: ['Beta'], secondTasks: ['Delta'] },
+      ],
+    )
+  })
+
   it('scopes update/delete writes with orderBy and limit', async function () {
     let db = options.createDatabase()
 

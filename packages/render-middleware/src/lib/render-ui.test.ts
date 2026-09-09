@@ -248,15 +248,14 @@ describe('render', () => {
   it('resolves source client entries through the asset server', async () => {
     let errors: unknown[] = []
     let resolvedEntries: string[] = []
-    let preloadedEntries: string[] = []
     let assets = {
-      async getHref(source: string) {
+      async getScriptEntry(source: string) {
         resolvedEntries.push(source)
-        return '/assets/counter-123.js'
-      },
-      async getPreloads(source: string | readonly string[]) {
-        preloadedEntries.push(...(typeof source === 'string' ? [source] : source))
-        return ['/assets/shared-456.js']
+        return {
+          href: '/assets/counter-123.js',
+          importMap: { imports: { package: '/assets/package-789.js' } },
+          preloads: ['/assets/shared-456.js'],
+        }
       },
     }
     let middleware = render({ assets, onError: (error) => errors.push(error) })
@@ -295,8 +294,11 @@ describe('render', () => {
     let html = await response.text()
 
     assert.deepEqual(resolvedEntries, ['file:///app/counter.ts', 'file:///app/named-entry.ts'])
-    assert.deepEqual(preloadedEntries, ['file:///app/counter.ts', 'file:///app/named-entry.ts'])
     assert.match(html, /\/assets\/counter-123\.js/)
+    assert.match(
+      html,
+      /<script data-rmx-import-map type="importmap">\{"imports":\{"package":"\/assets\/package-789\.js"\}\}<\/script>/,
+    )
     assert.match(
       html,
       /<link data-rmx-module-preload rel="modulepreload" href="\/assets\/shared-456\.js" \/>/,

@@ -1,7 +1,9 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { execFile, spawn, type ChildProcess } from 'node:child_process'
+import { once } from 'node:events'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { promisify } from 'node:util'
 
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
@@ -15,6 +17,25 @@ const waitForTimeout = 5_000
 const fixtureServerReadyTimeout = isWindows ? 15_000 : waitForTimeout
 
 describe('node-hmr', () => {
+  it('stops the fixture child server during cleanup', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getServerSource('./message.ts', 'getMessage()'),
+      'message.ts': 'export function getMessage() { return "hello" }',
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'hello')
+
+      await server.stop()
+
+      assert.throws(() => process.kill(ready.pid, 0), { code: 'ESRCH' })
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('hot updates self-accepting modules without restarting the server', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),
@@ -318,9 +339,10 @@ describe('node-hmr', () => {
 
       await fs.writeFile(releaseFileA, '')
       assert.deepEqual(await events.read(), {
-        timestamp: 1,
+        data: {
+          'test/browser@1': { path: '/a.css', timestamp: 1 },
+        },
         type: 'browser:update',
-        updates: [{ path: '/a.css', type: 'css' }],
       })
       assert.equal(readyResolved, false)
 
@@ -370,9 +392,14 @@ describe('node-hmr', () => {
       watcher.emit('all', 'change', 'browser/entry.ts', watchFileStats)
 
       assert.deepEqual(await events.read(), {
-        timestamp: 1,
+        data: {
+          'test/browser@1': {
+            details: [null, true, { version: 1 }],
+            path: '/entry.ts',
+            timestamp: 1,
+          },
+        },
         type: 'browser:update',
-        updates: [{ path: '/entry.ts', type: 'js' }],
       })
 
       await new Promise((resolve) => setTimeout(resolve, 250))
@@ -1669,9 +1696,13 @@ function getOverlappingBrowserHmrServerSource(): string {
     `    }`,
     `  }`,
     `  return [{`,
-    `    timestamp: isFileA ? 1 : 2,`,
+    `    data: {`,
+    `      'test/browser@1': {`,
+    `        path: isFileA ? '/a.css' : '/b.css',`,
+    `        timestamp: isFileA ? 1 : 2,`,
+    `      },`,
+    `    },`,
     `    type: 'update',`,
-    `    updates: [{ path: isFileA ? '/a.css' : '/b.css', type: 'css' }],`,
     `  }]`,
     `})`,
     `await fs.writeFile(process.env.HMR_URL_FILE, channel.url)`,
@@ -1690,9 +1721,14 @@ function getBrowserHmrServerSource(): string {
     `let channel = await createBrowserHmrChannel()`,
     `channel.updateWatchedFiles({ add: [process.env.WATCH_FILE], remove: [] })`,
     `channel.onFileEvents(() => [{`,
-    `  timestamp: 1,`,
+    `  data: {`,
+    `    'test/browser@1': {`,
+    `      details: [null, true, { version: 1 }],`,
+    `      path: '/entry.ts',`,
+    `      timestamp: 1,`,
+    `    },`,
+    `  },`,
     `  type: 'update',`,
-    `  updates: [{ path: '/entry.ts', type: 'js' }],`,
     `}])`,
     `await fs.writeFile(process.env.HMR_URL_FILE, channel.url)`,
     `emitServerReady()`,
@@ -2266,6 +2302,15 @@ function parseHmrUrlEvent(line: string): { pid: number; url: string } | null {
 
 async function stopProcess(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) return
+
+  if (isWindows && child.pid !== undefined) {
+    // Windows does not run SIGTERM handlers, so stop the child server as well as its parent.
+    await Promise.all([
+      once(child, 'exit'),
+      promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F']),
+    ])
+    return
+  }
 
   await new Promise<void>((resolve) => {
     // The HMR runner gives its child five seconds to exit before force-killing it.

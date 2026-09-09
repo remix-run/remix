@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "3.0.0-rc.1",
+  "version": "3.0.0-rc.2",
   "description": "The Remix web framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -84,6 +84,7 @@
     "./mime": "./src/mime.ts",
     "./multipart-parser": "./src/multipart-parser.ts",
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
+    "./multiple-import-maps-polyfill": "./src/multiple-import-maps-polyfill.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
     "./node-hmr": "./src/node-hmr.ts",
@@ -390,6 +391,10 @@
         "types": "./dist/multipart-parser/node.d.ts",
         "default": "./dist/multipart-parser/node.js"
       },
+      "./multiple-import-maps-polyfill": {
+        "types": "./dist/multiple-import-maps-polyfill.d.ts",
+        "default": "./dist/multiple-import-maps-polyfill.js"
+      },
       "./node-fetch-server": {
         "types": "./dist/node-fetch-server.d.ts",
         "default": "./dist/node-fetch-server.js"
@@ -691,7 +696,8 @@
     "@remix-run/node-hmr": "workspace:^",
     "@remix-run/ui-hmr": "workspace:^",
     "@remix-run/spa": "workspace:^",
-    "@remix-run/static-middleware": "workspace:^"
+    "@remix-run/static-middleware": "workspace:^",
+    "@remix-run/multiple-import-maps-polyfill": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",

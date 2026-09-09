@@ -1,6 +1,7 @@
 import type { Handle, RemixNode } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
 
-import { routes } from '../routes.ts'
+import { scriptEntry } from '../actions/assets/controller.ts'
 
 export interface DocumentProps {
   children?: RemixNode
@@ -12,6 +13,7 @@ const DEFAULT_TITLE = 'Timeboxer'
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { title = DEFAULT_TITLE, children } = handle.props
+    let { href, importMap, preloads } = scriptEntry
 
     return (
       <html lang="en">
@@ -20,14 +22,13 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <meta name="color-scheme" content="light" />
           <title>{title}</title>
+          <ImportMap value={importMap} />
+          {preloads.map((preloadHref) => (
+            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
+          ))}
+          <script type="module" src={href}></script>
         </head>
-        <body>
-          {children}
-          <script
-            type="module"
-            src={routes.assets.index.href({ path: 'app/actions/public/entry.ts' })}
-          ></script>
-        </body>
+        <body>{children}</body>
       </html>
     )
   }

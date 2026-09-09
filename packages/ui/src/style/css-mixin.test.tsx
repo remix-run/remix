@@ -210,14 +210,11 @@ describe('css mixin', () => {
     // A sibling mixin can persist the host node past unmount (e.g. exit
     // transitions). The css rule must keep styling the node until the
     // persistence teardown settles — only then may the refcount drop.
-    let releaseExit: (() => void) | undefined
-    let exitGate = new Promise<void>((resolve) => {
-      releaseExit = resolve
-    })
+    let exitGate = Promise.withResolvers<void>()
     let persistOnRemove = createMixin<Element>((handle) => {
       handle.addEventListener('beforeRemove', (event) => {
         ;(event as MixinBeforeRemoveEvent).persistNode(async () => {
-          await exitGate
+          await exitGate.promise
         })
       })
     })
@@ -244,8 +241,7 @@ describe('css mixin', () => {
     expect(getComputedStyle(div).color).toBe('rgb(77, 88, 99)')
 
     // Finish the exit: node is removed and the dynamic rule is released.
-    invariant(releaseExit)
-    releaseExit()
+    exitGate.resolve()
     await new Promise((resolve) => setTimeout(resolve, 0))
     root.flush()
 

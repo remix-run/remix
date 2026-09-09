@@ -4,7 +4,6 @@ import * as path from 'node:path'
 import { discoverDemoFiles } from './demos.tsx'
 import { discoverMarkdownFiles, type DocFile as MarkdownDocFile } from './markdown.ts'
 import { buildRegistry, type DocFile, type DocsRegistry } from './registry.ts'
-import type { DocsAssetServer } from '../assets.ts'
 
 const apiDir = path.resolve(import.meta.dirname, '..', '..')
 const repoDir = path.resolve(apiDir, '..', '..')
@@ -24,21 +23,18 @@ export function getDefaultVersions(): Versions {
   return [version]
 }
 
-export function createDocsContextLoader(
-  assetServer: DocsAssetServer,
-  docsContext?: DocsContext,
-): () => Promise<DocsContext> {
+export function createDocsContextLoader(docsContext?: DocsContext): () => Promise<DocsContext> {
   let docsContextPromise = docsContext ? Promise.resolve(docsContext) : undefined
 
   return function getDocsContext(): Promise<DocsContext> {
-    docsContextPromise ??= loadDocsContext(assetServer)
+    docsContextPromise ??= loadDocsContext()
     return docsContextPromise
   }
 }
 
-async function loadDocsContext(assetServer: DocsAssetServer): Promise<DocsContext> {
+async function loadDocsContext(): Promise<DocsContext> {
   let { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(markdownDir)
-  let demoFiles = await discoverDemoFiles(assetServer)
+  let demoFiles = await discoverDemoFiles()
   let docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
   let registryByVersion = new Map<string | undefined, DocsRegistry>()
   registryByVersion.set(undefined, buildRegistry(docFiles))

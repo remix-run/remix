@@ -12,7 +12,7 @@ export const assets = createAssetServer({
   /* remix-template:remove-start This is only needed inside the Remix monorepo. */
   mounts: {
     app: 'app',
-    npm: 'node_modules',
+    npm: '../node_modules',
     packages: '../packages',
   },
   /* remix-template:remove-end */
@@ -23,12 +23,14 @@ export const assets = createAssetServer({
   minify: !isDevelopment,
   watch: isDevelopment,
   hmr: isHmr
-    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+    ? {
+        channel: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
+        moduleImporter: 'remix/multiple-import-maps-polyfill',
+      }
     : undefined,
   scripts: { loaders: isHmr ? [uiHmr()] : undefined },
 })
 
 const entry = 'app/actions/public/entry.ts'
 
-export const entryHref = await assets.getHref(entry)
-export const entryPreloads = await assets.getPreloads(entry)
+export const scriptEntry = await assets.getScriptEntry(entry)

@@ -79,12 +79,9 @@ function Actions() {
 }
 ```
 
-## Frame Navigation
+## Client Entry Loading
 
-Calling `run()` starts both hydration and frame navigation. It represents the current document as
-`app.frames.top` and intercepts eligible same-origin links and forms through the browser's
-Navigation API. Those navigations fetch HTML with the frame resolver and update the existing
-document in place instead of loading a new document:
+`run()` hydrates client entries by calling `loadModule` for each component module:
 
 ```tsx
 import { run } from 'remix/ui'
@@ -99,8 +96,46 @@ let app = run({
 await app.ready()
 ```
 
+Client entries introduced after the initial document may depend on import maps added at runtime.
+When targeting browsers without native support for multiple import maps, use
+`remix/multiple-import-maps-polyfill` to load these modules and process their preloads:
+
+```tsx
+import {
+  detectMultipleImportMapSupport,
+  importModule,
+  preloadShim,
+} from 'remix/multiple-import-maps-polyfill'
+
+let app = run({
+  async loadModule(moduleUrl, exportName) {
+    let module = await importModule(moduleUrl)
+    let Component = module[exportName]
+    if (typeof Component !== 'function') {
+      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+    }
+    return Component
+  },
+  async processClientEntryPreloads(preloads) {
+    if (await detectMultipleImportMapSupport()) return preloads
+
+    preloadShim(preloads)
+    return []
+  },
+})
+```
+
+## Frame Navigation
+
+The same runtime represents the current document as `app.frames.top` and intercepts eligible
+same-origin links and forms through the browser's Navigation API. Those navigations fetch HTML with
+the frame resolver and update the existing document in place instead of loading a new document.
 This soft-navigation behavior applies even when the page only uses `clientEntry()` and does not
 render an explicit `<Frame>`.
+
+Frame navigation requires both `window.navigation` and `NavigateEvent.sourceElement`. Browsers
+missing either capability use document navigation for links, forms, and `navigate()`. Hydration and
+explicit frame reloads still work.
 
 The default resolver is equivalent to:
 
@@ -113,7 +148,8 @@ async function resolveFrame(src, options) {
     signal: options?.signal,
   })
 
-  if (!response.ok) {
+  let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
+  if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
     throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
   }
 
@@ -165,9 +201,7 @@ window.navigation?.addEventListener('navigate', (e) => e.stopImmediatePropagatio
 This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as
 `handle.frame.reload()` continue to use the frame resolver.
 
-The default resolver rejects non-OK responses with an error containing their status and status text.
-A custom `resolveFrame` may return a `Response` with any status when it wants Remix UI to render the
-response body.
+The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom `resolveFrame` may return a `Response` with any status when it wants Remix UI to render the response body.
 
 Forms remain ordinary HTML forms before the runtime starts. Add `data-rmx-target` to reload a named frame, or `data-rmx-document` to require a full-document submission:
 

@@ -63,11 +63,13 @@
     "@remix-run/node-fetch-server": "workspace:*",
     "@remix-run/node-hmr": "workspace:^",
     "@remix-run/node-tsx": "workspace:^",
+    "@remix-run/response": "workspace:^",
     "@remix-run/test": "workspace:*",
     "@remix-run/ui": "workspace:*",
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
     "chokidar": "^5.0.0",
+    "playwright": "catalog:",
     "typescript": "catalog:"
   },
   "scripts": {

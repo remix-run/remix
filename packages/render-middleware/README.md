@@ -6,7 +6,7 @@ Request-scoped response rendering for Remix. It provides the conventional Remix 
 
 - **Remix UI rendering** - Stream nodes to HTML responses with `render()`
 - **Framework-owned frames** - Resolve nested and targeted `<Frame>` requests through the current router
-- **Client entry assets** - Resolve source-based `clientEntry()` modules and their preloads through an asset server
+- **Client entry assets** - Resolve source-based `clientEntry()` modules, import maps, and preloads through an asset server
 - **Typed context** - Preserve renderer input and response option types on `context.render`
 - **Custom renderers** - Install JSON, email, or other response pipelines with `renderWith()`
 
@@ -72,7 +72,7 @@ The middleware forwards request credentials and session headers to internal fram
 
 ### Options
 
-- **`assets`** - An asset server that resolves source-based client entry IDs to browser module URLs and preload URLs. Omit it when client entries already use public URLs or the app has no client entries.
+- **`assets`** - An asset server that resolves source-based client entry IDs to browser module URLs, import maps, and preload URLs. Omit it when client entries already use public URLs or the app has no client entries.
 - **`onError`** - A callback for server rendering errors. When omitted, the UI renderer uses its default error reporting.
 
 ## Custom renderers

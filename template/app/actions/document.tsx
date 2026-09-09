@@ -1,7 +1,8 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
 
-import { entryHref, entryPreloads } from '../assets.ts'
+import { scriptEntry } from '../assets.ts'
 
 export interface DocumentProps {
   children?: RemixNode
@@ -14,6 +15,7 @@ const DEFAULT_TITLE = readAppDisplayName('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { children, head, title = DEFAULT_TITLE } = handle.props
+    let { href, importMap, preloads } = scriptEntry
 
     return (
       <html lang="en">
@@ -24,10 +26,11 @@ export function Document(handle: Handle<DocumentProps>) {
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <title>{title}</title>
           {head}
-          {entryPreloads.map((href) => (
-            <link key={href} rel="modulepreload" href={href} />
+          <ImportMap value={importMap} />
+          {preloads.map((preloadHref) => (
+            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}
-          <script type="module" src={entryHref}></script>
+          <script type="module" src={href}></script>
         </head>
         <body mix={css({ margin: 0 })}>{children}</body>
       </html>

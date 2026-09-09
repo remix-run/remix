@@ -2,6 +2,23 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v0.7.0
+
+### Minor Changes
+
+- Updated the default `remix new` app template to use import maps for browser scripts, client entries, and HMR. Generated apps include the multiple import maps polyfill for browsers that need it. For existing apps, follow the [asset server migration steps](https://github.com/remix-run/remix/blob/main/packages/assets/CHANGELOG.md#v070) (see #11706).
+
+### Patch Changes
+
+- Fixed redirect handling during frame navigation in generated apps. Existing apps can get the same fix by removing the custom `resolveFrame` callback from `run()` in `app/actions/public/entry.ts` to use the default resolver (see #11821).
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.7.0`](https://github.com/remix-run/remix/releases/tag/assets@0.7.0)
+  - [`data-table@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table@0.5.1)
+  - [`data-table-mysql@0.5.2`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.2)
+  - [`data-table-postgres@0.5.2`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.2)
+  - [`data-table-sqlite@0.6.2`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.2)
+
 ## v0.6.0
 
 ### Minor Changes

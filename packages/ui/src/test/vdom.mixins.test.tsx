@@ -590,7 +590,7 @@ describe('vnode mixins', () => {
     let reclaimedCalls = 0
     let removeCalls = 0
     let beforeRemoveCalls = 0
-    let resolvePending: (() => void) | null = null
+    let pending = Promise.withResolvers<void>()
 
     let withReclaimLifecycle = createMixin((handle) => {
       handle.addEventListener('insert', () => {
@@ -601,14 +601,10 @@ describe('vnode mixins', () => {
       })
       handle.addEventListener('beforeRemove', (event) => {
         beforeRemoveCalls++
-        event.persistNode(
-          (signal) =>
-            new Promise<void>((resolve) => {
-              let done = () => resolve()
-              resolvePending = done
-              signal.addEventListener('abort', done, { once: true })
-            }),
-        )
+        event.persistNode((signal) => {
+          signal.addEventListener('abort', () => pending.resolve(), { once: true })
+          return pending.promise
+        })
       })
       handle.addEventListener('remove', () => {
         removeCalls++
@@ -638,24 +634,17 @@ describe('vnode mixins', () => {
     expect(reclaimedCalls).toBe(1)
     expect(removeCalls).toBe(0)
 
-    if (resolvePending !== null) {
-      ;(resolvePending as () => void)()
-    }
+    pending.resolve()
   })
 
   it('defers host removal when beforeRemove.persistNode is used', async () => {
-    let releaseRemoval: (() => void) | null = null
+    let removal = Promise.withResolvers<void>()
     let beforeRemoveCalls = 0
     let removeCalls = 0
     let withDeferredRemove = createMixin((handle) => {
       handle.addEventListener('beforeRemove', (event) => {
         beforeRemoveCalls++
-        event.persistNode(
-          () =>
-            new Promise<void>((resolve) => {
-              releaseRemoval = () => resolve()
-            }),
-        )
+        event.persistNode(() => removal.promise)
       })
       handle.addEventListener('remove', () => {
         removeCalls++
@@ -678,12 +667,7 @@ describe('vnode mixins', () => {
     expect(removeCalls).toBe(0)
     expect(container.querySelector('#deferred-remove')).toBe(beforeRemove)
 
-    let release =
-      releaseRemoval ??
-      (() => {
-        throw new Error('expected deferred remove callback')
-      })
-    release()
+    removal.resolve()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(removeCalls).toBe(1)
     expect(container.querySelector('#deferred-remove')).toBe(null)

@@ -4,7 +4,6 @@ import * as url from 'node:url'
 import type { RemixNode } from 'remix/ui'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
-import type { DocsAssetServer } from '../assets.ts'
 import { formatWithOxfmt } from '../utils/format.ts'
 import { hasRemixPackage, mapToRemixPackage } from '../utils/package-manifest.ts'
 
@@ -14,14 +13,12 @@ const SOURCE_URL_BASE = 'https://github.com/remix-run/remix/blob/main'
 
 export type DemoDocFile = {
   kind: 'demo'
-  assetHref: string
   description: string
   importHref: string
   name: string
   order: number
   package: string
   path: string
-  preloads: readonly string[]
   relativePath: string
   slug: string
   source: string
@@ -29,7 +26,7 @@ export type DemoDocFile = {
   urlPath: string
 }
 
-export async function discoverDemoFiles(assetServer: DocsAssetServer): Promise<DemoDocFile[]> {
+export async function discoverDemoFiles(): Promise<DemoDocFile[]> {
   if (!fs.existsSync(DEMO_BUILD_DIR)) {
     throw new Error(
       `Demo build directory not found: ${DEMO_BUILD_DIR}. Run "pnpm build:demos" first.`,
@@ -37,7 +34,7 @@ export async function discoverDemoFiles(assetServer: DocsAssetServer): Promise<D
   }
 
   let demoPaths = walkBuiltDemos(DEMO_BUILD_DIR).sort()
-  let demoFiles = await Promise.all(demoPaths.map((demoPath) => getDemoFile(demoPath, assetServer)))
+  let demoFiles = await Promise.all(demoPaths.map((demoPath) => getDemoFile(demoPath)))
 
   let seenUrls = new Map<string, string>()
   for (let demo of demoFiles) {
@@ -76,7 +73,7 @@ export async function renderDemoSource(source: string): Promise<string> {
   })
 }
 
-async function getDemoFile(filePath: string, assetServer: DocsAssetServer): Promise<DemoDocFile> {
+async function getDemoFile(filePath: string): Promise<DemoDocFile> {
   let parts = path.relative(DEMO_BUILD_DIR, filePath).split(path.sep)
   if (parts.length < 3 || !parts.at(-1)?.endsWith('.demo.tsx')) {
     throw new Error(`Invalid built demo location: ${filePath}`)
@@ -95,24 +92,18 @@ async function getDemoFile(filePath: string, assetServer: DocsAssetServer): Prom
   let source = fs.readFileSync(filePath, 'utf-8')
   let { name, description, order, displaySource } = extractDemoMetadata(source, relativePath)
   let formattedSource = await formatDemoSource(displaySource, filePath)
-  let [assetHref, preloads] = await Promise.all([
-    assetServer.getHref(filePath),
-    assetServer.getPreloads(filePath),
-  ])
   let importHref = url.pathToFileURL(filePath).href
 
   await loadDemoComponent({ importHref, slug })
 
   return {
     kind: 'demo',
-    assetHref,
     description,
     importHref,
     name,
     order,
     package: packageName,
     path: filePath,
-    preloads,
     relativePath,
     slug,
     source: formattedSource,

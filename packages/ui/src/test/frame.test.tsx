@@ -220,7 +220,7 @@ describe('run', () => {
         formData,
         method: 'post',
         signal,
-      })
+      }).finished
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       let [src, init] = fetchMock.mock.calls[0]!.arguments
@@ -235,13 +235,119 @@ describe('run', () => {
     }
   })
 
-  it('rejects non-OK responses from the default resolver without replacing frame content', async (t) => {
+  it('renders 3xx HTML responses from the default resolver', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="choices">Multiple choices</main></body></html><!-- rmx:flush document -->',
+          {
+            headers: { 'Content-Type': 'text/html' },
+            status: 300,
+            statusText: 'Multiple Choices',
+          },
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/choices'
+
+    try {
+      await app.frames.top.reload()
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(document.getElementById('choices')?.textContent).toBe('Multiple choices')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('rejects non-HTML 3xx responses from the default resolver', async (t) => {
     document.body.innerHTML = '<main id="initial">Initial</main>'
     let fetchMock = t.mock.method(
       globalThis,
       'fetch',
       async () =>
-        new Response('<main id="error">Account not found</main>', {
+        new Response('{"next":"/account"}', {
+          headers: { 'Content-Type': 'application/json' },
+          status: 300,
+          statusText: 'Multiple Choices',
+        }),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    let reportedError: unknown
+    app.addEventListener('error', (event) => {
+      reportedError = event.error
+    })
+
+    try {
+      await app.ready()
+      app.frames.top.src = '/choices'
+
+      await expect(app.frames.top.reload()).rejects.toThrow(
+        'Failed to resolve frame: 300 Multiple Choices',
+      )
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(reportedError).toBeInstanceOf(Error)
+      expect((reportedError as Error).message).toBe('Failed to resolve frame: 300 Multiple Choices')
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('renders 4xx HTML responses from the default resolver', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><p role="alert">Name is required</p></body></html><!-- rmx:flush document -->',
+          {
+            headers: { 'Content-Type': 'Text/HTML; charset=utf-8' },
+            status: 422,
+            statusText: 'Unprocessable Content',
+          },
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        formData: new FormData(),
+        method: 'post',
+      }).finished
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(document.querySelector('[role="alert"]')?.textContent).toBe('Name is required')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('rejects non-HTML 4xx responses from the default resolver', async (t) => {
+    document.body.innerHTML = '<main id="initial">Initial</main>'
+    let unhandledRejections: unknown[] = []
+    let onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      event.preventDefault()
+      unhandledRejections.push(event.reason)
+    }
+    window.addEventListener('unhandledrejection', onUnhandledRejection)
+    t.after(() => window.removeEventListener('unhandledrejection', onUnhandledRejection))
+
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response('Not Found', {
+          headers: { 'Content-Type': 'text/plain' },
           status: 404,
           statusText: 'Not Found',
         }),
@@ -260,10 +366,50 @@ describe('run', () => {
       await expect(app.frames.top.reload()).rejects.toThrow(
         'Failed to resolve frame: 404 Not Found',
       )
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(unhandledRejections).toEqual([])
+      expect(reportedError).toBeInstanceOf(Error)
+      expect((reportedError as Error).message).toBe('Failed to resolve frame: 404 Not Found')
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('rejects 5xx HTML responses from the default resolver', async (t) => {
+    document.body.innerHTML = '<main id="initial">Initial</main>'
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response('<main id="error">Internal Server Error</main>', {
+          headers: { 'Content-Type': 'text/html' },
+          status: 500,
+          statusText: 'Internal Server Error',
+        }),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    let reportedError: unknown
+    app.addEventListener('error', (event) => {
+      reportedError = event.error
+    })
+
+    try {
+      await app.ready()
+      app.frames.top.src = '/account'
+
+      await expect(app.frames.top.reload()).rejects.toThrow(
+        'Failed to resolve frame: 500 Internal Server Error',
+      )
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       expect(reportedError).toBeInstanceOf(Error)
-      expect((reportedError as Error).message).toBe('Failed to resolve frame: 404 Not Found')
+      expect((reportedError as Error).message).toBe(
+        'Failed to resolve frame: 500 Internal Server Error',
+      )
       expect(document.getElementById('initial')?.textContent).toBe('Initial')
       expect(document.getElementById('error')).toBeNull()
     } finally {
@@ -293,7 +439,7 @@ describe('run', () => {
         encType: 'application/x-www-form-urlencoded',
         formData,
         method: 'post',
-      })
+      }).finished
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       let [, init] = fetchMock.mock.calls[0]!.arguments
@@ -327,7 +473,7 @@ describe('run', () => {
         encType: 'text/plain',
         formData,
         method: 'post',
-      })
+      }).finished
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       let [, init] = fetchMock.mock.calls[0]!.arguments
@@ -2458,12 +2604,33 @@ describe('run', () => {
     await navigate(detailUrl)
     expect(document.getElementById('scroll-detail-page')?.textContent).toContain('Detail')
 
+    let didScroll = false
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        let scroll = event.scroll.bind(event)
+        Object.defineProperty(event, 'scroll', {
+          value() {
+            didScroll = true
+            scroll()
+          },
+        })
+      },
+      { once: true },
+    )
+
     let backNavigation = window.navigation.back().finished
     await deferredListItemsRequested
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    )
+
+    expect(didScroll).toBe(false)
+
     resolveDeferredListItems(listItemsContent)
     await backNavigation
 
+    expect(didScroll).toBe(true)
     expect(document.getElementById('scroll-list-items')).not.toBe(null)
     expect(window.scrollY).toBe(2500)
   })

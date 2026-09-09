@@ -313,6 +313,60 @@ The router and browser are cleaned up automatically. Database or file-storage fi
 
 Keep validation statuses, redirects, and middleware branches in router tests. One representative end-to-end flow can prove that the form, pending state, POST, redirect, and rendered result work together without repeating every server-side case in Playwright.
 
+### End to end tests for a SPA
+
+A client-only SPA does not have a server router so you can't use `createTestServer(...)` for E2E
+tests. Instead, you can shim in your own test server to pass to `t.serve`.
+
+Here's an example using Vite's preview server:
+
+```ts filename=app/app.test.e2e.ts
+import { fileURLToPath } from "node:url";
+import * as assert from "remix/assert";
+import { beforeAll, describe, it } from "remix/test";
+import { build, preview } from "vite";
+
+const root = fileURLToPath(new URL("../", import.meta.url));
+
+async function createSpaTestServer() {
+  let vite = await preview({
+    root,
+    logLevel: "silent",
+    server: { host: "127.0.0.1", port: 0 },
+  });
+  let address = vite.httpServer?.address();
+
+  if (address == null || typeof address === "string") {
+    await vite.close();
+    throw new Error("Vite did not bind to a TCP port");
+  }
+
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    async close() {
+      await vite.close();
+    },
+  };
+}
+
+describe("SPA navigation", () => {
+  beforeAll(async () => {
+    await build({ root, logLevel: "silent" });
+  });
+
+  it("loads a client route and navigates", async (t) => {
+    let page = await t.serve(await createSpaTestServer());
+
+    await page.goto("/");
+    await page.getByRole("heading", { name: "Home" }).waitFor();
+
+    await page.goto("/about");
+    await page.getByRole("heading", { name: "About" }).waitFor();
+    assert.equal(new URL(page.url()).pathname, "/about");
+  });
+});
+```
+
 ## Configure discovery, coverage, and CI
 
 The default discovery rules are enough for the file names used in this chapter. Add a static `remix.json` when the app needs custom browser projects, excluded paths, global setup, or coverage settings. The file uses JSONC, so comments and trailing commas are allowed:

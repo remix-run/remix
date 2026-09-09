@@ -1,3 +1,5 @@
+import * as path from 'node:path'
+
 import { createAssetServer } from 'remix/assets'
 import { loadConfig } from 'remix/cli'
 import { createController } from 'remix/router'
@@ -16,6 +18,10 @@ export const assetServer = createAssetServer({
     },
   },
 })
+
+export const scriptEntry = await assetServer.getScriptEntry(
+  path.resolve(import.meta.dirname, '../public/entry.ts'),
+)
 
 export const assets = createController(routes.assets, {
   actions: {

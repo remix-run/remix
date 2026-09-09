@@ -13,12 +13,11 @@ export const assets = createAssetServer({
   denyFiles: ['demos/frame-navigation/app/**/*.test.*'],
   mounts: {
     app: 'demos/frame-navigation/app',
+    npm: 'node_modules',
     packages: 'packages',
   },
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
-  fingerprint: isDevelopment
-    ? undefined
-    : { buildId: process.env.GITHUB_SHA || String(Date.now()) },
+  fingerprint: !isDevelopment,
   watch: false,
 })

@@ -1097,6 +1097,7 @@ function insertFrame(
           moduleLoads: runtime.moduleLoads,
           frameInstances: runtime.frameInstances,
           namedFrames: runtime.namedFrames,
+          processClientEntryPreloads: runtime.processClientEntryPreloads,
         })
         runtime.frameInstances.set(start, instance)
       }
@@ -1147,6 +1148,7 @@ function insertFrame(
     moduleLoads: runtime.moduleLoads,
     frameInstances: runtime.frameInstances,
     namedFrames: runtime.namedFrames,
+    processClientEntryPreloads: runtime.processClientEntryPreloads,
   })
   runtime.frameInstances.set(start, instance)
 
@@ -1188,6 +1190,7 @@ function resolveClientFrame(
   }
   let resolveController = reload?.controller ?? new AbortController()
   state.resolveController = resolveController
+  let frameCommitted = Promise.withResolvers<void>()
 
   let resolve = Promise.resolve()
     .then(() =>
@@ -1206,6 +1209,8 @@ function resolveClientFrame(
       await instance.render(nextContent, {
         signal: resolveController.signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
+        blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
+        onCommit: frameCommitted.resolve,
       })
       if (state.resolveToken !== token || resolveController.signal.aborted) return
       state.resolved = true
@@ -1216,6 +1221,7 @@ function resolveClientFrame(
       }
     })
     .finally(() => {
+      frameCommitted.resolve()
       reload?.complete()
       if (state.resolveController === resolveController) {
         state.resolveController = undefined
@@ -1224,6 +1230,9 @@ function resolveClientFrame(
 
   if (serverFrameReload?.reconciliationTracker && !node.props.fallback) {
     serverFrameReload.reconciliationTracker.waitFor(resolve)
+  }
+  if (serverFrameReload?.blockingFrameTracker && !node.props.fallback) {
+    serverFrameReload.blockingFrameTracker.waitFor(frameCommitted.promise)
   }
 }
 

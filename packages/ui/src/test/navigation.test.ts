@@ -8,6 +8,15 @@ import {
 import type { FrameHandle } from '../runtime/component.ts'
 import type { ResolveFrameOptions } from '../runtime/frame.ts'
 import { withResolvers } from './utils.ts'
+import { reloadDocument } from '../runtime/document-reload.ts'
+
+type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }
+
+function createReloadTransition(result: StubFrameReloadResult | Promise<StubFrameReloadResult>) {
+  let signal = new AbortController().signal
+  let finished = Promise.resolve(result).then((result) => ({ ...result, signal }))
+  return { signal, committed: finished.then(() => {}), finished }
+}
 
 // Stand-in frame the navigation handler can call without dragging in the
 // full app runtime from ./run.ts. Only `src` and `reload` are touched on
@@ -20,7 +29,8 @@ const stubFrame = {
 const stubFrames = {
   getTopFrame: () => stubFrame,
   getNamedFrame: () => stubFrame,
-  reloadFrame: async (frame: FrameHandle) => ({ signal: await frame.reload() }),
+  reloadFrame: (frame: FrameHandle) =>
+    createReloadTransition(frame.reload().then((signal) => ({ signal }))),
 }
 
 function stubGlobalMethod(t: TestContext, api: string, method: string, impl: any) {
@@ -71,24 +81,89 @@ function stubWindowScrollPosition(t: TestContext) {
   }
 }
 
-function startStubNavigationListener(t: TestContext): (event: Event) => void {
+type StubNavigationTransition = {
+  runHandler(): Promise<void>
+  succeed(): Promise<void>
+}
+
+function startStubNavigationListener(
+  t: TestContext,
+  options: Parameters<typeof startNavigationListenerImpl>[1] = stubFrames,
+): (event: Event) => StubNavigationTransition {
   let stubNavigation = Object.assign(new EventTarget(), {
     updateCurrentEntry: mock.fn(),
+    transition: null as NavigationTransition | null,
   })
   stubGlobalField(t, 'navigation', stubNavigation)
 
   let controller = new AbortController()
-  startNavigationListenerImpl(controller.signal, stubFrames)
+  startNavigationListenerImpl(controller.signal, options)
   t.after(() => controller.abort())
 
   return (event) => {
+    let intercept = Reflect.get(event, 'intercept')
+    if (typeof intercept !== 'function') throw new Error('Expected an intercept method')
+
+    let [finished, resolveFinished] = withResolvers<void>()
+    let transition = { finished } as NavigationTransition
+    let interceptOptions: NavigationInterceptOptions | undefined
+    Reflect.set(event, 'intercept', (options?: NavigationInterceptOptions) => {
+      stubNavigation.transition = transition
+      interceptOptions = options
+      intercept.call(event, options)
+    })
     stubNavigation.dispatchEvent(event)
+
+    function clearTransition() {
+      if (stubNavigation.transition === transition) stubNavigation.transition = null
+    }
+
+    return {
+      async runHandler() {
+        await interceptOptions?.handler?.()
+      },
+      async succeed() {
+        resolveFinished()
+        await finished
+        await Promise.resolve()
+        clearTransition()
+      },
+    }
   }
 }
 
 describe('navigate', () => {
   afterEach(() => {
     document.body.textContent = ''
+  })
+
+  it('loads a fresh document without intercepting the replacement navigation', (t) => {
+    let intercept = mock.fn()
+    let navigation = Object.assign(new EventTarget(), {
+      updateCurrentEntry: mock.fn(),
+      navigate: mock.fn((href: string, options: NavigationNavigateOptions) => {
+        navigation.dispatchEvent(
+          Object.assign(new Event('navigate'), {
+            canIntercept: true,
+            info: options.info,
+            destination: { url: href },
+            intercept,
+          }),
+        )
+      }),
+    })
+    stubGlobalField(t, 'navigation', navigation)
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    startNavigationListenerImpl(controller.signal, stubFrames)
+
+    let destination = new URL('/next', document.location.href).href
+    reloadDocument(document, destination)
+
+    expect(navigation.navigate).toHaveBeenCalledTimes(1)
+    expect(navigation.navigate.mock.calls[0]?.arguments[0]).toBe(destination)
+    expect(navigation.navigate.mock.calls[0]?.arguments[1].history).toBe('replace')
+    expect(intercept).not.toHaveBeenCalled()
   })
 
   it('passes runtime state via navigate history state', async (t) => {
@@ -127,25 +202,50 @@ describe('navigate', () => {
     let originalUrl = window.location.href
     let destination = new URL(originalUrl)
     destination.hash = 'document-navigation-fallback'
-    let originalHistoryLength = window.history.length
     stubGlobalField(t, 'navigation', undefined)
 
     try {
+      let navigated = new Promise<void>((resolve) => {
+        window.addEventListener('hashchange', () => resolve(), { once: true })
+      })
       await navigate(destination.href)
+      await navigated
       expect(window.location.href).toBe(destination.href)
-      expect(window.history.length).toBe(originalHistoryLength + 1)
     } finally {
       let wentBack = new Promise<void>((resolve) => {
         window.addEventListener('popstate', () => resolve(), { once: true })
       })
       window.history.back()
       await wentBack
+      expect(window.location.href).toBe(originalUrl)
 
       let wentForward = new Promise<void>((resolve) => {
         window.addEventListener('popstate', () => resolve(), { once: true })
       })
       window.history.forward()
       await wentForward
+      expect(window.location.href).toBe(destination.href)
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('falls back to document navigation when sourceElement is unavailable', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.hash = 'source-element-fallback'
+    let navigation = { navigate: mock.fn() }
+    stubGlobalField(t, 'navigation', navigation)
+    stubGlobalField(t, 'NavigateEvent', class extends Event {})
+
+    try {
+      let navigated = new Promise<void>((resolve) => {
+        window.addEventListener('hashchange', () => resolve(), { once: true })
+      })
+      await navigate(destination.href, { history: 'replace' })
+      await navigated
+      expect(window.location.href).toBe(destination.href)
+      expect(navigation.navigate).not.toHaveBeenCalled()
+    } finally {
       window.history.replaceState(window.history.state, '', originalUrl)
     }
   })
@@ -158,7 +258,11 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', undefined)
 
     try {
+      let navigated = new Promise<void>((resolve) => {
+        window.addEventListener('hashchange', () => resolve(), { once: true })
+      })
       await navigate(destination.href, { history: 'replace' })
+      await navigated
       expect(window.location.href).toBe(destination.href)
       expect(window.history.length).toBe(originalHistoryLength)
     } finally {
@@ -177,28 +281,131 @@ describe('navigate', () => {
     controller.abort()
   })
 
-  it('leaves default scrolling to the browser', async (t) => {
+  it('skips navigation listeners when sourceElement is unavailable', (t) => {
+    let navigation = {
+      updateCurrentEntry: mock.fn(),
+      addEventListener: mock.fn(),
+    }
+    stubGlobalField(t, 'navigation', navigation)
+    stubGlobalField(t, 'NavigateEvent', class extends Event {})
+    let addDocumentListener = t.mock.method(document, 'addEventListener')
+    let controller = new AbortController()
+
+    startNavigationListener(controller.signal)
+
+    expect(addDocumentListener).not.toHaveBeenCalled()
+    expect(navigation.updateCurrentEntry).not.toHaveBeenCalled()
+    expect(navigation.addEventListener).not.toHaveBeenCalled()
+    controller.abort()
+  })
+
+  it('uses browser scrolling after the frame content commits', async (t) => {
+    stubNavigatorUserAgent(t, 'Mozilla/5.0 Gecko/20100101 Firefox/142.0')
     let dispatchNavigation = startStubNavigationListener(t)
-    let scrollTo = t.mock.method(window, 'scrollTo', () => {})
     let anchor = document.createElement('a')
     anchor.href = '/login'
+    let scroll = mock.fn()
     let intercept = mock.fn()
 
-    dispatchNavigation(
+    let transition = dispatchNavigation(
       createAnchorNavigateEvent(anchor, {
         intercept,
         destinationUrl: new URL('/login', window.location.origin).href,
+        info: { resetScroll: true },
+        scroll,
       }),
     )
 
     let interceptOptions = intercept.mock.calls[0]?.arguments[0]
     expect(interceptOptions?.scroll).toBe(undefined)
     await interceptOptions?.handler?.()
-    dispatchNavigation(new Event('navigatesuccess'))
-    expect(scrollTo).not.toHaveBeenCalled()
+    expect(scroll).toHaveBeenCalledTimes(1)
+    await transition.succeed()
   })
 
-  it('resynchronizes WebKit scroll state after a navigation scroll reset', (t) => {
+  it('suppresses Chromium scroll anchoring until after a push navigation paints', async (t) => {
+    stubNavigatorUserAgent(t, 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36')
+    let animationFrameCallbacks: FrameRequestCallback[] = []
+    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+      animationFrameCallbacks.push(callback)
+      return animationFrameCallbacks.length
+    })
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let eventController = new AbortController()
+    t.after(() => eventController.abort())
+
+    let adoptedStyleSheetCount = document.adoptedStyleSheets.length
+    let transition = dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept: mock.fn(),
+        destinationUrl: new URL('/login', window.location.origin).href,
+        info: { resetScroll: true },
+        signal: eventController.signal,
+      }),
+    )
+
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+    let stylesheet = document.adoptedStyleSheets[adoptedStyleSheetCount]
+    let overflowRule = stylesheet?.cssRules[0]
+    if (!(overflowRule instanceof CSSStyleRule)) {
+      throw new Error('Expected a scroll anchoring rule')
+    }
+    expect(overflowRule.selectorText).toBe('html, body')
+    expect(overflowRule.style.overflowAnchor).toBe('none')
+    expect(overflowRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
+
+    await transition.runHandler()
+    await transition.succeed()
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+    expect(animationFrameCallbacks).toHaveLength(1)
+
+    animationFrameCallbacks.shift()?.(0)
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+    expect(animationFrameCallbacks).toHaveLength(1)
+
+    animationFrameCallbacks.shift()?.(0)
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
+  })
+
+  it('does not scroll for a superseded frame reload', async (t) => {
+    stubNavigatorUserAgent(t, 'Mozilla/5.0 Gecko/20100101 Firefox/142.0')
+    let reloadController = new AbortController()
+    let [committed, resolveCommitted] = withResolvers<void>()
+    let [finished, resolveFinished] = withResolvers<StubFrameReloadResult>()
+    let frame = { src: '' } as FrameHandle
+    let dispatchNavigation = startStubNavigationListener(t, {
+      getTopFrame: () => frame,
+      getNamedFrame: () => frame,
+      reloadFrame() {
+        return { signal: reloadController.signal, committed, finished }
+      },
+    })
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    let scroll = mock.fn()
+    let transition = dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept: mock.fn(),
+        destinationUrl: new URL('/login', window.location.origin).href,
+        info: { resetScroll: true },
+        scroll,
+      }),
+    )
+
+    let handler = transition.runHandler()
+    await Promise.resolve()
+    reloadController.abort()
+    resolveCommitted()
+    resolveFinished({ signal: reloadController.signal })
+    await handler
+
+    expect(scroll).not.toHaveBeenCalled()
+    await transition.succeed()
+  })
+
+  it('resynchronizes WebKit scroll state after a navigation scroll reset', async (t) => {
     stubNavigatorUserAgent(
       t,
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.6 Safari/605.1.15',
@@ -214,7 +421,7 @@ describe('navigate', () => {
     let anchor = document.createElement('a')
     anchor.href = '/login'
 
-    dispatchNavigation(
+    let transition = dispatchNavigation(
       createAnchorNavigateEvent(anchor, {
         intercept: mock.fn(),
         destinationUrl: new URL('/login', window.location.origin).href,
@@ -222,7 +429,8 @@ describe('navigate', () => {
     )
     expect(scrollTo).not.toHaveBeenCalled()
 
-    dispatchNavigation(new Event('navigatesuccess'))
+    await transition.runHandler()
+    await transition.succeed()
     expect(scrollTo).toHaveBeenNthCalledWith(1, {
       behavior: 'instant',
       left: 0,
@@ -240,7 +448,7 @@ describe('navigate', () => {
     })
   })
 
-  it('preserves scrolling that occurs after WebKit scroll resynchronization', (t) => {
+  it('preserves scrolling that occurs after WebKit scroll resynchronization', async (t) => {
     stubNavigatorUserAgent(
       t,
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.6 Safari/605.1.15',
@@ -256,13 +464,14 @@ describe('navigate', () => {
     let anchor = document.createElement('a')
     anchor.href = '/login'
 
-    dispatchNavigation(
+    let transition = dispatchNavigation(
       createAnchorNavigateEvent(anchor, {
         intercept: mock.fn(),
         destinationUrl: new URL('/login', window.location.origin).href,
       }),
     )
-    dispatchNavigation(new Event('navigatesuccess'))
+    await transition.runHandler()
+    await transition.succeed()
     setScrollPosition(0, 200)
 
     let animationFrameCallback = animationFrameCallbacks[0]
@@ -272,7 +481,7 @@ describe('navigate', () => {
     expect(scrollTo).toHaveBeenCalledTimes(1)
   })
 
-  it('does not resynchronize WebKit scroll state for fragment navigations', (t) => {
+  it('does not resynchronize WebKit scroll state for fragment navigations', async (t) => {
     stubNavigatorUserAgent(
       t,
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.6 Safari/605.1.15',
@@ -282,13 +491,14 @@ describe('navigate', () => {
     let anchor = document.createElement('a')
     anchor.href = '/login#details'
 
-    dispatchNavigation(
+    let transition = dispatchNavigation(
       createAnchorNavigateEvent(anchor, {
         intercept: mock.fn(),
         destinationUrl: new URL('/login#details', window.location.origin).href,
       }),
     )
-    dispatchNavigation(new Event('navigatesuccess'))
+    await transition.runHandler()
+    await transition.succeed()
 
     expect(scrollTo).not.toHaveBeenCalled()
   })
@@ -351,51 +561,60 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
+  it('does not scroll again when synchronizing a frame redirect URL', (t) => {
+    stubNavigatorUserAgent(t, 'Mozilla/5.0 Gecko/20100101 Firefox/142.0')
+    let dispatchNavigation = startStubNavigationListener(t)
+    let eventController = new AbortController()
+    let intercept = mock.fn()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      navigationType: 'replace',
+      signal: eventController.signal,
+      destination: {
+        url: new URL('/redirected', window.location.origin).href,
+      },
+      info: { type: 'frame-redirect', resetScroll: true },
+      intercept,
+    })
+
+    dispatchNavigation(event)
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    eventController.abort()
+  })
+
   it('leaves traversal restoration to the browser after frame reconciliation', async (t) => {
     let navigateListener: EventListener | undefined
-    let navigationEvents = new EventTarget()
+    let [transitionFinished, resolveTransitionFinished] = withResolvers<void>()
     let stubNavigation = {
+      transition: { finished: transitionFinished } as NavigationTransition,
       updateCurrentEntry() {},
-      addEventListener(
-        type: string,
-        listener: EventListener,
-        options?: AddEventListenerOptions | boolean,
-      ) {
-        if (type === 'navigate') {
-          navigateListener = listener
-        } else {
-          navigationEvents.addEventListener(type, listener, options)
-        }
-      },
-      removeEventListener(
-        type: string,
-        listener: EventListener,
-        options?: EventListenerOptions | boolean,
-      ) {
-        navigationEvents.removeEventListener(type, listener, options)
+      addEventListener(type: string, listener: EventListener) {
+        if (type === 'navigate') navigateListener = listener
       },
     }
     stubGlobalField(t, 'navigation', stubNavigation)
 
-    let [reloadPromise, resolveReload] = withResolvers<{ signal: AbortSignal }>()
+    let [committed, resolveCommitted] = withResolvers<void>()
+    let [finished, resolveFinished] = withResolvers<{ signal: AbortSignal }>()
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame(_frame, options) {
-        let onAfterCommit = Reflect.get(options ?? {}, 'onAfterCommit')
-        if (typeof onAfterCommit === 'function') onAfterCommit()
-        return reloadPromise
+      reloadFrame() {
+        return { signal: eventController.signal, committed, finished }
       },
     })
 
     let scroll = mock.fn()
     let intercept = mock.fn()
+    let eventController = new AbortController()
     let event = Object.assign(new Event('navigate'), {
       canIntercept: true,
       navigationType: 'traverse',
-      signal: new AbortController().signal,
+      info: { resetScroll: true },
+      signal: eventController.signal,
       destination: {
         url: new URL('/collection', window.location.origin).href,
         key: 'collection',
@@ -410,14 +629,14 @@ describe('navigate', () => {
       intercept,
     })
 
+    let adoptedStyleSheetCount = document.adoptedStyleSheets.length
+    let startingDocumentHeight = document.documentElement.scrollHeight
+    let startingViewportHeight = document.documentElement.clientHeight
     try {
       navigateListener?.(event)
       let interceptOptions = intercept.mock.calls[0]?.arguments[0]
       if (!interceptOptions?.handler) throw new Error('Expected navigation interception handler')
       let handlerSettled = false
-      let adoptedStyleSheetCount = document.adoptedStyleSheets.length
-      let startingDocumentHeight = document.documentElement.scrollHeight
-      let startingViewportHeight = document.documentElement.clientHeight
       let handler = interceptOptions.handler().then(() => {
         handlerSettled = true
       })
@@ -441,14 +660,23 @@ describe('navigate', () => {
       expect(bodyRule.style.overflowAnchor).toBe('none')
       expect(bodyRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
 
-      resolveReload({ signal: event.signal })
+      resolveCommitted()
+      await Promise.resolve()
+
+      expect(handlerSettled).toBe(false)
+      expect(scroll).toHaveBeenCalledTimes(1)
+
+      resolveFinished({ signal: event.signal })
       await handler
 
-      expect(scroll).not.toHaveBeenCalled()
+      expect(scroll).toHaveBeenCalledTimes(1)
       expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
-      navigationEvents.dispatchEvent(new Event('navigatesuccess'))
+      resolveTransitionFinished()
+      await transitionFinished
+      await Promise.resolve()
       expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
     } finally {
+      eventController.abort()
       controller.abort()
     }
   })
@@ -578,9 +806,11 @@ describe('navigate', () => {
     anchor.append(svg)
 
     let intercept = mock.fn()
+    let eventController = new AbortController()
     let event = Object.assign(new Event('navigate'), {
       canIntercept: true,
       navigationType: 'push',
+      signal: eventController.signal,
       sourceElement: path,
       destination: {
         url: new URL('/logo', window.location.origin).href,
@@ -594,6 +824,7 @@ describe('navigate', () => {
 
     expect(intercept).toHaveBeenCalledTimes(1)
 
+    eventController.abort()
     controller.abort()
   })
 
@@ -609,7 +840,8 @@ describe('navigate', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: async (_frame, options) => ({ signal: await reload(options) }),
+      reloadFrame: (_frame, options) =>
+        createReloadTransition(reload(options).then((signal) => ({ signal }))),
     })
 
     let anchor = document.createElement('a')
@@ -644,15 +876,15 @@ describe('navigate', () => {
     redirectedUrl.searchParams.set('frame-navigation', 'redirected')
     let topFrame = { src: '' } as FrameHandle
     let shouldRedirect = true
-    let reloadFrame = mock.fn(async () => {
+    let reloadFrame = mock.fn(() => {
       if (shouldRedirect) {
         shouldRedirect = false
-        return {
+        return createReloadTransition({
           signal: new AbortController().signal,
           redirectedTo: redirectedUrl.href,
-        }
+        })
       }
-      return { signal: new AbortController().signal }
+      return createReloadTransition({ signal: new AbortController().signal })
     })
     let controller = new AbortController()
     startNavigationListenerImpl(controller.signal, {
@@ -701,10 +933,12 @@ describe('navigate', () => {
     let redirectedFrameUrl = new URL('/redirected-frame', originalUrl)
     let topFrame = { src: originalUrl } as FrameHandle
     let childFrame = { src: '' } as FrameHandle
-    let reloadFrame = mock.fn(async (frame: FrameHandle) => ({
-      signal: new AbortController().signal,
-      redirectedTo: frame === childFrame ? redirectedFrameUrl.href : undefined,
-    }))
+    let reloadFrame = mock.fn((frame: FrameHandle) =>
+      createReloadTransition({
+        signal: new AbortController().signal,
+        redirectedTo: frame === childFrame ? redirectedFrameUrl.href : undefined,
+      }),
+    )
     let controller = new AbortController()
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
@@ -756,7 +990,7 @@ describe('form navigation', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: (_frame, options) => reload(options),
+      reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
     let form = document.createElement('form')
@@ -794,7 +1028,7 @@ describe('form navigation', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: (_frame, options) => reload(options),
+      reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
     let form = document.createElement('form')
@@ -828,7 +1062,8 @@ describe('form navigation', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: async (_frame, options) => ({ signal: await reload(options) }),
+      reloadFrame: (_frame, options) =>
+        createReloadTransition(reload(options).then((signal) => ({ signal }))),
     })
 
     let form = document.createElement('form')
@@ -864,7 +1099,7 @@ describe('form navigation', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: (_frame, options) => reload(options),
+      reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
     let destination = new URL(window.location.href)
@@ -906,7 +1141,8 @@ describe('form navigation', () => {
         expect(name).toBe('account')
         return namedFrame
       },
-      reloadFrame: (frame, options) => (frame === namedFrame ? namedReload(options) : topReload()),
+      reloadFrame: (frame, options) =>
+        createReloadTransition(frame === namedFrame ? namedReload(options) : topReload()),
     })
 
     let destinationUrl = window.location.href
@@ -958,7 +1194,7 @@ describe('form navigation', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: (_frame, options) => reload(options),
+      reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
     let form = document.createElement('form')
@@ -1015,7 +1251,7 @@ describe('form navigation', () => {
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
-      reloadFrame: (_frame, options) => reload(options),
+      reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
     let form = document.createElement('form')
@@ -1169,18 +1405,23 @@ function createAnchorNavigateEvent(
   options: {
     intercept: (options?: NavigationInterceptOptions) => void
     destinationUrl: string
+    info?: unknown
+    scroll?: () => void
+    signal?: AbortSignal
   },
 ): Event {
   return Object.assign(new Event('navigate'), {
     canIntercept: true,
     navigationType: 'push',
+    info: options.info,
     sourceElement: anchor,
-    signal: new AbortController().signal,
+    signal: options.signal ?? new AbortController().signal,
     destination: {
       url: options.destinationUrl,
       key: 'next',
       getState: () => undefined,
     },
+    scroll: options.scroll ?? (() => {}),
     intercept: options.intercept,
   })
 }

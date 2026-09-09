@@ -130,6 +130,57 @@ describe('parseMultipart', async () => {
     ])
   })
 
+  it('ignores a textual RFC 2046 preamble before the initial boundary', () => {
+    let preamble = new TextEncoder().encode('This is a MIME preamble.\r\n')
+    let message = createMultipartMessage(boundary, { field: 'hello' })
+    let body = new Uint8Array(preamble.length + message.length)
+    body.set(preamble, 0)
+    body.set(message, preamble.length)
+
+    let parts = Array.from(parseMultipart(body, { boundary }))
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, 'hello')
+  })
+
+  it('ignores boundary text at a chunk edge in the middle of a preamble line', () => {
+    let firstChunk = new TextEncoder().encode(`some preamble text x--${boundary}\r`)
+    let preambleEnd = new TextEncoder().encode('\nX-Preamble: should be ignored\r\n')
+    let message = createMultipartMessage(boundary, { field: 'hello' })
+    let secondChunk = new Uint8Array(preambleEnd.length + message.length)
+    secondChunk.set(preambleEnd, 0)
+    secondChunk.set(message, preambleEnd.length)
+
+    let parts = Array.from(parseMultipart([firstChunk, secondChunk], { boundary }))
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].headers['x-preamble'], undefined)
+    assert.equal(parts[0].name, 'field')
+    assert.equal(parts[0].text, 'hello')
+  })
+
+  it('ignores a leading CRLF before the initial boundary', () => {
+    let preamble = new TextEncoder().encode('\r\n')
+    let message = createMultipartMessage(boundary, { field: 'hello' })
+    let body = new Uint8Array(preamble.length + message.length)
+    body.set(preamble, 0)
+    body.set(message, preamble.length)
+
+    let parts = Array.from(parseMultipart(body, { boundary }))
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, 'hello')
+  })
+
+  it('finds an opening boundary split across chunks after a preamble', () => {
+    let preamble = new TextEncoder().encode('This is a MIME preamble.\r\n')
+    let message = createMultipartMessage(boundary, { field: 'hello' })
+    let body = new Uint8Array(preamble.length + message.length)
+    body.set(preamble, 0)
+    body.set(message, preamble.length)
+
+    let parts = Array.from(parseMultipart(createChunkedIterable(body, 3), { boundary }))
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, 'hello')
+  })
+
   it('throws when the number of parts exceeds maxParts', () => {
     let message = createMultipartMessage(boundary, {
       field1: 'value1',

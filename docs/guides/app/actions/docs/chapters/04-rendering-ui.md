@@ -225,8 +225,9 @@ Pages should render a complete document through one shared component. The defaul
 
 ```tsx filename=app/actions/document.tsx
 import type { Handle, RemixNode } from "remix/ui";
+import { ImportMap } from "remix/ui/server";
 
-import { entryHref, entryPreloads } from "../assets.ts";
+import { scriptEntry } from "../assets.ts";
 
 export interface DocumentProps {
   children?: RemixNode;
@@ -237,6 +238,7 @@ export interface DocumentProps {
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { children, head, title = "Albums" } = handle.props;
+    let { href, importMap, preloads } = scriptEntry;
 
     return (
       <html lang="en">
@@ -246,10 +248,11 @@ export function Document(handle: Handle<DocumentProps>) {
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <title>{title}</title>
           {head}
-          {entryPreloads.map((href) => (
-            <link key={href} rel="modulepreload" href={href} />
+          <ImportMap value={importMap} />
+          {preloads.map((preloadHref) => (
+            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}
-          <script type="module" src={entryHref}></script>
+          <script type="module" src={href}></script>
         </head>
         <body>{children}</body>
       </html>
@@ -257,6 +260,9 @@ export function Document(handle: Handle<DocumentProps>) {
   };
 }
 ```
+
+`<ImportMap>` combines the script entry's map with mappings from blocking client entries so the
+initial document contains one complete import map.
 
 Put `title`, `meta`, `link`, and `style` elements inside the document's explicit `<head>`, along with
 global stylesheets, module preloads, icons, and the browser entry script. Resolve the entry href and
