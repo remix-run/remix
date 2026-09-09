@@ -4,6 +4,7 @@ import { describe, it } from '@remix-run/test'
 import { createCookie } from '@remix-run/cookie'
 import { createRouter } from '@remix-run/fetch-router'
 import { formData } from '@remix-run/form-data-middleware'
+import { methodOverride } from '@remix-run/method-override-middleware'
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { session } from '@remix-run/session-middleware'
 
@@ -97,6 +98,56 @@ describe('csrf middleware', () => {
 
     assert.equal(response.status, 403)
     assert.equal(await response.text(), 'Forbidden: missing CSRF token')
+  })
+
+  it('checks the original request method after a safe method override', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createCookieSessionStorage()
+
+    let router = createRouter({
+      middleware: [session(cookie, storage), formData(), methodOverride(), csrf()],
+    })
+
+    router.get('/', () => new Response('ok'))
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: '_method=GET',
+    })
+
+    assert.equal(response.status, 403)
+    assert.equal(await response.text(), 'Forbidden: missing CSRF token')
+  })
+
+  it('supports unsafe method overrides with a valid token', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createCookieSessionStorage()
+
+    let router = createRouter({
+      middleware: [session(cookie, storage), formData(), methodOverride(), csrf()],
+    })
+
+    router.get('/token', (context) => new Response(getCsrfToken(context)))
+    router.delete('/', () => new Response('Deleted'))
+
+    let tokenResponse = await router.fetch('https://remix.run/token')
+    let token = await tokenResponse.text()
+
+    let postRequest = createRequest(tokenResponse, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `_method=DELETE&_csrf=${encodeURIComponent(token)}`,
+    })
+
+    let response = await router.fetch(postRequest)
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Deleted')
   })
 
   it('rejects unsafe requests with an invalid token', async () => {

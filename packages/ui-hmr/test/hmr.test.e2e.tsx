@@ -595,11 +595,13 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
       let entrySource = await fs.readFile(entryPath, 'utf-8')
       let reloaded = waitForNavigation(page)
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await fs.writeFile(
         entryPath,
         entrySource.replace('Frame adoption failed:', 'Updated frame adoption failed:'),
       )
       await reloaded
+      await adopted
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
@@ -675,6 +677,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
       let reloaded = waitForNavigation(page)
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await fs.writeFile(
         clientFieldPath,
         [
@@ -687,6 +690,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
+      await adopted
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: after export add')
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
@@ -901,6 +905,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       ].join('\n'),
     })
     let server: NodeHmrTestServer | undefined
+    let startup = Promise.withResolvers<void>()
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
@@ -917,7 +922,20 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
+      // Keep the new page's client code from running until its HTML is visible.
+      await page.route(
+        '**/assets/app/entry.tsx*',
+        async (route) => {
+          await startup.promise
+          await route.continue()
+        },
+        { times: 1 },
+      )
+      let entryRequested = page.waitForRequest('**/assets/app/entry.tsx*', {
+        timeout: browserStartupTimeout,
+      })
       let reloaded = waitForNavigation(page)
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await fs.writeFile(
         clientFieldPath,
         clientFieldSource
@@ -930,11 +948,19 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
           ),
       )
 
-      await reloaded
-      await waitForText(page, '[data-testid="server-client-label"]', 'Client: after export removal')
+      await Promise.all([reloaded, entryRequested])
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
+      assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      startup.resolve()
+      await adopted
+      assert.equal(
+        await page.locator('[data-testid="server-client-label"]').textContent(),
+        'Client: after export removal',
+      )
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
     } finally {
+      startup.resolve()
       await server?.close()
       await fixture.close()
     }
@@ -960,6 +986,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
       let reloaded = waitForNavigation(page)
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await fs.writeFile(
         clientFieldPath,
         [
@@ -970,6 +997,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
+      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1003,6 +1031,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
       let reloaded = waitForNavigation(page)
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -1010,6 +1039,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
+      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1043,6 +1073,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
       let reloaded = waitForNavigation(page)
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -1053,6 +1084,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
+      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1133,6 +1165,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
       let reloaded = waitForNavigation(page)
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -1143,6 +1176,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
+      await adopted
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: after object export')
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
@@ -1209,6 +1243,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
       let reloaded = waitForNavigation(page)
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await write(
         fixture.rootDir,
         'app/client-message.tsx',
@@ -1222,6 +1257,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
+      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
