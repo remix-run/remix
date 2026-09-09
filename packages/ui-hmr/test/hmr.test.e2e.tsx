@@ -905,6 +905,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       ].join('\n'),
     })
     let server: NodeHmrTestServer | undefined
+    let startup = Promise.withResolvers<void>()
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
@@ -921,6 +922,18 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
+      // Keep the new page's client code from running until its HTML is visible.
+      await page.route(
+        '**/assets/app/entry.tsx*',
+        async (route) => {
+          await startup.promise
+          await route.continue()
+        },
+        { times: 1 },
+      )
+      let entryRequested = page.waitForRequest('**/assets/app/entry.tsx*', {
+        timeout: browserStartupTimeout,
+      })
       let reloaded = waitForNavigation(page)
       let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await fs.writeFile(
@@ -935,12 +948,19 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
           ),
       )
 
-      await reloaded
+      await Promise.all([reloaded, entryRequested])
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
+      assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      startup.resolve()
       await adopted
-      await waitForText(page, '[data-testid="server-client-label"]', 'Client: after export removal')
+      assert.equal(
+        await page.locator('[data-testid="server-client-label"]').textContent(),
+        'Client: after export removal',
+      )
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
     } finally {
+      startup.resolve()
       await server?.close()
       await fixture.close()
     }
