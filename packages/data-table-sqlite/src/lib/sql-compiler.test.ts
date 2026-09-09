@@ -583,7 +583,7 @@ describe('sqlite sql-compiler', () => {
       let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("status", "email") values (?, ?) on conflict ("id") do update set "email" = ?',
-        values: ['contact@remix.run', 'enabled', 'info@remix.run'],
+        values: ['enabled', 'info@remix.run', 'contact@remix.run'],
       })
     })
 
