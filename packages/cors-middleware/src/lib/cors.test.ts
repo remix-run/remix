@@ -94,6 +94,54 @@ describe('cors middleware', () => {
     assert.ok(vary.has('Access-Control-Request-Headers'))
   })
 
+  it('keeps the wildcard default for preflight requests with credentials', async () => {
+    let router = createRouter({
+      middleware: [cors({ credentials: true })],
+    })
+
+    router.get('/', () => new Response('ok'))
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://example.com',
+        'Access-Control-Request-Method': 'PATCH',
+      },
+    })
+
+    assert.equal(response.status, 204)
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), '*')
+    assert.equal(response.headers.get('Access-Control-Allow-Credentials'), 'true')
+
+    let vary = Vary.from(response.headers.get('Vary'))
+    assert.ok(!vary.has('Origin'))
+    assert.ok(vary.has('Access-Control-Request-Method'))
+  })
+
+  it('reflects an explicit wildcard origin for preflight requests with credentials', async () => {
+    let router = createRouter({
+      middleware: [cors({ origin: '*', credentials: true })],
+    })
+
+    router.get('/', () => new Response('ok'))
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://example.com',
+        'Access-Control-Request-Method': 'PATCH',
+      },
+    })
+
+    assert.equal(response.status, 204)
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://example.com')
+    assert.equal(response.headers.get('Access-Control-Allow-Credentials'), 'true')
+
+    let vary = Vary.from(response.headers.get('Vary'))
+    assert.ok(vary.has('Origin'))
+    assert.ok(vary.has('Access-Control-Request-Method'))
+  })
+
   it('continues preflight requests when preflightContinue is true', async () => {
     let router = createRouter({
       middleware: [cors({ preflightContinue: true })],
