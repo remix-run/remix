@@ -168,7 +168,11 @@ export function createSchema<input, output>(
         return validator(value, context)
       },
     },
-    '~run'(value: unknown, context: ValidationContext) {
+    '~run'(value: unknown, context: InternalValidationContext) {
+      if (context.mutablePath) {
+        return validator(value, { path: [...context.path], options: context.options })
+      }
+
       return validator(value, context)
     },
     pipe(...checks: Check<output>[]) {
@@ -186,7 +190,7 @@ export function createSchema<input, output>(
         for (let check of checks) {
           if (!check.check(result.value)) {
             if (!check.code) {
-              return { issues: [createIssue(check.message ?? 'Check failed', context.path)] }
+              return { issues: [createIssue(check.message ?? 'Check failed', [...context.path])] }
             }
 
             return {
@@ -215,7 +219,7 @@ export function createSchema<input, output>(
 
         if (!predicate(result.value)) {
           if (message !== undefined) {
-            return { issues: [createIssue(message, context.path)] }
+            return { issues: [createIssue(message, [...context.path])] }
           }
 
           return {
@@ -256,6 +260,8 @@ function createBuiltinSchema<input, output>(
   validator: (value: unknown, context: InternalValidationContext) => ValidationResult<output>,
 ): Schema<input, output> {
   let schema = createSchema<input, output>(validator)
+  // Built-in validators keep the shared path internal and copy it when creating issues.
+  schema['~run'] = validator
   builtinSchemas.add(schema)
   return schema
 }
@@ -275,7 +281,7 @@ function runAtPath<input, output>(
   context: InternalValidationContext,
   key: PropertyKey,
 ): ValidationResult<output> {
-  if (context.mutablePath !== true || !isBuiltinSchema(schema) || !Array.isArray(context.path)) {
+  if (context.mutablePath !== true || !Array.isArray(context.path)) {
     let childContext: InternalValidationContext = {
       path: withPath(context.path, key),
       options: context.options,
@@ -285,25 +291,11 @@ function runAtPath<input, output>(
   }
 
   context.path.push(key)
-  let result = schema['~run'](value, context)
-
-  if (result.issues) {
-    let issues: Issue[] | undefined
-
-    for (let index = 0; index < result.issues.length; index++) {
-      let issue = result.issues[index]
-      if (issue.path === context.path) {
-        issues ??= [...result.issues]
-        issues[index] = { ...issue, path: [...context.path] }
-      }
-    }
-
+  try {
+    return schema['~run'](value, context)
+  } finally {
     context.path.pop()
-    return issues ? { issues } : result
   }
-
-  context.path.pop()
-  return result
 }
 
 function shouldAbortEarly(options?: ParseOptions): boolean {
@@ -353,7 +345,7 @@ function resolveIssueMessage(options: ParseOptions | undefined, context: ErrorMa
 }
 
 function createIssueFromContext(context: ValidationContext, descriptor: IssueDescriptor): Issue {
-  let path = descriptor.path ?? context.path
+  let path = [...(descriptor.path ?? context.path)]
   let message = resolveIssueMessage(context.options, {
     code: descriptor.code,
     defaultMessage: descriptor.defaultMessage,
@@ -403,6 +395,7 @@ export function fail(
     return { issues: [createIssue(message, path)] }
   }
 
+  path = path && [...path]
   let resolvedMessage = resolveIssueMessage(options.parseOptions, {
     code: options.code,
     defaultMessage: message,
@@ -469,6 +462,7 @@ export function array<input, output>(
       return { issues }
     }
 
+    outputValues.length = index
     return { value: outputValues }
   })
 }
