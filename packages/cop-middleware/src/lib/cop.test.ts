@@ -200,6 +200,28 @@ describe('cop middleware', () => {
     )
   })
 
+  it('allows bypass patterns matching the original method after an unsafe method override', async () => {
+    let router = createRouter({
+      middleware: [formData(), methodOverride(), cop({ insecureBypassPatterns: ['POST /'] })],
+    })
+
+    router.delete('/', () => new Response('Deleted'))
+
+    let response = await router.fetch(
+      createRequest('/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Sec-Fetch-Site': 'cross-site',
+        },
+        body: '_method=DELETE',
+      }),
+    )
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Deleted')
+  })
+
   it('supports trusted origins', async () => {
     let router = createTestRouter([
       cop({
