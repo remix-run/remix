@@ -246,6 +246,7 @@ export class MultipartParser {
   #boundaryBytes: Uint8Array
 
   #state = MultipartParserStateStart
+  #atStartOfStream = true
   #buffer: Uint8Array | null = null
   #currentHeader: Uint8Array | null = null
   #currentContent: Uint8Array[] | null = null
@@ -426,12 +427,27 @@ export class MultipartParser {
           break
         }
 
-        if (this.#findOpeningBoundary(chunk) !== 0) {
-          throw new MultipartParseError('Invalid multipart stream: missing initial boundary')
+        if (this.#atStartOfStream && this.#findOpeningBoundary(chunk) === 0) {
+          index = this.#openingBoundaryLength
+          this.#state = MultipartParserStateAfterBoundary
+          continue
         }
 
-        index = this.#openingBoundaryLength
+        let boundaryIndex = this.#findBoundary(chunk)
+        if (boundaryIndex === -1) {
+          // RFC 2046 preamble: keep a tail so the opening boundary can be
+          // split across chunks.
+          let keep = this.#boundaryLength - 1
+          if (chunkLength <= keep) {
+            this.#buffer = chunk
+          } else {
+            this.#atStartOfStream = false
+            this.#buffer = chunk.subarray(chunkLength - keep)
+          }
+          break
+        }
 
+        index = boundaryIndex + this.#boundaryLength
         this.#state = MultipartParserStateAfterBoundary
       }
     }
