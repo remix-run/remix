@@ -83,7 +83,7 @@ export interface CsrfOptions {
   headerNames?: readonly string[]
 
   /**
-   * Methods that do not require CSRF validation.
+   * Original request methods that do not require CSRF validation.
    *
    * @default ['GET', 'HEAD', 'OPTIONS']
    */
@@ -136,7 +136,7 @@ export function csrf(options: CsrfOptions = {}): Middleware {
 
     let expectedToken = getCsrfToken(context, tokenKey)
 
-    if (isSafeMethod(context.method, safeMethods)) {
+    if (isSafeMethod(context.request.method.toUpperCase(), safeMethods)) {
       return next()
     }
 

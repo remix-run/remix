@@ -2,6 +2,8 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createRouter } from '@remix-run/fetch-router'
+import { formData } from '@remix-run/form-data-middleware'
+import { methodOverride } from '@remix-run/method-override-middleware'
 
 import { cop } from './cop.ts'
 
@@ -148,6 +150,76 @@ describe('cop middleware', () => {
     )
 
     assert.equal(response.status, 200)
+  })
+
+  it('checks the original request method after a safe method override', async () => {
+    let router = createRouter({ middleware: [formData(), methodOverride(), cop()] })
+
+    router.get('/', () => new Response('ok'))
+
+    let response = await router.fetch(
+      createRequest('/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Sec-Fetch-Site': 'cross-site',
+        },
+        body: '_method=GET',
+      }),
+    )
+
+    assert.equal(response.status, 403)
+    assert.equal(
+      await response.text(),
+      'Forbidden: cross-origin request detected from Sec-Fetch-Site header',
+    )
+  })
+
+  it('uses the original request method for method-specific bypass patterns', async () => {
+    let router = createRouter({
+      middleware: [formData(), methodOverride(), cop({ insecureBypassPatterns: ['GET /'] })],
+    })
+
+    router.get('/', () => new Response('ok'))
+
+    let response = await router.fetch(
+      createRequest('/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Sec-Fetch-Site': 'cross-site',
+        },
+        body: '_method=GET',
+      }),
+    )
+
+    assert.equal(response.status, 403)
+    assert.equal(
+      await response.text(),
+      'Forbidden: cross-origin request detected from Sec-Fetch-Site header',
+    )
+  })
+
+  it('allows bypass patterns matching the original method after an unsafe method override', async () => {
+    let router = createRouter({
+      middleware: [formData(), methodOverride(), cop({ insecureBypassPatterns: ['POST /'] })],
+    })
+
+    router.delete('/', () => new Response('Deleted'))
+
+    let response = await router.fetch(
+      createRequest('/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Sec-Fetch-Site': 'cross-site',
+        },
+        body: '_method=DELETE',
+      }),
+    )
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Deleted')
   })
 
   it('supports trusted origins', async () => {

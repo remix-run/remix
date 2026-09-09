@@ -59,7 +59,7 @@ Headers and form fields are the preferred transports. Query param fallback exist
 
 ## Origin Validation
 
-For unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`), the middleware validates request origin.
+For requests whose original method is unsafe (`POST`, `PUT`, `PATCH`, `DELETE`), the middleware validates the token and request origin. Routing middleware may change `context.method`, but method overrides do not change whether `csrf()` requires validation.
 
 - Default: same-origin validation when `Origin` or `Referer` is present
 - Custom: provide `origin` as string, regex, array, or function
