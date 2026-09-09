@@ -251,6 +251,16 @@ describe('postgres sql-compiler', () => {
       })
     })
 
+    it('compile ordering', async () => {
+      await db.query(accounts).orderBy('email', 'asc').orderBy('id', 'desc').all()
+
+      let compiled = compilePostgresOperation(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" order by "email" ASC, "id" DESC',
+        values: [],
+      })
+    })
+
     it('compile distinct selection with order by', async () => {
       await db.query(accounts).distinct().orderBy('id', 'desc').all()
 
