@@ -167,6 +167,17 @@ describe('SetCookie', () => {
     assert.equal(header.sameSite, 'None')
   })
 
+  it('ignores invalid SameSite values', () => {
+    let header = new SetCookie('test=value; SameSite=nonesense')
+    assert.equal(header.sameSite, undefined)
+
+    header = new SetCookie('test=value; SameSite=strictly')
+    assert.equal(header.sameSite, undefined)
+
+    header = new SetCookie('test=value; SameSite=laxness')
+    assert.equal(header.sameSite, undefined)
+  })
+
   it('handles cookies with empty value', () => {
     let header = new SetCookie('name=')
     assert.equal(header.name, 'name')
