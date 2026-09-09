@@ -31,17 +31,13 @@ describe('scroll anchoring', () => {
       `Expected the detail page to scroll, got ${detailScrollPosition}`,
     )
 
-    await Promise.all([
-      page.evaluate(
-        () =>
-          new Promise<void>((resolve) => {
-            window.navigation.addEventListener('navigatesuccess', () => resolve(), { once: true })
-          }),
-      ),
-      page.goBack(),
-    ])
+    await page.goBack()
     await page.getByText('Anchoring row 48', { exact: true }).waitFor()
     await reproduction.getByRole('button', { name: 'Hydration check: 1', exact: true }).waitFor()
+    await page.waitForFunction(
+      ({ expected, tolerance }) => Math.abs(window.scrollY - expected) < tolerance,
+      { expected: scrollPosition, tolerance: 50 },
+    )
     let restoredPosition = await page.evaluate(() => window.scrollY)
 
     assert.ok(
