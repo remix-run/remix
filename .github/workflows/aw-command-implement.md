@@ -38,10 +38,11 @@ checkout:
   fetch-depth: 0
 model: gpt-5.6-sol
 engine:
-  id: codex
+  id: copilot
   env:
-    OPENAI_BASE_URL: https://proxy.shopify.ai/v1
-    OPENAI_API_KEY: ${{ secrets.SHOPIFY_AI_PROXY }}
+    COPILOT_PROVIDER_BASE_URL: https://proxy.shopify.ai/v1
+    COPILOT_PROVIDER_API_KEY: ${{ secrets.SHOPIFY_AI_PROXY }}
+    COPILOT_PROVIDER_WIRE_API: responses
 strict: true
 imports:
   - shared/resolve-command-request.md
@@ -100,9 +101,10 @@ timeout-minutes: 30
 # Remix Implementation
 
 Implement the authorized request from the trusted default branch and create at
-most one draft pull request. Do not create a pull request until the requested
-behavior is clear, the implementation is focused, and relevant validation
-passes or is blocked solely by the sandbox Node.js version as described below.
+most one draft pull request. When the requested behavior is clear and the
+implementation is focused, preserve a coherent patch in a draft pull request
+even if later validation fails. Do not create a pull request for ambiguous,
+unsafe, or unusable work.
 
 ## Authoritative request
 
@@ -194,17 +196,13 @@ takes precedence over conflicting issue or discussion details.
 - Dependencies are installed from the committed lockfile before the agent
   starts. Do not run another dependency installation.
 - Use the smallest relevant test file or scoped test name while iterating, and
-  keep rerunning that focused regression until it passes. For example:
+  rerun it after targeted corrections until it passes. For example:
   `pnpm --filter @remix-run/<package> run test --quiet src/**/<filename>.test.ts --only '<suite-or-test-regex>'`.
-- After focused tests pass and the implementation diff is final, test and
-  typecheck the affected packages with `pnpm run test:changed` and
-  `pnpm run typecheck:changed`. Let pull request CI run the full repository
-  test and typecheck suites. Use the Chromium-only substitution below when
-  changed tests include a Firefox project.
-- Before creating a pull request, run the repository's fast validation loop:
+- After focused validation passes and the implementation diff is final, run the
+  repository's fast validation loop once:
   `pnpm run validate-package-meta`, `pnpm run lint`,
   `pnpm run format:check`, `pnpm run test:changed`, and
-  `pnpm run typecheck:changed`, again using the Chromium-only substitution when
+  `pnpm run typecheck:changed`, using the Chromium-only substitution below when
   needed.
 - Browser tests in this workflow are Chromium-only by default. Pass
   `--project chromium` to focused and affected-workspace browser test commands.
@@ -215,7 +213,10 @@ takes precedence over conflicting issue or discussion details.
   but run it only when the authorized request concerns Firefox-specific behavior
   or cross-browser behavior is material to the fix. Otherwise, leave Firefox
   coverage to pull request CI.
-- Run `pnpm run changes:validate` when a change file is added.
+- Run `pnpm run changes:validate` in that loop when a change file is added. Let
+  pull request CI run the full repository test and typecheck suites.
+- If a fast-loop command fails, make a targeted correction and rerun only that
+  failing command. Do not restart the full loop.
 - The sandbox may use Node.js 22 even though the repository requires Node.js 24.
   Do not treat an `Unsupported engine` warning or a command failure explicitly
   caused by the unavailable Node.js 24 runtime as a blocker to creating the
@@ -227,17 +228,25 @@ takes precedence over conflicting issue or discussion details.
   materially improves the evidence.
 - Review the complete diff, scan it for secrets, and confirm every changed file
   is necessary. Do not weaken or remove tests to make validation pass.
-- If relevant validation fails for any reason other than the sandbox Node.js
-  exception above, do not create a pull request. Comment with the exact failing
-  command and a concise explanation instead.
+- If relevant validation fails after producing a coherent, scoped, secret-free
+  patch, create a checkpoint draft pull request so another maintainer or agent
+  can continue the work. If no useful patch exists or the patch is ambiguous,
+  unsafe, or internally inconsistent, comment with the exact failing command
+  and a concise explanation instead.
 
 ## Draft pull request
 
-- Create at most one draft pull request targeting `main` after validation
-  passes or is blocked solely by the sandbox Node.js exception above.
+- Create at most one draft pull request targeting `main` after validation passes
+  or to checkpoint a coherent implementation blocked by later validation.
 - Use a concise imperative title without automation or agent attribution.
-- In the body, link the triggering issue or Proposal Discussion and summarize
-  the request, implementation, tests, change file when applicable, and exact
-  validation performed.
+- For a validated pull request, link the triggering issue or Proposal Discussion
+  and summarize the request, implementation, tests, change file when applicable,
+  and exact validation performed.
+- For a checkpoint pull request, clearly state that the implementation is
+  incomplete or unvalidated. Record what was completed, every failing command
+  and its result, the remaining work, and a link to the workflow run. Never claim
+  that validation passed.
+- Use the pull request body as the handoff record. Do not add a memory or handoff
+  file to the implementation diff.
 - Do not apply labels. Never merge, approve, enable auto-merge, or push more
   changes after requesting the safe output.
