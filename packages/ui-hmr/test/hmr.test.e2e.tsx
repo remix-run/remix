@@ -41,9 +41,9 @@ declare global {
 describe('ui-hmr e2e', { skip: isBun }, () => {
   it('updates component render output without losing setup state', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
     await page.goto('/')
@@ -65,9 +65,9 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
   it('reloads the page when a non-component export is added to a component module', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
     await page.goto('/')
@@ -97,9 +97,9 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     let fixture = await createHmrFixture({
       counterExtraExports: 'export const foo = true\n',
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
     await page.goto('/')
@@ -125,9 +125,9 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     let fixture = await createHmrFixture({
       counterExtraExports: 'export const foo = true\n',
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
     await page.goto('/')
@@ -157,10 +157,10 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     let fixture = await createHmrFixture({
       counterExtraExports: ["import { foo } from './stable.ts'", 'export { foo }', ''].join('\n'),
     })
-    t.after(fixture.close)
     await write(fixture.rootDir, 'app/stable.ts', 'export const foo = {}\n')
 
     let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
     await page.goto('/')
@@ -189,9 +189,9 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     let fixture = await createHmrFixture({
       counterExtraExports: 'export const foo = {}\n',
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
     await page.goto('/')
@@ -219,9 +219,9 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
   it('reloads the page when a component export is added to a component HMR module', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
     await page.goto('/')
@@ -258,9 +258,9 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
         '',
       ].join('\n'),
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
     await page.goto('/')
@@ -284,9 +284,9 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
   it('remounts the component when setup scope changes', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
     await page.goto('/')
@@ -305,7 +305,6 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
   it('runs new setup scope for each remounted component instance', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     await write(
       fixture.rootDir,
@@ -352,6 +351,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     )
 
     let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
     await page.goto('/')
@@ -377,9 +377,9 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
   it('hydrates and preserves a setup function callback after an HMR update', async (t) => {
     let fixture = await createServerFrameHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
     let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
@@ -405,9 +405,9 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
   it('updates a client entry after a failed HMR transform is fixed', async (t) => {
     let fixture = await createServerFrameHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
     let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
@@ -422,7 +422,6 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     let failedUpdate = waitForConsoleMessage(page, '[remix] HMR update failed')
     await fs.writeFile(clientFieldPath, clientFieldSource.replace("'Client: before'", "'Client:"))
     await failedUpdate
-    await page.waitForTimeout(100)
 
     await fs.writeFile(
       clientFieldPath,
@@ -434,10 +433,10 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
 
   it('recovers failed client entry updates after the HMR event stream reconnects', async (t) => {
     let fixture = await createServerFrameHmrFixture()
-    t.after(fixture.close)
 
     let server = await createHmrTestServer(fixture)
     let page = await t.serve(server)
+    t.after(fixture.close)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
     let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
@@ -512,6 +511,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
         '[data-testid="server-client-label"]',
         'Client: after server update!!!!!',
       )
+      await server.waitForReady(1)
       assert.equal(server.readyCount, 2)
     } finally {
       await server?.close()
@@ -565,8 +565,10 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       )
       assert.equal(server.readyCount, 1)
 
+      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete')
       await write(fixture.rootDir, 'server-side-effect.ts', `export const sideEffect = 'mixed'\n`)
-      await waitForConsoleMessage(page, 'Server frame reload complete')
+      await serverFrameReloaded
+      await server.waitForReady(1)
       assert.equal(server.readyCount, 2)
     } finally {
       await server?.close()
@@ -645,6 +647,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
         await page.locator('[data-testid="document-field"]').inputValue(),
         'preserved browser state',
       )
+      await server.waitForReady(1)
       assert.equal(server.readyCount, 2)
     } finally {
       await server?.close()
@@ -700,6 +703,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     try {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
+      let requests = monitorLocalRequestFailures(page, server.baseUrl)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
       let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
@@ -713,6 +717,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
       let reloaded = waitForNavigation(page)
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await fs.writeFile(
         clientFieldPath,
         [
@@ -725,12 +730,14 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
+      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
         'Client: after shared export add',
       )
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      await requests.assertNone(server.output)
     } finally {
       await server?.close()
       await fixture.close()
@@ -747,6 +754,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     try {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
+      let requests = monitorLocalRequestFailures(page, server.baseUrl)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
       let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
@@ -758,6 +766,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
       let reloaded = waitForNavigation(page)
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -765,13 +774,16 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
+      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
         'Client: after shared export removal',
       )
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      await server.waitForReady(1)
       assert.equal(server.readyCount, 2)
+      await requests.assertNone(server.output)
     } finally {
       await server?.close()
       await fixture.close()
@@ -788,6 +800,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     try {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
+      let requests = monitorLocalRequestFailures(page, server.baseUrl)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
       let hydrated = waitForConsoleMessage(page, 'Frame adoption complete')
 
@@ -799,6 +812,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
       let reloaded = waitForNavigation(page)
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -809,13 +823,16 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
+      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
         'Client: after shared export change',
       )
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      await server.waitForReady(1)
       assert.equal(server.readyCount, 2)
+      await requests.assertNone(server.output)
     } finally {
       await server?.close()
       await fixture.close()
@@ -1228,7 +1245,6 @@ type HmrFixture = {
 
 type NodeHmrFixture = {
   close(): Promise<void>
-  devProxy: boolean
   rootDir: string
 }
 
@@ -1618,7 +1634,6 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
 async function createNodeHmrFixture(
   options: {
     clientFieldExtraExports?: string
-    devProxy?: boolean
     serverImportsClientField?: boolean
     slowAssetMs?: number
     slowDisposeMs?: number
@@ -1705,22 +1720,9 @@ async function createNodeHmrFixture(
     ].join('\n'),
   )
   await write(rootDir, 'server.tsx', getNodeHmrServerSource(rootDir, options))
-  await write(
-    rootDir,
-    'dev.ts',
-    options.devProxy
-      ? getNodeHmrProxyDevSource()
-      : [
-          `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
-          ``,
-          `run('server.tsx', {`,
-          `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}, '--import', ${JSON.stringify(uiHmrNodeImportUrl)}],`,
-          `})`,
-        ].join('\n'),
-  )
+  await write(rootDir, 'dev.ts', getNodeHmrProxyDevSource())
 
   return {
-    devProxy: options.devProxy === true,
     rootDir,
     async close() {
       await removeFixtureDir(rootDir)
@@ -1805,6 +1807,14 @@ function getNodeHmrProxyDevSource(): string {
     '  }',
     '})',
     '',
+    'process.once("SIGINT", closeProxy)',
+    'process.once("SIGTERM", closeProxy)',
+    '',
+    'function closeProxy() {',
+    '  server.closeAllConnections()',
+    '  server.close()',
+    '}',
+    '',
     'async function waitForPort(filePath) {',
     '  while (true) {',
     '    try {',
@@ -1847,7 +1857,7 @@ function getNodeHmrServerSource(
 
   return [
     "import { createServer } from 'node:http'",
-    "import { readFile, writeFile } from 'node:fs/promises'",
+    "import { writeFile } from 'node:fs/promises'",
     "import { createAssetServer } from '@remix-run/assets'",
     "import { uiHmr } from '@remix-run/ui-hmr/assets'",
     "import { createBrowserHmrChannel, emitServerReady } from '@remix-run/node-hmr/runtime'",
@@ -1992,27 +2002,14 @@ function getNodeHmrServerSource(
     '  }',
     '})',
     '',
-    'let serverPortFile = process.env.TEST_CHILD_SERVER_PORT ? undefined : process.env.TEST_SERVER_PORT_FILE',
-    'let serverPort = await getServerPort()',
-    'server.listen(serverPort, "127.0.0.1", async () => {',
+    'server.listen(0, "127.0.0.1", async () => {',
     '  let address = server.address()',
     "  if (address && typeof address === 'object') {",
-    '    if (process.env.CHILD_PORT_FILE) await writeFile(process.env.CHILD_PORT_FILE, String(address.port))',
-    '    if (serverPortFile) await writeFile(serverPortFile, String(address.port))',
+    '    await writeFile(process.env.CHILD_PORT_FILE, String(address.port))',
     '    emitServerReady()',
     "    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))",
     '  }',
     '})',
-    '',
-    'async function getServerPort() {',
-    '  if (serverPortFile) {',
-    '    try {',
-    "      let port = Number(await readFile(serverPortFile, 'utf8'))",
-    '      if (port > 0) return port',
-    '    } catch {}',
-    '  }',
-    '  return Number(process.env.TEST_CHILD_SERVER_PORT ?? process.env.TEST_SERVER_PORT ?? 0)',
-    '}',
     '',
     'if (import.meta.hot) {',
     '  import.meta.hot.accept()',
@@ -2087,6 +2084,7 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
   let hmrEventStream: ReturnType<typeof createTestHmrEventStream> | undefined
   let browserHmrFileEventHandlers = new Set<BrowserHmrFileEventHandler>()
   let browserHmrWatcher: FSWatcher | undefined
+  let pendingBrowserHmrEvents = Promise.resolve()
 
   let createTestBrowserHmrChannel = (): BrowserHmrChannel => ({
     close() {
@@ -2135,20 +2133,21 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     if (assetServer) return
     hmrEventStream = createTestHmrEventStream()
     assetServer = createCurrentAssetServer()
-    startBrowserHmrWatcher()
+    await startBrowserHmrWatcher()
   }
 
   async function stopAssets(): Promise<void> {
-    await assetServer?.close()
-    assetServer = undefined
     await browserHmrWatcher?.close()
     browserHmrWatcher = undefined
+    await pendingBrowserHmrEvents
+    await assetServer?.close()
+    assetServer = undefined
     hmrEventStream?.close()
     hmrEventStream = undefined
   }
 
   hmrEventStream = createTestHmrEventStream()
-  startBrowserHmrWatcher()
+  await startBrowserHmrWatcher()
 
   let server = http.createServer(async (request, response) => {
     try {
@@ -2179,9 +2178,7 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     startAssets,
     stopAssets,
     async close() {
-      await assetServer?.close()
-      await browserHmrWatcher?.close()
-      hmrEventStream?.close()
+      await stopAssets()
       server.closeAllConnections()
       await new Promise<void>((resolve, reject) => {
         server.close((error) => {
@@ -2192,10 +2189,15 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     },
   }
 
-  function startBrowserHmrWatcher(): void {
+  async function startBrowserHmrWatcher(): Promise<void> {
     if (browserHmrWatcher) return
 
     browserHmrWatcher = watch(path.join(fixture.rootDir, 'app'), {
+      // Match node-hmr's write stabilization so Chokidar does not drop rapid edits.
+      awaitWriteFinish: {
+        pollInterval: 10,
+        stabilityThreshold: 10,
+      },
       ignoreInitial: true,
       interval: 50,
       usePolling: true,
@@ -2203,10 +2205,14 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
 
     browserHmrWatcher.on('all', (event, filePath) => {
       if (event !== 'add' && event !== 'change' && event !== 'unlink') return
-      handleBrowserHmrFileEvent({ event, filePath }).catch((error: unknown) => {
-        console.error(error)
-      })
+      pendingBrowserHmrEvents = pendingBrowserHmrEvents
+        .then(() => handleBrowserHmrFileEvent({ event, filePath }))
+        .catch((error: unknown) => {
+          console.error(error)
+        })
     })
+
+    await once(browserHmrWatcher, 'ready')
   }
 
   async function handleBrowserHmrFileEvent(event: BrowserHmrFileEvent): Promise<void> {
@@ -2256,9 +2262,8 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     env: {
       ...env,
       NODE_ENV: 'development',
-      ...(fixture.devProxy ? { CHILD_PORT_FILE: childPortFile, TEST_CHILD_SERVER_PORT: '0' } : {}),
+      CHILD_PORT_FILE: childPortFile,
       TEST_SERVER_PORT: '0',
-      TEST_SERVER_PORT_FILE: path.join(fixture.rootDir, 'server-port.txt'),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
@@ -2306,7 +2311,8 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     exit = { code, signal }
   })
 
-  let ready = fixture.devProxy ? await waitForProxyReady() : await waitForReadyEvent(0)
+  let ready = await waitForProxyReady()
+  await waitForReadyEvent(0)
 
   return {
     baseUrl: `http://127.0.0.1:${ready.port}`,
@@ -2344,7 +2350,9 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
       () => proxyReadyEvents[0] !== undefined,
       () => `Timed out waiting for node-hmr proxy server.\n${processOutput}`,
     )
-    return proxyReadyEvents[0]!
+    let event = proxyReadyEvents[0]
+    assert.ok(event)
+    return event
   }
 }
 
@@ -2559,7 +2567,7 @@ function waitForNavigation(page: TestPage): Promise<void> {
     let timeout = setTimeout(() => {
       page.off('framenavigated', handleFrameNavigated)
       reject(new Error(`Timed out waiting for page navigation\n${formatPageDiagnostics(page)}`))
-    }, 5000)
+    }, browserStartupTimeout)
 
     page.on('framenavigated', handleFrameNavigated)
 
@@ -2611,7 +2619,8 @@ function monitorLocalRequestFailures(
     if (url.origin !== origin) return
 
     let failureText = request.failure()?.errorText
-    if (failureText === 'net::ERR_ABORTED') return
+    // Reloading cancels in-flight requests in both Chromium and Firefox.
+    if (failureText === 'net::ERR_ABORTED' || failureText === 'NS_BINDING_ABORTED') return
 
     let reason = failureText ? ` (${failureText})` : ''
     failures.push(`${request.method()} ${url.pathname}${url.search}${reason}`)
