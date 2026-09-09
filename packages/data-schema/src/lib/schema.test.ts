@@ -15,6 +15,7 @@ import {
   number,
   object,
   optional,
+  createSchema,
   record,
   nullable,
   set,
@@ -23,6 +24,7 @@ import {
   tuple,
   undefined_,
   union,
+  variant,
 } from './schema.ts'
 import { minLength } from './checks.ts'
 import type { InferOutput, Issue, ValidationResult } from './schema.ts'
@@ -179,6 +181,39 @@ describe('array', () => {
     assert.deepEqual(result.value, [1, 2, 3])
   })
 
+  it('preserves explicit undefined elements for sparse inputs', () => {
+    let schema = array(optional(string()))
+    let result = schema['~standard'].validate(new Array(1))
+
+    assertSuccess(result)
+    assert.ok(0 in result.value)
+    assert.equal(result.value[0], undefined)
+  })
+
+  it('returns only the elements yielded by a custom iterator', () => {
+    let input = ['a', 'b']
+    input[Symbol.iterator] = function () {
+      return ['a'].values()
+    }
+
+    let result = array(string())['~standard'].validate(input)
+
+    assertSuccess(result)
+    assert.deepEqual(result.value, ['a'])
+  })
+
+  it('includes elements yielded beyond the input length', () => {
+    let input = ['a']
+    input[Symbol.iterator] = function () {
+      return ['a', 'b'].values()
+    }
+
+    let result = array(string())['~standard'].validate(input)
+
+    assertSuccess(result)
+    assert.deepEqual(result.value, ['a', 'b'])
+  })
+
   it('rejects non-array values', () => {
     let schema = array(string())
     let result = schema['~standard'].validate({ 0: 'a', length: 1 })
@@ -208,6 +243,87 @@ describe('array', () => {
 })
 
 describe('object', () => {
+  it('preserves paths passed to custom child schemas', () => {
+    let capturedPath: Issue['path']
+    let custom = createSchema<unknown, string>(function validate(value, context) {
+      capturedPath = context.path
+      return typeof value === 'string' ? { value } : { issues: [{ message: 'Expected string' }] }
+    })
+    let schema = object({ name: custom })
+
+    let result = schema['~standard'].validate({ name: 'Ada' })
+
+    assertSuccess(result)
+    assert.deepEqual(capturedPath, ['name'])
+  })
+
+  it('preserves issue paths returned by custom child schemas', () => {
+    let custom = createSchema<unknown, never>(function validate(_value, context) {
+      return { issues: [{ message: 'Invalid', path: context.path }] }
+    })
+    let schema = object({ name: custom })
+
+    let result = schema['~standard'].validate({ name: 'Ada' })
+
+    assertFailure(result)
+    assert.deepEqual(result.issues[0].path, ['name'])
+  })
+
+  it('preserves custom paths through schema wrappers', () => {
+    let custom = createSchema(function validate(_value, context) {
+      return { value: context.path }
+    })
+    let schema = object({
+      optional: optional(custom),
+      nullable: nullable(custom),
+      defaulted: defaulted(custom, []),
+      union: union([string(), custom]),
+      variant: variant('type', { custom }),
+      derived: optional(custom)
+        .pipe({ check: () => true })
+        .refine(() => true)
+        .transform((value) => value),
+    })
+
+    let result = schema['~standard'].validate({
+      optional: 1,
+      nullable: 1,
+      defaulted: 1,
+      union: 1,
+      variant: { type: 'custom' },
+      derived: 1,
+    })
+
+    assertSuccess(result)
+    assert.deepEqual(result.value, {
+      optional: ['optional'],
+      nullable: ['nullable'],
+      defaulted: ['defaulted'],
+      union: ['union'],
+      variant: ['variant'],
+      derived: ['derived'],
+    })
+  })
+
+  it('preserves issues retained by wrapped custom schemas', () => {
+    let captured: Issue[] = []
+    let custom = createSchema(function validate(_value, context) {
+      let issue = { message: 'Invalid', path: context.path }
+      captured.push(issue)
+      return { issues: [issue] }
+    })
+    let schema = object({ name: optional(custom), age: nullable(custom) })
+
+    let result = schema['~standard'].validate({ name: 'Ada', age: 37 })
+
+    assertFailure(result)
+    assert.deepEqual(captured, [
+      { message: 'Invalid', path: ['name'] },
+      { message: 'Invalid', path: ['age'] },
+    ])
+    assert.deepEqual(result.issues, captured)
+  })
+
   it('strips unknown keys by default', () => {
     let schema = object({ name: string() })
     let result = schema['~standard'].validate({ name: 'Ada', extra: 'x' })
@@ -442,6 +558,21 @@ describe('tuple', () => {
 })
 
 describe('union', () => {
+  it('preserves paths from every failing nested variant', () => {
+    let schema = object({
+      value: union([string(), object({ name: string(), age: number() }), array(number())]),
+      other: number(),
+    })
+
+    let result = schema['~standard'].validate({ value: { name: 123, age: 'bad' }, other: 'bad' })
+
+    assertFailure(result)
+    assert.deepEqual(
+      result.issues.map((issue) => issue.path),
+      [['value'], ['value', 'name'], ['value', 'age'], ['value'], ['other']],
+    )
+  })
+
   it('returns the first successful variant', () => {
     let schema = union([string(), number()])
     let result = schema['~standard'].validate(123)
@@ -764,6 +895,21 @@ describe('instanceof_', () => {
 })
 
 describe('modifiers (additional)', () => {
+  it('preserves paths for custom check messages', () => {
+    let schema = object({
+      name: string().pipe({ check: () => false, message: 'Invalid name' }),
+      age: number().refine((value) => value > 0, 'Must be positive'),
+    })
+
+    let result = schema['~standard'].validate({ name: 'Ada', age: -1 })
+
+    assertFailure(result)
+    assert.deepEqual(result.issues, [
+      { message: 'Invalid name', path: ['name'] },
+      { message: 'Must be positive', path: ['age'] },
+    ])
+  })
+
   it('refine propagates path inside objects', () => {
     let schema = object({ age: number().refine((v) => v > 0, 'Must be positive') })
     let result = schema['~standard'].validate({ age: -1 })
