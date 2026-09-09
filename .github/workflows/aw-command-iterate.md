@@ -300,20 +300,15 @@ maintainer edits. The privileged job rechecks the exact repository, branch,
 head SHA, open state, and maintainer-edit permission immediately before it uses
 the bot PAT.
 
-1. Minimize model and tool round trips. Batch related read-only inspection
-   before editing, use each command to answer a new question, and do not repeat
-   unchanged searches, reads, diffs, or failing commands.
-2. Stay on the triggering pull request branch and apply the minimum requested
+1. Stay on the triggering pull request branch and apply the minimum requested
    edits.
-3. Inspect the complete diff and run `git diff --check` once. If it fails, make
-   at most one targeted correction and rerun it once. If it still fails, call
-   `report_incomplete` with the exact failure and stop. Do not run repository
-   code.
-4. Commit the focused changes without automation attribution.
-5. Re-read the triggering pull request with the GitHub API and verify its head
+2. Inspect the complete diff and use only non-executing checks such as
+   `git diff --check`. Do not run repository code.
+3. Commit the focused changes without automation attribution.
+4. Re-read the triggering pull request with the GitHub API and verify its head
    repository, branch, and SHA still match the snapshot. If they changed,
    comment that the administrator must rerun and stop.
-6. Call `push_to_pull_request_branch` exactly once. Do not create a replacement
+5. Call `push_to_pull_request_branch` exactly once. Do not create a replacement
    pull request.
 
 The guarded safe output derives both source and destination from the triggering

@@ -38,10 +38,11 @@ checkout:
   fetch-depth: 0
 model: gpt-5.6-sol
 engine:
-  id: codex
+  id: copilot
   env:
-    OPENAI_BASE_URL: https://proxy.shopify.ai/v1
-    OPENAI_API_KEY: ${{ secrets.SHOPIFY_AI_PROXY }}
+    COPILOT_PROVIDER_BASE_URL: https://proxy.shopify.ai/v1
+    COPILOT_PROVIDER_API_KEY: ${{ secrets.SHOPIFY_AI_PROXY }}
+    COPILOT_PROVIDER_WIRE_API: responses
 strict: true
 imports:
   - shared/resolve-command-request.md
@@ -59,12 +60,10 @@ network:
 steps:
   - name: Enable pnpm with Corepack
     run: corepack enable pnpm
-  - name: Verify pnpm
-    run: pnpm --version
   - name: Install dependencies
     run: pnpm install --frozen-lockfile
-  - name: Install Chromium for repository tests
-    run: pnpm --filter @remix-run/test exec playwright install --with-deps chromium
+  - name: Install browsers for repository tests
+    run: pnpm --filter @remix-run/test exec playwright install --with-deps chromium firefox
 safe-outputs:
   footer: false
   add-comment:
@@ -171,13 +170,6 @@ takes precedence over conflicting issue or discussion details.
 
 ## Implement a focused change
 
-- Before editing, run `node --version && pnpm --version` once. Require Node.js
-  24 and an available pnpm. If either check fails, report a workflow
-  infrastructure failure and stop without editing. Do not search tool-cache
-  paths or retry equivalent invocation forms.
-- Minimize model and tool round trips. Batch related inspection before editing,
-  make the smallest coherent edit, and use each command to answer a new question.
-  Do not repeat unchanged searches, reads, diffs, or failing commands.
 - Inspect the relevant repository code and history before editing. Establish
   the current behavior and the smallest coherent implementation.
 - Keep terminal output bounded to the relevant files and line ranges. Prefer
@@ -203,24 +195,35 @@ takes precedence over conflicting issue or discussion details.
 
 - Dependencies are installed from the committed lockfile before the agent
   starts. Do not run another dependency installation.
-- After producing a coherent patch, run the smallest relevant test file or
-  scoped test name once. For example:
+- Use the smallest relevant test file or scoped test name while iterating, and
+  rerun it after targeted corrections until it passes. For example:
   `pnpm --filter @remix-run/<package> run test --quiet src/**/<filename>.test.ts --only '<suite-or-test-regex>'`.
-- If that focused validation fails, use its output to make at most one targeted
-  correction, then rerun only the failing command once. Never rerun a command
-  without an intervening change intended to address its failure.
 - After focused validation passes and the implementation diff is final, run the
   repository's fast validation loop once:
   `pnpm run validate-package-meta`, `pnpm run lint`,
   `pnpm run format:check`, `pnpm run test:changed`, and
-  `pnpm run typecheck:changed`.
+  `pnpm run typecheck:changed`, using the Chromium-only substitution below when
+  needed.
+- Browser tests in this workflow are Chromium-only by default. Pass
+  `--project chromium` to focused and affected-workspace browser test commands.
+  If `pnpm run test:changed` would also run a configured Firefox project,
+  replace that aggregate command with equivalent affected-workspace test
+  commands that select Chromium, such as
+  `pnpm --filter <workspace> run test --project chromium`. Firefox is available,
+  but run it only when the authorized request concerns Firefox-specific behavior
+  or cross-browser behavior is material to the fix. Otherwise, leave Firefox
+  coverage to pull request CI.
 - Run `pnpm run changes:validate` in that loop when a change file is added. Let
   pull request CI run the full repository test and typecheck suites.
-- If a fast-loop command fails, make at most one targeted correction and rerun
-  only that failing command once. Do not restart the full loop. If the command
-  still fails, stop validation and preserve the coherent patch in a checkpoint
-  draft pull request.
-- Use `pnpm` directly for all package commands after the initial version check.
+- If a fast-loop command fails, make a targeted correction and rerun only that
+  failing command. Do not restart the full loop.
+- The sandbox may use Node.js 22 even though the repository requires Node.js 24.
+  Do not treat an `Unsupported engine` warning or a command failure explicitly
+  caused by the unavailable Node.js 24 runtime as a blocker to creating the
+  draft pull request. Continue all validation that can run, record the exact
+  affected commands and results in the pull request body, and rely on pull
+  request CI for authoritative Node.js 24 validation. All failures not caused
+  solely by the runtime mismatch remain blockers.
 - Run repository-owned Playwright tests headlessly when browser behavior
   materially improves the evidence.
 - Review the complete diff, scan it for secrets, and confirm every changed file
