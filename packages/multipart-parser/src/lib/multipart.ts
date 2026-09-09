@@ -422,6 +422,11 @@ export class MultipartParser {
       }
 
       if (this.#state === MultipartParserStateStart) {
+        if (chunkLength < this.#openingBoundaryLength) {
+          this.#buffer = chunk
+          break
+        }
+
         if (this.#atStartOfStream && this.#findOpeningBoundary(chunk) === 0) {
           index = this.#openingBoundaryLength
           this.#state = MultipartParserStateAfterBoundary
