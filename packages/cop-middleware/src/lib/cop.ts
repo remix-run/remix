@@ -77,7 +77,7 @@ class CrossOriginProtection {
   }
 
   check(context: RequestContext): CopFailureReason | null {
-    if (isSafeMethod(context.method)) {
+    if (isSafeMethod(context.request.method.toUpperCase())) {
       return null
     }
 
@@ -310,7 +310,7 @@ function parseBypassSegment(
 }
 
 function matchesBypassPattern(pattern: BypassPattern, context: RequestContext): boolean {
-  if (pattern.method != null && pattern.method !== context.method) {
+  if (pattern.method != null && pattern.method !== context.request.method.toUpperCase()) {
     return false
   }
 

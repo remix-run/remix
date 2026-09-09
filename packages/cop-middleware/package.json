@@ -34,6 +34,8 @@
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/form-data-middleware": "workspace:*",
+    "@remix-run/method-override-middleware": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:"
