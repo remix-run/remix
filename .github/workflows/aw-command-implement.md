@@ -59,6 +59,8 @@ network:
 steps:
   - name: Enable pnpm with Corepack
     run: corepack enable pnpm
+  - name: Verify pnpm
+    run: pnpm --version
   - name: Install dependencies
     run: pnpm install --frozen-lockfile
   - name: Install Chromium for repository tests
@@ -100,9 +102,10 @@ timeout-minutes: 30
 # Remix Implementation
 
 Implement the authorized request from the trusted default branch and create at
-most one draft pull request. Do not create a pull request until the requested
-behavior is clear, the implementation is focused, and relevant validation
-passes or is blocked solely by the sandbox Node.js version as described below.
+most one draft pull request. When the requested behavior is clear and the
+implementation is focused, preserve a coherent patch in a draft pull request
+even if later validation fails. Do not create a pull request for ambiguous,
+unsafe, or unusable work.
 
 ## Authoritative request
 
@@ -168,6 +171,10 @@ takes precedence over conflicting issue or discussion details.
 
 ## Implement a focused change
 
+- Before editing, run `node --version && pnpm --version` once. Require Node.js
+  24 and an available pnpm. If either check fails, report a workflow
+  infrastructure failure and stop without editing. Do not search tool-cache
+  paths or retry equivalent invocation forms.
 - Inspect the relevant repository code and history before editing. Establish
   the current behavior and the smallest coherent implementation.
 - Keep terminal output bounded to the relevant files and line ranges. Prefer
@@ -205,28 +212,30 @@ takes precedence over conflicting issue or discussion details.
   `pnpm run format:check`, `pnpm run test:changed`, and
   `pnpm run typecheck:changed`.
 - Run `pnpm run changes:validate` when a change file is added.
-- The sandbox may use Node.js 22 even though the repository requires Node.js 24.
-  Do not treat an `Unsupported engine` warning or a command failure explicitly
-  caused by the unavailable Node.js 24 runtime as a blocker to creating the
-  draft pull request. Continue all validation that can run, record the exact
-  affected commands and results in the pull request body, and rely on pull
-  request CI for authoritative Node.js 24 validation. All failures not caused
-  solely by the runtime mismatch remain blockers.
+- Use `pnpm` directly for all package commands after the initial version check.
 - Run repository-owned Playwright tests headlessly when browser behavior
   materially improves the evidence.
 - Review the complete diff, scan it for secrets, and confirm every changed file
   is necessary. Do not weaken or remove tests to make validation pass.
-- If relevant validation fails for any reason other than the sandbox Node.js
-  exception above, do not create a pull request. Comment with the exact failing
-  command and a concise explanation instead.
+- If relevant validation fails after producing a coherent, scoped, secret-free
+  patch, create a checkpoint draft pull request so another maintainer or agent
+  can continue the work. If no useful patch exists or the patch is ambiguous,
+  unsafe, or internally inconsistent, comment with the exact failing command
+  and a concise explanation instead.
 
 ## Draft pull request
 
-- Create at most one draft pull request targeting `main` after validation
-  passes or is blocked solely by the sandbox Node.js exception above.
+- Create at most one draft pull request targeting `main` after validation passes
+  or to checkpoint a coherent implementation blocked by later validation.
 - Use a concise imperative title without automation or agent attribution.
-- In the body, link the triggering issue or Proposal Discussion and summarize
-  the request, implementation, tests, change file when applicable, and exact
-  validation performed.
+- For a validated pull request, link the triggering issue or Proposal Discussion
+  and summarize the request, implementation, tests, change file when applicable,
+  and exact validation performed.
+- For a checkpoint pull request, clearly state that the implementation is
+  incomplete or unvalidated. Record what was completed, every failing command
+  and its result, the remaining work, and a link to the workflow run. Never claim
+  that validation passed.
+- Use the pull request body as the handoff record. Do not add a memory or handoff
+  file to the implementation diff.
 - Do not apply labels. Never merge, approve, enable auto-merge, or push more
   changes after requesting the safe output.
