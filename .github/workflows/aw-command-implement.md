@@ -175,6 +175,9 @@ takes precedence over conflicting issue or discussion details.
   24 and an available pnpm. If either check fails, report a workflow
   infrastructure failure and stop without editing. Do not search tool-cache
   paths or retry equivalent invocation forms.
+- Minimize model and tool round trips. Batch related inspection before editing,
+  make the smallest coherent edit, and use each command to answer a new question.
+  Do not repeat unchanged searches, reads, diffs, or failing commands.
 - Inspect the relevant repository code and history before editing. Establish
   the current behavior and the smallest coherent implementation.
 - Keep terminal output bounded to the relevant files and line ranges. Prefer
@@ -200,18 +203,23 @@ takes precedence over conflicting issue or discussion details.
 
 - Dependencies are installed from the committed lockfile before the agent
   starts. Do not run another dependency installation.
-- Use the smallest relevant test file or scoped test name while iterating, and
-  keep rerunning that focused regression until it passes. For example:
+- After producing a coherent patch, run the smallest relevant test file or
+  scoped test name once. For example:
   `pnpm --filter @remix-run/<package> run test --quiet src/**/<filename>.test.ts --only '<suite-or-test-regex>'`.
-- After focused tests pass and the implementation diff is final, test and
-  typecheck the affected packages with `pnpm run test:changed` and
-  `pnpm run typecheck:changed`. Let pull request CI run the full repository
-  test and typecheck suites.
-- Before creating a pull request, run the repository's fast validation loop:
+- If that focused validation fails, use its output to make at most one targeted
+  correction, then rerun only the failing command once. Never rerun a command
+  without an intervening change intended to address its failure.
+- After focused validation passes and the implementation diff is final, run the
+  repository's fast validation loop once:
   `pnpm run validate-package-meta`, `pnpm run lint`,
   `pnpm run format:check`, `pnpm run test:changed`, and
   `pnpm run typecheck:changed`.
-- Run `pnpm run changes:validate` when a change file is added.
+- Run `pnpm run changes:validate` in that loop when a change file is added. Let
+  pull request CI run the full repository test and typecheck suites.
+- If a fast-loop command fails, make at most one targeted correction and rerun
+  only that failing command once. Do not restart the full loop. If the command
+  still fails, stop validation and preserve the coherent patch in a checkpoint
+  draft pull request.
 - Use `pnpm` directly for all package commands after the initial version check.
 - Run repository-owned Playwright tests headlessly when browser behavior
   materially improves the evidence.
