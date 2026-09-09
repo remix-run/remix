@@ -1,0 +1,1 @@
+BREAKING CHANGE: `cors({ credentials: true })` now preserves the default `Access-Control-Allow-Origin: *` response. Applications that intentionally allow credentialed requests from any origin must configure `origin: '*'` explicitly; applications with a restricted origin policy should continue to configure an exact origin, pattern, array, or resolver.

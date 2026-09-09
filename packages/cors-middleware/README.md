@@ -52,6 +52,8 @@ router.get('/api/projects', () => {
 - `true` to reflect the request origin
 - `(origin, context) => boolean | string` for dynamic policies
 
+When `origin` is omitted, it defaults to `'*'`. This implicit default is not reflected when credentials are enabled. Configure an explicit origin policy for credentialed cross-origin requests.
+
 ### Restrict Origins
 
 ```ts
@@ -152,7 +154,8 @@ let router = createRouter({
 ## Caveats
 
 - CORS is primarily a browser enforcement mechanism. Disallowed non-preflight requests still reach your handlers unless you add separate request validation.
-- When `credentials: true` is used with `origin: '*'`, the middleware reflects the request origin and adds `Vary: Origin` so the response stays cache-safe.
+- When `credentials: true` is used without an explicit `origin`, the middleware preserves the default `Access-Control-Allow-Origin: *` header. Browsers do not expose credentialed responses with a wildcard allowed origin, so configure an explicit origin policy to allow them.
+- When `credentials: true` is used with an explicit `origin: '*'`, the middleware reflects the request origin and adds `Vary: Origin` so the response stays cache-safe.
 - When `allowedHeaders` is a function, preflight responses vary on `Access-Control-Request-Headers` so caches do not reuse a response for a different requested-header set.
 - `preflightContinue` and `preflightStatusCode` only affect how preflight `OPTIONS` requests are handled. They do not change actual request authorization.
 

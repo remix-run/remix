@@ -25,9 +25,29 @@ describe('cors middleware', () => {
     assert.equal(response.headers.get('Vary'), null)
   })
 
-  it('reflects origin and adds Vary when credentials are enabled', async () => {
+  it('keeps the wildcard default when credentials are enabled', async () => {
     let router = createRouter({
       middleware: [cors({ credentials: true })],
+    })
+
+    router.get('/', () => new Response('ok'))
+
+    let response = await router.fetch('https://remix.run/', {
+      headers: {
+        Origin: 'https://example.com',
+      },
+    })
+
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), '*')
+    assert.equal(response.headers.get('Access-Control-Allow-Credentials'), 'true')
+
+    let vary = Vary.from(response.headers.get('Vary'))
+    assert.ok(!vary.has('Origin'))
+  })
+
+  it('reflects an explicit wildcard origin when credentials are enabled', async () => {
+    let router = createRouter({
+      middleware: [cors({ origin: '*', credentials: true })],
     })
 
     router.get('/', () => new Response('ok'))
@@ -301,7 +321,7 @@ describe('cors middleware', () => {
 
   it('merges CORS Vary values with an existing response Vary header', async () => {
     let router = createRouter({
-      middleware: [cors({ credentials: true })],
+      middleware: [cors({ origin: '*', credentials: true })],
     })
 
     router.get(
