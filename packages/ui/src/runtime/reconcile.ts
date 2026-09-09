@@ -844,6 +844,14 @@ function insert(
             sibling.remove()
             sibling = next
           }
+          if (
+            remainder.length > 0 &&
+            sibling instanceof Text &&
+            sibling.data.startsWith(remainder)
+          ) {
+            // A parser chunk can also contain the start of the next text child.
+            sibling.deleteData(0, remainder.length)
+          }
           hydrationNode.data = node._text
           if (cursor) cursor.current = sibling
           return commitTextNode(node, vParent, svg, hydrationNode)

@@ -162,5 +162,57 @@ describe('hydration', () => {
       expect(hydratedPre.textContent).toBe(largeText)
       expect(hydratedPre.textContent.split('\n').length).toBe(lineCount)
     })
+
+    it('hydrates adjacent text children across parser-split nodes', async () => {
+      let firstText = 'a'.repeat(70000)
+      let secondText = 'b'.repeat(70000)
+      let combinedText = firstText + secondText
+      let html = await renderToString(
+        <pre>
+          {firstText}
+          {secondText}
+          <span>after</span>
+        </pre>,
+      )
+      container.innerHTML = html
+
+      let existingPre = container.querySelector('pre')
+      let existingSpan = container.querySelector('span')
+      invariant(existingPre)
+      invariant(existingSpan)
+
+      let splitOffset = 65536
+      let firstTextNode = document.createTextNode(combinedText.slice(0, splitOffset))
+      let secondTextNode = document.createTextNode(combinedText.slice(splitOffset, splitOffset * 2))
+      let thirdTextNode = document.createTextNode(combinedText.slice(splitOffset * 2))
+      existingPre.replaceChildren(firstTextNode, secondTextNode, thirdTextNode, existingSpan)
+
+      let root = createRoot(container)
+      function render() {
+        root.render(
+          <pre>
+            {firstText}
+            {secondText}
+            <span>after</span>
+          </pre>,
+        )
+        root.flush()
+      }
+      render()
+
+      expect(container.querySelector('pre')).toBe(existingPre)
+      expect(existingPre.firstChild).toBe(firstTextNode)
+      expect(existingPre.childNodes.length).toBe(3)
+      expect(existingPre.lastChild).toBe(existingSpan)
+      expect(existingPre.textContent).toBe(combinedText + 'after')
+
+      firstText = 'updated first'
+      secondText = 'updated second'
+      render()
+
+      expect(existingPre.childNodes.length).toBe(3)
+      expect(existingPre.lastChild).toBe(existingSpan)
+      expect(existingPre.textContent).toBe(firstText + secondText + 'after')
+    })
   })
 })
