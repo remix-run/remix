@@ -913,7 +913,7 @@ describe('writes and validation', () => {
       async function () {
         await db
           .query(accounts)
-          .join(projects, eq('accounts.id', 'projects.account_id'))
+          .join(projects, eq(accounts.id, projects.account_id))
           .update({ status: 'inactive' })
       },
       function (error: unknown) {
