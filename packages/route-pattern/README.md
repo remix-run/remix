@@ -231,7 +231,7 @@ matcher.match('https://example.com/docs/Intro')?.params
 // { slug: 'Intro' }
 ```
 
-Matchers limit individual pattern size, total matcher size, and the work performed by one match. Pattern and matcher sizes are measured in UTF-8 bytes. Direct package consumers may lower or raise individual limits. Exceeding one throws `MatcherResourceError` with structured `details` instead of silently abandoning matching:
+Matchers limit individual pattern size, total matcher size, and the work performed by one match, including variable scans and comparisons between wildcard or optional captures. Pattern and matcher sizes are measured in UTF-8 bytes. Direct package consumers may lower or raise individual limits. Exceeding one throws `MatcherResourceError` with structured `details` instead of silently abandoning matching:
 
 ```ts
 let matcher = createMultiMatcher({

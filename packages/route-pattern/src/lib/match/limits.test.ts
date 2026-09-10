@@ -91,6 +91,54 @@ describe('matcher resource limits', () => {
     assert.ok(matcher.match(`https://example.com/${value}`))
   })
 
+  it('enforces match work while scanning optional pathname variables', () => {
+    let matcher = createMultiMatcher({ limits: { maxMatchWork: 1_000 } })
+    matcher.add('/:name(.:extension)', null)
+
+    assert.throws(
+      () => matcher.match(`https://example.com/${'a'.repeat(128)}`),
+      exceedsMatchWork(1_000),
+    )
+  })
+
+  it('enforces match work while scanning optional hostname variables', () => {
+    let matcher = createMultiMatcher({ limits: { maxMatchWork: 2_000 } })
+    matcher.add('://:tenant(.:region).example.com/', null)
+
+    assert.throws(
+      () => matcher.match(`https://${'a'.repeat(64)}.example.com/`),
+      exceedsMatchWork(2_000),
+    )
+  })
+
+  it('enforces match work while comparing pathname wildcard captures', () => {
+    let matcher = createMultiMatcher({ limits: { maxMatchWork: 1_000 } })
+    matcher.add('/*first(/*rest)', null)
+
+    assert.throws(
+      () => matcher.match(`https://example.com/${'a/'.repeat(30)}a`),
+      exceedsMatchWork(1_000),
+    )
+  })
+
+  it('enforces match work while comparing hostname wildcard captures', () => {
+    let matcher = createMultiMatcher({ limits: { maxMatchWork: 1_000 } })
+    matcher.add('://*tenant(.*region).example.com/', null)
+
+    assert.throws(
+      () => matcher.match(`https://${'a.'.repeat(12)}a.example.com/`),
+      exceedsMatchWork(1_000),
+    )
+  })
+
+  it('matches long linear variables within a small match-work limit', () => {
+    let matcher = createMultiMatcher({ limits: { maxMatchWork: 1_000 } })
+    matcher.add('/:name', null)
+    let name = 'a'.repeat(128)
+
+    assert.deepEqual(matcher.match(`https://example.com/${name}`)?.params, { name })
+  })
+
   it('rejects invalid configured limits', () => {
     assert.throws(
       () => createMultiMatcher({ limits: { maxMatcherSize: -1 } }),
@@ -98,6 +146,14 @@ describe('matcher resource limits', () => {
     )
   })
 })
+
+function exceedsMatchWork(maximum: number) {
+  return (error: unknown) =>
+    error instanceof MatcherResourceError &&
+    error.details.limit === 'maxMatchWork' &&
+    error.details.maximum === maximum &&
+    error.details.actual > maximum
+}
 
 function resourceError(
   limit: MatcherResourceError['details']['limit'],
