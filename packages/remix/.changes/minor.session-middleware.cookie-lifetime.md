@@ -1,0 +1,1 @@
+BREAKING CHANGE: `remix/middleware/session` now enforces configured cookie lifetimes before loading session data. Existing cookies without expiration metadata start a new session when `maxAge` or `expires` is configured. Sessions without a configured lifetime retain their existing behavior.
