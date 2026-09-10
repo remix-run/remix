@@ -255,9 +255,9 @@ handler:
 
 The form remains a normal document navigation before the runtime starts. Native constraint
 validation and the form's `submit` event run before Remix intercepts it. `data-rmx-target` chooses a named
-frame, `data-rmx-src` can provide a different frame request URL, `data-rmx-reset-scroll="false"` preserves the
-current scroll position, and `data-rmx-document` opts out of interception. `data-rmx-history="push|replace"`
-controls how the navigation updates history.
+frame, `data-rmx-src` can provide a different request URL for that named frame,
+`data-rmx-reset-scroll="false"` preserves the current scroll position, and `data-rmx-document` opts out of
+interception. `data-rmx-history="push|replace"` controls how the navigation updates history.
 
 GET controls are already encoded in the destination URL. For non-GET forms, `resolveFrame` receives
 `formData`, `method`, and `encType`. The action should return HTML for the targeted frame when it
@@ -328,8 +328,13 @@ A link can keep its public destination in `href` while loading a smaller route i
 </a>
 ```
 
-`data-rmx-target` chooses the frame, while `data-rmx-src` chooses the request used to fill it. The address bar
-still moves to `href`. Add `data-rmx-history="replace"` when it should replace the current history entry. Use
+`data-rmx-target` chooses a mounted named frame, while `data-rmx-src` chooses the request used to fill it.
+The address bar still moves to `href`. If the target is omitted or no matching frame is mounted, Remix
+uses `href` as the top frame's source to keep it in sync with the browser URL. A supplied `data-rmx-src`
+must still be a valid same-origin URL regardless of the target. Invalid or cross-origin values disable
+interception, so the browser performs a document navigation to `href`.
+
+Add `data-rmx-history="replace"` when it should replace the current history entry. Use
 `data-rmx-document` when a same-origin link must perform an ordinary document navigation instead.
 
 ## Handle failures and cancellation

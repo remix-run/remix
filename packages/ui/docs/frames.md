@@ -184,6 +184,7 @@ async function resolveFrame(src, options) {
     body: getRequestBody(options),
     headers: { Accept: 'text/html' },
     method: options?.method,
+    mode: 'same-origin',
     signal: options?.signal,
   })
 
@@ -237,6 +238,8 @@ response lets Remix stream its body. When `fetch()` followed a redirect during a
 the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`;
 other frames render the response without changing either URL.
 
+The default resolver uses Fetch's `same-origin` mode. Cross-origin sources and redirects fail, even if the destination allows CORS. To load trusted cross-origin frame content, provide a custom `resolveFrame` to `run()`. Custom resolvers control their own request and redirect policy.
+
 Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
 
 ## Link navigation
@@ -247,10 +250,14 @@ and reconcile it into the existing document instead of performing a full documen
 soft-navigation behavior applies even when the page does not render an explicit `<Frame>`.
 
 - `data-rmx-target="name"` reloads a named frame.
-- `data-rmx-src="/frame"` overrides the URL resolved into that frame while `href` remains the navigation destination.
+- `data-rmx-src="/frame"` overrides the source of the mounted frame selected by `data-rmx-target`, while `href` remains the navigation destination.
 - `data-rmx-history="push|replace"` controls how the navigation updates history.
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
 - `data-rmx-document` leaves the link as a normal document navigation.
+
+During navigation, the top frame's source stays in sync with the browser URL. `data-rmx-src` only changes the requested URL when `data-rmx-target` resolves to a mounted named frame. If the target is omitted or no matching frame is mounted, an intercepted navigation reloads the top frame from `href`. The same behavior applies to form destinations, the `src` and `target` options of `navigate()`, and history traversal.
+
+Every source override must resolve to the document origin, using `document.baseURI` for relative URLs. Invalid or cross-origin overrides disable interception regardless of the target, leaving the browser to navigate to the link's `href` or the form's destination.
 
 To keep links/forms as a document navigations while still hydrating client entries and using explicit
 frames, you can cancel the built-in `navigate` event behavior with your own listener before calling
@@ -269,7 +276,7 @@ Eligible same-origin form submissions use the same frame navigation path as link
 
 - Submissions reload `handle.frames.top` by default.
 - `data-rmx-target="name"` reloads a named frame.
-- `data-rmx-src="/frame"` overrides the URL resolved into that frame while the form action remains the navigation destination.
+- `data-rmx-src="/frame"` overrides the source of the mounted frame selected by `data-rmx-target`, while the form action remains the navigation destination.
 - `data-rmx-history="push|replace"` overrides how the navigation updates history.
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
 - `data-rmx-document` leaves the submission as a normal document navigation.
