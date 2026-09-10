@@ -2137,6 +2137,35 @@ describe('stream', () => {
       )
     })
 
+    it('does not render an import map when managed and resolved client entry maps are empty', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <ImportMap value={{ imports: {}, scopes: { '/assets/': {} }, integrity: {} }} />
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'ImportMapCounter',
+                importMap: { imports: {} },
+              }
+            },
+          },
+        ),
+      )
+
+      expect(html).not.toContain('type="importmap"')
+    })
+
     it('rejects multiple managed import maps in one document', async () => {
       await expect(
         renderToString(

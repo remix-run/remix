@@ -70,6 +70,7 @@ server and Remix CLI use the same configuration:
     "allowFiles": ["app/routes.ts", "app/**/public/**"],
     "allowPackages": ["remix"],
     "denyFiles": ["app/**/*.test.*"],
+    "importMaps": true,
     "files": {
       "extensions": [".svg", ".png", ".jpg", ".woff2"],
     },
@@ -303,13 +304,24 @@ let src = await assetServer.getHref('app/media/public/image.png', {
 
 ## Import Maps
 
-Scripts retain their imports as authored and rely on import maps for resolution in the browser. `assetServer.getScriptEntry()` returns the import map for a single rendered script entry. Use `assetServer.getImportMap()` directly when you need to generate a combined import map for multiple script roots or other custom graph-level behavior.
+By default, scripts retain their imports as authored and rely on generated import maps for resolution in the browser. `assetServer.getScriptEntry()` returns the import map for a single rendered script entry. Use `assetServer.getImportMap()` directly when you need to generate a combined import map for multiple script roots or other custom graph-level behavior.
 
 ```ts
 let importMap = await assetServer.getImportMap(['app/assets/entry.tsx', 'app/assets/search.tsx'])
 ```
 
 Without fingerprinting, import maps resolve authored specifiers to stable asset URLs. With fingerprinting enabled, the same import maps resolve stable asset URLs to content-fingerprinted asset URLs.
+
+Set `importMaps: false` to rewrite internal script imports to their served URLs instead. This applies to relative imports, bare imports, re-exports, and statically analyzable dynamic imports while leaving configured `scripts.external` imports unchanged.
+
+```ts
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  allowPackages: ['remix'],
+  importMaps: false,
+})
+```
 
 ## Preloads
 
@@ -349,7 +361,7 @@ let assetServer = createAssetServer({
 
 When fingerprinting is enabled, assets use a `.@<fingerprint>` segment before the file extension and are served with `Cache-Control: public, max-age=31536000, immutable`.
 
-Fingerprints are based on emitted asset contents. This allows unchanged assets to keep the same URL across deployments, but it assumes that files on disk won't change after a URL is generated, so fingerprinting requires `watch: false`.
+Fingerprints are based on emitted asset contents. When import maps are disabled, changes to imported scripts also update importer URLs, so browsers need to download the entire affected import chain again. This allows unchanged assets to keep the same URL across deployments, but it assumes that files on disk won't change after a URL is generated, so fingerprinting requires `watch: false`.
 
 ## Target
 
@@ -725,7 +737,7 @@ Use `moduleImporter` to customize how HMR dynamically imports updated browser mo
 export function importModule(specifier: string, parentUrl: string): Promise<Record<string, unknown>>
 ```
 
-HMR appends mappings for updated modules to the document in additional `<script type="importmap">` elements. Use `remix/multiple-import-maps-polyfill` when these updates must work in browsers without native support for multiple import maps:
+When generated import maps are enabled, HMR appends mappings for updated modules to the document in additional `<script type="importmap">` elements. Use `remix/multiple-import-maps-polyfill` when these updates must work in browsers without native support for multiple import maps. With `importMaps: false`, HMR updates use rewritten module URLs and omit generated maps.
 
 ```ts
 import { createAssetServer } from 'remix/assets'
