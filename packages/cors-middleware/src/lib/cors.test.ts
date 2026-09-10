@@ -347,7 +347,128 @@ describe('cors middleware', () => {
     })
 
     assert.equal(response.status, 204)
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), '*')
     assert.equal(response.headers.get('Access-Control-Allow-Private-Network'), 'true')
+
+    let vary = Vary.from(response.headers.get('Vary'))
+    assert.ok(vary.has('Access-Control-Request-Private-Network'))
+  })
+
+  it('does not allow private network requests by default', async () => {
+    let router = createRouter({ middleware: [cors()] })
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://example.com',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Private-Network': 'true',
+      },
+    })
+
+    assert.equal(response.status, 204)
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), '*')
+    assert.equal(response.headers.get('Access-Control-Allow-Private-Network'), null)
+
+    let vary = Vary.from(response.headers.get('Vary'))
+    assert.ok(!vary.has('Access-Control-Request-Private-Network'))
+  })
+
+  it('varies on private network requests when the request header is absent', async () => {
+    let router = createRouter({ middleware: [cors({ allowPrivateNetwork: true })] })
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://example.com',
+        'Access-Control-Request-Method': 'POST',
+      },
+    })
+
+    assert.equal(response.status, 204)
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), '*')
+    assert.equal(response.headers.get('Access-Control-Allow-Private-Network'), null)
+
+    let vary = Vary.from(response.headers.get('Vary'))
+    assert.ok(vary.has('Access-Control-Request-Private-Network'))
+  })
+
+  it('varies on private network requests when the request header is false', async () => {
+    let router = createRouter({ middleware: [cors({ allowPrivateNetwork: true })] })
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://example.com',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Private-Network': 'false',
+      },
+    })
+
+    assert.equal(response.status, 204)
+    assert.equal(response.headers.get('Access-Control-Allow-Private-Network'), null)
+
+    let vary = Vary.from(response.headers.get('Vary'))
+    assert.ok(vary.has('Access-Control-Request-Private-Network'))
+  })
+
+  it('merges private network Vary values for continued preflight requests', async () => {
+    let router = createRouter({
+      middleware: [cors({ allowPrivateNetwork: true, preflightContinue: true })],
+    })
+
+    router.options('/', () => new Response('continued', { headers: { Vary: 'Accept-Encoding' } }))
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://example.com',
+        'Access-Control-Request-Method': 'POST',
+      },
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'continued')
+    assert.equal(response.headers.get('Access-Control-Allow-Private-Network'), null)
+
+    let vary = Vary.from(response.headers.get('Vary'))
+    assert.ok(vary.has('Accept-Encoding'))
+    assert.ok(vary.has('Access-Control-Request-Method'))
+    assert.ok(vary.has('Access-Control-Request-Private-Network'))
+  })
+
+  it('applies the origin policy before allowing private network requests', async () => {
+    let router = createRouter({
+      middleware: [cors({ origin: 'https://allowed.example', allowPrivateNetwork: true })],
+    })
+
+    let allowedResponse = await router.fetch('https://remix.run/', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://allowed.example',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Private-Network': 'true',
+      },
+    })
+
+    let blockedResponse = await router.fetch('https://remix.run/', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://blocked.example',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Private-Network': 'true',
+      },
+    })
+
+    assert.equal(allowedResponse.status, 204)
+    assert.equal(
+      allowedResponse.headers.get('Access-Control-Allow-Origin'),
+      'https://allowed.example',
+    )
+    assert.equal(allowedResponse.headers.get('Access-Control-Allow-Private-Network'), 'true')
+    assert.equal(blockedResponse.status, 403)
+    assert.equal(blockedResponse.headers.get('Access-Control-Allow-Origin'), null)
+    assert.equal(blockedResponse.headers.get('Access-Control-Allow-Private-Network'), null)
   })
 
   it('sets Access-Control-Expose-Headers for actual requests', async () => {
