@@ -1135,6 +1135,9 @@ importers:
       '@remix-run/form-data-parser':
         specifier: workspace:^
         version: link:../form-data-parser
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
@@ -1151,6 +1154,9 @@ importers:
 
   packages/form-data-parser:
     dependencies:
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
       '@remix-run/multipart-parser':
         specifier: workspace:^
         version: link:../multipart-parser

@@ -13,6 +13,19 @@ const LARGE_FILE_SIZE = 128 * 1024
 describe('parseMultipartRequest (node)', () => {
   let boundary = '----WebKitFormBoundaryzv5f5B2cY6tjQ0Rn'
 
+  it('parses mixed-case media types with surrounding whitespace', async () => {
+    let request = createMultipartRequest(boundary, { field: 'value' })
+    request.headers['content-type'] = ` Multipart/Form-Data; boundary="${boundary}" `
+
+    let parts = []
+    for await (let part of parseMultipartRequest(request)) {
+      parts.push(part)
+    }
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, 'value')
+  })
+
   it('parses an empty multipart message', async () => {
     let request = createMultipartRequest(boundary)
 

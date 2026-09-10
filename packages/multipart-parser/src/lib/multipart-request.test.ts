@@ -35,6 +35,14 @@ describe('getMultipartBoundary', async () => {
 })
 
 describe('isMultipartRequest', async () => {
+  it('recognizes mixed-case media types with parameters', () => {
+    let request = new Request('https://example.com', {
+      headers: { 'Content-Type': 'Multipart/Mixed; boundary="ExampleBoundary"' },
+    })
+
+    assert.ok(isMultipartRequest(request))
+  })
+
   it('returns true for multipart/form-data requests', async () => {
     let request = new Request('https://example.com', {
       method: 'POST',

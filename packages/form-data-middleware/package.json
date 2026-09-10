@@ -41,7 +41,8 @@
   },
   "dependencies": {
     "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/form-data-parser": "workspace:^"
+    "@remix-run/form-data-parser": "workspace:^",
+    "@remix-run/headers": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
