@@ -4,6 +4,8 @@ import { Session, type SessionStorage } from '@remix-run/session'
 
 /**
  * Middleware that manages request session state on request context.
+ * Session cookies default to HTTP-only and use Secure for HTTPS requests.
+ * Explicit cookie settings take precedence.
  *
  * @param sessionCookie The session cookie to use
  * @param sessionStorage The storage backend for session data
@@ -47,6 +49,7 @@ export function session(
         'Set-Cookie',
         await sessionCookie.serialize(setCookieValue, {
           httpOnly: sessionCookie.httpOnly ?? true,
+          secure: sessionCookie.secure ?? context.url.protocol === 'https:',
         }),
       )
     }

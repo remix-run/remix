@@ -49,7 +49,7 @@ The middleware:
 Use `context.session` (or `context.get(Session)`) for normal session reads and writes.
 
 Note: The session cookie must be signed for security. This prevents tampering with the session data on the client.
-Session cookies are HTTP-only by default.
+Session cookies are HTTP-only by default. When `secure` is not configured, the middleware adds `Secure` for HTTPS request URLs and omits it for HTTP, including local development. Explicit `secure: true` and `secure: false` take precedence. If a proxy terminates HTTPS, configure the server to expose the original HTTPS request URL or set `secure: true` explicitly.
 
 ### Login/Logout Flow
 

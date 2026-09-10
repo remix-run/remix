@@ -1,0 +1,1 @@
+BREAKING CHANGE: `Cookie.secure` from `remix/cookie` returns `undefined` when unconfigured. Use `cookie.secure ?? false` when a boolean is required. Session middleware now defaults to `Secure` on HTTPS requests while preserving explicit cookie settings.
