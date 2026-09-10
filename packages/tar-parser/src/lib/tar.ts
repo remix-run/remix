@@ -50,7 +50,7 @@ export interface TarHeader {
   gid: number | null
 
   /**
-   * Entry size in bytes.
+   * Entry size in bytes. Parsed sizes are non-negative safe integers.
    */
   size: number
 
@@ -145,6 +145,14 @@ export interface ParseTarHeaderOptions {
  * @returns The parsed tar header
  */
 export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOptions): TarHeader {
+  let header = decodeTarHeader(block, options)
+  return { ...header, size: parseEntrySize(block.subarray(124, 136)) }
+}
+
+function decodeTarHeader(
+  block: Uint8Array,
+  options?: ParseTarHeaderOptions,
+): Omit<TarHeader, 'size'> {
   if (block.length !== TarBlockSize) {
     throw new TarParseError('Invalid tar header size')
   }
@@ -179,12 +187,11 @@ export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOption
   }
 
   let typeFlag = block[156] === 0 ? 0 : block[156] - ZeroOffset
-  let header: TarHeader = {
+  let header: Omit<TarHeader, 'size'> = {
     name: getString(block, 0, 100, filenameEncoding),
     mode: getOctal(block, 100, 8),
     uid: getOctal(block, 108, 8),
     gid: getOctal(block, 116, 8),
-    size: getOctal(block, 124, 12) ?? 0,
     mtime: getOctal(block, 136, 12),
     type: TarFileTypes[typeFlag] ?? 'unknown',
     linkname: block[157] === 0 ? null : getString(block, 157, 100, filenameEncoding),
@@ -210,6 +217,33 @@ export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOption
   }
 
   return header
+}
+
+function parseEntrySize(value: Uint8Array | string): number {
+  let size: number | null
+  if (typeof value === 'string') {
+    size = value === '' || /[^0-9]/.test(value) ? null : Number(value)
+  } else if (value[0] & 0x80) {
+    size = value[0] === 0x80 ? getOctal(value, 0, value.length) : null
+  } else {
+    let octal = new TextDecoder().decode(value).replace(/^[\0 ]+|[\0 ]+$/g, '')
+    size = /[^0-7]/.test(octal) ? null : parseInt(octal || '0', 8)
+  }
+
+  if (size === null || !Number.isSafeInteger(size) || size < 0) {
+    throw new TarParseError('Invalid tar entry size')
+  }
+
+  return size
+}
+
+function isLongHeader(type: string): boolean {
+  return (
+    type === 'gnu-long-path' ||
+    type === 'gnu-long-link-path' ||
+    type === 'pax-global-header' ||
+    type === 'pax-header'
+  )
 }
 
 type TarArchiveSource =
@@ -301,35 +335,44 @@ export class TarParser {
   async parse(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void> {
     this.#reset()
 
-    let results: unknown[] = []
+    let results: Promise<void>[] = []
 
     function handleEntry(entry: TarEntry): void {
-      results.push(handler(entry))
+      let result = Promise.resolve(handler(entry))
+      // A handler may reject before the archive finishes streaming.
+      result.catch(() => {})
+      results.push(result)
     }
 
-    if (archive instanceof ReadableStream) {
-      for await (let chunk of readStream(archive)) {
-        this.#write(chunk, handleEntry)
+    try {
+      if (archive instanceof ReadableStream) {
+        for await (let chunk of readStream(archive)) {
+          this.#write(chunk, handleEntry)
+        }
+      } else if (isAsyncIterable(archive)) {
+        for await (let chunk of archive) {
+          this.#write(chunk, handleEntry)
+        }
+      } else if (archive instanceof Uint8Array) {
+        this.#write(archive, handleEntry)
+      } else if (isIterable(archive)) {
+        for (let chunk of archive) {
+          this.#write(chunk, handleEntry)
+        }
+      } else {
+        throw new TypeError('Cannot parse tar archive; expected a stream or buffer')
       }
-    } else if (isAsyncIterable(archive)) {
-      for await (let chunk of archive) {
-        this.#write(chunk, handleEntry)
-      }
-    } else if (archive instanceof Uint8Array) {
-      this.#write(archive, handleEntry)
-    } else if (isIterable(archive)) {
-      for (let chunk of archive) {
-        this.#write(chunk, handleEntry)
-      }
-    } else {
-      throw new TypeError('Cannot parse tar archive; expected a stream or buffer')
-    }
 
-    if (this.#missing !== 0) {
-      throw new TarParseError('Unexpected end of archive')
-    }
+      if (this.#missing !== 0) {
+        throw new TarParseError('Unexpected end of archive')
+      }
 
-    await Promise.all(results)
+      await Promise.all(results)
+    } catch (error) {
+      this.#bodyController?.error(error)
+      this.#bodyController = null
+      throw error
+    }
   }
 
   #reset(): void {
@@ -387,16 +430,16 @@ export class TarParser {
       return
     }
 
-    this.#header = parseTarHeader(block, this.#options)
+    let header = decodeTarHeader(block, this.#options)
+    this.#longHeader = isLongHeader(header.type)
+    this.#header = {
+      ...header,
+      size: parseEntrySize((!this.#longHeader && this.#pax?.size) || block.subarray(124, 136)),
+    }
 
-    switch (this.#header.type) {
-      case 'gnu-long-path':
-      case 'gnu-long-link-path':
-      case 'pax-global-header':
-      case 'pax-header':
-        this.#longHeader = true
-        this.#missing = this.#header.size
-        return
+    if (this.#longHeader) {
+      this.#missing = this.#header.size
+      return
     }
 
     if (this.#gnuLongPath) {
@@ -412,7 +455,6 @@ export class TarParser {
     if (this.#pax) {
       if (this.#pax.path) this.#header.name = this.#pax.path
       if (this.#pax.linkpath) this.#header.linkname = this.#pax.linkpath
-      if (this.#pax.size) this.#header.size = parseInt(this.#pax.size, 10)
       this.#header.pax = this.#pax
       this.#pax = null
     }
@@ -541,7 +583,8 @@ export class TarEntry {
   }
 
   /**
-   * The content of this entry buffered into a single typed array.
+   * The content of this entry buffered into a single typed array using the bytes received.
+   * Rejects if parsing fails before the entry's body is complete.
    *
    * @returns A promise that resolves to a `Uint8Array`
    */
@@ -552,9 +595,16 @@ export class TarEntry {
 
     this.#bodyUsed = true
 
-    let result = new Uint8Array(this.size)
-    let offset = 0
+    let chunks: Uint8Array[] = []
+    let length = 0
     for await (let chunk of readStream(this.#body)) {
+      chunks.push(new Uint8Array(chunk))
+      length += chunk.length
+    }
+
+    let result = new Uint8Array(length)
+    let offset = 0
+    for (let chunk of chunks) {
       result.set(chunk, offset)
       offset += chunk.length
     }
