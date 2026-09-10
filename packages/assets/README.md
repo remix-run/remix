@@ -611,6 +611,10 @@ Use `files.cache` to store transformed file outputs via a [`file-storage`](https
 
 `files.cacheKey` scopes transformed file cache entries. Use a stable identifier, such as a commit SHA, when you want unchanged transformed files to be reused across server restarts for the same build.
 
+The server retains at most 256 transformed metadata entries. Each backing-store namespace uses 256 reusable slots, with at most 4 MiB per stored entry including cache metadata (1 GiB total). Equivalent transform URLs share an entry. Different transforms can replace the same slot; replaced entries are recomputed when requested again. Larger outputs are served normally without caching.
+
+These limits cover the current entries in one namespace. Remove obsolete namespaces and entries from older cache formats through your storage lifecycle policy. Without `files.cacheKey`, each server instance creates a new namespace. Storage backends that retain object versions also need a policy for removing old versions. Cache limits do not limit concurrent transform work or the size of an output while it is being computed.
+
 ```ts
 import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
