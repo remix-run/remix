@@ -799,6 +799,18 @@ function insert(
     hydrationNode = null
   }
 
+  // Components, fragments, and empty nodes do not claim DOM nodes. Preserve
+  // client entry markers until their descendants can claim the boundary.
+  hydrationNode = skipCommentsExceptBoundaryStart(
+    hydrationNode ?? null,
+    node.kind === 'component' || node.kind === 'fragment' || node.kind === 'empty',
+  )
+
+  if (hydrationNode && anchor && hydrationNode === anchor) {
+    hydrationNode = null
+  }
+  if (cursor) cursor.current = hydrationNode
+
   if (
     vParent.kind !== 'root' &&
     node.kind === 'component' &&
@@ -816,19 +828,6 @@ function insert(
       return committed
     }
   }
-
-  // Preserve frame-start markers for non-Frame nodes too, so a following <Frame>
-  // (e.g. the first child of a bare Fragment at a clientEntry boundary) can still
-  // claim its rmx:f marker during hydration instead of being re-inserted fresh.
-  // A rmx:f marker always belongs to a <Frame>, so no non-Frame node should
-  // consume one.
-  hydrationNode = skipCommentsExceptFrameStart(hydrationNode ?? null)
-
-  // Also check after skipComments in case we skipped past the anchor
-  if (hydrationNode && anchor && hydrationNode === anchor) {
-    hydrationNode = null
-  }
-  if (cursor) cursor.current = hydrationNode
 
   let doInsert = anchor
     ? (dom: Node) => domParent.insertBefore(dom, anchor)
@@ -1394,9 +1393,15 @@ function randomFrameId(): string {
   return `f${crypto.randomUUID().slice(0, 8)}`
 }
 
-function skipCommentsExceptFrameStart(cursor: Node | null): Node | null {
+function skipCommentsExceptBoundaryStart(
+  cursor: Node | null,
+  preserveClientEntry: boolean,
+): Node | null {
   while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
     if (isFrameStartComment(cursor)) return cursor
+    if (preserveClientEntry && isCommentNode(cursor) && cursor.data.trim().startsWith('rmx:h:')) {
+      return cursor
+    }
     cursor = cursor.nextSibling
   }
   return cursor
@@ -1551,9 +1556,9 @@ function diffClientEntryBoundary(
 function disposeCommittedClientEntryBoundary(
   node: CommittedClientEntryNode,
   context: ReconcileContext,
-): void {
+): boolean {
   getFrameRuntime(context.frame)?.pendingClientEntries.delete(node._rangeStart)
-  disposeClientEntryBoundary(node._rangeStart)
+  return disposeClientEntryBoundary(node._rangeStart)
 }
 
 // Cleanup without DOM removal - used for descendants when parent DOM node is removed
@@ -1649,8 +1654,14 @@ export function remove(
   }
 
   if (isCommittedClientEntryNode(node)) {
-    disposeCommittedClientEntryBoundary(node, context)
-    removeDomRange(node._rangeStart, node._rangeEnd, domParent)
+    if (disposeCommittedClientEntryBoundary(node, context)) {
+      // The root removes its content and honors mixin persistence. Only remove
+      // the boundary markers here so exit animations can finish in the DOM.
+      node._rangeStart.remove()
+      node._rangeEnd.remove()
+    } else {
+      removeDomRange(node._rangeStart, node._rangeEnd, domParent)
+    }
     return
   }
 
