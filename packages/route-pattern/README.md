@@ -332,6 +332,8 @@ createHref('search', undefined, { searchParams })
 
 Common failures include missing required params, nameless wildcards, invalid hostname params, empty pathname variables, and origin patterns that specify a protocol or port without a concrete hostname.
 
+Hostname params reject URL structural characters, including backslashes. Hostname variables also reject dots; hostname wildcards allow dots to span labels.
+
 **Note:** optional groups without params are included in the generated href:
 
 ```ts
