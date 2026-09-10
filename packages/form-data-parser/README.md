@@ -34,6 +34,8 @@ npm i remix
 
 The `parseFormData` interface allows you to define an "upload handler" function for fine-grained control of handling file uploads.
 
+`FileUpload.name` and `FileUpload.type` describe the submitted multipart metadata. The parser does not verify that the contents match the media type or filename extension. Choose storage names in your application and validate file contents before serving uploads inline. To serve uploads as downloads, set `Content-Disposition: attachment` on the file response; see [File Responses](https://github.com/remix-run/remix/tree/main/packages/response#file-responses).
+
 ```ts
 import * as fsp from 'node:fs/promises'
 import type { FileUpload } from 'remix/form-data-parser'
