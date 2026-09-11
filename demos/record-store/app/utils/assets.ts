@@ -9,11 +9,11 @@ const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
 export const assets = createAssetServer({
   basePath: assetsBase,
   rootDir: path.resolve(import.meta.dirname, '../../../..'),
-  allowFiles: ['demos/bookstore/app/routes.ts', 'demos/bookstore/app/**/public/**'],
+  allowFiles: ['demos/record-store/app/routes.ts', 'demos/record-store/app/**/public/**'],
   allowPackages: ['remix'],
-  denyFiles: ['demos/bookstore/app/**/*.test.*'],
+  denyFiles: ['demos/record-store/app/**/*.test.*'],
   mounts: {
-    app: 'demos/bookstore/app',
+    app: 'demos/record-store/app',
     npm: 'node_modules',
     packages: 'packages',
   },

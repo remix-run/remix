@@ -8,12 +8,12 @@ describe('browser assets', () => {
   it('serves every colocated browser entry graph and rejects server source', async () => {
     let router = createBookstoreRouter()
     let hrefs = await assets.getPreloads([
-      'demos/bookstore/app/actions/public/entry.tsx',
-      'demos/bookstore/app/actions/fragments/public/cart-button.tsx',
-      'demos/bookstore/app/actions/fragments/public/cart-items.tsx',
-      'demos/bookstore/app/actions/books/public/image-carousel.tsx',
+      'demos/record-store/app/actions/public/entry.tsx',
+      'demos/record-store/app/actions/fragments/public/cart-button.tsx',
+      'demos/record-store/app/actions/fragments/public/cart-items.tsx',
+      'demos/record-store/app/actions/books/public/image-carousel.tsx',
     ])
-    hrefs.push(await assets.getHref('demos/bookstore/app/actions/public/app.css'))
+    hrefs.push(await assets.getHref('demos/record-store/app/actions/public/app.css'))
 
     await assertServed(router.fetch, hrefs)
 
