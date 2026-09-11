@@ -40,6 +40,43 @@ await parseTar(response.body, { filenameEncoding: 'latin1' }, (entry) => {
 })
 ```
 
+Entry sizes must be non-negative safe integers. Use `entry.body` to stream content, or `entry.bytes()`, `entry.arrayBuffer()`, or `entry.text()` to buffer it. The buffering methods allocate from the bytes received and consume the body once. If parsing fails before an entry's body is complete, reading that body rejects with the parsing error.
+
+```ts
+await parseTar(archive, async (entry) => {
+  if (entry.type === 'file' && entry.name.endsWith('.txt')) {
+    console.log(entry.name, await entry.text())
+  }
+})
+```
+
+## Size Limits
+
+The parser does not impose entry or archive size limits. Check `entry.size` in the handler before buffering an entry, and track the sum of entry sizes to enforce an aggregate limit:
+
+```ts
+let maxEntrySize = 10 * 1024 * 1024
+let maxTotalSize = 100 * 1024 * 1024
+let totalSize = 0
+
+await parseTar(archive, (entry) => {
+  if (entry.size > maxEntrySize) {
+    throw new Error(`Entry exceeds size limit: ${entry.name}`)
+  }
+
+  totalSize += entry.size
+  if (totalSize > maxTotalSize) {
+    throw new Error('Total entry size exceeds limit')
+  }
+
+  return entry.bytes().then((bytes) => {
+    console.log(entry.name, bytes.byteLength)
+  })
+})
+```
+
+Keep the callback synchronous so size-check errors stop parsing immediately; return a promise for subsequent asynchronous work. To also bound headers, padding, and extension metadata, limit the incoming archive stream after decompression.
+
 ## Benchmark
 
 `tar-parser` performs on par with other popular tar parsing libraries on Node.js.
