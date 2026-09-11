@@ -259,6 +259,18 @@ describe('mysql sql-compiler', () => {
       })
     })
 
+    it('reject invalid order by directions', async () => {
+      await db
+        .query(accounts)
+        .orderBy('id', 'ascending' as 'asc')
+        .all()
+
+      assert.throws(() => compileMysqlOperation(statements[0]), {
+        name: 'TypeError',
+        message: 'Invalid order by direction: expected "asc" or "desc"',
+      })
+    })
+
     it('compile distinct selection with order by', async () => {
       await db.query(accounts).distinct().orderBy('id', 'desc').all()
 
