@@ -26,6 +26,45 @@ export class TarParseError extends Error {
 }
 
 /**
+ * An error thrown when a tar entry exceeds the maximum allowed body size.
+ */
+export class MaxEntrySizeExceededError extends TarParseError {
+  /**
+   * @param maxEntrySize The maximum entry size that was exceeded
+   */
+  constructor(maxEntrySize: number) {
+    super(`Tar entry size exceeds maximum allowed size of ${maxEntrySize} bytes`)
+    this.name = 'MaxEntrySizeExceededError'
+  }
+}
+
+/**
+ * An error thrown when a tar archive exceeds the maximum allowed total size.
+ */
+export class MaxTotalSizeExceededError extends TarParseError {
+  /**
+   * @param maxTotalSize The maximum total size that was exceeded
+   */
+  constructor(maxTotalSize: number) {
+    super(`Tar archive size exceeds maximum allowed size of ${maxTotalSize} bytes`)
+    this.name = 'MaxTotalSizeExceededError'
+  }
+}
+
+/**
+ * An error thrown when a tar archive exceeds the maximum allowed number of entries.
+ */
+export class MaxEntriesExceededError extends TarParseError {
+  /**
+   * @param maxEntries The maximum entry count that was exceeded
+   */
+  constructor(maxEntries: number) {
+    super(`Tar entry count exceeds maximum allowed count of ${maxEntries}`)
+    this.name = 'MaxEntriesExceededError'
+  }
+}
+
+/**
  * The parsed header of a tar entry.
  */
 export interface TarHeader {
@@ -257,7 +296,30 @@ type TarEntryHandler = (entry: TarEntry) => void | Promise<void>
 /**
  * Options for parsing a tar archive.
  */
-export type ParseTarOptions = ParseTarHeaderOptions
+export interface ParseTarOptions extends ParseTarHeaderOptions {
+  /**
+   * Maximum entry body size in bytes, including PAX/GNU metadata entries.
+   * Checked before reading the body or calling the handler. Exceeding the limit
+   * throws a {@link MaxEntrySizeExceededError}. Defaults to 2 MiB (2097152 bytes).
+   * Must be a non-negative safe integer, or `Infinity` to disable the limit.
+   */
+  maxEntrySize?: number
+  /**
+   * Maximum archive size in bytes, including headers, padding, and metadata.
+   * Counts all input bytes, after decompression if performed upstream. Exceeding
+   * the limit throws a {@link MaxTotalSizeExceededError}. Defaults to 20 MiB
+   * (20971520 bytes). Must be a non-negative safe integer, or `Infinity` to disable
+   * the limit.
+   */
+  maxTotalSize?: number
+  /**
+   * Maximum number of entries, including PAX/GNU metadata entries. Padding and
+   * end-of-archive markers do not count. Checked before processing each entry;
+   * exceeding the limit throws a {@link MaxEntriesExceededError}. Defaults to 5000.
+   * Must be a non-negative safe integer, or `Infinity` to disable the limit.
+   */
+  maxEntries?: number
+}
 
 /**
  * Parse a tar archive and call the given handler for each entry it contains.
@@ -275,6 +337,14 @@ export type ParseTarOptions = ParseTarHeaderOptions
  * @returns A promise that resolves when the parse is finished
  */
 export async function parseTar(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void>
+/**
+ * Parse a tar archive with the given options and call the handler for each entry.
+ *
+ * @param archive The tar archive source data
+ * @param options Options that control parsing and size limits
+ * @param handler A function to call for each entry in the archive
+ * @returns A promise that resolves when parsing and all handlers finish
+ */
 export async function parseTar(
   archive: TarArchiveSource,
   options: ParseTarOptions,
@@ -299,13 +369,30 @@ export async function parseTar(
 /**
  * Options for configuring a {@link TarParser}.
  */
-export type TarParserOptions = ParseTarHeaderOptions
+export type TarParserOptions = ParseTarOptions
 
 /**
  * A parser for tar archives.
  */
 export class TarParser {
+  /**
+   * Maximum entry body size in bytes, including PAX/GNU metadata entries.
+   */
+  readonly maxEntrySize: number
+
+  /**
+   * Maximum archive input size in bytes, including headers, padding, and metadata.
+   */
+  readonly maxTotalSize: number
+
+  /**
+   * Maximum number of entries, including PAX/GNU metadata entries.
+   */
+  readonly maxEntries: number
+
   #buffer: Uint8Array | null = null
+  #totalSize = 0
+  #entryCount = 0
   #missing = 0
   #header: TarHeader | null = null
   #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null
@@ -320,7 +407,26 @@ export class TarParser {
   /**
    * @param options Options that control how the tar archive is parsed
    */
-  constructor(options?: TarParserOptions) {
+  constructor(options: TarParserOptions = {}) {
+    let {
+      maxEntrySize = 2 * 1024 * 1024,
+      maxTotalSize = 20 * 1024 * 1024,
+      maxEntries = 5000,
+    } = options
+
+    if (maxEntrySize !== Infinity && (!Number.isSafeInteger(maxEntrySize) || maxEntrySize < 0)) {
+      throw new TypeError('maxEntrySize must be a non-negative safe integer or Infinity')
+    }
+    if (maxTotalSize !== Infinity && (!Number.isSafeInteger(maxTotalSize) || maxTotalSize < 0)) {
+      throw new TypeError('maxTotalSize must be a non-negative safe integer or Infinity')
+    }
+    if (maxEntries !== Infinity && (!Number.isSafeInteger(maxEntries) || maxEntries < 0)) {
+      throw new TypeError('maxEntries must be a non-negative safe integer or Infinity')
+    }
+
+    this.maxEntrySize = maxEntrySize
+    this.maxTotalSize = maxTotalSize
+    this.maxEntries = maxEntries
     this.#options = options
   }
 
@@ -377,6 +483,8 @@ export class TarParser {
 
   #reset(): void {
     this.#buffer = null
+    this.#totalSize = 0
+    this.#entryCount = 0
     this.#missing = 0
     this.#header = null
     this.#bodyController = null
@@ -388,6 +496,11 @@ export class TarParser {
   }
 
   #write(chunk: Uint8Array, handler: TarEntryHandler): void {
+    if (chunk.byteLength > this.maxTotalSize - this.#totalSize) {
+      throw new MaxTotalSizeExceededError(this.maxTotalSize)
+    }
+    this.#totalSize += chunk.byteLength
+
     if (this.#buffer !== null) {
       this.#buffer = concatChunks(this.#buffer, chunk)
     } else {
@@ -430,11 +543,23 @@ export class TarParser {
       return
     }
 
+    if (++this.#entryCount > this.maxEntries) {
+      throw new MaxEntriesExceededError(this.maxEntries)
+    }
+
     let header = decodeTarHeader(block, this.#options)
     this.#longHeader = isLongHeader(header.type)
+    let pax = this.#pax
+    if (this.#paxGlobal !== null) {
+      pax = { ...this.#paxGlobal, ...pax }
+    }
     this.#header = {
       ...header,
-      size: parseEntrySize((!this.#longHeader && this.#pax?.size) || block.subarray(124, 136)),
+      size: parseEntrySize((!this.#longHeader && pax?.size) || block.subarray(124, 136)),
+    }
+
+    if (this.#header.size > this.maxEntrySize) {
+      throw new MaxEntrySizeExceededError(this.maxEntrySize)
     }
 
     if (this.#longHeader) {
@@ -452,10 +577,10 @@ export class TarParser {
       this.#gnuLongLinkPath = null
     }
 
-    if (this.#pax) {
-      if (this.#pax.path) this.#header.name = this.#pax.path
-      if (this.#pax.linkpath) this.#header.linkname = this.#pax.linkpath
-      this.#header.pax = this.#pax
+    if (pax) {
+      if (pax.path) this.#header.name = pax.path
+      if (pax.linkpath) this.#header.linkname = pax.linkpath
+      this.#header.pax = pax
       this.#pax = null
     }
 
@@ -496,13 +621,10 @@ export class TarParser {
         this.#gnuLongLinkPath = decodeLongPath(buffer)
         break
       case 'pax-global-header':
-        this.#paxGlobal = decodePax(buffer)
+        this.#paxGlobal = { ...this.#paxGlobal, ...decodePax(buffer) }
         break
       case 'pax-header':
-        this.#pax =
-          this.#paxGlobal !== null
-            ? Object.assign({}, this.#paxGlobal, decodePax(buffer))
-            : decodePax(buffer)
+        this.#pax = decodePax(buffer)
         break
     }
 
