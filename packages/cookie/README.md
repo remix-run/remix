@@ -41,6 +41,8 @@ let response = new Response('Hello, world!', {
 })
 ```
 
+`cookie.secure` and `cookie.httpOnly` return `undefined` when those options were not configured, so middleware can distinguish defaults from explicit `false`. Use `cookie.secure ?? false` when you need a boolean. Direct serialization omits either attribute unless enabled; partitioned cookies always enable `Secure`.
+
 ### Signing Cookies
 
 This library supports signing cookies, which is useful for ensuring the integrity of the cookie value and preventing tampering. Signing happens automatically when you provide a `secrets` option to the `Cookie` constructor.
