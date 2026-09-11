@@ -14,15 +14,15 @@ export const assetServer = createAssetServer({
   denyFiles: ['demos/i18n/app/**/*.test.*'],
   mounts: {
     app: 'demos/i18n/app',
+    npm: 'node_modules',
     packages: 'packages',
   },
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: isProduction,
-  fingerprint: isProduction ? { buildId: process.env.GITHUB_SHA || String(Date.now()) } : undefined,
+  fingerprint: isProduction,
   watch: isDevelopment,
 })
 
-const scriptEntry = path.resolve(import.meta.dirname, 'actions/public/entry.ts')
+const entry = path.resolve(import.meta.dirname, 'actions/public/entry.ts')
 
-export const scriptSrc = await assetServer.getHref(scriptEntry)
-export const scriptPreloads = await assetServer.getPreloads(scriptEntry)
+export const scriptEntry = await assetServer.getScriptEntry(entry)
