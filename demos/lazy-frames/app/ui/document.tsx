@@ -1,4 +1,5 @@
 import { css, type Handle, type RemixNode } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
 
 import { getAssetEntry } from '../middleware/asset-entry.ts'
 import type { Theme } from './public/theme.ts'
@@ -12,7 +13,8 @@ interface DocumentProps {
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { title, theme, children } = handle.props
-    let { scriptSrc, scriptPreloads } = getAssetEntry()
+    let { scriptEntry } = getAssetEntry()
+    let { href, importMap, preloads } = scriptEntry
 
     return (
       <html lang="en" data-theme={theme}>
@@ -24,10 +26,11 @@ export function Document(handle: Handle<DocumentProps>) {
             content="A long-page demo that mounts Remix Frames as they approach the viewport."
           />
           <title>{title}</title>
-          {scriptPreloads.map((href) => (
-            <link key={href} rel="modulepreload" href={href} />
+          <ImportMap value={importMap} />
+          {preloads.map((preloadHref) => (
+            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}
-          <script async type="module" src={scriptSrc} />
+          <script type="module" src={href} />
         </head>
         <body id="top" data-theme={theme} mix={bodyStyle}>
           {children}
