@@ -6,7 +6,7 @@ import { column } from './column.ts'
 import { Database } from './database.ts'
 import { DataTableDatabaseError, DataTableQueryError, DataTableValidationError } from './errors.ts'
 import { table, hasMany, timestamps } from './table.ts'
-import { eq } from './operators.ts'
+import { and, eq, notInList, or } from './operators.ts'
 import { createRecordingDriver, TestDatabase } from '../../test/recording-driver.ts'
 
 const accounts = table({
@@ -265,6 +265,109 @@ describe('queries', () => {
     assert.equal(result.affectedRows, 2)
     assert.equal(recording.requests.length, 1)
     assert.equal(recording.requests[0].operation.kind, 'insertMany')
+  })
+
+  it('rejects updateMany() when an empty where object is structurally unconditional', async () => {
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
+
+    await assert.rejects(
+      async function () {
+        await db.updateMany(accounts, { status: 'inactive' }, { where: {} })
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message === 'update() does not allow a structurally unconditional where clause'
+        )
+      },
+    )
+    assert.equal(recording.requests.length, 0)
+  })
+
+  it('rejects deleteMany() when an empty where object is structurally unconditional', async () => {
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
+
+    await assert.rejects(
+      async function () {
+        await db.deleteMany(accounts, { where: {} })
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message === 'delete() does not allow a structurally unconditional where clause'
+        )
+      },
+    )
+    assert.equal(recording.requests.length, 0)
+  })
+
+  it('rejects update() when a nested empty notIn predicate is structurally unconditional', async () => {
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
+
+    await assert.rejects(
+      async function () {
+        await db
+          .query(accounts)
+          .where(or(eq('id', 1), notInList('id', [])))
+          .update({ status: 'inactive' })
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message === 'update() does not allow a structurally unconditional where clause'
+        )
+      },
+    )
+    assert.equal(recording.requests.length, 0)
+  })
+
+  it('rejects delete() when a nested empty notIn predicate is structurally unconditional', async () => {
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
+
+    await assert.rejects(
+      async function () {
+        await db
+          .query(accounts)
+          .where(and(notInList('id', [])))
+          .delete()
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message === 'delete() does not allow a structurally unconditional where clause'
+        )
+      },
+    )
+    assert.equal(recording.requests.length, 0)
+  })
+
+  it('allows structurally unconditional predicates in read queries', async () => {
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
+
+    await db.query(accounts).where({}).all()
+    await db.query(accounts).where(notInList('id', [])).all()
+
+    assert.equal(recording.requests.length, 2)
+    assert.equal(recording.requests[0].operation.kind, 'select')
+    assert.equal(recording.requests[1].operation.kind, 'select')
+  })
+
+  it('allows writes with a restrictive and structurally unconditional predicate', async () => {
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
+
+    await db
+      .query(accounts)
+      .where(and(eq('id', 1), notInList('id', [])))
+      .delete()
+
+    assert.equal(recording.requests.length, 1)
+    assert.equal(recording.requests[0].operation.kind, 'delete')
   })
 
   it('throws for createMany({ returnRows: true }) when driver has no RETURNING support', async () => {
