@@ -721,10 +721,17 @@ Native anchors and forms can also control frame-aware navigation with attributes
 the `link(...)` and `navigate(...)` options:
 
 - `data-rmx-target` names the frame to reload.
-- `data-rmx-src` provides the URL to fetch for that frame while `href` remains the browser's destination.
+- `data-rmx-src` provides the URL to fetch for the mounted named frame selected by `data-rmx-target` while `href` remains the browser's destination.
 - `data-rmx-history="push|replace"` controls how the navigation updates history, including overriding a form's default.
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
 - `data-rmx-document` opts out of interception and lets the browser perform a full-document navigation.
+
+The top frame follows the browser URL. If `data-rmx-target` is omitted or no matching frame is mounted,
+an intercepted navigation reloads the top frame from the link or form destination.
+
+A supplied `data-rmx-src` must be a valid same-origin URL regardless of the target. Invalid or
+cross-origin values disable interception and leave the navigation to the browser. These rules also
+apply to the `src` and `target` options of `link(...)` and `navigate(...)`.
 
 [Streaming UI with Frames](/streaming-ui-with-frames/) shows these attributes with named frames and
 explains when a form can submit directly through the frame resolver.

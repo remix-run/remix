@@ -117,9 +117,11 @@ let router = createRouter({
 
 ### Compression Options
 
-**Default:** Uses Node.js defaults for [zlib](https://nodejs.org/api/zlib.html#class-options) and [Brotli](https://nodejs.org/api/zlib.html#class-brotlioptions), with automatic flush handling for server-sent events.
+**Default:** Uses Node.js defaults for [zlib](https://nodejs.org/api/zlib.html#class-options) and [Brotli](https://nodejs.org/api/zlib.html#class-brotlioptions), with streaming-safe flush handling for HTML and server-sent events.
 
-You can pass options options to the underlying Node.js `zlib` and `brotli` compressors for fine-grained control:
+For `text/html` and `text/event-stream` responses, gzip and deflate use `Z_SYNC_FLUSH`, while Brotli uses `BROTLI_OPERATION_FLUSH`. This keeps each response chunk available to clients without waiting for the stream to finish. Explicit `flush` options override these defaults.
+
+You can pass options to the underlying Node.js `zlib` and `brotli` compressors for fine-grained control:
 
 ```ts
 import { createRouter } from 'remix/router'

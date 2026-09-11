@@ -1,5 +1,6 @@
 import { createMiddleware, createRouter, type MiddlewareContext } from 'remix/router'
 import { asyncContext } from 'remix/middleware/async-context'
+import { compression } from 'remix/middleware/compression'
 import { logger } from 'remix/middleware/logger'
 import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
@@ -26,6 +27,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 middleware.push(
+  compression(),
   staticFiles('./public', {
     cacheControl: 'no-store',
     etag: false,

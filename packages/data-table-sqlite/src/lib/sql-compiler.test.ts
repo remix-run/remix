@@ -399,6 +399,27 @@ describe('sqlite sql-compiler', () => {
       })
     })
 
+    it('compile ordering', async () => {
+      await db.query(accounts).orderBy('email', 'asc').orderBy('id', 'desc').all()
+      let compiled = compileSqliteOperation(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" order by "email" ASC, "id" DESC',
+        values: [],
+      })
+    })
+
+    it('reject invalid order by directions', async () => {
+      await db
+        .query(accounts)
+        .orderBy('id', 'ascending' as 'asc')
+        .all()
+
+      assert.throws(() => compileSqliteOperation(statements[0]), {
+        name: 'TypeError',
+        message: 'Invalid order by direction: expected "asc" or "desc"',
+      })
+    })
+
     it('compile with normalized boolean - true', async () => {
       await db.query(accounts).where({ deleted: true }).all()
       let compiled = compileSqliteOperation(statements[0])

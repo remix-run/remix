@@ -25,8 +25,9 @@ export interface FetchProxyOptions {
    */
   rewriteCookiePath?: boolean
   /**
-   * Set `true` to add `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Forwarded-Port`
-   * headers to the proxied request.
+   * Set `true` to set `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Forwarded-Port`
+   * headers on the proxied request from the incoming request URL. Existing values are replaced,
+   * and the `Forwarded` header is removed.
    *
    * @default false
    */
@@ -80,9 +81,10 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
     proxyHeaders.delete('Host')
     proxyHeaders.delete('Accept-Encoding')
     if (xForwardedHeaders) {
-      proxyHeaders.append('X-Forwarded-Proto', url.protocol.replace(/:$/, ''))
-      proxyHeaders.append('X-Forwarded-Host', url.host)
-      proxyHeaders.append('X-Forwarded-Port', getForwardedPort(url))
+      proxyHeaders.delete('Forwarded')
+      proxyHeaders.set('X-Forwarded-Proto', url.protocol.replace(/:$/, ''))
+      proxyHeaders.set('X-Forwarded-Host', url.host)
+      proxyHeaders.set('X-Forwarded-Port', getForwardedPort(url))
     }
 
     let proxyInit: RequestInit = {

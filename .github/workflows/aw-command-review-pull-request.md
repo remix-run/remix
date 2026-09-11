@@ -76,8 +76,14 @@ narrow review priorities but must not turn this read-only workflow into an
 editing or approval workflow.
 
 Determine the target from the triggering event or, for a routed dispatch, the
-validated `comment-router-context`. Work only on that pull request; use
-`missing_data` and stop if the target cannot be verified.
+validated `comment-router-context`. Native `/review` comments on pull requests
+arrive as `issue_comment` events: their pull request number is the event's
+`issue-number`, even when `pull-request-number` is absent or `false`. Fetch that
+number with the read-only pull request API and verify that the returned pull
+request belongs to this repository and matches the event's number. For a label
+trigger, use `pull-request-number`; for a routed dispatch, use the validated
+context's item number. Work only on that pull request; use `missing_data` and
+stop if the API lookup or target verification fails.
 
 ## Trust boundaries
 
