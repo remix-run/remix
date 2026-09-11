@@ -1360,6 +1360,161 @@ describe('asset-server', () => {
     assert.equal(transformCalls, 1)
   })
 
+  it('deduplicates equivalent transform URLs and preserves distinct pipeline inputs', async () => {
+    await write(dir, 'app/content/value.txt', 'hello')
+    let cache = createMemoryFileStorage()
+    let calls: (string | undefined)[] = []
+    let assetServer = createTestServer(dir, {
+      files: {
+        cache,
+        extensions: ['.txt'],
+        transforms: {
+          append: defineFileTransform({
+            param: 'optional',
+            async transform(bytes, { param }) {
+              calls.push(param)
+              return new TextDecoder().decode(bytes) + (param ?? 'default')
+            },
+          }),
+        },
+      },
+    })
+    let responses = await Promise.all([
+      get(assetServer, '/assets/app/content/value.txt?transform=append:a+b'),
+      get(assetServer, '/assets/app/content/value.txt?transform=append%3Aa%20b&v=2'),
+    ])
+    for (let response of responses) {
+      assert.ok(response)
+      assert.equal(await response.text(), 'helloa b')
+    }
+    assert.deepEqual(calls, ['a b'])
+    assert.equal((await cache.list()).files.length, 1)
+
+    let noParam = await get(assetServer, '/assets/app/content/value.txt?transform=append')
+    assert.ok(noParam)
+    assert.equal(await noParam.text(), 'hellodefault')
+    let emptyParam = await get(assetServer, '/assets/app/content/value.txt?transform=append:')
+    assert.ok(emptyParam)
+    assert.equal(await emptyParam.text(), 'hello')
+    let ordered = await get(
+      assetServer,
+      '/assets/app/content/value.txt?transform=append:a&transform=append:b',
+    )
+    assert.ok(ordered)
+    assert.equal(await ordered.text(), 'helloab')
+    let reversed = await get(
+      assetServer,
+      '/assets/app/content/value.txt?transform=append:b&transform=append:a',
+    )
+    assert.ok(reversed)
+    assert.equal(await reversed.text(), 'helloba')
+  })
+
+  it('bounds transformed metadata while preserving conditional requests after replacement', async () => {
+    await write(dir, 'app/content/value.txt', 'hello')
+    let transformCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        transforms: {
+          append: defineFileTransform({
+            param: true,
+            transform(bytes, { param }) {
+              transformCalls += 1
+              return new TextDecoder().decode(bytes) + param
+            },
+          }),
+        },
+      },
+    })
+    let etags: string[] = []
+    for (let index = 0; index < 257; index++) {
+      let response = await get(
+        assetServer,
+        `/assets/app/content/value.txt?transform=append:${index}`,
+      )
+      assert.ok(response)
+      assert.equal(await response.text(), `hello${index}`)
+      let etag = response.headers.get('ETag')
+      assert.ok(etag)
+      etags.push(etag)
+    }
+    assert.equal(transformCalls, 257)
+
+    for (let [index, etag] of etags.entries()) {
+      let response = await get(
+        assetServer,
+        `/assets/app/content/value.txt?transform=append:${index}`,
+        {
+          'If-None-Match': etag,
+        },
+      )
+      assert.ok(response)
+      assert.equal(response.status, 304)
+      assert.equal(response.headers.get('ETag'), etag)
+    }
+    assert.ok(transformCalls > 257)
+  })
+
+  it('bounds transformed storage across requests and server restarts', async () => {
+    await write(dir, 'app/content/value.txt', 'hello')
+    let cache = createMemoryFileStorage()
+    let createServer = () =>
+      createTestServer(dir, {
+        files: {
+          cache,
+          cacheKey: 'bounded-cache',
+          extensions: ['.txt'],
+          transforms: {
+            append: defineFileTransform({
+              param: true,
+              transform(bytes, { param }) {
+                return new TextDecoder().decode(bytes) + param
+              },
+            }),
+          },
+        },
+      })
+    for (let round = 0; round < 2; round++) {
+      let assetServer = createServer()
+      for (let index = 0; index < 257; index++) {
+        let param = `${round}:${index}`
+        let response = await get(
+          assetServer,
+          `/assets/app/content/value.txt?transform=append:${param}`,
+        )
+        assert.ok(response)
+        assert.equal(await response.text(), `hello${param}`)
+      }
+      let entries = await cache.list()
+      assert.ok(entries.files.length <= 256)
+    }
+  })
+
+  it('serves oversized transformed outputs without retaining their bodies', async () => {
+    await write(dir, 'app/content/value.txt', 'hello')
+    let cache = createMemoryFileStorage()
+    let content = new Uint8Array(4 * 1024 * 1024 + 1).fill(65)
+    let assetServer = createTestServer(dir, {
+      files: {
+        cache,
+        extensions: ['.txt'],
+        transforms: {
+          expand: defineFileTransform({
+            transform() {
+              return content
+            },
+          }),
+        },
+      },
+    })
+    let response = await get(assetServer, '/assets/app/content/value.txt?transform=expand')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.deepEqual(new Uint8Array(await response.arrayBuffer()), content)
+    assert.equal((await cache.list()).files.length, 0)
+  })
+
   it('reuses transformed file cache entries across servers with the same files cache key', async () => {
     await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
     let cache = createMemoryFileStorage()

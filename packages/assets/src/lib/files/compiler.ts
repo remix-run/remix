@@ -15,6 +15,13 @@ import { normalizeFilePath, resolveFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { AssetFileTransformResult, ResolvedAssetRequestTransformMap } from './config.ts'
 import { parseAssetTransformInvocations } from './config.ts'
+import {
+  createTransformCacheKey,
+  isTransformCacheable,
+  readCachedTransform,
+  writeCachedTransform,
+} from './cache.ts'
+import type { TransformCacheKey } from './cache.ts'
 import { createSourceFileStore } from './store.ts'
 import type {
   FileSnapshot,
@@ -125,8 +132,10 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   }
   let sourceFileStore: SourceFileStore = createSourceFileStore()
   let sourceFileInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
-  let transformedAssetMetadataByCacheKey = new Map<string, EmittedFileMetadata>()
-  let transformedCacheKeysByIdentityPath = new Map<string, Set<string>>()
+  let transformedAssetMetadataBySlot = new Map<
+    string,
+    { digest: string; identityPath: string; metadata: EmittedFileMetadata }
+  >()
   let transformedEmitInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
   let cacheKey = resolvedOptions.cacheKey ?? crypto.randomUUID()
   let resolveArgs: ResolveArgs = {
@@ -140,18 +149,27 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
       let resolvedFile = resolveServedFileOrThrow(resolveInputFilePath(filePath), resolveArgs)
       let record = getFreshSourceFileRecord(resolvedFile.identityPath)
       if (shouldUseTransformPipeline(getOptions.transform)) {
-        let transformedCacheKey = getTransformedRecordCacheKey(
+        let parsedTransforms = parseRequestTransforms(
+          getOptions.transform,
+          resolvedOptions.transforms,
+          resolvedOptions.maxRequestTransforms,
+        )
+        let transformedCacheKey = await getTransformedRecordCacheKey(
           cacheKey,
           record,
-          getOptions.transform,
+          parsedTransforms,
         )
         let notModified = getNotModifiedFile(
-          transformedAssetMetadataByCacheKey.get(transformedCacheKey),
+          getTransformedAssetMetadata(transformedCacheKey),
           getOptions,
         )
         if (notModified) return notModified
 
-        let transformedFile = await getOrCreateTransformedFile(record, getOptions.transform)
+        let transformedFile = await getOrCreateTransformedFile(
+          record,
+          parsedTransforms,
+          transformedCacheKey,
+        )
         notModified = getNotModifiedFile(toEmittedFileMetadata(transformedFile), getOptions)
         if (notModified) return notModified
 
@@ -185,9 +203,26 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
       let record = getFreshSourceFileRecord(resolvedFile.identityPath)
       let href = resolvedFile.stableUrlPathname
       if (resolvedOptions.fingerprintAssets) {
-        let emittedFile = shouldUseTransformPipeline(hrefOptions.transform)
-          ? await getOrCreateTransformedFile(record, hrefOptions.transform)
-          : await getOrCreateSourceFile(record)
+        let emittedFile: EmittedFile
+        if (shouldUseTransformPipeline(hrefOptions.transform)) {
+          let parsedTransforms = parseRequestTransforms(
+            hrefOptions.transform,
+            resolvedOptions.transforms,
+            resolvedOptions.maxRequestTransforms,
+          )
+          let transformedCacheKey = await getTransformedRecordCacheKey(
+            cacheKey,
+            record,
+            parsedTransforms,
+          )
+          emittedFile = await getOrCreateTransformedFile(
+            record,
+            parsedTransforms,
+            transformedCacheKey,
+          )
+        } else {
+          emittedFile = await getOrCreateSourceFile(record)
+        }
         href = formatFingerprintedPathname(href, emittedFile.fingerprint)
       }
 
@@ -289,15 +324,10 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
 
   async function getOrCreateTransformedFile(
     record: SourceFileRecord,
-    transformQuery: readonly string[] | null,
+    parsedTransforms: readonly ParsedRequestTransform[],
+    transformedCacheKey: TransformCacheKey,
   ): Promise<EmittedFile> {
-    let parsedTransforms = parseRequestTransforms(
-      transformQuery,
-      resolvedOptions.transforms,
-      resolvedOptions.maxRequestTransforms,
-    )
-    let transformedCacheKey = getTransformedRecordCacheKey(cacheKey, record, transformQuery)
-    let existing = transformedEmitInFlightByCacheKey.get(transformedCacheKey)
+    let existing = transformedEmitInFlightByCacheKey.get(transformedCacheKey.digest)
     if (existing) return existing
 
     let promise = (async () => {
@@ -314,22 +344,26 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
         extension: transformedFile.extension,
         filePath: record.identityPath,
       })
-      rememberTransformedAssetMetadata(
-        transformedCacheKey,
-        record.identityPath,
-        toEmittedFileMetadata(emittedFile),
-      )
-      await setCachedTransformedFile(transformedCacheKey, record.identityPath, emittedFile)
+      if (isTransformCacheable(emittedFile)) {
+        rememberTransformedAssetMetadata(
+          transformedCacheKey,
+          record.identityPath,
+          toEmittedFileMetadata(emittedFile),
+        )
+        if (resolvedOptions.cache) {
+          await writeCachedTransform(resolvedOptions.cache, transformedCacheKey, emittedFile)
+        }
+      }
       return emittedFile
     })()
 
-    transformedEmitInFlightByCacheKey.set(transformedCacheKey, promise)
+    transformedEmitInFlightByCacheKey.set(transformedCacheKey.digest, promise)
 
     try {
       return await promise
     } finally {
-      if (transformedEmitInFlightByCacheKey.get(transformedCacheKey) === promise) {
-        transformedEmitInFlightByCacheKey.delete(transformedCacheKey)
+      if (transformedEmitInFlightByCacheKey.get(transformedCacheKey.digest) === promise) {
+        transformedEmitInFlightByCacheKey.delete(transformedCacheKey.digest)
       }
     }
   }
@@ -430,19 +464,19 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   }
 
   async function getCachedTransformedFile(
-    cacheKey: string,
+    cacheKey: TransformCacheKey,
     identityPath: string,
   ): Promise<EmittedFile | null> {
     if (!resolvedOptions.cache) return null
 
-    let file = await resolvedOptions.cache.get(cacheKey)
+    let file = await readCachedTransform(resolvedOptions.cache, cacheKey)
     if (!file) return null
 
-    let body = new Uint8Array(await file.arrayBuffer())
+    let body = file.body
     let metadata =
-      transformedAssetMetadataByCacheKey.get(cacheKey) ??
+      getTransformedAssetMetadata(cacheKey) ??
       (await createEmittedFileMetadata(body, {
-        extension: path.extname(file.name).toLowerCase(),
+        extension: file.extension,
         filePath: identityPath,
       }))
 
@@ -452,22 +486,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
       body,
       ...metadata,
     }
-  }
-
-  async function setCachedTransformedFile(
-    cacheKey: string,
-    filePath: string,
-    emittedFile: EmittedFile,
-  ): Promise<void> {
-    if (!resolvedOptions.cache) return
-
-    let basename = path.basename(filePath, path.extname(filePath))
-    await resolvedOptions.cache.set(
-      cacheKey,
-      new File([Buffer.from(emittedFile.body)], `${basename}${emittedFile.extension}`, {
-        type: emittedFile.contentType,
-      }),
-    )
   }
 
   async function createEmittedFile(
@@ -485,26 +503,22 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   }
 
   function clearTransformedCacheIndex(identityPath: string): void {
-    let cacheKeys = transformedCacheKeysByIdentityPath.get(identityPath)
-    if (!cacheKeys) return
-
-    for (let cacheKey of cacheKeys) {
-      transformedAssetMetadataByCacheKey.delete(cacheKey)
+    for (let [slot, entry] of transformedAssetMetadataBySlot) {
+      if (entry.identityPath === identityPath) transformedAssetMetadataBySlot.delete(slot)
     }
+  }
 
-    transformedCacheKeysByIdentityPath.delete(identityPath)
+  function getTransformedAssetMetadata(key: TransformCacheKey): EmittedFileMetadata | undefined {
+    let entry = transformedAssetMetadataBySlot.get(key.slot)
+    return entry?.digest === key.digest ? entry.metadata : undefined
   }
 
   function rememberTransformedAssetMetadata(
-    cacheKey: string,
+    key: TransformCacheKey,
     identityPath: string,
     metadata: EmittedFileMetadata,
   ): void {
-    transformedAssetMetadataByCacheKey.set(cacheKey, metadata)
-
-    let cacheKeys = transformedCacheKeysByIdentityPath.get(identityPath) ?? new Set<string>()
-    cacheKeys.add(cacheKey)
-    transformedCacheKeysByIdentityPath.set(identityPath, cacheKeys)
+    transformedAssetMetadataBySlot.set(key.slot, { digest: key.digest, identityPath, metadata })
   }
 
   async function createEmittedFileMetadata(
@@ -599,16 +613,14 @@ function getRecordCacheKey(record: SourceFileRecord): string {
 }
 
 function getTransformedRecordCacheKey(
-  cacheKey: string,
+  namespace: string,
   record: SourceFileRecord,
-  transformQuery: readonly string[] | null,
-): string {
-  return [
-    encodeCacheKeyPart(cacheKey),
-    encodeCacheKeyPart(record.identityPath),
-    String(record.invalidationVersion),
-    encodeCacheKeyPart(JSON.stringify(transformQuery ?? [])),
-  ].join('/')
+  transforms: readonly ParsedRequestTransform[],
+): Promise<TransformCacheKey> {
+  return createTransformCacheKey(
+    namespace,
+    JSON.stringify([record.identityPath, record.invalidationVersion, transforms]),
+  )
 }
 
 function getFileSnapshot(filePath: string): FileSnapshot | null {
@@ -666,10 +678,6 @@ function appendTransformQuery(href: string, transformQuery: readonly string[] | 
 
   let search = searchParams.toString()
   return search.length > 0 ? `${href}?${search}` : href
-}
-
-function encodeCacheKeyPart(value: string): string {
-  return Buffer.from(value).toString('base64url')
 }
 
 function normalizeTransformResult(

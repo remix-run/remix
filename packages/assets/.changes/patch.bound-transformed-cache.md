@@ -1,0 +1,1 @@
+Bound transformed-file caching to 256 reusable entries per cache namespace, with at most 4 MiB per stored entry. Equivalent transform URLs continue to share cached output; replaced entries and larger outputs are recomputed as needed. Existing cache entries from older formats are not reused and can be removed through the storage backend's lifecycle policy.
