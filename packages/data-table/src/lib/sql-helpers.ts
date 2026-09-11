@@ -6,6 +6,25 @@ import type { TableRef } from './driver.ts'
 export type QuoteIdentifier = (value: string) => string
 
 /**
+ * Compiles a case-insensitive `orderBy` direction for use in a SQL statement.
+ * @param direction Runtime value to validate.
+ * @returns The uppercase SQL direction keyword.
+ */
+export function compileOrderByDirection(direction: unknown): 'ASC' | 'DESC' {
+  let normalizedDirection = typeof direction === 'string' ? direction.toLowerCase() : direction
+
+  if (normalizedDirection === 'asc') {
+    return 'ASC'
+  }
+
+  if (normalizedDirection === 'desc') {
+    return 'DESC'
+  }
+
+  throw new TypeError('Invalid order by direction: expected "asc" or "desc"')
+}
+
+/**
  * Normalizes an arbitrary join type string into `inner`, `left`, or `right`.
  * @param type Input join type.
  * @returns Normalized join type.

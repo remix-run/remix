@@ -37,6 +37,19 @@ let title = text.match(/<title>([^<]+)<\/title>/)[1]
 assert(title.includes('Remix'))
 ```
 
+## Forwarding Headers
+
+Set `xForwardedHeaders: true` to set `X-Forwarded-Proto`, `X-Forwarded-Host`, and
+`X-Forwarded-Port` from the incoming request URL. When enabled, the proxy removes the `Forwarded`
+header and replaces any existing values for these three headers so the target receives a single set
+of URL metadata from the current proxy request.
+
+```ts
+let proxy = createFetchProxy('https://remix.run', {
+  xForwardedHeaders: true,
+})
+```
+
 ## Encoding and Framing Headers
 
 Since proxying is done via `fetch` rather than raw HTTP messages, some encoding and framing headers need to be removed.

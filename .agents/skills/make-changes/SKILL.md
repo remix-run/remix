@@ -12,12 +12,13 @@ Write concise release notes that match this repository's `.changes` conventions.
 ## Workflow
 
 1. Read the package's `package.json`, existing `.changes/` directory if present, and any relevant PR diff or commit range.
-2. Check whether an unpublished change file already exists for the same work. If it does, update it in place instead of creating a duplicate note.
-3. Choose the bump type from the package version and the user-facing impact.
-4. Create `packages/<package>/.changes/` on demand if it does not already exist.
-5. Write user-facing release notes that describe shipped behavior, APIs, exports, migrations, or upgrade work.
-6. Run `pnpm changes:preview` to verify the rendered changelog output.
-7. Run lint or broader validation when the task also touched code, package metadata, docs, or release tooling.
+2. Read recent released entries from the relevant package changelog on `origin/main`. Use them as the editorial reference for voice, structure, and level of detail; use unpublished change files to detect overlap and follow placement conventions, not as the sole writing model.
+3. Check whether an unpublished change file already exists for the same work. If it does, update it in place instead of creating a duplicate note.
+4. Choose the bump type from the package version and the user-facing impact.
+5. Create `packages/<package>/.changes/` on demand if it does not already exist.
+6. Write changelog copy that describes shipped behavior, APIs, exports, migrations, or upgrade work from the user's perspective.
+7. Run `pnpm changes:preview` and review the affected package sections as complete changelog sections, not isolated rendered files. Edit for repetition, inconsistent voice, fragmented migrations, and overlapping notes.
+8. Run lint or broader validation when the task also touched code, package metadata, docs, or release tooling.
 
 ## Bump Rules
 
@@ -39,26 +40,31 @@ Write concise release notes that match this repository's `.changes` conventions.
 
 ## Note Content
 
+- Treat every change file as final changelog copy, not as a PR summary, implementation log, or inventory of touched APIs.
 - Document user-visible behavior, public API changes, exports, migrations, or upgrade work.
 - Do not write release notes for internal refactors unless they surface as real API or behavior changes.
 - Keep each note self-contained. A reader should understand the shipped behavior from the note itself, with links adding context rather than replacing the explanation.
+- Lead with the user-visible behavior, consequence, or required migration in direct language. Introduce API names where they become relevant to that explanation instead of opening with an inventory such as “This adds X, allows Y, and exposes Z.”
 - When a change is tied to a public issue, PR, RFC, decision doc, spec, or external bug report, include a short reference in the note. Prefer the PR that actually addressed the issue or feature over the source issue because the source issue remains reachable from the PR. Use inline same-repo references like `(see #1234)` and full URLs for external repositories, specs, or reports.
 - Name the affected API, route convention, package, entrypoint, runtime, browser, or tool version when that detail helps users recognize whether the note applies to them.
 - For bug fixes, describe the user-visible symptom or failing scenario instead of only describing the implementation fix.
-- For breaking changes, include the old behavior, new behavior, and migration path.
+- Structure breaking changes in this order: state what changed, explain the practical impact or who is affected, then give the migration. Do not bury the required action beneath implementation background.
 - For deprecations, mention the replacement API when one exists.
+- When migration prose tells readers to change code, configuration, commands, or entrypoints, include a fenced `diff` that shows that change. Keep enough surrounding context to identify the owning function call, configuration object, command, or entrypoint; avoid context-free fragments containing only the renamed token.
+- Use contextual before/after examples for changed behavior when a diff would be misleading or when multiple complete states are clearer. Show the owning function, configuration, or entrypoint in both examples.
 - Avoid linking every implementation PR when it does not add useful reader context.
-- Prefer a small number of logically grouped notes over many tiny files.
+- Prefer a small number of logically grouped notes over many tiny files. Consolidate related cross-package changes when they describe one migration, user workflow, or app-level capability, while keeping the owning package notes complete.
 - Do not manually hard-wrap prose in `.changes/*.md` files. Keep each paragraph or bullet on a single source line and let rendered changelogs wrap naturally.
 - Use flat bullets only when they add clarity. Short paragraphs are usually better.
 - Do not edit historical `CHANGELOG.md` entries unless explicitly asked, except for narrow corrections such as broken links, typos, or clearly invalid references.
 
 ## Detail Levels
 
-- Package-level change files are the source of truth. For sub-packages, include the concrete API, behavior, runtime, or tooling details users need to understand the change.
-- Include before/after examples in sub-package notes when they clarify a new API, migration, breaking change, or changed usage pattern.
+- Package-level change files are the source of truth. For sub-packages, include the concrete API, behavior, runtime, or tooling details users need to understand the change, but shape those details into polished, user-focused prose rather than an implementation inventory.
+- Include contextual before/after examples in sub-package notes when they clarify a new API, migration, breaking change, or changed usage pattern. If the prose instructs readers to edit code, use a `diff` as described above.
 - Include useful PR, issue, RFC, decision, spec, or external report links in sub-package notes. Prefer the implementation PR when it gives readers the full trail.
-- `packages/remix/.changes` entries should read like an umbrella release summary for `remix` users. Keep them shorter than the underlying package notes and focus on the surfaced `remix/...` entrypoints or release-level impact.
+- `packages/remix/.changes` entries should read like an umbrella release summary for application authors. Synthesize a coherent app-level behavior, workflow, or migration instead of concatenating lower-level package API lists. Keep them shorter than the underlying package notes and focus on the surfaced `remix/...` entrypoints or release-level impact.
+- When several owning packages participate in the same app-level workflow or migration, write one cohesive `remix` note that explains how the pieces work together. Do not mirror the package boundaries unless they represent distinct user-facing changes.
 - Do not duplicate detailed examples, migration prose, or implementation background from a sub-package note into the `remix` note unless the umbrella package itself changes behavior.
 - When a `remix` note summarizes a sub-package change, link to the lower-level changelog, release, PR, or other durable detail source when that helps readers drill down.
 - The release tooling already adds dependency bump links to released package tags, so do not manually recreate dependency bump lists in `remix` change files.
@@ -79,5 +85,11 @@ Write concise release notes that match this repository's `.changes` conventions.
 ## Before Finishing
 
 - Did you inspect existing unpublished `.changes` files first?
-- Does the note describe user-facing changes instead of implementation details?
-- Did `pnpm changes:preview` render the expected changelog entry?
+- Did you use recent released changelog entries from `origin/main` as the editorial reference?
+- Does each note lead with user-visible behavior, impact, or migration rather than an implementation inventory?
+- Does every breaking note explain what changed, the practical impact, and the migration in that order?
+- Does every instruction to change code include a contextual `diff`?
+- Are package-level notes technically complete, polished, and user-focused?
+- Does each `remix` umbrella note synthesize a coherent app-level story instead of concatenating package APIs?
+- Did you consolidate related cross-package notes when they form one migration or workflow?
+- Did `pnpm changes:preview` render the expected entries, and did you review each full affected section for repetition, inconsistent voice, fragmentation, and overlap?

@@ -1,11 +1,13 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { execFile, spawn, type ChildProcess } from 'node:child_process'
+import { once } from 'node:events'
 import * as fs from 'node:fs/promises'
 import * as http from 'node:http'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { promisify } from 'node:util'
 import { watch, type FSWatcher } from 'chokidar'
 import { createAssetServer, type AssetServer } from '../src/assets.ts'
 import type { HmrPayload } from '../src/lib/hmr.ts'
@@ -28,17 +30,23 @@ const consoleMessageTimeout = 5000
 const hmrConnectionTimeout = 15_000
 
 describe('asset server HMR', () => {
-  it('updates accepted browser module output without losing page state', async (t) => {
+  it('cancels the HMR connection wait when navigation fails', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+    t.after(fixture.close)
+    await page.route('**/*', (route) => route.abort())
+    await assert.rejects(navigateToHmrPage(page))
+  })
 
-    let documentResponse = await page.goto('/')
+  it('updates accepted browser module output without losing page state', async (t) => {
+    let fixture = await createHmrFixture()
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    let documentResponse = await navigateToHmrPage(page)
     assert.ok(documentResponse)
     assert.equal(documentResponse.status(), 200, await documentResponse.text())
-    await connected
     await assertCount(page, 'Count: 3')
     await page.locator('[data-testid="field"]').fill('hello')
 
@@ -55,13 +63,10 @@ describe('asset server HMR', () => {
 
   it('recovers an accepted browser module after a failed transform is fixed', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await assertCount(page, 'Count: 3')
     await page.locator('[data-testid="field"]').fill('hello')
 
@@ -84,15 +89,12 @@ describe('asset server HMR', () => {
 
   it('resolves bare imports from timestamped browser module updates through import map scopes', async (t) => {
     let fixture = await createHmrFixture({ counterBareImport: true })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    let documentResponse = await page.goto('/')
+    t.after(fixture.close)
+    let documentResponse = await navigateToHmrPage(page)
     assert.ok(documentResponse)
     assert.equal(documentResponse.status(), 200, await documentResponse.text())
-    await connected
     await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
     await page.locator('[data-testid="field"]').fill('hello')
 
@@ -122,13 +124,10 @@ describe('asset server HMR', () => {
 
   it('installs a new bare import mapping before applying a browser module update', async (t) => {
     let fixture = await createHmrFixture({ counterBareImportConfigured: true })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="increment"]', 'Increment')
     await page.locator('[data-testid="field"]').fill('hello')
     assert.equal(await page.locator('script[type="importmap"]').count(), 1)
@@ -179,13 +178,10 @@ describe('asset server HMR', () => {
 
   it('applies updates with new import map entries', async (t) => {
     let fixture = await createHmrFixture({ counterBareImportConfigured: true })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="increment"]', 'Increment')
     await page.locator('[data-testid="field"]').fill('hello')
 
@@ -207,13 +203,10 @@ describe('asset server HMR', () => {
 
   it('installs mappings for a new transitive browser module graph before applying an update', async (t) => {
     let fixture = await createHmrFixture({ counterBareImportConfigured: true })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="increment"]', 'Increment')
     await page.locator('[data-testid="field"]').fill('hello')
     assert.equal(await page.locator('script[type="importmap"]').count(), 1)
@@ -234,13 +227,10 @@ describe('asset server HMR', () => {
 
   it('logs and reloads when an update conflicts with a removed late import map', async (t) => {
     let fixture = await createHmrFixture({ counterBareImportConfigured: true })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="increment"]', 'Increment')
     await page.locator('[data-testid="field"]').fill('reload me')
     await page.evaluate(async () => {
@@ -287,13 +277,10 @@ describe('asset server HMR', () => {
       conflictingInitialBareImport: true,
       counterBareImportConfigured: true,
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="increment"]', 'Increment')
     await page.locator('[data-testid="field"]').fill('reload me')
     await page.locator('script[type="importmap"]').evaluate((script) => {
@@ -329,13 +316,10 @@ describe('asset server HMR', () => {
 
   it('updates bare dependencies accepted through import map scopes', async (t) => {
     let fixture = await createHmrFixture({ counterBareImport: true })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
     await page.locator('[data-testid="field"]').fill('hello')
 
@@ -356,13 +340,10 @@ describe('asset server HMR', () => {
 
   it('reloads when tsconfig metadata changes an installed import map', async (t) => {
     let fixture = await createHmrFixture({ counterBareImport: true })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
     await page.locator('[data-testid="field"]').fill('reload me')
 
@@ -380,13 +361,10 @@ describe('asset server HMR', () => {
 
   it('reloads when package metadata changes an installed import map', async (t) => {
     let fixture = await createHmrFixture({ counterPackageImport: true })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
     await page.locator('[data-testid="field"]').fill('reload me')
 
@@ -404,13 +382,10 @@ describe('asset server HMR', () => {
 
   it('reloads the page when an accepted browser module export is added', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await page.locator('[data-testid="field"]').fill('typed before reload')
 
     let reloaded = waitForNavigation(page)
@@ -432,13 +407,10 @@ describe('asset server HMR', () => {
     let fixture = await createHmrFixture({
       counterExtraExports: 'export const foo = true\n',
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await page.locator('[data-testid="field"]').fill('typed before reload')
 
     let reloaded = waitForNavigation(page)
@@ -459,13 +431,10 @@ describe('asset server HMR', () => {
     let fixture = await createHmrFixture({
       counterExtraExports: 'export const foo = true\n',
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await page.locator('[data-testid="field"]').fill('typed before reload')
 
     let reloaded = waitForNavigation(page)
@@ -487,14 +456,11 @@ describe('asset server HMR', () => {
     let fixture = await createHmrFixture({
       counterExtraExports: ["import { foo } from './stable.ts'", 'export { foo }', ''].join('\n'),
     })
-    t.after(fixture.close)
     await write(fixture.rootDir, 'app/stable.ts', 'export const foo = {}\n')
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await page.locator('[data-testid="field"]').fill('typed before update')
 
     await write(
@@ -514,13 +480,10 @@ describe('asset server HMR', () => {
     let fixture = await createHmrFixture({
       counterExtraExports: 'export const foo = {}\n',
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await page.locator('[data-testid="field"]').fill('typed before reload')
 
     let reloaded = waitForNavigation(page)
@@ -545,13 +508,10 @@ describe('asset server HMR', () => {
         parentAccepts: true,
       },
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="browser-message"]', 'Browser: before')
     await page.locator('[data-testid="field"]').fill('typed before update')
 
@@ -570,13 +530,10 @@ describe('asset server HMR', () => {
         trackDependencyDispose: true,
       },
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="browser-message"]', 'Browser: before')
 
     await writeBrowserInvalidationMessage(fixture.rootDir, 'Browser: after', {
@@ -604,13 +561,10 @@ describe('asset server HMR', () => {
         parentAccepts: false,
       },
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="browser-message"]', 'Browser: before')
     await page.locator('[data-testid="field"]').fill('typed before reload')
 
@@ -624,13 +578,10 @@ describe('asset server HMR', () => {
 
   it('updates a stylesheet after a failed HMR transform is fixed', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
     await waitForComputedStyle(page, '[data-testid="increment"]', 'padding-top', '13px')
 
@@ -668,13 +619,10 @@ describe('asset server HMR', () => {
 
   it('updates a linked stylesheet when an imported stylesheet changes', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
 
     let linkedStyleRequest = waitForStylesheetResponse(page, 200)
@@ -700,15 +648,12 @@ describe('asset server HMR', () => {
 
   it('ignores JavaScript updates for modules that are not loaded in the page', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
     await write(fixture.rootDir, 'app/inactive.ts', getInactiveModuleSource('before'))
 
     let fixtureServer = await createHmrTestServer(fixture)
     let page = await t.serve(fixtureServer)
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await get(page, '/assets/app/inactive.ts')
     await page.locator('[data-testid="field"]').fill('typed before update')
 
@@ -723,15 +668,12 @@ describe('asset server HMR', () => {
 
   it('ignores CSS updates for stylesheets that are not present in the page', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
     await write(fixture.rootDir, 'app/inactive.css', 'body { color: red; }\n')
 
     let fixtureServer = await createHmrTestServer(fixture)
     let page = await t.serve(fixtureServer)
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await get(page, '/assets/app/inactive.css')
     await page.locator('[data-testid="field"]').fill('typed before update')
 
@@ -752,22 +694,21 @@ describe('asset server HMR', () => {
     try {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
-      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-      await page.goto('/')
-      await connected
+      await navigateToHmrPage(page)
       await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(255, 0, 0)')
 
       let unexpectedStyleRequest = waitForStylesheetResponse(page, 200, { timeout: 250 }).then(
         () => true,
         () => false,
       )
+      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete')
       await write(
         fixture.rootDir,
         'server-side-effect.ts',
         `export const sideEffect = 'style-test'\n`,
       )
-      await waitForConsoleMessage(page, 'Server frame reload complete')
+      await serverFrameReloaded
+      await server.waitForReady(1)
 
       assert.equal(await unexpectedStyleRequest, false)
       await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
@@ -781,14 +722,11 @@ describe('asset server HMR', () => {
 
   it('recovers failed stylesheet updates after the HMR event stream reconnects', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let server = await createHmrTestServer(fixture)
     let page = await t.serve(server)
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
 
     let stylesheetPath = path.join(fixture.rootDir, 'app/styles.css')
@@ -825,10 +763,7 @@ describe('asset server HMR', () => {
     try {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
-      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-      await page.goto('/')
-      await connected
+      await navigateToHmrPage(page)
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
       await waitForText(page, '[data-testid="client-label"]', 'Client: before')
       await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(255, 0, 0)')
@@ -851,8 +786,10 @@ describe('asset server HMR', () => {
       await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(0, 0, 255)')
       assert.equal(server.readyCount, 1)
 
+      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete')
       await write(fixture.rootDir, 'server-side-effect.ts', `export const sideEffect = 'mixed'\n`)
-      await waitForConsoleMessage(page, 'Server frame reload complete')
+      await serverFrameReloaded
+      await server.waitForReady(1)
       assert.equal(server.readyCount, 2)
     } finally {
       await server?.close()
@@ -868,10 +805,7 @@ describe('asset server HMR', () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let ready = await server.waitForReady(0)
-      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-      await page.goto('/')
-      await connected
+      await navigateToHmrPage(page)
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
       await page.locator('[data-testid="client-field"]').fill('typed before reload')
 
@@ -905,10 +839,7 @@ describe('asset server HMR', () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let requestFailures = monitorLocalRequestFailures(page, server.baseUrl)
-      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-      await page.goto('/')
-      await connected
+      await navigateToHmrPage(page)
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
 
       await write(fixture.rootDir, 'server-message.ts', `export const serverMessage = \n`)
@@ -948,10 +879,7 @@ describe('asset server HMR', () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let requestFailures = monitorLocalRequestFailures(page, server.baseUrl)
-      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-      await page.goto('/')
-      await connected
+      await navigateToHmrPage(page)
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
 
       let serverMessagePath = path.join(fixture.rootDir, 'server-message.ts')
@@ -1044,11 +972,17 @@ type NodeHmrTestServer = {
 
 type TestPage = Awaited<ReturnType<TestContext['serve']>>
 
+type PageRequest = {
+  method(): string
+  url(): string
+}
+
 type PageDiagnostics = {
   consoleMessages: string[]
   getServerOutput?: () => string
   navigations: string[]
   pageErrors: string[]
+  pendingRequests: Map<PageRequest, number>
   requestFailures: string[]
   responseFailures: string[]
 }
@@ -1073,6 +1007,7 @@ function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): 
     getServerOutput,
     navigations: [],
     pageErrors: [],
+    pendingRequests: new Map(),
     requestFailures: [],
     responseFailures: [],
   }
@@ -1088,11 +1023,18 @@ function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): 
     if (frame.parentFrame() !== null) return
     diagnostics.navigations.push(frame.url())
   })
+  page.on('request', (request) => {
+    diagnostics.pendingRequests.set(request, Date.now())
+  })
   page.on('requestfailed', (request) => {
+    diagnostics.pendingRequests.delete(request)
     let failureText = request.failure()?.errorText
     diagnostics.requestFailures.push(
       `${request.method()} ${request.url()}${failureText ? ` (${failureText})` : ''}`,
     )
+  })
+  page.on('requestfinished', (request) => {
+    diagnostics.pendingRequests.delete(request)
   })
   page.on('response', (response) => {
     if (response.status() < 400) return
@@ -1104,10 +1046,18 @@ function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): 
 
 function formatPageDiagnostics(page: TestPage): string {
   let diagnostics = attachPageDiagnostics(page)
+  let now = Date.now()
+  let pendingRequests = Array.from(
+    diagnostics.pendingRequests,
+    ([request, startedAt]) => `${request.method()} ${request.url()} (${now - startedAt}ms)`,
+  )
+  let browserName = page.context().browser()?.browserType().name() ?? 'unknown'
   let sections = [
+    `browser:\n${browserName}`,
     formatDiagnosticsSection('console', diagnostics.consoleMessages),
     formatDiagnosticsSection('pageerror', diagnostics.pageErrors),
     formatDiagnosticsSection('navigation', diagnostics.navigations),
+    formatDiagnosticsSection('pending request', pendingRequests),
     formatDiagnosticsSection('requestfailed', diagnostics.requestFailures),
     formatDiagnosticsSection('response >= 400', diagnostics.responseFailures),
   ].filter(Boolean)
@@ -1658,6 +1608,14 @@ function getNodeHmrProxyDevSource(): string {
     '  }',
     '})',
     '',
+    'process.once("SIGINT", closeProxy)',
+    'process.once("SIGTERM", closeProxy)',
+    '',
+    'function closeProxy() {',
+    '  server.closeAllConnections()',
+    '  server.close()',
+    '}',
+    '',
     'async function waitForPort(filePath) {',
     '  while (true) {',
     '    try {',
@@ -1876,6 +1834,7 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
   let browserHmrFileEventHandlers = new Set<BrowserHmrFileEventHandler>()
   let browserUpdateWaiters = new Map<string, Array<() => void>>()
   let browserHmrWatcher: FSWatcher | undefined
+  let pendingBrowserHmrEvents = Promise.resolve()
 
   let createCurrentAssetServer = () =>
     createAssetServer({
@@ -1916,20 +1875,21 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     if (assetServer) return
     hmrEventStream = createTestHmrEventStream()
     assetServer = createCurrentAssetServer()
-    startBrowserHmrWatcher()
+    await startBrowserHmrWatcher()
   }
 
   async function stopAssets(): Promise<void> {
-    await assetServer?.close()
-    assetServer = undefined
     await browserHmrWatcher?.close()
     browserHmrWatcher = undefined
+    await pendingBrowserHmrEvents
+    await assetServer?.close()
+    assetServer = undefined
     hmrEventStream?.close()
     hmrEventStream = undefined
   }
 
   hmrEventStream = createTestHmrEventStream()
-  startBrowserHmrWatcher()
+  await startBrowserHmrWatcher()
 
   let server = http.createServer(async (request, response) => {
     try {
@@ -1980,10 +1940,15 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     },
   }
 
-  function startBrowserHmrWatcher(): void {
+  async function startBrowserHmrWatcher(): Promise<void> {
     if (browserHmrWatcher) return
 
     browserHmrWatcher = watch(fixture.rootDir, {
+      // Match node-hmr's write stabilization so Chokidar does not drop rapid edits.
+      awaitWriteFinish: {
+        pollInterval: 10,
+        stabilityThreshold: 10,
+      },
       ignoreInitial: true,
       interval: 50,
       usePolling: true,
@@ -1991,10 +1956,14 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
 
     browserHmrWatcher.on('all', (event, filePath) => {
       if (event !== 'add' && event !== 'change' && event !== 'unlink') return
-      handleBrowserHmrFileEvent({ event, filePath }).catch((error: unknown) => {
-        console.error(error)
-      })
+      pendingBrowserHmrEvents = pendingBrowserHmrEvents
+        .then(() => handleBrowserHmrFileEvent({ event, filePath }))
+        .catch((error: unknown) => {
+          console.error(error)
+        })
     })
+
+    await once(browserHmrWatcher, 'ready')
   }
 
   async function handleBrowserHmrFileEvent(event: BrowserHmrFileEvent): Promise<void> {
@@ -2114,6 +2083,7 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
   })
 
   let ready = fixture.devProxy ? await waitForProxyReady() : await waitForReadyEvent(0)
+  if (fixture.devProxy) await waitForReadyEvent(0)
 
   return {
     baseUrl: `http://127.0.0.1:${ready.port}`,
@@ -2151,7 +2121,9 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
       () => proxyReadyEvents[0] !== undefined,
       () => `Timed out waiting for node-hmr proxy server.\n${processOutput}`,
     )
-    return proxyReadyEvents[0]!
+    let event = proxyReadyEvents[0]
+    assert.ok(event)
+    return event
   }
 }
 
@@ -2292,17 +2264,22 @@ async function writeFetchResponse(
   }
 }
 
-function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
+function waitForConsoleMessage(
+  page: TestPage,
+  text: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<void> {
   attachPageDiagnostics(page)
-  return new Promise((resolve, reject) => {
+  let startedAt = Date.now()
+  let promise = new Promise<void>((resolve, reject) => {
     let consoleMessages: string[] = []
     let pageErrors: string[] = []
     let timeoutMs = text === '[remix] HMR connected' ? hmrConnectionTimeout : consoleMessageTimeout
     let timeout = setTimeout(() => {
-      reject(
+      rejectWait(
         new Error(
           [
-            `Timed out waiting for console message: ${text}`,
+            `Timed out after ${Date.now() - startedAt}ms waiting for console message: ${text}`,
             ...consoleMessages.map((message) => `console: ${message}`),
             ...pageErrors.map((message) => `pageerror: ${message}`),
             formatPageDiagnostics(page),
@@ -2311,15 +2288,39 @@ function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
       )
     }, timeoutMs)
 
+    page.on('close', handlePageClose)
     page.on('console', handleConsole)
     page.on('pageerror', handlePageError)
+    options.signal?.addEventListener('abort', handleAbort, { once: true })
+
+    if (options.signal?.aborted) handleAbort()
+
+    function cleanup() {
+      clearTimeout(timeout)
+      page.off('close', handlePageClose)
+      page.off('console', handleConsole)
+      page.off('pageerror', handlePageError)
+      options.signal?.removeEventListener('abort', handleAbort)
+    }
+
+    function rejectWait(error: Error) {
+      cleanup()
+      reject(error)
+    }
+
+    function handleAbort() {
+      let reason = options.signal?.reason
+      rejectWait(reason instanceof Error ? reason : new Error(`Cancelled console wait: ${text}`))
+    }
+
+    function handlePageClose() {
+      rejectWait(new Error(`Page closed while waiting for console message: ${text}`))
+    }
 
     function handleConsole(message: { text(): string }) {
       consoleMessages.push(message.text())
       if (message.text().includes(text)) {
-        clearTimeout(timeout)
-        page.off('console', handleConsole)
-        page.off('pageerror', handlePageError)
+        cleanup()
         resolve()
       }
     }
@@ -2328,6 +2329,25 @@ function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
       pageErrors.push(error.stack ?? error.message)
     }
   })
+
+  // A triggering operation may fail before the test awaits this promise.
+  // Keep that later rejection attached to the named test instead of crashing the worker.
+  void promise.catch(() => {})
+  return promise
+}
+
+async function navigateToHmrPage(page: TestPage) {
+  let controller = new AbortController()
+  let connected = waitForConsoleMessage(page, '[remix] HMR connected', {
+    signal: controller.signal,
+  })
+
+  try {
+    let [response] = await Promise.all([page.goto('/'), connected])
+    return response
+  } finally {
+    controller.abort(new Error('Navigation ended before the HMR connection wait completed'))
+  }
 }
 
 function assertNoConsoleMessage(page: TestPage, text: string): void {
@@ -2340,21 +2360,36 @@ function assertNoConsoleMessage(page: TestPage, text: string): void {
 
 function waitForNavigation(page: TestPage): Promise<void> {
   attachPageDiagnostics(page)
-  return new Promise((resolve, reject) => {
+  let promise = new Promise<void>((resolve, reject) => {
     let timeout = setTimeout(() => {
-      page.off('framenavigated', handleFrameNavigated)
+      cleanup()
       reject(new Error(`Timed out waiting for page navigation\n${formatPageDiagnostics(page)}`))
-    }, 5000)
+    }, consoleMessageTimeout)
 
+    page.on('close', handlePageClose)
     page.on('framenavigated', handleFrameNavigated)
+
+    function cleanup() {
+      clearTimeout(timeout)
+      page.off('close', handlePageClose)
+      page.off('framenavigated', handleFrameNavigated)
+    }
+
+    function handlePageClose() {
+      cleanup()
+      reject(new Error('Page closed while waiting for navigation'))
+    }
 
     function handleFrameNavigated(frame: { parentFrame(): unknown }) {
       if (frame.parentFrame() !== null) return
-      clearTimeout(timeout)
-      page.off('framenavigated', handleFrameNavigated)
+      cleanup()
       resolve()
     }
   })
+
+  // File updates can fail before the test awaits this promise.
+  void promise.catch(() => {})
+  return promise
 }
 
 async function ignoreAbortedNavigation(navigation: Promise<unknown>): Promise<void> {
@@ -2396,7 +2431,8 @@ function monitorLocalRequestFailures(
     if (url.origin !== origin) return
 
     let failureText = request.failure()?.errorText
-    if (failureText === 'net::ERR_ABORTED') return
+    // Reloading cancels in-flight requests in both Chromium and Firefox.
+    if (failureText === 'net::ERR_ABORTED' || failureText === 'NS_BINDING_ABORTED') return
 
     let reason = failureText ? ` (${failureText})` : ''
     failures.push(`${request.method()} ${url.pathname}${url.search}${reason}`)
@@ -2612,6 +2648,15 @@ function parseProxyReadyEvent(line: string): { pid: number; port: number } | nul
 
 async function stopProcess(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) return
+
+  if (process.platform === 'win32' && child.pid !== undefined) {
+    // Windows does not run SIGTERM handlers, so stop the child server as well as its parent.
+    await Promise.all([
+      once(child, 'exit'),
+      promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F']),
+    ])
+    return
+  }
 
   await new Promise<void>((resolve) => {
     let timeout = setTimeout(() => {
