@@ -1,3 +1,5 @@
+import { ContentType } from '@remix-run/headers/content-type'
+
 import {
   MaxFilesExceededError,
   MaxFileSizeExceededError,
@@ -66,12 +68,8 @@ export function formData(
       return next()
     }
 
-    let contentType = context.headers.get('Content-Type')
-    if (
-      contentType == null ||
-      (!contentType.startsWith('multipart/') &&
-        !contentType.startsWith('application/x-www-form-urlencoded'))
-    ) {
+    let mediaType = ContentType.from(context.headers.get('Content-Type')).mediaType?.toLowerCase()
+    if (!mediaType?.startsWith('multipart/') && mediaType !== 'application/x-www-form-urlencoded') {
       context.set(FormData, new FormData(), { property: 'formData' })
       return next()
     }

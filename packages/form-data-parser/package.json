@@ -32,6 +32,7 @@
     }
   },
   "dependencies": {
+    "@remix-run/headers": "workspace:^",
     "@remix-run/multipart-parser": "workspace:^"
   },
   "devDependencies": {

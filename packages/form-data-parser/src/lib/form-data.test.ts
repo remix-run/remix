@@ -7,7 +7,13 @@ import {
   MaxFilesExceededError,
   parseFormData,
 } from './form-data.ts'
-import { MultipartParseError, MaxPartsExceededError, MaxTotalSizeExceededError } from '../index.ts'
+import {
+  MultipartParseError,
+  MaxFileSizeExceededError,
+  MaxHeaderSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
+} from '../index.ts'
 
 // Native File normalizes some MIME types differently across runtimes (for example
 // Bun adds charset for text types and rewrites application/javascript), so derive
@@ -17,6 +23,136 @@ function normalizeFileType(type: string): string {
 }
 
 describe('parseFormData', () => {
+  it('reports the uploaded media type independently of the filename extension', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/form-data; boundary=ExampleBoundary' },
+      body: [
+        '--ExampleBoundary',
+        'Content-Disposition: form-data; name="file"; filename="example.txt"',
+        'Content-Type: Text/HTML; charset=UTF-8',
+        '',
+        '<p>Example</p>',
+        '--ExampleBoundary--',
+      ].join('\r\n'),
+    })
+
+    let formData = await parseFormData(request)
+    let file = formData.get('file')
+    assert.ok(file instanceof File)
+    assert.equal(file.name, 'example.txt')
+    assert.equal(file.type, normalizeFileType('text/html'))
+    assert.equal(await file.text(), '<p>Example</p>')
+  })
+
+  function createMixedCaseMultipartRequest(): Request {
+    return new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'Multipart/Form-Data; boundary="ExampleBoundary"' },
+      body: [
+        '--ExampleBoundary',
+        'Content-Disposition: form-data; name="text"',
+        '',
+        'hello',
+        '--ExampleBoundary',
+        'Content-Disposition: form-data; name="file"; filename="example.txt"',
+        'Content-Type: text/plain',
+        '',
+        'world',
+        '--ExampleBoundary--',
+      ].join('\r\n'),
+    })
+  }
+
+  it('calls the upload handler for mixed-case multipart media types', async () => {
+    let formData = await parseFormData(createMixedCaseMultipartRequest(), async (upload) => {
+      assert.equal(upload.name, 'example.txt')
+      return `stored: ${await upload.text()}`
+    })
+
+    assert.equal(formData.get('text'), 'hello')
+    assert.equal(formData.get('file'), 'stored: world')
+  })
+
+  it('enforces maxFiles for mixed-case multipart media types', async () => {
+    await assert.rejects(
+      () => parseFormData(createMixedCaseMultipartRequest(), { maxFiles: 0 }),
+      MaxFilesExceededError,
+    )
+  })
+
+  it('enforces maxFileSize for mixed-case multipart media types', async () => {
+    await assert.rejects(
+      () => parseFormData(createMixedCaseMultipartRequest(), { maxFileSize: 1 }),
+      MaxFileSizeExceededError,
+    )
+  })
+
+  it('enforces maxHeaderSize for mixed-case multipart media types', async () => {
+    await assert.rejects(
+      () => parseFormData(createMixedCaseMultipartRequest(), { maxHeaderSize: 1 }),
+      MaxHeaderSizeExceededError,
+    )
+  })
+
+  it('enforces maxParts for mixed-case multipart media types', async () => {
+    await assert.rejects(
+      () => parseFormData(createMixedCaseMultipartRequest(), { maxParts: 1 }),
+      MaxPartsExceededError,
+    )
+  })
+
+  it('enforces maxTotalSize for mixed-case multipart media types', async () => {
+    await assert.rejects(
+      () => parseFormData(createMixedCaseMultipartRequest(), { maxTotalSize: 1 }),
+      MaxTotalSizeExceededError,
+    )
+  })
+
+  it('enforces maxParts for mixed-case urlencoded media types', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'Application/X-Www-Form-Urlencoded; charset=UTF-8' },
+      body: 'tag=red&tag=green',
+    })
+
+    await assert.rejects(() => parseFormData(request, { maxParts: 1 }), MaxPartsExceededError)
+  })
+
+  it('enforces maxTotalSize for mixed-case urlencoded media types', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'APPLICATION/X-WWW-FORM-URLENCODED' },
+      body: 'tag=red',
+    })
+
+    await assert.rejects(
+      () => parseFormData(request, { maxTotalSize: 1 }),
+      MaxTotalSizeExceededError,
+    )
+  })
+
+  it('preserves repeated fields for mixed-case urlencoded media types', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'Application/X-Www-Form-Urlencoded; charset=UTF-8' },
+      body: 'tag=red&tag=green',
+    })
+
+    let formData = await parseFormData(request, { maxParts: 2 })
+    assert.deepEqual(formData.getAll('tag'), ['red', 'green'])
+  })
+
+  it('does not parse media types that only start with the urlencoded media type', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded-extra' },
+      body: 'tag=red',
+    })
+
+    await assert.rejects(() => parseFormData(request), FormDataParseError)
+  })
+
   it('parses a application/x-www-form-urlencoded request', async () => {
     let request = new Request('https://remix.run', {
       method: 'POST',

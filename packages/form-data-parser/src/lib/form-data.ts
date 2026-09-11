@@ -1,3 +1,5 @@
+import { ContentType } from '@remix-run/headers/content-type'
+
 import {
   type MultipartParserOptions,
   type MultipartPart,
@@ -31,6 +33,10 @@ export class MaxFilesExceededError extends FormDataParseError {
 
 /**
  * A file that was uploaded as part of a `multipart/form-data` request.
+ *
+ * The `name` and `type` properties come from the submitted multipart metadata; they do not
+ * validate the file contents. Choose storage names and validate content types in your upload
+ * handler before using files in application-specific contexts.
  */
 export class FileUpload extends File {
   /**
@@ -96,8 +102,8 @@ async function* parseFormDataParts(
 }
 
 function isUrlEncodedRequest(request: Request): boolean {
-  let contentType = request.headers.get('Content-Type')
-  return contentType != null && contentType.startsWith('application/x-www-form-urlencoded')
+  let mediaType = ContentType.from(request.headers.get('Content-Type')).mediaType?.toLowerCase()
+  return mediaType === 'application/x-www-form-urlencoded'
 }
 
 function validateUrlEncodedPartCount(partCount: number, maxParts: number): void {
