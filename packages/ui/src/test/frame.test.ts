@@ -8,6 +8,7 @@ import {
   createFrame,
   publishFrameTemplate,
   reloadFrameForNavigation,
+  syncElementAttributes,
   type LoadModule,
   type ResolveFrameOptions,
 } from '../runtime/frame.ts'
@@ -1948,6 +1949,93 @@ describe('frames', () => {
     } finally {
       frame.dispose()
     }
+  })
+
+  it('preserves client-set attributes on the root element across a top-frame reload', async () => {
+    // Client sets `class="dark"` (and `data-color-scheme`) on <html> after
+    // hydration. The server-rendered HTML for the next navigation has no
+    // class on <html>. The sync must NOT remove the client attributes.
+    let frame = createTestFrame(document.body, {
+      resolveFrame: () => null,
+    })
+    try {
+      document.documentElement.setAttribute('class', 'dark')
+      document.documentElement.setAttribute('data-color-scheme', 'dark')
+
+      // Simulate a server reply whose <html> doesn't carry class or data-color-scheme.
+      let serverDoc = new DOMParser().parseFromString(
+        '<!DOCTYPE html><html><head></head><body><main>Hello</main></body></html>',
+        'text/html',
+      )
+      let serverHtml = serverDoc.documentElement
+
+      // The function under test is internal to the runtime module — exposed
+      // only for testing via `@internal` export. The production path calls it
+      // from `reloadFrameForNavigation` on top-frame navigations.
+      syncElementAttributes(document.documentElement, serverHtml)
+
+      expect(document.documentElement.getAttribute('class')).toBe('dark')
+      expect(document.documentElement.getAttribute('data-color-scheme')).toBe('dark')
+    } finally {
+      // Reset to keep the suite clean.
+      document.documentElement.removeAttribute('class')
+      document.documentElement.removeAttribute('data-color-scheme')
+      frame.dispose()
+    }
+  })
+
+  it('token-merges client and server `class` attributes rather than overwriting', async () => {
+    // The exact bug from #11809: server has `class="h-full"` on <html>, client
+    // added `class="dark"` after hydration. Current "server wins on value"
+    // semantics lose the client token. The merge path adds the dark token to
+    // the server token set (and dedupes on overlap), leaving `class="h-full dark"`
+    // — both client and server state visible.
+    let serverDoc = new DOMParser().parseFromString(
+      '<!DOCTYPE html><html class="h-full"><head></head><body></body></html>',
+      'text/html',
+    )
+    let serverHtml = serverDoc.documentElement
+
+    document.documentElement.setAttribute('class', 'dark')
+    syncElementAttributes(document.documentElement, serverHtml)
+    expect(document.documentElement.getAttribute('class')).toBe('h-full dark')
+
+    // The reverse case: server has multiple tokens, client has one; merge
+    // should union all of them without dup. Server also has the client token.
+    document.documentElement.setAttribute('class', 'dark')
+    let serverDoc2 = new DOMParser().parseFromString(
+      '<!DOCTYPE html><html class="h-full dark"><head></head><body></body></html>',
+      'text/html',
+    )
+    syncElementAttributes(document.documentElement, serverDoc2.documentElement)
+    expect(document.documentElement.getAttribute('class')).toBe('h-full dark')
+
+    // Reset.
+    document.documentElement.removeAttribute('class')
+  })
+
+  it('mirrors documentElement behavior on <body>', async () => {
+    // Same-preservation semantics must apply to <body>: client adds
+    // `data-modal-open` after hydration; server's <body> doesn't carry it.
+    // We don't have a full reload helper here, so we exercise the same
+    // `syncElementAttributes` helper — the production call site in
+    // `frame.ts` calls it twice (once for documentElement, once for body).
+    let serverDoc = new DOMParser().parseFromString(
+      '<!DOCTYPE html><html><head></head><body class="app"><main></main></body></html>',
+      'text/html',
+    )
+    let serverBody = serverDoc.body
+
+    document.body.setAttribute('data-modal-open', 'sidebar')
+    document.body.setAttribute('class', 'app dark')
+
+    syncElementAttributes(document.body, serverBody)
+    expect(document.body.getAttribute('class')).toBe('app dark')
+    expect(document.body.getAttribute('data-modal-open')).toBe('sidebar')
+
+    // Reset.
+    document.body.removeAttribute('class')
+    document.body.removeAttribute('data-modal-open')
   })
 })
 
