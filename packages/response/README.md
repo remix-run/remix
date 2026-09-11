@@ -203,16 +203,16 @@ await compressResponse(response, request, {
   encodings: ['br', 'gzip', 'deflate'],
 
   // node:zlib options for gzip/deflate compression.
-  // For SSE responses (text/event-stream), flush: Z_SYNC_FLUSH
-  // is automatically applied unless you explicitly set a flush value.
+  // For HTML and SSE responses (text/html and text/event-stream),
+  // flush: Z_SYNC_FLUSH is applied unless you explicitly set a flush value.
   // See: https://nodejs.org/api/zlib.html#class-options
   zlib: {
     level: 6,
   },
 
   // node:zlib options for Brotli compression.
-  // For SSE responses (text/event-stream), flush: BROTLI_OPERATION_FLUSH
-  // is automatically applied unless you explicitly set a flush value.
+  // For HTML and SSE responses (text/html and text/event-stream),
+  // flush: BROTLI_OPERATION_FLUSH is applied unless you explicitly set a flush value.
   // See: https://nodejs.org/api/zlib.html#class-brotlioptions
   brotli: {
     params: {
@@ -221,6 +221,8 @@ await compressResponse(response, request, {
   },
 })
 ```
+
+The HTML and SSE flush defaults keep each compressed response chunk available to clients without waiting for the stream to finish. Set `zlib.flush` or `brotli.flush` explicitly to override this behavior.
 
 #### Range Requests and Compression
 
