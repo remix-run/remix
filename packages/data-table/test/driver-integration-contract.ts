@@ -93,7 +93,7 @@ export function runDriverIntegrationContract(options: IntegrationContractOptions
 
     let joined = await db
       .query(accounts)
-      .join(projects, eq('accounts.id', 'projects.account_id'))
+      .join(projects, eq(accounts.id, projects.account_id))
       .where(eq('projects.archived', false))
       .select({
         accountId: 'accounts.id',
@@ -121,7 +121,7 @@ export function runDriverIntegrationContract(options: IntegrationContractOptions
 
     let groupedCount = await db
       .query(accounts)
-      .join(projects, eq('accounts.id', 'projects.account_id'))
+      .join(projects, eq(accounts.id, projects.account_id))
       .where(eq('projects.archived', false))
       .groupBy('accounts.id')
       .having(eq('accounts.id', 1))

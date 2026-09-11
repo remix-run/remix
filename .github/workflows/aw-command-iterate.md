@@ -165,7 +165,9 @@ jobs:
             })
   agent:
     needs: [resolve_iteration_target]
-    if: needs.resolve_iteration_target.outputs.can-push == 'true'
+    if: >-
+      !cancelled() && !failure() &&
+      needs.resolve_iteration_target.outputs.can-push == 'true'
   safe_outputs:
     needs: [resolve_iteration_target]
     if: needs.resolve_iteration_target.outputs.can-push == 'true'

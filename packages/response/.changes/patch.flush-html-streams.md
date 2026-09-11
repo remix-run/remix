@@ -1,0 +1,1 @@
+Compressed `text/html` responses now flush each chunk as it becomes available, so streamed pages can send initial HTML before deferred content resolves. `compressResponse()` uses `Z_SYNC_FLUSH` for gzip and deflate and `BROTLI_OPERATION_FLUSH` for Brotli unless `flush` is configured explicitly.

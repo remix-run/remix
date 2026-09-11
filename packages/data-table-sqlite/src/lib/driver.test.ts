@@ -838,7 +838,7 @@ describe('sqlite driver', () => {
     sqlite.close()
   })
 
-  it('supports column-to-column comparisons from string references', async () => {
+  it('binds dotted strings in explicit column-to-column queries', async () => {
     let sqlite = createNativeSqliteDatabase()
     sqlite.exec(
       'create table accounts (id integer primary key, email text not null, status text not null)',
@@ -855,11 +855,11 @@ describe('sqlite driver', () => {
 
     let count = await db
       .query(accounts)
-      .join(projects, eq('accounts.id', 'projects.account_id'))
-      .where(eq('accounts.email', 'a@example.com'))
+      .join(projects, eq(accounts.id, projects.account_id))
+      .where(eq(accounts.email, 'accounts.email'))
       .count()
 
-    assert.equal(count, 1)
+    assert.equal(count, 0)
     sqlite.close()
   })
 

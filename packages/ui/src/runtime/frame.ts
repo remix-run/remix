@@ -53,7 +53,10 @@ type PendingClientEntries = Map<Comment, [Comment, RemixElement]>
 /**
  * Loads a named client-entry export for hydration.
  *
- * @param moduleUrl Browser-resolvable URL for the module that contains the client entry.
+ * Module specifiers from trusted document metadata are passed through unchanged. The loader
+ * controls resolution, including import maps, CDN URLs, and development server URLs.
+ *
+ * @param moduleUrl Module specifier for the client entry, as serialized by the server.
  * @param exportName Named export to read from the loaded module.
  * @returns The exported component function, or a promise for it.
  *
@@ -71,6 +74,9 @@ export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Func
 
 /**
  * Resolves content for a browser-loaded frame.
+ *
+ * Only return trusted application content. Frame HTML can select client-entry modules and
+ * contribute import maps, styles, and nested frames to the current document.
  *
  * @param src Source string from the `<Frame src>` prop.
  * @param options Information about the active frame load or form submission.

@@ -92,6 +92,7 @@ function startStubNavigationListener(
 ): (event: Event) => StubNavigationTransition {
   let stubNavigation = Object.assign(new EventTarget(), {
     updateCurrentEntry: mock.fn(),
+    navigate: mock.fn(),
     transition: null as NavigationTransition | null,
   })
   stubGlobalField(t, 'navigation', stubNavigation)
@@ -971,6 +972,204 @@ describe('navigate', () => {
       }
       controller.abort()
     }
+  })
+})
+
+describe('frame navigation sources', () => {
+  function setup(t: TestContext) {
+    let topFrame = { src: window.location.href } as FrameHandle
+    let namedFrame = { src: '/initial-frame' } as FrameHandle
+    let reloadFrame = mock.fn((_frame: FrameHandle) =>
+      createReloadTransition({ signal: new AbortController().signal }),
+    )
+    let dispatch = startStubNavigationListener(t, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: (name) => (name === 'details' ? namedFrame : topFrame),
+      reloadFrame,
+    })
+    let anchor = document.createElement('a')
+    anchor.href = new URL('/destination', window.location.href).href
+    anchor.setAttribute('data-rmx-target', 'details')
+    let intercept = mock.fn()
+    let event = createAnchorNavigateEvent(anchor, {
+      destinationUrl: anchor.href,
+      intercept,
+    })
+    return { topFrame, namedFrame, reloadFrame, dispatch, anchor, intercept, event }
+  }
+
+  async function expectDocumentNavigation(
+    t: TestContext,
+    src: string,
+    target: string | null = 'details',
+  ) {
+    let { anchor, event, dispatch, intercept, reloadFrame, topFrame, namedFrame } = setup(t)
+    anchor.setAttribute('data-rmx-src', src)
+    if (target === null) anchor.removeAttribute('data-rmx-target')
+    else anchor.setAttribute('data-rmx-target', target)
+    let transition = dispatch(event)
+    await transition.runHandler()
+    await transition.succeed()
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
+    expect(topFrame.src).toBe(window.location.href)
+    expect(namedFrame.src).toBe('/initial-frame')
+  }
+
+  it('leaves cross-origin named-frame link sources to document navigation', async (t) => {
+    await expectDocumentNavigation(t, 'https://frames.example/partial')
+  })
+
+  it('leaves protocol-relative cross-origin sources to document navigation', async (t) => {
+    await expectDocumentNavigation(t, '//frames.example/partial')
+  })
+
+  it('leaves malformed named-frame sources to document navigation', async (t) => {
+    await expectDocumentNavigation(t, 'https://[')
+  })
+
+  it('leaves cross-origin sources without a target to document navigation', async (t) => {
+    await expectDocumentNavigation(t, 'https://frames.example/partial', null)
+  })
+
+  it('leaves malformed sources with a missing target to document navigation', async (t) => {
+    await expectDocumentNavigation(t, 'https://[', 'missing')
+  })
+
+  it('leaves data URL frame sources to document navigation', async (t) => {
+    await expectDocumentNavigation(t, 'data:text/html,<p>Frame</p>')
+  })
+
+  it('leaves javascript URL frame sources to document navigation', async (t) => {
+    await expectDocumentNavigation(t, 'javascript:void(0)')
+  })
+
+  it('checks relative named-frame sources against the document base URL', async (t) => {
+    let base = document.createElement('base')
+    base.href = 'https://frames.example/partials/'
+    document.head.prepend(base)
+    t.after(() => base.remove())
+    await expectDocumentNavigation(t, 'details')
+  })
+
+  it('preserves same-origin relative sources for custom frame resolvers', async (t) => {
+    let { anchor, event, dispatch, intercept, reloadFrame, topFrame, namedFrame } = setup(t)
+    let base = document.createElement('base')
+    base.href = new URL('/partials/', window.location.href).href
+    document.head.prepend(base)
+    t.after(() => base.remove())
+    anchor.setAttribute('data-rmx-src', '../details?tab=one#summary')
+    let transition = dispatch(event)
+    await transition.runHandler()
+    await transition.succeed()
+    expect(intercept).toHaveBeenCalledTimes(1)
+    expect(reloadFrame.mock.calls[0]?.arguments[0]).toBe(namedFrame)
+    expect(namedFrame.src).toBe('../details?tab=one#summary')
+    expect(topFrame.src).toBe(anchor.href)
+  })
+
+  it('uses the public destination when the top frame ignores a source override', async (t) => {
+    let { anchor, event, dispatch, intercept, topFrame, namedFrame } = setup(t)
+    anchor.removeAttribute('data-rmx-target')
+    anchor.setAttribute('data-rmx-src', '/partial')
+    let transition = dispatch(event)
+    await transition.runHandler()
+    await transition.succeed()
+    expect(intercept).toHaveBeenCalledTimes(1)
+    expect(topFrame.src).toBe(anchor.href)
+    expect(namedFrame.src).toBe('/initial-frame')
+  })
+
+  it('uses the public destination when the named target does not exist', async (t) => {
+    let { anchor, event, dispatch, intercept, topFrame, namedFrame } = setup(t)
+    anchor.setAttribute('data-rmx-target', 'missing')
+    anchor.setAttribute('data-rmx-src', '/partial')
+    let transition = dispatch(event)
+    await transition.runHandler()
+    await transition.succeed()
+    expect(intercept).toHaveBeenCalledTimes(1)
+    expect(topFrame.src).toBe(anchor.href)
+    expect(namedFrame.src).toBe('/initial-frame')
+  })
+
+  it('checks sources supplied by programmatic navigate calls', async (t) => {
+    let { anchor, dispatch, intercept, reloadFrame } = setup(t)
+    stubGlobalMethod(
+      t,
+      'navigation',
+      'navigate',
+      (href: string, options: NavigationNavigateOptions) => {
+        let event = createAnchorNavigateEvent(anchor, { destinationUrl: href, intercept })
+        Object.assign(event, {
+          sourceElement: null,
+          destination: { url: href, getState: () => options.state },
+        })
+        let transition = dispatch(event)
+        return { finished: transition.runHandler().then(() => transition.succeed()) }
+      },
+    )
+    await navigate(anchor.href, { src: 'https://frames.example/partial' })
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('checks named-frame sources restored from navigation history', async (t) => {
+    let { event, anchor, dispatch, intercept, reloadFrame } = setup(t)
+    Object.assign(event, {
+      navigationType: 'traverse',
+      sourceElement: null,
+      destination: {
+        url: anchor.href,
+        getState: () => ({
+          target: 'details',
+          src: 'https://frames.example/partial',
+          resetScroll: true,
+          $rmx: true,
+        }),
+      },
+    })
+    let transition = dispatch(event)
+    await transition.runHandler()
+    await transition.succeed()
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('checks form sources before intercepting a POST submission', async (t) => {
+    let { anchor, dispatch, intercept, reloadFrame } = setup(t)
+    let form = document.createElement('form')
+    form.action = anchor.href
+    form.method = 'post'
+    form.setAttribute('data-rmx-target', 'details')
+    form.setAttribute('data-rmx-src', 'https://frames.example/partial')
+    let event = createFormNavigateEvent(form, { destinationUrl: form.action, intercept })
+    Object.assign(event, { scroll() {} })
+    let transition = dispatch(event)
+    await transition.runHandler()
+    await transition.succeed()
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('checks GET form sources overridden by the submitter', async (t) => {
+    let { anchor, dispatch, intercept, reloadFrame } = setup(t)
+    let form = document.createElement('form')
+    form.action = anchor.href
+    form.setAttribute('data-rmx-target', 'details')
+    form.setAttribute('data-rmx-src', '/partial')
+    let button = document.createElement('button')
+    button.setAttribute('data-rmx-src', 'https://frames.example/partial')
+    form.append(button)
+    document.body.append(form)
+    t.after(() => form.remove())
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+    let event = createFormNavigateEvent(form, { destinationUrl: form.action, intercept })
+    Object.assign(event, { scroll() {} })
+    let transition = dispatch(event)
+    await transition.runHandler()
+    await transition.succeed()
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
   })
 })
 
