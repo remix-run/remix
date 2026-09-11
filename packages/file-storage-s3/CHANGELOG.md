@@ -2,6 +2,12 @@
 
 This is the changelog for [`file-storage-s3`](https://github.com/remix-run/remix/tree/main/packages/file-storage-s3). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.5
+
+### Patch Changes
+
+- Reject empty S3 object keys and keys with period-only path segments instead of sending bucket-level requests or resolving them to a different object URL.
+
 ## v0.1.4
 
 ### Patch Changes

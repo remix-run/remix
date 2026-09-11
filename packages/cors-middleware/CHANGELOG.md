@@ -2,6 +2,17 @@
 
 This is the changelog for [`cors-middleware`](https://github.com/remix-run/remix/tree/main/packages/cors-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `cors({ credentials: true })` now preserves the default `Access-Control-Allow-Origin: *` response. Applications that intentionally allow credentialed requests from any origin must configure `origin: '*'` explicitly; applications with a restricted origin policy should continue to configure an exact origin, pattern, array, or resolver.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+
 ## v0.1.9
 
 ### Patch Changes

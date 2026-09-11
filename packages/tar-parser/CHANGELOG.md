@@ -2,6 +2,12 @@
 
 This is the changelog for [`tar-parser`](https://github.com/remix-run/remix/tree/main/packages/tar-parser). It follows [semantic versioning](https://semver.org/).
 
+## v0.7.2
+
+### Patch Changes
+
+- Buffer `TarEntry` content using the bytes received, validate octal, base-256, and PAX entry sizes, and reject unfinished body readers when archive parsing fails.
+
 ## v0.7.1
 
 ### Patch Changes
