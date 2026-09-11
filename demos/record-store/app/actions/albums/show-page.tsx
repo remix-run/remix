@@ -20,7 +20,7 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
         <div mix={css({ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' })}>
           <div
             mix={css({
-              height: '400px',
+              aspectRatio: '1 / 1',
               borderRadius: '8px',
               boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
               overflow: 'hidden',
