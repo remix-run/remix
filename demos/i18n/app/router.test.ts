@@ -2,7 +2,7 @@ import * as assert from 'remix/assert'
 import { Vary } from 'remix/headers'
 import { describe, it } from 'remix/test'
 
-import { scriptSrc } from './assets.ts'
+import { scriptEntry } from './assets.ts'
 import { localeCookie, type SupportedLanguage } from './i18n/config.ts'
 import { createAppRouter } from './router.ts'
 import { routes } from './routes.ts'
@@ -65,7 +65,7 @@ describe('i18n app', () => {
   })
 
   it('serves the browser entry', async () => {
-    let response = await createAppRouter().fetch(new Request(origin + scriptSrc))
+    let response = await createAppRouter().fetch(new Request(origin + scriptEntry.href))
 
     assert.equal(response.status, 200)
     assert.equal(response.headers.get('Content-Type'), 'application/javascript; charset=utf-8')
