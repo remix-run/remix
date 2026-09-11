@@ -2,6 +2,43 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-rc.3
+
+### Pre-release Changes
+
+- BREAKING CHANGE: `remix/data-table` now treats dotted strings passed as comparison values as scalar values. Use table column references for column-to-column comparisons.
+
+- Expose `compileOrderByDirection()` through `remix/data-table/sql-helpers`.
+
+- Compressed HTML from `remix/middleware/compression` now streams incrementally by default, so initial UI and Frame fallbacks can reach the browser before deferred Frames resolve. Explicit zlib and Brotli `flush` options continue to override the streaming-safe defaults.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.7.1`](https://github.com/remix-run/remix/releases/tag/assets@0.7.1)
+  - [`cli@0.7.1`](https://github.com/remix-run/remix/releases/tag/cli@0.7.1)
+  - [`compression-middleware@0.1.15`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.15)
+  - [`cookie@0.6.1`](https://github.com/remix-run/remix/releases/tag/cookie@0.6.1)
+  - [`cop-middleware@0.1.10`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.10)
+  - [`cors-middleware@0.2.0`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.2.0)
+  - [`csrf-middleware@0.1.10`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.10)
+  - [`data-schema@0.3.1`](https://github.com/remix-run/remix/releases/tag/data-schema@0.3.1)
+  - [`data-table@0.6.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.6.0)
+  - [`data-table-mysql@0.5.3`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.3)
+  - [`data-table-postgres@0.5.3`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.3)
+  - [`data-table-sqlite@0.6.3`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.3)
+  - [`fetch-proxy@0.8.6`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@0.8.6)
+  - [`file-storage-s3@0.1.5`](https://github.com/remix-run/remix/releases/tag/file-storage-s3@0.1.5)
+  - [`form-data-middleware@0.3.7`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.3.7)
+  - [`form-data-parser@0.17.6`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.6)
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+  - [`multipart-parser@0.16.5`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.5)
+  - [`render-middleware@0.3.1`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.3.1)
+  - [`response@0.3.9`](https://github.com/remix-run/remix/releases/tag/response@0.3.9)
+  - [`session-middleware@0.4.2`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.4.2)
+  - [`spa@0.1.2`](https://github.com/remix-run/remix/releases/tag/spa@0.1.2)
+  - [`static-middleware@0.4.16`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.16)
+  - [`tar-parser@0.7.2`](https://github.com/remix-run/remix/releases/tag/tar-parser@0.7.2)
+  - [`ui@0.10.0`](https://github.com/remix-run/remix/releases/tag/ui@0.10.0)
+
 ## v3.0.0-rc.2
 
 ### Pre-release Changes

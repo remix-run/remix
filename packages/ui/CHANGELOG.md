@@ -2,6 +2,18 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.10.0
+
+### Minor Changes
+
+- BREAKING CHANGE: The default `resolveFrame` now only fetches same-origin sources and follows same-origin redirects. Apps that load cross-origin frame content must provide a custom `resolveFrame` to `run()`.
+
+  Validate navigation source overrides regardless of the target, falling back to document navigation for invalid or cross-origin overrides.
+
+### Patch Changes
+
+- Fix duplicated text during hydration when a browser splits long server-rendered text into multiple DOM nodes, including chunks that span adjacent text children (see #11591).
+
 ## v0.9.0
 
 ### Minor Changes
