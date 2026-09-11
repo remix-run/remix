@@ -1,0 +1,1 @@
+{"version":3,"file":"router-types.d.ts","sourceRoot":"","sources":["../../src/lib/router-types.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,sBAAsB,CAAA;AAE1D;;;;;;;;;;;;;;;GAeG;AACH,MAAM,WAAW,WAAW;CAAG;AAE/B,MAAM,MAAM,cAAc,GAAG,WAAW,SAAS;IAC/C,OAAO,EAAE,MAAM,OAAO,SAAS,cAAc,CAAC,GAAG,EAAE,GAAG,CAAC,CAAA;CACxD,GACG,OAAO,GACP,cAAc,CAAA"}
