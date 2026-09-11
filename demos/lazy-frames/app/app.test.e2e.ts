@@ -53,7 +53,7 @@ describe('lazy frames in the browser', () => {
 
     await page.goto(routes.home.href())
     let lazyExample = page.locator('main > section').last()
-    await lazyExample.scrollIntoViewIfNeeded()
+    await lazyExample.getByText('Not requested', { exact: true }).scrollIntoViewIfNeeded()
     let frame = lazyExample.locator('article')
     await frame.waitFor()
 
