@@ -17,8 +17,8 @@ import {
 const requestI18n = createContextKey<I18nState>()
 
 /**
- * Resolves a locale in this order: URL path, preference cookie,
- * Accept-Language header, then the configured fallback.
+ * Resolves a locale from the URL path, preference cookie, or browser
+ * preference, falling back to the configured default language.
  */
 export async function detectLanguage(
   request: Request,
@@ -33,14 +33,10 @@ export async function detectLanguage(
     return { locale: cookieLocale, source: 'cookie' }
   }
 
-  let preferredLocale = AcceptLanguage.from(request.headers.get('Accept-Language')).getPreferred(
+  let browserLocale = AcceptLanguage.from(request.headers.get('Accept-Language')).getPreferred(
     supportedLanguages,
   )
-  if (preferredLocale) {
-    return { locale: preferredLocale, source: 'header' }
-  }
-
-  return { locale: fallbackLanguage, source: 'fallback' }
+  return { locale: browserLocale ?? fallbackLanguage, source: 'browser' }
 }
 
 /**

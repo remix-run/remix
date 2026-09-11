@@ -30,7 +30,7 @@ export const rootController = createController(routes, {
           },
         })
       }
-      if (intent !== null) {
+      if (intent !== 'save') {
         return new Response('Invalid intent', { status: 400 })
       }
 

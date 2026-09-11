@@ -1,6 +1,6 @@
 import type { Handle } from 'remix/ui'
 
-import { languageNames, supportedLanguages } from '../i18n/config.ts'
+import { detectionSources, languageNames, supportedLanguages } from '../i18n/config.ts'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import { getI18n } from '../ui/i18n.tsx'
@@ -22,7 +22,7 @@ export function HomePage(handle: Handle) {
       timeStyle: 'short',
       timeZone: 'UTC',
     }).format(demoDate)
-    let formattedNumber = new Intl.NumberFormat(locale).format(1250000)
+    let formattedNumber = new Intl.NumberFormat(locale).format(1_250_000)
     let formattedCurrency = new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: demoCurrency,
@@ -42,7 +42,6 @@ export function HomePage(handle: Handle) {
               <span mix={styles.brandTitle}>{t('common.brand')}</span>
             </a>
 
-            {/* A document submission resets unsaved selections even when the locale stays the same. */}
             <form
               method="POST"
               action={routes.language.href()}
@@ -52,20 +51,14 @@ export function HomePage(handle: Handle) {
               <label htmlFor="locale-select" mix={styles.srOnly}>
                 {t('switcher.label')}
               </label>
-              {/* Reset the live form control when frame navigation changes the locale. */}
-              <select
-                id="locale-select"
-                name="locale"
-                data-rmx-key={`locale-select-${locale}`}
-                mix={styles.select}
-              >
+              <select id="locale-select" name="locale" mix={styles.select}>
                 {supportedLanguages.map((code) => (
                   <option key={code} value={code} selected={code === locale} lang={code}>
                     {languageNames[code]}
                   </option>
                 ))}
               </select>
-              <button type="submit" mix={styles.button}>
+              <button type="submit" name="intent" value="save" mix={styles.button}>
                 {t('switcher.button')}
               </button>
               <button type="submit" name="intent" value="clear" mix={styles.clearPreferenceButton}>
@@ -95,7 +88,7 @@ export function HomePage(handle: Handle) {
                   lang={code}
                   data-rmx-document
                   mix={styles.quickSwitchPill}
-                  aria-current={code === locale ? 'true' : undefined}
+                  aria-current={code === locale ? 'page' : undefined}
                 >
                   {languageNames[code]}
                 </a>
@@ -113,42 +106,18 @@ export function HomePage(handle: Handle) {
                 <p mix={styles.cardDescription}>{t('detection.description')}</p>
 
                 <ol mix={styles.stepList}>
-                  <li
-                    mix={styles.stepItem}
-                    data-active={detectionSource === 'path' ? 'true' : undefined}
-                  >
-                    <span>{t('detection.step_path')}</span>
-                    {detectionSource === 'path' && (
-                      <span mix={styles.activeBadge}>{t('detection.active_badge')}</span>
-                    )}
-                  </li>
-                  <li
-                    mix={styles.stepItem}
-                    data-active={detectionSource === 'cookie' ? 'true' : undefined}
-                  >
-                    <span>{t('detection.step_cookie')}</span>
-                    {detectionSource === 'cookie' && (
-                      <span mix={styles.activeBadge}>{t('detection.active_badge')}</span>
-                    )}
-                  </li>
-                  <li
-                    mix={styles.stepItem}
-                    data-active={detectionSource === 'header' ? 'true' : undefined}
-                  >
-                    <span>{t('detection.step_header')}</span>
-                    {detectionSource === 'header' && (
-                      <span mix={styles.activeBadge}>{t('detection.active_badge')}</span>
-                    )}
-                  </li>
-                  <li
-                    mix={styles.stepItem}
-                    data-active={detectionSource === 'fallback' ? 'true' : undefined}
-                  >
-                    <span>{t('detection.step_fallback')}</span>
-                    {detectionSource === 'fallback' && (
-                      <span mix={styles.activeBadge}>{t('detection.active_badge')}</span>
-                    )}
-                  </li>
+                  {detectionSources.map((source) => (
+                    <li
+                      key={source}
+                      mix={styles.stepItem}
+                      data-active={detectionSource === source ? 'true' : undefined}
+                    >
+                      <span>{t(`detection.step_${source}`)}</span>
+                      {detectionSource === source && (
+                        <span mix={styles.activeBadge}>{t('detection.active_badge')}</span>
+                      )}
+                    </li>
+                  ))}
                 </ol>
 
                 <div mix={styles.demoRow}>

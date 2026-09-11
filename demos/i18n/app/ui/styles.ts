@@ -230,7 +230,7 @@ export const quickSwitchPill = css({
     outline: '2px solid light-dark(#0578be, #2dacf9)',
     outlineOffset: '2px',
   },
-  '&[aria-current="true"]': {
+  '&[aria-current="page"]': {
     color: 'light-dark(#1b1b1f, #e7e7ea)',
     backgroundColor: 'light-dark(rgb(0 0 0 / 10%), #2a2a30)',
     fontWeight: 700,

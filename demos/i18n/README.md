@@ -15,7 +15,7 @@ Open <http://localhost:44100>. Change the cart quantity to see i18next select pl
 
 ## Language URLs and preferences
 
-Detection follows four steps: URL locale, saved preference cookie, browser language preference (`Accept-Language`), then English. Every language has an explicit URL: `/en`, `/es`, `/fr`, `/ja`, and `/ar`.
+Detection checks the URL locale, then the saved preference cookie, then the browser language preference (`Accept-Language`), defaulting to English when none match. Every language has an explicit URL: `/en`, `/es`, `/fr`, `/ja`, and `/ar`.
 
 - **“View this page in” links** change the URL without saving a preference. They use `data-rmx-document`, so every language switch requests and loads a complete localized document.
 - **“Save preference”** stores an HTTP-only locale cookie and redirects to that language's URL using POST-redirect-GET.

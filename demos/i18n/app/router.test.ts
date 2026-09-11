@@ -75,6 +75,7 @@ describe('i18n app', () => {
 
   it('saves a language preference', async () => {
     let formData = new FormData()
+    formData.set('intent', 'save')
     formData.set('locale', 'fr')
     let response = await createAppRouter().fetch(
       new Request(origin + routes.language.href(), {
@@ -106,6 +107,7 @@ describe('i18n app', () => {
 
   it('rejects unsupported locales', async () => {
     let formData = new FormData()
+    formData.set('intent', 'save')
     formData.set('locale', 'de')
     let router = createAppRouter()
     let [pathResponse, preferenceResponse] = await Promise.all([
