@@ -22,11 +22,11 @@ describe('i18n middleware', () => {
       await detectLanguage(
         new Request(origin, { headers: { 'Accept-Language': 'fr-FR,fr;q=0.9' } }),
       ),
-      { locale: 'fr', source: 'header' },
+      { locale: 'fr', source: 'browser' },
     )
     assert.deepEqual(await detectLanguage(new Request(origin)), {
       locale: 'en',
-      source: 'fallback',
+      source: 'browser',
     })
   })
 
@@ -38,6 +38,6 @@ describe('i18n middleware', () => {
       },
     })
 
-    assert.deepEqual(await detectLanguage(request), { locale: 'es', source: 'header' })
+    assert.deepEqual(await detectLanguage(request), { locale: 'es', source: 'browser' })
   })
 })

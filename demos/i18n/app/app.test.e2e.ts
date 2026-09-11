@@ -45,7 +45,7 @@ describe('i18n browser behavior', () => {
     await arabicCartSummary.filter({ hasText: 'لديك 3 منتجات في سلة التسوق' }).waitFor()
 
     let arabicValue = page.getByRole('status', { name: 'القيمة المنسقة في المتصفح' })
-    await arabicValue.filter({ hasText: new Intl.NumberFormat('ar').format(1250000) }).waitFor()
+    await arabicValue.filter({ hasText: new Intl.NumberFormat('ar').format(1_250_000) }).waitFor()
 
     await page.getByRole('link', { name: 'English', exact: true }).click()
     await page.locator('html[lang="en"][dir="ltr"]').waitFor()

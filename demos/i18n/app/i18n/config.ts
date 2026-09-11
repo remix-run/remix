@@ -19,7 +19,8 @@ declare module 'i18next' {
 export const supportedLanguages = ['en', 'es', 'fr', 'ja', 'ar'] as const
 export type SupportedLanguage = (typeof supportedLanguages)[number]
 
-export type DetectionSource = 'path' | 'cookie' | 'header' | 'fallback'
+export const detectionSources = ['path', 'cookie', 'browser'] as const
+export type DetectionSource = (typeof detectionSources)[number]
 
 export interface DetectionResult {
   locale: SupportedLanguage
