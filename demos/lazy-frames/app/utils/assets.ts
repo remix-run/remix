@@ -13,6 +13,7 @@ export const assets = createAssetServer({
   denyFiles: ['demos/lazy-frames/app/**/*.test.*'],
   mounts: {
     app: 'demos/lazy-frames/app',
+    npm: 'node_modules',
     packages: 'packages',
   },
   sourceMaps: isDevelopment ? 'external' : undefined,
