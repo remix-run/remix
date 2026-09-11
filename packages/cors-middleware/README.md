@@ -137,7 +137,9 @@ let router = createRouter({
 })
 ```
 
-When `allowPrivateNetwork` is enabled, the middleware adds `Access-Control-Allow-Private-Network: true` for preflight requests that ask for private network access.
+Private network access is disabled by default. When `allowPrivateNetwork` is enabled, the middleware adds `Access-Control-Allow-Private-Network: true` for preflight requests that ask for private network access and pass the origin policy. The default `origin: '*'` allows all origins; configure `origin` to limit which origins can request private network access.
+
+With this option enabled, preflight responses vary on `Access-Control-Request-Private-Network`, including when the request header is absent or does not request access.
 
 ## Expose Response Headers
 
