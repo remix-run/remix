@@ -1,22 +1,22 @@
 import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
 
-import type { Book } from '../../../data/schema.ts'
+import type { Album } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
 import { RestfulForm } from '../../../ui/restful-form.tsx'
 import { Layout } from '../../../ui/layout.tsx'
 
-export function AdminBooksIndexPage(handle: Handle<{ books: Book[] }>) {
+export function AdminAlbumsIndexPage(handle: Handle<{ albums: Album[] }>) {
   return () => {
-    let { books } = handle.props
+    let { albums } = handle.props
 
     return (
       <Layout>
-        <h1>Manage Books</h1>
+        <h1>Manage Albums</h1>
 
         <p mix={css({ marginBottom: '1rem' })}>
-          <a href={routes.admin.books.new.href()} class="btn">
-            Add New Book
+          <a href={routes.admin.albums.new.href()} class="btn">
+            Add New Album
           </a>
           <a
             href={routes.admin.index.href()}
@@ -32,7 +32,7 @@ export function AdminBooksIndexPage(handle: Handle<{ books: Book[] }>) {
             <thead>
               <tr>
                 <th>Title</th>
-                <th>Author</th>
+                <th>Artist</th>
                 <th>Genre</th>
                 <th>Price</th>
                 <th>Stock</th>
@@ -40,20 +40,20 @@ export function AdminBooksIndexPage(handle: Handle<{ books: Book[] }>) {
               </tr>
             </thead>
             <tbody>
-              {books.map((book) => (
+              {albums.map((album) => (
                 <tr>
-                  <td>{book.title}</td>
-                  <td>{book.author}</td>
-                  <td>{book.genre}</td>
-                  <td>${book.price.toFixed(2)}</td>
+                  <td>{album.title}</td>
+                  <td>{album.artist}</td>
+                  <td>{album.genre}</td>
+                  <td>${album.price.toFixed(2)}</td>
                   <td>
-                    <span class={`badge ${book.in_stock ? 'badge-success' : 'badge-warning'}`}>
-                      {book.in_stock ? 'Yes' : 'No'}
+                    <span class={`badge ${album.in_stock ? 'badge-success' : 'badge-warning'}`}>
+                      {album.in_stock ? 'Yes' : 'No'}
                     </span>
                   </td>
                   <td class="actions">
                     <a
-                      href={routes.admin.books.edit.href({ bookId: book.id })}
+                      href={routes.admin.albums.edit.href({ albumId: album.id })}
                       class="btn btn-secondary"
                       mix={css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })}
                     >
@@ -61,7 +61,7 @@ export function AdminBooksIndexPage(handle: Handle<{ books: Book[] }>) {
                     </a>
                     <RestfulForm
                       method="DELETE"
-                      action={routes.admin.books.destroy.href({ bookId: book.id })}
+                      action={routes.admin.albums.destroy.href({ albumId: album.id })}
                       mix={css({ display: 'inline' })}
                     >
                       <button

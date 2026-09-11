@@ -53,7 +53,7 @@ export function CheckoutConfirmationPage(handle: Handle<{ order: Order }>) {
               View Order Details
             </a>
             <a
-              href={routes.books.index.href()}
+              href={routes.albums.index.href()}
               class="btn btn-secondary"
               mix={css({ marginLeft: '0.5rem' })}
             >

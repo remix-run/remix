@@ -1,15 +1,15 @@
-create table books (
+create table albums (
   id integer primary key autoincrement,
   slug text not null unique,
   title text not null,
-  author text not null,
+  artist text not null,
   description text not null,
   price numeric not null,
   genre text not null,
   image_urls text not null,
   cover_url text not null,
-  isbn text not null,
-  published_year integer not null,
+  catalog_number text not null,
+  release_year integer not null,
   in_stock integer not null
 );
 
@@ -36,17 +36,17 @@ create index orders_user_id_idx on orders (user_id);
 
 create table order_items (
   order_id integer not null,
-  book_id integer not null,
+  album_id integer not null,
   title text not null,
   unit_price numeric not null,
   quantity integer not null,
-  constraint order_items_pk primary key (order_id, book_id),
+  constraint order_items_pk primary key (order_id, album_id),
   constraint order_items_order_id_fk foreign key (order_id) references orders (id) on delete cascade,
-  constraint order_items_book_id_fk foreign key (book_id) references books (id) on delete restrict
+  constraint order_items_album_id_fk foreign key (album_id) references albums (id) on delete restrict
 );
 
 create index order_items_order_id_idx on order_items (order_id);
-create index order_items_book_id_idx on order_items (book_id);
+create index order_items_album_id_idx on order_items (album_id);
 
 create table password_reset_tokens (
   token text primary key,

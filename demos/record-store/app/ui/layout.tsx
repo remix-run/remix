@@ -20,11 +20,11 @@ export function Layout(handle: Handle<LayoutProps>) {
         <header>
           <div class="container">
             <h1>
-              <a href={routes.home.href()}>📚 Bookstore</a>
+              <a href={routes.home.href()}>🎵 Record Store</a>
             </h1>
             <nav>
               <a href={routes.home.href()}>Home</a>
-              <a href={routes.books.index.href()}>Books</a>
+              <a href={routes.albums.index.href()}>Albums</a>
               <a href={routes.about.href()}>About</a>
               <a href={routes.contact.index.href()}>Contact</a>
               <a href={routes.cart.index.href()}>Cart</a>
@@ -60,7 +60,7 @@ export function Layout(handle: Handle<LayoutProps>) {
         </main>
         <footer>
           <div class="container">
-            <p>&copy; {new Date().getFullYear()} Bookstore Demo. Built with Remix.</p>
+            <p>&copy; {new Date().getFullYear()} Record Store Demo. Built with Remix.</p>
           </div>
         </footer>
       </Document>

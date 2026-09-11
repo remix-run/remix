@@ -11,12 +11,12 @@ import {
 const router = await createTestRouter()
 
 describe('cart handlers', () => {
-  it('POST /cart/api/add adds book to cart', async () => {
+  it('POST /cart/api/add adds album to cart', async () => {
     let response = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '1',
-        slug: 'bbq',
+        albumId: '1',
+        slug: 'flannel-overdrive',
       }),
       redirect: 'manual',
     })
@@ -30,8 +30,8 @@ describe('cart handlers', () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '2',
-        slug: 'heavy-metal',
+        albumId: '2',
+        slug: 'shred-till-dawn',
       }),
       redirect: 'manual',
     })
@@ -46,7 +46,7 @@ describe('cart handlers', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
     assertContains(html, 'Shopping Cart')
-    assertContains(html, 'Heavy Metal Guitar Riffs')
+    assertContains(html, 'Shred Till Dawn')
   })
 
   it('cart persists state across requests with same session', async () => {
@@ -54,8 +54,8 @@ describe('cart handlers', () => {
     let addResponse1 = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '1',
-        slug: 'bbq',
+        albumId: '1',
+        slug: 'flannel-overdrive',
       }),
       redirect: 'manual',
     })
@@ -67,8 +67,8 @@ describe('cart handlers', () => {
     let addRequest2 = requestWithSession('https://remix.run/cart/api/add', sessionId, {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '3',
-        slug: 'three-ways',
+        albumId: '3',
+        slug: 'boom-bap-boulevard',
       }),
     })
     await router.fetch(addRequest2)
@@ -78,16 +78,16 @@ describe('cart handlers', () => {
     let cartResponse = await router.fetch(cartRequest)
 
     let html = await cartResponse.text()
-    assertContains(html, 'Ash & Smoke')
-    assertContains(html, 'Three Ways to Change Your Life')
+    assertContains(html, 'Flannel Overdrive')
+    assertContains(html, 'Boom Bap Boulevard')
   })
 
   it('GET /fragments/cart-items renders table fragment for cart items', async () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '2',
-        slug: 'heavy-metal',
+        albumId: '2',
+        slug: 'shred-till-dawn',
       }),
       redirect: 'manual',
     })
@@ -101,8 +101,8 @@ describe('cart handlers', () => {
 
     assert.equal(response.status, 200)
     assertContains(html, '<table>')
-    assertContains(html, '<th>Book</th>')
-    assertContains(html, 'Heavy Metal Guitar Riffs')
+    assertContains(html, '<th>Album</th>')
+    assertContains(html, 'Shred Till Dawn')
     assertContains(html, 'Update')
     assertContains(html, 'Remove')
     assertContains(html, 'Total:')
@@ -112,8 +112,8 @@ describe('cart handlers', () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '1',
-        slug: 'bbq',
+        albumId: '1',
+        slug: 'flannel-overdrive',
       }),
       redirect: 'manual',
     })
@@ -127,7 +127,7 @@ describe('cart handlers', () => {
 
     assert.equal(response.status, 200)
     assertContains(html, 'Total:')
-    assertContains(html, '$16.99')
+    assertContains(html, '$13.99')
     assertContains(html, 'Continue Shopping')
     assertContains(html, 'Login to Checkout')
   })
@@ -138,15 +138,15 @@ describe('cart handlers', () => {
 
     assert.equal(response.status, 200)
     assertContains(html, 'Your cart is empty.')
-    assertContains(html, 'Browse Books')
+    assertContains(html, 'Browse Albums')
   })
 
   it('PUT /cart/api/update returns 204 when redirect is none', async () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '1',
-        slug: 'bbq',
+        albumId: '1',
+        slug: 'flannel-overdrive',
       }),
       redirect: 'manual',
     })
@@ -157,7 +157,7 @@ describe('cart handlers', () => {
     let request = requestWithSession('https://remix.run/cart/api/update', sessionId, {
       method: 'PUT',
       body: new URLSearchParams({
-        bookId: '1',
+        albumId: '1',
         quantity: '2',
         redirect: 'none',
       }),
@@ -171,8 +171,8 @@ describe('cart handlers', () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '1',
-        slug: 'bbq',
+        albumId: '1',
+        slug: 'flannel-overdrive',
       }),
       redirect: 'manual',
     })
@@ -183,7 +183,7 @@ describe('cart handlers', () => {
     let request = requestWithSession('https://remix.run/cart/api/remove', sessionId, {
       method: 'DELETE',
       body: new URLSearchParams({
-        bookId: '1',
+        albumId: '1',
         redirect: 'none',
       }),
     })

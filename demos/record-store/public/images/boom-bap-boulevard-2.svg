@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#141414"/>
+  <rect x="40" y="40" width="520" height="520" fill="none" stroke="#f5d565" stroke-width="2" opacity="0.4"/>
+  <text x="80" y="110" font-family="Helvetica, Arial, sans-serif" font-size="34" font-weight="bold" fill="#f5d565">Boom Bap Boulevard</text>
+  <text x="80" y="150" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="#f5d565" opacity="0.8">MC Circuit Breaker</text>
+  
+    <text x="80" y="240" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="#f5d565">1.  Pager Money</text>
+    <line x1="80" y1="254" x2="520" y2="254" stroke="#f5d565" stroke-width="1" opacity="0.25"/>
+    <text x="80" y="292" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="#f5d565">2.  Boulevard Cipher</text>
+    <line x1="80" y1="306" x2="520" y2="306" stroke="#f5d565" stroke-width="1" opacity="0.25"/>
+    <text x="80" y="344" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="#f5d565">3.  Breakbeat Bodega</text>
+    <line x1="80" y1="358" x2="520" y2="358" stroke="#f5d565" stroke-width="1" opacity="0.25"/>
+    <text x="80" y="396" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="#f5d565">4.  Two Turntables, No Ride</text>
+    <line x1="80" y1="410" x2="520" y2="410" stroke="#f5d565" stroke-width="1" opacity="0.25"/>
+    <text x="80" y="448" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="#f5d565">5.  Circuit Breaker Anthem</text>
+    <line x1="80" y1="462" x2="520" y2="462" stroke="#f5d565" stroke-width="1" opacity="0.25"/>
+  <text x="80" y="530" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#f5d565" opacity="0.6">RSD-49003-2 · Record Store Recordings · 1990s</text>
+</svg>

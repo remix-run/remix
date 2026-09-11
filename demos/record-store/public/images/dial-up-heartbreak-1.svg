@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#2e2440"/>
+  
+      <path d="M300,420 C230,350 160,300 160,230 C160,175 205,150 250,170 C275,182 292,205 300,225 C308,205 325,182 350,170 C395,150 440,175 440,230 C440,300 370,350 300,420 Z" fill="#b04a6e"/>
+      <polyline points="60,510 130,470 200,510 270,470 340,510 410,470 480,510 540,470" fill="none" stroke="#7f74a3" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="80,90 140,120 200,90 260,120 320,90" fill="none" stroke="#7f74a3" stroke-width="8" opacity="0.6"/>
+  
+  <rect x="0" y="440" width="600" height="160" fill="#000000" opacity="0.45"/>
+  <text x="300" y="500" font-family="Helvetica, Arial, sans-serif" font-size="46" font-weight="bold" fill="#e6ddf2" text-anchor="middle">Dial-Up Heartbreak</text>
+  <text x="300" y="548" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#e6ddf2" text-anchor="middle" opacity="0.85">The Modem Tones</text>
+</svg>

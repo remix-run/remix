@@ -16,10 +16,10 @@ export function AdminDashboardPage() {
         })}
       >
         <div class="card">
-          <h2>Manage Books</h2>
-          <p>Add, edit, or remove books from the catalog.</p>
-          <a href={routes.admin.books.index.href()} class="btn" mix={css({ marginTop: '1rem' })}>
-            View Books
+          <h2>Manage Albums</h2>
+          <p>Add, edit, or remove albums from the catalog.</p>
+          <a href={routes.admin.albums.index.href()} class="btn" mix={css({ marginTop: '1rem' })}>
+            View Albums
           </a>
         </div>
 

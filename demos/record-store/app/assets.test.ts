@@ -1,17 +1,17 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { createBookstoreRouter } from './router.ts'
+import { createRecordStoreRouter } from './router.ts'
 import { assets } from './utils/assets.ts'
 
 describe('browser assets', () => {
   it('serves every colocated browser entry graph and rejects server source', async () => {
-    let router = createBookstoreRouter()
+    let router = createRecordStoreRouter()
     let hrefs = await assets.getPreloads([
       'demos/record-store/app/actions/public/entry.tsx',
       'demos/record-store/app/actions/fragments/public/cart-button.tsx',
       'demos/record-store/app/actions/fragments/public/cart-items.tsx',
-      'demos/record-store/app/actions/books/public/image-carousel.tsx',
+      'demos/record-store/app/actions/albums/public/image-carousel.tsx',
     ])
     hrefs.push(await assets.getHref('demos/record-store/app/actions/public/app.css'))
 

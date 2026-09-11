@@ -10,7 +10,7 @@ export interface DocumentProps {
 
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
-    let { title = 'Bookstore', children } = handle.props
+    let { title = 'Record Store', children } = handle.props
     let { scriptEntry, stylesheetHref } = getAssetEntry()
     let { href, importMap, preloads } = scriptEntry
 

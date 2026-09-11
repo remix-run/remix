@@ -301,9 +301,9 @@ import { form, get, post, resources, route } from 'remix/routes'
 export const routes = route({
   home: '/',
   contact: form('contact'),
-  books: {
-    index: '/books',
-    show: '/books/:slug',
+  albums: {
+    index: '/albums',
+    show: '/albums/:slug',
   },
   auth: route('auth', {
     login: form('login'),
@@ -311,7 +311,7 @@ export const routes = route({
   }),
   admin: route('admin', {
     index: get('/'),
-    books: resources('books', { param: 'bookId' }),
+    albums: resources('albums', { param: 'albumId' }),
   }),
 })
 ```
@@ -324,18 +324,18 @@ import { createController } from 'remix/router'
 import { databaseContext } from '../middleware/database.ts'
 import { routes } from '../routes.ts'
 
-export default createController(routes.books, {
+export default createController(routes.albums, {
   actions: {
     async index({ get }) {
       let db = get(databaseContext)
-      let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
-      return render(<BooksIndexPage allBooks={allBooks} />)
+      let allAlbums = await db.findMany(albums, { orderBy: ['id', 'asc'] })
+      return render(<AlbumsIndexPage allAlbums={allAlbums} />)
     },
     async show({ get, params }) {
       let db = get(databaseContext)
-      let book = await db.findOne(books, { where: { slug: params.slug } })
-      if (!book) return new Response('Not Found', { status: 404 })
-      return render(<BookShowPage book={book} />)
+      let album = await db.findOne(albums, { where: { slug: params.slug } })
+      if (!album) return new Response('Not Found', { status: 404 })
+      return render(<AlbumShowPage album={album} />)
     },
   },
 })
@@ -348,10 +348,10 @@ import { createRouter } from 'remix/router'
 
 import rootController from './actions/controller.tsx'
 import adminController from './actions/admin/controller.tsx'
-import adminBooksController from './actions/admin/books/controller.tsx'
+import adminAlbumsController from './actions/admin/albums/controller.tsx'
 import authController from './actions/auth/controller.tsx'
 import authLoginController from './actions/auth/login/controller.tsx'
-import booksController from './actions/books/controller.tsx'
+import albumsController from './actions/albums/controller.tsx'
 import contactController from './actions/contact/controller.tsx'
 import { routes } from './routes.ts'
 
@@ -359,11 +359,11 @@ export const router = createRouter({ middleware })
 
 router.map(routes, rootController)
 router.map(routes.contact, contactController)
-router.map(routes.books, booksController)
+router.map(routes.albums, albumsController)
 router.map(routes.auth, authController)
 router.map(routes.auth.login, authLoginController)
 router.map(routes.admin, adminController)
-router.map(routes.admin.books, adminBooksController)
+router.map(routes.admin.albums, adminAlbumsController)
 ```
 
 ### Compose middleware deliberately
@@ -401,26 +401,26 @@ import { Session } from 'remix/session'
 import { databaseContext } from '../middleware/database.ts'
 import { routes } from '../routes.ts'
 
-let bookSchema = f.object({
+let albumSchema = f.object({
   slug: f.field(s.string()),
   title: f.field(s.string()),
 })
 
-export default createController(routes.books, {
+export default createController(routes.albums, {
   actions: {
     async create({ get }) {
-      let parsed = s.parseSafe(bookSchema, get(FormData))
+      let parsed = s.parseSafe(albumSchema, get(FormData))
       if (!parsed.success) {
-        return render(<NewBookPage errors={parsed.issues} />, { status: 400 })
+        return render(<NewAlbumPage errors={parsed.issues} />, { status: 400 })
       }
 
       let db = get(databaseContext)
-      let book = await db.create(books, parsed.value)
+      let album = await db.create(albums, parsed.value)
 
       let session = get(Session)
-      session.flash('message', `Added ${book.title}.`)
+      session.flash('message', `Added ${album.title}.`)
 
-      return redirect(routes.books.show.href({ slug: book.slug }))
+      return redirect(routes.albums.show.href({ slug: album.slug }))
     },
   },
 })

@@ -13,7 +13,7 @@ describe('router', () => {
     assert.equal(response.headers.get('Content-Type'), 'text/html; charset=UTF-8')
 
     let html = await response.text()
-    assert.ok(html.includes('Welcome to the Bookstore'))
+    assert.ok(html.includes('Welcome to the Record Store'))
   })
 
   it('returns 404 for unknown routes', async () => {

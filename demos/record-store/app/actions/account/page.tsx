@@ -42,11 +42,11 @@ export function AccountPage(handle: Handle<{ user: User }>) {
               View Orders
             </a>
             <a
-              href={routes.books.index.href()}
+              href={routes.albums.index.href()}
               class="btn btn-secondary"
               mix={css({ marginLeft: '0.5rem' })}
             >
-              Browse Books
+              Browse Albums
             </a>
           </p>
         </div>

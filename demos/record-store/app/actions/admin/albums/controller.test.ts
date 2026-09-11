@@ -5,31 +5,31 @@ import { createTestRouter, loginAsAdmin, requestWithSession } from '../../../../
 
 const router = await createTestRouter()
 
-describe('admin books handlers', () => {
-  it('POST /admin/books creates new book when admin', async () => {
+describe('admin albums handlers', () => {
+  it('POST /admin/albums creates new album when admin', async () => {
     let sessionId = await loginAsAdmin(router)
 
-    // Create new book
-    let createRequest = requestWithSession('https://remix.run/admin/books', sessionId, {
+    // Create new album
+    let createRequest = requestWithSession('https://remix.run/admin/albums', sessionId, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        slug: 'test-book',
-        title: 'Test Book',
-        author: 'Test Author',
+        slug: 'test-album',
+        title: 'Test Album',
+        artist: 'Test Artist',
         description: 'Test description',
         price: '29.99',
         genre: 'test',
-        isbn: '978-0000000000',
-        publishedYear: '2024',
+        catalogNumber: 'RSD-49000-2',
+        releaseYear: '2024',
         inStock: 'true',
       }),
     })
     let response = await router.fetch(createRequest)
 
     assert.equal(response.status, 302)
-    assert.ok(response.headers.get('Location')?.includes('/admin/books'))
+    assert.ok(response.headers.get('Location')?.includes('/admin/albums'))
   })
 })

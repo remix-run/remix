@@ -1,41 +1,41 @@
 import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
 
-import type { Book } from '../data/schema.ts'
+import type { Album } from '../data/schema.ts'
 import { routes } from '../routes.ts'
 import type { Cart } from '../utils/cart.ts'
-import { BookCard } from '../ui/book-card.tsx'
+import { AlbumCard } from '../ui/album-card.tsx'
 import { Layout } from '../ui/layout.tsx'
 
 interface HomePageProps {
-  featuredBooks: Book[]
+  featuredAlbums: Album[]
   cart: Cart
 }
 
 export function HomePage(handle: Handle<HomePageProps>) {
   return () => {
-    let { featuredBooks, cart } = handle.props
+    let { featuredAlbums, cart } = handle.props
 
     return (
       <Layout>
         <div class="card">
-          <h1>Welcome to the Bookstore</h1>
+          <h1>Welcome to the Record Store</h1>
           <p mix={css({ margin: '1rem 0' })}>
-            Discover your next favorite book from our curated collection of fiction, non-fiction,
-            and more.
+            Dig through the crates for your next favorite album — grunge, hip-hop, metal, ska, and
+            more.
           </p>
           <p>
-            <a href={routes.books.index.href()} class="btn">
-              Browse Books
+            <a href={routes.albums.index.href()} class="btn">
+              Browse Albums
             </a>
           </p>
         </div>
 
-        <h2 mix={css({ margin: '2rem 0 1rem' })}>Featured Books</h2>
+        <h2 mix={css({ margin: '2rem 0 1rem' })}>Featured Albums</h2>
         <div class="grid">
-          {featuredBooks.map((book) => {
-            let inCart = cart.items.some((item) => item.slug === book.slug)
-            return <BookCard book={book} inCart={inCart} />
+          {featuredAlbums.map((album) => {
+            let inCart = cart.items.some((item) => item.slug === album.slug)
+            return <AlbumCard album={album} inCart={inCart} />
           })}
         </div>
       </Layout>

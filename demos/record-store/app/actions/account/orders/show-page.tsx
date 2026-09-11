@@ -49,7 +49,7 @@ export function AccountOrderShowPage(
           <table mix={css({ marginTop: '1rem' })}>
             <thead>
               <tr>
-                <th>Book</th>
+                <th>Album</th>
                 <th>Quantity</th>
                 <th>Price</th>
                 <th>Subtotal</th>

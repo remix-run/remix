@@ -14,16 +14,16 @@ import { parseId } from '../utils/ids.ts'
 import { verifyPassword } from '../utils/password-hash.ts'
 import { databaseContext } from './database.ts'
 
-interface BookstoreAuthSession {
+interface RecordStoreAuthSession {
   userId: number
 }
 
 export function loadAuth() {
   return auth({
     schemes: [
-      createSessionAuthScheme<User, BookstoreAuthSession>({
+      createSessionAuthScheme<User, RecordStoreAuthSession>({
         read(session) {
-          return parseBookstoreAuthSession(session.get('auth'))
+          return parseRecordStoreAuthSession(session.get('auth'))
         },
         async verify(value, context) {
           let db = context.get(databaseContext)
@@ -104,7 +104,7 @@ export function getLoginRedirectURL(
   })
 }
 
-function parseBookstoreAuthSession(value: unknown): BookstoreAuthSession | null {
+function parseRecordStoreAuthSession(value: unknown): RecordStoreAuthSession | null {
   if (typeof value !== 'object' || value == null) {
     return null
   }

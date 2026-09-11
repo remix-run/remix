@@ -3,7 +3,7 @@ import { SetCookie, Cookie } from 'remix/headers'
 import { createMemorySessionStorage } from 'remix/session-storage/memory'
 
 import { db, loadAppMigrations, loadAppSeed } from '../app/db.ts'
-import { createBookstoreRouter } from '../app/router.ts'
+import { createRecordStoreRouter } from '../app/router.ts'
 
 export async function createTestRouter() {
   await db.reset({ migrations: await loadAppMigrations(), seed: await loadAppSeed() })
@@ -17,7 +17,7 @@ export async function createTestRouter() {
   })
   let sessionStorage = createMemorySessionStorage()
 
-  return createBookstoreRouter({
+  return createRecordStoreRouter({
     sessionCookie,
     sessionStorage,
   })
@@ -105,7 +105,7 @@ export async function login(router: any, email: string, password: string): Promi
  * Login as admin and return the session cookie
  */
 export function loginAsAdmin(router: any): Promise<string> {
-  return login(router, 'admin@bookstore.com', 'admin123')
+  return login(router, 'admin@recordstore.com', 'admin123')
 }
 
 /**

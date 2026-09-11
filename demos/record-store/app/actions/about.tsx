@@ -7,9 +7,9 @@ export function AboutPage() {
   return () => (
     <Layout>
       <div class="card">
-        <h1>About Our Bookstore</h1>
+        <h1>About Our Record Store</h1>
         <p mix={css({ margin: '1rem 0' })}>
-          Welcome to our online bookstore, a demo application built to showcase the capabilities of
+          Welcome to our online record store, a demo application built to showcase the capabilities of
           <strong>fetch-router</strong> - a powerful, type-safe routing library for web
           applications.
         </p>
@@ -38,14 +38,14 @@ export function AboutPage() {
 
         <h2 mix={css({ margin: '1.5rem 0 0.5rem' })}>Try It Out</h2>
         <p mix={css({ margin: '1rem 0' })}>
-          Explore the site to see all these features in action. You can browse books, create an
+          Explore the site to see all these features in action. You can browse albums, create an
           account, add items to your cart, and even access the admin panel (login as
-          admin@bookstore.com / admin123).
+          admin@recordstore.com / admin123).
         </p>
 
         <p mix={css({ marginTop: '2rem' })}>
-          <a href={routes.books.index.href()} class="btn">
-            Explore Books
+          <a href={routes.albums.index.href()} class="btn">
+            Explore Albums
           </a>
           <a
             href={routes.auth.register.index.href()}

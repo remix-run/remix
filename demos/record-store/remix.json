@@ -3,7 +3,7 @@
   "db": {
     "adapter": {
       "type": "sqlite",
-      "filename": "./db/bookstore.sqlite",
+      "filename": "./db/record-store.sqlite",
       "foreignKeys": true
     },
     "migrations": {

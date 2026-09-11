@@ -10,14 +10,14 @@ beforeEach(async () => {
   await db.reset({ migrations: await loadAppMigrations(), seed: await loadAppSeed() })
 })
 
-describe('bookstore database seed', () => {
+describe('record store database seed', () => {
   it('stores verifiable password hashes for seeded users', async () => {
     let admin = await db.find(users, 1)
     let customer = await db.find(users, 2)
 
     assert.ok(admin)
     assert.ok(customer)
-    assert.equal(admin.email, 'admin@bookstore.com')
+    assert.equal(admin.email, 'admin@recordstore.com')
     assert.equal(customer.email, 'customer@example.com')
     assert.notEqual(admin.password_hash, 'admin123')
     assert.notEqual(customer.password_hash, 'password123')

@@ -27,9 +27,9 @@ export const routes = route({
   home: '/',
 
   // Plain object — no shared prefix, each leaf has an absolute path.
-  books: {
-    index: '/books',
-    show: '/books/:slug',
+  albums: {
+    index: '/albums',
+    show: '/albums/:slug',
   },
 
   // route('auth', ...) — every leaf is prefixed with /auth.
@@ -67,8 +67,8 @@ settings: form('settings', { formMethod: 'PUT', names: { action: 'update' } })
 Expands to conventional CRUD routes: `index`, `new`, `create`, `show`, `edit`, `update`, `destroy`.
 
 ```typescript
-books: resources('books', { param: 'bookId' })
-// GET /books, GET /books/new, POST /books, GET /books/:bookId, ...
+albums: resources('albums', { param: 'albumId' })
+// GET /albums, GET /albums/new, POST /albums, GET /albums/:albumId, ...
 
 orders: resources('orders', { only: ['index', 'show'], param: 'orderId' })
 // GET /orders, GET /orders/:orderId
@@ -133,8 +133,8 @@ For pages, render a component tree and return the resulting `Response`:
 ```typescript
 async handler({ get }) {
   let db = get(databaseContext)
-  let books = await db.findMany(books, { orderBy: ['id', 'asc'] })
-  return render(<IndexPage books={books} />)
+  let albums = await db.findMany(albums, { orderBy: ['id', 'asc'] })
+  return render(<IndexPage albums={albums} />)
 }
 ```
 
@@ -147,15 +147,15 @@ import { redirect } from 'remix/response/redirect'
 
 async create({ get }) {
   let formData = get(FormData)
-  let parsed = s.parseSafe(bookSchema, formData)
+  let parsed = s.parseSafe(albumSchema, formData)
   if (!parsed.success) {
-    return render(<NewBookPage errors={parsed.issues} />, { status: 400 })
+    return render(<NewAlbumPage errors={parsed.issues} />, { status: 400 })
   }
 
   let db = get(databaseContext)
-  let book = await db.create(books, parsed.value)
+  let album = await db.create(albums, parsed.value)
 
-  return redirect(routes.books.show.href({ slug: book.slug }), 303)
+  return redirect(routes.albums.show.href({ slug: album.slug }), 303)
 }
 ```
 
@@ -168,9 +168,9 @@ For expected failures — validation, conflict, not found — return a `Response
 ```typescript
 async show({ get, params }) {
   let db = get(databaseContext)
-  let book = await db.find(books, params.bookId)
-  if (!book) return new Response('Not Found', { status: 404 })
-  return render(<ShowPage book={book} />)
+  let album = await db.find(albums, params.albumId)
+  if (!album) return new Response('Not Found', { status: 404 })
+  return render(<ShowPage album={album} />)
 }
 ```
 
@@ -215,19 +215,19 @@ import { createController } from 'remix/router'
 
 import { routes } from '../routes.ts'
 
-export default createController(routes.books, {
+export default createController(routes.albums, {
   actions: {
     async index({ get }) {
       let db = get(databaseContext)
-      let items = await db.findMany(books, { orderBy: ['id', 'asc'] })
+      let items = await db.findMany(albums, { orderBy: ['id', 'asc'] })
       return render(<IndexPage items={items} />)
     },
 
     async show({ get, params }) {
       let db = get(databaseContext)
-      let book = await db.find(books, params.bookId)
-      if (!book) return new Response('Not Found', { status: 404 })
-      return render(<ShowPage book={book} />)
+      let album = await db.find(albums, params.albumId)
+      if (!album) return new Response('Not Found', { status: 404 })
+      return render(<ShowPage album={album} />)
     },
   },
 })
@@ -332,7 +332,7 @@ router.map(routes.contact, contactController)
 router.map(routes.auth, authController)
 router.map(routes.auth.login, authLoginController)
 router.map(routes.admin, adminController)
-router.map(routes.admin.books, adminBooksController)
+router.map(routes.admin.albums, adminAlbumsController)
 
 // Leaf route → one-off action
 router.get(routes.search, searchAction)

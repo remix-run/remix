@@ -26,8 +26,8 @@ describe('checkout handlers', () => {
     let addRequest = requestWithSession('https://remix.run/cart/api/add', sessionCookie, {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '1',
-        slug: 'bbq',
+        albumId: '1',
+        slug: 'flannel-overdrive',
       }),
     })
     let addResponse = await router.fetch(addRequest)
@@ -64,6 +64,6 @@ describe('checkout handlers', () => {
 
     assert.equal(orderDetailsResponse.status, 200)
     let orderDetailsHtml = await orderDetailsResponse.text()
-    assertContains(orderDetailsHtml, 'Ash &amp; Smoke')
+    assertContains(orderDetailsHtml, 'Flannel Overdrive')
   })
 })

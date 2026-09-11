@@ -3,7 +3,7 @@ import { css } from 'remix/ui'
 
 import { CartButton } from './public/cart-button.tsx'
 import { CartItems } from './public/cart-items.tsx'
-import { books } from '../../data/schema.ts'
+import { albums } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { getCartTotal } from '../../utils/cart.ts'
 import { getCurrentCart, getCurrentUserSafely } from '../../utils/context.ts'
@@ -12,18 +12,18 @@ import { parseId } from '../../utils/ids.ts'
 export default createController(routes.fragments, {
   actions: {
     async cartButton({ db, params, render, session }) {
-      let bookId = parseId(params.bookId)
-      let book = bookId === undefined ? undefined : await db.find(books, bookId)
+      let albumId = parseId(params.albumId)
+      let album = albumId === undefined ? undefined : await db.find(albums, albumId)
 
-      if (!book) {
-        return render(<p>Book not found</p>, fragmentResponseInit({ status: 404 }))
+      if (!album) {
+        return render(<p>Album not found</p>, fragmentResponseInit({ status: 404 }))
       }
 
       let cart = getCurrentCart(session)
-      let inCart = cart.items.some((item) => item.bookId === book.id)
+      let inCart = cart.items.some((item) => item.albumId === album.id)
 
       return render(
-        <CartButton inCart={inCart} id={book.id} slug={book.slug} />,
+        <CartButton inCart={inCart} id={album.id} slug={album.slug} />,
         fragmentResponseInit(),
       )
     },
@@ -38,8 +38,8 @@ export default createController(routes.fragments, {
           <div mix={css({ marginTop: '2rem' })}>
             <p>Your cart is empty.</p>
             <p mix={css({ marginTop: '1rem' })}>
-              <a href={routes.books.index.href()} class="btn">
-                Browse Books
+              <a href={routes.albums.index.href()} class="btn">
+                Browse Albums
               </a>
             </p>
           </div>,

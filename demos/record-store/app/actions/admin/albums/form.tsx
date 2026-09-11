@@ -1,22 +1,22 @@
 import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
 
-import type { Book } from '../../../data/schema.ts'
+import type { Album } from '../../../data/schema.ts'
 import { RestfulForm } from '../../../ui/restful-form.tsx'
 import { Layout } from '../../../ui/layout.tsx'
 
-export interface AdminBookFormPageProps {
+export interface AdminAlbumFormPageProps {
   title: string
   action: string
   cancelHref: string
   submitLabel: string
   method?: 'POST' | 'PUT'
-  book?: Book
+  album?: Album
 }
 
-export function AdminBookFormPage(handle: Handle<AdminBookFormPageProps>) {
+export function AdminAlbumFormPage(handle: Handle<AdminAlbumFormPageProps>) {
   return () => {
-    let { action, book, cancelHref, method = 'POST', submitLabel, title } = handle.props
+    let { action, album, cancelHref, method = 'POST', submitLabel, title } = handle.props
 
     return (
       <Layout>
@@ -26,17 +26,17 @@ export function AdminBookFormPage(handle: Handle<AdminBookFormPageProps>) {
           <RestfulForm method={method} action={action} encType="multipart/form-data">
             <div class="form-group">
               <label for="title">Title</label>
-              <input type="text" id="title" name="title" value={book?.title} required />
+              <input type="text" id="title" name="title" value={album?.title} required />
             </div>
 
             <div class="form-group">
-              <label for="author">Author</label>
-              <input type="text" id="author" name="author" value={book?.author} required />
+              <label for="artist">Artist</label>
+              <input type="text" id="artist" name="artist" value={album?.artist} required />
             </div>
 
             <div class="form-group">
               <label for="slug">Slug (URL-friendly name)</label>
-              <input type="text" id="slug" name="slug" value={book?.slug} required />
+              <input type="text" id="slug" name="slug" value={album?.slug} required />
             </div>
 
             <div class="form-group">
@@ -45,7 +45,7 @@ export function AdminBookFormPage(handle: Handle<AdminBookFormPageProps>) {
                 id="description"
                 name="description"
                 required
-                defaultValue={book?.description}
+                defaultValue={album?.description}
               />
             </div>
 
@@ -56,28 +56,28 @@ export function AdminBookFormPage(handle: Handle<AdminBookFormPageProps>) {
                 id="price"
                 name="price"
                 step="0.01"
-                value={book?.price}
+                value={album?.price}
                 required
               />
             </div>
 
             <div class="form-group">
               <label for="genre">Genre</label>
-              <input type="text" id="genre" name="genre" value={book?.genre} required />
+              <input type="text" id="genre" name="genre" value={album?.genre} required />
             </div>
 
             <div class="form-group">
-              <label for="isbn">ISBN</label>
-              <input type="text" id="isbn" name="isbn" value={book?.isbn} required />
+              <label for="catalogNumber">Catalog #</label>
+              <input type="text" id="catalogNumber" name="catalogNumber" value={album?.catalog_number} required />
             </div>
 
             <div class="form-group">
-              <label for="publishedYear">Published Year</label>
+              <label for="releaseYear">Release Year</label>
               <input
                 type="number"
-                id="publishedYear"
-                name="publishedYear"
-                value={book?.published_year ?? 2024}
+                id="releaseYear"
+                name="releaseYear"
+                value={album?.release_year ?? 2024}
                 required
               />
             </div>
@@ -85,22 +85,22 @@ export function AdminBookFormPage(handle: Handle<AdminBookFormPageProps>) {
             <div class="form-group">
               <label for="inStock">In Stock</label>
               <select id="inStock" name="inStock">
-                <option value="true" selected={book?.in_stock ?? true}>
+                <option value="true" selected={album?.in_stock ?? true}>
                   Yes
                 </option>
-                <option value="false" selected={book != null ? !book.in_stock : false}>
+                <option value="false" selected={album != null ? !album.in_stock : false}>
                   No
                 </option>
               </select>
             </div>
 
             <div class="form-group">
-              <label for="cover">Book Cover Image</label>
-              {book && book.cover_url !== '/images/placeholder.jpg' ? (
+              <label for="cover">Album Cover Image</label>
+              {album && album.cover_url !== '/images/placeholder.svg' ? (
                 <div mix={css({ marginBottom: '0.5rem' })}>
                   <img
-                    src={book.cover_url}
-                    alt={book.title}
+                    src={album.cover_url}
+                    alt={album.title}
                     mix={css({ maxWidth: '200px', height: 'auto', borderRadius: '4px' })}
                   />
                   <p mix={css({ fontSize: '0.875rem', color: '#666' })}>Current cover image</p>
@@ -108,9 +108,9 @@ export function AdminBookFormPage(handle: Handle<AdminBookFormPageProps>) {
               ) : null}
               <input type="file" id="cover" name="cover" accept="image/*" />
               <small mix={css({ color: '#666' })}>
-                {book
+                {album
                   ? 'Optional. Upload a new cover image to replace the current one.'
-                  : 'Optional. Upload a cover image for this book.'}
+                  : 'Optional. Upload a cover image for this album.'}
               </small>
             </div>
 

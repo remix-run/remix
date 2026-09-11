@@ -159,36 +159,36 @@
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1.5rem;
   }
-  .book-card {
+  .album-card {
     background: white;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s;
   }
-  .book-card:hover {
+  .album-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   }
-  .book-card img {
+  .album-card img {
     width: 100%;
     height: 300px;
     object-fit: cover;
     background: #ecf0f1;
   }
-  .book-card-body {
+  .album-card-body {
     padding: 1rem;
   }
-  .book-card h3 {
+  .album-card h3 {
     font-size: 1.1rem;
     margin-bottom: 0.5rem;
   }
-  .book-card .author {
+  .album-card .artist {
     color: #7f8c8d;
     font-size: 0.9rem;
     margin-bottom: 0.5rem;
   }
-  .book-card .price {
+  .album-card .price {
     font-size: 1.25rem;
     font-weight: bold;
     color: #27ae60;

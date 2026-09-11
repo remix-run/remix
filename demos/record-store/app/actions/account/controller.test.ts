@@ -42,7 +42,7 @@ describe('account handlers', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
     assertContains(html, 'Order #1001')
-    assertContains(html, 'Ash &amp; Smoke')
+    assertContains(html, 'Flannel Overdrive')
   })
 
   it('GET /account/orders shows item counts from normalized order items', async () => {

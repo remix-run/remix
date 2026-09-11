@@ -10,7 +10,7 @@ describe('auth handlers', () => {
     let response = await router.fetch('https://remix.run/login', {
       method: 'POST',
       body: new URLSearchParams({
-        email: 'admin@bookstore.com',
+        email: 'admin@recordstore.com',
         password: 'admin123',
       }),
       redirect: 'manual',
@@ -52,7 +52,7 @@ describe('auth handlers', () => {
     let response = await router.fetch('https://remix.run/login', {
       method: 'POST',
       body: new URLSearchParams({
-        email: '%@bookstore.com',
+        email: '%@recordstore.com',
         password: 'admin123',
       }),
       redirect: 'manual',

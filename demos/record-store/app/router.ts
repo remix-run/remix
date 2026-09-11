@@ -15,7 +15,7 @@ import accountController from './actions/account/controller.tsx'
 import accountOrdersController from './actions/account/orders/controller.tsx'
 import accountSettingsController from './actions/account/settings/controller.tsx'
 import adminController from './actions/admin/controller.tsx'
-import adminBooksController from './actions/admin/books/controller.tsx'
+import adminAlbumsController from './actions/admin/albums/controller.tsx'
 import adminOrdersController from './actions/admin/orders/controller.tsx'
 import adminUsersController from './actions/admin/users/controller.tsx'
 import authController from './actions/auth/controller.tsx'
@@ -23,7 +23,7 @@ import authForgotPasswordController from './actions/auth/forgot-password/control
 import authLoginController from './actions/auth/login/controller.tsx'
 import authRegisterController from './actions/auth/register/controller.tsx'
 import authResetPasswordController from './actions/auth/reset-password/controller.tsx'
-import booksController from './actions/books/controller.tsx'
+import albumsController from './actions/albums/controller.tsx'
 import cartApiController from './actions/cart/api/controller.tsx'
 import cartController from './actions/cart/controller.tsx'
 import checkoutController from './actions/checkout/controller.tsx'
@@ -55,12 +55,12 @@ declare module 'remix/router' {
   }
 }
 
-export interface BookstoreRouterOptions {
+export interface RecordStoreRouterOptions {
   sessionCookie?: Cookie
   sessionStorage?: SessionStorage
 }
 
-export function createBookstoreRouter(options?: BookstoreRouterOptions) {
+export function createRecordStoreRouter(options?: RecordStoreRouterOptions) {
   let cookie = options?.sessionCookie ?? sessionCookie
   let storage = options?.sessionStorage ?? sessionStorage
   let middleware = []
@@ -94,7 +94,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
 
   router.map(routes.contact, contactController)
 
-  router.map(routes.books, booksController)
+  router.map(routes.albums, albumsController)
   router.map(routes.auth, authController)
   router.map(routes.auth.login, authLoginController)
   router.map(routes.auth.register, authRegisterController)
@@ -107,7 +107,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   router.map(routes.account.orders, accountOrdersController)
   router.map(routes.checkout, checkoutController)
   router.map(routes.admin, adminController)
-  router.map(routes.admin.books, adminBooksController)
+  router.map(routes.admin.albums, adminAlbumsController)
   router.map(routes.admin.users, adminUsersController)
   router.map(routes.admin.orders, adminOrdersController)
 

@@ -2,7 +2,7 @@ import { createController } from 'remix/router'
 import { ilike, inList, or } from 'remix/data-table'
 import { createFileResponse as sendFile } from 'remix/response/file'
 
-import { books } from '../data/schema.ts'
+import { albums } from '../data/schema.ts'
 import { routes } from '../routes.ts'
 import { assets } from '../utils/assets.ts'
 import { getCurrentCart } from '../utils/context.ts'
@@ -30,17 +30,17 @@ export default createController(routes, {
     },
     async home({ db, render, session }) {
       let cart = getCurrentCart(session)
-      let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
-      let featuredBookRows = await db.findMany(books, {
+      let featuredSlugs = ['flannel-overdrive', 'shred-till-dawn', 'boom-bap-boulevard']
+      let featuredAlbumRows = await db.findMany(albums, {
         where: inList('slug', featuredSlugs),
       })
-      let featuredBooksBySlug = new Map(featuredBookRows.map((book) => [book.slug, book]))
-      let featuredBooks = featuredSlugs.flatMap((slug) => {
-        let book = featuredBooksBySlug.get(slug)
-        return book ? [book] : []
+      let featuredAlbumsBySlug = new Map(featuredAlbumRows.map((album) => [album.slug, album]))
+      let featuredAlbums = featuredSlugs.flatMap((slug) => {
+        let album = featuredAlbumsBySlug.get(slug)
+        return album ? [album] : []
       })
 
-      return render(<HomePage featuredBooks={featuredBooks} cart={cart} />, {
+      return render(<HomePage featuredAlbums={featuredAlbums} cart={cart} />, {
         headers: { 'Cache-Control': 'no-store' },
       })
     },
@@ -49,11 +49,11 @@ export default createController(routes, {
     },
     async search({ db, render, session, url }) {
       let query = url.searchParams.get('q') ?? ''
-      let matchingBooks = query
-        ? await db.findMany(books, {
+      let matchingAlbums = query
+        ? await db.findMany(albums, {
             where: or(
               ilike('title', `%${query.toLowerCase()}%`),
-              ilike('author', `%${query.toLowerCase()}%`),
+              ilike('artist', `%${query.toLowerCase()}%`),
               ilike('description', `%${query.toLowerCase()}%`),
             ),
             orderBy: ['id', 'asc'],
@@ -61,7 +61,7 @@ export default createController(routes, {
         : []
       let cart = getCurrentCart(session)
 
-      return render(<SearchPage query={query} matchingBooks={matchingBooks} cart={cart} />)
+      return render(<SearchPage query={query} matchingAlbums={matchingAlbums} cart={cart} />)
     },
   },
 })

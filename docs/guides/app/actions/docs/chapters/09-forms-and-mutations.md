@@ -31,7 +31,7 @@ Use named submit buttons when one form has a small set of related intents. Choos
 
 ## PUT, PATCH, and DELETE from HTML forms {#method-override-for-put-patch-and-delete}
 
-HTML forms submit GET or POST. Add a hidden `_method` field and run `methodOverride()` after `formData()` when the route contract uses PUT, PATCH, or DELETE, as the bookstore demo's RESTful form wrapper does.
+HTML forms submit GET or POST. Add a hidden `_method` field and run `methodOverride()` after `formData()` when the route contract uses PUT, PATCH, or DELETE, as the record store demo's RESTful form wrapper does.
 
 ## Enhance submissions without replacing the action {#enhanced-form-submissions}
 

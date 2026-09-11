@@ -19,13 +19,13 @@ Define tables with typed columns, relations, and optional validation hooks:
 import { belongsTo, column as c, hasMany, table } from 'remix/data-table'
 import type { TableRow, TableRowWith } from 'remix/data-table'
 
-export const books = table({
-  name: 'books',
+export const albums = table({
+  name: 'albums',
   columns: {
     id: c.integer().primaryKey().autoIncrement(),
     slug: c.text().notNull().unique(),
     title: c.text().notNull(),
-    author: c.text().notNull(),
+    artist: c.text().notNull(),
     price: c.decimal(10, 2).notNull(),
     genre: c.text().notNull(),
     in_stock: c.boolean(),
@@ -46,7 +46,7 @@ export const orders = table({
   },
 })
 
-export type Book = TableRow<typeof books>
+export type Album = TableRow<typeof albums>
 export type Order = TableRow<typeof orders>
 export type OrderWithItems = TableRowWith<typeof orders, 'items'>
 ```
@@ -65,7 +65,7 @@ export type OrderWithItems = TableRowWith<typeof orders, 'items'>
 
 Column modifiers: `.primaryKey()`, `.autoIncrement()`, `.notNull()`, `.unique()`, `.references(table, column, fkName?)`, `.onDelete(action)`, `.default(value)`.
 
-Composite primary keys go on the table option, not the column: `primaryKey: ['order_id', 'book_id']`.
+Composite primary keys go on the table option, not the column: `primaryKey: ['order_id', 'album_id']`.
 
 ### Schema vs migrations
 
@@ -87,8 +87,8 @@ Tables can define validation and lifecycle hooks:
 - `afterRead` can normalize or reject row values after reads
 
 ```typescript
-export const books = table({
-  name: 'books',
+export const albums = table({
+  name: 'albums',
   columns: {
     /* ... */
   },
@@ -148,28 +148,28 @@ export function loadDatabase(): Middleware {
 let db = get(databaseContext)
 
 // Find by primary key
-let book = await db.find(books, id)
+let album = await db.find(albums, id)
 
 // Find one by condition
 let user = await db.findOne(users, { where: { email } })
 
 // Find many with ordering
-let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
+let allAlbums = await db.findMany(albums, { orderBy: ['id', 'asc'] })
 
 // Count
 let total = await db.count(orders, { where: { user_id: userId } })
 
 // Query builder
-let genres = await db.query(books).select('genre').distinct().orderBy('genre', 'asc').all()
+let genres = await db.query(albums).select('genre').distinct().orderBy('genre', 'asc').all()
 
 // Create
-let newBook = await db.create(books, { slug: 'new-book', title: 'New Book' /* ... */ })
+let newAlbum = await db.create(albums, { slug: 'new-album', title: 'New Album' /* ... */ })
 
 // Update
-await db.update(books, bookId, { title: 'Updated Title' })
+await db.update(albums, albumId, { title: 'Updated Title' })
 
 // Delete
-await db.delete(books, bookId)
+await db.delete(albums, albumId)
 ```
 
 ### Operators
@@ -177,8 +177,8 @@ await db.delete(books, bookId)
 ```typescript
 import { inList } from 'remix/data-table/operators'
 
-let featured = await db.findMany(books, {
-  where: inList('slug', ['book-a', 'book-b', 'book-c']),
+let featured = await db.findMany(albums, {
+  where: inList('slug', ['album-a', 'album-b', 'album-c']),
 })
 ```
 
@@ -192,7 +192,7 @@ db/
     20260228090000_create_users/
       up.sql
       down.sql
-    20260301083000_add_books_search_index/
+    20260301083000_add_albums_search_index/
       up.sql
 ```
 

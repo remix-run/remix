@@ -1,35 +1,35 @@
 import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
 
-import type { Book } from '../../data/schema.ts'
+import type { Album } from '../../data/schema.ts'
 import type { Cart } from '../../utils/cart.ts'
 import { routes } from '../../routes.ts'
-import { BookCard } from '../../ui/book-card.tsx'
+import { AlbumCard } from '../../ui/album-card.tsx'
 import { Layout } from '../../ui/layout.tsx'
 
 export interface GenrePageProps {
   genre: string
-  matchingBooks: Book[]
+  matchingAlbums: Album[]
   cart: Cart
 }
 
 export function GenrePage(handle: Handle<GenrePageProps>) {
   return () => {
-    let { cart, genre, matchingBooks } = handle.props
+    let { cart, genre, matchingAlbums } = handle.props
 
     return (
       <Layout>
-        <h1>{genre.charAt(0).toUpperCase() + genre.slice(1)} Books</h1>
+        <h1>{genre.charAt(0).toUpperCase() + genre.slice(1)} Albums</h1>
         <p mix={css({ margin: '1rem 0' })}>
-          <a href={routes.books.index.href()} class="btn btn-secondary">
-            View All Books
+          <a href={routes.albums.index.href()} class="btn btn-secondary">
+            View All Albums
           </a>
         </p>
 
         <div class="grid" mix={css({ marginTop: '2rem' })}>
-          {matchingBooks.map((book) => {
-            let inCart = cart.items.some((item) => item.slug === book.slug)
-            return <BookCard book={book} inCart={inCart} />
+          {matchingAlbums.map((album) => {
+            let inCart = cart.items.some((item) => item.slug === album.slug)
+            return <AlbumCard album={album} inCart={inCart} />
           })}
         </div>
       </Layout>
@@ -42,10 +42,10 @@ export function GenreNotFoundPage(handle: Handle<{ genre: string }>) {
     <Layout>
       <div class="card">
         <h1>Genre Not Found</h1>
-        <p>No books found in the "{handle.props.genre}" genre.</p>
+        <p>No albums found in the "{handle.props.genre}" genre.</p>
         <p mix={css({ marginTop: '1rem' })}>
-          <a href={routes.books.index.href()} class="btn">
-            Browse All Books
+          <a href={routes.albums.index.href()} class="btn">
+            Browse All Albums
           </a>
         </p>
       </div>

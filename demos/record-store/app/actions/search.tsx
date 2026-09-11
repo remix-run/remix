@@ -1,21 +1,21 @@
 import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
 
-import type { Book } from '../data/schema.ts'
+import type { Album } from '../data/schema.ts'
 import { routes } from '../routes.ts'
 import type { Cart } from '../utils/cart.ts'
-import { BookCard } from '../ui/book-card.tsx'
+import { AlbumCard } from '../ui/album-card.tsx'
 import { Layout } from '../ui/layout.tsx'
 
 interface SearchPageProps {
   query: string
-  matchingBooks: Book[]
+  matchingAlbums: Album[]
   cart: Cart
 }
 
 export function SearchPage(handle: Handle<SearchPageProps>) {
   return () => {
-    let { cart, matchingBooks, query } = handle.props
+    let { cart, matchingAlbums, query } = handle.props
 
     return (
       <Layout>
@@ -30,7 +30,7 @@ export function SearchPage(handle: Handle<SearchPageProps>) {
             <input
               type="search"
               name="q"
-              placeholder="Search books..."
+              placeholder="Search albums..."
               value={query}
               mix={css({ flex: 1, padding: '0.5rem' })}
             />
@@ -42,18 +42,18 @@ export function SearchPage(handle: Handle<SearchPageProps>) {
 
         {query ? (
           <p mix={css({ marginBottom: '1rem' })}>
-            Found {matchingBooks.length} result(s) for "{query}"
+            Found {matchingAlbums.length} result(s) for "{query}"
           </p>
         ) : null}
 
         <div class="grid">
-          {matchingBooks.length > 0 ? (
-            matchingBooks.map((book) => {
-              let inCart = cart.items.some((item) => item.slug === book.slug)
-              return <BookCard book={book} inCart={inCart} />
+          {matchingAlbums.length > 0 ? (
+            matchingAlbums.map((album) => {
+              let inCart = cart.items.some((item) => item.slug === album.slug)
+              return <AlbumCard album={album} inCart={inCart} />
             })
           ) : (
-            <p>No books found matching your search.</p>
+            <p>No albums found matching your search.</p>
           )}
         </div>
       </Layout>

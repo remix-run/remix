@@ -4,7 +4,7 @@ import { css, clientEntry, on } from 'remix/ui'
 import { routes } from '../../../routes.ts'
 
 type CartItem = {
-  bookId: number
+  albumId: number
   slug: string
   title: string
   price: number
@@ -19,7 +19,7 @@ type CartItemsProps = {
 
 type PendingAction = {
   type: 'update' | 'remove'
-  bookId: number
+  albumId: number
 } | null
 
 export const CartItems = clientEntry(
@@ -68,7 +68,7 @@ export const CartItems = clientEntry(
           <table>
             <thead>
               <tr>
-                <th>Book</th>
+                <th>Album</th>
                 <th>Price</th>
                 <th>Quantity</th>
                 <th>Subtotal</th>
@@ -78,14 +78,14 @@ export const CartItems = clientEntry(
             <tbody>
               {items.map((item) => {
                 let isUpdating =
-                  pendingAction?.type === 'update' && pendingAction.bookId === item.bookId
+                  pendingAction?.type === 'update' && pendingAction.albumId === item.albumId
                 let isRemoving =
-                  pendingAction?.type === 'remove' && pendingAction.bookId === item.bookId
+                  pendingAction?.type === 'remove' && pendingAction.albumId === item.albumId
 
                 return (
-                  <tr key={item.bookId}>
+                  <tr key={item.albumId}>
                     <td>
-                      <a href={routes.books.show.href({ slug: item.slug })}>{item.title}</a>
+                      <a href={routes.albums.show.href({ slug: item.slug })}>{item.title}</a>
                     </td>
 
                     <td>${item.price.toFixed(2)}</td>
@@ -99,14 +99,14 @@ export const CartItems = clientEntry(
                             event.preventDefault()
                             await submit(event.currentTarget, signal, {
                               type: 'update',
-                              bookId: item.bookId,
+                              albumId: item.albumId,
                             })
                           }),
                           css({ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }),
                         ]}
                       >
                         <input type="hidden" name="_method" value="PUT" />
-                        <input type="hidden" name="bookId" value={item.bookId} />
+                        <input type="hidden" name="albumId" value={item.albumId} />
 
                         <input
                           type="number"
@@ -144,14 +144,14 @@ export const CartItems = clientEntry(
                             event.preventDefault()
                             await submit(event.currentTarget, signal, {
                               type: 'remove',
-                              bookId: item.bookId,
+                              albumId: item.albumId,
                             })
                           }),
                           css({ display: 'inline' }),
                         ]}
                       >
                         <input type="hidden" name="_method" value="DELETE" />
-                        <input type="hidden" name="bookId" value={item.bookId} />
+                        <input type="hidden" name="albumId" value={item.albumId} />
 
                         <button
                           type="submit"
@@ -181,7 +181,7 @@ export const CartItems = clientEntry(
               Total: {totalLabel}
             </p>
 
-            <a href={routes.books.index.href()} class="btn btn-secondary">
+            <a href={routes.albums.index.href()} class="btn btn-secondary">
               Continue Shopping
             </a>
 

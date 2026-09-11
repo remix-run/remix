@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#0fb8ad"/>
+  
+      <path d="M60,480 q40,-60 80,0 t80,0 t80,0 t80,0 t80,0" fill="none" stroke="#e5399e" stroke-width="14" stroke-linecap="round"/>
+      <rect x="70" y="90" width="90" height="90" fill="#ffd23f" transform="rotate(18 115 135)"/>
+      <circle cx="480" cy="140" r="52" fill="#e5399e"/>
+      <rect x="420" y="380" width="70" height="70" fill="#ffd23f" transform="rotate(-12 455 415)"/>
+      <circle cx="150" cy="330" r="18" fill="#ffffff" opacity="0.7"/>
+      <circle cx="330" cy="90" r="14" fill="#ffffff" opacity="0.7"/>
+  
+  <rect x="0" y="440" width="600" height="160" fill="#000000" opacity="0.45"/>
+  <text x="300" y="500" font-family="Helvetica, Arial, sans-serif" font-size="46" font-weight="bold" fill="#ffffff" text-anchor="middle">Mall Hair Forever</text>
+  <text x="300" y="548" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#ffffff" text-anchor="middle" opacity="0.85">Aqua Nette</text>
+</svg>

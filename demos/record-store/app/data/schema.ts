@@ -1,20 +1,20 @@
 import { belongsTo, column as c, table, hasMany } from 'remix/data-table'
 import type { TableRow, TableRowWith } from 'remix/data-table'
 
-export const books = table({
-  name: 'books',
+export const albums = table({
+  name: 'albums',
   columns: {
     id: c.integer(),
     slug: c.text(),
     title: c.text(),
-    author: c.text(),
+    artist: c.text(),
     description: c.text(),
     price: c.decimal(10, 2),
     genre: c.text(),
     image_urls: c.text(),
     cover_url: c.text(),
-    isbn: c.text(),
-    published_year: c.integer(),
+    catalog_number: c.text(),
+    release_year: c.integer(),
     in_stock: c.boolean(),
   },
   beforeWrite({ value }) {
@@ -28,8 +28,8 @@ export const books = table({
       next.title = normalizeText(next.title)
     }
 
-    if (typeof next.author === 'string') {
-      next.author = normalizeText(next.author)
+    if (typeof next.artist === 'string') {
+      next.artist = normalizeText(next.artist)
     }
 
     if (typeof next.description === 'string') {
@@ -40,12 +40,12 @@ export const books = table({
       next.genre = normalizeText(next.genre)
     }
 
-    if (typeof next.isbn === 'string') {
-      next.isbn = normalizeText(next.isbn)
+    if (typeof next.catalog_number === 'string') {
+      next.catalog_number = normalizeText(next.catalog_number)
     }
 
     if (typeof next.cover_url === 'string' && next.cover_url.trim() === '') {
-      next.cover_url = '/images/placeholder.jpg'
+      next.cover_url = '/images/placeholder.svg'
     }
 
     return { value: next }
@@ -56,19 +56,19 @@ export const books = table({
     let title = typeof value.title === 'string' ? normalizeText(value.title) : undefined
 
     if (operation === 'create' && !slug) {
-      issues.push({ message: 'Book slug is required.', path: ['slug'] })
+      issues.push({ message: 'Album slug is required.', path: ['slug'] })
     }
 
     if (slug !== undefined && slug.length === 0) {
-      issues.push({ message: 'Book slug is required.', path: ['slug'] })
+      issues.push({ message: 'Album slug is required.', path: ['slug'] })
     }
 
     if (operation === 'create' && !title) {
-      issues.push({ message: 'Book title is required.', path: ['title'] })
+      issues.push({ message: 'Album title is required.', path: ['title'] })
     }
 
     if (title !== undefined && title.length === 0) {
-      issues.push({ message: 'Book title is required.', path: ['title'] })
+      issues.push({ message: 'Album title is required.', path: ['title'] })
     }
 
     if (typeof value.price === 'number' && (!Number.isFinite(value.price) || value.price < 0)) {
@@ -76,12 +76,12 @@ export const books = table({
     }
 
     if (
-      typeof value.published_year === 'number' &&
-      (!Number.isInteger(value.published_year) || value.published_year < 0)
+      typeof value.release_year === 'number' &&
+      (!Number.isInteger(value.release_year) || value.release_year < 0)
     ) {
       issues.push({
-        message: 'Published year must be a valid positive integer.',
-        path: ['published_year'],
+        message: 'Release year must be a valid positive integer.',
+        path: ['release_year'],
       })
     }
 
@@ -95,7 +95,7 @@ export const books = table({
     return {
       value: {
         ...value,
-        cover_url: '/images/placeholder.jpg',
+        cover_url: '/images/placeholder.svg',
       },
     }
   },
@@ -237,10 +237,10 @@ export const orders = table({
 
 export const orderItems = table({
   name: 'order_items',
-  primaryKey: ['order_id', 'book_id'],
+  primaryKey: ['order_id', 'album_id'],
   columns: {
     order_id: c.integer(),
-    book_id: c.integer(),
+    album_id: c.integer(),
     title: c.text(),
     unit_price: c.decimal(10, 2),
     quantity: c.integer(),
@@ -279,10 +279,10 @@ export const orderItems = table({
 })
 
 export const itemsByOrder = hasMany(orders, orderItems)
-export const bookForOrderItem = belongsTo(orderItems, books)
-export const orderItemsWithBook = itemsByOrder
-  .orderBy('book_id', 'asc')
-  .with({ book: bookForOrderItem })
+export const albumForOrderItem = belongsTo(orderItems, albums)
+export const orderItemsWithAlbum = itemsByOrder
+  .orderBy('album_id', 'asc')
+  .with({ album: albumForOrderItem })
 
 export const passwordResetTokens = table({
   name: 'password_reset_tokens',
@@ -294,12 +294,12 @@ export const passwordResetTokens = table({
   },
 })
 
-export type Book = TableRow<typeof books>
+export type Album = TableRow<typeof albums>
 export type User = TableRow<typeof users>
 export type Order = TableRowWith<typeof orders, { items: OrderItem[] }>
 export type OrderItem = TableRowWith<
   typeof itemsByOrder.targetTable,
-  { book: TableRow<typeof bookForOrderItem.targetTable> | null }
+  { album: TableRow<typeof albumForOrderItem.targetTable> | null }
 >
 
 function normalizeEmail(email: string): string {

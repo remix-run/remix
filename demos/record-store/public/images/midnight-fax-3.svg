@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#141a33"/>
+  <circle cx="300" cy="300" r="240" fill="#d8d8d8"/>
+  <circle cx="300" cy="300" r="238" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.8"/>
+  <circle cx="300" cy="300" r="200" fill="none" stroke="#bcbcbc" stroke-width="2"/>
+  <circle cx="300" cy="300" r="170" fill="none" stroke="#c9c9c9" stroke-width="1"/>
+  <path d="M300,60 a240,240 0 0 1 170,70 L300,300 Z" fill="#ffffff" opacity="0.35"/>
+  <circle cx="300" cy="300" r="95" fill="#4a3f75"/>
+  <circle cx="300" cy="300" r="30" fill="#141a33"/>
+  <circle cx="300" cy="300" r="30" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.5"/>
+  <text x="300" y="248" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="bold" fill="#f4f4f4" text-anchor="middle">Midnight Fax</text>
+  <text x="300" y="352" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#f4f4f4" text-anchor="middle" opacity="0.9">Velvet Rewind</text>
+  <text x="300" y="374" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#f4f4f4" text-anchor="middle" opacity="0.6">RSD-49006-2</text>
+</svg>
