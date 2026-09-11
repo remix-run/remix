@@ -1,0 +1,1 @@
+Compressed HTML from `remix/middleware/compression` now streams incrementally by default, so initial UI and Frame fallbacks can reach the browser before deferred Frames resolve. Explicit zlib and Brotli `flush` options continue to override the streaming-safe defaults.

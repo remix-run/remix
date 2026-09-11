@@ -64,6 +64,11 @@ function resyncWebKitScrollAfterNavigation(
  * Options for client-side frame-aware navigation.
  */
 export type NavigationOptions = {
+  /**
+   * Same-origin source override for a mounted named frame, resolved against the document base URL.
+   * Invalid or cross-origin values disable interception even when `target` is omitted or missing.
+   * Top-frame navigations use `href` to keep the frame source in sync with the browser URL.
+   */
   src?: string
   target?: string
   history?: 'push' | 'replace'
@@ -72,6 +77,7 @@ export type NavigationOptions = {
 
 /**
  * Performs a Navigation API transition understood by Remix frame runtime state.
+ * Invalid or cross-origin sources fall back to document navigation.
  *
  * @param href Destination URL.
  * @param options Navigation options.
@@ -136,7 +142,7 @@ export function startNavigationListenerImpl(
       // we do a host check ourselves/. The spec is clear that a different host should prevent
       // interception so this is likely a bug in Safari:
       // https://html.spec.whatwg.org/multipage/nav-history-apis.html#can-have-its-url-rewritten
-      if (!event.canIntercept || isCrossOriginDestination(event)) return
+      if (!event.canIntercept || !isSameOriginUrl(event.destination.url)) return
 
       if (isFrameRedirectNavigationInfo(event.info)) {
         interceptNavigation(navigation, event, event.info.resetScroll, {
@@ -155,6 +161,7 @@ export function startNavigationListenerImpl(
         : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
+      if (!isSameOriginUrl(state.src)) return
 
       let topFrame = options.getTopFrame()
       let namedFrame = state.target ? options.getNamedFrame(state.target) : undefined
@@ -290,9 +297,12 @@ function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNa
   )
 }
 
-function isCrossOriginDestination(event: NavigateEvent): boolean {
-  let destination = new URL(event.destination.url)
-  return destination.origin !== window.location.origin
+function isSameOriginUrl(src: string): boolean {
+  try {
+    return new URL(src, document.baseURI).origin === window.location.origin
+  } catch {
+    return false
+  }
 }
 
 function interceptNavigation(

@@ -417,7 +417,7 @@ describe('type safety', () => {
     // @ts-expect-error join predicate key must be from source or target table
     db.query(accounts).join(projects, eq('not_a_column', true))
     // @ts-expect-error right-hand column reference must be from source or target table
-    db.query(accounts).join(projects, eq(accounts.id, 'projects.not_a_column'))
+    db.query(accounts).join(projects, eq(accounts.id, tasks.id))
     // @ts-expect-error relation predicate key must be from relation target table
     accountProjects.where({ not_a_column: true })
   })
