@@ -48,6 +48,13 @@ export default {
     cart_few: 'لديك {{count}} منتجات في سلة التسوق',
     cart_many: 'لديك {{count}} منتجًا في سلة التسوق',
     cart_other: 'لديك {{count}} منتج في سلة التسوق',
+    cart_demo: {
+      title: 'سلة تسوق تفاعلية',
+      quantity_label: 'كمية سلة التسوق',
+      decrease: 'إزالة منتج واحد',
+      increase: 'إضافة منتج واحد',
+      summary_label: 'ملخص سلة التسوق',
+    },
   },
   formatting: {
     title: 'تنسيق التواريخ والأرقام حسب اللغة',
@@ -57,7 +64,7 @@ export default {
     currency_label: 'القيمة بالدولار الأمريكي (\u2066Intl.NumberFormat\u2069)',
     relative_time_label: 'الوقت النسبي (\u2066Intl.RelativeTimeFormat\u2069)',
     preview_description:
-      'يتلقى هذا المكون في المتصفح تسميات مترجمة ولغة، وليس دالة ترجمة. تبقى قيمته عند استخدام روابط اللغة، وتتحدث تسمياته وتنسيق الرقم.',
+      'يتلقى هذا المكون في المتصفح تسميات مترجمة ولغة، وليس دالة ترجمة. وينسق القيم المحلية من دون طلب إلى الخادم.',
     preview_button: 'زيادة القيمة',
     preview_value: 'القيمة المنسقة في المتصفح',
   },

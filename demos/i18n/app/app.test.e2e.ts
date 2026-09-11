@@ -6,10 +6,16 @@ import { createAppRouter } from './router.ts'
 import { routes } from './routes.ts'
 
 describe('i18n browser behavior', () => {
-  it('updates client labels and direction on language links, then saves and clears preferences', async (t) => {
+  it('uses full-document language navigations, then saves and clears preferences', async (t) => {
     let page = await t.serve(await createTestServer(createAppRouter().fetch))
     await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
     await page.goto(routes.home.href({ locale: 'en' }))
+    let cartQuantity = page.getByRole('spinbutton', { name: 'Cart quantity' })
+    let cartSummary = page.getByRole('status', { name: 'Cart summary' })
+    await cartSummary.filter({ hasText: 'Your cart is empty' }).waitFor()
+    await cartQuantity.fill('2')
+    await cartSummary.filter({ hasText: 'You have 2 items in your cart' }).waitFor()
+
     await page.getByRole('button', { name: 'Increase value', exact: true }).click()
     await page.getByRole('status').filter({ hasText: '1,251,000' }).waitFor()
     let documentStarted = await page.evaluate(() => performance.timeOrigin)
@@ -26,21 +32,35 @@ describe('i18n browser behavior', () => {
       ),
       true,
     )
+    let arabicDocumentStarted = await page.evaluate(() => performance.timeOrigin)
+    assert.notEqual(arabicDocumentStarted, documentStarted)
+
+    let arabicCartQuantity = page.getByRole('spinbutton', { name: 'كمية سلة التسوق' })
+    let arabicCartSummary = page.getByRole('status', { name: 'ملخص سلة التسوق' })
+    assert.equal(await arabicCartQuantity.inputValue(), '0')
+    await arabicCartSummary.filter({ hasText: 'سلة التسوق فارغة' }).waitFor()
+    await arabicCartQuantity.fill('2')
+    await arabicCartSummary.filter({ hasText: 'لديك منتجان في سلة التسوق' }).waitFor()
+    await page.getByRole('button', { name: 'إضافة منتج واحد' }).click()
+    await arabicCartSummary.filter({ hasText: 'لديك 3 منتجات في سلة التسوق' }).waitFor()
+
     let arabicValue = page.getByRole('status', { name: 'القيمة المنسقة في المتصفح' })
-    await arabicValue.filter({ hasText: new Intl.NumberFormat('ar').format(1251000) }).waitFor()
-    await page.getByRole('button', { name: 'زيادة القيمة', exact: true }).click()
-    await arabicValue.filter({ hasText: new Intl.NumberFormat('ar').format(1252000) }).waitFor()
-    assert.equal(await page.evaluate(() => performance.timeOrigin), documentStarted)
+    await arabicValue.filter({ hasText: new Intl.NumberFormat('ar').format(1250000) }).waitFor()
 
     await page.getByRole('link', { name: 'English', exact: true }).click()
     await page.locator('html[lang="en"][dir="ltr"]').waitFor()
     await page
       .getByRole('status', { name: 'Browser-formatted value' })
-      .filter({ hasText: '1,252,000' })
+      .filter({ hasText: '1,250,000' })
+      .waitFor()
+    assert.equal(await page.getByRole('spinbutton', { name: 'Cart quantity' }).inputValue(), '0')
+    await page
+      .getByRole('status', { name: 'Cart summary' })
+      .filter({ hasText: 'Your cart is empty' })
       .waitFor()
     assert.equal(await page.title(), 'Remix i18n Demo')
     assert.equal(await page.getByRole('combobox').inputValue(), 'en')
-    assert.equal(await page.evaluate(() => performance.timeOrigin), documentStarted)
+    assert.notEqual(await page.evaluate(() => performance.timeOrigin), arabicDocumentStarted)
 
     await page.getByRole('combobox').selectOption('ja')
     await page.getByRole('button', { name: 'Save preference', exact: true }).click()
@@ -82,6 +102,7 @@ describe('i18n browser behavior', () => {
 
     await page.goto(routes.home.href({ locale: 'en' }))
     assert.equal(await page.getByRole('button', { name: 'Increase value' }).isDisabled(), true)
+    assert.equal(await page.getByRole('spinbutton', { name: 'Cart quantity' }).isDisabled(), true)
     await page.getByRole('link', { name: 'العربية', exact: true }).click()
     await page.locator('html[lang="ar"][dir="rtl"]').waitFor()
     await page.getByRole('combobox').selectOption('fr')

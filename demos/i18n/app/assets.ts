@@ -10,7 +10,7 @@ export const assetServer = createAssetServer({
   basePath: assetsBase,
   rootDir: path.resolve(import.meta.dirname, '../../..'),
   allowFiles: ['demos/i18n/app/routes.ts', 'demos/i18n/app/**/public/**'],
-  allowPackages: ['remix'],
+  allowPackages: ['i18next', 'remix'],
   denyFiles: ['demos/i18n/app/**/*.test.*'],
   mounts: {
     app: 'demos/i18n/app',

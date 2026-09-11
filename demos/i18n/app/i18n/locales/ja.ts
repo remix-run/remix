@@ -39,6 +39,13 @@ export default {
     tasks_other: '{{count}} 件の保留中タスクがあります',
     cart_zero: 'カートは空です',
     cart_other: 'カートに {{count}} 個の商品があります',
+    cart_demo: {
+      title: 'インタラクティブなカート',
+      quantity_label: 'カートの数量',
+      decrease: '商品を1つ減らす',
+      increase: '商品を1つ追加する',
+      summary_label: 'カートの概要',
+    },
   },
   formatting: {
     title: 'ロケールに応じた日付と数値',
@@ -49,7 +56,7 @@ export default {
     currency_label: 'USD の値 (Intl.NumberFormat)',
     relative_time_label: '相対時間 (Intl.RelativeTimeFormat)',
     preview_description:
-      'このブラウザー側のウィジェットには、翻訳関数ではなく翻訳済みラベルと言語を渡します。言語リンクで切り替えても値は保持され、ラベルと数値の書式が更新されます。',
+      'このブラウザー側のウィジェットには、翻訳関数ではなく翻訳済みラベルと言語を渡します。サーバーへリクエストせずにローカルの値を書式設定します。',
     preview_button: '値を増やす',
     preview_value: 'ブラウザーで整形した値',
   },

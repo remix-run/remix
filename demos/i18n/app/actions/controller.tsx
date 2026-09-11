@@ -4,13 +4,18 @@ import { createController } from 'remix/router'
 import { isSupportedLanguage, localeCookie } from '../i18n/config.ts'
 import { i18nMiddleware } from '../middleware/i18n.ts'
 import { routes } from '../routes.ts'
+import { I18nProvider } from '../ui/i18n.tsx'
 import { HomePage } from './home-page.tsx'
 
 export const rootController = createController(routes, {
   middleware: [i18nMiddleware()],
   actions: {
     home({ i18n, render }) {
-      return render(<HomePage i18n={i18n} />)
+      return render(
+        <I18nProvider value={i18n}>
+          <HomePage />
+        </I18nProvider>,
+      )
     },
     async language({ formData }) {
       let intent = formData.get('intent')
