@@ -19,37 +19,27 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./assets": "./src/assets.ts",
-    "./node": "./src/node.ts",
-    "./runtime/browser": "./src/runtime/browser.ts",
-    "./runtime/server": "./src/runtime/server.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./assets": {
+      "types": "./dist/assets.d.ts",
+      "default": "./dist/assets.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    },
+    "./runtime/browser": {
+      "types": "./dist/runtime/browser.d.ts",
+      "default": "./dist/runtime/browser.js"
+    },
+    "./runtime/server": {
+      "types": "./dist/runtime/server.d.ts",
+      "default": "./dist/runtime/server.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./assets": {
-        "types": "./dist/assets.d.ts",
-        "default": "./dist/assets.js"
-      },
-      "./node": {
-        "types": "./dist/node.d.ts",
-        "default": "./dist/node.js"
-      },
-      "./runtime/browser": {
-        "types": "./dist/runtime/browser.d.ts",
-        "default": "./dist/runtime/browser.js"
-      },
-      "./runtime/server": {
-        "types": "./dist/runtime/server.d.ts",
-        "default": "./dist/runtime/server.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "dependencies": {
     "magic-string": "^0.30.21",

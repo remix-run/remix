@@ -22,21 +22,14 @@
     "node": ">=24.3.0"
   },
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json",
-    "./load-module": "./src/load-module.ts"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json",
-      "./load-module": {
-        "types": "./dist/load-module.d.ts",
-        "default": "./dist/load-module.js"
-      }
+    "./load-module": {
+      "types": "./dist/load-module.d.ts",
+      "default": "./dist/load-module.js"
     }
   },
   "scripts": {
