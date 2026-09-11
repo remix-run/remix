@@ -43,6 +43,13 @@ export default {
     cart_one: 'Vous avez {{count}} article dans votre panier',
     cart_many: 'Vous avez {{count}} articles dans votre panier',
     cart_other: 'Vous avez {{count}} articles dans votre panier',
+    cart_demo: {
+      title: 'Panier interactif',
+      quantity_label: 'Quantité du panier',
+      decrease: 'Retirer un article',
+      increase: 'Ajouter un article',
+      summary_label: 'Résumé du panier',
+    },
   },
   formatting: {
     title: 'Dates et nombres localisés',
@@ -53,7 +60,7 @@ export default {
     currency_label: 'Valeur en USD (Intl.NumberFormat)',
     relative_time_label: 'Temps relatif (Intl.RelativeTimeFormat)',
     preview_description:
-      'Ce composant côté navigateur reçoit des libellés traduits et une langue, pas de traducteur. Sa valeur est conservée lors des changements de langue par les liens ; ses libellés et le format du nombre sont mis à jour.',
+      'Ce composant côté navigateur reçoit des libellés traduits et une langue, pas de traducteur. Il formate les valeurs locales sans requête au serveur.',
     preview_button: 'Augmenter la valeur',
     preview_value: 'Valeur formatée dans le navigateur',
   },

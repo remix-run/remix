@@ -4,6 +4,7 @@ import { AcceptLanguage } from 'remix/headers/accept-language'
 import { createContextKey, type Middleware } from 'remix/router'
 
 import {
+  createTranslator,
   fallbackLanguage,
   isSupportedLanguage,
   localeCookie,
@@ -77,7 +78,7 @@ export function i18nMiddleware(): Middleware<{
         locale,
         direction: instance.dir(locale),
         detectionSource: source,
-        t: instance.getFixedT(locale),
+        t: createTranslator(instance, locale),
       },
       { property: 'i18n' },
     )

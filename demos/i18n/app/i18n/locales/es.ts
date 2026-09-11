@@ -43,6 +43,13 @@ export default {
     cart_one: 'Tienes 1 artículo en tu carrito',
     cart_many: 'Tienes {{count}} artículos en tu carrito',
     cart_other: 'Tienes {{count}} artículos en tu carrito',
+    cart_demo: {
+      title: 'Carrito interactivo',
+      quantity_label: 'Cantidad del carrito',
+      decrease: 'Quitar un artículo',
+      increase: 'Añadir un artículo',
+      summary_label: 'Resumen del carrito',
+    },
   },
   formatting: {
     title: 'Fechas y números localizados',
@@ -53,7 +60,7 @@ export default {
     currency_label: 'Valor en USD (Intl.NumberFormat)',
     relative_time_label: 'Tiempo relativo (Intl.RelativeTimeFormat)',
     preview_description:
-      'Este componente del navegador recibe etiquetas traducidas y un idioma, no un traductor. Su valor se conserva al seguir enlaces de idioma; sus etiquetas y el formato del número se actualizan.',
+      'Este componente del navegador recibe etiquetas traducidas y un idioma, no un traductor. Formatea valores locales sin solicitar datos al servidor.',
     preview_button: 'Aumentar el valor',
     preview_value: 'Valor formateado en el navegador',
   },

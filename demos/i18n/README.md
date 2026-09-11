@@ -11,17 +11,17 @@ pnpm install
 pnpm -C demos/i18n dev
 ```
 
-Open <http://localhost:44100>. Try Arabic to see right-to-left layout and its plural forms. Increase the browser widget's value, then follow a language link: the value stays, while its translated labels and number format change.
+Open <http://localhost:44100>. Change the cart quantity to see i18next select plural forms without a request. Switch to Arabic and try zero, one, two, few, many, and other counts.
 
 ## Language URLs and preferences
 
 Detection follows four steps: URL locale, saved preference cookie, browser language preference (`Accept-Language`), then English. Every language has an explicit URL: `/en`, `/es`, `/fr`, `/ja`, and `/ar`.
 
-- **“View this page in” links** change the URL without saving a preference. `run()` enhances these anchors through the browser Navigation API, preserving the document and client widget state. Unsupported browsers retain document navigation.
+- **“View this page in” links** change the URL without saving a preference. They use `data-rmx-document`, so every language switch requests and loads a complete localized document.
 - **“Save preference”** stores an HTTP-only locale cookie and redirects to that language's URL using POST-redirect-GET.
 - **“Clear saved preference”** deletes the cookie and returns to `/`, where browser-language detection runs again. The header logo also links to `/`.
 
-The preference form uses `data-rmx-document` deliberately: a document submission resets unsaved selector state even when the resulting language is unchanged. Both preference actions and all language links work without JavaScript. The browser-only increment button remains disabled until hydration.
+All language-changing links and forms use `data-rmx-document`. Each switch starts with fresh browser component state and works without JavaScript. Browser-only controls remain disabled until hydration.
 
 `<html lang>` and `Content-Language` reflect the selected language. `<html dir>` comes from i18next's language direction; logical CSS properties support both LTR and RTL layouts. Arabic strings use Unicode isolates around LTR code examples so paths and header names stay readable. Locale-less HTML varies by `Cookie` and `Accept-Language`; explicit locale URLs do not depend on those headers.
 
@@ -29,7 +29,7 @@ The preference form uses `data-rmx-document` deliberately: a document submission
 
 The middleware creates an i18next instance per request, fixes its translator to the selected language, and exposes `{ locale, direction, t, detectionSource }` as `context.i18n`. There is no shared mutable active language.
 
-The page action passes this state through normal server component props. For a deeper server-rendered tree, component context can avoid threading those props through every descendant.
+The page action places that state in an `I18nProvider`. Server-rendered descendants read it through component context instead of threading translator props through the tree. The demo extends the fixed translator with `t.get(path)`, which returns raw data from the active catalog. `t.get('pluralization')` returns that section's object; dotted paths such as `t.get('pluralization.cart_demo.title')` return deeper values. Both forms are type-checked against the catalog.
 
 Translation keys are checked by TypeScript, but plural suffixes are language-specific. Each catalog declares its categories through `Translation<...>` rather than copying English's plural keys:
 
@@ -46,7 +46,7 @@ All catalogs also provide i18next's `_zero` override for zero-count messages. `I
 
 ## Server and browser translation boundaries
 
-A `clientEntry(...)` is a serialized boundary. It cannot receive the request-bound `t` function or read component context from a server-only ancestor. The number preview receives only its locale and translated strings:
+A `clientEntry(...)` is a serialized boundary. It cannot receive the request-bound `t` function or inherit component context from a server-only ancestor. The number preview receives only its locale and translated strings:
 
 ```tsx
 <NumberPreview
@@ -56,9 +56,15 @@ A `clientEntry(...)` is a serialized boundary. It cannot receive the request-bou
 />
 ```
 
-The client entry reads its current labels from `handle.props` and formats its local number with `Intl.NumberFormat(handle.props.locale)`. Language-link navigation supplies new props without resetting that number. Neither i18next nor the translation catalogs are imported by browser modules.
+The number preview reads its labels from `handle.props` and formats its local number with `Intl.NumberFormat(handle.props.locale)`. A language switch loads a new document and creates a new preview instance.
 
-Only initialize i18next in the browser when an interaction must generate arbitrary translated copy without a server response. In that case, create a shared parent client entry from serializable locale and resource data, then provide its browser-side translator to descendants through component context.
+The cart needs to translate arbitrary counts without a server response, so its client boundary receives the locale and one serializable catalog subtree:
+
+```tsx
+<CartPreview locale={locale} translations={t.get('pluralization')} />
+```
+
+`CartPreview` creates one browser-side i18next instance from that subtree and places its mutable cart state and translator in component context. Event handlers mutate that shared state and call `handle.update()`; the heading, quantity control, and summary consume it without prop drilling. The server provider and browser provider are separate because context does not cross the serialized client-entry boundary. Full-document language switches create a fresh cart and translator, so the client does not need to synchronize translator props across navigations.
 
 ## Key files
 
@@ -69,6 +75,8 @@ Only initialize i18next in the browser when an interaction must generate arbitra
 | [app/i18n/config.ts](https://github.com/remix-run/remix/blob/main/demos/i18n/app/i18n/config.ts)                                       | Supported languages, typed resources, and preference cookie   |
 | [app/actions/controller.tsx](https://github.com/remix-run/remix/blob/main/demos/i18n/app/actions/controller.tsx)                       | Localized page response and preference actions                |
 | [app/actions/home-page.tsx](https://github.com/remix-run/remix/blob/main/demos/i18n/app/actions/home-page.tsx)                         | Language links, pluralization, and server formatting          |
+| [app/ui/i18n.tsx](https://github.com/remix-run/remix/blob/main/demos/i18n/app/ui/i18n.tsx)                                             | Request-scoped server component context                       |
+| [app/actions/public/cart-preview.tsx](https://github.com/remix-run/remix/blob/main/demos/i18n/app/actions/public/cart-preview.tsx)     | Browser translator and cart component context                 |
 | [app/actions/public/number-preview.tsx](https://github.com/remix-run/remix/blob/main/demos/i18n/app/actions/public/number-preview.tsx) | Serialized labels, client state, and browser formatting       |
 | [app/assets.ts](https://github.com/remix-run/remix/blob/main/demos/i18n/app/assets.ts)                                                 | Browser compilation and source allowlist                      |
 
@@ -81,4 +89,4 @@ pnpm -C demos/i18n test
 pnpm -C demos/i18n typecheck
 ```
 
-The tests cover negotiation, concurrent translated HTML, locale-specific plural forms, response headers, redirects, and cookies. Chromium tests exercise client-state preservation, translated label updates, LTR/RTL transitions, the same-language preference reset, and navigation with JavaScript disabled. The E2E tests use the repository's Playwright setup.
+The tests cover negotiation, concurrent translated HTML, locale-specific plural forms, response headers, redirects, and cookies. Chromium tests exercise browser-side pluralization, full-document language switches, LTR/RTL transitions, reset client state, and navigation without JavaScript. The E2E tests use the repository's Playwright setup.

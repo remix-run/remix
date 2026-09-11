@@ -39,6 +39,13 @@ const en = {
     cart_zero: 'Your cart is empty',
     cart_one: 'You have 1 item in your cart',
     cart_other: 'You have {{count}} items in your cart',
+    cart_demo: {
+      title: 'Interactive cart',
+      quantity_label: 'Cart quantity',
+      decrease: 'Remove one item',
+      increase: 'Add one item',
+      summary_label: 'Cart summary',
+    },
   },
   formatting: {
     title: 'Localized dates & numbers',
@@ -49,7 +56,7 @@ const en = {
     currency_label: 'USD value (Intl.NumberFormat)',
     relative_time_label: 'Relative time (Intl.RelativeTimeFormat)',
     preview_description:
-      'This browser widget receives translated labels and a locale, not a translator. Its value survives language links; its labels and number format update.',
+      'This browser widget receives translated labels and a locale, not a translator. It formats local values without a server request.',
     preview_button: 'Increase value',
     preview_value: 'Browser-formatted value',
   },
@@ -60,7 +67,7 @@ const en = {
 
 // Plural categories belong to each language; _zero is also an i18next override for zero counts.
 export type Translation<category extends Intl.LDMLPluralRule> = Omit<typeof en, 'pluralization'> & {
-  pluralization: Pick<typeof en.pluralization, 'title' | 'description'> &
+  pluralization: Pick<typeof en.pluralization, 'title' | 'description' | 'cart_demo'> &
     Record<`${'tasks' | 'cart'}_${category | 'zero'}`, string>
 }
 

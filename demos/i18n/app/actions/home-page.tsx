@@ -1,22 +1,22 @@
 import type { Handle } from 'remix/ui'
 
-import { languageNames, supportedLanguages, type I18nState } from '../i18n/config.ts'
+import { languageNames, supportedLanguages } from '../i18n/config.ts'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
+import { getI18n } from '../ui/i18n.tsx'
 import * as styles from '../ui/styles.ts'
+import { CartPreview } from './public/cart-preview.tsx'
 import { NumberPreview } from './public/number-preview.tsx'
 
 const taskCounts = [0, 1, 2, 5, 11, 100, 1_000_000]
 const demoDate = new Date(Date.UTC(2026, 3, 15, 14, 30))
 const demoCurrency = 'USD'
 
-interface HomePageProps {
-  i18n: I18nState
-}
+export function HomePage(handle: Handle) {
+  let i18n = getI18n(handle)
 
-export function HomePage(handle: Handle<HomePageProps>) {
   return () => {
-    let { locale, direction, t, detectionSource } = handle.props.i18n
+    let { locale, direction, t, detectionSource } = i18n
     let formattedDate = new Intl.DateTimeFormat(locale, {
       dateStyle: 'full',
       timeStyle: 'short',
@@ -35,7 +35,7 @@ export function HomePage(handle: Handle<HomePageProps>) {
       <Document lang={locale} dir={direction} title={t('common.title')}>
         <div mix={styles.pageWrapper}>
           <header mix={styles.header}>
-            <a href={routes.home.href()} mix={styles.brandGroup}>
+            <a href={routes.home.href()} data-rmx-document mix={styles.brandGroup}>
               <span mix={styles.logo} aria-hidden="true">
                 🌐
               </span>
@@ -93,6 +93,7 @@ export function HomePage(handle: Handle<HomePageProps>) {
                   href={routes.home.href({ locale: code })}
                   hrefLang={code}
                   lang={code}
+                  data-rmx-document
                   mix={styles.quickSwitchPill}
                   aria-current={code === locale ? 'true' : undefined}
                 >
@@ -174,19 +175,9 @@ export function HomePage(handle: Handle<HomePageProps>) {
                       <span mix={styles.demoValue}>{t('pluralization.tasks', { count })}</span>
                     </div>
                   ))}
-                  <div mix={styles.demoRow}>
-                    <span mix={styles.demoLabel} dir="ltr">
-                      cart = 0
-                    </span>
-                    <span mix={styles.demoValue}>{t('pluralization.cart', { count: 0 })}</span>
-                  </div>
-                  <div mix={styles.demoRow}>
-                    <span mix={styles.demoLabel} dir="ltr">
-                      cart = 3
-                    </span>
-                    <span mix={styles.demoValue}>{t('pluralization.cart', { count: 3 })}</span>
-                  </div>
                 </div>
+
+                <CartPreview locale={locale} translations={t.get('pluralization')} />
               </section>
 
               <section mix={styles.card}>

@@ -54,6 +54,8 @@ describe('i18n app', () => {
     assert.match(japanese, /1 件の保留中タスクがあります/)
     assert.match(arabic, /<html lang="ar" dir="rtl">/)
     assert.match(arabic, /<title>مثال التدويل في Remix<\/title>/)
+    assert.match(arabic, /سلة تسوق تفاعلية/)
+    assert.match(arabic, /سلة التسوق فارغة/)
     assert.match(arabic, /ليس لديك مهام معلقة/)
     assert.match(arabic, /لديك مهمة واحدة معلقة/)
     assert.match(arabic, /لديك مهمتان معلقتان/)
