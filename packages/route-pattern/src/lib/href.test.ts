@@ -114,6 +114,40 @@ describe('createHref', () => {
         hrefError('invalid-hostname-wildcard'),
       )
     })
+
+    it('rejects backslashes in hostname variables', () => {
+      assert.throws(
+        () => createHref('://:tenant.example.com/path', { tenant: 'preview\\' }),
+        new CreateHrefError({
+          type: 'invalid-hostname-variable',
+          value: 'preview\\',
+          char: '\\',
+        }),
+      )
+    })
+
+    it('rejects backslashes in hostname wildcards', () => {
+      assert.throws(
+        () => createHref('://*tenant.example.com/path', { tenant: 'preview.test\\' }),
+        new CreateHrefError({
+          type: 'invalid-hostname-wildcard',
+          value: 'preview.test\\',
+          char: '\\',
+        }),
+      )
+    })
+
+    it('preserves host labels in generated URLs', () => {
+      let variableURL = new URL(createHref('://:tenant.example.com/path', { tenant: 'café' }))
+      let wildcardURL = new URL(
+        createHref('://*tenant.example.com/path', { tenant: 'preview.café' }),
+      )
+
+      assert.equal(variableURL.hostname, 'xn--caf-dma.example.com')
+      assert.equal(wildcardURL.hostname, 'preview.xn--caf-dma.example.com')
+      assert.equal(variableURL.pathname, '/path')
+      assert.equal(wildcardURL.pathname, '/path')
+    })
   })
 
   describe('port', () => {
