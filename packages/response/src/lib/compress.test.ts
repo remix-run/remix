@@ -771,6 +771,19 @@ describe('compressResponse()', () => {
       assert.equal(configured.brotli?.flush, constants.BROTLI_OPERATION_PROCESS)
     })
 
+    it('matches streaming media types case-insensitively', () => {
+      let html = createCompressionOptions(
+        new Headers({ 'Content-Type': 'Text/HTML; charset=UTF-8' }),
+        {},
+      )
+      let sse = createCompressionOptions(new Headers({ 'Content-Type': 'TEXT/Event-Stream' }), {})
+
+      assert.equal(html.zlib?.flush, constants.Z_SYNC_FLUSH)
+      assert.equal(html.brotli?.flush, constants.BROTLI_OPERATION_FLUSH)
+      assert.equal(sse.zlib?.flush, constants.Z_SYNC_FLUSH)
+      assert.equal(sse.brotli?.flush, constants.BROTLI_OPERATION_FLUSH)
+    })
+
     it('preserves explicit SSE flush options', () => {
       let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/event-stream' }), {
         zlib: {

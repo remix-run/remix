@@ -232,7 +232,7 @@ export function createCompressionOptions(
   options: CompressResponseOptions,
 ): CompressResponseOptions {
   let contentTypeHeader = responseHeaders.get('Content-Type')
-  let mediaType = contentTypeHeader?.split(';')[0].trim()
+  let mediaType = contentTypeHeader?.split(';')[0].trim().toLowerCase()
   let shouldFlush = mediaType === 'text/event-stream' || mediaType === 'text/html'
 
   return {
