@@ -228,8 +228,86 @@ describe('run', () => {
       expect(init?.body).toBe(formData)
       expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
       expect(init?.method).toBe('post')
+      expect(init?.mode).toBe('same-origin')
       expect(init?.signal).toBeInstanceOf(AbortSignal)
       expect(document.getElementById('account')?.textContent).toBe('Ada')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('uses same-origin requests for explicitly cross-origin frame sources', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="external">External frame</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = 'https://frames.example/partial'
+
+    try {
+      await app.frames.top.reload()
+      expect(fetchMock.mock.calls[0]?.arguments[0]).toBe('https://frames.example/partial')
+      expect(fetchMock.mock.calls[0]?.arguments[1]?.mode).toBe('same-origin')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('uses same-origin requests when the document base is cross-origin', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="external">External frame</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+    let base = document.createElement('base')
+    base.href = 'https://frames.example/partials/'
+    document.head.prepend(base)
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = 'details'
+
+    try {
+      await app.frames.top.reload()
+      expect(fetchMock.mock.calls[0]?.arguments[0]).toBe('details')
+      expect(fetchMock.mock.calls[0]?.arguments[1]?.mode).toBe('same-origin')
+    } finally {
+      app.dispose()
+      base.remove()
+    }
+  })
+
+  it('allows custom resolvers to fetch cross-origin frame sources', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="external">External frame</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src, options) {
+        return fetch(src, { mode: 'cors', signal: options?.signal })
+      },
+    })
+    await app.ready()
+    app.frames.top.src = 'https://frames.example/partial'
+
+    try {
+      await app.frames.top.reload()
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(fetchMock.mock.calls[0]?.arguments[0]).toBe('https://frames.example/partial')
+      expect(fetchMock.mock.calls[0]?.arguments[1]?.mode).toBe('cors')
+      expect(document.getElementById('external')?.textContent).toBe('External frame')
     } finally {
       app.dispose()
     }
