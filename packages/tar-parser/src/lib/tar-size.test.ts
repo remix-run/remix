@@ -1,7 +1,16 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { parseTar, parseTarHeader, TarEntry, TarParseError } from './tar.ts'
+import {
+  MaxEntriesExceededError,
+  MaxEntrySizeExceededError,
+  MaxTotalSizeExceededError,
+  parseTar,
+  parseTarHeader,
+  TarEntry,
+  TarParseError,
+  TarParser,
+} from '../index.ts'
 import { computeChecksum } from './utils.ts'
 
 function createHeader(size: number | string | Uint8Array, type = '0'): Uint8Array {
@@ -37,14 +46,18 @@ function base256(size: bigint): Uint8Array {
   return field
 }
 
-function paxSize(size: string): Uint8Array[] {
-  let record = ` size=${size}\n`
+function paxSize(size: string, type = 'x'): Uint8Array[] {
+  return paxHeader('size', size, type)
+}
+
+function paxHeader(key: string, value: string, type: string): Uint8Array[] {
+  let record = ` ${key}=${value}\n`
   let length = record.length + 1
   while (String(length).length + record.length !== length) {
     length = String(length).length + record.length
   }
   let body = new TextEncoder().encode(`${length}${record}`)
-  return [createHeader(body.length, 'x'), body, new Uint8Array(512 - body.length)]
+  return [createHeader(body.length, type), body, new Uint8Array(512 - body.length)]
 }
 
 async function assertInvalidArchive(chunks: Uint8Array[]): Promise<void> {
@@ -76,7 +89,7 @@ async function assertNoDeclaredAllocation(chunks: Uint8Array[]): Promise<void> {
   try {
     await assert.rejects(
       () =>
-        parseTar(chunks, (entry) => {
+        parseTar(chunks, { maxEntrySize: Infinity }, (entry) => {
           bodyResult = entry.bytes().then(
             () => 'complete',
             (error: unknown) => error,
@@ -223,6 +236,505 @@ describe('tar entry sizes', () => {
 
   it('validates extension header sizes even when a PAX override is pending', async () => {
     await assertInvalidArchive([...paxSize('0'), createHeader('unknown', 'L')])
+  })
+})
+
+describe('tar size limits', () => {
+  it('exposes resolved defaults and allows explicit undefined options', () => {
+    let parser = new TarParser({
+      maxEntrySize: undefined,
+      maxTotalSize: undefined,
+      maxEntries: undefined,
+    })
+    assert.equal(parser.maxEntrySize, 2 * 1024 * 1024)
+    assert.equal(parser.maxTotalSize, 20 * 1024 * 1024)
+    assert.equal(parser.maxEntries, 5000)
+  })
+
+  it('rejects invalid limits when constructing the parser', () => {
+    for (let limit of [-1, 0.5, NaN, -Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      assert.throws(() => new TarParser({ maxEntrySize: limit }), {
+        name: 'TypeError',
+        message: 'maxEntrySize must be a non-negative safe integer or Infinity',
+      })
+      assert.throws(() => new TarParser({ maxTotalSize: limit }), {
+        name: 'TypeError',
+        message: 'maxTotalSize must be a non-negative safe integer or Infinity',
+      })
+      assert.throws(() => new TarParser({ maxEntries: limit }), {
+        name: 'TypeError',
+        message: 'maxEntries must be a non-negative safe integer or Infinity',
+      })
+    }
+  })
+
+  it('rejects invalid options before reading the archive', async () => {
+    let reads = 0
+    function* source() {
+      reads++
+      yield createHeader(0)
+    }
+    await assert.rejects(() => parseTar(source(), { maxTotalSize: NaN }, () => {}), TypeError)
+    await assert.rejects(() => parseTar(source(), { maxEntries: NaN }, () => {}), TypeError)
+    assert.equal(reads, 0)
+  })
+
+  it('limits entries to 2 MiB by default before invoking the handler', async () => {
+    let entries = 0
+    await assert.rejects(
+      () =>
+        parseTar(createHeader(2 * 1024 * 1024 + 1), () => {
+          entries++
+        }),
+      MaxEntrySizeExceededError,
+    )
+    assert.equal(entries, 0)
+  })
+
+  it('enforces a configured entry limit', async () => {
+    await assert.rejects(
+      () => parseTar(createHeader(5), { maxEntrySize: 4 }, () => {}),
+      MaxEntrySizeExceededError,
+    )
+  })
+
+  it('counts headers and padding toward the total limit', async () => {
+    await assert.rejects(
+      () => parseTar([createHeader(1), new Uint8Array(512)], { maxTotalSize: 1023 }, () => {}),
+      MaxTotalSizeExceededError,
+    )
+  })
+
+  it('allows entry and total sizes exactly at their limits with async handlers', async () => {
+    let contents: string[] = []
+    await parseTar(
+      [createHeader(5), new TextEncoder().encode('hello'), new Uint8Array(507)],
+      { maxEntrySize: 5, maxTotalSize: 1024 },
+      async (entry) => {
+        contents.push(await entry.text())
+      },
+    )
+    assert.deepEqual(contents, ['hello'])
+  })
+
+  it('allows entries exactly at the default limit and explicit larger limits', async () => {
+    let chunk = new Uint8Array(1024 * 1024)
+    let chunks = [createHeader(2 * chunk.length), ...Array<Uint8Array>(2).fill(chunk)]
+    await parseTar(chunks, () => {})
+    chunks[0] = createHeader(3 * chunk.length)
+    chunks.push(chunk)
+    await parseTar(chunks, { maxEntrySize: 3 * chunk.length }, () => {})
+  })
+
+  it('allows only empty bodies with a zero entry limit', async () => {
+    let entries = 0
+    await parseTar(createHeader(0), { maxEntrySize: 0 }, async (entry) => {
+      assert.equal((await entry.bytes()).length, 0)
+      entries++
+    })
+    assert.equal(entries, 1)
+    await assert.rejects(
+      () => parseTar(createHeader(1), { maxEntrySize: 0 }, () => {}),
+      MaxEntrySizeExceededError,
+    )
+  })
+
+  it('allows only empty input with a zero total limit', async () => {
+    await parseTar(new Uint8Array(), { maxTotalSize: 0 }, () => {})
+    await assert.rejects(
+      () => parseTar(new Uint8Array(1), { maxTotalSize: 0 }, () => {}),
+      MaxTotalSizeExceededError,
+    )
+  })
+
+  it('checks base-256 entry sizes', async () => {
+    await assert.rejects(
+      () => parseTar(createHeader(base256(513n)), { maxEntrySize: 512 }, () => {}),
+      MaxEntrySizeExceededError,
+    )
+  })
+
+  it('checks the effective PAX size instead of the overridden header field', async () => {
+    await assert.rejects(
+      () => parseTar([...paxSize('513'), createHeader(0)], { maxEntrySize: 512 }, () => {}),
+      MaxEntrySizeExceededError,
+    )
+    let sizes: number[] = []
+    await parseTar([...paxSize('0'), createHeader(513)], { maxEntrySize: 512 }, (entry) => {
+      sizes.push(entry.size)
+    })
+    assert.deepEqual(sizes, [0])
+  })
+
+  it('limits PAX and GNU metadata before reading their bodies', async () => {
+    for (let type of ['x', 'g', 'L', 'K']) {
+      let reads = 0
+      let entries = 0
+      function* source() {
+        reads++
+        yield createHeader(513, type)
+        reads++
+        yield new Uint8Array(1024)
+      }
+      await assert.rejects(
+        () =>
+          parseTar(source(), { maxEntrySize: 512 }, () => {
+            entries++
+          }),
+        MaxEntrySizeExceededError,
+      )
+      assert.equal(reads, 1)
+      assert.equal(entries, 0)
+    }
+  })
+
+  it('checks global PAX sizes without a local PAX header', async () => {
+    let entries = 0
+    await assert.rejects(
+      () =>
+        parseTar([...paxSize('513', 'g'), createHeader(0)], { maxEntrySize: 512 }, () => {
+          entries++
+        }),
+      MaxEntrySizeExceededError,
+    )
+    assert.equal(entries, 0)
+  })
+
+  it('preserves global PAX sizes across files and unrelated global updates', async () => {
+    let sizes: number[] = []
+    await parseTar(
+      [
+        ...paxSize('1', 'g'),
+        ...paxSize('0'),
+        createHeader(513),
+        createHeader(0),
+        new Uint8Array(512),
+        ...paxHeader('uid', '123', 'g'),
+        createHeader(0),
+        new Uint8Array(512),
+      ],
+      { maxEntrySize: 512 },
+      async (entry) => {
+        sizes.push(entry.size)
+        assert.equal((await entry.bytes()).length, entry.size)
+      },
+    )
+    assert.deepEqual(sizes, [0, 1, 1])
+  })
+
+  it('allows local deletion of a global PAX size for one entry', async () => {
+    let sizes: number[] = []
+    await assert.rejects(
+      () =>
+        parseTar(
+          [...paxSize('513', 'g'), ...paxSize(''), createHeader(0), createHeader(0)],
+          { maxEntrySize: 512 },
+          (entry) => {
+            sizes.push(entry.size)
+          },
+        ),
+      MaxEntrySizeExceededError,
+    )
+    assert.deepEqual(sizes, [0])
+  })
+
+  it('allows global deletion of a previous PAX size', async () => {
+    let sizes: number[] = []
+    await parseTar(
+      [...paxSize('513', 'g'), ...paxSize('', 'g'), createHeader(0), createHeader(0)],
+      { maxEntrySize: 512 },
+      (entry) => {
+        sizes.push(entry.size)
+      },
+    )
+    assert.deepEqual(sizes, [0, 0])
+  })
+
+  it('does not let a PAX override bypass a metadata entry limit', async () => {
+    await assert.rejects(
+      () => parseTar([...paxSize('0'), createHeader(513, 'L')], { maxEntrySize: 512 }, () => {}),
+      MaxEntrySizeExceededError,
+    )
+  })
+
+  it('counts extension metadata toward the total limit', async () => {
+    let entries = 0
+    await assert.rejects(
+      () =>
+        parseTar([...paxSize('0'), createHeader(0)], { maxTotalSize: 1535 }, () => {
+          entries++
+        }),
+      MaxTotalSizeExceededError,
+    )
+    assert.equal(entries, 0)
+  })
+
+  it('limits total input to 20 MiB and allows raising or disabling the limit', async () => {
+    let chunk = new Uint8Array(1024 * 1024)
+    let chunks = [
+      createHeader(20 * chunk.length - 512),
+      ...Array<Uint8Array>(19).fill(chunk),
+      chunk.subarray(512),
+    ]
+    await parseTar(chunks, { maxEntrySize: Infinity }, () => {})
+    chunks.push(new Uint8Array(512))
+    await assert.rejects(
+      () => parseTar(chunks, { maxEntrySize: Infinity }, () => {}),
+      MaxTotalSizeExceededError,
+    )
+    await parseTar(
+      chunks,
+      { maxEntrySize: Infinity, maxTotalSize: 20 * chunk.length + 512 },
+      () => {},
+    )
+    await parseTar(chunks, { maxEntrySize: Infinity, maxTotalSize: Infinity }, () => {})
+  })
+
+  it('rejects an oversized input chunk before invoking any handlers', async () => {
+    let entries = 0
+    await assert.rejects(
+      () =>
+        parseTar(createHeader(0), { maxTotalSize: 511 }, () => {
+          entries++
+        }),
+      MaxTotalSizeExceededError,
+    )
+    assert.equal(entries, 0)
+  })
+
+  it('limits archives to 5000 entries by default before invoking the next handler', async () => {
+    let entries = 0
+    await assert.rejects(
+      () =>
+        parseTar(Array<Uint8Array>(5001).fill(createHeader(0)), () => {
+          entries++
+        }),
+      MaxEntriesExceededError,
+    )
+    assert.equal(entries, 5000)
+  })
+
+  it('allows exactly 5000 entries and explicit larger or disabled count limits', async () => {
+    let chunks = Array<Uint8Array>(5000).fill(createHeader(0))
+    let entries = 0
+    await parseTar(chunks, () => {
+      entries++
+    })
+    assert.equal(entries, 5000)
+    chunks.push(createHeader(0))
+    entries = 0
+    await parseTar(chunks, { maxEntries: 5001 }, () => {
+      entries++
+    })
+    assert.equal(entries, 5001)
+    entries = 0
+    await parseTar(chunks, { maxEntries: Infinity }, () => {
+      entries++
+    })
+    assert.equal(entries, 5001)
+  })
+
+  it('allows empty archives and end markers with a zero entry count limit', async () => {
+    await parseTar(new Uint8Array(), { maxEntries: 0 }, () => {})
+    await parseTar(new Uint8Array(1024), { maxEntries: 0 }, () => {})
+    await assert.rejects(
+      () => parseTar(createHeader(0), { maxEntries: 0 }, () => {}),
+      MaxEntriesExceededError,
+    )
+  })
+
+  it('counts files, directories, and links toward the entry count limit', async () => {
+    let types: string[] = []
+    await assert.rejects(
+      () =>
+        parseTar(
+          [createHeader(0), createHeader(0, '5'), createHeader(0, '2')],
+          { maxEntries: 2 },
+          (entry) => {
+            types.push(entry.header.type)
+          },
+        ),
+      MaxEntriesExceededError,
+    )
+    assert.deepEqual(types, ['file', 'directory'])
+  })
+
+  it('stops at excess metadata entries before reading their bodies', async () => {
+    for (let type of ['x', 'g', 'L', 'K']) {
+      let reads = 0
+      let entries = 0
+      async function* source() {
+        reads++
+        yield createHeader(0)
+        reads++
+        yield createHeader(1, type)
+        reads++
+        yield new Uint8Array(512)
+      }
+      await assert.rejects(
+        () =>
+          parseTar(source(), { maxEntries: 1 }, () => {
+            entries++
+          }),
+        MaxEntriesExceededError,
+      )
+      assert.equal(reads, 2)
+      assert.equal(entries, 1)
+    }
+  })
+
+  it('counts metadata entries even when no entries reach the handler', async () => {
+    let entries = 0
+    await assert.rejects(
+      () =>
+        parseTar([...paxSize('0', 'g'), ...paxSize('0')], { maxEntries: 1 }, () => {
+          entries++
+        }),
+      MaxEntriesExceededError,
+    )
+    assert.equal(entries, 0)
+  })
+
+  it('counts split headers once and excludes bodies, padding, and end markers', async () => {
+    let header = createHeader(513)
+    let sizes: number[] = []
+    await parseTar(
+      [
+        header.subarray(0, 256),
+        header.subarray(256),
+        new Uint8Array(513).fill(1),
+        new Uint8Array(511),
+        createHeader(0),
+        new Uint8Array(1024),
+      ],
+      { maxEntries: 2 },
+      async (entry) => {
+        sizes.push((await entry.bytes()).length)
+      },
+    )
+    assert.deepEqual(
+      sizes.sort((a, b) => a - b),
+      [0, 513],
+    )
+  })
+
+  it('does not reset the entry count at zero blocks between entries', async () => {
+    let entries = 0
+    await assert.rejects(
+      () =>
+        parseTar(
+          [createHeader(0), new Uint8Array(1024), createHeader(0)],
+          { maxEntries: 1 },
+          () => {
+            entries++
+          },
+        ),
+      MaxEntriesExceededError,
+    )
+    assert.equal(entries, 1)
+  })
+
+  it('resets entry accounting between successful and failed parses', async () => {
+    let parser = new TarParser({ maxEntries: 1 })
+    let entries = 0
+    function handleEntry() {
+      entries++
+    }
+    await parser.parse(createHeader(0), handleEntry)
+    await parser.parse(createHeader(0), handleEntry)
+    await assert.rejects(
+      () => parser.parse([createHeader(0), createHeader(0)], handleEntry),
+      MaxEntriesExceededError,
+    )
+    await parser.parse(createHeader(0), handleEntry)
+    assert.equal(entries, 4)
+  })
+
+  it('resets total accounting between successful and failed parses', async () => {
+    let parser = new TarParser({ maxTotalSize: 512 })
+    let entries = 0
+    function handleEntry() {
+      entries++
+    }
+    await parser.parse(createHeader(0), handleEntry)
+    await parser.parse(createHeader(0), handleEntry)
+    await assert.rejects(
+      () => parser.parse([createHeader(0), new Uint8Array(1)], handleEntry),
+      MaxTotalSizeExceededError,
+    )
+    await parser.parse(createHeader(0), handleEntry)
+    assert.equal(entries, 4)
+  })
+
+  it(
+    'stops an async source at the total limit and rejects unfinished body readers',
+    { timeout: 1000 },
+    async () => {
+      let reads = 0
+      let bodyResult: Promise<unknown> | undefined
+      async function* source() {
+        yield createHeader(2)
+        while (true) {
+          reads++
+          yield new Uint8Array([1])
+        }
+      }
+      let error = await parseTar(source(), { maxTotalSize: 513 }, (entry) => {
+        bodyResult = entry.bytes().catch((error: unknown) => error)
+      }).catch((error: unknown) => error)
+      assert.ok(error instanceof MaxTotalSizeExceededError)
+      assert.equal(reads, 2)
+      assert.equal(await bodyResult, error)
+    },
+  )
+
+  it(
+    'enforces the total limit on readable streams before forwarding excess bytes',
+    { timeout: 1000 },
+    async () => {
+      let received: number[] = []
+      let bodyResult: Promise<unknown> | undefined
+      let chunks = [createHeader(2), new Uint8Array([1]), new Uint8Array([2])]
+      let reads = 0
+      let source = new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            if (reads < chunks.length) {
+              controller.enqueue(chunks[reads++])
+            } else {
+              controller.close()
+            }
+          },
+        },
+        { highWaterMark: 0 },
+      )
+      let error = await parseTar(source, { maxTotalSize: 513 }, (entry) => {
+        bodyResult = (async () => {
+          for await (let chunk of entry.body) {
+            received.push(...chunk)
+          }
+        })().catch((error: unknown) => error)
+      }).catch((error: unknown) => error)
+      assert.ok(error instanceof MaxTotalSizeExceededError)
+      assert.equal(await bodyResult, error)
+      assert.deepEqual(received, [1])
+      assert.equal(reads, 3)
+    },
+  )
+
+  it('exports named limit errors that extend TarParseError', () => {
+    let entryError = new MaxEntrySizeExceededError(10)
+    assert.ok(entryError instanceof TarParseError)
+    assert.equal(entryError.name, 'MaxEntrySizeExceededError')
+    assert.equal(entryError.message, 'Tar entry size exceeds maximum allowed size of 10 bytes')
+    let totalError = new MaxTotalSizeExceededError(100)
+    assert.ok(totalError instanceof TarParseError)
+    assert.equal(totalError.name, 'MaxTotalSizeExceededError')
+    assert.equal(totalError.message, 'Tar archive size exceeds maximum allowed size of 100 bytes')
+    let countError = new MaxEntriesExceededError(5000)
+    assert.ok(countError instanceof TarParseError)
+    assert.equal(countError.name, 'MaxEntriesExceededError')
+    assert.equal(countError.message, 'Tar entry count exceeds maximum allowed count of 5000')
   })
 })
 

@@ -44,38 +44,29 @@ Entry sizes must be non-negative safe integers. Use `entry.body` to stream conte
 
 ```ts
 await parseTar(archive, async (entry) => {
-  if (entry.type === 'file' && entry.name.endsWith('.txt')) {
+  if (entry.header.type === 'file' && entry.name.endsWith('.txt')) {
     console.log(entry.name, await entry.text())
   }
 })
 ```
 
-## Size Limits
+## Limits
 
-The parser does not impose entry or archive size limits. Check `entry.size` in the handler before buffering an entry, and track the sum of entry sizes to enforce an aggregate limit:
+By default, `parseTar()` and `TarParser` limit each entry body to **2 MiB**, the total archive input to **20 MiB**, and the archive to **5,000 entries**. Override these limits with `maxEntrySize`, `maxTotalSize`, and `maxEntries`:
 
 ```ts
-let maxEntrySize = 10 * 1024 * 1024
-let maxTotalSize = 100 * 1024 * 1024
-let totalSize = 0
-
-await parseTar(archive, (entry) => {
-  if (entry.size > maxEntrySize) {
-    throw new Error(`Entry exceeds size limit: ${entry.name}`)
-  }
-
-  totalSize += entry.size
-  if (totalSize > maxTotalSize) {
-    throw new Error('Total entry size exceeds limit')
-  }
-
-  return entry.bytes().then((bytes) => {
-    console.log(entry.name, bytes.byteLength)
-  })
-})
+await parseTar(
+  archive,
+  { maxEntrySize: 10 * 1024 * 1024, maxTotalSize: 100 * 1024 * 1024, maxEntries: 10_000 },
+  async (entry) => {
+    console.log(entry.name, (await entry.bytes()).byteLength)
+  },
+)
 ```
 
-Keep the callback synchronous so size-check errors stop parsing immediately; return a promise for subsequent asynchronous work. To also bound headers, padding, and extension metadata, limit the incoming archive stream after decompression.
+`maxEntrySize` and `maxEntries` also apply to PAX/GNU metadata entries. `maxEntries` excludes padding and end markers. `maxTotalSize` counts all input bytes, including headers and padding; when decompressing upstream, it counts decompressed bytes. Limits must be non-negative safe integers, or `Infinity` to disable an individual limit.
+
+Exceeding a limit throws `MaxEntrySizeExceededError`, `MaxTotalSizeExceededError`, or `MaxEntriesExceededError`, all exported from `remix/tar-parser` and extending `TarParseError`.
 
 ## Benchmark
 
