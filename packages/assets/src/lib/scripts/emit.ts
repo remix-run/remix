@@ -32,6 +32,7 @@ type EmitResult =
     }
 
 type RewriteImportsOptions = {
+  getRewrittenImportUrl?(identityPath: string): string
   getHmrImportTimestamp(identityPath: string): number | null
   getServedUrl(identityPath: string): Promise<string>
   getStableUrl(identityPath: string): string
@@ -41,6 +42,7 @@ export async function emitResolvedModule(
   resolvedModule: ResolvedModule,
   options: {
     fingerprintAssets: boolean
+    getRewrittenImportUrl?(identityPath: string): string
     getHmrImportTimestamp(identityPath: string): number | null
     getServedUrl(identityPath: string): Promise<string>
     getStableUrl(identityPath: string): string
@@ -100,8 +102,13 @@ async function rewriteImports(
         await options.getServedUrl(imported.depPath),
         hmrImportTimestamp,
       )
-    } else if (imported.compiledSpecifier === imported.specifier) {
-      continue
+    } else {
+      let rewrittenImportUrl = options.getRewrittenImportUrl?.(imported.depPath)
+      if (rewrittenImportUrl !== undefined) {
+        replacementSpecifier = rewrittenImportUrl
+      } else if (imported.compiledSpecifier === imported.specifier) {
+        continue
+      }
     }
 
     rewrittenSource.overwrite(

@@ -13,6 +13,7 @@ import {
   parseFingerprintSuffix,
 } from '../fingerprint.ts'
 import { emitResolvedModule } from './emit.ts'
+import { createFingerprintedImportEmitter } from './fingerprinted-imports.ts'
 import { normalizeFilePath, resolveFilePath } from '../paths.ts'
 import {
   resolveModule,
@@ -48,6 +49,12 @@ type ScriptCompileResult = {
   sourceMap: EmittedAsset | null
 }
 
+type EmitScripts = (
+  root: ResolvedModule,
+  modules: ReadonlyMap<string, ResolvedModule>,
+) => Promise<Map<string, EmittedModule>>
+
+/** Generated import-map data for a script graph. `imports` is empty when import maps are disabled. */
 export type ScriptImportMap = {
   imports: Record<string, string>
   scopes?: Record<string, Record<string, string>>
@@ -73,6 +80,7 @@ type ScriptCompilerOptions = {
   define?: Record<string, string>
   external: string[]
   fingerprintAssets: boolean
+  importMaps: boolean
   hmr?: {
     clientPathname: string
     send(updates: ScriptHmrUpdate[]): void
@@ -174,6 +182,15 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   let directoryResolutionIdentityByCacheKey = new Map<string, Promise<string | null>>()
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedModule>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedModule>>()
+  let emitScripts: EmitScripts
+  if (resolvedOptions.importMaps) {
+    emitScripts = emitScriptsForImportMaps
+  } else if (resolvedOptions.fingerprintAssets) {
+    let emitFingerprintedImports = createFingerprintedImportEmitter(emitModule)
+    emitScripts = (_root, modules) => emitFingerprintedImports(modules)
+  } else {
+    emitScripts = emitScriptsWithStableImports
+  }
   let hasResolvedScripts = false
 
   let transformArgs: TransformArgs = {
@@ -246,6 +263,8 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
     async getImportMap(filePath) {
       let resolvedEntries = resolveInputScriptRoots(filePath)
+      if (!resolvedOptions.importMaps) return { imports: {} }
+
       let resolvedEntrySet = new Set(resolvedEntries)
       let visited = new Set<string>()
       let queue = [...resolvedEntries]
@@ -628,31 +647,17 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     if (existing) return existing
 
     let promise = (async () => {
-      let startedVersion = record.invalidationVersion
-      let resolvedModule = await getOrCreateResolvedScript(record)
-      await resolveScriptGraph(resolvedModule)
-      let emitResolvedModuleResult = await emitResolvedModule(resolvedModule, {
-        fingerprintAssets: resolvedOptions.fingerprintAssets,
-        getHmrImportTimestamp,
-        getServedUrl,
-        getStableUrl,
-        hmrClientPathname: resolvedOptions.hmr?.clientPathname,
-        sourceMaps: resolvedOptions.sourceMaps,
-      })
-
-      if (!emitResolvedModuleResult.ok) {
-        throw emitResolvedModuleResult.error
+      let root = await getOrCreateResolvedScript(record)
+      let graph = await resolveScriptGraph(root)
+      let emissions = await emitScripts(root, graph)
+      for (let [identityPath, emitted] of emissions) {
+        let resolvedModule = graph.get(identityPath)
+        if (resolvedModule) cacheEmission(resolvedModule, emitted)
       }
 
-      if (isFresh(record, startedVersion)) {
-        scriptStore.setEmitted(
-          record.identityPath,
-          emitResolvedModuleResult.value,
-          createModuleSnapshot(resolvedModule.trackedFiles),
-        )
-      }
-
-      return emitResolvedModuleResult.value
+      let emitted = emissions.get(root.identityPath)
+      if (!emitted) throw new Error(`Failed to emit script ${record.identityPath}`)
+      return emitted
     })()
 
     emitInFlightByCacheKey.set(cacheKey, promise)
@@ -666,8 +671,48 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     }
   }
 
-  async function resolveScriptGraph(root: ResolvedModule): Promise<void> {
+  async function emitScriptsForImportMaps(
+    root: ResolvedModule,
+  ): Promise<Map<string, EmittedModule>> {
+    return new Map([[root.identityPath, await emitModule(root)]])
+  }
+
+  async function emitScriptsWithStableImports(
+    root: ResolvedModule,
+  ): Promise<Map<string, EmittedModule>> {
+    return new Map([[root.identityPath, await emitModule(root, getStableUrl)]])
+  }
+
+  async function emitModule(
+    resolvedModule: ResolvedModule,
+    getRewrittenImportUrl?: (identityPath: string) => string,
+  ): Promise<EmittedModule> {
+    let result = await emitResolvedModule(resolvedModule, {
+      fingerprintAssets: resolvedOptions.fingerprintAssets,
+      getHmrImportTimestamp,
+      getServedUrl,
+      getStableUrl,
+      hmrClientPathname: resolvedOptions.hmr?.clientPathname,
+      getRewrittenImportUrl,
+      sourceMaps: resolvedOptions.sourceMaps,
+    })
+    if (!result.ok) throw result.error
+    return result.value
+  }
+
+  function cacheEmission(resolvedModule: ResolvedModule, emitted: EmittedModule): void {
+    let record = scriptStore.get(resolvedModule.identityPath)
+    if (record.resolved !== resolvedModule || !scriptStore.isResolvedFresh(record)) return
+    scriptStore.setEmitted(
+      resolvedModule.identityPath,
+      emitted,
+      createModuleSnapshot(resolvedModule.trackedFiles),
+    )
+  }
+
+  async function resolveScriptGraph(root: ResolvedModule): Promise<Map<string, ResolvedModule>> {
     let visited = new Set([root.identityPath])
+    let graph = new Map([[root.identityPath, root]])
     let queue = [...root.deps]
 
     while (queue.length > 0) {
@@ -682,12 +727,15 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       for (let resolvedModule of resolvedModules) {
         if (visited.has(resolvedModule.identityPath)) continue
         visited.add(resolvedModule.identityPath)
+        graph.set(resolvedModule.identityPath, resolvedModule)
 
         for (let dep of resolvedModule.deps) {
           if (!visited.has(dep)) queue.push(dep)
         }
       }
     }
+
+    return graph
   }
 
   async function getServedUrl(identityPath: string): Promise<string> {
@@ -862,7 +910,8 @@ function getNotModifiedResult(
   let asset = getEmittedAssetForRequest(emittedModule, options.isSourceMapRequest)
   if (!asset) return null
 
-  if (options.requestedFingerprint !== null && asset.fingerprint !== options.requestedFingerprint) {
+  let servedFingerprint = options.isSourceMapRequest ? asset.fingerprint : emittedModule.fingerprint
+  if (options.requestedFingerprint !== null && servedFingerprint !== options.requestedFingerprint) {
     return null
   }
 
