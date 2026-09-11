@@ -9,8 +9,8 @@ export function AboutPage() {
       <div class="card">
         <h1>About Our Record Store</h1>
         <p mix={css({ margin: '1rem 0' })}>
-          Welcome to our online record store, a demo application built to showcase the capabilities of
-          <strong>fetch-router</strong> - a powerful, type-safe routing library for web
+          Welcome to our online record store, a demo application built to showcase the capabilities
+          of <strong>fetch-router</strong> — a powerful, type-safe routing library for web
           applications.
         </p>
 

@@ -133,8 +133,8 @@ For pages, render a component tree and return the resulting `Response`:
 ```typescript
 async handler({ get }) {
   let db = get(databaseContext)
-  let albums = await db.findMany(albums, { orderBy: ['id', 'asc'] })
-  return render(<IndexPage albums={albums} />)
+  let allAlbums = await db.findMany(albums, { orderBy: ['id', 'asc'] })
+  return render(<IndexPage albums={allAlbums} />)
 }
 ```
 
@@ -168,7 +168,7 @@ For expected failures — validation, conflict, not found — return a `Response
 ```typescript
 async show({ get, params }) {
   let db = get(databaseContext)
-  let album = await db.find(albums, params.albumId)
+  let album = await db.findOne(albums, { where: { slug: params.slug } })
   if (!album) return new Response('Not Found', { status: 404 })
   return render(<ShowPage album={album} />)
 }
@@ -225,7 +225,7 @@ export default createController(routes.albums, {
 
     async show({ get, params }) {
       let db = get(databaseContext)
-      let album = await db.find(albums, params.albumId)
+      let album = await db.findOne(albums, { where: { slug: params.slug } })
       if (!album) return new Response('Not Found', { status: 404 })
       return render(<ShowPage album={album} />)
     },

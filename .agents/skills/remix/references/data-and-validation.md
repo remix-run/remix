@@ -40,15 +40,28 @@ export const orders = table({
     total: c.decimal(10, 2).notNull(),
     created_at: c.integer().notNull(),
   },
-  relations: {
-    user: belongsTo('users', 'user_id'),
-    items: hasMany('order_items', 'order_id'),
+})
+
+export const orderItems = table({
+  name: 'order_items',
+  primaryKey: ['order_id', 'album_id'],
+  columns: {
+    order_id: c.integer().references('orders', 'id'),
+    album_id: c.integer().references('albums', 'id'),
+    quantity: c.integer().notNull(),
   },
 })
 
+// Relations are standalone values built from table objects (not a table option),
+// and queries opt into them with .with(...).
+export const itemsByOrder = hasMany(orders, orderItems)
+export const albumForOrderItem = belongsTo(orderItems, albums)
+export const orderItemsWithAlbum = itemsByOrder.with({ album: albumForOrderItem })
+
 export type Album = TableRow<typeof albums>
 export type Order = TableRow<typeof orders>
-export type OrderWithItems = TableRowWith<typeof orders, 'items'>
+export type OrderItem = TableRow<typeof orderItems>
+export type OrderWithItems = TableRowWith<typeof orders, { items: OrderItem[] }>
 ```
 
 ### Column types
