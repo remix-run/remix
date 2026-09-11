@@ -851,6 +851,60 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('does not hydrate imported client entries through their parent boundary', async () => {
+    let clicks = 0
+    let updateOuter = () => {}
+
+    let Inner = clientEntry('/inner.js#Inner', function Inner() {
+      return () => (
+        <button
+          mix={[
+            on('click', () => {
+              clicks++
+            }),
+          ]}
+        >
+          Inner
+        </button>
+      )
+    })
+
+    let Outer = clientEntry('/outer.js#Outer', function Outer(handle: Handle) {
+      updateOuter = () => {
+        void handle.update()
+      }
+      return () => (
+        <section>
+          <Inner />
+        </section>
+      )
+    })
+
+    document.body.innerHTML = await drain(renderToStream(<Outer />))
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/outer.js' && exportName === 'Outer') return Outer
+        if (moduleUrl === '/inner.js' && exportName === 'Inner') return Inner
+        throw new Error(`Unexpected client entry: ${moduleUrl}#${exportName}`)
+      },
+    })
+    await app.ready()
+
+    let button = document.querySelector('button')
+    invariant(button)
+
+    button.click()
+    expect(clicks).toBe(1)
+
+    updateOuter()
+    app.flush()
+    button.click()
+    expect(clicks).toBe(2)
+
+    app.dispose()
+  })
+
   it('removes orphaned hydration end markers after full-document reloads of adjacent client entries', async () => {
     let FragmentEntry = clientEntry(
       '/js/fragment-entry.js#FragmentEntry',

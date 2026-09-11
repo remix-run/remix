@@ -1,0 +1,1 @@
+Avoid attaching duplicate event handlers when a client entry imports and renders another client entry, including through fragments and wrapper components. Preserve deferred removal and exit animations when removing nested client entries (see #11844).

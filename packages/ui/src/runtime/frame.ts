@@ -48,7 +48,7 @@ type FrameMarkerData = FrameData & {
   id: string
 }
 
-type PendingClientEntries = Map<Comment, [Comment, RemixElement]>
+type PendingClientEntries = Map<Comment, [Comment, RemixElement | undefined]>
 
 /**
  * Loads a named client-entry export for hydration.
@@ -1201,6 +1201,13 @@ function scheduleHydrationInContainer(
   if (!hydrationData) return
 
   for (let marker of hydrationMarkers) {
+    if (!hydrationData[marker.id]) continue
+    if (!context.pendingClientEntries.has(marker.start)) {
+      context.pendingClientEntries.set(marker.start, [marker.end, undefined])
+    }
+  }
+
+  for (let marker of hydrationMarkers) {
     let entry = hydrationData[marker.id]
     if (!entry) continue
     scheduleHydrationMarker(marker, entry, context, reconciliationTracker, signal)
@@ -1241,7 +1248,8 @@ function scheduleHydrationMarker(
     if (signal?.aborted || context.lifecycleSignal.aborted) return
     if (!isHydrationMarkerLive(marker, context)) return
     if (!props) return
-    let vElement = createElement(component, props)
+    let pending = context.pendingClientEntries.get(marker.start)
+    let vElement = pending?.[1] ?? createElement(component, props)
     context.pendingClientEntries.set(marker.start, [marker.end, vElement])
     hydrateRegion(vElement, marker.start, marker.end, identity, context, signal)
   }
@@ -1406,7 +1414,7 @@ function hydrateRegion(
     context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   })
 
-  setClientEntryBoundaryOwner(start, identity, root)
+  setClientEntryBoundaryOwner(start, end, identity, root)
   renderEntry(root)
 }
 
