@@ -215,6 +215,9 @@ function compileUpsertOperation(operation: UpsertOperation, context: CompileCont
 
   let updateValues = operation.update ?? operation.values
   let updateColumns = Object.keys(updateValues)
+  let insertValues = insertColumns
+    .map((column) => pushValue(context, operation.values[column]))
+    .join(', ')
 
   let conflictClause = ''
 
@@ -240,7 +243,7 @@ function compileUpsertOperation(operation: UpsertOperation, context: CompileCont
       ' (' +
       insertColumns.map((column) => quotePath(column)).join(', ') +
       ') values (' +
-      insertColumns.map((column) => pushValue(context, operation.values[column])).join(', ') +
+      insertValues +
       ')' +
       conflictClause +
       compileReturningClause(operation.returning),
