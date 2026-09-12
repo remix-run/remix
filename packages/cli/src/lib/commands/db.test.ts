@@ -267,6 +267,24 @@ describe('db command', () => {
     }
   })
 
+  it('creates a database from a module adapter', async () => {
+    let projectDir = await createModuleDatabaseProject()
+
+    try {
+      let migrate = await captureOutput(() => runRemix(['db', 'migrate'], { cwd: projectDir }))
+      assert.equal(migrate.exitCode, 0, migrate.stderr)
+      assert.match(migrate.stdout, /applied 20260715120000_create_first/)
+      assert.ok(readTableNames(projectDir).includes('first_table'))
+
+      let context = await readModuleContext(projectDir)
+      assert.equal(context.configDir, projectDir)
+      assert.equal(context.connection, './database.sqlite')
+      assert.deepEqual(context.options, { label: 'from-config' })
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('bounds a rollback with --step, --to, and --dry-run', async () => {
     let projectDir = await createDatabaseProject({ reversible: true })
 
@@ -299,6 +317,36 @@ describe('db command', () => {
       assert.match(both.stdout, /reverted 20260715130000_create_second/)
       assert.match(both.stdout, /reverted 20260715120000_create_first/)
     } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('calls the default export of a module adapter and overrides its connection', async () => {
+    let projectDir = await createModuleDatabaseProject({
+      adapter: { type: 'module', module: './app/database.ts' },
+    })
+    let previous = process.env.REMIX_TEST_DATABASE
+    process.env.REMIX_TEST_DATABASE = './override.sqlite'
+
+    try {
+      let result = await captureOutput(() =>
+        runRemix(['db', 'migrate', '--connection-env', 'REMIX_TEST_DATABASE'], { cwd: projectDir }),
+      )
+      assert.equal(result.exitCode, 0, result.stderr)
+
+      let context = await readModuleContext(projectDir)
+      assert.equal(context.connection, './override.sqlite')
+      assert.equal(context.options, undefined)
+
+      let sqlite = new DatabaseSync(path.join(projectDir, 'override.sqlite'))
+      let table = sqlite
+        .prepare("select name from sqlite_master where type = 'table' and name = 'first_table'")
+        .get()
+      sqlite.close()
+      assert.ok(table)
+    } finally {
+      if (previous === undefined) delete process.env.REMIX_TEST_DATABASE
+      else process.env.REMIX_TEST_DATABASE = previous
       await fs.rm(projectDir, { recursive: true, force: true })
     }
   })
@@ -345,6 +393,30 @@ describe('db command', () => {
     }
   })
 
+  it('reports module adapters that cannot be imported or do not export a factory', async () => {
+    let missingModule = await createModuleDatabaseProject({
+      adapter: { type: 'module', module: './app/missing.ts' },
+    })
+    let missingExport = await createModuleDatabaseProject({
+      adapter: { type: 'module', module: './app/database.ts', export: 'createTursoDatabase' },
+    })
+
+    try {
+      let notFound = await captureOutput(() => runRemix(['db', 'status'], { cwd: missingModule }))
+      assert.equal(notFound.exitCode, 1)
+      assert.match(notFound.stderr, /RMX_DB_MODULE_NOT_FOUND/)
+      assert.match(notFound.stderr, /\.\/app\/missing\.ts/)
+
+      let noFactory = await captureOutput(() => runRemix(['db', 'status'], { cwd: missingExport }))
+      assert.equal(noFactory.exitCode, 1)
+      assert.match(noFactory.stderr, /RMX_DB_MODULE_FACTORY_REQUIRED/)
+      assert.match(noFactory.stderr, /"createTursoDatabase"/)
+    } finally {
+      await fs.rm(missingModule, { recursive: true, force: true })
+      await fs.rm(missingExport, { recursive: true, force: true })
+    }
+  })
+
   it('reports unknown subcommands and invalid command options', async () => {
     let unknown = await captureOutput(() => runRemix(['db', 'wat']))
     let invalid = await captureOutput(() => runRemix(['db', 'migrate', '--seed', './seed.sql']))
@@ -371,6 +443,69 @@ function countSeededRows(projectDir: string): number {
   let row = sqlite.prepare('select count(*) as count from seeded').get()
   sqlite.close()
   return Number(row?.count)
+}
+
+async function readModuleContext(projectDir: string): Promise<Record<string, unknown>> {
+  return JSON.parse(await fs.readFile(path.join(projectDir, 'module-context.json'), 'utf8'))
+}
+
+async function createModuleDatabaseProject(
+  options: { adapter?: Record<string, unknown> } = {},
+): Promise<string> {
+  let projectDir = await createDatabaseProject()
+  let sqliteModule = import.meta.resolve('@remix-run/data-table-sqlite')
+
+  await fs.writeFile(
+    path.join(projectDir, 'app/database.ts'),
+    [
+      "import { writeFileSync } from 'node:fs'",
+      "import * as path from 'node:path'",
+      '',
+      `import { createSqliteDatabase } from '${sqliteModule}'`,
+      '',
+      'export function createDatabase(context) {',
+      '  writeFileSync(',
+      "    path.join(context.configDir, 'module-context.json'),",
+      '    JSON.stringify({',
+      '      configDir: context.configDir,',
+      '      connection: context.connection,',
+      '      options: context.options,',
+      '    }),',
+      "    'utf8',",
+      '  )',
+      '  return createSqliteDatabase({',
+      "    filename: path.resolve(context.configDir, context.connection ?? './database.sqlite'),",
+      '  })',
+      '}',
+      '',
+      'export default createDatabase',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+
+  await fs.writeFile(
+    path.join(projectDir, 'remix.json'),
+    JSON.stringify(
+      {
+        db: {
+          adapter: options.adapter ?? {
+            type: 'module',
+            module: './app/database.ts',
+            export: 'createDatabase',
+            connection: './database.sqlite',
+            options: { label: 'from-config' },
+          },
+          migrations: { directory: './db/migrations' },
+          seed: './db/seed.sql',
+        },
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  )
+  return projectDir
 }
 
 async function createDatabaseProject(

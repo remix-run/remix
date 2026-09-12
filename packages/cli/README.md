@@ -185,14 +185,37 @@ configured arrays, while nested Playwright and coverage settings merge by field.
 globs are resolved from the directory containing the config file. Use `remix doctor --no-strict` to
 disable configured strict mode for one run.
 
-`remix db` requires `db.adapter`. Adapters use `type: "sqlite"`, `type: "postgres"`, or
-`type: "mysql"`; PostgreSQL uses `connectionString` and MySQL uses `uri`. A connection value may be
-a string or an object naming an environment variable with an optional default. `db.seed` names a
-SQL file that `remix db seed` and `remix db reset` run against the database. Database flags such as
-`--migrations`, `--seed`, `--journal-table`, and `--connection-env` override the corresponding
-config for one invocation. Rollbacks also accept `--step`, `--to`, and `--dry-run`. When no global
-`--config` is provided, database commands find the nearest `remix.json` by walking up from the
-working directory.
+`remix db` requires `db.adapter`. Adapters use `type: "sqlite"`, `type: "postgres"`,
+`type: "mysql"`, or `type: "module"`; PostgreSQL uses `connectionString` and MySQL uses `uri`. A
+connection value may be a string or an object naming an environment variable with an optional
+default. `db.seed` names a SQL file that `remix db seed` and `remix db reset` run against the
+database. Database flags such as `--migrations`, `--seed`, `--journal-table`, and `--connection-env`
+override the corresponding config for one invocation. Rollbacks also accept `--step`, `--to`, and
+`--dry-run`. When no global `--config` is provided, database commands find the nearest `remix.json`
+by walking up from the working directory.
+
+A `type: "module"` adapter names a `module` that exports a database factory, so databases the CLI
+does not ship an adapter for — Turso/libSQL or Cloudflare D1, for example — can still run
+`remix db`:
+
+```jsonc
+{
+  "db": {
+    "adapter": {
+      "type": "module",
+      "module": "./app/database.ts",
+      "export": "createDatabase",
+      "connection": { "env": "DATABASE_URL" },
+      "options": { "syncInterval": 60 },
+    },
+  },
+}
+```
+
+Relative `module` specifiers resolve from `remix.json`, and bare specifiers resolve from the app.
+`export` defaults to the default export. The factory receives `{ configDir, connection, options }`
+and returns a `Database`, which the CLI closes when the command finishes. Type the factory with
+`RemixDbModuleFactory` from `remix/cli`.
 
 Use the global `--config` option to select another JSONC file. The option itself is resolved from the
 CLI working directory and may appear before or after the command:
