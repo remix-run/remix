@@ -149,6 +149,10 @@ function getWatchEventFilePath(filePath: string): string {
   }
 }
 
+function getBrowserHmrWatchedFilePath(filePath: string): string {
+  return normalizeWindowsPath(getWatchEventFilePath(filePath))
+}
+
 function isNoEntityError(error: unknown): error is NodeJS.ErrnoException {
   return (
     error instanceof Error &&
@@ -5929,16 +5933,16 @@ describe('asset-server', () => {
         await Promise.resolve()
 
         assert.ok(handleFileEvents)
-        assert.ok(watchedFiles.has(getWatchEventFilePath(packageJsonPath)))
-        assert.ok(watchedFiles.has(getWatchEventFilePath(outerPath)))
-        assert.ok(watchedFiles.has(getWatchEventFilePath(barrelPath)))
-        assert.ok(watchedFiles.has(getWatchEventFilePath(unusedPath)))
-        assert.ok(watchedFiles.has(getWatchEventFilePath(firstPath)))
-        assert.ok(watchedFiles.has(getWatchEventFilePath(secondPath)))
-        assert.ok(watchedFiles.has(getWatchEventFilePath(sharedPath)))
-        assert.ok(watchedFiles.has(getWatchEventFilePath(otherPath)))
+        assert.ok(watchedFiles.has(getBrowserHmrWatchedFilePath(packageJsonPath)))
+        assert.ok(watchedFiles.has(getBrowserHmrWatchedFilePath(outerPath)))
+        assert.ok(watchedFiles.has(getBrowserHmrWatchedFilePath(barrelPath)))
+        assert.ok(watchedFiles.has(getBrowserHmrWatchedFilePath(unusedPath)))
+        assert.ok(watchedFiles.has(getBrowserHmrWatchedFilePath(firstPath)))
+        assert.ok(watchedFiles.has(getBrowserHmrWatchedFilePath(secondPath)))
+        assert.ok(watchedFiles.has(getBrowserHmrWatchedFilePath(sharedPath)))
+        assert.ok(watchedFiles.has(getBrowserHmrWatchedFilePath(otherPath)))
         let nestedPackageJsonPath = path.join(caseDir, 'app/nested/package.json')
-        assert.ok(watchedFiles.has(getWatchEventFilePath(nestedPackageJsonPath)))
+        assert.ok(watchedFiles.has(getBrowserHmrWatchedFilePath(nestedPackageJsonPath)))
 
         assert.ok(
           getLineAndColumn(entryBody, '/assets/app/nested/shared.ts').line <
