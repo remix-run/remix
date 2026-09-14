@@ -28,16 +28,16 @@ Treat the router as a pure `(Request) => Promise<Response>` function. Build a fr
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { createBookstoreRouter } from '../app/router.ts'
+import { createRecordStoreRouter } from '../app/router.ts'
 import { routes } from '../app/routes.ts'
 
 describe('home', () => {
   it('responds 200 with the home page', async () => {
-    let router = createBookstoreRouter()
+    let router = createRecordStoreRouter()
     let response = await router.fetch(new Request('http://localhost' + routes.home.href()))
 
     assert.equal(response.status, 200)
-    assert.match(await response.text(), /Welcome to the Bookstore/)
+    assert.match(await response.text(), /Welcome to the Record Store/)
   })
 })
 ```
@@ -48,7 +48,7 @@ Use `routes.<name>.href(...)` to build URLs in tests so they stay in sync with t
 import { createMemorySessionStorage } from 'remix/session-storage/memory'
 import { createCookie } from 'remix/cookie'
 
-let router = createBookstoreRouter({
+let router = createRecordStoreRouter({
   sessionCookie: createCookie('session', { secrets: ['test'] }),
   sessionStorage: createMemorySessionStorage(),
 })

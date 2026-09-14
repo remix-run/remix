@@ -47,10 +47,10 @@ To guarantee that migrations are stable, we need a file format that precludes im
 │   └── schema.ts
 └── db/
     └── migrations/
-        ├── 20260228090000_create_bookstore_schema/
+        ├── 20260228090000_create_record_store_schema/
         │   ├── up.sql
         │   └── down.sql
-        └── 20260301083000_add_books_search_index/
+        └── 20260301083000_add_albums_search_index/
             └── up.sql
 ```
 

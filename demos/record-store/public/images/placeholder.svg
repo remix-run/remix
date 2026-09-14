@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#e4e0d8"/>
+  <rect x="40" y="40" width="520" height="520" fill="none" stroke="#a39d90" stroke-width="3" stroke-dasharray="12 10"/>
+  <circle cx="300" cy="260" r="110" fill="#c8c2b4"/>
+  <circle cx="300" cy="260" r="34" fill="#e4e0d8"/>
+  <text x="300" y="450" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#7d786d" text-anchor="middle">No Cover Available</text>
+</svg>

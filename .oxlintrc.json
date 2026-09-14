@@ -18,7 +18,7 @@
     "**/dist/**",
     "docs/api/**",
     "packages/ui/docs/**",
-    "**/demos/bookstore/public/assets/**",
+    "**/demos/record-store/public/assets/**",
     "**/demos/sse/public/assets/**",
     "**/coverage/**",
     "**/bench/**",
