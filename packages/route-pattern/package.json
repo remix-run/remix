@@ -21,6 +21,7 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/route-pattern.ts",
     "./href": "./src/href.ts",

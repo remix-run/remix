@@ -46,6 +46,7 @@ export const scriptEntry = await assetServer.getScriptEntry(entry);
 
 Render the script entry's import map with `<ImportMap>` before its modulepreload links and module script. This combines its mappings with import maps from blocking client entries.
 
+Set `optimizeBarrelFileImports: true` to rewrite named imports through eligible barrel files to their resolved implementation modules. This avoids intermediary requests and removes side-effect-free dependency branches that are no longer reachable. Every removed module must be declared side-effect-free by its nearest `package.json` with `sideEffects: false` or a non-matching `sideEffects` pattern; missing or invalid metadata preserves the original graph.
 Resolve `clientEntry(import.meta.url, ...)` IDs to `href`, `importMap`, and `preloads` through the asset server in the shared renderer instead of hard-coding deployment URLs in components. Frame responses can introduce additional mappings. When targeting browsers without native support for multiple import maps, configure the browser entry with `remix/multiple-import-maps-polyfill` as shown in [Interactivity](/interactivity/#browser-entry-with-run).
 
 ## File transforms and transformed-output caches {#asset-file-transforms}

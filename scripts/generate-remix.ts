@@ -15,6 +15,7 @@ import url from 'node:url'
 import { parseSync } from 'oxc-parser'
 import { logAndExec } from './utils/process.ts'
 import { findReadmeForSpecifier } from './utils/remix-readmes.ts'
+import { getPackageExportSideEffects } from './utils/package-side-effects.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '../packages')
@@ -59,6 +60,8 @@ type ExportEntry = {
   reExportFrom: string
   exportMode: ExportMode
   hasDefaultValueExport: boolean
+  hasPublishedSideEffects: boolean
+  hasSourceSideEffects: boolean
   // The README file in the owning package to copy next to the generated umbrella export.
   readmePath?: string
 }
@@ -174,6 +177,7 @@ async function buildExportsFromManifest(
     if (remixPath.startsWith('_')) continue // skip comment/metadata keys
     let exportClassification = await getExportClassificationForSpecifier(specifier, pkgJsonByName)
     let exportMode = getExportMode(exportClassification)
+    let packageSideEffects = getPackageSideEffectsForSpecifier(specifier, pkgJsonByName)
     let sourceFile =
       exportMode === 'type-reference'
         ? specifier.replace('@remix-run/', '') + '.d.ts'
@@ -191,6 +195,8 @@ async function buildExportsFromManifest(
       reExportFrom: specifier,
       exportMode,
       hasDefaultValueExport: exportClassification.hasDefaultValueExport,
+      hasPublishedSideEffects: hasRuntimeImport(exportMode) && packageSideEffects.published,
+      hasSourceSideEffects: hasRuntimeImport(exportMode) && packageSideEffects.source,
       readmePath,
     })
   }
@@ -204,12 +210,15 @@ async function buildExportsFromManifest(
       pkgJsonByName,
     )
     let exportMode = getExportMode(exportClassification)
+    let packageSideEffects = getPackageSideEffectsForSpecifier(CLI_PACKAGE_NAME, pkgJsonByName)
     exports.push({
       sourceFile: 'cli.ts',
       exportPath: './cli',
       reExportFrom: CLI_PACKAGE_NAME,
       exportMode,
       hasDefaultValueExport: exportClassification.hasDefaultValueExport,
+      hasPublishedSideEffects: hasRuntimeImport(exportMode) && packageSideEffects.published,
+      hasSourceSideEffects: hasRuntimeImport(exportMode) && packageSideEffects.source,
       readmePath,
     })
   }
@@ -225,6 +234,40 @@ function getSourceFileForManifestEntry(remixPath: string, specifier: string): st
 
 function isFile(filePath: string): boolean {
   return statSync(filePath, { throwIfNoEntry: false })?.isFile() ?? false
+}
+
+function hasRuntimeImport(exportMode: ExportMode): boolean {
+  return exportMode !== 'type' && exportMode !== 'type-reference'
+}
+
+function getGeneratedSideEffectFiles(): string[] {
+  let sourceFiles = new Set<string>()
+  let publishedFiles = new Set<string>()
+
+  if (allExports.some((entry) => entry.exportPath === './cli')) {
+    sourceFiles.add(REMIX_CLI_ENTRY_FILE)
+    publishedFiles.add(getDistFileName(REMIX_CLI_ENTRY_FILE))
+  }
+
+  for (let entry of allExports) {
+    if (entry.hasSourceSideEffects) sourceFiles.add(entry.sourceFile)
+    if (entry.hasPublishedSideEffects) publishedFiles.add(getDistFileName(entry.sourceFile))
+  }
+
+  for (let bin of allBins) {
+    if (isRemixCliBin(bin)) continue
+    sourceFiles.add(`${bin.command}.ts`)
+    publishedFiles.add(`${bin.command}.js`)
+  }
+
+  return [
+    ...[...sourceFiles].sort().map((file) => `./src/${file}`),
+    ...[...publishedFiles].sort().map((file) => `./dist/${file}`),
+  ]
+}
+
+function getDistFileName(sourceFile: string): string {
+  return sourceFile.replace(/\.d\.ts$/, '.d.ts').replace(/\.ts$/, '.js')
 }
 
 async function updateRemixPackage() {
@@ -300,6 +343,7 @@ async function updateRemixPackage() {
 
   // Update package.json
   console.log('Updating Remix package.json...')
+  remixPackageJson.sideEffects = getGeneratedSideEffectFiles()
   remixPackageJson.exports = {}
   remixPackageJson.publishConfig.exports = {}
 
@@ -462,16 +506,30 @@ async function getExportClassificationForSpecifier(
   specifier: string,
   pkgJsonByName: Map<string, Record<string, unknown>>,
 ): Promise<ExportClassification> {
-  let parts = specifier.split('/')
-  let packageName = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0]
+  let { packageName, packageExportPath } = getPackageSpecifierParts(specifier)
   let packageDirName = packageName.replace('@remix-run/', '')
-  let subPath = parts.slice(packageName.split('/').length).join('/')
   let pkgJson = pkgJsonByName.get(packageName)
-  let exportConfig = (pkgJson?.exports as Record<string, unknown> | undefined)?.[
-    subPath ? `./${subPath}` : '.'
-  ]
+  let exportConfig = isRecord(pkgJson?.exports) ? pkgJson.exports[packageExportPath] : undefined
 
   return getPackageExportClassification(packageDirName, exportConfig)
+}
+
+function getPackageSideEffectsForSpecifier(
+  specifier: string,
+  pkgJsonByName: Map<string, Record<string, unknown>>,
+) {
+  let { packageName, packageExportPath } = getPackageSpecifierParts(specifier)
+  return getPackageExportSideEffects(pkgJsonByName.get(packageName), packageExportPath)
+}
+
+function getPackageSpecifierParts(specifier: string): {
+  packageExportPath: string
+  packageName: string
+} {
+  let parts = specifier.split('/')
+  let packageName = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0]
+  let subPath = parts.slice(packageName.split('/').length).join('/')
+  return { packageExportPath: subPath ? `./${subPath}` : '.', packageName }
 }
 
 function getExportMode(classification: ExportClassification): ExportMode {
