@@ -233,6 +233,13 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
    */
   importMaps?: boolean
   /**
+   * Whether to optimize named imports through eligible side-effect-free barrel files by rewriting
+   * them to their resolved implementation modules. This avoids intermediary requests and removes
+   * dependency branches that are no longer reachable. In HMR mode, script changes trigger a full
+   * browser reload while this option is enabled; stylesheet updates remain hot. (default: `false`)
+   */
+  optimizeBarrelFileImports?: boolean
+  /**
    * Shared compatibility target for scripts and styles. Browser targets apply to both
    * pipelines, and `es` only affects scripts.
    */
@@ -366,6 +373,7 @@ type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
   files: ResolvedAssetServerFilesOptions
   fingerprintAssets: boolean
   importMaps: boolean
+  optimizeBarrelFileImports: boolean
   hmr: BrowserHmrChannelFactory | null
   hmrModuleImporter: string | null
   minify: boolean
@@ -463,6 +471,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     external: resolvedOptions.external,
     fingerprintAssets: resolvedOptions.fingerprintAssets,
     importMaps: resolvedOptions.importMaps,
+    optimizeBarrelFileImports: resolvedOptions.optimizeBarrelFileImports,
     loaders: resolvedOptions.loaders,
     hmr: sendHmrPayload
       ? {
@@ -1166,6 +1175,9 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
   if (hmr.channel && watchOptions === null) {
     throw new TypeError('hmr requires watch mode')
   }
+  let optimizeBarrelFileImports = normalizeOptimizeBarrelFileImportsOption(
+    options.optimizeBarrelFileImports,
+  )
   if (Object.keys(mounts).length === 0) {
     throw new TypeError('mounts must include at least one entry')
   }
@@ -1179,6 +1191,7 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
     files: normalizeFilesOptions(options.files),
     fingerprintAssets,
     importMaps: normalizeImportMapsOption(options.importMaps),
+    optimizeBarrelFileImports,
     hmr: hmr.channel,
     hmrModuleImporter: hmr.moduleImporter,
     minify: options.minify ?? false,
@@ -1299,6 +1312,15 @@ function normalizeImportMapsOption(importMaps: AssetServerOptions['importMaps'])
     throw new TypeError('importMaps must be a boolean')
   }
   return importMaps ?? true
+}
+
+function normalizeOptimizeBarrelFileImportsOption(
+  optimizeBarrelFileImports: AssetServerOptions['optimizeBarrelFileImports'],
+): boolean {
+  if (optimizeBarrelFileImports !== undefined && typeof optimizeBarrelFileImports !== 'boolean') {
+    throw new TypeError('optimizeBarrelFileImports must be a boolean')
+  }
+  return optimizeBarrelFileImports ?? false
 }
 
 function normalizeWatchOptions(

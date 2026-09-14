@@ -61,10 +61,13 @@ function createResolvedModule(
       usesImportMetaHot: false,
     },
     identityPath,
+    importRewrites: [],
     imports: [],
+    packageJsonPath: null,
     trackedFiles: [identityPath],
     rawCode: 'export const value = 1',
     resolvedPath: identityPath,
+    runtimeImports: [],
     sourceMap: null,
     staticDeps: [],
     stableUrlPathname: `/assets${identityPath}`,
@@ -322,6 +325,40 @@ describe('createModuleStore', () => {
     store.setResolved('/app/entry.ts', resolved, [resolved])
 
     assert.deepEqual([...store.getImporters('/app/value.ts')], ['/app/entry.ts'])
+  })
+
+  it('invalidates transitive importers without invalidating unrelated modules', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getDependencies(resolved) {
+        return resolved.deps
+      },
+    })
+    store.setResolved(
+      '/app/entry.ts',
+      createResolvedModule({ deps: ['/app/barrel.ts'], identityPath: '/app/entry.ts' }),
+      [{ trackedFiles: ['/app/entry.ts'] }],
+    )
+    store.setResolved(
+      '/app/barrel.ts',
+      createResolvedModule({ deps: ['/app/value.ts'], identityPath: '/app/barrel.ts' }),
+      [{ trackedFiles: ['/app/barrel.ts'] }],
+    )
+    store.setResolved('/app/value.ts', createResolvedModule({ identityPath: '/app/value.ts' }), [
+      { trackedFiles: ['/app/value.ts'] },
+    ])
+    store.setResolved(
+      '/app/unrelated.ts',
+      createResolvedModule({ identityPath: '/app/unrelated.ts' }),
+      [{ trackedFiles: ['/app/unrelated.ts'] }],
+    )
+
+    let invalidated = store.invalidateForFileEvent('/app/value.ts', 'change')
+    store.invalidateImporters(invalidated)
+
+    assert.equal(store.isResolvedFresh(store.get('/app/value.ts')), false)
+    assert.equal(store.isResolvedFresh(store.get('/app/barrel.ts')), false)
+    assert.equal(store.isResolvedFresh(store.get('/app/entry.ts')), false)
+    assert.equal(store.isResolvedFresh(store.get('/app/unrelated.ts')), true)
   })
 
   it('indexes accepted importers from resolved module dependencies', () => {

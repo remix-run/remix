@@ -14,6 +14,7 @@ import {
 } from '../fingerprint.ts'
 import { emitResolvedModule } from './emit.ts'
 import { createFingerprintedImportEmitter } from './fingerprinted-imports.ts'
+import { createBarrelFileImportOptimizer } from './optimize-barrel-file-imports.ts'
 import { normalizeFilePath, resolveFilePath } from '../paths.ts'
 import {
   resolveModule,
@@ -54,6 +55,11 @@ type EmitScripts = (
   modules: ReadonlyMap<string, ResolvedModule>,
 ) => Promise<Map<string, EmittedModule>>
 
+type RuntimeGraph = {
+  modules: Map<string, ResolvedModule>
+  sourceModules: Map<string, ResolvedModule>
+}
+
 /** Generated import-map data for a script graph. `imports` is empty when import maps are disabled. */
 export type ScriptImportMap = {
   imports: Record<string, string>
@@ -87,6 +93,7 @@ type ScriptCompilerOptions = {
   }
   isAllowed(absolutePath: string): boolean
   minify: boolean
+  optimizeBarrelFileImports: boolean
   loaders: readonly ModuleLoader[]
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
   onWatchFilesChange?: (delta: { add: string[]; remove: string[] }) => void
@@ -192,6 +199,9 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     emitScripts = emitScriptsWithStableImports
   }
   let hasResolvedScripts = false
+  let barrelFileImportOptimizer = resolvedOptions.optimizeBarrelFileImports
+    ? createBarrelFileImportOptimizer()
+    : null
 
   let transformArgs: TransformArgs = {
     define: resolvedOptions.define ?? null,
@@ -215,6 +225,8 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     resolverFactory,
     resolveDirectorySpecifierIdentity,
     routes: resolvedOptions.routes,
+    packageJsonSearchRoot: resolvedOptions.rootDir,
+    trackPackageSideEffects: resolvedOptions.optimizeBarrelFileImports,
   }
 
   return {
@@ -232,20 +244,22 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     },
 
     async getPreloadLayers(filePath) {
-      let resolvedEntries = resolveInputScriptRoots(filePath)
-      let visited = new Set(resolvedEntries)
-      let queue = [...resolvedEntries]
+      let resolvedEntries = await getOrCreateResolvedScripts(
+        resolveInputScriptRoots(filePath).map((identityPath) => scriptStore.get(identityPath)),
+      )
+      let graph = await resolveRuntimeGraphs(resolvedEntries)
+      let visited = new Set(resolvedEntries.map((entry) => entry.identityPath))
+      let queue = resolvedEntries.map((entry) => entry.identityPath)
       let layers: string[][] = []
 
       while (queue.length > 0) {
         let frontier = queue
         queue = []
-        let resolvedModules = await getOrCreateResolvedScripts(
-          frontier.map((identityPath) => scriptStore.get(identityPath)),
-        )
         let layer: string[] = []
 
-        for (let resolvedModule of resolvedModules) {
+        for (let identityPath of frontier) {
+          let resolvedModule = graph.get(identityPath)
+          if (!resolvedModule) continue
           layer.push(await getServedUrl(resolvedModule.identityPath))
 
           for (let dep of resolvedModule.staticDeps) {
@@ -262,23 +276,24 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     },
 
     async getImportMap(filePath) {
-      let resolvedEntries = resolveInputScriptRoots(filePath)
+      let resolvedEntries = await getOrCreateResolvedScripts(
+        resolveInputScriptRoots(filePath).map((identityPath) => scriptStore.get(identityPath)),
+      )
       if (!resolvedOptions.importMaps) return { imports: {} }
 
-      let resolvedEntrySet = new Set(resolvedEntries)
+      let graph = await resolveRuntimeGraphs(resolvedEntries)
+      let resolvedEntrySet = new Set(resolvedEntries.map((entry) => entry.identityPath))
       let visited = new Set<string>()
-      let queue = [...resolvedEntries]
+      let queue = resolvedEntries.map((entry) => entry.identityPath)
       let imports: Record<string, string> = {}
       let scopes: Record<string, Record<string, string>> = {}
 
       while (queue.length > 0) {
         let frontier = queue
         queue = []
-        let resolvedModules = await getOrCreateResolvedScripts(
-          frontier.map((identityPath) => scriptStore.get(identityPath)),
-        )
-
-        for (let resolvedModule of resolvedModules) {
+        for (let identityPath of frontier) {
+          let resolvedModule = graph.get(identityPath)
+          if (!resolvedModule) continue
           if (visited.has(resolvedModule.identityPath)) continue
           visited.add(resolvedModule.identityPath)
           if (!resolvedEntrySet.has(resolvedModule.identityPath)) {
@@ -289,7 +304,17 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
             )
           }
 
-          for (let imported of resolvedModule.imports) {
+          for (let rewrite of resolvedModule.importRewrites) {
+            for (let imported of rewrite.imports) {
+              addImportMapEntry(
+                imports,
+                getStableUrl(imported.depPath),
+                await getServedUrl(imported.depPath),
+              )
+            }
+          }
+
+          for (let imported of resolvedModule.runtimeImports) {
             let depUrl = await getServedUrl(imported.depPath)
             if (isBareImportSpecifier(imported.specifier)) {
               let scopePathname = imported.scopePathname
@@ -354,10 +379,13 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       let updatePathname = previousResolvedModule?.stableUrlPathname
       let resolutionMetadataChanged =
         isPackageJsonPath(normalizedFilePath) || isTsconfigPath(normalizedFilePath)
+      let barrelFileImportGraphChanged =
+        resolvedOptions.optimizeBarrelFileImports &&
+        (resolutionMetadataChanged || isSupportedScriptPath(normalizedFilePath))
 
       invalidateScriptFileEvent(normalizedFilePath, event)
 
-      if (resolutionMetadataChanged && hasResolvedScripts) {
+      if ((resolutionMetadataChanged || barrelFileImportGraphChanged) && hasResolvedScripts) {
         let hmrUpdate: ScriptHmrUpdate[] = [
           {
             accepted: false,
@@ -442,6 +470,12 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
     if (isPackageJsonPath(normalizedFilePath)) {
       scriptStore.invalidateAll()
+      return
+    }
+
+    if (resolvedOptions.optimizeBarrelFileImports && isSupportedScriptPath(normalizedFilePath)) {
+      let invalidated = scriptStore.invalidateForFileEvent(normalizedFilePath, event)
+      scriptStore.invalidateImporters(invalidated)
       return
     }
 
@@ -647,12 +681,14 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     if (existing) return existing
 
     let promise = (async () => {
-      let root = await getOrCreateResolvedScript(record)
-      let graph = await resolveScriptGraph(root)
+      let sourceRoot = await getOrCreateResolvedScript(record)
+      let { modules: graph, sourceModules } = await resolveRuntimeGraph(sourceRoot)
+      let root = graph.get(sourceRoot.identityPath)
+      if (!root) throw new Error(`Failed to resolve script graph for ${record.identityPath}`)
       let emissions = await emitScripts(root, graph)
       for (let [identityPath, emitted] of emissions) {
-        let resolvedModule = graph.get(identityPath)
-        if (resolvedModule) cacheEmission(resolvedModule, emitted)
+        let sourceModule = sourceModules.get(identityPath)
+        if (sourceModule) cacheEmission(sourceModule, emitted)
       }
 
       let emitted = emissions.get(root.identityPath)
@@ -710,10 +746,12 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     )
   }
 
-  async function resolveScriptGraph(root: ResolvedModule): Promise<Map<string, ResolvedModule>> {
-    let visited = new Set([root.identityPath])
-    let graph = new Map([[root.identityPath, root]])
-    let queue = [...root.deps]
+  async function resolveScriptGraph(
+    roots: readonly ResolvedModule[],
+  ): Promise<Map<string, ResolvedModule>> {
+    let visited = new Set(roots.map((root) => root.identityPath))
+    let graph = new Map(roots.map((root) => [root.identityPath, root]))
+    let queue = roots.flatMap((root) => root.deps)
 
     while (queue.length > 0) {
       let frontier = queue
@@ -736,6 +774,42 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     }
 
     return graph
+  }
+
+  async function resolveRuntimeGraph(root: ResolvedModule): Promise<RuntimeGraph> {
+    let sourceGraph = await resolveScriptGraph([root])
+    let modules = barrelFileImportOptimizer
+      ? getReachableGraph([root.identityPath], barrelFileImportOptimizer(sourceGraph))
+      : sourceGraph
+    return { modules, sourceModules: sourceGraph }
+  }
+
+  async function resolveRuntimeGraphs(
+    roots: readonly ResolvedModule[],
+  ): Promise<Map<string, ResolvedModule>> {
+    let sourceGraph = await resolveScriptGraph(roots)
+    if (!barrelFileImportOptimizer) return sourceGraph
+    return getReachableGraph(
+      roots.map((root) => root.identityPath),
+      barrelFileImportOptimizer(sourceGraph),
+    )
+  }
+
+  function getReachableGraph(
+    rootIdentityPaths: readonly string[],
+    graph: ReadonlyMap<string, ResolvedModule>,
+  ): Map<string, ResolvedModule> {
+    let reachable = new Map<string, ResolvedModule>()
+    let queue = [...rootIdentityPaths]
+    while (queue.length > 0) {
+      let identityPath = queue.pop()
+      if (!identityPath || reachable.has(identityPath)) continue
+      let module = graph.get(identityPath)
+      if (!module) continue
+      reachable.set(identityPath, module)
+      queue.push(...module.deps)
+    }
+    return reachable
   }
 
   async function getServedUrl(identityPath: string): Promise<string> {
@@ -1009,6 +1083,10 @@ function toScriptCompileResult(emittedModule: EmittedModule): ScriptCompileResul
 
 function isPackageJsonPath(filePath: string): boolean {
   return filePath.endsWith('/package.json')
+}
+
+function isSupportedScriptPath(filePath: string): boolean {
+  return supportedScriptExtensionSet.has(path.extname(filePath))
 }
 
 function isTsconfigPath(filePath: string): boolean {

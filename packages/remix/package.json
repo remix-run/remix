@@ -731,5 +731,15 @@
     "playwright": {
       "optional": true
     }
-  }
+  },
+  "sideEffects": [
+    "./src/cli-entry.ts",
+    "./src/node-hmr/runtime.ts",
+    "./src/node-tsx.ts",
+    "./src/ui-hmr/node.ts",
+    "./dist/cli-entry.js",
+    "./dist/node-hmr/runtime.js",
+    "./dist/node-tsx.js",
+    "./dist/ui-hmr/node.js"
+  ]
 }

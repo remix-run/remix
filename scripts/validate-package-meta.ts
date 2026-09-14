@@ -1,6 +1,7 @@
 import * as fs from 'node:fs'
 import { parse } from 'yaml'
 import { colors, colorize } from './utils/color.ts'
+import { getSideEffectPatternPairingIssues } from './utils/package-side-effects.ts'
 import { getAllPackageDirNames, getPackageFile } from './utils/packages.ts'
 
 const CONSUMER_DEPENDENCY_FIELDS = [
@@ -22,6 +23,7 @@ interface PublishedPackageJson {
   dependencies?: PackageDependencyMap
   optionalDependencies?: PackageDependencyMap
   peerDependencies?: PackageDependencyMap
+  sideEffects?: unknown
 }
 
 interface DependencyUsage {
@@ -35,6 +37,7 @@ interface DependencyUsage {
 type RawPackageJson = {
   name?: unknown
   private?: unknown
+  sideEffects?: unknown
 } & {
   [field in ConsumerDependencyField]?: unknown
 }
@@ -48,6 +51,12 @@ function main() {
   let packageInfos = getPublishedPackageInfos()
   let catalogDependencies = getCatalogDependencies()
   let checks: PackageMetaCheck[] = [
+    {
+      name: 'Published package.json files declare valid sideEffects metadata',
+      validate() {
+        return validateSideEffects(packageInfos)
+      },
+    },
     {
       name: 'Published package.json files use explicit consumer-facing dependency ranges',
       validate() {
@@ -108,12 +117,50 @@ function getPublishedPackageInfos(): PublishedPackageInfo[] {
       dir: `packages/${dirName}`,
       packageJson: {
         name: packageJson.name,
+        sideEffects: packageJson.sideEffects,
         ...readConsumerDependencies(packageJson, packageJsonPath),
       },
     })
   }
 
   return packageInfos
+}
+
+function validateSideEffects(packageInfos: PublishedPackageInfo[]): string[] {
+  let violations: string[] = []
+
+  for (let packageInfo of packageInfos) {
+    let sideEffects = packageInfo.packageJson.sideEffects
+    if (typeof sideEffects === 'boolean') continue
+    if (
+      !Array.isArray(sideEffects) ||
+      !sideEffects.every((pattern) => typeof pattern === 'string')
+    ) {
+      violations.push(
+        `${packageInfo.dir}/package.json sideEffects must be a boolean or an array of glob patterns.`,
+      )
+      continue
+    }
+
+    let pairingIssues = getSideEffectPatternPairingIssues(sideEffects)
+    for (let pattern of pairingIssues.unsupportedPatterns) {
+      violations.push(
+        `${packageInfo.dir}/package.json sideEffects pattern ${JSON.stringify(pattern)} uses glob syntax under src or dist, but source/dist pairing currently requires literal package-relative file paths.`,
+      )
+    }
+    for (let { source, expectedPublished } of pairingIssues.missingPublished) {
+      violations.push(
+        `${packageInfo.dir}/package.json sideEffects pattern ${JSON.stringify(source)} is missing its published counterpart ${JSON.stringify(expectedPublished)}.`,
+      )
+    }
+    for (let published of pairingIssues.unmatchedPublished) {
+      violations.push(
+        `${packageInfo.dir}/package.json published sideEffects pattern ${JSON.stringify(published)} has no matching source pattern.`,
+      )
+    }
+  }
+
+  return violations
 }
 
 function getCatalogDependencies(): PackageDependencyMap {

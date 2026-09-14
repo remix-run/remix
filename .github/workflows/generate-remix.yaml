@@ -13,6 +13,7 @@ on:
     paths:
       - 'packages/**/package.json'
       - 'scripts/generate-remix.ts'
+      - 'scripts/utils/**'
   pull_request:
     branches-ignore:
       - release-v2
@@ -20,6 +21,7 @@ on:
     paths:
       - 'packages/**/package.json'
       - 'scripts/generate-remix.ts'
+      - 'scripts/utils/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

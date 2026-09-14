@@ -85,7 +85,8 @@ export type ModuleStore<transformed, resolved, emitted> = {
   setResolved(identityPath: string, resolved: resolved, tracking: readonly ModuleTracking[]): void
   clearResolved(identityPath: string, tracking: readonly ModuleTracking[]): void
   setEmitted(identityPath: string, emitted: emitted, snapshot: ModuleSnapshot | null): void
-  invalidateForFileEvent(filePath: string, event: ModuleWatchEvent): void
+  invalidateForFileEvent(filePath: string, event: ModuleWatchEvent): string[]
+  invalidateImporters(identityPaths: readonly string[]): void
   invalidateAll(): void
 }
 
@@ -244,10 +245,30 @@ export function createModuleStore<transformed, resolved, emitted>(
       if (event === 'unlink') {
         let deletedRecord = recordsByIdentityPath.get(filePath)
         if (deletedRecord) {
-          if (!affected.has(filePath)) {
+          let wasAffected = affected.has(filePath)
+          affected.add(filePath)
+          if (!wasAffected) {
             invalidateGraph(deletedRecord)
           }
           clearTracking(deletedRecord)
+        }
+      }
+
+      return [...affected]
+    },
+
+    invalidateImporters(identityPaths) {
+      let visited = new Set(identityPaths)
+      let queue = [...identityPaths]
+      while (queue.length > 0) {
+        let identityPath = queue.pop()
+        if (!identityPath) continue
+        for (let importerPath of importersByDepPath.get(identityPath) ?? []) {
+          if (visited.has(importerPath)) continue
+          visited.add(importerPath)
+          queue.push(importerPath)
+          let importer = recordsByIdentityPath.get(importerPath)
+          if (importer) invalidateGraph(importer)
         }
       }
     },

@@ -2594,6 +2594,30 @@ describe('asset-server', () => {
     assert.match(importMap.imports['/assets/app/lazy.ts'] ?? '', /\/assets\/app\/lazy\.@/)
   })
 
+  it('maps an explicit script root reached through an optimized barrel file import', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { value } from "./barrel.ts"\nexport const entry = value',
+    )
+    await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+    await write(dir, 'app/value.ts', 'export const value = true')
+    let assetServer = createTestServer(dir, {
+      fingerprint: true,
+      optimizeBarrelFileImports: true,
+    })
+
+    let entryBody = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+    let importMap = await assetServer.getImportMap(['app/entry.ts', 'app/value.ts'])
+
+    assert.match(entryBody, /from "\/assets\/app\/value\.ts"/)
+    let valueHref = importMap.imports['/assets/app/value.ts']
+    assert.match(valueHref ?? '', /\/assets\/app\/value\.@/)
+    assert.ok(valueHref)
+    assert.equal((await get(assetServer, valueHref))?.status, 200)
+  })
+
   it('reifies package-local bare import resolution with import map scopes', async () => {
     await write(dir, 'app/entry.ts', 'import { value } from "pkg"\nexport const entry = value')
     await writeJson(dir, 'app/node_modules/pkg/package.json', {
@@ -3052,6 +3076,1475 @@ describe('asset-server', () => {
     assert.match(body, /import\(["`]\/assets\/app\/lazy\.ts["`]\)/)
     assert.deepEqual(entry.importMap, { imports: {} })
     assert.deepEqual(await assetServer.getImportMap('app/entry.ts'), { imports: {} })
+  })
+
+  it('optimizes barrel file imports by rewriting named imports', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { value as localValue } from "./barrel.ts"\nconsole.log(localValue)',
+    )
+    await write(dir, 'app/barrel.ts', 'export * from "./nested-barrel.ts"')
+    await write(
+      dir,
+      'app/nested-barrel.ts',
+      [
+        'export { internalValue as value } from "./value.ts"',
+        'export { unused } from "./unused.ts"',
+      ].join('\n'),
+    )
+    await write(dir, 'app/value.ts', 'export const internalValue = 1')
+    await write(dir, 'app/unused.ts', 'export const unused = 2')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let entry = await assetServer.getScriptEntry('app/entry.ts')
+    let response = await get(assetServer, entry.href)
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.match(body, /import \{ internalValue as localValue \} from "\/assets\/app\/value\.ts"/)
+    assert.deepEqual(entry.preloads, ['/assets/app/entry.ts', '/assets/app/value.ts'])
+    assert.doesNotMatch(JSON.stringify(entry), /barrel|unused/)
+
+    let etag = response.headers.get('ETag')
+    assert.ok(etag)
+    let notModified = await get(assetServer, entry.href, { 'If-None-Match': etag })
+    assert.ok(notModified)
+    assert.equal(notModified.status, 304)
+  })
+
+  it('preserves a barrel file request when another branch cycles back to the importer', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      ['import "./consumer-a.ts"', 'import "./consumer-b.ts"'].join('\n'),
+    )
+    await write(
+      dir,
+      'app/consumer-a.ts',
+      ['import { first } from "./barrel.ts"', 'export const a = first'].join('\n'),
+    )
+    await write(
+      dir,
+      'app/consumer-b.ts',
+      ['import { second } from "./barrel.ts"', 'console.log(second)'].join('\n'),
+    )
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { first } from "./first.ts"', 'export { second } from "./second.ts"'].join('\n'),
+    )
+    await write(dir, 'app/first.ts', 'export const first = 1')
+    await write(
+      dir,
+      'app/second.ts',
+      ['import { a } from "./consumer-a.ts"', 'export const second = a'].join('\n'),
+    )
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let consumerA = await (await getByFile(assetServer, 'app/consumer-a.ts'))!.text()
+    let consumerB = await (await getByFile(assetServer, 'app/consumer-b.ts'))!.text()
+
+    assert.match(consumerA, /from "\.\/barrel\.ts"/)
+    assert.match(consumerB, /from "\.\/barrel\.ts"/)
+    assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+      '/assets/app/entry.ts',
+      '/assets/app/consumer-a.ts',
+      '/assets/app/consumer-b.ts',
+      '/assets/app/barrel.ts',
+      '/assets/app/first.ts',
+      '/assets/app/second.ts',
+    ])
+  })
+
+  it('rewrites imports through multiple locally renamed re-exports', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { createStyleManager } from "./style/index.ts"\nconsole.log(createStyleManager)',
+    )
+    await write(
+      dir,
+      'app/style/index.ts',
+      [
+        'import { internalManager as manager } from "./manager.ts"',
+        'export { processStyleClass } from "./style.ts"',
+        'export { manager as createStyleManager }',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/style/manager.ts',
+      [
+        'import { createStyleManager as manager } from "./stylesheet.ts"',
+        'export { manager as internalManager }',
+      ].join('\n'),
+    )
+    await write(dir, 'app/style/stylesheet.ts', 'export function createStyleManager() {}')
+    await write(dir, 'app/style/style.ts', 'export function processStyleClass() {}')
+    let assetServer = createTestServer(dir, { minify: true, optimizeBarrelFileImports: true })
+
+    let entry = await assetServer.getScriptEntry('app/entry.ts')
+    let response = await get(assetServer, entry.href)
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.match(body, /from "\/assets\/app\/style\/stylesheet\.ts"/)
+    assert.deepEqual(entry.preloads, ['/assets/app/entry.ts', '/assets/app/style/stylesheet.ts'])
+  })
+
+  it('updates rewritten barrel file imports in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        [
+          'import { second } from "./barrel.ts"',
+          'import { first } from "./barrel.ts"',
+          'console.log(first, second)',
+        ].join('\n'),
+      )
+      let barrelPath = await write(
+        caseDir,
+        'app/barrel.ts',
+        ['export { first } from "./first.ts"', 'export { second } from "./second.ts"'].join('\n'),
+      )
+      await write(caseDir, 'app/first.ts', 'export const first = 1')
+      await write(caseDir, 'app/second.ts', 'export const second = 2')
+      await write(caseDir, 'app/third.ts', 'export const first = 3')
+      let assetServer = createWatchedTestServer(caseDir, { optimizeBarrelFileImports: true })
+
+      try {
+        let firstResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(firstResponse)
+        let firstEtag = firstResponse.headers.get('ETag')
+        let firstBody = await firstResponse.text()
+        assert.ok(
+          getLineAndColumn(firstBody, '/assets/app/first.ts').line <
+            getLineAndColumn(firstBody, '/assets/app/second.ts').line,
+        )
+
+        await write(
+          caseDir,
+          'app/barrel.ts',
+          ['export { second } from "./second.ts"', 'export { first } from "./first.ts"'].join('\n'),
+        )
+        await emitWatchEvent(assetServer, barrelPath, 'change')
+
+        let secondResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(secondResponse)
+        let secondEtag = secondResponse.headers.get('ETag')
+        let secondBody = await secondResponse.text()
+        assert.notEqual(secondEtag, firstEtag)
+        assert.ok(
+          getLineAndColumn(secondBody, '/assets/app/second.ts').line <
+            getLineAndColumn(secondBody, '/assets/app/first.ts').line,
+        )
+        assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+          '/assets/app/entry.ts',
+          '/assets/app/second.ts',
+          '/assets/app/first.ts',
+        ])
+
+        await write(
+          caseDir,
+          'app/barrel.ts',
+          ['export { second } from "./second.ts"', 'export { first } from "./third.ts"'].join('\n'),
+        )
+        await emitWatchEvent(assetServer, barrelPath, 'change')
+
+        let thirdResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(thirdResponse)
+        let thirdBody = await thirdResponse.text()
+        assert.match(thirdBody, /from "\/assets\/app\/third\.ts"/)
+        assert.doesNotMatch(thirdBody, /from "\/assets\/app\/first\.ts"/)
+        assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+          '/assets/app/entry.ts',
+          '/assets/app/second.ts',
+          '/assets/app/third.ts',
+        ])
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('retains cached scripts outside an invalidated barrel file import graph', async () => {
+    let caseDir = await makeTmpDir()
+    let loadCounts = new Map<string, number>()
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "./barrel.ts"\nconsole.log(value)',
+      )
+      let barrelPath = await write(caseDir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+      await write(caseDir, 'app/value.ts', 'export const value = 1')
+      await write(caseDir, 'app/unrelated.ts', 'export const unrelated = true')
+      let assetServer = createWatchedTestServer(caseDir, {
+        optimizeBarrelFileImports: true,
+        scripts: {
+          loaders: [
+            (url, context, nextLoad) => {
+              loadCounts.set(url, (loadCounts.get(url) ?? 0) + 1)
+              return nextLoad(url, context)
+            },
+          ],
+        },
+      })
+
+      try {
+        let firstEntry = await getByFile(assetServer, 'app/entry.ts')
+        let firstUnrelated = await getByFile(assetServer, 'app/unrelated.ts')
+        assert.ok(firstEntry)
+        assert.ok(firstUnrelated)
+        let unrelatedUrl = [...loadCounts.keys()].find((url) => url.endsWith('/unrelated.ts'))
+        assert.ok(unrelatedUrl)
+        let unrelatedLoadCount = loadCounts.get(unrelatedUrl)
+
+        await write(caseDir, 'app/barrel.ts', 'export { value } from "./next.ts"')
+        await write(caseDir, 'app/next.ts', 'export const value = 2')
+        await emitWatchEvent(assetServer, barrelPath, 'change')
+
+        let secondUnrelated = await getByFile(assetServer, 'app/unrelated.ts')
+        assert.ok(secondUnrelated)
+        assert.equal(loadCounts.get(unrelatedUrl), unrelatedLoadCount)
+
+        let secondEntry = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(secondEntry)
+        assert.match(await secondEntry.text(), /from "\/assets\/app\/next\.ts"/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('updates nested local re-exports in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { first, second } from "./outer.ts"\nconsole.log(first, second)',
+      )
+      await write(caseDir, 'app/outer.ts', 'export * from "./barrel.ts"')
+      let barrelPath = await write(
+        caseDir,
+        'app/barrel.ts',
+        [
+          'import { secondValue as second } from "./second.ts"',
+          'import { firstValue as first } from "./first.ts"',
+          'export { first, second }',
+        ].join('\n'),
+      )
+      await write(caseDir, 'app/first.ts', 'export const firstValue = 1')
+      await write(caseDir, 'app/second.ts', 'export const secondValue = 2')
+      let assetServer = createWatchedTestServer(caseDir, { optimizeBarrelFileImports: true })
+
+      try {
+        let firstResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(firstResponse)
+        let firstEtag = firstResponse.headers.get('ETag')
+        let firstBody = await firstResponse.text()
+        assert.ok(
+          getLineAndColumn(firstBody, '/assets/app/second.ts').line <
+            getLineAndColumn(firstBody, '/assets/app/first.ts').line,
+        )
+        assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+          '/assets/app/entry.ts',
+          '/assets/app/second.ts',
+          '/assets/app/first.ts',
+        ])
+
+        await write(
+          caseDir,
+          'app/barrel.ts',
+          [
+            'import { firstValue as first } from "./first.ts"',
+            'import { secondValue as second } from "./second.ts"',
+            // Export specifier order does not control module evaluation order.
+            'export { second, first }',
+          ].join('\n'),
+        )
+        await emitWatchEvent(assetServer, barrelPath, 'change')
+
+        let reorderedResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(reorderedResponse)
+        let reorderedEtag = reorderedResponse.headers.get('ETag')
+        let reorderedBody = await reorderedResponse.text()
+        assert.notEqual(reorderedEtag, firstEtag)
+        assert.ok(
+          getLineAndColumn(reorderedBody, '/assets/app/first.ts').line <
+            getLineAndColumn(reorderedBody, '/assets/app/second.ts').line,
+        )
+        assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+          '/assets/app/entry.ts',
+          '/assets/app/first.ts',
+          '/assets/app/second.ts',
+        ])
+
+        await write(caseDir, 'app/barrel.ts', 'export const first = 1\nexport const second = 2')
+        await emitWatchEvent(assetServer, barrelPath, 'change')
+
+        let retainedResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(retainedResponse)
+        let retainedBody = await retainedResponse.text()
+        assert.match(retainedBody, /from "\/assets\/app\/barrel\.ts"/)
+        assert.doesNotMatch(retainedBody, /from "\/assets\/app\/(?:first|second)\.ts"/)
+        assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+          '/assets/app/entry.ts',
+          '/assets/app/barrel.ts',
+        ])
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('de-opts barrel file imports when sideEffects changes in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      let packageJsonPath = await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "./barrel.ts"\nconsole.log(value)',
+      )
+      await write(caseDir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+      await write(caseDir, 'app/value.ts', 'export const value = 1')
+      let assetServer = createWatchedTestServer(caseDir, { optimizeBarrelFileImports: true })
+
+      try {
+        let optimizedResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(optimizedResponse)
+        assert.match(await optimizedResponse.text(), /from "\/assets\/app\/value\.ts"/)
+
+        await writeJson(caseDir, 'app/package.json', { sideEffects: true })
+        await emitWatchEvent(assetServer, packageJsonPath, 'change')
+
+        let restoredResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(restoredResponse)
+        assert.match(await restoredResponse.text(), /from "\.\/barrel\.ts"/)
+        assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+          '/assets/app/entry.ts',
+          '/assets/app/barrel.ts',
+          '/assets/app/value.ts',
+        ])
+
+        await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+        await emitWatchEvent(assetServer, packageJsonPath, 'change')
+
+        let optimizedAgainResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(optimizedAgainResponse)
+        assert.match(await optimizedAgainResponse.text(), /from "\/assets\/app\/value\.ts"/)
+        assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+          '/assets/app/entry.ts',
+          '/assets/app/value.ts',
+        ])
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('splits imports in re-export dependency order', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import "./before.ts"',
+        'import { second as localSecond, first } from "./barrel.ts"',
+        'import "./after.ts"',
+        'console.log(first, localSecond)',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { first } from "./first.ts"', 'export { second } from "./second.ts"'].join('\n'),
+    )
+    await write(dir, 'app/first.ts', 'export const first = 1')
+    await write(dir, 'app/second.ts', 'export const second = 2')
+    await write(dir, 'app/before.ts', 'globalThis.before = true')
+    await write(dir, 'app/after.ts', 'globalThis.after = true')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    let firstImport = getLineAndColumn(body, '/assets/app/first.ts')
+    let secondImport = getLineAndColumn(body, '/assets/app/second.ts')
+    assert.ok(getLineAndColumn(body, './before.ts').line < firstImport.line)
+    assert.ok(firstImport.line < secondImport.line)
+    assert.ok(secondImport.line < getLineAndColumn(body, './after.ts').line)
+    assert.match(body, /import \{ first \} from "\/assets\/app\/first\.ts"/)
+    assert.match(body, /import \{ second as localSecond \} from "\/assets\/app\/second\.ts"/)
+    assert.doesNotMatch(body, /barrel/)
+    assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+      '/assets/app/entry.ts',
+      '/assets/app/before.ts',
+      '/assets/app/first.ts',
+      '/assets/app/second.ts',
+      '/assets/app/after.ts',
+    ])
+  })
+
+  it('derives split import order through nested re-export modules', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { first, second } from "./outer.ts"\nconsole.log(first, second)',
+    )
+    await write(
+      dir,
+      'app/outer.ts',
+      [
+        'export { second } from "./second-barrel.ts"',
+        'export { first } from "./first-barrel.ts"',
+      ].join('\n'),
+    )
+    await write(dir, 'app/first-barrel.ts', 'export { first } from "./first.ts"')
+    await write(dir, 'app/second-barrel.ts', 'export { second } from "./second.ts"')
+    await write(dir, 'app/first.ts', 'export const first = 1')
+    await write(dir, 'app/second.ts', 'export const second = 2')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    let secondImport = getLineAndColumn(body, '/assets/app/second.ts')
+    let firstImport = getLineAndColumn(body, '/assets/app/first.ts')
+    assert.ok(secondImport.line < firstImport.line)
+    assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+      '/assets/app/entry.ts',
+      '/assets/app/second.ts',
+      '/assets/app/first.ts',
+    ])
+  })
+
+  it('preserves evaluation order for retained dependencies reached through removed branches', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: ['./shared.ts', './other.ts'] })
+    await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { unused } from "./unused.ts"', 'export { value } from "./value.ts"'].join('\n'),
+    )
+    await write(dir, 'app/unused.ts', 'import "./shared.ts"\nexport const unused = "unused"')
+    await write(
+      dir,
+      'app/value.ts',
+      ['import "./other.ts"', 'import "./shared.ts"', 'export const value = "value"'].join('\n'),
+    )
+    await write(dir, 'app/shared.ts', 'globalThis.order = ["shared"]')
+    await write(dir, 'app/other.ts', 'globalThis.order.push("other")')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+    assert.ok(
+      getLineAndColumn(body, '/assets/app/shared.ts').line <
+        getLineAndColumn(body, '/assets/app/value.ts').line,
+    )
+    assert.match(body, /import "\/assets\/app\/shared\.ts"/)
+    assert.match(body, /import \{ value \} from "\/assets\/app\/value\.ts"/)
+    assert.doesNotMatch(body, /(?:barrel|unused)\.ts/)
+    assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+      '/assets/app/entry.ts',
+      '/assets/app/shared.ts',
+      '/assets/app/value.ts',
+      '/assets/app/other.ts',
+    ])
+  })
+
+  it('rewrites repeated imports together in re-export dependency order', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import "./before.ts"',
+        'import { second as localSecond } from "./barrel.ts"',
+        'import "./between.ts"',
+        'import { first as localFirst } from "./barrel.ts"',
+        'import "./after.ts"',
+        'console.log(localFirst, localSecond)',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { first } from "./first.ts"', 'export { second } from "./second.ts"'].join('\n'),
+    )
+    await write(dir, 'app/first.ts', 'globalThis.order = ["first"]\nexport const first = 1')
+    await write(dir, 'app/second.ts', 'globalThis.order.push("second")\nexport const second = 2')
+    await write(dir, 'app/before.ts', 'globalThis.before = true')
+    await write(dir, 'app/between.ts', 'globalThis.between = true')
+    await write(dir, 'app/after.ts', 'globalThis.after = true')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+    let beforeImport = getLineAndColumn(body, './before.ts')
+    let firstImport = getLineAndColumn(body, '/assets/app/first.ts')
+    let secondImport = getLineAndColumn(body, '/assets/app/second.ts')
+    let betweenImport = getLineAndColumn(body, './between.ts')
+    let afterImport = getLineAndColumn(body, './after.ts')
+    assert.ok(beforeImport.line < firstImport.line)
+    assert.ok(firstImport.line < secondImport.line)
+    assert.ok(secondImport.line < betweenImport.line)
+    assert.ok(betweenImport.line < afterImport.line)
+    assert.match(body, /import "\/assets\/app\/first\.ts";/)
+    assert.match(body, /import \{ first as localFirst \} from "\/assets\/app\/first\.ts"/)
+    assert.match(body, /import \{ second as localSecond \} from "\/assets\/app\/second\.ts"/)
+    assert.doesNotMatch(body, /barrel/)
+    assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+      '/assets/app/entry.ts',
+      '/assets/app/before.ts',
+      '/assets/app/first.ts',
+      '/assets/app/second.ts',
+      '/assets/app/between.ts',
+      '/assets/app/after.ts',
+    ])
+  })
+
+  it('keeps repeated imports in place through nested and renamed re-exports', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import { second as localSecond } from "./outer.ts"',
+        'import { first as localFirst } from "./outer.ts"',
+        'import { third as localThird } from "./outer.ts"',
+        'console.log(localFirst, localSecond, localThird)',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/outer.ts',
+      [
+        'export { nestedFirst as first, nestedThird as third } from "./first-barrel.ts"',
+        'export { nestedSecond as second } from "./second-barrel.ts"',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/first-barrel.ts',
+      [
+        'import { rawFirst as localFirst, rawThird as localThird } from "./values.ts"',
+        'export { localFirst as nestedFirst, localThird as nestedThird }',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/second-barrel.ts',
+      'export { rawSecond as nestedSecond } from "./second.ts"',
+    )
+    await write(dir, 'app/values.ts', 'export const rawFirst = 1\nexport const rawThird = 3')
+    await write(dir, 'app/second.ts', 'export const rawSecond = 2')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+    assert.ok(
+      getLineAndColumn(body, '/assets/app/values.ts').line <
+        getLineAndColumn(body, '/assets/app/second.ts').line,
+    )
+    assert.match(body, /import \{ rawFirst as localFirst \} from "\/assets\/app\/values\.ts"/)
+    assert.match(body, /import \{ rawThird as localThird \} from "\/assets\/app\/values\.ts"/)
+    assert.match(body, /import \{ rawSecond as localSecond \} from "\/assets\/app\/second\.ts"/)
+    assert.doesNotMatch(body, /(?:outer|barrel)\.ts/)
+    assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+      '/assets/app/entry.ts',
+      '/assets/app/values.ts',
+      '/assets/app/second.ts',
+    ])
+  })
+
+  it('groups different specifiers that resolve to the same barrel file', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import { second } from "./nested/../barrel.ts"',
+        'import { first } from "./barrel.ts"',
+        'console.log(first, second)',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { first } from "./first.ts"', 'export { second } from "./second.ts"'].join('\n'),
+    )
+    await write(dir, 'app/first.ts', 'export const first = 1')
+    await write(dir, 'app/second.ts', 'export const second = 2')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+    assert.ok(
+      getLineAndColumn(body, '/assets/app/first.ts').line <
+        getLineAndColumn(body, '/assets/app/second.ts').line,
+    )
+    assert.doesNotMatch(body, /barrel/)
+  })
+
+  it('leaves all requests to a barrel file unchanged when one is unsupported', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import * as namespace from "./barrel.ts"',
+        'import { value } from "./barrel.ts"',
+        'console.log(value, namespace)',
+      ].join('\n'),
+    )
+    await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+    await write(dir, 'app/value.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+    assert.equal(body.match(/from "\.\/barrel\.ts"/g)?.length, 2)
+    assert.doesNotMatch(body, /from "\/assets\/app\/value\.ts"/)
+  })
+
+  it('leaves imports with attributes unchanged', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import { value as attributedValue } from "./barrel.ts" with { type: "javascript" }',
+        'import { value } from "./barrel.ts"',
+        'console.log(value, attributedValue)',
+      ].join('\n'),
+    )
+    await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+    await write(dir, 'app/value.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+    assert.equal(body.match(/from "\.\/barrel\.ts"/g)?.length, 2)
+    assert.match(body, /from "\.\/barrel\.ts" with \{ type: "javascript" \}/)
+    assert.doesNotMatch(body, /from "\/assets\/app\/value\.ts"/)
+  })
+
+  it('leaves named re-exports with attributes unchanged', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
+    await write(
+      dir,
+      'app/barrel.ts',
+      'export { value } from "./value.ts" with { type: "javascript" }',
+    )
+    await write(dir, 'app/value.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+    assert.match(body, /from "\.\/barrel\.ts"/)
+    assert.doesNotMatch(body, /from "\/assets\/app\/value\.ts"/)
+  })
+
+  it('leaves star re-exports with attributes unchanged', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
+    await write(dir, 'app/barrel.ts', 'export * from "./value.ts" with { type: "javascript" }')
+    await write(dir, 'app/value.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+    assert.match(body, /from "\.\/barrel\.ts"/)
+    assert.doesNotMatch(body, /from "\/assets\/app\/value\.ts"/)
+  })
+
+  it('optimizes static barrel file imports independently from dynamic imports', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import { value } from "./barrel.ts"',
+        'export const load = () => import("./barrel.ts")',
+        'console.log(value)',
+      ].join('\n'),
+    )
+    await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+    await write(dir, 'app/value.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let entry = await assetServer.getScriptEntry('app/entry.ts')
+    let body = await (await get(assetServer, entry.href))!.text()
+
+    assert.match(body, /import \{ value \} from "\/assets\/app\/value\.ts"/)
+    assert.match(body, /import\("\.\/barrel\.ts"\)/)
+    assert.deepEqual(entry.preloads, ['/assets/app/entry.ts', '/assets/app/value.ts'])
+  })
+
+  it('keeps source maps aligned when repeated imports are reordered and split', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    let sourceText = [
+      'import { second as localSecond } from "./barrel.ts"',
+      'import { first } from "./barrel.ts"',
+      'export function value() {',
+      '  return first + localSecond',
+      '}',
+    ].join('\n')
+    await write(dir, 'app/entry.ts', sourceText)
+    await write(
+      dir,
+      'app/barrel.ts',
+      [
+        'export { middleFirst as first } from "./middle.ts"',
+        'export { rawSecond as second } from "./second.ts"',
+      ].join('\n'),
+    )
+    await write(dir, 'app/middle.ts', 'export { rawFirst as middleFirst } from "./first.ts"')
+    await write(dir, 'app/first.ts', 'export const rawFirst = 1')
+    await write(dir, 'app/second.ts', 'export const rawSecond = 2')
+    let assetServer = createTestServer(dir, {
+      optimizeBarrelFileImports: true,
+      scripts: { loaders: [createPrependModuleLoader('// transformed\n')] },
+      sourceMaps: 'external',
+    })
+
+    let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(assetServer, 'app/entry.ts')
+    let consumer = new SourceMapConsumer(sourceMap)
+
+    let generatedFirstOrderingImport = getLineAndColumn(
+      compiledCode,
+      'import "/assets/app/first.ts"',
+    )
+    let originalFirstOrderingImport = consumer.originalPositionFor(generatedFirstOrderingImport)
+    assert.equal(originalFirstOrderingImport.line, 1)
+
+    let generatedFirstImport = getLineAndColumn(compiledCode, 'rawFirst as first')
+    let originalFirstImport = consumer.originalPositionFor(generatedFirstImport)
+    let expectedFirstImport = getLineAndColumn(sourceText, 'first }')
+    assert.equal(originalFirstImport.line, expectedFirstImport.line)
+    assert.equal(originalFirstImport.column, expectedFirstImport.column)
+    assert.equal(originalFirstImport.name, 'first')
+
+    let generatedLocalFirst = getLineAndColumn(compiledCode, 'first } from "/assets/app/first.ts"')
+    let originalLocalFirst = consumer.originalPositionFor(generatedLocalFirst)
+    assert.equal(originalLocalFirst.line, expectedFirstImport.line)
+    assert.equal(originalLocalFirst.column, expectedFirstImport.column)
+
+    let generatedSecondImport = getLineAndColumn(
+      compiledCode,
+      'rawSecond as localSecond } from "/assets/app/second.ts"',
+    )
+    let originalSecondImport = consumer.originalPositionFor(generatedSecondImport)
+    let expectedSecondImport = getLineAndColumn(sourceText, 'second as localSecond')
+    assert.equal(originalSecondImport.line, expectedSecondImport.line)
+    assert.equal(originalSecondImport.column, expectedSecondImport.column)
+
+    let generatedLocalSecond = getLineAndColumn(compiledCode, 'localSecond }')
+    let originalLocalSecond = consumer.originalPositionFor(generatedLocalSecond)
+    let expectedLocalSecond = getLineAndColumn(sourceText, 'localSecond }')
+    assert.equal(originalLocalSecond.line, expectedLocalSecond.line)
+    assert.equal(originalLocalSecond.column, expectedLocalSecond.column)
+    assert.equal(originalLocalSecond.name, 'localSecond')
+
+    let generatedFirstUrl = getLineAndColumn(compiledCode, '/assets/app/first.ts')
+    let originalFirstUrl = consumer.originalPositionFor(generatedFirstUrl)
+    let expectedFirstUrl = getLineAndColumn(sourceText, '"./barrel.ts"')
+    assert.equal(originalFirstUrl.line, expectedFirstUrl.line)
+    assert.equal(originalFirstUrl.column, expectedFirstUrl.column)
+
+    let generatedReturn = getLineAndColumn(compiledCode, 'return')
+    let originalReturn = consumer.originalPositionFor(generatedReturn)
+    let expectedReturn = getLineAndColumn(sourceText, 'return')
+    assert.equal(originalReturn.line, expectedReturn.line)
+    assert.equal(originalReturn.column, expectedReturn.column)
+  })
+
+  it('keeps rewritten import binding columns aligned through minification', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    let sourceText = [
+      'import { value as localValue } from "./barrel.ts"',
+      'console.log(localValue)',
+    ].join('\n')
+    await write(dir, 'app/entry.ts', sourceText)
+    await write(dir, 'app/barrel.ts', 'export { rawValue as value } from "./value.ts"')
+    await write(dir, 'app/value.ts', 'export const rawValue = 1')
+    let assetServer = createTestServer(dir, {
+      minify: true,
+      optimizeBarrelFileImports: true,
+      sourceMaps: 'external',
+    })
+
+    let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(assetServer, 'app/entry.ts')
+    let consumer = new SourceMapConsumer(sourceMap)
+
+    let generatedBinding = getLineAndColumn(compiledCode, 'rawValue')
+    let originalBinding = consumer.originalPositionFor(generatedBinding)
+    let expectedBinding = getLineAndColumn(sourceText, 'value as localValue')
+    assert.equal(originalBinding.line, expectedBinding.line)
+    assert.equal(originalBinding.column, expectedBinding.column)
+
+    let generatedUrl = getLineAndColumn(compiledCode, '/assets/app/value.ts')
+    let originalUrl = consumer.originalPositionFor(generatedUrl)
+    let expectedUrl = getLineAndColumn(sourceText, '"./barrel.ts"')
+    assert.equal(originalUrl.line, expectedUrl.line)
+    assert.equal(originalUrl.column, expectedUrl.column)
+  })
+
+  it('leaves default and namespace imports through barrel files unchanged', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import value from "./barrel.ts"',
+        'import * as values from "./barrel.ts"',
+        'console.log(value, values)',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { default } from "./value.ts"', 'export * from "./value.ts"'].join('\n'),
+    )
+    await write(dir, 'app/value.ts', 'export default 1\nexport const named = 2')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.equal(body.match(/from "\.\/barrel\.ts"/g)?.length, 2)
+  })
+
+  it('preserves barrel file requests for ambiguous star exports while honoring explicit exports', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import { value as ambiguous } from "./ambiguous.ts"',
+        'import { value as explicit } from "./explicit.ts"',
+        'console.log(ambiguous, explicit)',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/ambiguous.ts',
+      ['export * from "./first.ts"', 'export * from "./second.ts"'].join('\n'),
+    )
+    await write(
+      dir,
+      'app/explicit.ts',
+      [
+        'export * from "./first.ts"',
+        'export * from "./second.ts"',
+        'export { value } from "./first.ts"',
+      ].join('\n'),
+    )
+    await write(dir, 'app/first.ts', 'export const value = 1')
+    await write(dir, 'app/second.ts', 'export const value = 2')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.match(body, /import \{ value as ambiguous \} from "\.\/ambiguous\.ts"/)
+    assert.match(body, /import \{ value as explicit \} from "\/assets\/app\/first\.ts"/)
+  })
+
+  it('leaves cyclic re-export chains unchanged', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(dir, 'app/entry.ts', 'import { first } from "./outer.ts"\nconsole.log(first)')
+    await write(dir, 'app/outer.ts', 'export * from "./barrel.ts"')
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { first } from "./first.ts"', 'export { second } from "./second.ts"'].join('\n'),
+    )
+    await write(
+      dir,
+      'app/first.ts',
+      'import { second } from "./barrel.ts"\nexport const first = second',
+    )
+    await write(dir, 'app/second.ts', 'export const second = 2')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.match(body, /from "\.\/outer\.ts"/)
+  })
+
+  it('uses resolved URLs when a re-exported package is not importable from the original module', async () => {
+    await writeJson(dir, 'app/node_modules/public-pkg/package.json', {
+      name: 'public-pkg',
+      sideEffects: false,
+      type: 'module',
+      exports: './index.ts',
+      dependencies: { 'nested-pkg': '1.0.0' },
+    })
+    await write(dir, 'app/node_modules/public-pkg/index.ts', 'export * from "nested-pkg"')
+    await writeJson(dir, 'app/node_modules/public-pkg/node_modules/nested-pkg/package.json', {
+      name: 'nested-pkg',
+      sideEffects: false,
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(
+      dir,
+      'app/node_modules/public-pkg/node_modules/nested-pkg/index.ts',
+      'export { value } from "./value.ts"',
+    )
+    await write(
+      dir,
+      'app/node_modules/public-pkg/node_modules/nested-pkg/value.ts',
+      'export const value = 1',
+    )
+    await write(dir, 'app/entry.ts', 'import { value } from "public-pkg"\nconsole.log(value)')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.doesNotMatch(body, /from "nested-pkg"/)
+    assert.match(
+      body,
+      /from "\/assets\/app\/node_modules\/public-pkg\/node_modules\/nested-pkg\/value\.ts"/,
+    )
+  })
+
+  it('leaves a re-export chain unchanged without side-effect metadata', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    try {
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "./barrel.ts"\nconsole.log(value)',
+      )
+      await write(caseDir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+      await write(caseDir, 'app/value.ts', 'export const value = 1')
+
+      let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+      assert.match(body, /from "\.\/barrel\.ts"/)
+    } finally {
+      await assetServer.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('leaves the original import unchanged when a barrel file branch has side effects', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: ['./unused.ts'] })
+      await write(caseDir, 'app/entry.ts', 'import { value } from "./outer.ts"\nconsole.log(value)')
+      await write(caseDir, 'app/outer.ts', 'export * from "./barrel.ts"')
+      await write(
+        caseDir,
+        'app/barrel.ts',
+        ['export { value } from "./value.ts"', 'export * from "./unused.ts"'].join('\n'),
+      )
+      await write(caseDir, 'app/value.ts', 'export const value = 1')
+      await write(caseDir, 'app/unused.ts', 'globalThis.unusedLoaded = true')
+
+      let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+      assert.match(body, /from "\.\/outer\.ts"/)
+    } finally {
+      await assetServer.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not treat a dynamic dependency as a retained side-effectful branch', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: ['./effect.ts'] })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "./barrel.ts"\nconsole.log(value)',
+      )
+      await write(
+        caseDir,
+        'app/barrel.ts',
+        ['export { value } from "./value.ts"', 'export * from "./effect.ts"'].join('\n'),
+      )
+      await write(
+        caseDir,
+        'app/value.ts',
+        'export const value = 1\nexport function loadEffect() { return import("./effect.ts") }',
+      )
+      await write(caseDir, 'app/effect.ts', 'globalThis.effectLoaded = true')
+
+      let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+      assert.match(body, /from "\.\/barrel\.ts"/)
+    } finally {
+      await assetServer.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('treats sideEffects metadata as authoritative after loaders run', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { value } from "./value.ts"', 'export * from "./unused.ts"'].join('\n'),
+    )
+    await write(dir, 'app/value.ts', 'export const value = 1')
+    await write(dir, 'app/unused.ts', 'export const unused = 2')
+    let assetServer = createTestServer(dir, {
+      optimizeBarrelFileImports: true,
+      scripts: {
+        loaders: [
+          (url, context, nextLoad) => {
+            let result = nextLoad(url, context)
+            if (!url.endsWith('/unused.ts')) return result
+            if (typeof result.source !== 'string') {
+              throw new TypeError('Expected module loader source to be a string')
+            }
+            return { ...result, source: `console.log('loaded')\n${result.source}` }
+          },
+        ],
+      },
+    })
+
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    assert.match(await response.text(), /from "\/assets\/app\/value\.ts"/)
+  })
+
+  it('derives split import order after loaders run', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { first, second } from "./barrel.ts"\nconsole.log(first, second)',
+    )
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { first } from "./first.ts"', 'export { second } from "./second.ts"'].join('\n'),
+    )
+    await write(dir, 'app/first.ts', 'export const first = 1')
+    await write(dir, 'app/second.ts', 'export const second = 2')
+    let assetServer = createTestServer(dir, {
+      optimizeBarrelFileImports: true,
+      scripts: {
+        loaders: [
+          (url, context, nextLoad) => {
+            let result = nextLoad(url, context)
+            if (!url.endsWith('/barrel.ts')) return result
+            return {
+              ...result,
+              source: [
+                'export { second } from "./second.ts"',
+                'export { first } from "./first.ts"',
+              ].join('\n'),
+            }
+          },
+        ],
+      },
+    })
+
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.ok(
+      getLineAndColumn(body, '/assets/app/second.ts').line <
+        getLineAndColumn(body, '/assets/app/first.ts').line,
+    )
+  })
+
+  it('optimizes imports through barrel files that do not match sideEffects glob patterns', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: ['**/*.css'] })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "./barrel.ts"\nconsole.log(value)',
+      )
+      await write(caseDir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+      await write(caseDir, 'app/value.ts', 'export const value = 1')
+
+      let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+      assert.match(body, /from "\/assets\/app\/value\.ts"/)
+    } finally {
+      await assetServer.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('preserves requests for nested barrel files that match sideEffects glob patterns', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: ['**/barrel.ts'] })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "./feature/barrel.ts"\nconsole.log(value)',
+      )
+      await write(caseDir, 'app/feature/barrel.ts', 'export { value } from "./value.ts"')
+      await write(caseDir, 'app/feature/value.ts', 'export const value = 1')
+
+      let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+      assert.match(body, /from "\.\/feature\/barrel\.ts"/)
+    } finally {
+      await assetServer.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('matches basename-only sideEffects patterns at any depth', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: ['barrel.ts'] })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "./feature/barrel.ts"\nconsole.log(value)',
+      )
+      await write(caseDir, 'app/feature/barrel.ts', 'export { value } from "./value.ts"')
+      await write(caseDir, 'app/feature/value.ts', 'export const value = 1')
+
+      let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+      assert.match(body, /from "\.\/feature\/barrel\.ts"/)
+    } finally {
+      await assetServer.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('normalizes leading ./ in sideEffects patterns', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: ['./barrel.ts'] })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "./barrel.ts"\nconsole.log(value)',
+      )
+      await write(caseDir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+      await write(caseDir, 'app/value.ts', 'export const value = 1')
+
+      let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+      assert.match(body, /from "\.\/barrel\.ts"/)
+    } finally {
+      await assetServer.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('treats leading ./ sideEffects patterns as package-root-relative', async () => {
+    let caseDir = await fs.mkdtemp(path.join(os.tmpdir(), 'assets-test-'))
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: ['./barrel.ts'] })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "./feature/barrel.ts"\nconsole.log(value)',
+      )
+      await write(caseDir, 'app/feature/barrel.ts', 'export { value } from "./value.ts"')
+      await write(caseDir, 'app/feature/value.ts', 'export const value = 1')
+      let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+
+      let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+      assert.match(body, /from "\/assets\/app\/feature\/value\.ts"/)
+      assert.doesNotMatch(body, /barrel/)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('treats an empty sideEffects array as side-effect-free', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: [] })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "./barrel.ts"\nconsole.log(value)',
+      )
+      await write(caseDir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+      await write(caseDir, 'app/value.ts', 'export const value = 1')
+
+      let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+      assert.match(body, /from "\/assets\/app\/value\.ts"/)
+    } finally {
+      await assetServer.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('leaves a re-export chain unchanged when sideEffects is true', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: true })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "./barrel.ts"\nconsole.log(value)',
+      )
+      await write(caseDir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+      await write(caseDir, 'app/value.ts', 'export const value = 1')
+
+      let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+      assert.match(body, /from "\.\/barrel\.ts"/)
+    } finally {
+      await assetServer.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('leaves a re-export chain unchanged with invalid sideEffects metadata', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: 'false' })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "./barrel.ts"\nconsole.log(value)',
+      )
+      await write(caseDir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+      await write(caseDir, 'app/value.ts', 'export const value = 1')
+
+      let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+      assert.match(body, /from "\.\/barrel\.ts"/)
+    } finally {
+      await assetServer.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('optimizes an independent barrel file import when another chain is effectful', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: ['**/unsafe-*.ts'] })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        [
+          'import { safe } from "./safe-barrel.ts"',
+          'import { unsafe } from "./unsafe-barrel.ts"',
+          'console.log(safe, unsafe)',
+        ].join('\n'),
+      )
+      await write(caseDir, 'app/safe-barrel.ts', 'export { safe } from "./safe.ts"')
+      await write(caseDir, 'app/safe.ts', 'export const safe = 1')
+      await write(
+        caseDir,
+        'app/unsafe-barrel.ts',
+        ['export { unsafe } from "./unsafe.ts"', 'export * from "./unsafe-effect.ts"'].join('\n'),
+      )
+      await write(caseDir, 'app/unsafe.ts', 'export const unsafe = 2')
+      await write(caseDir, 'app/unsafe-effect.ts', 'globalThis.unsafeLoaded = true')
+
+      let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+      assert.match(body, /from "\/assets\/app\/safe\.ts"/)
+      assert.match(body, /from "\.\/unsafe-barrel\.ts"/)
+    } finally {
+      await assetServer.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('updates fingerprints and graph metadata when barrel file requests are restored', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: true })
+    await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
+    await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+    await write(dir, 'app/value.ts', 'export const value = 1')
+
+    let preservedServer = createTestServer(dir, {
+      fingerprint: true,
+      optimizeBarrelFileImports: true,
+    })
+    let preservedEntry = await preservedServer.getScriptEntry('app/entry.ts')
+    let preservedResponse = await get(preservedServer, preservedEntry.href)
+    assert.ok(preservedResponse)
+    let preservedBody = await preservedResponse.text()
+
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    let firstServer = createTestServer(dir, { fingerprint: true, optimizeBarrelFileImports: true })
+    let firstEntry = await firstServer.getScriptEntry('app/entry.ts')
+    let firstResponse = await get(firstServer, firstEntry.href)
+    assert.ok(firstResponse)
+    let firstBody = await firstResponse.text()
+    let firstTargetHref = firstEntry.importMap.imports['/assets/app/value.ts']
+
+    assert.notEqual(firstEntry.href, preservedEntry.href)
+    assert.equal(
+      preservedEntry.href.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1],
+      await hashContent(preservedBody),
+    )
+    assert.equal(
+      firstEntry.href.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1],
+      await hashContent(firstBody),
+    )
+    assert.match(preservedBody, /from "\.\/barrel\.ts"/)
+    assert.match(firstBody, /from "\/assets\/app\/value\.ts"/)
+    assert.match(
+      preservedEntry.importMap.imports['/assets/app/barrel.ts'] ?? '',
+      /\/assets\/app\/barrel\.@[A-Za-z0-9_-]+\.ts/,
+    )
+    assert.equal(firstEntry.importMap.imports['/assets/app/barrel.ts'], undefined)
+    assert.equal(preservedEntry.preloads.length, 3)
+    assert.equal(firstEntry.preloads.length, 2)
+    assert.match(firstTargetHref ?? '', /\/assets\/app\/value\.@[A-Za-z0-9_-]+\.ts/)
+
+    await write(dir, 'app/value.ts', 'export const value = 2')
+    let secondServer = createTestServer(dir, { fingerprint: true, optimizeBarrelFileImports: true })
+    let secondHref = await secondServer.getHref('app/entry.ts')
+    let secondImportMap = await secondServer.getImportMap('app/entry.ts')
+    let secondTargetHref = secondImportMap.imports['/assets/app/value.ts']
+
+    assert.equal(secondHref, firstEntry.href)
+    assert.notEqual(secondTargetHref, firstTargetHref)
+  })
+
+  it('updates the importer fingerprint and preserves source maps when re-export order changes', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import { secondValue } from "./barrel.ts"',
+        'import { first } from "./barrel.ts"',
+        'console.log(first, secondValue)',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { first } from "./first.ts"', 'export { secondValue } from "./second.ts"'].join(
+        '\n',
+      ),
+    )
+    await write(dir, 'app/first.ts', 'export const first = 1')
+    await write(dir, 'app/second.ts', 'export const secondValue = 2')
+    let options = {
+      fingerprint: true,
+      optimizeBarrelFileImports: true,
+      sourceMaps: 'external' as const,
+    }
+
+    let firstServer = createTestServer(dir, options)
+    let firstEntry = await firstServer.getScriptEntry('app/entry.ts')
+    let firstResponse = await get(firstServer, firstEntry.href)
+    assert.ok(firstResponse)
+    let firstBody = await firstResponse.text()
+    let firstSourceMapHref = firstBody.match(/sourceMappingURL=([^\s]+)/)?.[1]
+    assert.ok(firstSourceMapHref)
+
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { secondValue } from "./second.ts"', 'export { first } from "./first.ts"'].join(
+        '\n',
+      ),
+    )
+
+    let secondServer = createTestServer(dir, options)
+    let secondEntry = await secondServer.getScriptEntry('app/entry.ts')
+    let secondResponse = await get(secondServer, secondEntry.href)
+    assert.ok(secondResponse)
+    let secondBody = await secondResponse.text()
+    let secondSourceMapHref = secondBody.match(/sourceMappingURL=([^\s]+)/)?.[1]
+    assert.ok(secondSourceMapHref)
+
+    assert.notEqual(secondEntry.href, firstEntry.href)
+    let secondSourceMapResponse = await get(secondServer, secondSourceMapHref)
+    assert.ok(secondSourceMapResponse)
+    let secondSourceMap = JSON.parse(await secondSourceMapResponse.text()) as RawSourceMap
+    let consumer = new SourceMapConsumer(secondSourceMap)
+    let generatedSecondImport = getLineAndColumn(secondBody, '/assets/app/second.ts')
+    let originalSecondImport = consumer.originalPositionFor(generatedSecondImport)
+    assert.equal(originalSecondImport.line, 1)
+    assert.match(firstEntry.preloads[1] ?? '', /\/assets\/app\/first\.@.*\.ts/)
+    assert.match(firstEntry.preloads[2] ?? '', /\/assets\/app\/second\.@.*\.ts/)
+    assert.match(secondEntry.preloads[1] ?? '', /\/assets\/app\/second\.@.*\.ts/)
+    assert.match(secondEntry.preloads[2] ?? '', /\/assets\/app\/first\.@.*\.ts/)
+  })
+
+  it('cascades rewritten target fingerprints when import maps are disabled', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
+    await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+    await write(dir, 'app/value.ts', 'export const value = 1')
+    let options = {
+      fingerprint: true,
+      importMaps: false,
+      optimizeBarrelFileImports: true,
+    }
+    let firstServer = createTestServer(dir, options)
+    let firstEntry = await firstServer.getScriptEntry('app/entry.ts')
+    let firstResponse = await get(firstServer, firstEntry.href)
+    assert.ok(firstResponse)
+    let firstBody = await firstResponse.text()
+
+    assert.match(firstBody, /from "\/assets\/app\/value\.@[A-Za-z0-9_-]+\.ts"/)
+    assert.doesNotMatch(firstBody, /barrel/)
+    assert.deepEqual(firstEntry.importMap, { imports: {} })
+    assert.equal(firstEntry.preloads.length, 2)
+
+    await write(dir, 'app/value.ts', 'export const value = 2')
+    let secondServer = createTestServer(dir, options)
+    let secondEntry = await secondServer.getScriptEntry('app/entry.ts')
+
+    assert.notEqual(secondEntry.href, firstEntry.href)
+    assert.notEqual(secondEntry.preloads[1], firstEntry.preloads[1])
   })
 
   it('leaves configured external imports unchanged when import maps are disabled', async () => {
@@ -4463,6 +5956,173 @@ describe('asset-server', () => {
 
         assert.equal(events.length, 1)
         assert.doesNotMatch(JSON.stringify(events), /importMap/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('reloads barrel file import graph changes while keeping CSS updates hot', async () => {
+    let caseDir = await makeTmpDir()
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    let watchedFiles = new Set<string>()
+    try {
+      let packageJsonPath = await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      let entryPath = await write(
+        caseDir,
+        'app/nested/entry.ts',
+        [
+          'import { first, second } from "./outer.ts"',
+          'if (import.meta.hot) import.meta.hot.accept()',
+          'console.log(first, second)',
+        ].join('\n'),
+      )
+      let outerPath = await write(caseDir, 'app/nested/outer.ts', 'export * from "./barrel.ts"')
+      let barrelPath = await write(
+        caseDir,
+        'app/nested/barrel.ts',
+        [
+          'export { unused } from "./unused.ts"',
+          'export { first } from "./first.ts"',
+          'export { second } from "./second.ts"',
+        ].join('\n'),
+      )
+      let unusedPath = await write(
+        caseDir,
+        'app/nested/unused.ts',
+        'import "./shared.ts"\nexport const unused = 0',
+      )
+      let firstPath = await write(
+        caseDir,
+        'app/nested/first.ts',
+        'import "./other.ts"\nimport "./shared.ts"\nexport const first = 1',
+      )
+      let secondPath = await write(caseDir, 'app/nested/second.ts', 'export const second = 2')
+      let sharedPath = await write(caseDir, 'app/nested/shared.ts', 'export const shared = 1')
+      let otherPath = await write(caseDir, 'app/nested/other.ts', 'export const other = 1')
+      let stylePath = await write(caseDir, 'app/styles.css', 'body { color: red; }')
+      let assetServer = createWatchedTestServer(caseDir, {
+        optimizeBarrelFileImports: true,
+        hmr() {
+          return {
+            close() {},
+            onFileEvents(handler) {
+              handleFileEvents = handler
+              return () => {}
+            },
+            updateWatchedFiles(delta) {
+              for (let filePath of delta.remove) watchedFiles.delete(filePath)
+              for (let filePath of delta.add) watchedFiles.add(filePath)
+            },
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      try {
+        let entryResponse = await getByFile(assetServer, 'app/nested/entry.ts')
+        assert.ok(entryResponse)
+        let entryBody = await entryResponse.text()
+        let styleResponse = await getByFile(assetServer, 'app/styles.css')
+        assert.ok(styleResponse)
+        await Promise.resolve()
+
+        assert.ok(handleFileEvents)
+        assert.ok(watchedFiles.has(getWatchEventFilePath(packageJsonPath)))
+        assert.ok(watchedFiles.has(getWatchEventFilePath(outerPath)))
+        assert.ok(watchedFiles.has(getWatchEventFilePath(barrelPath)))
+        assert.ok(watchedFiles.has(getWatchEventFilePath(unusedPath)))
+        assert.ok(watchedFiles.has(getWatchEventFilePath(firstPath)))
+        assert.ok(watchedFiles.has(getWatchEventFilePath(secondPath)))
+        assert.ok(watchedFiles.has(getWatchEventFilePath(sharedPath)))
+        assert.ok(watchedFiles.has(getWatchEventFilePath(otherPath)))
+        let nestedPackageJsonPath = path.join(caseDir, 'app/nested/package.json')
+        assert.ok(watchedFiles.has(getWatchEventFilePath(nestedPackageJsonPath)))
+
+        assert.ok(
+          getLineAndColumn(entryBody, '/assets/app/nested/shared.ts').line <
+            getLineAndColumn(entryBody, '/assets/app/nested/first.ts').line,
+        )
+        await write(caseDir, 'app/nested/unused.ts', 'export const unused = 0')
+        let unusedEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(unusedPath) },
+        ])
+
+        assert.deepEqual(
+          unusedEvents.map((event) => event.type),
+          ['reload'],
+        )
+        let reorderedDependencyResponse = await getByFile(assetServer, 'app/nested/entry.ts')
+        assert.ok(reorderedDependencyResponse)
+        assert.doesNotMatch(await reorderedDependencyResponse.text(), /\/shared\.ts/)
+
+        await write(
+          caseDir,
+          'app/nested/barrel.ts',
+          [
+            'export { second } from "./second.ts"',
+            'export { unused } from "./unused.ts"',
+            'export { first } from "./first.ts"',
+          ].join('\n'),
+        )
+        let barrelEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(barrelPath) },
+        ])
+
+        assert.deepEqual(
+          barrelEvents.map((event) => event.type),
+          ['reload'],
+        )
+        let reorderedResponse = await getByFile(assetServer, 'app/nested/entry.ts')
+        assert.ok(reorderedResponse)
+        let reorderedBody = await reorderedResponse.text()
+        assert.ok(
+          getLineAndColumn(reorderedBody, '/assets/app/nested/second.ts').line <
+            getLineAndColumn(reorderedBody, '/assets/app/nested/first.ts').line,
+        )
+
+        await writeJson(caseDir, 'app/nested/package.json', { sideEffects: true })
+        let packageEvents = await handleFileEvents([
+          { event: 'add', filePath: getWatchEventFilePath(nestedPackageJsonPath) },
+        ])
+
+        assert.deepEqual(
+          packageEvents.map((event) => event.type),
+          ['reload'],
+        )
+        let restoredResponse = await getByFile(assetServer, 'app/nested/entry.ts')
+        assert.ok(restoredResponse)
+        assert.match(await restoredResponse.text(), /from "\.\/outer\.ts"/)
+
+        await write(
+          caseDir,
+          'app/nested/entry.ts',
+          [
+            'import { first, second } from "./outer.ts"',
+            'if (import.meta.hot) import.meta.hot.accept()',
+            'console.log(first, second, "changed")',
+          ].join('\n'),
+        )
+        let scriptEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(entryPath) },
+        ])
+
+        assert.deepEqual(
+          scriptEvents.map((event) => event.type),
+          ['reload'],
+        )
+
+        await write(caseDir, 'app/styles.css', 'body { color: blue; }')
+        let styleEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(stylePath) },
+        ])
+
+        assert.deepEqual(
+          styleEvents.map((event) => event.type),
+          ['update'],
+        )
       } finally {
         await assetServer.close()
       }
@@ -8738,6 +10398,16 @@ describe('asset-server', () => {
           importMaps: 'false' as never,
         }),
       /importMaps must be a boolean/,
+    )
+  })
+
+  it('rejects non-boolean optimizeBarrelFileImports options', async () => {
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          optimizeBarrelFileImports: 'true' as never,
+        }),
+      /optimizeBarrelFileImports must be a boolean/,
     )
   })
 
