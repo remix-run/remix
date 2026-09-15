@@ -20,6 +20,7 @@ import type {
   AssetServer,
   AssetServerOptions,
   BrowserHmrChannel,
+  BrowserHmrEvent,
   BrowserHmrFileEventHandler,
 } from './asset-server.ts'
 import type { AssetRequestTransformMap } from './files/config.ts'
@@ -143,6 +144,22 @@ function createTestBrowserHmrChannel(): BrowserHmrChannel {
     updateWatchedFiles() {},
     url: 'http://127.0.0.1:1234/hmr',
   }
+}
+
+function getBrowserHmrTimestamp(events: readonly BrowserHmrEvent[]): number {
+  let event = events.find((event) => event.type === 'update')
+  if (!event || event.type !== 'update') throw new Error('Expected a browser HMR update')
+  let payload = Object.values(event.data)[0]
+  if (
+    payload === null ||
+    typeof payload !== 'object' ||
+    Array.isArray(payload) ||
+    !('timestamp' in payload) ||
+    typeof payload.timestamp !== 'number'
+  ) {
+    throw new Error('Expected a browser HMR update timestamp')
+  }
+  return payload.timestamp
 }
 
 function getWatchEventFilePath(filePath: string): string {
@@ -3100,7 +3117,7 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/value.ts', 'export const internalValue = 1')
     await write(dir, 'app/unused.ts', 'export const unused = 2')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let entry = await assetServer.getScriptEntry('app/entry.ts')
     let response = await get(assetServer, entry.href)
@@ -3116,6 +3133,25 @@ describe('asset-server', () => {
     let notModified = await get(assetServer, entry.href, { 'If-None-Match': etag })
     assert.ok(notModified)
     assert.equal(notModified.status, 304)
+  })
+
+  it('can disable barrel file import optimization', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
+    await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+    await write(dir, 'app/value.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: false })
+
+    let entry = await assetServer.getScriptEntry('app/entry.ts')
+    let response = await get(assetServer, entry.href)
+    assert.ok(response)
+
+    assert.match(await response.text(), /from "\.\/barrel\.ts"/)
+    assert.deepEqual(entry.preloads, [
+      '/assets/app/entry.ts',
+      '/assets/app/barrel.ts',
+      '/assets/app/value.ts',
+    ])
   })
 
   it('preserves a barrel file request when another branch cycles back to the importer', async () => {
@@ -5968,7 +6004,7 @@ describe('asset-server', () => {
     }
   })
 
-  it('reloads barrel file import graph changes while keeping CSS updates hot', async () => {
+  it('hot updates changes to the optimized served module graph', async () => {
     let caseDir = await makeTmpDir()
     let handleFileEvents: BrowserHmrFileEventHandler | undefined
     let watchedFiles = new Set<string>()
@@ -6008,7 +6044,7 @@ describe('asset-server', () => {
       let otherPath = await write(caseDir, 'app/nested/other.ts', 'export const other = 1')
       let stylePath = await write(caseDir, 'app/styles.css', 'body { color: red; }')
       let assetServer = createWatchedTestServer(caseDir, {
-        optimizeBarrelFileImports: true,
+        importMaps: false,
         hmr() {
           return {
             close() {},
@@ -6049,6 +6085,17 @@ describe('asset-server', () => {
           getLineAndColumn(entryBody, '/assets/app/nested/shared.ts').line <
             getLineAndColumn(entryBody, '/assets/app/nested/first.ts').line,
         )
+
+        await write(
+          caseDir,
+          'app/nested/unused.ts',
+          'import "./shared.ts"\nexport const unused = 1',
+        )
+        let skippedModuleEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(unusedPath) },
+        ])
+        assert.deepEqual(skippedModuleEvents, [])
+
         await write(caseDir, 'app/nested/unused.ts', 'export const unused = 0')
         let unusedEvents = await handleFileEvents([
           { event: 'change', filePath: getWatchEventFilePath(unusedPath) },
@@ -6056,7 +6103,7 @@ describe('asset-server', () => {
 
         assert.deepEqual(
           unusedEvents.map((event) => event.type),
-          ['reload'],
+          ['update'],
         )
         let reorderedDependencyResponse = await getByFile(assetServer, 'app/nested/entry.ts')
         assert.ok(reorderedDependencyResponse)
@@ -6077,14 +6124,45 @@ describe('asset-server', () => {
 
         assert.deepEqual(
           barrelEvents.map((event) => event.type),
-          ['reload'],
+          ['update'],
         )
+        assert.deepEqual(barrelEvents[0]?.files, [getBrowserHmrWatchedFilePath(barrelPath)])
         let reorderedResponse = await getByFile(assetServer, 'app/nested/entry.ts')
         assert.ok(reorderedResponse)
         let reorderedBody = await reorderedResponse.text()
         assert.ok(
           getLineAndColumn(reorderedBody, '/assets/app/nested/second.ts').line <
             getLineAndColumn(reorderedBody, '/assets/app/nested/first.ts').line,
+        )
+
+        await write(
+          caseDir,
+          'app/nested/barrel.ts',
+          'export const first = 1\nexport const second = 2\nexport const unused = 0',
+        )
+        let reintroducedEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(barrelPath) },
+        ])
+        assert.deepEqual(
+          reintroducedEvents.map((event) => event.type),
+          ['update'],
+        )
+
+        await write(
+          caseDir,
+          'app/nested/barrel.ts',
+          [
+            'export { second } from "./second.ts"',
+            'export { unused } from "./unused.ts"',
+            'export { first } from "./first.ts"',
+          ].join('\n'),
+        )
+        let optimizedAgainEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(barrelPath) },
+        ])
+        assert.deepEqual(
+          optimizedAgainEvents.map((event) => event.type),
+          ['update'],
         )
 
         await writeJson(caseDir, 'app/nested/package.json', { sideEffects: true })
@@ -6098,7 +6176,7 @@ describe('asset-server', () => {
         )
         let restoredResponse = await getByFile(assetServer, 'app/nested/entry.ts')
         assert.ok(restoredResponse)
-        assert.match(await restoredResponse.text(), /from "\.\/outer\.ts"/)
+        assert.match(await restoredResponse.text(), /from "\/assets\/app\/nested\/outer\.ts"/)
 
         await write(
           caseDir,
@@ -6115,7 +6193,7 @@ describe('asset-server', () => {
 
         assert.deepEqual(
           scriptEvents.map((event) => event.type),
-          ['reload'],
+          ['update'],
         )
 
         await write(caseDir, 'app/styles.css', 'body { color: blue; }')
@@ -6127,6 +6205,648 @@ describe('asset-server', () => {
           styleEvents.map((event) => event.type),
           ['update'],
         )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('returns current HMR module URLs while keeping import maps stable', async () => {
+    let caseDir = await makeTmpDir()
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        [
+          'import { read } from "./feature.js"',
+          'if (import.meta.hot) import.meta.hot.accept()',
+          'console.log(read())',
+        ].join('\n'),
+      )
+      await write(
+        caseDir,
+        'app/late-entry.ts',
+        [
+          'import { read } from "./feature.js"',
+          'if (import.meta.hot) import.meta.hot.accept()',
+          'console.log(read())',
+        ].join('\n'),
+      )
+      await write(
+        caseDir,
+        'app/feature.ts',
+        'import { value } from "./barrel.ts"\nexport function read() { return value }',
+      )
+      await write(caseDir, 'app/barrel.ts', 'export { source as value } from "./value.ts"')
+      let valuePath = await write(caseDir, 'app/value.ts', 'export const source = 1')
+      let assetServer = createWatchedTestServer(caseDir, {
+        sourceMaps: 'external',
+        hmr() {
+          return {
+            close() {},
+            onFileEvents(handler) {
+              handleFileEvents = handler
+              return () => {}
+            },
+            updateWatchedFiles() {},
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      try {
+        let initialEntryResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(initialEntryResponse)
+        assert.ok(handleFileEvents)
+
+        await write(caseDir, 'app/value.ts', 'export const source = 2')
+        let firstEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(valuePath) },
+        ])
+        let firstTimestamp = getBrowserHmrTimestamp(firstEvents)
+
+        let hmrEntryResponse = await get(assetServer, `/assets/app/entry.ts?t=${firstTimestamp}`)
+        assert.ok(hmrEntryResponse)
+        let hmrEntrySource = await hmrEntryResponse.text()
+        assert.match(hmrEntrySource, new RegExp(`/assets/app/feature\\.ts\\?t=${firstTimestamp}`))
+        assert.match(
+          hmrEntrySource,
+          new RegExp(`sourceMappingURL=/assets/app/entry\\.ts\\.map\\?t=${firstTimestamp}`),
+        )
+        let hmrSourceMapResponse = await get(
+          assetServer,
+          `/assets/app/entry.ts.map?t=${firstTimestamp}`,
+        )
+        assert.ok(hmrSourceMapResponse)
+        assert.equal(
+          hmrSourceMapResponse.headers.get('Content-Type'),
+          'application/json; charset=utf-8',
+        )
+        let hmrFeatureResponse = await get(
+          assetServer,
+          `/assets/app/feature.ts?t=${firstTimestamp}`,
+        )
+        assert.ok(hmrFeatureResponse)
+        assert.match(
+          await hmrFeatureResponse.text(),
+          new RegExp(`/assets/app/value\\.ts\\?t=${firstTimestamp}`),
+        )
+
+        let currentEntry = await assetServer.getScriptEntry('app/entry.ts')
+        assert.equal(currentEntry.href, `/assets/app/entry.ts?t=${firstTimestamp}`)
+        assert.deepEqual(currentEntry.preloads, [
+          `/assets/app/entry.ts?t=${firstTimestamp}`,
+          `/assets/app/feature.ts?t=${firstTimestamp}`,
+          `/assets/app/value.ts?t=${firstTimestamp}`,
+        ])
+        assert.equal(
+          currentEntry.importMap.imports['/assets/app/feature.js'],
+          '/assets/app/feature.ts',
+        )
+        assert.equal(currentEntry.importMap.imports['/assets/app/value.ts'], undefined)
+        let stableEntryResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(stableEntryResponse)
+        assert.match(
+          await stableEntryResponse.text(),
+          new RegExp(`/assets/app/feature\\.ts\\?t=${firstTimestamp}`),
+        )
+        let stableFeatureResponse = await get(assetServer, '/assets/app/feature.ts')
+        assert.ok(stableFeatureResponse)
+        assert.match(
+          await stableFeatureResponse.text(),
+          new RegExp(`/assets/app/value\\.ts\\?t=${firstTimestamp}`),
+        )
+
+        let lateEntry = await assetServer.getScriptEntry('app/late-entry.ts')
+        assert.equal(lateEntry.href, '/assets/app/late-entry.ts')
+        assert.deepEqual(lateEntry.preloads, [
+          '/assets/app/late-entry.ts',
+          `/assets/app/feature.ts?t=${firstTimestamp}`,
+          `/assets/app/value.ts?t=${firstTimestamp}`,
+        ])
+        assert.equal(
+          lateEntry.importMap.imports['/assets/app/feature.js'],
+          '/assets/app/feature.ts',
+        )
+        let lateEntryResponse = await get(assetServer, '/assets/app/late-entry.ts')
+        assert.ok(lateEntryResponse)
+        assert.match(
+          await lateEntryResponse.text(),
+          new RegExp(`/assets/app/feature\\.ts\\?t=${firstTimestamp}`),
+        )
+
+        await write(caseDir, 'app/value.ts', 'export const source = 3')
+        let secondEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(valuePath) },
+        ])
+        let secondTimestamp = getBrowserHmrTimestamp(secondEvents)
+        assert.notEqual(secondTimestamp, firstTimestamp)
+
+        let lateHmrResponse = await get(
+          assetServer,
+          `/assets/app/late-entry.ts?t=${secondTimestamp}`,
+        )
+        assert.ok(lateHmrResponse)
+        assert.match(
+          await lateHmrResponse.text(),
+          new RegExp(`/assets/app/feature\\.ts\\?t=${secondTimestamp}`),
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('returns current HMR module URLs when import maps are disabled', async () => {
+    let caseDir = await makeTmpDir()
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    try {
+      await write(
+        caseDir,
+        'app/entry.ts',
+        [
+          'import { value } from "./dep.ts"',
+          'if (import.meta.hot) import.meta.hot.accept()',
+          'console.log(value)',
+        ].join('\n'),
+      )
+      let depPath = await write(caseDir, 'app/dep.ts', 'export const value = 1')
+      let assetServer = createWatchedTestServer(caseDir, {
+        importMaps: false,
+        hmr() {
+          return {
+            close() {},
+            onFileEvents(handler) {
+              handleFileEvents = handler
+              return () => {}
+            },
+            updateWatchedFiles() {},
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      try {
+        let initialResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(initialResponse)
+        assert.ok(handleFileEvents)
+
+        await write(caseDir, 'app/dep.ts', 'export const value = 2')
+        let events = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(depPath) },
+        ])
+        let timestamp = getBrowserHmrTimestamp(events)
+
+        let hmrResponse = await get(assetServer, `/assets/app/entry.ts?t=${timestamp}`)
+        assert.ok(hmrResponse)
+        assert.match(await hmrResponse.text(), new RegExp(`/assets/app/dep\\.ts\\?t=${timestamp}`))
+
+        let currentEntry = await assetServer.getScriptEntry('app/entry.ts')
+        assert.equal(currentEntry.href, `/assets/app/entry.ts?t=${timestamp}`)
+        assert.deepEqual(currentEntry.importMap, { imports: {} })
+        assert.deepEqual(currentEntry.preloads, [
+          `/assets/app/entry.ts?t=${timestamp}`,
+          `/assets/app/dep.ts?t=${timestamp}`,
+        ])
+        let stableResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(stableResponse)
+        assert.match(
+          await stableResponse.text(),
+          new RegExp(`/assets/app/dep\\.ts\\?t=${timestamp}`),
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('serves the latest resolved graph when an HMR request is overtaken by another update', async () => {
+    let caseDir = await makeTmpDir()
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    try {
+      let entryPath = await write(
+        caseDir,
+        'app/entry.ts',
+        [
+          'import { value } from "./first.js"',
+          'if (import.meta.hot) import.meta.hot.accept()',
+          'console.log(value)',
+        ].join('\n'),
+      )
+      await write(caseDir, 'app/first.ts', 'export const value = "first"')
+      await write(caseDir, 'app/second.ts', 'export const value = "second"')
+      await write(caseDir, 'app/third.ts', 'export const value = "third"')
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr() {
+          return {
+            close() {},
+            onFileEvents(handler) {
+              handleFileEvents = handler
+              return () => {}
+            },
+            updateWatchedFiles() {},
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      try {
+        let initialResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(initialResponse)
+        assert.ok(handleFileEvents)
+
+        await write(
+          caseDir,
+          'app/entry.ts',
+          [
+            'import { value } from "./second.js"',
+            'if (import.meta.hot) import.meta.hot.accept()',
+            'console.log(value)',
+          ].join('\n'),
+        )
+        let firstEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(entryPath) },
+        ])
+        let firstTimestamp = getBrowserHmrTimestamp(firstEvents)
+        assert.doesNotMatch(JSON.stringify(firstEvents), /third/)
+
+        await write(
+          caseDir,
+          'app/entry.ts',
+          [
+            'import { value } from "./third.js"',
+            'if (import.meta.hot) import.meta.hot.accept()',
+            'console.log(value)',
+          ].join('\n'),
+        )
+        await handleFileEvents([{ event: 'change', filePath: getWatchEventFilePath(entryPath) }])
+
+        let overtakenResponse = await get(assetServer, `/assets/app/entry.ts?t=${firstTimestamp}`)
+        assert.ok(overtakenResponse)
+        let overtakenBody = await overtakenResponse.text()
+        assert.match(overtakenBody, /from "\/assets\/app\/third\.ts"/)
+        assert.doesNotMatch(overtakenBody, /"\.\/third\.js"/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('tracks an optimized graph through missing and removed dependencies', async () => {
+    let caseDir = await makeTmpDir()
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    let watchedFiles = new Set<string>()
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        [
+          'import { value } from "./barrel.ts"',
+          'if (import.meta.hot) import.meta.hot.accept()',
+          'console.log(value)',
+        ].join('\n'),
+      )
+      let barrelPath = await write(caseDir, 'app/barrel.ts', 'export { value } from "./old.ts"')
+      let oldPath = await write(caseDir, 'app/old.ts', 'export const value = "old"')
+      let assetServer = createWatchedTestServer(caseDir, {
+        importMaps: false,
+        hmr() {
+          return {
+            close() {},
+            onFileEvents(handler) {
+              handleFileEvents = handler
+              return () => {}
+            },
+            updateWatchedFiles(delta) {
+              for (let filePath of delta.remove) watchedFiles.delete(filePath)
+              for (let filePath of delta.add) watchedFiles.add(filePath)
+            },
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      try {
+        let entryResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(entryResponse)
+        assert.ok(handleFileEvents)
+
+        await write(caseDir, 'app/barrel.ts', 'export { value } from "./replacement.ts"')
+        await handleFileEvents([{ event: 'change', filePath: getWatchEventFilePath(barrelPath) }])
+        let replacementPath = path.join(caseDir, 'app/replacement.ts')
+        assert.ok(watchedFiles.has(getBrowserHmrWatchedFilePath(replacementPath)))
+
+        await write(caseDir, 'app/replacement.ts', 'export const value = "replacement"')
+        let recoveredEvents = await handleFileEvents([
+          { event: 'add', filePath: getWatchEventFilePath(replacementPath) },
+        ])
+        assert.deepEqual(
+          recoveredEvents.map((event) => event.type),
+          ['update'],
+        )
+
+        await fs.rm(oldPath)
+        let removedDependencyEvents = await handleFileEvents([
+          { event: 'unlink', filePath: getWatchEventFilePath(oldPath) },
+        ])
+        assert.deepEqual(removedDependencyEvents, [])
+        assert.ok(watchedFiles.has(getBrowserHmrWatchedFilePath(barrelPath)))
+
+        await write(
+          caseDir,
+          'app/barrel.ts',
+          'import { value as source } from "./replacement.ts"\nexport const value = source + " runtime"',
+        )
+        let events = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(barrelPath) },
+        ])
+        assert.deepEqual(
+          events.map((event) => event.type),
+          ['update'],
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('forgets deleted requested modules when tracking the served HMR graph', async () => {
+    let caseDir = await makeTmpDir()
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      let removedPath = await write(
+        caseDir,
+        'app/removed.ts',
+        'if (import.meta.hot) import.meta.hot.accept()\nexport const removed = 1',
+      )
+      let currentPath = await write(
+        caseDir,
+        'app/current.ts',
+        'if (import.meta.hot) import.meta.hot.accept()\nexport const current = 1',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr() {
+          return {
+            close() {},
+            onFileEvents(handler) {
+              handleFileEvents = handler
+              return () => {}
+            },
+            updateWatchedFiles() {},
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      try {
+        let removedResponse = await getByFile(assetServer, 'app/removed.ts')
+        assert.ok(removedResponse)
+        assert.equal(removedResponse.status, 200)
+
+        await fs.rm(removedPath)
+        assert.ok(handleFileEvents)
+        let unlinkEvents = await handleFileEvents([
+          { event: 'unlink', filePath: getWatchEventFilePath(removedPath) },
+        ])
+        assert.deepEqual(
+          unlinkEvents.map((event) => event.type),
+          ['reload'],
+        )
+
+        let currentResponse = await getByFile(assetServer, 'app/current.ts')
+        assert.ok(currentResponse)
+        assert.equal(currentResponse.status, 200)
+
+        await write(
+          caseDir,
+          'app/current.ts',
+          'if (import.meta.hot) import.meta.hot.accept()\nexport const current = 2',
+        )
+        let currentEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(currentPath) },
+        ])
+        assert.deepEqual(
+          currentEvents.map((event) => event.type),
+          ['update'],
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('serves new scripts while another requested HMR graph is temporarily invalid', async () => {
+    let caseDir = await makeTmpDir()
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      let brokenPath = await write(
+        caseDir,
+        'app/broken.ts',
+        'if (import.meta.hot) import.meta.hot.accept()\nexport const value = 1',
+      )
+      let currentPath = await write(
+        caseDir,
+        'app/current.ts',
+        'if (import.meta.hot) import.meta.hot.accept()\nexport const current = 1',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr() {
+          return {
+            close() {},
+            onFileEvents(handler) {
+              handleFileEvents = handler
+              return () => {}
+            },
+            updateWatchedFiles() {},
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      try {
+        let initialResponse = await getByFile(assetServer, 'app/broken.ts')
+        assert.ok(initialResponse)
+        assert.equal(initialResponse.status, 200)
+
+        await write(caseDir, 'app/broken.ts', 'export const =')
+        assert.ok(handleFileEvents)
+        let brokenEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(brokenPath) },
+        ])
+        assert.deepEqual(
+          brokenEvents.map((event) => event.type),
+          ['update'],
+        )
+
+        let currentResponse = await getByFile(assetServer, 'app/current.ts')
+        assert.ok(currentResponse)
+        assert.equal(currentResponse.status, 200)
+
+        await write(
+          caseDir,
+          'app/broken.ts',
+          'if (import.meta.hot) import.meta.hot.accept()\nexport const value = 2',
+        )
+        let recoveredEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(brokenPath) },
+        ])
+        assert.deepEqual(
+          recoveredEvents.map((event) => event.type),
+          ['update'],
+        )
+
+        await write(
+          caseDir,
+          'app/current.ts',
+          'if (import.meta.hot) import.meta.hot.accept()\nexport const current = 2',
+        )
+        let currentEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(currentPath) },
+        ])
+        assert.deepEqual(
+          currentEvents.map((event) => event.type),
+          ['update'],
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('tracks optimized HMR graphs loaded after the initial script', async () => {
+    let caseDir = await makeTmpDir()
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      await write(caseDir, 'app/entry.ts', 'export const entry = true')
+      await write(
+        caseDir,
+        'app/lazy.ts',
+        [
+          'import { value } from "./outer.ts"',
+          'if (import.meta.hot) import.meta.hot.accept()',
+          'console.log(value)',
+        ].join('\n'),
+      )
+      await write(caseDir, 'app/outer.ts', 'export { value } from "./barrel.ts"')
+      let barrelPath = await write(caseDir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+      await write(caseDir, 'app/value.ts', 'export const value = 1')
+      let assetServer = createWatchedTestServer(caseDir, {
+        importMaps: false,
+        hmr() {
+          return {
+            close() {},
+            onFileEvents(handler) {
+              handleFileEvents = handler
+              return () => {}
+            },
+            updateWatchedFiles() {},
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      try {
+        let entryResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(entryResponse)
+        assert.equal(entryResponse.status, 200)
+
+        let lazyResponse = await getByFile(assetServer, 'app/lazy.ts')
+        assert.ok(lazyResponse)
+        assert.match(await lazyResponse.text(), /from "\/assets\/app\/value\.ts"/)
+
+        await write(
+          caseDir,
+          'app/barrel.ts',
+          'import { value } from "./value.ts"\nexport const wrappedValue = value\nexport { wrappedValue as value }',
+        )
+        assert.ok(handleFileEvents)
+        let barrelEvents = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(barrelPath) },
+        ])
+        assert.deepEqual(
+          barrelEvents.map((event) => event.type),
+          ['update'],
+        )
+
+        let updatedLazyResponse = await getByFile(assetServer, 'app/lazy.ts')
+        assert.ok(updatedLazyResponse)
+        assert.match(await updatedLazyResponse.text(), /from "\/assets\/app\/barrel\.ts"/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('hot updates a dynamically imported module after it loads', async () => {
+    let caseDir = await makeTmpDir()
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    try {
+      await write(caseDir, 'app/entry.ts', 'void import("./lazy.ts")')
+      let lazyPath = await write(
+        caseDir,
+        'app/lazy.ts',
+        'if (import.meta.hot) import.meta.hot.accept()\nexport const value = 1',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr() {
+          return {
+            close() {},
+            onFileEvents(handler) {
+              handleFileEvents = handler
+              return () => {}
+            },
+            updateWatchedFiles() {},
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      try {
+        let entryResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(entryResponse)
+        assert.equal(entryResponse.status, 200)
+
+        let lazyResponse = await getByFile(assetServer, 'app/lazy.ts')
+        assert.ok(lazyResponse)
+        assert.equal(lazyResponse.status, 200)
+
+        await write(
+          caseDir,
+          'app/lazy.ts',
+          'if (import.meta.hot) import.meta.hot.accept()\nexport const value = 2',
+        )
+        assert.ok(handleFileEvents)
+        let events = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(lazyPath) },
+        ])
+
+        assert.deepEqual(
+          events.map((event) => event.type),
+          ['update'],
+        )
+        assert.deepEqual(events[0]?.files, [getBrowserHmrWatchedFilePath(lazyPath)])
       } finally {
         await assetServer.close()
       }
@@ -6156,6 +6876,51 @@ describe('asset-server', () => {
         assert.match(
           await clientResponse.text(),
           /import \{ importModule as __remixImport \} from "\/assets\/app\/module-importer\.ts"/,
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('includes imports used by the HMR browser module importer in generated import maps', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'tsconfig.json', {
+        compilerOptions: {
+          baseUrl: '.',
+          paths: {
+            'module-importer-package': ['./app/module-importer-package.ts'],
+          },
+        },
+      })
+      await write(
+        caseDir,
+        'app/module-importer.ts',
+        "export { importModule } from 'module-importer-package'",
+      )
+      await write(
+        caseDir,
+        'app/module-importer-package.ts',
+        'export async function importModule(specifier) { return import(specifier) }',
+      )
+      let entryPath = await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: {
+          channel: createTestBrowserHmrChannel,
+          moduleImporter: './app/module-importer.ts',
+        },
+      })
+
+      try {
+        await assertImportMapScopeImport(
+          assetServer,
+          entryPath,
+          '/assets/app/',
+          'module-importer-package',
+          /\/assets\/app\/module-importer-package\.ts$/,
         )
       } finally {
         await assetServer.close()

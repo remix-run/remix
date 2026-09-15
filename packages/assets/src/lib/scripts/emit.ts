@@ -47,6 +47,7 @@ export async function emitResolvedModule(
     getServedUrl(identityPath: string): Promise<string>
     getStableUrl(identityPath: string): string
     hmrClientPathname?: string
+    hmrTimestamp: number | null
     sourceMaps?: 'external' | 'inline'
   },
 ): Promise<EmitResult> {
@@ -62,10 +63,14 @@ export async function emitResolvedModule(
         let encoded = Buffer.from(rewriteResult.sourceMap).toString('base64')
         finalCode += `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
       } else if (options.sourceMaps === 'external') {
-        finalCode += `\n//# sourceMappingURL=${formatFingerprintedPathname(
+        let sourceMapUrl = `${formatFingerprintedPathname(
           resolvedModule.stableUrlPathname,
           options.fingerprintAssets && sourceMap ? sourceMap.fingerprint : null,
         )}.map`
+        if (options.hmrTimestamp !== null) {
+          sourceMapUrl = addTimestampQuery(sourceMapUrl, options.hmrTimestamp)
+        }
+        finalCode += `\n//# sourceMappingURL=${sourceMapUrl}`
       }
     }
 
@@ -108,7 +113,11 @@ async function rewriteImports(
   for (let declaration of resolvedModule.importRewrites) {
     let replacement = ''
     for (let { depPath, sourceStart, specifiers } of declaration.imports) {
-      let url = options.getRewrittenImportUrl?.(depPath) ?? options.getStableUrl(depPath)
+      let hmrImportTimestamp = options.getHmrImportTimestamp(depPath)
+      let url =
+        hmrImportTimestamp === null
+          ? (options.getRewrittenImportUrl?.(depPath) ?? options.getStableUrl(depPath))
+          : addTimestampQuery(await options.getServedUrl(depPath), hmrImportTimestamp)
       if (replacement.length > 0) replacement += '\n'
       replacement += specifiers.length === 0 ? 'import ' : 'import { '
       for (let index = 0; index < specifiers.length; index++) {

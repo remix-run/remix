@@ -437,13 +437,13 @@ describe('createModuleStore', () => {
     assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], ['/app/entry.ts'])
   })
 
-  it('clears HMR update timestamps across graph invalidations', () => {
+  it('retains HMR update timestamps across graph invalidations', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>()
 
     store.setHmrUpdateTimestamp('/app/entry.ts', 123)
     store.invalidateAll()
 
-    assert.equal(store.getHmrUpdateTimestamp('/app/entry.ts'), undefined)
+    assert.equal(store.getHmrUpdateTimestamp('/app/entry.ts'), 123)
   })
 
   it('retains stale resolved modules and links when all records are invalidated', () => {

@@ -126,6 +126,7 @@ let reconnectPending = false
 let pageReloadTimer
 let failedJavaScriptUpdates = new Map()
 let stylesheetUpdatePromise = Promise.resolve()
+let hmrPayloadPromise = Promise.resolve()
 let installedImportMap = { imports: new Map(), scopes: new Map() }
 let processedScripts = new WeakSet()
 
@@ -158,18 +159,24 @@ events.onerror = () => {
 
 events.onmessage = (event) => {
   let payload = JSON.parse(event.data)
-  if (payload.type === 'browser:update') {
-    let update = payload.data?.[${JSON.stringify(options.dataKey)}]
-    if (!update) return
-    handleBrowserUpdate(update).catch((error) => {
+  hmrPayloadPromise = hmrPayloadPromise.then(async () => {
+    if (payload.type === 'browser:update') {
+      let update = payload.data?.[${JSON.stringify(options.dataKey)}]
+      if (!update) return
+      try {
+        await handleBrowserUpdate(update)
+      } catch (error) {
+        console.error('[remix] HMR update failed', error)
+        if (update.updates.some((entry) => entry.type !== 'js')) reloadPage()
+      }
+      return
+    }
+    try {
+      await handlePayload(payload)
+    } catch (error) {
       console.error('[remix] HMR update failed', error)
-      if (update.updates.some((entry) => entry.type !== 'js')) reloadPage()
-    })
-    return
-  }
-  handlePayload(payload).catch((error) => {
-    console.error('[remix] HMR update failed', error)
-    reloadPage()
+      reloadPage()
+    }
   })
 }
 

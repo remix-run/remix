@@ -430,16 +430,7 @@ let assetServer = createAssetServer({
 
 ## Optimizing Barrel File Imports
 
-Set `optimizeBarrelFileImports: true` to rewrite named imports through eligible barrel files to the modules that provide their bindings. This avoids intermediary requests and unused dependency branches.
-
-```ts
-let assetServer = createAssetServer({
-  basePath: '/assets',
-  allowFiles: ['app/routes.ts', 'app/**/public/**'],
-  allowPackages: ['remix'],
-  optimizeBarrelFileImports: true,
-})
-```
+By default, the asset server rewrites named imports through eligible barrel files to the modules that provide their bindings. This avoids intermediary requests and unused dependency branches.
 
 An import can only be optimized if every module removed from its dependency graph is marked side-effect free by its owning `package.json`.
 
@@ -469,9 +460,11 @@ That binding passes through two barrel files before reaching its implementation:
 ```ts
 // remix/src/ui.ts
 export * from '@remix-run/ui'
+```
 
+```ts
 // @remix-run/ui/src/index.ts
-export { css } from './style/css-mixin.ts'
+export { css } from './style/css-mixin.js'
 // ...other exports
 ```
 
@@ -479,7 +472,18 @@ After optimization, the served `entry.ts` module imports the binding directly fr
 
 ```ts
 // entry.ts
-import { css } from '/assets/packages/ui/src/style/css-mixin.ts'
+import { css } from '/assets/npm/@remix-run/ui/src/style/css-mixin.js'
+```
+
+Set `optimizeBarrelFileImports: false` to disable this optimization:
+
+```ts
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  allowPackages: ['remix'],
+  optimizeBarrelFileImports: false,
+})
 ```
 
 ## Script Options

@@ -28,7 +28,6 @@ async function createTestServer(
     basePath: '/assets',
     fingerprint: options.fingerprint,
     importMaps,
-    optimizeBarrelFileImports: true,
     rootDir,
     watch: false,
   })

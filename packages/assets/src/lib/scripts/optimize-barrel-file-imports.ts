@@ -54,7 +54,7 @@ export function createBarrelFileImportOptimizer(): (
     graph: ReadonlyMap<string, ResolvedModule>,
   ): Map<string, ResolvedModule> {
     let sideEffectsCache = new Map<string, SideEffects>()
-    let rewrittenGraph = new Map<string, ResolvedModule>()
+    let rewrittenModules = new Map<string, ResolvedModule>()
 
     for (let module of graph.values()) {
       let analysis = getExportAnalysis(module, analysisCache)
@@ -148,7 +148,6 @@ export function createBarrelFileImportOptimizer(): (
       }
 
       if (importRewrites.length === 0) {
-        rewrittenGraph.set(module.identityPath, module)
         continue
       }
 
@@ -182,7 +181,7 @@ export function createBarrelFileImportOptimizer(): (
           .map((dependency) => dependency.depPath),
       )
 
-      rewrittenGraph.set(module.identityPath, {
+      rewrittenModules.set(module.identityPath, {
         ...module,
         deps: [...remainingDeps],
         importRewrites,
@@ -191,7 +190,7 @@ export function createBarrelFileImportOptimizer(): (
       })
     }
 
-    return rewrittenGraph
+    return rewrittenModules
   }
 }
 

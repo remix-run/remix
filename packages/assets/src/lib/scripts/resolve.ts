@@ -152,9 +152,26 @@ export async function resolveModule(
           )
         : new Map<string, ResolvedSpec>()
   } catch (error) {
-    return failResolve(error, trackedFiles, trackedResolutions, transformed.resolvedPath, {
-      isWatchIgnored: args.isWatchIgnored,
-    })
+    let failedRelativeResolutions = transformed.unresolvedImports
+      .map((unresolved) =>
+        getTrackedRelativeImportResolution(
+          transformed.importerDir,
+          getDisplayImportSpecifier(unresolved.specifier),
+          args.isWatchIgnored,
+          true,
+        ),
+      )
+      .filter((resolution): resolution is RelativeImportResolution => resolution !== null)
+    return failResolve(
+      error,
+      trackedFiles,
+      failedRelativeResolutions.map((resolution) => ({
+        ...resolution,
+        resolvedIdentityPath: null,
+      })),
+      transformed.resolvedPath,
+      { isWatchIgnored: args.isWatchIgnored },
+    )
   }
 
   let importsWithPaths: ResolvedImport[] = []
@@ -173,6 +190,12 @@ export async function resolveModule(
 
     let resolvedSpec = resolvedImports.get(unresolved.specifier)
     if (!resolvedSpec?.absolutePath) {
+      trackedResolution ??= getTrackedRelativeImportResolution(
+        transformed.importerDir,
+        displaySpecifier,
+        args.isWatchIgnored,
+        true,
+      )
       return failResolve(
         createAssetServerCompilationError(
           `Failed to resolve import "${displaySpecifier}" in ${transformed.resolvedPath}. ` +
@@ -322,6 +345,12 @@ export async function resolveModule(
           args.resolverFactory,
         ).then((resolved) => resolved.get(unresolved.specifier))
       } catch (error) {
+        trackedResolution ??= getTrackedRelativeImportResolution(
+          transformed.importerDir,
+          displaySpecifier,
+          args.isWatchIgnored,
+          true,
+        )
         return failResolve(error, trackedFiles, trackedResolutions, transformed.resolvedPath, {
           isWatchIgnored: args.isWatchIgnored,
           trackedResolution,
@@ -330,6 +359,12 @@ export async function resolveModule(
     }
 
     if (!resolvedSpec?.absolutePath) {
+      trackedResolution ??= getTrackedRelativeImportResolution(
+        transformed.importerDir,
+        displaySpecifier,
+        args.isWatchIgnored,
+        true,
+      )
       return failResolve(
         createAssetServerCompilationError(
           `Failed to resolve accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}. ` +
@@ -613,6 +648,7 @@ function getTrackedRelativeImportResolution(
   importerDir: string,
   specifier: string,
   isWatchIgnored: (filePath: string) => boolean,
+  trackExactFile = false,
 ): RelativeImportResolution | null {
   if (!isRelativeImportSpecifier(specifier)) return null
 
@@ -656,7 +692,9 @@ function getTrackedRelativeImportResolution(
         }
   }
 
-  if (!candidateExtensions) return null
+  if (!candidateExtensions) {
+    return trackExactFile ? { candidatePaths: [candidatePath], candidatePrefixes, specifier } : null
+  }
 
   let candidatePaths = [
     candidatePath,

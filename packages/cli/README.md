@@ -114,7 +114,6 @@ trailing commas. Every top-level field is optional:
     "allowPackages": ["remix"],
     "denyFiles": ["app/**/*.test.*"],
     "importMaps": true,
-    "optimizeBarrelFileImports": true,
     "files": {
       "extensions": [".svg", ".png", ".jpg", ".woff2"],
     },
