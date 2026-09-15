@@ -13,7 +13,7 @@ function attachClientEntryOwner(
   onDispose = () => {},
   identity: ClientEntryIdentity = { moduleUrl: '/entry.js', exportName: 'Entry' },
 ): void {
-  setClientEntryBoundaryOwner(marker, identity, { dispose: onDispose, render() {} })
+  setClientEntryBoundaryOwner(marker, marker, identity, { dispose: onDispose, render() {} })
 }
 
 function diffDomNodes(current: Node[], next: Node[], data: FrameContext['data'] = {}) {
