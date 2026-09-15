@@ -113,6 +113,8 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
   globalTransforms?: readonly AssetGlobalTransform[]
   /**
    * Optional backing store for cached transformed file outputs.
+   * Each namespace uses at most 256 entries of 4 MiB each, including cache metadata.
+   * Outputs that exceed this size are served without caching.
    */
   cache?: FileStorage
   /**
