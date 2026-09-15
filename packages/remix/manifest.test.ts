@@ -5,6 +5,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as url from 'node:url'
 import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
+import { getPackageExportSideEffects } from '../../scripts/utils/package-side-effects.ts'
 import { getRemixReadmeCopies } from '../../scripts/utils/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
@@ -39,6 +40,33 @@ function exportSpecifier(packageName: string, exportPath: string): string {
 
 function packageRelativePath(filePath: string): string {
   return path.relative(packagesDir, filePath).split(path.sep).join('/')
+}
+
+function packageExportPath(specifier: string): string {
+  let packageName = packageNameFromSpecifier(specifier)
+  return specifier === packageName ? '.' : `./${specifier.slice(packageName.length + 1)}`
+}
+
+function getExportTarget(exportConfig: unknown): string | null {
+  if (typeof exportConfig === 'string') return exportConfig
+  if (typeof exportConfig !== 'object' || exportConfig === null) return null
+  if ('default' in exportConfig && typeof exportConfig.default === 'string') {
+    return exportConfig.default
+  }
+  if ('types' in exportConfig && typeof exportConfig.types === 'string') return exportConfig.types
+  return null
+}
+
+function generatedModuleHasRuntimeImport(sourceTarget: string): boolean {
+  if (sourceTarget.endsWith('.d.ts')) return false
+  let source = fs.readFileSync(path.join(__dirname, sourceTarget), 'utf-8')
+  return source
+    .split(/\r?\n/)
+    .some(
+      (line) =>
+        (line.startsWith('import ') && !line.startsWith('import type ')) ||
+        (line.startsWith('export ') && !line.startsWith('export type ') && line !== 'export {}'),
+    )
 }
 
 const referencedPackages = new Set([...specifierMap.keys()].map(packageNameFromSpecifier))
@@ -148,6 +176,45 @@ describe('manifest', () => {
         `Package export "${exportPath}" references missing source file "${sourcePath}"`,
       )
     }
+  })
+
+  it('derives generated sideEffects from the owning package exports', () => {
+    let remixPackageJson: {
+      exports: Record<string, unknown>
+      publishConfig: { exports: Record<string, unknown> }
+      sideEffects: string[]
+    } = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'))
+    let sideEffects = new Set(remixPackageJson.sideEffects)
+    let entries = [...Object.entries(manifest), ['remix/cli', '@remix-run/cli'] as const]
+
+    for (let [remixPath, specifier] of entries) {
+      if (remixPath.startsWith('_')) continue
+      let packageName = packageNameFromSpecifier(specifier)
+      let owningPackageJson = JSON.parse(
+        fs.readFileSync(path.join(packagesDir, shortName(packageName), 'package.json'), 'utf-8'),
+      )
+      let expected = getPackageExportSideEffects(owningPackageJson, packageExportPath(specifier))
+      let remixExportPath = `./${remixPath.slice('remix/'.length)}`
+      let sourceTarget = getExportTarget(remixPackageJson.exports[remixExportPath])
+      let publishedTarget = getExportTarget(remixPackageJson.publishConfig.exports[remixExportPath])
+
+      assert.ok(sourceTarget, `Expected a source target for ${remixPath}`)
+      assert.ok(publishedTarget, `Expected a published target for ${remixPath}`)
+      let hasRuntimeImport = generatedModuleHasRuntimeImport(sourceTarget)
+      assert.equal(
+        sideEffects.has(sourceTarget),
+        hasRuntimeImport && expected.source,
+        `${sourceTarget} must match ${specifier}'s source sideEffects metadata`,
+      )
+      assert.equal(
+        sideEffects.has(publishedTarget),
+        hasRuntimeImport && expected.published,
+        `${publishedTarget} must match ${specifier}'s published sideEffects metadata`,
+      )
+    }
+
+    assert.ok(sideEffects.has('./src/cli-entry.ts'))
+    assert.ok(sideEffects.has('./dist/cli-entry.js'))
   })
 
   it('package README headings use unscoped package names', () => {

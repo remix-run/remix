@@ -18,6 +18,8 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 
 Use `pnpm dev` for automatic server restarts, or `pnpm hmr` to enable hot module replacement.
 
+The production server enables minification and asset fingerprinting.
+
 ## Explore the Code
 
 - Start with [`app/routes.ts`](app/routes.ts) and [`app/router.ts`](app/router.ts) to see the typed route contract and the middleware stack, including the standard UI render middleware.

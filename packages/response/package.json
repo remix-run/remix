@@ -18,6 +18,7 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     "./compress": "./src/compress.ts",
     "./file": "./src/file.ts",

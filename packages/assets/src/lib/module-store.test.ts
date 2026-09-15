@@ -61,10 +61,13 @@ function createResolvedModule(
       usesImportMetaHot: false,
     },
     identityPath,
+    importRewrites: [],
     imports: [],
+    packageJsonPath: null,
     trackedFiles: [identityPath],
     rawCode: 'export const value = 1',
     resolvedPath: identityPath,
+    runtimeImports: [],
     sourceMap: null,
     staticDeps: [],
     stableUrlPathname: `/assets${identityPath}`,
@@ -324,6 +327,61 @@ describe('createModuleStore', () => {
     assert.deepEqual([...store.getImporters('/app/value.ts')], ['/app/entry.ts'])
   })
 
+  it('invalidates transitive importers after file events when configured', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getDependencies(resolved) {
+        return resolved.deps
+      },
+      invalidateImportersOnFileEvent: true,
+    })
+    store.setResolved(
+      '/app/entry.ts',
+      createResolvedModule({ deps: ['/app/barrel.ts'], identityPath: '/app/entry.ts' }),
+      [{ trackedFiles: ['/app/entry.ts'] }],
+    )
+    store.setResolved(
+      '/app/barrel.ts',
+      createResolvedModule({ deps: ['/app/value.ts'], identityPath: '/app/barrel.ts' }),
+      [{ trackedFiles: ['/app/barrel.ts'] }],
+    )
+    store.setResolved('/app/value.ts', createResolvedModule({ identityPath: '/app/value.ts' }), [
+      { trackedFiles: ['/app/value.ts'] },
+    ])
+    store.setResolved(
+      '/app/unrelated.ts',
+      createResolvedModule({ identityPath: '/app/unrelated.ts' }),
+      [{ trackedFiles: ['/app/unrelated.ts'] }],
+    )
+
+    store.invalidateForFileEvent('/app/value.ts', 'change')
+
+    assert.equal(store.isResolvedFresh(store.get('/app/value.ts')), false)
+    assert.equal(store.isResolvedFresh(store.get('/app/barrel.ts')), false)
+    assert.equal(store.isResolvedFresh(store.get('/app/entry.ts')), false)
+    assert.equal(store.isResolvedFresh(store.get('/app/unrelated.ts')), true)
+  })
+
+  it('does not invalidate importers after file events by default', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getDependencies(resolved) {
+        return resolved.deps
+      },
+    })
+    store.setResolved(
+      '/app/entry.ts',
+      createResolvedModule({ deps: ['/app/value.ts'], identityPath: '/app/entry.ts' }),
+      [{ trackedFiles: ['/app/entry.ts'] }],
+    )
+    store.setResolved('/app/value.ts', createResolvedModule({ identityPath: '/app/value.ts' }), [
+      { trackedFiles: ['/app/value.ts'] },
+    ])
+
+    store.invalidateForFileEvent('/app/value.ts', 'change')
+
+    assert.equal(store.isResolvedFresh(store.get('/app/value.ts')), false)
+    assert.equal(store.isResolvedFresh(store.get('/app/entry.ts')), true)
+  })
+
   it('indexes accepted importers from resolved module dependencies', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       getAcceptedDependencies(resolved) {
@@ -400,13 +458,13 @@ describe('createModuleStore', () => {
     assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], ['/app/entry.ts'])
   })
 
-  it('clears HMR update timestamps across graph invalidations', () => {
+  it('retains HMR update timestamps across graph invalidations', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>()
 
     store.setHmrUpdateTimestamp('/app/entry.ts', 123)
     store.invalidateAll()
 
-    assert.equal(store.getHmrUpdateTimestamp('/app/entry.ts'), undefined)
+    assert.equal(store.getHmrUpdateTimestamp('/app/entry.ts'), 123)
   })
 
   it('retains stale resolved modules and links when all records are invalidated', () => {

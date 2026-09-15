@@ -42,6 +42,7 @@ describe('Remix config loading', () => {
             mounts: { app: 'app' },
             files: { extensions: ['.svg', '.png'] },
             importMaps: false,
+            optimizeBarrelFileImports: true,
             rootDir: '..',
           },
         }),
@@ -56,6 +57,7 @@ describe('Remix config loading', () => {
         mounts: { app: 'app' },
         files: { extensions: ['.svg', '.png'] },
         importMaps: false,
+        optimizeBarrelFileImports: true,
         rootDir: path.dirname(cwd),
       })
     } finally {

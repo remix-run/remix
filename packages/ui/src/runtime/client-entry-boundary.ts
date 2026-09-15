@@ -5,6 +5,15 @@ export type ClientEntryIdentity = {
   exportName: string
 }
 
+export function getClientEntryKey(identity: ClientEntryIdentity): string {
+  return `${getClientEntryComparisonUrl(identity.moduleUrl)}#${identity.exportName}`
+}
+
+function getClientEntryComparisonUrl(moduleUrl: string): string {
+  // remix/assets and other dev servers append millisecond timestamps to updated modules without changing their identity.
+  return moduleUrl.replace(/^([^?#]*)\?t=\d{13,}$/, '$1')
+}
+
 type ClientEntryRoot = Pick<VirtualRoot, 'dispose' | 'render'>
 
 export type ClientEntryBoundaryOwner = {

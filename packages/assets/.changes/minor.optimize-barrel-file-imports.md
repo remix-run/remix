@@ -1,0 +1,1 @@
+Optimize named imports through eligible barrel files by default, rewriting them to their resolved implementation modules. This avoids intermediary requests and removes side-effect-free dependency branches that are no longer reachable while preserving package export restrictions. Set `optimizeBarrelFileImports: false` to disable this optimization.

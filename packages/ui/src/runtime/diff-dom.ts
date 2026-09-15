@@ -1,6 +1,10 @@
 import { invariant } from './invariant.ts'
 import type { FrameContext } from './frame.ts'
-import { disposeClientEntryBoundary, getClientEntryBoundaryOwner } from './client-entry-boundary.ts'
+import {
+  disposeClientEntryBoundary,
+  getClientEntryBoundaryOwner,
+  getClientEntryKey,
+} from './client-entry-boundary.ts'
 
 type MarkerKind = 'frame-start' | 'frame-end' | 'virtual-root-start' | 'virtual-root-end'
 
@@ -646,8 +650,8 @@ function shouldPreserveHydrationStartMarker(
   return (
     currentOwner !== undefined &&
     nextData !== undefined &&
-    currentOwner.identity.moduleUrl === nextData.moduleUrl &&
-    currentOwner.identity.exportName === nextData.exportName
+    getClientEntryKey(currentOwner.identity) ===
+      getClientEntryKey({ moduleUrl: nextData.moduleUrl, exportName: nextData.exportName })
   )
 }
 

@@ -233,6 +233,12 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
    */
   importMaps?: boolean
   /**
+   * Whether to optimize named imports through eligible side-effect-free barrel files by rewriting
+   * them to their resolved implementation modules. This avoids intermediary requests and removes
+   * dependency branches that are no longer reachable. (default: `true`)
+   */
+  optimizeBarrelFileImports?: boolean
+  /**
    * Shared compatibility target for scripts and styles. Browser targets apply to both
    * pipelines, and `es` only affects scripts.
    */
@@ -366,6 +372,7 @@ type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
   files: ResolvedAssetServerFilesOptions
   fingerprintAssets: boolean
   importMaps: boolean
+  optimizeBarrelFileImports: boolean
   hmr: BrowserHmrChannelFactory | null
   hmrModuleImporter: string | null
   minify: boolean
@@ -463,6 +470,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     external: resolvedOptions.external,
     fingerprintAssets: resolvedOptions.fingerprintAssets,
     importMaps: resolvedOptions.importMaps,
+    optimizeBarrelFileImports: resolvedOptions.optimizeBarrelFileImports,
     loaders: resolvedOptions.loaders,
     hmr: sendHmrPayload
       ? {
@@ -593,16 +601,14 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     events: readonly BrowserHmrFileEvent[],
   ): Promise<readonly BrowserHmrEvent[]> {
     let browserHmrEvents: BrowserHmrEvent[] = []
+    let scriptUpdates: ScriptHmrUpdate[] = []
+    let eventFilePaths = [...new Set(events.map((event) => normalizeFilePath(event.filePath)))]
 
     for (let event of events) {
       let normalizedFilePath = normalizeFilePath(event.filePath)
-      let scriptUpdates = await scriptCompiler.classifyHmrFileEvent(normalizedFilePath, event.event)
-      let scriptPayload = await createScriptHmrPayloadWithImportMaps(scriptUpdates)
-      if (scriptPayload) {
-        browserHmrEvents.push(
-          createBrowserHmrEvent(scriptPayload, getScriptHmrUpdateFiles(scriptUpdates), hmrDataKey),
-        )
-      }
+      scriptUpdates.push(
+        ...(await scriptCompiler.classifyHmrFileEvent(normalizedFilePath, event.event)),
+      )
 
       let styleUpdates = await styleCompiler.classifyHmrFileEvent(normalizedFilePath, event.event)
       for (let styleUpdate of styleUpdates) {
@@ -625,6 +631,13 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       }
 
       await fileCompiler?.handleFileEvent(normalizedFilePath, event.event)
+    }
+
+    let scriptPayload = await createScriptHmrPayloadWithImportMaps(
+      dedupeScriptHmrUpdates(scriptUpdates),
+    )
+    if (scriptPayload) {
+      browserHmrEvents.unshift(createBrowserHmrEvent(scriptPayload, eventFilePaths, hmrDataKey))
     }
 
     return browserHmrEvents
@@ -779,6 +792,10 @@ export function createAssetServer<const transforms extends AssetRequestTransform
           )
         }
         let scriptResult = await scriptCompiler.getScript(parsedRequestPathname.filePath, {
+          hmrTimestamp:
+            resolvedOptions.hmr === null
+              ? null
+              : parseHmrTimestamp(requestUrl.searchParams.get('t')),
           ifNoneMatch,
           isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
           requestedFingerprint: parsedRequestPathname.requestedFingerprint,
@@ -933,7 +950,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       return mergePreloadLayers(await Promise.all(preloadLayerGroupPromises))
     },
     async getImportMap(filePath) {
-      let filePaths = Array.isArray(filePath) ? filePath : [filePath]
+      let filePaths = Array.isArray(filePath) ? [...filePath] : [filePath]
       for (let nextFilePath of filePaths) {
         let typeCheckFilePath = stripFilePathUrlSuffix(nextFilePath)
         if (!isScriptFilePath(typeCheckFilePath)) {
@@ -943,7 +960,14 @@ export function createAssetServer<const transforms extends AssetRequestTransform
         }
       }
 
-      return scriptCompiler.getImportMap(filePath)
+      if (resolvedOptions.hmrModuleImporter) {
+        let moduleImporter = await scriptCompiler.resolveSpecifierFromRoot(
+          resolvedOptions.hmrModuleImporter,
+        )
+        filePaths.push(moduleImporter.identityPath)
+      }
+
+      return scriptCompiler.getImportMap(filePaths)
     },
     async close() {
       if (closed) return
@@ -968,6 +992,12 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   }
 
   return assetServer
+}
+
+function parseHmrTimestamp(value: string | null): number | null {
+  if (value === null || !/^\d+$/.test(value)) return null
+  let timestamp = Number(value)
+  return Number.isSafeInteger(timestamp) ? timestamp : null
 }
 
 function getHrefTransform<transforms extends AssetRequestTransformMap>(
@@ -1018,7 +1048,7 @@ async function createHmrClientResponse(
   scriptCompiler: ReturnType<typeof createScriptCompiler>,
 ): Promise<Response> {
   let moduleImporterHref = moduleImporter
-    ? await scriptCompiler.resolveSpecifierFromRoot(moduleImporter)
+    ? (await scriptCompiler.resolveSpecifierFromRoot(moduleImporter)).href
     : null
   return new Response(
     method === 'HEAD'
@@ -1067,8 +1097,18 @@ function createBrowserHmrEvent(
   }
 }
 
-function getScriptHmrUpdateFiles(updates: ScriptHmrUpdate[]): string[] {
-  return [...new Set(updates.map((update) => update.filePath))]
+function dedupeScriptHmrUpdates(updates: readonly ScriptHmrUpdate[]): ScriptHmrUpdate[] {
+  let deduped: ScriptHmrUpdate[] = []
+  let seen = new Set<string>()
+  for (let update of updates) {
+    let key = update.accepted
+      ? `${update.path}\0${update.acceptedUrlPathname}`
+      : `${update.filePath}\0${update.path}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    deduped.push(update)
+  }
+  return deduped
 }
 
 export function createScriptHmrPayload(
@@ -1166,6 +1206,9 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
   if (hmr.channel && watchOptions === null) {
     throw new TypeError('hmr requires watch mode')
   }
+  let optimizeBarrelFileImports = normalizeOptimizeBarrelFileImportsOption(
+    options.optimizeBarrelFileImports,
+  )
   if (Object.keys(mounts).length === 0) {
     throw new TypeError('mounts must include at least one entry')
   }
@@ -1179,6 +1222,7 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
     files: normalizeFilesOptions(options.files),
     fingerprintAssets,
     importMaps: normalizeImportMapsOption(options.importMaps),
+    optimizeBarrelFileImports,
     hmr: hmr.channel,
     hmrModuleImporter: hmr.moduleImporter,
     minify: options.minify ?? false,
@@ -1299,6 +1343,15 @@ function normalizeImportMapsOption(importMaps: AssetServerOptions['importMaps'])
     throw new TypeError('importMaps must be a boolean')
   }
   return importMaps ?? true
+}
+
+function normalizeOptimizeBarrelFileImportsOption(
+  optimizeBarrelFileImports: AssetServerOptions['optimizeBarrelFileImports'],
+): boolean {
+  if (optimizeBarrelFileImports !== undefined && typeof optimizeBarrelFileImports !== 'boolean') {
+    throw new TypeError('optimizeBarrelFileImports must be a boolean')
+  }
+  return optimizeBarrelFileImports ?? true
 }
 
 function normalizeWatchOptions(

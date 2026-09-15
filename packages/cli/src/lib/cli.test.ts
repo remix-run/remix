@@ -546,6 +546,7 @@ describe('run', () => {
       assert.match(assets, /createBrowserHmrChannel/)
       assert.match(assets, /moduleImporter: 'remix\/multiple-import-maps-polyfill'/)
       assert.match(assets, /scripts: \{ loaders: isHmr \? \[uiHmr\(\)\] : undefined \}/)
+      assert.doesNotMatch(assets, /optimizeBarrelFileImports/)
       assert.match(assets, /watch: isDevelopment/)
       assert.match(router, /staticFiles\('\.\/public'/)
       assert.match(router, /import \{ render \} from 'remix\/middleware\/render'/)

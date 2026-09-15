@@ -2308,9 +2308,15 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
+      '@types/picomatch':
+        specifier: ^4.0.3
+        version: 4.0.3
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
+      picomatch:
+        specifier: ^4.0.4
+        version: 4.0.4
       semver:
         specifier: ^7.6.3
         version: 7.6.3

@@ -18,6 +18,16 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": [
+    "./src/lib/core.ts",
+    "./src/lib/features.ts",
+    "./src/lib/native-resolve.ts",
+    "./src/lib/trusted-types.ts",
+    "./dist/lib/core.js",
+    "./dist/lib/features.js",
+    "./dist/lib/native-resolve.js",
+    "./dist/lib/trusted-types.js"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
