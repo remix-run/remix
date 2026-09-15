@@ -115,12 +115,13 @@ export type ImportMapProps = Omit<
   Props<'script'>,
   'children' | 'innerHTML' | 'integrity' | 'src' | 'type'
 > & {
-  /** Initial import map entries to render and merge with resolved client entries. */
+  /** Initial import map entries to render and merge with resolved client entries. May be empty. */
   value: ImportMapData
 }
 
 /**
  * Renders the document import map and merges maps from server-resolved client entries.
+ * Renders nothing when the combined map contains no entries.
  *
  * @param handle Server component handle containing the initial import map and script attributes.
  * @returns This component is handled directly by the server renderer.
@@ -1436,8 +1437,19 @@ function finalizeManagedImportMap(context: RenderContext): void {
   if (context.clientEntryHeadResources.importMap) {
     mergeImportMap(resources, context.clientEntryHeadResources.importMap)
   }
-  managed.segment.html = buildImportMapScript(resources.importMap ?? {}, managed.attrs)
+  managed.segment.html = hasImportMapEntries(resources.importMap)
+    ? buildImportMapScript(resources.importMap, managed.attrs)
+    : ''
   context.clientEntryHeadResources.importMap = undefined
+}
+
+function hasImportMapEntries(importMap: ImportMapData | undefined): importMap is ImportMapData {
+  if (!importMap) return false
+  return (
+    Object.keys(importMap.imports ?? {}).length > 0 ||
+    Object.values(importMap.scopes ?? {}).some((imports) => Object.keys(imports).length > 0) ||
+    Object.keys(importMap.integrity ?? {}).length > 0
+  )
 }
 
 function getImportMapDelta(

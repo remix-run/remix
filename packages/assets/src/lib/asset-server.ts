@@ -227,6 +227,12 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
    */
   fingerprint?: boolean
   /**
+   * Whether scripts use generated import maps to resolve internal imports. Defaults to `true`.
+   * When disabled, internal imports are rewritten to their served URLs and import-map APIs return
+   * empty maps.
+   */
+  importMaps?: boolean
+  /**
    * Shared compatibility target for scripts and styles. Browser targets apply to both
    * pipelines, and `es` only affects scripts.
    */
@@ -300,7 +306,7 @@ export interface ScriptEntry {
   href: string
   /** Public URLs that should be emitted as `modulepreload` hints for this script graph. */
   preloads: string[]
-  /** Import map entries required to resolve this script graph in the browser. */
+  /** Import map entries required to resolve this script graph, or an empty map when generated import maps are disabled. */
   importMap: ScriptImportMap
 }
 
@@ -319,7 +325,8 @@ export interface AssetServer<transforms extends AssetRequestTransformMap = {}> {
    */
   getHref(filePath: string, options?: AssetServerGetHrefOptions<transforms>): Promise<string>
   /**
-   * Returns the href, preload URLs, and import map for a script entry module.
+   * Returns the href, preload URLs, and import map for a script entry module. The import map is
+   * empty when generated import maps are disabled.
    */
   getScriptEntry(filePath: string): Promise<ScriptEntry>
   /**
@@ -327,7 +334,8 @@ export interface AssetServer<transforms extends AssetRequestTransformMap = {}> {
    */
   getPreloads(filePath: string | readonly string[]): Promise<string[]>
   /**
-   * Returns an import map for one or more script entry modules.
+   * Returns an import map for one or more script entry modules, or an empty map when generated
+   * import maps are disabled.
    */
   getImportMap(filePath: string | readonly string[]): Promise<ScriptImportMap>
   /**
@@ -357,6 +365,7 @@ type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
   external: string[]
   files: ResolvedAssetServerFilesOptions
   fingerprintAssets: boolean
+  importMaps: boolean
   hmr: BrowserHmrChannelFactory | null
   hmrModuleImporter: string | null
   minify: boolean
@@ -453,6 +462,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     define: resolvedOptions.define,
     external: resolvedOptions.external,
     fingerprintAssets: resolvedOptions.fingerprintAssets,
+    importMaps: resolvedOptions.importMaps,
     loaders: resolvedOptions.loaders,
     hmr: sendHmrPayload
       ? {
@@ -625,17 +635,20 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       let payload = createScriptHmrPayload(updates)
       if (!payload || payload.type === 'browser:reload') return payload
 
-      let acceptedUpdates = updates.filter((update) => update.accepted)
-      let importMaps = await Promise.all(
-        acceptedUpdates.map(async (update) => {
-          try {
-            return await scriptCompiler.getImportMap(update.acceptedFilePath)
-          } catch (error) {
-            if (!isAssetServerCompilationError(error)) throw error
-            return undefined
-          }
-        }),
-      )
+      let importMaps = resolvedOptions.importMaps
+        ? await Promise.all(
+            updates
+              .filter((update) => update.accepted)
+              .map(async (update) => {
+                try {
+                  return await scriptCompiler.getImportMap(update.acceptedFilePath)
+                } catch (error) {
+                  if (!isAssetServerCompilationError(error)) throw error
+                  return undefined
+                }
+              }),
+          )
+        : []
       return {
         ...payload,
         updates: payload.updates.map((update, index) => ({
@@ -1165,6 +1178,7 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
     external: scriptOptions.external ?? [],
     files: normalizeFilesOptions(options.files),
     fingerprintAssets,
+    importMaps: normalizeImportMapsOption(options.importMaps),
     hmr: hmr.channel,
     hmrModuleImporter: hmr.moduleImporter,
     minify: options.minify ?? false,
@@ -1278,6 +1292,13 @@ function normalizeFingerprintOptions(options: {
   }
 
   return true
+}
+
+function normalizeImportMapsOption(importMaps: AssetServerOptions['importMaps']): boolean {
+  if (importMaps !== undefined && typeof importMaps !== 'boolean') {
+    throw new TypeError('importMaps must be a boolean')
+  }
+  return importMaps ?? true
 }
 
 function normalizeWatchOptions(

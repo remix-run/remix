@@ -52,6 +52,10 @@
         "files": {
           "$ref": "#/$defs/assetsFiles"
         },
+        "importMaps": {
+          "type": "boolean",
+          "description": "Whether scripts use generated import maps to resolve internal imports. Defaults to true."
+        },
         "rootDir": {
           "type": "string",
           "description": "Root directory for asset file paths, relative to this config file."

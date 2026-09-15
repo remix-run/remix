@@ -31,11 +31,11 @@ Map the asset namespace to a controller action that calls `assetServer.fetch(req
 
 Put browser source beside its narrowest owner, such as `app/actions/cart/public/` or `app/ui/public/`. Every local dependency in that browser module graph must also match `allowFiles`, so keep the graph inside the colocated `public/` directory. Package dependencies are allowed separately with `allowPackages`.
 
-The asset server compiles TypeScript and JavaScript on demand, generates preloads and import maps, follows and rewrites CSS `@import` and `url()` references, and can serve explicitly configured leaf-file extensions. This keeps the whole browser graph visible without exposing the rest of the app.
+The asset server compiles TypeScript and JavaScript on demand, resolves script imports, generates preloads, follows and rewrites CSS `@import` and `url()` references, and can serve explicitly configured leaf-file extensions. This keeps the whole browser graph visible without exposing the rest of the app.
 
 ## Asset hrefs, client entries, import maps and preloads {#client-entry-hrefs-import-maps-and-module-preloads}
 
-Use `getScriptEntry()` for rendered script entries because scripts need a public URL, modulepreload hints, and an import map. Use `getHref()` for styles and files, and `getPreloads()` when you need lower-level preload control. Resolve stable root entry metadata once in `app/assets.ts`:
+Use `getScriptEntry()` for rendered script entries because scripts need a public URL and modulepreload hints. By default, scripts keep their imports as authored, so the result also includes a generated import map. Use `getHref()` for styles and files, and `getPreloads()` when you need lower-level preload control. Resolve stable root entry metadata once in `app/assets.ts`:
 
 ```ts filename=app/assets.ts
 const entry = "app/actions/public/entry.ts";
@@ -45,6 +45,8 @@ export const scriptEntry = await assetServer.getScriptEntry(entry);
 
 Render the script entry's import map with `<ImportMap>` before its modulepreload links and module script. This combines its mappings with import maps from blocking client entries.
 
+Set `importMaps: false` on the asset server to rewrite internal script imports to their served URLs instead. `getScriptEntry()` keeps the same result shape with an empty `importMap`, so the shared document can continue rendering `<ImportMap>`. It renders nothing when the combined map is empty.
+
 Resolve `clientEntry(import.meta.url, ...)` IDs to `href`, `importMap`, and `preloads` through the asset server in the shared renderer instead of hard-coding deployment URLs in components. Frame responses can introduce additional mappings. When targeting browsers without native support for multiple import maps, configure the browser entry with `remix/multiple-import-maps-polyfill` as shown in [Interactivity](/interactivity/#browser-entry-with-run).
 
 ## File transforms and transformed-output caches {#asset-file-transforms}
@@ -53,7 +55,7 @@ Define request-selected transforms with `defineFileTransform()`, optional global
 
 ## Development watching and production fingerprints {#fingerprinting-source-maps-minification}
 
-Choose one development watcher. A long-lived asset server may watch source files itself, while the generated app sets `watch: false` and lets Node's `--watch` restart the process. Close asset-owned watchers during shutdown. In production, disable watching, choose browser targets, source-map and minification policy, and enable content-based fingerprinting for long-lived immutable asset caching.
+Choose one development watcher. A long-lived asset server may watch source files itself, while the generated app sets `watch: false` and lets Node's `--watch` restart the process. Close asset-owned watchers during shutdown. In production, disable watching, choose browser targets, source-map and minification policy, and enable content-based fingerprinting for long-lived immutable asset caching. When import maps are disabled, changes to imported scripts also update importer URLs, so browsers need to download the entire affected import chain again.
 
 ## Parse bounded form uploads {#file-uploads}
 

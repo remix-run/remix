@@ -16,7 +16,12 @@ import {
   getInternalChokidarWatcher,
   getInternalWatchTargets,
 } from './asset-server.ts'
-import type { AssetServer, AssetServerOptions, BrowserHmrChannel } from './asset-server.ts'
+import type {
+  AssetServer,
+  AssetServerOptions,
+  BrowserHmrChannel,
+  BrowserHmrFileEventHandler,
+} from './asset-server.ts'
 import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
 import { hashContent } from './fingerprint.ts'
@@ -3016,6 +3021,291 @@ describe('asset-server', () => {
     assert.doesNotMatch(body, /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts/)
   })
 
+  it('rewrites internal script imports to stable URLs when import maps are disabled', async () => {
+    await writeJson(dir, 'app/node_modules/pkg/package.json', {
+      name: 'pkg',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/node_modules/pkg/index.ts', 'export const pkg = true')
+    await write(dir, 'app/dep.ts', 'export const dep = true')
+    await write(dir, 'app/lazy.ts', 'export const lazy = true')
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import { dep } from "./dep.ts"',
+        'export { pkg } from "pkg"',
+        'export const load = () => import(`./lazy.ts`)',
+        'export { dep }',
+      ].join('\n'),
+    )
+    let assetServer = createTestServer(dir, { importMaps: false })
+
+    let entry = await assetServer.getScriptEntry('app/entry.ts')
+    let response = await get(assetServer, entry.href)
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.match(body, /from "\/assets\/app\/dep\.ts"/)
+    assert.match(body, /from "\/assets\/app\/node_modules\/pkg\/index\.ts"/)
+    assert.match(body, /import\(["`]\/assets\/app\/lazy\.ts["`]\)/)
+    assert.deepEqual(entry.importMap, { imports: {} })
+    assert.deepEqual(await assetServer.getImportMap('app/entry.ts'), { imports: {} })
+  })
+
+  it('leaves configured external imports unchanged when import maps are disabled', async () => {
+    await write(dir, 'app/entry.ts', 'import { value } from "external-pkg"\nexport { value }')
+    let assetServer = createTestServer(dir, {
+      importMaps: false,
+      scripts: { external: ['external-pkg'] },
+    })
+
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    assert.match(await response.text(), /from "external-pkg"/)
+  })
+
+  it('cascades fingerprints through rewritten imports', async () => {
+    await write(dir, 'app/entry.ts', 'import "./mid.ts"\nexport const entry = true')
+    await write(dir, 'app/mid.ts', 'import "./leaf.ts"\nexport const mid = true')
+    await write(dir, 'app/leaf.ts', 'export const leaf = 1')
+    let firstServer = createTestServer(dir, { fingerprint: true, importMaps: false })
+    let first = await firstServer.getPreloads('app/entry.ts')
+
+    await write(dir, 'app/leaf.ts', 'export const leaf = 2')
+    let secondServer = createTestServer(dir, { fingerprint: true, importMaps: false })
+    let second = await secondServer.getPreloads('app/entry.ts')
+
+    assert.notEqual(second[0], first[0])
+    assert.notEqual(second[1], first[1])
+    assert.notEqual(second[2], first[2])
+  })
+
+  it('uses one deterministic fingerprint for circular imports', async () => {
+    await write(dir, 'app/a.ts', 'import { b } from "./b.ts"\nexport const a = b ?? "a"')
+    await write(dir, 'app/b.ts', 'import { a } from "./a.ts"\nexport const b = a ?? "b"')
+    let firstServer = createTestServer(dir, { fingerprint: true, importMaps: false })
+    let [firstA, firstB] = await Promise.all([
+      firstServer.getHref('app/a.ts'),
+      firstServer.getHref('app/b.ts'),
+    ])
+
+    let firstFingerprintA = firstA.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1]
+    let firstFingerprintB = firstB.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1]
+    assert.ok(firstFingerprintA)
+    assert.equal(firstFingerprintB, firstFingerprintA)
+
+    let aResponse = await get(firstServer, firstA)
+    let bResponse = await get(firstServer, firstB)
+    assert.ok(aResponse)
+    assert.ok(bResponse)
+    assert.match(await aResponse.text(), new RegExp(`/assets/app/b\\.@${firstFingerprintA}\\.ts`))
+    assert.match(await bResponse.text(), new RegExp(`/assets/app/a\\.@${firstFingerprintA}\\.ts`))
+
+    let secondServer = createTestServer(dir, { fingerprint: true, importMaps: false })
+    assert.equal(await secondServer.getHref('app/a.ts'), firstA)
+    assert.equal(await secondServer.getHref('app/b.ts'), firstB)
+  })
+
+  it('fingerprints self-importing scripts without deadlocking', async () => {
+    await write(dir, 'app/self.ts', 'import "./self.ts"\nexport const value = 1')
+    let assetServer = createTestServer(dir, { fingerprint: true, importMaps: false })
+
+    let href = await assetServer.getHref('app/self.ts')
+    let fingerprint = href.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1]
+    assert.ok(fingerprint)
+    let response = await get(assetServer, href)
+    assert.ok(response)
+    assert.match(await response.text(), new RegExp(`/assets/app/self\\.@${fingerprint}\\.ts`))
+  })
+
+  it('includes outgoing dependencies in circular import fingerprints', async () => {
+    await write(dir, 'app/a.ts', 'import "./b.ts"\nimport "./outside.ts"\nexport const a = 1')
+    await write(dir, 'app/b.ts', 'import "./a.ts"\nexport const b = 1')
+    await write(dir, 'app/outside.ts', 'export const outside = 1')
+    let firstServer = createTestServer(dir, { fingerprint: true, importMaps: false })
+    let first = await firstServer.getPreloads('app/a.ts')
+
+    await write(dir, 'app/outside.ts', 'export const outside = 2')
+    let secondServer = createTestServer(dir, { fingerprint: true, importMaps: false })
+    let second = await secondServer.getPreloads('app/a.ts')
+
+    assert.notEqual(second[0], first[0])
+    assert.notEqual(second[1], first[1])
+    assert.notEqual(second[2], first[2])
+    assert.equal(
+      second[0]?.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1],
+      second[1]?.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1],
+    )
+  })
+
+  it('supports dynamic imports that complete a circular import', async () => {
+    await write(dir, 'app/a.ts', 'import "./b.ts"\nexport const a = 1')
+    await write(dir, 'app/b.ts', 'export const load = () => import("./c.ts")')
+    await write(dir, 'app/c.ts', 'import "./a.ts"\nexport const c = 1')
+    let assetServer = createTestServer(dir, { fingerprint: true, importMaps: false })
+
+    let [aHref, bHref, cHref] = await Promise.all([
+      assetServer.getHref('app/a.ts'),
+      assetServer.getHref('app/b.ts'),
+      assetServer.getHref('app/c.ts'),
+    ])
+    let fingerprint = aHref.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1]
+    assert.ok(fingerprint)
+    assert.equal(bHref.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1], fingerprint)
+    assert.equal(cHref.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1], fingerprint)
+
+    let bResponse = await get(assetServer, bHref)
+    assert.ok(bResponse)
+    assert.match(await bResponse.text(), new RegExp(`/assets/app/c\\.@${fingerprint}\\.ts`))
+  })
+
+  it('serves external source maps for fingerprinted circular imports', async () => {
+    await write(dir, 'app/a.ts', 'import "./b.ts"\nexport const a: number = 1')
+    await write(dir, 'app/b.ts', 'import "./a.ts"\nexport const b: number = 1')
+    let assetServer = createTestServer(dir, {
+      fingerprint: true,
+      importMaps: false,
+      minify: true,
+      sourceMaps: 'external',
+    })
+
+    let href = await assetServer.getHref('app/a.ts')
+    let response = await get(assetServer, href)
+    assert.ok(response)
+    let body = await response.text()
+    let sourceMapHref = body.match(/sourceMappingURL=([^\s]+)/)?.[1]
+    assert.ok(sourceMapHref)
+    assert.match(sourceMapHref, /\/assets\/app\/a\.@[A-Za-z0-9_-]+\.ts\.map/)
+    let sourceMapResponse = await get(assetServer, sourceMapHref)
+    assert.ok(sourceMapResponse)
+    assert.equal(sourceMapResponse.status, 200)
+  })
+
+  it('hashes external source maps and cascades fingerprints through importers', async () => {
+    await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry: number = 1')
+    await write(dir, 'app/dep.ts', 'export const dep: number = 1')
+    let firstServer = createTestServer(dir, {
+      fingerprint: true,
+      importMaps: false,
+      sourceMaps: 'external',
+    })
+
+    let firstHref = await firstServer.getHref('app/entry.ts')
+    let firstResponse = await get(firstServer, firstHref)
+    assert.ok(firstResponse)
+    let firstBody = await firstResponse.text()
+    assert.equal(firstHref.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1], await hashContent(firstBody))
+    let sourceMapHref = firstBody.match(/sourceMappingURL=([^\s]+)/)?.[1]
+    assert.ok(sourceMapHref)
+    let sourceMapResponse = await get(firstServer, sourceMapHref)
+    assert.ok(sourceMapResponse)
+    let sourceMap = await sourceMapResponse.text()
+    assert.equal(
+      sourceMapHref.match(/\.@([A-Za-z0-9_-]+)\.ts\.map/)?.[1],
+      await hashContent(sourceMap),
+    )
+
+    await write(dir, 'app/dep.ts', 'export const dep: number = 2')
+    let secondServer = createTestServer(dir, {
+      fingerprint: true,
+      importMaps: false,
+      sourceMaps: 'external',
+    })
+    assert.notEqual(await secondServer.getHref('app/entry.ts'), firstHref)
+  })
+
+  it('hashes inline source maps and cascades fingerprints through importers', async () => {
+    await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry: number = 1')
+    await write(dir, 'app/dep.ts', 'export const dep: number = 1')
+    let firstServer = createTestServer(dir, {
+      fingerprint: true,
+      importMaps: false,
+      sourceMaps: 'inline',
+    })
+
+    let firstHref = await firstServer.getHref('app/entry.ts')
+    let firstResponse = await get(firstServer, firstHref)
+    assert.ok(firstResponse)
+    let firstBody = await firstResponse.text()
+    assert.equal(firstHref.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1], await hashContent(firstBody))
+    assert.deepEqual(decodeInlineSourceMap(firstBody).sources, ['/assets/app/entry.ts'])
+
+    await write(dir, 'app/dep.ts', 'export const dep: number = 2')
+    let secondServer = createTestServer(dir, {
+      fingerprint: true,
+      importMaps: false,
+      sourceMaps: 'inline',
+    })
+    assert.notEqual(await secondServer.getHref('app/entry.ts'), firstHref)
+  })
+
+  it('uses per-file ETags for scripts with circular imports', async () => {
+    await write(dir, 'app/a.ts', 'import "./b.ts"\nexport const a = 1')
+    await write(dir, 'app/b.ts', 'import "./a.ts"\nexport const b = 1')
+    let assetServer = createTestServer(dir, { fingerprint: true, importMaps: false })
+    let [aHref, bHref] = await Promise.all([
+      assetServer.getHref('app/a.ts'),
+      assetServer.getHref('app/b.ts'),
+    ])
+    let [aResponse, bResponse] = await Promise.all([
+      get(assetServer, aHref),
+      get(assetServer, bHref),
+    ])
+    assert.ok(aResponse)
+    assert.ok(bResponse)
+    let aEtag = aResponse.headers.get('ETag')
+    let bEtag = bResponse.headers.get('ETag')
+    assert.ok(aEtag)
+    assert.ok(bEtag)
+    assert.notEqual(aEtag, bEtag)
+
+    let notModified = await get(assetServer, aHref, { 'If-None-Match': aEtag })
+    assert.ok(notModified)
+    assert.equal(notModified.status, 304)
+  })
+
+  it('propagates circular import fingerprint changes to importers', async () => {
+    await write(dir, 'app/entry.ts', 'import "./a.ts"\nexport const entry = true')
+    await write(dir, 'app/a.ts', 'import "./b.ts"\nexport const a = 1')
+    await write(dir, 'app/b.ts', 'import "./a.ts"\nexport const b = 1')
+    let firstServer = createTestServer(dir, { fingerprint: true, importMaps: false })
+    let first = await firstServer.getPreloads('app/entry.ts')
+
+    await write(dir, 'app/b.ts', 'import "./a.ts"\nexport const b = 2')
+    let secondServer = createTestServer(dir, { fingerprint: true, importMaps: false })
+    let second = await secondServer.getPreloads('app/entry.ts')
+
+    assert.notEqual(second[0], first[0])
+    assert.notEqual(second[1], first[1])
+    assert.notEqual(second[2], first[2])
+    assert.equal(
+      second[1]?.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1],
+      second[2]?.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1],
+    )
+  })
+
+  it('rewrites loader-generated imports when import maps are disabled', async () => {
+    await write(dir, 'app/entry.ts', 'export const entry = true')
+    await write(dir, 'app/generated.ts', 'export const generated = true')
+    let assetServer = createTestServer(dir, {
+      importMaps: false,
+      scripts: {
+        loaders: [createPrependModuleLoader('import "./generated.ts"\n')],
+      },
+      sourceMaps: 'external',
+    })
+
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+    assert.match(body, /import "\/assets\/app\/generated\.ts"/)
+    let sourceMapHref = body.match(/sourceMappingURL=([^\s]+)/)?.[1]
+    assert.ok(sourceMapHref)
+    assert.ok(await get(assetServer, sourceMapHref))
+  })
+
   it('keeps cached source output stable until the server restarts', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
     let firstServer = createTestServer(dir)
@@ -3175,6 +3465,22 @@ describe('asset-server', () => {
       .replace(/\\/g, '/')
       .replace(/^\/([A-Za-z]:\/)/, '$1')
     assert.deepEqual(sourceMap.sources, [expectedSource])
+  })
+
+  it('includes inline source maps in fingerprinted script hashes', async () => {
+    await write(dir, 'app/entry.ts', 'export const entry: number = 1')
+    let assetServer = createTestServer(dir, {
+      fingerprint: true,
+      sourceMaps: 'inline',
+    })
+
+    let href = await assetServer.getHref('app/entry.ts')
+    let response = await get(assetServer, href)
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.equal(href.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1], await hashContent(body))
+    assert.deepEqual(decodeInlineSourceMap(body).sources, ['/assets/app/entry.ts'])
   })
 
   it('supports inline source maps after module loaders transform scripts', async () => {
@@ -4110,6 +4416,53 @@ describe('asset-server', () => {
           entryBody,
           /import\.meta\.hot = __remixCreateHotContext\("\/assets\/app\/entry\.ts"\)/,
         )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('omits generated import maps from HMR updates when import maps are disabled', async () => {
+    let caseDir = await makeTmpDir()
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    try {
+      let entryPath = await write(
+        caseDir,
+        'app/entry.ts',
+        'if (import.meta.hot) import.meta.hot.accept()\nexport const value = 1',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        importMaps: false,
+        hmr() {
+          return {
+            close() {},
+            onFileEvents(handler) {
+              handleFileEvents = handler
+              return () => {}
+            },
+            updateWatchedFiles() {},
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        await write(
+          caseDir,
+          'app/entry.ts',
+          'if (import.meta.hot) import.meta.hot.accept()\nexport const value = 2',
+        )
+        assert.ok(handleFileEvents)
+        let events = await handleFileEvents([
+          { event: 'change', filePath: getWatchEventFilePath(entryPath) },
+        ])
+
+        assert.equal(events.length, 1)
+        assert.doesNotMatch(JSON.stringify(events), /importMap/)
       } finally {
         await assetServer.close()
       }
@@ -8375,6 +8728,16 @@ describe('asset-server', () => {
           fingerprint: {} as never,
         }),
       /fingerprint must be a boolean/,
+    )
+  })
+
+  it('rejects non-boolean importMaps options', async () => {
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          importMaps: 'false' as never,
+        }),
+      /importMaps must be a boolean/,
     )
   })
 

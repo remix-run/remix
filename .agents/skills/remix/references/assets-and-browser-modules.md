@@ -4,7 +4,7 @@
 
 How to serve browser scripts and styles from source. Read this when the task involves:
 
-- Configuring `createAssetServer` (`basePath`, `mounts`, `allowFiles`, `allowPackages`, `denyFiles`, fingerprinting, compiler options)
+- Configuring `createAssetServer` (`basePath`, `mounts`, `allowFiles`, `allowPackages`, `denyFiles`, import maps, fingerprinting, compiler options)
 - Choosing between `staticFiles()` for already-built files and `createAssetServer()` for source assets that need dependency resolution, preloads, or fingerprinted URLs
 - Generating script URLs or `<link rel="modulepreload">` tags for a client entry
 - Enabling browser HMR for source-served modules
@@ -71,7 +71,7 @@ export default createController(routes, {
 
 ## Rendering HTML
 
-Use `getScriptEntry()` when rendering a browser script entry. Scripts keep JavaScript imports as authored, so a rendered script entry needs its public URL, modulepreload hints, and an import map.
+Use `getScriptEntry()` when rendering a browser script entry. A rendered entry needs its public URL and modulepreload hints. By default, scripts keep JavaScript imports as authored, so the result also includes a generated import map.
 
 ```typescript
 let { href, importMap, preloads } = await assets.getScriptEntry('app/actions/public/entry.ts')
@@ -79,9 +79,11 @@ let { href, importMap, preloads } = await assets.getScriptEntry('app/actions/pub
 
 Render `importMap` with `ImportMap` from `remix/ui/server` before the modulepreload links and module script. This combines its mappings with import maps from blocking client entries.
 
+Set `importMaps: false` to rewrite internal script imports to their served URLs instead. `getScriptEntry()` keeps the same result shape with an empty `importMap`, so shared document components can continue rendering `<ImportMap>`. It renders nothing when the combined map is empty.
+
 Use `getHref()` directly when you need the public URL for a non-script asset, and `getPreloads()` when you need lower-level preload control for one or more entrypoints.
 
-For normal Remix applications, pass the asset server to `render({ assets })` from `remix/middleware/render`. The middleware resolves source entry IDs from `clientEntry(import.meta.url, ...)` with `getScriptEntry()`, includes their import maps, and applies the UI renderer's explicit-hash or named-component export rules. Use a custom `resolveClientEntry` callback only when building a custom rendering pipeline.
+For normal Remix applications, pass the asset server to `render({ assets })` from `remix/middleware/render`. The middleware resolves source entry IDs from `clientEntry(import.meta.url, ...)` with `getScriptEntry()`, includes generated import maps by default, and applies the UI renderer's explicit-hash or named-component export rules. Use a custom `resolveClientEntry` callback only when building a custom rendering pipeline.
 
 ## Development vs Deployment
 
@@ -92,14 +94,14 @@ In development:
 - Enable source maps when debugging browser code
 - Use `hmr` only when the app is running under `remix/node-hmr`
 - Use `scripts.loaders` for development-only browser transforms such as `uiHmr()`
-- Configure `hmr.moduleImporter` with `remix/multiple-import-maps-polyfill` when HMR must support browsers without native support for multiple import maps. HMR appends updated mappings in additional `<script type="importmap">` elements
+- With the default import-map behavior, configure `hmr.moduleImporter` with `remix/multiple-import-maps-polyfill` if HMR must support browsers without native support for multiple import maps. HMR appends updated mappings in additional `<script type="importmap">` elements
 
 In deployment:
 
 - Set `watch: false`
 - Use `fingerprint: true` for content-based fingerprints and long-lived immutable caching
-- Render the script import map before modulepreload links and module scripts
-- Keep bare-import resolution uniform for files in the same directory; different directories may use
+- By default, render the generated import map before modulepreload links and module scripts
+- With the default import-map behavior, keep bare-import resolution uniform for files in the same directory; different directories may use
   different resolutions through more-specific import map scopes
 
 Fingerprinting assumes files on disk are stable and requires `watch: false`.
@@ -142,6 +144,7 @@ Rules:
 ## Useful Compiler Options
 
 - `minify` for production minification of scripts and styles
+- `importMaps: false` to rewrite internal script imports instead of generating import maps
 - `sourceMaps` for `'external'` or `'inline'` source maps for scripts and styles
 - `sourceMapSourcePaths` for `'url'` or `'absolute'` source map paths
 - `target` as an object for shared browser targets and script-only ECMAScript output, such as `{ es: '2020', chrome: '109', safari: '16.4' }`
