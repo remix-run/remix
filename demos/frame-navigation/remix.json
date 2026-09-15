@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/remix/schema/remix.json",
+  "assets": {
+    "rootDir": "../..",
+    "basePath": "/assets",
+    "mounts": {
+      "app": "demos/frame-navigation/app",
+      "npm": "node_modules",
+      "packages": "packages"
+    },
+    "allowFiles": [
+      "demos/frame-navigation/app/routes.ts",
+      "demos/frame-navigation/app/**/public/**"
+    ],
+    "allowPackages": ["remix"],
+    "denyFiles": ["demos/frame-navigation/app/**/*.test.*"]
+  }
+}
