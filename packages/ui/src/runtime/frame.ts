@@ -181,12 +181,6 @@ function syncElementAttributes(target: Element, source: Element) {
   }
 }
 
-/**
- * Exposed for unit tests; do not use from app code.
- * @see syncElementAttributes
- */
-export { syncElementAttributes }
-
 const FRAME_RUNTIME = Symbol('FrameRuntime')
 
 export type FrameRuntime = {
@@ -494,13 +488,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       )
 
       syncElementAttributes(container.doc.documentElement, parsed.documentElement)
-
-      // `<body>` may also carry client-owned attributes (e.g. `data-theme`,
-      // `data-modal-open`) that the server doesn't echo on every navigation.
-      // Mirror the documentElement behaviour — same function, same semantics.
-      if (container.doc.body && parsed.body) {
-        syncElementAttributes(container.doc.body, parsed.body)
-      }
 
       diffNodes([container.doc.head], [parsed.head], {
         ...responseContext,
