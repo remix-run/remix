@@ -1949,6 +1949,91 @@ describe('frames', () => {
       frame.dispose()
     }
   })
+
+  it('preserves client-set attributes on the root element across a top-frame reload', async () => {
+    // #11809: the client adds `class="dark"` (and `data-color-scheme`) to <html>
+    // after hydration; the next navigation's server HTML does not echo them.
+    // Driven through the real reload path — `handle.reload()` renders with
+    // `flushKind: 'document'`, which is the only production caller of
+    // `syncElementAttributes`. No internal export is involved.
+    let frame = createTestFrame(document, {
+      resolveFrame: () =>
+        htmlStream([
+          '<!doctype html><html><head><title>Next</title></head>',
+          ['<body><main>next</main>', appendFlushMarker('</body></html>', 'document')].join(''),
+        ]),
+    })
+
+    try {
+      await frame.ready()
+
+      document.documentElement.setAttribute('class', 'dark')
+      document.documentElement.setAttribute('data-color-scheme', 'dark')
+
+      await frame.handle.reload()
+
+      expect(document.documentElement.getAttribute('class')).toBe('dark')
+      expect(document.documentElement.getAttribute('data-color-scheme')).toBe('dark')
+    } finally {
+      // The root's own attributes are not covered by the afterEach reset, which
+      // only replaces documentElement's children.
+      document.documentElement.removeAttribute('class')
+      document.documentElement.removeAttribute('data-color-scheme')
+      frame.dispose()
+    }
+  })
+
+  it('token-merges client and server `class` attributes rather than overwriting', async () => {
+    // The real-world shape of #11809: the server renders `class="h-full"` on
+    // <html> while the client has added `class="dark"`. Plain "server wins on
+    // value" drops `dark`; the merge keeps both. Driven through
+    // `handle.reload()` so the assertion covers the production call site.
+    let frame = createTestFrame(document, {
+      resolveFrame: () =>
+        htmlStream([
+          '<!doctype html><html class="h-full"><head><title>Next</title></head>',
+          ['<body><main>next</main>', appendFlushMarker('</body></html>', 'document')].join(''),
+        ]),
+    })
+
+    try {
+      await frame.ready()
+      document.documentElement.setAttribute('class', 'dark')
+
+      await frame.handle.reload()
+
+      expect(document.documentElement.getAttribute('class')).toBe('h-full dark')
+    } finally {
+      document.documentElement.removeAttribute('class')
+      frame.dispose()
+    }
+  })
+
+  it('does not duplicate a `class` token the server already sent', async () => {
+    // Overlap case: both sides carry `dark`. The union must not repeat it.
+    // This pins the merge contract rather than the reported bug — the pre-fix
+    // code also happened to produce this output, so it guards against a future
+    // merge implementation that concatenates without deduping.
+    let frame = createTestFrame(document, {
+      resolveFrame: () =>
+        htmlStream([
+          '<!doctype html><html class="h-full dark"><head><title>Next</title></head>',
+          ['<body><main>next</main>', appendFlushMarker('</body></html>', 'document')].join(''),
+        ]),
+    })
+
+    try {
+      await frame.ready()
+      document.documentElement.setAttribute('class', 'dark')
+
+      await frame.handle.reload()
+
+      expect(document.documentElement.getAttribute('class')).toBe('h-full dark')
+    } finally {
+      document.documentElement.removeAttribute('class')
+      frame.dispose()
+    }
+  })
 })
 
 function mockDocumentNavigation(t: TestContext) {

@@ -155,14 +155,35 @@ function stripDoctypeMarkup(html: string): string {
 }
 
 function syncElementAttributes(target: Element, source: Element) {
-  for (let attribute of Array.from(target.attributes)) {
-    if (!source.hasAttribute(attribute.name)) {
-      target.removeAttribute(attribute.name)
-    }
-  }
-
   for (let attribute of Array.from(source.attributes)) {
-    if (target.getAttribute(attribute.name) !== attribute.value) {
+    if (attribute.name === 'class') {
+      // `class` is special: server tokens and client tokens are merged
+      // (union, dedup, preserve order) rather than replaced, so that
+      // client-side state such as `class="dark"` survives a server reload
+      // that doesn't carry the client token. Other attributes fall
+      // through to the standard "server wins on value" semantics.
+      let targetClass = target.getAttribute('class') ?? ''
+      let sourceClass = attribute.value
+      let targetTokens = targetClass.trim().length === 0
+        ? []
+        : targetClass.trim().split(/\s+/)
+      let sourceTokens = sourceClass.trim().length === 0
+        ? []
+        : sourceClass.trim().split(/\s+/)
+      let seen = new Set<string>()
+      let merged: string[] = []
+      // Server tokens first (they describe the server-rendered layout baseline),
+      // then any client-added tokens that aren't already on the server side.
+      for (let token of [...sourceTokens, ...targetTokens]) {
+        if (seen.has(token)) continue
+        seen.add(token)
+        merged.push(token)
+      }
+      let next = merged.join(' ')
+      if (target.getAttribute('class') !== next) {
+        target.setAttribute('class', next)
+      }
+    } else if (target.getAttribute(attribute.name) !== attribute.value) {
       target.setAttribute(attribute.name, attribute.value)
     }
   }
