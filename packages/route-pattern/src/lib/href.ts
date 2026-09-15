@@ -363,14 +363,15 @@ function encodePathnameVariableSegment(value: string): string {
 
 /**
  * Keep hostname params from changing URL authority structure when parsed. `@` ends userinfo,
- * `:` starts the port, and `/`, `?`, and `#` start the path, query, and fragment. Hostname
+ * `:` starts the port, and `/`, `?`, and `#` start the path, query, and fragment. A backslash
+ * also starts the path for special URL schemes such as HTTP and HTTPS. Hostname
  * variables also reject `.` because dots separate host labels; hostname wildcards allow `.` to
  * span labels intentionally.
  *
  * @see https://url.spec.whatwg.org/#authority-state
  * @see https://url.spec.whatwg.org/#host-parsing
  */
-const HOSTNAME_PARAM_STRUCTURAL_CHARS = ['@', ':', '/', '?', '#', '%']
+const HOSTNAME_PARAM_STRUCTURAL_CHARS = ['@', ':', '/', '\\', '?', '#', '%']
 
 export function validateHostnameVariable(value: unknown): string {
   let serialized = String(value)

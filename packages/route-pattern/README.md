@@ -231,7 +231,7 @@ matcher.match('https://example.com/docs/Intro')?.params
 // { slug: 'Intro' }
 ```
 
-Matchers limit individual pattern size, total matcher size, and the work performed by one match. Pattern and matcher sizes are measured in UTF-8 bytes. Direct package consumers may lower or raise individual limits. Exceeding one throws `MatcherResourceError` with structured `details` instead of silently abandoning matching:
+Matchers limit individual pattern size, total matcher size, and the work performed by one match, including variable scans and comparisons between wildcard or optional captures. Pattern and matcher sizes are measured in UTF-8 bytes. Direct package consumers may lower or raise individual limits. Exceeding one throws `MatcherResourceError` with structured `details` instead of silently abandoning matching:
 
 ```ts
 let matcher = createMultiMatcher({
@@ -331,6 +331,8 @@ createHref('search', undefined, { searchParams })
 `createHref()` throws `CreateHrefError` when it cannot safely generate an href. The error exposes stable structured details on `error.details`; the string message is for humans.
 
 Common failures include missing required params, nameless wildcards, invalid hostname params, empty pathname variables, and origin patterns that specify a protocol or port without a concrete hostname.
+
+Hostname params reject URL structural characters, including backslashes. Hostname variables also reject dots; hostname wildcards allow dots to span labels.
 
 **Note:** optional groups without params are included in the generated href:
 
