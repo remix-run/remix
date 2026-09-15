@@ -327,11 +327,12 @@ describe('createModuleStore', () => {
     assert.deepEqual([...store.getImporters('/app/value.ts')], ['/app/entry.ts'])
   })
 
-  it('invalidates transitive importers without invalidating unrelated modules', () => {
+  it('invalidates transitive importers after file events when configured', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       getDependencies(resolved) {
         return resolved.deps
       },
+      invalidateImportersOnFileEvent: true,
     })
     store.setResolved(
       '/app/entry.ts',
@@ -352,13 +353,33 @@ describe('createModuleStore', () => {
       [{ trackedFiles: ['/app/unrelated.ts'] }],
     )
 
-    let invalidated = store.invalidateForFileEvent('/app/value.ts', 'change')
-    store.invalidateImporters(invalidated)
+    store.invalidateForFileEvent('/app/value.ts', 'change')
 
     assert.equal(store.isResolvedFresh(store.get('/app/value.ts')), false)
     assert.equal(store.isResolvedFresh(store.get('/app/barrel.ts')), false)
     assert.equal(store.isResolvedFresh(store.get('/app/entry.ts')), false)
     assert.equal(store.isResolvedFresh(store.get('/app/unrelated.ts')), true)
+  })
+
+  it('does not invalidate importers after file events by default', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getDependencies(resolved) {
+        return resolved.deps
+      },
+    })
+    store.setResolved(
+      '/app/entry.ts',
+      createResolvedModule({ deps: ['/app/value.ts'], identityPath: '/app/entry.ts' }),
+      [{ trackedFiles: ['/app/entry.ts'] }],
+    )
+    store.setResolved('/app/value.ts', createResolvedModule({ identityPath: '/app/value.ts' }), [
+      { trackedFiles: ['/app/value.ts'] },
+    ])
+
+    store.invalidateForFileEvent('/app/value.ts', 'change')
+
+    assert.equal(store.isResolvedFresh(store.get('/app/value.ts')), false)
+    assert.equal(store.isResolvedFresh(store.get('/app/entry.ts')), true)
   })
 
   it('indexes accepted importers from resolved module dependencies', () => {

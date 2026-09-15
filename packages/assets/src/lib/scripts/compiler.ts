@@ -187,6 +187,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     getDependencies(resolvedModule) {
       return resolvedModule.deps
     },
+    invalidateImportersOnFileEvent: resolvedOptions.optimizeBarrelFileImports,
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
     onWatchFilesChange: options.onWatchFilesChange,
   })
@@ -594,12 +595,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
     if (isPackageJsonPath(normalizedFilePath)) {
       scriptStore.invalidateAll()
-      return
-    }
-
-    if (resolvedOptions.optimizeBarrelFileImports && isSupportedScriptPath(normalizedFilePath)) {
-      let invalidated = scriptStore.invalidateForFileEvent(normalizedFilePath, event)
-      scriptStore.invalidateImporters(invalidated)
       return
     }
 

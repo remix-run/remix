@@ -85,8 +85,7 @@ export type ModuleStore<transformed, resolved, emitted> = {
   setResolved(identityPath: string, resolved: resolved, tracking: readonly ModuleTracking[]): void
   clearResolved(identityPath: string, tracking: readonly ModuleTracking[]): void
   setEmitted(identityPath: string, emitted: emitted, snapshot: ModuleSnapshot | null): void
-  invalidateForFileEvent(filePath: string, event: ModuleWatchEvent): string[]
-  invalidateImporters(identityPaths: readonly string[]): void
+  invalidateForFileEvent(filePath: string, event: ModuleWatchEvent): void
   invalidateAll(): void
 }
 
@@ -94,6 +93,7 @@ export function createModuleStore<transformed, resolved, emitted>(
   options: {
     getAcceptedDependencies?: (resolved: resolved) => readonly string[]
     getDependencies?: (resolved: resolved) => readonly string[]
+    invalidateImportersOnFileEvent?: boolean
     onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
     onWatchFilesChange?: (delta: { add: string[]; remove: string[] }) => void
   } = {},
@@ -254,23 +254,7 @@ export function createModuleStore<transformed, resolved, emitted>(
         }
       }
 
-      return [...affected]
-    },
-
-    invalidateImporters(identityPaths) {
-      let visited = new Set(identityPaths)
-      let queue = [...identityPaths]
-      while (queue.length > 0) {
-        let identityPath = queue.pop()
-        if (!identityPath) continue
-        for (let importerPath of importersByDepPath.get(identityPath) ?? []) {
-          if (visited.has(importerPath)) continue
-          visited.add(importerPath)
-          queue.push(importerPath)
-          let importer = recordsByIdentityPath.get(importerPath)
-          if (importer) invalidateGraph(importer)
-        }
-      }
+      if (options.invalidateImportersOnFileEvent) invalidateImporters(affected)
     },
 
     invalidateAll() {
@@ -317,6 +301,22 @@ export function createModuleStore<transformed, resolved, emitted>(
 
   function invalidateGraph(record: MutableModuleRecord<transformed, resolved, emitted>) {
     invalidateContent(record, { retainStale: false })
+  }
+
+  function invalidateImporters(identityPaths: ReadonlySet<string>): void {
+    let visited = new Set(identityPaths)
+    let queue = [...identityPaths]
+    while (queue.length > 0) {
+      let identityPath = queue.pop()
+      if (!identityPath) continue
+      for (let importerPath of importersByDepPath.get(identityPath) ?? []) {
+        if (visited.has(importerPath)) continue
+        visited.add(importerPath)
+        queue.push(importerPath)
+        let importer = recordsByIdentityPath.get(importerPath)
+        if (importer) invalidateGraph(importer)
+      }
+    }
   }
 
   function createLinks(resolved: resolved): MutableModuleLinks {
