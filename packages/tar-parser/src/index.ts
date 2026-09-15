@@ -2,6 +2,9 @@ import './globals.ts'
 
 export {
   TarParseError,
+  MaxEntrySizeExceededError,
+  MaxTotalSizeExceededError,
+  MaxEntriesExceededError,
   type TarHeader,
   type ParseTarHeaderOptions,
   parseTarHeader,
