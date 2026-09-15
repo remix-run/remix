@@ -157,6 +157,102 @@ describe('diffNodes', () => {
       expect(container.firstChild).toBe(start)
     })
 
+    it('preserves hydration ranges across HMR timestamped URLs', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!-- rmx:h:old --><input value="Stateful"><!-- /rmx:h -->'
+      let start = container.firstChild
+      invariant(start instanceof Comment)
+      attachClientEntryOwner(start, undefined, {
+        moduleUrl: '/entry.js?t=1234567890123',
+        exportName: 'Entry',
+      })
+
+      diffDom(container, '<!-- rmx:h:new --><input value="Server"><!-- /rmx:h -->', {
+        h: {
+          new: {
+            moduleUrl: '/entry.js?t=12345678901234',
+            exportName: 'Entry',
+            props: {},
+          },
+        },
+      })
+
+      expect(container.firstChild).toBe(start)
+      expect(container.querySelector('input')?.value).toBe('Stateful')
+    })
+
+    it('does not treat short timestamp parameters as HMR versions', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!-- rmx:h:old --><input value="Stateful"><!-- /rmx:h -->'
+      let oldStart = container.firstChild
+      invariant(oldStart instanceof Comment)
+      attachClientEntryOwner(oldStart, undefined, {
+        moduleUrl: '/entry.js',
+        exportName: 'Entry',
+      })
+
+      diffDom(container, '<!-- rmx:h:new --><input value="Server"><!-- /rmx:h -->', {
+        h: {
+          new: {
+            moduleUrl: '/entry.js?t=1',
+            exportName: 'Entry',
+            props: {},
+          },
+        },
+      })
+
+      expect(container.firstChild).not.toBe(oldStart)
+      expect(container.querySelector('input')?.value).toBe('Server')
+    })
+
+    it('does not treat timestamps combined with other search parameters as HMR versions', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!-- rmx:h:old --><input value="Stateful"><!-- /rmx:h -->'
+      let oldStart = container.firstChild
+      invariant(oldStart instanceof Comment)
+      attachClientEntryOwner(oldStart, undefined, {
+        moduleUrl: '/entry.js?mode=compact&t=1234567890123',
+        exportName: 'Entry',
+      })
+
+      diffDom(container, '<!-- rmx:h:new --><input value="Server"><!-- /rmx:h -->', {
+        h: {
+          new: {
+            moduleUrl: '/entry.js?mode=compact&t=1234567890124',
+            exportName: 'Entry',
+            props: {},
+          },
+        },
+      })
+
+      expect(container.firstChild).not.toBe(oldStart)
+      expect(container.querySelector('input')?.value).toBe('Server')
+    })
+
+    it('does not treat timestamps inside URL fragments as HMR versions', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!-- rmx:h:old --><input value="Stateful"><!-- /rmx:h -->'
+      let oldStart = container.firstChild
+      invariant(oldStart instanceof Comment)
+      attachClientEntryOwner(oldStart, undefined, {
+        moduleUrl: '/entry.js#view?t=1234567890123',
+        exportName: 'Entry',
+      })
+
+      diffDom(container, '<!-- rmx:h:new --><input value="Server"><!-- /rmx:h -->', {
+        h: {
+          new: {
+            moduleUrl: '/entry.js#view?t=1234567890124',
+            exportName: 'Entry',
+            props: {},
+          },
+        },
+      })
+
+      expect(container.firstChild).not.toBe(oldStart)
+      expect(container.querySelector('input')?.value).toBe('Server')
+    })
+
     it('replaces same-identity hydration ranges that do not have a live owner', () => {
       let container = document.createElement('div')
       container.innerHTML = '<!-- rmx:h:old --><button>Old</button><!-- /rmx:h -->'

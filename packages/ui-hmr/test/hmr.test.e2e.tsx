@@ -866,6 +866,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before update')
       await page.locator('[data-testid="document-field"]').fill('document before update')
 
+      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete')
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -875,6 +876,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
         }),
       )
 
+      await serverFrameReloaded
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -883,6 +885,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       assert.equal(
         await page.locator('[data-testid="server-client-field"]').inputValue(),
         'typed before update',
+        formatPageDiagnostics(page),
       )
       assert.equal(
         await page.locator('[data-testid="document-field"]').inputValue(),

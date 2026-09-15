@@ -15,6 +15,7 @@ import { unwrapFrameResolution } from './frame-resolution.ts'
 import {
   disposeClientEntryBoundary,
   getClientEntryBoundaryOwner,
+  getClientEntryKey,
   setClientEntryBoundaryOwner,
   type ClientEntryIdentity,
 } from './client-entry-boundary.ts'
@@ -1217,11 +1218,11 @@ function scheduleHydrationMarker(
   if (signal?.aborted || context.lifecycleSignal.aborted) return
 
   let done = reconciliationTracker?.track()
-  let key = `${entry.moduleUrl}#${entry.exportName}`
   let identity: ClientEntryIdentity = {
     moduleUrl: entry.moduleUrl,
     exportName: entry.exportName,
   }
+  let key = getClientEntryKey(identity)
   let props: Record<string, unknown> | undefined = entry.props
   let completed = false
 
