@@ -1,356 +1,76 @@
-# Data Access and Validation
+# Data and Validation
 
-## What This Covers
+Read when untrusted input becomes an app value, or when a feature changes persistence or migrations.
 
-How input becomes a value the app trusts, and how that value reaches storage. Read this when the task involves:
+Installed API docs: `src/data-schema/README.md`, `src/data-table/README.md`, and the mapped dialect README, such as `src/data-table-sqlite/README.md`. The parent schema/table READMEs cover subpaths such as form-data, operators, and migrations. Read `src/cli/README.md` for `remix db` configuration and commands.
 
-- Defining database tables, columns, relations, and migrations
-- Querying or mutating persisted data with `Database`
-- Parsing and validating user input from forms, query strings, or external payloads
-- Choosing between schema-level checks, table validation hooks, and migration-level constraints
+## Keep the Boundaries Separate
 
-For where validation runs in the request lifecycle, see `routing-and-controllers.md`. For session or identity-bound writes, see `auth-and-sessions.md`.
+| Boundary               | Responsibility                                                      |
+| ---------------------- | ------------------------------------------------------------------- |
+| Request → action       | Parse fields, params, query strings, cookies, and external payloads |
+| Identity → resource    | Authorize ownership/permissions; do not trust submitted owner IDs   |
+| Action → persistence   | Pass validated values; translate known conflicts into HTTP outcomes |
+| Persistence → database | Enforce durable constraints and transaction semantics               |
+| Action → response      | Return HTML/errors/redirects with explicit status and headers       |
 
-## Table Definitions (`remix/data-table`)
+Build one schema per input source with `remix/data-schema/form-data` and parse with `parseSafe`, so invalid input is a return value the action can render:
 
-Define tables with typed columns, relations, and optional validation hooks:
-
-```typescript
-import { belongsTo, column as c, hasMany, table } from 'remix/data-table'
-import type { TableRow, TableRowWith } from 'remix/data-table'
-
-export const books = table({
-  name: 'books',
-  columns: {
-    id: c.integer().primaryKey().autoIncrement(),
-    slug: c.text().notNull().unique(),
-    title: c.text().notNull(),
-    author: c.text().notNull(),
-    price: c.decimal(10, 2).notNull(),
-    genre: c.text().notNull(),
-    in_stock: c.boolean(),
-  },
-})
-
-export const orders = table({
-  name: 'orders',
-  columns: {
-    id: c.integer().primaryKey().autoIncrement(),
-    user_id: c.integer().notNull().references('users', 'id'),
-    total: c.decimal(10, 2).notNull(),
-    created_at: c.integer().notNull(),
-  },
-  relations: {
-    user: belongsTo('users', 'user_id'),
-    items: hasMany('order_items', 'order_id'),
-  },
-})
-
-export type Book = TableRow<typeof books>
-export type Order = TableRow<typeof orders>
-export type OrderWithItems = TableRowWith<typeof orders, 'items'>
-```
-
-### Column types
-
-| Method                        | SQL type           |
-| ----------------------------- | ------------------ |
-| `c.integer()`                 | INTEGER            |
-| `c.text()`                    | TEXT               |
-| `c.boolean()`                 | BOOLEAN            |
-| `c.decimal(precision, scale)` | DECIMAL            |
-| `c.enum([...])`               | TEXT (string enum) |
-| `c.uuid()`                    | UUID / TEXT        |
-| `c.varchar(length)`           | VARCHAR            |
-
-Column modifiers: `.primaryKey()`, `.autoIncrement()`, `.notNull()`, `.unique()`, `.references(table, column, fkName?)`, `.onDelete(action)`, `.default(value)`.
-
-Composite primary keys go on the table option, not the column: `primaryKey: ['order_id', 'book_id']`.
-
-### Schema vs migrations
-
-Column modifiers on runtime `table(...)` definitions in `app/data/schema.ts` describe app-facing column metadata. They do not create or update database tables by themselves. The source of truth for actual DDL and constraints is your hand-written SQL migration files. Two valid patterns:
-
-- **Mirror constraints in schema and SQL** — table definitions stay useful as schema-level docs, and migrations still own the actual DDL.
-- **Bare columns in schema, constraints in SQL** — schema describes what the app reads and writes; migrations own the DDL and constraints.
-
-Pick one and apply it consistently across the app.
-
-### Table lifecycle hooks
-
-Tables can define validation and lifecycle hooks:
-
-- `validate` runs before `create` and `update` writes and should return either `{ value }` or `{ issues }`
-- `beforeWrite` can normalize or veto `create`/`update` values
-- `afterWrite` observes completed `create`/`update` operations
-- `beforeDelete` and `afterDelete` observe or veto deletes
-- `afterRead` can normalize or reject row values after reads
-
-```typescript
-export const books = table({
-  name: 'books',
-  columns: {
-    /* ... */
-  },
-  beforeWrite({ value }) {
-    if (typeof value.slug === 'string') {
-      return { value: { ...value, slug: value.slug.trim().toLowerCase() } }
-    }
-    return { value }
-  },
-  validate({ operation, value }) {
-    let issues = []
-    if (operation === 'create' && !value.slug) {
-      issues.push({ message: 'Slug is required.', path: ['slug'] })
-    }
-    return issues.length > 0 ? { issues } : { value }
-  },
-  afterRead({ value }) {
-    return { value }
-  },
-})
-```
-
-## Database Setup
-
-Create a database and expose it via middleware:
-
-```typescript
-import BetterSqlite3 from 'better-sqlite3'
-import { createSqliteDatabase } from 'remix/data-table/sqlite'
-
-let sqlite = new BetterSqlite3('./db/app.db')
-sqlite.pragma('foreign_keys = ON')
-export let db = createSqliteDatabase(sqlite)
-```
-
-`createSqliteDatabase` accepts synchronous SQLite clients with a shared `prepare`/`exec` surface, including Node's `node:sqlite`, Bun's `bun:sqlite`, and compatible clients. Use whichever client fits the runtime instead of assuming `better-sqlite3` is required.
-
-### Database middleware
-
-```typescript
-import type { Database } from 'remix/data-table'
-import { createContextKey, type Middleware } from 'remix/router'
-
-export const databaseContext = createContextKey<Database>()
-
-export function loadDatabase(): Middleware {
-  return async (context, next) => {
-    context.set(databaseContext, db)
-    return next()
-  }
-}
-```
-
-### Querying
-
-```typescript
-let db = get(databaseContext)
-
-// Find by primary key
-let book = await db.find(books, id)
-
-// Find one by condition
-let user = await db.findOne(users, { where: { email } })
-
-// Find many with ordering
-let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
-
-// Count
-let total = await db.count(orders, { where: { user_id: userId } })
-
-// Query builder
-let genres = await db.query(books).select('genre').distinct().orderBy('genre', 'asc').all()
-
-// Create
-let newBook = await db.create(books, { slug: 'new-book', title: 'New Book' /* ... */ })
-
-// Update
-await db.update(books, bookId, { title: 'Updated Title' })
-
-// Delete
-await db.delete(books, bookId)
-```
-
-### Operators
-
-```typescript
-import { inList } from 'remix/data-table/operators'
-
-let featured = await db.findMany(books, {
-  where: inList('slug', ['book-a', 'book-b', 'book-c']),
-})
-```
-
-## Migrations
-
-Migrations are plain SQL files. Each migration is a directory named `YYYYMMDDHHmmss_<slug>/` containing a hand-written `up.sql` (required) and an optional `down.sql` (omit for irreversible migrations).
-
-```txt
-db/
-  migrations/
-    20260228090000_create_users/
-      up.sql
-      down.sql
-    20260301083000_add_books_search_index/
-      up.sql
-```
-
-### Writing migrations
-
-Write standard SQL in `up.sql` and `down.sql`:
-
-```sql
--- up.sql
-create table users (
-  id integer primary key autoincrement,
-  email text not null unique,
-  name text not null
-);
-
-create index users_email_idx on users (email);
-```
-
-```sql
--- down.sql
-drop table if exists users;
-```
-
-Do **not** import app code (e.g. `app/data/schema.ts`) into migration files. Migrations must be stable, immutable artifacts — importing live schema definitions creates drift between what the migration meant when it was written and what it does when replayed later. SQL files guarantee stability because they cannot import anything.
-
-### Transaction modes
-
-Migrations run inside a transaction by default (when the database supports transactional DDL). Override per migration with a directive comment in `up.sql`:
-
-```sql
--- data-table/transaction: none
-create index concurrently users_email_idx on users (email);
-```
-
-Modes: `auto` (default — wrap when supported), `required` (wrap; throw if unsupported), `none` (never wrap).
-
-### Running migrations
-
-```typescript
-import { loadMigrations } from 'remix/data-table/migrations/node'
-
-let migrations = await loadMigrations('./db/migrations')
-await db.migrate(migrations)
-```
-
-The database checksums each `up.sql` and detects drift if a previously applied migration changes.
-Use `db.migrationStatus(migrations)` to inspect applied/pending/drifted state, and
-`db.migrate(migrations, { direction: 'down' })` to revert.
-
-## Input Validation (`remix/data-schema`)
-
-Use `data-schema` to validate user input (forms, query params, API payloads). This is separate from table-level `validate` hooks which run at persistence.
-
-### Schema builders
-
-```typescript
+```ts
 import * as s from 'remix/data-schema'
-import { email, minLength, maxLength } from 'remix/data-schema/checks'
-
-let userSchema = s.object({
-  name: s.string().pipe(minLength(1)),
-  email: s.string().pipe(email()),
-  age: s.optional(s.number()),
-})
-
-let result = s.parse(userSchema, data)
-```
-
-### FormData validation
-
-Use `remix/data-schema/form-data` to validate `FormData` directly:
-
-```typescript
-import * as s from 'remix/data-schema'
-import * as f from 'remix/data-schema/form-data'
-import { email, minLength } from 'remix/data-schema/checks'
-
-let signupSchema = f.object({
-  name: f.field(s.string().pipe(minLength(1))),
-  email: f.field(s.string().pipe(email())),
-  password: f.field(s.string().pipe(minLength(8))),
-})
-
-// In a controller action:
-let formData = get(FormData)
-let { name, email, password } = s.parse(signupSchema, formData)
-```
-
-### Reading FormData: middleware vs `request.formData()`
-
-There are two ways to get a `FormData` value inside an action.
-
-The recommended way: register `formData()` middleware in the root stack and read with `get(FormData)`. The body is parsed once per request, and the typed `FormData` value flows through the context system. This also lets `methodOverride()` and CSRF middleware work uniformly.
-
-```typescript
-import { formData } from 'remix/middleware/form-data'
-
-let router = createRouter({
-  middleware: [, /* ... */ formData() /* ... */],
-})
-
-// In an action:
-let parsed = s.parseSafe(signupSchema, get(FormData))
-```
-
-The fallback: `await request.formData()` directly. This works without middleware and is fine for small one-off cases, but it bypasses the context system, runs once per call site, and doesn't compose with middleware that depends on parsed form fields.
-
-### Safe parsing
-
-`s.parse` throws on invalid input. `s.parseSafe` returns a tagged result and is usually what an action wants, since validation failure is an expected outcome (re-render the form with errors) rather than an exception:
-
-```typescript
-let result = s.parseSafe(signupSchema, get(FormData))
-if (!result.success) {
-  return render(<SignupPage errors={result.issues} />, { status: 400 })
-}
-let { name, email, password } = result.value
-```
-
-Returning a `Response` for validation failures keeps the route contract honest: the same action returns 200 on success, 400 with errors on bad input, no out-of-band exception flow.
-
-### Transforming validated output
-
-Use `.transform(...)` when a schema should validate one shape but return another value or output type. Transforms run after validation and compose with `.pipe(...)` and `.refine(...)`:
-
-```typescript
+import * as checks from 'remix/data-schema/checks'
 import * as coerce from 'remix/data-schema/coerce'
+import * as f from 'remix/data-schema/form-data'
 
-let slugSchema = s
-  .string()
-  .pipe(minLength(1))
-  .transform((value) => value.trim().toLowerCase().replace(/\s+/g, '-'))
-
-let pageSchema = f.object({
-  page: f.field(s.defaulted(coerce.coerceNumber(), 1).refine(Number.isInteger)),
-  q: f.field(s.defaulted(s.string(), '').transform((value) => value.trim())),
+const bookSchema = f.object({
+  title: f.field(s.string().pipe(checks.minLength(1))),
+  year: f.field(coerce.number()),
+  tags: f.fields(s.array(s.string())),
 })
 
-let { page, q } = s.parse(pageSchema, formData)
+// In an action, after formData() middleware has parsed the body:
+let parsed = s.parseSafe(bookSchema, context.get(FormData))
+if (!parsed.success) {
+  // parsed.issues: standard-schema issues with `message` and an optional `path`
+  return context.render(<NewBookPage issues={parsed.issues} />, { status: 400 })
+}
+let book = parsed.value // { title: string; year: number; tags: string[] }
 ```
 
-### Anti-patterns
+`f.object` accepts `FormData` or `URLSearchParams`, so the same shape validates query strings. `f.fields` keeps repeated values; `Object.fromEntries` would drop them. Use `f.file`/`f.files` for uploads and `s.defaulted(...)` for optional fields. The README owns the full builder, check, and coercion list. The [routing recipe](routing-and-controllers.md) shows a complete form with field preservation and a failure response.
 
-Avoid these shapes when reading and validating input:
+Read `context.get(FormData)` when `formData()` middleware has parsed the request; call `request.formData()` directly only in a route that owns body parsing. Middleware that depends on form fields (`csrf()`, `methodOverride()`) runs after `formData()`. For multipart data, use the [upload workflow](file-uploads.md).
 
-- **Raw `formData.get('name')` plus an `if (typeof name !== 'string')` guard**, then a thrown custom error. This reinvents what `data-schema` already does, loses the typed result, and pushes error translation into a `try/catch` instead of a return value.
-- **Letting route-local domain errors leak out of the action.** Translate expected outcomes (bad input, missing record, duplicate entry) into the `Response` the route means to return instead of throwing a custom `Error` subclass with a `status` field and catching it later.
-- **Trusting `params`, query strings, or external payloads without a schema.** Anything that crosses a trust boundary should be parsed before it reaches business logic.
+Validation is not authorization. A well-formed user ID is still attacker-controlled; derive ownership from the authenticated context and enforce it in the write/query.
 
-### Common patterns
+## Add Persistence Without Rebuilding the App
 
-```typescript
-// Optional with default
-let limitSchema = f.field(s.defaulted(s.string(), '10'))
+1. Inspect the existing database client, connection lifecycle, schemas, and migrations before introducing another abstraction or dependency.
+2. Keep table definitions and queries under `app/data/`. Add a database dependency to request context only when useful; declare what its middleware provides as shown in [middleware and server](middleware-and-server.md#describe-what-custom-middleware-provides).
+3. Choose the existing runtime's database client. `createSqliteDatabase` accepts compatible synchronous clients, including built-in Node/Bun SQLite; do not assume `better-sqlite3` must be installed. Use the matching PostgreSQL/MySQL integration for those databases.
+4. Use table validation/hooks for persistence invariants shared by callers, not as a replacement for form-specific feedback. Database constraints remain necessary for uniqueness and races.
+5. Use a transaction for writes that must succeed together. Scope queries/writes to the authorized owner, and handle a known unique/conflict outcome at the action boundary. Let unexpected database errors reach the app's error handler.
+6. Close connections during shutdown and dispose test databases. A fresh router does not isolate a database imported as a shared module singleton.
 
-// Union types
-let methodSchema = s.union([s.literal('credentials'), s.literal('google'), s.literal('github')])
+Prefer the table/query APIs for ordinary app work. Read the data-table README for query composition, relations, hooks, and transactions; reach for raw SQL or driver interfaces only when the task needs them.
 
-// Refinements
-let idSchema = s.number().refine(Number.isInteger, 'Expected an integer')
+## Schema Metadata Is Not a Migration
+
+Runtime `table(...)` column definitions do not create or alter database tables. Keep the runtime model and actual database constraints aligned, but author DDL in migrations.
+
+Default disk layout:
+
+```text
+db/migrations/
+  20260301083000_create_books/
+    up.sql
+    down.sql
 ```
+
+- `up.sql` is required; omit `down.sql` for an intentionally irreversible migration.
+- Applied migrations are immutable. Add a new migration rather than changing a checksummed file that may already be deployed.
+- Keep migrations independent of live app/schema imports so replaying history is stable.
+- Read the README for transaction modes and dialect-specific DDL limitations. Do not infer SQLite behavior applies to PostgreSQL or MySQL.
+- Prefer the app's existing migration script or configured `remix db migrate` workflow. Programmatic `loadMigrations(...)` and `db.migrate(...)` are for apps that intentionally own that lifecycle; do not add automatic production startup migrations by default.
+
+Inspect `remix db status` before changing migration state. Validate a new migration on a disposable database, including an upgrade from the relevant prior schema. Use rollback dry runs when appropriate; do not run `wipe`, `reset`, or a destructive rollback on shared data without explicit approval.

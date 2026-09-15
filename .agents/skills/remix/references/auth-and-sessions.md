@@ -1,408 +1,89 @@
-# Authentication and Sessions
+# Auth and Sessions
 
-## What This Covers
+Read for per-browser state, login, route protection, or cookie-authenticated mutations.
 
-How to remember things about a browser between requests and how to identify a user. Read this when the task involves:
+Installed API docs: `src/auth/README.md` for login/provider protocols, `src/auth-middleware/README.md` for identity resolution and protection, `src/session/README.md` and `src/session-middleware/README.md` for storage/commit behavior, and `src/csrf-middleware/README.md` / `src/cop-middleware/README.md` for cross-origin defenses.
 
-- Storing per-browser state across requests (login, cart, "I have submitted this form")
-- Adding a credentials login flow or an OAuth provider
-- Protecting routes with `requireAuth()` or stacking authorization checks
-- Reading or writing `Session`, `Auth`, or other identity-related context values
-- Logging in, logging out, or rotating session IDs
+## Choose State and Storage Deliberately
 
-For raw cookies that are not session-backed (theme, locale, dismissed-banner), see `createCookie` in this file plus the broader `Package Map` in `SKILL.md`.
+- Use a plain cookie for a browser-controlled preference. A signed cookie can protect a small value from tampering; session helpers are preferable when server-managed lifecycle, login, carts, or flash messages are involved.
+- Use session middleware to read and save sessions and emit `Set-Cookie`. Actions should not implement a second session commit pipeline.
+- A session identifies a browser, not a person. Clearing cookies can bypass session-only submission limits. Durable ownership or quotas need an account and server-side enforcement.
+- Use memory storage for isolated tests. Filesystem storage needs durable disk and a topology that can access it. Multi-host apps need shared storage or an appropriate cookie-backed design.
+- Signing is not encryption. Do not put confidential provider tokens or other secrets into a merely signed client-readable cookie. Read the storage backend's size, confidentiality, and revocation constraints before choosing it.
 
-## Sessions vs Plain Cookies
+## Secure Session Configuration
 
-Reach for `remix/session` when state is sensitive, must be tamper-resistant, or represents the identity of a request: who is logged in, which form a browser already submitted, what items are in a cart. Sessions sign or encrypt their backing cookie with a server-held secret and give you a typed `Session` object you can `get`, `set`, `flash`, `unset`, and `regenerateId`.
+Define the session cookie and storage in a focused server-only module, such as `app/middleware/session.ts`.
 
-Reach for `remix/cookie` directly when the browser is allowed to carry the value and the server does not need session semantics. This often means preferences (theme, locale, dismissed banner), but a signed cookie can also be fine for small low-risk values where you truly only need one cookie-shaped fact and do not need `Session` helpers.
+Require session and provider secrets from configuration in non-test environments and fail at startup when missing. Tests should inject an explicit test cookie/storage rather than relying on a production fallback secret. Configure session cookies with `httpOnly`, a deliberate `sameSite` policy (normally `Lax`), `path: '/'`, and `secure` when served over HTTPS. Confirm how TLS termination and trusted proxies affect the app's public origin.
 
-If a malicious user editing the value would be a bug, or if the value needs server-managed lifecycle, reach for a session.
+## Connect Sessions, CSRF, and Form Rendering
 
-### Quick chooser
+The preference form in [routing and controllers](routing-and-controllers.md) mutates session state from a cookie-authenticated browser, so it needs CSRF protection before shipping. Add `csrf()` after `session()` and `formData()`, and extend the scaffold's `AppContext` tuple with the new middleware:
 
-| Need                                                                | Best fit        | Why                                                |
-| ------------------------------------------------------------------- | --------------- | -------------------------------------------------- |
-| Theme, locale, dismissed banner                                     | `remix/cookie`  | Browser-controlled preference                      |
-| Small signed hint with minimal lifecycle                            | `remix/cookie`  | One value, no `Session` helpers needed             |
-| "This browser already submitted", cart, flash messages, login state | `remix/session` | Tamper-sensitive, server-managed per-browser state |
-| "One real person only", ownership, durable identity                 | account/auth    | Cookies or sessions alone do not prove personhood  |
-
-## Session Setup
-
-### Create a session cookie
-
-```typescript
-import { createCookie } from 'remix/cookie'
-
-let sessionSecret = process.env.SESSION_SECRET
-if (!sessionSecret && process.env.NODE_ENV !== 'test') {
-  throw new Error('SESSION_SECRET is required')
-}
-
-export let sessionCookie = createCookie('session', {
-  secrets: [sessionSecret ?? 'test-only-secret'],
-  httpOnly: true,
-  sameSite: 'Lax',
-  secure: process.env.NODE_ENV === 'production',
-  maxAge: 2592000, // 30 days
-  path: '/',
-})
-```
-
-The cookie should always be `httpOnly`, default to `sameSite: 'Lax'`, and be `secure` in production. Demo defaults like `'s3cr3t'` are fine in tests but should never reach production — fail fast when the secret is missing.
-
-### Create session storage
-
-```typescript
-// Filesystem storage
-import { createFsSessionStorage } from 'remix/session-storage/fs'
-export let sessionStorage = createFsSessionStorage('./tmp/sessions')
-
-// Memory storage (for tests)
-import { createMemorySessionStorage } from 'remix/session-storage/memory'
-export let sessionStorage = createMemorySessionStorage()
-```
-
-### Add session middleware
-
-```typescript
+```ts
+// app/router.ts — middleware setup; keep the app's controller registrations
+import { csrf } from 'remix/middleware/csrf'
+import { formData } from 'remix/middleware/form-data'
+import { render } from 'remix/middleware/render'
 import { session } from 'remix/middleware/session'
+import { createRouter, type MiddlewareContext } from 'remix/router'
 
-let router = createRouter({
-  middleware: [
-    session(sessionCookie, sessionStorage),
-    // ... other middleware
-  ],
-})
-```
+import { assets } from './assets.ts'
+import { sessionCookie, sessionStorage } from './middleware/session.ts'
 
-### Using sessions in handlers
+const sessionMiddleware = session(sessionCookie, sessionStorage)
+const formDataMiddleware = formData()
+const csrfMiddleware = csrf()
+const renderMiddleware = render({ assets })
+type AppContext = MiddlewareContext<
+  [
+    typeof sessionMiddleware,
+    typeof formDataMiddleware,
+    typeof csrfMiddleware,
+    typeof renderMiddleware,
+  ]
+>
 
-```typescript
-import { Session } from 'remix/session'
-
-async function handler({ get }) {
-  let session = get(Session)
-
-  // Read
-  let userId = session.get('userId')
-
-  // Write
-  session.set('userId', 42)
-
-  // Flash (read once, then cleared)
-  session.flash('message', 'Settings saved!')
-  let message = session.get('message') // returns and clears
-
-  // Remove a key
-  session.unset('userId')
-
-  // Regenerate session ID (after login/logout)
-  session.regenerateId(true)
-}
-```
-
-### Sessions for non-auth state
-
-Sessions are not just for login. They are the right place to store any tamper-sensitive per-browser fact: which form a browser already submitted, how many free actions are left in a trial, which feature flags a tester opted into, what items are in a cart.
-
-```typescript
-async function submit({ get }) {
-  let session = get(Session)
-  if (session.get('hasSubmitted')) {
-    return render(<AlreadySubmittedPage />, { status: 409 })
-  }
-
-  let parsed = s.parseSafe(submitSchema, get(FormData))
-  if (!parsed.success) {
-    return render(<SubmitPage errors={parsed.issues} />, { status: 400 })
-  }
-
-  await saveSubmission(parsed.value)
-  session.set('hasSubmitted', true)
-  session.flash('message', 'Thanks for submitting!')
-
-  return redirect(routes.thanks.href())
-}
-```
-
-Notice that there is no manual `Set-Cookie` plumbing in the action — the session middleware handles that, and the handler returns an ordinary `Response`. Per-browser state enforced this way is still bypassable by clearing cookies; if the guarantee needs to survive that, you also need an account (see auth providers below).
-
-## Auth Middleware
-
-### Basic setup
-
-```typescript
-import { auth, createSessionAuthScheme } from 'remix/middleware/auth'
-import { Session } from 'remix/session'
-import { databaseContext } from '~/middleware/database.ts'
-
-export function loadAuth() {
-  return auth({
-    schemes: [
-      createSessionAuthScheme({
-        read(session) {
-          let data = session.get('auth')
-          return data ?? null
-        },
-        async verify(value, context) {
-          let db = context.get(databaseContext)
-          return (await db.find(users, value.userId)) ?? null
-        },
-        invalidate(session) {
-          session.unset('auth')
-        },
-      }),
-    ],
-  })
-}
-```
-
-### Reading auth state
-
-```typescript
-import { Auth } from 'remix/middleware/auth'
-
-function handler({ get }) {
-  let auth = get(Auth)
-
-  if (auth.ok) {
-    // User is authenticated
-    let user = auth.identity
+declare module 'remix/router' {
+  interface RouterTypes {
+    context: AppContext
   }
 }
-```
 
-## Credentials Auth
-
-### Define a credentials provider
-
-```typescript
-import { createCredentialsAuthProvider, verifyCredentials, completeAuth } from 'remix/auth'
-import * as s from 'remix/data-schema'
-import * as f from 'remix/data-schema/form-data'
-
-let loginSchema = f.object({
-  email: f.field(s.defaulted(s.string(), '')),
-  password: f.field(s.defaulted(s.string(), '')),
-})
-
-export let passwordProvider = createCredentialsAuthProvider({
-  parse(context) {
-    let formData = context.get(FormData)
-    return s.parse(loginSchema, formData)
-  },
-  async verify({ email, password }, context) {
-    let db = context.get(databaseContext)
-    let user = await db.findOne(users, { where: { email } })
-    if (!user || !(await verifyPassword(password, user.password_hash))) {
-      return null
-    }
-    return user
-  },
+export const router = createRouter<AppContext>({
+  middleware: [sessionMiddleware, formDataMiddleware, csrfMiddleware, renderMiddleware],
 })
 ```
 
-### Login action
+Then pass `getCsrfToken(context)` from `remix/middleware/csrf` into the page as a prop and render it as `<input type="hidden" name="_csrf" value={handle.props.csrfToken} />` inside the form. Both the GET and the failed-validation re-render need the token.
 
-```typescript
-import { verifyCredentials, completeAuth } from 'remix/auth'
-import { redirect } from 'remix/response/redirect'
+The complete request flow is:
 
-async action(context) {
-  let user = await verifyCredentials(passwordProvider, context)
+1. The GET reads its session and renders the hidden `_csrf` input. Session middleware persists the token and cookie.
+2. The browser sends the cookie and token with the POST. `formData()` parses fields before `csrf()` validates them.
+3. For account-bound mutations, run `auth({ schemes })` after the middleware its scheme needs, then `requireAuth<Identity>()` on each protected controller. Confirm resource ownership in the action/data write; never trust a submitted owner ID.
+4. Validate submitted values with `parseSafe`. On failure, render safe values, accessible errors, and the current token with `400` or `422`. Do not write data on a rejected request.
+5. Perform the authorized mutation and return a `303` redirect. The session middleware handles any session changes.
 
-  if (user == null) {
-    let session = context.get(Session)
-    session.flash('error', 'Invalid email or password.')
-    return redirect(routes.auth.login.href())
-  }
+A missing/invalid CSRF token should be a `403`, not an unexpected server error. Configure `csrf({ onError })` when a user-facing recovery response is needed; the user should reload a fresh form rather than silently resubmitting. If that callback needs `context.render`, install render middleware before CSRF.
 
-  let session = completeAuth(context)
-  session.set('auth', { userId: user.id })
+For enhanced forms, preserve the server's validation and authorization error bodies in the [browser frame resolver](hydration-frames-navigation.md#preserve-form-error-responses), or keep `data-rmx-document`. Tests must retain the GET response's session cookie when submitting its token.
 
-  return redirect(routes.home.href())
-},
-```
+Use `csrf()` as the conservative default for cookie-authenticated forms. A tokenless `cop()` policy is an alternative only when the deployment meets its documented prerequisites. CORS does not replace either defense. Scope browser-session CSRF checks appropriately so unrelated bearer-token APIs and validated external provider callbacks keep their own protocol-specific protections.
 
-### Logout action
+## Login and Logout
 
-```typescript
-import { Session } from 'remix/session'
-import { redirect } from 'remix/response/redirect'
+Use the auth README's provider implementations instead of recreating OAuth/OIDC protocol handling.
 
-function logout(context) {
-  let session = context.get(Session)
-  session.unset('auth')
-  session.regenerateId(true)
-  return redirect(routes.home.href())
-}
-```
+- **Credentials:** validate input, use `verifyCredentials(...)`, return a normal failure response for invalid credentials, then call `completeAuth(context)` before storing the minimal app-owned auth record. Keep password verification server-side and do not disclose whether an account exists.
+- **External login:** configure providers once using validated secrets and a trusted public callback URL. Use `startExternalAuth(...)` and `finishExternalAuth(...)` for the transaction and protocol checks. Persist the app's user/account association before completing the login. Accept return destinations only under an explicit safe redirect policy.
+- **Later requests:** resolve the session record with `createSessionAuthScheme(...)` inside `auth({ schemes })`. Handle absent, invalid, or revoked records. Check stored data rather than asserting that it is a valid user.
+- **Privilege changes:** regenerate the session ID and retire the old session as appropriate. `completeAuth()` already requests this for login.
+- **Logout:** use a protected mutation, not GET. Destroy the session with `session.destroy()` when all state should be cleared. If retaining non-auth state, clear every auth-related field and regenerate the ID with old-session deletion. Respect the backend's revocation limitations.
+- **Flash messages:** use `session.flash(...)` for the next request; do not assume a value flashed now is readable in the same request.
 
-## OAuth / External Auth
+## Verify the Boundary
 
-### Create providers
-
-```typescript
-import {
-  createGoogleAuthProvider,
-  createGitHubAuthProvider,
-  startExternalAuth,
-  finishExternalAuth,
-  completeAuth,
-  refreshExternalAuth,
-} from 'remix/auth'
-
-let googleProvider = createGoogleAuthProvider({
-  clientId: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.google.callback.href(), origin),
-})
-
-let githubProvider = createGitHubAuthProvider({
-  clientId: process.env.GITHUB_CLIENT_ID,
-  clientSecret: process.env.GITHUB_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.github.callback.href(), origin),
-})
-```
-
-### OAuth controller
-
-```typescript
-import { createController } from 'remix/router'
-
-export default createController(routes.auth.google, {
-  actions: {
-    // GET /auth/google — redirect to Google
-    async index(context) {
-      return await startExternalAuth(googleProvider, context, {
-        returnTo: context.url.searchParams.get('returnTo'),
-      })
-    },
-
-    // GET /auth/google/callback — handle redirect back
-    async callback(context) {
-      let { result, returnTo } = await finishExternalAuth(googleProvider, context)
-
-      let db = context.get(databaseContext)
-      let { user, authAccount } = await resolveExternalAuth(db, result)
-
-      let session = completeAuth(context)
-      session.set('auth', {
-        userId: user.id,
-        loginMethod: result.provider,
-        authAccountId: authAccount.id,
-      })
-
-      return redirect(returnTo ?? routes.account.index.href())
-    },
-  },
-})
-```
-
-### Refresh stored provider tokens
-
-Use `refreshExternalAuth(provider, tokens)` when an app has stored OAuth/OIDC tokens and needs a fresh access token from a refresh token. Built-in OIDC providers and X support refresh-token exchange. If the provider does not rotate the refresh token, the refreshed bundle preserves the current one.
-
-```typescript
-async function refreshGoogleTokens({ get }) {
-  let db = get(databaseContext)
-  let account = await db.findOne(authAccounts, { where: { provider: 'google' } })
-  if (!account) return null
-
-  let refreshed = await refreshExternalAuth(googleProvider, account.tokens)
-  await db.update(authAccounts, account.id, { tokens: refreshed.tokens })
-
-  return refreshed.tokens
-}
-```
-
-## Protecting Routes
-
-### Controller middleware protection
-
-Apply `requireAuth()` as controller middleware to every action in one controller:
-
-```typescript
-import { createController } from 'remix/router'
-import { requireAuth } from 'remix/middleware/auth'
-
-export default createController(routes.account, {
-  middleware: [requireAuth()],
-  actions: {
-    index() {
-      /* guaranteed authenticated */
-    },
-  },
-})
-```
-
-Nested route maps need their own explicit protection:
-
-```typescript
-// app/router.ts
-router.map(routes.account, accountController)
-router.map(routes.account.settings, accountSettingsController)
-
-// app/actions/account/settings/controller.tsx
-export default createController(routes.account.settings, {
-  middleware: [requireAuth()],
-  actions: {
-    index() {
-      /* guaranteed authenticated */
-    },
-    update() {
-      /* guaranteed authenticated */
-    },
-  },
-})
-```
-
-### Stacking middleware
-
-Combine auth checks with role checks:
-
-```typescript
-export default createController(routes.admin, {
-  middleware: [requireAuth(), requireAdmin()],
-  actions: {
-    index() {
-      /* requires auth + admin */
-    },
-  },
-})
-```
-
-### Action middleware protection
-
-Apply middleware to a single route:
-
-```typescript
-import { Auth, requireAuth } from 'remix/middleware/auth'
-
-router.get(routes.account.index, {
-  middleware: [requireAuth()],
-  handler(context) {
-    let auth = context.get(Auth)
-    return render(<AccountPage identity={auth.identity} />)
-  },
-})
-```
-
-### Redirect on auth failure
-
-```typescript
-import { requireAuth } from 'remix/middleware/auth'
-import { redirect } from 'remix/response/redirect'
-
-export function requireAuthRedirect() {
-  return requireAuth({
-    onFailure(context) {
-      let returnTo = encodeURIComponent(context.url.pathname)
-      return redirect(routes.auth.login.href() + `?returnTo=${returnTo}`, 303)
-    },
-  })
-}
-```
+Test anonymous access, authenticated access, another user's resource, stale/revoked identity, missing/invalid CSRF tokens, login rotation, and logout invalidation where relevant. Nested controllers require their own protection even when their parent controller already has `requireAuth()`.

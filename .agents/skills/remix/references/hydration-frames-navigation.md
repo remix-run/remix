@@ -1,341 +1,123 @@
 # Hydration, Frames, and Navigation
 
-## What This Covers
+Read when server-rendered UI needs browser behavior, targeted reloads, or enhanced navigation.
 
-How server-rendered UI becomes interactive in the browser, and how the page updates without a full navigation. Read this when the task involves:
+Installed API docs: `src/ui/README.md`, `src/ui/server/README.md`, and `src/render-middleware/README.md`. For compatibility with late import maps, use `src/multiple-import-maps-polyfill/README.md`. Use [assets and browser modules](assets-and-browser-modules.md) for source URLs and HMR; use [component model](component-model.md) for state and lifecycle.
 
-- Marking a component for client-side hydration with `clientEntry`
-- Booting the client runtime with `run`
-- Streaming server content into a region of the page with `<Frame>` and reloading those regions
-- Handling browser HMR updates for hydrated entries
-- Triggering Navigation API transitions with `navigate(...)` or `link(...)`
-- Server rendering with `renderToStream` or `renderToString`
-- Managing the document `<head>`
+## Contents
 
-For component-local state and updates, see `component-model.md`. For host-element behavior and events, see `mixins-styling-events.md`. For browser asset HMR setup, see `assets-and-browser-modules.md`.
+- Add interactivity to an existing server path: `clientEntry`
+- `run()` also changes navigation, including preserving form error responses
+- Support client entries discovered during navigation
+- Choose a state refresh mechanism
+- Frames and identity
+- Rendering and head ownership
 
-## Server First, Then Hydrate
+## Add Interactivity to an Existing Server Path
 
-Make the server route correct before adding `clientEntry(...)`. A POST should already do the right thing on its own — return HTML, a redirect, or an error response — and a GET should already render the page the user expects. `clientEntry` exists to layer interactivity on top of UI that already works without it.
+A GET should already render the intended page; a POST should already validate, authorize, mutate, and return HTML or a redirect. Keep a real link/form route contract even when adding browser behavior.
 
-When server state changes after a mutation, prefer reloading a `<Frame>` when the UI region already maps cleanly to a server-rendered route. Frames re-fetch the same route, so the rendering logic stays in one place and the client does not need a parallel "state" API.
-
-```tsx
-on('submit', async (event, signal) => {
-  event.preventDefault()
-  await fetch(routes.cart.add.href(), {
-    method: 'POST',
-    body: new FormData(event.currentTarget),
-    signal,
-  })
-  if (signal.aborted) return
-  await handle.frames.get('cart-summary')?.reload()
-})
-```
-
-Use polling or a small JSON state endpoint when the data changes outside this page, or when a tiny shared widget would be heavier to model as a frame. Pick the lightest sync mechanism that preserves clear ownership of rendering logic.
-
-## Client Entries
-
-Use `clientEntry` to mark a component for client-side hydration. In source-served apps, prefer the source module's `import.meta.url` as the entry ID and let server rendering map it to the public asset URL:
+Mark the smallest interactive boundary with `clientEntry`. Place its entire browser module graph in allowed source locations, and pass the asset server to render middleware:
 
 ```tsx
-import { clientEntry, on, type Handle } from 'remix/ui'
+// app/actions/public/counter.tsx
+import { clientEntry, on } from 'remix/ui'
+import type { Handle } from 'remix/ui'
 
 export const Counter = clientEntry(
   import.meta.url,
-  function Counter(handle: Handle<{ initialCount: number; label: string }>) {
+  function Counter(handle: Handle<{ initialCount: number }>) {
     let count = handle.props.initialCount
 
     return () => (
-      <div>
-        <span>
-          {handle.props.label}: {count}
-        </span>
-        <button
-          mix={on('click', () => {
-            count++
-            handle.update()
-          })}
-        >
-          +
-        </button>
-      </div>
+      <button
+        type="button"
+        mix={on('click', () => {
+          count++
+          handle.update()
+        })}
+      >
+        Count: {count}
+      </button>
     )
   },
 )
 ```
 
-On the server, pass the asset server to the standard render middleware so source file URLs become browser-loadable asset URLs without hard-coding deployment paths in component modules:
+Use an explicit `#ExportName` in the entry ID when the module export name differs from the component function's name. Pass serializable values only: supported primitives, plain objects/arrays, and supported JSX/Frame values. Functions, class instances, secrets, and database objects must stay on the server. Read the server README for serialization details.
 
-```tsx
-import { render } from 'remix/middleware/render'
+The component also renders on the server. Put browser-only work in tasks/events/refs, not unguarded module or setup code. Reuse the document's existing browser entry and `run()` call rather than booting a runtime for every widget.
 
-let router = createRouter({
-  middleware: [render({ assets: assetServer })],
-})
-```
+## `run()` Also Changes Navigation
 
-If the module export name differs from the component function name, include `#ExportName` in the entry ID. Custom rendering pipelines may instead provide the exact export name through `renderToStream({ resolveClientEntry })`.
+`run()` hydrates entries **and** enhances eligible same-origin links/forms, even without an explicit `<Frame>`. Inspect the existing `resolveFrame` before relying on its behavior.
 
-On the server, `clientEntry` components render like any other component. The server wraps their output in comment markers and serializes props into a `<script type="application/json">` tag.
+- Use native `<a href={routes.page.href()}>` and `<form action={routes.form.action.href()}>` elements.
+- `data-rmx-document` leaves a link/form to the browser, including its response and download behavior.
+- `data-rmx-target` selects a named frame. Use `data-rmx-src`, history, and scroll options only when the UX needs them; the UI README owns their exact semantics.
+- Keep real document navigation working before the runtime starts and in browsers without enhancement support.
 
-Client entry props must be serializable: strings, numbers, booleans, `null`, `undefined`, plain objects/arrays of the above, JSX elements, and `<Frame>` elements. Functions and class instances cannot be passed.
+### Preserve Form Error Responses
 
-The resolved `preloads` array contains browser module hrefs. During server rendering these are emitted as `<link rel="modulepreload">` tags, including preloads discovered in blocking frames. When a later frame response introduces a client entry, its preloads start before the entry module is loaded.
+An action returning useful HTML with `400`, `403`, `404`, or `422` does not guarantee that the enhanced form will display it. The default `run()` resolver throws on non-OK responses, and the scaffolded `app/actions/public/entry.ts` replaces those bodies with a generic `Frame error: <status>` message.
 
-## Booting the Client
+Choose a policy before removing `data-rmx-document` from a form:
 
-Use `run` to start the client runtime. It scans the document for client entry markers, loads modules, and hydrates each one:
+1. **Document submission:** leave the attribute in place. The browser renders the action's response directly.
+2. **Enhanced HTML submission:** make the app's `resolveFrame` return the original HTML `Response`, including expected non-2xx statuses. Do not replace validation/auth error bodies with a generic string.
 
-Client entries introduced by later frame responses may depend on import map entries that were not in the initial document. Browsers without native support for multiple import maps cannot resolve those modules with `import()`. Apps that use asset server import maps and target these browsers can opt into `remix/multiple-import-maps-polyfill`:
+For the second option, keep the existing resolver's request encoding and cancellation handling. Replace its response-handling tail, after `fetch(...)`, with an HTML response policy such as:
 
-```tsx
-import {
-  detectMultipleImportMapSupport,
-  importModule,
-  preloadShim,
-} from 'remix/multiple-import-maps-polyfill'
-import { run } from 'remix/ui'
-
-const app = run({
-  async loadModule(moduleUrl, exportName) {
-    let mod = await importModule(moduleUrl)
-    let Component = mod[exportName]
-    if (typeof Component !== 'function') {
-      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
-    }
-    return Component
-  },
-  async processClientEntryPreloads(preloads) {
-    if (await detectMultipleImportMapSupport()) return preloads
-
-    preloadShim(preloads)
-    return []
-  },
-})
-
-app.addEventListener('error', (event) => {
-  console.error('Component error:', event.error)
-})
-
-await app.ready()
-```
-
-The support check keeps native imports and modulepreload links in browsers that support multiple import maps. Other browsers use the polyfill for late client entries and their preloads. Apps that do not need this compatibility can use `import()` directly in `loadModule` and omit `processClientEntryPreloads`.
-
-```tsx
-import { run } from 'remix/ui'
-
-const app = run({
-  async loadModule(moduleUrl, exportName) {
-    let mod = await import(moduleUrl)
-    return mod[exportName]
-  },
-})
-
-app.addEventListener('error', (event) => {
-  console.error('Component error:', event.error)
-})
-
-await app.ready()
-```
-
-By default, `run()` resolves frames with `fetch()`, requests `text/html`, and forwards the submitted
-method and abort signal. GET form values are already encoded in `src`; non-GET submissions use
-`URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for `text/plain`, and
-`FormData` for `multipart/form-data`. Provide `resolveFrame` when an app needs additional headers,
-another body encoding, or a different response policy.
-
-Add `data-rmx-document` to a link or form to leave its navigation to the browser.
-
-The default resolver rejects non-OK responses with an error containing their status and status text.
-A custom `resolveFrame` may return a `Response` with any status when it wants the runtime to render
-the response body.
-
-### `run` options
-
-- **`loadModule(moduleUrl, exportName)`** (required) — return the component function for each client entry. Typically uses dynamic `import()`.
-- **`resolveFrame(src, options)`** (optional) — overrides the default `fetch()` resolver when a `<Frame>` loads or reloads content and for intercepted link and form navigations. `options` may contain `signal` and `target`; non-GET forms also provide `formData`, `method`, and `encType`.
-
-### `app` methods
-
-- **`app.ready()`** — resolves when all initial client entries are hydrated
-- **`app.flush()`** — synchronously flushes all pending updates
-- **`app.dispose()`** — tears down all hydrated components
-
-`app` is an `EventTarget` that emits `error` events from any hydrated component.
-
-## Browser HMR Updates
-
-When `remix/node-hmr` reports a server update, reload the top frame to apply the latest server-rendered document while preserving browser state:
-
-```tsx
-if (import.meta.hot) {
-  import.meta.hot.on('server:update', async () => {
-    await app.ready()
-    await app.frames.top.reload()
-  })
+```ts
+// Inside resolveFrame, after the existing fetch has produced `response`:
+let contentType = response.headers.get('Content-Type') ?? ''
+if (!/^text\/html(?:;|$)/i.test(contentType)) {
+  throw new Error(`Expected an HTML frame response (${response.status})`)
 }
+return response
 ```
 
-## Frames
+This deliberately accepts HTML error pages while rejecting unexpected JSON or empty non-HTML responses. Network failures still need the app's error UI/logging policy. Keep server error pages free of internal details.
 
-A `<Frame>` renders server content into the page. Frames stream after the initial HTML, nest inside other frames, contain client entries, and can be reloaded without full page navigation.
+When writing a resolver from scratch, use the installed UI README's request-encoding example: GET values are in `src`; non-GET forms need their effective method, encoding, `FormData`, and abort signal forwarded. URL-encoded, multipart, and plain-text forms have different body encodings. Do not replace this with an unconditional JSON POST or drop CSRF fields.
 
-```tsx
-import { Frame } from 'remix/ui'
+Test invalid input and expired authentication with JavaScript both enabled and disabled. For targeted forms, verify that the response updates the intended region and exposes its errors accessibly.
 
-function App() {
-  return () => (
-    <div>
-      <Frame src="/sidebar" fallback={<div>Loading...</div>} />
-      <Frame name="main" src="/main-content" />
-    </div>
-  )
-}
-```
+## Support Client Entries Discovered During Navigation
 
-### Frame props
+Later frame responses can introduce client entries whose import-map entries were not in the initial document. Inspect the scaffolded browser entry before changing it; current scaffolds already configure this compatibility path.
 
-- **`src`** (required) — URL to fetch the frame content from
-- **`fallback`** (optional) — content to show while loading; determines streaming behavior
-- **`name`** (optional) — registers the frame for lookup via `handle.frames.get(name)`
-- **`on`** (optional) — event handlers for events dispatched from the frame element
+When the app targets browsers without native multiple-import-map support, configure `run()` to load modules with `importModule` and process late preloads with `detectMultipleImportMapSupport` and `preloadShim` from `remix/multiple-import-maps-polyfill`. Native-capable browsers continue using native imports and modulepreload links. Keep the initial import map before all module scripts, and import the polyfill from the initial browser entry when HMR uses it as `hmr.moduleImporter`.
 
-### Blocking vs non-blocking
+The polyfill evaluates affected module graphs from blob URLs and compiles a parser from Wasm. Check the package README before changing Content Security Policy or Trusted Types rules; do not enable the polyfill without preserving the required directives.
 
-- **Without `fallback`** (blocking) — the server waits for frame content before sending the initial HTML chunk
-- **With `fallback`** (non-blocking) — the fallback renders immediately; real content streams in later and replaces it
+## Choose a State Refresh Mechanism
 
-### Reloading frames
+| Situation                                                 | Prefer                                                              |
+| --------------------------------------------------------- | ------------------------------------------------------------------- |
+| A form already maps to server-rendered HTML               | Native form navigation, optionally targeting a frame                |
+| An existing server-rendered region changed                | Reload its frame                                                    |
+| A small widget consumes data without shared server markup | A focused JSON endpoint                                             |
+| State changes outside this page                           | Polling or another explicit update mechanism appropriate to the app |
 
-Client entries inside a frame can trigger a reload:
+Do not build a second client-rendered data model merely to refresh an existing server-rendered region. Conversely, do not force every small JSON consumer into a frame.
 
-```tsx
-// Reload the containing frame
-handle.frame.reload()
+For custom fetch-based mutations, check the response before declaring success or reloading a frame. Display validation/auth failures and pass the event's cancellation signal. Avoid `preventDefault()` plus `fetch()` when the native enhanced form already provides the needed behavior.
 
-// Reload an adjacent named frame
-await handle.frames.get('cart-summary')?.reload()
+## Frames and Identity
 
-// Reload the entire page/frame tree
-handle.frames.top.reload()
-```
+A `<Frame src={...}>` renders a server-owned region. Without a fallback, server rendering waits for it; with a fallback, the placeholder can stream before the final content. Use route-generated URLs.
 
-When a frame reloads, matching DOM nodes are updated in place. Client entries receive updated props while preserving their local component state.
+Client entries can reload their containing frame with `handle.frame.reload()`, find a named frame through `handle.frames.get(name)`, or reload the document through `handle.frames.top.reload()`. Handle missing named frames rather than asserting they exist.
 
-### Form navigation
+Frame updates preserve matching client entries and their local state while updating props. State initialized once from a prop will not automatically reset when the prop changes. Read current props in render, derive values when possible, and use deliberate keys/identity when a new instance is wanted.
 
-When `run()` is active, eligible same-origin forms progressively enhance into frame navigations. Native validation and the form's `submit` event still run first.
+For third-party widgets that own live DOM, consult the UI README's `data-rmx-preserve-dom` guidance. Preserve the smallest necessary region, not the whole page.
 
-- Forms target `handle.frames.top` by default.
-- `data-rmx-target` selects a named frame.
-- `data-rmx-src` selects a different frame request URL while preserving the form action as the navigation destination.
-- `data-rmx-history="push|replace"` overrides how the navigation updates history.
-- `data-rmx-reset-scroll="false"` preserves scroll position.
-- `data-rmx-document` opts back into a document submission.
-- Cross-origin forms, `method="dialog"`, and `target="_blank"` remain browser-owned.
+## Rendering and Head Ownership
 
-GET controls are already encoded in `src`, so GET forms reach the resolver like links. Non-GET forms provide their native `FormData`, effective method, and encoding. The resolver owns body encoding and method-override conventions. Non-GET submissions to the current URL replace its history entry; GET submissions and submissions to a different URL push one. The `data-rmx-history` attribute overrides those defaults.
+Use the standard render middleware for internal frame resolution, credential forwarding, redirects, response status, and request cancellation. Do not rebuild those policies with an ad hoc `fetchHtml` helper.
 
-### Nested frames
+Keep `title`, `meta`, `link`, and styles in the document's explicit `<head>`; bare head-like elements elsewhere are not automatically hoisted. Update the existing document shell rather than creating a competing one. Use low-level `renderToStream`/`renderToString` only for an intentionally custom pipeline.
 
-Frames can nest. Each frame owns its own DOM region and hydrates client entries independently. During SSR, `handle.frame.src` points at the frame being rendered, while `handle.frames.top.src` stays fixed at the outer document URL.
-
-## Server Rendering
-
-Normal applications install the conventional middleware and render at the action boundary:
-
-```tsx
-import { render } from 'remix/middleware/render'
-import { createRouter } from 'remix/router'
-
-let router = createRouter({ middleware: [render()] })
-
-router.get('/', (context) => context.render(<App />, { status: 200 }))
-```
-
-The middleware seeds frame URLs from the request, resolves nested and targeted frames through the current router, forwards session and authentication headers safely, follows frame redirects, preserves application error bodies, and cancels rendering with the request.
-
-### `renderToStream`
-
-Use this low-level API when replacing the standard response pipeline. It renders a component tree to a `ReadableStream<Uint8Array>`, sends initial HTML immediately, and streams frame content as it resolves:
-
-```tsx
-import { renderToStream } from 'remix/ui/server'
-
-let stream = renderToStream(<App />, {
-  frameSrc: request.url,
-  resolveFrame(src, target, context) {
-    let frameUrl = new URL(src, context?.currentFrameSrc ?? request.url)
-    return fetchHtml(frameUrl)
-  },
-  onError(error) {
-    console.error(error)
-  },
-})
-
-return new Response(stream, {
-  headers: { 'Content-Type': 'text/html; charset=utf-8' },
-})
-```
-
-Options:
-
-- **`frameSrc`** — seeds SSR frame state; populates `handle.frame.src` and `handle.frames.top.src`
-- **`topFrameSrc`** — overrides the root frame URL for nested frame renders (carry forward from `resolveFrame` context)
-- **`resolveFrame(src, target, context)`** — return HTML string, `ReadableStream<Uint8Array>`, or a promise of either. `context.currentFrameSrc` is the containing frame URL; `context.topFrameSrc` is the outer document URL
-- **`onError(error)`** — called on rendering errors
-
-### `renderToString`
-
-Renders a component tree to a complete HTML string. Use for static pages or embedding HTML:
-
-```tsx
-import { renderToString } from 'remix/ui/server'
-let html = await renderToString(<App />)
-```
-
-### CSS in SSR
-
-Components using the `css` mixin have styles collected during rendering and emitted as a single `<style>` tag in `<head>`. No client-side style injection needed.
-
-## Navigation
-
-Use real anchors for normal document navigation. For app-driven navigation:
-
-- `navigate(href, options?)` — performs a Navigation API transition
-- `link(href, options?)` mixin — makes any element behave like a navigation link
-
-```tsx
-import { navigate } from 'remix/ui'
-navigate('/dashboard', { history: 'replace' })
-```
-
-Options: `src`, `target`, `history` (`'push' | 'replace'`), `resetScroll`.
-
-Attributes understood by the runtime: `data-rmx-target`, `data-rmx-src`, `data-rmx-history`, `data-rmx-reset-scroll`, `data-rmx-document`.
-
-## Head Management
-
-Manage document head with an explicit `<head>` in your document structure:
-
-```tsx
-function App() {
-  return () => (
-    <html>
-      <head>
-        <title>Dashboard</title>
-        <meta name="description" content="Team dashboard" />
-        <link rel="stylesheet" href="/styles/app.css" />
-      </head>
-      <body>
-        <main>...</main>
-      </body>
-    </html>
-  )
-}
-```
-
-Put `title`, `meta`, `link`, and `style` tags inside an explicit `<head>`. Bare head-like tags rendered outside `<head>` stay where they are — they are not moved into the document head for you.
+Verify loading/error states, focus after region changes, navigation history, keyboard operation, and preservation of user-entered input. HMR is a separate development concern; its coordination recipe is in [assets](assets-and-browser-modules.md#development-hmr).

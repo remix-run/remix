@@ -1,197 +1,82 @@
 # Mixins, Styling, and Events
 
-## What This Covers
+Read for host-element behavior, styles, DOM access, or accessible interaction. Use the installed `src/ui/README.md`, the relevant `src/ui/<primitive>/README.md`, and `src/ui/animation/README.md` for first-party controls and animation APIs. See [component model](component-model.md) for updates and cleanup.
 
-How to attach behavior, styles, and DOM-aware setup to host elements with `mix`. Read this when the task involves:
+## Compose Host Behavior
 
-- DOM event handling with `on(...)`
-- Static styling with `css(...)` and dynamic styling with `style`
-- Imperative DOM access via `ref(...)`
-- Navigation behavior on non-anchor elements with `link(...)`
-- Native click, pointer, and keyboard behavior with `on(...)`, plus attributes with `attrs(...)`
-- Element-level animation mixins from `remix/ui/animation`
+Core mixins (`on`, `css`, `ref`, `link`, `attrs`) are imported from `remix/ui`. Pass one descriptor as `mix={on(...)}` or compose several with `mix={[css(...), on(...)]}`. Prefer existing primitives for complex controls such as menus, comboboxes, tabs, and popovers before inventing a reusable interaction.
 
-For richer animation work (springs, tweens, layout transitions), see `animate-elements.md`. For authoring custom mixins, see `create-mixins.md`. For component lifecycle and updates, see `component-model.md`.
-
-Compose behavior on host elements with `mix`. Pass a single mixin directly (`mix={on(...)}`), or an array when composing multiple mixins (`mix={[css(...), on(...)]}`). Core mixins are imported from `remix/ui`; animation mixins are imported from `remix/ui/animation`.
-
-## `on(type, handler, capture?)`
-
-Attaches a typed DOM event handler. The handler receives the event and an `AbortSignal` that aborts when the handler is re-entered or the component is removed — this prevents race conditions:
+Use native elements and event semantics:
 
 ```tsx
-<input
-  mix={on('input', async (event, signal) => {
-    let query = event.currentTarget.value
-    loading = true
-    handle.update()
+import { css, on } from 'remix/ui'
+import type { Handle } from 'remix/ui'
 
-    let response = await fetch(`/search?q=${query}`, { signal })
-    let data = await response.json()
-    if (signal.aborted) return
+export function ToggleDetails(handle: Handle) {
+  let expanded = false
 
-    results = data.results
-    loading = false
-    handle.update()
-  })}
-/>
-```
-
-Multiple events on the same element:
-
-```tsx
-<form
-  mix={on('submit', (event) => {
-      event.preventDefault()
-      let formData = new FormData(event.currentTarget)
-    })}
->
-```
-
-## `css(styles)`
-
-Applies generated class names for CSS object styles. Produces static CSS rules inserted into the document. Supports pseudo-selectors, pseudo-elements, attribute selectors, descendant selectors, and media queries using `&` to reference the current element:
-
-```tsx
-<button
-  mix={css({
-    color: 'white',
-    backgroundColor: 'blue',
-    padding: '12px 24px',
-    borderRadius: '4px',
-    border: 'none',
-    cursor: 'pointer',
-    '&:hover': { backgroundColor: 'darkblue' },
-    '&:active': { transform: 'scale(0.98)' },
-    '&:disabled': { opacity: 0.5, cursor: 'not-allowed' },
-    '& .title': { fontSize: '20px', fontWeight: 'bold' },
-    '@media (max-width: 768px)': { width: '100%' },
-  })}
-/>
-```
-
-### `css(...)` vs `style` prop
-
-Use `css(...)` for static styles, selectors, and media queries. Use `style` for dynamic values that change often. Prefer CSS nested selectors for parent-state-affects-children over managing hover/focus state in JavaScript:
-
-```tsx
-<div
-  mix={css({
-    backgroundColor: 'blue', // static
-    '&:hover': { '& .title': { color: 'blue' } }, // parent hover → child
-  })}
-  style={{ width: `${progress}%` }} // dynamic
-/>
-```
-
-## `ref(callback)`
-
-Calls a callback when an element is inserted. The callback receives the DOM node and an `AbortSignal` that aborts when the element is removed:
-
-```tsx
-<input mix={ref((node) => node.focus())} />
-
-<div mix={ref((node, signal) => {
-  let observer = new ResizeObserver((entries) => {
-    dimensions.width = Math.round(entries[0].contentRect.width)
-    handle.update()
-  })
-  observer.observe(node)
-  signal.addEventListener('abort', () => observer.disconnect())
-})} />
-```
-
-The `ref` callback runs once when the element is first rendered, not on every update.
-
-## `link(href, options?)`
-
-Adds client-side navigation behavior to any element. Makes non-anchor elements behave like Remix navigation links:
-
-```tsx
-<article mix={link('/courses/intro')}>
-  <h3>Introduction</h3>
-</article>
-```
-
-Options match `NavigationOptions`: `src`, `target`, `history` (`'push' | 'replace'`), `resetScroll`.
-
-On a native anchor, the `history` option renders the corresponding `data-rmx-history="push|replace"` attribute so the enhanced navigation uses the same history behavior.
-
-## Native press and keyboard interactions
-
-Use native DOM events directly with `on(...)`. For buttons and links, `click` already includes keyboard activation when the element has the right semantics:
-
-```tsx
-<button mix={on('click', () => doAction())}>Action</button>
-```
-
-For gesture-specific behavior, compose the pointer or keyboard events the interaction actually needs:
-
-```tsx
-<button
-  mix={[
-    on('pointerdown', (event) => {
-      event.currentTarget.setPointerCapture(event.pointerId)
-    }),
-    on('pointerup', () => doAction()),
-  ]}
->
-  Action
-</button>
-
-<div
-  tabIndex={0}
-  mix={on('keydown', (event) => {
-      if (event.key === 'Escape') close()
-      if (event.key === 'Enter' || event.key === ' ') doAction()
-    })}
-/>
-```
-
-## `attrs()`
-
-Sets HTML attributes through the mixin system.
-
-## Animation Mixins
-
-### `animateEntrance(config)`
-
-Animates an element when it is inserted into the DOM. Config specifies the **starting** style:
-
-```tsx
-<div mix={animateEntrance({ opacity: 0, transform: 'translateY(8px)', duration: 180 })} />
-```
-
-### `animateExit(config)`
-
-Animates an element when it is removed. Config specifies the **ending** style. The element is kept in the DOM until the animation completes:
-
-```tsx
-{
-  isVisible && (
-    <div
-      key="panel"
-      mix={[
-        animateEntrance({ opacity: 0, transform: 'scale(0.98)', ...spring('smooth') }),
-        animateExit({ opacity: 0, duration: 120, easing: 'ease-in' }),
-      ]}
-    />
+  return () => (
+    <div>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={handle.id}
+        mix={[
+          css({ padding: '0.5rem 1rem', '&:focus-visible': { outline: '2px solid' } }),
+          on('click', () => {
+            expanded = !expanded
+            handle.update()
+          }),
+        ]}
+      >
+        Details
+      </button>
+      <div id={handle.id} hidden={!expanded}>
+        Additional information
+      </div>
+    </div>
   )
 }
 ```
 
-### `animateLayout(config?)`
+`on(type, handler, capture?)` receives the typed event and a cancellation signal. The signal aborts when the handler is re-entered or its host lifecycle ends; pass it to async work and ignore canceled results. Read control values from `event.currentTarget`. A native button's `click` already handles keyboard activation; pointer-only handlers do not.
 
-Animates layout changes (position/size) using FLIP-style transforms:
+Use actual anchors for navigation. `link(...)` can add navigation behavior, but making a generic element clickable does not by itself establish all the semantics, focus behavior, and browser affordances of an anchor.
+
+## Style Without Unnecessary State
+
+- Use `css(...)` for static rules, nested selectors, media queries, and keyframes. Use the `style` prop for frequently changing values such as progress or measured dimensions.
+- Keep short one-off rules inline. Extract a module-scoped descriptor for a reused visual recipe or a large selector set; export it only when other modules need it.
+- Use CSS hover/focus/disabled selectors rather than JavaScript state that duplicates browser state.
+- Generated rules live in the `rmx` cascade layer. Unlayered styles outrank layered styles; define global layer ordering when combining resets, app styles, and Remix styles. The UI README explains this behavior.
+- SSR collects generated CSS. Do not add a second style-injection system just to make server-rendered styles appear.
+
+## Use Refs for Element Lifecycles
+
+`ref(callback)` supplies the inserted element and a signal for its removal. It is not an every-render effect. Use cleanup for observers and imperative libraries:
 
 ```tsx
-{
-  items.map((item) => (
-    <li key={item.id} mix={animateLayout({ duration: 220, easing: 'ease-out' })} />
-  ))
-}
+import { ref } from 'remix/ui'
+
+const observeSize = ref((node, signal) => {
+  let observer = new ResizeObserver(() => {
+    // Measure the node or notify the owning component here.
+  })
+  observer.observe(node)
+  signal.addEventListener('abort', () => observer.disconnect(), { once: true })
+})
+
+// On the observed element: <div mix={observeSize} />
 ```
 
-Options: `duration` (default 200ms), `easing` (default spring snappy), `size` (boolean, default true — include scale projection for size changes).
+Use `handle.queueTask(...)` for DOM work that depends on the next committed update. Use component-lifetime cleanup for global listeners; see the component-model recipe rather than registering them during render.
 
-Always key elements you expect to animate. Use `...spring(preset)` to spread `duration` and `easing` into any animation config.
+## Accessibility and Motion
+
+- Use buttons for actions, anchors for navigation, labels for controls, and explicit button types inside forms. Prefer native semantics over adding roles and keyboard handlers to generic elements.
+- Connect errors to inputs with `aria-describedby` and `aria-invalid`. Announce meaningful async status/errors without making every changing element a live region.
+- Preserve focus when updating frames or removing a focused element. Move focus intentionally to the relevant error, dialog, or replacement control; do not autofocus unrelated content on every update.
+- Do not suppress native form validation or submission unless the replacement preserves their behavior. Keep document navigation available when enhancement is unsuitable.
+- Respect `prefers-reduced-motion` and avoid communicating state solely through animation or color.
+
+For entrance, exit, and layout motion, read the animation README rather than building imperative loops by default. Key elements whose identity matters during removal/reordering, animate only the changing region, and clean up imperative work. For a genuinely reusable new behavior, see [creating mixins](create-mixins.md).

@@ -1,154 +1,87 @@
 # Testing
 
-## What This Covers
+Read before adding tests or changing the app's test command.
 
-How to test the two layers most Remix code lives in: HTTP behavior and DOM behavior. Read this when the task involves:
+Installed API docs: `src/test/README.md` for runner setup/discovery, `src/ui/test/README.md` for browser component tests, `src/node-fetch-server/README.md` for real HTTP test servers, and `src/cli/README.md` for configuration. Prefer those examples over duplicating runner options here.
 
-- Driving the router with `router.fetch(new Request(...))` and asserting on the returned `Response`
-- Building a fresh router per test for session, storage, or database isolation
-- Rendering components into a real DOM with `render(...)` or `createRoot(...)`
-- Configuring `remix test` discovery, excludes, and coverage
-- Using adjacent CLI checks such as `remix routes`, `remix doctor`, and `remix version`
-- Choosing which layer to test for a given behavior
+## Verify the Runner First
 
-For session and auth test setup, see `auth-and-sessions.md`. For component lifecycle, see `component-model.md`.
+The scaffold's `test` script is `NODE_ENV=test remix test`, and it ships `app/actions/controller.test.ts` as a smoke test. Tests import `describe`/`it` from `remix/test` and assertions from `remix/assert`. If an app instead runs `node --test`, its tests must import `node:test`; do not mix the two, and do not switch an established suite without migrating its imports and lifecycle setup. Node's runner reports a passing file without executing bodies registered through `remix/test`, so check test counts in the output, not just the exit code.
 
-## Two Shapes
+Read the installed runner README before adding setup dependencies or replacing discovery patterns. Its default patterns include server, `.test.browser.tsx`, and `.test.e2e.ts` tests. If the app overrides `test.files` in `remix.json`, make sure it still includes the intended browser/e2e files and type classifications.
 
-Remix tests run with `remix test`, use `remix/test` for the test framework, and use `remix/assert` for assertions. Two main shapes:
+## Choose the Narrowest Meaningful Layer
 
-- **Server / router tests** — drive the router with `router.fetch(new Request(...))` and assert on the returned `Response`. No DOM, no browser harness.
-- **Component tests** — render a component into a real DOM `Element` with `render(...)`, or use `createRoot(...)` directly when you need lower-level root control.
+| Behavior                                                    | Test                                                        |
+| ----------------------------------------------------------- | ----------------------------------------------------------- |
+| Pure helper                                                 | Colocated unit test                                         |
+| Routing, validation, redirects, authorization, persistence  | `router.fetch(new Request(...))`                            |
+| Real HTTP origin, streaming, network redirects/cookies      | `createTestServer(...)` from `remix/node-fetch-server/test` |
+| Local component interaction/lifecycle                       | `.test.browser.tsx` using `remix/ui/test`                   |
+| Hydration, navigation, enhanced forms across server/browser | E2E test using the runner's browser/server support          |
 
-## Server / Router Tests
+Place root controller tests at `app/actions/controller.test.ts(x)` and nested controller tests beside their controller. Use `test/` only for shared fixtures or integration helpers. Test the behavior, not internal hydration markers or incidental markup.
 
-Treat the router as a pure `(Request) => Promise<Response>` function. Build a fresh app router per test (or per suite) so middleware state — sessions, in-memory storage, the database — stays isolated.
+## Router Tests and Isolation
+
+A stateless test can use the existing app router, as the scaffold's smoke test does:
 
 ```ts
+// app/actions/controller.test.ts
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { createBookstoreRouter } from '../app/router.ts'
-import { routes } from '../app/routes.ts'
+import { router } from '../router.ts'
+import { routes } from '../routes.ts'
 
-describe('home', () => {
-  it('responds 200 with the home page', async () => {
-    let router = createBookstoreRouter()
-    let response = await router.fetch(new Request('http://localhost' + routes.home.href()))
+describe('root controller', () => {
+  it('GET / returns the home page', async () => {
+    let response = await router.fetch(new URL(routes.home.href(), 'http://localhost'))
 
     assert.equal(response.status, 200)
-    assert.match(await response.text(), /Welcome to the Bookstore/)
+    assert.match(response.headers.get('Content-Type') ?? '', /text\/html/)
+    assert.match(await response.text(), /<html[\s>]/)
   })
 })
 ```
 
-Use `routes.<name>.href(...)` to build URLs in tests so they stay in sync with the route definition. For form-style POSTs, attach a `FormData` body to the `Request`. For tests that need a known session, swap in `createMemorySessionStorage()` and a test cookie when constructing the router.
+For stateful behavior, export an app-owned router factory (for example `createAppRouter(options)` in `app/router.ts`) that accepts fresh session storage and database dependencies, and build one per suite. A new router alone does not isolate resources imported as module singletons; the factory has to accept them as parameters.
 
-```ts
-import { createMemorySessionStorage } from 'remix/session-storage/memory'
-import { createCookie } from 'remix/cookie'
+Use a test cookie and `createMemorySessionStorage()` for session tests. For a CSRF-protected form, first GET the form, retain the response's cookie, then submit its token with the same cookie. An in-process router request does not maintain a browser cookie jar for you.
 
-let router = createBookstoreRouter({
-  sessionCookie: createCookie('session', { secrets: ['test'] }),
-  sessionStorage: createMemorySessionStorage(),
-})
-```
+Assert the status, redirect `Location`, safe error body, and mutation side effects that define the behavior. Add rejection cases for auth, ownership, invalid input, and limits as appropriate; one happy-path test is not sufficient for a security boundary.
 
-Use `createTestServer` from `remix/node-fetch-server/test` when the behavior depends on a real HTTP origin, redirects, streaming, cookies through a network boundary, or browser-style `fetch`:
+Register cleanup with `t.after(...)` or an equivalent lifecycle hook so it runs after assertion failures. Close real HTTP servers, database clients, asset watchers, and temporary storage. A module import that starts a watcher or connects to production data is a fixture-design problem, not something to hide with a timeout.
 
-```ts
-import { createTestServer } from 'remix/node-fetch-server/test'
+## Browser Component Tests
 
-let server = await createTestServer((request) => router.fetch(request))
-try {
-  let response = await fetch(new URL(routes.home.href(), server.baseUrl))
-  assert.equal(response.status, 200)
-} finally {
-  await server.close()
-}
-```
+Name browser tests `*.test.browser.tsx` so the Remix runner provides a live browser rather than a Node process with no DOM. Read the installed test README for Playwright setup and project selection; do not add a DOM shim to work around the wrong test environment.
 
-## Test Runner Config
-
-Configure discovery and coverage in the `test` section of `remix.json` or with CLI flags:
-
-```jsonc
-{
-  "$schema": "./node_modules/remix/schema/remix.json",
-  "test": {
-    "files": ["**/*.test{,.e2e}.{ts,tsx}"],
-    "e2eFiles": ["**/*.test.e2e.{ts,tsx}"],
-    "exclude": ["node_modules/**"],
-    "coverage": {
-      "dir": ".coverage",
-      "include": ["app/**/*.{ts,tsx}"],
-      "exclude": ["app/**/*.test.{ts,tsx}"],
-      "statements": 80,
-      "lines": 80,
-      "branches": 70,
-      "functions": 80,
-    },
-  },
-}
-```
-
-Use `remix test --coverage` to enable coverage with defaults. Use `exclude` when discovery would otherwise enter generated output, symlinked workspaces, or other paths that should not produce tests.
-
-## Component Tests
-
-Use `render(...)` from `remix/ui/test` for most component tests. It creates a real DOM container, flushes the initial render, and returns `act(...)` so interactions can flush pending updates before assertions. Use `createRoot(container)` from `remix/ui` directly when a test needs explicit control over root rendering, flushing, or disposal.
-
-### Basic pattern
+For the `Counter` in [component model](component-model.md), colocate a browser test:
 
 ```tsx
 import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
 import { render } from 'remix/ui/test'
 
-let result = render(<Counter />)
+import { Counter } from './counter.tsx'
 
-let button = result.$('button')!
-await result.act(() => button.click())
+describe('Counter', () => {
+  it('increments on activation', async (t) => {
+    let result = render(<Counter label="Count" />)
+    t.after(result.cleanup)
 
-assert.match(result.container.textContent ?? '', /1/)
-result.cleanup()
+    let button = result.$('button')
+    assert.ok(button)
+    await result.act(() => button.click())
+
+    assert.equal(button.textContent, 'Count: 1')
+  })
+})
 ```
 
-### Why act / flush
+`render(...)` flushes the initial tree. Await `act(...)` for interactions and await the relevant async operation inside it before asserting; it does not magically wait for every outstanding fetch. Use `createRoot(...)`/`root.flush()` only when a test needs lower-level control.
 
-- **After initial render** — ensures event listeners are attached and the DOM is ready for interaction.
-- **After interactions** — applies updates from `handle.update()` calls triggered by events.
-- **After async work resolves** — applies updates from resolved `queueTask(...)` callbacks.
+Use native DOM interactions. Verify removal/cleanup and keyboard/focus behavior when those are part of the component's contract. For a form that gains enhancement, test success **and** server-rendered validation errors with JavaScript on and off; a component unit test cannot prove that integration.
 
-### Async operations
-
-For components with async operations in `queueTask`, use `act(...)` after each async step:
-
-```tsx
-let result = render(<AsyncLoader />)
-
-assert.equal(result.container.textContent, 'Loading...')
-
-await waitForFetch()
-await result.act(() => {})
-
-assert.equal(result.container.textContent, 'Expected data')
-```
-
-### Component removal
-
-Use `result.cleanup()` or `root.dispose()` to remove the component tree and verify cleanup behavior:
-
-```tsx
-let result = render(<MyComponent />)
-
-assert.ok(result.$('.content'))
-
-result.cleanup()
-assert.throws(() => result.$('.content'), /cleaned up/)
-```
-
-### Guidelines
-
-- Prefer real DOM interactions over mocking framework behavior.
-- Avoid testing implementation-only markers unless they are the only stable synchronization point.
-- One representative flow proving a behavior is better than repeating the same assertion across many paths.
+Run the focused tests and the app's typecheck script. Use the installed runner's `--only` or file filters for a tight loop, and report which test environments were actually exercised.

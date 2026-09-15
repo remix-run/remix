@@ -1,156 +1,93 @@
 # Assets and Browser Modules
 
-## What This Covers
+Read for browser-source access, module URLs, import maps, deployment caching, or development HMR.
 
-How to serve browser scripts and styles from source. Read this when the task involves:
+Installed API docs: `src/assets/README.md`, `src/static-middleware/README.md`, and `src/cli/README.md`. HMR also uses `src/node-hmr/README.md` and `src/ui-hmr/README.md`; compatibility for late import maps uses `src/multiple-import-maps-polyfill/README.md`. Read those for option signatures rather than duplicating the app's configuration.
 
-- Configuring `createAssetServer` (`basePath`, `mounts`, `allowFiles`, `allowPackages`, `denyFiles`, fingerprinting, compiler options)
-- Choosing between `staticFiles()` for already-built files and `createAssetServer()` for source assets that need dependency resolution, preloads, or fingerprinted URLs
-- Generating script URLs or `<link rel="modulepreload">` tags for a client entry
-- Enabling browser HMR for source-served modules
-- Keeping files such as tests out of the browser via `denyFiles` rules
+## Start with Existing Setup
 
-For routing the URL namespace itself, see `routing-and-controllers.md`. For client entry hydration and browser update handling, see `hydration-frames-navigation.md`. For the Node HMR runner and browser HMR channel, see `middleware-and-server.md`.
+Inspect `app/assets.ts`, the asset route in `app/routes.ts` and its controller, the document shell, and `app/actions/public/entry.ts`. A scaffolded app already has these connections:
 
-## When To Reach For It
+```text
+browser-source file → asset server → public module URL/import map/preloads
+                               ↘ render middleware → client-entry metadata
+asset route → assets.fetch(request)
+document shell → browser runtime entry → run()
+```
 
-Use `remix/assets` when the app serves browser JavaScript, TypeScript, or CSS from source files. This is the right tool for client entrypoints, browser-only helpers, styles, and monorepo code that should be compiled and served under a public URL namespace.
+Keep root `public/` for static files served unchanged by `staticFiles(...)`. Source modules that need compilation and dependency resolution belong in owner-local `app/**/public/` directories and are served by `remix/assets`.
 
-Use `staticFiles()` for files that already exist on disk exactly as they should be served. Use `createAssetServer()` for source scripts or styles that need compilation, dependency scanning, preloads, sourcemaps, or fingerprinted URLs.
+The scaffold's `app/assets.ts` is the single place to extend. The access rules are the part that changes most often:
 
-## Default Pattern
-
-```typescript
-import { createAssetServer } from 'remix/assets'
-import { createController } from 'remix/router'
-import { get, route } from 'remix/routes'
-
-export const routes = route({
-  assets: get('/assets/*path'),
-})
-
-let assets = createAssetServer({
+```ts
+// app/assets.ts (excerpt)
+export const assets = createAssetServer({
   basePath: '/assets',
   rootDir: process.cwd(),
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   denyFiles: ['app/**/*.test.*'],
-  target: { es: '2020', chrome: '109', safari: '16.4' },
-  sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
-  minify: process.env.NODE_ENV === 'production',
-  scripts: {
-    define: {
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'development'),
-    },
-  },
+  // ...compiler, watch, and HMR options
 })
 
-export default createController(routes, {
-  actions: {
-    async assets({ request }) {
-      return (await assets.fetch(request)) ?? new Response('Not Found', { status: 404 })
-    },
-  },
-})
+export const scriptEntry = await assets.getScriptEntry('app/actions/public/entry.ts')
 ```
 
-## Rules
+A new `app/<area>/public/` directory is already allowed by the glob. A new browser-side npm dependency needs its exact name in `allowPackages`.
 
-- Treat `allowFiles`/`allowPackages` and `denyFiles` as the security boundary for browser-reachable source files.
-- Put browser-reachable app source in a `public/` directory inside `app/`, beside its narrowest owner, such as `app/ui/public/` or `app/actions/cart/public/`.
-- Every local dependency in a browser module graph must match `allowFiles`, so keep the whole graph inside those `public/` directories. `app/routes.ts` is allowed separately so browser modules can build type-safe links with `routes.*.href(...)`.
-- Deny test modules with `denyFiles` so tests can be colocated inside a `public/` directory without becoming browser-reachable.
-- Use `allowFiles` and `denyFiles` for file paths and globs. Relative values resolve from `rootDir`.
-- Use `allowPackages` for exact package names, not globs or subpaths. Packages allowed by `allowPackages` also allow their installed `dependencies` and `optionalDependencies`; peer dependencies must be listed explicitly if they should be browser-reachable.
-- `denyFiles` takes precedence over both file and package allow rules.
-- Set `rootDir` explicitly in monorepos so relative paths resolve from the intended project root.
-- `basePath` is the public URL namespace handled by the asset server.
-- The default mounts serve the `app` directory at `/app` and `node_modules` at `/npm`. Use `mounts` to replace these defaults when the app needs different public or root-relative directory roots.
-- Mounts preserve every path segment beneath their public and filesystem roots. Do not configure overlapping public or filesystem roots.
-- CSS files are compiled and served alongside scripts. Local CSS `@import` rules are rewritten and fingerprinted with the same asset server routing rules.
+## Keep Browser Access Narrow
 
-## Rendering HTML
+- Treat `allowFiles`, `allowPackages`, and `denyFiles` as access control. Do not broaden them to fix an import error without inspecting what becomes reachable.
+- Keep every local dependency of browser source within allowed locations. Allow `app/routes.ts` separately for shared URL generation, and keep that module free of server-only imports.
+- Deny colocated test modules with `denyFiles`, including browser tests. Never place secrets, persistence setup, or server request helpers inside public source directories.
+- Use file paths/globs in `allowFiles`/`denyFiles` and exact package names in `allowPackages`. Allowed packages also expose their installed dependencies/optional dependencies; inspect that reachability before adding a package. Peer dependencies need explicit allowance.
+- `denyFiles` takes precedence. A denied dependency should prompt an ownership check, not a blanket allow rule.
+- Set `rootDir` deliberately in a monorepo. `basePath` owns the public asset URL namespace; default mounts map `app` and `node_modules` beneath it. Customize mounts only when those roots are insufficient.
 
-Use `getScriptEntry()` when rendering a browser script entry. Scripts keep JavaScript imports as authored, so a rendered script entry needs its public URL, modulepreload hints, and an import map.
+Use `remix assets inspect <url-or-file>` for a denied, missing, or mis-mapped asset and `remix assets` to inspect the reachable surface. Make sure the CLI's asset configuration matches the server's configuration; the CLI README explains sharing `remix.json` through `loadConfig()`.
 
-```typescript
-let { href, importMap, preloads } = await assets.getScriptEntry('app/actions/public/entry.ts')
-```
+## Connect Rendering Rather Than Hard-Coding URLs
 
-Render `importMap` with `ImportMap` from `remix/ui/server` before the modulepreload links and module script. This combines its mappings with import maps from blocking client entries.
+For an explicit browser script, use `assets.getScriptEntry(...)` to obtain its `href`, `importMap`, and `preloads`. Render `ImportMap` from `remix/ui/server` before modulepreload links and module scripts. Use `getHref()` for non-script assets and `getPreloads()` only for lower-level preload control.
 
-Use `getHref()` directly when you need the public URL for a non-script asset, and `getPreloads()` when you need lower-level preload control for one or more entrypoints.
+Pass the app's asset server to `render({ assets })`. It resolves `clientEntry(import.meta.url, Component)` IDs with `getScriptEntry()`, includes their import maps and preloads, and applies the UI renderer's export rules.
 
-For normal Remix applications, pass the asset server to `render({ assets })` from `remix/middleware/render`. The middleware resolves source entry IDs from `clientEntry(import.meta.url, ...)` with `getScriptEntry()`, includes their import maps, and applies the UI renderer's explicit-hash or named-component export rules. Use a custom `resolveClientEntry` callback only when building a custom rendering pipeline.
+If a new client entry fails to hydrate, check in order:
 
-## Development vs Deployment
+1. Its source file and dependencies are allowed and resolve to browser-loadable URLs.
+2. Its module exports the expected component name; specify `#ExportName` when necessary.
+3. Render middleware has the correct asset server and emits entry markers, import maps, and preloads.
+4. The document renders the initial import map before preloads and scripts, then loads the existing runtime entry that calls `run()`.
+5. Props are serializable and contain no server objects or secrets.
 
-In development:
+Do not introduce a custom `resolveClientEntry` merely to bypass missing standard render setup. See [hydration and navigation](hydration-frames-navigation.md) for the runtime side.
 
-- Keep `watch` enabled so source changes are picked up without restarting the server
-- Prefer stable URLs with normal revalidation
-- Enable source maps when debugging browser code
-- Use `hmr` only when the app is running under `remix/node-hmr`
-- Use `scripts.loaders` for development-only browser transforms such as `uiHmr()`
-- Configure `hmr.moduleImporter` with `remix/multiple-import-maps-polyfill` when HMR must support browsers without native support for multiple import maps. HMR appends updated mappings in additional `<script type="importmap">` elements
+## Development HMR
 
-In deployment:
+HMR has three cooperating layers. Inspect the existing files before changing any of them:
 
-- Set `watch: false`
-- Use `fingerprint: true` for content-based fingerprints and long-lived immutable caching
-- Render the script import map before modulepreload links and module scripts
-- Keep bare-import resolution uniform for files in the same directory; different directories may use
-  different resolutions through more-specific import map scopes
+| Layer               | Owner                         | Responsibility                                                              |
+| ------------------- | ----------------------------- | --------------------------------------------------------------------------- |
+| Node supervision    | `hmr.ts`, `server.ts`         | Restart/update server modules, report readiness, keep a stable public proxy |
+| Browser compilation | `app/assets.ts`               | Use the runner's browser HMR channel and development UI transforms          |
+| Browser runtime     | `app/actions/public/entry.ts` | Refresh server-rendered HTML after a server update                          |
 
-Fingerprinting assumes files on disk are stable and requires `watch: false`.
+For a new or repaired HMR integration:
 
-## Browser HMR
+1. Keep ordinary development and production startup independent of the optional `hmr` script. Do not recreate `hmr.ts` when the scaffold already supplies it.
+2. Follow the Node HMR README for `run(...)`, `createHmrReadyFetch(...)`, and readiness reporting after the child server starts listening. Keep the browser event-channel port stable across restarts.
+3. Use `--import remix/ui-hmr/node` for server component HMR and `uiHmr()` from `remix/ui-hmr/assets` as a development-only asset loader when that behavior is wanted.
+4. Guard child runtime imports with `process.env.REMIX_NODE_HMR`; obtain the asset server's browser channel from `remix/node-hmr/runtime` only inside the supervised child.
+5. When supporting browsers without multiple import maps, set `hmr.moduleImporter` to `remix/multiple-import-maps-polyfill` and keep that package imported by the initial browser entry.
+6. In the browser entry, handle `server:update` by awaiting `app.ready()` and then `app.frames.top.reload()`, with error handling. Do not call `run()` again for each update.
+7. Close the public proxy, HMR runner, and asset watchers on shutdown. Test a real source edit and reconnection when changing this lifecycle.
 
-Use browser HMR when source-served browser modules should update without a full page reload during development. Let `remix/node-hmr` own the browser HMR channel so browser updates stay coordinated with server restarts.
+For direct browser `import.meta.hot` usage, retain `remix/assets/types/hmr` in the app's TypeScript types and use literal dependency specifiers in accept calls. The package README owns the detailed HMR API.
 
-```typescript
-import { createAssetServer } from 'remix/assets'
-import { uiHmr } from 'remix/ui-hmr/assets'
+## Deployment
 
-const isDevelopment = process.env.NODE_ENV === 'development'
-const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
-
-const assetServer = createAssetServer({
-  basePath: '/assets',
-  allowFiles: ['app/routes.ts', 'app/**/public/**'],
-  denyFiles: ['app/**/*.test.*'],
-  watch: isDevelopment,
-  hmr: isHmr
-    ? {
-        channel: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
-        moduleImporter: 'remix/multiple-import-maps-polyfill',
-      }
-    : undefined,
-  scripts: {
-    loaders: isHmr ? [uiHmr()] : undefined,
-  },
-})
-```
-
-Rules:
-
-- Guard `remix/node-hmr/runtime` imports with `process.env.REMIX_NODE_HMR`; that runtime API is only available inside the supervised child process.
-- Keep browser HMR and loaders development-only.
-- Add `remix/assets/types/hmr` to `compilerOptions.types` only when browser source modules use `import.meta.hot` directly.
-- Write HMR accept calls directly as `import.meta.hot.accept(...)` with literal dependency specifiers.
-
-## Useful Compiler Options
-
-- `minify` for production minification of scripts and styles
-- `sourceMaps` for `'external'` or `'inline'` source maps for scripts and styles
-- `sourceMapSourcePaths` for `'url'` or `'absolute'` source map paths
-- `target` as an object for shared browser targets and script-only ECMAScript output, such as `{ es: '2020', chrome: '109', safari: '16.4' }`
-- `scripts.define` to replace globals such as `process.env.NODE_ENV`
-- `scripts.external` to leave specific script imports untouched
-- `scripts.loaders` to transform browser modules during compilation
-
-Do not nest shared compiler options under `scripts`. Use top-level `minify`, `sourceMaps`, `sourceMapSourcePaths`, and `target` so they apply to styles as well as scripts.
-
-## Lifecycle
-
-If the asset server is long-lived and watching the file system, call `await assetServer.close()` when shutting down dev servers or disposing tests.
+- Disable watching and HMR in production. Use `fingerprint: true` for content-based fingerprints and long-lived immutable caching only with stable on-disk files and `watch: false`.
+- Render the initial import map before modulepreload links and module scripts. Keep bare-import resolution uniform within a directory; use import-map scopes when directories need different resolutions.
+- Make browser targets, source-map exposure, and minification explicit. Shared compiler options such as `target`, `minify`, and `sourceMaps` are top-level options, not nested under `scripts`.
+- Confirm that immutable caching applies only to versioned assets, not private or session-dependent responses.
+- Close long-lived asset servers in tests and during app shutdown.

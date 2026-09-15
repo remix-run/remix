@@ -1,33 +1,27 @@
 # Component Model
 
-## What This Covers
+Read before writing Remix UI state, props, lifecycle work, or shared component context. The installed `src/ui/README.md` covers the runtime overview. See [mixins and events](mixins-styling-events.md) for host behavior and [hydration](hydration-frames-navigation.md) for browser boundaries.
 
-How a Remix Component is shaped and how its state, lifecycle, and updates behave. Read this when the task involves:
+## Contents
 
-- Writing a component (`handle` plus render function)
-- Managing component-local state, derived values, or post-render DOM work
-- Using `handle.props`, `handle.update()`, `handle.queueTask()`, `handle.signal`, `handle.id`, or `handle.context`
-- Listening to global events with cleanup tied to the component lifecycle
+- Setup once, render repeatedly: props, state, `handle.update()`
+- Put work in the right lifecycle: events, refs, `queueTask`, signals
+- Share context without freezing values
 
-For host-element behavior (event handlers, styles, refs, animations), see `mixins-styling-events.md`. For browser hydration, frames, and navigation, see `hydration-frames-navigation.md`.
+## Setup Once, Render Repeatedly
 
-## Phases
-
-A component has two phases:
-
-1. **Setup phase** — runs once when the component is created
-2. **Render phase** — returned zero-argument function runs on initial render and every update
-
-The component shape is `function Component(handle: Handle<Props>) { return () => ... }`. Props are available as `handle.props` in setup scope and are updated before every render.
+A component receives a handle and returns a zero-argument render function. Setup runs once per instance; the render function runs initially and on updates. There are no React hooks or implicit updates when a variable changes.
 
 ```tsx
-import { on, type Handle } from 'remix/ui'
+import { on } from 'remix/ui'
+import type { Handle } from 'remix/ui'
 
-function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
+export function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
   let count = handle.props.initialCount ?? 0
 
   return () => (
     <button
+      type="button"
       mix={on('click', () => {
         count++
         handle.update()
@@ -39,234 +33,90 @@ function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
 }
 ```
 
-## Props
+- Keep instance state in setup-scope variables. Derive values from current state/props inside render instead of maintaining redundant copies.
+- `handle.props` has stable identity and current values. Destructuring `let { props } = handle` is safe; destructuring individual values during setup takes a snapshot.
+- Initialization from `initialCount` happens once. A later prop update does not reset `count`. Use current props directly for controlled values, or choose an explicit reset/identity policy.
+- Local variables changed in an event need `handle.update()` when the UI should reflect the change.
+- Prefer browser-owned form inputs until controlled state is actually needed. Do not mirror every input value into component state.
 
-Components receive all JSX props through `handle.props`. The object identity is stable for the component lifetime, and its values are updated before each render. Put initialization inputs on normal JSX props and read them from `handle.props`:
+## Put Work in the Right Lifecycle
 
-```tsx
-function Timer(handle: Handle<{ initialSeconds: number; paused?: boolean }>) {
-  let seconds = handle.props.initialSeconds
+| Work                                    | Where                                              |
+| --------------------------------------- | -------------------------------------------------- |
+| Compute output from current values      | Render function                                    |
+| React to a click/input/submit           | `on(...)` event handler                            |
+| Access a host element when inserted     | `ref(...)`                                         |
+| Focus or measure after an update        | `handle.queueTask(...)` or await `handle.update()` |
+| Browser-only setup after initial render | Queue a task during setup                          |
+| Release subscriptions/timers on removal | `handle.signal`                                    |
 
-  return () => <div>Time remaining: {seconds}s</div>
-}
+`handle.queueTask(task)` queues work for the next commit; it does not itself request an update. When scheduling from an event, call `handle.update()` if a commit is needed. Tasks queued during setup/render run after that render.
 
-// Usage: <Timer initialSeconds={60} paused={false} />
-```
+The task's signal is aborted on a subsequent render or removal. The signal returned by `await handle.update()` is also render-scoped; check it before follow-up work if another update may have superseded it. Use `handle.signal` for work intended to last for the whole mounted component.
 
-Because `handle.props` is stable, destructuring `let { props } = handle` is safe when helpers need to read current values later. Destructuring individual prop values is only a snapshot; prefer `handle.props.name` inside callbacks and render output when values can change.
-
-## State Rules
-
-- Keep state in setup scope as plain JavaScript variables.
-- Store only what affects rendering. Derive computed values in render.
-- Do not mirror input state unless you truly need controlled behavior.
-- Do work in event handlers, not in render. Use the handler scope for transient state.
-
-```tsx
-// Derive computed values in render
-function TodoList(handle: Handle) {
-  let todos: Array<{ text: string; completed: boolean }> = []
-
-  return () => {
-    let completedCount = todos.filter((t) => t.completed).length
-    return <div>Completed: {completedCount}</div>
-  }
-}
-```
-
-## Handle API
-
-### `handle.update()`
-
-Schedules a rerender. Returns a promise that resolves with an `AbortSignal` after the update completes. Await it when you need the updated DOM before follow-up work:
+For example, start a browser timer after mounting, not during server rendering:
 
 ```tsx
-on('click', async () => {
-  isPlaying = true
-  let signal = await handle.update()
-  // DOM is now updated, safe to focus or measure
-  stopButton.focus()
-})
-```
+import type { Handle } from 'remix/ui'
 
-### `handle.queueTask(task)`
+export function ElapsedTime(handle: Handle) {
+  let seconds = 0
 
-Schedules a task to run after the next update. The task receives an `AbortSignal` that aborts when the component re-renders or is removed. Use for post-render DOM work, reactive data loading, or hydration-sensitive setup:
-
-```tsx
-let data = null
-let requestedUrl: string | null = null
-
-// Post-render DOM work in an event handler
-on('click', () => {
-  showDetails = true
-  handle.update()
   handle.queueTask(() => {
-    detailsSection.scrollIntoView({ behavior: 'smooth' })
-  })
-})
-
-// Reactive data loading keyed by props.url
-return () => {
-  if (requestedUrl !== handle.props.url) {
-    let nextUrl = handle.props.url
-    requestedUrl = nextUrl
-    data = null
-
-    handle.queueTask(async (signal) => {
-      let response = await fetch(nextUrl, { signal })
-      let json = await response.json()
-      if (signal.aborted || requestedUrl !== nextUrl) return
-      data = json
+    if (handle.signal.aborted) return
+    let interval = setInterval(() => {
+      seconds++
       handle.update()
-    })
-  }
+    }, 1000)
+    handle.signal.addEventListener('abort', () => clearInterval(interval), { once: true })
+  })
 
-  return <div>{data ?? 'Loading...'}</div>
+  return () => <span>{seconds}s elapsed</span>
 }
 ```
 
-Avoid creating intermediate state just to trigger `queueTask`. Do the work directly in the handler or the queued task.
+For `window`/`document` listeners, use the same queued setup and pass `{ signal: handle.signal }` to `addEventListener`. Do not install browser listeners at module scope or assume a client entry never renders on the server.
 
-### `handle.signal`
+For async work caused by an event, use the event handler's signal with `fetch`, check for cancellation, and expose pending/error states. Do not turn a click into a special state flag merely to run its work in the next render. For prop-driven tasks, account for cancellation on _any_ re-render; a remembered URL alone does not prove an earlier request is still running or has completed.
 
-An `AbortSignal` aborted when the component disconnects. Use for cleanup:
+## Share Context Without Freezing Values
 
-```tsx
-function Clock(handle: Handle) {
-  let interval = setInterval(handle.update, 1000)
-  handle.signal.addEventListener('abort', () => clearInterval(interval))
+`handle.context.get(Provider)` reads the nearest ancestor with that component identity. `handle.context.set(value)` stores a value but does not schedule an update.
 
-  return () => <span>{new Date().toString()}</span>
-}
-```
-
-### `handle.id`
-
-Stable identifier per component instance. Useful for `htmlFor`, `aria-owns`, etc.:
+When a provider replaces its value, read it during render rather than destructuring a primitive once during consumer setup:
 
 ```tsx
-function LabeledInput(handle: Handle) {
-  return () => (
-    <div>
-      <label htmlFor={handle.id}>Name</label>
-      <input id={handle.id} type="text" />
-    </div>
-  )
-}
-```
+import { on } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
 
-### `handle.frame` and `handle.frames`
-
-Frame-aware behavior for client entries rendered inside frames:
-
-- `handle.frame.reload()` — reload the containing frame
-- `handle.frame.src` — the URL of the containing frame
-- `handle.frames.top` — the root frame (the whole page)
-- `handle.frames.top.reload()` — reload the entire page/frame tree
-- `handle.frames.get(name)` — look up a named frame; returns `FrameHandle | undefined`
-
-```tsx
-function RefreshButton(handle: Handle) {
-  return () => <button mix={on('click', () => handle.frame.reload())}>Refresh</button>
-}
-```
-
-### `handle.context`
-
-Context for ancestor/descendant communication. See the context section below.
-
-## Context
-
-Use `handle.context.set()` to provide values and `handle.context.get(Provider)` to consume them. `set()` does **not** trigger updates — call `handle.update()` if the tree needs to rerender.
-
-```tsx
-function ThemeProvider(handle: Handle<{ children?: RemixNode }, { theme: 'light' | 'dark' }>) {
+export function ThemeProvider(
+  handle: Handle<{ children?: RemixNode }, { theme: 'light' | 'dark' }>,
+) {
   let theme: 'light' | 'dark' = 'light'
   handle.context.set({ theme })
 
   return () => (
-    <div>
+    <section>
       <button
+        type="button"
         mix={on('click', () => {
           theme = theme === 'light' ? 'dark' : 'light'
           handle.context.set({ theme })
           handle.update()
         })}
       >
-        Toggle
+        Toggle theme
       </button>
       {handle.props.children}
-    </div>
+    </section>
   )
 }
 
-function ThemedContent(handle: Handle) {
-  let { theme } = handle.context.get(ThemeProvider)
-  return () => <div>Current theme: {theme}</div>
+export function ThemeName(handle: Handle) {
+  return () => <p>Theme: {handle.context.get(ThemeProvider).theme}</p>
 }
 ```
 
-For granular updates without re-rendering the full subtree, use `TypedEventTarget`:
+Render `ThemeName` beneath `ThemeProvider`. For updates that should not rerender the whole provider subtree, expose a stable event-producing object (for example `TypedEventTarget`) and have consumers subscribe with their component signal. Read current values from that object in render; dispatching an event still needs a subscriber to call `handle.update()`.
 
-```tsx
-import { TypedEventTarget } from 'remix/ui'
-
-class Theme extends TypedEventTarget<{ change: Event }> {
-  #value: 'light' | 'dark' = 'light'
-  get value() {
-    return this.#value
-  }
-  setValue(value: 'light' | 'dark') {
-    this.#value = value
-    this.dispatchEvent(new Event('change'))
-  }
-}
-
-function ThemeProvider(handle: Handle<{ children?: RemixNode }, Theme>) {
-  let theme = new Theme()
-  handle.context.set(theme)
-
-  return () => (
-    <div>
-      <button mix={on('click', () => theme.setValue(theme.value === 'light' ? 'dark' : 'light'))}>
-        Toggle
-      </button>
-      {handle.props.children}
-    </div>
-  )
-}
-
-function ThemedContent(handle: Handle) {
-  let theme = handle.context.get(ThemeProvider)
-  theme.addEventListener('change', () => handle.update(), { signal: handle.signal })
-  return () => <div>Theme: {theme.value}</div>
-}
-```
-
-## Global Events
-
-Use `on(...)` for element events. For browser globals such as `window` or `document`, schedule setup with `handle.queueTask()` and pass `handle.signal` to `addEventListener()` so the listener is removed when the component disconnects:
-
-```tsx
-import type { Handle } from 'remix/ui'
-
-function ViewportWidth(handle: Handle) {
-  let width: number | undefined
-
-  handle.queueTask(() => {
-    width = window.innerWidth
-    window.addEventListener(
-      'resize',
-      () => {
-        width = window.innerWidth
-        handle.update()
-      },
-      { signal: handle.signal },
-    )
-    handle.update()
-  })
-
-  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
-}
-```
+Use `handle.id` to associate labels and descriptions with unique controls. Frame handles and state preservation across frame reloads are covered in [hydration and navigation](hydration-frames-navigation.md#frames-and-identity).
