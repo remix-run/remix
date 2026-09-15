@@ -154,6 +154,17 @@ function stripDoctypeMarkup(html: string): string {
   return html.replace(DOCTYPE_PATTERN, '')
 }
 
+// Marker-less HTML is a whole document when it starts with a doctype or `<html>`.
+// `renderToString` strips flush markers before returning, and so does any comment-stripping
+// minifier run over static output, so the marker alone cannot tell the two apart here.
+// Diffing such HTML as a fragment parses it inside a `<template>`, which drops the
+// `<html>`/`<head>`/`<body>` wrappers and makes the document diff throw HierarchyRequestError.
+const FULL_DOCUMENT_PATTERN = /^\s*(?:<!doctype\b|<html\b)/i
+
+function inferFlushKind(html: string): FlushKind {
+  return FULL_DOCUMENT_PATTERN.test(html) ? 'document' : 'fragment'
+}
+
 function syncElementAttributes(target: Element, source: Element) {
   for (let attribute of Array.from(target.attributes)) {
     if (!source.hasAttribute(attribute.name)) {
@@ -480,12 +491,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       }
     }
 
-    let htmlContent = typeof content === 'string' ? stripDoctypeMarkup(content) : undefined
+    let rawHtml = typeof content === 'string' ? content : undefined
+    let htmlContent = rawHtml === undefined ? undefined : stripDoctypeMarkup(rawHtml)
 
     let isFullDocumentReload =
       container.root instanceof Document &&
-      htmlContent !== undefined &&
-      options.flushKind === 'document'
+      rawHtml !== undefined &&
+      (options.flushKind ?? inferFlushKind(rawHtml)) === 'document'
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
@@ -1735,7 +1747,7 @@ async function renderFrameStream(
     }
 
     if (html !== '') {
-      await applyHtml(html, 'fragment')
+      await applyHtml(html, appliedOnce ? 'fragment' : inferFlushKind(html))
       appliedOnce = true
     }
 
