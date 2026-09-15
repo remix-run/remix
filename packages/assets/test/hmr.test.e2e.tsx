@@ -30,6 +30,15 @@ const consoleMessageTimeout = 5000
 const hmrConnectionTimeout = 15_000
 
 describe('asset server HMR', () => {
+  it('cancels the HMR connection wait when navigation fails', async (t) => {
+    let fixture = await createHmrFixture()
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await page.route('**/*', (route) => route.abort())
+    await assert.rejects(navigateToHmrPage(page))
+  })
+
   it('loads current HMR dependencies from a later entry with import maps', async (t) => {
     await assertLateEntryUsesLatestHmrDependency(t, { importMaps: true })
   })
@@ -40,16 +49,6 @@ describe('asset server HMR', () => {
 
   it('updates accepted browser module output without losing page state', async (t) => {
     let fixture = await createHmrFixture({ counterBarrelImport: true })
-    t.after(fixture.close)
-
-    let page = await t.serve(await createHmrTestServer(fixture))
-    t.after(fixture.close)
-    await page.route('**/*', (route) => route.abort())
-    await assert.rejects(navigateToHmrPage(page))
-  })
-
-  it('updates accepted browser module output without losing page state', async (t) => {
-    let fixture = await createHmrFixture()
 
     let page = await t.serve(await createHmrTestServer(fixture))
     t.after(fixture.close)
@@ -2841,7 +2840,7 @@ async function createHmrTestServer(
   }
 
   hmrEventStream = createTestHmrEventStream()
-  if (!options.manualBrowserFileEvents) startBrowserHmrWatcher()
+  if (!options.manualBrowserFileEvents) await startBrowserHmrWatcher()
 
   let server = http.createServer(async (request, response) => {
     try {
@@ -2897,7 +2896,7 @@ async function createHmrTestServer(
     },
   }
 
-  function startBrowserHmrWatcher(): void {
+  async function startBrowserHmrWatcher(): Promise<void> {
     if (options.manualBrowserFileEvents) return
     if (browserHmrWatcher) return
 
@@ -2914,9 +2913,13 @@ async function createHmrTestServer(
 
     browserHmrWatcher.on('all', (event, filePath) => {
       if (event !== 'add' && event !== 'change' && event !== 'unlink') return
-      handleBrowserFileEvents([{ event, filePath }]).catch((error: unknown) => {
-        console.error(error)
-      })
+      pendingBrowserHmrEvents = pendingBrowserHmrEvents
+        .then(async () => {
+          await handleBrowserFileEvents([{ event, filePath }])
+        })
+        .catch((error: unknown) => {
+          console.error(error)
+        })
     })
 
     await once(browserHmrWatcher, 'ready')
