@@ -2,6 +2,14 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## v0.21.2
+
+### Patch Changes
+
+- Fix `SetCookie` accepting invalid `SameSite` values
+
+  The `SameSite` check used `/strict|lax|none/i` as a substring test, so any value containing one of those words (e.g. `SameSite=nonesense`, `SameSite=strictly`) was accepted, capitalized, and re-serialized — violating the declared `'Strict' | 'Lax' | 'None'` type. The regex is now anchored, and invalid values fall through to `undefined` like other malformed attributes.
+
 ## v0.21.1
 
 ### Patch Changes

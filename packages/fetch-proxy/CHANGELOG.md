@@ -2,6 +2,15 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
+## v0.8.6
+
+### Patch Changes
+
+- Replace existing forwarding URL metadata when `xForwardedHeaders` is enabled so proxied requests consistently describe the current incoming request URL.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+
 ## v0.8.5
 
 ### Patch Changes
