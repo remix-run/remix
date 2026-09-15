@@ -1,0 +1,1 @@
+Ignore invalid host prop names and reserved DOM mutation properties during server rendering and client reconciliation. Use the `on()` mixin for events; the explicit `innerHTML` API and standard DOM, `data-*`, `aria-*`, SVG, and custom-element properties continue to work as before.

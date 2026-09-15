@@ -420,6 +420,22 @@ describe('stream', () => {
       )
     })
 
+    it('omits invalid and reserved host prop names', async () => {
+      let html = await drain(
+        renderToStream(
+          createElement('div', {
+            'data-value': 'ok',
+            'aria-label': 'Example',
+            'x onclick="alert(1)': 'value',
+            onclick: 'alert(1)',
+            outerHTML: '<p>replacement</p>',
+          }),
+        ),
+      )
+
+      expect(html).toBe('<div data-value="ok" aria-label="Example"></div>')
+    })
+
     it('changes className to class', async () => {
       let stream = renderToStream(<div className="test-class">Content</div>)
       let html = await drain(stream)

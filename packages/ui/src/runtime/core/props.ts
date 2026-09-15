@@ -2,6 +2,7 @@ import type { ElementProps } from '../jsx.ts'
 import {
   canUseProperty,
   getMergedClassName,
+  isAllowedHostPropName,
   isBooleanishStringAttribute,
   normalizeAttributeName,
   serializeStyleObject,
@@ -66,6 +67,7 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
   for (let name in curr) {
     if (isFrameworkProp(name)) continue
+    if (!isAllowedHostPropName(name)) continue
     if (name === 'class' || name === 'className') continue
     if (name in next && next[name] != null) continue
 
@@ -80,6 +82,7 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
   for (let name in next) {
     if (isFrameworkProp(name)) continue
+    if (!isAllowedHostPropName(name)) continue
     if (name === 'class' || name === 'className') continue
 
     let nextValue = next[name]

@@ -13,6 +13,7 @@ import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
   FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
   SELF_CLOSING_TAGS,
+  isAllowedHostPropName,
   normalizeAttributeName,
   serializeStyleObject,
   shouldStringifyBooleanAttribute,
@@ -748,6 +749,7 @@ function renderAttributes(props: any, isSvg: boolean, excludedProps?: Set<string
   for (let key in props) {
     if (SSR_OMITTED_PROPS.has(key)) continue
     if (excludedProps?.has(key)) continue
+    if (!isAllowedHostPropName(key)) continue
 
     let value = props[key]
     let attrName = transformAttributeName(key, isSvg)

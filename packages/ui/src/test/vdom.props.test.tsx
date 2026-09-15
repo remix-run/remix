@@ -1,5 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+import { createElement } from '../runtime/create-element.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { css } from '../index.ts'
@@ -24,6 +25,90 @@ describe('vnode rendering', () => {
     it.todo('checked')
     it.todo('defaultChecked')
     it.todo('disabled')
+
+    it('ignores invalid host prop names', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(
+        createElement('div', {
+          'data-value': 'ok',
+          'aria-label': 'Example',
+          'invalid name': 'ignored',
+        }),
+      )
+
+      let div = container.querySelector('div')
+      invariant(div instanceof HTMLDivElement)
+      expect(div.getAttributeNames()).toEqual(['data-value', 'aria-label'])
+    })
+
+    it('does not reflect reserved DOM properties', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(<div>content</div>)
+
+      let div = container.querySelector('div')
+      invariant(div instanceof HTMLDivElement)
+      let calls = 0
+      root.render(
+        createElement(
+          'div',
+          {
+            onclick: () => calls++,
+            outerHTML: '<p>replacement</p>',
+          },
+          'content',
+        ),
+      )
+
+      expect(container.querySelector('div')).toBe(div)
+      expect(container.querySelector('p')).toBeNull()
+      div.click()
+      expect(calls).toBe(0)
+    })
+
+    it('does not set inline event attributes on SVG elements', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(createElement('svg', { onclick: 'alert(1)', 'data-value': 'ok' }))
+
+      let svg = container.querySelector('svg')
+      invariant(svg instanceof SVGSVGElement)
+      expect(svg.hasAttribute('onclick')).toBe(false)
+      expect(svg.getAttribute('data-value')).toBe('ok')
+    })
+
+    it('does not mutate an element prototype through a host prop', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let props = JSON.parse('{"__proto__":{"changed":true},"id":"target"}')
+
+      root.render(createElement('div', props))
+
+      let div = container.querySelector('#target')
+      invariant(div instanceof HTMLDivElement)
+      expect('changed' in div).toBe(false)
+    })
+
+    it('reflects custom element properties', () => {
+      class HostPropsElement extends HTMLElement {
+        settings: unknown = undefined
+      }
+
+      let tagName = 'x-remix-host-props-test'
+      if (!customElements.get(tagName)) customElements.define(tagName, HostPropsElement)
+
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let settings = { mode: 'compact' }
+      root.render(createElement(tagName, { settings }))
+
+      let element = container.querySelector(tagName)
+      invariant(element instanceof HostPropsElement)
+      expect(element.settings).toBe(settings)
+    })
   })
 
   describe('framework props', () => {

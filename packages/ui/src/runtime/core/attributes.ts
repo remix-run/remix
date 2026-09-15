@@ -27,6 +27,9 @@ const BOOLEANISH_STRING_ATTRIBUTES = new Set([
   'spellcheck',
 ])
 
+const BLOCKED_HOST_PROP_NAMES = new Set(['__proto__', 'outerHTML'])
+const INVALID_HOST_PROP_NAME_CHARACTER = /[\u0000\t\n\f\r "'/>=]/
+
 export const FRAMEWORK_PROPS = new Set(['children', 'mix', 'key', 'animate', 'innerHTML', 'on'])
 
 export const SELF_CLOSING_TAGS = new Set([
@@ -48,6 +51,13 @@ export const SELF_CLOSING_TAGS = new Set([
 
 export function isChildlessElement(name: string): boolean {
   return SELF_CLOSING_TAGS.has(name)
+}
+
+export function isAllowedHostPropName(name: string): boolean {
+  if (name.length === 0 || INVALID_HOST_PROP_NAME_CHARACTER.test(name)) return false
+
+  let normalizedName = name.toLowerCase()
+  return !normalizedName.startsWith('on') && !BLOCKED_HOST_PROP_NAMES.has(name)
 }
 
 export function canUseProperty(
