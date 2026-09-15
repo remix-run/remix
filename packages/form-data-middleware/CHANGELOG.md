@@ -2,6 +2,13 @@
 
 This is the changelog for [`form-data-middleware`](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.7
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`form-data-parser@0.17.6`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.6)
+
 ## v0.3.6
 
 ### Patch Changes

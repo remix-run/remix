@@ -2,6 +2,15 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
+## v0.16.5
+
+### Patch Changes
+
+- Allow RFC 2046 multipart preambles before the initial boundary while ignoring boundary-like text that does not begin a delimiter line (see #11759).
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+
 ## v0.16.4
 
 ### Patch Changes
