@@ -25,7 +25,7 @@ type RebindTuple<args extends unknown[], baseNode, boundNode> = {
 export type MixinProps<
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
-> = Omit<props, 'children' | 'innerHTML' | 'mix'> & {
+> = Omit<props, 'children' | 'innerHTML' | 'srcDoc' | 'srcdoc' | 'outerHTML' | 'mix'> & {
   mix?: MixValue<node, props>
 }
 
@@ -74,7 +74,8 @@ type MixinHandleEventMap<node extends EventTarget = Element> = {
  * Runtime handle passed to mixin setup functions.
  *
  * The node type is covariant so a handle for a subtype host can be used by a mixin authored for
- * its base type. Mixin render callbacks receive host props with `children` and `innerHTML` removed.
+ * its base type. Mixin render callbacks receive host props with children and raw HTML props
+ * removed.
  * Returned mixin elements may patch host attributes and nested `mix`, but cannot replace
  * the host subtree.
  */

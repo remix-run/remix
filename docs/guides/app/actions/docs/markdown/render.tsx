@@ -1,5 +1,5 @@
 import type { Root } from 'mdast'
-import { Frame } from 'remix/ui'
+import { Frame, unsafeHTML } from 'remix/ui'
 import type { Handle, RemixNode } from 'remix/ui'
 import { addHeadingIds, readMarkdownHeadingsFromRoot } from 'remix-docs-shared/markdown/headings'
 import { parseMarkdownDocument } from 'remix-docs-shared/markdown/parser'
@@ -74,6 +74,10 @@ async function renderMarkdownRoot(root: Root): Promise<RemixNode[]> {
 
 function MarkdownHtml(handle: Handle<{ html: string }>) {
   return () => (
-    <div class="rmx-page-body" mix={docsMarkdownContentCss} innerHTML={handle.props.html} />
+    <div
+      class="rmx-page-body"
+      mix={docsMarkdownContentCss}
+      innerHTML={unsafeHTML(handle.props.html)}
+    />
   )
 }
