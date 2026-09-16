@@ -181,6 +181,7 @@ let app = run({
       credentials: "same-origin",
       headers,
       method: options?.method,
+      mode: "same-origin",
       signal: options?.signal,
     });
 
@@ -205,11 +206,16 @@ function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
 }
 ```
 
-Only return trusted HTML from `resolveFrame`. Same-origin route URLs are the normal choice. Pass
-`options.signal` to `fetch()` instead of letting a removed or superseded frame request continue.
-GET forms already include their values in `src`. For non-GET forms, the resolver receives the
-browser's `FormData`, method, and encoding. This example preserves URL-encoded and multipart form
-bodies; the resolver remains the place to apply other encoding or `_method` conventions.
+The default resolver only makes same-origin requests, including redirects. This custom resolver
+keeps that restriction with `mode: "same-origin"`; omit it only when the application explicitly
+trusts a cross-origin source. Remix does not sanitize returned HTML before reconciling it into the
+current document, and same-origin user-generated HTML is not implicitly safe. Sanitize untrusted
+content before returning it.
+
+Pass `options.signal` to `fetch()` instead of letting a removed or superseded frame request
+continue. GET forms already include their values in `src`. For non-GET forms, the resolver receives
+the browser's `FormData`, method, and encoding. This example preserves URL-encoded and multipart
+form bodies; the resolver remains the place to apply other encoding or `_method` conventions.
 
 ## Name and reload frames {#frames-and-partial-server-rendered-ui}
 

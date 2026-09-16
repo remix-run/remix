@@ -75,8 +75,9 @@ export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Func
 /**
  * Resolves content for a browser-loaded frame.
  *
- * Only return trusted application content. Frame HTML can select client-entry modules and
- * contribute import maps, styles, and nested frames to the current document.
+ * Only return trusted application content. Remix does not sanitize HTML strings, streams, or
+ * response bodies before parsing and reconciling them into the current document. Frame HTML can
+ * select client-entry modules and contribute import maps, styles, and nested frames.
  *
  * @param src Source string from the `<Frame src>` prop.
  * @param options Information about the active frame load or form submission.

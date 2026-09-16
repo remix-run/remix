@@ -238,9 +238,9 @@ response lets Remix stream its body. When `fetch()` followed a redirect during a
 the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`;
 other frames render the response without changing either URL.
 
-The default resolver uses Fetch's `same-origin` mode. Cross-origin sources and redirects fail, even if the destination allows CORS. To load trusted cross-origin frame content, provide a custom `resolveFrame` to `run()`. Custom resolvers control their own request and redirect policy.
+The default resolver uses Fetch's `same-origin` mode. Cross-origin sources and redirects fail, even if the destination allows CORS. This restricts where the default resolver can fetch content; it does not sanitize the response or make user-generated HTML safe because it came from the same origin.
 
-Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
+Remix parses and reconciles frame HTML into the current document without sanitizing it. Only return content from sources the application trusts to run code in the current page, and sanitize untrusted content before returning it. To load trusted cross-origin frame content, provide a custom `resolveFrame` to `run()`. Custom resolvers control their own request, redirect, and content trust policies.
 
 ## Link navigation
 
