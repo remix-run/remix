@@ -12,7 +12,6 @@ export const assets = createAssetServer({
   ...config.assets,
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
-  optimizeBarrelFileImports: !isDevelopment,
   fingerprint: !isDevelopment,
   watch: isHmr,
   hmr: isHmr
