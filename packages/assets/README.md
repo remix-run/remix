@@ -70,7 +70,6 @@ server and Remix CLI use the same configuration:
     "allowFiles": ["app/routes.ts", "app/**/public/**"],
     "allowPackages": ["remix"],
     "denyFiles": ["app/**/*.test.*"],
-    "importMaps": true,
     "files": {
       "extensions": [".svg", ".png", ".jpg", ".woff2"],
     },
