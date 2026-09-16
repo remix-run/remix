@@ -232,7 +232,7 @@ async function assertImportMapImport(
 
 async function assertImportMapScopeImport(
   assetServer: ReturnType<typeof createAssetServer>,
-  filePath: string,
+  filePath: string | readonly string[],
   scope: string,
   specifier: string,
   pattern: RegExp,
@@ -3062,7 +3062,7 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/value.ts', 'export const internalValue = 1')
     await write(dir, 'app/unused.ts', 'export const unused = 2')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let entry = await assetServer.getScriptEntry('app/entry.ts')
     let response = await get(assetServer, entry.href)
@@ -3078,6 +3078,25 @@ describe('asset-server', () => {
     let notModified = await get(assetServer, entry.href, { 'If-None-Match': etag })
     assert.ok(notModified)
     assert.equal(notModified.status, 304)
+  })
+
+  it('can disable barrel file import optimization', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: false })
+    await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
+    await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
+    await write(dir, 'app/value.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: false })
+
+    let entry = await assetServer.getScriptEntry('app/entry.ts')
+    let response = await get(assetServer, entry.href)
+    assert.ok(response)
+
+    assert.match(await response.text(), /from "\.\/barrel\.ts"/)
+    assert.deepEqual(entry.preloads, [
+      '/assets/app/entry.ts',
+      '/assets/app/barrel.ts',
+      '/assets/app/value.ts',
+    ])
   })
 
   it('preserves a barrel file request when another branch cycles back to the importer', async () => {
@@ -5867,7 +5886,7 @@ describe('asset-server', () => {
     }
   })
 
-  it('reloads barrel file import graph changes while keeping CSS updates hot', async () => {
+  it('hot updates optimized barrel import graph changes while keeping CSS updates hot', async () => {
     let caseDir = await makeTmpDir()
     let handleFileEvents: BrowserHmrFileEventHandler | undefined
     let watchedFiles = new Set<string>()
@@ -5907,7 +5926,6 @@ describe('asset-server', () => {
       let otherPath = await write(caseDir, 'app/nested/other.ts', 'export const other = 1')
       let stylePath = await write(caseDir, 'app/styles.css', 'body { color: red; }')
       let assetServer = createWatchedTestServer(caseDir, {
-        optimizeBarrelFileImports: true,
         hmr() {
           return {
             close() {},
@@ -5955,7 +5973,7 @@ describe('asset-server', () => {
 
         assert.deepEqual(
           unusedEvents.map((event) => event.type),
-          ['reload'],
+          ['update'],
         )
         let reorderedDependencyResponse = await getByFile(assetServer, 'app/nested/entry.ts')
         assert.ok(reorderedDependencyResponse)
@@ -5976,7 +5994,7 @@ describe('asset-server', () => {
 
         assert.deepEqual(
           barrelEvents.map((event) => event.type),
-          ['reload'],
+          ['update'],
         )
         let reorderedResponse = await getByFile(assetServer, 'app/nested/entry.ts')
         assert.ok(reorderedResponse)
@@ -6014,7 +6032,7 @@ describe('asset-server', () => {
 
         assert.deepEqual(
           scriptEvents.map((event) => event.type),
-          ['reload'],
+          ['update'],
         )
 
         await write(caseDir, 'app/styles.css', 'body { color: blue; }')
@@ -6056,6 +6074,54 @@ describe('asset-server', () => {
           await clientResponse.text(),
           /import \{ importModule as __remixImport \} from "\/assets\/app\/module-importer\.ts"/,
         )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('includes imports used by the HMR browser module importer in generated import maps', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'tsconfig.json', {
+        compilerOptions: {
+          baseUrl: '.',
+          paths: {
+            'module-importer-package': ['./app/module-importer-package.ts'],
+          },
+        },
+      })
+      await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      await write(
+        caseDir,
+        'app/module-importer.ts',
+        "export { importModule } from 'module-importer-package'",
+      )
+      await write(
+        caseDir,
+        'app/module-importer-package.ts',
+        'export async function importModule(specifier) { return import(specifier) }',
+      )
+      let entryPath = await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: {
+          channel: createTestBrowserHmrChannel,
+          moduleImporter: './app/module-importer.ts',
+        },
+      })
+
+      try {
+        let entryPaths = [entryPath]
+        await assertImportMapScopeImport(
+          assetServer,
+          entryPaths,
+          '/assets/app/',
+          'module-importer-package',
+          /\/assets\/app\/module-importer-package\.ts$/,
+        )
+        assert.deepEqual(entryPaths, [entryPath])
       } finally {
         await assetServer.close()
       }

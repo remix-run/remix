@@ -103,10 +103,15 @@ type ScriptCompiler = {
   getPreloadLayers(filePath: string | readonly string[]): Promise<string[][]>
   getImportMap(filePath: string | readonly string[]): Promise<ScriptImportMap>
   getHref(filePath: string): Promise<string>
-  resolveSpecifierFromRoot(specifier: string): Promise<string>
+  resolveSpecifierFromRoot(specifier: string): Promise<ResolvedScriptSpecifier>
   classifyHmrFileEvent(filePath: string, event: ModuleWatchEvent): Promise<ScriptHmrUpdate[]>
   invalidateFileEvent(filePath: string, event: ModuleWatchEvent): void
   parseRequestPathname(pathname: string): ParsedRequestPathname | null
+}
+
+type ResolvedScriptSpecifier = {
+  href: string
+  identityPath: string
 }
 
 type ParsedRequestPathname = {
@@ -164,6 +169,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     getDependencies(resolvedModule) {
       return resolvedModule.deps
     },
+    invalidateImportersOnFileEvent: resolvedOptions.optimizeBarrelFileImports,
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
     onWatchFilesChange: options.onWatchFilesChange,
   })
@@ -348,7 +354,10 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       }
 
       let resolvedModule = resolveServedScriptOrThrow(resolutionResult.path)
-      return getServedUrl(resolvedModule.identityPath)
+      return {
+        href: await getServedUrl(resolvedModule.identityPath),
+        identityPath: resolvedModule.identityPath,
+      }
     },
 
     async classifyHmrFileEvent(filePath, event) {
@@ -360,13 +369,10 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       let updatePathname = previousResolvedModule?.stableUrlPathname
       let resolutionMetadataChanged =
         isPackageJsonPath(normalizedFilePath) || isTsconfigPath(normalizedFilePath)
-      let barrelFileImportGraphChanged =
-        resolvedOptions.optimizeBarrelFileImports &&
-        (resolutionMetadataChanged || isSupportedScriptPath(normalizedFilePath))
 
       invalidateScriptFileEvent(normalizedFilePath, event)
 
-      if ((resolutionMetadataChanged || barrelFileImportGraphChanged) && hasResolvedScripts) {
+      if (resolutionMetadataChanged && hasResolvedScripts) {
         let hmrUpdate: ScriptHmrUpdate[] = [
           {
             accepted: false,
@@ -451,12 +457,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
     if (isPackageJsonPath(normalizedFilePath)) {
       scriptStore.invalidateAll()
-      return
-    }
-
-    if (resolvedOptions.optimizeBarrelFileImports && isSupportedScriptPath(normalizedFilePath)) {
-      let invalidated = scriptStore.invalidateForFileEvent(normalizedFilePath, event)
-      scriptStore.invalidateImporters(invalidated)
       return
     }
 
@@ -1038,10 +1038,6 @@ function toScriptCompileResult(emittedModule: EmittedModule): ScriptCompileResul
 
 function isPackageJsonPath(filePath: string): boolean {
   return filePath.endsWith('/package.json')
-}
-
-function isSupportedScriptPath(filePath: string): boolean {
-  return supportedScriptExtensionSet.has(path.extname(filePath))
 }
 
 function isTsconfigPath(filePath: string): boolean {

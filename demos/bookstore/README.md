@@ -18,7 +18,7 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 
 Use `pnpm dev` for automatic server restarts, or `pnpm hmr` to enable hot module replacement.
 
-The production server optimizes eligible barrel file imports alongside enabling minification and asset fingerprinting. Development and HMR modes leave this disabled.
+The production server enables minification and asset fingerprinting.
 
 ## Explore the Code
 

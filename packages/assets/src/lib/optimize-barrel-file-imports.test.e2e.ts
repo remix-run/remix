@@ -16,19 +16,16 @@ async function write(dir: string, relativePath: string, content: string): Promis
 
 async function createTestServer(
   rootDir: string,
-  options: { fingerprint?: boolean; importMaps?: boolean } = {},
+  options: { fingerprint?: boolean } = {},
 ): Promise<{
   baseUrl: string
   close(): Promise<void>
   requestedAssetPaths: string[]
 }> {
-  let importMaps = options.importMaps ?? true
   let assetServer = createAssetServer({
     allowFiles: ['app/**'],
     basePath: '/assets',
     fingerprint: options.fingerprint,
-    importMaps,
-    optimizeBarrelFileImports: true,
     rootDir,
     watch: false,
   })
@@ -38,9 +35,7 @@ async function createTestServer(
       let url = new URL(request.url ?? '/', 'http://localhost')
       if (url.pathname === '/') {
         let entry = await assetServer.getScriptEntry('app/entry.ts')
-        let importMapScript = importMaps
-          ? `<script type="importmap">${JSON.stringify(entry.importMap)}</script>`
-          : ''
+        let importMapScript = `<script type="importmap">${JSON.stringify(entry.importMap)}</script>`
         let preloadLinks = entry.preloads
           .map((href) => `<link rel="modulepreload" href="${href}">`)
           .join('')
@@ -93,7 +88,6 @@ async function createTestServer(
 
 async function assertFingerprintRuntime(
   t: TestContext,
-  mode: 'import-map' | 'rewritten-urls',
 ): Promise<void> {
   let dir = await fs.mkdtemp(path.join(os.tmpdir(), 'optimized-barrel-runtime-test-'))
   await write(dir, 'package.json', JSON.stringify({ sideEffects: false }))
@@ -110,10 +104,7 @@ async function assertFingerprintRuntime(
   await write(dir, 'app/value.ts', 'export const value = 42')
   await write(dir, 'app/unused.ts', 'export const unused = 0')
 
-  let server = await createTestServer(dir, {
-    fingerprint: true,
-    importMaps: mode === 'import-map',
-  })
+  let server = await createTestServer(dir, { fingerprint: true })
   let page = await t.serve(server)
   t.after(() => fs.rm(dir, { recursive: true, force: true }))
   await page.goto('/')
@@ -130,19 +121,12 @@ async function assertFingerprintRuntime(
   assert.ok(preloadPaths.some((pathname) => /\/value\.@[A-Za-z0-9_-]+\.ts$/.test(pathname)))
   assert.ok(server.requestedAssetPaths.some((pathname) => /\/value\.@/.test(pathname)))
   assert.ok(!server.requestedAssetPaths.some((pathname) => /barrel|unused/.test(pathname)))
-  assert.equal(
-    await page.locator('script[type="importmap"]').count(),
-    mode === 'import-map' ? 1 : 0,
-  )
+  assert.equal(await page.locator('script[type="importmap"]').count(), 1)
 }
 
 describe('optimizeBarrelFileImports', () => {
   it('runs fingerprinted optimized imports using an import map and preloads', async (t) => {
-    await assertFingerprintRuntime(t, 'import-map')
-  })
-
-  it('runs fingerprinted optimized imports using rewritten URLs and preloads', async (t) => {
-    await assertFingerprintRuntime(t, 'rewritten-urls')
+    await assertFingerprintRuntime(t)
   })
 
   it('preserves evaluation order when repeated imports expand through nested re-exports', async (t) => {

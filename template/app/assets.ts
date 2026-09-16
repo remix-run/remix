@@ -21,7 +21,6 @@ export const assets = createAssetServer({
   denyFiles: ['app/**/*.test.*'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
-  optimizeBarrelFileImports: !isDevelopment,
   watch: isDevelopment,
   hmr: isHmr
     ? {
