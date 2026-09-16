@@ -1,4 +1,4 @@
-import { createFrame, type Frame } from './frame.ts'
+import { createFrame, NamedFrameRegistry, type Frame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
 import type { FrameHandle, Handle } from './component.ts'
@@ -67,15 +67,15 @@ export function getTopFrame(): FrameHandle {
   return topFrame.handle
 }
 
-const namedFrames = new Map<string, FrameHandle>()
+const namedFrames = new NamedFrameRegistry()
 /**
- * Returns a named frame handle, falling back to the top frame when not found.
+ * Returns a named frame handle.
  *
  * @param name Name of the frame to look up.
- * @returns The matching frame handle or the top frame.
+ * @returns The matching frame handle, or `undefined` when not found.
  */
-export function getNamedFrame(name: string): FrameHandle {
-  return namedFrames.get(name) ?? getTopFrame()
+export function getNamedFrame(name: string): FrameHandle | undefined {
+  return namedFrames.get(name)
 }
 
 // Frame reloads can receive raw FormData without going through form navigation. Encode it here so

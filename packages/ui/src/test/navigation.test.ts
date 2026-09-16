@@ -984,7 +984,7 @@ describe('frame navigation sources', () => {
     )
     let dispatch = startStubNavigationListener(t, {
       getTopFrame: () => topFrame,
-      getNamedFrame: (name) => (name === 'details' ? namedFrame : topFrame),
+      getNamedFrame: (name) => (name === 'details' ? namedFrame : undefined),
       reloadFrame,
     })
     let anchor = document.createElement('a')
@@ -1081,13 +1081,14 @@ describe('frame navigation sources', () => {
   })
 
   it('uses the public destination when the named target does not exist', async (t) => {
-    let { anchor, event, dispatch, intercept, topFrame, namedFrame } = setup(t)
+    let { anchor, event, dispatch, intercept, reloadFrame, topFrame, namedFrame } = setup(t)
     anchor.setAttribute('data-rmx-target', 'missing')
     anchor.setAttribute('data-rmx-src', '/partial')
     let transition = dispatch(event)
     await transition.runHandler()
     await transition.succeed()
     expect(intercept).toHaveBeenCalledTimes(1)
+    expect(reloadFrame.mock.calls[0]?.arguments[0]).toBe(topFrame)
     expect(topFrame.src).toBe(anchor.href)
     expect(namedFrame.src).toBe('/initial-frame')
   })

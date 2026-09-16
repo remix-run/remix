@@ -2439,6 +2439,70 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
+  it('returns undefined when an internal named frame lookup misses', async () => {
+    document.body.innerHTML = await drain(renderToStream(<main />))
+
+    let app = run({ loadModule: mock.fn() })
+
+    try {
+      await app.ready()
+      expect(getNamedFrame('missing-frame')).toBeUndefined()
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('restores the previous named frame when the latest duplicate unmounts', async () => {
+    let showLatest = true
+    let getDuplicateFrame: undefined | (() => ReturnType<Handle['frames']['get']>)
+    let removeLatestFrame: undefined | (() => Promise<AbortSignal>)
+
+    let DuplicateFrames = clientEntry(
+      '/assets/duplicate-frames.js#DuplicateFrames',
+      function DuplicateFrames(handle: Handle) {
+        getDuplicateFrame = () => handle.frames.get('duplicate')
+        removeLatestFrame = () => {
+          showLatest = false
+          return handle.update()
+        }
+
+        return () => (
+          <>
+            <Frame name="duplicate" src="/first" />
+            {showLatest ? <Frame name="duplicate" src="/latest" /> : null}
+          </>
+        )
+      },
+    )
+
+    let resolveFrame = (src: string) => `<p>${src}</p>`
+    let html = await drain(renderToStream(<DuplicateFrames />, { resolveFrame }))
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/duplicate-frames.js' && exportName === 'DuplicateFrames') {
+          return DuplicateFrames
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+
+    try {
+      await app.ready()
+      invariant(getDuplicateFrame)
+      invariant(removeLatestFrame)
+      expect(getDuplicateFrame()?.src).toBe('/latest')
+
+      await removeLatestFrame()
+
+      expect(getDuplicateFrame()?.src).toBe('/first')
+    } finally {
+      app.dispose()
+    }
+  })
+
   it('exposes the root frame as handle.frames.top', async () => {
     let assertTopFrame: undefined | (() => void)
 
