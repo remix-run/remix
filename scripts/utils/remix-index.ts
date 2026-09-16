@@ -2,6 +2,7 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
+import { getRemixGuideCopies } from './remix-guides.ts'
 import { getRemixReadmeMappings } from './remix-readmes.ts'
 
 const packagesDir = path.resolve(import.meta.dirname, '..', '..', 'packages')
@@ -58,19 +59,33 @@ export function getRemixIndexEntries(): RemixIndexEntry[] {
 }
 
 export function createRemixIndex(): string {
-  let rows = getRemixIndexEntries().map((entry) => {
+  let guideRows = getRemixGuideCopies().map((guide) => {
+    let guidePath = toPosixPath(path.relative(remixDir, guide.remixGuidePath))
+    return `| [${escapeTableCell(guide.title)}](${guidePath}) | ${escapeTableCell(guide.description)} |`
+  })
+  let apiRows = getRemixIndexEntries().map((entry) => {
     let exportNames = entry.exportNames.map((exportName) => `\`${exportName}\``).join('<br>')
     return `| ${exportNames} | ${escapeTableCell(entry.description)} | ${formatDocsLink(entry.docsPath)} |`
   })
 
   return [
-    '# Remix Package Index',
+    '# Remix Documentation Index',
     '',
-    'Search this generated index by export name or description, then read the linked documentation for the installed Remix version. Exports covered by the same README are grouped together.',
+    'Search this generated index by task, export name, or description. Use the guides for app workflows and the package READMEs for API details that match the installed Remix version.',
+    '',
+    '## Guides',
+    '',
+    '| Guide | Description |',
+    '| --- | --- |',
+    ...guideRows,
+    '',
+    '## Package APIs',
+    '',
+    'Exports covered by the same README are grouped together.',
     '',
     '| Exports | Description | Docs |',
     '| --- | --- | --- |',
-    ...rows,
+    ...apiRows,
     '',
   ].join('\n')
 }

@@ -5,6 +5,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as url from 'node:url'
 import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
+import { getRemixGuideCopies } from '../../scripts/utils/remix-guides.ts'
 import { createRemixIndex, getRemixIndexEntries } from '../../scripts/utils/remix-index.ts'
 import { getRemixReadmeCopies } from '../../scripts/utils/remix-readmes.ts'
 
@@ -43,6 +44,7 @@ function packageRelativePath(filePath: string): string {
 }
 
 const referencedPackages = new Set([...specifierMap.keys()].map(packageNameFromSpecifier))
+const guideCopies = getRemixGuideCopies()
 const readmeCopies = getRemixReadmeCopies()
 const remixIndexEntries = getRemixIndexEntries()
 
@@ -193,6 +195,46 @@ describe('manifest', () => {
     let mirrorPaths = readmeCopies.map((copy) => copy.remixReadmePath)
     assert.equal(new Set(sourcePaths).size, sourcePaths.length)
     assert.equal(new Set(mirrorPaths).size, mirrorPaths.length)
+  })
+
+  it('generates one guide mirror per published guide chapter', () => {
+    let sourceGuidesDir = path.resolve(
+      __dirname,
+      '..',
+      '..',
+      'docs',
+      'guides',
+      'app',
+      'actions',
+      'docs',
+      'chapters',
+    )
+    let sourceGuideNames = fs
+      .readdirSync(sourceGuidesDir)
+      .filter((name) => /^\d+-[a-z0-9][a-z0-9-]*\.md$/.test(name))
+      .filter((name) =>
+        /^published:\s*true\s*$/m.test(fs.readFileSync(path.join(sourceGuidesDir, name), 'utf-8')),
+      )
+      .sort()
+    let guideNames = guideCopies.map((copy) => path.basename(copy.remixGuidePath))
+
+    assert.deepEqual(guideNames, sourceGuideNames)
+    assert.ok(guideNames.includes('13-testing.md'))
+    assert.ok(!guideNames.includes('08-data-and-validation.md'))
+    assert.equal(new Set(guideCopies.map((copy) => copy.remixGuidePath)).size, guideCopies.length)
+    assert.ok(guideCopies.every((copy) => copy.title && copy.description))
+  })
+
+  it('adds installed guides to the package index', () => {
+    let index = createRemixIndex()
+    let guideRows = index.split('\n').filter((line) => line.startsWith('| ['))
+
+    assert.equal(guideRows.length, guideCopies.length)
+    for (let guide of guideCopies) {
+      let guidePath = `guides/${path.basename(guide.remixGuidePath)}`
+      assert.ok(index.includes(`[${guide.title}](${guidePath})`))
+      assert.ok(fs.existsSync(guide.sourceGuidePath))
+    }
   })
 
   it('groups package index exports by README', () => {

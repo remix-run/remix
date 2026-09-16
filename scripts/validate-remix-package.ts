@@ -75,6 +75,10 @@ try {
   let indexDocsPaths = [...packedIndex.matchAll(/\]\(([^)]+)\)/g)].flatMap((match) =>
     match[1] ? [`package/${match[1]}`] : [],
   )
+  if (!indexDocsPaths.some((docsPath) => docsPath.startsWith('package/guides/'))) {
+    throw new Error('The remix package index does not link to any installed guides.')
+  }
+
   let missingIndexDocs = indexDocsPaths.filter((docsPath) => !packedFiles.has(docsPath))
   if (missingIndexDocs.length > 0) {
     throw new Error(
@@ -98,7 +102,7 @@ try {
   }
 
   console.log(
-    'Verified the package index, generated README mirrors, declaration-only exports, and the Remix schema in the tarball.',
+    'Verified the package index, generated guides and README mirrors, declaration-only exports, and the Remix schema in the tarball.',
   )
 } finally {
   fs.rmSync(packDir, { recursive: true, force: true })

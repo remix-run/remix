@@ -1,6 +1,7 @@
 ---
 title: Files and Assets
 description: How Remix serves static files and source assets, accepts bounded uploads, stores files, and returns HTTP file responses.
+published: false
 ---
 
 Remix has separate paths for files that already exist in public form, browser source that needs compilation, and user uploads that must cross a trust boundary. Choose that path before configuring caches or storage.

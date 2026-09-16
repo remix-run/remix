@@ -1,6 +1,7 @@
 ---
 title: Testing
 description: How to choose a test boundary and test Remix routes, stateful request flows, components, and end-to-end behavior.
+published: true
 ---
 
 Remix includes `remix/test`, whose three runner types—`server`, `browser`, and `e2e`—determine how and where a test runs. They do not determine how much application code the test exercises. `remix/assert` provides assertions in all three.

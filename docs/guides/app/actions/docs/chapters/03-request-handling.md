@@ -1,6 +1,7 @@
 ---
 title: Request Handling
 description: How a Web Request becomes a Web Response across runtime adapters and the middleware pipeline.
+published: true
 ---
 
 [Routing and Controllers](/routing-and-controllers/) covered what happens after Remix finds a route. This chapter backs up to the server boundary: how a runtime hands the app a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request), how middleware prepares request context, and how the resulting Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) gets back to the client.

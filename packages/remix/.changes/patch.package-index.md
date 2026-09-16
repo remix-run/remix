@@ -1,1 +1,1 @@
-Ship a generated `INDEX.md` that maps `remix/*` imports to their package description and the most specific installed README available.
+Ship a generated `INDEX.md` that maps app workflows to installed guides and `remix/*` imports to the most specific installed README available.

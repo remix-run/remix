@@ -11,6 +11,7 @@
   },
   "homepage": "https://github.com/remix-run/remix/tree/main/packages/remix#readme",
   "files": [
+    "guides",
     "INDEX.md",
     "LICENSE",
     "README.md",

@@ -1,6 +1,7 @@
 ---
 title: Errors and Cancellation
 description: How expected HTTP failures, uncaught server errors, rendering failures, client runtime errors, and aborted work propagate through Remix.
+published: false
 ---
 
 Remix does not turn every failure into a component error boundary. Expected outcomes are responses; unexpected exceptions cross the router boundary; rendering and browser runtime errors use explicit reporting hooks.

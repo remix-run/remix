@@ -7,7 +7,7 @@ description: Builds, reviews, and refactors Remix 3 applications using the remix
 
 Remix 3 uses Web APIs (`Request`, `Response`, `URL`, `FormData`) and imports from `remix/<subpath>`, not a top-level `remix` entry. Its UI runtime is **not React**: components use a setup function, `handle.props`, and a returned render function rather than hooks.
 
-Use this skill for app conventions and cross-package workflows; use installed package READMEs for API details. Start with the existing app, then load only the recipe and documentation needed for the task. To find which `remix/*` export does what, read or grep `node_modules/remix/INDEX.md`.
+Use this skill for app conventions and guardrails; use installed guides for task-oriented workflows and package READMEs for API details. Start with the existing app, then load only the documentation needed for the task. Search `node_modules/remix/INDEX.md` to find both.
 
 ## Inspect Before Changing
 
@@ -18,23 +18,25 @@ Use this skill for app conventions and cross-package workflows; use installed pa
 
 The skill is copied into an app when it is scaffolded. Upgrading `remix` does not automatically refresh that copy. When examples disagree with the installed version, use that version's exports, types, and documentation rather than inventing compatibility wrappers or trusting older framework knowledge.
 
-## Find Package Documentation
+## Find Installed Documentation
 
-Use the installed package as the API source of truth:
+Use the installed package as the documentation source of truth:
 
-1. Search `node_modules/remix/INDEX.md` by export or keyword, for example `grep -i 'session' node_modules/remix/INDEX.md`.
-2. Read the linked README relative to `node_modules/remix/`; load only the relevant headings and examples.
-3. If an older installed version has no index, inspect its `package.json` exports and source/types instead of using documentation for a newer version.
+1. Search `node_modules/remix/INDEX.md` by task, export, or keyword, for example `grep -i 'session' node_modules/remix/INDEX.md`.
+2. For a how-to task, read the linked guide under `node_modules/remix/guides/`.
+3. For API details, read the linked README under `node_modules/remix/src/`; load only the relevant headings and examples.
+4. If an older installed version has no index, inspect its `package.json` exports and source/types instead of using documentation for a newer version.
 
 In the Remix monorepo, search the generated `packages/remix/INDEX.md` instead.
 
-## Choose a Recipe
+## Choose Task Context
 
-Reference links are relative to this skill. Each recipe identifies the installed READMEs for its APIs; those README paths are relative to `node_modules/remix/`.
+Start with an installed guide. Use the focused references below only for guardrails or details the guide does not cover. Reference links are relative to this skill; installed documentation paths are relative to `node_modules/remix/`.
 
 | Task                                                    | Start here                                                                     |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Which `remix/*` export to reach for                     | Installed `node_modules/remix/INDEX.md`                                        |
+| App workflow or how-to task                             | Guide linked from installed `node_modules/remix/INDEX.md`                      |
+| Which `remix/*` export to reach for                     | Package API section of installed `node_modules/remix/INDEX.md`                 |
 | Placing files, adding a route area, sharing code        | [App structure](references/app-structure.md)                                   |
 | Routes, controllers, forms, HTTP responses              | [Routing and controllers](references/routing-and-controllers.md)               |
 | Middleware order, typed context, server lifecycle       | [Middleware and server](references/middleware-and-server.md)                   |
