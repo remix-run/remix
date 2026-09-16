@@ -74,34 +74,46 @@ h1 {
   margin: 0 0 1rem;
 }
 
+h2 {
+  margin: 0 0 1rem;
+}
+
 p {
   line-height: 1.6;
 }
 
-.app {
-  margin-top: 1.25rem;
-  margin-bottom: 1.25rem;
-  padding: 1rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 0.75rem;
-  background: white;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+.web-worker {
+  margin: 2rem 0;
 }
 
-.client-card {
+.worker-form {
   display: grid;
   gap: 0.75rem;
 }
 
-.client-card h2 {
-  margin: 0;
+.worker-form label {
+  font-weight: 600;
 }
 
-.client-card p {
-  margin: 0;
+.worker-form input {
+  padding: 0.75rem;
+  border: 1px solid #94a3b8;
+  border-radius: 0.5rem;
+  font: inherit;
 }
 
-.client-note {
+.worker-form button {
+  width: fit-content;
+  padding: 0.6rem 0.9rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #0f172a;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+}
+
+.worker-form output {
+  min-height: 1.5em;
   color: #475569;
-  font-size: 0.95rem;
 }

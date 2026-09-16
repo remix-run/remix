@@ -2,7 +2,7 @@ import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
 import { router } from './app/router.ts'
-import { assetServer } from './app/utils/assets.ts'
+import { assets, workerAssets } from './app/utils/assets.ts'
 
 const server = http.createServer(
   createRequestListener(async (request) => {
@@ -21,7 +21,7 @@ const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
   console.log(`assets demo is running on http://localhost:${port}`)
-  console.log('Edit a client file and refresh to verify the client code updates.')
+  console.log('Edit a document or worker module and refresh to verify that assets update.')
 })
 
 let shuttingDown = false
@@ -30,7 +30,7 @@ async function shutdown() {
   if (shuttingDown) return
   shuttingDown = true
 
-  await assetServer.close()
+  await Promise.all([assets.close(), workerAssets.close()])
   server.close(() => process.exit(0))
   server.closeAllConnections()
 }

@@ -9,6 +9,7 @@
       "packages": "packages"
     },
     "allowFiles": ["demos/assets/app/routes.ts", "demos/assets/app/**/public/**"],
+    "allowPackages": ["remix"],
     "denyFiles": ["demos/assets/app/**/*.test.*"],
     "files": {
       "extensions": [".svg"]

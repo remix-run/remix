@@ -1,19 +1,29 @@
 import * as path from 'node:path'
-import { createAssetServer, defineFileTransform } from 'remix/assets'
+import { createAssetServer, defineFileTransform, type AssetServerOptions } from 'remix/assets'
 import { loadConfig } from 'remix/cli'
 import { createFsFileStorage } from 'remix/file-storage/fs'
 import { optimize as optimizeSvg } from 'svgo'
+import { workerAssetsBase } from '../routes.ts'
+
+const isDevelopment = process.env.NODE_ENV === 'development'
 
 const config = await loadConfig(import.meta.dirname)
 if (config.assets === undefined) throw new Error('Missing assets configuration')
 if (config.assets.files === undefined) throw new Error('Missing asset file configuration')
 
-const isDevelopment = process.env.NODE_ENV === 'development'
-
-export const assetServer = createAssetServer({
+const baseOptions = {
   ...config.assets,
+  files: config.assets.files,
+  sourceMaps: isDevelopment ? 'external' : undefined,
+  minify: !isDevelopment,
+  watch: isDevelopment,
+  fingerprint: !isDevelopment,
+} satisfies AssetServerOptions
+
+export const assets = createAssetServer({
+  ...baseOptions,
   files: {
-    ...config.assets.files,
+    ...baseOptions.files,
     cache: createFsFileStorage(path.resolve(import.meta.dirname, '../../.tmp/assets-cache')),
     globalTransforms: [
       {
@@ -39,6 +49,10 @@ export const assetServer = createAssetServer({
       }),
     },
   },
-  watch: isDevelopment,
-  fingerprint: !isDevelopment,
+})
+
+export const workerAssets = createAssetServer({
+  ...baseOptions,
+  basePath: workerAssetsBase,
+  importMaps: false,
 })

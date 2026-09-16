@@ -13,8 +13,11 @@
     "@types/node": "catalog:",
     "typescript": "catalog:"
   },
+  "imports": {
+    "#count-words": "./app/workers/public/count-words.ts"
+  },
   "scripts": {
-    "dev": "NODE_ENV=development node --import remix/node-tsx server.ts",
+    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
     "start": "node --import remix/node-tsx server.ts",
     "typecheck": "tsc --noEmit"
   }

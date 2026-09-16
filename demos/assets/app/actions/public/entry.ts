@@ -1,20 +1,18 @@
-import { getContent } from './content.ts'
+import { run } from 'remix/ui'
 
-const root = document.getElementById('app-root')
+run({
+  async loadModule(moduleUrl, exportName) {
+    let module = await import(moduleUrl)
+    let component = module[exportName]
 
-if (!(root instanceof HTMLElement)) {
-  throw new Error('Expected #app-root to exist')
-}
+    if (typeof component !== 'function') {
+      throw new TypeError(`Unknown component: ${moduleUrl}#${exportName}`)
+    }
 
-root.innerHTML = `
-  <section class="client-card">
-    <h2>Client code is live</h2>
-    <p>
-      This UI comes from browser-only modules served by <code>remix/assets</code>.
-    </p>
-    <p>${getContent()}</p>
-    <p class="client-note">
-      Refresh after editing this file to confirm the server keeps running.
-    </p>
-  </section>
-`
+    return component
+  },
+})
+  .ready()
+  .catch((error: unknown) => {
+    console.error('Hydration failed:', error)
+  })
