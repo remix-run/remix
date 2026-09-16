@@ -228,8 +228,11 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
   fingerprint?: boolean
   /**
    * Whether scripts use generated import maps to resolve internal imports. Defaults to `true`.
-   * When disabled, internal imports are rewritten to their served URLs and import-map APIs return
-   * empty maps.
+   * Set it to `false` to allow scripts to run outside the document, such as in Web Workers and
+   * Service Workers, by rewriting imports to their resolved asset URLs. This gives up fine-grained
+   * import-map caching because dependency changes also update importer URLs. Applications that need
+   * both behaviors can use one asset server for document scripts and another for scripts that run
+   * outside the document.
    */
   importMaps?: boolean
   /**

@@ -79,7 +79,7 @@ let { href, importMap, preloads } = await assets.getScriptEntry('app/actions/pub
 
 Render `importMap` with `ImportMap` from `remix/ui/server` before the modulepreload links and module script. This combines its mappings with import maps from blocking client entries.
 
-Set `importMaps: false` to rewrite internal script imports to their served URLs instead. `getScriptEntry()` keeps the same result shape with an empty `importMap`, so shared document components can continue rendering `<ImportMap>`. It renders nothing when the combined map is empty.
+Set `importMaps: false` to allow scripts to run outside the document, such as in Web Workers and Service Workers, by rewriting imports to their resolved asset URLs. This gives up the fine-grained caching provided by import maps, so changing one module may require browsers to also download its importers again. Applications that need both behaviors can use one asset server for document scripts and another for scripts that run outside the document.
 
 Use `getHref()` directly when you need the public URL for a non-script asset, and `getPreloads()` when you need lower-level preload control for one or more entrypoints.
 
@@ -144,7 +144,7 @@ Rules:
 ## Useful Compiler Options
 
 - `minify` for production minification of scripts and styles
-- `importMaps: false` to rewrite internal script imports instead of generating import maps
+- `importMaps: false` to rewrite imports to their resolved asset URLs when scripts must run outside the document, at the cost of fine-grained import-map caching
 - `sourceMaps` for `'external'` or `'inline'` source maps for scripts and styles
 - `sourceMapSourcePaths` for `'url'` or `'absolute'` source map paths
 - `target` as an object for shared browser targets and script-only ECMAScript output, such as `{ es: '2020', chrome: '109', safari: '16.4' }`

@@ -1,1 +1,1 @@
-Add `importMaps: false` support to `remix/assets` and `remix.json`, allowing apps to use rewritten internal script URLs instead of generated import maps.
+Add `importMaps: false` support to `remix/assets`, allowing scripts to run outside the document, such as in Web Workers and Service Workers, by rewriting imports to their resolved asset URLs. This gives up the fine-grained caching provided by import maps, so applications that need both behaviors can use one asset server for document scripts and another for scripts that run outside the document.

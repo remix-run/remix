@@ -312,16 +312,7 @@ let importMap = await assetServer.getImportMap(['app/assets/entry.tsx', 'app/ass
 
 Without fingerprinting, import maps resolve authored specifiers to stable asset URLs. With fingerprinting enabled, the same import maps resolve stable asset URLs to content-fingerprinted asset URLs.
 
-Set `importMaps: false` to rewrite internal script imports to their served URLs instead. This applies to relative imports, bare imports, re-exports, and statically analyzable dynamic imports while leaving configured `scripts.external` imports unchanged.
-
-```ts
-let assetServer = createAssetServer({
-  basePath: '/assets',
-  allowFiles: ['app/routes.ts', 'app/**/public/**'],
-  allowPackages: ['remix'],
-  importMaps: false,
-})
-```
+Set `importMaps: false` to allow scripts to run outside the document, such as in Web Workers and Service Workers, by rewriting imports to their resolved asset URLs. This gives up the fine-grained caching provided by import maps, so changing one module may require browsers to also download its importers again. Applications that need both behaviors can use one asset server for document scripts and another for scripts that run outside the document.
 
 ## Preloads
 
@@ -737,7 +728,7 @@ Use `moduleImporter` to customize how HMR dynamically imports updated browser mo
 export function importModule(specifier: string, parentUrl: string): Promise<Record<string, unknown>>
 ```
 
-When generated import maps are enabled, HMR appends mappings for updated modules to the document in additional `<script type="importmap">` elements. Use `remix/multiple-import-maps-polyfill` when these updates must work in browsers without native support for multiple import maps. With `importMaps: false`, HMR updates use rewritten module URLs and omit generated maps.
+When generated import maps are enabled, HMR appends mappings for updated modules to the document in additional `<script type="importmap">` elements. Use `remix/multiple-import-maps-polyfill` when these updates must work in browsers without native support for multiple import maps. With `importMaps: false`, HMR updates rewrite imports to their resolved asset URLs and omit generated maps.
 
 ```ts
 import { createAssetServer } from 'remix/assets'

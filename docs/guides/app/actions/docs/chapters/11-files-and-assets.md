@@ -45,7 +45,9 @@ export const scriptEntry = await assetServer.getScriptEntry(entry);
 
 Render the script entry's import map with `<ImportMap>` before its modulepreload links and module script. This combines its mappings with import maps from blocking client entries.
 
-Set `importMaps: false` on the asset server to rewrite internal script imports to their served URLs instead. `getScriptEntry()` keeps the same result shape with an empty `importMap`, so the shared document can continue rendering `<ImportMap>`. It renders nothing when the combined map is empty.
+Set `importMaps: false` to allow scripts to run outside the document, such as in Web Workers and Service Workers, by rewriting imports to their resolved asset URLs. This gives up the fine-grained caching provided by import maps, so changing one module may require browsers to also download its importers again. Applications that need both behaviors can use one asset server for document scripts and another for scripts that run outside the document.
+
+When import maps are disabled, `getScriptEntry()` keeps the same result shape with an empty `importMap`, so the shared document can continue rendering `<ImportMap>`. It renders nothing when the combined map is empty.
 
 Resolve `clientEntry(import.meta.url, ...)` IDs to `href`, `importMap`, and `preloads` through the asset server in the shared renderer instead of hard-coding deployment URLs in components. Frame responses can introduce additional mappings. When targeting browsers without native support for multiple import maps, configure the browser entry with `remix/multiple-import-maps-polyfill` as shown in [Interactivity](/interactivity/#browser-entry-with-run).
 
