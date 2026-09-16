@@ -1,13 +1,13 @@
 ---
 name: remix
-description: Build and review Remix 3 applications using the remix npm package and subpath imports. Use for app structure, routes, controllers, middleware, validation, data, auth, sessions, uploads, UI, hydration, navigation, assets, or tests.
+description: Builds, reviews, and refactors Remix 3 applications using the remix npm package and remix/* imports. Use when changing an application's structure, routes, controllers, middleware, validation, data, auth, sessions, uploads, UI, hydration, navigation, assets, or tests; not when implementing Remix framework packages.
 ---
 
-# Build a Remix App
+# Build and Review a Remix App
 
 Remix 3 uses Web APIs (`Request`, `Response`, `URL`, `FormData`) and imports from `remix/<subpath>`, not a top-level `remix` entry. Its UI runtime is **not React**: components use a setup function, `handle.props`, and a returned render function rather than hooks.
 
-This skill owns app conventions and cross-package workflows. Installed package READMEs own API details. Start with the existing app, then load only the recipe and documentation needed for the task. To find which `remix/*` export does what, read [the package index](references/package-index.md).
+Use this skill for app conventions and cross-package workflows; use installed package READMEs for API details. Start with the existing app, then load only the recipe and documentation needed for the task. To find which `remix/*` export does what, read or grep `node_modules/remix/INDEX.md`.
 
 ## Inspect Before Changing
 
@@ -20,24 +20,13 @@ The skill is copied into an app when it is scaffolded. Upgrading `remix` does no
 
 ## Find Package Documentation
 
-Look inside the directly installed `remix` package; do not assume transitive `@remix-run/*` packages are linked at the app root.
+Use the installed package as the API source of truth:
 
-1. Inspect `node_modules/remix/package.json` to resolve the relevant `exports` entry. The public import name can differ from the underlying module name.
-2. Look for its README beneath `node_modules/remix/src/`. Published exports usually point into `dist/`; README mirrors use the corresponding source module name beneath `src/`, without the file extension.
-3. If there is no module-specific README, look in the mapped module's parent directories. Read the relevant headings/examples rather than loading every related package in full.
-4. If the README is missing or unclear, inspect the installed source/types and follow relevant documentation links. Check version compatibility before applying examples from online `main` documentation.
+1. Search `node_modules/remix/INDEX.md` by export or keyword, for example `grep -i 'session' node_modules/remix/INDEX.md`.
+2. Read the linked README relative to `node_modules/remix/`; load only the relevant headings and examples.
+3. If an older installed version has no index, inspect its `package.json` exports and source/types instead of using documentation for a newer version.
 
-Examples of mapped README paths, relative to `node_modules/remix/`:
-
-| Import                         | README                            |
-| ------------------------------ | --------------------------------- |
-| `remix/router`, `remix/routes` | `src/fetch-router/README.md`      |
-| `remix/middleware/render`      | `src/render-middleware/README.md` |
-| `remix/session-storage/fs`     | `src/session/README.md`           |
-| `remix/data-table/sqlite`      | `src/data-table-sqlite/README.md` |
-| `remix/ui/button`              | `src/ui/button/README.md`         |
-
-In the Remix monorepo itself, the mirrors are untracked; read the owning `packages/*` README instead.
+In the Remix monorepo, search the generated `packages/remix/INDEX.md` instead.
 
 ## Choose a Recipe
 
@@ -45,7 +34,7 @@ Reference links are relative to this skill. Each recipe identifies the installed
 
 | Task                                                    | Start here                                                                     |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Which `remix/*` export to reach for                     | [Package index](references/package-index.md)                                   |
+| Which `remix/*` export to reach for                     | Installed `node_modules/remix/INDEX.md`                                        |
 | Placing files, adding a route area, sharing code        | [App structure](references/app-structure.md)                                   |
 | Routes, controllers, forms, HTTP responses              | [Routing and controllers](references/routing-and-controllers.md)               |
 | Middleware order, typed context, server lifecycle       | [Middleware and server](references/middleware-and-server.md)                   |

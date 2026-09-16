@@ -9,6 +9,7 @@ reference/
 autoresearch-results/
 /demos/tmp/
 /packages/cli/template/
+/packages/remix/INDEX.md
 /packages/remix/src/**/README.md
 /packages/remix/schema/
 /packages/ui/demo/.artifacts/

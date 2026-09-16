@@ -2,7 +2,7 @@
 
 Read for URL contracts, controller ownership, or form-to-response flows.
 
-Installed API docs: `src/fetch-router/README.md` (including `remix/routes`) and `src/render-middleware/README.md`. The `remix/response/*` helpers have no README mirror; read their installed types. See [app structure](app-structure.md) for file placement and [middleware](middleware-and-server.md) for typed context.
+Installed API docs: `src/fetch-router/README.md` (including `remix/routes`), `src/render-middleware/README.md`, and `src/response/README.md` for the `remix/response/*` helpers. See [app structure](app-structure.md) for file placement and [middleware](middleware-and-server.md) for typed context.
 
 ## Contents
 

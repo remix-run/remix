@@ -19,6 +19,7 @@ const requiredTypeExportPaths = [
   'package/dist/node-hmr/types.d.ts',
 ]
 
+const remixIndexTarPath = 'package/INDEX.md'
 const remixSchemaTarPath = 'package/schema/remix.json'
 
 const packDir = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-pack-'))
@@ -64,6 +65,26 @@ try {
     )
   }
 
+  if (!packedFiles.has(remixIndexTarPath)) {
+    throw new Error(`The remix package tarball is missing ${remixIndexTarPath}.`)
+  }
+
+  let packedIndex = cp.execFileSync('tar', ['-xOzf', tarballPath, remixIndexTarPath], {
+    encoding: 'utf-8',
+  })
+  let indexDocsPaths = [...packedIndex.matchAll(/\]\(([^)]+)\)/g)].flatMap((match) =>
+    match[1] ? [`package/${match[1]}`] : [],
+  )
+  let missingIndexDocs = indexDocsPaths.filter((docsPath) => !packedFiles.has(docsPath))
+  if (missingIndexDocs.length > 0) {
+    throw new Error(
+      [
+        'The remix package index links to files missing from the tarball:',
+        ...missingIndexDocs.map((docsPath) => `- ${docsPath}`),
+      ].join('\n'),
+    )
+  }
+
   if (!packedFiles.has(remixSchemaTarPath)) {
     throw new Error(`The remix package tarball is missing ${remixSchemaTarPath}.`)
   }
@@ -77,7 +98,7 @@ try {
   }
 
   console.log(
-    'Verified generated README mirrors, declaration-only exports, and the Remix schema in the tarball.',
+    'Verified the package index, generated README mirrors, declaration-only exports, and the Remix schema in the tarball.',
   )
 } finally {
   fs.rmSync(packDir, { recursive: true, force: true })
