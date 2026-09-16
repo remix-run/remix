@@ -15,6 +15,7 @@ import {
   SELF_CLOSING_TAGS,
   isAllowedHostPropName,
   normalizeAttributeName,
+  sanitizeUrlAttribute,
   serializeStyleObject,
   shouldStringifyBooleanAttribute,
 } from '../runtime/core/attributes.ts'
@@ -599,7 +600,7 @@ function buildElementSegment(
   let attrs =
     !currentIsSvg && tag === 'input'
       ? renderInputAttributes(processedProps)
-      : renderAttributes(processedProps, currentIsSvg)
+      : renderAttributes(tag, processedProps, currentIsSvg)
 
   if (SELF_CLOSING_TAGS.has(tag)) {
     return staticSeg(`<${tag}${attrs} />`)
@@ -634,7 +635,7 @@ function buildElementSegment(
 }
 
 function buildTextareaElementSegment(tag: string, props: any): Segment {
-  let attrs = renderAttributes(props, false, TEXTAREA_VALUE_PROPS)
+  let attrs = renderAttributes(tag, props, false, TEXTAREA_VALUE_PROPS)
   let value = props.value ?? props.defaultValue ?? ''
   return staticSeg(`<${tag}${attrs}>${escapeTextContent(String(value))}</${tag}>`)
 }
@@ -702,7 +703,7 @@ function buildImportMapSegment(props: ElementProps, context: RenderContext): Seg
   }
 
   let { value: _value, ...scriptProps } = props
-  let attrs = renderAttributes(scriptProps, false)
+  let attrs = renderAttributes('script', scriptProps, false)
   let segment = staticSeg('')
   context.managedImportMaps.push({ attrs, segment, value })
   return segment
@@ -720,7 +721,7 @@ function renderInputAttributes(props: any): string {
     ...(value === undefined ? {} : { value }),
     ...(checked === undefined ? {} : { checked }),
   }
-  return renderAttributes(inputProps, false, INPUT_DEFAULT_PROPS)
+  return renderAttributes('input', inputProps, false, INPUT_DEFAULT_PROPS)
 }
 
 function buildHeadElementSegment(
@@ -730,7 +731,7 @@ function buildHeadElementSegment(
   frameState: SsrFrameState,
 ): Segment {
   let processedProps = processStyleProps(props)
-  let attrs = renderAttributes(processedProps, false)
+  let attrs = renderAttributes(tag, processedProps, false)
 
   let open = staticSeg(`<${tag}${attrs}>`)
   let previousInsideHead = context.insideHead
@@ -743,7 +744,12 @@ function buildHeadElementSegment(
   return compositeSeg([open, children, close])
 }
 
-function renderAttributes(props: any, isSvg: boolean, excludedProps?: Set<string>): string {
+function renderAttributes(
+  tag: string,
+  props: any,
+  isSvg: boolean,
+  excludedProps?: Set<string>,
+): string {
   let attrs = ''
 
   for (let key in props) {
@@ -757,6 +763,7 @@ function renderAttributes(props: any, isSvg: boolean, excludedProps?: Set<string
     if (value === undefined || value === null || (value === false && !shouldStringifyBoolean)) {
       continue
     }
+    value = sanitizeUrlAttribute(tag, attrName, value)
 
     if (typeof value === 'boolean' && shouldStringifyBoolean) {
       attrs += ` ${attrName}="${escapeHtml(String(value))}"`

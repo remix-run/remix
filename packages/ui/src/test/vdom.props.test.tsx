@@ -5,6 +5,9 @@ import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { css } from '../index.ts'
 
+const blockedJavaScriptUrl =
+  "javascript:throw new Error('Remix has blocked a javascript: URL as a security precaution.')"
+
 describe('vnode rendering', () => {
   describe('special attributes', () => {
     it.todo('className')
@@ -108,6 +111,68 @@ describe('vnode rendering', () => {
       let element = container.querySelector(tagName)
       invariant(element instanceof HostPropsElement)
       expect(element.settings).toBe(settings)
+    })
+
+    it('blocks javascript URLs in executable URL attributes', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(
+        <>
+          <a id="link" href="javascript:alert(1)" />
+          <img id="image" alt="" src={'\u0000 \tJ\na\rv\ta\ns\rc\tr\ni\tp\tt:alert(1)'} />
+          <form id="form" action="javascript:alert(1)" />
+          <button id="button" formAction="javascript:alert(1)" />
+          <svg>
+            <use id="use" xlinkHref="javascript:alert(1)" />
+          </svg>
+          <object id="object" data="javascript:alert(1)" />
+        </>,
+      )
+
+      expect(container.querySelector('#link')?.getAttribute('href')).toBe(blockedJavaScriptUrl)
+      expect(container.querySelector('#image')?.getAttribute('src')).toBe(blockedJavaScriptUrl)
+      expect(container.querySelector('#form')?.getAttribute('action')).toBe(blockedJavaScriptUrl)
+      expect(container.querySelector('#button')?.getAttribute('formaction')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(container.querySelector('#use')?.getAttribute('xlink:href')).toBe(blockedJavaScriptUrl)
+      expect(container.querySelector('#object')?.getAttribute('data')).toBe(blockedJavaScriptUrl)
+    })
+
+    it('preserves allowed URLs and non-executable URL attributes', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(
+        <>
+          <a id="relative" href="/docs" />
+          <a id="mailto" href="mailto:test@example.com" />
+          <a id="blob" href="blob:https://example.com/id" />
+          <img id="data-url" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP" />
+          <img id="srcset" alt="" srcSet="javascript:alert(1) 1x" />
+          <video id="poster" poster="javascript:alert(1)" />
+          {createElement('div', { id: 'ordinary-data', data: 'javascript:alert(1)' })}
+        </>,
+      )
+
+      expect(container.querySelector('#relative')?.getAttribute('href')).toBe('/docs')
+      expect(container.querySelector('#mailto')?.getAttribute('href')).toBe(
+        'mailto:test@example.com',
+      )
+      expect(container.querySelector('#blob')?.getAttribute('href')).toBe(
+        'blob:https://example.com/id',
+      )
+      expect(container.querySelector('#data-url')?.getAttribute('src')).toBe(
+        'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP',
+      )
+      expect(container.querySelector('#srcset')?.getAttribute('srcset')).toBe(
+        'javascript:alert(1) 1x',
+      )
+      expect(container.querySelector('#poster')?.getAttribute('poster')).toBe('javascript:alert(1)')
+      expect(container.querySelector('#ordinary-data')?.getAttribute('data')).toBe(
+        'javascript:alert(1)',
+      )
     })
   })
 

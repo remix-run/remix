@@ -5,6 +5,7 @@ import {
   isAllowedHostPropName,
   isBooleanishStringAttribute,
   normalizeAttributeName,
+  sanitizeUrlAttribute,
   serializeStyleObject,
   toKebabCase,
 } from './attributes.ts'
@@ -107,6 +108,7 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
 function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolean): void {
   let { ns, attr } = normalizeAttributeName(name, isSvg)
+  value = sanitizeUrlAttribute(dom.localName, attr, value)
 
   if (attr === 'style' && isStyleObject(value)) {
     patchStyleObject(dom, undefined, value)
