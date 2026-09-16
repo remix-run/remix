@@ -255,7 +255,7 @@ soft-navigation behavior applies even when the page does not render an explicit 
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
 - `data-rmx-document` leaves the link as a normal document navigation.
 
-During navigation, the top frame's source stays in sync with the browser URL. `data-rmx-src` only changes the requested URL when `data-rmx-target` resolves to a mounted named frame. If the target is omitted or no matching frame is mounted, an intercepted navigation reloads the top frame from `href`. The same behavior applies to form destinations, the `src` and `target` options of `navigate()`, and history traversal.
+During navigation, the top frame's source stays in sync with the browser URL. `data-rmx-src` only changes the requested URL when `data-rmx-target` resolves to a mounted named frame. If the target is omitted, an intercepted navigation reloads the top frame from `href`. If a specified target does not match a mounted frame, Remix leaves fresh link, form, and `navigate()` navigations to the browser. Back and forward traversal reloads the destination document instead of reconciling stale frame content. Native form navigation preserves the selected method, body, files, and submitter overrides.
 
 Every source override must resolve to the document origin, using `document.baseURI` for relative URLs. Invalid or cross-origin overrides disable interception regardless of the target, leaving the browser to navigate to the link's `href` or the form's destination.
 

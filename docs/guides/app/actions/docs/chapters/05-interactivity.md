@@ -726,8 +726,11 @@ the `link(...)` and `navigate(...)` options:
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
 - `data-rmx-document` opts out of interception and lets the browser perform a full-document navigation.
 
-The top frame follows the browser URL. If `data-rmx-target` is omitted or no matching frame is mounted,
-an intercepted navigation reloads the top frame from the link or form destination.
+The top frame follows the browser URL. If `data-rmx-target` is omitted, an intercepted navigation
+reloads the top frame from the link or form destination. If a specified target does not match a
+mounted frame, the browser performs a document navigation. Native form navigation preserves its
+method, body, files, and submitter overrides. Back and forward traversal reloads the destination
+document instead of reconciling stale frame content.
 
 A supplied `data-rmx-src` must be a valid same-origin URL regardless of the target. Invalid or
 cross-origin values disable interception and leave the navigation to the browser. These rules also
