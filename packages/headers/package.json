@@ -19,92 +19,71 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./accept": "./src/lib/accept.ts",
-    "./accept-encoding": "./src/lib/accept-encoding.ts",
-    "./accept-language": "./src/lib/accept-language.ts",
-    "./cache-control": "./src/lib/cache-control.ts",
-    "./content-disposition": "./src/lib/content-disposition.ts",
-    "./content-range": "./src/lib/content-range.ts",
-    "./content-type": "./src/lib/content-type.ts",
-    "./cookie": "./src/lib/cookie.ts",
-    "./if-match": "./src/lib/if-match.ts",
-    "./if-none-match": "./src/lib/if-none-match.ts",
-    "./if-range": "./src/lib/if-range.ts",
-    "./range": "./src/lib/range.ts",
-    "./raw-headers": "./src/lib/raw-headers.ts",
-    "./set-cookie": "./src/lib/set-cookie.ts",
-    "./vary": "./src/lib/vary.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./accept": {
+      "types": "./dist/lib/accept.d.ts",
+      "default": "./dist/lib/accept.js"
+    },
+    "./accept-encoding": {
+      "types": "./dist/lib/accept-encoding.d.ts",
+      "default": "./dist/lib/accept-encoding.js"
+    },
+    "./accept-language": {
+      "types": "./dist/lib/accept-language.d.ts",
+      "default": "./dist/lib/accept-language.js"
+    },
+    "./cache-control": {
+      "types": "./dist/lib/cache-control.d.ts",
+      "default": "./dist/lib/cache-control.js"
+    },
+    "./content-disposition": {
+      "types": "./dist/lib/content-disposition.d.ts",
+      "default": "./dist/lib/content-disposition.js"
+    },
+    "./content-range": {
+      "types": "./dist/lib/content-range.d.ts",
+      "default": "./dist/lib/content-range.js"
+    },
+    "./content-type": {
+      "types": "./dist/lib/content-type.d.ts",
+      "default": "./dist/lib/content-type.js"
+    },
+    "./cookie": {
+      "types": "./dist/lib/cookie.d.ts",
+      "default": "./dist/lib/cookie.js"
+    },
+    "./if-match": {
+      "types": "./dist/lib/if-match.d.ts",
+      "default": "./dist/lib/if-match.js"
+    },
+    "./if-none-match": {
+      "types": "./dist/lib/if-none-match.d.ts",
+      "default": "./dist/lib/if-none-match.js"
+    },
+    "./if-range": {
+      "types": "./dist/lib/if-range.d.ts",
+      "default": "./dist/lib/if-range.js"
+    },
+    "./range": {
+      "types": "./dist/lib/range.d.ts",
+      "default": "./dist/lib/range.js"
+    },
+    "./raw-headers": {
+      "types": "./dist/lib/raw-headers.d.ts",
+      "default": "./dist/lib/raw-headers.js"
+    },
+    "./set-cookie": {
+      "types": "./dist/lib/set-cookie.d.ts",
+      "default": "./dist/lib/set-cookie.js"
+    },
+    "./vary": {
+      "types": "./dist/lib/vary.d.ts",
+      "default": "./dist/lib/vary.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./accept": {
-        "types": "./dist/lib/accept.d.ts",
-        "default": "./dist/lib/accept.js"
-      },
-      "./accept-encoding": {
-        "types": "./dist/lib/accept-encoding.d.ts",
-        "default": "./dist/lib/accept-encoding.js"
-      },
-      "./accept-language": {
-        "types": "./dist/lib/accept-language.d.ts",
-        "default": "./dist/lib/accept-language.js"
-      },
-      "./cache-control": {
-        "types": "./dist/lib/cache-control.d.ts",
-        "default": "./dist/lib/cache-control.js"
-      },
-      "./content-disposition": {
-        "types": "./dist/lib/content-disposition.d.ts",
-        "default": "./dist/lib/content-disposition.js"
-      },
-      "./content-range": {
-        "types": "./dist/lib/content-range.d.ts",
-        "default": "./dist/lib/content-range.js"
-      },
-      "./content-type": {
-        "types": "./dist/lib/content-type.d.ts",
-        "default": "./dist/lib/content-type.js"
-      },
-      "./cookie": {
-        "types": "./dist/lib/cookie.d.ts",
-        "default": "./dist/lib/cookie.js"
-      },
-      "./if-match": {
-        "types": "./dist/lib/if-match.d.ts",
-        "default": "./dist/lib/if-match.js"
-      },
-      "./if-none-match": {
-        "types": "./dist/lib/if-none-match.d.ts",
-        "default": "./dist/lib/if-none-match.js"
-      },
-      "./if-range": {
-        "types": "./dist/lib/if-range.d.ts",
-        "default": "./dist/lib/if-range.js"
-      },
-      "./range": {
-        "types": "./dist/lib/range.d.ts",
-        "default": "./dist/lib/range.js"
-      },
-      "./raw-headers": {
-        "types": "./dist/lib/raw-headers.d.ts",
-        "default": "./dist/lib/raw-headers.js"
-      },
-      "./set-cookie": {
-        "types": "./dist/lib/set-cookie.d.ts",
-        "default": "./dist/lib/set-cookie.js"
-      },
-      "./vary": {
-        "types": "./dist/lib/vary.d.ts",
-        "default": "./dist/lib/vary.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
