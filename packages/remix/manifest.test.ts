@@ -6,7 +6,11 @@ import * as path from 'node:path'
 import * as url from 'node:url'
 import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
 import { getRemixGuideCopies } from '../../scripts/utils/remix-guides.ts'
-import { createRemixIndex, getRemixIndexEntries } from '../../scripts/utils/remix-index.ts'
+import {
+  createRemixIndex,
+  getRemixIndexEntries,
+  remixIndexPath,
+} from '../../scripts/utils/remix-index.ts'
 import { getRemixReadmeCopies } from '../../scripts/utils/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
@@ -217,12 +221,30 @@ describe('manifest', () => {
       )
       .sort()
     let guideNames = guideCopies.map((copy) => path.basename(copy.remixGuidePath))
+    let generatedGuideNames = fs
+      .readdirSync(path.join(__dirname, 'guides'))
+      .filter((name) => name.endsWith('.md'))
+      .sort()
 
     assert.deepEqual(guideNames, sourceGuideNames)
+    assert.deepEqual(generatedGuideNames, guideNames)
     assert.ok(guideNames.includes('13-testing.md'))
     assert.ok(!guideNames.includes('08-data-and-validation.md'))
     assert.equal(new Set(guideCopies.map((copy) => copy.remixGuidePath)).size, guideCopies.length)
     assert.ok(guideCopies.every((copy) => copy.title && copy.description))
+  })
+
+  it('keeps generated guide mirrors up to date', () => {
+    for (let guide of guideCopies) {
+      assert.equal(
+        fs.readFileSync(guide.remixGuidePath, 'utf-8'),
+        fs.readFileSync(guide.sourceGuidePath, 'utf-8'),
+      )
+    }
+  })
+
+  it('keeps the generated package index up to date', () => {
+    assert.equal(fs.readFileSync(remixIndexPath, 'utf-8'), createRemixIndex())
   })
 
   it('adds installed guides to the package index', () => {

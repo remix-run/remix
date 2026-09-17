@@ -4,6 +4,7 @@
  * 2. Creating source files that re-export from each package and sub-export
  * 3. Generating exports configuration in package.json
  * 4. Setting up dependencies for all referenced packages
+ * 5. Copying published guides and generating the documentation index
  *
  * Run: node scripts/generate-remix.ts
  */
@@ -14,6 +15,8 @@ import path from 'node:path'
 import url from 'node:url'
 import { parseSync } from 'oxc-parser'
 import { logAndExec } from './utils/process.ts'
+import { syncRemixGuides } from './utils/remix-guides.ts'
+import { syncRemixIndex } from './utils/remix-index.ts'
 import { findReadmeForSpecifier } from './utils/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
@@ -104,6 +107,8 @@ const existingBins = new Set<string>(Object.keys(remixPackageJson.bin || {}))
 
 // Update remixPackageJson in place and output to disk
 await updateRemixPackage()
+await syncRemixGuides()
+await syncRemixIndex()
 
 // Generate change files
 await outputExportsChangeFiles(remixPackageJson.exports, remixPackageJson.bin || {})

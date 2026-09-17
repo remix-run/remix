@@ -94,10 +94,6 @@ export async function syncRemixIndex(): Promise<void> {
   await fsp.writeFile(remixIndexPath, createRemixIndex())
 }
 
-export async function removeRemixIndex(): Promise<void> {
-  await fsp.rm(remixIndexPath, { force: true })
-}
-
 function readPackageDescriptions(): Map<string, string> {
   let descriptions = new Map<string, string>()
 
