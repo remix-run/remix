@@ -1613,7 +1613,9 @@ function diffChildren(
     return committed as CommittedVNode[]
   }
 
+  // Only bulk-clear when at least one committed child is being removed.
   if (
+    curr.length > 0 &&
     next.length === 0 &&
     anchor === undefined &&
     !parentUsesInnerHTML(vParent) &&
