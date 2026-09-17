@@ -52,9 +52,17 @@ await parseTar(archive, async (entry) => {
 
 ## Entry Paths
 
-`entry.name` and `entry.header.linkname` are archive metadata. The parser combines ustar prefixes and applies GNU/PAX overrides, but does not normalize paths, validate characters, or check filesystem containment. Values can include absolute paths, `..` segments, and control characters, including NUL and newline in GNU/PAX metadata.
+The default `entryNamePolicy: 'relative'` requires nonempty relative names. `parseTarHeader()`, `parseTar()`, and `TarParser` throw `TarParseError` for names starting with `/`, containing a `..` path component, a Windows drive prefix, backslashes, or embedded NULs. Validation applies to the final name after ustar prefixes and GNU/PAX overrides, before invoking the entry handler. Names such as `src/file.txt`, `./src/file.txt`, and `src/` are preserved. GNU long-name terminators are removed during decoding.
 
-Consumers that extract files must validate the final names and link targets for their destination filesystem and keep writes inside the extraction directory, including when existing or archived symlinks are present. Use context-appropriate escaping when displaying metadata or writing it to logs. The parser itself does not write files or create links.
+For archive inspection, backups, or controlled extraction, set `entryNamePolicy: 'preserve'` to return decoded names without these restrictions. Archive limits and header structure validation still apply. The option works with all three parsing APIs:
+
+```ts
+await parseTar(archive, { entryNamePolicy: 'preserve' }, (entry) => {
+  console.log(JSON.stringify(entry.name))
+})
+```
+
+`entry.header.linkname` remains unvalidated archive metadata. Consumers that extract files must validate link targets and keep writes inside the extraction directory, including when existing or archived symlinks are present. Entry name validation does not guarantee filesystem containment. Names can still contain newlines, so use context-appropriate escaping when displaying metadata or writing it to logs.
 
 ## Limits
 

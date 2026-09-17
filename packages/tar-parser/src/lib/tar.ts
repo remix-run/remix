@@ -70,7 +70,9 @@ export class MaxEntriesExceededError extends TarParseError {
 export interface TarHeader {
   /**
    * Entry path stored in the archive.
-   * Archive metadata; not normalized or validated for filesystem use.
+   * By default, parsed names are relative paths without parent components, Windows drive
+   * prefixes, backslashes, or NULs. The `preserve` entry name policy disables these checks.
+   * Filesystem containment still requires consumer validation.
    */
   name: string
 
@@ -176,10 +178,20 @@ export interface ParseTarHeaderOptions {
    * @default 'utf-8'
    */
   filenameEncoding?: string
+  /**
+   * Policy for entry names. Defaults to `relative`, which rejects empty names, absolute
+   * paths, parent components, Windows drive prefixes, backslashes, and NULs. Set to
+   * `preserve` to return decoded archive names without these checks. This does not
+   * affect link targets, archive limits, or header structure validation.
+   */
+  entryNamePolicy?: 'relative' | 'preserve'
 }
 
 /**
  * Parses a tar header block.
+ * With the default `relative` entry name policy, throws {@link TarParseError} if the
+ * name is empty, absolute, or contains parent components, a Windows drive prefix,
+ * backslashes, or NULs.
  *
  * @param block The tar header block
  * @param options Options that control how the header is parsed
@@ -187,7 +199,26 @@ export interface ParseTarHeaderOptions {
  */
 export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOptions): TarHeader {
   let header = decodeTarHeader(block, options)
+  validateEntryName(header.name, options?.entryNamePolicy)
   return { ...header, size: parseEntrySize(block.subarray(124, 136)) }
+}
+
+function validateEntryName(
+  name: string,
+  policy: ParseTarHeaderOptions['entryNamePolicy'] = 'relative',
+): void {
+  if (policy === 'preserve') return
+
+  if (
+    name === '' ||
+    name.startsWith('/') ||
+    name.includes('\\') ||
+    name.includes('\0') ||
+    /^(?:\.\/)*[a-z]:/i.test(name) ||
+    name.split('/').includes('..')
+  ) {
+    throw new TarParseError('Invalid tar entry name')
+  }
 }
 
 function decodeTarHeader(
@@ -325,6 +356,8 @@ export interface ParseTarOptions extends ParseTarHeaderOptions {
 
 /**
  * Parse a tar archive and call the given handler for each entry it contains.
+ * Applies the configured entry name policy, as in {@link parseTarHeader}, before
+ * calling the handler.
  *
  * ```ts
  * import { parseTar } from 'remix/tar-parser';
@@ -341,6 +374,8 @@ export interface ParseTarOptions extends ParseTarHeaderOptions {
 export async function parseTar(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void>
 /**
  * Parse a tar archive with the given options and call the handler for each entry.
+ * Applies the configured entry name policy, as in {@link parseTarHeader}, before
+ * calling the handler.
  *
  * @param archive The tar archive source data
  * @param options Options that control parsing and size limits
@@ -570,7 +605,7 @@ export class TarParser {
       return
     }
 
-    if (this.#gnuLongPath) {
+    if (this.#gnuLongPath !== null) {
       this.#header.name = this.#gnuLongPath
       this.#gnuLongPath = null
     }
@@ -586,6 +621,8 @@ export class TarParser {
       this.#header.pax = pax
       this.#pax = null
     }
+
+    validateEntryName(this.#header.name, this.#options?.entryNamePolicy)
 
     if (this.#header.size === 0 || this.#header.type === 'directory') {
       let emptyBody = new ReadableStream({
@@ -642,7 +679,9 @@ export class TarParser {
 
     switch (this.#header!.type) {
       case 'gnu-long-path':
-        this.#gnuLongPath = decodeLongPath(buffer)
+        this.#gnuLongPath = decodeLongPath(
+          buffer[buffer.length - 1] === 0 ? buffer.subarray(0, -1) : buffer,
+        )
         break
       case 'gnu-long-link-path':
         this.#gnuLongLinkPath = decodeLongPath(buffer)
@@ -770,7 +809,8 @@ export class TarEntry {
 
   /**
    * The name of this entry.
-   * Includes ustar prefixes and GNU/PAX overrides, without path or character validation.
+   * Parsed names include ustar prefixes and GNU/PAX overrides and follow the same
+   * entry name policy as {@link parseTarHeader}.
    */
   get name(): string {
     return this.header.name
