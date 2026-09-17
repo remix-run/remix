@@ -41,7 +41,7 @@ describe('parseFormData', () => {
     let file = formData.get('file')
     assert.ok(file instanceof File)
     assert.equal(file.name, 'example.txt')
-    assert.equal(file.type, normalizeFileType('text/html'))
+    assert.equal(file.type, normalizeFileType('Text/HTML'))
     assert.equal(await file.text(), '<p>Example</p>')
   })
 
@@ -147,10 +147,33 @@ describe('parseFormData', () => {
     let request = new Request('https://remix.run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded-extra' },
-      body: 'tag=red',
+      body: 'tag=red&tag=green',
     })
 
-    await assert.rejects(() => parseFormData(request), FormDataParseError)
+    await assert.rejects(
+      () => parseFormData(request, { maxParts: 1, maxTotalSize: 7 }),
+      FormDataParseError,
+    )
+    assert.equal(request.bodyUsed, false)
+  })
+
+  it('rejects unsupported media types even if the native parser accepts them', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded-extra' },
+      body: 'tag=red&tag=green',
+    })
+    request.formData = async function () {
+      let formData = new FormData()
+      formData.append('tag', 'red')
+      formData.append('tag', 'green')
+      return formData
+    }
+
+    await assert.rejects(
+      () => parseFormData(request, { maxParts: 1, maxTotalSize: 7 }),
+      FormDataParseError,
+    )
   })
 
   it('parses a application/x-www-form-urlencoded request', async () => {
