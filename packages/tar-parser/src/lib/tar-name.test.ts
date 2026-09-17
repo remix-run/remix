@@ -34,7 +34,11 @@ function metadata(type: string, value: string): Uint8Array[] {
 }
 
 function paxPath(value: string, type = 'x'): Uint8Array[] {
-  let record = ` path=${value}\n`
+  return pax('path', value, type)
+}
+
+function pax(key: string, value: string, type = 'x'): Uint8Array[] {
+  let record = ` ${key}=${value}\n`
   let recordLength = new TextEncoder().encode(record).length
   let length = recordLength + 1
   while (String(length).length + recordLength !== length) {
@@ -51,6 +55,18 @@ async function assertInvalidName(chunks: Uint8Array[]): Promise<void> {
         entries++
       }),
     { name: 'TarParseError', message: 'Invalid tar entry name' },
+  )
+  assert.equal(entries, 0)
+}
+
+async function assertInvalidLink(chunks: Uint8Array[]): Promise<void> {
+  let entries = 0
+  await assert.rejects(
+    () =>
+      parseTar(chunks, () => {
+        entries++
+      }),
+    { name: 'TarParseError', message: 'Invalid tar link target' },
   )
   assert.equal(entries, 0)
 }
@@ -97,6 +113,7 @@ describe('tar entry names', () => {
     await assertInvalidName([createHeader('C:/outside.txt')])
     await assertInvalidName([createHeader('c:outside.txt')])
     await assertInvalidName([createHeader('././C:/outside.txt')])
+    await assertInvalidName([createHeader('.//./C:/outside.txt')])
   })
 
   it('rejects backslash paths and UNC names', async () => {
@@ -209,32 +226,268 @@ describe('tar entry names', () => {
     )
     assert.deepEqual(names, ['file.txt'])
   })
+})
 
-  it('leaves link-target validation to consumers', async () => {
-    let targets: (string | null)[] = []
-    await parseTar([createHeader('link', { type: '2', linkname: '../target' })], (entry) => {
-      targets.push(entry.header.linkname)
+describe('tar link paths', () => {
+  it('rejects absolute targets in direct header parsing', () => {
+    assert.throws(() => parseTarHeader(createHeader('link', { type: '2', linkname: '/outside' })), {
+      name: 'TarParseError',
+      message: 'Invalid tar link target',
     })
-    assert.deepEqual(targets, ['../target'])
+    assert.throws(() => parseTarHeader(createHeader('link', { type: '1', linkname: '/outside' })), {
+      name: 'TarParseError',
+      message: 'Invalid tar link target',
+    })
+  })
+
+  it('validates symlink targets relative to the combined ustar parent', () => {
+    let header = createHeader('current', { prefix: 'lib', type: '2', linkname: '../shared/v2' })
+    assert.equal(parseTarHeader(header).linkname, '../shared/v2')
+    assert.throws(
+      () => parseTarHeader(createHeader('current', { type: '2', linkname: '../shared/v2' })),
+      { name: 'TarParseError', message: 'Invalid tar link target' },
+    )
+  })
+
+  it('rejects absolute targets before invoking the handler', async () => {
+    await assertInvalidLink([createHeader('link', { type: '2', linkname: '/outside' })])
+    await assertInvalidLink([createHeader('link', { type: '1', linkname: '/outside' })])
+  })
+
+  it('rejects missing link targets', async () => {
+    await assertInvalidLink([createHeader('link', { type: '2' })])
+    await assertInvalidLink([createHeader('link', { type: '1' })])
+  })
+
+  it('rejects Windows drive prefixes, backslashes, and UNC targets', async () => {
+    await assertInvalidLink([createHeader('link', { type: '2', linkname: 'C:/outside' })])
+    await assertInvalidLink([createHeader('link', { type: '1', linkname: 'c:outside' })])
+    await assertInvalidLink([createHeader('link', { type: '2', linkname: './/./C:/outside' })])
+    await assertInvalidLink([createHeader('link', { type: '2', linkname: '..\\outside' })])
+    await assertInvalidLink([createHeader('link', { type: '1', linkname: '\\\\server\\share' })])
+    await assertInvalidLink([createHeader('link', { type: '2', linkname: '//server/share' })])
+  })
+
+  it('rejects symlink targets that traverse above the archive root', async () => {
+    await assertInvalidLink([createHeader('link', { type: '2', linkname: '../outside' })])
+    await assertInvalidLink([createHeader('lib/link', { type: '2', linkname: '../../outside' })])
+    await assertInvalidLink([createHeader('link', { type: '2', linkname: '../lib/file' })])
+  })
+
+  it('does not count dots, repeated separators, or trailing slashes as parent directories', async () => {
+    await assertInvalidLink([createHeader('./link', { type: '2', linkname: '../outside' })])
+    await assertInvalidLink([createHeader('lib//link', { type: '2', linkname: '../../outside' })])
+    await assertInvalidLink([createHeader('lib/./link', { type: '2', linkname: '../../outside' })])
+    await assertInvalidLink([createHeader('lib/link/', { type: '2', linkname: '../../outside' })])
+  })
+
+  it('preserves symlink targets that stay within the archive', async () => {
+    let targets: (string | null)[] = []
+    await parseTar(
+      [
+        createHeader('lib/current', { type: '2', linkname: '../shared/v2' }),
+        createHeader('./lib//current', { type: '2', linkname: './v1/../é\n' }),
+        createHeader('lib/current', { type: '2', linkname: '..' }),
+        createHeader('current', { type: '2', linkname: '.' }),
+      ],
+      (entry) => {
+        targets.push(entry.header.linkname)
+      },
+    )
+    assert.deepEqual(targets, ['../shared/v2', './v1/../é\n', '..', '.'])
+  })
+
+  it('resolves hard-link targets from the archive root, not the link parent', async () => {
+    await assertInvalidLink([createHeader('lib/current', { type: '1', linkname: '../shared/v2' })])
+    let targets: (string | null)[] = []
+    await parseTar(
+      [createHeader('lib/current', { type: '1', linkname: './shared/../file.txt' })],
+      (entry) => {
+        targets.push(entry.header.linkname)
+      },
+    )
+    assert.deepEqual(targets, ['./shared/../file.txt'])
+  })
+
+  it('rejects GNU long-link traversal after overriding a safe header target', async () => {
+    await assertInvalidLink([
+      ...metadata('K', '../outside\0'),
+      createHeader('link', { type: '2', linkname: 'file.txt' }),
+    ])
+  })
+
+  it('rejects empty and embedded-NUL GNU link targets', async () => {
+    await assertInvalidLink([
+      ...metadata('K', '\0'),
+      createHeader('link', { type: '2', linkname: 'file.txt' }),
+    ])
+    await assertInvalidLink([
+      ...metadata('K', 'file\0.txt\0'),
+      createHeader('link', { type: '1', linkname: 'file.txt' }),
+    ])
+  })
+
+  it('decodes a fragmented GNU link terminator and clears the override for the next entry', async () => {
+    let target = '../shared/' + 'é'.repeat(100)
+    let chunks = metadata('K', target + '\0')
+    let body = chunks[1]
+    chunks.splice(1, 1, body.subarray(0, body.length - 2), body.subarray(body.length - 2))
+    let targets: (string | null)[] = []
+    await parseTar(
+      [
+        ...chunks,
+        createHeader('lib/current', { type: '2' }),
+        createHeader('next', { type: '2', linkname: 'local' }),
+      ],
+      (entry) => {
+        targets.push(entry.header.linkname)
+      },
+    )
+    assert.deepEqual(targets, [target, 'local'])
+  })
+
+  it('preserves GNU link targets without a terminator', async () => {
+    let targets: (string | null)[] = []
+    await parseTar(
+      [...metadata('K', './file.txt'), createHeader('link', { type: '1' })],
+      (entry) => {
+        targets.push(entry.header.linkname)
+      },
+    )
+    assert.deepEqual(targets, ['./file.txt'])
+  })
+
+  it('rejects local and global PAX link targets after overrides', async () => {
+    await assertInvalidLink([
+      ...pax('linkpath', '../outside'),
+      createHeader('link', { type: '2', linkname: 'file.txt' }),
+    ])
+    await assertInvalidLink([
+      ...pax('linkpath', '/outside', 'g'),
+      createHeader('link', { type: '1', linkname: 'file.txt' }),
+    ])
+  })
+
+  it('rejects embedded and trailing NULs in PAX link targets', async () => {
+    await assertInvalidLink([...pax('linkpath', 'file\0.txt'), createHeader('link', { type: '2' })])
+    await assertInvalidLink([...pax('linkpath', 'file.txt\0'), createHeader('link', { type: '1' })])
+  })
+
+  it('uses the final GNU and PAX entry names to locate the symlink parent', async () => {
+    let targets: (string | null)[] = []
+    await parseTar(
+      [
+        ...metadata('L', 'lib/current\0'),
+        createHeader('current', { type: '2', linkname: '../shared' }),
+        ...paxPath('lib/current'),
+        createHeader('current', { type: '2', linkname: '../shared' }),
+      ],
+      (entry) => {
+        targets.push(entry.header.linkname)
+      },
+    )
+    assert.deepEqual(targets, ['../shared', '../shared'])
+    await assertInvalidLink([
+      ...paxPath('current'),
+      createHeader('lib/current', { type: '2', linkname: '../shared' }),
+    ])
+  })
+
+  it('validates the final link target without rejecting superseded metadata', async () => {
+    let targets: (string | null)[] = []
+    await parseTar(
+      [
+        ...pax('linkpath', '/global', 'g'),
+        ...metadata('K', '../gnu\0'),
+        ...pax('linkpath', './file.txt'),
+        createHeader('link', { type: '2', linkname: '/header' }),
+      ],
+      (entry) => {
+        targets.push(entry.header.linkname)
+      },
+    )
+    assert.deepEqual(targets, ['./file.txt'])
+  })
+
+  it('preserves PAX deletion of a link target override', async () => {
+    let targets: (string | null)[] = []
+    await parseTar(
+      [
+        ...pax('linkpath', '/global', 'g'),
+        ...pax('linkpath', ''),
+        createHeader('link', { type: '2', linkname: 'file.txt' }),
+      ],
+      (entry) => {
+        targets.push(entry.header.linkname)
+      },
+    )
+    assert.deepEqual(targets, ['file.txt'])
   })
 })
 
-describe('tar entry name policy', () => {
+describe('tar path policy', () => {
   it('enforces an explicit relative policy', async () => {
     let header = createHeader('../file.txt')
-    assert.throws(() => parseTarHeader(header, { entryNamePolicy: 'relative' }), {
+    assert.throws(() => parseTarHeader(header, { pathPolicy: 'relative' }), {
       name: 'TarParseError',
       message: 'Invalid tar entry name',
     })
-    await assert.rejects(() => parseTar(header, { entryNamePolicy: 'relative' }, () => {}), {
+    await assert.rejects(() => parseTar(header, { pathPolicy: 'relative' }, () => {}), {
       name: 'TarParseError',
       message: 'Invalid tar entry name',
+    })
+    let link = createHeader('link', { type: '2', linkname: '/outside' })
+    assert.throws(() => parseTarHeader(link, { pathPolicy: 'relative' }), {
+      name: 'TarParseError',
+      message: 'Invalid tar link target',
+    })
+    await assert.rejects(() => parseTar(link, { pathPolicy: 'relative' }, () => {}), {
+      name: 'TarParseError',
+      message: 'Invalid tar link target',
     })
   })
 
   it('preserves combined names in direct header parsing', () => {
     let header = createHeader('file.txt', { prefix: '/etc' })
-    assert.equal(parseTarHeader(header, { entryNamePolicy: 'preserve' }).name, '/etc/file.txt')
+    assert.equal(parseTarHeader(header, { pathPolicy: 'preserve' }).name, '/etc/file.txt')
+  })
+
+  it('preserves entry names and link targets together in all parsing APIs', async () => {
+    let header = createHeader('link', { prefix: '/etc', type: '2', linkname: '../outside' })
+    let parsed = parseTarHeader(header, { pathPolicy: 'preserve' })
+    assert.equal(parsed.name, '/etc/link')
+    assert.equal(parsed.linkname, '../outside')
+    let paths: (string | null)[][] = []
+    await parseTar(header, { pathPolicy: 'preserve' }, (entry) => {
+      paths.push([entry.name, entry.header.linkname])
+    })
+    let parser = new TarParser({ pathPolicy: 'preserve' })
+    await parser.parse(header, (entry) => {
+      paths.push([entry.name, entry.header.linkname])
+    })
+    assert.deepEqual(paths, [
+      ['/etc/link', '../outside'],
+      ['/etc/link', '../outside'],
+    ])
+  })
+
+  it('preserves unrestricted GNU and PAX link targets while decoding GNU terminators', async () => {
+    let targets: (string | null)[] = []
+    await parseTar(
+      [
+        ...metadata('K', '../gnu\0target\0'),
+        createHeader('link', { type: '2' }),
+        ...metadata('K', '\0'),
+        createHeader('link', { type: '2', linkname: 'fallback' }),
+        ...pax('linkpath', '/pax\0target\0', 'g'),
+        createHeader('link', { type: '1' }),
+      ],
+      { pathPolicy: 'preserve' },
+      (entry) => {
+        targets.push(entry.header.linkname)
+      },
+    )
+    assert.deepEqual(targets, ['../gnu\0target', '', '/pax\0target\0'])
   })
 
   it('preserves ordinary names without relative-path restrictions', async () => {
@@ -242,7 +495,7 @@ describe('tar entry name policy', () => {
     let parsed: string[] = []
     await parseTar(
       names.map((name) => createHeader(name)),
-      { entryNamePolicy: 'preserve' },
+      { pathPolicy: 'preserve' },
       (entry) => {
         parsed.push(entry.name)
       },
@@ -251,7 +504,7 @@ describe('tar entry name policy', () => {
   })
 
   it('preserves final GNU and PAX names when configured on TarParser', async () => {
-    let parser = new TarParser({ entryNamePolicy: 'preserve' })
+    let parser = new TarParser({ pathPolicy: 'preserve' })
     let names: string[] = []
     await parser.parse(
       [
@@ -273,13 +526,9 @@ describe('tar entry name policy', () => {
   it('still validates header structure and sizes when preserving names', () => {
     let header = createHeader('/file.txt')
     header[0] = 0
+    assert.throws(() => parseTarHeader(header, { pathPolicy: 'preserve' }), /Invalid tar header/)
     assert.throws(
-      () => parseTarHeader(header, { entryNamePolicy: 'preserve' }),
-      /Invalid tar header/,
-    )
-    assert.throws(
-      () =>
-        parseTarHeader(createHeader('/file.txt', { size: -1 }), { entryNamePolicy: 'preserve' }),
+      () => parseTarHeader(createHeader('/file.txt', { size: -1 }), { pathPolicy: 'preserve' }),
       { name: 'TarParseError', message: 'Invalid tar entry size' },
     )
   })
@@ -289,7 +538,7 @@ describe('tar entry name policy', () => {
       () =>
         parseTar(
           createHeader('/file.txt', { size: 1 }),
-          { entryNamePolicy: 'preserve', maxEntrySize: 0 },
+          { pathPolicy: 'preserve', maxEntrySize: 0 },
           () => {},
         ),
       MaxEntrySizeExceededError,
@@ -298,18 +547,14 @@ describe('tar entry name policy', () => {
       () =>
         parseTar(
           createHeader('/file.txt'),
-          { entryNamePolicy: 'preserve', maxTotalSize: 511 },
+          { pathPolicy: 'preserve', maxTotalSize: 511 },
           () => {},
         ),
       MaxTotalSizeExceededError,
     )
     await assert.rejects(
       () =>
-        parseTar(
-          createHeader('/file.txt'),
-          { entryNamePolicy: 'preserve', maxEntries: 0 },
-          () => {},
-        ),
+        parseTar(createHeader('/file.txt'), { pathPolicy: 'preserve', maxEntries: 0 }, () => {}),
       MaxEntriesExceededError,
     )
   })

@@ -71,7 +71,7 @@ export interface TarHeader {
   /**
    * Entry path stored in the archive.
    * By default, parsed names are relative paths without parent components, Windows drive
-   * prefixes, backslashes, or NULs. The `preserve` entry name policy disables these checks.
+   * prefixes, backslashes, or NULs. The `preserve` path policy disables these checks.
    * Filesystem containment still requires consumer validation.
    */
   name: string
@@ -108,7 +108,10 @@ export interface TarHeader {
 
   /**
    * Linked path target for link entries, or `null` when not present.
-   * Archive metadata; consumers must validate the target before creating or following links.
+   * By default, symlink targets must stay within the archive when resolved relative to the
+   * link's parent, and hard-link targets when resolved relative to the archive root.
+   * Targets retain their relative spelling. Filesystem containment still requires consumer
+   * validation. The `preserve` path policy disables target checks.
    */
   linkname: string | null
 
@@ -179,19 +182,21 @@ export interface ParseTarHeaderOptions {
    */
   filenameEncoding?: string
   /**
-   * Policy for entry names. Defaults to `relative`, which rejects empty names, absolute
-   * paths, parent components, Windows drive prefixes, backslashes, and NULs. Set to
-   * `preserve` to return decoded archive names without these checks. This does not
-   * affect link targets, archive limits, or header structure validation.
+   * Policy for entry names and link targets. Defaults to `relative`, which rejects empty
+   * paths, absolute paths, Windows drive prefixes, backslashes, and NULs. Entry names
+   * cannot contain parent components. Symlink targets are checked relative to the link's
+   * parent, and hard-link targets relative to the archive root; parent components are
+   * allowed only when they do not traverse above the archive root. Valid paths are preserved.
+   * Set to `preserve` to skip path checks. Archive limits and header validation still apply.
+   * Neither policy guarantees containment on the destination filesystem.
    */
-  entryNamePolicy?: 'relative' | 'preserve'
+  pathPolicy?: 'relative' | 'preserve'
 }
 
 /**
  * Parses a tar header block.
- * With the default `relative` entry name policy, throws {@link TarParseError} if the
- * name is empty, absolute, or contains parent components, a Windows drive prefix,
- * backslashes, or NULs.
+ * With the default `relative` path policy, throws {@link TarParseError} for invalid
+ * entry names or link targets, including paths that traverse above the archive root.
  *
  * @param block The tar header block
  * @param options Options that control how the header is parsed
@@ -199,26 +204,50 @@ export interface ParseTarHeaderOptions {
  */
 export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOptions): TarHeader {
   let header = decodeTarHeader(block, options)
-  validateEntryName(header.name, options?.entryNamePolicy)
+  validatePaths(header, options?.pathPolicy)
   return { ...header, size: parseEntrySize(block.subarray(124, 136)) }
 }
 
-function validateEntryName(
-  name: string,
-  policy: ParseTarHeaderOptions['entryNamePolicy'] = 'relative',
+function validatePaths(
+  header: Pick<TarHeader, 'name' | 'type' | 'linkname'>,
+  policy: ParseTarHeaderOptions['pathPolicy'] = 'relative',
 ): void {
   if (policy === 'preserve') return
 
-  if (
-    name === '' ||
-    name.startsWith('/') ||
-    name.includes('\\') ||
-    name.includes('\0') ||
-    /^(?:\.\/)*[a-z]:/i.test(name) ||
-    name.split('/').includes('..')
-  ) {
+  let parts = header.name.split('/')
+  if (!isRelativePath(header.name) || parts.includes('..')) {
     throw new TarParseError('Invalid tar entry name')
   }
+
+  if (header.type !== 'symlink' && header.type !== 'link') return
+
+  let target = header.linkname
+  if (target === null || !isRelativePath(target)) {
+    throw new TarParseError('Invalid tar link target')
+  }
+
+  let depth =
+    header.type === 'symlink'
+      ? Math.max(0, parts.filter((part) => part !== '' && part !== '.').length - 1)
+      : 0
+  for (let part of target.split('/')) {
+    if (part === '..') {
+      if (depth === 0) throw new TarParseError('Invalid tar link target')
+      depth--
+    } else if (part !== '' && part !== '.') {
+      depth++
+    }
+  }
+}
+
+function isRelativePath(path: string): boolean {
+  return (
+    path !== '' &&
+    !path.startsWith('/') &&
+    !path.includes('\\') &&
+    !path.includes('\0') &&
+    !/^(?:\.\/+)*[a-z]:/i.test(path)
+  )
 }
 
 function decodeTarHeader(
@@ -356,7 +385,7 @@ export interface ParseTarOptions extends ParseTarHeaderOptions {
 
 /**
  * Parse a tar archive and call the given handler for each entry it contains.
- * Applies the configured entry name policy, as in {@link parseTarHeader}, before
+ * Applies the configured path policy, as in {@link parseTarHeader}, before
  * calling the handler.
  *
  * ```ts
@@ -374,7 +403,7 @@ export interface ParseTarOptions extends ParseTarHeaderOptions {
 export async function parseTar(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void>
 /**
  * Parse a tar archive with the given options and call the handler for each entry.
- * Applies the configured entry name policy, as in {@link parseTarHeader}, before
+ * Applies the configured path policy, as in {@link parseTarHeader}, before
  * calling the handler.
  *
  * @param archive The tar archive source data
@@ -610,7 +639,7 @@ export class TarParser {
       this.#gnuLongPath = null
     }
 
-    if (this.#gnuLongLinkPath) {
+    if (this.#gnuLongLinkPath !== null) {
       this.#header.linkname = this.#gnuLongLinkPath
       this.#gnuLongLinkPath = null
     }
@@ -622,7 +651,7 @@ export class TarParser {
       this.#pax = null
     }
 
-    validateEntryName(this.#header.name, this.#options?.entryNamePolicy)
+    validatePaths(this.#header, this.#options?.pathPolicy)
 
     if (this.#header.size === 0 || this.#header.type === 'directory') {
       let emptyBody = new ReadableStream({
@@ -679,9 +708,7 @@ export class TarParser {
 
     switch (this.#header!.type) {
       case 'gnu-long-path':
-        this.#gnuLongPath = decodeLongPath(
-          buffer[buffer.length - 1] === 0 ? buffer.subarray(0, -1) : buffer,
-        )
+        this.#gnuLongPath = decodeLongPath(buffer)
         break
       case 'gnu-long-link-path':
         this.#gnuLongLinkPath = decodeLongPath(buffer)
@@ -810,7 +837,7 @@ export class TarEntry {
   /**
    * The name of this entry.
    * Parsed names include ustar prefixes and GNU/PAX overrides and follow the same
-   * entry name policy as {@link parseTarHeader}.
+   * path policy as {@link parseTarHeader}.
    */
   get name(): string {
     return this.header.name
