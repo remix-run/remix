@@ -108,6 +108,9 @@ export interface FileResponseOptions<file extends FileLike = File> {
  *
  * Accepts both native `File` objects and
  * {@link import('@remix-run/lazy-file').LazyFile} values.
+ * Uses `file.type` for `Content-Type` and includes `X-Content-Type-Options: nosniff`.
+ * Uploaded file metadata does not validate the contents. Validate uploaded files before
+ * serving them inline, or set `Content-Disposition: attachment` on the returned response.
  *
  * @param file The file to send (native `File` or `LazyFile`)
  * @param request The request object
@@ -238,6 +241,7 @@ export async function createFileResponse<file extends FileLike>(
     if (range.ranges.length === 0) {
       return new Response('Bad Request', {
         status: 400,
+        headers: buildResponseHeaders({}),
       })
     }
 
@@ -316,7 +320,7 @@ interface ResponseHeaderValues {
 }
 
 function buildResponseHeaders(values: ResponseHeaderValues): Headers {
-  let headers = new Headers()
+  let headers = new Headers({ 'X-Content-Type-Options': 'nosniff' })
 
   if (values.contentType) {
     headers.set('Content-Type', values.contentType)
