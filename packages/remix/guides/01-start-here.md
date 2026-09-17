@@ -1,7 +1,6 @@
 ---
 title: Start Here
 description: A high-level introduction to Remix and the mental model behind a Remix application.
-published: true
 ---
 
 ## What is Remix?

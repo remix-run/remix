@@ -72,11 +72,11 @@ function readGuideMetadata(filePath: string): {
   if (typeof description !== 'string' || !description.trim()) {
     throw new Error(`${filePath} must have a non-empty frontmatter description`)
   }
-  if (typeof published !== 'boolean') {
-    throw new Error(`${filePath} must have a boolean frontmatter published value`)
+  if (published !== undefined && typeof published !== 'boolean') {
+    throw new Error(`${filePath} must have a boolean frontmatter published value when present`)
   }
 
-  return { title: title.trim(), description: description.trim(), published }
+  return { title: title.trim(), description: description.trim(), published: published ?? true }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

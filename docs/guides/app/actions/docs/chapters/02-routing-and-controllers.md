@@ -1,7 +1,6 @@
 ---
 title: Routing and Controllers
 description: How route maps, route helpers, controllers, actions, and responses define Remix request handling.
-published: true
 ---
 
 In [Chapter 1](/start-here/), we built one end-to-end request flow: a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) comes in, Remix matches a route, a controller runs an action, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) containing HTML rendered from a Remix component.

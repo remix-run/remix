@@ -212,8 +212,11 @@ describe('manifest', () => {
     let sourceGuideNames = fs
       .readdirSync(sourceGuidesDir)
       .filter((name) => /^\d+-[a-z0-9][a-z0-9-]*\.md$/.test(name))
-      .filter((name) =>
-        /^published:\s*true\s*$/m.test(fs.readFileSync(path.join(sourceGuidesDir, name), 'utf-8')),
+      .filter(
+        (name) =>
+          !/^published:\s*false\s*$/m.test(
+            fs.readFileSync(path.join(sourceGuidesDir, name), 'utf-8'),
+          ),
       )
       .sort()
     let guideNames = guideCopies.map((copy) => path.basename(copy.remixGuidePath))

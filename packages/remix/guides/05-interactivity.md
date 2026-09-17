@@ -1,7 +1,6 @@
 ---
 title: Interactivity
 description: How server-rendered UI hydrates, handles events, connects components to application models, navigates, and cancels stale work.
-published: true
 ---
 
 In [Start Here](/start-here/), the album page, edit form, validation, mutation, and redirect all

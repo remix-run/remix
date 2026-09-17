@@ -1,7 +1,6 @@
 ---
 title: Rendering UI
 description: How to build pages from Remix components, props, context, document shells, styles, and first-party UI.
-published: true
 ---
 
 In the previous chapter, we added `render()` to the middleware stack so actions could call

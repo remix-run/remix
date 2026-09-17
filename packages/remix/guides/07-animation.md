@@ -1,7 +1,6 @@
 ---
 title: Animation
 description: The CSS-first animation model and Remix UI helpers for motion that respects rendering state.
-published: true
 ---
 
 ## CSS-first visual states {#css-first-visual-states}
