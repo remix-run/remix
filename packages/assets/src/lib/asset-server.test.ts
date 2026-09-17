@@ -1,5 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { after, before, describe, it } from '@remix-run/test'
+import { createFsFileStorage } from '@remix-run/file-storage/fs'
+import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import * as nodeFs from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
@@ -1368,6 +1370,37 @@ describe('asset-server', () => {
     assert.ok(secondResponse)
     assert.equal(secondResponse.status, 200)
     assert.equal(transformCalls, 1)
+  })
+
+  it('accepts FileStorage backends as FileCache implementations', async () => {
+    await write(dir, 'app/content/value.txt', 'hello')
+    let caches: FileCache[] = [
+      createMemoryFileStorage(),
+      createFsFileStorage(path.join(dir, 'custom-file-storage-cache')),
+    ]
+    for (let cache of caches) {
+      let calls = 0
+      let assetServer = createTestServer(dir, {
+        files: {
+          cache,
+          extensions: ['.txt'],
+          transforms: {
+            upper: defineFileTransform({
+              transform(bytes) {
+                calls += 1
+                return new TextDecoder().decode(bytes).toUpperCase()
+              },
+            }),
+          },
+        },
+      })
+      for (let index = 0; index < 2; index++) {
+        let response = await get(assetServer, '/assets/app/content/value.txt?transform=upper')
+        assert.ok(response)
+        assert.equal(await response.text(), 'HELLO')
+      }
+      assert.equal(calls, 1)
+    }
   })
 
   it('deduplicates equivalent transform URLs and preserves distinct pipeline inputs', async () => {

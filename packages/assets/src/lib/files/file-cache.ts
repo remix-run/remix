@@ -15,7 +15,7 @@ export interface FileCache {
    *
    * @param key The cache key.
    * @param file The file to cache.
-   * @returns Completes when the file has been accepted or declined.
+   * @returns The stored file or no value, optionally wrapped in a promise. The asset server ignores this value.
    */
-  put(key: string, file: File): void | Promise<void>
+  put(key: string, file: File): File | void | Promise<File | void>
 }

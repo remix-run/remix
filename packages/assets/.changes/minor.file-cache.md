@@ -1,19 +1,6 @@
-BREAKING CHANGE: `files.cache` accepts a `FileCache` with `get(key)` and `put(key, file)` methods instead of a `FileStorage`. Transformed outputs are cached on disk by default, with up to 256 reusable entries of 4 MiB each including metadata. Custom caches control their own limits and eviction policy (see #11859).
+Allow applications to customize transformed-file caching through a `FileCache` with only `get(key)` and `put(key, file)` methods. Existing `FileStorage` backends remain compatible and need no configuration changes. Custom caches control their own limits, eviction, and persistence (see #11859).
 
-Remove an existing `FileStorage` option to use the bounded default cache in `node_modules/.cache/remix/assets` under `rootDir`:
-
-```diff
--import { createFsFileStorage } from 'remix/file-storage/fs'
-
- let assetServer = createAssetServer({
-   files: {
--    cache: createFsFileStorage('.tmp/assets-cache'),
-     extensions: ['.svg', '.png'],
-   },
- })
-```
-
-To retain recomputation on every request, set `files.cache: false`:
+When `files.cache` is omitted, transformed outputs now use a default disk cache in `node_modules/.cache/remix/assets` under `rootDir`, with up to 256 reusable entries shared across namespaces and 4 MiB per stored entry including metadata. To retain recomputation on every request, set `files.cache: false`:
 
 ```diff
  let assetServer = createAssetServer({
@@ -24,4 +11,4 @@ To retain recomputation on every request, set `files.cache: false`:
  })
 ```
 
-The exported `FileCache` interface accepts synchronous or asynchronous methods. `get` returns a `File` or `null` for a miss; `put` stores or replaces the ordinary file without returning a value. Implementations may decline admission or evict entries, and must preserve the file's bytes and metadata. `files.cacheKey` continues to namespace outputs for reuse across server restarts; change it when sources or transforms change. Existing cache entries from older formats are not reused.
+The exported `FileCache` interface accepts synchronous or asynchronous methods. `get` returns a `File` or `null` for a miss; `put` may return a stored `File` or no value. Implementations may decline admission or evict entries, and must preserve the file's bytes and metadata. `files.cacheKey` continues to namespace outputs for reuse across server restarts; change it when sources or transforms change. Existing cache entries from older formats are not reused.

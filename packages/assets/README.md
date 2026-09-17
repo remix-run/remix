@@ -628,7 +628,7 @@ let assetServer = createAssetServer({
 })
 ```
 
-To choose different limits, persistence, or eviction behavior, supply a `FileCache`. It needs only `get(key)` and `put(key, file)`, and both methods may be synchronous or asynchronous. `get` returns a `File` or `null` for a miss. `put` stores or replaces a file, or declines admission according to the cache's policy. Cached files must preserve their bytes, name, type, and `lastModified` value.
+To choose different limits, persistence, or eviction behavior, supply a `FileCache`. It needs only `get(key)` and `put(key, file)`, and both methods may be synchronous or asynchronous. `get` returns a `File` or `null` for a miss. `put` stores or replaces a file, or declines admission according to the cache's policy. It may return a stored `File` or no value, which the asset server ignores. Existing `FileStorage` backends satisfy this interface and can still be passed directly to `files.cache`. Cached files must preserve their bytes, name, type, and `lastModified` value.
 
 For example, this in-memory cache retains up to 512 files, each at most 8 MiB, and evicts the least recently used entry:
 
