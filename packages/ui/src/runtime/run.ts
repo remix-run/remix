@@ -24,10 +24,10 @@ export interface RunInit {
   /**
    * Resolves browser-loaded `<Frame>` content.
    *
-   * Defaults to fetching the frame source as HTML with the submitted form data,
-   * method, encoding, and abort signal. The default resolver only fetches from
-   * the document origin, including redirects. Provide a custom resolver to load
-   * trusted cross-origin frame content.
+   * Defaults to fetching the frame source as HTML with the submitted form data, method, encoding,
+   * and abort signal. The default resolver only fetches from the document origin, including
+   * redirects, but does not sanitize the returned HTML. Custom resolvers own their request,
+   * redirect, and content trust policies.
    */
   resolveFrame?: ResolveFrame
 
