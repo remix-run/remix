@@ -57,7 +57,7 @@ type FileGetHrefOptions = {
 }
 
 type FileCompilerOptions = {
-  cache?: FileCache | false
+  cache?: boolean | FileCache
   cacheKey?: string
   extensions: readonly string[]
   fingerprintAssets: boolean
@@ -127,8 +127,9 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   let sourceFileStore: SourceFileStore = createSourceFileStore()
   let sourceFileInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
   let cache =
-    options.cache ??
-    createDefaultFileCache(path.join(options.rootDir, 'node_modules/.cache/remix/assets'))
+    options.cache === true
+      ? createDefaultFileCache(path.join(options.rootDir, 'node_modules/.cache/remix/assets'))
+      : options.cache
   let transformedEmitInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
   let cacheKey = resolvedOptions.cacheKey ?? crypto.randomUUID()
   let resolveArgs: ResolveArgs = {

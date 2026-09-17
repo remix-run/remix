@@ -112,12 +112,13 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
    */
   globalTransforms?: readonly AssetGlobalTransform[]
   /**
-   * Cache for transformed file outputs. Defaults to an on-disk cache in
-   * `node_modules/.cache/remix/assets` under `rootDir`, with at most 256 entries
-   * of 4 MiB each including metadata. Larger outputs are served without caching.
-   * Custom caches control their own limits. Set to `false` to disable caching.
+   * Cache for transformed file outputs. Disabled when omitted or `false`.
+   * Set to `true` to use an on-disk cache in `node_modules/.cache/remix/assets`
+   * under `rootDir`, with at most 256 entries of 4 MiB each including metadata.
+   * Larger outputs are served without caching. Supply a `FileCache` to control
+   * your own limits and eviction policy.
    */
-  cache?: FileCache | false
+  cache?: boolean | FileCache
   /**
    * Optional namespace for cached transformed file outputs. Use a stable value such as a
    * commit SHA to reuse transformed files across server restarts for the same deployment.
@@ -127,7 +128,7 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
 }
 
 export interface ResolvedAssetServerFilesOptions {
-  cache?: FileCache | false
+  cache?: boolean | FileCache
   cacheKey?: string
   extensions: readonly string[]
   globalTransforms: readonly ResolvedAssetGlobalTransform[]
@@ -302,7 +303,7 @@ export function normalizeFilesOptions<transforms extends AssetRequestTransformMa
     throw new TypeError('files.maxRequestTransforms must be a positive integer')
   }
 
-  if (files.cache !== undefined && files.cache !== false) {
+  if (files.cache !== undefined && typeof files.cache !== 'boolean') {
     if (
       files.cache === null ||
       typeof files.cache !== 'object' ||
@@ -310,7 +311,7 @@ export function normalizeFilesOptions<transforms extends AssetRequestTransformMa
       typeof files.cache.put !== 'function'
     ) {
       throw new TypeError(
-        'files.cache must be false or implement the FileCache interface (get and put)',
+        'files.cache must be a boolean or implement the FileCache interface (get and put)',
       )
     }
   }

@@ -12,6 +12,7 @@ export const assetServer = createAssetServer({
   ...config.assets,
   files: {
     ...config.assets.files,
+    cache: true,
     globalTransforms: [
       {
         extensions: ['.svg'],

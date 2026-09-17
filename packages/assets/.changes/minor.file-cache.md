@@ -1,11 +1,11 @@
 Allow applications to customize transformed-file caching through a `FileCache` with only `get(key)` and `put(key, file)` methods. Existing `FileStorage` backends remain compatible and need no configuration changes. Custom caches control their own limits, eviction, and persistence (see #11859).
 
-When `files.cache` is omitted, transformed outputs now use a default disk cache in `node_modules/.cache/remix/assets` under `rootDir`, with up to 256 reusable entries shared across namespaces and 4 MiB per stored entry including metadata. To retain recomputation on every request, set `files.cache: false`:
+Caching remains disabled when `files.cache` is omitted or `false`. Set `files.cache: true` to use the built-in disk cache in `node_modules/.cache/remix/assets` under `rootDir`, with up to 256 reusable entries shared across namespaces and 4 MiB per stored entry including metadata:
 
 ```diff
  let assetServer = createAssetServer({
    files: {
-+    cache: false,
++    cache: true,
      extensions: ['.svg', '.png'],
    },
  })

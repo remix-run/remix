@@ -1301,6 +1301,32 @@ describe('asset-server', () => {
     assert.equal(await response.text(), 'HELLO\n')
   })
 
+  it('recomputes without writing a disk cache when cache is omitted', async () => {
+    let rootDir = path.join(dir, 'uncached-assets')
+    await write(rootDir, 'app/content/value.txt', 'hello')
+    let calls = 0
+    let assetServer = createTestServer(rootDir, {
+      files: {
+        extensions: ['.txt'],
+        transforms: {
+          upper: defineFileTransform({
+            transform(bytes) {
+              calls += 1
+              return new TextDecoder().decode(bytes).toUpperCase()
+            },
+          }),
+        },
+      },
+    })
+    for (let index = 0; index < 2; index++) {
+      let response = await get(assetServer, '/assets/app/content/value.txt?transform=upper')
+      assert.ok(response)
+      assert.equal(await response.text(), 'HELLO')
+    }
+    assert.equal(calls, 2)
+    assert.equal(nodeFs.existsSync(path.join(rootDir, 'node_modules')), false)
+  })
+
   it('recomputes transformed file outputs on each request when caching is disabled', async () => {
     await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
     let transformCalls = 0
@@ -1537,6 +1563,7 @@ describe('asset-server', () => {
     let transformCalls = 0
     let assetServer = createTestServer(dir, {
       files: {
+        cache: true,
         extensions: ['.txt'],
         transforms: {
           append: defineFileTransform({
@@ -1583,6 +1610,7 @@ describe('asset-server', () => {
     let createServer = () =>
       createTestServer(dir, {
         files: {
+          cache: true,
           extensions: ['.txt'],
           transforms: {
             append: defineFileTransform({
@@ -1620,6 +1648,7 @@ describe('asset-server', () => {
     let content = new Uint8Array(4 * 1024 * 1024 + 1).fill(65)
     let assetServer = createTestServer(dir, {
       files: {
+        cache: true,
         extensions: ['.txt'],
         transforms: {
           expand: defineFileTransform({
@@ -1646,6 +1675,7 @@ describe('asset-server', () => {
     let createServer = (cacheKey: string) =>
       createTestServer(dir, {
         files: {
+          cache: true,
           cacheKey,
           extensions: ['.txt'],
           transforms: {
@@ -8771,7 +8801,7 @@ describe('asset-server', () => {
             },
           },
         }),
-      /files\.cache must be false or implement the FileCache interface \(get and put\)/,
+      /files\.cache must be a boolean or implement the FileCache interface \(get and put\)/,
     )
   })
 
@@ -8785,7 +8815,7 @@ describe('asset-server', () => {
             cache: { put() {} },
           },
         }),
-      /files\.cache must be false or implement the FileCache interface \(get and put\)/,
+      /files\.cache must be a boolean or implement the FileCache interface \(get and put\)/,
     )
   })
 
