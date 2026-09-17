@@ -212,6 +212,9 @@ export interface ParseFormDataOptions extends MultipartParserOptions {
  * keeping all files in memory, the `uploadHandler` allows you to store the file on disk or a
  * cloud storage service.
  *
+ * Accepts `multipart/*` and `application/x-www-form-urlencoded` media types.
+ * Unsupported media types throw {@link FormDataParseError} before the body is read.
+ *
  * @param request The `Request` object to parse
  * @param uploadHandler A function that handles file uploads. It receives a `File` object and may return any value that is valid in a `FormData` object
  * @returns A `Promise` that resolves to a `FormData` object containing the parsed data
@@ -266,11 +269,7 @@ export async function parseFormData(
   }
 
   if (!isMultipartRequest(request)) {
-    try {
-      return await request.formData()
-    } catch (error) {
-      throw new FormDataParseError('Cannot parse form data', { cause: error })
-    }
+    throw new FormDataParseError('Cannot parse form data')
   }
 
   let parserOptions: MultipartParserOptions = {

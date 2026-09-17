@@ -1,1 +1,1 @@
-Apply upload handlers and parser limits consistently for mixed-case form media types. Match the complete URL-encoded media type instead of accepting unrelated types with the same prefix.
+Apply upload handlers and parser limits consistently for mixed-case form media types. Reject unsupported media types before reading the request body, including on Bun, so they cannot bypass parser limits.

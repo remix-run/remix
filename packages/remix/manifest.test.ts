@@ -6,6 +6,8 @@ import * as path from 'node:path'
 import * as url from 'node:url'
 import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
 import { getPackageExportSideEffects } from '../../scripts/utils/package-side-effects.ts'
+import { getRemixGuideCopies } from '../../scripts/utils/remix-guides.ts'
+import { createRemixIndex, getRemixIndexEntries } from '../../scripts/utils/remix-index.ts'
 import { getRemixReadmeCopies } from '../../scripts/utils/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
@@ -70,7 +72,9 @@ function generatedModuleHasRuntimeImport(sourceTarget: string): boolean {
 }
 
 const referencedPackages = new Set([...specifierMap.keys()].map(packageNameFromSpecifier))
+const guideCopies = getRemixGuideCopies()
 const readmeCopies = getRemixReadmeCopies()
+const remixIndexEntries = getRemixIndexEntries()
 
 // All @remix-run/* packages in the workspace (excluding remix itself).
 const allRemixRunPackages: string[] = fs
@@ -253,8 +257,84 @@ describe('manifest', () => {
     assert.equal(sourceByMirrorPath.get('remix/src/cli/README.md'), 'cli/README.md')
   })
 
-  it('generates one README mirror per remix source path', () => {
+  it('generates one README mirror per authoritative README', () => {
+    let sourcePaths = readmeCopies.map((copy) => copy.sourceReadmePath)
     let mirrorPaths = readmeCopies.map((copy) => copy.remixReadmePath)
+    assert.equal(new Set(sourcePaths).size, sourcePaths.length)
     assert.equal(new Set(mirrorPaths).size, mirrorPaths.length)
+  })
+
+  it('selects published guide chapters', () => {
+    let guideNames = guideCopies.map((copy) => path.basename(copy.remixGuidePath))
+
+    assert.ok(guideNames.includes('13-testing.md'))
+    assert.ok(!guideNames.includes('08-data-and-validation.md'))
+    assert.equal(new Set(guideCopies.map((copy) => copy.remixGuidePath)).size, guideCopies.length)
+    assert.ok(guideCopies.every((copy) => copy.title && copy.description))
+  })
+
+  it('adds installed guides to the package index', () => {
+    let index = createRemixIndex()
+    let guideRows = index.split('\n').filter((line) => line.startsWith('| ['))
+
+    assert.equal(guideRows.length, guideCopies.length)
+    for (let guide of guideCopies) {
+      let guidePath = `guides/${path.basename(guide.remixGuidePath)}`
+      assert.ok(index.includes(`[${guide.title}](${guidePath})`))
+      assert.ok(fs.existsSync(guide.sourceGuidePath))
+    }
+  })
+
+  it('groups package index exports by README', () => {
+    let manifestExports = Object.keys(manifest)
+      .filter((exportName) => !exportName.startsWith('_'))
+      .sort()
+    let indexExports = remixIndexEntries.flatMap((entry) => entry.exportNames).sort()
+    let markdownRows = createRemixIndex()
+      .split('\n')
+      .filter((line) => line.startsWith('| `remix/'))
+
+    assert.deepEqual(indexExports, manifestExports)
+    assert.equal(markdownRows.length, remixIndexEntries.length)
+    assert.equal(
+      new Set(remixIndexEntries.map((entry) => entry.docsPath)).size,
+      remixIndexEntries.length,
+    )
+    assert.ok(remixIndexEntries.length < manifestExports.length)
+  })
+
+  it('generates package index links to README mirrors', () => {
+    let entriesByExport = new Map<string, string>()
+    for (let entry of remixIndexEntries) {
+      for (let exportName of entry.exportNames) {
+        entriesByExport.set(exportName, entry.docsPath)
+      }
+    }
+    assert.equal(entriesByExport.get('remix/ui/button'), 'src/ui/button/README.md')
+    assert.equal(entriesByExport.get('remix/headers/cache-control'), 'src/headers/README.md')
+    assert.equal(entriesByExport.get('remix/assets/types/hmr'), 'src/assets/README.md')
+    assert.equal(entriesByExport.get('remix/response/file'), 'src/response/README.md')
+
+    let readmeCopiesByPath = new Map(
+      readmeCopies.map((copy) => [
+        packageRelativePath(copy.remixReadmePath).replace(/^remix\//, ''),
+        copy,
+      ]),
+    )
+
+    for (let entry of remixIndexEntries) {
+      assert.ok(entry.docsPath.endsWith('/README.md'))
+
+      let docsPath = path.join(__dirname, entry.docsPath)
+      if (fs.existsSync(docsPath)) continue
+
+      let readmeCopy = readmeCopiesByPath.get(entry.docsPath)
+      let exportNames = entry.exportNames.join(', ')
+      assert.ok(readmeCopy, `${exportNames} link to missing docs at ${entry.docsPath}`)
+      assert.ok(
+        fs.existsSync(readmeCopy.sourceReadmePath),
+        `${exportNames} link to a README without a source file at ${entry.docsPath}`,
+      )
+    }
   })
 })

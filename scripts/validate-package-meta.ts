@@ -20,6 +20,7 @@ interface PublishedPackageInfo {
 
 interface PublishedPackageJson {
   name: string
+  description?: string
   dependencies?: PackageDependencyMap
   optionalDependencies?: PackageDependencyMap
   peerDependencies?: PackageDependencyMap
@@ -36,6 +37,7 @@ interface DependencyUsage {
 
 type RawPackageJson = {
   name?: unknown
+  description?: unknown
   private?: unknown
   sideEffects?: unknown
 } & {
@@ -51,6 +53,12 @@ function main() {
   let packageInfos = getPublishedPackageInfos()
   let catalogDependencies = getCatalogDependencies()
   let checks: PackageMetaCheck[] = [
+    {
+      name: 'Published package.json files have descriptions',
+      validate() {
+        return validatePackageDescriptions(packageInfos)
+      },
+    },
     {
       name: 'Published package.json files declare valid sideEffects metadata',
       validate() {
@@ -117,6 +125,8 @@ function getPublishedPackageInfos(): PublishedPackageInfo[] {
       dir: `packages/${dirName}`,
       packageJson: {
         name: packageJson.name,
+        description:
+          typeof packageJson.description === 'string' ? packageJson.description : undefined,
         sideEffects: packageJson.sideEffects,
         ...readConsumerDependencies(packageJson, packageJsonPath),
       },
@@ -179,6 +189,14 @@ function getCatalogDependencies(): PackageDependencyMap {
   }
 
   return catalog
+}
+
+function validatePackageDescriptions(packageInfos: PublishedPackageInfo[]): string[] {
+  return packageInfos.flatMap((packageInfo) =>
+    packageInfo.packageJson.description?.trim()
+      ? []
+      : [`${packageInfo.dir}/package.json must have a non-empty description.`],
+  )
 }
 
 function validateExplicitConsumerDependencyRanges(packageInfos: PublishedPackageInfo[]): string[] {

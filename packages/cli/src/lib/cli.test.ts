@@ -513,6 +513,10 @@ describe('run', () => {
         path.join(appDir, 'app', 'actions', 'controller.tsx'),
         'utf8',
       )
+      let controllerTest = await fs.readFile(
+        path.join(appDir, 'app', 'actions', 'controller.test.ts'),
+        'utf8',
+      )
 
       assert.equal(packageJson.name, 'my-app')
       assert.equal(packageJson.dependencies.remix, `^${await readRepoRemixVersion()}`)
@@ -524,7 +528,8 @@ describe('run', () => {
       assert.match(packageJson.scripts.hmr, /NODE_ENV=development/)
       assert.match(packageJson.scripts.hmr, /node hmr\.ts/)
       assert.match(packageJson.scripts.start, /NODE_ENV=production/)
-      assert.match(packageJson.scripts.test, /NODE_ENV=test/)
+      assert.match(packageJson.scripts.test, /NODE_ENV=test remix test/)
+      assert.match(controllerTest, /from 'remix\/test'/)
       assert.match(agentsGuide, /^# My App Agent Guide/m)
       assert.match(agentsGuide, /This starter intentionally begins small/)
       assert.match(agentsGuide, /Put top-level route actions in `app\/actions\/controller\.tsx`/)
