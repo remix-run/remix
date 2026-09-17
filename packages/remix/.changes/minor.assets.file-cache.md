@@ -1,0 +1,1 @@
+BREAKING CHANGE: `remix/assets` uses a bounded disk cache for transformed files by default. The `files.cache` option accepts the exported `FileCache` interface with `get` and `put` methods, allowing applications to choose their own limits and eviction policy. Set `files.cache: false` to disable caching. See #11859 for migration from `FileStorage`.

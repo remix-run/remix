@@ -1,4 +1,4 @@
-import type { FileStorage } from '@remix-run/file-storage'
+import type { FileCache } from './file-cache.ts'
 import { supportedScriptExtensions } from '../scripts/resolve.ts'
 
 export interface AssetFileTransformResult {
@@ -112,20 +112,22 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
    */
   globalTransforms?: readonly AssetGlobalTransform[]
   /**
-   * Optional backing store for cached transformed file outputs.
-   * Each namespace uses at most 256 entries of 4 MiB each, including cache metadata.
-   * Outputs that exceed this size are served without caching.
+   * Cache for transformed file outputs. Defaults to an on-disk cache in
+   * `node_modules/.cache/remix/assets` under `rootDir`, with at most 256 entries
+   * of 4 MiB each including metadata. Larger outputs are served without caching.
+   * Custom caches control their own limits. Set to `false` to disable caching.
    */
-  cache?: FileStorage
+  cache?: FileCache | false
   /**
    * Optional namespace for cached transformed file outputs. Use a stable value such as a
    * commit SHA to reuse transformed files across server restarts for the same deployment.
+   * Defaults to a random value per server. Change it when sources or transforms change.
    */
   cacheKey?: string
 }
 
 export interface ResolvedAssetServerFilesOptions {
-  cache?: FileStorage
+  cache?: FileCache | false
   cacheKey?: string
   extensions: readonly string[]
   globalTransforms: readonly ResolvedAssetGlobalTransform[]
@@ -300,14 +302,16 @@ export function normalizeFilesOptions<transforms extends AssetRequestTransformMa
     throw new TypeError('files.maxRequestTransforms must be a positive integer')
   }
 
-  if (files.cache !== undefined) {
+  if (files.cache !== undefined && files.cache !== false) {
     if (
       files.cache === null ||
       typeof files.cache !== 'object' ||
       typeof files.cache.get !== 'function' ||
-      typeof files.cache.set !== 'function'
+      typeof files.cache.put !== 'function'
     ) {
-      throw new TypeError('files.cache must implement the FileStorage interface')
+      throw new TypeError(
+        'files.cache must be false or implement the FileCache interface (get and put)',
+      )
     }
   }
 

@@ -607,25 +607,18 @@ let assetServer = createAssetServer({
 
 #### File transform caching
 
-Use `files.cache` to store transformed file outputs via a [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) backend. Without `files.cache`, transformed file outputs are recomputed per request.
+Transformed file outputs are cached on disk by default in `node_modules/.cache/remix/assets` under `rootDir`. The default cache uses 256 reusable slots shared across namespaces, with at most 4 MiB per entry including cache metadata. Different entries can replace the same slot; replaced entries are recomputed when requested again. Larger outputs are served normally without caching. Set `files.cache: false` to recompute transformed outputs on each request.
 
-`files.cacheKey` scopes transformed file cache entries. Use a stable identifier, such as a commit SHA, when you want unchanged transformed files to be reused across server restarts for the same build.
-
-The server retains at most 256 transformed metadata entries. Each backing-store namespace uses 256 reusable slots, with at most 4 MiB per stored entry including cache metadata (1 GiB total). Equivalent transform URLs share an entry. Different transforms can replace the same slot; replaced entries are recomputed when requested again. Larger outputs are served normally without caching.
-
-These limits cover the current entries in one namespace. Remove obsolete namespaces and entries from older cache formats through your storage lifecycle policy. Without `files.cacheKey`, each server instance creates a new namespace. Storage backends that retain object versions also need a policy for removing old versions. Cache limits do not limit concurrent transform work or the size of an output while it is being computed.
+`files.cacheKey` namespaces transformed outputs. Use a stable identifier, such as a commit SHA, to reuse them across server restarts for the same build. Change it when sources or transform implementations change. Without it, each server instance uses a random namespace. A namespace identifies a set of cached outputs; it does not create a separate cache instance.
 
 ```ts
-import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
-import { createFsFileStorage } from 'remix/file-storage/fs'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
-    cache: createFsFileStorage(path.resolve('.tmp/assets-cache')),
     cacheKey: process.env.GIT_COMMIT_SHA,
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
     transforms: {
@@ -634,6 +627,49 @@ let assetServer = createAssetServer({
   },
 })
 ```
+
+To choose different limits, persistence, or eviction behavior, supply a `FileCache`. It needs only `get(key)` and `put(key, file)`, and both methods may be synchronous or asynchronous. `get` returns a `File` or `null` for a miss. `put` stores or replaces a file, or declines admission according to the cache's policy. Cached files must preserve their bytes, name, type, and `lastModified` value.
+
+For example, this in-memory cache retains up to 512 files, each at most 8 MiB, and evicts the least recently used entry:
+
+```ts
+import { createAssetServer } from 'remix/assets'
+import type { FileCache } from 'remix/assets'
+
+let files = new Map<string, File>()
+let cache: FileCache = {
+  get(key) {
+    let file = files.get(key)
+    if (!file) return null
+    files.delete(key)
+    files.set(key, file)
+    return file
+  },
+  put(key, file) {
+    files.delete(key)
+    if (file.size > 8 * 1024 * 1024) return
+    files.set(key, file)
+    if (files.size > 512) {
+      let oldestKey = files.keys().next().value
+      if (oldestKey !== undefined) files.delete(oldestKey)
+    }
+  },
+}
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  allowFiles: ['app/**/public/**'],
+  files: {
+    cache,
+    extensions: ['.svg', '.png'],
+    transforms: {
+      /*...*/
+    },
+  },
+})
+```
+
+Custom caches receive opaque keys and ordinary `File` values. The server applies no entry count or file size limits to them, and consults the cache before responding to conditional requests. Your cache controls expiration and cleanup, including obsolete namespaces in persistent stores. Custom cache errors follow normal asset-server error handling. The default cache requires a writable directory; use a custom cache or `cache: false` when local disk storage is unavailable. Cache limits do not limit concurrent transform work or the size of an output while it is being computed.
 
 #### Request transform limits
 

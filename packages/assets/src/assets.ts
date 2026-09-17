@@ -10,3 +10,4 @@ export type {
 export type { AssetDetails, AssetKind, AssetStatus } from './lib/inspection.ts'
 export type { ScriptImportMap } from './lib/scripts/compiler.ts'
 export type { ModuleLoader } from './lib/loaders.ts'
+export type { FileCache } from './lib/files/file-cache.ts'

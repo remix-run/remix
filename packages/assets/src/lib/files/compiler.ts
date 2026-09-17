@@ -2,7 +2,6 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { FileStorage } from '@remix-run/file-storage'
 import { IfNoneMatch } from '@remix-run/headers/if-none-match'
 import { detectContentType } from '@remix-run/mime'
 import {
@@ -15,13 +14,8 @@ import { normalizeFilePath, resolveFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { AssetFileTransformResult, ResolvedAssetRequestTransformMap } from './config.ts'
 import { parseAssetTransformInvocations } from './config.ts'
-import {
-  createTransformCacheKey,
-  isTransformCacheable,
-  readCachedTransform,
-  writeCachedTransform,
-} from './cache.ts'
-import type { TransformCacheKey } from './cache.ts'
+import { createDefaultFileCache, createTransformCacheKey } from './cache.ts'
+import type { FileCache } from './file-cache.ts'
 import { createSourceFileStore } from './store.ts'
 import type {
   FileSnapshot,
@@ -63,7 +57,7 @@ type FileGetHrefOptions = {
 }
 
 type FileCompilerOptions = {
-  cache?: FileStorage
+  cache?: FileCache | false
   cacheKey?: string
   extensions: readonly string[]
   fingerprintAssets: boolean
@@ -132,10 +126,9 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   }
   let sourceFileStore: SourceFileStore = createSourceFileStore()
   let sourceFileInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
-  let transformedAssetMetadataBySlot = new Map<
-    string,
-    { digest: string; identityPath: string; metadata: EmittedFileMetadata }
-  >()
+  let cache =
+    options.cache ??
+    createDefaultFileCache(path.join(options.rootDir, 'node_modules/.cache/remix/assets'))
   let transformedEmitInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
   let cacheKey = resolvedOptions.cacheKey ?? crypto.randomUUID()
   let resolveArgs: ResolveArgs = {
@@ -159,18 +152,12 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
           record,
           parsedTransforms,
         )
-        let notModified = getNotModifiedFile(
-          getTransformedAssetMetadata(transformedCacheKey),
-          getOptions,
-        )
-        if (notModified) return notModified
-
         let transformedFile = await getOrCreateTransformedFile(
           record,
           parsedTransforms,
           transformedCacheKey,
         )
-        notModified = getNotModifiedFile(toEmittedFileMetadata(transformedFile), getOptions)
+        let notModified = getNotModifiedFile(toEmittedFileMetadata(transformedFile), getOptions)
         if (notModified) return notModified
 
         return {
@@ -236,7 +223,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     async handleFileEvent(filePath, event) {
       if (!isServedFilePath(filePath, resolvedOptions.extensionSet)) return
       sourceFileStore.invalidateForFileEvent(filePath, event)
-      clearTransformedCacheIndex(filePath)
     },
 
     isServedFilePath(filePath) {
@@ -274,7 +260,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     let record = sourceFileStore.get(identityPath)
     if (record.metadataSnapshot && !isFileSnapshotFresh(record.metadataSnapshot)) {
       sourceFileStore.invalidate(identityPath)
-      clearTransformedCacheIndex(identityPath)
       record = sourceFileStore.get(identityPath)
     }
 
@@ -325,9 +310,9 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   async function getOrCreateTransformedFile(
     record: SourceFileRecord,
     parsedTransforms: readonly ParsedRequestTransform[],
-    transformedCacheKey: TransformCacheKey,
+    transformedCacheKey: string,
   ): Promise<EmittedFile> {
-    let existing = transformedEmitInFlightByCacheKey.get(transformedCacheKey.digest)
+    let existing = transformedEmitInFlightByCacheKey.get(transformedCacheKey)
     if (existing) return existing
 
     let promise = (async () => {
@@ -344,26 +329,25 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
         extension: transformedFile.extension,
         filePath: record.identityPath,
       })
-      if (isTransformCacheable(emittedFile)) {
-        rememberTransformedAssetMetadata(
+      if (cache) {
+        let name =
+          path.basename(record.identityPath, path.extname(record.identityPath)) +
+          emittedFile.extension
+        await cache.put(
           transformedCacheKey,
-          record.identityPath,
-          toEmittedFileMetadata(emittedFile),
+          new File([Buffer.from(emittedFile.body)], name, { type: emittedFile.contentType }),
         )
-        if (resolvedOptions.cache) {
-          await writeCachedTransform(resolvedOptions.cache, transformedCacheKey, emittedFile)
-        }
       }
       return emittedFile
     })()
 
-    transformedEmitInFlightByCacheKey.set(transformedCacheKey.digest, promise)
+    transformedEmitInFlightByCacheKey.set(transformedCacheKey, promise)
 
     try {
       return await promise
     } finally {
-      if (transformedEmitInFlightByCacheKey.get(transformedCacheKey.digest) === promise) {
-        transformedEmitInFlightByCacheKey.delete(transformedCacheKey.digest)
+      if (transformedEmitInFlightByCacheKey.get(transformedCacheKey) === promise) {
+        transformedEmitInFlightByCacheKey.delete(transformedCacheKey)
       }
     }
   }
@@ -464,28 +448,17 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   }
 
   async function getCachedTransformedFile(
-    cacheKey: TransformCacheKey,
+    cacheKey: string,
     identityPath: string,
   ): Promise<EmittedFile | null> {
-    if (!resolvedOptions.cache) return null
-
-    let file = await readCachedTransform(resolvedOptions.cache, cacheKey)
+    if (!cache) return null
+    let file = await cache.get(cacheKey)
     if (!file) return null
 
-    let body = file.body
-    let metadata =
-      getTransformedAssetMetadata(cacheKey) ??
-      (await createEmittedFileMetadata(body, {
-        extension: file.extension,
-        filePath: identityPath,
-      }))
-
-    rememberTransformedAssetMetadata(cacheKey, identityPath, metadata)
-
-    return {
-      body,
-      ...metadata,
-    }
+    return createEmittedFile(new Uint8Array(await file.arrayBuffer()), {
+      extension: path.extname(file.name),
+      filePath: identityPath,
+    })
   }
 
   async function createEmittedFile(
@@ -500,25 +473,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
       body,
       ...metadata,
     }
-  }
-
-  function clearTransformedCacheIndex(identityPath: string): void {
-    for (let [slot, entry] of transformedAssetMetadataBySlot) {
-      if (entry.identityPath === identityPath) transformedAssetMetadataBySlot.delete(slot)
-    }
-  }
-
-  function getTransformedAssetMetadata(key: TransformCacheKey): EmittedFileMetadata | undefined {
-    let entry = transformedAssetMetadataBySlot.get(key.slot)
-    return entry?.digest === key.digest ? entry.metadata : undefined
-  }
-
-  function rememberTransformedAssetMetadata(
-    key: TransformCacheKey,
-    identityPath: string,
-    metadata: EmittedFileMetadata,
-  ): void {
-    transformedAssetMetadataBySlot.set(key.slot, { digest: key.digest, identityPath, metadata })
   }
 
   async function createEmittedFileMetadata(
@@ -616,7 +570,7 @@ function getTransformedRecordCacheKey(
   namespace: string,
   record: SourceFileRecord,
   transforms: readonly ParsedRequestTransform[],
-): Promise<TransformCacheKey> {
+): Promise<string> {
   return createTransformCacheKey(
     namespace,
     JSON.stringify([record.identityPath, record.invalidationVersion, transforms]),

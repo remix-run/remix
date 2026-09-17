@@ -6,7 +6,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
 import MagicString from 'magic-string'
-import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
+import type { FileCache } from '../assets.ts'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
 import { isAssetServerCompilationError } from './compilation-error.ts'
@@ -1299,11 +1299,12 @@ describe('asset-server', () => {
     assert.equal(await response.text(), 'HELLO\n')
   })
 
-  it('recomputes transformed file outputs on each request when no cache is configured', async () => {
+  it('recomputes transformed file outputs on each request when caching is disabled', async () => {
     await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
     let transformCalls = 0
     let assetServer = createTestServer(dir, {
       files: {
+        cache: false,
         extensions: ['.svg'],
         transforms: {
           optimize: defineFileTransform({
@@ -1329,12 +1330,21 @@ describe('asset-server', () => {
     assert.equal(transformCalls, 2)
   })
 
-  it('uses configured file storage for transformed asset caching', async () => {
+  it('uses a get and put only cache for transformed assets', async () => {
     await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
     let transformCalls = 0
+    let files = new Map<string, File>()
+    let cache = {
+      async get(key: string) {
+        return files.get(key) ?? null
+      },
+      async put(key: string, file: File) {
+        files.set(key, file)
+      },
+    } satisfies FileCache
     let assetServer = createTestServer(dir, {
       files: {
-        cache: createMemoryFileStorage(),
+        cache,
         extensions: ['.svg'],
         transforms: {
           optimize: defineFileTransform({
@@ -1362,7 +1372,7 @@ describe('asset-server', () => {
 
   it('deduplicates equivalent transform URLs and preserves distinct pipeline inputs', async () => {
     await write(dir, 'app/content/value.txt', 'hello')
-    let cache = createMemoryFileStorage()
+    let cache = createMemoryFileCache()
     let calls: (string | undefined)[] = []
     let assetServer = createTestServer(dir, {
       files: {
@@ -1388,7 +1398,7 @@ describe('asset-server', () => {
       assert.equal(await response.text(), 'helloa b')
     }
     assert.deepEqual(calls, ['a b'])
-    assert.equal((await cache.list()).files.length, 1)
+    assert.equal(cache.files.size, 1)
 
     let noParam = await get(assetServer, '/assets/app/content/value.txt?transform=append')
     assert.ok(noParam)
@@ -1410,7 +1420,86 @@ describe('asset-server', () => {
     assert.equal(await reversed.text(), 'helloba')
   })
 
-  it('bounds transformed metadata while preserving conditional requests after replacement', async () => {
+  it('lets custom caches retain more entries and larger files than the default limits', async () => {
+    await write(dir, 'app/content/value.txt', 'hello')
+    let cache = createMemoryFileCache()
+    let calls = 0
+    let content = new Uint8Array(4 * 1024 * 1024 + 1).fill(65)
+    let assetServer = createTestServer(dir, {
+      files: {
+        cache,
+        extensions: ['.txt'],
+        transforms: {
+          variant: defineFileTransform({
+            param: true,
+            transform(bytes, { param }) {
+              calls += 1
+              return { content: param === 'large' ? content : param, extension: '.svg' }
+            },
+          }),
+        },
+      },
+    })
+    for (let index = 0; index < 257; index++) {
+      await get(assetServer, `/assets/app/content/value.txt?transform=variant:${index}`)
+    }
+    assert.equal(cache.files.size, 257)
+    for (let index = 0; index < 257; index++) {
+      let response = await get(
+        assetServer,
+        `/assets/app/content/value.txt?transform=variant:${index}`,
+      )
+      assert.ok(response)
+      assert.equal(await response.text(), String(index))
+      assert.match(response.headers.get('Content-Type') ?? '', /image\/svg\+xml/)
+    }
+    assert.equal(calls, 257)
+    for (let index = 0; index < 2; index++) {
+      let response = await get(assetServer, '/assets/app/content/value.txt?transform=variant:large')
+      assert.ok(response)
+      assert.deepEqual(new Uint8Array(await response.arrayBuffer()), content)
+    }
+    assert.equal(calls, 258)
+    assert.equal(cache.files.size, 258)
+    let file = [...cache.files.values()].at(-1)
+    assert.ok(file)
+    assert.equal(file.name, 'value.svg')
+    assert.match(file.type, /image\/svg\+xml/)
+    assert.deepEqual(new Uint8Array(await file.arrayBuffer()), content)
+  })
+
+  it('consults custom cache eviction before answering conditional requests', async () => {
+    await write(dir, 'app/content/value.txt', 'hello')
+    let cache = createMemoryFileCache()
+    let calls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        cache,
+        extensions: ['.txt'],
+        transforms: {
+          append: defineFileTransform({
+            transform() {
+              calls += 1
+              return `output-${calls}`
+            },
+          }),
+        },
+      },
+    })
+    let href = '/assets/app/content/value.txt?transform=append'
+    let first = await get(assetServer, href)
+    assert.ok(first)
+    let etag = first.headers.get('ETag')
+    assert.ok(etag)
+    cache.files.clear()
+    let second = await get(assetServer, href, { 'If-None-Match': etag })
+    assert.ok(second)
+    assert.equal(second.status, 200)
+    assert.equal(await second.text(), 'output-2')
+    assert.equal(calls, 2)
+  })
+
+  it('recomputes evicted default cache entries for conditional requests', async () => {
     await write(dir, 'app/content/value.txt', 'hello')
     let transformCalls = 0
     let assetServer = createTestServer(dir, {
@@ -1456,14 +1545,11 @@ describe('asset-server', () => {
     assert.ok(transformCalls > 257)
   })
 
-  it('bounds transformed storage across requests and server restarts', async () => {
+  it('uses a bounded default disk cache across server restarts and namespaces', async () => {
     await write(dir, 'app/content/value.txt', 'hello')
-    let cache = createMemoryFileStorage()
     let createServer = () =>
       createTestServer(dir, {
         files: {
-          cache,
-          cacheKey: 'bounded-cache',
           extensions: ['.txt'],
           transforms: {
             append: defineFileTransform({
@@ -1486,38 +1572,73 @@ describe('asset-server', () => {
         assert.ok(response)
         assert.equal(await response.text(), `hello${param}`)
       }
-      let entries = await cache.list()
-      assert.ok(entries.files.length <= 256)
+      let entries = await fs.readdir(path.join(dir, 'node_modules/.cache/remix/assets'), {
+        recursive: true,
+      })
+      let bodies = entries.filter((entry) => entry.endsWith('.dat'))
+      assert.ok(bodies.length > 0)
+      assert.ok(bodies.length <= 256)
     }
   })
 
-  it('serves oversized transformed outputs without retaining their bodies', async () => {
+  it('serves oversized outputs without admitting them to the default cache', async () => {
     await write(dir, 'app/content/value.txt', 'hello')
-    let cache = createMemoryFileStorage()
+    let calls = 0
     let content = new Uint8Array(4 * 1024 * 1024 + 1).fill(65)
     let assetServer = createTestServer(dir, {
       files: {
-        cache,
         extensions: ['.txt'],
         transforms: {
           expand: defineFileTransform({
             transform() {
+              calls += 1
               return content
             },
           }),
         },
       },
     })
-    let response = await get(assetServer, '/assets/app/content/value.txt?transform=expand')
-    assert.ok(response)
-    assert.equal(response.status, 200)
-    assert.deepEqual(new Uint8Array(await response.arrayBuffer()), content)
-    assert.equal((await cache.list()).files.length, 0)
+    for (let index = 0; index < 2; index++) {
+      let response = await get(assetServer, '/assets/app/content/value.txt?transform=expand')
+      assert.ok(response)
+      assert.equal(response.status, 200)
+      assert.deepEqual(new Uint8Array(await response.arrayBuffer()), content)
+    }
+    assert.equal(calls, 2)
+  })
+
+  it('reuses the default cache with a stable namespace and isolates new namespaces', async () => {
+    await write(dir, 'app/content/value.txt', 'hello')
+    let calls = 0
+    let createServer = (cacheKey: string) =>
+      createTestServer(dir, {
+        files: {
+          cacheKey,
+          extensions: ['.txt'],
+          transforms: {
+            append: defineFileTransform({
+              transform(bytes) {
+                calls += 1
+                return bytes
+              },
+            }),
+          },
+        },
+      })
+    for (let cacheKey of ['default-build-a', 'default-build-a', 'default-build-b']) {
+      let response = await get(
+        createServer(cacheKey),
+        '/assets/app/content/value.txt?transform=append',
+      )
+      assert.ok(response)
+      assert.equal(await response.text(), 'hello')
+    }
+    assert.equal(calls, 2)
   })
 
   it('reuses transformed file cache entries across servers with the same files cache key', async () => {
     await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
-    let cache = createMemoryFileStorage()
+    let cache = createMemoryFileCache()
     let transformCalls = 0
     let createServer = () =>
       createTestServer(dir, {
@@ -1557,7 +1678,7 @@ describe('asset-server', () => {
 
   it('does not reuse transformed file cache entries across different files cache keys', async () => {
     await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
-    let cache = createMemoryFileStorage()
+    let cache = createMemoryFileCache()
     let transformCalls = 0
     let createServer = (cacheKey: string) =>
       createTestServer(dir, {
@@ -1597,7 +1718,7 @@ describe('asset-server', () => {
 
   it('lets files.cacheKey control transformed file cache invalidation across servers', async () => {
     await write(dir, 'app/content/value.txt', 'hello\n')
-    let cache = createMemoryFileStorage()
+    let cache = createMemoryFileCache()
     let transformCalls = 0
     let createServer = () =>
       createTestServer(dir, {
@@ -1642,7 +1763,7 @@ describe('asset-server', () => {
     let transformCalls = 0
     let assetServer = createTestServer(dir, {
       files: {
-        cache: createMemoryFileStorage(),
+        cache: createMemoryFileCache(),
         extensions: ['.txt'],
         transforms: {
           upper: defineFileTransform({
@@ -1676,7 +1797,7 @@ describe('asset-server', () => {
     let transformCalls = 0
     let assetServer = createWatchedTestServer(dir, {
       files: {
-        cache: createMemoryFileStorage(),
+        cache: createMemoryFileCache(),
         extensions: ['.txt'],
         transforms: {
           upper: defineFileTransform({
@@ -8603,6 +8724,38 @@ describe('asset-server', () => {
     )
   })
 
+  it('rejects caches without a put method', () => {
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          files: {
+            extensions: ['.svg'],
+            // @ts-expect-error - exercise runtime validation of an incomplete cache
+            cache: {
+              get() {
+                return null
+              },
+            },
+          },
+        }),
+      /files\.cache must be false or implement the FileCache interface \(get and put\)/,
+    )
+  })
+
+  it('rejects caches without a get method', () => {
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          files: {
+            extensions: ['.svg'],
+            // @ts-expect-error - exercise runtime validation of an incomplete cache
+            cache: { put() {} },
+          },
+        }),
+      /files\.cache must be false or implement the FileCache interface \(get and put\)/,
+    )
+  })
+
   it('rejects non-string files.cacheKey values', async () => {
     await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
     assert.throws(
@@ -9238,3 +9391,16 @@ describe('asset-server', () => {
     }
   })
 })
+
+function createMemoryFileCache() {
+  let files = new Map<string, File>()
+  return {
+    files,
+    get(key: string) {
+      return files.get(key) ?? null
+    },
+    put(key: string, file: File) {
+      files.set(key, file)
+    },
+  }
+}

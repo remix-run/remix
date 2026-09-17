@@ -1,70 +1,89 @@
 import type { FileStorage } from '@remix-run/file-storage'
+import { createFsFileStorage } from '@remix-run/file-storage/fs'
+import type { FileCache } from './file-cache.ts'
 
 const maxCacheSlots = 256
 const maxCacheFileSize = 4 * 1024 * 1024
 
-export interface TransformCacheKey {
-  digest: string
-  slot: string
-}
+export function createDefaultFileCache(directory: string): FileCache {
+  let storage: FileStorage | undefined
 
-interface CachedTransform {
-  body: Uint8Array
-  extension: string
-}
+  function getStorage(): FileStorage {
+    return (storage ??= createFsFileStorage(directory))
+  }
 
-export function isTransformCacheable(output: CachedTransform): boolean {
-  // Two SHA-256 hex digests, three newlines, the ASCII extension, and the output bytes.
-  return 131 + output.extension.length + output.body.byteLength <= maxCacheFileSize
-}
-
-export async function createTransformCacheKey(
-  namespace: string,
-  identity: string,
-): Promise<TransformCacheKey> {
-  let digest = await hash(new TextEncoder().encode(identity))
   return {
-    digest,
-    slot: `${Buffer.from(namespace).toString('base64url')}/v2/${parseInt(digest.slice(0, 8), 16) % maxCacheSlots}`,
+    async get(key) {
+      let digest = await hash(new TextEncoder().encode(key))
+      let file: File | null
+      try {
+        file = await getStorage().get(getSlot(digest))
+      } catch (error) {
+        // Another writer may be replacing the backing store's JSON metadata.
+        if (error instanceof SyntaxError) return null
+        throw error
+      }
+      if (!file || file.size > maxCacheFileSize) return null
+
+      let bytes = new Uint8Array(await file.arrayBuffer())
+      if (bytes.length > maxCacheFileSize || bytes[64] !== 10) return null
+      let decoder = new TextDecoder()
+      let checksum = decoder.decode(bytes.subarray(0, 64))
+      if ((await hash(bytes.subarray(65))) !== checksum) return null
+
+      let headerEnd = bytes.indexOf(10, 65)
+      if (headerEnd === -1) return null
+      let header: unknown
+      try {
+        header = JSON.parse(decoder.decode(bytes.subarray(65, headerEnd)))
+      } catch {
+        return null
+      }
+      if (
+        !Array.isArray(header) ||
+        header.length !== 4 ||
+        header[0] !== digest ||
+        typeof header[1] !== 'string' ||
+        typeof header[2] !== 'string' ||
+        typeof header[3] !== 'number' ||
+        !Number.isFinite(header[3])
+      ) {
+        return null
+      }
+
+      return new File([bytes.subarray(headerEnd + 1)], header[1], {
+        type: header[2],
+        lastModified: header[3],
+      })
+    },
+    async put(key, file) {
+      if (file.size > maxCacheFileSize) return
+      let digest = await hash(new TextEncoder().encode(key))
+      let header = JSON.stringify([digest, file.name, file.type, file.lastModified])
+      let content = new Blob([header, '\n', file])
+      if (65 + content.size > maxCacheFileSize) return
+
+      // FileStorage replaces bytes and metadata separately, so keep the entire record in the body.
+      let bytes = new Uint8Array(await content.arrayBuffer())
+      let checksum = await hash(bytes)
+      try {
+        await getStorage().set(getSlot(digest), new File([checksum, '\n', bytes], 'file-cache'))
+      } catch (error) {
+        // FileStorage rereads metadata after writing; concurrent replacement can interrupt that read.
+        if (!(error instanceof SyntaxError)) throw error
+      }
+    },
   }
 }
 
-export async function readCachedTransform(
-  cache: FileStorage,
-  key: TransformCacheKey,
-): Promise<CachedTransform | null> {
-  let file = await cache.get(key.slot)
-  if (!file || file.size > maxCacheFileSize) return null
-
-  let bytes = new Uint8Array(await file.arrayBuffer())
-  if (bytes.length > maxCacheFileSize || bytes[64] !== 10 || bytes[129] !== 10) return null
-
-  let decoder = new TextDecoder()
-  if (decoder.decode(bytes.subarray(65, 129)) !== key.digest) return null
-
-  // Keep the identity and checksum in the body: some stores replace File metadata separately.
-  let checksum = decoder.decode(bytes.subarray(0, 64))
-  if ((await hash(bytes.subarray(65))) !== checksum) return null
-
-  let extensionEnd = bytes.indexOf(10, 130)
-  if (extensionEnd === -1) return null
-  let extension = decoder.decode(bytes.subarray(130, extensionEnd))
-  if (!/^\.[A-Za-z0-9_-]+$/.test(extension)) return null
-
-  return { body: bytes.subarray(extensionEnd + 1), extension }
+export function createTransformCacheKey(namespace: string, identity: string): Promise<string> {
+  return hash(
+    new TextEncoder().encode(JSON.stringify(['transformed-file-v3', namespace, identity])),
+  )
 }
 
-export async function writeCachedTransform(
-  cache: FileStorage,
-  key: TransformCacheKey,
-  output: CachedTransform,
-): Promise<void> {
-  if (!isTransformCacheable(output)) return
-  let header = new TextEncoder().encode(`${key.digest}\n${output.extension}\n`)
-
-  let content = Buffer.concat([header, output.body])
-  let checksum = await hash(content)
-  await cache.set(key.slot, new File([`${checksum}\n`, content], 'transform-cache'))
+function getSlot(digest: string): string {
+  return String(parseInt(digest.slice(0, 8), 16) % maxCacheSlots)
 }
 
 async function hash(bytes: Uint8Array): Promise<string> {

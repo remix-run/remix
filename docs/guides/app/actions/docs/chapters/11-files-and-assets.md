@@ -49,7 +49,7 @@ Resolve `clientEntry(import.meta.url, ...)` IDs to `href`, `importMap`, and `pre
 
 ## File transforms and transformed-output caches {#asset-file-transforms}
 
-Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits. Use a `FileStorage` cache when transformed output should survive repeated requests or process restarts for the same build.
+Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits. Transformed outputs use a bounded disk cache by default. Set `files.cacheKey` to a build identifier to reuse outputs across server restarts, or supply a `FileCache` with `get` and `put` methods to choose your own limits and eviction policy. Set `files.cache: false` to disable caching.
 
 ## Development watching and production fingerprints {#fingerprinting-source-maps-minification}
 
