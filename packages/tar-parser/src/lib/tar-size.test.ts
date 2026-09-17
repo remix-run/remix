@@ -57,7 +57,7 @@ function paxHeader(key: string, value: string, type: string): Uint8Array[] {
     length = String(length).length + record.length
   }
   let body = new TextEncoder().encode(`${length}${record}`)
-  return [createHeader(body.length, type), body, new Uint8Array(512 - body.length)]
+  return [createHeader(body.length, type), body, new Uint8Array((512 - (body.length % 512)) % 512)]
 }
 
 async function assertInvalidArchive(chunks: Uint8Array[]): Promise<void> {
@@ -735,6 +735,116 @@ describe('tar size limits', () => {
     assert.ok(countError instanceof TarParseError)
     assert.equal(countError.name, 'MaxEntriesExceededError')
     assert.equal(countError.message, 'Tar entry count exceeds maximum allowed count of 5000')
+  })
+})
+
+describe('tar metadata buffering', () => {
+  async function assertLinearBuffering(type: string, key: 'path' | 'linkpath') {
+    let value = 'a'.repeat(64 * 1024)
+    let chunks =
+      type === 'x' || type === 'g'
+        ? paxHeader(key, value, type)
+        : [createHeader(value.length, type), new TextEncoder().encode(value)]
+    let header = createHeader(0)
+    let names: (string | null)[] = []
+    let native = Uint8Array
+    let allocated = 0
+
+    function* source() {
+      for (let chunk of chunks) {
+        for (let offset = 0; offset < chunk.length; offset += 64) {
+          yield chunk.subarray(offset, offset + 64)
+        }
+      }
+      yield header
+    }
+
+    globalThis.Uint8Array = new Proxy(native, {
+      construct(target, args) {
+        if (typeof args[0] === 'number') allocated += args[0]
+        return Reflect.construct(target, args)
+      },
+    })
+    try {
+      await parseTar(source(), (entry) => {
+        names.push(key === 'path' ? entry.name : entry.header.linkname)
+      })
+    } finally {
+      globalThis.Uint8Array = native
+    }
+
+    assert.deepEqual(names, [value])
+    assert.ok(
+      allocated < 4 * value.length,
+      `Allocated ${allocated} bytes for ${value.length} bytes`,
+    )
+  }
+
+  it('buffers fragmented GNU paths with linear allocation', async () => {
+    await assertLinearBuffering('L', 'path')
+  })
+
+  it('buffers fragmented GNU link targets with linear allocation', async () => {
+    await assertLinearBuffering('K', 'linkpath')
+  })
+
+  it('buffers fragmented local PAX metadata with linear allocation', async () => {
+    await assertLinearBuffering('x', 'path')
+  })
+
+  it('buffers fragmented global PAX metadata with linear allocation', async () => {
+    await assertLinearBuffering('g', 'linkpath')
+  })
+
+  it('allocates metadata storage from received bytes with the entry limit disabled', async () => {
+    let chunks = [createHeader(1024 ** 3, 'L'), new Uint8Array(1)]
+    let native = Uint8Array
+    let allocated = 0
+    globalThis.Uint8Array = new Proxy(native, {
+      construct(target, args) {
+        if (typeof args[0] === 'number') {
+          allocated += args[0]
+          if (allocated > 4096) throw new Error('Unexpected allocation')
+        }
+        return Reflect.construct(target, args)
+      },
+    })
+    try {
+      await assert.rejects(
+        () => parseTar(chunks, { maxEntrySize: Infinity }, () => assert.fail('Unexpected entry')),
+        { name: 'TarParseError', message: 'Unexpected end of archive' },
+      )
+      assert.ok(allocated <= 4096)
+    } finally {
+      globalThis.Uint8Array = native
+    }
+  })
+
+  it('preserves split UTF-8 metadata and following content across padding boundaries', async () => {
+    let name = 'files/é.txt'
+    let body = new TextEncoder().encode(name)
+    let tail = new Uint8Array(1536 - 7)
+    tail.set(body.subarray(7))
+    tail.set(createHeader(2), 512 - 7)
+    tail.set(new TextEncoder().encode('ok'), 1024 - 7)
+    let entries: string[] = []
+    await parseTar([createHeader(body.length, 'L'), body.subarray(0, 7), tail], async (entry) => {
+      entries.push(`${entry.name}: ${await entry.text()}`)
+    })
+    assert.deepEqual(entries, [`${name}: ok`])
+  })
+
+  it('rejects truncated metadata and resets buffering before reuse', async () => {
+    let parser = new TarParser()
+    await assert.rejects(
+      () => parser.parse([createHeader(8, 'L'), new TextEncoder().encode('part')], () => {}),
+      /Unexpected end of archive/,
+    )
+    let names: string[] = []
+    await parser.parse([...paxHeader('path', 'next.txt', 'x'), createHeader(0)], (entry) => {
+      names.push(entry.name)
+    })
+    assert.deepEqual(names, ['next.txt'])
   })
 })
 

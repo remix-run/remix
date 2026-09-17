@@ -50,6 +50,31 @@ await parseTar(archive, async (entry) => {
 })
 ```
 
+## Path Policy
+
+The default `pathPolicy: 'relative'` requires nonempty relative entry names and link targets. `parseTarHeader()`, `parseTar()`, and `TarParser` throw `TarParseError` when paths start with `/` or a Windows drive prefix, or contain backslashes or embedded NULs. Validation applies to the final `entry.name` and, for symlinks and hard links, `entry.header.linkname` after ustar prefixes and GNU/PAX overrides, before invoking the entry handler.
+
+Entry names cannot contain `..` path components. Symlink targets are checked relative to the link's parent directory; hard-link targets are checked relative to the archive root. Link targets can contain `..` only when resolving each component stays within the archive:
+
+| Entry         | Type      | Target         | Result   |
+| ------------- | --------- | -------------- | -------- |
+| `lib/current` | Symlink   | `../shared/v2` | Allowed  |
+| `current`     | Symlink   | `../shared/v2` | Rejected |
+| `lib/current` | Hard link | `../shared/v2` | Rejected |
+| `lib/current` | Hard link | `shared/v2`    | Allowed  |
+
+Valid paths retain their spelling, including `./` prefixes, trailing slashes, and allowed `..` components in link targets. GNU long names and link targets omit their terminating NUL under either policy.
+
+For archive inspection, backups, or controlled extraction, set `pathPolicy: 'preserve'` to return decoded names and link targets without these restrictions. Archive limits and header structure validation still apply. The option works with all three parsing APIs:
+
+```ts
+await parseTar(archive, { pathPolicy: 'preserve' }, (entry) => {
+  console.log(JSON.stringify({ name: entry.name, target: entry.header.linkname }))
+})
+```
+
+These checks use archive paths without consulting the filesystem or following links. Consumers that extract files must still keep writes inside the extraction directory, including when existing or archived symlinks are present. Path validation does not guarantee filesystem containment. Paths can still contain newlines, so use context-appropriate escaping when displaying metadata or writing it to logs.
+
 ## Limits
 
 By default, `parseTar()` and `TarParser` limit each entry body to **2 MiB**, the total archive input to **20 MiB**, and the archive to **5,000 entries**. Override these limits with `maxEntrySize`, `maxTotalSize`, and `maxEntries`:
