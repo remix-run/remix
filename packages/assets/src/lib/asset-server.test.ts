@@ -8,6 +8,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
 import MagicString from 'magic-string'
+import { createFsFileCache } from '../assets.ts'
 import type { FileCache } from '../assets.ts'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
@@ -1396,6 +1397,36 @@ describe('asset-server', () => {
     assert.ok(secondResponse)
     assert.equal(secondResponse.status, 200)
     assert.equal(transformCalls, 1)
+  })
+
+  it('reuses a filesystem cache in a custom directory across server restarts', async () => {
+    let rootDir = path.join(dir, 'custom-cached-assets')
+    let cacheDir = path.join(dir, 'custom-asset-cache')
+    await write(rootDir, 'app/content/value.txt', 'hello')
+    let calls = 0
+    for (let index = 0; index < 2; index++) {
+      let assetServer = createTestServer(rootDir, {
+        files: {
+          cache: createFsFileCache(path.relative(process.cwd(), cacheDir)),
+          cacheKey: 'custom-build',
+          extensions: ['.txt'],
+          transforms: {
+            upper: defineFileTransform({
+              transform(bytes) {
+                calls += 1
+                return new TextDecoder().decode(bytes).toUpperCase()
+              },
+            }),
+          },
+        },
+      })
+      let response = await get(assetServer, '/assets/app/content/value.txt?transform=upper')
+      assert.ok(response)
+      assert.equal(await response.text(), 'HELLO')
+    }
+    assert.equal(calls, 1)
+    assert.ok(nodeFs.existsSync(cacheDir))
+    assert.equal(nodeFs.existsSync(path.join(rootDir, 'node_modules')), false)
   })
 
   it('accepts FileStorage backends as FileCache implementations', async () => {

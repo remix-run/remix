@@ -4,13 +4,13 @@ import { createFsFileStorage } from '@remix-run/file-storage/fs'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { createDefaultFileCache } from './cache.ts'
+import { createFsFileCache } from '../../assets.ts'
 
-describe('default file cache', () => {
+describe('createFsFileCache', () => {
   it('preserves file bytes and metadata across replacements and restarts', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createDefaultFileCache(directory)
+      let cache = createFsFileCache(path.relative(process.cwd(), directory))
       let original = new File([new Uint8Array([0, 255, 10])], 'image\n☃.png', {
         type: 'image/png',
         lastModified: 123456,
@@ -22,7 +22,7 @@ describe('default file cache', () => {
         lastModified: 654321,
       })
       await cache.put('any key/☃', replacement)
-      let restarted = createDefaultFileCache(directory)
+      let restarted = createFsFileCache(directory)
       await assertCachedFile(await restarted.get('any key/☃'), replacement)
       assert.equal((await createFsFileStorage(directory).list()).files.length, 1)
     } finally {
@@ -34,7 +34,7 @@ describe('default file cache', () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
       for (let round = 0; round < 2; round++) {
-        let cache = createDefaultFileCache(directory)
+        let cache = createFsFileCache(directory)
         for (let index = 0; index < 257; index++) {
           let key = `${round}:${index}`
           await cache.put(key, new File([key], `${key}.txt`))
@@ -62,7 +62,7 @@ describe('default file cache', () => {
   it('treats incomplete and mixed record bytes as misses independently of storage metadata', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createDefaultFileCache(directory)
+      let cache = createFsFileCache(directory)
       let original = new File([new Uint8Array([1, 2, 3])], 'image.png', {
         type: 'image/png',
         lastModified: 123456,
@@ -89,7 +89,7 @@ describe('default file cache', () => {
   it('treats incomplete storage metadata as a miss', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createDefaultFileCache(directory)
+      let cache = createFsFileCache(directory)
       await cache.put('key', new File(['hello'], 'file.txt'))
       let entries = await fs.readdir(directory, { recursive: true })
       let metadataPath = entries.find((entry) => entry.endsWith('.meta.json'))
@@ -106,8 +106,8 @@ describe('default file cache', () => {
   it('serves hits or misses when separate caches write colliding slots concurrently', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let first = createDefaultFileCache(directory)
-      let second = createDefaultFileCache(directory)
+      let first = createFsFileCache(directory)
+      let second = createFsFileCache(directory)
       let results = await Promise.allSettled(
         Array.from({ length: 257 }, async (_, index) => {
           let key = `key-${index}`
@@ -128,7 +128,7 @@ describe('default file cache', () => {
   it('includes record metadata in the stored size limit', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createDefaultFileCache(directory)
+      let cache = createFsFileCache(directory)
       let original = new File([], 'image.png', { type: 'image/png', lastModified: 123456 })
       await cache.put('key', original)
       let storage = createFsFileStorage(directory)

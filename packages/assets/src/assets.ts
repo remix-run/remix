@@ -1,4 +1,5 @@
 export { createAssetServer } from './lib/asset-server.ts'
+export { createFsFileCache } from './lib/files/cache.ts'
 export { defineFileTransform } from './lib/files/config.ts'
 export type { AssetAccessDetails, AssetAccessRule } from './lib/access.ts'
 export type {

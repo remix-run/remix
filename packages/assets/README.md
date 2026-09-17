@@ -629,6 +629,27 @@ let assetServer = createAssetServer({
 })
 ```
 
+To use the built-in cache with a different directory, pass `createFsFileCache(directory)`:
+
+```ts
+import { createAssetServer, createFsFileCache } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  allowFiles: ['app/**/public/**'],
+  files: {
+    cache: createFsFileCache('/var/cache/my-app/assets'),
+    cacheKey: process.env.GIT_COMMIT_SHA,
+    extensions: ['.svg', '.png'],
+    transforms: {
+      /*...*/
+    },
+  },
+})
+```
+
+Use a directory dedicated to this cache. Relative paths resolve from `process.cwd()` when the factory is called, independently of the asset server's `rootDir`. The directory is created on first use. Cache instances using the same directory share the 256 slots and 4 MiB entry limit.
+
 To choose different limits, persistence, or eviction behavior, supply a `FileCache`. It needs only `get(key)` and `put(key, file)`, and both methods may be synchronous or asynchronous. `get` returns a `File` or `null` for a miss. `put` stores or replaces a file, or declines admission according to the cache's policy. It may return a stored `File` or no value, which the asset server ignores. Existing `FileStorage` backends satisfy this interface and can still be passed directly to `files.cache`. Cached files must preserve their bytes, name, type, and `lastModified` value.
 
 For example, this in-memory cache retains up to 512 files, each at most 8 MiB, and evicts the least recently used entry:

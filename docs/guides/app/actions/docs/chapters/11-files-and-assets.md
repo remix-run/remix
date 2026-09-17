@@ -49,7 +49,7 @@ Resolve `clientEntry(import.meta.url, ...)` IDs to `href`, `importMap`, and `pre
 
 ## File transforms and transformed-output caches {#asset-file-transforms}
 
-Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits. Set `files.cache: true` to cache transformed outputs on disk with built-in limits. Set `files.cacheKey` to a build identifier to reuse outputs across server restarts, or supply a `FileCache` with `get` and `put` methods to choose your own limits and eviction policy. Caching is disabled when `files.cache` is omitted or `false`.
+Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits. Set `files.cache: true` to cache transformed outputs on disk with built-in limits, or use `cache: createFsFileCache(directory)` from `remix/assets` to choose the directory. Relative cache directories resolve from `process.cwd()`, independently of `rootDir`. Set `files.cacheKey` to a build identifier to reuse outputs across server restarts, or supply a `FileCache` with `get` and `put` methods to choose your own limits and eviction policy. Caching is disabled when `files.cache` is omitted or `false`.
 
 ## Development watching and production fingerprints {#fingerprinting-source-maps-minification}
 

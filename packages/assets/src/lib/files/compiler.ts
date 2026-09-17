@@ -14,7 +14,7 @@ import { normalizeFilePath, resolveFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { AssetFileTransformResult, ResolvedAssetRequestTransformMap } from './config.ts'
 import { parseAssetTransformInvocations } from './config.ts'
-import { createDefaultFileCache, createTransformCacheKey } from './cache.ts'
+import { createFsFileCache, createTransformCacheKey } from './cache.ts'
 import type { FileCache } from './file-cache.ts'
 import { createSourceFileStore } from './store.ts'
 import type {
@@ -128,7 +128,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   let sourceFileInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
   let cache =
     options.cache === true
-      ? createDefaultFileCache(path.join(options.rootDir, 'node_modules/.cache/remix/assets'))
+      ? createFsFileCache(path.join(options.rootDir, 'node_modules/.cache/remix/assets'))
       : options.cache
   let transformedEmitInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
   let cacheKey = resolvedOptions.cacheKey ?? crypto.randomUUID()

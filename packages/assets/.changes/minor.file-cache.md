@@ -11,4 +11,21 @@ Caching remains disabled when `files.cache` is omitted or `false`. Set `files.ca
  })
 ```
 
+To use the same bounded cache in a custom directory, pass the exported `createFsFileCache(directory)` factory:
+
+```diff
+ import { createAssetServer } from 'remix/assets'
++import { createFsFileCache } from 'remix/assets'
+
+ let assetServer = createAssetServer({
+   files: {
+-    cache: true,
++    cache: createFsFileCache('/var/cache/my-app/assets'),
+     extensions: ['.svg', '.png'],
+   },
+ })
+```
+
+Relative directories resolve from `process.cwd()` when the factory is called, independently of the asset server's `rootDir`.
+
 The exported `FileCache` interface accepts synchronous or asynchronous methods. `get` returns a `File` or `null` for a miss; `put` may return a stored `File` or no value. Implementations may decline admission or evict entries, and must preserve the file's bytes and metadata. `files.cacheKey` continues to namespace outputs for reuse across server restarts; change it when sources or transforms change. Existing cache entries from older formats are not reused.

@@ -1,15 +1,27 @@
 import type { FileStorage } from '@remix-run/file-storage'
 import { createFsFileStorage } from '@remix-run/file-storage/fs'
+import * as path from 'node:path'
 import type { FileCache } from './file-cache.ts'
 
 const maxCacheSlots = 256
 const maxCacheFileSize = 4 * 1024 * 1024
 
-export function createDefaultFileCache(directory: string): FileCache {
+/**
+ * Creates a bounded filesystem cache with up to 256 reusable slots and 4 MiB per
+ * stored entry, including metadata. Entries that share a slot replace one another;
+ * oversized files are not cached. All instances using the same directory share
+ * these limits and may reuse cached files.
+ *
+ * @param directory A directory dedicated to this cache, created on first use if needed.
+ * Relative paths resolve from `process.cwd()` when this function is called.
+ * @returns A file cache suitable for `files.cache` in `createAssetServer()`.
+ */
+export function createFsFileCache(directory: string): FileCache {
+  let rootDir = path.resolve(directory)
   let storage: FileStorage | undefined
 
   function getStorage(): FileStorage {
-    return (storage ??= createFsFileStorage(directory))
+    return (storage ??= createFsFileStorage(rootDir))
   }
 
   return {

@@ -115,8 +115,9 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
    * Cache for transformed file outputs. Disabled when omitted or `false`.
    * Set to `true` to use an on-disk cache in `node_modules/.cache/remix/assets`
    * under `rootDir`, with at most 256 entries of 4 MiB each including metadata.
-   * Larger outputs are served without caching. Supply a `FileCache` to control
-   * your own limits and eviction policy.
+   * Larger outputs are served without caching. Use `createFsFileCache(directory)`
+   * to choose the cache directory, or supply a `FileCache` to control your own
+   * limits and eviction policy.
    */
   cache?: boolean | FileCache
   /**
