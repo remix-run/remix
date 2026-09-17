@@ -74,7 +74,7 @@ export const exhibits: Exhibit[] = [
     metricLabel: 'Default vertical preload margin',
     trend: 'Applied above and below the viewport.',
     details: [
-      'One-shot load observer',
+      'One shared load observer',
       'Configurable rootMargin',
       'No request before intersection',
     ],
