@@ -45,7 +45,7 @@ export async function syncRemixGuides(): Promise<RemixGuideCopy[]> {
   return copies
 }
 
-export async function removeRemixGuides(): Promise<void> {
+async function removeRemixGuides(): Promise<void> {
   await fsp.rm(remixGuidesDir, { recursive: true, force: true })
 }
 
