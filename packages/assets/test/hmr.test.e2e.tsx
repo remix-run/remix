@@ -119,7 +119,7 @@ describe('asset server HMR', () => {
     let fixture = await createHmrFixture({ counterBarrelHmrBoundary: true })
     t.after(fixture.close)
 
-    let page = await t.serve(await createHmrTestServer(fixture, { importMaps: false }))
+    let page = await t.serve(await createHmrTestServer(fixture))
     await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="increment"]', 'Increment')
     await page.locator('[data-testid="field"]').fill('keep me')
@@ -1971,7 +1971,7 @@ async function writeWorkspacePackageLinks(rootDir: string, packageNames: string[
 
 async function createHmrTestServer(
   fixture: HmrFixture,
-  options: { importMaps?: boolean; optimizeBarrelFileImports?: boolean } = {},
+  options: { optimizeBarrelFileImports?: boolean } = {},
 ): Promise<HmrTestServer> {
   let appDir = path.relative(workspaceDir, path.join(fixture.rootDir, 'app'))
   let hmrEventStream: ReturnType<typeof createTestHmrEventStream> | undefined
@@ -2006,7 +2006,6 @@ async function createHmrTestServer(
         }),
         moduleImporter: './packages/multiple-import-maps-polyfill/src/index.ts',
       },
-      importMaps: options.importMaps,
       onError() {},
       optimizeBarrelFileImports: options.optimizeBarrelFileImports,
       rootDir: workspaceDir,

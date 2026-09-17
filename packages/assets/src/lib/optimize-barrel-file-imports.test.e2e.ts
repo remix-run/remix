@@ -86,9 +86,7 @@ async function createTestServer(
   }
 }
 
-async function assertFingerprintRuntime(
-  t: TestContext,
-): Promise<void> {
+async function assertFingerprintRuntime(t: TestContext): Promise<void> {
   let dir = await fs.mkdtemp(path.join(os.tmpdir(), 'optimized-barrel-runtime-test-'))
   await write(dir, 'package.json', JSON.stringify({ sideEffects: false }))
   await write(

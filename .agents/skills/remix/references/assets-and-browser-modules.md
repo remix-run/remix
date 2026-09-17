@@ -68,7 +68,7 @@ export default createController(routes, {
 - The default mounts serve the `app` directory at `/app` and `node_modules` at `/npm`. Use `mounts` to replace these defaults when the app needs different public or root-relative directory roots.
 - Mounts preserve every path segment beneath their public and filesystem roots. Do not configure overlapping public or filesystem roots.
 - CSS files are compiled and served alongside scripts. Local CSS `@import` rules are rewritten and fingerprinted with the same asset server routing rules.
-- By default, the asset server rewrites named imports through eligible barrel files to their resolved implementation modules, avoiding intermediary requests and removing side-effect-free dependency branches that are no longer reachable. Every removed module must be declared side-effect-free by its nearest `package.json`. The optimization works with generated import maps or rewritten import URLs; set `optimizeBarrelFileImports: false` to disable it.
+- By default, the asset server rewrites named imports through eligible barrel files to their resolved implementation modules, avoiding intermediary requests and removing side-effect-free dependency branches that are no longer reachable. Every removed module must be declared side-effect-free by its nearest `package.json`. Set `optimizeBarrelFileImports: false` to disable the optimization.
 
 ## Rendering HTML
 

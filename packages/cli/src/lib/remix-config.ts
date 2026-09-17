@@ -40,12 +40,7 @@ export interface RemixConfig {
 /** JSON-compatible asset server configuration loaded from `remix.json`. */
 export interface RemixAssetsConfig extends Pick<
   AssetServerOptions,
-  | 'allowFiles'
-  | 'allowPackages'
-  | 'basePath'
-  | 'denyFiles'
-  | 'mounts'
-  | 'optimizeBarrelFileImports'
+  'allowFiles' | 'allowPackages' | 'basePath' | 'denyFiles' | 'mounts' | 'optimizeBarrelFileImports'
 > {
   /** Leaf file asset configuration. */
   files?: Pick<NonNullable<AssetServerOptions['files']>, 'extensions'>

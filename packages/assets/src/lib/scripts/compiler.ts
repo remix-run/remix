@@ -49,11 +49,6 @@ type ScriptCompileResult = {
   sourceMap: EmittedAsset | null
 }
 
-type RuntimeGraph = {
-  modules: Map<string, ResolvedModule>
-  sourceModules: Map<string, ResolvedModule>
-}
-
 export type ScriptImportMap = {
   imports: Record<string, string>
   scopes?: Record<string, Record<string, string>>
@@ -236,7 +231,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       let resolvedEntries = await getOrCreateResolvedScripts(
         resolveInputScriptRoots(filePath).map((identityPath) => scriptStore.get(identityPath)),
       )
-      let graph = await resolveRuntimeGraphs(resolvedEntries)
+      let graph = await resolveServedGraph(resolvedEntries)
       let visited = new Set(resolvedEntries.map((entry) => entry.identityPath))
       let queue = resolvedEntries.map((entry) => entry.identityPath)
       let layers: string[][] = []
@@ -268,7 +263,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       let resolvedEntries = await getOrCreateResolvedScripts(
         resolveInputScriptRoots(filePath).map((identityPath) => scriptStore.get(identityPath)),
       )
-      let graph = await resolveRuntimeGraphs(resolvedEntries)
+      let graph = await resolveServedGraph(resolvedEntries)
       let resolvedEntrySet = new Set(resolvedEntries.map((entry) => entry.identityPath))
       let visited = new Set<string>()
       let queue = resolvedEntries.map((entry) => entry.identityPath)
@@ -664,8 +659,8 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     let promise = (async () => {
       let startedVersion = record.invalidationVersion
       let sourceRoot = await getOrCreateResolvedScript(record)
-      let { modules } = await resolveRuntimeGraph(sourceRoot)
-      let root = modules.get(sourceRoot.identityPath)
+      let graph = await resolveServedGraph([sourceRoot])
+      let root = graph.get(sourceRoot.identityPath)
       if (!root) throw new Error(`Failed to resolve script graph for ${record.identityPath}`)
       let emitResolvedModuleResult = await emitResolvedModule(root, {
         fingerprintAssets: resolvedOptions.fingerprintAssets,
@@ -732,15 +727,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     return graph
   }
 
-  async function resolveRuntimeGraph(root: ResolvedModule): Promise<RuntimeGraph> {
-    let sourceGraph = await resolveScriptGraph([root])
-    let modules = barrelFileImportOptimizer
-      ? getReachableGraph([root.identityPath], barrelFileImportOptimizer(sourceGraph))
-      : sourceGraph
-    return { modules, sourceModules: sourceGraph }
-  }
-
-  async function resolveRuntimeGraphs(
+  async function resolveServedGraph(
     roots: readonly ResolvedModule[],
   ): Promise<Map<string, ResolvedModule>> {
     let sourceGraph = await resolveScriptGraph(roots)
