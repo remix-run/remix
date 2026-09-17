@@ -93,7 +93,7 @@ This preview build will be updated automatically as you push new commits.`
 
 async function cleanup() {
   console.log(`Deleted branch: ${branch}`)
-  await logAndExec(`git push --delete origin ${branch}`)
+  logAndExec('git', ['push', '--delete', 'origin', branch])
 
   let commentBody = `\
 ${CLEANUP_MARKER}
