@@ -9,7 +9,7 @@ import { readMarkdownChapterSummary, renderMarkdownChapter } from './markdown/re
 import type { MarkdownChapter, MarkdownChapterSummary } from './markdown/types.ts'
 import { DocsChapter } from './layout.tsx'
 
-export type DocsChapterSummary = MarkdownChapterSummary & {
+export type DocsChapterSummary = Omit<MarkdownChapterSummary, 'published'> & {
   order: number
   slug: string
   href: string
@@ -26,7 +26,7 @@ type ChapterFile = {
   href: string
 }
 
-type LoadedDocsChapterSummary = DocsChapterSummary &
+type LoadedDocsChapterSummary = MarkdownChapterSummary &
   ChapterFile & {
     mtime: number
   }
@@ -61,8 +61,10 @@ export async function docsChapterHandler(context: DocsChapterRouteContext) {
   return context.render(<MarkdownChapterPage {...chapter} />)
 }
 
-export async function loadDocsChapterSummaries(): Promise<DocsChapterSummary[]> {
-  let summaries = await loadChapterSummaries()
+export async function loadDocsChapterSummaries(
+  environment = process.env.NODE_ENV,
+): Promise<DocsChapterSummary[]> {
+  let summaries = await loadChapterSummaries(environment)
   return summaries.map(toDocsChapterSummary)
 }
 
@@ -89,10 +91,12 @@ async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | un
   }
 }
 
-async function loadChapterSummaries(): Promise<LoadedDocsChapterSummary[]> {
+async function loadChapterSummaries(
+  environment = process.env.NODE_ENV,
+): Promise<LoadedDocsChapterSummary[]> {
   let files = await loadChapterFiles()
   let summaries = await Promise.all(files.map(loadCachedSummary))
-  return summaries
+  return environment === 'production' ? summaries.filter((summary) => summary.published) : summaries
 }
 
 // Keyed by mtime so dev edits (process stays up) invalidate without a restart.

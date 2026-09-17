@@ -1,4 +1,4 @@
-import { object, parseSafe, string, type Check } from 'remix/data-schema'
+import { boolean, object, optional, parseSafe, string, type Check } from 'remix/data-schema'
 
 import type { ChapterMetadata, MarkdownOptions } from './types.ts'
 
@@ -13,6 +13,7 @@ const nonEmpty: Check<string> = {
 const frontmatterSchema = object({
   title: string().pipe(nonEmpty),
   description: string().pipe(nonEmpty),
+  published: optional(boolean()),
 })
 
 export function readChapterMetadata(
@@ -25,12 +26,14 @@ export function readChapterMetadata(
     let key = issue.path?.[0]
     let location = options.filePath ? `${options.filePath}:1` : 'Markdown:1'
     let field = typeof key === 'string' ? `\`${key}\`` : 'frontmatter'
-    throw new Error(`${location}: Invalid frontmatter: Expected ${field} to be a non-empty string`)
+    let expected = key === 'published' ? 'a boolean' : 'a non-empty string'
+    throw new Error(`${location}: Invalid frontmatter: Expected ${field} to be ${expected}`)
   }
 
   return {
     chapter: options.chapter,
     title: result.value.title,
     description: result.value.description,
+    published: result.value.published ?? true,
   }
 }

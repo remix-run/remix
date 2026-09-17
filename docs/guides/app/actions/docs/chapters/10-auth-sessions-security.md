@@ -1,6 +1,7 @@
 ---
 title: Auth, Sessions, and Security
 description: How Remix stores per-browser state, resolves identity, protects routes, and defends browser request boundaries.
+published: false
 ---
 
 A signed cookie, a session, and an authenticated identity are different layers. Build them in that order, then add authorization and browser-origin defenses around the routes that mutate state.
