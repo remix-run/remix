@@ -70,6 +70,7 @@ export class MaxEntriesExceededError extends TarParseError {
 export interface TarHeader {
   /**
    * Entry path stored in the archive.
+   * Archive metadata; not normalized or validated for filesystem use.
    */
   name: string
 
@@ -105,6 +106,7 @@ export interface TarHeader {
 
   /**
    * Linked path target for link entries, or `null` when not present.
+   * Archive metadata; consumers must validate the target before creating or following links.
    */
   linkname: string | null
 
@@ -768,6 +770,7 @@ export class TarEntry {
 
   /**
    * The name of this entry.
+   * Includes ustar prefixes and GNU/PAX overrides, without path or character validation.
    */
   get name(): string {
     return this.header.name

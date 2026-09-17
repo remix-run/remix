@@ -50,6 +50,12 @@ await parseTar(archive, async (entry) => {
 })
 ```
 
+## Entry Paths
+
+`entry.name` and `entry.header.linkname` are archive metadata. The parser combines ustar prefixes and applies GNU/PAX overrides, but does not normalize paths, validate characters, or check filesystem containment. Values can include absolute paths, `..` segments, and control characters, including NUL and newline in GNU/PAX metadata.
+
+Consumers that extract files must validate the final names and link targets for their destination filesystem and keep writes inside the extraction directory, including when existing or archived symlinks are present. Use context-appropriate escaping when displaying metadata or writing it to logs. The parser itself does not write files or create links.
+
 ## Limits
 
 By default, `parseTar()` and `TarParser` limit each entry body to **2 MiB**, the total archive input to **20 MiB**, and the archive to **5,000 entries**. Override these limits with `maxEntrySize`, `maxTotalSize`, and `maxEntries`:
