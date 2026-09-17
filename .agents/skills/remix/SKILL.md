@@ -5,102 +5,138 @@ description: Builds, reviews, and refactors Remix 3 applications using the remix
 
 # Build and Review a Remix App
 
-Remix 3 uses Web APIs (`Request`, `Response`, `URL`, `FormData`) and imports from `remix/<subpath>`, not a top-level `remix` entry. Its UI runtime is **not React**: components use a setup function, `handle.props`, and a returned render function rather than hooks.
+Use this skill for Remix's framework-level mental model and app shape. Use the guides and API READMEs shipped with the installed `remix` package for task workflows, exact APIs, and recipes.
 
-Use this skill for app conventions and guardrails; use installed guides for task-oriented workflows and package READMEs for API details. Start with the existing app, then load only the documentation needed for the task. Search `node_modules/remix/INDEX.md` to find both.
+Remix 3 uses Web APIs (`Request`, `Response`, `URL`, `FormData`) and `remix/<subpath>` imports. Its UI runtime is not React: do not assume hooks, React lifecycle, or React package conventions apply.
 
-## Inspect Before Changing
+## Framework Mental Model
 
-1. Read the app's `AGENTS.md`, `package.json`, and `tsconfig.json`. Use its package manager, scripts, runtime, and import conventions.
-2. Check the installed Remix version, not just the dependency range. Read `node_modules/remix/package.json` or run the installed `remix version` command.
-3. Inspect the relevant existing code: `app/routes.ts`, `app/router.ts`, the owning controller, and any middleware or browser entry involved. For asset or HMR changes, inspect `app/assets.ts`, `server.ts`, and `hmr.ts` before adding setup.
-4. Decide what actually changes: URL contract, request lifecycle, persistence, identity, or UI. A component-only change does not need new routes; a server-only change does not need hydration.
+A Remix app is a visible request pipeline:
 
-The skill is copied into an app when it is scaffolded. Upgrading `remix` does not automatically refresh that copy. When examples disagree with the installed version, use that version's exports, types, and documentation rather than inventing compatibility wrappers or trusting older framework knowledge.
+```txt
+runtime server → router middleware → matched route → controller action → Web Response
+```
 
-## Find Installed Documentation
+- `server.ts` adapts the host runtime to a Web `Request` and passes it to `router.fetch(request)`.
+- `app/routes.ts` is the typed URL and method contract. The same route map generates URLs for links, forms, redirects, and tests.
+- `app/router.ts` composes middleware and maps route branches to controllers.
+- `app/actions/` owns route behavior. Each controller handles the direct route leaves mapped to it and returns a Web `Response`.
+- Remix components render HTML on the server. Browser JavaScript is opt-in at explicit client-entry boundaries.
 
-Use the installed package as the documentation source of truth:
+Make the server request/response path correct before adding browser enhancement. Keep runtime-specific code at the server edge and use Web APIs through the rest of the app.
 
-1. Search `node_modules/remix/INDEX.md` by task, export, or keyword, for example `grep -i 'session' node_modules/remix/INDEX.md`.
-2. For a how-to task, read the linked guide under `node_modules/remix/guides/`.
-3. For API details, read the linked README under `node_modules/remix/src/`; load only the relevant headings and examples.
-4. If an older installed version has no index, inspect its `package.json` exports and source/types instead of using documentation for a newer version.
+## Typical App Shape
 
-In the Remix monorepo, search the generated `packages/remix/INDEX.md` instead.
+Follow the existing app first. A conventional app keeps request ownership visible in its file tree:
 
-## Choose Task Context
+```txt
+server.ts
+app/
+├── routes.ts
+├── router.ts
+├── assets.ts
+├── middleware/
+├── actions/
+│   ├── controller.tsx
+│   ├── document.tsx
+│   └── albums/
+│       ├── controller.tsx
+│       ├── show-page.tsx
+│       └── public/
+└── ui/
+```
 
-Start with an installed guide. Use the focused references below only for guardrails or details the guide does not cover. Reference links are relative to this skill; installed documentation paths are relative to `node_modules/remix/`.
+Keep route-local controllers, data access, UI, and browser modules together under their owning `actions/<route>/` directory. Put components in `app/ui/` when multiple route areas actually share them. A colocated `public/` directory marks source that may reach the browser; server-only code must stay outside that boundary.
 
-| Task                                                    | Start here                                                                     |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| App workflow or how-to task                             | Guide linked from installed `node_modules/remix/INDEX.md`                      |
-| Which `remix/*` export to reach for                     | Package API section of installed `node_modules/remix/INDEX.md`                 |
-| Placing files, adding a route area, sharing code        | [App structure](references/app-structure.md)                                   |
-| Routes, controllers, forms, HTTP responses              | [Routing and controllers](references/routing-and-controllers.md)               |
-| Middleware order, typed context, server lifecycle       | [Middleware and server](references/middleware-and-server.md)                   |
-| Browser module access, asset URLs, development HMR      | [Assets and browser modules](references/assets-and-browser-modules.md)         |
-| Input validation, persistence, migrations               | [Data and validation](references/data-and-validation.md)                       |
-| Login, sessions, route protection, CSRF                 | [Auth and sessions](references/auth-and-sessions.md)                           |
-| Multipart limits, upload authorization, cleanup         | [File uploads](references/file-uploads.md)                                     |
-| Component state, props, lifecycle, context              | [Component model](references/component-model.md)                               |
-| Events, styling, refs, accessible interactions          | [Mixins, styling, and events](references/mixins-styling-events.md)             |
-| Client entries, frames, navigation, form error bodies   | [Hydration, frames, and navigation](references/hydration-frames-navigation.md) |
-| Choosing a runner, router tests, browser tests          | [Testing](references/testing-patterns.md)                                      |
-| Authoring a reusable host-element behavior              | [Creating mixins](references/create-mixins.md)                                 |
-| Animation, spring, tween                                | Installed `src/ui/animation/README.md`                                         |
-| Existing UI controls such as menus, tabs, or comboboxes | Installed README for the relevant `remix/ui/<primitive>` export                |
-| Intentionally browser-only routing                      | Installed `src/spa/README.md`                                                  |
+## One Feature Across the Stack
 
-Load connected recipes when a feature crosses layers. For example, a protected form needs routing, auth, and testing; an enhanced form also needs the navigation response policy. Follow relevant links rather than reading the entire skill directory.
+Define the URL contract independently from its implementation:
 
-## Essential Rules
+```ts
+// app/routes.ts
+import { get, route } from 'remix/routes'
 
-### Routes and ownership
+export const routes = route({
+  albums: {
+    show: get('/albums/:albumId'),
+  },
+})
+```
 
-- Treat `app/routes.ts` as the shared URL contract. Use `routes.<name>.href(...)` for internal links, redirects, form actions, and test URLs.
-- Controllers under `app/actions/` own direct leaf routes. Map nested route maps explicitly with their own controllers; controller middleware does **not** protect other controllers.
-- Put code in the narrowest owner first. Extract shared modules when reuse is real. Apply layout conventions to the work at hand, not as a reason to reorganize unrelated existing code.
-- Install `render()` from `remix/middleware/render` for normal UI apps. Actions call `context.render(node, init)`; pass the asset server to the middleware for source-based client entries.
+Implement the direct route leaf in the matching controller:
 
-### Request behavior
+```tsx
+// app/actions/albums/controller.tsx
+import { createController } from 'remix/router'
 
-- Make the server path correct before adding browser behavior. Actions return explicit responses for expected outcomes: success, validation failure, conflict, not found, or redirect. Reserve thrown errors for unexpected failures.
-- Validate untrusted input before rendering or persistence. Prefer `parseSafe` from `remix/data-schema` when validation failure should re-render a form.
-- Model status, headers, caching, and content type as part of the route behavior. Use an explicit `303` for POST-redirect-GET.
-- Preserve middleware context types with inline arrays or `createMiddleware()` for stored chains. Do not cast away missing context. Only call `getContext()` outside handlers when `asyncContext()` is installed.
-- Keep secrets and persistence code server-only. Browser asset allow/deny rules are a security boundary, not just build configuration.
+import { routes } from '../../routes.ts'
+import { AlbumPage } from './show-page.tsx'
 
-### UI and browser behavior
+export default createController(routes.albums, {
+  actions: {
+    show(context) {
+      return context.render(<AlbumPage albumId={context.params.albumId} />)
+    },
+  },
+})
+```
 
-- Read changing props inside render/callbacks through `handle.props`. Keep local state in setup-scope variables and request updates with `handle.update()`.
-- Keep rendering free of DOM side effects. Use events, `ref(...)`, or `handle.queueTask(...)`; tie cleanup and cancellation to the appropriate signal.
-- Compose host behavior with `mix={mixin(...)}`, or `mix={[...]}` for multiple mixins. Prefer existing first-party primitives over recreating complex controls.
-- Add `clientEntry(...)` only where browser behavior is needed. Its props cross a serialization boundary; never pass functions, secrets, or server runtime objects.
-- Use native links, buttons, and forms. Preserve labels, keyboard behavior, focus, validation feedback, and reduced-motion preferences when enhancing them.
+Register that route branch and controller in `app/router.ts`:
 
-### Security
+```ts
+router.map(routes.albums, albumsController)
+```
 
-- Require production session/provider secrets from the environment; never copy demo secrets. Session cookies should be `httpOnly`, use `sameSite`, and be `secure` over HTTPS.
-- Rotate sessions on login/privilege changes and invalidate them on logout. Authentication does not replace per-resource authorization.
-- Protect cookie-authenticated mutations against CSRF. Use the auth recipe to connect middleware, form tokens, and failure behavior; CORS is not CSRF protection.
-- Treat upload names, types, and contents as untrusted. Apply limits before buffering or storing data, authorize writes, and clean up failed uploads.
+A Remix component is a setup function that returns a render function. Read changing props from the handle during render:
 
-## Verify the Changed Behavior
+```tsx
+import type { Handle } from 'remix/ui'
 
-Use the app's existing scripts and the installed CLI. Read `src/cli/README.md` for flags; do not install a newer CLI merely to inspect the app.
+export function AlbumPage(handle: Handle<{ albumId: string }>) {
+  return () => <h1>Album {handle.props.albumId}</h1>
+}
+```
 
-| Change                            | Useful verification                                                                               |
-| --------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Any code change                   | Relevant tests and the app's typecheck script                                                     |
-| Route contract or registration    | `remix routes`, plus `router.fetch(...)` tests                                                    |
-| Asset reachability or URL mapping | `remix assets inspect <url-or-file>`; confirm private source is denied                            |
-| Environment or app conventions    | `remix doctor`; review findings before applying fixes                                             |
-| Schema or migrations              | `remix db status`, then migration checks against a disposable database                            |
-| Interactive forms or navigation   | Browser flow plus ordinary document submission; check validation/error bodies, focus, and history |
-| Auth or uploads                   | Rejection paths as well as success; prove unauthorized requests cannot write data                 |
+The route map owns the URL, the controller owns request behavior, and the component owns presentation. Middleware adds request-scoped capabilities such as rendering, sessions, or parsed form data. Read the installed guides before expanding this shape into forms, persistence, authentication, uploads, or browser interaction.
 
-The scaffold's `npm test` runs `remix test` and ships a router smoke test in `app/actions/controller.test.ts`; extend that pattern. Check reported test counts, not just the exit code.
+## Know the Starter Workflow
 
-Do not run destructive database commands or rewrite existing project configuration just to make a diagnostic pass. Report what was checked and what remains unverified.
+Read the app's `package.json` and use its package manager to run scripts. A generated starter distinguishes three server modes:
+
+- `dev` runs the app in development with Node watch/restart behavior, but does not activate HMR.
+- `hmr` is the development entry for live server and browser updates. Use it instead of `dev` when iterating on interactive or visual changes; Remix HMR is not active unless this entry is running.
+- `start` runs the same TypeScript server and asset pipeline with `NODE_ENV=production`. The starter has no separate production build step. Production disables development behavior and enables configurable optimizations rather than introducing another application architecture. Inspect `app/assets.ts` and deployment configuration to adjust them.
+
+Generated apps also include testing through the Remix test runner and a router smoke test that can be extended as the app grows.
+
+The installed CLI includes `remix doctor`, which checks the project environment and Remix app conventions. Run it when entering an unfamiliar app and after structural or configuration changes. Review its findings before applying its available low-risk fixes.
+
+## Find Canonical Documentation
+
+1. Read the app's `AGENTS.md`, `package.json`, and `tsconfig.json`, then inspect the code that owns the behavior being changed.
+2. Check the installed version in `node_modules/remix/package.json` or with the installed `remix version` command. A scaffolded skill copy may be older than the installed package.
+3. Search `node_modules/remix/INDEX.md` by task, export, or keyword:
+
+   ```sh
+   grep -i 'session' node_modules/remix/INDEX.md
+   ```
+
+4. If the index lists a relevant guide, read it for the workflow and follow its links to related guides.
+5. Read the relevant package README for exact imports, options, behavior, and examples. When no task guide is published yet, use the API documentation and existing app patterns rather than inventing a skill-local recipe.
+
+Treat the installed package documentation as canonical. Do not use online documentation for a newer version, invent compatibility wrappers, or rely on remembered React or Remix 2 patterns. If an older installation has no index, inspect its `package.json` exports and matching installed documentation, source, and types directly.
+
+## Work Within the App
+
+- Preserve the app's package manager, scripts, runtime, route organization, middleware order, and import conventions unless the task requires changing them.
+- Inspect the relevant route map, router, controller, middleware, component, browser entry, and tests before editing. Change the narrowest owner of the behavior.
+- Keep secrets, credentials, persistence, authorization, and other trusted work on the server. Treat browser-module exposure and uploaded data as security boundaries.
+- Prefer Web APIs, native links, buttons, and forms, plus existing first-party Remix primitives, over custom abstractions.
+
+## Verify the Behavior
+
+Use the app's existing scripts and installed CLI. Start with relevant tests and typechecking, then verify the changed boundary directly. Read the installed testing guide for test patterns and `node_modules/remix/src/cli/README.md` for CLI diagnostics.
+
+For browser-enhanced behavior, test both ordinary document behavior and the enhanced path. For authentication, authorization, uploads, validation, and persistence, test rejection and failure paths as well as success.
+
+Do not run destructive database commands or rewrite project configuration merely to make a diagnostic pass. Report what was checked and what remains unverified.
