@@ -13,9 +13,11 @@ npm test
 npm run typecheck
 ```
 
+Use `npm run hmr` for live server and browser updates; `npm run dev` only watches and restarts the server. `npm run start` runs in production mode without a separate build step.
+
 ## Building Features
 
-Refer to ./.agents/skills/remix/SKILL.md. It owns the conventions for file placement, routes, controllers, middleware, data, auth, UI, and tests.
+Refer to ./.agents/skills/remix/SKILL.md for the Remix mental model and how to find guides and API READMEs through `node_modules/remix/INDEX.md`.
 
 ## Starter Layout
 
