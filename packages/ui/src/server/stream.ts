@@ -22,6 +22,8 @@ import {
 import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
 import { composeMixedProps, resolveMixDescriptors } from '../runtime/core/mix.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
+import { invariant } from '../runtime/invariant.ts'
+import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
 
 interface VNode {
   type: ElementType
@@ -588,7 +590,9 @@ function buildElementSegment(
   context: RenderContext,
   frameState: SsrFrameState,
 ): Segment {
-  let mixedProps = resolveSsrMixedProps(tag, props, context, frameState)
+  let normalizedProps = normalizeUnsafeHTMLProps(props)
+  let innerHTML = normalizedProps.innerHTML
+  let mixedProps = resolveSsrMixedProps(tag, normalizedProps, context, frameState)
   let processedProps = processStyleProps(mixedProps)
   // Determine namespace context for the current element and its children
   let currentIsSvg = context.insideSvg || tag === 'svg'
@@ -606,8 +610,8 @@ function buildElementSegment(
     return staticSeg(`<${tag}${attrs} />`)
   }
 
-  if (props.innerHTML) {
-    return staticSeg(`<${tag}${attrs}>${props.innerHTML}</${tag}>`)
+  if (innerHTML !== undefined) {
+    return staticSeg(`<${tag}${attrs}>${innerHTML}</${tag}>`)
   }
 
   if (tag === 'script') {

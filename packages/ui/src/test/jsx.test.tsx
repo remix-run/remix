@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { Assert, Equal } from './utils.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
-import { createMixin, on, ref } from '../index.ts'
+import { createMixin, on, ref, unsafeHTML } from '../index.ts'
 
 import { animateLayout } from '../animation/index.ts'
 import type { Dispatched, MixInput, MixinDescriptor, MixinHandle, Props } from '../index.ts'
@@ -82,6 +82,26 @@ describe('jsx', () => {
       let bad = <textarea>Hello</textarea>
       // @ts-expect-error textarea content should come from value/defaultValue
       let alsoBad = <textarea innerHTML="Hello" />
+    })
+
+    it('requires an unsafeHTML value for the innerHTML prop', () => {
+      let element = <div innerHTML={unsafeHTML('<strong>HTML</strong>')} />
+      // @ts-expect-error raw strings must be explicitly authorized with unsafeHTML()
+      let badElement = <div innerHTML="<strong>HTML</strong>" />
+
+      expect(element.props.innerHTML).toBeDefined()
+    })
+
+    it('requires an unsafeHTML value for iframe srcdoc props', () => {
+      let camelCase = <iframe srcDoc={unsafeHTML('<p>HTML</p>')} />
+      let lowercase = <iframe srcdoc={unsafeHTML('<p>HTML</p>')} />
+      // @ts-expect-error raw strings must be explicitly authorized with unsafeHTML()
+      let badCamelCase = <iframe srcDoc="<p>HTML</p>" />
+      // @ts-expect-error raw strings must be explicitly authorized with unsafeHTML()
+      let badLowercase = <iframe srcdoc="<p>HTML</p>" />
+
+      expect(camelCase.props.srcDoc).toBeDefined()
+      expect(lowercase.props.srcdoc).toBeDefined()
     })
 
     it('accepts booleanish string attributes', () => {

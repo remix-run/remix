@@ -1,9 +1,10 @@
 import type { Handle, RemixNode } from 'remix/ui'
+import { unsafeHTML } from 'remix/ui'
 
 import type { DemoDocFile } from '../../data/demos.tsx'
 
 export function MarkdownContent(handle: Handle<{ html: string }>) {
-  return () => <div innerHTML={handle.props.html} />
+  return () => <div innerHTML={unsafeHTML(handle.props.html)} />
 }
 
 export function DemoContent(
@@ -25,7 +26,7 @@ export function DemoContent(
 
         <div class="api-demo__frame">
           <div class="api-demo__preview">{children}</div>
-          <div class="api-demo__source" innerHTML={sourceHtml} />
+          <div class="api-demo__source" innerHTML={unsafeHTML(sourceHtml)} />
         </div>
       </div>
     )

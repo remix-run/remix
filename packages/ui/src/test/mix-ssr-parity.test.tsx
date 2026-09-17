@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { RemixNode } from '../runtime/component.ts'
-import { createMixin } from '../index.ts'
+import { createMixin, unsafeHTML } from '../index.ts'
 import type { MixinDescriptor } from '../index.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
@@ -89,7 +89,7 @@ describe('mixin composition ssr/client parity', () => {
     })
 
     await expectParity(<div mix={[inspect()]}>child</div>, {})
-    await expectParity(<div mix={[inspect()]} innerHTML="child" />, {})
+    await expectParity(<div mix={[inspect()]} innerHTML={unsafeHTML('child')} />, {})
     expect(sawTreeProps).toBe(false)
   })
 

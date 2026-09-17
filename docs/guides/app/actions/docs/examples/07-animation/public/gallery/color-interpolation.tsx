@@ -1,4 +1,4 @@
-import { css } from "remix/ui";
+import { css, unsafeHTML } from "remix/ui";
 
 /*
  * A comparison of color interpolation methods.
@@ -22,7 +22,7 @@ export function ColorInterpolation() {
       ]}
     >
       <style
-        innerHTML={`
+        innerHTML={unsafeHTML(`
           @property --color-t {
             syntax: '<number>';
             inherits: false;
@@ -42,7 +42,7 @@ export function ColorInterpolation() {
               #0d63f8 calc(var(--color-t) * 100%)
             );
           }
-        `}
+        `)}
       />
 
       <div

@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { Handle, RemixNode } from '../runtime/component.ts'
-import { createMixin, css, on } from '../index.ts'
+import { createMixin, css, on, unsafeHTML } from '../index.ts'
 import { createElement } from '../runtime/create-element.ts'
 
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
@@ -412,7 +412,7 @@ describe('stream', () => {
       let stream = renderToStream(
         <div>
           <h1>Title</h1>
-          <div innerHTML={htmlContent} />
+          <div innerHTML={unsafeHTML(htmlContent)} />
           <p>After innerHTML</p>
         </div>,
       )
@@ -420,6 +420,72 @@ describe('stream', () => {
       expect(html).toBe(
         '<div><h1>Title</h1><div><strong>Bold text</strong> and <em>italic text</em></div><p>After innerHTML</p></div>',
       )
+    })
+
+    it('rejects unbranded innerHTML values', async () => {
+      let stream = renderToStream(
+        createElement('div', {
+          innerHTML: '<img src="invalid" onerror="alert(1)">',
+        }),
+      )
+
+      await expect(drain(stream)).rejects.toThrow('Invalid innerHTML prop')
+    })
+
+    it('rejects JSON-shaped innerHTML values', async () => {
+      let stream = renderToStream(
+        createElement('div', {
+          innerHTML: { value: '<img src="invalid" onerror="alert(1)">' },
+        }),
+      )
+
+      await expect(drain(stream)).rejects.toThrow('Invalid innerHTML prop')
+    })
+
+    it('renders branded iframe srcDoc as escaped attribute markup', async () => {
+      let html = await drain(
+        renderToStream(<iframe srcDoc={unsafeHTML('<p class="message">HTML & text</p>')} />),
+      )
+
+      expect(html).toBe(
+        '<iframe srcdoc="&lt;p class=&quot;message&quot;&gt;HTML &amp; text&lt;/p&gt;"></iframe>',
+      )
+    })
+
+    it('renders branded iframe srcdoc as escaped attribute markup', async () => {
+      let html = await drain(renderToStream(<iframe srcdoc={unsafeHTML('<p>HTML</p>')} />))
+
+      expect(html).toBe('<iframe srcdoc="&lt;p&gt;HTML&lt;/p&gt;"></iframe>')
+    })
+
+    it('rejects unbranded iframe srcDoc values', async () => {
+      let stream = renderToStream(createElement('iframe', { srcDoc: '<p>HTML</p>' }))
+
+      await expect(drain(stream)).rejects.toThrow('Invalid srcDoc prop')
+    })
+
+    it('rejects JSON-shaped iframe srcDoc values', async () => {
+      let stream = renderToStream(createElement('iframe', { srcDoc: { value: '<p>HTML</p>' } }))
+
+      await expect(drain(stream)).rejects.toThrow('Invalid srcDoc prop')
+    })
+
+    it('rejects unbranded iframe srcdoc values', async () => {
+      let stream = renderToStream(createElement('iframe', { srcdoc: '<p>HTML</p>' }))
+
+      await expect(drain(stream)).rejects.toThrow('Invalid srcdoc prop')
+    })
+
+    it('rejects JSON-shaped iframe srcdoc values', async () => {
+      let stream = renderToStream(createElement('iframe', { srcdoc: { value: '<p>HTML</p>' } }))
+
+      await expect(drain(stream)).rejects.toThrow('Invalid srcdoc prop')
+    })
+
+    it('rejects outerHTML values', async () => {
+      let stream = renderToStream(createElement('div', { outerHTML: '<p>replacement</p>' }))
+
+      await expect(drain(stream)).rejects.toThrow('Invalid outerHTML prop')
     })
 
     it('omits invalid and reserved host prop names', async () => {
@@ -430,7 +496,6 @@ describe('stream', () => {
             'aria-label': 'Example',
             'x onclick="alert(1)': 'value',
             onclick: 'alert(1)',
-            outerHTML: '<p>replacement</p>',
           }),
         ),
       )
@@ -681,19 +746,23 @@ describe('stream', () => {
       expect(html).toBe('<div data-mixed="created">child</div>')
     })
 
-    it('strips children and innerHTML before passing props to SSR mixins', async () => {
+    it('strips children and raw HTML props before passing props to SSR mixins', async () => {
       let seenProps: Array<Record<string, unknown>> = []
       let inspect = createMixin((_handle) => (props: Record<string, unknown>) => {
         seenProps.push(props)
       })
 
       await drain(renderToStream(<div mix={[inspect()]}>child</div>))
-      await drain(renderToStream(<div innerHTML="<strong>html</strong>" mix={[inspect()]} />))
+      await drain(
+        renderToStream(<div innerHTML={unsafeHTML('<strong>html</strong>')} mix={[inspect()]} />),
+      )
+      await drain(renderToStream(<iframe srcdoc={unsafeHTML('<p>html</p>')} mix={[inspect()]} />))
 
       expect('children' in seenProps[0]!).toBe(false)
       expect('innerHTML' in seenProps[0]!).toBe(false)
       expect('children' in seenProps[1]!).toBe(false)
       expect('innerHTML' in seenProps[1]!).toBe(false)
+      expect('srcdoc' in seenProps[2]!).toBe(false)
     })
 
     it('ignores children returned from mixins during SSR', async (t) => {
@@ -714,7 +783,7 @@ describe('stream', () => {
 
     it('ignores innerHTML returned from mixins during SSR', async (t) => {
       let withInnerHtml = createMixin((_handle) => () => (
-        <div data-mode="innerHTML" innerHTML="<strong>blocked</strong>" />
+        <div data-mode="innerHTML" innerHTML={unsafeHTML('<strong>blocked</strong>')} />
       ))
 
       let errorSpy = t.mock.method(console, 'error', () => {})
@@ -724,7 +793,27 @@ describe('stream', () => {
       expect(errorSpy).toHaveBeenCalledTimes(1)
       let error = errorSpy.mock.calls[0]?.arguments[0]
       invariant(error instanceof Error)
-      expect(error.message).toBe('mixins must not return children or innerHTML')
+      expect(error.message).toBe('mixins must not return children or raw HTML props')
+    })
+
+    it('ignores iframe document and outerHTML props returned from SSR mixins', async (t) => {
+      let withRawHtml = createMixin(
+        (_handle) => () =>
+          createElement('iframe', {
+            srcDoc: '<p>camel</p>',
+            srcdoc: '<p>lowercase</p>',
+            outerHTML: '<p>replacement</p>',
+          }),
+      )
+
+      let errorSpy = t.mock.method(console, 'error', () => {})
+      let html = await drain(renderToStream(<iframe mix={[withRawHtml()]} />))
+
+      expect(html).toBe('<iframe></iframe>')
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      let error = errorSpy.mock.calls[0]?.arguments[0]
+      invariant(error instanceof Error)
+      expect(error.message).toBe('mixins must not return children or raw HTML props')
     })
 
     it('supports mixins returning nested descriptors directly during SSR', async () => {
@@ -1731,7 +1820,10 @@ describe('stream', () => {
 
       let stream = renderToStream(
         <div>
-          <script type="application/ld+json" innerHTML={JSON.stringify(structuredData)} />
+          <script
+            type="application/ld+json"
+            innerHTML={unsafeHTML(JSON.stringify(structuredData))}
+          />
           <h1>Product Page</h1>
         </div>,
       )
@@ -1745,7 +1837,7 @@ describe('stream', () => {
       let stream = renderToStream(
         <div>
           <h1>Page Title</h1>
-          <script innerHTML="console.log('Hello World')" />
+          <script innerHTML={unsafeHTML("console.log('Hello World')")} />
           <p>Some content</p>
         </div>,
       )
@@ -1758,12 +1850,12 @@ describe('stream', () => {
     it('renders ld+json scripts in place when mixed with regular scripts', async () => {
       let stream = renderToStream(
         <div>
-          <script type="text/javascript" innerHTML="console.log('Regular script')" />
+          <script type="text/javascript" innerHTML={unsafeHTML("console.log('Regular script')")} />
           <script
             type="application/ld+json"
-            innerHTML='{"@context":"https://schema.org","@type":"WebPage"}'
+            innerHTML={unsafeHTML('{"@context":"https://schema.org","@type":"WebPage"}')}
           />
-          <script innerHTML="console.log('Another regular script')" />
+          <script innerHTML={unsafeHTML("console.log('Another regular script')")} />
           <h1>Mixed Scripts Page</h1>
         </div>,
       )
@@ -2694,9 +2786,11 @@ describe('stream', () => {
             <head>
               <script
                 type="importmap"
-                innerHTML={JSON.stringify({
-                  imports: { pkg: '/assets/pkg.@abc.ts' },
-                })}
+                innerHTML={unsafeHTML(
+                  JSON.stringify({
+                    imports: { pkg: '/assets/pkg.@abc.ts' },
+                  }),
+                )}
               />
             </head>
             <body>

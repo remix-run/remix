@@ -24,6 +24,8 @@ export type RuntimeElementProps = {
 export type RuntimeHostProps = RuntimeElementProps & {
   children?: RemixNode
   innerHTML?: string
+  srcDoc?: string
+  srcdoc?: string
   mix?: MixinRuntimeValue
 }
 
