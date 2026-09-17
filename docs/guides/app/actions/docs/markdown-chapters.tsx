@@ -69,7 +69,9 @@ export async function loadDocsChapterSummaries(
 }
 
 async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | undefined> {
-  let summaries = await loadChapterSummaries()
+  let environment = process.env.NODE_ENV
+  let allSummaries = await loadAllChapterSummaries()
+  let summaries = filterChapterSummaries(allSummaries, environment)
   let index = summaries.findIndex((summary) => summary.slug === slug)
   let summary = summaries[index]
 
@@ -77,7 +79,11 @@ async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | un
     return undefined
   }
 
-  let chapter = await loadRenderedChapter(summary)
+  let disabledLinkPaths =
+    environment === 'production'
+      ? new Set(allSummaries.filter((summary) => !summary.published).map((summary) => summary.href))
+      : undefined
+  let chapter = await loadRenderedChapter(summary, disabledLinkPaths)
   let previous = summaries[index - 1]
   let next = summaries[index + 1]
 
@@ -94,8 +100,18 @@ async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | un
 async function loadChapterSummaries(
   environment = process.env.NODE_ENV,
 ): Promise<LoadedDocsChapterSummary[]> {
+  return filterChapterSummaries(await loadAllChapterSummaries(), environment)
+}
+
+async function loadAllChapterSummaries(): Promise<LoadedDocsChapterSummary[]> {
   let files = await loadChapterFiles()
-  let summaries = await Promise.all(files.map(loadCachedSummary))
+  return Promise.all(files.map(loadCachedSummary))
+}
+
+function filterChapterSummaries(
+  summaries: LoadedDocsChapterSummary[],
+  environment: string | undefined,
+): LoadedDocsChapterSummary[] {
   return environment === 'production' ? summaries.filter((summary) => summary.published) : summaries
 }
 
@@ -132,9 +148,13 @@ async function loadCachedSummary(file: ChapterFile): Promise<LoadedDocsChapterSu
 // the markdown render.
 const renderCache = new Map<string, { mtime: number; chapter: MarkdownChapter }>()
 
-async function loadRenderedChapter(summary: LoadedDocsChapterSummary): Promise<MarkdownChapter> {
+async function loadRenderedChapter(
+  summary: LoadedDocsChapterSummary,
+  disabledLinkPaths: ReadonlySet<string> | undefined,
+): Promise<MarkdownChapter> {
   let { mtime } = await stat(summary.filePath)
-  let cached = renderCache.get(summary.filePath)
+  let cacheKey = `${summary.filePath}:${disabledLinkPaths === undefined ? 'all' : 'published'}`
+  let cached = renderCache.get(cacheKey)
   if (cached && cached.mtime === mtime.getTime()) {
     return cached.chapter
   }
@@ -143,9 +163,10 @@ async function loadRenderedChapter(summary: LoadedDocsChapterSummary): Promise<M
   let chapter = await renderMarkdownChapter(markdown, {
     chapter: summary.chapter,
     filePath: summary.filePath,
+    disabledLinkPaths,
   })
 
-  renderCache.set(summary.filePath, { mtime: mtime.getTime(), chapter })
+  renderCache.set(cacheKey, { mtime: mtime.getTime(), chapter })
   return chapter
 }
 

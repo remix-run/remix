@@ -19,7 +19,7 @@ export async function renderMarkdownChapter(
   return {
     ...readChapterMetadata(attributes, options),
     sections: readMarkdownHeadingsFromRoot(root),
-    content: await renderMarkdownRoot(root),
+    content: await renderMarkdownRoot(root, options.disabledLinkPaths),
   }
 }
 
@@ -45,7 +45,10 @@ function readMarkdownDocument(source: string): {
   return { attributes, root }
 }
 
-async function renderMarkdownRoot(root: Root): Promise<RemixNode[]> {
+async function renderMarkdownRoot(
+  root: Root,
+  disabledLinkPaths: ReadonlySet<string> | undefined,
+): Promise<RemixNode[]> {
   let nodes: RemixNode[] = []
   let definitions = root.children.filter(
     (child) => child.type === 'definition' || child.type === 'footnoteDefinition',
@@ -64,12 +67,25 @@ async function renderMarkdownRoot(root: Root): Promise<RemixNode[]> {
     nodes.push(
       <MarkdownHtml
         key={`markdown-${segment.lineNumber}-${nodes.length}`}
-        html={await renderMarkdownHtml(segmentRoot)}
+        html={await renderMarkdownHtml(segmentRoot, {
+          transformLink(href) {
+            let pathname = getRootRelativePathname(href)
+            return pathname !== undefined && disabledLinkPaths?.has(pathname) ? null : undefined
+          },
+        })}
       />,
     )
   }
 
   return nodes
+}
+
+function getRootRelativePathname(href: string): string | undefined {
+  if (!href.startsWith('/') || href.startsWith('//')) {
+    return undefined
+  }
+
+  return new URL(href, 'http://localhost').pathname
 }
 
 function MarkdownHtml(handle: Handle<{ html: string }>) {

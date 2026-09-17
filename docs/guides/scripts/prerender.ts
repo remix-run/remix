@@ -43,7 +43,6 @@ await prerender(router, {
   outputDir,
   publicDirs: [sharedAssetsDir, publicDir],
   paths,
-  crawlOptions: { spider: false },
   pagefindSiteDir: outputDir,
   onFinally: () => assetServer.close(),
 })
