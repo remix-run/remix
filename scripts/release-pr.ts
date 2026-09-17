@@ -86,22 +86,22 @@ async function main() {
 
   // Configure git
   console.log('Configuring git...')
-  logAndExec('git config user.name "Remix Run Bot"')
-  logAndExec('git config user.email "hello@remix.run"')
+  logAndExec('git', ['config', 'user.name', 'Remix Run Bot'])
+  logAndExec('git', ['config', 'user.email', 'hello@remix.run'])
 
   // Create or switch to PR branch
   console.log(`\nSwitching to branch: ${prBranch}`)
-  logAndExec(`git checkout -B ${prBranch}`)
+  logAndExec('git', ['checkout', '-B', prBranch])
 
   // Reset to base branch
-  logAndExec(`git reset --hard origin/${baseBranch}`)
+  logAndExec('git', ['reset', '--hard', `origin/${baseBranch}`])
 
   // Run version command
   console.log('\nRunning pnpm changes:version...')
-  logAndExec('pnpm changes:version')
+  logAndExec('pnpm', ['changes:version'])
 
   console.log('\nPushing branch...')
-  logAndExec(`git push origin ${prBranch} --force`)
+  logAndExec('git', ['push', 'origin', prBranch, '--force'])
 
   // Create or update PR
   console.log('\nChecking for existing PR...')

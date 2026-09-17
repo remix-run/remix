@@ -6,6 +6,7 @@ import { clientEntry } from '../runtime/client-entries.ts'
 import {
   consumeFrameTemplate,
   createFrame,
+  NamedFrameRegistry,
   publishFrameTemplate,
   reloadFrameForNavigation,
   type LoadModule,
@@ -36,7 +37,7 @@ function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestF
     moduleCache: new Map(),
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
-    namedFrames: new Map(),
+    namedFrames: new NamedFrameRegistry(),
     ...options,
   })
 }
@@ -106,7 +107,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -163,7 +164,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -770,7 +771,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -811,7 +812,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     frame.dispose()
@@ -859,7 +860,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -897,7 +898,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -934,7 +935,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -969,7 +970,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
     let formData = new FormData()
     formData.set('displayName', 'Ada')
@@ -1017,7 +1018,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
     let controller = new AbortController()
 
@@ -1060,7 +1061,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
     let controller = new AbortController()
 
@@ -1651,7 +1652,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     await frame.ready()
@@ -1705,7 +1706,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -1808,7 +1809,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -1878,7 +1879,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -1925,7 +1926,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -1985,7 +1986,7 @@ function createClientEntryResourceTestFrame(): ReturnType<typeof createFrame> {
     moduleCache: new Map(),
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
-    namedFrames: new Map(),
+    namedFrames: new NamedFrameRegistry(),
   })
 }
 

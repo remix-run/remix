@@ -177,6 +177,7 @@ describe('frame css style ownership', () => {
     }
 
     let stableFrame = getNamedFrame('stable')
+    invariant(stableFrame)
     expect(stableFrame.src).toBe('/stable')
     let reload = () => stableFrame.reload()
     await reload()

@@ -48,6 +48,73 @@ function getFormDataState<params extends Record<string, any>, entries extends Co
 }
 
 describe('formData middleware', () => {
+  it('parses mixed-case urlencoded media types with parameters', async () => {
+    let router = createRouter({ middleware: [formData()] })
+    router.post('/', (context) => Response.json(context.formData.getAll('tag')))
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'Application/X-Www-Form-Urlencoded; charset=UTF-8' },
+      body: 'tag=red&tag=green',
+    })
+
+    assert.deepEqual(await response.json(), ['red', 'green'])
+  })
+
+  it('runs the upload handler for mixed-case multipart media types', async () => {
+    let router = createRouter({
+      middleware: [formData({ uploadHandler: async (upload) => `stored: ${await upload.text()}` })],
+    })
+    router.post('/', (context) => Response.json(context.formData.get('file')))
+
+    let body = new FormData()
+    body.set('file', new File(['hello'], 'example.txt'))
+    let request = new Request('https://remix.run/', { method: 'POST', body })
+    let contentType = request.headers.get('Content-Type')
+    assert.ok(contentType)
+    request.headers.set(
+      'Content-Type',
+      contentType.replace('multipart/form-data', 'Multipart/Form-Data'),
+    )
+
+    let response = await router.fetch(request)
+
+    assert.equal(await response.json(), 'stored: hello')
+  })
+
+  it('does not suppress limits for mixed-case form media types', async () => {
+    let router = createRouter({ middleware: [formData({ maxParts: 1, suppressErrors: true })] })
+    router.post('/', () => new Response('ok'))
+
+    await assert.rejects(
+      () =>
+        router.fetch('https://remix.run/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'Application/X-Www-Form-Urlencoded' },
+          body: 'tag=red&tag=green',
+        }),
+      MaxPartsExceededError,
+    )
+  })
+
+  it('ignores media types that only start with the urlencoded media type', async () => {
+    let router = createRouter({ middleware: [formData()] })
+    router.post('/', async (context) =>
+      Response.json({
+        fields: [...context.formData],
+        body: await context.request.text(),
+      }),
+    )
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded-extra' },
+      body: 'tag=red',
+    })
+
+    assert.deepEqual(await response.json(), { fields: [], body: 'tag=red' })
+  })
+
   it('parses application/x-www-form-urlencoded form data from the request body', async () => {
     let router = createRouter({
       middleware: [formData()],

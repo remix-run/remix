@@ -229,7 +229,7 @@ describe('fetch proxy', () => {
     )
 
     assert.equal(request.headers.get('Forwarded'), null)
-    assert.equal(request.headers.get('X-Forwarded-For'), '203.0.113.43')
+    assert.equal(request.headers.get('X-Forwarded-For'), null)
     assert.equal(request.headers.get('X-Forwarded-Proto'), 'http')
     assert.equal(request.headers.get('X-Forwarded-Host'), 'shopify.com:8080')
     assert.equal(request.headers.get('X-Forwarded-Port'), '8080')
@@ -253,6 +253,22 @@ describe('fetch proxy', () => {
 
     assert.equal(httpRequest.headers.get('X-Forwarded-Port'), '80')
     assert.equal(httpsRequest.headers.get('X-Forwarded-Port'), '443')
+  })
+
+  it('preserves forwarding metadata when X-Forwarded headers are disabled', async () => {
+    let headers = {
+      Forwarded: 'for=203.0.113.43; proto=https; host=example.com',
+      'X-Forwarded-For': '203.0.113.43, 198.51.100.7',
+      'X-Forwarded-Host': 'example.com',
+      'X-Forwarded-Port': '443',
+      'X-Forwarded-Proto': 'https',
+    }
+    let { request } = await testProxy(
+      new Request('http://shopify.com:8080/search?q=remix', { headers }),
+      'https://remix.run:3000/dest',
+    )
+
+    assert.deepEqual(Object.fromEntries(request.headers), Object.fromEntries(new Headers(headers)))
   })
 
   it('forwards additional request init options', async () => {
@@ -826,6 +842,8 @@ describe('fetch proxy (double-arg style)', () => {
       credentials: 'same-origin',
       headers: {
         'X-Custom': 'present',
+        Forwarded: 'for=198.51.100.7',
+        'X-Forwarded-For': '203.0.113.43, 198.51.100.7',
       },
     })
 
@@ -837,6 +855,8 @@ describe('fetch proxy (double-arg style)', () => {
       assert.equal(capturedRequest.credentials, 'same-origin')
     }
     assert.equal(capturedRequest.headers.get('X-Custom'), 'present')
+    assert.equal(capturedRequest.headers.get('Forwarded'), null)
+    assert.equal(capturedRequest.headers.get('X-Forwarded-For'), null)
     assert.equal(capturedRequest.headers.get('X-Forwarded-Proto'), 'http')
     assert.equal(capturedRequest.headers.get('X-Forwarded-Host'), 'shop.example:8080')
     assert.equal(capturedRequest.headers.get('X-Forwarded-Port'), '8080')

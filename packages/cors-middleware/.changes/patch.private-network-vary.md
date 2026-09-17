@@ -1,0 +1,1 @@
+Include `Access-Control-Request-Private-Network` in `Vary` on all allowed preflight responses when `allowPrivateNetwork` is enabled, so caches distinguish ordinary preflights from private network preflights. This also applies when `preflightContinue` is enabled.

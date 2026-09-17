@@ -41,6 +41,16 @@ let response = await createFileResponse(lazyFile, request, {
 })
 ```
 
+File responses use `file.type` for `Content-Type` and include `X-Content-Type-Options: nosniff`, including partial, conditional, and error responses. The helper preserves media types such as HTML, JavaScript, and SVG so it can serve application assets. `nosniff` does not stop a browser from rendering content declared as HTML or SVG.
+
+Uploaded file names and types come from the submitted metadata. Validate the contents before serving uploads inline, or serve them as downloads:
+
+```ts
+let response = await createFileResponse(uploadedFile, request)
+response.headers.set('Content-Disposition', 'attachment')
+return response
+```
+
 #### Features
 
 - **Content-Type** and **Content-Length** headers

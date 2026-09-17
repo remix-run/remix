@@ -50,6 +50,36 @@ type FrameMarkerData = FrameData & {
 
 type PendingClientEntries = Map<Comment, [Comment, RemixElement]>
 
+export class NamedFrameRegistry {
+  #framesByName = new Map<string, FrameHandle[]>()
+
+  register(name: string, frame: FrameHandle): void {
+    let frames = this.#framesByName.get(name)
+    if (frames) {
+      frames.push(frame)
+    } else {
+      this.#framesByName.set(name, [frame])
+    }
+  }
+
+  get(name: string): FrameHandle | undefined {
+    return this.#framesByName.get(name)?.at(-1)
+  }
+
+  unregister(name: string, frame: FrameHandle): void {
+    let frames = this.#framesByName.get(name)
+    if (!frames) return
+
+    let index = frames.lastIndexOf(frame)
+    if (index === -1) return
+    frames.splice(index, 1)
+
+    if (frames.length === 0) {
+      this.#framesByName.delete(name)
+    }
+  }
+}
+
 /**
  * Loads a named client-entry export for hydration.
  *
@@ -75,8 +105,9 @@ export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Func
 /**
  * Resolves content for a browser-loaded frame.
  *
- * Only return trusted application content. Frame HTML can select client-entry modules and
- * contribute import maps, styles, and nested frames to the current document.
+ * Only return trusted application content. Remix does not sanitize HTML strings, streams, or
+ * response bodies before parsing and reconciling them into the current document. Frame HTML can
+ * select client-entry modules and contribute import maps, styles, and nested frames.
  *
  * @param src Source string from the `<Frame src>` prop.
  * @param options Information about the active frame load or form submission.
@@ -183,7 +214,7 @@ export type FrameRuntime = {
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
+  namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
   serverFrameReload:
     | {
@@ -230,7 +261,7 @@ export type FrameContext = {
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
+  namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
   lifecycleSignal: AbortSignal
   regionTailRef?: ChildNode | null
@@ -256,7 +287,7 @@ type FrameInit = {
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
+  namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
 }
 
@@ -369,7 +400,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   let frameName = init.marker?.name ?? init.name
   if (frameName) {
-    init.namedFrames.set(frameName, frame)
+    init.namedFrames.register(frameName, frame)
   }
 
   let context: FrameContext = {
@@ -666,9 +697,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     }
 
     if (frameName) {
-      if (init.namedFrames.get(frameName) === frame) {
-        init.namedFrames.delete(frameName)
-      }
+      init.namedFrames.unregister(frameName, frame)
     }
   }
 
@@ -1011,7 +1040,7 @@ export function createFrameRuntime(init: {
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
+  namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
   reloadForNavigation?: (options?: FrameReloadOptions) => FrameReloadTransition
 }): FrameRuntime {
