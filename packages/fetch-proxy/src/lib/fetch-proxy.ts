@@ -27,7 +27,8 @@ export interface FetchProxyOptions {
   /**
    * Set `true` to set `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Forwarded-Port`
    * headers on the proxied request from the incoming request URL. Existing values are replaced,
-   * and the `Forwarded` header is removed.
+   * and the `Forwarded` and `X-Forwarded-For` headers are removed. The client address is not
+   * available on a Fetch request. When disabled, existing forwarding headers are passed through.
    *
    * @default false
    */
@@ -82,6 +83,7 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
     proxyHeaders.delete('Accept-Encoding')
     if (xForwardedHeaders) {
       proxyHeaders.delete('Forwarded')
+      proxyHeaders.delete('X-Forwarded-For')
       proxyHeaders.set('X-Forwarded-Proto', url.protocol.replace(/:$/, ''))
       proxyHeaders.set('X-Forwarded-Host', url.host)
       proxyHeaders.set('X-Forwarded-Port', getForwardedPort(url))
