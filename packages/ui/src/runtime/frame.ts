@@ -50,6 +50,36 @@ type FrameMarkerData = FrameData & {
 
 type PendingClientEntries = Map<Comment, [Comment, RemixElement]>
 
+export class NamedFrameRegistry {
+  #framesByName = new Map<string, FrameHandle[]>()
+
+  register(name: string, frame: FrameHandle): void {
+    let frames = this.#framesByName.get(name)
+    if (frames) {
+      frames.push(frame)
+    } else {
+      this.#framesByName.set(name, [frame])
+    }
+  }
+
+  get(name: string): FrameHandle | undefined {
+    return this.#framesByName.get(name)?.at(-1)
+  }
+
+  unregister(name: string, frame: FrameHandle): void {
+    let frames = this.#framesByName.get(name)
+    if (!frames) return
+
+    let index = frames.lastIndexOf(frame)
+    if (index === -1) return
+    frames.splice(index, 1)
+
+    if (frames.length === 0) {
+      this.#framesByName.delete(name)
+    }
+  }
+}
+
 /**
  * Loads a named client-entry export for hydration.
  *
@@ -183,7 +213,7 @@ export type FrameRuntime = {
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
+  namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
   serverFrameReload:
     | {
@@ -230,7 +260,7 @@ export type FrameContext = {
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
+  namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
   lifecycleSignal: AbortSignal
   regionTailRef?: ChildNode | null
@@ -256,7 +286,7 @@ type FrameInit = {
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
+  namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
 }
 
@@ -369,7 +399,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   let frameName = init.marker?.name ?? init.name
   if (frameName) {
-    init.namedFrames.set(frameName, frame)
+    init.namedFrames.register(frameName, frame)
   }
 
   let context: FrameContext = {
@@ -666,9 +696,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     }
 
     if (frameName) {
-      if (init.namedFrames.get(frameName) === frame) {
-        init.namedFrames.delete(frameName)
-      }
+      init.namedFrames.unregister(frameName, frame)
     }
   }
 
@@ -1011,7 +1039,7 @@ export function createFrameRuntime(init: {
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
+  namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
   reloadForNavigation?: (options?: FrameReloadOptions) => FrameReloadTransition
 }): FrameRuntime {
