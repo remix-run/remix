@@ -13,6 +13,8 @@ import { invariant } from '../runtime/invariant.ts'
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
 const flushMarkerPattern = /<!--\s*rmx:flush\s+(?:document|fragment)\s*-->/g
 const managedModulePreloadPattern = /<link data-rmx-module-preload rel="modulepreload"/g
+const blockedJavaScriptUrl =
+  "javascript:throw new Error('Remix has blocked a javascript: URL as a security precaution.')"
 
 describe('stream', () => {
   function getLatestRmxDataScript(root: ParentNode): HTMLScriptElement {
@@ -417,6 +419,92 @@ describe('stream', () => {
       let html = await drain(stream)
       expect(html).toBe(
         '<div><h1>Title</h1><div><strong>Bold text</strong> and <em>italic text</em></div><p>After innerHTML</p></div>',
+      )
+    })
+
+    it('omits invalid and reserved host prop names', async () => {
+      let html = await drain(
+        renderToStream(
+          createElement('div', {
+            'data-value': 'ok',
+            'aria-label': 'Example',
+            'x onclick="alert(1)': 'value',
+            onclick: 'alert(1)',
+            outerHTML: '<p>replacement</p>',
+          }),
+        ),
+      )
+
+      expect(html).toBe('<div data-value="ok" aria-label="Example"></div>')
+    })
+
+    it('blocks javascript URLs in executable URL attributes', async () => {
+      let html = await drain(
+        renderToStream(
+          <>
+            <a id="link" href="javascript:alert(1)" />
+            <img id="image" alt="" src={'\u0000 \tJ\na\rv\ta\ns\rc\tr\ni\tp\tt:alert(1)'} />
+            <form id="form" action="javascript:alert(1)" />
+            {createElement('button', { id: 'button', formaction: 'javascript:alert(1)' })}
+            <svg>{createElement('use', { id: 'use', 'xlink:href': 'javascript:alert(1)' })}</svg>
+            <object id="object" data="javascript:alert(1)" />
+          </>,
+        ),
+      )
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+
+      expect(shelf.content.querySelector('#link')?.getAttribute('href')).toBe(blockedJavaScriptUrl)
+      expect(shelf.content.querySelector('#image')?.getAttribute('src')).toBe(blockedJavaScriptUrl)
+      expect(shelf.content.querySelector('#form')?.getAttribute('action')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(shelf.content.querySelector('#button')?.getAttribute('formaction')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(shelf.content.querySelector('#use')?.getAttribute('xlink:href')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(shelf.content.querySelector('#object')?.getAttribute('data')).toBe(
+        blockedJavaScriptUrl,
+      )
+    })
+
+    it('preserves allowed URLs and non-executable URL attributes', async () => {
+      let html = await drain(
+        renderToStream(
+          <>
+            <a id="relative" href="/docs" />
+            <a id="mailto" href="mailto:test@example.com" />
+            <a id="blob" href="blob:https://example.com/id" />
+            <img id="data-url" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP" />
+            <img id="srcset" alt="" srcSet="javascript:alert(1) 1x" />
+            <video id="poster" poster="javascript:alert(1)" />
+            {createElement('div', { id: 'ordinary-data', data: 'javascript:alert(1)' })}
+          </>,
+        ),
+      )
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+
+      expect(shelf.content.querySelector('#relative')?.getAttribute('href')).toBe('/docs')
+      expect(shelf.content.querySelector('#mailto')?.getAttribute('href')).toBe(
+        'mailto:test@example.com',
+      )
+      expect(shelf.content.querySelector('#blob')?.getAttribute('href')).toBe(
+        'blob:https://example.com/id',
+      )
+      expect(shelf.content.querySelector('#data-url')?.getAttribute('src')).toBe(
+        'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP',
+      )
+      expect(shelf.content.querySelector('#srcset')?.getAttribute('srcset')).toBe(
+        'javascript:alert(1) 1x',
+      )
+      expect(shelf.content.querySelector('#poster')?.getAttribute('poster')).toBe(
+        'javascript:alert(1)',
+      )
+      expect(shelf.content.querySelector('#ordinary-data')?.getAttribute('data')).toBe(
+        'javascript:alert(1)',
       )
     })
 
