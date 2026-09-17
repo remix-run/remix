@@ -15,12 +15,18 @@ export function getRootDir(): string {
   return process.cwd()
 }
 
-export function logAndExec(command: string, captureOutput = false): string {
-  console.log(`$ ${command}`)
+export function formatCommand(command: string, args: string[]): string {
+  return [command, ...args]
+    .map((arg) => (/^[\w./:@=-]+$/.test(arg) ? arg : `'${arg.replaceAll("'", "'\\''")}'`))
+    .join(' ')
+}
+
+export function logAndExec(command: string, args: string[], captureOutput = false): string {
+  console.log(`$ ${formatCommand(command, args)}`)
   if (captureOutput) {
-    return cp.execSync(command, { stdio: 'pipe', encoding: 'utf-8' }).trim()
+    return cp.execFileSync(command, args, { stdio: 'pipe', encoding: 'utf-8' }).trim()
   } else {
-    cp.execSync(command, { stdio: 'inherit' })
+    cp.execFileSync(command, args, { stdio: 'inherit' })
     return ''
   }
 }
