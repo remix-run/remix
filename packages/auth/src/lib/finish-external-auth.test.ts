@@ -8,11 +8,47 @@ import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
 import { finishExternalAuth } from './finish-external-auth.ts'
+import { createOAuthProvider } from './provider.ts'
 import { createGoogleAuthProvider } from './providers/google.ts'
 import { startExternalAuth } from './start-external-auth.ts'
 import { createRequest, mockFetch } from './test-utils.ts'
 
 describe('finishExternalAuth()', () => {
+  it('drops authority references from previously stored return targets', async () => {
+    let provider = createOAuthProvider('test', {
+      createAuthorizationURL: () => new URL('https://provider.example/authorize'),
+      async handleCallback() {
+        return {
+          provider: 'test',
+          account: { provider: 'test', providerAccountId: '123' },
+          profile: {},
+          tokens: { accessToken: 'test-token' },
+        }
+      },
+    })
+    let router = createRouter({
+      middleware: [
+        sessionMiddleware(
+          createCookie('__session', { secrets: ['secret1'] }),
+          createMemorySessionStorage(),
+        ),
+      ],
+    })
+    router.get('/', async (context) => {
+      context.session.set('__auth', {
+        provider: 'test',
+        state: 'test-state',
+        codeVerifier: 'test-verifier',
+        returnTo: '//other.example',
+      })
+      let { returnTo } = await finishExternalAuth(provider, context)
+      return new Response(null, { status: 302, headers: { Location: returnTo ?? '/' } })
+    })
+
+    let response = await router.fetch('https://app.example/?state=test-state')
+    assert.equal(response.headers.get('Location'), '/')
+  })
+
   it('completes a Google callback, preserves returnTo, and clears the transaction', async () => {
     let restoreFetch = mockFetch(async (input, init) => {
       let url =

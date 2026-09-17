@@ -1,0 +1,1 @@
+Session cookies now default to `Secure` for HTTPS request URLs. HTTP development requests and explicit `secure` settings retain their configured behavior. When HTTPS terminates at a proxy, expose the original request URL or configure `secure: true`.

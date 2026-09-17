@@ -49,7 +49,15 @@ The middleware:
 Use `context.session` (or `context.get(Session)`) for normal session reads and writes.
 
 Note: The session cookie must be signed for security. This prevents tampering with the session data on the client.
-Session cookies are HTTP-only by default.
+Session cookies are HTTP-only by default. When `secure` is not configured, the middleware adds `Secure` for HTTPS request URLs and omits it for HTTP, including local development. Explicit `secure: true` and `secure: false` take precedence. If a proxy terminates HTTPS, configure the server to expose the original HTTPS request URL or set `secure: true` explicitly.
+
+### Session Lifetime
+
+Configure `maxAge` (seconds) or `expires` (a `Date`) on the session cookie to limit how long the middleware accepts it. The middleware stores the expiration alongside the storage value inside the signed cookie and checks it before loading session data. This applies to cookie, memory, filesystem, Redis, Memcache, and custom storage backends.
+
+`maxAge` takes precedence over `expires` and starts again whenever a session update emits a new cookie. Reads alone do not renew it. `expires` is a fixed deadline. Without either option, the middleware adds no lifetime limit; configured backend TTLs still apply independently.
+
+Cookies issued by older versions do not contain expiration metadata. When a lifetime is configured, those cookies start a new session after upgrading. Keep the middleware responsible for reading and writing these cookies; the storage backend continues to receive its original opaque value. This check does not remove abandoned backend records. Configure a backend TTL or your own cleanup policy when records also need to be removed from storage.
 
 ### Login/Logout Flow
 

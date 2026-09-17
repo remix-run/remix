@@ -15,7 +15,7 @@ import {
 export interface StartExternalAuthOptions {
   /** Session key used to store the in-progress OAuth transaction. */
   transactionKey?: string
-  /** Optional post-auth redirect target to preserve in the OAuth transaction. */
+  /** Optional local path to normalize and preserve as the post-auth redirect target. */
   returnTo?: string | null
 }
 
