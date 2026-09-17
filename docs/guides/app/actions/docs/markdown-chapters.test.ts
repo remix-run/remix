@@ -12,6 +12,24 @@ describe('loadDocsChapterSummaries', () => {
     assert.equal(summaries[9]?.order, 10)
     assert.equal(summaries[9]?.chapter, 'Chapter 10')
   })
+
+  it('omits unpublished chapters from production', async () => {
+    let developmentSummaries = await loadDocsChapterSummaries('development')
+    let productionSummaries = await loadDocsChapterSummaries('production')
+
+    assert.deepEqual(
+      developmentSummaries
+        .filter((summary) => summary.order >= 8 && summary.order <= 16)
+        .map((summary) => summary.order),
+      [8, 9, 10, 11, 12, 13, 14, 15, 16],
+    )
+    assert.deepEqual(
+      productionSummaries
+        .filter((summary) => summary.order >= 8 && summary.order <= 16)
+        .map((summary) => summary.order),
+      [13],
+    )
+  })
 })
 
 describe('parseChapterFilename', () => {
@@ -24,8 +42,8 @@ describe('parseChapterFilename', () => {
   })
 
   it('parses a numeric slug segment', () => {
-    assert.deepEqual(parseChapterFilename('17-markdown-style-demo.md'), {
-      order: 17,
+    assert.deepEqual(parseChapterFilename('16-markdown-style-demo.md'), {
+      order: 16,
       slug: 'markdown-style-demo',
     })
   })

@@ -9,7 +9,7 @@ import { readMarkdownChapterSummary, renderMarkdownChapter } from './markdown/re
 import type { MarkdownChapter, MarkdownChapterSummary } from './markdown/types.ts'
 import { DocsChapter } from './layout.tsx'
 
-export type DocsChapterSummary = MarkdownChapterSummary & {
+export type DocsChapterSummary = Omit<MarkdownChapterSummary, 'published'> & {
   order: number
   slug: string
   href: string
@@ -26,7 +26,7 @@ type ChapterFile = {
   href: string
 }
 
-type LoadedDocsChapterSummary = DocsChapterSummary &
+type LoadedDocsChapterSummary = MarkdownChapterSummary &
   ChapterFile & {
     mtime: number
   }
@@ -61,13 +61,17 @@ export async function docsChapterHandler(context: DocsChapterRouteContext) {
   return context.render(<MarkdownChapterPage {...chapter} />)
 }
 
-export async function loadDocsChapterSummaries(): Promise<DocsChapterSummary[]> {
-  let summaries = await loadChapterSummaries()
+export async function loadDocsChapterSummaries(
+  environment = process.env.NODE_ENV,
+): Promise<DocsChapterSummary[]> {
+  let summaries = await loadChapterSummaries(environment)
   return summaries.map(toDocsChapterSummary)
 }
 
 async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | undefined> {
-  let summaries = await loadChapterSummaries()
+  let environment = process.env.NODE_ENV
+  let allSummaries = await loadAllChapterSummaries()
+  let summaries = filterChapterSummaries(allSummaries, environment)
   let index = summaries.findIndex((summary) => summary.slug === slug)
   let summary = summaries[index]
 
@@ -75,7 +79,11 @@ async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | un
     return undefined
   }
 
-  let chapter = await loadRenderedChapter(summary)
+  let disabledLinkPaths =
+    environment === 'production'
+      ? new Set(allSummaries.filter((summary) => !summary.published).map((summary) => summary.href))
+      : undefined
+  let chapter = await loadRenderedChapter(summary, disabledLinkPaths)
   let previous = summaries[index - 1]
   let next = summaries[index + 1]
 
@@ -89,10 +97,22 @@ async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | un
   }
 }
 
-async function loadChapterSummaries(): Promise<LoadedDocsChapterSummary[]> {
+async function loadChapterSummaries(
+  environment = process.env.NODE_ENV,
+): Promise<LoadedDocsChapterSummary[]> {
+  return filterChapterSummaries(await loadAllChapterSummaries(), environment)
+}
+
+async function loadAllChapterSummaries(): Promise<LoadedDocsChapterSummary[]> {
   let files = await loadChapterFiles()
-  let summaries = await Promise.all(files.map(loadCachedSummary))
-  return summaries
+  return Promise.all(files.map(loadCachedSummary))
+}
+
+function filterChapterSummaries(
+  summaries: LoadedDocsChapterSummary[],
+  environment: string | undefined,
+): LoadedDocsChapterSummary[] {
+  return environment === 'production' ? summaries.filter((summary) => summary.published) : summaries
 }
 
 // Keyed by mtime so dev edits (process stays up) invalidate without a restart.
@@ -128,9 +148,13 @@ async function loadCachedSummary(file: ChapterFile): Promise<LoadedDocsChapterSu
 // the markdown render.
 const renderCache = new Map<string, { mtime: number; chapter: MarkdownChapter }>()
 
-async function loadRenderedChapter(summary: LoadedDocsChapterSummary): Promise<MarkdownChapter> {
+async function loadRenderedChapter(
+  summary: LoadedDocsChapterSummary,
+  disabledLinkPaths: ReadonlySet<string> | undefined,
+): Promise<MarkdownChapter> {
   let { mtime } = await stat(summary.filePath)
-  let cached = renderCache.get(summary.filePath)
+  let cacheKey = `${summary.filePath}:${disabledLinkPaths === undefined ? 'all' : 'published'}`
+  let cached = renderCache.get(cacheKey)
   if (cached && cached.mtime === mtime.getTime()) {
     return cached.chapter
   }
@@ -139,9 +163,10 @@ async function loadRenderedChapter(summary: LoadedDocsChapterSummary): Promise<M
   let chapter = await renderMarkdownChapter(markdown, {
     chapter: summary.chapter,
     filePath: summary.filePath,
+    disabledLinkPaths,
   })
 
-  renderCache.set(summary.filePath, { mtime: mtime.getTime(), chapter })
+  renderCache.set(cacheKey, { mtime: mtime.getTime(), chapter })
   return chapter
 }
 

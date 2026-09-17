@@ -9,7 +9,31 @@ describe('readChapterMetadata', () => {
   it('reads title, description, and chapter from frontmatter attributes', () => {
     assert.deepEqual(
       readChapterMetadata({ title: 'Start Here', description: 'An intro to Remix.' }, options),
-      { chapter: 'Chapter 1', title: 'Start Here', description: 'An intro to Remix.' },
+      {
+        chapter: 'Chapter 1',
+        title: 'Start Here',
+        description: 'An intro to Remix.',
+        published: true,
+      },
+    )
+  })
+
+  it('reads an unpublished marker', () => {
+    assert.deepEqual(
+      readChapterMetadata(
+        {
+          title: 'Markdown Style Demo',
+          description: 'A rendering fixture.',
+          published: false,
+        },
+        options,
+      ),
+      {
+        chapter: 'Chapter 1',
+        title: 'Markdown Style Demo',
+        description: 'A rendering fixture.',
+        published: false,
+      },
     )
   })
 
@@ -38,6 +62,13 @@ describe('readChapterMetadata', () => {
     assert.throws(
       () => readChapterMetadata({ title: 42, description: 'ok' }, options),
       /Expected `title` to be a non-empty string/,
+    )
+  })
+
+  it('throws when published is not a boolean', () => {
+    assert.throws(
+      () => readChapterMetadata({ title: 'ok', description: 'ok', published: 'yes' }, options),
+      /Expected `published` to be a boolean/,
     )
   })
 

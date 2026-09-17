@@ -1,6 +1,7 @@
 ---
 title: Markdown Style Demo
 description: A fixture page for reviewing guide markdown, code block chrome, and frame rendering.
+published: false
 ---
 
 This page is a rendering fixture, not product documentation. Use it to review how the guides app styles common Markdown elements and custom docs features.
@@ -145,9 +146,9 @@ Use an explicit heading ID when a section needs a stable URL that should not cha
 The `::frame` directive is docs-specific Markdown. Inside a code fence it stays text:
 
 ````md filename=chapter.md
-::frame{src="/examples/17-markdown-style-demo/callout/"}
+::frame{src="/examples/16-markdown-style-demo/callout/"}
 
-```tsx filename=app/actions/docs/examples/17-markdown-style-demo/public/callout.demo.tsx
+```tsx filename=app/actions/docs/examples/16-markdown-style-demo/public/callout.demo.tsx
 export function CalloutDemo() {
   return () => <p>Hello from a frame.</p>;
 }
@@ -162,8 +163,8 @@ A one-off frame can still share structure. These examples use normal `::frame` d
 
 The counter demo uses browser events, but the example itself does not call `clientEntry`. It assumes the parent frame handler will hydrate it.
 
-::frame{src="/examples/17-markdown-style-demo/counter/"}
+::frame{src="/examples/16-markdown-style-demo/counter/"}
 
 The callout is a plain server-rendered frame: no hydration, no source display, just the markup the handler returns.
 
-::frame{src="/examples/17-markdown-style-demo/callout/"}
+::frame{src="/examples/16-markdown-style-demo/callout/"}

@@ -33,4 +33,16 @@ describe('renderMarkdownHtml', () => {
     )
     assert.match(html, /<a href="\/v1\/api\/example\/">API<\/a>/)
   })
+
+  it('renders disabled links as text', async () => {
+    let { root } = parseMarkdownDocument('[Published](/published/) [Draft](/draft/)\n')
+
+    let html = await renderMarkdownHtml(root, {
+      transformLink(href) {
+        return href === '/draft/' ? null : undefined
+      },
+    })
+
+    assert.equal(html, '<p><a href="/published/">Published</a> <span>Draft</span></p>')
+  })
 })

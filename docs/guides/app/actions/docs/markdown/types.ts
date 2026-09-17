@@ -6,12 +6,14 @@ import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
 export type MarkdownOptions = {
   chapter: string
   filePath?: string
+  disabledLinkPaths?: ReadonlySet<string>
 }
 
 export type MarkdownChapter = {
   chapter: string
   title: string
   description: string
+  published: boolean
   sections: MarkdownHeading[]
   content: RemixNode
 }

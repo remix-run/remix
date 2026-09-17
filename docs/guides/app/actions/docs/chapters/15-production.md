@@ -1,6 +1,7 @@
 ---
 title: Production
 description: How to configure, start, cache, observe, and shut down a Remix application in production.
+published: false
 ---
 
 A production Remix app is still a Fetch handler behind a runtime adapter. Deployment work configures that adapter, initializes durable services, assigns cache policy, and closes resources without inventing a separate application architecture.
