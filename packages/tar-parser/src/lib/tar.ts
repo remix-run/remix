@@ -397,6 +397,7 @@ export class TarParser {
   #header: TarHeader | null = null
   #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null
   #longHeader = false
+  #longHeaderBuffer: Uint8Array | null = null
   #gnuLongPath: string | null = null
   #gnuLongLinkPath: string | null = null
   #paxGlobal: Record<string, string> | null = null
@@ -489,6 +490,7 @@ export class TarParser {
     this.#header = null
     this.#bodyController = null
     this.#longHeader = false
+    this.#longHeaderBuffer = null
     this.#gnuLongPath = null
     this.#gnuLongLinkPath = null
     this.#paxGlobal = null
@@ -515,7 +517,6 @@ export class TarParser {
         }
 
         if (this.#longHeader) {
-          if (this.#missing > this.#buffer.length) break
           this.#parseLongHeader()
           continue
         }
@@ -609,9 +610,33 @@ export class TarParser {
   }
 
   #parseLongHeader(): void {
-    this.#longHeader = false
+    let offset = this.#header!.size - this.#missing
+    let chunk = this.#read(Math.min(this.#missing, this.#buffer!.length))
+    let length = offset + chunk.length
+    let buffer = this.#longHeaderBuffer
 
-    let buffer = this.#read(this.#header!.size)
+    if (buffer !== null || chunk.length < this.#missing) {
+      if (buffer === null || buffer.length < length) {
+        // Grow with received bytes so fragmented metadata takes linear copying work.
+        let capacity = Math.min(this.#header!.size, Math.max(length, (buffer?.length ?? 0) * 2))
+        let next = new Uint8Array(capacity)
+        if (buffer !== null) next.set(buffer.subarray(0, offset))
+        buffer = next
+      }
+      buffer.set(chunk, offset)
+      this.#longHeaderBuffer = buffer
+    } else {
+      buffer = chunk
+    }
+
+    this.#missing -= chunk.length
+    if (this.#missing > 0) {
+      this.#buffer = null
+      return
+    }
+
+    this.#longHeader = false
+    this.#longHeaderBuffer = null
 
     switch (this.#header!.type) {
       case 'gnu-long-path':
