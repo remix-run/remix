@@ -61,6 +61,80 @@ describe('asset server HMR', () => {
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
   })
 
+  it('updates transitive dependencies of an accepted browser module', async (t) => {
+    let fixture = await createHmrFixture()
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        buttonPrefixImport: './button-prefix.ts',
+        buttonText: 'Increment',
+      }),
+    )
+    await write(
+      fixture.rootDir,
+      'app/button-prefix.ts',
+      "export { buttonPrefix } from './button-prefix-leaf.ts'\n",
+    )
+    await write(
+      fixture.rootDir,
+      'app/button-prefix-leaf.ts',
+      "export const buttonPrefix = 'Before: '\n",
+    )
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Before: Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+
+    await write(
+      fixture.rootDir,
+      'app/button-prefix-leaf.ts',
+      "export const buttonPrefix = 'After: '\n",
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'After: Increment')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+  })
+
+  it('updates every dependency path through a diamond-shaped browser module graph', async (t) => {
+    let fixture = await createHmrFixture()
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        buttonPrefixImport: './button-prefix.ts',
+        buttonText: 'Increment',
+      }),
+    )
+    await write(
+      fixture.rootDir,
+      'app/button-prefix.ts',
+      [
+        "import { left } from './left.ts'",
+        "import { right } from './right.ts'",
+        '',
+        'export const buttonPrefix = `${left} ${right}: `',
+        '',
+      ].join('\n'),
+    )
+    await write(fixture.rootDir, 'app/left.ts', "export { shared as left } from './shared.ts'\n")
+    await write(fixture.rootDir, 'app/right.ts', "export { shared as right } from './shared.ts'\n")
+    await write(fixture.rootDir, 'app/shared.ts', "export const shared = 'Before'\n")
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Before Before: Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+
+    await write(fixture.rootDir, 'app/shared.ts', "export const shared = 'After'\n")
+
+    await waitForText(page, '[data-testid="increment"]', 'After After: Increment')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+  })
+
   it('recovers an accepted browser module after a failed transform is fixed', async (t) => {
     let fixture = await createHmrFixture()
 
