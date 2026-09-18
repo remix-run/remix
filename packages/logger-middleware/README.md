@@ -7,7 +7,8 @@ HTTP request/response logging middleware for Remix. It logs request metadata and
 - **Request/Response Logging** - Logs method, path, status, and response metadata
 - **Context Logger** - Exposes `context.logger` (or `context.get(Logger)`)
 - **Token-Based Formatting** - Customize log output with built-in placeholders
-- **Structured Timing Data** - Includes request duration and timestamps
+- **Structured Logging** - Serialize typed request and response data as JSON
+- **Request Timing** - Includes request duration and timestamps
 - **Colorized Output** - Highlights method, status, duration, and content length in TTY output
 
 ## Installation
@@ -102,6 +103,34 @@ The following tokens are colorized when colors are enabled:
 - `%status`
 - `%duration`
 - `%contentLength`
+
+### Structured Logs
+
+Pass a formatter function to serialize request and response fields as JSON. The formatter receives the Web API `Request` and `Response`, start and end times, and the duration in milliseconds.
+
+```ts
+let router = createRouter({
+  middleware: [
+    logger({
+      format({ request, response, start, duration }) {
+        let url = new URL(request.url)
+
+        return JSON.stringify({
+          timestamp: start.toISOString(),
+          method: request.method,
+          path: url.pathname + url.search,
+          status: response.status,
+          duration,
+          contentType: response.headers.get('Content-Type'),
+        })
+      },
+    }),
+  ],
+})
+// Logs: {"timestamp":"2025-11-19T22:32:10.000Z","method":"GET","path":"/users/123","status":200,"duration":42,"contentType":"application/json"}
+```
+
+The resulting JSON line can be collected by structured logging systems. Use the `log` option to send it to a file, stream, or logging service.
 
 ### Custom Logger
 
