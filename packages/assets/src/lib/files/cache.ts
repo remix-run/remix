@@ -46,7 +46,7 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
   }
   let queue = Promise.resolve()
 
-  function run<result>(
+  function withLockedCache<result>(
     action: (entries: Map<string, number>, storage: FileStorage) => Promise<result>,
   ): Promise<result | undefined> {
     let result = queue.then(async () => {
@@ -128,7 +128,7 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
     async get(key) {
       let digest = await hash(new TextEncoder().encode(key))
       return (
-        (await run(async (entries, storage) => {
+        (await withLockedCache(async (entries, storage) => {
           if (!entries.has(digest)) return null
           let file = await readRecord(storage, digest, maxFileSize).catch((error: unknown) => {
             if (isFileError(error, 'ENOENT')) return null
@@ -155,7 +155,7 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
       let bytes = new Uint8Array(await content.arrayBuffer())
       let checksum = await hash(bytes)
       let record = new File([checksum, '\n', bytes], 'file-cache')
-      await run(async (entries, storage) => {
+      await withLockedCache(async (entries, storage) => {
         // Remove the replaced record before eviction so only the new size is counted.
         if (entries.delete(digest)) await storage.remove(digest)
         entries.set(digest, record.size)
