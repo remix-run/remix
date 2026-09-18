@@ -13,6 +13,7 @@ import {
   parseFingerprintSuffix,
 } from '../fingerprint.ts'
 import { emitResolvedModule } from './emit.ts'
+import { createBarrelFileImportOptimizer } from './optimize-barrel-file-imports.ts'
 import { normalizeFilePath, resolveFilePath } from '../paths.ts'
 import {
   resolveModule,
@@ -79,6 +80,7 @@ type ScriptCompilerOptions = {
   }
   isAllowed(absolutePath: string): boolean
   minify: boolean
+  optimizeBarrelFileImports: boolean
   loaders: readonly ModuleLoader[]
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
   onWatchFilesChange?: (delta: { add: string[]; remove: string[] }) => void
@@ -96,10 +98,15 @@ type ScriptCompiler = {
   getPreloadLayers(filePath: string | readonly string[]): Promise<string[][]>
   getImportMap(filePath: string | readonly string[]): Promise<ScriptImportMap>
   getHref(filePath: string): Promise<string>
-  resolveSpecifierFromRoot(specifier: string): Promise<string>
+  resolveSpecifierFromRoot(specifier: string): Promise<ResolvedScriptSpecifier>
   classifyHmrFileEvent(filePath: string, event: ModuleWatchEvent): Promise<ScriptHmrUpdate[]>
   invalidateFileEvent(filePath: string, event: ModuleWatchEvent): void
   parseRequestPathname(pathname: string): ParsedRequestPathname | null
+}
+
+type ResolvedScriptSpecifier = {
+  href: string
+  identityPath: string
 }
 
 type ParsedRequestPathname = {
@@ -157,6 +164,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     getDependencies(resolvedModule) {
       return resolvedModule.deps
     },
+    invalidateImportersOnFileEvent: resolvedOptions.optimizeBarrelFileImports,
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
     onWatchFilesChange: options.onWatchFilesChange,
   })
@@ -175,6 +183,9 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedModule>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedModule>>()
   let hasResolvedScripts = false
+  let barrelFileImportOptimizer = resolvedOptions.optimizeBarrelFileImports
+    ? createBarrelFileImportOptimizer()
+    : null
 
   let transformArgs: TransformArgs = {
     define: resolvedOptions.define ?? null,
@@ -198,6 +209,8 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     resolverFactory,
     resolveDirectorySpecifierIdentity,
     routes: resolvedOptions.routes,
+    packageJsonSearchRoot: resolvedOptions.rootDir,
+    trackPackageSideEffects: resolvedOptions.optimizeBarrelFileImports,
   }
 
   return {
@@ -215,20 +228,22 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     },
 
     async getPreloadLayers(filePath) {
-      let resolvedEntries = resolveInputScriptRoots(filePath)
-      let visited = new Set(resolvedEntries)
-      let queue = [...resolvedEntries]
+      let resolvedEntries = await getOrCreateResolvedScripts(
+        resolveInputScriptRoots(filePath).map((identityPath) => scriptStore.get(identityPath)),
+      )
+      let graph = await resolveServedGraph(resolvedEntries)
+      let visited = new Set(resolvedEntries.map((entry) => entry.identityPath))
+      let queue = resolvedEntries.map((entry) => entry.identityPath)
       let layers: string[][] = []
 
       while (queue.length > 0) {
         let frontier = queue
         queue = []
-        let resolvedModules = await getOrCreateResolvedScripts(
-          frontier.map((identityPath) => scriptStore.get(identityPath)),
-        )
         let layer: string[] = []
 
-        for (let resolvedModule of resolvedModules) {
+        for (let identityPath of frontier) {
+          let resolvedModule = graph.get(identityPath)
+          if (!resolvedModule) continue
           layer.push(await getServedUrl(resolvedModule.identityPath))
 
           for (let dep of resolvedModule.staticDeps) {
@@ -245,21 +260,22 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     },
 
     async getImportMap(filePath) {
-      let resolvedEntries = resolveInputScriptRoots(filePath)
-      let resolvedEntrySet = new Set(resolvedEntries)
+      let resolvedEntries = await getOrCreateResolvedScripts(
+        resolveInputScriptRoots(filePath).map((identityPath) => scriptStore.get(identityPath)),
+      )
+      let graph = await resolveServedGraph(resolvedEntries)
+      let resolvedEntrySet = new Set(resolvedEntries.map((entry) => entry.identityPath))
       let visited = new Set<string>()
-      let queue = [...resolvedEntries]
+      let queue = resolvedEntries.map((entry) => entry.identityPath)
       let imports: Record<string, string> = {}
       let scopes: Record<string, Record<string, string>> = {}
 
       while (queue.length > 0) {
         let frontier = queue
         queue = []
-        let resolvedModules = await getOrCreateResolvedScripts(
-          frontier.map((identityPath) => scriptStore.get(identityPath)),
-        )
-
-        for (let resolvedModule of resolvedModules) {
+        for (let identityPath of frontier) {
+          let resolvedModule = graph.get(identityPath)
+          if (!resolvedModule) continue
           if (visited.has(resolvedModule.identityPath)) continue
           visited.add(resolvedModule.identityPath)
           if (!resolvedEntrySet.has(resolvedModule.identityPath)) {
@@ -270,7 +286,17 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
             )
           }
 
-          for (let imported of resolvedModule.imports) {
+          for (let rewrite of resolvedModule.importRewrites) {
+            for (let imported of rewrite.imports) {
+              addImportMapEntry(
+                imports,
+                getStableUrl(imported.depPath),
+                await getServedUrl(imported.depPath),
+              )
+            }
+          }
+
+          for (let imported of resolvedModule.runtimeImports) {
             let depUrl = await getServedUrl(imported.depPath)
             if (isBareImportSpecifier(imported.specifier)) {
               let scopePathname = imported.scopePathname
@@ -323,7 +349,10 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       }
 
       let resolvedModule = resolveServedScriptOrThrow(resolutionResult.path)
-      return getServedUrl(resolvedModule.identityPath)
+      return {
+        href: await getServedUrl(resolvedModule.identityPath),
+        identityPath: resolvedModule.identityPath,
+      }
     },
 
     async classifyHmrFileEvent(filePath, event) {
@@ -629,9 +658,11 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
     let promise = (async () => {
       let startedVersion = record.invalidationVersion
-      let resolvedModule = await getOrCreateResolvedScript(record)
-      await resolveScriptGraph(resolvedModule)
-      let emitResolvedModuleResult = await emitResolvedModule(resolvedModule, {
+      let sourceRoot = await getOrCreateResolvedScript(record)
+      let graph = await resolveServedGraph([sourceRoot])
+      let root = graph.get(sourceRoot.identityPath)
+      if (!root) throw new Error(`Failed to resolve script graph for ${record.identityPath}`)
+      let emitResolvedModuleResult = await emitResolvedModule(root, {
         fingerprintAssets: resolvedOptions.fingerprintAssets,
         getHmrImportTimestamp,
         getServedUrl,
@@ -648,7 +679,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         scriptStore.setEmitted(
           record.identityPath,
           emitResolvedModuleResult.value,
-          createModuleSnapshot(resolvedModule.trackedFiles),
+          createModuleSnapshot(sourceRoot.trackedFiles),
         )
       }
 
@@ -666,9 +697,12 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     }
   }
 
-  async function resolveScriptGraph(root: ResolvedModule): Promise<void> {
-    let visited = new Set([root.identityPath])
-    let queue = [...root.deps]
+  async function resolveScriptGraph(
+    roots: readonly ResolvedModule[],
+  ): Promise<Map<string, ResolvedModule>> {
+    let visited = new Set(roots.map((root) => root.identityPath))
+    let graph = new Map(roots.map((root) => [root.identityPath, root]))
+    let queue = roots.flatMap((root) => root.deps)
 
     while (queue.length > 0) {
       let frontier = queue
@@ -682,12 +716,43 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       for (let resolvedModule of resolvedModules) {
         if (visited.has(resolvedModule.identityPath)) continue
         visited.add(resolvedModule.identityPath)
+        graph.set(resolvedModule.identityPath, resolvedModule)
 
         for (let dep of resolvedModule.deps) {
           if (!visited.has(dep)) queue.push(dep)
         }
       }
     }
+
+    return graph
+  }
+
+  async function resolveServedGraph(
+    roots: readonly ResolvedModule[],
+  ): Promise<Map<string, ResolvedModule>> {
+    let sourceGraph = await resolveScriptGraph(roots)
+    if (!barrelFileImportOptimizer) return sourceGraph
+    return getReachableGraph(
+      roots.map((root) => root.identityPath),
+      barrelFileImportOptimizer(sourceGraph),
+    )
+  }
+
+  function getReachableGraph(
+    rootIdentityPaths: readonly string[],
+    graph: ReadonlyMap<string, ResolvedModule>,
+  ): Map<string, ResolvedModule> {
+    let reachable = new Map<string, ResolvedModule>()
+    let queue = [...rootIdentityPaths]
+    while (queue.length > 0) {
+      let identityPath = queue.pop()
+      if (!identityPath || reachable.has(identityPath)) continue
+      let module = graph.get(identityPath)
+      if (!module) continue
+      reachable.set(identityPath, module)
+      queue.push(...module.deps)
+    }
+    return reachable
   }
 
   async function getServedUrl(identityPath: string): Promise<string> {

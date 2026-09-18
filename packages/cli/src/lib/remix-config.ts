@@ -40,7 +40,7 @@ export interface RemixConfig {
 /** JSON-compatible asset server configuration loaded from `remix.json`. */
 export interface RemixAssetsConfig extends Pick<
   AssetServerOptions,
-  'allowFiles' | 'allowPackages' | 'basePath' | 'denyFiles' | 'mounts'
+  'allowFiles' | 'allowPackages' | 'basePath' | 'denyFiles' | 'mounts' | 'optimizeBarrelFileImports'
 > {
   /** Leaf file asset configuration. */
   files?: Pick<NonNullable<AssetServerOptions['files']>, 'extensions'>
@@ -240,7 +240,16 @@ function parseAssetsConfig(
   let object = requireObject(value, source, objectPath)
   requireKnownProperties(
     object,
-    ['allowFiles', 'allowPackages', 'basePath', 'denyFiles', 'files', 'mounts', 'rootDir'],
+    [
+      'allowFiles',
+      'allowPackages',
+      'basePath',
+      'denyFiles',
+      'files',
+      'mounts',
+      'optimizeBarrelFileImports',
+      'rootDir',
+    ],
     source,
     objectPath,
   )
@@ -262,10 +271,16 @@ function parseAssetsConfig(
     object.mounts === undefined
       ? undefined
       : requireStringRecord(object.mounts, source, [...objectPath, 'mounts'])
+  let optimizeBarrelFileImports = optionalBoolean(object.optimizeBarrelFileImports, source, [
+    ...objectPath,
+    'optimizeBarrelFileImports',
+  ])
 
   if (allowPackages !== undefined) config.allowPackages = allowPackages
   if (denyFiles !== undefined) config.denyFiles = denyFiles
   if (mounts !== undefined) config.mounts = mounts
+  if (optimizeBarrelFileImports !== undefined)
+    config.optimizeBarrelFileImports = optimizeBarrelFileImports
 
   if (object.files !== undefined) {
     let filesPath = [...objectPath, 'files']

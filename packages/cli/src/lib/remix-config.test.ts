@@ -41,6 +41,7 @@ describe('Remix config loading', () => {
             denyFiles: ['app/**/*.test.*'],
             mounts: { app: 'app' },
             files: { extensions: ['.svg', '.png'] },
+            optimizeBarrelFileImports: true,
             rootDir: '..',
           },
         }),
@@ -54,6 +55,7 @@ describe('Remix config loading', () => {
         denyFiles: ['app/**/*.test.*'],
         mounts: { app: 'app' },
         files: { extensions: ['.svg', '.png'] },
+        optimizeBarrelFileImports: true,
         rootDir: path.dirname(cwd),
       })
     } finally {

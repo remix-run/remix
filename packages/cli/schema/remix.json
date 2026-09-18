@@ -52,6 +52,10 @@
         "files": {
           "$ref": "#/$defs/assetsFiles"
         },
+        "optimizeBarrelFileImports": {
+          "type": "boolean",
+          "description": "Whether to optimize named imports through eligible side-effect-free barrel files by rewriting them to their resolved implementation modules. Defaults to true."
+        },
         "rootDir": {
           "type": "string",
           "description": "Root directory for asset file paths, relative to this config file."
