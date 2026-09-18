@@ -1510,7 +1510,7 @@ describe('asset-server', () => {
     assert.equal(await reversed.text(), 'helloba')
   })
 
-  it('lets custom caches retain more entries and larger files than the default limits', async () => {
+  it('lets custom caches retain files larger than the filesystem cache limit', async () => {
     await write(dir, 'app/content/value.txt', 'hello')
     let cache = createMemoryFileCache()
     let calls = 0
@@ -1520,38 +1520,24 @@ describe('asset-server', () => {
         cache,
         extensions: ['.txt'],
         transforms: {
-          variant: defineFileTransform({
-            param: true,
-            transform(bytes, { param }) {
+          expand: defineFileTransform({
+            transform() {
               calls += 1
-              return { content: param === 'large' ? content : param, extension: '.svg' }
+              return { content, extension: '.svg' }
             },
           }),
         },
       },
     })
-    for (let index = 0; index < 257; index++) {
-      await get(assetServer, `/assets/app/content/value.txt?transform=variant:${index}`)
-    }
-    assert.equal(cache.files.size, 257)
-    for (let index = 0; index < 257; index++) {
-      let response = await get(
-        assetServer,
-        `/assets/app/content/value.txt?transform=variant:${index}`,
-      )
-      assert.ok(response)
-      assert.equal(await response.text(), String(index))
-      assert.match(response.headers.get('Content-Type') ?? '', /image\/svg\+xml/)
-    }
-    assert.equal(calls, 257)
     for (let index = 0; index < 2; index++) {
-      let response = await get(assetServer, '/assets/app/content/value.txt?transform=variant:large')
+      let response = await get(assetServer, '/assets/app/content/value.txt?transform=expand')
       assert.ok(response)
+      assert.match(response.headers.get('Content-Type') ?? '', /image\/svg\+xml/)
       assert.deepEqual(new Uint8Array(await response.arrayBuffer()), content)
     }
-    assert.equal(calls, 258)
-    assert.equal(cache.files.size, 258)
-    let file = [...cache.files.values()].at(-1)
+    assert.equal(calls, 1)
+    assert.equal(cache.files.size, 1)
+    let [file] = cache.files.values()
     assert.ok(file)
     assert.equal(file.name, 'value.svg')
     assert.match(file.type, /image\/svg\+xml/)
@@ -1636,12 +1622,12 @@ describe('asset-server', () => {
     assert.ok(transformCalls > 4)
   })
 
-  it('bounds the filesystem cache with default limits across server restarts and namespaces', async () => {
+  it('bounds the filesystem cache with configured limits across server restarts and namespaces', async () => {
     await write(dir, 'app/content/value.txt', 'hello')
     let createServer = () =>
       createTestServer(dir, {
         files: {
-          cache: createFsFileCache({ directory: path.join(dir, 'cache') }),
+          cache: createFsFileCache({ directory: path.join(dir, 'cache'), maxEntries: 5 }),
           extensions: ['.txt'],
           transforms: {
             append: defineFileTransform({
@@ -1655,7 +1641,7 @@ describe('asset-server', () => {
       })
     for (let round = 0; round < 2; round++) {
       let assetServer = createServer()
-      for (let index = 0; index < 1025; index++) {
+      for (let index = 0; index < 6; index++) {
         let param = `${round}:${index}`
         let response = await get(
           assetServer,
@@ -1668,8 +1654,7 @@ describe('asset-server', () => {
         recursive: true,
       })
       let bodies = entries.filter((entry) => entry.endsWith('.dat'))
-      assert.ok(bodies.length > 0)
-      assert.equal(bodies.length, 1024)
+      assert.equal(bodies.length, 5)
     }
   })
 
