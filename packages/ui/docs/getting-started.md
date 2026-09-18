@@ -173,6 +173,6 @@ export let Counter = clientEntry(
 - [Handle API](./handle.md) - The component's interface to the framework
 - [Server](../src/server/README.md) - `renderToString` and `renderToStream`
 - [Hydration](./hydration.md) - `clientEntry` and `run`
-- [Frames](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md) - Streaming partial server UI with `<Frame>`
+- [Frames](./frames.md) - Streaming partial server UI with `<Frame>`
 - [Styling](./styling.md) - CSS mixin for inline styling
 - [Events](./events.md) - Event handling patterns
