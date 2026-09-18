@@ -61,7 +61,6 @@ root.render(<App />)
 The root object provides several methods:
 
 - **`render(node)`** - Renders a component tree into the root container
-- **`reconcile()`** - Renders the most recently supplied tree again
 - **`flush()`** - Synchronously drains pending DOM work and tasks. It does not wait for promises, frame fetches, or deferred removal callbacks
 - **`dispose()`** - Removes the component tree and releases root listeners and resources. Exit mixins can defer host removal until their teardown callbacks settle
 
