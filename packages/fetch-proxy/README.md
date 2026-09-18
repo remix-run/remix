@@ -54,6 +54,22 @@ The proxy also removes `X-Forwarded-For` when this option is enabled. Fetch requ
 
 When `xForwardedHeaders` is disabled (the default), existing forwarding headers are passed through unchanged. If the target trusts these headers, the caller must supply them from a trusted source.
 
+## Redirects
+
+Unlike a client-side `fetch`, the proxy returns upstream redirects instead of following them by default. This lets the client receive the redirect status, `Location`, and headers such as `Set-Cookie`.
+
+Every `Request` uses `'follow'` by default, even when the caller did not choose a redirect mode. The proxy treats that implicit default as `'manual'`, meaning it returns the redirect to the client. Input requests using `'manual'` or `'error'` retain those modes.
+
+To follow redirects inside the proxy:
+
+```ts
+let proxy = createFetchProxy('https://remix.run', {
+  redirect: 'follow',
+})
+```
+
+A defined per-call `init.redirect` overrides the proxy option.
+
 ## Encoding and Framing Headers
 
 Since proxying is done via `fetch` rather than raw HTTP messages, some encoding and framing headers need to be removed.
