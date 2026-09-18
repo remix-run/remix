@@ -1,7 +1,12 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { loadDocsChapterSummaries, parseChapterFilename } from './markdown-chapters.tsx'
+import {
+  loadDocsChapterSummaries,
+  loadDocsIndexChapterSummaries,
+  loadDocsNavigationItems,
+  parseChapterFilename,
+} from './markdown-chapters.tsx'
 
 describe('loadDocsChapterSummaries', () => {
   it('retains numeric chapter order for presentation-specific labels', async () => {
@@ -28,6 +33,50 @@ describe('loadDocsChapterSummaries', () => {
         .filter((summary) => summary.order >= 8 && summary.order <= 16)
         .map((summary) => summary.order),
       [13],
+    )
+  })
+})
+
+describe('loadDocsIndexChapterSummaries', () => {
+  it('disables unpublished production chapters without listing unlisted chapters', async () => {
+    let summaries = await loadDocsIndexChapterSummaries('production')
+
+    assert.deepEqual(
+      summaries
+        .filter((chapter) => chapter.order >= 8)
+        .map((chapter) => ({ order: chapter.order, disabled: chapter.disabled })),
+      [
+        { order: 8, disabled: true },
+        { order: 9, disabled: true },
+        { order: 10, disabled: true },
+        { order: 11, disabled: true },
+        { order: 12, disabled: true },
+        { order: 13, disabled: false },
+        { order: 14, disabled: true },
+        { order: 15, disabled: true },
+      ],
+    )
+  })
+})
+
+describe('loadDocsNavigationItems', () => {
+  it('disables unpublished production chapters without listing unlisted chapters', async () => {
+    let navigation = await loadDocsNavigationItems('production')
+
+    assert.deepEqual(
+      navigation
+        .filter((chapter) => chapter.order >= 8)
+        .map((chapter) => ({ order: chapter.order, disabled: chapter.disabled })),
+      [
+        { order: 8, disabled: true },
+        { order: 9, disabled: true },
+        { order: 10, disabled: true },
+        { order: 11, disabled: true },
+        { order: 12, disabled: true },
+        { order: 13, disabled: false },
+        { order: 14, disabled: true },
+        { order: 15, disabled: true },
+      ],
     )
   })
 })
