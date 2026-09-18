@@ -95,7 +95,7 @@ jobs:
         run: pnpm test:bun
 
   test-windows-pr:
-    name: test (windows-latest, changed packages)
+    name: test (windows-latest, full suite)
     if: github.event_name == 'pull_request'
     runs-on: windows-2025
 
@@ -131,8 +131,8 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
-      - name: Run changed package tests
-        run: node ./scripts/detect-changed-packages.ts origin/${{ github.base_ref }}
+      - name: Run tests
+        run: pnpm test
 
   test-windows-main:
     name: test (windows-latest)
