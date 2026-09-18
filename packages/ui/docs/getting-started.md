@@ -29,6 +29,9 @@ root.render(<App />)
 The `createRoot` function takes a DOM element (or `document.body`) and returns a root object with a `render` method. You can call `render` multiple times to update the app:
 
 ```tsx
+import { createRoot, on } from 'remix/ui'
+import type { Handle } from 'remix/ui'
+
 function App(handle: Handle) {
   let count = 0
 
@@ -58,8 +61,9 @@ root.render(<App />)
 The root object provides several methods:
 
 - **`render(node)`** - Renders a component tree into the root container
-- **`flush()`** - Synchronously flushes all pending updates and tasks
-- **`dispose()`** - Removes the component tree and cleans up
+- **`reconcile()`** - Renders the most recently supplied tree again
+- **`flush()`** - Synchronously drains pending DOM work and tasks. It does not wait for promises, frame fetches, or deferred removal callbacks
+- **`dispose()`** - Removes the component tree and releases root listeners and resources. Exit mixins can defer host removal until their teardown callbacks settle
 
 ```tsx
 let root = createRoot(document.body)
@@ -73,6 +77,8 @@ root.flush()
 // Later, remove the app
 root.dispose()
 ```
+
+For browser tests, prefer [`render()` from `remix/ui/test`](https://github.com/remix-run/remix/blob/main/packages/ui/src/test/README.md), which provides `act()` and cleanup around a root.
 
 ## Server-Rendered App
 
@@ -168,6 +174,6 @@ export let Counter = clientEntry(
 - [Handle API](./handle.md) - The component's interface to the framework
 - [Server](../src/server/README.md) - `renderToString` and `renderToStream`
 - [Hydration](./hydration.md) - `clientEntry` and `run`
-- [Frames](./frames.md) - Streaming partial server UI with `<Frame>`
+- [Frames](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md) - Streaming partial server UI with `<Frame>`
 - [Styling](./styling.md) - CSS mixin for inline styling
 - [Events](./events.md) - Event handling patterns

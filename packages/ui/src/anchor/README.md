@@ -59,13 +59,16 @@ Keep presentation app-owned when the anchored element is rendered by your compon
 
 ```tsx
 import { anchor } from 'remix/ui/anchor'
-import { on, ref, type Handle } from 'remix/ui'
-import { panelStyle } from './floating.styles'
+import { on, ref } from 'remix/ui'
+import type { Handle } from 'remix/ui'
+import { panelStyle } from './floating.styles.ts'
 
 export function AnchoredPanel(handle: Handle) {
   let cleanup = () => {}
   let trigger: HTMLElement | null = null
   let panel: HTMLElement | null = null
+
+  handle.signal.addEventListener('abort', () => cleanup(), { once: true })
 
   function position() {
     cleanup()
@@ -76,13 +79,10 @@ export function AnchoredPanel(handle: Handle) {
 
   return () => (
     <>
-      <button
-        mix={[ref((node) => (trigger = node as HTMLElement)), on('click', position)]}
-        type="button"
-      >
+      <button mix={[ref((node) => (trigger = node)), on('click', position)]} type="button">
         Open
       </button>
-      <div data-panel mix={[panelStyle, ref((node) => (panel = node as HTMLElement))]}>
+      <div data-panel mix={[panelStyle, ref((node) => (panel = node))]}>
         Panel
       </div>
     </>
@@ -193,4 +193,4 @@ anchor(listbox, trigger, {
 - `offset`, `offsetX`, and `offsetY` may be numbers or functions that receive the floating element.
 - `relativeTo` lets a surface align to an inner element, which is useful for selected options inside popovers.
 - `anchor` polls on animation frames for anchor target or floating geometry changes and repositions when either changes.
-- The returned cleanup function cancels animation-frame polling.
+- The returned cleanup function cancels animation-frame polling and removes scroll and resize listeners. It leaves the last inline styles and `data-anchor-placement` attribute in place.
