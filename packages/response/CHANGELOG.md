@@ -2,6 +2,17 @@
 
 This is the changelog for [`response`](https://github.com/remix-run/remix/tree/main/packages/response). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.9
+
+### Patch Changes
+
+- Include `X-Content-Type-Options: nosniff` on file responses, including partial, conditional, and error responses. Existing file media types and response bodies are preserved.
+
+- Compressed `text/html` responses now flush each chunk as it becomes available, so streamed pages can send initial HTML before deferred content resolves. `compressResponse()` uses `Z_SYNC_FLUSH` for gzip and deflate and `BROTLI_OPERATION_FLUSH` for Brotli unless `flush` is configured explicitly.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+
 ## v0.3.8
 
 ### Patch Changes

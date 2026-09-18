@@ -2,6 +2,14 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.24.1
+
+### Patch Changes
+
+- Reject backslashes in `createHref()` hostname variables and wildcards so generated URLs retain the intended hostname.
+
+- Count variable scans and capture comparisons toward `maxMatchWork` so matching stops when optional or wildcard patterns exceed the configured work limit.
+
 ## v0.24.0
 
 ### Minor Changes

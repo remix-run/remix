@@ -1,1 +1,0 @@
-Remove incoming `X-Forwarded-For` values when `xForwardedHeaders` is enabled, alongside `Forwarded`. Fetch requests do not expose the client's connection address, so no replacement address is generated. Existing forwarding headers continue to pass through when the option is disabled.

@@ -2,6 +2,22 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v0.7.1
+
+### Patch Changes
+
+- Simplify the Remix skill bundled with new apps to start with documentation discovery through the installed package's `INDEX.md`. It keeps a compact routing and component mental model, an interactive component example, and explicit browser hydration guidance, while leaving workflows and API details to the installed guides and READMEs.
+
+  Scaffolded apps now run `remix test` from `npm test` and include a router smoke test at `app/actions/controller.test.ts`.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.7.1`](https://github.com/remix-run/remix/releases/tag/assets@0.7.1)
+  - [`data-table@0.6.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.6.0)
+  - [`data-table-mysql@0.5.3`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.3)
+  - [`data-table-postgres@0.5.3`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.3)
+  - [`data-table-sqlite@0.6.3`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.3)
+  - [`test@0.6.1`](https://github.com/remix-run/remix/releases/tag/test@0.6.1)
+
 ## v0.7.0
 
 ### Minor Changes
