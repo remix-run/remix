@@ -128,6 +128,7 @@ export type ScriptHmrUpdate =
 type ScriptHmrBoundary = {
   acceptedModule: ResolvedModule
   boundaryModule: ResolvedModule
+  propagationPath: readonly string[]
 }
 
 type DirectoryTsconfig = {
@@ -747,6 +748,11 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     let sourceFilePath = resolvedModule?.identityPath
     let boundaries = findHmrBoundaries(sourceFilePath)
     if (sourceFilePath !== undefined && boundaries) {
+      for (let boundary of boundaries) {
+        for (let identityPath of boundary.propagationPath) {
+          scriptStore.setHmrUpdateTimestamp(identityPath, timestamp)
+        }
+      }
       return dedupeHmrBoundaries(boundaries).map(({ acceptedModule, boundaryModule }) => ({
         accepted: true,
         acceptedFilePath: acceptedModule.identityPath,
@@ -778,7 +784,8 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     traversed: Set<string>,
   ): ScriptHmrBoundary[] | null {
     if (traversed.has(identityPath)) return []
-    traversed.add(identityPath)
+    let nextTraversed = new Set(traversed)
+    nextTraversed.add(identityPath)
 
     let resolvedModule = scriptStore.getLastResolved(identityPath)
     if (!resolvedModule) return null
@@ -788,6 +795,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         {
           acceptedModule: resolvedModule,
           boundaryModule: resolvedModule,
+          propagationPath: [],
         },
       ]
     }
@@ -805,13 +813,19 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         boundaries.push({
           acceptedModule: resolvedModule,
           boundaryModule: importer,
+          propagationPath: [resolvedModule.identityPath],
         })
         continue
       }
 
-      let importerBoundaries = propagateHmrUpdate(importerPath, traversed)
+      let importerBoundaries = propagateHmrUpdate(importerPath, nextTraversed)
       if (!importerBoundaries) return null
-      boundaries.push(...importerBoundaries)
+      for (let importerBoundary of importerBoundaries) {
+        boundaries.push({
+          ...importerBoundary,
+          propagationPath: [resolvedModule.identityPath, ...importerBoundary.propagationPath],
+        })
+      }
     }
 
     return boundaries
