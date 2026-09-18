@@ -1,1 +1,0 @@
-BREAKING CHANGE: Dotted string values passed to `eq()`, `ne()`, `gt()`, `gte()`, `lt()`, and `lte()` are now treated as scalar values. Use table column references, such as `eq(accounts.id, projects.account_id)`, for column-to-column comparisons.
