@@ -49,9 +49,9 @@ Resolve `clientEntry(import.meta.url, ...)` IDs to `href`, `importMap`, and `pre
 
 ## File transforms and transformed-output caches {#asset-file-transforms}
 
-Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits. Set `files.cache: createFsFileCache()` using the factory from `remix/assets` to cache transformed outputs on disk with LRU eviction and built-in limits. Pass `{ directory, maxEntries, maxFileSize, maxTotalSize }` to the factory to choose the directory and limits. Size limits are in bytes. Relative cache directories resolve from `process.cwd()`, independently of `rootDir`. Set `files.cacheKey` to a build identifier to reuse outputs across server restarts, or supply a `FileCache` with `get` and `put` methods to choose your own limits and eviction policy. Caching is disabled when `files.cache` is omitted.
+Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits.
 
-Use one filesystem cache instance per directory. Share that instance when several asset servers in the same process need it, or provide a custom `FileCache` for shared multi-process caching. Cached files survive restarts, but the eviction order is rebuilt from write timestamps. Reads update recency only in memory.
+Set `files.cache` to `createFsFileCache()` from `remix/assets` to cache transformed outputs on disk. Caching is disabled by default. See the [assets README](https://github.com/remix-run/remix/tree/main/packages/assets#file-transform-caching) for cache options and reuse across server restarts.
 
 ## Development watching and production fingerprints {#fingerprinting-source-maps-minification}
 
