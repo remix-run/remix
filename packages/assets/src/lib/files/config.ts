@@ -113,15 +113,14 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
   globalTransforms?: readonly AssetGlobalTransform[]
   /**
    * Cache for transformed file outputs. Disabled when omitted or `false`.
-   * Set to `true` to use an on-disk cache in `node_modules/.cache/remix/assets`
-   * under `rootDir`, with LRU eviction, at most 1024 entries, 4 MiB per entry,
-   * and 256 MiB total including cache metadata.
-   * Larger outputs are served without caching. Use `createFsFileCache(options)`
-   * to choose the directory and limits, or supply a `FileCache` for your own policy.
+   * Use `createFsFileCache()` for an on-disk LRU cache with default directory and
+   * limits, or pass options to customize them. Relative cache directories resolve
+   * from `process.cwd()`, independently of `rootDir`. Supply a custom `FileCache`
+   * for your own persistence and eviction policy.
    * The built-in cache requires one instance per directory. Use a custom cache
    * for shared multi-process caching. Read recency is not preserved across restarts.
    */
-  cache?: boolean | FileCache
+  cache?: false | FileCache
   /**
    * Optional namespace for cached transformed file outputs. Use a stable value such as a
    * commit SHA to reuse transformed files across server restarts for the same deployment.
@@ -131,7 +130,7 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
 }
 
 export interface ResolvedAssetServerFilesOptions {
-  cache?: boolean | FileCache
+  cache?: false | FileCache
   cacheKey?: string
   extensions: readonly string[]
   globalTransforms: readonly ResolvedAssetGlobalTransform[]
@@ -306,7 +305,7 @@ export function normalizeFilesOptions<transforms extends AssetRequestTransformMa
     throw new TypeError('files.maxRequestTransforms must be a positive integer')
   }
 
-  if (files.cache !== undefined && typeof files.cache !== 'boolean') {
+  if (files.cache !== undefined && files.cache !== false) {
     if (
       files.cache === null ||
       typeof files.cache !== 'object' ||
@@ -314,7 +313,7 @@ export function normalizeFilesOptions<transforms extends AssetRequestTransformMa
       typeof files.cache.put !== 'function'
     ) {
       throw new TypeError(
-        'files.cache must be a boolean or implement the FileCache interface (get and put)',
+        'files.cache must be false or implement the FileCache interface (get and put)',
       )
     }
   }

@@ -1,4 +1,4 @@
-import { createAssetServer, defineFileTransform } from 'remix/assets'
+import { createAssetServer, createFsFileCache, defineFileTransform } from 'remix/assets'
 import { loadConfig } from 'remix/cli'
 import { optimize as optimizeSvg } from 'svgo'
 
@@ -12,7 +12,7 @@ export const assetServer = createAssetServer({
   ...config.assets,
   files: {
     ...config.assets.files,
-    cache: true,
+    cache: createFsFileCache(),
     globalTransforms: [
       {
         extensions: ['.svg'],

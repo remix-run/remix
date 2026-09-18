@@ -1,6 +1,6 @@
 Allow applications to customize transformed-file caching through a `FileCache` with only `get(key)` and `put(key, file)` methods. Existing `FileStorage` backends remain compatible and need no configuration changes. Custom caches control their own limits, eviction, and persistence (see #11859).
 
-Caching remains disabled when `files.cache` is omitted or `false`. Set `files.cache: true` to use the built-in filesystem LRU cache in `node_modules/.cache/remix/assets` under `rootDir`. It retains up to 1,024 entries and 256 MiB total, with a 4 MiB maximum per entry. Byte limits include embedded cache metadata; storage metadata and filesystem overhead are additional.
+Caching remains disabled when `files.cache` is omitted or `false`. Set `files.cache: createFsFileCache()` to use the built-in filesystem LRU cache in `node_modules/.cache/remix/assets`, relative to `process.cwd()`. It retains up to 1,024 entries and 256 MiB total, with a 4 MiB maximum per entry. Byte limits include embedded cache metadata; storage metadata and filesystem overhead are additional.
 
 Call `createFsFileCache()` for the default directory and limits, or use `createFsFileCache(options)` to choose the directory and override the positive-integer `maxEntries`, `maxFileSize`, and `maxTotalSize` limits:
 

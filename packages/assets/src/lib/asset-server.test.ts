@@ -1636,12 +1636,12 @@ describe('asset-server', () => {
     assert.ok(transformCalls > 4)
   })
 
-  it('uses a bounded default disk cache across server restarts and namespaces', async () => {
+  it('bounds the filesystem cache with default limits across server restarts and namespaces', async () => {
     await write(dir, 'app/content/value.txt', 'hello')
     let createServer = () =>
       createTestServer(dir, {
         files: {
-          cache: true,
+          cache: createFsFileCache({ directory: path.join(dir, 'cache') }),
           extensions: ['.txt'],
           transforms: {
             append: defineFileTransform({
@@ -1664,7 +1664,7 @@ describe('asset-server', () => {
         assert.ok(response)
         assert.equal(await response.text(), `hello${param}`)
       }
-      let entries = await fs.readdir(path.join(dir, 'node_modules/.cache/remix/assets'), {
+      let entries = await fs.readdir(path.join(dir, 'cache'), {
         recursive: true,
       })
       let bodies = entries.filter((entry) => entry.endsWith('.dat'))
@@ -1673,13 +1673,13 @@ describe('asset-server', () => {
     }
   })
 
-  it('serves oversized outputs without admitting them to the default cache', async () => {
+  it('serves oversized outputs without admitting them to the filesystem cache', async () => {
     await write(dir, 'app/content/value.txt', 'hello')
     let calls = 0
     let content = new Uint8Array(4 * 1024 * 1024 + 1).fill(65)
     let assetServer = createTestServer(dir, {
       files: {
-        cache: true,
+        cache: createFsFileCache({ directory: path.join(dir, 'cache') }),
         extensions: ['.txt'],
         transforms: {
           expand: defineFileTransform({
@@ -1700,13 +1700,13 @@ describe('asset-server', () => {
     assert.equal(calls, 2)
   })
 
-  it('reuses the default cache with a stable namespace and isolates new namespaces', async () => {
+  it('reuses the filesystem cache with a stable namespace and isolates new namespaces', async () => {
     await write(dir, 'app/content/value.txt', 'hello')
     let calls = 0
     let createServer = (cacheKey: string) =>
       createTestServer(dir, {
         files: {
-          cache: true,
+          cache: createFsFileCache({ directory: path.join(dir, 'cache') }),
           cacheKey,
           extensions: ['.txt'],
           transforms: {
@@ -8818,6 +8818,20 @@ describe('asset-server', () => {
     )
   })
 
+  it('rejects files.cache: true', () => {
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          files: {
+            extensions: ['.svg'],
+            // @ts-expect-error - exercise runtime validation of the unsupported cache shortcut
+            cache: true,
+          },
+        }),
+      /files\.cache must be false or implement the FileCache interface \(get and put\)/,
+    )
+  })
+
   it('rejects caches without a put method', () => {
     assert.throws(
       () =>
@@ -8832,7 +8846,7 @@ describe('asset-server', () => {
             },
           },
         }),
-      /files\.cache must be a boolean or implement the FileCache interface \(get and put\)/,
+      /files\.cache must be false or implement the FileCache interface \(get and put\)/,
     )
   })
 
@@ -8846,7 +8860,7 @@ describe('asset-server', () => {
             cache: { put() {} },
           },
         }),
-      /files\.cache must be a boolean or implement the FileCache interface \(get and put\)/,
+      /files\.cache must be false or implement the FileCache interface \(get and put\)/,
     )
   })
 

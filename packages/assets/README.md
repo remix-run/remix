@@ -607,19 +607,19 @@ let assetServer = createAssetServer({
 
 #### File transform caching
 
-Transformed file outputs are recomputed per request unless you configure `files.cache`. Set it to `true` to use the built-in disk cache in `node_modules/.cache/remix/assets` under `rootDir`. This cache evicts the least recently used entries when it reaches 1,024 entries or 256 MiB of stored data. Each stored entry can be at most 4 MiB, including cache metadata. Reads and writes refresh recency. Larger outputs are served normally without caching. Omitting `files.cache` or setting it to `false` disables transformed-output caching.
+Transformed file outputs are recomputed per request unless you configure `files.cache`. Set it to `createFsFileCache()` to use the built-in disk cache in `node_modules/.cache/remix/assets`, relative to `process.cwd()`. This cache evicts the least recently used entries when it reaches 1,024 entries or 256 MiB of stored data. Each stored entry can be at most 4 MiB, including cache metadata. Reads and writes refresh recency. Larger outputs are served normally without caching. Omitting `files.cache` or setting it to `false` disables transformed-output caching.
 
 `files.cacheKey` namespaces transformed outputs. Use a stable identifier, such as a commit SHA, to reuse them across server restarts for the same build. Change it when sources or transform implementations change. Without it, each server instance uses a random namespace. A namespace identifies a set of cached outputs; it does not create a separate cache instance.
 
 ```ts
-import { createAssetServer } from 'remix/assets'
+import { createAssetServer, createFsFileCache } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
-    cache: true,
+    cache: createFsFileCache(),
     cacheKey: process.env.GIT_COMMIT_SHA,
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
     transforms: {

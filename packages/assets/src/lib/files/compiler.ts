@@ -14,7 +14,7 @@ import { normalizeFilePath, resolveFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { AssetFileTransformResult, ResolvedAssetRequestTransformMap } from './config.ts'
 import { parseAssetTransformInvocations } from './config.ts'
-import { createFsFileCache, createTransformCacheKey } from './cache.ts'
+import { createTransformCacheKey } from './cache.ts'
 import type { FileCache } from './file-cache.ts'
 import { createSourceFileStore } from './store.ts'
 import type {
@@ -57,7 +57,7 @@ type FileGetHrefOptions = {
 }
 
 type FileCompilerOptions = {
-  cache?: boolean | FileCache
+  cache?: false | FileCache
   cacheKey?: string
   extensions: readonly string[]
   fingerprintAssets: boolean
@@ -126,12 +126,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   }
   let sourceFileStore: SourceFileStore = createSourceFileStore()
   let sourceFileInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
-  let cache =
-    options.cache === true
-      ? createFsFileCache({
-          directory: path.join(options.rootDir, 'node_modules/.cache/remix/assets'),
-        })
-      : options.cache
+  let cache = options.cache
   let transformedEmitInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
   let cacheKey = resolvedOptions.cacheKey ?? crypto.randomUUID()
   let resolveArgs: ResolveArgs = {
