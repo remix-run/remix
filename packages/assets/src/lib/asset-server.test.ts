@@ -1328,12 +1328,12 @@ describe('asset-server', () => {
     assert.equal(nodeFs.existsSync(path.join(rootDir, 'node_modules')), false)
   })
 
-  it('recomputes transformed file outputs on each request when caching is disabled', async () => {
+  it('recomputes transformed file outputs on each request when cache is undefined', async () => {
     await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
     let transformCalls = 0
     let assetServer = createTestServer(dir, {
       files: {
-        cache: false,
+        cache: undefined,
         extensions: ['.svg'],
         transforms: {
           optimize: defineFileTransform({
@@ -8828,7 +8828,21 @@ describe('asset-server', () => {
             cache: true,
           },
         }),
-      /files\.cache must be false or implement the FileCache interface \(get and put\)/,
+      /files\.cache must implement the FileCache interface \(get and put\)/,
+    )
+  })
+
+  it('rejects files.cache: false', () => {
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          files: {
+            extensions: ['.svg'],
+            // @ts-expect-error - exercise runtime validation of an unsupported boolean cache
+            cache: false,
+          },
+        }),
+      /files\.cache must implement the FileCache interface \(get and put\)/,
     )
   })
 
@@ -8846,7 +8860,7 @@ describe('asset-server', () => {
             },
           },
         }),
-      /files\.cache must be false or implement the FileCache interface \(get and put\)/,
+      /files\.cache must implement the FileCache interface \(get and put\)/,
     )
   })
 
@@ -8860,7 +8874,7 @@ describe('asset-server', () => {
             cache: { put() {} },
           },
         }),
-      /files\.cache must be false or implement the FileCache interface \(get and put\)/,
+      /files\.cache must implement the FileCache interface \(get and put\)/,
     )
   })
 

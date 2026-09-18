@@ -57,7 +57,7 @@ type FileGetHrefOptions = {
 }
 
 type FileCompilerOptions = {
-  cache?: false | FileCache
+  cache?: FileCache
   cacheKey?: string
   extensions: readonly string[]
   fingerprintAssets: boolean

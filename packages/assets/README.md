@@ -607,7 +607,7 @@ let assetServer = createAssetServer({
 
 #### File transform caching
 
-Transformed file outputs are recomputed per request unless you configure `files.cache`. Set it to `createFsFileCache()` to use the built-in disk cache in `node_modules/.cache/remix/assets`, relative to `process.cwd()`. This cache evicts the least recently used entries when it reaches 1,024 entries or 256 MiB of stored data. Each stored entry can be at most 4 MiB, including cache metadata. Reads and writes refresh recency. Larger outputs are served normally without caching. Omitting `files.cache` or setting it to `false` disables transformed-output caching.
+Transformed file outputs are recomputed per request unless you configure `files.cache`. Set it to `createFsFileCache()` to use the built-in disk cache in `node_modules/.cache/remix/assets`, relative to `process.cwd()`. This cache evicts the least recently used entries when it reaches 1,024 entries or 256 MiB of stored data. Each stored entry can be at most 4 MiB, including cache metadata. Reads and writes refresh recency. Larger outputs are served normally without caching. Omitting `files.cache` disables transformed-output caching.
 
 `files.cacheKey` namespaces transformed outputs. Use a stable identifier, such as a commit SHA, to reuse them across server restarts for the same build. Change it when sources or transform implementations change. Without it, each server instance uses a random namespace. A namespace identifies a set of cached outputs; it does not create a separate cache instance.
 
@@ -707,7 +707,7 @@ let assetServer = createAssetServer({
 })
 ```
 
-Custom caches receive opaque keys and ordinary `File` values. The server applies no entry count or file size limits to them, and consults the cache before responding to conditional requests. Your cache controls expiration and cleanup, including obsolete namespaces in persistent stores. Custom cache errors follow normal asset-server error handling. The built-in cache requires a writable directory; use a custom cache or `cache: false` when local disk storage is unavailable. Cache limits do not limit concurrent transform work or the size of an output while it is being computed.
+Custom caches receive opaque keys and ordinary `File` values. The server applies no entry count or file size limits to them, and consults the cache before responding to conditional requests. Your cache controls expiration and cleanup, including obsolete namespaces in persistent stores. Custom cache errors follow normal asset-server error handling. The built-in cache requires a writable directory; use a custom cache or omit `files.cache` when local disk storage is unavailable. Cache limits do not limit concurrent transform work or the size of an output while it is being computed.
 
 #### Request transform limits
 
