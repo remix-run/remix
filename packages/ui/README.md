@@ -266,6 +266,14 @@ Use `data-rmx-preserve-dom` on the smallest element whose live DOM should belong
 
 Remix UI still renders the element's children during SSR and still hydrates any initial client entries inside it. On later frame reloads, matched `data-rmx-preserve-dom` elements keep their current attributes and children instead of accepting incoming DOM updates. See [Preserving client-owned DOM](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#preserving-client-owned-dom) for guidance and caveats.
 
+Use `data-rmx-preserve-attrs` when client code owns only specific attributes, such as a theme set on `<html>`:
+
+```html
+<html lang="en" data-rmx-preserve-attrs="data-theme"></html>
+```
+
+On frame reloads, the space-separated attribute names in the incoming HTML keep their live values or absence. Other attributes and children reconcile normally. An empty or omitted list uses normal attribute reconciliation. This works on any matched element; it does not prevent removal or replacement. See [Preserving client-owned attributes](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#preserving-client-owned-attributes) for examples and ownership rules.
+
 ## Cascade Layers
 
 Remix UI emits generated `css(...)` rules under the `rmx` cascade layer. Unlayered CSS outranks layered CSS, so use explicit layer order when mixing Remix UI with global styles.

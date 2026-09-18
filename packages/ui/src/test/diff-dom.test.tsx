@@ -644,6 +644,155 @@ describe('diffNodes', () => {
       expect(div.innerHTML).toBe('<button>Client</button>')
     })
 
+    it('preserves named attributes while reconciling other attributes and children', () => {
+      let container = document.createElement('div')
+      container.innerHTML =
+        '<div class="layout" data-theme="light" title="Old" data-page="old"><p>Old</p></div>'
+      let div = container.querySelector('div')
+      invariant(div)
+      div.classList.add('dark')
+      div.setAttribute('data-theme', 'dark')
+
+      diffDom(
+        container,
+        '<div data-rmx-preserve-attrs=" class\tdata-theme\nclass " class="new-layout" title="New" lang="en"><p>New</p></div>',
+      )
+
+      expect(container.firstElementChild).toBe(div)
+      expect(div.className).toBe('layout dark')
+      expect(div.getAttribute('data-theme')).toBe('dark')
+      expect(div.getAttribute('title')).toBe('New')
+      expect(div.getAttribute('lang')).toBe('en')
+      expect(div.hasAttribute('data-page')).toBe(false)
+      expect(div.innerHTML).toBe('<p>New</p>')
+    })
+
+    it('preserves the absence of attributes removed by client code', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<div class="dark" data-theme="dark"></div>'
+      let div = container.querySelector('div')
+      invariant(div)
+      div.removeAttribute('class')
+      div.removeAttribute('data-theme')
+
+      diffDom(
+        container,
+        '<div data-rmx-preserve-attrs="class data-theme" class="dark" data-theme="dark"></div>',
+      )
+
+      expect(div.hasAttribute('class')).toBe(false)
+      expect(div.hasAttribute('data-theme')).toBe(false)
+    })
+
+    it('uses the incoming preservation list when ownership changes', () => {
+      let container = document.createElement('div')
+      container.innerHTML =
+        '<div data-rmx-preserve-attrs="class data-theme" class="dark" data-theme="dark"></div>'
+      let div = container.querySelector('div')
+      invariant(div)
+
+      diffDom(
+        container,
+        '<div data-rmx-preserve-attrs="data-theme" class="light" data-theme="light"></div>',
+      )
+
+      expect(div.className).toBe('light')
+      expect(div.getAttribute('data-theme')).toBe('dark')
+      expect(div.getAttribute('data-rmx-preserve-attrs')).toBe('data-theme')
+    })
+
+    it('returns attributes to normal reconciliation when the preservation list is empty', () => {
+      let container = document.createElement('div')
+      container.innerHTML =
+        '<div data-rmx-preserve-attrs="class data-theme" class="dark" data-theme="dark"></div>'
+      let div = container.querySelector('div')
+      invariant(div)
+
+      diffDom(container, '<div data-rmx-preserve-attrs="" class="light"></div>')
+
+      expect(div.className).toBe('light')
+      expect(div.hasAttribute('data-theme')).toBe(false)
+      expect(div.getAttribute('data-rmx-preserve-attrs')).toBe('')
+    })
+
+    it('returns attributes to normal reconciliation when the preservation list is omitted', () => {
+      let container = document.createElement('div')
+      container.innerHTML =
+        '<div data-rmx-preserve-attrs="class data-theme" class="dark" data-theme="dark"></div>'
+      let div = container.querySelector('div')
+      invariant(div)
+
+      diffDom(container, '<div data-theme="light"></div>')
+
+      expect(div.hasAttribute('class')).toBe(false)
+      expect(div.getAttribute('data-theme')).toBe('light')
+      expect(div.hasAttribute('data-rmx-preserve-attrs')).toBe(false)
+    })
+
+    it('preserves named SVG attributes without changing their case', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<svg viewBox="0 0 10 10"><circle r="2"></circle></svg>'
+      let svg = container.querySelector('svg')
+      invariant(svg)
+      svg.setAttribute('viewBox', '0 0 20 20')
+
+      diffDom(
+        container,
+        '<svg data-rmx-preserve-attrs="viewBox" viewBox="0 0 10 10"><circle r="4"></circle></svg>',
+      )
+
+      expect(svg.getAttribute('viewBox')).toBe('0 0 20 20')
+      expect(svg.querySelector('circle')?.getAttribute('r')).toBe('4')
+    })
+
+    it('does not preserve descendants with an attribute preservation list', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<div class="dark"><span class="old">Old</span></div>'
+      let div = container.querySelector('div')
+      invariant(div)
+
+      diffDom(
+        container,
+        '<div data-rmx-preserve-attrs="class" class="light"><span class="new">New</span></div>',
+      )
+
+      expect(div.className).toBe('dark')
+      expect(div.innerHTML).toBe('<span class="new">New</span>')
+    })
+
+    it('can replace and remove elements with preserved attributes', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<div data-rmx-preserve-attrs="class" class="dark">Old</div>'
+      let div = container.querySelector('div')
+      invariant(div)
+
+      diffDom(container, '<section data-rmx-preserve-attrs="class" class="light">New</section>')
+
+      expect(container.contains(div)).toBe(false)
+      expect(container.firstElementChild?.getAttribute('class')).toBe('light')
+      expect(container.textContent).toBe('New')
+
+      diffDom(container, '')
+
+      expect(container.childNodes).toHaveLength(0)
+    })
+
+    it('preserves the whole DOM when both preservation attributes are present', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<div class="dark" data-theme="dark"><p>Client</p></div>'
+      let div = container.querySelector('div')
+      invariant(div)
+
+      diffDom(
+        container,
+        '<div data-rmx-preserve-dom data-rmx-preserve-attrs="class" class="light" data-theme="light"><p>Server</p></div>',
+      )
+
+      expect(div.className).toBe('dark')
+      expect(div.getAttribute('data-theme')).toBe('dark')
+      expect(div.innerHTML).toBe('<p>Client</p>')
+    })
+
     it('preserves data-rmx-preserve-dom custom element children added during initialization', () => {
       let tagName = 'mock-pagefind-modal-trigger-lifecycle'
       if (!customElements.get(tagName)) {
