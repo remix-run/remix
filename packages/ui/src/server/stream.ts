@@ -33,6 +33,16 @@ interface VNode {
   _parent?: VNode
 }
 
+/**
+ * Creates a server renderer node record from an element type and props.
+ *
+ * Application components normally use JSX or `createElement` from `remix/ui` instead.
+ *
+ * @param type Host tag, component, or fragment to render.
+ * @param props Props passed to the element.
+ * @param key Optional reconciliation key.
+ * @returns A node record used by the server renderer.
+ */
 export function createVNode(type: ElementType, props: ElementProps, key?: Key): VNode {
   return { type, props, key }
 }
@@ -115,6 +125,10 @@ type ManagedImportMap = {
   value: ImportMapData
 }
 
+/**
+ * Props for {@link ImportMap}, including authored mappings and optional script attributes.
+ * The component owns the script's type and contents; external sources and children are excluded.
+ */
 export type ImportMapProps = Omit<
   Props<'script'>,
   'children' | 'innerHTML' | 'integrity' | 'src' | 'type'
