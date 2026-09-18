@@ -607,21 +607,19 @@ let assetServer = createAssetServer({
 
 #### File transform caching
 
-Use `files.cache` to store transformed file outputs via a [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) backend. Without `files.cache`, transformed file outputs are recomputed per request.
+Transformed file outputs are recomputed per request unless you configure `files.cache`. Set it to `createFsFileCache()` to use the built-in disk cache in `node_modules/.cache/remix/assets`, relative to `process.cwd()`. This cache evicts the least recently used entries when it reaches 1,024 entries or 256 MiB of stored data. Each stored entry can be at most 4 MiB, including cache metadata. Reads and writes refresh recency. Larger outputs are served normally without caching. Omitting `files.cache` disables transformed-output caching.
 
-`files.cacheKey` scopes transformed file cache entries. Use a stable identifier, such as a commit SHA, when you want unchanged transformed files to be reused across server restarts for the same build.
+`files.cacheKey` namespaces transformed outputs. Use a stable identifier, such as a commit SHA, to reuse them across server restarts for the same build. Change it when sources or transform implementations change. Without it, each server instance uses a random namespace. A namespace identifies a set of cached outputs; it does not create a separate cache instance.
 
 ```ts
-import * as path from 'node:path'
-import { createAssetServer } from 'remix/assets'
-import { createFsFileStorage } from 'remix/file-storage/fs'
+import { createAssetServer, createFsFileCache } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
   allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
-    cache: createFsFileStorage(path.resolve('.tmp/assets-cache')),
+    cache: createFsFileCache(),
     cacheKey: process.env.GIT_COMMIT_SHA,
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
     transforms: {
@@ -630,6 +628,86 @@ let assetServer = createAssetServer({
   },
 })
 ```
+
+Call `createFsFileCache()` to use the default directory and limits. Pass an options object to customize them:
+
+```ts
+import { createAssetServer, createFsFileCache } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  allowFiles: ['app/**/public/**'],
+  files: {
+    cache: createFsFileCache({
+      directory: '/var/cache/my-app/assets',
+      maxEntries: 2048,
+      maxFileSize: 8 * 1024 * 1024,
+      maxTotalSize: 512 * 1024 * 1024,
+    }),
+    cacheKey: process.env.GIT_COMMIT_SHA,
+    extensions: ['.svg', '.png'],
+    transforms: {
+      /*...*/
+    },
+  },
+})
+```
+
+Use a directory dedicated to this cache. Relative paths resolve from `process.cwd()` when the factory is called, independently of the asset server's `rootDir`. The directory is created on first use. All options are optional. Limits accept positive safe integers:
+
+| Option         | Default                              | Description                                        |
+| -------------- | ------------------------------------ | -------------------------------------------------- |
+| `directory`    | `'node_modules/.cache/remix/assets'` | Cache directory, relative to `process.cwd()`       |
+| `maxEntries`   | `1024`                               | Number of stored entries                           |
+| `maxFileSize`  | `4 * 1024 * 1024`                    | Bytes per entry, including cache metadata          |
+| `maxTotalSize` | `256 * 1024 * 1024`                  | Total stored entry bytes, including cache metadata |
+
+Storage metadata and filesystem overhead are additional to the byte budgets. All namespaces using a cache share its limits. Use one cache instance per directory. If multiple asset servers in one process need the same cache, pass them the same instance. For shared multi-process caching, supply a custom `FileCache`.
+
+The cache tracks recency and total size in memory. Reads refresh recency without writing to disk. On first use, it rebuilds the index from stored record sizes and write timestamps and enforces the configured limits. Cached files survive restarts, but read recency does not. An interrupted write or invalid accounting metadata resets the stored cache on recovery, and outputs are recomputed as needed.
+
+To choose different persistence or eviction behavior, supply a `FileCache`. It needs only `get(key)` and `put(key, file)`, and both methods may be synchronous or asynchronous. `get` returns a `File` or `null` for a miss. `put` stores or replaces a file, or declines admission according to the cache's policy. It may return a stored `File` or no value, which the asset server ignores. Existing `FileStorage` backends satisfy this interface and can still be passed directly to `files.cache`. Cached files must preserve their bytes, name, type, and `lastModified` value.
+
+For example, this in-memory cache retains up to 512 files, each at most 8 MiB, and evicts the least recently used entry:
+
+```ts
+import { createAssetServer } from 'remix/assets'
+import type { FileCache } from 'remix/assets'
+
+let files = new Map<string, File>()
+let cache: FileCache = {
+  get(key) {
+    let file = files.get(key)
+    if (!file) return null
+    files.delete(key)
+    files.set(key, file)
+    return file
+  },
+  put(key, file) {
+    files.delete(key)
+    if (file.size > 8 * 1024 * 1024) return
+    files.set(key, file)
+    if (files.size > 512) {
+      let oldestKey = files.keys().next().value
+      if (oldestKey !== undefined) files.delete(oldestKey)
+    }
+  },
+}
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  allowFiles: ['app/**/public/**'],
+  files: {
+    cache,
+    extensions: ['.svg', '.png'],
+    transforms: {
+      /*...*/
+    },
+  },
+})
+```
+
+Custom caches receive opaque keys and ordinary `File` values. The server applies no entry count or file size limits to them, and consults the cache before responding to conditional requests. Your cache controls expiration and cleanup, including obsolete namespaces in persistent stores. Custom cache errors follow normal asset-server error handling. The built-in cache requires a writable directory; use a custom cache or omit `files.cache` when local disk storage is unavailable. Cache limits do not limit concurrent transform work or the size of an output while it is being computed.
 
 #### Request transform limits
 
