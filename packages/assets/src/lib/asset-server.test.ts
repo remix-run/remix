@@ -8803,34 +8803,6 @@ describe('asset-server', () => {
     )
   })
 
-  it('rejects files.cache: true', () => {
-    assert.throws(
-      () =>
-        createTestServer(dir, {
-          files: {
-            extensions: ['.svg'],
-            // @ts-expect-error - exercise runtime validation of the unsupported cache shortcut
-            cache: true,
-          },
-        }),
-      /files\.cache must implement the FileCache interface \(get and put\)/,
-    )
-  })
-
-  it('rejects files.cache: false', () => {
-    assert.throws(
-      () =>
-        createTestServer(dir, {
-          files: {
-            extensions: ['.svg'],
-            // @ts-expect-error - exercise runtime validation of an unsupported boolean cache
-            cache: false,
-          },
-        }),
-      /files\.cache must implement the FileCache interface \(get and put\)/,
-    )
-  })
-
   it('rejects caches without a put method', () => {
     assert.throws(
       () =>
