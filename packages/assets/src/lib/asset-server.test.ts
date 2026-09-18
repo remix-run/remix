@@ -1407,7 +1407,7 @@ describe('asset-server', () => {
     for (let index = 0; index < 2; index++) {
       let assetServer = createTestServer(rootDir, {
         files: {
-          cache: createFsFileCache(path.relative(process.cwd(), cacheDir)),
+          cache: createFsFileCache({ directory: path.relative(process.cwd(), cacheDir) }),
           cacheKey: 'custom-build',
           extensions: ['.txt'],
           transforms: {
@@ -1594,7 +1594,7 @@ describe('asset-server', () => {
     let transformCalls = 0
     let assetServer = createTestServer(dir, {
       files: {
-        cache: createFsFileCache(path.join(dir, 'conditional-cache'), { maxEntries: 3 }),
+        cache: createFsFileCache({ directory: path.join(dir, 'conditional-cache'), maxEntries: 3 }),
         extensions: ['.txt'],
         transforms: {
           append: defineFileTransform({

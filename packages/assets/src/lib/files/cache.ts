@@ -5,8 +5,14 @@ import * as path from 'node:path'
 import { lock } from 'proper-lockfile'
 import type { FileCache } from './file-cache.ts'
 
-/** Limits for a filesystem file cache. */
+/** Directory and limits for a filesystem file cache. */
 export interface FsFileCacheOptions {
+  /**
+   * Directory dedicated to this cache, created on first use if needed.
+   * Defaults to `node_modules/.cache/remix/assets`. Relative paths resolve from
+   * `process.cwd()` when the factory is called.
+   */
+  directory?: string
   /** Maximum number of cached files (defaults to `1024`). */
   maxEntries?: number
   /** Maximum bytes per stored entry, including cache metadata (defaults to 4 MiB). */
@@ -22,13 +28,11 @@ export interface FsFileCacheOptions {
  * are additional to the byte budgets. Instances sharing a directory should use the
  * same limits; each operation enforces the calling instance's limits.
  *
- * @param directory A directory dedicated to this cache, created on first use if needed.
- * Relative paths resolve from `process.cwd()` when this function is called.
- * @param options Entry count and byte limits.
+ * @param options Cache directory, entry count, and byte limits.
  * @returns A file cache suitable for `files.cache` in `createAssetServer()`.
  */
-export function createFsFileCache(directory: string, options: FsFileCacheOptions = {}): FileCache {
-  let rootDir = path.resolve(directory)
+export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
+  let rootDir = path.resolve(options.directory ?? 'node_modules/.cache/remix/assets')
   let dataDir = path.join(rootDir, 'files')
   let indexPath = path.join(rootDir, 'index.json')
   let pendingPath = path.join(rootDir, 'pending')

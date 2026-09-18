@@ -128,7 +128,9 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   let sourceFileInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
   let cache =
     options.cache === true
-      ? createFsFileCache(path.join(options.rootDir, 'node_modules/.cache/remix/assets'))
+      ? createFsFileCache({
+          directory: path.join(options.rootDir, 'node_modules/.cache/remix/assets'),
+        })
       : options.cache
   let transformedEmitInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
   let cacheKey = resolvedOptions.cacheKey ?? crypto.randomUUID()

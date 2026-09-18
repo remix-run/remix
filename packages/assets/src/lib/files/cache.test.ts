@@ -9,10 +9,37 @@ import { promisify } from 'node:util'
 import { createFsFileCache } from '../../assets.ts'
 
 describe('createFsFileCache', () => {
+  it('defaults to a cache directory under cwd and accepts limits without a directory', async () => {
+    let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-default-'))
+    try {
+      let source = `
+        import { createFsFileCache } from ${JSON.stringify(new URL('../../assets.ts', import.meta.url).href)}
+        let cache = createFsFileCache()
+        await cache.put('a', new File(['a'], 'file.txt'))
+        let limited = createFsFileCache({ maxEntries: 1 })
+        await limited.put('b', new File(['b'], 'file.txt'))
+        if (await limited.get('a') !== null) throw new Error('Entry limit was not applied')
+        let restarted = createFsFileCache()
+        if (await (await restarted.get('b'))?.text() !== 'b') {
+          throw new Error('Default cache directory was not reused')
+        }
+      `
+      await promisify(execFile)(process.execPath, ['--input-type=module', '-e', source], {
+        cwd: directory,
+      })
+      let storage = createFsFileStorage(
+        path.join(directory, 'node_modules/.cache/remix/assets/files'),
+      )
+      assert.equal((await storage.list()).files.length, 1)
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true })
+    }
+  })
+
   it('preserves file bytes and metadata across replacements and restarts', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(path.relative(process.cwd(), directory))
+      let cache = createFsFileCache({ directory: path.relative(process.cwd(), directory) })
       let original = new File([new Uint8Array([0, 255, 10])], 'image\n☃.png', {
         type: 'image/png',
         lastModified: 123456,
@@ -24,7 +51,7 @@ describe('createFsFileCache', () => {
         lastModified: 654321,
       })
       await cache.put('any key/☃', replacement)
-      let restarted = createFsFileCache(directory)
+      let restarted = createFsFileCache({ directory })
       await assertCachedFile(await restarted.get('any key/☃'), replacement)
       assert.equal(
         (await createFsFileStorage(path.join(directory, 'files')).list()).files.length,
@@ -38,11 +65,11 @@ describe('createFsFileCache', () => {
   it('evicts the least recently used entry and persists reads across restarts', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory, { maxEntries: 2 })
+      let cache = createFsFileCache({ directory, maxEntries: 2 })
       await cache.put('a', new File(['a'], 'a.txt'))
       await cache.put('b', new File(['b'], 'b.txt'))
       assert.equal(await (await cache.get('a'))?.text(), 'a')
-      let restarted = createFsFileCache(directory, { maxEntries: 2 })
+      let restarted = createFsFileCache({ directory, maxEntries: 2 })
       await restarted.put('c', new File(['c'], 'c.txt'))
       assert.equal(await restarted.get('b'), null)
       assert.equal(await (await restarted.get('a'))?.text(), 'a')
@@ -56,7 +83,7 @@ describe('createFsFileCache', () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
       for (let round = 0; round < 2; round++) {
-        let cache = createFsFileCache(directory, { maxEntries: 4 })
+        let cache = createFsFileCache({ directory, maxEntries: 4 })
         for (let index = 0; index < 5; index++) {
           let key = `${round}:${index}`
           await cache.put(key, new File([key], `${key}.txt`))
@@ -84,7 +111,7 @@ describe('createFsFileCache', () => {
   it('treats incomplete and mixed record bytes as misses independently of storage metadata', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory)
+      let cache = createFsFileCache({ directory })
       let original = new File([new Uint8Array([1, 2, 3])], 'image.png', {
         type: 'image/png',
         lastModified: 123456,
@@ -112,7 +139,7 @@ describe('createFsFileCache', () => {
   it('treats incomplete storage metadata as a miss', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory)
+      let cache = createFsFileCache({ directory })
       await cache.put('key', new File(['hello'], 'file.txt'))
       let entries = await fs.readdir(directory, { recursive: true })
       let metadataPath = entries.find((entry) => entry.endsWith('.meta.json'))
@@ -129,8 +156,8 @@ describe('createFsFileCache', () => {
   it('bounds concurrent writes from separate cache instances', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let first = createFsFileCache(directory, { maxEntries: 8 })
-      let second = createFsFileCache(directory, { maxEntries: 8 })
+      let first = createFsFileCache({ directory, maxEntries: 8 })
+      let second = createFsFileCache({ directory, maxEntries: 8 })
       let results = await Promise.allSettled(
         Array.from({ length: 32 }, async (_, index) => {
           let key = `key-${index}`
@@ -154,7 +181,7 @@ describe('createFsFileCache', () => {
   it('includes record metadata in the stored size limit', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory, { maxFileSize: 512 })
+      let cache = createFsFileCache({ directory, maxFileSize: 512 })
       let original = new File([], 'image.png', { type: 'image/png', lastModified: 123456 })
       await cache.put('key', original)
       let storage = createFsFileStorage(path.join(directory, 'files'))
@@ -179,13 +206,13 @@ describe('createFsFileCache', () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
       let original = new File(['x'], 'file.txt', { lastModified: 0 })
-      let cache = createFsFileCache(directory)
+      let cache = createFsFileCache({ directory })
       await cache.put('a', original)
       let storage = createFsFileStorage(path.join(directory, 'files'))
       let [entry] = (await storage.list({ includeMetadata: true })).files
       assert.ok(entry)
       let size = entry.size
-      cache = createFsFileCache(directory, { maxTotalSize: 2 * size, maxEntries: 10 })
+      cache = createFsFileCache({ directory, maxTotalSize: 2 * size, maxEntries: 10 })
       await cache.put('b', original)
       await cache.get('a')
       await cache.put('c', original)
@@ -209,7 +236,7 @@ describe('createFsFileCache', () => {
   it('refreshes recency when replacing an entry', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory, { maxEntries: 2 })
+      let cache = createFsFileCache({ directory, maxEntries: 2 })
       await cache.put('a', new File(['a'], 'file.txt'))
       await cache.put('b', new File(['b'], 'file.txt'))
       await cache.put('a', new File(['updated'], 'file.txt'))
@@ -224,11 +251,11 @@ describe('createFsFileCache', () => {
   it('enforces smaller limits when reopening a directory', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory)
+      let cache = createFsFileCache({ directory })
       await cache.put('a', new File(['a'], 'file.txt'))
       await cache.put('b', new File(['b'], 'file.txt'))
       await cache.put('c', new File(['c'], 'file.txt'))
-      cache = createFsFileCache(directory, { maxEntries: 1 })
+      cache = createFsFileCache({ directory, maxEntries: 1 })
       assert.equal(await (await cache.get('c'))?.text(), 'c')
       assert.equal(await cache.get('a'), null)
       assert.equal(await cache.get('b'), null)
@@ -244,7 +271,7 @@ describe('createFsFileCache', () => {
   it('allows a configured file limit larger than the default', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory, { maxFileSize: 8 * 1024 * 1024 })
+      let cache = createFsFileCache({ directory, maxFileSize: 8 * 1024 * 1024 })
       let file = new File([new Uint8Array(4 * 1024 * 1024 + 1)], 'large.bin')
       await cache.put('large', file)
       await assertCachedFile(await cache.get('large'), file)
@@ -256,7 +283,7 @@ describe('createFsFileCache', () => {
   it('declines entries larger than the total byte budget', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory, { maxFileSize: 4096, maxTotalSize: 256 })
+      let cache = createFsFileCache({ directory, maxFileSize: 4096, maxTotalSize: 256 })
       await cache.put('key', new File([new Uint8Array(257)], 'file.txt'))
       assert.equal(await cache.get('key'), null)
       assert.equal(
@@ -271,7 +298,7 @@ describe('createFsFileCache', () => {
   it('recovers an interrupted write without retaining unaccounted records', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory)
+      let cache = createFsFileCache({ directory })
       await cache.put('a', new File(['a'], 'file.txt'))
       let storage = createFsFileStorage(path.join(directory, 'files'))
       await fs.writeFile(path.join(directory, 'pending'), '')
@@ -279,7 +306,7 @@ describe('createFsFileCache', () => {
       await fs.mkdir(path.join(directory, '.lock'))
       let old = new Date(Date.now() - 60_000)
       await fs.utimes(path.join(directory, '.lock'), old, old)
-      let restarted = createFsFileCache(directory)
+      let restarted = createFsFileCache({ directory })
       assert.equal(await restarted.get('a'), null)
       assert.equal((await storage.list()).files.length, 0)
       await restarted.put('b', new File(['b'], 'file.txt'))
@@ -292,7 +319,7 @@ describe('createFsFileCache', () => {
   it('recovers from a corrupt index without leaving old files outside the limits', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory)
+      let cache = createFsFileCache({ directory })
       await cache.put('a', new File(['a'], 'file.txt'))
       await fs.writeFile(path.join(directory, 'index.json'), '{')
       assert.equal(await cache.get('a'), null)
@@ -308,12 +335,12 @@ describe('createFsFileCache', () => {
   it('shares persisted recency and budgets across processes', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory, { maxEntries: 2 })
+      let cache = createFsFileCache({ directory, maxEntries: 2 })
       await cache.put('a', new File(['a'], 'file.txt'))
       await cache.put('b', new File(['b'], 'file.txt'))
       let source = `
         import { createFsFileCache } from ${JSON.stringify(new URL('../../assets.ts', import.meta.url).href)}
-        let cache = createFsFileCache(process.argv[1], { maxEntries: 2 })
+        let cache = createFsFileCache({ directory: process.argv[1], maxEntries: 2 })
         await cache.get('a')
         await cache.put('c', new File(['c'], 'file.txt'))
       `
@@ -323,7 +350,7 @@ describe('createFsFileCache', () => {
       assert.equal(await (await cache.get('c'))?.text(), 'c')
       let writers = `
         import { createFsFileCache } from ${JSON.stringify(new URL('../../assets.ts', import.meta.url).href)}
-        let cache = createFsFileCache(process.argv[1], { maxEntries: 2 })
+        let cache = createFsFileCache({ directory: process.argv[1], maxEntries: 2 })
         for (let i = 0; i < 20; i++) {
           await cache.put(process.argv[2] + i, new File(['x'], 'file.txt'))
         }
@@ -356,7 +383,7 @@ describe('createFsFileCache', () => {
   it('treats a locked cache as a miss without changing its records', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory)
+      let cache = createFsFileCache({ directory })
       await cache.put('a', new File(['a'], 'file.txt'))
       await fs.mkdir(path.join(directory, '.lock'))
       assert.equal(await cache.get('a'), null)
@@ -372,7 +399,7 @@ describe('createFsFileCache', () => {
   it('treats a missing backing file as a miss and allows it to be replaced', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache(directory)
+      let cache = createFsFileCache({ directory })
       await cache.put('a', new File(['a'], 'file.txt'))
       let files = await fs.readdir(directory, { recursive: true })
       let body = files.find((file) => file.endsWith('.dat'))
@@ -388,13 +415,13 @@ describe('createFsFileCache', () => {
 
   it('rejects invalid limits before creating the cache directory', async () => {
     let directory = path.join(os.tmpdir(), `file-cache-${crypto.randomUUID()}`)
-    assert.throws(() => createFsFileCache(directory, { maxEntries: 0 }), /maxEntries/)
-    assert.throws(() => createFsFileCache(directory, { maxEntries: 1.5 }), /maxEntries/)
-    assert.throws(() => createFsFileCache(directory, { maxFileSize: -1 }), /maxFileSize/)
-    assert.throws(() => createFsFileCache(directory, { maxFileSize: NaN }), /maxFileSize/)
-    assert.throws(() => createFsFileCache(directory, { maxTotalSize: Infinity }), /maxTotalSize/)
+    assert.throws(() => createFsFileCache({ directory, maxEntries: 0 }), /maxEntries/)
+    assert.throws(() => createFsFileCache({ directory, maxEntries: 1.5 }), /maxEntries/)
+    assert.throws(() => createFsFileCache({ directory, maxFileSize: -1 }), /maxFileSize/)
+    assert.throws(() => createFsFileCache({ directory, maxFileSize: NaN }), /maxFileSize/)
+    assert.throws(() => createFsFileCache({ directory, maxTotalSize: Infinity }), /maxTotalSize/)
     assert.throws(
-      () => createFsFileCache(directory, { maxTotalSize: Number.MAX_SAFE_INTEGER + 1 }),
+      () => createFsFileCache({ directory, maxTotalSize: Number.MAX_SAFE_INTEGER + 1 }),
       /maxTotalSize/,
     )
     await assert.rejects(() => fs.stat(directory), /ENOENT/)

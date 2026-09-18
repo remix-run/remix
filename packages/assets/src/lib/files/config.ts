@@ -116,7 +116,7 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
    * Set to `true` to use an on-disk cache in `node_modules/.cache/remix/assets`
    * under `rootDir`, with LRU eviction, at most 1024 entries, 4 MiB per entry,
    * and 256 MiB total including cache metadata.
-   * Larger outputs are served without caching. Use `createFsFileCache(directory, options)`
+   * Larger outputs are served without caching. Use `createFsFileCache(options)`
    * to choose the directory and limits, or supply a `FileCache` for your own policy.
    */
   cache?: boolean | FileCache

@@ -629,7 +629,7 @@ let assetServer = createAssetServer({
 })
 ```
 
-To choose the cache directory and limits, pass `createFsFileCache(directory, options)`:
+Call `createFsFileCache()` to use the default directory and limits. Pass an options object to customize them:
 
 ```ts
 import { createAssetServer, createFsFileCache } from 'remix/assets'
@@ -638,7 +638,8 @@ let assetServer = createAssetServer({
   basePath: '/assets',
   allowFiles: ['app/**/public/**'],
   files: {
-    cache: createFsFileCache('/var/cache/my-app/assets', {
+    cache: createFsFileCache({
+      directory: '/var/cache/my-app/assets',
       maxEntries: 2048,
       maxFileSize: 8 * 1024 * 1024,
       maxTotalSize: 512 * 1024 * 1024,
@@ -652,13 +653,14 @@ let assetServer = createAssetServer({
 })
 ```
 
-Use a directory dedicated to this cache. Relative paths resolve from `process.cwd()` when the factory is called, independently of the asset server's `rootDir`. The directory is created on first use. The options are optional and accept positive safe integers:
+Use a directory dedicated to this cache. Relative paths resolve from `process.cwd()` when the factory is called, independently of the asset server's `rootDir`. The directory is created on first use. All options are optional. Limits accept positive safe integers:
 
-| Option         | Default             | Limit                                              |
-| -------------- | ------------------- | -------------------------------------------------- |
-| `maxEntries`   | `1024`              | Number of stored entries                           |
-| `maxFileSize`  | `4 * 1024 * 1024`   | Bytes per entry, including cache metadata          |
-| `maxTotalSize` | `256 * 1024 * 1024` | Total stored entry bytes, including cache metadata |
+| Option         | Default                              | Description                                        |
+| -------------- | ------------------------------------ | -------------------------------------------------- |
+| `directory`    | `'node_modules/.cache/remix/assets'` | Cache directory, relative to `process.cwd()`       |
+| `maxEntries`   | `1024`                               | Number of stored entries                           |
+| `maxFileSize`  | `4 * 1024 * 1024`                    | Bytes per entry, including cache metadata          |
+| `maxTotalSize` | `256 * 1024 * 1024`                  | Total stored entry bytes, including cache metadata |
 
 Storage metadata, the recency index, and filesystem overhead are additional to the byte budgets. All namespaces and cache instances using the same directory share the stored entries and recency ordering, including across restarts. Use the same limits for instances sharing a directory; each operation enforces its caller's limits.
 
