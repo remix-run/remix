@@ -1,8 +1,7 @@
-import type { FileStorage } from '@remix-run/file-storage'
+import type { FileMetadata, FileStorage } from '@remix-run/file-storage'
 import { createFsFileStorage } from '@remix-run/file-storage/fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { lock } from 'proper-lockfile'
 import type { FileCache } from './file-cache.ts'
 
 /** Directory and limits for a filesystem file cache. */
@@ -23,10 +22,12 @@ export interface FsFileCacheOptions {
 
 /**
  * Creates a persistent filesystem cache that evicts least recently used entries.
- * Reads and writes refresh recency. Files exceeding either byte limit are not cached.
- * All limits must be positive safe integers. Storage metadata and filesystem overhead
- * are additional to the byte budgets. Instances sharing a directory should use the
- * same limits; each operation enforces the calling instance's limits.
+ * Reads and writes refresh an in-memory index. On first use, the index is rebuilt
+ * from stored write timestamps; read recency is not preserved across restarts.
+ * Use one cache instance per directory. For shared multi-process caching, provide
+ * a custom `FileCache`. Files exceeding either byte limit are not cached. All limits
+ * must be positive safe integers. Storage metadata and filesystem overhead are
+ * additional to the byte budgets.
  *
  * @param options Cache directory, entry count, and byte limits.
  * @returns A file cache suitable for `files.cache` in `createAssetServer()`.
@@ -34,7 +35,6 @@ export interface FsFileCacheOptions {
 export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
   let rootDir = path.resolve(options.directory ?? 'node_modules/.cache/remix/assets')
   let dataDir = path.join(rootDir, 'files')
-  let indexPath = path.join(rootDir, 'index.json')
   let pendingPath = path.join(rootDir, 'pending')
   let maxEntries = options.maxEntries ?? 1024
   let maxFileSize = options.maxFileSize ?? 4 * 1024 * 1024
@@ -44,106 +44,111 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
       throw new TypeError(`${name} must be a positive safe integer`)
     }
   }
-  let queue = Promise.resolve()
+  let initialization: Promise<CacheState> | undefined
+  let mutations = Promise.resolve()
 
-  function withLockedCache<result>(
-    action: (entries: Map<string, number>, storage: FileStorage) => Promise<result>,
-  ): Promise<result | undefined> {
-    let result = queue.then(async () => {
-      await fs.mkdir(rootDir, { recursive: true })
-      let compromised: Error | undefined
-      let release: () => Promise<void>
+  function getState(): Promise<CacheState> {
+    return (initialization ??= initialize().catch((error: unknown) => {
+      initialization = undefined
+      throw error
+    }))
+  }
+
+  async function initialize(): Promise<CacheState> {
+    await fs.mkdir(rootDir, { recursive: true })
+    let pending = await fs.stat(pendingPath).catch((error: unknown) => {
+      if (isFileError(error, 'ENOENT')) return null
+      throw error
+    })
+    // A partial storage write may leave a body without metadata to account for it.
+    if (pending) await fs.rm(dataDir, { recursive: true, force: true })
+    let storage = createFsFileStorage(dataDir)
+    let records: FileMetadata[]
+    try {
+      records = (await storage.list({ includeMetadata: true, limit: Number.MAX_SAFE_INTEGER }))
+        .files
+      if (!records.every(isCacheRecordMetadata)) throw new SyntaxError('Invalid cache metadata')
+    } catch (error) {
+      if (!(error instanceof SyntaxError) && !isFileError(error, 'ENOENT')) throw error
+      await fs.writeFile(pendingPath, '')
+      await fs.rm(dataDir, { recursive: true, force: true })
+      await fs.mkdir(dataDir, { recursive: true })
+      records = []
+    }
+    records.sort((a, b) => a.lastModified - b.lastModified || a.key.localeCompare(b.key))
+    let state: CacheState = { storage, entries: new Map(), size: 0 }
+    for (let record of records) {
+      state.entries.set(record.key, { size: record.size })
+      state.size += record.size
+    }
+    if (
+      records.some((record) => record.size > maxFileSize) ||
+      state.entries.size > maxEntries ||
+      state.size > maxTotalSize
+    ) {
+      await fs.writeFile(pendingPath, '')
+      for (let record of records) {
+        if (record.size > maxFileSize) await removeEntry(state, record.key)
+      }
+      await trim(state)
+    }
+    await fs.rm(pendingPath, { force: true })
+    return state
+  }
+
+  function withCacheMutation(action: (state: CacheState) => Promise<void>): Promise<void> {
+    let result = mutations.then(async () => {
+      let state = await getState()
       try {
-        release = await lock(rootDir, {
-          lockfilePath: path.join(rootDir, '.lock'),
-          onCompromised(error) {
-            compromised = error
-          },
-        })
+        await fs.writeFile(pendingPath, '')
+        await action(state)
+        await fs.unlink(pendingPath)
       } catch (error) {
-        // Another process owns the cache. Contention is a miss or declined admission.
-        if (isFileError(error, 'ELOCKED')) return undefined
+        initialization = undefined
         throw error
       }
-      try {
-        let entries = await readIndex()
-        // An interrupted operation invalidates the cache instead of leaving unaccounted files.
-        await fs.writeFile(pendingPath, '')
-        let storage = createFsFileStorage(dataDir)
-        await trim(entries, storage)
-        let value = await action(entries, storage)
-        if (compromised) throw compromised
-        let temporaryIndex = path.join(rootDir, 'index.tmp')
-        await fs.writeFile(temporaryIndex, JSON.stringify([...entries]))
-        await fs.rename(temporaryIndex, indexPath)
-        await fs.unlink(pendingPath)
-        return value
-      } finally {
-        if (!compromised) await release()
-      }
     })
-    queue = result.then(
-      () => {},
-      () => {},
-    )
+    mutations = result.catch(() => {})
     return result
   }
 
-  async function readIndex(): Promise<Map<string, number>> {
-    try {
-      let pending = await fs.stat(pendingPath).catch((error: unknown) => {
-        if (isFileError(error, 'ENOENT')) return null
-        throw error
-      })
-      if (!pending) {
-        let value: unknown = JSON.parse(await fs.readFile(indexPath, 'utf8'))
-        if (isCacheIndex(value)) return new Map(value)
-      }
-    } catch (error) {
-      if (!(error instanceof SyntaxError) && !isFileError(error, 'ENOENT')) throw error
+  async function removeEntry(state: CacheState, key: string): Promise<void> {
+    await state.storage.remove(key)
+    let entry = state.entries.get(key)
+    if (entry) {
+      state.entries.delete(key)
+      state.size -= entry.size
     }
-    await fs.rm(dataDir, { recursive: true, force: true })
-    return new Map()
   }
 
-  async function trim(entries: Map<string, number>, storage: FileStorage): Promise<void> {
-    let size = 0
-    for (let [key, entrySize] of entries) {
-      if (entrySize > maxFileSize) {
-        await storage.remove(key)
-        entries.delete(key)
-      } else {
-        size += entrySize
-      }
-    }
-    for (let [key, entrySize] of entries) {
-      if (entries.size <= maxEntries && size <= maxTotalSize) break
-      await storage.remove(key)
-      entries.delete(key)
-      size -= entrySize
+  async function trim(state: CacheState, incomingSize = 0): Promise<void> {
+    let entryLimit = maxEntries - (incomingSize > 0 ? 1 : 0)
+    for (let key of state.entries.keys()) {
+      if (state.entries.size <= entryLimit && state.size <= maxTotalSize - incomingSize) break
+      await removeEntry(state, key)
     }
   }
 
   return {
     async get(key) {
       let digest = await hash(new TextEncoder().encode(key))
-      return (
-        (await withLockedCache(async (entries, storage) => {
-          if (!entries.has(digest)) return null
-          let file = await readRecord(storage, digest, maxFileSize).catch((error: unknown) => {
-            if (isFileError(error, 'ENOENT')) return null
-            throw error
-          })
-          let size = entries.get(digest)
-          entries.delete(digest)
-          if (file && size !== undefined) {
-            entries.set(digest, size)
-          } else {
-            await storage.remove(digest)
-          }
-          return file
-        })) ?? null
-      )
+      await mutations
+      let state = await getState()
+      let entry = state.entries.get(digest)
+      if (!entry) return null
+      state.entries.delete(digest)
+      state.entries.set(digest, entry)
+      let file = await readRecord(state.storage, digest, maxFileSize).catch((error: unknown) => {
+        if (isFileError(error, 'ENOENT')) return null
+        throw error
+      })
+      if (!file) {
+        await withCacheMutation(async (current) => {
+          // A read may overlap replacement or eviction. Do not remove a newer entry.
+          if (current.entries.get(digest) === entry) await removeEntry(current, digest)
+        })
+      }
+      return file
     },
     async put(key, file) {
       let limit = Math.min(maxFileSize, maxTotalSize)
@@ -154,16 +159,22 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
       if (65 + content.size > limit) return
       let bytes = new Uint8Array(await content.arrayBuffer())
       let checksum = await hash(bytes)
-      let record = new File([checksum, '\n', bytes], 'file-cache')
-      await withLockedCache(async (entries, storage) => {
-        // Remove the replaced record before eviction so only the new size is counted.
-        if (entries.delete(digest)) await storage.remove(digest)
-        entries.set(digest, record.size)
-        await trim(entries, storage)
-        await storage.set(digest, record)
+      await withCacheMutation(async (state) => {
+        let record = new File([checksum, '\n', bytes], 'file-cache')
+        if (state.entries.has(digest)) await removeEntry(state, digest)
+        await trim(state, record.size)
+        await state.storage.set(digest, record)
+        state.entries.set(digest, { size: record.size })
+        state.size += record.size
       })
     },
   }
+}
+
+type CacheState = {
+  storage: FileStorage
+  entries: Map<string, { size: number }>
+  size: number
 }
 
 export function createTransformCacheKey(namespace: string, identity: string): Promise<string> {
@@ -219,19 +230,20 @@ async function readRecord(
   })
 }
 
-function isCacheIndex(value: unknown): value is [string, number][] {
+function isCacheRecordMetadata(value: unknown): boolean {
   return (
-    Array.isArray(value) &&
-    value.every(
-      (entry: unknown) =>
-        Array.isArray(entry) &&
-        entry.length === 2 &&
-        typeof entry[0] === 'string' &&
-        /^[a-f0-9]{64}$/.test(entry[0]) &&
-        typeof entry[1] === 'number' &&
-        Number.isSafeInteger(entry[1]) &&
-        entry[1] > 0,
-    )
+    typeof value === 'object' &&
+    value !== null &&
+    'key' in value &&
+    typeof value.key === 'string' &&
+    /^[a-f0-9]{64}$/.test(value.key) &&
+    'size' in value &&
+    typeof value.size === 'number' &&
+    Number.isSafeInteger(value.size) &&
+    value.size > 0 &&
+    'lastModified' in value &&
+    typeof value.lastModified === 'number' &&
+    Number.isFinite(value.lastModified)
   )
 }
 

@@ -662,9 +662,9 @@ Use a directory dedicated to this cache. Relative paths resolve from `process.cw
 | `maxFileSize`  | `4 * 1024 * 1024`                    | Bytes per entry, including cache metadata          |
 | `maxTotalSize` | `256 * 1024 * 1024`                  | Total stored entry bytes, including cache metadata |
 
-Storage metadata, the recency index, and filesystem overhead are additional to the byte budgets. All namespaces and cache instances using the same directory share the stored entries and recency ordering, including across restarts. Use the same limits for instances sharing a directory; each operation enforces its caller's limits.
+Storage metadata and filesystem overhead are additional to the byte budgets. All namespaces using a cache share its limits. Use one cache instance per directory. If multiple asset servers in one process need the same cache, pass them the same instance. For shared multi-process caching, supply a custom `FileCache`.
 
-Filesystem operations are coordinated with a directory lock. If another instance holds it, reads return a cache miss and writes skip admission. An interrupted operation or invalid index resets the stored cache on its next use, once any abandoned lock expires. Cached outputs are then recomputed as needed.
+The cache tracks recency and total size in memory. Reads refresh recency without writing to disk. On first use, it rebuilds the index from stored record sizes and write timestamps and enforces the configured limits. Cached files survive restarts, but read recency does not. An interrupted write or invalid accounting metadata resets the stored cache on recovery, and outputs are recomputed as needed.
 
 To choose different persistence or eviction behavior, supply a `FileCache`. It needs only `get(key)` and `put(key, file)`, and both methods may be synchronous or asynchronous. `get` returns a `File` or `null` for a miss. `put` stores or replaces a file, or declines admission according to the cache's policy. It may return a stored `File` or no value, which the asset server ignores. Existing `FileStorage` backends satisfy this interface and can still be passed directly to `files.cache`. Cached files must preserve their bytes, name, type, and `lastModified` value.
 

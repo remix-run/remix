@@ -62,18 +62,64 @@ describe('createFsFileCache', () => {
     }
   })
 
-  it('evicts the least recently used entry and persists reads across restarts', async () => {
+  it('evicts the least recently used entry after a cache hit', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
       let cache = createFsFileCache({ directory, maxEntries: 2 })
       await cache.put('a', new File(['a'], 'a.txt'))
       await cache.put('b', new File(['b'], 'b.txt'))
       assert.equal(await (await cache.get('a'))?.text(), 'a')
+      await cache.put('c', new File(['c'], 'c.txt'))
+      assert.equal(await cache.get('b'), null)
+      assert.equal(await (await cache.get('a'))?.text(), 'a')
+      assert.equal(await (await cache.get('c'))?.text(), 'c')
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('rebuilds recency from record timestamps instead of previous reads', async () => {
+    let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
+    try {
+      let cache = createFsFileCache({ directory, maxEntries: 2 })
+      await cache.put('a', new File(['a'], 'file.txt', { lastModified: 100 }))
+      let storage = createFsFileStorage(path.join(directory, 'files'))
+      let [first] = (await storage.list()).files
+      assert.ok(first)
+      let record = await storage.get(first.key)
+      assert.ok(record)
+      await storage.put(
+        first.key,
+        new File([await record.arrayBuffer()], record.name, { lastModified: 1 }),
+      )
+      await cache.put('b', new File(['b'], 'file.txt', { lastModified: 0 }))
+      await cache.get('a')
+
       let restarted = createFsFileCache({ directory, maxEntries: 2 })
-      await restarted.put('c', new File(['c'], 'c.txt'))
-      assert.equal(await restarted.get('b'), null)
-      assert.equal(await (await restarted.get('a'))?.text(), 'a')
+      await restarted.put('c', new File(['c'], 'file.txt'))
+      assert.equal(await restarted.get('a'), null)
+      assert.equal(await (await restarted.get('b'))?.text(), 'b')
       assert.equal(await (await restarted.get('c'))?.text(), 'c')
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('does not write filesystem metadata for cache hits or misses after initialization', async () => {
+    let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
+    try {
+      let cache = createFsFileCache({ directory })
+      await cache.put('a', new File(['a'], 'file.txt'))
+      await cache.put('b', new File(['b'], 'file.txt'))
+      let files = await fs.readdir(directory, { recursive: true })
+      for (let file of [...files, '.']) {
+        await fs.utimes(path.join(directory, file), new Date(0), new Date(0))
+      }
+      let before = await snapshotCacheDirectory(directory)
+      assert.equal(await (await cache.get('a'))?.text(), 'a')
+      assert.equal(await cache.get('missing'), null)
+      assert.equal(await (await cache.get('b'))?.text(), 'b')
+      assert.deepEqual(await snapshotCacheDirectory(directory), before)
     } finally {
       await fs.rm(directory, { recursive: true, force: true })
     }
@@ -153,18 +199,60 @@ describe('createFsFileCache', () => {
     }
   })
 
-  it('bounds concurrent writes from separate cache instances', async () => {
+  it('does not delete a replacement when an overlapping read finds a corrupt record', async (t) => {
+    let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
+    let started = Promise.withResolvers<void>()
+    let resume = Promise.withResolvers<void>()
+    try {
+      let cache = createFsFileCache({ directory })
+      await cache.put('a', new File(['original'], 'file.txt'))
+      let storage = createFsFileStorage(path.join(directory, 'files'))
+      let [entry] = (await storage.list()).files
+      assert.ok(entry)
+      let record = await storage.get(entry.key)
+      assert.ok(record)
+      let bytes = new Uint8Array(await record.arrayBuffer())
+      bytes[bytes.length - 1] = 33
+      await storage.put(entry.key, new File([bytes], 'file-cache'))
+
+      let digest = crypto.subtle.digest.bind(crypto.subtle)
+      t.mock.method(
+        crypto.subtle,
+        'digest',
+        async (algorithm: AlgorithmIdentifier, data: BufferSource) => {
+          let input = ArrayBuffer.isView(data)
+            ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+            : new Uint8Array(data)
+          if (new TextDecoder().decode(input).endsWith('origina!')) {
+            started.resolve()
+            await resume.promise
+          }
+          return digest(algorithm, data)
+        },
+      )
+      let reading = cache.get('a')
+      await started.promise
+      await cache.put('a', new File(['replacement'], 'file.txt'))
+      resume.resolve()
+      assert.equal(await reading, null)
+      assert.equal(await (await cache.get('a'))?.text(), 'replacement')
+    } finally {
+      resume.resolve()
+      await fs.rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('bounds concurrent writes within one cache instance', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let first = createFsFileCache({ directory, maxEntries: 8 })
-      let second = createFsFileCache({ directory, maxEntries: 8 })
+      let cache = createFsFileCache({ directory, maxEntries: 8 })
       let results = await Promise.allSettled(
         Array.from({ length: 32 }, async (_, index) => {
           let key = `key-${index}`
-          await first.put(key, new File([key], 'file.txt'))
-          let file = await second.get(key)
+          await cache.put(key, new File([key], 'file.txt'))
+          let file = await cache.get(key)
           if (file !== null) assert.equal(await file.text(), key)
-          await second.put(key, new File([key], 'file.txt'))
+          await cache.put(key, new File([key], 'file.txt'))
         }),
       )
       for (let result of results) {
@@ -256,9 +344,8 @@ describe('createFsFileCache', () => {
       await cache.put('b', new File(['b'], 'file.txt'))
       await cache.put('c', new File(['c'], 'file.txt'))
       cache = createFsFileCache({ directory, maxEntries: 1 })
-      assert.equal(await (await cache.get('c'))?.text(), 'c')
-      assert.equal(await cache.get('a'), null)
-      assert.equal(await cache.get('b'), null)
+      let files = await Promise.all(['a', 'b', 'c'].map((key) => cache.get(key)))
+      assert.equal(files.filter((file) => file !== null).length, 1)
       assert.equal(
         (await createFsFileStorage(path.join(directory, 'files')).list()).files.length,
         1,
@@ -303,9 +390,6 @@ describe('createFsFileCache', () => {
       let storage = createFsFileStorage(path.join(directory, 'files'))
       await fs.writeFile(path.join(directory, 'pending'), '')
       await storage.put('uncommitted', new File(['uncommitted'], 'file.txt'))
-      await fs.mkdir(path.join(directory, '.lock'))
-      let old = new Date(Date.now() - 60_000)
-      await fs.utimes(path.join(directory, '.lock'), old, old)
       let restarted = createFsFileCache({ directory })
       assert.equal(await restarted.get('a'), null)
       assert.equal((await storage.list()).files.length, 0)
@@ -316,13 +400,17 @@ describe('createFsFileCache', () => {
     }
   })
 
-  it('recovers from a corrupt index without leaving old files outside the limits', async () => {
+  it('recovers from corrupt storage metadata when rebuilding the index', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
       let cache = createFsFileCache({ directory })
       await cache.put('a', new File(['a'], 'file.txt'))
-      await fs.writeFile(path.join(directory, 'index.json'), '{')
-      assert.equal(await cache.get('a'), null)
+      let files = await fs.readdir(directory, { recursive: true })
+      let metadata = files.find((file) => file.endsWith('.meta.json'))
+      assert.ok(metadata)
+      await fs.writeFile(path.join(directory, metadata), '{')
+      let restarted = createFsFileCache({ directory })
+      assert.equal(await restarted.get('a'), null)
       assert.equal(
         (await createFsFileStorage(path.join(directory, 'files')).list()).files.length,
         0,
@@ -332,65 +420,65 @@ describe('createFsFileCache', () => {
     }
   })
 
-  it('shares persisted recency and budgets across processes', async () => {
+  it('reuses records after the writing process exits', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
-      let cache = createFsFileCache({ directory, maxEntries: 2 })
-      await cache.put('a', new File(['a'], 'file.txt'))
-      await cache.put('b', new File(['b'], 'file.txt'))
       let source = `
         import { createFsFileCache } from ${JSON.stringify(new URL('../../assets.ts', import.meta.url).href)}
-        let cache = createFsFileCache({ directory: process.argv[1], maxEntries: 2 })
-        await cache.get('a')
-        await cache.put('c', new File(['c'], 'file.txt'))
+        let cache = createFsFileCache({ directory: process.argv[1] })
+        await cache.put('a', new File(['a'], 'file.txt', { lastModified: 123 }))
       `
       await promisify(execFile)(process.execPath, ['--input-type=module', '-e', source, directory])
-      assert.equal(await cache.get('b'), null)
-      assert.equal(await (await cache.get('a'))?.text(), 'a')
-      assert.equal(await (await cache.get('c'))?.text(), 'c')
-      let writers = `
-        import { createFsFileCache } from ${JSON.stringify(new URL('../../assets.ts', import.meta.url).href)}
-        let cache = createFsFileCache({ directory: process.argv[1], maxEntries: 2 })
-        for (let i = 0; i < 20; i++) {
-          await cache.put(process.argv[2] + i, new File(['x'], 'file.txt'))
-        }
-      `
-      await Promise.all([
-        promisify(execFile)(process.execPath, [
-          '--input-type=module',
-          '-e',
-          writers,
-          directory,
-          'first',
-        ]),
-        promisify(execFile)(process.execPath, [
-          '--input-type=module',
-          '-e',
-          writers,
-          directory,
-          'second',
-        ]),
-      ])
-      assert.equal(
-        (await createFsFileStorage(path.join(directory, 'files')).list()).files.length,
-        2,
+      let cache = createFsFileCache({ directory })
+      await assertCachedFile(
+        await cache.get('a'),
+        new File(['a'], 'file.txt', { lastModified: 123 }),
       )
     } finally {
       await fs.rm(directory, { recursive: true, force: true })
     }
   })
 
-  it('treats a locked cache as a miss without changing its records', async () => {
+  it('recovers from a failed write before admitting more entries', async () => {
+    let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
+    try {
+      let cache = createFsFileCache({ directory, maxEntries: 1 })
+      await cache.put('a', new File(['a'], 'file.txt'))
+      let files = await fs.readdir(directory, { recursive: true })
+      let body = files.find((file) => file.endsWith('.dat'))
+      assert.ok(body)
+      let bodyPath = path.join(directory, body)
+      await fs.unlink(bodyPath)
+      await fs.mkdir(bodyPath)
+      await assert.rejects(async () => cache.put('a', new File(['replacement'], 'file.txt')))
+      await cache.put('b', new File(['b'], 'file.txt'))
+      assert.equal(await cache.get('a'), null)
+      assert.equal(await (await cache.get('b'))?.text(), 'b')
+      assert.equal(
+        (await createFsFileStorage(path.join(directory, 'files')).list()).files.length,
+        1,
+      )
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('discards invalid accounting metadata on restart', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
       let cache = createFsFileCache({ directory })
       await cache.put('a', new File(['a'], 'file.txt'))
-      await fs.mkdir(path.join(directory, '.lock'))
-      assert.equal(await cache.get('a'), null)
-      await cache.put('b', new File(['b'], 'file.txt'))
-      await fs.rmdir(path.join(directory, '.lock'))
-      assert.equal(await (await cache.get('a'))?.text(), 'a')
-      assert.equal(await cache.get('b'), null)
+      let files = await fs.readdir(directory, { recursive: true })
+      let metadata = files.find((file) => file.endsWith('.meta.json'))
+      assert.ok(metadata)
+      await fs.writeFile(path.join(directory, metadata), '{}')
+      let restarted = createFsFileCache({ directory })
+      assert.equal(await restarted.get('a'), null)
+      await restarted.put('b', new File(['b'], 'file.txt'))
+      assert.equal(
+        (await createFsFileStorage(path.join(directory, 'files')).list()).files.length,
+        1,
+      )
     } finally {
       await fs.rm(directory, { recursive: true, force: true })
     }
@@ -427,6 +515,16 @@ describe('createFsFileCache', () => {
     await assert.rejects(() => fs.stat(directory), /ENOENT/)
   })
 })
+
+async function snapshotCacheDirectory(directory: string) {
+  let files = await fs.readdir(directory, { recursive: true })
+  return Promise.all(
+    [...files, '.'].sort().map(async (file) => {
+      let stat = await fs.stat(path.join(directory, file))
+      return { file, size: stat.size, mtime: stat.mtimeMs }
+    }),
+  )
+}
 
 async function assertCachedFile(actual: File | null, expected: File): Promise<void> {
   assert.ok(actual)

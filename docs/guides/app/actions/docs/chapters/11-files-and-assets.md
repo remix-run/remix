@@ -51,6 +51,8 @@ Resolve `clientEntry(import.meta.url, ...)` IDs to `href`, `importMap`, and `pre
 
 Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits. Set `files.cache: true` to cache transformed outputs on disk with LRU eviction and built-in limits. Use `cache: createFsFileCache({ directory, maxEntries, maxFileSize, maxTotalSize })` from `remix/assets` to choose the directory and limits; size limits are in bytes. Relative cache directories resolve from `process.cwd()`, independently of `rootDir`. Set `files.cacheKey` to a build identifier to reuse outputs across server restarts, or supply a `FileCache` with `get` and `put` methods to choose your own limits and eviction policy. Caching is disabled when `files.cache` is omitted or `false`.
 
+Use one filesystem cache instance per directory. Share that instance when several asset servers in the same process need it, or provide a custom `FileCache` for shared multi-process caching. Cached files survive restarts, but the eviction order is rebuilt from write timestamps. Reads update recency only in memory.
+
 ## Development watching and production fingerprints {#fingerprinting-source-maps-minification}
 
 Choose one development watcher. A long-lived asset server may watch source files itself, while the generated app sets `watch: false` and lets Node's `--watch` restart the process. Close asset-owned watchers during shutdown. In production, disable watching, choose browser targets, source-map and minification policy, and enable content-based fingerprinting for long-lived immutable asset caching.

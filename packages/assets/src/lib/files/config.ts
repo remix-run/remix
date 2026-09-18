@@ -118,6 +118,8 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
    * and 256 MiB total including cache metadata.
    * Larger outputs are served without caching. Use `createFsFileCache(options)`
    * to choose the directory and limits, or supply a `FileCache` for your own policy.
+   * The built-in cache requires one instance per directory. Use a custom cache
+   * for shared multi-process caching. Read recency is not preserved across restarts.
    */
   cache?: boolean | FileCache
   /**
