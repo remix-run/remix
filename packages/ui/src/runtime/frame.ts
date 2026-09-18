@@ -204,6 +204,7 @@ const FRAME_RUNTIME = Symbol('FrameRuntime')
 export type FrameRuntime = {
   [FRAME_RUNTIME]: true
   canResolveFrames?: boolean
+  getContext?: (type: ElementFunction) => unknown
   topFrame?: FrameHandle
   errorTarget: EventTarget
   loadModule: LoadModule
@@ -250,6 +251,7 @@ export function reloadFrameForNavigation(
 
 export type FrameContext = {
   topFrame?: FrameHandle
+  getContext: (type: ElementFunction) => unknown
   errorTarget: EventTarget
   loadModule: LoadModule
   resolveFrame: ResolveFrame
@@ -275,6 +277,7 @@ export type FrameContext = {
 type FrameInit = {
   name?: string
   topFrame?: FrameHandle
+  getContext?: (type: ElementFunction) => unknown
   src: string
   errorTarget: EventTarget
   loadModule: LoadModule
@@ -405,6 +408,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   let context: FrameContext = {
     topFrame: runtime.topFrame,
+    getContext: (type) => runtime.getContext?.(type),
     errorTarget: init.errorTarget,
     loadModule: init.loadModule,
     resolveFrame: init.resolveFrame,
@@ -617,6 +621,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       virtualRoot = createRoot(container.doc.body, {
         scheduler: context.scheduler,
         frame,
+        getContext: context.getContext,
         styleManager: context.styleManager,
       })
     } else {
@@ -624,6 +629,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       virtualRoot = createRangeRoot(root, {
         scheduler: context.scheduler,
         frame,
+        getContext: context.getContext,
         styleManager: context.styleManager,
       })
     }
@@ -654,8 +660,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if ((await initialClientEntryResources) === false) return
     if (disposed || context.lifecycleSignal.aborted) return
     context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
-    let subFramesReady = createSubFrames(container.childNodes, context)
     scheduleHydrationInContainer(container, context, reconciliationTracker)
+    let subFramesReady = createSubFrames(container.childNodes, context)
 
     try {
       await subFramesReady
@@ -1031,6 +1037,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
 export function createFrameRuntime(init: {
   topFrame?: FrameHandle
+  getContext?: (type: ElementFunction) => unknown
   errorTarget: EventTarget
   loadModule: LoadModule
   resolveFrame: ResolveFrame
@@ -1047,6 +1054,7 @@ export function createFrameRuntime(init: {
   return {
     [FRAME_RUNTIME]: true,
     topFrame: init.topFrame,
+    getContext: init.getContext,
     errorTarget: init.errorTarget,
     loadModule: init.loadModule,
     resolveFrame: init.resolveFrame,
@@ -1436,6 +1444,7 @@ function hydrateRegion(
   let root = createRangeRoot([start, end], {
     scheduler: context.scheduler,
     frame: context.frame,
+    getContext: context.getContext,
     styleManager: context.styleManager,
   })
   root.addEventListener('error', (event) => {
@@ -1479,6 +1488,7 @@ async function createSubFrames(
             src: frameMarker.src,
             marker: frameMarker,
             topFrame: context.topFrame,
+            getContext: context.getContext,
             errorTarget: context.errorTarget,
             loadModule: context.loadModule,
             resolveFrame: context.resolveFrame,
