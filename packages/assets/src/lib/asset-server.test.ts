@@ -1589,12 +1589,12 @@ describe('asset-server', () => {
     assert.equal(calls, 2)
   })
 
-  it('recomputes evicted default cache entries for conditional requests', async () => {
+  it('recomputes evicted filesystem cache entries for conditional requests', async () => {
     await write(dir, 'app/content/value.txt', 'hello')
     let transformCalls = 0
     let assetServer = createTestServer(dir, {
       files: {
-        cache: true,
+        cache: createFsFileCache(path.join(dir, 'conditional-cache'), { maxEntries: 3 }),
         extensions: ['.txt'],
         transforms: {
           append: defineFileTransform({
@@ -1608,7 +1608,7 @@ describe('asset-server', () => {
       },
     })
     let etags: string[] = []
-    for (let index = 0; index < 257; index++) {
+    for (let index = 0; index < 4; index++) {
       let response = await get(
         assetServer,
         `/assets/app/content/value.txt?transform=append:${index}`,
@@ -1619,7 +1619,7 @@ describe('asset-server', () => {
       assert.ok(etag)
       etags.push(etag)
     }
-    assert.equal(transformCalls, 257)
+    assert.equal(transformCalls, 4)
 
     for (let [index, etag] of etags.entries()) {
       let response = await get(
@@ -1633,7 +1633,7 @@ describe('asset-server', () => {
       assert.equal(response.status, 304)
       assert.equal(response.headers.get('ETag'), etag)
     }
-    assert.ok(transformCalls > 257)
+    assert.ok(transformCalls > 4)
   })
 
   it('uses a bounded default disk cache across server restarts and namespaces', async () => {
@@ -1655,7 +1655,7 @@ describe('asset-server', () => {
       })
     for (let round = 0; round < 2; round++) {
       let assetServer = createServer()
-      for (let index = 0; index < 257; index++) {
+      for (let index = 0; index < 1025; index++) {
         let param = `${round}:${index}`
         let response = await get(
           assetServer,
@@ -1669,7 +1669,7 @@ describe('asset-server', () => {
       })
       let bodies = entries.filter((entry) => entry.endsWith('.dat'))
       assert.ok(bodies.length > 0)
-      assert.ok(bodies.length <= 256)
+      assert.equal(bodies.length, 1024)
     }
   })
 

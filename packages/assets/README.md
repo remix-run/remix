@@ -607,7 +607,7 @@ let assetServer = createAssetServer({
 
 #### File transform caching
 
-Transformed file outputs are recomputed per request unless you configure `files.cache`. Set it to `true` to use the built-in disk cache in `node_modules/.cache/remix/assets` under `rootDir`. This cache uses 256 reusable slots shared across namespaces, with at most 4 MiB per entry including cache metadata. Different entries can replace the same slot; replaced entries are recomputed when requested again. Larger outputs are served normally without caching. Omitting `files.cache` or setting it to `false` disables transformed-output caching.
+Transformed file outputs are recomputed per request unless you configure `files.cache`. Set it to `true` to use the built-in disk cache in `node_modules/.cache/remix/assets` under `rootDir`. This cache evicts the least recently used entries when it reaches 1,024 entries or 256 MiB of stored data. Each stored entry can be at most 4 MiB, including cache metadata. Reads and writes refresh recency. Larger outputs are served normally without caching. Omitting `files.cache` or setting it to `false` disables transformed-output caching.
 
 `files.cacheKey` namespaces transformed outputs. Use a stable identifier, such as a commit SHA, to reuse them across server restarts for the same build. Change it when sources or transform implementations change. Without it, each server instance uses a random namespace. A namespace identifies a set of cached outputs; it does not create a separate cache instance.
 
@@ -629,7 +629,7 @@ let assetServer = createAssetServer({
 })
 ```
 
-To use the built-in cache with a different directory, pass `createFsFileCache(directory)`:
+To choose the cache directory and limits, pass `createFsFileCache(directory, options)`:
 
 ```ts
 import { createAssetServer, createFsFileCache } from 'remix/assets'
@@ -638,7 +638,11 @@ let assetServer = createAssetServer({
   basePath: '/assets',
   allowFiles: ['app/**/public/**'],
   files: {
-    cache: createFsFileCache('/var/cache/my-app/assets'),
+    cache: createFsFileCache('/var/cache/my-app/assets', {
+      maxEntries: 2048,
+      maxFileSize: 8 * 1024 * 1024,
+      maxTotalSize: 512 * 1024 * 1024,
+    }),
     cacheKey: process.env.GIT_COMMIT_SHA,
     extensions: ['.svg', '.png'],
     transforms: {
@@ -648,9 +652,19 @@ let assetServer = createAssetServer({
 })
 ```
 
-Use a directory dedicated to this cache. Relative paths resolve from `process.cwd()` when the factory is called, independently of the asset server's `rootDir`. The directory is created on first use. Cache instances using the same directory share the 256 slots and 4 MiB entry limit.
+Use a directory dedicated to this cache. Relative paths resolve from `process.cwd()` when the factory is called, independently of the asset server's `rootDir`. The directory is created on first use. The options are optional and accept positive safe integers:
 
-To choose different limits, persistence, or eviction behavior, supply a `FileCache`. It needs only `get(key)` and `put(key, file)`, and both methods may be synchronous or asynchronous. `get` returns a `File` or `null` for a miss. `put` stores or replaces a file, or declines admission according to the cache's policy. It may return a stored `File` or no value, which the asset server ignores. Existing `FileStorage` backends satisfy this interface and can still be passed directly to `files.cache`. Cached files must preserve their bytes, name, type, and `lastModified` value.
+| Option         | Default             | Limit                                              |
+| -------------- | ------------------- | -------------------------------------------------- |
+| `maxEntries`   | `1024`              | Number of stored entries                           |
+| `maxFileSize`  | `4 * 1024 * 1024`   | Bytes per entry, including cache metadata          |
+| `maxTotalSize` | `256 * 1024 * 1024` | Total stored entry bytes, including cache metadata |
+
+Storage metadata, the recency index, and filesystem overhead are additional to the byte budgets. All namespaces and cache instances using the same directory share the stored entries and recency ordering, including across restarts. Use the same limits for instances sharing a directory; each operation enforces its caller's limits.
+
+Filesystem operations are coordinated with a directory lock. If another instance holds it, reads return a cache miss and writes skip admission. An interrupted operation or invalid index resets the stored cache on its next use, once any abandoned lock expires. Cached outputs are then recomputed as needed.
+
+To choose different persistence or eviction behavior, supply a `FileCache`. It needs only `get(key)` and `put(key, file)`, and both methods may be synchronous or asynchronous. `get` returns a `File` or `null` for a miss. `put` stores or replaces a file, or declines admission according to the cache's policy. It may return a stored `File` or no value, which the asset server ignores. Existing `FileStorage` backends satisfy this interface and can still be passed directly to `files.cache`. Cached files must preserve their bytes, name, type, and `lastModified` value.
 
 For example, this in-memory cache retains up to 512 files, each at most 8 MiB, and evicts the least recently used entry:
 
