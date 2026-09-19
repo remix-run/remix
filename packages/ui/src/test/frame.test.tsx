@@ -3879,6 +3879,83 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
+  it('preserves parent context for client entries rendered by a frame', async () => {
+    let contextEvents = 0
+
+    let ContextProvider = clientEntry(
+      '/js/context-provider.js#ContextProvider',
+      function ContextProvider(handle: Handle) {
+        let context = new EventTarget()
+        context.addEventListener('action', () => {
+          contextEvents++
+        })
+        handle.context.set(context)
+
+        return () => <Frame name="context-frame" src="/context-frame" />
+      },
+    )
+
+    let FrameEntry = clientEntry(
+      '/js/frame-entry.js#FrameEntry',
+      function FrameEntry(handle: Handle) {
+        return () => (
+          <button
+            id="context-action"
+            mix={[
+              on('click', () => {
+                handle.context.get(ContextProvider)?.dispatchEvent(new Event('action'))
+              }),
+            ]}
+          >
+            Dispatch context event
+          </button>
+        )
+      },
+    )
+
+    async function renderFrameEntry(): Promise<string> {
+      return await renderFrameContent(<FrameEntry />)
+    }
+
+    document.body.innerHTML = await drain(
+      renderToStream(<ContextProvider />, {
+        resolveFrame: renderFrameEntry,
+      }),
+    )
+    contextEvents = 0
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/context-provider.js' && exportName === 'ContextProvider') {
+          return ContextProvider
+        }
+        if (moduleUrl === '/js/frame-entry.js' && exportName === 'FrameEntry') {
+          return FrameEntry
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame: renderFrameEntry,
+    })
+
+    await app.ready()
+
+    let action = document.getElementById('context-action')
+    invariant(action)
+    action.click()
+    expect(contextEvents).toBe(1)
+
+    let contextFrame = app.frames.get('context-frame')
+    invariant(contextFrame)
+    await contextFrame.reload()
+
+    action = document.getElementById('context-action')
+    invariant(action)
+    action.click()
+    expect(contextEvents).toBe(2)
+
+    app.dispose()
+  })
+
   it('deeply nested frames resolve independently at each level', async () => {
     // Page has outer frame → outer has middle frame → middle has inner frame.
     // Each level resolves independently via MutationObserver.
