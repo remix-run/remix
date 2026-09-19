@@ -17,11 +17,14 @@ import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
 import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
-import { ImportMap, renderToStream } from '../server/stream.ts'
+import { ImportMap, renderToString, renderToStream } from '../server/stream.ts'
 import { createStyleManager } from '../style/index.ts'
 import { drain, withResolvers } from './utils.ts'
 
 const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'
+
+const markerlessDocument =
+  '<!doctype html><html><head><title>Next</title></head><body><main>Next</main></body></html>'
 
 type TestFrameOptions = Partial<Parameters<typeof createFrame>[1]> &
   Pick<Parameters<typeof createFrame>[1], 'resolveFrame'>
@@ -122,6 +125,79 @@ describe('frames', () => {
       expect(document.querySelector('[data-entry]')?.textContent).toBe('next')
       expect(setupCount).toBe(setupCountBeforeReload)
       expect(disconnectCount).toBe(disconnectCountBeforeReload)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads the document when streamed frame HTML carries no flush marker', async () => {
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([markerlessDocument])
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(document.title).toBe('Next')
+      expect(document.querySelector('main')?.textContent).toBe('Next')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads the document when frame HTML is a string without a flush marker', async () => {
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([])
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.render(markerlessDocument)
+
+      expect(document.title).toBe('Next')
+      expect(document.querySelector('main')?.textContent).toBe('Next')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads the document for renderToString output, which has no flush marker', async () => {
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+
+    let html = await renderToString(
+      jsx('html', {
+        children: [
+          jsx('head', { children: jsx('title', { children: 'Next' }) }),
+          jsx('body', { children: jsx('main', { children: 'Next' }) }),
+        ],
+      }),
+    )
+    expect(html).not.toContain('rmx:flush')
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([html])
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(document.title).toBe('Next')
+      expect(document.querySelector('main')?.textContent).toBe('Next')
     } finally {
       frame.dispose()
     }
