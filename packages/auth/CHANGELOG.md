@@ -2,6 +2,15 @@
 
 This is the changelog for [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.2
+
+### Patch Changes
+
+- Normalize post-auth return targets before accepting them as local paths, including targets read from existing OAuth transactions. Paths that normalize to an authority reference are omitted.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.1)
+
 ## v0.3.1
 
 ### Patch Changes

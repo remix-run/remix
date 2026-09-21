@@ -1,1 +1,0 @@
-BREAKING CHANGE: `Cookie.secure` now returns `undefined` when the option was not configured, matching `Cookie.httpOnly`. Explicit `true` and `false` values are preserved. Use `cookie.secure ?? false` when a boolean is required. Direct cookie serialization is unchanged.

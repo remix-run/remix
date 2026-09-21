@@ -2,6 +2,20 @@
 
 This is the changelog for [`cors-middleware`](https://github.com/remix-run/remix/tree/main/packages/cors-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `cors({ credentials: true })` now preserves the default `Access-Control-Allow-Origin: *` response. Applications that intentionally allow credentialed requests from any origin must configure `origin: '*'` explicitly; applications with a restricted origin policy should continue to configure an exact origin, pattern, array, or resolver.
+
+### Patch Changes
+
+- Include `Access-Control-Request-Private-Network` in `Vary` on all allowed preflight responses when `allowPrivateNetwork` is enabled, so caches distinguish ordinary preflights from private network preflights. This also applies when `preflightContinue` is enabled.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.1)
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+
 ## v0.1.9
 
 ### Patch Changes
