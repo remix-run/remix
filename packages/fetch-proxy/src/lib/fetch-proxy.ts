@@ -1,5 +1,20 @@
 import { SetCookie } from '@remix-run/headers/set-cookie'
 
+// Original hop-by-hop list: https://www.rfc-editor.org/rfc/rfc2616.html#section-13.5.1
+// Current forwarding rules, including legacy Proxy-Connection:
+// https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.1
+const hopByHopRequestHeaders = [
+  'Connection',
+  'Keep-Alive',
+  'Proxy-Authenticate',
+  'Proxy-Authorization',
+  'Proxy-Connection',
+  'TE',
+  'Trailer',
+  'Transfer-Encoding',
+  'Upgrade',
+]
+
 /**
  * Options for {@link createFetchProxy}.
  */
@@ -28,7 +43,8 @@ export interface FetchProxyOptions {
    * Set `true` to set `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Forwarded-Port`
    * headers on the proxied request from the incoming request URL. Existing values are replaced,
    * and the `Forwarded` and `X-Forwarded-For` headers are removed. The client address is not
-   * available on a Fetch request. When disabled, existing forwarding headers are passed through.
+   * available on a Fetch request. When disabled, existing forwarding headers are passed through
+   * unless listed in `Connection`.
    *
    * @default false
    */
@@ -52,6 +68,9 @@ export interface FetchProxy {
 
 /**
  * Creates a `fetch` function that forwards requests to another server.
+ *
+ * Removes connection-specific request headers and incoming `Content-Length` so the outgoing
+ * fetch can determine framing for the forwarded body.
  *
  * @param target The URL of the server to proxy requests to
  * @param options Options to customize the behavior of the proxy
@@ -79,8 +98,16 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
     }
 
     let proxyHeaders = new Headers(request.headers)
+    for (let name of (proxyHeaders.get('Connection') ?? '').split(',')) {
+      let headerName = name.trim()
+      if (headerName !== '') proxyHeaders.delete(headerName)
+    }
+    for (let name of hopByHopRequestHeaders) {
+      proxyHeaders.delete(name)
+    }
     proxyHeaders.delete('Host')
     proxyHeaders.delete('Accept-Encoding')
+    proxyHeaders.delete('Content-Length')
     if (xForwardedHeaders) {
       proxyHeaders.delete('Forwarded')
       proxyHeaders.delete('X-Forwarded-For')
