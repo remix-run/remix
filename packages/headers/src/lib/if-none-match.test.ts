@@ -94,6 +94,26 @@ describe('IfNoneMatch', () => {
 })
 
 describe('IfNoneMatch.from', () => {
+  it('preserves outer whitespace and empty list entries', () => {
+    let header = IfNoneMatch.from(' first \t,\t W/"second" , , * , last ')
+
+    assert.deepEqual(header.tags, ['" first"', 'W/"second"', '""', '*', '"last "'])
+    assert.deepEqual(IfNoneMatch.from('').tags, ['""'])
+    assert.deepEqual(IfNoneMatch.from(' \t ').tags, ['" \t "'])
+    assert.deepEqual(IfNoneMatch.from(' ,\t, ').tags, ['""', '""', '""'])
+  })
+
+  it('parses long whitespace runs promptly', () => {
+    let tag = `"first${' '.repeat(128_000)}last"`
+    let start = performance.now()
+    let header = IfNoneMatch.from(`W/"other",${tag}`)
+    let elapsed = performance.now() - start
+
+    assert.deepEqual(header.tags, ['W/"other"', tag])
+    // Allow ample time for parsing while catching repeated scans of the whitespace run.
+    assert.ok(elapsed < 1_000, `Parsing took ${elapsed}ms`)
+  })
+
   it('parses a string value', () => {
     let result = IfNoneMatch.from('"abc", "def"')
     assert.ok(result instanceof IfNoneMatch)

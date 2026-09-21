@@ -34,6 +34,30 @@ describe('Accept-Encoding', () => {
     assert.equal(header.size, 2)
   })
 
+  it('preserves weights and ordering around empty list entries', () => {
+    let header = AcceptEncoding.from(' , GZIP ;q=0.5,\t,br;q=0.9, gzip;q=0.7, ')
+
+    assert.deepEqual(Array.from(header), [
+      ['br', 0.9],
+      ['gzip', 0.7],
+    ])
+    assert.equal(AcceptEncoding.from(' \t ').size, 0)
+  })
+
+  it('parses long whitespace runs promptly', () => {
+    let value = `gzip,br${' '.repeat(128_000)};q=0.5`
+    let start = performance.now()
+    let header = AcceptEncoding.from(value)
+    let elapsed = performance.now() - start
+
+    assert.deepEqual(Array.from(header), [
+      ['gzip', 1],
+      ['br', 0.5],
+    ])
+    // Allow ample time for parsing while catching repeated scans of the whitespace run.
+    assert.ok(elapsed < 1_000, `Parsing took ${elapsed}ms`)
+  })
+
   it('gets all encodings', () => {
     let header = new AcceptEncoding('gzip, deflate;q=0.9')
     assert.deepEqual(header.encodings, ['gzip', 'deflate'])

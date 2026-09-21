@@ -34,6 +34,30 @@ describe('Accept-Language', () => {
     assert.equal(header.size, 2)
   })
 
+  it('preserves weights and ordering around empty list entries', () => {
+    let header = AcceptLanguage.from(' , EN-US ;q=0.5,\t,fr;q=0.9, en-us;q=0.7, ')
+
+    assert.deepEqual(Array.from(header), [
+      ['fr', 0.9],
+      ['en-us', 0.7],
+    ])
+    assert.equal(AcceptLanguage.from(' \t ').size, 0)
+  })
+
+  it('parses long whitespace runs promptly', () => {
+    let value = `en-US,fr${' '.repeat(128_000)};q=0.5`
+    let start = performance.now()
+    let header = AcceptLanguage.from(value)
+    let elapsed = performance.now() - start
+
+    assert.deepEqual(Array.from(header), [
+      ['en-us', 1],
+      ['fr', 0.5],
+    ])
+    // Allow ample time for parsing while catching repeated scans of the whitespace run.
+    assert.ok(elapsed < 1_000, `Parsing took ${elapsed}ms`)
+  })
+
   it('gets all languages', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9')
     assert.deepEqual(header.languages, ['en-us', 'en'])
