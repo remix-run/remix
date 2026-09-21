@@ -61,6 +61,87 @@ describe('asset server HMR', () => {
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
   })
 
+  it('updates an accepting importer when an optimized barrel import is retargeted', async (t) => {
+    let fixture = await createHmrFixture({ counterBarrelHmrBoundary: true })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('keep me')
+
+    await write(
+      fixture.rootDir,
+      'app/counter-next.ts',
+      getCounterModuleSource({ buttonText: 'Retargeted through barrel' }),
+    )
+    await write(
+      fixture.rootDir,
+      'app/counter-inner.ts',
+      "export { renderCounter } from './counter-next.ts'\n",
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Retargeted through barrel')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
+  })
+
+  it('updates an accepting importer when a skipped barrel enters the served graph', async (t) => {
+    let fixture = await createHmrFixture({ counterBarrelHmrBoundary: true })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('keep me')
+
+    await write(
+      fixture.rootDir,
+      'app/counter-barrel.ts',
+      [
+        "import { renderCounter as render } from './counter-inner.ts'",
+        'export function renderCounter() {',
+        '  render()',
+        `  document.querySelector('[data-testid="increment"]')!.textContent = 'Wrapped'`,
+        '}',
+        '',
+      ].join('\n'),
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Wrapped')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
+  })
+
+  it('updates an accepting importer when a served barrel becomes skippable', async (t) => {
+    let fixture = await createHmrFixture({ counterBarrelHmrBoundary: true })
+    t.after(fixture.close)
+    await write(
+      fixture.rootDir,
+      'app/counter-barrel.ts',
+      [
+        "import { renderCounter as render } from './counter-inner.ts'",
+        'export function renderCounter() {',
+        '  render()',
+        `  document.querySelector('[data-testid="increment"]')!.textContent = 'Wrapped'`,
+        '}',
+        '',
+      ].join('\n'),
+    )
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Wrapped')
+    await page.locator('[data-testid="field"]').fill('keep me')
+
+    await write(
+      fixture.rootDir,
+      'app/counter-barrel.ts',
+      "export { renderCounter } from './counter-inner.ts'\n",
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
+  })
+
   it('recovers an accepted browser module after a failed transform is fixed', async (t) => {
     let fixture = await createHmrFixture()
 
@@ -1086,6 +1167,7 @@ async function createHmrFixture(
     conflictingInitialBareImport?: boolean
     counterBareImport?: boolean
     counterBareImportConfigured?: boolean
+    counterBarrelHmrBoundary?: boolean
     counterPackageImport?: boolean
     counterExtraExports?: string
   } = {},
@@ -1111,6 +1193,31 @@ async function createHmrFixture(
         : getHmrTsconfig(),
     ),
   )
+  if (options.counterBarrelHmrBoundary) {
+    await write(rootDir, 'app/package.json', JSON.stringify({ sideEffects: false }))
+    await write(rootDir, 'app/counter-inner.ts', "export { renderCounter } from './counter.ts'\n")
+    await write(
+      rootDir,
+      'app/counter-barrel.ts',
+      "export { renderCounter } from './counter-inner.ts'\n",
+    )
+    await write(
+      rootDir,
+      'app/counter-consumer.ts',
+      [
+        "import { renderCounter } from './counter-barrel.ts'",
+        '',
+        'export function startCounter() {',
+        '  renderCounter()',
+        '}',
+        '',
+        'if (import.meta.hot) {',
+        '  import.meta.hot.accept((module) => module?.startCounter())',
+        '}',
+        '',
+      ].join('\n'),
+    )
+  }
   await write(
     rootDir,
     'index.html',
@@ -1136,18 +1243,22 @@ async function createHmrFixture(
       polyfillEntryPath,
     )
   } else {
+    let counterImport = options.counterBarrelHmrBoundary
+      ? "import { startCounter } from './counter-consumer.ts'"
+      : "import { renderCounter } from './counter.ts'"
+    let startCounter = options.counterBarrelHmrBoundary ? 'startCounter()' : 'renderCounter()'
     await write(
       rootDir,
       'app/entry.tsx',
       [
         `import ${JSON.stringify(polyfillEntryPath)}`,
-        "import { renderCounter } from './counter.ts'",
+        counterImport,
         '',
         "let app = document.getElementById('app')",
         "if (!app) throw new Error('Missing app container')",
         '',
         'app.innerHTML = \'<main><input data-testid="field"><p data-testid="count"></p><button data-testid="increment"></button></main>\'',
-        'renderCounter()',
+        startCounter,
         '',
       ].join('\n'),
     )
