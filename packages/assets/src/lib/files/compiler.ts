@@ -372,7 +372,8 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     source: EmittedFile,
     transforms: readonly ParsedRequestTransform[],
   ): Promise<{ body: Uint8Array; extension: string } | null> {
-    let currentBody = source.body
+    // Concurrent pipelines can share a source read, but transforms may mutate their input.
+    let currentBody: Uint8Array = new Uint8Array(source.body)
     let currentExtension = source.extension
     let appliedTransform = false
 
@@ -820,7 +821,8 @@ function isNoEntityError(
 
 async function readFileContents(identityPath: string): Promise<Uint8Array> {
   try {
-    return new Uint8Array(await fsp.readFile(identityPath))
+    let bytes = await fsp.readFile(identityPath)
+    return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   } catch (error) {
     if (isNoEntityError(error)) {
       throw createAssetServerCompilationError(`File not found: ${identityPath}`, {

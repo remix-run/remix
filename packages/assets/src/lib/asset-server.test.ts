@@ -1399,6 +1399,88 @@ describe('asset-server', () => {
     assert.equal(transformCalls, 1)
   })
 
+  it('isolates in-place mutations between concurrent transform pipelines', async (t) => {
+    let source = 'hello from shared source'
+    await write(dir, 'app/content/value.txt', source)
+    let sourceStarted = Promise.withResolvers<void>()
+    let resumeSource = Promise.withResolvers<void>()
+    let mutated = Promise.withResolvers<void>()
+    let observed = Promise.withResolvers<void>()
+    let sourcePaused = false
+    let digest = crypto.subtle.digest.bind(crypto.subtle)
+    t.mock.method(
+      crypto.subtle,
+      'digest',
+      async (algorithm: AlgorithmIdentifier, data: BufferSource) => {
+        let result = await digest(algorithm, data)
+        if (!sourcePaused && new TextDecoder().decode(data) === source) {
+          sourcePaused = true
+          sourceStarted.resolve()
+          await resumeSource.promise
+        }
+        return result
+      },
+    )
+    let cache = createMemoryFileCache()
+    let cacheReads = 0
+    let cacheGet = cache.get.bind(cache)
+    cache.get = (key) => {
+      cacheReads += 1
+      // Let both pipelines join the pending source read before it completes.
+      if (cacheReads === 2) setImmediate(() => resumeSource.resolve())
+      return cacheGet(key)
+    }
+    let transformCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        cache,
+        extensions: ['.txt'],
+        transforms: {
+          edit: defineFileTransform({
+            param: true,
+            async transform(bytes, { param }) {
+              transformCalls += 1
+              if (param === 'mutate') {
+                bytes[0] = 88
+                mutated.resolve()
+                await observed.promise
+              } else {
+                await mutated.promise
+                observed.resolve()
+              }
+              return bytes
+            },
+          }),
+        },
+      },
+    })
+    let mutatingHref = '/assets/app/content/value.txt?transform=edit:mutate'
+    let observingHref = '/assets/app/content/value.txt?transform=edit:observe'
+    try {
+      let mutating = get(assetServer, mutatingHref)
+      await sourceStarted.promise
+      let observing = get(assetServer, observingHref)
+      let [mutatedResponse, observedResponse] = await Promise.all([mutating, observing])
+      assert.ok(mutatedResponse)
+      assert.ok(observedResponse)
+      assert.equal(await mutatedResponse.text(), 'Xello from shared source')
+      assert.equal(await observedResponse.text(), source)
+
+      let cachedMutated = await get(assetServer, mutatingHref)
+      let cachedObserved = await get(assetServer, observingHref)
+      assert.ok(cachedMutated)
+      assert.ok(cachedObserved)
+      assert.equal(await cachedMutated.text(), 'Xello from shared source')
+      assert.equal(await cachedObserved.text(), source)
+      assert.equal(transformCalls, 2)
+    } finally {
+      resumeSource.resolve()
+      mutated.resolve()
+      observed.resolve()
+      await assetServer.close()
+    }
+  })
+
   it('snapshots sliced transform outputs in cached files and responses', async () => {
     await write(dir, 'app/content/value.txt', 'hello')
     for (let buffer of [new ArrayBuffer(5), new SharedArrayBuffer(5)]) {
