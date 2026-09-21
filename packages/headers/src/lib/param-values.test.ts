@@ -4,6 +4,13 @@ import { describe, it } from '@remix-run/test'
 import { parseParams } from './param-values.ts'
 
 describe('parseParams', () => {
+  it('preserves delimiters and unescapes quoted HTTP parameters', () => {
+    assert.deepEqual(parseParams(String.raw`attachment; filename="one;two\".txt"`), [
+      ['attachment', undefined],
+      ['filename', 'one;two".txt'],
+    ])
+  })
+
   it('correctly parses a string of parameters for a Content-Type header', () => {
     assert.deepEqual(parseParams('text/html; charset=utf-8'), [
       ['text/html', undefined],
