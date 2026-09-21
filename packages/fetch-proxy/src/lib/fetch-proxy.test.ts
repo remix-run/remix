@@ -325,9 +325,10 @@ describe('fetch proxy', () => {
     })
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
     t.after(async () => {
-      server.closeAllConnections()
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()))
+        // Bun's closeAllConnections() also stops the server, so call close() first.
+        server.closeAllConnections()
       })
     })
     let address = server.address()
