@@ -108,6 +108,20 @@ describe('ContentType', () => {
 })
 
 describe('ContentType.from', () => {
+  it('matches boundary parameter names case-insensitively while preserving the value', () => {
+    let result = ContentType.from('Multipart/Form-Data; BOUNDARY="MixedCaseBoundary"')
+
+    assert.equal(result.mediaType, 'Multipart/Form-Data')
+    assert.equal(result.boundary, 'MixedCaseBoundary')
+  })
+
+  it('matches charset parameter names case-insensitively while preserving the value', () => {
+    let result = ContentType.from('Text/HTML; CharSet="UTF-8"')
+
+    assert.equal(result.mediaType, 'Text/HTML')
+    assert.equal(result.charset, 'UTF-8')
+  })
+
   it('parses a string value', () => {
     let result = ContentType.from('text/html; charset=utf-8')
     assert.ok(result instanceof ContentType)

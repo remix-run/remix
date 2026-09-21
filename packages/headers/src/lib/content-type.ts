@@ -89,6 +89,7 @@ export class ContentType implements HeaderValue, ContentTypeInit {
         if (params.length > 0) {
           header.mediaType = params[0][0]
           for (let [name, val] of params.slice(1)) {
+            name = name.toLowerCase()
             if (name === 'boundary') {
               header.boundary = val
             } else if (name === 'charset') {
