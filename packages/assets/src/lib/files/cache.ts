@@ -251,7 +251,7 @@ function isFileError(error: unknown, code: string): boolean {
   return error instanceof Error && 'code' in error && error.code === code
 }
 
-async function hash(bytes: Uint8Array): Promise<string> {
-  let digest = await crypto.subtle.digest('SHA-256', Buffer.from(bytes))
+async function hash(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
+  let digest = await crypto.subtle.digest('SHA-256', bytes)
   return Buffer.from(digest).toString('hex')
 }

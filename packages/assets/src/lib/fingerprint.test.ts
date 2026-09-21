@@ -10,6 +10,29 @@ describe('hashContent', () => {
 
     assert.notEqual(hashA, hashB)
   })
+
+  it('hashes only the bytes within a view', async () => {
+    let bytes = new TextEncoder().encode('before hello after')
+    let view = bytes.subarray(7, 12)
+
+    assert.equal(await hashContent(view), await hashContent('hello'))
+    assert.equal(await hashContent(Buffer.from(bytes).subarray(7, 12)), await hashContent('hello'))
+  })
+
+  it('accepts views backed by shared memory', async () => {
+    let bytes = new Uint8Array(new SharedArrayBuffer(18))
+    bytes.set(new TextEncoder().encode('before hello after'))
+
+    assert.equal(await hashContent(bytes.subarray(7, 12)), await hashContent('hello'))
+  })
+
+  it('snapshots the input before returning', async () => {
+    let bytes = new TextEncoder().encode('hello')
+    let hash = hashContent(bytes)
+    bytes.fill(0)
+
+    assert.equal(await hash, await hashContent('hello'))
+  })
 })
 
 describe('formatFingerprintedPathname', () => {
