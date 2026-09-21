@@ -368,6 +368,8 @@ Default scopes for OAuth providers that don't use OIDC discovery:
 
 Pass `scopes` if you need a different set for a provider.
 
+GitHub uses the email returned in the profile when present. Otherwise, it selects a verified address from the email API, preferring the primary address, and leaves the email `null` or absent if none are verified. The provider account identity remains the GitHub user ID in `result.account.providerAccountId`.
+
 ## Custom Auth Providers
 
 Use `createOIDCAuthProvider()` directly for custom external auth providers. This is the extension point for providers that support OpenID Connect discovery, authorization code flow, and a userinfo endpoint. Reach for a custom OAuth provider implementation only when the provider does not support OIDC.
