@@ -1,3 +1,4 @@
+import type { IncomingHttpHeaders } from 'node:http'
 import { createServer } from 'node:http'
 
 import * as assert from '@remix-run/assert'
@@ -209,6 +210,145 @@ describe('fetch proxy', () => {
     assert.equal(request.headers.get('X-Forwarded-Proto'), 'http')
     assert.equal(request.headers.get('X-Forwarded-Host'), 'shopify.com:8080')
     assert.equal(request.headers.get('X-Forwarded-Port'), '8080')
+  })
+
+  it('does not forward connection-specific request headers', async () => {
+    let { request } = await testProxy(
+      new Request('http://shopify.com/', {
+        headers: {
+          Connection: 'keep-alive',
+          'Keep-Alive': 'timeout=5',
+          'Proxy-Connection': 'keep-alive',
+          'Proxy-Authenticate': 'Basic',
+          'Proxy-Authorization': 'Basic example',
+          TE: 'trailers',
+          Trailer: 'X-Checksum',
+          'Transfer-Encoding': 'chunked',
+          Upgrade: 'websocket',
+          Authorization: 'Bearer example',
+          Cookie: 'session=example',
+          Accept: 'application/json',
+        },
+      }),
+      'https://remix.run/',
+    )
+
+    assert.deepEqual(Object.fromEntries(request.headers), {
+      accept: 'application/json',
+      authorization: 'Bearer example',
+      cookie: 'session=example',
+    })
+  })
+
+  it('removes request headers nominated by Connection case-insensitively', async () => {
+    let headers = new Headers({
+      Connection: 'keep-alive, X-First-Hop, ,',
+      'X-First-Hop': 'first',
+      'X-Second-Hop': 'second',
+      'X-End-To-End': 'preserved',
+    })
+    headers.append('Connection', 'x-second-hop, CONNECTION')
+    let originalRequest = new Request('http://shopify.com/', { headers })
+    let { request } = await testProxy(originalRequest, 'https://remix.run/')
+
+    assert.deepEqual(Object.fromEntries(request.headers), { 'x-end-to-end': 'preserved' })
+    assert.equal(originalRequest.headers.get('X-First-Hop'), 'first')
+    assert.equal(originalRequest.headers.get('Connection'), headers.get('Connection'))
+  })
+
+  it('leaves streamed request framing to fetch', async () => {
+    let { request } = await testProxy(
+      new Request('http://shopify.com/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain', 'Content-Length': '999' },
+        body: 'hello',
+      }),
+      'https://remix.run/',
+    )
+
+    assert.equal(request.headers.get('Content-Length'), null)
+    assert.equal(request.headers.get('Content-Type'), 'text/plain')
+    assert.equal(await request.text(), 'hello')
+  })
+
+  it('removes caller-supplied framing headers from bodyless requests', async () => {
+    let { request } = await testProxy(
+      new Request('http://shopify.com/', {
+        headers: { 'Content-Length': '42' },
+      }),
+      'https://remix.run/',
+    )
+
+    assert.equal(request.headers.get('Content-Length'), null)
+    assert.equal(request.body, null)
+  })
+
+  it('sets forwarding metadata after removing Connection-nominated headers from init', async () => {
+    let proxy = createFetchProxy('https://remix.run/', {
+      xForwardedHeaders: true,
+      async fetch(input, init) {
+        let request = new Request(input, init)
+        assert.equal(request.headers.get('Connection'), null)
+        assert.equal(request.headers.get('X-First-Hop'), null)
+        assert.equal(request.headers.get('X-Forwarded-Host'), 'shopify.com:8080')
+        assert.equal(request.headers.get('X-Forwarded-Proto'), 'http')
+        assert.equal(request.headers.get('X-Forwarded-Port'), '8080')
+        return new Response('ok')
+      },
+    })
+
+    let response = await proxy('http://shopify.com:8080/', {
+      headers: {
+        Connection: 'X-First-Hop, X-Forwarded-Host, X-Forwarded-Proto, X-Forwarded-Port',
+        'X-First-Hop': 'local-only',
+        'X-Forwarded-Host': 'example.com',
+      },
+    })
+
+    assert.equal(await response.text(), 'ok')
+  })
+
+  it('forwards a streamed body through default fetch with fresh framing', async (t) => {
+    let receivedHeaders: IncomingHttpHeaders | undefined
+    let server = createServer(async (request, response) => {
+      let body = ''
+      for await (let chunk of request) body += chunk
+      receivedHeaders = request.headers
+      response.end(body)
+    })
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    t.after(async () => {
+      server.closeAllConnections()
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()))
+      })
+    })
+    let address = server.address()
+    assert.ok(address && typeof address !== 'string')
+
+    let proxy = createFetchProxy(`http://127.0.0.1:${address.port}`)
+    let response = await proxy('http://shopify.com/', {
+      method: 'POST',
+      headers: {
+        Connection: 'keep-alive, X-First-Hop',
+        'X-First-Hop': 'local-only',
+        'Proxy-Authorization': 'Basic example',
+        'Content-Length': '999',
+        'Transfer-Encoding': 'chunked',
+        Upgrade: 'websocket',
+        'Content-Type': 'text/plain',
+        Authorization: 'Bearer example',
+      },
+      body: 'hello',
+    })
+    assert.equal(await response.text(), 'hello')
+    assert.ok(receivedHeaders)
+    assert.equal(receivedHeaders['x-first-hop'], undefined)
+    assert.equal(receivedHeaders['proxy-authorization'], undefined)
+    assert.equal(receivedHeaders.upgrade, undefined)
+    assert.notEqual(receivedHeaders['content-length'], '999')
+    assert.equal(receivedHeaders['content-type'], 'text/plain')
+    assert.equal(receivedHeaders.authorization, 'Bearer example')
   })
 
   it('replaces incoming forwarding metadata when X-Forwarded headers are enabled', async () => {
