@@ -37,6 +37,20 @@ describe('parseParams', () => {
     assert.deepEqual(parseParams('note=" \tvalue \t'), [['note', ' \tvalue \t']])
   })
 
+  it('keeps escaped semicolons inside unquoted values', () => {
+    assert.deepEqual(parseParams(String.raw`filename=the\;file.txt; name=upload`), [
+      ['filename', 'the;file.txt'],
+      ['name', 'upload'],
+    ])
+  })
+
+  it('keeps escaped commas inside unquoted values', () => {
+    assert.deepEqual(parseParams(String.raw`private=field\,name, max-age=60`, ','), [
+      ['private', 'field,name'],
+      ['max-age', '60'],
+    ])
+  })
+
   it('correctly parses a string of parameters for a Content-Type header', () => {
     assert.deepEqual(parseParams('text/html; charset=utf-8'), [
       ['text/html', undefined],
