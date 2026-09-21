@@ -1,5 +1,5 @@
 import { type HeaderValue } from './header-value.ts'
-import { quote } from './param-values.ts'
+import { parseParams, quote } from './param-values.ts'
 import { isIterable } from './utils.ts'
 
 type CookiePair = [name: string, value: string]
@@ -179,19 +179,12 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
 
     if (value !== null) {
       if (typeof value === 'string') {
-        // RFC 6265 excludes semicolons and backslashes from cookie-octet, even in quotes.
+        // Cookie semicolons delimit pairs even inside quotes, per RFC 6265.
         // https://www.rfc-editor.org/rfc/rfc6265.html#section-4.1.1
         for (let piece of value.split(';')) {
-          let index = piece.indexOf('=')
-          let name = (index === -1 ? piece : piece.slice(0, index)).trim()
-          if (name === '') continue
-
-          let val = index === -1 ? '' : piece.slice(index + 1).trim()
-          if (val.length >= 2 && val.startsWith('"') && val.endsWith('"')) {
-            val = val.slice(1, -1)
+          for (let [name, val] of parseParams(piece)) {
+            header.#cookies.push([name, val ?? ''])
           }
-
-          header.#cookies.push([name, val])
         }
       } else if (isIterable(value)) {
         for (let [name, val] of value) {

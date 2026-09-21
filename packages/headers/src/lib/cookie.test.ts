@@ -71,15 +71,30 @@ describe('Cookie', () => {
     assert.equal(header.get('session'), 'child')
   })
 
-  it('preserves literal backslashes in cookie values', () => {
-    let header = Cookie.from(String.raw`first="one\; second=two"; path=a\b; quoted="c\d"`)
+  it('keeps cookie pairs separate when a backslash precedes a semicolon', () => {
+    let header = Cookie.from(String.raw`first="one\; second=two"`)
 
     assert.deepEqual(Array.from(header), [
       ['first', '"one\\'],
       ['second', 'two"'],
-      ['path', String.raw`a\b`],
-      ['quoted', String.raw`c\d`],
     ])
+  })
+
+  it('preserves existing backslash decoding in cookie values', () => {
+    let header = Cookie.from(String.raw`unquoted=a\b; quoted="c\d"; escaped="e\"f"`)
+
+    assert.deepEqual(Array.from(header), [
+      ['unquoted', 'ab'],
+      ['quoted', 'cd'],
+      ['escaped', 'e"f'],
+    ])
+  })
+
+  it('round trips cookie values containing double quotes', () => {
+    let header = new Cookie({ name: 'a"b' })
+
+    assert.equal(header.toString(), String.raw`name="a\"b"`)
+    assert.equal(Cookie.from(header.toString()).get('name'), 'a"b')
   })
 
   it('unquotes complete values and preserves equals signs and encoded values', () => {
