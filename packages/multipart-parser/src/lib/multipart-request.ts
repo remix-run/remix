@@ -10,22 +10,7 @@ import { MultipartParseError, parseMultipartStream } from './multipart.ts'
  * @returns The boundary string if found, or null if not present
  */
 export function getMultipartBoundary(contentType: string): string | null {
-  let parameterStart = contentType.indexOf(';')
-  if (parameterStart === -1) return null
-
-  // Read consecutive parameters so quoted values cannot be mistaken for parameter names.
-  let parameter =
-    /;[ \t]*([^=;\s]+)[ \t]*=[ \t]*(?:"((?:[^"\\]|\\.)*)"[ \t]*|([^";\s][^";]*)?)(?=;|$)/y
-  parameter.lastIndex = parameterStart
-
-  let match
-  while ((match = parameter.exec(contentType)) !== null) {
-    if (match[1].toLowerCase() === 'boundary') {
-      return match[2] !== undefined ? match[2].replace(/\\(.)/g, '$1') : (match[3] ?? '').trim()
-    }
-  }
-
-  return null
+  return ContentType.from(contentType).boundary ?? null
 }
 
 /**

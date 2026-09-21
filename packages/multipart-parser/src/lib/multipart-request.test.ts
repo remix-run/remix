@@ -78,6 +78,14 @@ describe('getMultipartBoundary', async () => {
     assert.equal(getMultipartBoundary('multipart/form-data; note="value; boundary=other'), null)
   })
 
+  it('reads an unterminated quoted boundary to the end of the header', () => {
+    assert.equal(getMultipartBoundary('multipart/form-data; boundary="abc'), 'abc')
+    assert.equal(
+      getMultipartBoundary(String.raw`multipart/form-data; boundary="abc\"; charset=utf-8`),
+      'abc"; charset=utf-8',
+    )
+  })
+
   it('returns null when boundary is missing', async () => {
     assert.equal(getMultipartBoundary('multipart/form-data'), null)
   })
@@ -183,6 +191,41 @@ describe('parseMultipartRequest', async () => {
     assert.equal(parts.length, 1)
     assert.equal(parts[0].name, 'field')
     assert.equal(parts[0].text, 'value')
+  })
+
+  it('parses a request with an unterminated quoted boundary', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary="${boundary}`,
+      },
+      body: createMultipartMessage(boundary, { field: 'value' }),
+    })
+
+    let parts: MultipartPart[] = []
+    for await (let part of parseMultipartRequest(request)) {
+      parts.push(part)
+    }
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, 'field')
+    assert.equal(parts[0].text, 'value')
+  })
+
+  it('rejects a boundary inside an unterminated quoted parameter', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; note="value; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, { field: 'value' }),
+    })
+
+    await assert.rejects(async () => {
+      for await (let _part of parseMultipartRequest(request)) {
+        assert.fail('Unexpected multipart part')
+      }
+    }, /Invalid Content-Type header: missing boundary/)
   })
 
   it('parses an empty multipart message', async () => {

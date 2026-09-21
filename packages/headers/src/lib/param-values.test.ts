@@ -4,6 +4,39 @@ import { describe, it } from '@remix-run/test'
 import { parseParams } from './param-values.ts'
 
 describe('parseParams', () => {
+  it('reads an unterminated quoted value to the end of input', () => {
+    assert.deepEqual(parseParams('boundary="abc'), [['boundary', 'abc']])
+    assert.deepEqual(parseParams('boundary="'), [['boundary', '']])
+  })
+
+  it('keeps semicolons inside unterminated quoted values', () => {
+    assert.deepEqual(parseParams('note="value; boundary=abc'), [['note', 'value; boundary=abc']])
+  })
+
+  it('keeps commas inside unterminated quoted values', () => {
+    assert.deepEqual(parseParams('private="field, max-age=60', ','), [
+      ['private', 'field, max-age=60'],
+    ])
+  })
+
+  it('unescapes quotes and backslashes in unterminated quoted values', () => {
+    assert.deepEqual(parseParams(String.raw`note="value\\\"; boundary=abc`), [
+      ['note', String.raw`value\"; boundary=abc`],
+    ])
+  })
+
+  it('preserves a trailing backslash in an unterminated quoted value', () => {
+    assert.deepEqual(parseParams('note="value\\'), [['note', 'value\\']])
+  })
+
+  it('preserves whitespace inside quoted values', () => {
+    assert.deepEqual(parseParams('note=" \tvalue \t"; boundary=abc'), [
+      ['note', ' \tvalue \t'],
+      ['boundary', 'abc'],
+    ])
+    assert.deepEqual(parseParams('note=" \tvalue \t'), [['note', ' \tvalue \t']])
+  })
+
   it('correctly parses a string of parameters for a Content-Type header', () => {
     assert.deepEqual(parseParams('text/html; charset=utf-8'), [
       ['text/html', undefined],

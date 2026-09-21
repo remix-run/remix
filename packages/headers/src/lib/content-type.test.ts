@@ -108,6 +108,30 @@ describe('ContentType', () => {
 })
 
 describe('ContentType.from', () => {
+  it('accepts a boundary with an unterminated quote', () => {
+    let result = ContentType.from('multipart/form-data; boundary="abc')
+
+    assert.equal(result.boundary, 'abc')
+  })
+
+  it('does not read parameters inside an unterminated quoted value', () => {
+    let result = ContentType.from('multipart/form-data; note="value; boundary=abc; charset=utf-8')
+
+    assert.equal(result.boundary, undefined)
+    assert.equal(result.charset, undefined)
+  })
+
+  it('keeps a boundary before an unterminated quoted value', () => {
+    let result = ContentType.from('multipart/form-data; boundary=abc; note="value')
+
+    assert.equal(result.boundary, 'abc')
+  })
+
+  it('preserves quoted boundary whitespace while ignoring surrounding header whitespace', () => {
+    assert.equal(ContentType.from('multipart/form-data; boundary=" abc " ').boundary, ' abc ')
+    assert.equal(ContentType.from('multipart/form-data; boundary=" abc ').boundary, ' abc')
+  })
+
   it('matches boundary parameter names case-insensitively while preserving the value', () => {
     let result = ContentType.from('Multipart/Form-Data; BOUNDARY="MixedCaseBoundary"')
 
