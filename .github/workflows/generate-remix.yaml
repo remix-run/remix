@@ -58,10 +58,7 @@ jobs:
         if: github.event_name == 'push'
         uses: actions/checkout@v6
         with:
-          # Use a PAT because using the default `GITHUB_TOKEN`/`github.token` will not
-          # trigger workflow runs, so use a PAT to ensure new commits will run CI checks.
-          # See: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
-          token: ${{ secrets.GH_REMIX_PAT }}
+          persist-credentials: false
 
       # Checkout the PR branch when running on PRs
       - name: Checkout
@@ -69,10 +66,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-          # Use a PAT because using the default `GITHUB_TOKEN`/`github.token` will not
-          # trigger workflow runs, so use a PAT to ensure new commits will run CI checks.
-          # See: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
-          token: ${{ secrets.GH_REMIX_PAT }}
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -86,7 +80,7 @@ jobs:
       - name: Generate remix package
         run: pnpm run generate-remix
 
-      - name: Commit and push changes
+      - name: Commit changes
         id: commit
         run: |
           if [ -z "$(git status --porcelain)" ]; then
@@ -109,9 +103,16 @@ jobs:
           git config --local user.name "Remix Run Bot"
           git add .
           git commit -a -m "build: update remix package"
-          git push
+          echo "new_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Push changes
+        if: steps.commit.outputs.new_sha != ''
+        env:
+          # Use a PAT for the push so the generated commit triggers CI checks.
+          GH_TOKEN: ${{ secrets.GH_REMIX_PAT }}
+        run: |
+          git -c credential.helper='!gh auth git-credential' -c core.hooksPath=/dev/null push
           echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
-          echo "new_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Comment on PR
         if: github.event_name == 'pull_request' && steps.commit.outputs.new_sha != ''
