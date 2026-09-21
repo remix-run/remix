@@ -52,13 +52,15 @@ let proxy = createFetchProxy('https://remix.run', {
 
 The proxy also removes `X-Forwarded-For` when this option is enabled. Fetch requests do not expose the client's connection address, so the proxy cannot generate a replacement value. An upstream using `node-fetch-server` with `trustProxy: true` will fall back to the proxy's connection address.
 
-When `xForwardedHeaders` is disabled (the default), existing forwarding headers are passed through unchanged. If the target trusts these headers, the caller must supply them from a trusted source.
+When `xForwardedHeaders` is disabled (the default), existing forwarding headers are passed through unless listed in `Connection`. If the target trusts these headers, the caller must supply them from a trusted source.
 
 ## Encoding and Framing Headers
 
 Since proxying is done via `fetch` rather than raw HTTP messages, some encoding and framing headers need to be removed.
 
 The incoming `Accept-Encoding` request header describes the final client, so it is not forwarded to the target server.
+
+Connection-specific request headers, including any fields named by `Connection`, are removed before forwarding. Incoming `Content-Length` and `Transfer-Encoding` are also removed so the outgoing `fetch` determines framing for the streamed body. This applies to custom `fetch` functions as well.
 
 Since `fetch` can decompress upstream responses and does not expose raw HTTP transfer framing, `fetch-proxy` strips response headers that may no longer describe the returned body: `Content-Encoding`, related `Content-Length`, and `Transfer-Encoding`.
 
