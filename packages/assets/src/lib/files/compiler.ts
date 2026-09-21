@@ -333,7 +333,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
           emittedFile.extension
         await cache.put(
           transformedCacheKey,
-          new File([Buffer.from(emittedFile.body)], name, { type: emittedFile.contentType }),
+          new File([toArrayBufferView(emittedFile.body)], name, { type: emittedFile.contentType }),
         )
       }
       return emittedFile
@@ -547,13 +547,20 @@ export function createResponseForFile(
     return new Response(null, { status: 304, headers: { ETag: result.etag } })
   }
 
-  return new Response(options.method === 'HEAD' ? null : Buffer.from(result.body), {
+  return new Response(options.method === 'HEAD' ? null : toArrayBufferView(result.body), {
     headers: {
       'Cache-Control': options.cacheControl,
       'Content-Type': result.contentType,
       ETag: result.etag,
     },
   })
+}
+
+function toArrayBufferView(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  // File and Response require ArrayBuffer-backed input, so copy only shared buffers.
+  return bytes.buffer instanceof ArrayBuffer
+    ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    : new Uint8Array(bytes)
 }
 
 export function isServedFilePath(filePath: string, extensions: ReadonlySet<string>): boolean {

@@ -1399,6 +1399,39 @@ describe('asset-server', () => {
     assert.equal(transformCalls, 1)
   })
 
+  it('snapshots sliced transform outputs in cached files and responses', async () => {
+    await write(dir, 'app/content/value.txt', 'hello')
+    for (let buffer of [new ArrayBuffer(5), new SharedArrayBuffer(5)]) {
+      let bytes = new Uint8Array(buffer)
+      bytes.set([0, 1, 2, 3, 4])
+      let cache = createMemoryFileCache()
+      let assetServer = createTestServer(dir, {
+        files: {
+          cache,
+          extensions: ['.txt'],
+          transforms: {
+            slice: defineFileTransform({
+              transform() {
+                return bytes.subarray(1, 4)
+              },
+            }),
+          },
+        },
+      })
+
+      let response = await get(assetServer, '/assets/app/content/value.txt?transform=slice')
+      assert.ok(response)
+      assert.equal(response.status, 200)
+      bytes.fill(9)
+      assert.deepEqual(new Uint8Array(await response.arrayBuffer()), new Uint8Array([1, 2, 3]))
+
+      let [file] = cache.files.values()
+      assert.ok(file)
+      assert.equal(file.size, 3)
+      assert.deepEqual(new Uint8Array(await file.arrayBuffer()), new Uint8Array([1, 2, 3]))
+    }
+  })
+
   it('reuses a filesystem cache in a custom directory across server restarts', async () => {
     let rootDir = path.join(dir, 'custom-cached-assets')
     let cacheDir = path.join(dir, 'custom-asset-cache')
