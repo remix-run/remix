@@ -851,6 +851,60 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('does not hydrate imported client entries through their parent boundary', async () => {
+    let clicks = 0
+    let updateOuter = () => {}
+
+    let Inner = clientEntry('/inner.js#Inner', function Inner() {
+      return () => (
+        <button
+          mix={[
+            on('click', () => {
+              clicks++
+            }),
+          ]}
+        >
+          Inner
+        </button>
+      )
+    })
+
+    let Outer = clientEntry('/outer.js#Outer', function Outer(handle: Handle) {
+      updateOuter = () => {
+        void handle.update()
+      }
+      return () => (
+        <section>
+          <Inner />
+        </section>
+      )
+    })
+
+    document.body.innerHTML = await drain(renderToStream(<Outer />))
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/outer.js' && exportName === 'Outer') return Outer
+        if (moduleUrl === '/inner.js' && exportName === 'Inner') return Inner
+        throw new Error(`Unexpected client entry: ${moduleUrl}#${exportName}`)
+      },
+    })
+    await app.ready()
+
+    let button = document.querySelector('button')
+    invariant(button)
+
+    button.click()
+    expect(clicks).toBe(1)
+
+    updateOuter()
+    app.flush()
+    button.click()
+    expect(clicks).toBe(2)
+
+    app.dispose()
+  })
+
   it('removes orphaned hydration end markers after full-document reloads of adjacent client entries', async () => {
     let FragmentEntry = clientEntry(
       '/js/fragment-entry.js#FragmentEntry',
@@ -2437,6 +2491,70 @@ describe('run', () => {
     expect(document.querySelector('#summary')?.textContent).toBe('Summary: 2')
 
     clientFrame.dispose()
+  })
+
+  it('returns undefined when an internal named frame lookup misses', async () => {
+    document.body.innerHTML = await drain(renderToStream(<main />))
+
+    let app = run({ loadModule: mock.fn() })
+
+    try {
+      await app.ready()
+      expect(getNamedFrame('missing-frame')).toBeUndefined()
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('restores the previous named frame when the latest duplicate unmounts', async () => {
+    let showLatest = true
+    let getDuplicateFrame: undefined | (() => ReturnType<Handle['frames']['get']>)
+    let removeLatestFrame: undefined | (() => Promise<AbortSignal>)
+
+    let DuplicateFrames = clientEntry(
+      '/assets/duplicate-frames.js#DuplicateFrames',
+      function DuplicateFrames(handle: Handle) {
+        getDuplicateFrame = () => handle.frames.get('duplicate')
+        removeLatestFrame = () => {
+          showLatest = false
+          return handle.update()
+        }
+
+        return () => (
+          <>
+            <Frame name="duplicate" src="/first" />
+            {showLatest ? <Frame name="duplicate" src="/latest" /> : null}
+          </>
+        )
+      },
+    )
+
+    let resolveFrame = (src: string) => `<p>${src}</p>`
+    let html = await drain(renderToStream(<DuplicateFrames />, { resolveFrame }))
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/duplicate-frames.js' && exportName === 'DuplicateFrames') {
+          return DuplicateFrames
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+
+    try {
+      await app.ready()
+      invariant(getDuplicateFrame)
+      invariant(removeLatestFrame)
+      expect(getDuplicateFrame()?.src).toBe('/latest')
+
+      await removeLatestFrame()
+
+      expect(getDuplicateFrame()?.src).toBe('/first')
+    } finally {
+      app.dispose()
+    }
   })
 
   it('exposes the root frame as handle.frames.top', async () => {

@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/form-data-middleware",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Middleware for parsing FormData from request bodies",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -41,7 +41,8 @@
   },
   "dependencies": {
     "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/form-data-parser": "workspace:^"
+    "@remix-run/form-data-parser": "workspace:^",
+    "@remix-run/headers": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

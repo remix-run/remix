@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createElement } from '../runtime/create-element.ts'
 import { createRoot } from '../runtime/vdom.ts'
-import { createMixin, on, ref } from '../index.ts'
+import { createMixin, on, ref, unsafeHTML } from '../index.ts'
 import { invariant } from '../runtime/invariant.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 import type { Props } from '../index.ts'
@@ -62,7 +62,7 @@ describe('vnode mixins', () => {
     expect(div.textContent).toBe('child')
   })
 
-  it('strips children and innerHTML before passing props to mixins', () => {
+  it('strips children and raw HTML props before passing props to mixins', () => {
     let seenProps: Array<Record<string, unknown>> = []
     let inspect = createMixin((_handle) => (props: Record<string, unknown>) => {
       seenProps.push(props)
@@ -72,13 +72,16 @@ describe('vnode mixins', () => {
     let root = createRoot(container)
     root.render(<div mix={[inspect()]}>child</div>)
     root.flush()
-    root.render(<div innerHTML="<strong>html</strong>" mix={[inspect()]} />)
+    root.render(<div innerHTML={unsafeHTML('<strong>html</strong>')} mix={[inspect()]} />)
+    root.flush()
+    root.render(<iframe srcDoc={unsafeHTML('<p>html</p>')} mix={[inspect()]} />)
     root.flush()
 
     expect('children' in seenProps[0]!).toBe(false)
     expect('innerHTML' in seenProps[0]!).toBe(false)
     expect('children' in seenProps[1]!).toBe(false)
     expect('innerHTML' in seenProps[1]!).toBe(false)
+    expect('srcDoc' in seenProps[2]!).toBe(false)
   })
 
   it('ignores children returned from mixins while preserving host content', (t) => {
@@ -104,7 +107,7 @@ describe('vnode mixins', () => {
 
   it('ignores innerHTML returned from mixins while preserving host content', (t) => {
     let withInnerHtml = createMixin((_handle) => () => (
-      <div data-mode="innerHTML" innerHTML="<strong>blocked</strong>" />
+      <div data-mode="innerHTML" innerHTML={unsafeHTML('<strong>blocked</strong>')} />
     ))
 
     let errorSpy = t.mock.method(console, 'error', () => {})
@@ -119,7 +122,34 @@ describe('vnode mixins', () => {
     expect(errorSpy).toHaveBeenCalledTimes(1)
     let error = errorSpy.mock.calls[0]?.arguments[0]
     invariant(error instanceof Error)
-    expect(error.message).toBe('mixins must not return children or innerHTML')
+    expect(error.message).toBe('mixins must not return children or raw HTML props')
+  })
+
+  it('ignores iframe document and outerHTML props returned from mixins', (t) => {
+    let withRawHtml = createMixin(
+      (_handle) => () =>
+        createElement('iframe', {
+          srcDoc: '<p>camel</p>',
+          srcdoc: '<p>lowercase</p>',
+          outerHTML: '<p>replacement</p>',
+        }),
+    )
+
+    let errorSpy = t.mock.method(console, 'error', () => {})
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    root.render(<iframe mix={[withRawHtml()]} />)
+    root.flush()
+
+    let iframe = container.querySelector('iframe')
+    invariant(iframe)
+    expect(iframe.hasAttribute('srcdoc')).toBe(false)
+    expect(container.innerHTML).toBe('<iframe></iframe>')
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    let error = errorSpy.mock.calls[0]?.arguments[0]
+    invariant(error instanceof Error)
+    expect(error.message).toBe('mixins must not return children or raw HTML props')
   })
 
   it('supports mixins returning nested descriptors directly', () => {

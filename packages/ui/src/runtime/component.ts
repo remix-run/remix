@@ -141,6 +141,9 @@ export interface Context<C> {
 
 /**
  * Content that can be rendered into a frame.
+ *
+ * HTML strings and streams must contain trusted application content. Remix does not sanitize them
+ * before parsing and reconciling them into the current document.
  */
 export type FrameContent = ReadableStream<Uint8Array> | string | RemixNode
 
@@ -166,8 +169,11 @@ export type FrameHandleEventMap = {
  * Public API for interacting with a frame instance.
  */
 export type FrameHandle = TypedEventTarget<FrameHandleEventMap> & {
+  /** Current source used when reloading the frame. */
   src: string
+  /** Reloads the frame from its current source. */
   reload(): Promise<AbortSignal>
+  /** Replaces the frame with trusted content. HTML strings and streams are not sanitized. */
   replace(content: FrameContent): Promise<void>
   // Internal runtime context used by client-rendered Frame reconciliation.
   $runtime?: unknown

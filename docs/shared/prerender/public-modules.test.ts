@@ -16,6 +16,7 @@ describe('discoverPublicModuleHrefs()', () => {
       await Promise.all([
         writeFile(path.join(appDir, 'actions', 'public', 'entry.ts')),
         writeFile(path.join(appDir, 'actions', 'public', 'entry.test.ts')),
+        writeFile(path.join(appDir, 'actions', 'public', 'preview.dev.ts')),
         writeFile(path.join(appDir, 'actions', 'public', 'dev-refresh.ts')),
         writeFile(path.join(appDir, 'actions', 'private.ts')),
         writeFile(path.join(sharedDir, 'ui', 'public', 'shell.tsx')),

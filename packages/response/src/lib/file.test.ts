@@ -30,6 +30,40 @@ function appendUtf8Charset(type: string): string {
 }
 
 describe('createFileResponse()', () => {
+  it('includes nosniff for full, partial, conditional, and error responses', async () => {
+    let file = new File(['hello'], 'example.bin', {
+      type: 'application/octet-stream',
+      lastModified: 1000000,
+    })
+    let cases: { init?: RequestInit; status: number }[] = [
+      { status: 200 },
+      { init: { method: 'HEAD' }, status: 200 },
+      { init: { headers: { Range: 'bytes=0-1' } }, status: 206 },
+      { init: { headers: { 'If-None-Match': 'W/"5-1000000"' } }, status: 304 },
+      { init: { headers: { 'If-Match': '"other"' } }, status: 412 },
+      { init: { headers: { Range: 'bytes=10-20' } }, status: 416 },
+      { init: { headers: { Range: 'bytes=invalid' } }, status: 400 },
+    ]
+
+    for (let { init, status } of cases) {
+      let response = await createFileResponse(file, new Request('https://example.com/file', init), {
+        acceptRanges: true,
+      })
+      assert.equal(response.status, status)
+      assert.equal(response.headers.get('X-Content-Type-Options'), 'nosniff')
+      await response.body?.cancel()
+    }
+  })
+
+  it('preserves HTML content types for inline file responses', async () => {
+    let file = new File(['<p>Example</p>'], 'example.html', { type: 'text/html' })
+    let response = await createFileResponse(file, new Request('https://example.com/file'))
+
+    assert.equal(response.headers.get('Content-Type'), appendUtf8Charset(file.type))
+    assert.equal(response.headers.get('Content-Disposition'), null)
+    assert.equal(await response.text(), '<p>Example</p>')
+  })
+
   it('serves a file', async () => {
     let fileType = normalizeFileType('text/plain')
     let mockFile = new File(['Hello, World!'], 'test.txt', { type: fileType })

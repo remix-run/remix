@@ -12,3 +12,12 @@ export function reloadDocument(doc: Document, href = doc.location.href): void {
     doc.location.replace(href)
   }
 }
+
+export function reloadCurrentDocument(doc: Document): void {
+  let navigation = doc.defaultView?.navigation
+  if (navigation && typeof navigation.reload === 'function') {
+    navigation.reload({ info: documentReloadInfo })
+  } else {
+    doc.location.reload()
+  }
+}

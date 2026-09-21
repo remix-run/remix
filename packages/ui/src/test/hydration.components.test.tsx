@@ -5,7 +5,7 @@ import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { on, ref } from '../index.ts'
+import { on, ref, unsafeHTML } from '../index.ts'
 
 describe('hydration', () => {
   let container: HTMLDivElement
@@ -284,7 +284,7 @@ describe('hydration', () => {
     })
 
     it('hydrates innerHTML prop', async () => {
-      let html = await renderToString(<div innerHTML="<span>Raw HTML</span>" />)
+      let html = await renderToString(<div innerHTML={unsafeHTML('<span>Raw HTML</span>')} />)
       container.innerHTML = html
 
       let existingDiv = container.querySelector('div')
@@ -292,7 +292,7 @@ describe('hydration', () => {
       expect(existingDiv.innerHTML).toBe('<span>Raw HTML</span>')
 
       let root = createRoot(container)
-      root.render(<div innerHTML="<span>Raw HTML</span>" />)
+      root.render(<div innerHTML={unsafeHTML('<span>Raw HTML</span>')} />)
       root.flush()
 
       expect(container.querySelector('div')).toBe(existingDiv)

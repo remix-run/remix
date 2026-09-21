@@ -138,14 +138,16 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   }
 }
 
-function diffElementAttributes(current: Element, next: Element): void {
+export function diffElementAttributes(current: Element, next: Element): void {
   let prevAttrNames = current.getAttributeNames()
   let nextAttrNames = next.getAttributeNames()
+  let preservedNames = next.getAttribute('data-rmx-preserve-attrs')?.split(/[\t\n\f\r ]+/)
 
   let nextNameSet = new Set(nextAttrNames)
 
   // Removals
   for (let name of prevAttrNames) {
+    if (preservedNames?.includes(name)) continue
     if (!nextNameSet.has(name)) {
       if (shouldPreserveLiveAttribute(current, next, name)) continue
       current.removeAttribute(name)
@@ -154,6 +156,7 @@ function diffElementAttributes(current: Element, next: Element): void {
 
   // Additions/updates
   for (let name of nextAttrNames) {
+    if (preservedNames?.includes(name)) continue
     let prevVal = current.getAttribute(name)
     let nextVal = next.getAttribute(name)
     if (prevVal !== nextVal) {

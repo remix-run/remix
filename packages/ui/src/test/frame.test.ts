@@ -6,6 +6,7 @@ import { clientEntry } from '../runtime/client-entries.ts'
 import {
   consumeFrameTemplate,
   createFrame,
+  NamedFrameRegistry,
   publishFrameTemplate,
   reloadFrameForNavigation,
   type LoadModule,
@@ -36,7 +37,7 @@ function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestF
     moduleCache: new Map(),
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
-    namedFrames: new Map(),
+    namedFrames: new NamedFrameRegistry(),
     ...options,
   })
 }
@@ -45,6 +46,62 @@ describe('frames', () => {
   afterEach(() => {
     resetDocumentImportMapManager(document)
     document.documentElement.innerHTML = '<head></head><body></body>'
+  })
+
+  it('preserves named html and body attributes across top frame reloads', async () => {
+    let doc = document.implementation.createHTMLDocument('Initial')
+    let nextHtml = [
+      '<html data-rmx-preserve-attrs="class data-theme" class="server" lang="fr">',
+      '<head><title>Next</title></head>',
+      '<body data-rmx-preserve-attrs="class data-client" class="server" data-client="server" title="Next">',
+      '<main>Next</main></body></html>',
+    ].join('')
+    let frame = createTestFrame(doc, {
+      resolveFrame: () => htmlStream([appendFlushMarker(nextHtml, 'document')]),
+    })
+
+    try {
+      await frame.ready()
+      doc.documentElement.setAttribute('class', 'dark')
+      doc.documentElement.setAttribute('data-theme', 'dark')
+      doc.documentElement.setAttribute('lang', 'en')
+      doc.documentElement.setAttribute('data-page', 'initial')
+      doc.body.setAttribute('class', 'scroll-locked')
+
+      await frame.handle.reload()
+
+      expect(doc.documentElement.className).toBe('dark')
+      expect(doc.documentElement.getAttribute('data-theme')).toBe('dark')
+      expect(doc.documentElement.getAttribute('lang')).toBe('fr')
+      expect(doc.documentElement.hasAttribute('data-page')).toBe(false)
+      expect(doc.title).toBe('Next')
+      expect(doc.body.className).toBe('scroll-locked')
+      expect(doc.body.hasAttribute('data-client')).toBe(false)
+      expect(doc.body.getAttribute('title')).toBe('Next')
+      expect(doc.querySelector('main')?.textContent).toBe('Next')
+
+      doc.documentElement.removeAttribute('class')
+      doc.body.removeAttribute('class')
+      await frame.handle.reload()
+
+      expect(doc.documentElement.hasAttribute('class')).toBe(false)
+      expect(doc.body.hasAttribute('class')).toBe(false)
+
+      nextHtml = [
+        '<html data-rmx-preserve-attrs="" class="light"><head><title>Final</title></head>',
+        '<body class="unlocked"><main>Final</main></body></html>',
+      ].join('')
+      await frame.handle.reload()
+
+      expect(doc.documentElement.className).toBe('light')
+      expect(doc.documentElement.hasAttribute('data-theme')).toBe(false)
+      expect(doc.documentElement.hasAttribute('lang')).toBe(false)
+      expect(doc.body.className).toBe('unlocked')
+      expect(doc.body.hasAttribute('data-rmx-preserve-attrs')).toBe(false)
+      expect(doc.querySelector('main')?.textContent).toBe('Final')
+    } finally {
+      frame.dispose()
+    }
   })
 
   it('preserves hydrated client entries while streaming a top frame reload', async () => {
@@ -106,7 +163,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -163,7 +220,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -770,7 +827,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -811,7 +868,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     frame.dispose()
@@ -859,7 +916,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -897,7 +954,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -934,7 +991,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -969,7 +1026,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
     let formData = new FormData()
     formData.set('displayName', 'Ada')
@@ -1017,7 +1074,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
     let controller = new AbortController()
 
@@ -1060,7 +1117,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
     let controller = new AbortController()
 
@@ -1651,7 +1708,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     await frame.ready()
@@ -1705,7 +1762,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -1808,7 +1865,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -1878,7 +1935,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -1925,7 +1982,7 @@ describe('frames', () => {
       moduleCache: new Map(),
       moduleLoads: new Map(),
       frameInstances: new WeakMap(),
-      namedFrames: new Map(),
+      namedFrames: new NamedFrameRegistry(),
     })
 
     try {
@@ -1985,7 +2042,7 @@ function createClientEntryResourceTestFrame(): ReturnType<typeof createFrame> {
     moduleCache: new Map(),
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
-    namedFrames: new Map(),
+    namedFrames: new NamedFrameRegistry(),
   })
 }
 

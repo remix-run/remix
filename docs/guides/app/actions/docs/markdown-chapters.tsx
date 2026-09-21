@@ -9,13 +9,16 @@ import { readMarkdownChapterSummary, renderMarkdownChapter } from './markdown/re
 import type { MarkdownChapter, MarkdownChapterSummary } from './markdown/types.ts'
 import { DocsChapter } from './layout.tsx'
 
-export type DocsChapterSummary = MarkdownChapterSummary & {
+export type DocsChapterSummary = Omit<MarkdownChapterSummary, 'published' | 'listed'> & {
   order: number
   slug: string
   href: string
+  disabled: boolean
 }
 
-export type DocsNavigationItem = Pick<DocsChapterSummary, 'order' | 'slug' | 'href' | 'title'>
+export type DocsNavigationItem = Pick<DocsChapterSummary, 'order' | 'slug' | 'href' | 'title'> & {
+  disabled: boolean
+}
 
 type ChapterFile = {
   order: number
@@ -26,7 +29,7 @@ type ChapterFile = {
   href: string
 }
 
-type LoadedDocsChapterSummary = DocsChapterSummary &
+type LoadedDocsChapterSummary = MarkdownChapterSummary &
   ChapterFile & {
     mtime: number
   }
@@ -61,13 +64,33 @@ export async function docsChapterHandler(context: DocsChapterRouteContext) {
   return context.render(<MarkdownChapterPage {...chapter} />)
 }
 
-export async function loadDocsChapterSummaries(): Promise<DocsChapterSummary[]> {
-  let summaries = await loadChapterSummaries()
-  return summaries.map(toDocsChapterSummary)
+export async function loadDocsChapterSummaries(
+  environment = process.env.NODE_ENV,
+): Promise<DocsChapterSummary[]> {
+  let summaries = await loadChapterSummaries(environment)
+  return summaries.map((summary) => toDocsChapterSummary(summary, environment))
+}
+
+export async function loadDocsIndexChapterSummaries(
+  environment = process.env.NODE_ENV,
+): Promise<DocsChapterSummary[]> {
+  let summaries = await loadAllChapterSummaries()
+  return summaries
+    .filter((summary) => summary.listed)
+    .map((summary) => toDocsChapterSummary(summary, environment))
+}
+
+export async function loadDocsNavigationItems(
+  environment = process.env.NODE_ENV,
+): Promise<DocsNavigationItem[]> {
+  let summaries = await loadAllChapterSummaries()
+  return createDocsNavigationItems(summaries, environment)
 }
 
 async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | undefined> {
-  let summaries = await loadChapterSummaries()
+  let environment = process.env.NODE_ENV
+  let allSummaries = await loadAllChapterSummaries()
+  let summaries = filterChapterSummaries(allSummaries, environment)
   let index = summaries.findIndex((summary) => summary.slug === slug)
   let summary = summaries[index]
 
@@ -75,7 +98,11 @@ async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | un
     return undefined
   }
 
-  let chapter = await loadRenderedChapter(summary)
+  let disabledLinkPaths =
+    environment === 'production'
+      ? new Set(allSummaries.filter((summary) => !summary.published).map((summary) => summary.href))
+      : undefined
+  let chapter = await loadRenderedChapter(summary, disabledLinkPaths)
   let previous = summaries[index - 1]
   let next = summaries[index + 1]
 
@@ -83,16 +110,28 @@ async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | un
     ...chapter,
     slug: summary.slug,
     chapter: summary.chapter,
-    chapters: summaries.map(toDocsNavigationItem),
+    chapters: createDocsNavigationItems(allSummaries, environment),
     previous: getNavigation(previous),
     next: getNavigation(next),
   }
 }
 
-async function loadChapterSummaries(): Promise<LoadedDocsChapterSummary[]> {
+async function loadChapterSummaries(
+  environment = process.env.NODE_ENV,
+): Promise<LoadedDocsChapterSummary[]> {
+  return filterChapterSummaries(await loadAllChapterSummaries(), environment)
+}
+
+async function loadAllChapterSummaries(): Promise<LoadedDocsChapterSummary[]> {
   let files = await loadChapterFiles()
-  let summaries = await Promise.all(files.map(loadCachedSummary))
-  return summaries
+  return Promise.all(files.map(loadCachedSummary))
+}
+
+function filterChapterSummaries(
+  summaries: LoadedDocsChapterSummary[],
+  environment: string | undefined,
+): LoadedDocsChapterSummary[] {
+  return environment === 'production' ? summaries.filter((summary) => summary.published) : summaries
 }
 
 // Keyed by mtime so dev edits (process stays up) invalidate without a restart.
@@ -128,9 +167,13 @@ async function loadCachedSummary(file: ChapterFile): Promise<LoadedDocsChapterSu
 // the markdown render.
 const renderCache = new Map<string, { mtime: number; chapter: MarkdownChapter }>()
 
-async function loadRenderedChapter(summary: LoadedDocsChapterSummary): Promise<MarkdownChapter> {
+async function loadRenderedChapter(
+  summary: LoadedDocsChapterSummary,
+  disabledLinkPaths: ReadonlySet<string> | undefined,
+): Promise<MarkdownChapter> {
   let { mtime } = await stat(summary.filePath)
-  let cached = renderCache.get(summary.filePath)
+  let cacheKey = `${summary.filePath}:${disabledLinkPaths === undefined ? 'all' : 'published'}`
+  let cached = renderCache.get(cacheKey)
   if (cached && cached.mtime === mtime.getTime()) {
     return cached.chapter
   }
@@ -139,9 +182,10 @@ async function loadRenderedChapter(summary: LoadedDocsChapterSummary): Promise<M
   let chapter = await renderMarkdownChapter(markdown, {
     chapter: summary.chapter,
     filePath: summary.filePath,
+    disabledLinkPaths,
   })
 
-  renderCache.set(summary.filePath, { mtime: mtime.getTime(), chapter })
+  renderCache.set(cacheKey, { mtime: mtime.getTime(), chapter })
   return chapter
 }
 
@@ -187,7 +231,10 @@ export function parseChapterFilename(
   return { order, slug: match[2] }
 }
 
-function toDocsChapterSummary(summary: LoadedDocsChapterSummary): DocsChapterSummary {
+function toDocsChapterSummary(
+  summary: LoadedDocsChapterSummary,
+  environment: string | undefined,
+): DocsChapterSummary {
   return {
     order: summary.order,
     slug: summary.slug,
@@ -196,16 +243,27 @@ function toDocsChapterSummary(summary: LoadedDocsChapterSummary): DocsChapterSum
     title: summary.title,
     description: summary.description,
     sections: summary.sections,
+    disabled: isDisabled(summary, environment),
   }
 }
 
-function toDocsNavigationItem(summary: LoadedDocsChapterSummary): DocsNavigationItem {
-  return {
-    order: summary.order,
-    slug: summary.slug,
-    href: summary.href,
-    title: summary.title,
-  }
+function createDocsNavigationItems(
+  summaries: LoadedDocsChapterSummary[],
+  environment: string | undefined,
+): DocsNavigationItem[] {
+  return summaries
+    .filter((summary) => summary.listed)
+    .map((summary) => ({
+      order: summary.order,
+      slug: summary.slug,
+      href: summary.href,
+      title: summary.title,
+      disabled: isDisabled(summary, environment),
+    }))
+}
+
+function isDisabled(summary: LoadedDocsChapterSummary, environment: string | undefined): boolean {
+  return environment === 'production' && !summary.published
 }
 
 function getNavigation(

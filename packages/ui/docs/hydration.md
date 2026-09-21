@@ -76,7 +76,9 @@ and how to opt out for one navigation or the whole app.
 
 The initial document and HTML returned by `resolveFrame` are trusted application content. They can
 select client-entry modules and contribute import maps, styles, and nested frames. Only return HTML
-from sources the application trusts to run code in the current page.
+from sources the application trusts to run code in the current page. The default resolver restricts
+requests and redirects to the document origin, but Remix does not sanitize the returned HTML and
+same-origin user-generated content is not implicitly safe.
 
 Remix passes each serialized module specifier unchanged to `loadModule`. The loader controls how it
 resolves that specifier, so client entries can use CDN URLs, development server URLs, or bare

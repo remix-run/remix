@@ -944,6 +944,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../node-fetch-server
       '@remix-run/response':
         specifier: workspace:*
         version: link:../response
@@ -1151,6 +1154,9 @@ importers:
       '@remix-run/form-data-parser':
         specifier: workspace:^
         version: link:../form-data-parser
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
@@ -1167,6 +1173,9 @@ importers:
 
   packages/form-data-parser:
     dependencies:
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
       '@remix-run/multipart-parser':
         specifier: workspace:^
         version: link:../multipart-parser

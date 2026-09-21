@@ -1,6 +1,7 @@
 import type { StyleProps } from '../style/style.ts'
 import type { RemixNode } from './jsx.ts'
 import type { MixInput } from './mixins/mixin.ts'
+import type { UnsafeHTML } from './unsafe-html.ts'
 
 /**
  * Adapted from Preact:
@@ -35,11 +36,11 @@ export interface HostProps<eventTarget extends EventTarget> {
   /** Mixins to apply to the element. */
   mix?: MixInput<eventTarget>
   /**
-   * Set the innerHTML of the element directly.
-   * When provided, children are ignored.
-   * Use with caution as this can expose XSS vulnerabilities if the content is not sanitized.
+   * Raw HTML to insert into the element. Create this value with `unsafeHTML()`.
+   *
+   * When provided, children are ignored. Remix does not sanitize or otherwise modify the HTML.
    */
-  innerHTML?: string
+  innerHTML?: UnsafeHTML
 }
 
 /**
@@ -1495,10 +1496,10 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
   spellCheck?: Trackable<Booleanish | undefined>
   /** The `src` HTML attribute. */
   src?: Trackable<string | undefined>
-  /** The `srcDoc` HTML attribute. */
-  srcDoc?: Trackable<string | undefined>
-  /** The `srcdoc` HTML attribute. */
-  srcdoc?: Trackable<string | undefined>
+  /** Raw HTML for the iframe document. Create this value with `unsafeHTML()`. */
+  srcDoc?: Trackable<UnsafeHTML | undefined>
+  /** Raw HTML for the iframe document. Create this value with `unsafeHTML()`. */
+  srcdoc?: Trackable<UnsafeHTML | undefined>
   /** The `srcLang` HTML attribute. */
   srcLang?: Trackable<string | undefined>
   /** The `srclang` HTML attribute. */
@@ -2401,10 +2402,10 @@ export interface IframeHTMLProps<
   seamless?: Trackable<boolean | undefined>
   /** The `src` HTML attribute. */
   src?: Trackable<string | undefined>
-  /** The `srcdoc` HTML attribute. */
-  srcdoc?: Trackable<string | undefined>
-  /** The `srcDoc` HTML attribute. */
-  srcDoc?: Trackable<string | undefined>
+  /** Raw HTML for the iframe document. Create this value with `unsafeHTML()`. */
+  srcdoc?: Trackable<UnsafeHTML | undefined>
+  /** Raw HTML for the iframe document. Create this value with `unsafeHTML()`. */
+  srcDoc?: Trackable<UnsafeHTML | undefined>
   /** The `width` HTML attribute. */
   width?: Trackable<number | string | undefined>
 }

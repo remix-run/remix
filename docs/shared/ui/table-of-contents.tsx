@@ -1,4 +1,5 @@
 import type { Handle } from 'remix/ui'
+import { unsafeHTML } from 'remix/ui'
 
 import { TableOfContentsBehavior } from './public/table-of-contents.tsx'
 
@@ -49,12 +50,12 @@ export function DocsTableOfContents(handle: Handle<{ headings: DocsHeadingLink[]
               <a
                 href={`#${heading.id}`}
                 aria-current={index === 0 ? 'location' : undefined}
-                innerHTML={heading.titleHtml}
+                innerHTML={unsafeHTML(heading.titleHtml)}
               />
             </li>
           ))}
         </ol>
-        <script innerHTML={initializeTableOfContentsScript} />
+        <script innerHTML={unsafeHTML(initializeTableOfContentsScript)} />
         <TableOfContentsBehavior listId={listId} />
       </>
     )

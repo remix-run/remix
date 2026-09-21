@@ -146,6 +146,20 @@ Use this for custom elements, third-party widgets, and imperative integrations t
 
 Avoid wrapping Remix-owned UI that should continue receiving server-driven frame updates. A client entry inside `data-rmx-preserve-dom` can hydrate from the initial HTML, but later frame reloads will not patch new server-rendered children or props through the preserved host. Put the client entry outside the preserved boundary when it needs future frame data, or put `data-rmx-preserve-dom` inside the client entry around only the imperative DOM island.
 
+## Preserving client-owned attributes
+
+Use `data-rmx-preserve-attrs` with space-separated DOM attribute names to keep client-owned state on any matched element:
+
+```html
+<html lang="en" data-rmx-preserve-attrs="class data-theme"></html>
+```
+
+On frame reloads, listed attributes keep their live values or absence. Other attributes and children reconcile normally. Each attribute is preserved as a whole, so listing `class` preserves all its tokens without merging server classes.
+
+Each reload uses the list from the incoming HTML for that same reconciliation. Removing a name immediately returns that attribute to normal reconciliation; an empty or omitted list adds no preservation.
+
+This applies only to the matched element's attributes. It does not preserve descendants or prevent removal or replacement of the element. Initial rendering and hydration are unchanged.
+
 ## Nested frames
 
 Frames can nest. Each frame owns its own region of the DOM and hydrates its client entries independently:
@@ -238,9 +252,9 @@ response lets Remix stream its body. When `fetch()` followed a redirect during a
 the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`;
 other frames render the response without changing either URL.
 
-The default resolver uses Fetch's `same-origin` mode. Cross-origin sources and redirects fail, even if the destination allows CORS. To load trusted cross-origin frame content, provide a custom `resolveFrame` to `run()`. Custom resolvers control their own request and redirect policy.
+The default resolver uses Fetch's `same-origin` mode. Cross-origin sources and redirects fail, even if the destination allows CORS. This restricts where the default resolver can fetch content; it does not sanitize the response or make user-generated HTML safe because it came from the same origin.
 
-Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
+Remix parses and reconciles frame HTML into the current document without sanitizing it. Only return content from sources the application trusts to run code in the current page, and sanitize untrusted content before returning it. To load trusted cross-origin frame content, provide a custom `resolveFrame` to `run()`. Custom resolvers control their own request, redirect, and content trust policies.
 
 ## Link navigation
 
@@ -255,7 +269,7 @@ soft-navigation behavior applies even when the page does not render an explicit 
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
 - `data-rmx-document` leaves the link as a normal document navigation.
 
-During navigation, the top frame's source stays in sync with the browser URL. `data-rmx-src` only changes the requested URL when `data-rmx-target` resolves to a mounted named frame. If the target is omitted or no matching frame is mounted, an intercepted navigation reloads the top frame from `href`. The same behavior applies to form destinations, the `src` and `target` options of `navigate()`, and history traversal.
+During navigation, the top frame's source stays in sync with the browser URL. `data-rmx-src` only changes the requested URL when `data-rmx-target` resolves to a mounted named frame. If the target is omitted, an intercepted navigation reloads the top frame from `href`. If a specified target does not match a mounted frame, Remix leaves fresh link, form, and `navigate()` navigations to the browser. Back and forward traversal reloads the destination document instead of reconciling stale frame content. Native form navigation preserves the selected method, body, files, and submitter overrides.
 
 Every source override must resolve to the document origin, using `document.baseURI` for relative URLs. Invalid or cross-origin overrides disable interception regardless of the target, leaving the browser to navigate to the link's `href` or the form's destination.
 

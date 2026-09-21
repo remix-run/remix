@@ -513,6 +513,10 @@ describe('run', () => {
         path.join(appDir, 'app', 'actions', 'controller.tsx'),
         'utf8',
       )
+      let controllerTest = await fs.readFile(
+        path.join(appDir, 'app', 'actions', 'controller.test.ts'),
+        'utf8',
+      )
 
       assert.equal(packageJson.name, 'my-app')
       assert.equal(packageJson.dependencies.remix, `^${await readRepoRemixVersion()}`)
@@ -524,17 +528,21 @@ describe('run', () => {
       assert.match(packageJson.scripts.hmr, /NODE_ENV=development/)
       assert.match(packageJson.scripts.hmr, /node hmr\.ts/)
       assert.match(packageJson.scripts.start, /NODE_ENV=production/)
-      assert.match(packageJson.scripts.test, /NODE_ENV=test/)
+      assert.match(packageJson.scripts.test, /NODE_ENV=test remix test/)
+      assert.match(controllerTest, /from 'remix\/test'/)
       assert.match(agentsGuide, /^# My App Agent Guide/m)
       assert.match(agentsGuide, /This starter intentionally begins small/)
       assert.match(agentsGuide, /Put top-level route actions in `app\/actions\/controller\.tsx`/)
       assert.match(readme, /^# My App/m)
       assert.match(hmr, /createHmrReadyFetch/)
       assert.match(hmr, /run\('server\.ts'/)
+      assert.match(hmr, /xForwardedHeaders: true/)
       assert.match(server, /import \* as http from 'node:http'/)
       assert.match(server, /import \{ createRequestListener \} from 'remix\/node-fetch-server'/)
+      assert.match(server, /const isHmr = process\.env\.REMIX_NODE_HMR === '1'/)
       assert.match(server, /http\.createServer/)
       assert.match(server, /createRequestListener/)
+      assert.match(server, /trustProxy: isHmr/)
       assert.match(server, /emitServerReady/)
       assert.doesNotMatch(assets, /remix-template:remove-/)
       assert.doesNotMatch(assets, /\bmounts\s*:/)
