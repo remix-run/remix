@@ -195,9 +195,10 @@ export type MultipartParserOptions = Omit<ParseMultipartOptions, 'boundary'>
 
 const MultipartParserStateStart = 0
 const MultipartParserStateAfterBoundary = 1
-const MultipartParserStateHeader = 2
-const MultipartParserStateBody = 3
-const MultipartParserStateDone = 4
+const MultipartParserStateBoundaryPadding = 2
+const MultipartParserStateHeader = 3
+const MultipartParserStateBody = 4
+const MultipartParserStateDone = 5
 
 const findDoubleNewline = createSearch('\r\n\r\n')
 
@@ -320,8 +321,6 @@ export class MultipartParser {
             this.#append(carry.subarray(0, carryResult.start))
           }
 
-          yield this.#createPart()
-
           this.#state = MultipartParserStateAfterBoundary
 
           let carryAfterStart = carry.length - carryResult.start
@@ -366,8 +365,6 @@ export class MultipartParser {
           this.#append(chunk.subarray(index, boundaryIndex))
         }
 
-        yield this.#createPart()
-
         index = boundaryIndex + this.#boundaryLength
 
         this.#state = MultipartParserStateAfterBoundary
@@ -381,7 +378,31 @@ export class MultipartParser {
 
         if (chunk[index] === 45 && chunk[index + 1] === 45) {
           this.#state = MultipartParserStateDone
+          if (this.#currentContent !== null) {
+            yield this.#createPart()
+          }
           break
+        }
+
+        this.#state = MultipartParserStateBoundaryPadding
+      }
+
+      if (this.#state === MultipartParserStateBoundaryPadding) {
+        while (chunk[index] === 32 || chunk[index] === 9) {
+          index++
+        }
+
+        if (chunkLength - index < 2) {
+          this.#buffer = chunk.subarray(index)
+          break
+        }
+
+        if (chunk[index] !== 13 || chunk[index + 1] !== 10) {
+          throw new MultipartParseError('Invalid multipart boundary ending')
+        }
+
+        if (this.#currentContent !== null) {
+          yield this.#createPart()
         }
 
         index += 2 // Skip \r\n after boundary

@@ -57,9 +57,120 @@ describe('MultipartParser', () => {
       },
     )
   })
+
+  it('waits for a complete delimiter ending before yielding a part', () => {
+    let parser = new MultipartParser(boundary)
+    let firstChunk = new TextEncoder().encode(
+      `--${boundary}\r\nContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n--${boundary}`,
+    )
+
+    assert.deepEqual(Array.from(parser.write(firstChunk)), [])
+    assert.deepEqual(Array.from(parser.write(new Uint8Array([13]))), [])
+    let parts = Array.from(parser.write(new Uint8Array([10])))
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, 'field')
+    assert.equal(parts[0].text, 'value')
+  })
+
+  it('waits for both closing hyphens before yielding the final part', () => {
+    let parser = new MultipartParser(boundary)
+    let message = createMultipartMessage(boundary, { field: 'value' })
+
+    assert.deepEqual(Array.from(parser.write(message.subarray(0, -1))), [])
+    let parts = Array.from(parser.write(message.subarray(-1)))
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, 'value')
+    assert.doesNotThrow(() => parser.finish())
+  })
 })
 
 describe('parseMultipart', async () => {
+  it('rejects invalid opening delimiter endings', () => {
+    let message = new TextEncoder().encode(
+      `--${boundary}XYContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n--${boundary}--`,
+    )
+
+    assert.throws(() => Array.from(parseMultipart(message, { boundary })), {
+      name: 'MultipartParseError',
+      message: 'Invalid multipart boundary ending',
+    })
+  })
+
+  it('rejects invalid part delimiter endings before yielding a part', () => {
+    for (let ending of ['XY', '\rX', 'X\n', '\n\n', ' \tXY', ' --']) {
+      let message = createMultipartMessage(boundary, {
+        field: `value\r\n--${boundary}${ending}Content-Disposition: form-data; name="other"\r\n\r\nnext`,
+      })
+      let parts = []
+
+      assert.throws(
+        () => {
+          for (let part of parseMultipart(message, { boundary })) {
+            parts.push(part)
+          }
+        },
+        {
+          name: 'MultipartParseError',
+          message: 'Invalid multipart boundary ending',
+        },
+      )
+      assert.equal(parts.length, 0)
+    }
+  })
+
+  it('rejects invalid delimiter endings at every chunk split', () => {
+    let message = createMultipartMessage(boundary, {
+      field: `value\r\n--${boundary}XYContent-Disposition: form-data; name="other"\r\n\r\nnext`,
+    })
+
+    for (let split = 1; split < message.length; split++) {
+      let chunks = [message.subarray(0, split), message.subarray(split)]
+      let parts = []
+
+      assert.throws(
+        () => {
+          for (let part of parseMultipart(chunks, { boundary })) {
+            parts.push(part)
+          }
+        },
+        {
+          name: 'MultipartParseError',
+          message: 'Invalid multipart boundary ending',
+        },
+      )
+      assert.equal(parts.length, 0)
+    }
+  })
+
+  it('parses padded delimiter lines at every chunk split', () => {
+    let message = new TextEncoder().encode(
+      [
+        `--${boundary} \t`,
+        'Content-Disposition: form-data; name="first"',
+        '',
+        'one',
+        `--${boundary}\t `,
+        'Content-Disposition: form-data; name="second"',
+        '',
+        'two',
+        `--${boundary}--`,
+      ].join('\r\n'),
+    )
+
+    for (let split = 1; split < message.length; split++) {
+      let parts = Array.from(
+        parseMultipart([message.subarray(0, split), message.subarray(split)], { boundary }),
+      )
+      assert.deepEqual(
+        parts.map((part) => [part.name, part.text]),
+        [
+          ['first', 'one'],
+          ['second', 'two'],
+        ],
+      )
+    }
+  })
+
   it('does not eagerly use Web Encoding globals while importing and parsing', async () => {
     let moduleUrl = new URL('./multipart.ts', import.meta.url).href
     let script = `
@@ -206,6 +317,28 @@ describe('parseMultipart', async () => {
 })
 
 describe('parseMultipartStream', async () => {
+  it('rejects invalid delimiter endings in single-byte chunks', async () => {
+    let message = createMultipartMessage(boundary, {
+      field: `value\r\n--${boundary}XYContent-Disposition: form-data; name="other"\r\n\r\nnext`,
+    })
+    let parts = []
+
+    await assert.rejects(
+      async () => {
+        for await (let part of parseMultipartStream(createChunkedStream(message, 1), {
+          boundary,
+        })) {
+          parts.push(part)
+        }
+      },
+      {
+        name: 'MultipartParseError',
+        message: 'Invalid multipart boundary ending',
+      },
+    )
+    assert.equal(parts.length, 0)
+  })
+
   it('throws when the number of parts exceeds maxParts', async () => {
     let message = createMultipartMessage(boundary, {
       field1: 'value1',
