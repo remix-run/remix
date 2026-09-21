@@ -179,7 +179,8 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
 
     if (value !== null) {
       if (typeof value === 'string') {
-        // Cookie values cannot quote or escape semicolon delimiters.
+        // RFC 6265 excludes semicolons and backslashes from cookie-octet, even in quotes.
+        // https://www.rfc-editor.org/rfc/rfc6265.html#section-4.1.1
         for (let piece of value.split(';')) {
           let index = piece.indexOf('=')
           let name = (index === -1 ? piece : piece.slice(0, index)).trim()
