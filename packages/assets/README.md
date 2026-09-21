@@ -666,48 +666,29 @@ Storage metadata and filesystem overhead are additional to the byte budgets. All
 
 The cache tracks recency and total size in memory. Reads refresh recency without writing to disk. On first use, it rebuilds the index from stored record sizes and write timestamps and enforces the configured limits. Cached files survive restarts, but read recency does not. An interrupted write or invalid accounting metadata resets the stored cache on recovery, and outputs are recomputed as needed.
 
-To choose different persistence or eviction behavior, supply a `FileCache`. It needs only `get(key)` and `put(key, file)`, and both methods may be synchronous or asynchronous. `get` returns a `File` or `null` for a miss. `put` stores or replaces a file, or declines admission according to the cache's policy. It may return a stored `File` or no value, which the asset server ignores. Existing `FileStorage` backends satisfy this interface and can still be passed directly to `files.cache`. Cached files must preserve their bytes, name, type, and `lastModified` value.
-
-For example, this in-memory cache retains up to 512 files, each at most 8 MiB, and evicts the least recently used entry:
+For custom persistence or eviction, supply a `FileCache` with `get` and `put` methods. Both may be synchronous or asynchronous. This pseudocode delegates to your own storage backend:
 
 ```ts
 import { createAssetServer } from 'remix/assets'
-import type { FileCache } from 'remix/assets'
-
-let files = new Map<string, File>()
-let cache: FileCache = {
-  get(key) {
-    let file = files.get(key)
-    if (!file) return null
-    files.delete(key)
-    files.set(key, file)
-    return file
-  },
-  put(key, file) {
-    files.delete(key)
-    if (file.size > 8 * 1024 * 1024) return
-    files.set(key, file)
-    if (files.size > 512) {
-      let oldestKey = files.keys().next().value
-      if (oldestKey !== undefined) files.delete(oldestKey)
-    }
-  },
-}
 
 let assetServer = createAssetServer({
   basePath: '/assets',
   allowFiles: ['app/**/public/**'],
   files: {
-    cache,
     extensions: ['.svg', '.png'],
-    transforms: {
-      /*...*/
+    cache: {
+      async get(key) {
+        return backend.readFile(key) // Return a File, or null on a miss.
+      },
+      async put(key, file) {
+        await backend.writeFile(key, file)
+      },
     },
   },
 })
 ```
 
-Custom caches receive opaque keys and ordinary `File` values. The server applies no entry count or file size limits to them, and consults the cache before responding to conditional requests. Your cache controls expiration and cleanup, including obsolete namespaces in persistent stores. Custom cache errors follow normal asset-server error handling. The built-in cache requires a writable directory; use a custom cache or omit `files.cache` when local disk storage is unavailable. Cache limits do not limit concurrent transform work or the size of an output while it is being computed.
+Keys are opaque strings. Your cache controls limits, eviction, and persistence, and must preserve each file's bytes and metadata. Existing `FileStorage` backends can also be passed directly to `files.cache`.
 
 #### Request transform limits
 
