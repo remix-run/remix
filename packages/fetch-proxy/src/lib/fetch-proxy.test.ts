@@ -2,6 +2,7 @@ import type { IncomingHttpHeaders } from 'node:http'
 import { createServer } from 'node:http'
 
 import * as assert from '@remix-run/assert'
+import { createRequestListener } from '@remix-run/node-fetch-server'
 import { compressResponse } from '@remix-run/response/compress'
 import { describe, it } from '@remix-run/test'
 import { fetch as undiciFetch } from 'undici'
@@ -31,6 +32,31 @@ async function testProxy(
   return { request: capturedRequest, response }
 }
 
+async function listenOnLoopback(server: ReturnType<typeof createServer>): Promise<number> {
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      server.off('error', reject)
+      resolve()
+    })
+  })
+
+  let address = server.address()
+  if (address == null || typeof address === 'string') {
+    throw new Error('Expected test server to listen on a TCP port')
+  }
+  return address.port
+}
+
+async function closeServer(server: ReturnType<typeof createServer>): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) reject(error)
+      else resolve()
+    })
+  })
+}
+
 async function readBodyWithUndici(response: Response): Promise<string> {
   let clientResponse = await readResponseWithUndici(response)
   return clientResponse.body
@@ -47,21 +73,10 @@ async function readResponseWithUndici(
     serverResponse.end(body)
   })
 
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject)
-    server.listen(0, '127.0.0.1', () => {
-      server.off('error', reject)
-      resolve()
-    })
-  })
+  let port = await listenOnLoopback(server)
 
   try {
-    let address = server.address()
-    if (address == null || typeof address === 'string') {
-      throw new Error('Expected test server to listen on a TCP port')
-    }
-
-    let clientResponse = await undiciFetch(`http://127.0.0.1:${address.port}/`, { method })
+    let clientResponse = await undiciFetch(`http://127.0.0.1:${port}/`, { method })
     let clientHeaders = new Headers()
     for (let [name, value] of clientResponse.headers) {
       clientHeaders.append(name, value)
@@ -73,15 +88,7 @@ async function readResponseWithUndici(
       status: clientResponse.status,
     }
   } finally {
-    await new Promise<void>((resolve, reject) => {
-      server.close((error) => {
-        if (error) {
-          reject(error)
-        } else {
-          resolve()
-        }
-      })
-    })
+    await closeServer(server)
   }
 }
 
@@ -429,6 +436,91 @@ describe('fetch proxy', () => {
     }
     assert.equal(request.credentials, 'include')
     assert.equal(request.redirect, 'manual')
+  })
+
+  it('returns redirects to the client by default and follows them when configured', async () => {
+    let targetServer = createServer((request, response) => {
+      if (request.url === '/login') {
+        response.writeHead(303, {
+          Location: '/account',
+          'Set-Cookie': 'session=abc; Path=/; HttpOnly',
+        })
+        response.end()
+      } else {
+        response.end('account page')
+      }
+    })
+    let targetPort = await listenOnLoopback(targetServer)
+    let target = `http://127.0.0.1:${targetPort}`
+
+    try {
+      let response = await createFetchProxy(target)(new Request('http://shopify.com/login'))
+
+      assert.equal(response.status, 303)
+      assert.equal(response.headers.get('Location'), '/account')
+      assert.deepEqual(response.headers.getSetCookie(), ['session=abc; HttpOnly; Path=/'])
+      await response.text()
+
+      let followedResponse = await createFetchProxy(target, { redirect: 'follow' })(
+        new Request('http://shopify.com/login'),
+      )
+
+      assert.equal(followedResponse.status, 200)
+      assert.equal(await followedResponse.text(), 'account page')
+    } finally {
+      await closeServer(targetServer)
+    }
+  })
+
+  it('preserves browser origins and auth redirects through a trusted development proxy', async () => {
+    let appServer = createServer(
+      createRequestListener(
+        (request) => {
+          let url = new URL(request.url)
+          if (url.pathname === '/account') return new Response('account page')
+
+          let origin = request.headers.get('Origin')
+          if (origin == null || url.origin !== origin) {
+            return new Response('Forbidden', { status: 403 })
+          }
+
+          return new Response(null, {
+            status: 303,
+            headers: {
+              Location: '/account',
+              'Set-Cookie': 'session=abc; Path=/; HttpOnly',
+            },
+          })
+        },
+        { trustProxy: true },
+      ),
+    )
+
+    let appPort = await listenOnLoopback(appServer)
+    let proxyServer: ReturnType<typeof createServer> | undefined
+    try {
+      let proxy = createFetchProxy(`http://127.0.0.1:${appPort}`, {
+        xForwardedHeaders: true,
+      })
+      let activeProxyServer = createServer(createRequestListener((request) => proxy(request)))
+      proxyServer = activeProxyServer
+
+      let proxyPort = await listenOnLoopback(activeProxyServer)
+      let publicOrigin = `http://127.0.0.1:${proxyPort}`
+      let response = await fetch(`${publicOrigin}/signup`, {
+        method: 'POST',
+        headers: { Origin: publicOrigin },
+        redirect: 'manual',
+      })
+
+      assert.equal(response.status, 303)
+      assert.equal(response.headers.get('Location'), '/account')
+      assert.deepEqual(response.headers.getSetCookie(), ['session=abc; HttpOnly; Path=/'])
+      await response.text()
+    } finally {
+      if (proxyServer) await closeServer(proxyServer)
+      await closeServer(appServer)
+    }
   })
 
   it('rewrites cookie domain and path', async () => {
@@ -911,6 +1003,7 @@ describe('fetch proxy', () => {
   it('allows init to override request properties', async () => {
     let capturedRequest: Request
     let proxy = createFetchProxy('https://remix.run:3000/dest', {
+      redirect: 'error',
       fetch(input, init) {
         capturedRequest = new Request(input, init)
         return Promise.resolve(new Response())
@@ -921,18 +1014,21 @@ describe('fetch proxy', () => {
       method: 'PUT',
       cache: 'no-store',
       credentials: 'omit',
+      redirect: 'manual',
     })
 
     await proxy(originalRequest, {
       method: 'POST',
       cache: 'default',
       credentials: 'include',
+      redirect: 'follow',
     })
 
     assert.ok(capturedRequest!)
     assert.equal(capturedRequest.method, 'POST')
     assert.equal(capturedRequest.cache, 'default')
     assert.equal(capturedRequest.credentials, 'include')
+    assert.equal(capturedRequest.redirect, 'follow')
   })
 })
 

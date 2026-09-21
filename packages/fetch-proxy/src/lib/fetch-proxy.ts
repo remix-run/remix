@@ -26,6 +26,14 @@ export interface FetchProxyOptions {
    */
   fetch?: typeof globalThis.fetch
   /**
+   * Controls upstream redirect handling. When omitted, the proxy changes the Fetch default of
+   * `follow` to `manual` so redirects reach the client. Input requests using `manual` or `error`
+   * retain those modes. A defined per-call `init.redirect` overrides this option.
+   *
+   * @default 'manual'
+   */
+  redirect?: RequestRedirect
+  /**
    * Set `false` to prevent the `Domain` attribute of `Set-Cookie` headers from being rewritten. By
    * default the domain will be rewritten to the domain of the incoming request.
    *
@@ -78,6 +86,7 @@ export interface FetchProxy {
  */
 export function createFetchProxy(target: string | URL, options?: FetchProxyOptions): FetchProxy {
   let localFetch = options?.fetch ?? globalThis.fetch
+  let redirect = options?.redirect
   let rewriteCookieDomain = options?.rewriteCookieDomain ?? true
   let rewriteCookiePath = options?.rewriteCookiePath ?? true
   let xForwardedHeaders = options?.xForwardedHeaders ?? false
@@ -123,11 +132,12 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
       integrity: request.integrity,
       keepalive: request.keepalive,
       mode: request.mode,
-      redirect: request.redirect,
       referrer: request.referrer,
       referrerPolicy: request.referrerPolicy,
       signal: request.signal,
       ...init,
+      redirect:
+        init?.redirect ?? redirect ?? (request.redirect === 'follow' ? 'manual' : request.redirect),
       headers: proxyHeaders,
     }
     if (request.method !== 'GET' && request.method !== 'HEAD') {

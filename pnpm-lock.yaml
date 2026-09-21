@@ -944,6 +944,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../node-fetch-server
       '@remix-run/response':
         specifier: workspace:*
         version: link:../response
