@@ -58,6 +58,11 @@
   transition: background-color 150ms ease-in-out;
 }
 
+.chapter-card--disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
 .chapter-card__heading {
   display: flex;
   flex: none;
@@ -119,6 +124,6 @@
   line-height: 1.4;
 }
 
-.chapter-card:is(:hover, :focus-within) {
+.chapter-card:not(.chapter-card--disabled):is(:hover, :focus-within) {
   background-color: var(--docs-chapter-card-hover-background);
 }

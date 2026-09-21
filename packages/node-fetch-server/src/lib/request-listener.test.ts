@@ -1313,6 +1313,19 @@ describe('createRequestListener', () => {
   })
 })
 
+describe('createRequest HTTP/2 authority', () => {
+  it('throws when Host and authority identify different hosts', () => {
+    let req = createMockRequest({
+      headers: { ':authority': 'example.com', Host: 'other.example.com' },
+    })
+    let res = createMockResponse({ req })
+
+    assert.throws(() => createRequest(req, res), {
+      message: 'Host header does not match :authority',
+    })
+  })
+})
+
 describe('createRequest abort behavior', () => {
   it('aborts the request.signal when response closes before finishing', () => {
     let req = createMockRequest()
@@ -1612,7 +1625,9 @@ function createMockRequest({
       method,
       rawHeaders,
       socket,
-      headers,
+      headers: Object.fromEntries(
+        Object.entries(headers).map(([name, value]) => [name.toLowerCase(), value]),
+      ),
     },
   ) as http.IncomingMessage
 }

@@ -2,6 +2,15 @@
 
 This is the changelog for [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.3
+
+### Patch Changes
+
+- Reject invalid `orderBy` direction values at runtime before interpolating them into generated MySQL queries.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.6.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.6.0)
+
 ## v0.5.2
 
 ### Patch Changes

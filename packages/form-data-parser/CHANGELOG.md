@@ -2,6 +2,16 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
+## v0.17.6
+
+### Patch Changes
+
+- Apply upload handlers and parser limits consistently for mixed-case form media types. Reject unsupported media types before reading the request body, including on Bun, so they cannot bypass parser limits.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+  - [`multipart-parser@0.16.5`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.5)
+
 ## v0.17.5
 
 ### Patch Changes

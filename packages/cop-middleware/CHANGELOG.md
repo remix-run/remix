@@ -2,6 +2,15 @@
 
 This is the changelog for [`cop-middleware`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.10
+
+### Patch Changes
+
+- Use the original request method for safe-method and method-specific bypass checks, so routing method overrides do not change request classification.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.1)
+
 ## v0.1.9
 
 ### Patch Changes

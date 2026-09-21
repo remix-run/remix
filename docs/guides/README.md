@@ -43,7 +43,7 @@ An optional chapter introduction can go here.
 ## Stable custom anchor {#custom-anchor}
 ```
 
-Set `published: false` in a chapter's frontmatter to keep it available locally while omitting it from production navigation and responses. Chapters are published by default when this field is absent. In production, links to unpublished chapters render as plain text. The prerender seeds the crawler with published chapter URLs, so unpublished chapters are not written to the deployed site or added to Pagefind.
+Set `published: false` in a chapter's frontmatter to keep it available locally while omitting it from production responses. Chapters are published by default when this field is absent. The production guide index and sidebar still list unpublished chapters as disabled so the full guide sequence remains visible. Set `listed: false` for development fixtures and other pages that are not part of that sequence. In production, links to unpublished chapters render as plain text. The prerender seeds the crawler with published chapter URLs, so unpublished chapters are not written to the deployed site or added to Pagefind.
 
 Code fences support filename headers and line highlighting:
 
