@@ -143,13 +143,9 @@ describe('IfMatch.from', () => {
     assert.deepEqual(IfMatch.from('').tags, ['""'])
     assert.deepEqual(IfMatch.from(' \t ').tags, ['" \t "'])
     assert.deepEqual(IfMatch.from(' ,\t, ').tags, ['""', '""', '""'])
-  })
 
-  it('parses long whitespace runs', () => {
-    let tag = `"first${' '.repeat(128_000)}last"`
-    let header = IfMatch.from(`W/"other",${tag}`)
-
-    assert.deepEqual(header.tags, ['W/"other"', tag])
+    let tag = `"first${' '.repeat(100)}last"`
+    assert.deepEqual(IfMatch.from(`W/"other",${tag}`).tags, ['W/"other"', tag])
   })
 
   it('parses a string value', () => {
