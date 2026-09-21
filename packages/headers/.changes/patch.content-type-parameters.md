@@ -1,1 +1,1 @@
-Recognize `ContentType` parameter names case-insensitively while preserving media type and parameter value casing.
+Recognize `ContentType` parameter names case-insensitively while preserving media type and parameter value casing. Keep the first value when a `boundary` or `charset` parameter is repeated, including when the names use different casing.

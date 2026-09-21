@@ -91,9 +91,9 @@ export class ContentType implements HeaderValue, ContentTypeInit {
           for (let [name, val] of params.slice(1)) {
             name = name.toLowerCase()
             if (name === 'boundary') {
-              header.boundary = val
+              header.boundary ??= val
             } else if (name === 'charset') {
-              header.charset = val
+              header.charset ??= val
             }
           }
         }
