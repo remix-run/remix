@@ -14,6 +14,7 @@ export type MarkdownChapter = {
   title: string
   description: string
   published: boolean
+  listed: boolean
   sections: MarkdownHeading[]
   content: RemixNode
 }

@@ -2,6 +2,18 @@
 
 This is the changelog for [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table). It follows [semantic versioning](https://semver.org/).
 
+## v0.6.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Dotted string values passed to `eq()`, `ne()`, `gt()`, `gte()`, `lt()`, and `lte()` are now treated as scalar values. Use table column references, such as `eq(accounts.id, projects.account_id)`, for column-to-column comparisons.
+
+- Add `compileOrderByDirection()` to `@remix-run/data-table/sql-helpers` for adapters that need to validate and compile case-insensitive `asc` and `desc` values.
+
+### Patch Changes
+
+- Reject update and delete operations when a supplied `where` clause is structurally unconditional, including empty object filters and empty `notIn` predicates.
+
 ## v0.5.1
 
 ### Patch Changes
