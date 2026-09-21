@@ -162,7 +162,7 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
     let pairs: string[] = []
 
     for (let [name, value] of this.#cookies) {
-      pairs.push(`${name}=${quote(value)}`)
+      pairs.push(`${name}=${quote(value.replace(/;/g, '%3B'))}`)
     }
 
     return pairs.join('; ')

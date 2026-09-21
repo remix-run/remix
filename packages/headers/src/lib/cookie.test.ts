@@ -96,6 +96,12 @@ describe('Cookie', () => {
     assert.equal(Cookie.from(header.toString()).get('name'), 'a"b')
   })
 
+  it('encodes semicolons when serializing cookie values', () => {
+    let header = new Cookie({ name: 'a;b;c' })
+
+    assert.equal(header.toString(), 'name=a%3Bb%3Bc')
+  })
+
   it('unquotes complete values and preserves equals signs and encoded values', () => {
     let header = Cookie.from('quoted="abc=="; encoded=a%3Bb; empty=""; bare; =ignored; ;')
 
