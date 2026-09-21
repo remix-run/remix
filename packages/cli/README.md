@@ -113,7 +113,6 @@ trailing commas. Every top-level field is optional:
     "allowFiles": ["app/routes.ts", "app/**/public/**"],
     "allowPackages": ["remix"],
     "denyFiles": ["app/**/*.test.*"],
-    "optimizeBarrelFileImports": true,
     "files": {
       "extensions": [".svg", ".png", ".jpg", ".woff2"],
     },

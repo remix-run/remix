@@ -119,7 +119,6 @@ export type ResolveArgs = {
   resolverFactory: ResolverFactory
   resolveDirectorySpecifierIdentity(directory: string, specifier: string): Promise<string | null>
   routes: CompiledRoutes
-  trackPackageSideEffects: boolean
 }
 
 type ResolvedSpec = {
@@ -412,21 +411,17 @@ export async function resolveModule(
     })
   }
 
-  let packageJsonPath = args.trackPackageSideEffects
-    ? findNearestPackageJsonPath(transformed.resolvedPath)
-    : null
+  let packageJsonPath = findNearestPackageJsonPath(transformed.resolvedPath)
   let resolveTrackingFiles = new Set(trackedFiles)
-  if (args.trackPackageSideEffects && packageJsonPath && !args.isWatchIgnored(packageJsonPath)) {
+  if (packageJsonPath && !args.isWatchIgnored(packageJsonPath)) {
     trackedFiles.add(packageJsonPath)
   }
-  if (args.trackPackageSideEffects) {
-    for (let candidatePath of getPackageJsonCandidatePaths(
-      transformed.resolvedPath,
-      packageJsonPath,
-      args.packageJsonSearchRoot,
-    )) {
-      if (!args.isWatchIgnored(candidatePath)) resolveTrackingFiles.add(candidatePath)
-    }
+  for (let candidatePath of getPackageJsonCandidatePaths(
+    transformed.resolvedPath,
+    packageJsonPath,
+    args.packageJsonSearchRoot,
+  )) {
+    if (!args.isWatchIgnored(candidatePath)) resolveTrackingFiles.add(candidatePath)
   }
   for (let trackedFile of trackedFiles) resolveTrackingFiles.add(trackedFile)
 

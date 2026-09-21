@@ -1,1 +1,1 @@
-Optimize named imports through eligible side-effect-free barrel files by default in `remix/assets`. Set `optimizeBarrelFileImports: false` in `createAssetServer()` or `remix.json` to disable this optimization.
+Optimize named imports through eligible side-effect-free barrel files in `remix/assets`.

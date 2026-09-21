@@ -80,7 +80,6 @@ type ScriptCompilerOptions = {
   }
   isAllowed(absolutePath: string): boolean
   minify: boolean
-  optimizeBarrelFileImports: boolean
   loaders: readonly ModuleLoader[]
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
   onWatchFilesChange?: (delta: { add: string[]; remove: string[] }) => void
@@ -164,7 +163,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     getDependencies(resolvedModule) {
       return resolvedModule.deps
     },
-    invalidateImportersOnFileEvent: resolvedOptions.optimizeBarrelFileImports,
+    invalidateImportersOnFileEvent: true,
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
     onWatchFilesChange: options.onWatchFilesChange,
   })
@@ -183,9 +182,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedModule>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedModule>>()
   let hasResolvedScripts = false
-  let barrelFileImportOptimizer = resolvedOptions.optimizeBarrelFileImports
-    ? createBarrelFileImportOptimizer()
-    : null
+  let barrelFileImportOptimizer = createBarrelFileImportOptimizer()
 
   let transformArgs: TransformArgs = {
     define: resolvedOptions.define ?? null,
@@ -210,7 +207,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     resolveDirectorySpecifierIdentity,
     routes: resolvedOptions.routes,
     packageJsonSearchRoot: resolvedOptions.rootDir,
-    trackPackageSideEffects: resolvedOptions.optimizeBarrelFileImports,
   }
 
   return {
@@ -731,7 +727,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     roots: readonly ResolvedModule[],
   ): Promise<Map<string, ResolvedModule>> {
     let sourceGraph = await resolveScriptGraph(roots)
-    if (!barrelFileImportOptimizer) return sourceGraph
     return getReachableGraph(
       roots.map((root) => root.identityPath),
       barrelFileImportOptimizer(sourceGraph),

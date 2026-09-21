@@ -2607,10 +2607,7 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
     await write(dir, 'app/value.ts', 'export const value = true')
-    let assetServer = createTestServer(dir, {
-      fingerprint: true,
-      optimizeBarrelFileImports: true,
-    })
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
     let entryBody = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
     let importMap = await assetServer.getImportMap(['app/entry.ts', 'app/value.ts'])
@@ -3085,25 +3082,6 @@ describe('asset-server', () => {
     assert.equal(notModified.status, 304)
   })
 
-  it('can disable barrel file import optimization', async () => {
-    await writeJson(dir, 'app/package.json', { sideEffects: false })
-    await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
-    await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
-    await write(dir, 'app/value.ts', 'export const value = 1')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: false })
-
-    let entry = await assetServer.getScriptEntry('app/entry.ts')
-    let response = await get(assetServer, entry.href)
-    assert.ok(response)
-
-    assert.match(await response.text(), /from "\.\/barrel\.ts"/)
-    assert.deepEqual(entry.preloads, [
-      '/assets/app/entry.ts',
-      '/assets/app/barrel.ts',
-      '/assets/app/value.ts',
-    ])
-  })
-
   it('preserves a barrel file request when another branch cycles back to the importer', async () => {
     await writeJson(dir, 'app/package.json', { sideEffects: false })
     await write(
@@ -3132,7 +3110,7 @@ describe('asset-server', () => {
       'app/second.ts',
       ['import { a } from "./consumer-a.ts"', 'export const second = a'].join('\n'),
     )
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let consumerA = await (await getByFile(assetServer, 'app/consumer-a.ts'))!.text()
     let consumerB = await (await getByFile(assetServer, 'app/consumer-b.ts'))!.text()
@@ -3175,7 +3153,7 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/style/stylesheet.ts', 'export function createStyleManager() {}')
     await write(dir, 'app/style/style.ts', 'export function processStyleClass() {}')
-    let assetServer = createTestServer(dir, { minify: true, optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir, { minify: true })
 
     let entry = await assetServer.getScriptEntry('app/entry.ts')
     let response = await get(assetServer, entry.href)
@@ -3207,7 +3185,7 @@ describe('asset-server', () => {
       await write(caseDir, 'app/first.ts', 'export const first = 1')
       await write(caseDir, 'app/second.ts', 'export const second = 2')
       await write(caseDir, 'app/third.ts', 'export const first = 3')
-      let assetServer = createWatchedTestServer(caseDir, { optimizeBarrelFileImports: true })
+      let assetServer = createWatchedTestServer(caseDir)
 
       try {
         let firstResponse = await getByFile(assetServer, 'app/entry.ts')
@@ -3280,7 +3258,6 @@ describe('asset-server', () => {
       await write(caseDir, 'app/value.ts', 'export const value = 1')
       await write(caseDir, 'app/unrelated.ts', 'export const unrelated = true')
       let assetServer = createWatchedTestServer(caseDir, {
-        optimizeBarrelFileImports: true,
         scripts: {
           loaders: [
             (url, context, nextLoad) => {
@@ -3340,7 +3317,7 @@ describe('asset-server', () => {
       )
       await write(caseDir, 'app/first.ts', 'export const firstValue = 1')
       await write(caseDir, 'app/second.ts', 'export const secondValue = 2')
-      let assetServer = createWatchedTestServer(caseDir, { optimizeBarrelFileImports: true })
+      let assetServer = createWatchedTestServer(caseDir)
 
       try {
         let firstResponse = await getByFile(assetServer, 'app/entry.ts')
@@ -3415,7 +3392,7 @@ describe('asset-server', () => {
       )
       await write(caseDir, 'app/barrel.ts', 'export { value } from "./value.ts"')
       await write(caseDir, 'app/value.ts', 'export const value = 1')
-      let assetServer = createWatchedTestServer(caseDir, { optimizeBarrelFileImports: true })
+      let assetServer = createWatchedTestServer(caseDir)
 
       try {
         let optimizedResponse = await getByFile(assetServer, 'app/entry.ts')
@@ -3473,7 +3450,7 @@ describe('asset-server', () => {
     await write(dir, 'app/second.ts', 'export const second = 2')
     await write(dir, 'app/before.ts', 'globalThis.before = true')
     await write(dir, 'app/after.ts', 'globalThis.after = true')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
@@ -3515,7 +3492,7 @@ describe('asset-server', () => {
     await write(dir, 'app/second-barrel.ts', 'export { second } from "./second.ts"')
     await write(dir, 'app/first.ts', 'export const first = 1')
     await write(dir, 'app/second.ts', 'export const second = 2')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
@@ -3547,7 +3524,7 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/shared.ts', 'globalThis.order = ["shared"]')
     await write(dir, 'app/other.ts', 'globalThis.order.push("other")')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
 
@@ -3590,7 +3567,7 @@ describe('asset-server', () => {
     await write(dir, 'app/before.ts', 'globalThis.before = true')
     await write(dir, 'app/between.ts', 'globalThis.between = true')
     await write(dir, 'app/after.ts', 'globalThis.after = true')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
 
@@ -3652,7 +3629,7 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/values.ts', 'export const rawFirst = 1\nexport const rawThird = 3')
     await write(dir, 'app/second.ts', 'export const rawSecond = 2')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
 
@@ -3689,7 +3666,7 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/first.ts', 'export const first = 1')
     await write(dir, 'app/second.ts', 'export const second = 2')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
 
@@ -3713,7 +3690,7 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
     await write(dir, 'app/value.ts', 'export const value = 1')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
 
@@ -3734,7 +3711,7 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
     await write(dir, 'app/value.ts', 'export const value = 1')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
 
@@ -3752,7 +3729,7 @@ describe('asset-server', () => {
       'export { value } from "./value.ts" with { type: "javascript" }',
     )
     await write(dir, 'app/value.ts', 'export const value = 1')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
 
@@ -3765,7 +3742,7 @@ describe('asset-server', () => {
     await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
     await write(dir, 'app/barrel.ts', 'export * from "./value.ts" with { type: "javascript" }')
     await write(dir, 'app/value.ts', 'export const value = 1')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
 
@@ -3786,7 +3763,7 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/barrel.ts', 'export { value } from "./value.ts"')
     await write(dir, 'app/value.ts', 'export const value = 1')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let entry = await assetServer.getScriptEntry('app/entry.ts')
     let body = await (await get(assetServer, entry.href))!.text()
@@ -3818,7 +3795,6 @@ describe('asset-server', () => {
     await write(dir, 'app/first.ts', 'export const rawFirst = 1')
     await write(dir, 'app/second.ts', 'export const rawSecond = 2')
     let assetServer = createTestServer(dir, {
-      optimizeBarrelFileImports: true,
       scripts: { loaders: [createPrependModuleLoader('// transformed\n')] },
       sourceMaps: 'external',
     })
@@ -3885,7 +3861,6 @@ describe('asset-server', () => {
     await write(dir, 'app/value.ts', 'export const rawValue = 1')
     let assetServer = createTestServer(dir, {
       minify: true,
-      optimizeBarrelFileImports: true,
       sourceMaps: 'external',
     })
 
@@ -3922,7 +3897,7 @@ describe('asset-server', () => {
       ['export { default } from "./value.ts"', 'export * from "./value.ts"'].join('\n'),
     )
     await write(dir, 'app/value.ts', 'export default 1\nexport const named = 2')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
@@ -3958,7 +3933,7 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/first.ts', 'export const value = 1')
     await write(dir, 'app/second.ts', 'export const value = 2')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
@@ -3983,7 +3958,7 @@ describe('asset-server', () => {
       'import { second } from "./barrel.ts"\nexport const first = second',
     )
     await write(dir, 'app/second.ts', 'export const second = 2')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
@@ -4018,7 +3993,7 @@ describe('asset-server', () => {
       'export const value = 1',
     )
     await write(dir, 'app/entry.ts', 'import { value } from "public-pkg"\nconsole.log(value)')
-    let assetServer = createTestServer(dir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(dir)
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
@@ -4033,7 +4008,7 @@ describe('asset-server', () => {
 
   it('leaves a re-export chain unchanged without side-effect metadata', async () => {
     let caseDir = await makeTmpDir()
-    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(caseDir)
     try {
       await write(
         caseDir,
@@ -4054,7 +4029,7 @@ describe('asset-server', () => {
 
   it('leaves the original import unchanged when a barrel file branch has side effects', async () => {
     let caseDir = await makeTmpDir()
-    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(caseDir)
     try {
       await writeJson(caseDir, 'app/package.json', { sideEffects: ['./unused.ts'] })
       await write(caseDir, 'app/entry.ts', 'import { value } from "./outer.ts"\nconsole.log(value)')
@@ -4078,7 +4053,7 @@ describe('asset-server', () => {
 
   it('does not treat a dynamic dependency as a retained side-effectful branch', async () => {
     let caseDir = await makeTmpDir()
-    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(caseDir)
     try {
       await writeJson(caseDir, 'app/package.json', { sideEffects: ['./effect.ts'] })
       await write(
@@ -4118,7 +4093,6 @@ describe('asset-server', () => {
     await write(dir, 'app/value.ts', 'export const value = 1')
     await write(dir, 'app/unused.ts', 'export const unused = 2')
     let assetServer = createTestServer(dir, {
-      optimizeBarrelFileImports: true,
       scripts: {
         loaders: [
           (url, context, nextLoad) => {
@@ -4153,7 +4127,6 @@ describe('asset-server', () => {
     await write(dir, 'app/first.ts', 'export const first = 1')
     await write(dir, 'app/second.ts', 'export const second = 2')
     let assetServer = createTestServer(dir, {
-      optimizeBarrelFileImports: true,
       scripts: {
         loaders: [
           (url, context, nextLoad) => {
@@ -4183,7 +4156,7 @@ describe('asset-server', () => {
 
   it('optimizes imports through barrel files that do not match sideEffects glob patterns', async () => {
     let caseDir = await makeTmpDir()
-    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(caseDir)
     try {
       await writeJson(caseDir, 'app/package.json', { sideEffects: ['**/*.css'] })
       await write(
@@ -4205,7 +4178,7 @@ describe('asset-server', () => {
 
   it('preserves requests for nested barrel files that match sideEffects glob patterns', async () => {
     let caseDir = await makeTmpDir()
-    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(caseDir)
     try {
       await writeJson(caseDir, 'app/package.json', { sideEffects: ['**/barrel.ts'] })
       await write(
@@ -4227,7 +4200,7 @@ describe('asset-server', () => {
 
   it('matches basename-only sideEffects patterns at any depth', async () => {
     let caseDir = await makeTmpDir()
-    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(caseDir)
     try {
       await writeJson(caseDir, 'app/package.json', { sideEffects: ['barrel.ts'] })
       await write(
@@ -4249,7 +4222,7 @@ describe('asset-server', () => {
 
   it('normalizes leading ./ in sideEffects patterns', async () => {
     let caseDir = await makeTmpDir()
-    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(caseDir)
     try {
       await writeJson(caseDir, 'app/package.json', { sideEffects: ['./barrel.ts'] })
       await write(
@@ -4280,7 +4253,7 @@ describe('asset-server', () => {
       )
       await write(caseDir, 'app/feature/barrel.ts', 'export { value } from "./value.ts"')
       await write(caseDir, 'app/feature/value.ts', 'export const value = 1')
-      let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+      let assetServer = createTestServer(caseDir)
 
       let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
 
@@ -4293,7 +4266,7 @@ describe('asset-server', () => {
 
   it('treats an empty sideEffects array as side-effect-free', async () => {
     let caseDir = await makeTmpDir()
-    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(caseDir)
     try {
       await writeJson(caseDir, 'app/package.json', { sideEffects: [] })
       await write(
@@ -4315,7 +4288,7 @@ describe('asset-server', () => {
 
   it('leaves a re-export chain unchanged when sideEffects is true', async () => {
     let caseDir = await makeTmpDir()
-    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(caseDir)
     try {
       await writeJson(caseDir, 'app/package.json', { sideEffects: true })
       await write(
@@ -4337,7 +4310,7 @@ describe('asset-server', () => {
 
   it('leaves a re-export chain unchanged with invalid sideEffects metadata', async () => {
     let caseDir = await makeTmpDir()
-    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(caseDir)
     try {
       await writeJson(caseDir, 'app/package.json', { sideEffects: 'false' })
       await write(
@@ -4359,7 +4332,7 @@ describe('asset-server', () => {
 
   it('optimizes an independent barrel file import when another chain is effectful', async () => {
     let caseDir = await makeTmpDir()
-    let assetServer = createTestServer(caseDir, { optimizeBarrelFileImports: true })
+    let assetServer = createTestServer(caseDir)
     try {
       await writeJson(caseDir, 'app/package.json', { sideEffects: ['**/unsafe-*.ts'] })
       await write(
@@ -4399,7 +4372,6 @@ describe('asset-server', () => {
 
     let preservedServer = createTestServer(dir, {
       fingerprint: true,
-      optimizeBarrelFileImports: true,
     })
     let preservedEntry = await preservedServer.getScriptEntry('app/entry.ts')
     let preservedResponse = await get(preservedServer, preservedEntry.href)
@@ -4407,7 +4379,7 @@ describe('asset-server', () => {
     let preservedBody = await preservedResponse.text()
 
     await writeJson(dir, 'app/package.json', { sideEffects: false })
-    let firstServer = createTestServer(dir, { fingerprint: true, optimizeBarrelFileImports: true })
+    let firstServer = createTestServer(dir, { fingerprint: true })
     let firstEntry = await firstServer.getScriptEntry('app/entry.ts')
     let firstResponse = await get(firstServer, firstEntry.href)
     assert.ok(firstResponse)
@@ -4435,7 +4407,7 @@ describe('asset-server', () => {
     assert.match(firstTargetHref ?? '', /\/assets\/app\/value\.@[A-Za-z0-9_-]+\.ts/)
 
     await write(dir, 'app/value.ts', 'export const value = 2')
-    let secondServer = createTestServer(dir, { fingerprint: true, optimizeBarrelFileImports: true })
+    let secondServer = createTestServer(dir, { fingerprint: true })
     let secondHref = await secondServer.getHref('app/entry.ts')
     let secondImportMap = await secondServer.getImportMap('app/entry.ts')
     let secondTargetHref = secondImportMap.imports['/assets/app/value.ts']
@@ -4466,7 +4438,6 @@ describe('asset-server', () => {
     await write(dir, 'app/second.ts', 'export const secondValue = 2')
     let options = {
       fingerprint: true,
-      optimizeBarrelFileImports: true,
       sourceMaps: 'external' as const,
     }
 
@@ -10084,15 +10055,6 @@ describe('asset-server', () => {
     )
   })
 
-  it('rejects non-boolean optimizeBarrelFileImports options', async () => {
-    assert.throws(
-      () =>
-        createTestServer(dir, {
-          optimizeBarrelFileImports: 'true' as never,
-        }),
-      /optimizeBarrelFileImports must be a boolean/,
-    )
-  })
   it('rejects fingerprinting when watch uses its default mode', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
     assert.throws(

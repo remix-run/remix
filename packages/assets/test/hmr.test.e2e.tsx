@@ -85,36 +85,6 @@ describe('asset server HMR', () => {
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
   })
 
-  it('preserves barrel import HMR behavior when optimization is disabled', async (t) => {
-    let fixture = await createHmrFixture({ counterBarrelHmrBoundary: true })
-    t.after(fixture.close)
-
-    let server = await createHmrTestServer(fixture, { optimizeBarrelFileImports: false })
-    let compiledConsumer = await fetch(
-      new URL('/assets/app/counter-consumer.ts', server.baseUrl),
-    ).then((response) => response.text())
-    assert.match(compiledConsumer, /from ['"]\.\/counter-barrel\.ts['"]/)
-
-    let page = await t.serve(server)
-    await navigateToHmrPage(page)
-    await waitForText(page, '[data-testid="increment"]', 'Increment')
-    await page.locator('[data-testid="field"]').fill('keep me')
-
-    await write(
-      fixture.rootDir,
-      'app/counter-next.ts',
-      getCounterModuleSource({ buttonText: 'Retargeted without optimization' }),
-    )
-    await write(
-      fixture.rootDir,
-      'app/counter-barrel.ts',
-      "export { renderCounter } from './counter-next.ts'\n",
-    )
-
-    await waitForText(page, '[data-testid="increment"]', 'Retargeted without optimization')
-    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
-  })
-
   it('updates an accepting importer when a skipped barrel enters the served graph', async (t) => {
     let fixture = await createHmrFixture({ counterBarrelHmrBoundary: true })
     t.after(fixture.close)
@@ -1969,10 +1939,7 @@ async function writeWorkspacePackageLinks(rootDir: string, packageNames: string[
   )
 }
 
-async function createHmrTestServer(
-  fixture: HmrFixture,
-  options: { optimizeBarrelFileImports?: boolean } = {},
-): Promise<HmrTestServer> {
+async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> {
   let appDir = path.relative(workspaceDir, path.join(fixture.rootDir, 'app'))
   let hmrEventStream: ReturnType<typeof createTestHmrEventStream> | undefined
   let browserHmrFileEventHandlers = new Set<BrowserHmrFileEventHandler>()
@@ -2007,7 +1974,6 @@ async function createHmrTestServer(
         moduleImporter: './packages/multiple-import-maps-polyfill/src/index.ts',
       },
       onError() {},
-      optimizeBarrelFileImports: options.optimizeBarrelFileImports,
       rootDir: workspaceDir,
       watch: {
         poll: true,

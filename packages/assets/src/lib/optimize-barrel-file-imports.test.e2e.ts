@@ -122,7 +122,7 @@ async function assertFingerprintRuntime(t: TestContext): Promise<void> {
   assert.equal(await page.locator('script[type="importmap"]').count(), 1)
 }
 
-describe('optimizeBarrelFileImports', () => {
+describe('barrel file import optimization', () => {
   it('runs fingerprinted optimized imports using an import map and preloads', async (t) => {
     await assertFingerprintRuntime(t)
   })
