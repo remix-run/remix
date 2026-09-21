@@ -223,7 +223,7 @@ jobs:
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node ./scripts/run-changed-workspaces.ts test:bun "$PR_BASE_SHA" "$PR_HEAD_SHA"
+        run: node ./scripts/detect-changed-packages.ts "$PR_BASE_SHA" "$PR_HEAD_SHA" --script test:bun
 
   test_windows_changed:
     name: test (windows-latest, changed packages)
