@@ -21,10 +21,12 @@ npm i remix
 
 The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It automatically validates the request is `multipart/form-data`, extracts the multipart boundary from the `Content-Type` header, parses all fields and files in the `request.body` stream, and gives each one to you as a `MultipartPart` object with a rich API for accessing its metadata and content.
 
+`MultipartPart.filename` is untrusted client input from `Content-Disposition`, including decoded `filename*` values when supplied. The parser does not sanitize filenames for filesystem use. Do not use `part.filename`, or a `File.name` derived from it, directly as a filesystem path. Generate a storage name in your application; see [Filename Safety](https://github.com/remix-run/remix/tree/main/packages/headers#filename-safety).
+
 ```ts
 import { MultipartParseError, parseMultipartRequest } from 'remix/multipart-parser'
 
-async function handleRequest(request: Request): void {
+async function handleRequest(request: Request): Promise<void> {
   try {
     for await (let part of parseMultipartRequest(request)) {
       if (part.isFile) {
@@ -35,8 +37,9 @@ async function handleRequest(request: Request): void {
         console.log(`Field name: ${part.name}`)
         console.log(`Content-Type header: ${part.headers['content-type']}`)
 
-        // Save to disk, upload to cloud storage, etc.
-        await saveFile(part.filename, part.bytes)
+        // Save under an application-generated name, independent of part.filename
+        let storageName = crypto.randomUUID()
+        await saveFile(storageName, part.bytes)
       } else {
         let text = part.text // string
         console.log(`Field received: ${part.name} = ${JSON.stringify(text)}`)

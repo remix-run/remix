@@ -1,0 +1,1 @@
+Clarify that `Content-Disposition` filename parameters and `preferredFilename` expose untrusted metadata without filesystem sanitization. Document application-generated storage names for saving uploaded or downloaded files.

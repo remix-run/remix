@@ -670,7 +670,10 @@ export class MultipartPart {
   }
 
   /**
-   * The filename of the part, if it is a file upload.
+   * The filename from the part's `Content-Disposition` header, preferring a decoded `filename*`
+   * over `filename` when available. This is untrusted client input without filesystem sanitization.
+   * Do not use it, or a `File.name` derived from it, directly as a filesystem path. Generate a
+   * storage name in your application instead.
    */
   get filename(): string | undefined {
     return ContentDisposition.from(this.headers['content-disposition'] ?? null).preferredFilename
