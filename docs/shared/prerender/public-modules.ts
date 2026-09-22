@@ -10,7 +10,11 @@ export async function discoverPublicModuleHrefs(
 
   for (let rootDir of rootDirs) {
     for await (let entry of fs.glob('**/public/**/*.{ts,tsx}', { cwd: rootDir })) {
-      if (entry.includes('.test.') || path.basename(entry) === 'dev-refresh.ts') {
+      if (
+        entry.includes('.test.') ||
+        entry.includes('.dev.') ||
+        path.basename(entry) === 'dev-refresh.ts'
+      ) {
         continue
       }
 

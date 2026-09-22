@@ -38,28 +38,28 @@ if (!installableBranch) {
 }
 
 // Error if git status is not clean
-const gitStatus = logAndExec('git status --porcelain', true)
+const gitStatus = logAndExec('git', ['status', '--porcelain'], true)
 if (gitStatus) {
   throw new Error('Error: Git working directory is not clean. Commit or stash changes first.')
 }
 
 // Capture the current branch name
-const sha = logAndExec('git rev-parse --short HEAD ', true).trim()
+const sha = logAndExec('git', ['rev-parse', '--short', 'HEAD'], true).trim()
 
 console.log(`Preparing installable branch \`${installableBranch}\` from sha ${sha}`)
 
 // Switch to new branch and reset to current commit on base branch
-logAndExec(`git checkout -B ${installableBranch}`)
+logAndExec('git', ['checkout', '-B', installableBranch])
 
 // Build dist/ folders
-logAndExec('pnpm build')
+logAndExec('pnpm', ['build'])
 
 await updateGitignore()
 await updatePackageDependencies()
 await runCliPrepack()
 
-logAndExec('git add .')
-logAndExec(`git commit -a -m "installable build from ${sha}"`)
+logAndExec('git', ['add', '.'])
+logAndExec('git', ['commit', '-a', '-m', `installable build from ${sha}`])
 
 console.log(
   [
@@ -100,7 +100,7 @@ async function runCliPrepack() {
   }
 
   console.log('Running CLI prepack script...')
-  logAndExec('pnpm --filter @remix-run/cli run prepack')
+  logAndExec('pnpm', ['--filter', '@remix-run/cli', 'run', 'prepack'])
 
   delete pkg.scripts.prepack
   delete pkg.scripts.postpack

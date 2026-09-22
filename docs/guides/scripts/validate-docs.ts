@@ -166,7 +166,7 @@ function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
   return ts.getModifiers(node)?.some((modifier) => modifier.kind === kind) ?? false
 }
 
-// The example directory mirrors the chapter file name (e.g. `17-markdown-style-demo`),
+// The example directory mirrors the chapter file name (e.g. `16-markdown-style-demo`),
 // including the order prefix, so frames stay scoped to the chapter that references them.
 function readChapterDir(chapterFile: string): string {
   let match = /^(\d+-[a-z0-9][a-z0-9-]*)\.md$/.exec(chapterFile)

@@ -52,6 +52,10 @@ Use this skill to scaffold and standardize packages so they look and behave like
   - `"@types/node": "catalog:"`
   - `"@typescript/native-preview": "catalog:"`
 - Add `keywords` like existing packages (short, lowercase, feature-focused).
+- Every published package must declare accurate `sideEffects` metadata. The generated `remix` package derives its metadata from each owning package, and package metadata validation rejects missing or invalid declarations.
+  - Use `"sideEffects": false` only when evaluating every runtime module is free of observable side effects, including effects introduced by its imports.
+  - Otherwise, list every effectful module using package-relative paths or glob patterns. Cover both source and emitted paths when the published package contains both, such as `./src/register.ts` and `./dist/register.js`.
+  - Re-audit the field whenever runtime exports, top-level imports, or evaluation behavior changes. Registration, polyfills, global mutation, hook installation, event listeners, and effectful style imports are common reasons a module must be listed.
 
 3. Define exports with `src` entry files only.
 

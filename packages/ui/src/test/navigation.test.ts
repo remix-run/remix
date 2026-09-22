@@ -984,7 +984,7 @@ describe('frame navigation sources', () => {
     )
     let dispatch = startStubNavigationListener(t, {
       getTopFrame: () => topFrame,
-      getNamedFrame: (name) => (name === 'details' ? namedFrame : topFrame),
+      getNamedFrame: (name) => (name === 'details' ? namedFrame : undefined),
       reloadFrame,
     })
     let anchor = document.createElement('a')
@@ -1080,16 +1080,122 @@ describe('frame navigation sources', () => {
     expect(namedFrame.src).toBe('/initial-frame')
   })
 
-  it('uses the public destination when the named target does not exist', async (t) => {
-    let { anchor, event, dispatch, intercept, topFrame, namedFrame } = setup(t)
+  it('leaves links with a missing named target to document navigation', async (t) => {
+    let { anchor, event, dispatch, intercept, reloadFrame, topFrame, namedFrame } = setup(t)
     anchor.setAttribute('data-rmx-target', 'missing')
     anchor.setAttribute('data-rmx-src', '/partial')
     let transition = dispatch(event)
     await transition.runHandler()
     await transition.succeed()
-    expect(intercept).toHaveBeenCalledTimes(1)
-    expect(topFrame.src).toBe(anchor.href)
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
+    expect(topFrame.src).toBe(window.location.href)
     expect(namedFrame.src).toBe('/initial-frame')
+  })
+
+  it('reloads the destination document when traversing to a missing named target', async (t) => {
+    let navigateListener: EventListener | undefined
+    let reload = mock.fn()
+    let stubNavigation = {
+      transition: { finished: Promise.resolve() } as NavigationTransition,
+      updateCurrentEntry() {},
+      addEventListener(type: string, listener: EventListener) {
+        if (type === 'navigate') navigateListener = listener
+      },
+      reload,
+    }
+    stubGlobalField(t, 'navigation', stubNavigation)
+
+    let topFrame = { src: window.location.href } as FrameHandle
+    let reloadFrame = mock.fn(() =>
+      createReloadTransition({ signal: new AbortController().signal }),
+    )
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => undefined,
+      reloadFrame,
+    })
+
+    let intercept = mock.fn()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      navigationType: 'traverse',
+      signal: new AbortController().signal,
+      destination: {
+        url: new URL('/previous', window.location.origin).href,
+        key: 'previous',
+        getState: () => ({
+          target: 'missing',
+          src: '/previous-frame',
+          resetScroll: false,
+          $rmx: true,
+        }),
+      },
+      intercept,
+    })
+
+    navigateListener?.(event)
+    expect(intercept).toHaveBeenCalledTimes(1)
+    let interceptOptions = intercept.mock.calls[0]?.arguments[0]
+    expect(interceptOptions?.scroll).toBe('manual')
+    await interceptOptions?.handler?.()
+
+    expect(reload).toHaveBeenCalledTimes(1)
+    expect(reload.mock.calls[0]?.arguments[0]).toEqual({ info: 'remix-document-reload' })
+    expect(reloadFrame).not.toHaveBeenCalled()
+    controller.abort()
+  })
+
+  it('reloads the destination document when traversal restores an unsafe frame source', async (t) => {
+    let navigateListener: EventListener | undefined
+    let reload = mock.fn()
+    let stubNavigation = {
+      transition: { finished: Promise.resolve() } as NavigationTransition,
+      updateCurrentEntry() {},
+      addEventListener(type: string, listener: EventListener) {
+        if (type === 'navigate') navigateListener = listener
+      },
+      reload,
+    }
+    stubGlobalField(t, 'navigation', stubNavigation)
+
+    let reloadFrame = mock.fn(() =>
+      createReloadTransition({ signal: new AbortController().signal }),
+    )
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => ({ src: window.location.href }) as FrameHandle,
+      getNamedFrame: () => stubFrame,
+      reloadFrame,
+    })
+
+    let intercept = mock.fn()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      navigationType: 'traverse',
+      signal: new AbortController().signal,
+      destination: {
+        url: new URL('/previous', window.location.origin).href,
+        key: 'previous',
+        getState: () => ({
+          target: 'details',
+          src: 'https://frames.example/partial',
+          resetScroll: true,
+          $rmx: true,
+        }),
+      },
+      intercept,
+    })
+
+    navigateListener?.(event)
+    let interceptOptions = intercept.mock.calls[0]?.arguments[0]
+    expect(interceptOptions?.scroll).toBe('manual')
+    await interceptOptions?.handler?.()
+
+    expect(reload).toHaveBeenCalledTimes(1)
+    expect(reloadFrame).not.toHaveBeenCalled()
+    controller.abort()
   })
 
   it('checks sources supplied by programmatic navigate calls', async (t) => {
@@ -1113,7 +1219,28 @@ describe('frame navigation sources', () => {
     expect(reloadFrame).not.toHaveBeenCalled()
   })
 
-  it('checks named-frame sources restored from navigation history', async (t) => {
+  it('leaves programmatic navigations with a missing named target to document navigation', async (t) => {
+    let { anchor, dispatch, intercept, reloadFrame } = setup(t)
+    stubGlobalMethod(
+      t,
+      'navigation',
+      'navigate',
+      (href: string, options: NavigationNavigateOptions) => {
+        let event = createAnchorNavigateEvent(anchor, { destinationUrl: href, intercept })
+        Object.assign(event, {
+          sourceElement: null,
+          destination: { url: href, getState: () => options.state },
+        })
+        let transition = dispatch(event)
+        return { finished: transition.runHandler().then(() => transition.succeed()) }
+      },
+    )
+    await navigate(anchor.href, { target: 'missing' })
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('does not reconcile unsafe frame sources restored from navigation history', async (t) => {
     let { event, anchor, dispatch, intercept, reloadFrame } = setup(t)
     Object.assign(event, {
       navigationType: 'traverse',
@@ -1129,9 +1256,9 @@ describe('frame navigation sources', () => {
       },
     })
     let transition = dispatch(event)
-    await transition.runHandler()
     await transition.succeed()
-    expect(intercept).not.toHaveBeenCalled()
+    expect(intercept).toHaveBeenCalledTimes(1)
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
     expect(reloadFrame).not.toHaveBeenCalled()
   })
 
@@ -1251,6 +1378,52 @@ describe('form navigation', () => {
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
 
+    controller.abort()
+  })
+
+  it('replays a POST submission in the frame selected before cancelling it', async (t) => {
+    stubGlobalField(t, 'NavigationPrecommitController', undefined)
+
+    let topFrame = { src: '' } as FrameHandle
+    let namedFrame = { src: '' } as FrameHandle
+    let lookupCount = 0
+    let getNamedFrame = mock.fn(
+      () => (++lookupCount === 1 ? namedFrame : undefined) as FrameHandle | undefined,
+    )
+    let reloadFrame = mock.fn((_frame: FrameHandle, _options?: ResolveFrameOptions) =>
+      createReloadTransition({ signal: new AbortController().signal }),
+    )
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame(name) {
+        expect(name).toBe('account')
+        return getNamedFrame()
+      },
+      reloadFrame,
+    })
+
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'post'
+    form.setAttribute('data-rmx-target', 'account')
+    let input = document.createElement('input')
+    input.name = 'displayName'
+    input.value = 'Ada'
+    form.append(input)
+    document.body.append(form)
+
+    let navigationSucceeded = waitForNavigationSuccess()
+    form.requestSubmit()
+    await navigationSucceeded
+
+    expect(getNamedFrame).toHaveBeenCalledTimes(1)
+    expect(reloadFrame).toHaveBeenCalledTimes(1)
+    expect(reloadFrame.mock.calls[0]?.arguments[0]).toBe(namedFrame)
+    let options = reloadFrame.mock.calls[0]?.arguments[1]
+    expect(options?.method).toBe('post')
+    expect(options?.formData?.get('displayName')).toBe('Ada')
+    expect(topFrame.src).toBe(window.location.href)
     controller.abort()
   })
 
@@ -1381,6 +1554,47 @@ describe('form navigation', () => {
       $rmx: true,
     })
 
+    controller.abort()
+  })
+
+  it('leaves POST submissions with a missing named target to document navigation', (t) => {
+    let navigateListener: EventListener | undefined
+    let stubNavigation = {
+      currentEntry: { url: window.location.href },
+      updateCurrentEntry() {},
+      addEventListener(type: string, listener: EventListener) {
+        if (type === 'navigate') navigateListener = listener
+      },
+    }
+    stubGlobalField(t, 'navigation', stubNavigation)
+
+    let topFrame = { src: window.location.href } as FrameHandle
+    let reloadFrame = mock.fn(() =>
+      createReloadTransition({ signal: new AbortController().signal }),
+    )
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => undefined,
+      reloadFrame,
+    })
+
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'post'
+    form.setAttribute('data-rmx-target', 'missing')
+    let intercept = mock.fn()
+    let event = createFormNavigateEvent(form, {
+      cancelable: true,
+      destinationUrl: form.action,
+      intercept,
+    })
+
+    navigateListener?.(event)
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
     controller.abort()
   })
 

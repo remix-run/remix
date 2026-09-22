@@ -25,6 +25,67 @@ describe('getMultipartBoundary', async () => {
     assert.equal(getMultipartBoundary('multipart/form-data; boundary=boundary123'), 'boundary123')
   })
 
+  it('ignores parameter names that end with boundary', () => {
+    assert.equal(
+      getMultipartBoundary('multipart/form-data; xboundary=other; boundary=boundary123'),
+      'boundary123',
+    )
+    assert.equal(getMultipartBoundary('multipart/form-data; xboundary=other'), null)
+  })
+
+  it('ignores boundary text inside another quoted parameter', () => {
+    assert.equal(
+      getMultipartBoundary(
+        'multipart/form-data; note="value; boundary=other"; boundary=boundary123',
+      ),
+      'boundary123',
+    )
+    assert.equal(getMultipartBoundary('multipart/form-data; note="boundary=other"'), null)
+  })
+
+  it('honors escaped quotes while reading parameters', () => {
+    assert.equal(
+      getMultipartBoundary(
+        String.raw`multipart/form-data; note="value\"; boundary=other"; boundary=boundary123`,
+      ),
+      'boundary123',
+    )
+    assert.equal(
+      getMultipartBoundary(String.raw`multipart/form-data; boundary="value\"; boundary=other"`),
+      'value"; boundary=other',
+    )
+  })
+
+  it('preserves boundary case and handles parameter whitespace', () => {
+    assert.equal(
+      getMultipartBoundary('multipart/form-data; BOUNDARY = "Boundary123"'),
+      'Boundary123',
+    )
+    assert.equal(
+      getMultipartBoundary('multipart/form-data; boundary=Boundary123 ; charset=utf-8'),
+      'Boundary123',
+    )
+  })
+
+  it('keeps the first boundary when the parameter is repeated', () => {
+    assert.equal(
+      getMultipartBoundary('multipart/form-data; boundary=first; boundary=second'),
+      'first',
+    )
+  })
+
+  it('does not read parameters inside an unterminated quoted value', () => {
+    assert.equal(getMultipartBoundary('multipart/form-data; note="value; boundary=other'), null)
+  })
+
+  it('reads an unterminated quoted boundary to the end of the header', () => {
+    assert.equal(getMultipartBoundary('multipart/form-data; boundary="abc'), 'abc')
+    assert.equal(
+      getMultipartBoundary(String.raw`multipart/form-data; boundary="abc\"; charset=utf-8`),
+      'abc"; charset=utf-8',
+    )
+  })
+
   it('returns null when boundary is missing', async () => {
     assert.equal(getMultipartBoundary('multipart/form-data'), null)
   })
@@ -35,6 +96,14 @@ describe('getMultipartBoundary', async () => {
 })
 
 describe('isMultipartRequest', async () => {
+  it('recognizes mixed-case media types with parameters', () => {
+    let request = new Request('https://example.com', {
+      headers: { 'Content-Type': 'Multipart/Mixed; boundary="ExampleBoundary"' },
+    })
+
+    assert.ok(isMultipartRequest(request))
+  })
+
   it('returns true for multipart/form-data requests', async () => {
     let request = new Request('https://example.com', {
       method: 'POST',
@@ -105,6 +174,59 @@ describe('parseMultipartRequest', async () => {
       duplex: 'half',
     } as RequestInit & { duplex: 'half' })
   }
+
+  it('uses the boundary parameter after unrelated parameters', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; xboundary=other; note="value; boundary=other"; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, { field: 'value' }),
+    })
+
+    let parts: MultipartPart[] = []
+    for await (let part of parseMultipartRequest(request)) {
+      parts.push(part)
+    }
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, 'field')
+    assert.equal(parts[0].text, 'value')
+  })
+
+  it('parses a request with an unterminated quoted boundary', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary="${boundary}`,
+      },
+      body: createMultipartMessage(boundary, { field: 'value' }),
+    })
+
+    let parts: MultipartPart[] = []
+    for await (let part of parseMultipartRequest(request)) {
+      parts.push(part)
+    }
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, 'field')
+    assert.equal(parts[0].text, 'value')
+  })
+
+  it('rejects a boundary inside an unterminated quoted parameter', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; note="value; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, { field: 'value' }),
+    })
+
+    await assert.rejects(async () => {
+      for await (let _part of parseMultipartRequest(request)) {
+        assert.fail('Unexpected multipart part')
+      }
+    }, /Invalid Content-Type header: missing boundary/)
+  })
 
   it('parses an empty multipart message', async () => {
     let request = new Request('https://example.com', {

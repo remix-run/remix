@@ -1,3 +1,5 @@
+import { ContentType } from '@remix-run/headers/content-type'
+
 import {
   type MultipartParserOptions,
   type MultipartPart,
@@ -31,6 +33,10 @@ export class MaxFilesExceededError extends FormDataParseError {
 
 /**
  * A file that was uploaded as part of a `multipart/form-data` request.
+ *
+ * The `name` and `type` properties come from the submitted multipart metadata; they do not
+ * validate the file contents. Choose storage names and validate content types in your upload
+ * handler before using files in application-specific contexts.
  */
 export class FileUpload extends File {
   /**
@@ -96,8 +102,8 @@ async function* parseFormDataParts(
 }
 
 function isUrlEncodedRequest(request: Request): boolean {
-  let contentType = request.headers.get('Content-Type')
-  return contentType != null && contentType.startsWith('application/x-www-form-urlencoded')
+  let mediaType = ContentType.from(request.headers.get('Content-Type')).mediaType?.toLowerCase()
+  return mediaType === 'application/x-www-form-urlencoded'
 }
 
 function validateUrlEncodedPartCount(partCount: number, maxParts: number): void {
@@ -206,6 +212,9 @@ export interface ParseFormDataOptions extends MultipartParserOptions {
  * keeping all files in memory, the `uploadHandler` allows you to store the file on disk or a
  * cloud storage service.
  *
+ * Accepts `multipart/*` and `application/x-www-form-urlencoded` media types.
+ * Unsupported media types throw {@link FormDataParseError} before the body is read.
+ *
  * @param request The `Request` object to parse
  * @param uploadHandler A function that handles file uploads. It receives a `File` object and may return any value that is valid in a `FormData` object
  * @returns A `Promise` that resolves to a `FormData` object containing the parsed data
@@ -260,11 +269,7 @@ export async function parseFormData(
   }
 
   if (!isMultipartRequest(request)) {
-    try {
-      return await request.formData()
-    } catch (error) {
-      throw new FormDataParseError('Cannot parse form data', { cause: error })
-    }
+    throw new FormDataParseError('Cannot parse form data')
   }
 
   let parserOptions: MultipartParserOptions = {

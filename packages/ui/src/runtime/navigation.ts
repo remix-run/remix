@@ -1,7 +1,8 @@
 import { getTopFrame, getNamedFrame } from './run.ts'
 import { reloadFrameForNavigation } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
-import { isDocumentReload } from './document-reload.ts'
+import { isDocumentReload, reloadCurrentDocument } from './document-reload.ts'
+import type { FrameHandle } from './component.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -23,6 +24,7 @@ type RuntimeNavigation = {
 interface FormSubmissionNavigationInfo {
   type: typeof formSubmissionNavigationInfoType
   state: NavigationState
+  frame: FrameHandle
   getSubmission(): Promise<FormSubmission>
 }
 
@@ -31,7 +33,7 @@ interface FrameRedirectNavigationInfo {
   resetScroll: boolean
 }
 
-const formSubmissionNavigationInfoType = 'frame-form-submission'
+const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
 function resyncWebKitScrollAfterNavigation(
@@ -66,12 +68,18 @@ function resyncWebKitScrollAfterNavigation(
 export type NavigationOptions = {
   /**
    * Same-origin source override for a mounted named frame, resolved against the document base URL.
-   * Invalid or cross-origin values disable interception even when `target` is omitted or missing.
-   * Top-frame navigations use `href` to keep the frame source in sync with the browser URL.
+   * Invalid or cross-origin values fall back to document navigation. Top-frame navigations use
+   * `href` to keep the frame source in sync with the browser URL.
    */
   src?: string
+  /**
+   * Mounted named frame to reload. When omitted, the top frame reloads. An unmatched name falls
+   * back to document navigation.
+   */
   target?: string
+  /** How the destination updates browser history. */
   history?: 'push' | 'replace'
+  /** Whether the destination resets scroll. (default: `true`) */
   resetScroll?: boolean
 }
 
@@ -81,6 +89,7 @@ export type NavigationOptions = {
  *
  * @param href Destination URL.
  * @param options Navigation options.
+ * @returns A promise that settles when the Navigation API transition finishes.
  */
 export async function navigate(href: string, options?: NavigationOptions) {
   let state = {
@@ -161,11 +170,24 @@ export function startNavigationListenerImpl(
         : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
-      if (!isSameOriginUrl(state.src)) return
+      if (!isSameOriginUrl(state.src)) {
+        fallbackToDocumentNavigation(navigation, event)
+        return
+      }
 
       let topFrame = options.getTopFrame()
-      let namedFrame = state.target ? options.getNamedFrame(state.target) : undefined
-      let frame = namedFrame ?? topFrame
+      let frame = replayedSubmission?.frame
+      if (!frame) {
+        if (state.target) {
+          frame = options.getNamedFrame(state.target)
+          if (!frame) {
+            fallbackToDocumentNavigation(navigation, event)
+            return
+          }
+        } else {
+          frame = topFrame
+        }
+      }
 
       let handler = async () => {
         if (event.signal.aborted) return
@@ -235,6 +257,7 @@ export function startNavigationListenerImpl(
               info: {
                 type: formSubmissionNavigationInfoType,
                 state,
+                frame,
                 getSubmission: runtimeNavigation.getSubmission,
               } satisfies FormSubmissionNavigationInfo,
             })
@@ -281,6 +304,7 @@ function isFormSubmissionNavigationInfo(value: unknown): value is FormSubmission
     value.type === formSubmissionNavigationInfoType &&
     'state' in value &&
     isRuntimeNavigation(value.state) &&
+    'frame' in value &&
     'getSubmission' in value &&
     typeof value.getSubmission === 'function'
   )
@@ -303,6 +327,17 @@ function isSameOriginUrl(src: string): boolean {
   } catch {
     return false
   }
+}
+
+function fallbackToDocumentNavigation(navigation: Navigation, event: NavigateEvent): void {
+  if (event.navigationType !== 'traverse') return
+
+  interceptNavigation(navigation, event, false, {
+    scroll: 'manual',
+    handler() {
+      if (!event.signal.aborted) reloadCurrentDocument(document)
+    },
+  })
 }
 
 function interceptNavigation(

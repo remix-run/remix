@@ -1,0 +1,1 @@
+Customize transformed-file caching in `remix/assets` with a `FileCache` or the configurable `createFsFileCache()` filesystem LRU. Existing `FileStorage` configurations remain compatible, and caching stays disabled unless configured (see #11859).

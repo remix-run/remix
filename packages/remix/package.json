@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "3.0.0-rc.2",
+  "version": "3.0.0-rc.3",
   "description": "The Remix web framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -11,6 +11,8 @@
   },
   "homepage": "https://github.com/remix-run/remix/tree/main/packages/remix#readme",
   "files": [
+    "guides",
+    "INDEX.md",
     "LICENSE",
     "README.md",
     "dist",
@@ -702,10 +704,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
     "clean": "git clean -fdX",
-    "postpack": "pnpm run sync-package-files -- --clean",
-    "prepack": "pnpm run sync-package-files",
+    "postpack": "node ../../scripts/sync-remix-package-files.ts --clean",
+    "prepack": "node ../../scripts/sync-remix-package-files.ts",
     "prepublishOnly": "pnpm run build",
-    "sync-package-files": "node ../../scripts/sync-remix-package-files.ts",
     "test": "remix test",
     "typecheck": "tsc --noEmit"
   },
@@ -731,5 +732,15 @@
     "playwright": {
       "optional": true
     }
-  }
+  },
+  "sideEffects": [
+    "./src/cli-entry.ts",
+    "./src/node-hmr/runtime.ts",
+    "./src/node-tsx.ts",
+    "./src/ui-hmr/node.ts",
+    "./dist/cli-entry.js",
+    "./dist/node-hmr/runtime.js",
+    "./dist/node-tsx.js",
+    "./dist/ui-hmr/node.js"
+  ]
 }

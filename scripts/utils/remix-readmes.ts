@@ -9,7 +9,6 @@ const remixManifestPath = path.join(remixDir, 'manifest.json')
 const cliPackageName = '@remix-run/cli'
 
 export interface RemixReadmeCopy {
-  sourceFile: string
   specifier: string
   sourceReadmePath: string
   remixReadmePath: string
@@ -19,41 +18,42 @@ type PackageJson = {
   exports?: Record<string, unknown>
 }
 
-export function getRemixReadmeCopies(): RemixReadmeCopy[] {
+export function getRemixReadmeMappings(): RemixReadmeCopy[] {
   let manifest: Record<string, string> = JSON.parse(fs.readFileSync(remixManifestPath, 'utf-8'))
   let packageJsonByName = readPackageJsonByName()
-  let copies: RemixReadmeCopy[] = []
-  let readmesWritten = new Set<string>()
+  let mappings: RemixReadmeCopy[] = []
 
   for (let [remixPath, specifier] of Object.entries(manifest)) {
     if (remixPath.startsWith('_')) continue
 
-    let sourceFile = getRemixSourceFile(remixPath, specifier)
-    if (readmesWritten.has(sourceFile)) continue
-
-    let sourceReadmePath = findReadmeForSpecifier(specifier, packageJsonByName)
-    if (!sourceReadmePath) continue
-
-    readmesWritten.add(sourceFile)
-    copies.push({
-      sourceFile,
-      specifier,
-      sourceReadmePath,
-      remixReadmePath: getRemixReadmePath(sourceFile),
-    })
+    let mapping = getRemixReadmeMapping(specifier, packageJsonByName)
+    if (mapping) {
+      mappings.push(mapping)
+    }
   }
 
   let cliReadmePath = findReadmeForSpecifier(cliPackageName, packageJsonByName)
   if (cliReadmePath) {
-    copies.push({
-      sourceFile: 'cli.ts',
+    mappings.push({
       specifier: cliPackageName,
       sourceReadmePath: cliReadmePath,
-      remixReadmePath: getRemixReadmePath('cli.ts'),
+      remixReadmePath: getRemixReadmePath(cliPackageName, cliReadmePath),
     })
   }
 
-  return copies
+  return mappings
+}
+
+export function getRemixReadmeCopies(): RemixReadmeCopy[] {
+  let copiesByPath = new Map<string, RemixReadmeCopy>()
+
+  for (let mapping of getRemixReadmeMappings()) {
+    if (!copiesByPath.has(mapping.remixReadmePath)) {
+      copiesByPath.set(mapping.remixReadmePath, mapping)
+    }
+  }
+
+  return [...copiesByPath.values()]
 }
 
 export async function syncRemixReadmes(): Promise<RemixReadmeCopy[]> {
@@ -68,7 +68,7 @@ export async function syncRemixReadmes(): Promise<RemixReadmeCopy[]> {
   return copies
 }
 
-export async function removeRemixReadmes(): Promise<void> {
+async function removeRemixReadmes(): Promise<void> {
   let readmePaths = await findReadmePaths(remixSrcDir)
   await Promise.all(readmePaths.map((readmePath) => fsp.rm(readmePath, { force: true })))
 }
@@ -89,12 +89,38 @@ export function findReadmeForSpecifier(
   return sourceEntryPath ? findReadmePath(packageDirName, sourceEntryPath) : undefined
 }
 
-function getRemixSourceFile(remixPath: string, specifier: string): string {
-  return specifier.replace('@remix-run/', '') + '.ts'
+function getRemixReadmeMapping(
+  specifier: string,
+  packageJsonByName: Map<string, PackageJson>,
+): RemixReadmeCopy | undefined {
+  let sourceReadmePath = findReadmeForSpecifier(specifier, packageJsonByName)
+
+  if (!sourceReadmePath) {
+    let { packageName } = parseSpecifier(specifier)
+    sourceReadmePath = findReadmeForSpecifier(packageName, packageJsonByName)
+  }
+
+  if (!sourceReadmePath) {
+    return undefined
+  }
+
+  return {
+    specifier,
+    sourceReadmePath,
+    remixReadmePath: getRemixReadmePath(specifier, sourceReadmePath),
+  }
 }
 
-function getRemixReadmePath(sourceFile: string): string {
-  return path.join(remixSrcDir, sourceFile.replace(/\.ts$/, ''), 'README.md')
+function getRemixReadmePath(specifier: string, sourceReadmePath: string): string {
+  let { packageDirName } = parseSpecifier(specifier)
+  let packageDir = path.join(packagesDir, packageDirName)
+  let sourceDirectory = path.relative(packageDir, path.dirname(sourceReadmePath))
+  let sourceParts = sourceDirectory ? sourceDirectory.split(path.sep) : []
+  if (sourceParts[0] === 'src') {
+    sourceParts.shift()
+  }
+
+  return path.join(remixSrcDir, packageDirName, ...sourceParts, 'README.md')
 }
 
 function readPackageJsonByName(): Map<string, PackageJson> {

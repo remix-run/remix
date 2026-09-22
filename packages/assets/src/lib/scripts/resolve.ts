@@ -31,9 +31,10 @@ export const resolverExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs']
 export const supportedScriptExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs']
 const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
 
-type ResolvedImport = {
+export type ResolvedImport = {
   compiledSpecifier: string
   depPath: string
+  dynamic?: boolean
   end: number
   quote?: '"' | "'" | '`'
   scopePathname?: string
@@ -66,13 +67,33 @@ export type ResolvedModule = {
     acceptedDeps: ResolvedHmrAcceptedDependency[]
   }
   identityPath: string
+  importRewrites: ImportRewrite[]
   imports: ResolvedImport[]
+  packageJsonPath: string | null
   trackedFiles: string[]
   rawCode: string
   resolvedPath: string
+  runtimeImports: ResolvedImport[]
   sourceMap: string | null
   staticDeps: string[]
   stableUrlPathname: string
+}
+
+export type ImportRewrite = {
+  end: number
+  imports: Array<{
+    depPath: string
+    sourceStart: number
+    /** Empty when this rewrite only preserves the original module evaluation order. */
+    specifiers: Array<{
+      authoredImportedName: string
+      importedName: string
+      importedStart: number
+      localName: string
+      localStart: number
+    }>
+  }>
+  start: number
 }
 
 type ResolveResult = {
@@ -93,6 +114,7 @@ export type ResolveArgs = {
   isDirectoryResolutionFileIndependent(directory: string): boolean
   isAllowed(absolutePath: string): boolean
   isWatchIgnored(filePath: string): boolean
+  packageJsonSearchRoot: string
   resolveModulePath(absolutePath: string): ResolveModuleResult | null
   resolverFactory: ResolverFactory
   resolveDirectorySpecifierIdentity(directory: string, specifier: string): Promise<string | null>
@@ -236,6 +258,7 @@ export async function resolveModule(
     let imported: ResolvedImport = {
       compiledSpecifier: unresolved.specifier,
       depPath: resolvedImport.identityPath,
+      dynamic: unresolved.dynamic,
       end: unresolved.end,
       quote: unresolved.quote,
       specifier: displaySpecifier,
@@ -388,9 +411,23 @@ export async function resolveModule(
     })
   }
 
+  let packageJsonPath = findNearestPackageJsonPath(transformed.resolvedPath)
+  let resolveTrackingFiles = new Set(trackedFiles)
+  if (packageJsonPath && !args.isWatchIgnored(packageJsonPath)) {
+    trackedFiles.add(packageJsonPath)
+  }
+  for (let candidatePath of getPackageJsonCandidatePaths(
+    transformed.resolvedPath,
+    packageJsonPath,
+    args.packageJsonSearchRoot,
+  )) {
+    if (!args.isWatchIgnored(candidatePath)) resolveTrackingFiles.add(candidatePath)
+  }
+  for (let trackedFile of trackedFiles) resolveTrackingFiles.add(trackedFile)
+
   return {
     ok: true,
-    tracking: toResolveTracking(trackedFiles, trackedResolutions),
+    tracking: toResolveTracking(resolveTrackingFiles, trackedResolutions),
     value: {
       deps: [...deps],
       hmr: {
@@ -399,10 +436,13 @@ export async function resolveModule(
         usesImportMetaHot: transformed.hmr.usesImportMetaHot,
       },
       identityPath: record.identityPath,
+      importRewrites: [],
       imports: importsWithPaths,
+      packageJsonPath,
       trackedFiles: [...trackedFiles],
       rawCode: transformed.rawCode,
       resolvedPath: transformed.resolvedPath,
+      runtimeImports: importsWithPaths,
       sourceMap: transformed.sourceMap,
       staticDeps: [...staticDeps],
       stableUrlPathname: transformed.stableUrlPathname,
@@ -528,6 +568,36 @@ function findNearestPackageJsonPath(filePath: string): string | null {
     if (parentDirectory === directory) return null
     directory = parentDirectory
   }
+}
+
+function getPackageJsonCandidatePaths(
+  filePath: string,
+  nearestPackageJsonPath: string | null,
+  searchRoot: string,
+): string[] {
+  let candidates: string[] = []
+  let directory = path.dirname(filePath)
+  let nearestPackageDirectory = nearestPackageJsonPath ? path.dirname(nearestPackageJsonPath) : null
+  let normalizedSearchRoot = normalizeFilePath(searchRoot)
+  let searchWithinRoot =
+    directory === normalizedSearchRoot || directory.startsWith(`${normalizedSearchRoot}/`)
+
+  while (true) {
+    candidates.push(normalizeFilePath(path.join(directory, 'package.json')))
+    if (directory === nearestPackageDirectory) break
+    if (
+      nearestPackageDirectory === null &&
+      (!searchWithinRoot || directory === normalizedSearchRoot)
+    ) {
+      break
+    }
+
+    let parentDirectory = path.dirname(directory)
+    if (parentDirectory === directory) break
+    directory = parentDirectory
+  }
+
+  return candidates
 }
 
 function isRelativeImportSpecifier(specifier: string): boolean {

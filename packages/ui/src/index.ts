@@ -49,6 +49,8 @@ export type {
   Props,
 } from './runtime/jsx.ts'
 export type { HostProps, LayoutAnimationConfig } from './runtime/dom.ts'
+export { unsafeHTML } from './runtime/unsafe-html.ts'
+export type { UnsafeHTML } from './runtime/unsafe-html.ts'
 export { createMixin } from './runtime/mixins/mixin.ts'
 export type {
   MixinDescriptor,

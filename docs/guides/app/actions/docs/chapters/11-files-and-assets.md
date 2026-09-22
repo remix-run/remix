@@ -1,6 +1,7 @@
 ---
 title: Files and Assets
 description: How Remix serves static files and source assets, accepts bounded uploads, stores files, and returns HTTP file responses.
+published: false
 ---
 
 Remix has separate paths for files that already exist in public form, browser source that needs compilation, and user uploads that must cross a trust boundary. Choose that path before configuring caches or storage.
@@ -45,11 +46,30 @@ export const scriptEntry = await assetServer.getScriptEntry(entry);
 
 Render the script entry's import map with `<ImportMap>` before its modulepreload links and module script. This combines its mappings with import maps from blocking client entries.
 
+Named imports through eligible barrel files are rewritten to their resolved implementation modules. This avoids intermediary requests and removes side-effect-free dependency branches that are no longer reachable. Every removed module must be declared side-effect-free by its nearest `package.json` with `sideEffects: false` or a non-matching `sideEffects` pattern; missing or invalid metadata preserves the original graph.
 Resolve `clientEntry(import.meta.url, ...)` IDs to `href`, `importMap`, and `preloads` through the asset server in the shared renderer instead of hard-coding deployment URLs in components. Frame responses can introduce additional mappings. When targeting browsers without native support for multiple import maps, configure the browser entry with `remix/multiple-import-maps-polyfill` as shown in [Interactivity](/interactivity/#browser-entry-with-run).
 
 ## File transforms and transformed-output caches {#asset-file-transforms}
 
-Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits. Use a `FileStorage` cache when transformed output should survive repeated requests or process restarts for the same build.
+Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits.
+
+To cache transformed outputs on disk, add a cache to your asset server:
+
+```ts filename=app/assets.ts
+import { createAssetServer, createFsFileCache } from "remix/assets";
+
+export const assetServer = createAssetServer({
+  basePath: "/assets",
+  allowFiles: ["app/**/public/**"],
+  files: {
+    extensions: [".svg", ".png"],
+    cache: createFsFileCache(),
+    // ...existing transforms
+  },
+});
+```
+
+Caching is disabled by default. See the [assets README](https://github.com/remix-run/remix/tree/main/packages/assets#file-transform-caching) for cache options and reuse across server restarts.
 
 ## Development watching and production fingerprints {#fingerprinting-source-maps-minification}
 

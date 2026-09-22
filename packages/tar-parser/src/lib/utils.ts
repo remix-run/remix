@@ -21,7 +21,7 @@ export function computeChecksum(block: Uint8Array): number {
 }
 
 export function decodeLongPath(buffer: Uint8Array): string {
-  return Utf8Decoder.decode(buffer)
+  return Utf8Decoder.decode(buffer[buffer.length - 1] === 0 ? buffer.subarray(0, -1) : buffer)
 }
 
 export function decodePax(buffer: Uint8Array): Record<string, string> {

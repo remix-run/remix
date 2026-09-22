@@ -11,6 +11,14 @@ function getCookieFromSetCookie(setCookie: string): string {
 }
 
 describe('Cookie', () => {
+  it('leaves secure undefined when it is not configured', async () => {
+    let cookie = createCookie('my-cookie')
+    assert.equal(cookie.secure, undefined)
+    assert.equal(new SetCookie(await cookie.serialize('value')).secure, undefined)
+    assert.equal(createCookie('my-cookie', { secure: true }).secure, true)
+    assert.equal(createCookie('my-cookie', { secure: false }).secure, false)
+  })
+
   it('leaves httpOnly undefined by default', () => {
     let cookie = createCookie('my-cookie')
     assert.equal(cookie.httpOnly, undefined)

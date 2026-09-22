@@ -198,14 +198,12 @@ export class Cookie implements CookieProperties {
   }
 
   /**
-   * True if the cookie is secure (only sent over HTTPS).
+   * Whether the cookie is only sent over HTTPS, or `undefined` when not configured.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure)
-   *
-   * @default false
    */
-  get secure(): boolean {
-    return this.#secure ?? false
+  get secure(): boolean | undefined {
+    return this.#secure
   }
 
   /**

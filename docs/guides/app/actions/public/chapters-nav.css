@@ -27,7 +27,7 @@
   margin: 0;
 }
 
-.docs-chapters-nav__list a {
+.docs-chapters-nav__item {
   position: relative;
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
@@ -52,6 +52,10 @@
 .docs-chapters-nav__list a[aria-current='page'] {
   color: var(--rmx-color-text-primary);
   background: var(--docs-nav-selected-background);
+}
+
+.docs-chapters-nav__item[aria-disabled='true'] {
+  opacity: 0.45;
 }
 
 .docs-chapters-nav__eyebrow {
@@ -80,7 +84,7 @@
     gap: 1px;
   }
 
-  .docs-chapters-nav__list a {
+  .docs-chapters-nav__item {
     height: 26px;
     padding-block: 5px;
     overflow: hidden;

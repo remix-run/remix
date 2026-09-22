@@ -3,7 +3,7 @@ import type { Session } from '@remix-run/session'
 
 import { getOAuthProviderRuntime } from './provider.ts'
 import type { OAuthProvider, OAuthResult, OAuthTokens, OAuthTransaction } from './provider.ts'
-import { getRequiredSearchParam, getSession } from './utils.ts'
+import { getRequiredSearchParam, getSession, sanitizeReturnTo } from './utils.ts'
 
 /**
  * Options for finishing an OAuth or OIDC callback flow.
@@ -23,7 +23,7 @@ export interface FinishedExternalAuthResult<
 > {
   /** Normalized OAuth or OIDC result returned by the provider runtime. */
   result: OAuthResult<profile, provider, tokens>
-  /** Preserved post-auth redirect target, when one was stored in the transaction. */
+  /** Normalized local post-auth redirect path, when the stored target is valid. */
   returnTo?: string
 }
 
@@ -73,7 +73,7 @@ export async function finishExternalAuth<
 
     return {
       result,
-      returnTo: transaction.returnTo,
+      returnTo: sanitizeReturnTo(transaction.returnTo ?? null),
     }
   } catch (error) {
     if (session?.has(transactionKey)) {

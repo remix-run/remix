@@ -6,6 +6,7 @@ import type { RemixNode } from './jsx.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameProps } from './component.ts'
 import { isMixinDescriptor } from './core/mix.ts'
+import { normalizeUnsafeHTMLProps } from './unsafe-html.ts'
 import {
   isRemixElement,
   NON_RENDER_NODE,
@@ -86,15 +87,14 @@ function isFrameProps(props: RuntimeElementProps): props is RuntimeElementProps 
 }
 
 function parseHostProps(props: RuntimeElementProps): RuntimeHostProps {
-  let children = props.children
+  let normalizedProps = normalizeUnsafeHTMLProps(props)
+
+  let children = normalizedProps.children
   invariant(children === undefined || isRemixNode(children), 'Invalid host children')
 
-  let innerHTML = props.innerHTML
-  invariant(innerHTML === undefined || typeof innerHTML === 'string', 'Invalid innerHTML prop')
-
-  let mix = props.mix
+  let mix = normalizedProps.mix
   invariant(mix === undefined || isRuntimeMixValue(mix), 'Invalid mix prop')
-  return props
+  return normalizedProps
 }
 
 function isRuntimeMixValue(value: unknown): value is RuntimeHostProps['mix'] {

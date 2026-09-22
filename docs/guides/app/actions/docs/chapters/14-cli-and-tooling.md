@@ -1,6 +1,7 @@
 ---
 title: CLI and Tooling
 description: The Remix command-line workflow for creating, inspecting, testing, checking, and running TypeScript projects.
+published: false
 ---
 
 The installed `remix` package provides the CLI and the runtime subpaths used by an app. This chapter covers the commands that exist in Remix 3 and the TypeScript loader used by the generated Node project.

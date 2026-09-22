@@ -7,7 +7,7 @@ import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle } from './component.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
-import { diffNodes } from './diff-dom.ts'
+import { diffElementAttributes, diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
 import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
@@ -48,7 +48,37 @@ type FrameMarkerData = FrameData & {
   id: string
 }
 
-type PendingClientEntries = Map<Comment, [Comment, RemixElement]>
+type PendingClientEntries = Map<Comment, [Comment, RemixElement | undefined]>
+
+export class NamedFrameRegistry {
+  #framesByName = new Map<string, FrameHandle[]>()
+
+  register(name: string, frame: FrameHandle): void {
+    let frames = this.#framesByName.get(name)
+    if (frames) {
+      frames.push(frame)
+    } else {
+      this.#framesByName.set(name, [frame])
+    }
+  }
+
+  get(name: string): FrameHandle | undefined {
+    return this.#framesByName.get(name)?.at(-1)
+  }
+
+  unregister(name: string, frame: FrameHandle): void {
+    let frames = this.#framesByName.get(name)
+    if (!frames) return
+
+    let index = frames.lastIndexOf(frame)
+    if (index === -1) return
+    frames.splice(index, 1)
+
+    if (frames.length === 0) {
+      this.#framesByName.delete(name)
+    }
+  }
+}
 
 /**
  * Loads a named client-entry export for hydration.
@@ -75,8 +105,9 @@ export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Func
 /**
  * Resolves content for a browser-loaded frame.
  *
- * Only return trusted application content. Frame HTML can select client-entry modules and
- * contribute import maps, styles, and nested frames to the current document.
+ * Only return trusted application content. Remix does not sanitize HTML strings, streams, or
+ * response bodies before parsing and reconciling them into the current document. Frame HTML can
+ * select client-entry modules and contribute import maps, styles, and nested frames.
  *
  * @param src Source string from the `<Frame src>` prop.
  * @param options Information about the active frame load or form submission.
@@ -165,20 +196,6 @@ function inferFlushKind(html: string): FlushKind {
   return FULL_DOCUMENT_PATTERN.test(html) ? 'document' : 'fragment'
 }
 
-function syncElementAttributes(target: Element, source: Element) {
-  for (let attribute of Array.from(target.attributes)) {
-    if (!source.hasAttribute(attribute.name)) {
-      target.removeAttribute(attribute.name)
-    }
-  }
-
-  for (let attribute of Array.from(source.attributes)) {
-    if (target.getAttribute(attribute.name) !== attribute.value) {
-      target.setAttribute(attribute.name, attribute.value)
-    }
-  }
-}
-
 const FRAME_RUNTIME = Symbol('FrameRuntime')
 
 export type FrameRuntime = {
@@ -194,7 +211,7 @@ export type FrameRuntime = {
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
+  namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
   serverFrameReload:
     | {
@@ -241,7 +258,7 @@ export type FrameContext = {
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
+  namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
   lifecycleSignal: AbortSignal
   regionTailRef?: ChildNode | null
@@ -267,7 +284,7 @@ type FrameInit = {
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
+  namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
 }
 
@@ -380,7 +397,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   let frameName = init.marker?.name ?? init.name
   if (frameName) {
-    init.namedFrames.set(frameName, frame)
+    init.namedFrames.register(frameName, frame)
   }
 
   let context: FrameContext = {
@@ -515,7 +532,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         collectFrameServerStyleTags(createElementContainer(parsed)),
       )
 
-      syncElementAttributes(container.doc.documentElement, parsed.documentElement)
+      diffElementAttributes(container.doc.documentElement, parsed.documentElement)
 
       diffNodes([container.doc.head], [parsed.head], {
         ...responseContext,
@@ -678,9 +695,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     }
 
     if (frameName) {
-      if (init.namedFrames.get(frameName) === frame) {
-        init.namedFrames.delete(frameName)
-      }
+      init.namedFrames.unregister(frameName, frame)
     }
   }
 
@@ -1023,7 +1038,7 @@ export function createFrameRuntime(init: {
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
   frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
+  namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
   reloadForNavigation?: (options?: FrameReloadOptions) => FrameReloadTransition
 }): FrameRuntime {
@@ -1213,6 +1228,13 @@ function scheduleHydrationInContainer(
   if (!hydrationData) return
 
   for (let marker of hydrationMarkers) {
+    if (!hydrationData[marker.id]) continue
+    if (!context.pendingClientEntries.has(marker.start)) {
+      context.pendingClientEntries.set(marker.start, [marker.end, undefined])
+    }
+  }
+
+  for (let marker of hydrationMarkers) {
     let entry = hydrationData[marker.id]
     if (!entry) continue
     scheduleHydrationMarker(marker, entry, context, reconciliationTracker, signal)
@@ -1253,7 +1275,8 @@ function scheduleHydrationMarker(
     if (signal?.aborted || context.lifecycleSignal.aborted) return
     if (!isHydrationMarkerLive(marker, context)) return
     if (!props) return
-    let vElement = createElement(component, props)
+    let pending = context.pendingClientEntries.get(marker.start)
+    let vElement = pending?.[1] ?? createElement(component, props)
     context.pendingClientEntries.set(marker.start, [marker.end, vElement])
     hydrateRegion(vElement, marker.start, marker.end, identity, context, signal)
   }
@@ -1418,7 +1441,7 @@ function hydrateRegion(
     context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   })
 
-  setClientEntryBoundaryOwner(start, identity, root)
+  setClientEntryBoundaryOwner(start, end, identity, root)
   renderEntry(root)
 }
 

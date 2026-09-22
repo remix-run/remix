@@ -18,6 +18,14 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": [
+    "./src/register.ts",
+    "./src/runtime.node-hmr.ts",
+    "./src/runtime.ts",
+    "./dist/register.js",
+    "./dist/runtime.node-hmr.js",
+    "./dist/runtime.js"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./runtime": {

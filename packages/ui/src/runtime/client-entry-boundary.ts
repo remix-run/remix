@@ -8,6 +8,7 @@ export type ClientEntryIdentity = {
 type ClientEntryRoot = Pick<VirtualRoot, 'dispose' | 'render'>
 
 export type ClientEntryBoundaryOwner = {
+  end: Comment
   identity: ClientEntryIdentity
   root: ClientEntryRoot
 }
@@ -25,10 +26,11 @@ export function getClientEntryBoundaryOwner(marker: Comment): ClientEntryBoundar
 
 export function setClientEntryBoundaryOwner(
   marker: Comment,
+  end: Comment,
   identity: ClientEntryIdentity,
   root: ClientEntryRoot,
 ): ClientEntryBoundaryOwner {
-  let owner = { identity, root }
+  let owner = { end, identity, root }
   Object.defineProperties(marker, {
     [CLIENT_ENTRY_BOUNDARY_OWNER]: {
       configurable: true,

@@ -1,7 +1,12 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { loadDocsChapterSummaries, parseChapterFilename } from './markdown-chapters.tsx'
+import {
+  loadDocsChapterSummaries,
+  loadDocsIndexChapterSummaries,
+  loadDocsNavigationItems,
+  parseChapterFilename,
+} from './markdown-chapters.tsx'
 
 describe('loadDocsChapterSummaries', () => {
   it('retains numeric chapter order for presentation-specific labels', async () => {
@@ -11,6 +16,68 @@ describe('loadDocsChapterSummaries', () => {
     assert.equal(summaries[0]?.chapter, 'Chapter 1')
     assert.equal(summaries[9]?.order, 10)
     assert.equal(summaries[9]?.chapter, 'Chapter 10')
+  })
+
+  it('omits unpublished chapters from production', async () => {
+    let developmentSummaries = await loadDocsChapterSummaries('development')
+    let productionSummaries = await loadDocsChapterSummaries('production')
+
+    assert.deepEqual(
+      developmentSummaries
+        .filter((summary) => summary.order >= 8 && summary.order <= 16)
+        .map((summary) => summary.order),
+      [8, 9, 10, 11, 12, 13, 14, 15, 16],
+    )
+    assert.deepEqual(
+      productionSummaries
+        .filter((summary) => summary.order >= 8 && summary.order <= 16)
+        .map((summary) => summary.order),
+      [13],
+    )
+  })
+})
+
+describe('loadDocsIndexChapterSummaries', () => {
+  it('disables unpublished production chapters without listing unlisted chapters', async () => {
+    let summaries = await loadDocsIndexChapterSummaries('production')
+
+    assert.deepEqual(
+      summaries
+        .filter((chapter) => chapter.order >= 8)
+        .map((chapter) => ({ order: chapter.order, disabled: chapter.disabled })),
+      [
+        { order: 8, disabled: true },
+        { order: 9, disabled: true },
+        { order: 10, disabled: true },
+        { order: 11, disabled: true },
+        { order: 12, disabled: true },
+        { order: 13, disabled: false },
+        { order: 14, disabled: true },
+        { order: 15, disabled: true },
+      ],
+    )
+  })
+})
+
+describe('loadDocsNavigationItems', () => {
+  it('disables unpublished production chapters without listing unlisted chapters', async () => {
+    let navigation = await loadDocsNavigationItems('production')
+
+    assert.deepEqual(
+      navigation
+        .filter((chapter) => chapter.order >= 8)
+        .map((chapter) => ({ order: chapter.order, disabled: chapter.disabled })),
+      [
+        { order: 8, disabled: true },
+        { order: 9, disabled: true },
+        { order: 10, disabled: true },
+        { order: 11, disabled: true },
+        { order: 12, disabled: true },
+        { order: 13, disabled: false },
+        { order: 14, disabled: true },
+        { order: 15, disabled: true },
+      ],
+    )
   })
 })
 
@@ -24,8 +91,8 @@ describe('parseChapterFilename', () => {
   })
 
   it('parses a numeric slug segment', () => {
-    assert.deepEqual(parseChapterFilename('17-markdown-style-demo.md'), {
-      order: 17,
+    assert.deepEqual(parseChapterFilename('16-markdown-style-demo.md'), {
+      order: 16,
       slug: 'markdown-style-demo',
     })
   })
