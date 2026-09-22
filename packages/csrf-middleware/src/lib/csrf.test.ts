@@ -10,7 +10,11 @@ import { session } from '@remix-run/session-middleware'
 
 import { csrf, getCsrfToken } from './csrf.ts'
 
-function createRequest(fromResponse?: Response, init?: RequestInit): Request {
+function createRequest(
+  fromResponse?: Response,
+  init?: RequestInit,
+  url = 'https://remix.run/',
+): Request {
   let headers = new Headers(init?.headers)
 
   if (fromResponse) {
@@ -24,7 +28,7 @@ function createRequest(fromResponse?: Response, init?: RequestInit): Request {
     }
   }
 
-  return new Request('https://remix.run/', {
+  return new Request(url, {
     ...init,
     headers,
   })
@@ -93,6 +97,68 @@ describe('csrf middleware', () => {
     let postRequest = createRequest(tokenResponse, {
       method: 'POST',
     })
+
+    let response = await router.fetch(postRequest)
+
+    assert.equal(response.status, 403)
+    assert.equal(await response.text(), 'Forbidden: missing CSRF token')
+  })
+
+  it('rejects tokens supplied only in the query string by default', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createCookieSessionStorage()
+
+    let router = createRouter({
+      middleware: [session(cookie, storage), csrf()],
+    })
+
+    router.get('/', (context) => new Response(getCsrfToken(context)))
+    router.post('/', () => new Response('ok'))
+
+    let tokenResponse = await router.fetch('https://remix.run/')
+    let token = await tokenResponse.text()
+    let postRequest = createRequest(
+      tokenResponse,
+      { method: 'POST' },
+      `https://remix.run/?_csrf=${encodeURIComponent(token)}`,
+    )
+
+    let response = await router.fetch(postRequest)
+
+    assert.equal(response.status, 403)
+    assert.equal(await response.text(), 'Forbidden: missing CSRF token')
+  })
+
+  it('does not fall back to the query string when configured headers and form fields are empty', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createCookieSessionStorage()
+
+    let router = createRouter({
+      middleware: [
+        session(cookie, storage),
+        formData(),
+        csrf({ fieldName: 'token', headerNames: ['X-Custom-Csrf'] }),
+      ],
+    })
+
+    router.get('/', (context) => new Response(getCsrfToken(context)))
+    router.post('/', () => new Response('ok'))
+
+    let tokenResponse = await router.fetch('https://remix.run/')
+    let token = await tokenResponse.text()
+    let postRequest = createRequest(
+      tokenResponse,
+      {
+        method: 'POST',
+        headers: {
+          Origin: 'https://remix.run',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Custom-Csrf': ' ',
+        },
+        body: 'token=+',
+      },
+      `https://remix.run/?token=${encodeURIComponent(token)}`,
+    )
 
     let response = await router.fetch(postRequest)
 
@@ -287,6 +353,41 @@ describe('csrf middleware', () => {
         'X-Custom-Csrf': token,
       },
     })
+
+    let response = await router.fetch(postRequest)
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'ok')
+  })
+
+  it('supports query string tokens through a custom token resolver', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createCookieSessionStorage()
+
+    let router = createRouter({
+      middleware: [
+        session(cookie, storage),
+        csrf({
+          async value(context) {
+            return context.url.searchParams.get('_csrf')
+          },
+        }),
+      ],
+    })
+
+    router.get('/', (context) => new Response(getCsrfToken(context)))
+    router.post('/', () => new Response('ok'))
+
+    let tokenResponse = await router.fetch('https://remix.run/')
+    let token = await tokenResponse.text()
+    let postRequest = createRequest(
+      tokenResponse,
+      {
+        method: 'POST',
+        headers: { 'X-Csrf-Token': 'ignored-token' },
+      },
+      `https://remix.run/?_csrf=${encodeURIComponent(` ${token} `)}`,
+    )
 
     let response = await router.fetch(postRequest)
 
