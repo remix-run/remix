@@ -43,10 +43,25 @@ describe('Cookie', () => {
     assert.ok(setCookie.includes('SameSite=Lax'))
   })
 
-  it('accepts lowercase sameSite values', async () => {
+  it('normalizes lowercase sameSite values', async () => {
     let cookie = createCookie('my-cookie', { sameSite: 'lax' })
-    assert.equal(cookie.sameSite, 'lax')
+    assert.equal(cookie.sameSite, 'Lax')
     assert.ok((await cookie.serialize('hello world')).includes('SameSite=Lax'))
+
+    cookie = createCookie('my-cookie', { sameSite: 'strict' })
+    assert.equal(cookie.sameSite, 'Strict')
+    assert.ok((await cookie.serialize('hello world')).includes('SameSite=Strict'))
+
+    cookie = createCookie('my-cookie', { sameSite: 'none', secure: true })
+    assert.equal(cookie.sameSite, 'None')
+    assert.ok((await cookie.serialize('hello world')).includes('SameSite=None'))
+  })
+
+  it('exposes sameSite values compatible with SetCookie', () => {
+    let cookie = createCookie('my-cookie', { sameSite: 'Lax' })
+    let header = new SetCookie({ name: cookie.name, value: 'value' })
+    header.sameSite = cookie.sameSite
+    assert.equal(header.toString(), 'my-cookie=value; SameSite=Lax')
   })
 
   it('defaults secure to true when partitioned is true', async () => {

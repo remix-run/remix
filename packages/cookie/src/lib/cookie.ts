@@ -36,7 +36,7 @@ export interface CookieOptions extends CookieProperties {
   secrets?: string[]
 }
 
-type SameSiteValue = NonNullable<CookieProperties['sameSite']>
+type SameSiteValue = Capitalize<NonNullable<CookieProperties['sameSite']>>
 type Coder = (value: string) => string
 
 /**
@@ -79,6 +79,14 @@ export class Cookie implements CookieProperties {
       secure,
       sameSite = 'Lax',
     } = options ?? {}
+
+    if (sameSite === 'strict') {
+      sameSite = 'Strict'
+    } else if (sameSite === 'lax') {
+      sameSite = 'Lax'
+    } else if (sameSite === 'none') {
+      sameSite = 'None'
+    }
 
     if (partitioned === true) {
       // Partitioned cookies must be set with Secure
@@ -187,7 +195,7 @@ export class Cookie implements CookieProperties {
   }
 
   /**
-   * The `SameSite` attribute of the cookie.
+   * The `SameSite` attribute of the cookie, normalized to `Strict`, `Lax`, or `None`.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value)
    *
