@@ -1140,14 +1140,17 @@ async function createHmrFixture(
       rootDir,
       'app/entry.tsx',
       [
-        `import ${JSON.stringify(polyfillEntryPath)}`,
+        `import { importModule } from ${JSON.stringify(polyfillEntryPath)}`,
         "import { renderCounter } from './counter.ts'",
+        '',
+        "await importModule('./counter.ts', import.meta.url)",
         '',
         "let app = document.getElementById('app')",
         "if (!app) throw new Error('Missing app container')",
         '',
         'app.innerHTML = \'<main><input data-testid="field"><p data-testid="count"></p><button data-testid="increment"></button></main>\'',
         'renderCounter()',
+        "document.documentElement.dataset.hmrReady = 'true'",
         '',
       ].join('\n'),
     )
@@ -1363,14 +1366,17 @@ async function writeBrowserInvalidationFixture(
     rootDir,
     'app/entry.tsx',
     [
-      `import ${JSON.stringify(polyfillEntryPath)}`,
+      `import { importModule } from ${JSON.stringify(polyfillEntryPath)}`,
       "import { renderMessage } from './browser-parent.ts'",
+      '',
+      "await importModule('./browser-parent.ts', import.meta.url)",
       '',
       "let app = document.getElementById('app')",
       "if (!app) throw new Error('Missing app container')",
       '',
       'app.innerHTML = \'<main><input data-testid="field"><p data-testid="browser-message"></p></main>\'',
       'renderMessage()',
+      "document.documentElement.dataset.hmrReady = 'true'",
       '',
     ].join('\n'),
   )
@@ -1525,6 +1531,7 @@ async function createNodeHmrFixture(
       '    console.info("Server frame reload complete")',
       '  })',
       '}',
+      "document.documentElement.dataset.hmrReady = 'true'",
       '',
     ].join('\n'),
   )
@@ -2344,7 +2351,16 @@ async function navigateToHmrPage(page: TestPage) {
 
   try {
     let [response] = await Promise.all([page.goto('/'), connected])
+    // The event stream can connect before the fixture and its lazy module importer are ready.
+    await page.waitForFunction(
+      () => document.documentElement.dataset.hmrReady === 'true',
+      undefined,
+      { timeout: hmrConnectionTimeout },
+    )
     return response
+  } catch (error) {
+    let message = error instanceof Error ? error.message : String(error)
+    throw new Error(`Failed to initialize HMR fixture: ${message}\n${formatPageDiagnostics(page)}`)
   } finally {
     controller.abort(new Error('Navigation ended before the HMR connection wait completed'))
   }
