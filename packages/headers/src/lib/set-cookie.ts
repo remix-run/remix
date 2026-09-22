@@ -2,7 +2,8 @@ import { type HeaderValue } from './header-value.ts'
 import { parseParams, quote } from './param-values.ts'
 import { capitalize, isValidDate } from './utils.ts'
 
-type SameSiteValue = 'Strict' | 'Lax' | 'None' | 'strict' | 'lax' | 'none'
+type SameSiteValue = 'Strict' | 'Lax' | 'None'
+type SameSiteInput = SameSiteValue | Lowercase<SameSiteValue>
 
 /**
  * Properties for a `Set-Cookie` header value.
@@ -52,7 +53,7 @@ export interface CookieProperties {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value)
    */
-  sameSite?: SameSiteValue
+  sameSite?: SameSiteInput
   /**
    * Indicates the cookie should only be sent over HTTPS.
    *
@@ -246,7 +247,7 @@ export class SetCookie implements HeaderValue, SetCookieInit {
         header.name = value.name
         header.partitioned = value.partitioned
         header.path = value.path
-        header.sameSite = value.sameSite
+        header.sameSite = value.sameSite ? (capitalize(value.sameSite) as SameSiteValue) : undefined
         header.secure = value.secure
         header.value = value.value
       }
