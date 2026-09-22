@@ -162,6 +162,27 @@ for await (let part of parseMultipartStream(message, { boundary })) {
 }
 ```
 
+For direct control over chunk delivery, use `MultipartParser`. Consume the parts yielded by `write()`, then call `finish()` at EOF and handle its optional final part. A closing delimiter without CRLF cannot be validated until EOF, so its preceding part is returned by `finish()` instead of `write()`.
+
+```ts
+import { MultipartParser } from 'remix/multipart-parser'
+
+let parser = new MultipartParser(boundary)
+
+for await (let chunk of chunks) {
+  for (let part of parser.write(chunk)) {
+    await handlePart(part)
+  }
+}
+
+let finalPart = parser.finish()
+if (finalPart !== undefined) {
+  await handlePart(finalPart)
+}
+```
+
+Empty multipart messages return no parts. The higher-level `parseMultipart`, `parseMultipartStream`, and `parseMultipartRequest` functions handle final-part delivery automatically.
+
 ## Demos
 
 The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos) contains a few working demos of how you can use this library:

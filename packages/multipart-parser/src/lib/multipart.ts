@@ -151,7 +151,8 @@ export function* parseMultipart(
     }
   }
 
-  parser.finish()
+  let finalPart = parser.finish()
+  if (finalPart !== undefined) yield finalPart
 }
 
 /**
@@ -185,7 +186,8 @@ export async function* parseMultipartStream(
     yield* parser.write(chunk)
   }
 
-  parser.finish()
+  let finalPart = parser.finish()
+  if (finalPart !== undefined) yield finalPart
 }
 
 /**
@@ -198,7 +200,9 @@ const MultipartParserStateAfterBoundary = 1
 const MultipartParserStateBoundaryPadding = 2
 const MultipartParserStateHeader = 3
 const MultipartParserStateBody = 4
-const MultipartParserStateDone = 5
+const MultipartParserStateClosingBoundary = 5
+const MultipartParserStateEpilogue = 6
+const MultipartParserStateDone = 7
 
 const findDoubleNewline = createSearch('\r\n\r\n')
 
@@ -293,6 +297,7 @@ export class MultipartParser {
     if (this.#state === MultipartParserStateDone) {
       throw new MultipartParseError('Unexpected data after end of stream')
     }
+    if (this.#state === MultipartParserStateEpilogue) return
 
     let index = 0
     let chunkLength = chunk.length
@@ -377,22 +382,23 @@ export class MultipartParser {
         }
 
         if (chunk[index] === 45 && chunk[index + 1] === 45) {
-          this.#state = MultipartParserStateDone
-          if (this.#currentContent !== null) {
-            yield this.#createPart()
-          }
-          break
+          index += 2
+          this.#state = MultipartParserStateClosingBoundary
+        } else {
+          this.#state = MultipartParserStateBoundaryPadding
         }
-
-        this.#state = MultipartParserStateBoundaryPadding
       }
 
-      if (this.#state === MultipartParserStateBoundaryPadding) {
+      if (
+        this.#state === MultipartParserStateBoundaryPadding ||
+        this.#state === MultipartParserStateClosingBoundary
+      ) {
+        let closing = this.#state === MultipartParserStateClosingBoundary
         while (chunk[index] === 32 || chunk[index] === 9) {
           index++
         }
 
-        if (chunkLength - index < 2) {
+        if (index === chunkLength || (chunk[index] === 13 && chunkLength - index === 1)) {
           this.#buffer = chunk.subarray(index)
           break
         }
@@ -401,13 +407,13 @@ export class MultipartParser {
           throw new MultipartParseError('Invalid multipart boundary ending')
         }
 
+        index += 2 // Skip \r\n after boundary
+        this.#state = closing ? MultipartParserStateEpilogue : MultipartParserStateHeader
+
         if (this.#currentContent !== null) {
           yield this.#createPart()
         }
-
-        index += 2 // Skip \r\n after boundary
-
-        this.#state = MultipartParserStateHeader
+        if (closing) break
       }
 
       if (this.#state === MultipartParserStateHeader) {
@@ -536,12 +542,28 @@ export class MultipartParser {
   }
 
   /**
-   * Should be called after all data has been written to the parser.
+   * Complete parsing after all chunks have been written and return any final part.
    *
-   * Note: This will throw if the multipart message is incomplete or
-   * wasn't properly terminated.
+   * A closing delimiter without CRLF is only valid once EOF is known. In that case,
+   * consume the part returned here in addition to parts yielded by {@link MultipartParser.write}.
+   * Throws if the message is incomplete or its closing delimiter is malformed.
+   *
+   * @returns The final part if it was waiting for EOF, or undefined if no part remains
    */
-  finish(): void {
+  finish(): MultipartPart | undefined {
+    if (this.#state === MultipartParserStateClosingBoundary) {
+      if (this.#buffer !== null && this.#buffer.length > 0) {
+        throw new MultipartParseError('Invalid multipart boundary ending')
+      }
+
+      let part = this.#currentContent === null ? undefined : this.#createPart()
+      this.#state = MultipartParserStateDone
+      return part
+    }
+
+    if (this.#state === MultipartParserStateEpilogue) {
+      this.#state = MultipartParserStateDone
+    }
     if (this.#state !== MultipartParserStateDone) {
       throw new MultipartParseError('Multipart stream not finished')
     }

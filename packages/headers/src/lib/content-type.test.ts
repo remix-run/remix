@@ -108,6 +108,12 @@ describe('ContentType', () => {
 })
 
 describe('ContentType.from', () => {
+  it('treats a semicolon after an unquoted backslash as a parameter separator', () => {
+    let result = ContentType.from(String.raw`multipart/form-data; note=foo\; boundary=abc`)
+
+    assert.equal(result.boundary, 'abc')
+  })
+
   it('accepts a boundary with an unterminated quote', () => {
     let result = ContentType.from('multipart/form-data; boundary="abc')
 

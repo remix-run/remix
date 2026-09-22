@@ -4,7 +4,7 @@ import { promisify } from 'node:util'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createMultipartMessage } from '../../test/utils.ts'
+import { concat, createMultipartMessage } from '../../test/utils.ts'
 
 import {
   MultipartParseError,
@@ -72,19 +72,132 @@ describe('MultipartParser', () => {
     assert.equal(parts[0].text, 'value')
   })
 
-  it('waits for both closing hyphens before yielding the final part', () => {
+  it('returns the final part from finish when the closing delimiter ends at EOF', () => {
     let parser = new MultipartParser(boundary)
     let message = createMultipartMessage(boundary, { field: 'value' })
 
     assert.deepEqual(Array.from(parser.write(message.subarray(0, -1))), [])
-    let parts = Array.from(parser.write(message.subarray(-1)))
+    assert.deepEqual(Array.from(parser.write(message.subarray(-1))), [])
+    let part = parser.finish()
+    assert.ok(part)
+    assert.equal(part.name, 'field')
+    assert.equal(part.text, 'value')
+    assert.equal(parser.finish(), undefined)
+    assert.throws(() => Array.from(parser.write(new Uint8Array([88]))), {
+      name: 'MultipartParseError',
+      message: 'Unexpected data after end of stream',
+    })
+  })
+
+  it('waits for a closing CRLF before yielding the final part', () => {
+    let parser = new MultipartParser(boundary)
+
+    assert.deepEqual(
+      Array.from(parser.write(createMultipartMessage(boundary, { field: 'value' }))),
+      [],
+    )
+    assert.deepEqual(Array.from(parser.write(new Uint8Array([32, 9, 13]))), [])
+    let parts = Array.from(parser.write(new Uint8Array([10])))
     assert.equal(parts.length, 1)
     assert.equal(parts[0].text, 'value')
-    assert.doesNotThrow(() => parser.finish())
+    assert.equal(parser.finish(), undefined)
+  })
+
+  it('finishes an empty multipart message at EOF without returning a part', () => {
+    let parser = new MultipartParser(boundary)
+
+    assert.deepEqual(Array.from(parser.write(createMultipartMessage(boundary))), [])
+    assert.equal(parser.finish(), undefined)
+    assert.equal(parser.finish(), undefined)
+  })
+
+  it('enforces maxParts when finish returns the final part', () => {
+    let parser = new MultipartParser(boundary, { maxParts: 0 })
+
+    assert.deepEqual(
+      Array.from(parser.write(createMultipartMessage(boundary, { field: 'value' }))),
+      [],
+    )
+    assert.throws(() => parser.finish(), MaxPartsExceededError)
   })
 })
 
 describe('parseMultipart', async () => {
+  it('rejects invalid closing delimiter endings before yielding at every chunk split', () => {
+    for (let ending of ['X', '\r', '\rX', '\n', ' \tX']) {
+      let message = concat([
+        createMultipartMessage(boundary, { field: 'value' }),
+        new TextEncoder().encode(ending),
+      ])
+
+      for (let split = 0; split <= message.length; split++) {
+        let parts = []
+        assert.throws(
+          () => {
+            for (let part of parseMultipart([message.subarray(0, split), message.subarray(split)], {
+              boundary,
+            })) {
+              parts.push(part)
+            }
+          },
+          { name: 'MultipartParseError', message: 'Invalid multipart boundary ending' },
+        )
+        assert.equal(parts.length, 0)
+      }
+    }
+  })
+
+  it('accepts closing EOF, padding, and CRLF endings at every chunk split', () => {
+    for (let ending of ['', ' \t', '\r\n', ' \t\r\n']) {
+      let message = concat([
+        createMultipartMessage(boundary, { field: 'value' }),
+        new TextEncoder().encode(ending),
+      ])
+
+      for (let split = 0; split <= message.length; split++) {
+        let parts = Array.from(
+          parseMultipart([message.subarray(0, split), message.subarray(split)], { boundary }),
+        )
+        assert.deepEqual(
+          parts.map((part) => [part.name, part.text]),
+          [['field', 'value']],
+        )
+      }
+    }
+  })
+
+  it('accepts empty multipart messages at every closing delimiter chunk split', () => {
+    for (let ending of ['', ' \t', '\r\n', ' \t\r\n']) {
+      let message = concat([createMultipartMessage(boundary), new TextEncoder().encode(ending)])
+
+      for (let split = 0; split <= message.length; split++) {
+        assert.deepEqual(
+          Array.from(
+            parseMultipart([message.subarray(0, split), message.subarray(split)], { boundary }),
+          ),
+          [],
+        )
+      }
+    }
+  })
+
+  it('ignores an epilogue after the closing CRLF at every chunk split', () => {
+    let message = concat([
+      createMultipartMessage(boundary, { field: 'value' }),
+      new TextEncoder().encode(' \t\r\nepilogue\r\n'),
+    ])
+
+    for (let split = 0; split <= message.length; split++) {
+      let parts = Array.from(
+        parseMultipart([message.subarray(0, split), message.subarray(split)], { boundary }),
+      )
+      assert.deepEqual(
+        parts.map((part) => part.text),
+        ['value'],
+      )
+    }
+  })
+
   it('rejects invalid opening delimiter endings', () => {
     let message = new TextEncoder().encode(
       `--${boundary}XYContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n--${boundary}--`,
@@ -317,6 +430,40 @@ describe('parseMultipart', async () => {
 })
 
 describe('parseMultipartStream', async () => {
+  it('rejects an invalid closing delimiter before yielding in single-byte chunks', async () => {
+    let message = concat([
+      createMultipartMessage(boundary, { field: 'value' }),
+      new TextEncoder().encode('X'),
+    ])
+    let parts = []
+
+    await assert.rejects(
+      async () => {
+        for await (let part of parseMultipartStream(createChunkedStream(message, 1), {
+          boundary,
+        })) {
+          parts.push(part)
+        }
+      },
+      { name: 'MultipartParseError', message: 'Invalid multipart boundary ending' },
+    )
+    assert.equal(parts.length, 0)
+  })
+
+  it('yields the final part for EOF and CRLF endings in single-byte chunks', async () => {
+    for (let ending of ['', ' \t', '\r\nepilogue']) {
+      let message = concat([
+        createMultipartMessage(boundary, { field: 'value' }),
+        new TextEncoder().encode(ending),
+      ])
+      let parts = []
+      for await (let part of parseMultipartStream(createChunkedStream(message, 1), { boundary })) {
+        parts.push(part.text)
+      }
+      assert.deepEqual(parts, ['value'])
+    }
+  })
+
   it('rejects invalid delimiter endings in single-byte chunks', async () => {
     let message = createMultipartMessage(boundary, {
       field: `value\r\n--${boundary}XYContent-Disposition: form-data; name="other"\r\n\r\nnext`,
