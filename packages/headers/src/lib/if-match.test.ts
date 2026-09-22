@@ -136,6 +136,18 @@ describe('IfMatch', () => {
 })
 
 describe('IfMatch.from', () => {
+  it('preserves outer whitespace and empty list entries', () => {
+    let header = IfMatch.from(' first \t,\t W/"second" , , * , last ')
+
+    assert.deepEqual(header.tags, ['" first"', 'W/"second"', '""', '*', '"last "'])
+    assert.deepEqual(IfMatch.from('').tags, ['""'])
+    assert.deepEqual(IfMatch.from(' \t ').tags, ['" \t "'])
+    assert.deepEqual(IfMatch.from(' ,\t, ').tags, ['""', '""', '""'])
+
+    let tag = `"first${' '.repeat(100)}last"`
+    assert.deepEqual(IfMatch.from(`W/"other",${tag}`).tags, ['W/"other"', tag])
+  })
+
   it('parses a string value', () => {
     let result = IfMatch.from('"abc", "def"')
     assert.ok(result instanceof IfMatch)

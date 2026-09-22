@@ -1,0 +1,1 @@
+Improve parsing performance for `Accept`, `Accept-Encoding`, `Accept-Language`, `If-Match`, and `If-None-Match` headers containing long whitespace runs while preserving existing list parsing behavior.

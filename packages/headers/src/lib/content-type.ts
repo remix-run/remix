@@ -77,6 +77,8 @@ export class ContentType implements HeaderValue, ContentTypeInit {
   /**
    * Parse a Content-Type header value.
    *
+   * Quoted parameter values extend to the end of the header if the closing quote is missing.
+   *
    * @param value The header value (string, init object, or null)
    * @returns A ContentType instance (empty if null)
    */
@@ -85,14 +87,15 @@ export class ContentType implements HeaderValue, ContentTypeInit {
 
     if (value !== null) {
       if (typeof value === 'string') {
-        let params = parseParams(value)
+        let params = parseParams(value.trim())
         if (params.length > 0) {
           header.mediaType = params[0][0]
           for (let [name, val] of params.slice(1)) {
+            name = name.toLowerCase()
             if (name === 'boundary') {
-              header.boundary = val
+              header.boundary ??= val
             } else if (name === 'charset') {
-              header.charset = val
+              header.charset ??= val
             }
           }
         }

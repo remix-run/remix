@@ -18,6 +18,10 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": [
+    "./src/node.ts",
+    "./dist/node.js"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./assets": "./src/assets.ts",

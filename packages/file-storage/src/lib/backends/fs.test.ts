@@ -495,13 +495,31 @@ describe('fs file storage', () => {
     let storage = createFsFileStorage(tmpDir)
 
     await assert.rejects(async () => storage.get('file'), /Invalid stored file content path/)
-    await assert.rejects(async () => storage.remove('file'), /Invalid stored file content path/)
     await assert.rejects(
       async () => storage.set('file', new File(['new'], 'new.txt')),
       /Invalid stored file content path/,
     )
     assert.equal(fs.readFileSync(unrelatedPath, 'utf-8'), 'unrelated')
     assert.equal(fs.readFileSync(dataPath, 'utf-8'), 'original')
+    await storage.remove('file')
+    assert.equal(fs.readFileSync(unrelatedPath, 'utf-8'), 'unrelated')
+    assert.equal(fs.existsSync(dataPath), false)
+    assert.equal(await storage.has('file'), false)
+  })
+
+  it('removes content for a key with corrupt metadata without removing unrelated files', async () => {
+    let { dataPath, metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['old'], 'old.txt'))
+    let storage = createFsFileStorage(tmpDir)
+    await storage.set('file', new File(['replacement'], 'new.txt'))
+    fs.writeFileSync(dataPath, 'unused legacy content')
+    fs.writeFileSync(path.join(path.dirname(metaPath), 'unrelated.dat'), 'unrelated')
+    fs.writeFileSync(metaPath, '{')
+
+    await storage.remove('file')
+
+    assert.equal(await storage.get('file'), null)
+    assert.equal(await storage.has('file'), false)
+    assert.deepEqual(fs.readdirSync(path.dirname(metaPath)), ['unrelated.dat'])
   })
 
   it('reads and replaces legacy entries that do not store their size', async () => {
@@ -553,11 +571,12 @@ describe('fs file storage', () => {
     let retrieved = await storage.put('hello', file)
 
     assert.ok(await storage.has('hello'))
-    assert.ok(retrieved)
+    assert.ok(retrieved instanceof LazyFile)
     assert.equal(retrieved.name, 'hello.txt')
     assert.equal(retrieved.type, file.type)
     assert.equal(retrieved.lastModified, lastModified)
     assert.equal(retrieved.size, 13)
+    assert.equal(await retrieved.text(), 'Hello, world!')
   })
 
   describe('integration with form-data-parser', () => {

@@ -14,6 +14,9 @@ type StyleManagerLike = {
   getGeneration?(): number
 }
 
+/**
+ * Descriptor produced by `css(...)` for composing generated styles with other host mixins.
+ */
 export type CSSMixinDescriptor = MixinDescriptor<Element, [styles: CSSProps], ElementProps>
 
 const clientStyleCache: StyleCache = new Map()

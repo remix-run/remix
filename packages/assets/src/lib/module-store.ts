@@ -93,6 +93,7 @@ export function createModuleStore<transformed, resolved, emitted>(
   options: {
     getAcceptedDependencies?: (resolved: resolved) => readonly string[]
     getDependencies?: (resolved: resolved) => readonly string[]
+    invalidateImportersOnFileEvent?: boolean
     onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
     onWatchFilesChange?: (delta: { add: string[]; remove: string[] }) => void
   } = {},
@@ -244,12 +245,16 @@ export function createModuleStore<transformed, resolved, emitted>(
       if (event === 'unlink') {
         let deletedRecord = recordsByIdentityPath.get(filePath)
         if (deletedRecord) {
-          if (!affected.has(filePath)) {
+          let wasAffected = affected.has(filePath)
+          affected.add(filePath)
+          if (!wasAffected) {
             invalidateGraph(deletedRecord)
           }
           clearTracking(deletedRecord)
         }
       }
+
+      if (options.invalidateImportersOnFileEvent) invalidateImporters(affected)
     },
 
     invalidateAll() {
@@ -297,6 +302,22 @@ export function createModuleStore<transformed, resolved, emitted>(
   function invalidateGraph(record: MutableModuleRecord<transformed, resolved, emitted>) {
     record.hmrUpdateTimestamp = undefined
     invalidateContent(record, { retainStale: false })
+  }
+
+  function invalidateImporters(identityPaths: ReadonlySet<string>): void {
+    let visited = new Set(identityPaths)
+    let queue = [...identityPaths]
+    while (queue.length > 0) {
+      let identityPath = queue.pop()
+      if (!identityPath) continue
+      for (let importerPath of importersByDepPath.get(identityPath) ?? []) {
+        if (visited.has(importerPath)) continue
+        visited.add(importerPath)
+        queue.push(importerPath)
+        let importer = recordsByIdentityPath.get(importerPath)
+        if (importer) invalidateGraph(importer)
+      }
+    }
   }
 
   function createLinks(resolved: resolved): MutableModuleLinks {

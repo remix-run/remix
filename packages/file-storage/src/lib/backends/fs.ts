@@ -60,7 +60,11 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
     }
   }
 
-  async function putFile(key: string, file: FileLike): Promise<LazyFile> {
+  async function putFile<result>(
+    key: string,
+    file: FileLike,
+    prepareResult: (filePath: string, meta: FileMetadata) => result,
+  ): Promise<result> {
     let { directory, filePath, metaPath } = await getPaths(key)
     let previous = await readMetadata(metaPath)
     let version = crypto.randomUUID()
@@ -91,7 +95,8 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
         await handle.close()
       }
 
-      let stored = openLazyFile(dataPath, metadata)
+      // Prepare the return value before publication so preparation errors preserve the old entry.
+      let result = prepareResult(dataPath, metadata)
       let metaHandle = await fsp.open(tempMetaPath, 'wx')
       tempMetadataCreated = true
       try {
@@ -108,7 +113,7 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
       if (previous !== null) {
         await fsp.rm(getDataPath(metaPath, previous.dataFile), { force: true }).catch(() => {})
       }
-      return stored
+      return result
     } finally {
       if (!published) {
         await fsp.rm(dataPath, { force: true }).catch(() => {})
@@ -192,15 +197,29 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
       }
     },
     put(key: string, file: FileLike): Promise<LazyFile> {
-      return putFile(key, file)
+      return putFile(key, file, openLazyFile)
     },
     async remove(key: string): Promise<void> {
-      let { directory, metaPath } = await getPaths(key)
-      let metadata = await readMetadata(metaPath)
-      if (metadata === null) return
+      let { directory, filePath, metaPath } = await getPaths(key)
+      let dataPaths: string[]
+      try {
+        let metadata = await readMetadata(metaPath)
+        if (metadata === null) return
+        dataPaths = [getDataPath(metaPath, metadata.dataFile)]
+      } catch (error) {
+        if (!(error instanceof SyntaxError)) throw error
+        // Corrupt metadata cannot identify the current version. Callers serialize removal, so
+        // all content versions belonging to this key can be removed without following its pointer.
+        let hash = path.basename(filePath, '.dat')
+        dataPaths = (await fsp.readdir(directory))
+          .filter((name) => name === `${hash}.dat` || isVersionedDataFile(name, hash))
+          .map((name) => path.join(directory, name))
+      }
 
       await fsp.rm(metaPath, { force: true })
-      await fsp.rm(getDataPath(metaPath, metadata.dataFile), { force: true })
+      for (let dataPath of dataPaths) {
+        await fsp.rm(dataPath, { force: true })
+      }
       try {
         await fsp.rmdir(directory)
       } catch (error) {
@@ -214,7 +233,7 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
       }
     },
     async set(key: string, file: FileLike): Promise<void> {
-      await putFile(key, file)
+      await putFile(key, file, () => {})
     },
   }
 }
@@ -227,6 +246,10 @@ function getDataPath(metaPath: string, dataFile?: string): string {
   return dataFile === undefined
     ? metaPath.replace(/\.meta\.json$/, '.dat')
     : path.join(path.dirname(metaPath), dataFile)
+}
+
+function isVersionedDataFile(name: string, hash: string): boolean {
+  return /^[a-f0-9]{64}\.[a-f0-9-]{36}\.dat$/.test(name) && name.startsWith(`${hash}.`)
 }
 
 async function readMetadata(metaPath: string): Promise<StoredMetadata | null> {
@@ -250,20 +273,19 @@ async function readMetadata(metaPath: string): Promise<StoredMetadata | null> {
     !('lastModified' in value) ||
     typeof value.lastModified !== 'number'
   ) {
-    throw new Error('Invalid stored file metadata')
+    throw new SyntaxError('Invalid stored file metadata')
   }
   let dataFile = 'dataFile' in value ? value.dataFile : undefined
   if (
     dataFile !== undefined &&
     (typeof dataFile !== 'string' ||
-      !/^[a-f0-9]{64}\.[a-f0-9-]{36}\.dat$/.test(dataFile) ||
-      !dataFile.startsWith(`${path.basename(metaPath, '.meta.json')}.`))
+      !isVersionedDataFile(dataFile, path.basename(metaPath, '.meta.json')))
   ) {
-    throw new Error('Invalid stored file content path')
+    throw new SyntaxError('Invalid stored file content path')
   }
   // Older entries did not store their size in metadata.
   let size = 'size' in value ? value.size : (await fsp.stat(getDataPath(metaPath, dataFile))).size
-  if (typeof size !== 'number') throw new Error('Invalid stored file metadata')
+  if (typeof size !== 'number') throw new SyntaxError('Invalid stored file metadata')
   return {
     key: value.key,
     name: value.name,
