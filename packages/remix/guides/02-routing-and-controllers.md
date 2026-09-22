@@ -127,7 +127,7 @@ export const routes = route({
 // routes.albums.edit.action -> POST /albums/:albumId/edit
 ```
 
-The [Forms and Mutations](/forms-and-mutations/) chapter builds on this route shape for validation, redirects, and progressive enhancement.
+The Forms and Mutations chapter builds on this route shape for validation, redirects, and progressive enhancement.
 
 `resources(...)` creates seven conventional routes for a collection: `index`, `new`, `show`, `create`, `edit`, `update`, and `destroy`. `resource(...)` creates routes for a singleton and omits `index` because there is no collection page.
 
@@ -226,7 +226,7 @@ return context.render(<AlbumPage album={album} />);
 
 The result is still an ordinary Web `Response`. An action can render a page, return text or JSON, redirect the browser, send a file, or return an error response.
 
-Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action or middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and return a `500` response. The [Errors and Error Boundaries](/errors-and-error-boundaries/) chapter covers that path in detail.
+Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action or middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and return a `500` response. The Errors and Cancellation chapter covers that path in detail.
 
 A text response can be as simple as:
 

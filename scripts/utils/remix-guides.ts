@@ -5,8 +5,16 @@ import * as path from 'node:path'
 import { parse } from 'yaml'
 
 const rootDir = path.resolve(import.meta.dirname, '..', '..')
-const sourceGuidesDir = path.join(rootDir, 'docs', 'guides', 'app', 'actions', 'docs', 'chapters')
-const remixGuidesDir = path.join(rootDir, 'packages', 'remix', 'guides')
+const defaultSourceGuidesDir = path.join(
+  rootDir,
+  'docs',
+  'guides',
+  'app',
+  'actions',
+  'docs',
+  'chapters',
+)
+const defaultRemixGuidesDir = path.join(rootDir, 'packages', 'remix', 'guides')
 
 export interface RemixGuideCopy {
   title: string
@@ -15,38 +23,90 @@ export interface RemixGuideCopy {
   remixGuidePath: string
 }
 
-export function getRemixGuideCopies(): RemixGuideCopy[] {
-  return fs
+interface RemixGuide extends RemixGuideCopy {
+  href: string
+  published: boolean
+}
+
+interface RemixGuideDirectories {
+  sourceGuidesDir?: string
+  remixGuidesDir?: string
+}
+
+export function getRemixGuideCopies({
+  sourceGuidesDir = defaultSourceGuidesDir,
+  remixGuidesDir = defaultRemixGuidesDir,
+}: RemixGuideDirectories = {}): RemixGuideCopy[] {
+  let guides = fs
     .readdirSync(sourceGuidesDir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && /^\d+-[a-z0-9][a-z0-9-]*\.md$/.test(entry.name))
     .sort((a, b) => a.name.localeCompare(b.name))
-    .flatMap((entry) => {
+    .map((entry): RemixGuide => {
       let sourceGuidePath = path.join(sourceGuidesDir, entry.name)
       let { title, description, published } = readGuideMetadata(sourceGuidePath)
-      return published
-        ? [
-            {
-              title,
-              description,
-              sourceGuidePath,
-              remixGuidePath: path.join(remixGuidesDir, entry.name),
-            },
-          ]
-        : []
+      return {
+        title,
+        description,
+        published,
+        href: `/${entry.name.replace(/^\d+-|\.md$/g, '')}/`,
+        sourceGuidePath,
+        remixGuidePath: path.join(remixGuidesDir, entry.name),
+      }
     })
+
+  validatePublishedGuideLinks(guides)
+  return guides
+    .filter((guide) => guide.published)
+    .map(({ title, description, sourceGuidePath, remixGuidePath }) => ({
+      title,
+      description,
+      sourceGuidePath,
+      remixGuidePath,
+    }))
 }
 
 export async function syncRemixGuides(): Promise<RemixGuideCopy[]> {
+  let copies = getRemixGuideCopies()
   await removeRemixGuides()
 
-  let copies = getRemixGuideCopies()
-  await fsp.mkdir(remixGuidesDir, { recursive: true })
+  await fsp.mkdir(defaultRemixGuidesDir, { recursive: true })
   await Promise.all(copies.map((copy) => fsp.copyFile(copy.sourceGuidePath, copy.remixGuidePath)))
   return copies
 }
 
 async function removeRemixGuides(): Promise<void> {
-  await fsp.rm(remixGuidesDir, { recursive: true, force: true })
+  await fsp.rm(defaultRemixGuidesDir, { recursive: true, force: true })
+}
+
+function validatePublishedGuideLinks(guides: RemixGuide[]): void {
+  let unpublishedGuides = new Map(
+    guides.filter((guide) => !guide.published).map((guide) => [guide.href, guide]),
+  )
+  let invalidLinks: string[] = []
+
+  for (let guide of guides) {
+    if (!guide.published) continue
+
+    let markdown = fs.readFileSync(guide.sourceGuidePath, 'utf-8')
+    let linkPattern = /(?:\]\(\s*|^\s*\[[^\]\r\n]+\]:\s*)<?(\/(?!\/)[^\s)>]+)/gm
+    for (let match of markdown.matchAll(linkPattern)) {
+      let href = match[1].split(/[?#]/, 1)[0]
+      let normalizedHref = href.endsWith('/') ? href : `${href}/`
+      let unpublishedGuide = unpublishedGuides.get(normalizedHref)
+      if (!unpublishedGuide) continue
+
+      let line = markdown.slice(0, match.index).split('\n').length
+      invalidLinks.push(
+        `${guide.sourceGuidePath}:${line} links to unpublished guide "${unpublishedGuide.title}" (${href})`,
+      )
+    }
+  }
+
+  if (invalidLinks.length > 0) {
+    throw new Error(
+      `Published guides must not link to unpublished guides:\n${invalidLinks.join('\n')}`,
+    )
+  }
 }
 
 function readGuideMetadata(filePath: string): {

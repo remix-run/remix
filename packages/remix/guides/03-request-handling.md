@@ -301,7 +301,7 @@ Global middleware is convenient when most routes use it. If only one action acce
 
 Method override is an exception because it must change `context.method` before route matching. When forms use `_method` to reach `PUT`, `PATCH`, or `DELETE` routes, put both `formData()` and `methodOverride()` in the router middleware stack.
 
-`staticFiles()` serves files exactly as they exist under the root `public/` directory. Browser source compiled by `remix/assets` lives in colocated `public/` directories under `app/`; [Files and Assets](/files-and-assets/) covers that separate pipeline. The next chapter, [Rendering UI](/rendering-ui/), uses `render()` from `remix/middleware/render` to build component pages. [Streaming UI with Frames](/streaming-ui-with-frames/) covers the renderer behind it.
+`staticFiles()` serves files exactly as they exist under the root `public/` directory. Browser source compiled by `remix/assets` lives in colocated `public/` directories under `app/`; Files and Assets covers that separate pipeline. The next chapter, [Rendering UI](/rendering-ui/), uses `render()` from `remix/middleware/render` to build component pages. [Streaming UI with Frames](/streaming-ui-with-frames/) covers the renderer behind it.
 
 ## Custom middleware {#custom-middleware}
 

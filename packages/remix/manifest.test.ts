@@ -2,6 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import * as fs from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import * as url from 'node:url'
 import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
@@ -271,6 +272,28 @@ describe('manifest', () => {
     assert.ok(!guideNames.includes('08-data-and-validation.md'))
     assert.equal(new Set(guideCopies.map((copy) => copy.remixGuidePath)).size, guideCopies.length)
     assert.ok(guideCopies.every((copy) => copy.title && copy.description))
+  })
+
+  it('rejects published guides that link to unpublished chapters', () => {
+    let fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-guides-'))
+
+    try {
+      fs.writeFileSync(
+        path.join(fixtureDir, '01-published.md'),
+        `---\ntitle: Published\ndescription: Published guide.\n---\n\nRead [Draft](/draft/).\n`,
+      )
+      fs.writeFileSync(
+        path.join(fixtureDir, '02-draft.md'),
+        `---\ntitle: Draft\ndescription: Draft guide.\npublished: false\n---\n`,
+      )
+
+      assert.throws(
+        () => getRemixGuideCopies({ sourceGuidesDir: fixtureDir }),
+        /01-published\.md:6 links to unpublished guide "Draft" \(\/draft\/\)/,
+      )
+    } finally {
+      fs.rmSync(fixtureDir, { recursive: true, force: true })
+    }
   })
 
   it('adds installed guides to the package index', () => {
