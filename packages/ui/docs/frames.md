@@ -146,6 +146,20 @@ Use this for custom elements, third-party widgets, and imperative integrations t
 
 Avoid wrapping Remix-owned UI that should continue receiving server-driven frame updates. A client entry inside `data-rmx-preserve-dom` can hydrate from the initial HTML, but later frame reloads will not patch new server-rendered children or props through the preserved host. Put the client entry outside the preserved boundary when it needs future frame data, or put `data-rmx-preserve-dom` inside the client entry around only the imperative DOM island.
 
+## Preserving client-owned attributes
+
+Use `data-rmx-preserve-attrs` with space-separated DOM attribute names to keep client-owned state on any matched element:
+
+```html
+<html lang="en" data-rmx-preserve-attrs="class data-theme"></html>
+```
+
+On frame reloads, listed attributes keep their live values or absence. Other attributes and children reconcile normally. Each attribute is preserved as a whole, so listing `class` preserves all its tokens without merging server classes.
+
+Each reload uses the list from the incoming HTML for that same reconciliation. Removing a name immediately returns that attribute to normal reconciliation; an empty or omitted list adds no preservation.
+
+This applies only to the matched element's attributes. It does not preserve descendants or prevent removal or replacement of the element. Initial rendering and hydration are unchanged.
+
 ## Nested frames
 
 Frames can nest. Each frame owns its own region of the DOM and hydrates its client entries independently:
