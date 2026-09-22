@@ -45,6 +45,9 @@ tools:
   edit: false
   github:
     mode: local
+    allowed-repos: public
+    # Administrator-requested reviews must be able to read community contributions.
+    min-integrity: none
     # Read linked proposals as context for the pull request.
     toolsets: [repos, issues, pull_requests, discussions]
 network:
