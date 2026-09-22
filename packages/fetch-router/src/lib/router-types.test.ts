@@ -390,6 +390,48 @@ describe('router type inference', () => {
     })
   })
 
+  it('preserves action middleware results in stored controller actions', () => {
+    let elevatedReportAction = createAction(routes.reports, {
+      middleware: [setRole('admin')],
+      handler(context) {
+        let user = context.get(CurrentUser)
+        let role = context.get(CurrentRole)
+        let reportId: string = context.params.reportId
+        let exactRole: 'admin' = role
+
+        expectTypeEquality<IsEqual<typeof user, { id: string }>>()
+        expectTypeEquality<IsEqual<typeof role, 'admin'>>()
+        expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
+
+        void reportId
+        void exactRole
+
+        return new Response(role)
+      },
+    })
+
+    let elevatedReportsController = createController(
+      { reports: routes.reports },
+      {
+        actions: { reports: elevatedReportAction },
+      },
+    )
+
+    if (false as boolean) {
+      createController(
+        { account: routes.account },
+        {
+          actions: {
+            // @ts-expect-error - created actions retain their route contract
+            account: elevatedReportAction,
+          },
+        },
+      )
+    }
+
+    void elevatedReportsController
+  })
+
   it('infers controller middleware results in stored controller actions', () => {
     let elevatedReportsControllerWithMiddleware = createController(
       { reports: routes.reports },

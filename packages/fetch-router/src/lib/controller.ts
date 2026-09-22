@@ -65,6 +65,22 @@ export type Action<
   middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
 > = RequestHandler<ActionContext<route, context>> | ActionObject<route, context, middleware>
 
+// This marker preserves an independently inferred action context without adding another
+// contextual `handler` signature to plain controller action objects.
+declare const actionDefinition: unique symbol
+
+export type ActionDefinition<
+  route extends ActionRoute,
+  context extends RequestContext<any, any>,
+  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+> = {
+  readonly [actionDefinition]: {
+    route: route
+    context: (context: context) => context
+    middleware: middleware
+  }
+}
+
 /**
  * Defines a route handler with route-aware params and the default router context.
  *
@@ -80,7 +96,19 @@ export function createAction<
   route extends ActionRoute,
   context extends RequestContext<any, any> = DefaultContext,
   const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
->(route: route, action: Action<route, context, middleware>): Action<route, context, middleware> {
+>(
+  route: route,
+  action: ActionObject<route, context, middleware> & { middleware: readonly [...middleware] },
+): ActionObject<route, context, middleware> & ActionDefinition<route, context, middleware>
+export function createAction<
+  route extends ActionRoute,
+  context extends RequestContext<any, any> = DefaultContext,
+  const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+>(route: route, action: Action<route, context, middleware>): Action<route, context, middleware>
+export function createAction(
+  route: ActionRoute,
+  action: Action<any, any, any>,
+): Action<any, any, any> {
   void route
   return action
 }
@@ -106,6 +134,30 @@ type ControllerActions<
     }
   : never
 
+type ControllerDefinitionActions<
+  routes extends RouteMap,
+  context extends RequestContext<any, any>,
+> = routes extends any
+  ? {
+      [name in keyof routes as routes[name] extends Route<any, any>
+        ? name
+        : never]: routes[name] extends Route<any, any>
+        ? Action<routes[name], context> | ActionDefinition<routes[name], context>
+        : never
+    } & {
+      [name in keyof routes as routes[name] extends RouteMap ? name : never]?: never
+    }
+  : never
+
+type ControllerDefinition<
+  routes extends RouteMap,
+  context extends RequestContext<any, any>,
+  middleware extends readonly AnyMiddleware[],
+> = {
+  middleware?: readonly [...middleware]
+  actions: ControllerDefinitionActions<routes, MiddlewareContext<middleware, context>>
+}
+
 /**
  * A controller maps route leaves in a route map to actions.
  *
@@ -128,7 +180,8 @@ export type Controller<
  *
  * This helper returns the controller unchanged while giving TypeScript the route map it needs to
  * type each action's `context.params`. If controller middleware adds context values, those values are
- * available to the controller actions.
+ * available to the controller actions. Wrap a nested action that has its own middleware in
+ * {@link createAction} so its refined context is preserved.
  *
  * @param routes The route map this controller handles.
  * @param controller The controller object to type-check.
@@ -140,8 +193,15 @@ export function createController<
   const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
 >(
   routes: routes,
-  controller: Controller<routes, context, middleware>,
-): Controller<routes, context, middleware> {
+  controller: ControllerDefinition<routes, context, middleware>,
+): Controller<routes, context, middleware>
+export function createController(
+  routes: RouteMap,
+  controller: {
+    middleware?: readonly AnyMiddleware[] | undefined
+    actions: Record<string, unknown>
+  },
+): unknown {
   void routes
   return controller
 }

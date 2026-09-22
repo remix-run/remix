@@ -20,6 +20,7 @@ import { type RouteMap, Route } from './route-map.ts'
 import {
   type RequestHandler,
   type Action,
+  type ActionDefinition,
   type Controller,
   isRequestHandler,
   isActionObject,
@@ -55,7 +56,22 @@ type ContextCompatibility<
       ? unknown
       : never
 
+type RoutableAction<
+  route extends RouteTarget,
+  context extends AnyContext,
+  middleware extends readonly AnyMiddleware[],
+> = Action<route, context, middleware> | ActionDefinition<route, context, middleware>
+
 type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
+  <
+    pattern extends string,
+    actionContext extends AnyContext = context,
+    const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  >(
+    route: RouteTarget<pattern, method>,
+    action: ActionDefinition<RouteTarget<pattern, method>, actionContext, middleware> &
+      ContextCompatibility<context, actionContext, middleware>,
+  ): void
   <
     pattern extends string,
     actionContext extends AnyContext = context,
@@ -136,12 +152,32 @@ export interface RouteBuilder<context extends AnyContext = RequestContext> {
   >(
     method: method,
     pattern: RouteTarget<pattern, method>,
+    action: ActionDefinition<RouteTarget<pattern, method>, actionContext, middleware> &
+      ContextCompatibility<context, actionContext, middleware>,
+  ): void
+  route<
+    method extends RequestMethod | 'ANY',
+    pattern extends string,
+    actionContext extends AnyContext = context,
+    const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  >(
+    method: method,
+    pattern: RouteTarget<pattern, method>,
     action: Action<RouteTarget<pattern, method>, actionContext, middleware> &
       ContextCompatibility<context, actionContext, middleware>,
   ): void
   /**
    * Maps either a single route target to an action or a route map to a controller.
    */
+  map<
+    target extends RouteTarget,
+    handlerContext extends AnyContext = context,
+    const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  >(
+    target: target,
+    handler: ActionDefinition<target, handlerContext, middleware> &
+      ContextCompatibility<context, handlerContext, middleware>,
+  ): void
   map<
     target extends MapTarget,
     handlerContext extends AnyContext = context,
@@ -540,7 +576,7 @@ export function createRouter<
         const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
       >(
         route: RouteTarget<pattern, method>,
-        action: Action<RouteTarget<pattern, method>, actionContext, middleware> &
+        action: RoutableAction<RouteTarget<pattern, method>, actionContext, middleware> &
           ContextCompatibility<builderContext, actionContext, middleware>,
       ): void => {
         addRoute(method, route, action, state)
@@ -556,7 +592,7 @@ export function createRouter<
       >(
         method: method,
         route: RouteTarget<pattern, method>,
-        action: Action<RouteTarget<pattern, method>, actionContext, middleware> &
+        action: RoutableAction<RouteTarget<pattern, method>, actionContext, middleware> &
           ContextCompatibility<builderContext, actionContext, middleware>,
       ): void {
         addRoute(method, route, action, state)

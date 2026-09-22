@@ -124,6 +124,31 @@ const privateAction = createAction(routes.private, {
   },
 })
 
+const privateController = createController(
+  { private: routes.private },
+  {
+    actions: {
+      private: createAction(routes.private, {
+        middleware: [requireAuth<APIIdentity>()],
+        handler(context) {
+          let currentAuth = context.get(Auth)
+          let directAuth = context.auth
+          let id: string = context.params.id
+
+          let authState: GoodAuth<APIIdentity> = currentAuth
+          let directAuthState: GoodAuth<APIIdentity> = directAuth
+
+          void id
+          void authState
+          void directAuthState
+
+          return new Response('Private')
+        },
+      }),
+    },
+  },
+)
+
 const adminController = createController(routes.admin, {
   middleware: protectedMiddleware,
   actions: {
@@ -172,6 +197,7 @@ fallbackRouter.get('/session/:id', sessionAction)
 
 router.get(routes.private, privateAction)
 
+router.map({ private: routes.private }, privateController)
 router.map(routes.admin, adminController)
 
 if (false as boolean) {
@@ -186,6 +212,7 @@ void typedAuth
 void router
 void fallbackRouter
 void privateAction
+void privateController
 void adminController
 void sessionAction
 
