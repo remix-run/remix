@@ -39,7 +39,7 @@ type SerializableProperty<value> = value extends SerializablePrimitive | RemixNo
       : value extends readonly unknown[]
         ? { [index in keyof value]: SerializableProperty<value[index]> }
         : value extends object
-          ? object extends value
+          ? keyof value extends never
             ? never
             : { [key in keyof value]: SerializableProperty<value[key]> }
           : never

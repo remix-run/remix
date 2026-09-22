@@ -164,6 +164,36 @@ describe('clientEntry', () => {
       expect(EntryComponent.$entry).toBe(true)
     })
 
+    it('accepts nested serializable objects with only optional properties', () => {
+      interface GameProps {
+        options: { maxScore?: number }
+      }
+
+      function Game(handle: Handle<GameProps>) {
+        return () => <div>{handle.props.options.maxScore ?? 100}</div>
+      }
+
+      let EntryComponent = clientEntry('/js/game.js#Game', Game)
+      expect(isEntry(EntryComponent)).toBe(true)
+    })
+
+    it('accepts optional nested partial interfaces', () => {
+      interface GameOptions {
+        maxScore: number
+      }
+
+      interface GameProps {
+        options?: Partial<GameOptions>
+      }
+
+      function Game(handle: Handle<GameProps>) {
+        return () => <div>{handle.props.options?.maxScore ?? 100}</div>
+      }
+
+      let EntryComponent = clientEntry('/js/game.js#Game', Game)
+      expect(isEntry(EntryComponent)).toBe(true)
+    })
+
     // Type-level rejection: non-serializable props should be disallowed
     it('rejects components with non-serializable props', () => {
       function InvalidFunctionComponent(handle: Handle<{ func: () => void }>) {
@@ -181,6 +211,11 @@ describe('clientEntry', () => {
         return () => <div>Invalid</div>
       }
 
+      function InvalidOptionalFunction(handle: Handle<{ options: { onScore?: () => void } }>) {
+        void handle
+        return () => <div>Invalid</div>
+      }
+
       class ExampleClass {}
       function InvalidConstructorComponent(handle: Handle<{ value: typeof ExampleClass }>) {
         void handle
@@ -193,6 +228,8 @@ describe('clientEntry', () => {
       clientEntry('/js/invalid.js#InvalidDateComponent', InvalidDateComponent)
       // @ts-expect-error - broad object props may contain non-serializable values
       clientEntry('/js/invalid.js#InvalidObjectComponent', InvalidObjectComponent)
+      // @ts-expect-error - optional nested function props should be rejected
+      clientEntry('/js/invalid.js#InvalidOptionalFunction', InvalidOptionalFunction)
       // @ts-expect-error - class constructors are functions, not serializable values
       clientEntry('/js/invalid.js#InvalidConstructorComponent', InvalidConstructorComponent)
 
