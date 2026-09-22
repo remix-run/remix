@@ -151,8 +151,7 @@ export function* parseMultipart(
     }
   }
 
-  let finalPart = parser.finish()
-  if (finalPart !== undefined) yield finalPart
+  parser.finish()
 }
 
 /**
@@ -186,8 +185,7 @@ export async function* parseMultipartStream(
     yield* parser.write(chunk)
   }
 
-  let finalPart = parser.finish()
-  if (finalPart !== undefined) yield finalPart
+  parser.finish()
 }
 
 /**
@@ -289,6 +287,10 @@ export class MultipartParser {
   /**
    * Write a chunk of data to the parser.
    *
+   * The final part is yielded when both closing hyphens arrive. Consume all chunks
+   * and call {@link MultipartParser.finish} to validate the complete message;
+   * malformed closing suffixes may throw after the final part has been yielded.
+   *
    * @param chunk A chunk of data to write to the parser
    * @yields Parsed {@link MultipartPart} objects that became available from this chunk
    * @returns A generator yielding `MultipartPart` objects as they are parsed
@@ -384,6 +386,9 @@ export class MultipartParser {
         if (chunk[index] === 45 && chunk[index + 1] === 45) {
           index += 2
           this.#state = MultipartParserStateClosingBoundary
+          if (this.#currentContent !== null) {
+            yield this.#createPart()
+          }
         } else {
           this.#state = MultipartParserStateBoundaryPadding
         }
@@ -410,7 +415,7 @@ export class MultipartParser {
         index += 2 // Skip \r\n after boundary
         this.#state = closing ? MultipartParserStateEpilogue : MultipartParserStateHeader
 
-        if (this.#currentContent !== null) {
+        if (!closing && this.#currentContent !== null) {
           yield this.#createPart()
         }
         if (closing) break
@@ -542,23 +547,18 @@ export class MultipartParser {
   }
 
   /**
-   * Complete parsing after all chunks have been written and return any final part.
+   * Validate completion after all chunks have been written to the parser.
    *
-   * A closing delimiter without CRLF is only valid once EOF is known. In that case,
-   * consume the part returned here in addition to parts yielded by {@link MultipartParser.write}.
-   * Throws if the message is incomplete or its closing delimiter is malformed.
-   *
-   * @returns The final part if it was waiting for EOF, or undefined if no part remains
+   * Throws if the message is incomplete or its closing delimiter is malformed,
+   * even if {@link MultipartParser.write} has already yielded the final part.
    */
-  finish(): MultipartPart | undefined {
+  finish(): void {
     if (this.#state === MultipartParserStateClosingBoundary) {
       if (this.#buffer !== null && this.#buffer.length > 0) {
         throw new MultipartParseError('Invalid multipart boundary ending')
       }
 
-      let part = this.#currentContent === null ? undefined : this.#createPart()
       this.#state = MultipartParserStateDone
-      return part
     }
 
     if (this.#state === MultipartParserStateEpilogue) {

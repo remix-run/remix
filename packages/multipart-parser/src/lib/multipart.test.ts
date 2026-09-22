@@ -72,16 +72,16 @@ describe('MultipartParser', () => {
     assert.equal(parts[0].text, 'value')
   })
 
-  it('returns the final part from finish when the closing delimiter ends at EOF', () => {
+  it('yields the final part from write when both closing hyphens arrive', () => {
     let parser = new MultipartParser(boundary)
     let message = createMultipartMessage(boundary, { field: 'value' })
 
     assert.deepEqual(Array.from(parser.write(message.subarray(0, -1))), [])
-    assert.deepEqual(Array.from(parser.write(message.subarray(-1))), [])
-    let part = parser.finish()
-    assert.ok(part)
-    assert.equal(part.name, 'field')
-    assert.equal(part.text, 'value')
+    let parts = Array.from(parser.write(message.subarray(-1)))
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, 'field')
+    assert.equal(parts[0].text, 'value')
+    assert.equal(parser.finish(), undefined)
     assert.equal(parser.finish(), undefined)
     assert.throws(() => Array.from(parser.write(new Uint8Array([88]))), {
       name: 'MultipartParseError',
@@ -89,18 +89,40 @@ describe('MultipartParser', () => {
     })
   })
 
-  it('waits for a closing CRLF before yielding the final part', () => {
+  it('does not yield the final part again when a closing CRLF arrives', () => {
     let parser = new MultipartParser(boundary)
 
-    assert.deepEqual(
-      Array.from(parser.write(createMultipartMessage(boundary, { field: 'value' }))),
-      [],
-    )
-    assert.deepEqual(Array.from(parser.write(new Uint8Array([32, 9, 13]))), [])
-    let parts = Array.from(parser.write(new Uint8Array([10])))
+    let parts = Array.from(parser.write(createMultipartMessage(boundary, { field: 'value' })))
     assert.equal(parts.length, 1)
     assert.equal(parts[0].text, 'value')
+    assert.deepEqual(Array.from(parser.write(new Uint8Array([32, 9, 13]))), [])
+    assert.deepEqual(Array.from(parser.write(new Uint8Array([10]))), [])
     assert.equal(parser.finish(), undefined)
+  })
+
+  it('rejects an invalid closing suffix after yielding the final part', () => {
+    let parser = new MultipartParser(boundary)
+    let parts = Array.from(parser.write(createMultipartMessage(boundary, { field: 'value' })))
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, 'value')
+    assert.throws(() => Array.from(parser.write(new Uint8Array([88]))), {
+      name: 'MultipartParseError',
+      message: 'Invalid multipart boundary ending',
+    })
+  })
+
+  it('rejects a closing CR at EOF after yielding the final part', () => {
+    let parser = new MultipartParser(boundary)
+    let parts = Array.from(parser.write(createMultipartMessage(boundary, { field: 'value' })))
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, 'value')
+    assert.deepEqual(Array.from(parser.write(new Uint8Array([13]))), [])
+    assert.throws(() => parser.finish(), {
+      name: 'MultipartParseError',
+      message: 'Invalid multipart boundary ending',
+    })
   })
 
   it('finishes an empty multipart message at EOF without returning a part', () => {
@@ -111,19 +133,18 @@ describe('MultipartParser', () => {
     assert.equal(parser.finish(), undefined)
   })
 
-  it('enforces maxParts when finish returns the final part', () => {
+  it('enforces maxParts when write yields the final part', () => {
     let parser = new MultipartParser(boundary, { maxParts: 0 })
 
-    assert.deepEqual(
-      Array.from(parser.write(createMultipartMessage(boundary, { field: 'value' }))),
-      [],
+    assert.throws(
+      () => Array.from(parser.write(createMultipartMessage(boundary, { field: 'value' }))),
+      MaxPartsExceededError,
     )
-    assert.throws(() => parser.finish(), MaxPartsExceededError)
   })
 })
 
 describe('parseMultipart', async () => {
-  it('rejects invalid closing delimiter endings before yielding at every chunk split', () => {
+  it('rejects invalid closing delimiter endings at every chunk split', () => {
     for (let ending of ['X', '\r', '\rX', '\n', ' \tX']) {
       let message = concat([
         createMultipartMessage(boundary, { field: 'value' }),
@@ -131,18 +152,15 @@ describe('parseMultipart', async () => {
       ])
 
       for (let split = 0; split <= message.length; split++) {
-        let parts = []
         assert.throws(
-          () => {
-            for (let part of parseMultipart([message.subarray(0, split), message.subarray(split)], {
-              boundary,
-            })) {
-              parts.push(part)
-            }
-          },
+          () =>
+            Array.from(
+              parseMultipart([message.subarray(0, split), message.subarray(split)], {
+                boundary,
+              }),
+            ),
           { name: 'MultipartParseError', message: 'Invalid multipart boundary ending' },
         )
-        assert.equal(parts.length, 0)
       }
     }
   })
@@ -430,24 +448,24 @@ describe('parseMultipart', async () => {
 })
 
 describe('parseMultipartStream', async () => {
-  it('rejects an invalid closing delimiter before yielding in single-byte chunks', async () => {
+  it('rejects an invalid closing suffix after yielding the final part in single-byte chunks', async () => {
     let message = concat([
       createMultipartMessage(boundary, { field: 'value' }),
       new TextEncoder().encode('X'),
     ])
-    let parts = []
+    let parts: string[] = []
 
     await assert.rejects(
       async () => {
         for await (let part of parseMultipartStream(createChunkedStream(message, 1), {
           boundary,
         })) {
-          parts.push(part)
+          parts.push(part.text)
         }
       },
       { name: 'MultipartParseError', message: 'Invalid multipart boundary ending' },
     )
-    assert.equal(parts.length, 0)
+    assert.deepEqual(parts, ['value'])
   })
 
   it('yields the final part for EOF and CRLF endings in single-byte chunks', async () => {
