@@ -162,7 +162,7 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
     let pairs: string[] = []
 
     for (let [name, value] of this.#cookies) {
-      pairs.push(`${name}=${quote(value)}`)
+      pairs.push(`${name}=${quote(value.replace(/;/g, '%3B'))}`)
     }
 
     return pairs.join('; ')
@@ -179,9 +179,12 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
 
     if (value !== null) {
       if (typeof value === 'string') {
-        let params = parseParams(value)
-        for (let [name, val] of params) {
-          header.#cookies.push([name, val ?? ''])
+        // Cookie semicolons delimit pairs even inside quotes, per RFC 6265.
+        // https://www.rfc-editor.org/rfc/rfc6265.html#section-4.1.1
+        for (let piece of value.split(';')) {
+          for (let [name, val] of parseParams(piece)) {
+            header.#cookies.push([name, val ?? ''])
+          }
         }
       } else if (isIterable(value)) {
         for (let [name, val] of value) {
