@@ -1,1 +1,1 @@
-- Remove links from installed guides to unpublished chapters and validate future guide links during package generation.
+Remove links from installed guides to unpublished chapters and validate future guide links during package generation.
