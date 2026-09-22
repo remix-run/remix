@@ -34,11 +34,15 @@ type SerializableProperty<value> = value extends SerializablePrimitive | RemixNo
   ? value
   : value extends (...args: never[]) => unknown
     ? never
-    : value extends readonly unknown[]
-      ? { [index in keyof value]: SerializableProperty<value[index]> }
-      : value extends object
-        ? { [key in keyof value]: SerializableProperty<value[key]> }
-        : never
+    : value extends abstract new (...args: never[]) => object
+      ? never
+      : value extends readonly unknown[]
+        ? { [index in keyof value]: SerializableProperty<value[index]> }
+        : value extends object
+          ? object extends value
+            ? never
+            : { [key in keyof value]: SerializableProperty<value[key]> }
+          : never
 
 export type SerializableProps<props extends object = SerializableObject> =
   props extends SerializableObject

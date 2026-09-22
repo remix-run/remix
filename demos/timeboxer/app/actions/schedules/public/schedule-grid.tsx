@@ -13,10 +13,8 @@ import {
   type ScheduleLayoutResult,
 } from './schedule-layout.ts'
 
-type GridBlockDocument = ScheduleLayoutBlock
-
 export type GridScheduleDocument = {
-  blocks: GridBlockDocument[]
+  blocks: ScheduleLayoutBlock[]
   id: number
   name: string
   revision: number
@@ -25,7 +23,7 @@ export type GridScheduleDocument = {
 
 type GridInputId = string
 
-type DraftBlock = GridBlockDocument & {
+type DraftBlock = ScheduleLayoutBlock & {
   id: string
 }
 
@@ -59,7 +57,7 @@ type ResizeState = {
   grid: GridMeasurement
   moved: boolean
   offsetY: number
-  originalBlock: GridBlockDocument
+  originalBlock: ScheduleLayoutBlock
   originalBlocks: ScheduleLayoutBlock[]
   pointerId: number
   startY: number
@@ -76,7 +74,7 @@ type HorizontalResizeState = {
   idPrefix: string
   moved: boolean
   offsetX: number
-  originalBlock: GridBlockDocument
+  originalBlock: ScheduleLayoutBlock
   originalBlocks: ScheduleLayoutBlock[]
   pointerId: number
   startX: number
@@ -168,7 +166,7 @@ export const ScheduleGrid = clientEntry(
         })
       }
 
-      let visibleBlocks = (preview?.blocks ?? schedule.blocks) as GridBlockDocument[]
+      let visibleBlocks = preview?.blocks ?? schedule.blocks
       let activeDragState = dragState?.active === true ? dragState : null
       let dragGhostBlocks = activeDragState
         ? visibleBlocks.filter((block) => activeDragState.blockIds.includes(block.id))
@@ -321,7 +319,7 @@ export const ScheduleGrid = clientEntry(
       handle.update()
     }
 
-    function commitBlock(block: GridBlockDocument) {
+    function commitBlock(block: ScheduleLayoutBlock) {
       let name = block.name.trim()
 
       if (!name) {
@@ -335,7 +333,7 @@ export const ScheduleGrid = clientEntry(
       saveSchedule()
     }
 
-    function deleteBlock(block: GridBlockDocument) {
+    function deleteBlock(block: ScheduleLayoutBlock) {
       if (draftBlock?.id === block.id) {
         cancelDraft()
         return
@@ -345,7 +343,7 @@ export const ScheduleGrid = clientEntry(
       let deleteIdSet = new Set(deleteIds)
       let nextBlocks = schedule.blocks
       for (let blockId of deleteIds) {
-        nextBlocks = previewDeleteBlock(nextBlocks, blockId).blocks as GridBlockDocument[]
+        nextBlocks = previewDeleteBlock(nextBlocks, blockId).blocks
       }
 
       schedule.blocks = nextBlocks
@@ -357,7 +355,7 @@ export const ScheduleGrid = clientEntry(
       saveSchedule()
     }
 
-    function startDrag(block: GridBlockDocument, event: PointerEvent) {
+    function startDrag(block: ScheduleLayoutBlock, event: PointerEvent) {
       if (
         draftBlock ||
         activeGesture ||
@@ -455,7 +453,7 @@ export const ScheduleGrid = clientEntry(
 
       if (finalPreview) {
         event.preventDefault()
-        schedule.blocks = finalPreview.blocks as GridBlockDocument[]
+        schedule.blocks = finalPreview.blocks
         selectedBlockIds = new Set(draggedBlockIds)
         preview = null
         saveSchedule()
@@ -472,7 +470,7 @@ export const ScheduleGrid = clientEntry(
       handle.update()
     }
 
-    function selectBlock(block: GridBlockDocument, event: MouseEvent) {
+    function selectBlock(block: ScheduleLayoutBlock, event: MouseEvent) {
       if (draftBlock || activeGesture) return
       if (!event.shiftKey && performance.now() < suppressSelectionClickUntil) return
 
@@ -487,7 +485,7 @@ export const ScheduleGrid = clientEntry(
       handle.update()
     }
 
-    function focusBlock(block: GridBlockDocument) {
+    function focusBlock(block: ScheduleLayoutBlock) {
       if (draftBlock || activeGesture) return
       if (selectedBlockIds.size === 1 && selectedBlockIds.has(block.id)) return
       if (selectedBlockIds.size > 1 && selectedBlockIds.has(block.id)) return
@@ -497,7 +495,7 @@ export const ScheduleGrid = clientEntry(
       handle.update()
     }
 
-    function prepareBlockPointerDown(block: GridBlockDocument, event: PointerEvent) {
+    function prepareBlockPointerDown(block: ScheduleLayoutBlock, event: PointerEvent) {
       if (draftBlock || activeGesture || event.shiftKey) {
         return
       }
@@ -543,7 +541,7 @@ export const ScheduleGrid = clientEntry(
       return true
     }
 
-    function startResize(block: GridBlockDocument, edge: ResizeEdge, event: PointerEvent) {
+    function startResize(block: ScheduleLayoutBlock, edge: ResizeEdge, event: PointerEvent) {
       if (
         (draftBlock && draftBlock.id !== block.id) ||
         dragState ||
@@ -606,7 +604,7 @@ export const ScheduleGrid = clientEntry(
 
       if (finalPreview) {
         event.preventDefault()
-        schedule.blocks = finalPreview.blocks as GridBlockDocument[]
+        schedule.blocks = finalPreview.blocks
         preview = null
         saveSchedule()
         handle.update()
@@ -623,7 +621,7 @@ export const ScheduleGrid = clientEntry(
     }
 
     function startHorizontalResize(
-      block: GridBlockDocument,
+      block: ScheduleLayoutBlock,
       edge: HorizontalResizeEdge,
       event: PointerEvent,
     ) {
@@ -704,7 +702,7 @@ export const ScheduleGrid = clientEntry(
 
       if (finalPreview) {
         event.preventDefault()
-        schedule.blocks = finalPreview.blocks as GridBlockDocument[]
+        schedule.blocks = finalPreview.blocks
         preview = null
         saveSchedule()
         handle.update()
@@ -858,7 +856,7 @@ const blockDragVisual = createMixin<HTMLElement>((handle) => {
 
 function ScheduleBlockGhost(
   handle: Handle<{
-    block: GridBlockDocument
+    block: ScheduleLayoutBlock
   }>,
 ) {
   return () => {
@@ -886,7 +884,7 @@ function ScheduleBlock(
   handle: Handle<{
     activeHorizontalResizeEdge?: HorizontalResizeEdge
     activeResizeEdge?: ResizeEdge
-    block: GridBlockDocument
+    block: ScheduleLayoutBlock
     isDragging: boolean
     isDraft: boolean
     isHorizontalResizing: boolean
@@ -895,18 +893,18 @@ function ScheduleBlock(
     shouldAnimateLayout: boolean
     onCancelDraft: () => void
     onClearSelection: () => void
-    onCommit: (block: GridBlockDocument) => void
-    onDelete: (block: GridBlockDocument) => void
-    onDragStart: (block: GridBlockDocument, event: PointerEvent) => void
-    onFocus: (block: GridBlockDocument) => void
+    onCommit: (block: ScheduleLayoutBlock) => void
+    onDelete: (block: ScheduleLayoutBlock) => void
+    onDragStart: (block: ScheduleLayoutBlock, event: PointerEvent) => void
+    onFocus: (block: ScheduleLayoutBlock) => void
     onHorizontalResizeStart: (
-      block: GridBlockDocument,
+      block: ScheduleLayoutBlock,
       edge: HorizontalResizeEdge,
       event: PointerEvent,
     ) => void
-    onPointerDown: (block: GridBlockDocument, event: PointerEvent) => void
-    onResizeStart: (block: GridBlockDocument, edge: ResizeEdge, event: PointerEvent) => void
-    onSelect: (block: GridBlockDocument, event: MouseEvent) => void
+    onPointerDown: (block: ScheduleLayoutBlock, event: PointerEvent) => void
+    onResizeStart: (block: ScheduleLayoutBlock, edge: ResizeEdge, event: PointerEvent) => void
+    onSelect: (block: ScheduleLayoutBlock, event: MouseEvent) => void
   }>,
 ) {
   let block = handle.props.block
@@ -1145,10 +1143,10 @@ function ScheduleBlock(
 
 function ResizeHandle(
   handle: Handle<{
-    block: GridBlockDocument
+    block: ScheduleLayoutBlock
     edge: ResizeEdge
     isActive: boolean
-    onResizeStart: (block: GridBlockDocument, edge: ResizeEdge, event: PointerEvent) => void
+    onResizeStart: (block: ScheduleLayoutBlock, edge: ResizeEdge, event: PointerEvent) => void
   }>,
 ) {
   return () => (
@@ -1171,11 +1169,11 @@ function ResizeHandle(
 
 function HorizontalResizeHandle(
   handle: Handle<{
-    block: GridBlockDocument
+    block: ScheduleLayoutBlock
     edge: HorizontalResizeEdge
     isActive: boolean
     onResizeStart: (
-      block: GridBlockDocument,
+      block: ScheduleLayoutBlock,
       edge: HorizontalResizeEdge,
       event: PointerEvent,
     ) => void
@@ -1347,12 +1345,12 @@ function horizontalResizeBlockId(state: HorizontalResizeState, dayOfWeek: number
     : `${state.idPrefix}-${dayOfWeek}`
 }
 
-function copyBlock(block: GridBlockDocument): GridBlockDocument {
+function copyBlock(block: ScheduleLayoutBlock): ScheduleLayoutBlock {
   return { ...block }
 }
 
 function adjacentSelection(
-  blocks: GridBlockDocument[],
+  blocks: ScheduleLayoutBlock[],
   anchorId: GridInputId,
   targetId: GridInputId,
 ) {
@@ -1428,7 +1426,7 @@ function durationToSlotSpan(startMinute: number, endMinute: number) {
   return Math.max(1, Math.round((endMinute - startMinute) / slotMinutes))
 }
 
-function blockBackgroundColor(block: GridBlockDocument) {
+function blockBackgroundColor(block: ScheduleLayoutBlock) {
   let hue = hashString(block.name.trim().toLowerCase() || String(block.id)) % 360
   return `hsl(${hue} 78% 88%)`
 }

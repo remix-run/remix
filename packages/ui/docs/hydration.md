@@ -41,7 +41,7 @@ The format is `moduleUrl#ExportName`. If you omit the export name, the function'
 
 On the server, `clientEntry` components render like any other component. The server wraps their output in comment markers and serializes their props into a `<script type="application/json">` tag so the client knows what to hydrate and with what data.
 
-Client entry props may use ordinary interfaces. Remix checks each known property recursively, so nested objects and arrays are accepted without adding a string index signature. Values such as functions and class instances are rejected because they cannot be serialized for hydration.
+Client entry props may use ordinary interfaces. Remix checks each known property recursively, so nested objects and arrays are accepted without adding a string index signature. Functions, broad `object` values, and object types with non-serializable members, such as `Date`, are rejected.
 
 ## Booting the client
 
@@ -115,7 +115,7 @@ Client entry props are serialized to JSON. Supported prop types:
 - JSX elements (serialized as descriptors and revived on the client)
 - `<Frame>` elements in props (serialized as frame descriptors)
 
-Functions, class instances, and other non-serializable values cannot be passed as props to client entries.
+Client entry props should use plain data. Functions and object types with non-serializable members, such as `Date`, cannot be passed as props. Because TypeScript uses structural typing, it cannot distinguish a data-only class instance from an equivalent plain object; class instances should not be passed because their prototype is not preserved during serialization.
 
 ## How hydration works
 

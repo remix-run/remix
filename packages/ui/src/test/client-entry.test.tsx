@@ -176,10 +176,25 @@ describe('clientEntry', () => {
         return () => <div>Invalid</div>
       }
 
+      function InvalidObjectComponent(handle: Handle<{ value: object }>) {
+        void handle
+        return () => <div>Invalid</div>
+      }
+
+      class ExampleClass {}
+      function InvalidConstructorComponent(handle: Handle<{ value: typeof ExampleClass }>) {
+        void handle
+        return () => <div>Invalid</div>
+      }
+
       // @ts-expect-error - non-serializable function prop should be rejected
       clientEntry('/js/invalid.js#InvalidFunctionComponent', InvalidFunctionComponent)
       // @ts-expect-error - non-serializable class instance should be rejected
       clientEntry('/js/invalid.js#InvalidDateComponent', InvalidDateComponent)
+      // @ts-expect-error - broad object props may contain non-serializable values
+      clientEntry('/js/invalid.js#InvalidObjectComponent', InvalidObjectComponent)
+      // @ts-expect-error - class constructors are functions, not serializable values
+      clientEntry('/js/invalid.js#InvalidConstructorComponent', InvalidConstructorComponent)
 
       expect(true).toBe(true)
     })
