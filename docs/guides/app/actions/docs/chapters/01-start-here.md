@@ -13,7 +13,7 @@ These APIs ship together through focused subpath imports from the `remix` packag
 
 The design of Remix comes from six core principles:
 
-1. **Agent-First Development.** Remix optimizes source code, documentation, tooling, and abstractions for LLMs, and provides primitives for using models inside the products you build.
+1. **Model-First Development.** Remix optimizes source code, documentation, tooling, and abstractions for LLMs, and provides primitives for using models inside the products you build.
 2. **Build on Web APIs.** Remix builds on `Request`, `Response`, `URL`, `FormData`, headers, cookies, and JavaScript because shared platform APIs reduce context switching across the full stack while keeping your application portable.
 3. **Religiously Runtime.** Remix APIs do not depend on bundlers, type generation, or static analysis. Routes, middleware, controllers, and tests should run as ordinary runtime code.
 4. **Avoid Dependencies.** Remix chooses dependencies carefully, wraps them behind its own boundaries, and works toward replacing them with focused packages when the framework needs long-term control.
