@@ -41,6 +41,8 @@ The format is `moduleUrl#ExportName`. If you omit the export name, the function'
 
 On the server, `clientEntry` components render like any other component. The server wraps their output in comment markers and serializes their props into a `<script type="application/json">` tag so the client knows what to hydrate and with what data.
 
+Client entry props may use ordinary interfaces. Remix checks each known property recursively, so nested objects and arrays are accepted without adding a string index signature. Values such as functions and class instances are rejected because they cannot be serialized for hydration.
+
 ## Booting the client
 
 Use `run` to start the client. It scans the document for client entry markers, loads the corresponding modules, and hydrates each one:

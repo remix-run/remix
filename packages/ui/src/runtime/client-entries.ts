@@ -30,9 +30,20 @@ export type SerializableValue =
 /**
  * Constraint that ensures all properties in an object are serializable.
  */
-export type SerializableProps = {
-  [K in string]: SerializableValue
-}
+type SerializableProperty<value> = value extends SerializablePrimitive | RemixNode
+  ? value
+  : value extends (...args: never[]) => unknown
+    ? never
+    : value extends readonly unknown[]
+      ? { [index in keyof value]: SerializableProperty<value[index]> }
+      : value extends object
+        ? { [key in keyof value]: SerializableProperty<value[key]> }
+        : never
+
+export type SerializableProps<props extends object = SerializableObject> =
+  props extends SerializableObject
+    ? props
+    : { [key in keyof props]: SerializableProperty<props[key]> }
 
 /**
  * Metadata added to entry components
@@ -45,10 +56,11 @@ export type EntryMetadata = {
 /**
  * An entry component preserves the exact function type with added metadata
  */
-export type EntryComponent<props extends SerializableProps = {}, context = NoContext> = ((
-  handle: Handle<props, context>,
-) => RenderFn) &
-  EntryMetadata
+export type EntryComponent<props extends object = {}, context = NoContext> = [props] extends [
+  SerializableProps<props>,
+]
+  ? ((handle: Handle<props, context>) => RenderFn) & EntryMetadata
+  : never
 
 /**
  * Marks a component as a client entry for client-side hydration.
@@ -82,9 +94,10 @@ export type EntryComponent<props extends SerializableProps = {}, context = NoCon
  * )
  * ```
  */
-export function clientEntry<props extends SerializableProps = {}, context = NoContext>(
+export function clientEntry<props extends object = {}, context = NoContext>(
   entryId: string,
-  component: (handle: Handle<props, context>) => RenderFn,
+  component: ((handle: Handle<props, context>) => RenderFn) &
+    ([props] extends [SerializableProps<props>] ? unknown : never),
 ): EntryComponent<props, context>
 
 // Implementation

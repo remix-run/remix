@@ -140,35 +140,47 @@ describe('clientEntry', () => {
   })
 
   describe('type constraints', () => {
-    it('accepts components with serializable props', () => {
-      // This should compile without errors
-      function ValidComponent(
-        handle: Handle<{
-          str: string
-          num: number
-          bool: boolean
-          obj: { nested: string }
-          arr: number[]
-          element: JSX.Element
-        }>,
-      ) {
+    it('accepts components with serializable interface props', () => {
+      interface ScoreEntry {
+        rank: number
+        userId: string
+        email: string
+        score: number
+      }
+
+      interface GameProps {
+        title: string
+        leaderboard: ScoreEntry[]
+        options?: { maxScore: number }
+        element: JSX.Element
+      }
+
+      function Game(handle: Handle<GameProps>) {
         void handle
         return () => <div>Valid</div>
       }
 
-      let EntryComponent = clientEntry('/js/valid.js#ValidComponent', ValidComponent)
+      let EntryComponent = clientEntry('/js/game.js#Game', Game)
       expect(EntryComponent.$entry).toBe(true)
     })
 
     // Type-level rejection: non-serializable props should be disallowed
     it('rejects components with non-serializable props', () => {
-      function InvalidComponent(handle: Handle<{ func: () => void }>) {
+      function InvalidFunctionComponent(handle: Handle<{ func: () => void }>) {
+        void handle
+        return () => <div>Invalid</div>
+      }
+
+      function InvalidDateComponent(handle: Handle<{ createdAt: Date }>) {
         void handle
         return () => <div>Invalid</div>
       }
 
       // @ts-expect-error - non-serializable function prop should be rejected
-      let HydratedInvalid = clientEntry('/js/invalid.js#InvalidComponent', InvalidComponent)
+      clientEntry('/js/invalid.js#InvalidFunctionComponent', InvalidFunctionComponent)
+      // @ts-expect-error - non-serializable class instance should be rejected
+      clientEntry('/js/invalid.js#InvalidDateComponent', InvalidDateComponent)
+
       expect(true).toBe(true)
     })
 

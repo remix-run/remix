@@ -1,12 +1,4 @@
-import {
-  clientEntry,
-  createMixin,
-  css,
-  on,
-  ref,
-  type Handle,
-  type SerializableValue,
-} from 'remix/ui'
+import { clientEntry, createMixin, css, on, ref, type Handle } from 'remix/ui'
 import { animateLayout, spring } from 'remix/ui/animation'
 import button from 'remix/ui/button'
 import { theme } from '../../../ui/public/design.ts'
@@ -21,12 +13,9 @@ import {
   type ScheduleLayoutResult,
 } from './schedule-layout.ts'
 
-type GridBlockDocument = ScheduleLayoutBlock & {
-  [key: string]: SerializableValue
-}
+type GridBlockDocument = ScheduleLayoutBlock
 
 export type GridScheduleDocument = {
-  [key: string]: SerializableValue
   blocks: GridBlockDocument[]
   id: number
   name: string
