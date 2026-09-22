@@ -62,6 +62,25 @@ describe('createFsFileCache', () => {
     }
   })
 
+  it('preserves bytes and metadata when caching a LazyFile from filesystem storage', async () => {
+    let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
+    try {
+      let storage = createFsFileStorage(path.join(directory, 'source'))
+      let cache = createFsFileCache({ directory: path.join(directory, 'cache') })
+      let original = new File([new Uint8Array([0, 255, 10])], 'image.png', {
+        type: 'image/png',
+        lastModified: 123456,
+      })
+      let file = await storage.put('source', original)
+
+      await cache.put('key', file)
+
+      await assertCachedFile(await cache.get('key'), original)
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true })
+    }
+  })
+
   it('evicts the least recently used entry after a cache hit', async () => {
     let directory = await fs.mkdtemp(path.join(os.tmpdir(), 'file-cache-'))
     try {
