@@ -24,13 +24,6 @@ export function createCookieSessionStorage(): SessionStorage {
       return createSession()
     },
     async save(session) {
-      if (session.deleteId) {
-        console.warn(
-          `Session ID ${session.deleteId} was regenerated, but the old session cannot ` +
-            'be deleted when using cookie storage',
-        )
-      }
-
       if (session.destroyed) {
         return ''
       }

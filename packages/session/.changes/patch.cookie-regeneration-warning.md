@@ -1,0 +1,1 @@
+Cookie session storage no longer warns when saving a session regenerated with old-session deletion enabled. Cookie storage still rotates the ID in the new cookie, but cannot invalidate a previously issued cookie because there is no server-side session record to delete.

@@ -143,7 +143,7 @@ describe('cookie session storage', () => {
     assert.equal(response4.session.get('count'), 2, 'old session data should still be in storage')
   })
 
-  it('logs a warning when the id is regenerated and the deleteOldSession option is true', async (t) => {
+  it('ignores old session deletion when the id is regenerated', async (t) => {
     let consoleWarn = t.mock.method(console, 'warn', () => {})
 
     let storage = createCookieSessionStorage()
@@ -175,11 +175,12 @@ describe('cookie session storage', () => {
     let response3 = await requestIndex(response2.cookie)
     assert.equal(response3.session.get('count'), 2)
 
-    assert.equal(consoleWarn.mock.calls.length, 1)
-    let warning = consoleWarn.mock.calls[0].arguments[0] as string
-    assert.match(
-      warning,
-      /Session ID [\w-]+ was regenerated, but the old session cannot be deleted when using cookie storage/,
+    let response4 = await requestIndex(response1.cookie)
+    assert.equal(
+      response4.session.get('count'),
+      2,
+      'old session data remains in its original cookie',
     )
+    assert.equal(consoleWarn.mock.calls.length, 0)
   })
 })
