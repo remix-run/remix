@@ -14,6 +14,7 @@ describe('readChapterMetadata', () => {
         title: 'Start Here',
         description: 'An intro to Remix.',
         published: true,
+        listed: true,
       },
     )
   })
@@ -33,6 +34,28 @@ describe('readChapterMetadata', () => {
         title: 'Markdown Style Demo',
         description: 'A rendering fixture.',
         published: false,
+        listed: true,
+      },
+    )
+  })
+
+  it('reads an unlisted marker', () => {
+    assert.deepEqual(
+      readChapterMetadata(
+        {
+          title: 'Markdown Style Demo',
+          description: 'A rendering fixture.',
+          published: false,
+          listed: false,
+        },
+        options,
+      ),
+      {
+        chapter: 'Chapter 1',
+        title: 'Markdown Style Demo',
+        description: 'A rendering fixture.',
+        published: false,
+        listed: false,
       },
     )
   })
@@ -69,6 +92,13 @@ describe('readChapterMetadata', () => {
     assert.throws(
       () => readChapterMetadata({ title: 'ok', description: 'ok', published: 'yes' }, options),
       /Expected `published` to be a boolean/,
+    )
+  })
+
+  it('throws when listed is not a boolean', () => {
+    assert.throws(
+      () => readChapterMetadata({ title: 'ok', description: 'ok', listed: 'yes' }, options),
+      /Expected `listed` to be a boolean/,
     )
   })
 

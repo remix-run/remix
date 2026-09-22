@@ -1,6 +1,6 @@
 import { type HeaderValue } from './header-value.ts'
 import { parseParams } from './param-values.ts'
-import { isIterable } from './utils.ts'
+import { isIterable, splitList } from './utils.ts'
 
 /**
  * Initializer for an {@link Accept} header value.
@@ -201,7 +201,7 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
 
     if (value !== null) {
       if (typeof value === 'string') {
-        for (let piece of value.split(/\s*,\s*/)) {
+        for (let piece of splitList(value)) {
           let params = parseParams(piece)
           if (params.length < 1) continue
 

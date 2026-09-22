@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "3.0.0-rc.2",
+  "version": "3.0.0-rc.3",
   "description": "The Remix web framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -732,5 +732,15 @@
     "playwright": {
       "optional": true
     }
-  }
+  },
+  "sideEffects": [
+    "./src/cli-entry.ts",
+    "./src/node-hmr/runtime.ts",
+    "./src/node-tsx.ts",
+    "./src/ui-hmr/node.ts",
+    "./dist/cli-entry.js",
+    "./dist/node-hmr/runtime.js",
+    "./dist/node-tsx.js",
+    "./dist/ui-hmr/node.js"
+  ]
 }

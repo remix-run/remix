@@ -1,0 +1,1 @@
+BREAKING CHANGE: `remix/fetch-proxy` now returns upstream redirects by default so stable development proxies preserve redirect responses and session cookies at the browser boundary. Pass `redirect: 'follow'` to preserve the previous behavior.

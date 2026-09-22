@@ -9,6 +9,7 @@ describe('scroll anchoring', () => {
   it('restores traversal scroll after an earlier client entry is removed', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(routes.scrollAnchoring.href())
+    await page.locator('html[data-frames-ready="true"]').waitFor()
 
     let reproduction = page.locator('#scroll-anchoring-reproduction')
     let hydrationCheck = reproduction.getByRole('button', {

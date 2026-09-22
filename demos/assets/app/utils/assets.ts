@@ -1,7 +1,5 @@
-import * as path from 'node:path'
-import { createAssetServer, defineFileTransform } from 'remix/assets'
+import { createAssetServer, createFsFileCache, defineFileTransform } from 'remix/assets'
 import { loadConfig } from 'remix/cli'
-import { createFsFileStorage } from 'remix/file-storage/fs'
 import { optimize as optimizeSvg } from 'svgo'
 
 const config = await loadConfig(import.meta.dirname)
@@ -14,7 +12,7 @@ export const assetServer = createAssetServer({
   ...config.assets,
   files: {
     ...config.assets.files,
-    cache: createFsFileStorage(path.resolve(import.meta.dirname, '../../.tmp/assets-cache')),
+    cache: createFsFileCache(),
     globalTransforms: [
       {
         extensions: ['.svg'],

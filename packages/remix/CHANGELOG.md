@@ -2,6 +2,81 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-rc.3
+
+### Pre-release Changes
+
+- BREAKING CHANGE: `remix/data-table` now treats dotted strings passed as comparison values as scalar values. Use table column references for column-to-column comparisons.
+
+- BREAKING CHANGE: Raw HTML rendered through `remix/ui` must now be explicitly authorized with `unsafeHTML()`. This applies to `innerHTML` and both iframe `srcDoc` spellings (`srcDoc` and `srcdoc`). `outerHTML` is not supported because it would replace a reconciler-owned element. The helper preserves its input exactly and does not sanitize it.
+
+  ```diff
+  -import type { Handle } from 'remix/ui'
+  +import { unsafeHTML } from 'remix/ui'
+  +import type { Handle } from 'remix/ui'
+
+   function Content(handle: Handle<{ html: string }>) {
+  -  return () => <div innerHTML={handle.props.html} />
+  +  return () => <div innerHTML={unsafeHTML(handle.props.html)} />
+   }
+  ```
+
+- BREAKING CHANGE: `Cookie.secure` from `remix/cookie` returns `undefined` when unconfigured. Use `cookie.secure ?? false` when a boolean is required. Session middleware now defaults to `Secure` on HTTPS requests while preserving explicit cookie settings.
+
+- BREAKING CHANGE: `remix/middleware/session` now enforces configured cookie lifetimes before loading session data. Existing cookies without expiration metadata start a new session when `maxAge` or `expires` is configured. Sessions without a configured lifetime retain their existing behavior.
+
+- BREAKING CHANGE: `remix/tar-parser` now defaults to `pathPolicy: 'relative'`, rejecting invalid entry names and link targets with `TarParseError`. Entry names must be relative without parent components; symlink and hard-link targets must stay within the archive when resolved from the link's parent and archive root, respectively. Set `pathPolicy: 'preserve'` to process unrestricted decoded paths while retaining archive limits and header structure validation:
+
+  ```diff
+  -await parseTar(archive, handleEntry)
+  +await parseTar(archive, { pathPolicy: 'preserve' }, handleEntry)
+  ```
+
+  See the [tar-parser changelog](https://github.com/remix-run/remix/blob/main/packages/tar-parser/CHANGELOG.md) for details.
+
+- BREAKING CHANGE: `remix/tar-parser` now limits entry bodies to 2 MiB, total archive input to 20 MiB, and entry counts to 5,000 by default. These limits are configurable through `maxEntrySize`, `maxTotalSize`, and `maxEntries`, with an `Infinity` opt-out and named limit errors. See the [tar-parser changelog](https://github.com/remix-run/remix/blob/main/packages/tar-parser/CHANGELOG.md) for migration details.
+
+- Expose `compileOrderByDirection()` through `remix/data-table/sql-helpers`.
+
+- Ship a generated `INDEX.md` that maps app workflows to installed guides and `remix/*` imports to the most specific installed README available.
+
+- Compressed HTML from `remix/middleware/compression` now streams incrementally by default, so initial UI and Frame fallbacks can reach the browser before deferred Frames resolve. Explicit zlib and Brotli `flush` options continue to override the streaming-safe defaults.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.7.1`](https://github.com/remix-run/remix/releases/tag/assets@0.7.1)
+  - [`async-context-middleware@0.3.7`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.3.7)
+  - [`auth@0.3.2`](https://github.com/remix-run/remix/releases/tag/auth@0.3.2)
+  - [`auth-middleware@0.2.7`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.2.7)
+  - [`cli@0.7.1`](https://github.com/remix-run/remix/releases/tag/cli@0.7.1)
+  - [`compression-middleware@0.1.15`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.15)
+  - [`cookie@0.7.0`](https://github.com/remix-run/remix/releases/tag/cookie@0.7.0)
+  - [`cop-middleware@0.1.10`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.10)
+  - [`cors-middleware@0.2.0`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.2.0)
+  - [`csrf-middleware@0.1.10`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.10)
+  - [`data-schema@0.3.1`](https://github.com/remix-run/remix/releases/tag/data-schema@0.3.1)
+  - [`data-table@0.6.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.6.0)
+  - [`data-table-mysql@0.5.3`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.3)
+  - [`data-table-postgres@0.5.3`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.3)
+  - [`data-table-sqlite@0.6.3`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.3)
+  - [`fetch-proxy@0.8.6`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@0.8.6)
+  - [`fetch-router@0.22.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.1)
+  - [`file-storage-s3@0.1.5`](https://github.com/remix-run/remix/releases/tag/file-storage-s3@0.1.5)
+  - [`form-data-middleware@0.3.7`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.3.7)
+  - [`form-data-parser@0.17.6`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.6)
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+  - [`logger-middleware@0.3.7`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.3.7)
+  - [`method-override-middleware@0.1.15`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.15)
+  - [`multipart-parser@0.16.5`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.5)
+  - [`render-middleware@0.3.1`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.3.1)
+  - [`response@0.3.9`](https://github.com/remix-run/remix/releases/tag/response@0.3.9)
+  - [`route-pattern@0.24.1`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.24.1)
+  - [`session-middleware@0.5.0`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.5.0)
+  - [`spa@0.1.2`](https://github.com/remix-run/remix/releases/tag/spa@0.1.2)
+  - [`static-middleware@0.4.16`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.16)
+  - [`tar-parser@0.8.0`](https://github.com/remix-run/remix/releases/tag/tar-parser@0.8.0)
+  - [`test@0.6.1`](https://github.com/remix-run/remix/releases/tag/test@0.6.1)
+  - [`ui@0.10.0`](https://github.com/remix-run/remix/releases/tag/ui@0.10.0)
+
 ## v3.0.0-rc.2
 
 ### Pre-release Changes

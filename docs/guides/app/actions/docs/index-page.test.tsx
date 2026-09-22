@@ -12,6 +12,7 @@ const chapter: DocsChapterSummary = {
   chapter: 'Chapter 2',
   title: 'Routing and Controllers',
   description: 'Route requests through Remix.',
+  disabled: false,
   sections: [
     {
       id: 'route-contract',
@@ -27,5 +28,13 @@ describe('ChapterCard', () => {
     let html = await renderToString(<ChapterCard chapter={chapter} />)
 
     assert.match(html, /chapter-card__eyebrow">02<\/div>/)
+  })
+
+  it('renders disabled chapters without links', async () => {
+    let html = await renderToString(<ChapterCard chapter={{ ...chapter, disabled: true }} />)
+
+    assert.match(html, /chapter-card chapter-card--disabled/)
+    assert.match(html, /<span aria-disabled="true">Routing and Controllers<\/span>/)
+    assert.doesNotMatch(html, /href="\/routing-and-controllers\/"/)
   })
 })

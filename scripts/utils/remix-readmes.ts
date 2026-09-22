@@ -68,7 +68,7 @@ export async function syncRemixReadmes(): Promise<RemixReadmeCopy[]> {
   return copies
 }
 
-export async function removeRemixReadmes(): Promise<void> {
+async function removeRemixReadmes(): Promise<void> {
   let readmePaths = await findReadmePaths(remixSrcDir)
   await Promise.all(readmePaths.map((readmePath) => fsp.rm(readmePath, { force: true })))
 }

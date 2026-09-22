@@ -238,6 +238,93 @@ describe('createHref', () => {
       assert.equal(createHref('/files/*path', { path: '' }), '/files/')
     })
 
+    it('normalizes a leading wildcard slash on the current origin', () => {
+      let pattern = '/*path' as const
+      let href = createHref(pattern, { path: '/files/readme.md' })
+      let url = new URL(href, 'https://example.com/current/page')
+
+      assert.equal(url.origin, 'https://example.com')
+      assert.equal(url.pathname, '/files/readme.md')
+      assert.equal(href, '/files/readme.md')
+      assert.deepEqual(createMatcher(pattern).match(url)?.params, { path: 'files/readme.md' })
+    })
+
+    it('normalizes repeated leading wildcard slashes on the current origin', () => {
+      let pattern = '/*path' as const
+      let href = createHref(pattern, { path: '//files/readme.md' })
+      let url = new URL(href, 'https://example.com/current/page')
+
+      assert.equal(url.origin, 'https://example.com')
+      assert.equal(url.pathname, '/files/readme.md')
+      assert.equal(href, '/files/readme.md')
+      assert.deepEqual(createMatcher(pattern).match(url)?.params, { path: 'files/readme.md' })
+    })
+
+    it('preserves internal wildcard slashes when normalizing the pathname', () => {
+      assert.equal(
+        createHref('/files/*path', { path: '/docs//readme.md/' }),
+        '/files//docs//readme.md/',
+      )
+      assert.equal(
+        createHref('https://example.com/*path', { path: '//docs//readme.md/' }),
+        'https://example.com/docs//readme.md/',
+      )
+    })
+
+    it('normalizes slash-only wildcard paths to the root pathname', () => {
+      assert.equal(createHref('/*path', { path: '///' }), '/')
+      assert.equal(createHref('https://example.com/*path', { path: '///' }), 'https://example.com/')
+    })
+
+    it('rejects parent segments in pathname wildcards', () => {
+      assert.throws(() => createHref('/files/*path', { path: '../../admin' }), {
+        details: { type: 'invalid-pathname-wildcard', value: '../../admin', segment: '..' },
+      })
+      assert.throws(() => createHref('/files/*path', { path: 'docs/../readme.md' }), {
+        details: { type: 'invalid-pathname-wildcard', value: 'docs/../readme.md', segment: '..' },
+      })
+      assert.throws(() => createHref('/files/*path', { path: 'docs/..' }), {
+        details: { type: 'invalid-pathname-wildcard', value: 'docs/..', segment: '..' },
+      })
+    })
+
+    it('rejects current-directory segments in pathname wildcards', () => {
+      assert.throws(() => createHref('/files/*path', { path: '.' }), {
+        details: { type: 'invalid-pathname-wildcard', value: '.', segment: '.' },
+      })
+      assert.throws(() => createHref('/files/*path', { path: 'docs/./readme.md' }), {
+        details: { type: 'invalid-pathname-wildcard', value: 'docs/./readme.md', segment: '.' },
+      })
+    })
+
+    it('rejects dot segments in optional wildcards and relative hrefs', () => {
+      assert.throws(() => createHref('/files(/*path)', { path: '../readme.md' }), {
+        details: { type: 'invalid-pathname-wildcard', value: '../readme.md', segment: '..' },
+      })
+      assert.throws(
+        () =>
+          createHref(
+            '/files/*path',
+            { path: '../readme.md' },
+            {
+              baseURL: 'https://example.com/files/current',
+            },
+          ),
+        { details: { type: 'invalid-pathname-wildcard', value: '../readme.md', segment: '..' } },
+      )
+    })
+
+    it('round trips dotted filenames and encoded text in pathname wildcards', () => {
+      let pattern = '/files/*path' as const
+      let path = '.hidden/.../readme..md/%2e%2e/%2F/\\draft\n'
+      let href = createHref(pattern, { path })
+      let url = new URL(href, 'https://example.com/current')
+
+      assert.equal(href, '/files/.hidden/.../readme..md/%252e%252e/%252F/%5Cdraft%0A')
+      assert.equal(url.pathname, href)
+      assert.deepEqual(createMatcher(pattern).match(url)?.params, { path })
+    })
+
     it('throws for unnamed wildcard', () => {
       let pattern = '/files/*' as const
       // @ts-expect-error - nameless wildcard
@@ -602,13 +689,33 @@ describe('createHref', () => {
       )
     })
 
-    it('uses ./ when leading separators could be parsed as an authority', () => {
+    it('normalizes leading wildcard slashes before generating relative hrefs', () => {
       let baseURL = 'https://example.com/current'
       let slashHref = createHref('/*path', { path: '//files' }, { baseURL })
+
+      assert.equal(slashHref, 'files')
+      assert.equal(new URL(slashHref, baseURL).href, 'https://example.com/files')
+      assert.equal(createHref('/*path', { path: '///' }, { baseURL }), './')
+      assert.equal(
+        createHref(
+          'https://example.com/*path',
+          { path: '//files' },
+          {
+            baseURL: 'https://example.com/admin/current',
+          },
+        ),
+        '../files',
+      )
+      assert.equal(
+        createHref('https://cdn.example.com/*path', { path: '//files' }, { baseURL }),
+        'https://cdn.example.com/files',
+      )
+    })
+
+    it('uses ./ when leading backslashes could be parsed as an authority', () => {
+      let baseURL = 'https://example.com/current'
       let backslashHref = createHref('/\\\\\\\\host/path', undefined, { baseURL })
 
-      assert.equal(slashHref, './//files')
-      assert.equal(new URL(slashHref, baseURL).href, 'https://example.com///files')
       assert.equal(backslashHref, './\\\\host/path')
       assert.equal(new URL(backslashHref, baseURL).href, 'https://example.com///host/path')
     })
