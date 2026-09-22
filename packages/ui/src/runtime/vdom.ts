@@ -16,6 +16,7 @@ import { ROOT_VNODE, type CommittedVNode, type ReconcileContext, type RootVNode 
 import { resetStyleState, defaultStyleManager } from './diff-props.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
 import type { StyleManager } from '../style/index.ts'
+import type { ElementFunction } from './element-function.ts'
 
 /**
  * Events emitted by virtual roots.
@@ -53,6 +54,8 @@ export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
 export type VirtualRootOptions = {
   /** Existing frame runtime to share with this root instead of creating one from `frameInit`. */
   frame?: FrameHandle
+  /** Resolves context from outside this root when no matching provider exists inside it. */
+  getContext?: (type: ElementFunction) => unknown
   /** Scheduler to share with related roots (defaults to a new scheduler). */
   scheduler?: Scheduler
   /** Style manager used to adopt server styles and manage generated CSS. */
@@ -150,6 +153,7 @@ export function createRangeRoot(
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
+        _getContext: options.getContext,
         _rangeStart: start,
         _rangeEnd: end,
         _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(start),
@@ -258,6 +262,7 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
+        _getContext: options.getContext,
       }
       scheduler.enqueueWork([
         () => {
