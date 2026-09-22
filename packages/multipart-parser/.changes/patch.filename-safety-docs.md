@@ -1,1 +1,0 @@
-Document that `MultipartPart.filename` and any derived `File.name` are untrusted client metadata. Update the upload example to use an application-generated storage name while preserving parser behavior.

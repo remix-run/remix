@@ -1,1 +1,0 @@
-Clarify that uploaded filenames, including names on files returned in `FormData`, are untrusted client metadata. Update the disk upload example to generate a storage name and read file contents through `arrayBuffer()`.
