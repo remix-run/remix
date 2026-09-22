@@ -89,6 +89,15 @@ describe('Cookie', () => {
     ])
   })
 
+  it('preserves trimming and unmatched quotes in cookie values', () => {
+    let header = Cookie.from('first=" \tvalue \t"; second=" \tvalue \t')
+
+    assert.deepEqual(Array.from(header), [
+      ['first', 'value'],
+      ['second', '" \tvalue'],
+    ])
+  })
+
   it('round trips cookie values containing double quotes', () => {
     let header = new Cookie({ name: 'a"b' })
 

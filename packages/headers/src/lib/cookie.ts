@@ -1,5 +1,5 @@
 import { type HeaderValue } from './header-value.ts'
-import { parseParams, quote } from './param-values.ts'
+import { quote } from './param-values.ts'
 import { isIterable } from './utils.ts'
 
 type CookiePair = [name: string, value: string]
@@ -182,9 +182,14 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
         // Cookie semicolons delimit pairs even inside quotes, per RFC 6265.
         // https://www.rfc-editor.org/rfc/rfc6265.html#section-4.1.1
         for (let piece of value.split(';')) {
-          for (let [name, val] of parseParams(piece)) {
-            header.#cookies.push([name, val ?? ''])
-          }
+          let match = /^\s*([^=\s]+)(\s*=\s*)?/.exec(piece)
+          if (match === null) continue
+
+          let val = match[2] ? piece.slice(match[0].length) : ''
+          // Preserve unmatched quotes instead of applying HTTP parameter recovery.
+          let quoted = /^"((?:[^"\\]|\\.)*)"/.exec(val)
+          if (quoted !== null) val = quoted[1]
+          header.#cookies.push([match[1], val.replace(/\\(.)/g, '$1').trim()])
         }
       } else if (isIterable(value)) {
         for (let [name, val] of value) {

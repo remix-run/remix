@@ -162,6 +162,24 @@ for await (let part of parseMultipartStream(message, { boundary })) {
 }
 ```
 
+For direct control over chunk delivery, use `MultipartParser`. Consume all parts yielded by `write()` for every chunk, then call `finish()` at EOF to validate completion.
+
+```ts
+import { MultipartParser } from 'remix/multipart-parser'
+
+let parser = new MultipartParser(boundary)
+
+for await (let chunk of chunks) {
+  for (let part of parser.write(chunk)) {
+    await handlePart(part)
+  }
+}
+
+parser.finish()
+```
+
+`write()` yields the final part when both closing hyphens arrive. A malformed closing suffix can cause a subsequent `write()` or `finish()` to throw after that part was delivered. Processing a part does not guarantee that the entire message is valid. Empty multipart messages yield no parts.
+
 ## Demos
 
 The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos) contains a few working demos of how you can use this library:
