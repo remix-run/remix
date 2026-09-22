@@ -155,7 +155,8 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
       if (file.size > limit) return
       let digest = await hash(new TextEncoder().encode(key))
       let header = JSON.stringify([digest, file.name, file.type, file.lastModified])
-      let content = new Blob([header, '\n', file])
+      let isNativeBlob = file instanceof Blob
+      let content = new Blob([header, '\n', isNativeBlob ? file : await file.arrayBuffer()])
       if (65 + content.size > limit) return
       let bytes = new Uint8Array(await content.arrayBuffer())
       let checksum = await hash(bytes)
