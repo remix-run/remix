@@ -292,6 +292,22 @@ describe('manifest', () => {
     )
     assert.equal(
       rewriteLinksToRemixReadmes(
+        '[Router][router]\n\n[router]: https://api.remix.run/api/remix/router/overview/#middleware',
+        guidePath,
+        mappings,
+      ),
+      '[Router][router]\n\n[router]: ../src/fetch-router/README.md#middleware',
+    )
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '`[Router](https://api.remix.run/api/remix/router/overview/)`\n\n```md\n[Router](https://api.remix.run/api/remix/router/overview/)\n```',
+        guidePath,
+        mappings,
+      ),
+      '`[Router](https://api.remix.run/api/remix/router/overview/)`\n\n```md\n[Router](https://api.remix.run/api/remix/router/overview/)\n```',
+    )
+    assert.equal(
+      rewriteLinksToRemixReadmes(
         '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
         guidePath,
         mappings,
@@ -315,7 +331,7 @@ describe('manifest', () => {
     try {
       fs.writeFileSync(
         path.join(fixtureDir, '01-published.md'),
-        `---\ntitle: Published\ndescription: Published guide.\n---\n\nRead [Draft](/draft/).\n`,
+        `---\ntitle: Published\ndescription: Published guide.\n---\n\nRead [Draft][draft].\n\n[draft]: /draft/#section\n`,
       )
       fs.writeFileSync(
         path.join(fixtureDir, '02-draft.md'),
@@ -324,8 +340,28 @@ describe('manifest', () => {
 
       assert.throws(
         () => getRemixGuideCopies({ sourceGuidesDir: fixtureDir }),
-        /01-published\.md:6 links to unpublished guide "Draft" \(\/draft\/\)/,
+        /01-published\.md:8 links to unpublished guide "Draft" \(\/draft\/#section\)/,
       )
+    } finally {
+      fs.rmSync(fixtureDir, { recursive: true, force: true })
+    }
+  })
+
+  it('ignores unpublished guide links in code examples', () => {
+    let fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-guides-'))
+
+    try {
+      fs.writeFileSync(
+        path.join(fixtureDir, '01-published.md'),
+        `---\ntitle: Published\ndescription: Published guide.\n---\n\n\`[Draft](/draft/)\`\n\n\`\`\`md\n[Draft](/draft/)\n\`\`\`\n`,
+      )
+      fs.writeFileSync(
+        path.join(fixtureDir, '02-draft.md'),
+        `---\ntitle: Draft\ndescription: Draft guide.\npublished: false\n---\n`,
+      )
+
+      let copies = getRemixGuideCopies({ sourceGuidesDir: fixtureDir })
+      assert.equal(copies.length, 1)
     } finally {
       fs.rmSync(fixtureDir, { recursive: true, force: true })
     }

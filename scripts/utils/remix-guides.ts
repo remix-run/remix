@@ -2,6 +2,7 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
+import { getMarkdownLinkDestinations } from 'remix-docs-shared/markdown/parser'
 import { parse } from 'yaml'
 
 import { getRemixReadmeMappings, rewriteLinksToRemixReadmes } from './remix-readmes.ts'
@@ -101,14 +102,14 @@ function validatePublishedGuideLinks(guides: RemixGuide[]): void {
     if (!guide.published) continue
 
     let markdown = fs.readFileSync(guide.sourceGuidePath, 'utf-8')
-    let linkPattern = /(?:\]\(\s*|^\s*\[[^\]\r\n]+\]:\s*)<?(\/(?!\/)[^\s)>]+)/gm
-    for (let match of markdown.matchAll(linkPattern)) {
-      let href = match[1].split(/[?#]/, 1)[0]
-      let normalizedHref = href.endsWith('/') ? href : `${href}/`
+    for (let { href, line } of getMarkdownLinkDestinations(markdown)) {
+      if (!href.startsWith('/') || href.startsWith('//')) continue
+
+      let { pathname } = new URL(href, 'https://remix.run')
+      let normalizedHref = pathname.endsWith('/') ? pathname : `${pathname}/`
       let unpublishedGuide = unpublishedGuides.get(normalizedHref)
       if (!unpublishedGuide) continue
 
-      let line = markdown.slice(0, match.index).split('\n').length
       invalidLinks.push(
         `${guide.sourceGuidePath}:${line} links to unpublished guide "${unpublishedGuide.title}" (${href})`,
       )

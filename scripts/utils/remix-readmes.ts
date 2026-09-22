@@ -2,6 +2,8 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
+import { rewriteMarkdownLinkDestinations } from 'remix-docs-shared/markdown/parser'
+
 const packagesDir = path.resolve(import.meta.dirname, '..', '..', 'packages')
 const remixDir = path.join(packagesDir, 'remix')
 const remixSrcDir = path.join(remixDir, 'src')
@@ -79,44 +81,58 @@ export function rewriteLinksToRemixReadmes(
   outputPath: string,
   mappings: RemixReadmeCopy[] = getRemixReadmeMappings(),
 ): string {
-  let readmePathByRemixPath = new Map(
-    mappings.map((mapping) => [mapping.remixPath, mapping.remixReadmePath]),
-  )
-  let readmePathBySource = new Map(
-    mappings.map((mapping) => [path.resolve(mapping.sourceReadmePath), mapping.remixReadmePath]),
-  )
-  let linkPattern =
-    /((?:\]\(\s*|^\s*\[[^\]\r\n]+\]:\s*)<?)(https:\/\/(?:api\.remix\.run|github\.com\/remix-run\/remix)\/[^\s)>]+)(>?)/gm
+  let readmePaths = getReadmePathsByUrlPath(mappings)
 
-  return markdown.replace(linkPattern, (match, prefix: string, href: string, suffix: string) => {
-    let url = new URL(href)
+  return rewriteMarkdownLinkDestinations(markdown, (href) => {
+    let url = parseUrl(href)
+    if (!url || url.protocol !== 'https:' || url.port) return
+
     let readmePath: string | undefined
-
     if (url.hostname === 'api.remix.run') {
-      let apiOverview = /^\/api\/(remix(?:\/[^/]+)+)\/overview\/?$/.exec(url.pathname)
-      if (apiOverview) {
-        readmePath = readmePathByRemixPath.get(apiOverview[1])
-      }
-    } else {
-      let repositoryPath = /^\/remix-run\/remix\/(?:blob|tree)\/main\/(packages\/.+)$/.exec(
-        url.pathname,
-      )?.[1]
-      if (repositoryPath) {
-        let packagePath = repositoryPath.slice('packages/'.length)
-        let sourceReadmePath = path.resolve(
-          packagesDir,
-          packagePath.endsWith('/README.md') ? packagePath : path.join(packagePath, 'README.md'),
-        )
-        readmePath = readmePathBySource.get(sourceReadmePath)
-      }
+      readmePath = readmePaths.api.get(withoutTrailingSlash(url.pathname))
+    } else if (url.hostname === 'github.com') {
+      readmePath = readmePaths.github.get(withoutTrailingSlash(url.pathname))
     }
-
-    if (!readmePath) return match
+    if (!readmePath) return
 
     let relativePath = toPosixPath(path.relative(path.dirname(outputPath), readmePath))
     let localHref = relativePath.startsWith('.') ? relativePath : `./${relativePath}`
-    return `${prefix}${localHref}${url.search}${url.hash}${suffix}`
+    return `${localHref}${url.search}${url.hash}`
   })
+}
+
+function getReadmePathsByUrlPath(mappings: RemixReadmeCopy[]): {
+  api: Map<string, string>
+  github: Map<string, string>
+} {
+  let api = new Map<string, string>()
+  let github = new Map<string, string>()
+
+  for (let mapping of mappings) {
+    api.set(`/api/${mapping.remixPath}/overview`, mapping.remixReadmePath)
+
+    let sourcePath = toPosixPath(path.relative(packagesDir, mapping.sourceReadmePath))
+    let readmePath = `packages/${sourcePath}`
+    let directoryPath = path.posix.dirname(readmePath)
+    for (let repositoryPath of [readmePath, directoryPath]) {
+      github.set(`/remix-run/remix/blob/main/${repositoryPath}`, mapping.remixReadmePath)
+      github.set(`/remix-run/remix/tree/main/${repositoryPath}`, mapping.remixReadmePath)
+    }
+  }
+
+  return { api, github }
+}
+
+function parseUrl(href: string): URL | undefined {
+  try {
+    return new URL(href)
+  } catch {
+    return undefined
+  }
+}
+
+function withoutTrailingSlash(pathname: string): string {
+  return pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
 }
 
 async function removeRemixReadmes(): Promise<void> {
