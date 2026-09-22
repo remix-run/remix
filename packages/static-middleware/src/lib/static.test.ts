@@ -698,6 +698,87 @@ describe('staticFiles middleware', () => {
     })
   })
 
+  describe('listFiles option', () => {
+    it('lists folders without sizes and preserves file metadata and navigation', async () => {
+      createTestFile('downloads/folder10/nested/file.txt', 'Nested file')
+      fs.mkdirSync(path.join(tmpDir, 'downloads/folder2'))
+      createTestFile('downloads/index.html', '<h1>Index</h1>')
+      createTestFile('downloads/empty.txt', '')
+
+      let router = createRouter({
+        middleware: [staticFiles(tmpDir, { listFiles: true, index: false })],
+      })
+
+      let response = await router.fetch('https://remix.run/downloads/')
+      assert.equal(response.status, 200)
+      assert.equal(response.headers.get('Content-Type'), 'text/html; charset=UTF-8')
+
+      let body = await response.text()
+      let rows = [...body.matchAll(/<tr class="file-row">([\s\S]*?)<\/tr>/g)].map(
+        (match) => match[1],
+      )
+      assert.equal(rows.length, 5)
+      assert.match(rows[0], /href="\/"[\s\S]*?\.\./)
+      assert.match(rows[1], /href="\/downloads\/folder2"/)
+      assert.match(rows[2], /href="\/downloads\/folder10"/)
+      assert.match(rows[1], /<td class="size-cell"><\/td>/)
+      assert.match(rows[2], /<td class="size-cell"><\/td>/)
+      assert.match(rows[1], /<td class="type-cell">Folder<\/td>/)
+      assert.match(rows[2], /<td class="type-cell">Folder<\/td>/)
+      assert.match(rows[3], /href="\/downloads\/empty.txt"/)
+      assert.match(rows[3], /<td class="size-cell">0 B<\/td>/)
+      assert.match(rows[3], /<td class="type-cell">text\/plain<\/td>/)
+      assert.match(rows[4], /href="\/downloads\/index.html"/)
+      assert.match(rows[4], /<td class="size-cell">14 B<\/td>/)
+      assert.match(rows[4], /<td class="type-cell">text\/html<\/td>/)
+    })
+
+    it('only reads immediate entries on repeated GET and HEAD listings', async (t) => {
+      createTestFile('folder/nested/file.txt', 'Nested file')
+      createTestFile('other/file.txt', 'Other file')
+      createTestFile('readme.txt', 'Read me')
+
+      let rootPath = fs.realpathSync(tmpDir)
+      let readdir = t.mock.method(fs.promises, 'readdir')
+      let stat = t.mock.method(fs.promises, 'stat')
+
+      let router = createRouter({
+        middleware: [staticFiles(tmpDir, { listFiles: true })],
+      })
+
+      for (let method of ['GET', 'GET', 'HEAD']) {
+        readdir.mock.calls.length = 0
+        stat.mock.calls.length = 0
+
+        let response = await router.fetch('https://remix.run/', { method })
+        assert.equal(response.status, 200)
+        await response.text()
+
+        assert.deepEqual(
+          readdir.mock.calls.map((call) => call.arguments[0]),
+          [rootPath],
+        )
+        assert.deepEqual(
+          stat.mock.calls.map((call) => call.arguments[0]),
+          [rootPath, path.join(rootPath, 'readme.txt')],
+        )
+      }
+    })
+
+    it('serves index files before generating a listing', async () => {
+      createTestFile('index.html', '<h1>Index</h1>')
+      createTestFile('folder/nested/file.txt', 'Nested file')
+
+      let router = createRouter({
+        middleware: [staticFiles(tmpDir, { listFiles: true })],
+      })
+
+      let response = await router.fetch('https://remix.run/')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '<h1>Index</h1>')
+    })
+  })
+
   describe('works with method-override middleware', () => {
     it('ignores overridden POST requests', async () => {
       createTestFile('test.txt', 'Hello, World!')
