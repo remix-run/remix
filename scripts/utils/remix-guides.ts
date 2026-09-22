@@ -4,6 +4,8 @@ import * as path from 'node:path'
 
 import { parse } from 'yaml'
 
+import { getRemixReadmeMappings, rewriteLinksToRemixReadmes } from './remix-readmes.ts'
+
 const rootDir = path.resolve(import.meta.dirname, '..', '..')
 const defaultSourceGuidesDir = path.join(
   rootDir,
@@ -69,8 +71,19 @@ export async function syncRemixGuides(): Promise<RemixGuideCopy[]> {
   let copies = getRemixGuideCopies()
   await removeRemixGuides()
 
+  let readmeMappings = getRemixReadmeMappings()
   await fsp.mkdir(defaultRemixGuidesDir, { recursive: true })
-  await Promise.all(copies.map((copy) => fsp.copyFile(copy.sourceGuidePath, copy.remixGuidePath)))
+  await Promise.all(
+    copies.map(async (copy) => {
+      let markdown = await fsp.readFile(copy.sourceGuidePath, 'utf-8')
+      let installedMarkdown = rewriteLinksToRemixReadmes(
+        markdown,
+        copy.remixGuidePath,
+        readmeMappings,
+      )
+      await fsp.writeFile(copy.remixGuidePath, installedMarkdown)
+    }),
+  )
   return copies
 }
 

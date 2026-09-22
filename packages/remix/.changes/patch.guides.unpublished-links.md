@@ -1,1 +1,1 @@
-Remove links from installed guides to unpublished chapters and validate future guide links during package generation.
+Keep installed documentation self-contained by removing links to unpublished guide chapters, rewriting API overview and package README links to bundled README mirrors, and validating future guide links during package generation.

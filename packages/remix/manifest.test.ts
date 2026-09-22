@@ -9,7 +9,11 @@ import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
 import { getPackageExportSideEffects } from '../../scripts/utils/package-side-effects.ts'
 import { getRemixGuideCopies } from '../../scripts/utils/remix-guides.ts'
 import { createRemixIndex, getRemixIndexEntries } from '../../scripts/utils/remix-index.ts'
-import { getRemixReadmeCopies } from '../../scripts/utils/remix-readmes.ts'
+import {
+  getRemixReadmeCopies,
+  getRemixReadmeMappings,
+  rewriteLinksToRemixReadmes,
+} from '../../scripts/utils/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '..')
@@ -263,6 +267,37 @@ describe('manifest', () => {
     let mirrorPaths = readmeCopies.map((copy) => copy.remixReadmePath)
     assert.equal(new Set(sourcePaths).size, sourcePaths.length)
     assert.equal(new Set(mirrorPaths).size, mirrorPaths.length)
+  })
+
+  it('rewrites package documentation links to local README mirrors', () => {
+    let mappings = getRemixReadmeMappings()
+    let guidePath = path.join(__dirname, 'guides', 'example.md')
+    let sessionReadmePath = path.join(__dirname, 'src', 'session', 'README.md')
+
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '[Router](https://api.remix.run/api/remix/router/overview/)',
+        guidePath,
+        mappings,
+      ),
+      '[Router](../src/fetch-router/README.md)',
+    )
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '[Router](https://github.com/remix-run/remix/tree/main/packages/fetch-router#middleware)',
+        sessionReadmePath,
+        mappings,
+      ),
+      '[Router](../fetch-router/README.md#middleware)',
+    )
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
+        guidePath,
+        mappings,
+      ),
+      '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
+    )
   })
 
   it('selects published guide chapters', () => {

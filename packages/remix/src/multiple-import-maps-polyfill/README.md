@@ -99,8 +99,8 @@ The module importer and its dependencies must be available through the document'
 
 ## Related Packages
 
-- [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Compiles and serves browser assets
-- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Loads client entries discovered during navigation
+- [`assets`](../assets/README.md) - Compiles and serves browser assets
+- [`ui`](../ui/README.md) - Loads client entries discovered during navigation
 
 ## License
 

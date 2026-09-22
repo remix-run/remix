@@ -77,11 +77,11 @@ const router = createRouter({
 
 ## Related Packages
 
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Request
+- [`fetch-router`](../fetch-router/README.md) - Request
   routing, controllers, and middleware context
-- [`render-middleware`](https://github.com/remix-run/remix/tree/main/packages/render-middleware) -
+- [`render-middleware`](../render-middleware/README.md) -
   Request-scoped renderer middleware
-- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Remix components, frames, and
+- [`ui`](../ui/README.md) - Remix components, frames, and
   browser runtime
 
 ## Related Work

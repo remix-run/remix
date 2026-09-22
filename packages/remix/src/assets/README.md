@@ -248,7 +248,7 @@ export function Document(handle: Handle<{ children: RemixNode }>) {
 }
 ```
 
-This can also be used for resolved client entries in [`remix/ui`](https://github.com/remix-run/remix/tree/main/packages/ui) when using `import.meta.url` as the client entry ID:
+This can also be used for resolved client entries in [`remix/ui`](../ui/README.md) when using `import.meta.url` as the client entry ID:
 
 ```tsx
 import { renderToStream } from 'remix/ui/server'
@@ -806,9 +806,9 @@ If `onError` returns nothing, the asset server responds with the default `500 In
 
 ## Hot Module Reloading
 
-Use `hmr` with `watch` to enable the `import.meta.hot` API for browser modules. The `hmr` option is designed for integrating assets with a server-level HMR runtime such as [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) so server and browser updates can be coordinated.
+Use `hmr` with `watch` to enable the `import.meta.hot` API for browser modules. The `hmr` option is designed for integrating assets with a server-level HMR runtime such as [`node-hmr`](../node-hmr/README.md) so server and browser updates can be coordinated.
 
-The `hmr` option accepts an async function that creates a `BrowserHmrChannel`, such as the `createBrowserHmrChannel` function from [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr):
+The `hmr` option accepts an async function that creates a `BrowserHmrChannel`, such as the `createBrowserHmrChannel` function from [`node-hmr`](../node-hmr/README.md):
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -983,9 +983,9 @@ if (import.meta.hot) {
 
 ## Related Packages
 
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - A Fetch-based router that pairs naturally with `assets`
-- [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) - Provides the server-side `import.meta.hot` runtime and browser HMR channel used by `hmr`
-- [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) - Provides a Remix UI component HMR loader for `scripts.loaders`
+- [`fetch-router`](../fetch-router/README.md) - A Fetch-based router that pairs naturally with `assets`
+- [`node-hmr`](../node-hmr/README.md) - Provides the server-side `import.meta.hot` runtime and browser HMR channel used by `hmr`
+- [`ui-hmr`](../ui-hmr/README.md) - Provides a Remix UI component HMR loader for `scripts.loaders`
 
 ## License
 

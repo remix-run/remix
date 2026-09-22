@@ -46,7 +46,7 @@ Path variables are one part of Remix's route pattern syntax. Patterns can also i
 // matches /docs/v2/guides/routing/route-maps.html?preview=1
 ```
 
-You do not need to memorize Remix's route pattern syntax to follow this guide. The [`route-pattern` overview](https://api.remix.run/api/remix/route-pattern/overview/) covers the full grammar and the lower-level `remix/route-pattern/href` and `remix/route-pattern/match` APIs.
+You do not need to memorize Remix's route pattern syntax to follow this guide. The [`route-pattern` overview](../src/route-pattern/README.md) covers the full grammar and the lower-level `remix/route-pattern/href` and `remix/route-pattern/match` APIs.
 
 Finally, the `edit` branch has two leaves at the same URL: `index` handles `GET` and `action` handles `POST`.
 
@@ -148,7 +148,7 @@ export const routes = route({
 // routes.albums.create -> POST   /albums
 ```
 
-These helpers produce ordinary route maps and leaves, so you can nest them with hand-written definitions. Pass a map to `createController(...)`, then register it with `router.map(...)` just as you would a hand-written map. The [`remix/router` overview](https://api.remix.run/api/remix/router/overview/) covers the full route builder API.
+These helpers produce ordinary route maps and leaves, so you can nest them with hand-written definitions. Pass a map to `createController(...)`, then register it with `router.map(...)` just as you would a hand-written map. The [`remix/router` overview](../src/fetch-router/README.md) covers the full route builder API.
 
 ## Controllers and actions
 

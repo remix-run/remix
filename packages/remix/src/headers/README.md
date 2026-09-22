@@ -637,8 +637,8 @@ stringify(headers)
 
 ## Related Packages
 
-- [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
-- [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server) - Build HTTP servers on Node.js using the web fetch API
+- [`fetch-proxy`](../fetch-proxy/README.md) - Build HTTP proxy servers using the web fetch API
+- [`node-fetch-server`](../node-fetch-server/README.md) - Build HTTP servers on Node.js using the web fetch API
 
 ## License
 

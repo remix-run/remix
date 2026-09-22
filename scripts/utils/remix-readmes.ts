@@ -9,6 +9,7 @@ const remixManifestPath = path.join(remixDir, 'manifest.json')
 const cliPackageName = '@remix-run/cli'
 
 export interface RemixReadmeCopy {
+  remixPath: string
   specifier: string
   sourceReadmePath: string
   remixReadmePath: string
@@ -26,7 +27,7 @@ export function getRemixReadmeMappings(): RemixReadmeCopy[] {
   for (let [remixPath, specifier] of Object.entries(manifest)) {
     if (remixPath.startsWith('_')) continue
 
-    let mapping = getRemixReadmeMapping(specifier, packageJsonByName)
+    let mapping = getRemixReadmeMapping(remixPath, specifier, packageJsonByName)
     if (mapping) {
       mappings.push(mapping)
     }
@@ -35,6 +36,7 @@ export function getRemixReadmeMappings(): RemixReadmeCopy[] {
   let cliReadmePath = findReadmeForSpecifier(cliPackageName, packageJsonByName)
   if (cliReadmePath) {
     mappings.push({
+      remixPath: 'remix/cli',
       specifier: cliPackageName,
       sourceReadmePath: cliReadmePath,
       remixReadmePath: getRemixReadmePath(cliPackageName, cliReadmePath),
@@ -59,13 +61,62 @@ export function getRemixReadmeCopies(): RemixReadmeCopy[] {
 export async function syncRemixReadmes(): Promise<RemixReadmeCopy[]> {
   await removeRemixReadmes()
 
+  let mappings = getRemixReadmeMappings()
   let copies = getRemixReadmeCopies()
   for (let copy of copies) {
+    let markdown = await fsp.readFile(copy.sourceReadmePath, 'utf-8')
+    let installedMarkdown = rewriteLinksToRemixReadmes(markdown, copy.remixReadmePath, mappings)
+
     await fsp.mkdir(path.dirname(copy.remixReadmePath), { recursive: true })
-    await fsp.copyFile(copy.sourceReadmePath, copy.remixReadmePath)
+    await fsp.writeFile(copy.remixReadmePath, installedMarkdown)
   }
 
   return copies
+}
+
+export function rewriteLinksToRemixReadmes(
+  markdown: string,
+  outputPath: string,
+  mappings: RemixReadmeCopy[] = getRemixReadmeMappings(),
+): string {
+  let readmePathByRemixPath = new Map(
+    mappings.map((mapping) => [mapping.remixPath, mapping.remixReadmePath]),
+  )
+  let readmePathBySource = new Map(
+    mappings.map((mapping) => [path.resolve(mapping.sourceReadmePath), mapping.remixReadmePath]),
+  )
+  let linkPattern =
+    /((?:\]\(\s*|^\s*\[[^\]\r\n]+\]:\s*)<?)(https:\/\/(?:api\.remix\.run|github\.com\/remix-run\/remix)\/[^\s)>]+)(>?)/gm
+
+  return markdown.replace(linkPattern, (match, prefix: string, href: string, suffix: string) => {
+    let url = new URL(href)
+    let readmePath: string | undefined
+
+    if (url.hostname === 'api.remix.run') {
+      let apiOverview = /^\/api\/(remix(?:\/[^/]+)+)\/overview\/?$/.exec(url.pathname)
+      if (apiOverview) {
+        readmePath = readmePathByRemixPath.get(apiOverview[1])
+      }
+    } else {
+      let repositoryPath = /^\/remix-run\/remix\/(?:blob|tree)\/main\/(packages\/.+)$/.exec(
+        url.pathname,
+      )?.[1]
+      if (repositoryPath) {
+        let packagePath = repositoryPath.slice('packages/'.length)
+        let sourceReadmePath = path.resolve(
+          packagesDir,
+          packagePath.endsWith('/README.md') ? packagePath : path.join(packagePath, 'README.md'),
+        )
+        readmePath = readmePathBySource.get(sourceReadmePath)
+      }
+    }
+
+    if (!readmePath) return match
+
+    let relativePath = toPosixPath(path.relative(path.dirname(outputPath), readmePath))
+    let localHref = relativePath.startsWith('.') ? relativePath : `./${relativePath}`
+    return `${prefix}${localHref}${url.search}${url.hash}${suffix}`
+  })
 }
 
 async function removeRemixReadmes(): Promise<void> {
@@ -90,6 +141,7 @@ export function findReadmeForSpecifier(
 }
 
 function getRemixReadmeMapping(
+  remixPath: string,
   specifier: string,
   packageJsonByName: Map<string, PackageJson>,
 ): RemixReadmeCopy | undefined {
@@ -105,6 +157,7 @@ function getRemixReadmeMapping(
   }
 
   return {
+    remixPath,
     specifier,
     sourceReadmePath,
     remixReadmePath: getRemixReadmePath(specifier, sourceReadmePath),
@@ -243,6 +296,10 @@ async function findReadmePaths(directory: string): Promise<string[]> {
 
 function isFile(filePath: string): boolean {
   return fs.statSync(filePath, { throwIfNoEntry: false })?.isFile() ?? false
+}
+
+function toPosixPath(filePath: string): string {
+  return filePath.split(path.sep).join('/')
 }
 
 function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
