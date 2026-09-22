@@ -36,7 +36,7 @@ export interface CookieOptions extends CookieProperties {
   secrets?: string[]
 }
 
-type SameSiteValue = Capitalize<NonNullable<CookieProperties['sameSite']>>
+type SameSiteValue = 'Strict' | 'Lax' | 'None'
 type Coder = (value: string) => string
 
 /**
