@@ -190,6 +190,7 @@ export type RootVNode = {
   type: typeof ROOT_VNODE
   _children: CommittedVNode[]
   _svg: boolean
+  _getContext?: (type: ElementFunction) => unknown
   _rangeStart?: Node
   _rangeEnd?: Node
   _pendingHydrationComponentId?: string
@@ -262,6 +263,9 @@ export function findContextFromAncestry(node: VNodeParent, type: ElementFunction
   while (current) {
     if (current.kind === 'component' && current.type === type) {
       return current._handle.getContextValue()
+    }
+    if (current.kind === 'root') {
+      return current._getContext?.(type)
     }
     current = '_parent' in current ? current._parent : undefined
   }
