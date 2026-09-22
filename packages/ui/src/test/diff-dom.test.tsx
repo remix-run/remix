@@ -597,6 +597,73 @@ describe('diffNodes', () => {
       expect(input.getAttribute('value')).toBe('server')
     })
 
+    it('does not preserve input values when id, name, or type changes', () => {
+      let container = document.createElement('div')
+      container.innerHTML = [
+        '<input data-case="id" id="before" name="id-field" type="text" value="server">',
+        '<input data-case="name" id="name" name="before" type="text" value="server">',
+        '<input data-case="type" id="type" name="type-field" type="text" value="server">',
+      ].join('')
+      let inputs = container.querySelectorAll<HTMLInputElement>('input')
+      inputs.item(0).value = 'live id value'
+      inputs.item(1).value = 'live name value'
+      inputs.item(2).value = 'live type value'
+
+      diffDom(
+        container,
+        [
+          '<input data-case="id" id="after" name="id-field" type="text" value="next id">',
+          '<input data-case="name" id="name" name="after" type="text" value="next name">',
+          '<input data-case="type" id="type" name="type-field" type="search" value="next type">',
+        ].join(''),
+      )
+
+      let updatedInputs = container.querySelectorAll<HTMLInputElement>('input')
+      expect(updatedInputs.item(0).value).toBe('next id')
+      expect(updatedInputs.item(1).value).toBe('next name')
+      expect(updatedInputs.item(2).value).toBe('next type')
+    })
+
+    it('does not move live input values between fields when a sibling is inserted', () => {
+      let container = document.createElement('div')
+      container.innerHTML = [
+        '<form>',
+        '<input value="server" name="unchanged">',
+        '<label>First<input name="first" type="text"></label>',
+        '<label>Second<input name="second" type="text"></label>',
+        '<button type="submit">Submit</button>',
+        '</form>',
+      ].join('')
+      let unchanged = container.querySelector<HTMLInputElement>('input[name="unchanged"]')
+      let first = container.querySelector<HTMLInputElement>('input[name="first"]')
+      let second = container.querySelector<HTMLInputElement>('input[name="second"]')
+      invariant(unchanged && first && second)
+      unchanged.value = 'client'
+      first.value = 'submitted first'
+      second.value = 'live second'
+
+      diffDom(
+        container,
+        [
+          '<form>',
+          '<input value="server-next" name="unchanged">',
+          '<p role="alert">Validation failed</p>',
+          '<label>First<input value="submitted first" name="first" type="text"></label>',
+          '<label>Second<input name="second" type="text"></label>',
+          '<button type="submit">Submit</button>',
+          '</form>',
+        ].join(''),
+      )
+
+      let updatedUnchanged = container.querySelector<HTMLInputElement>('input[name="unchanged"]')
+      let updatedFirst = container.querySelector<HTMLInputElement>('input[name="first"]')
+      invariant(updatedUnchanged && updatedFirst)
+      expect(updatedUnchanged).toBe(unchanged)
+      expect(updatedUnchanged.value).toBe('client')
+      expect(updatedFirst.value).toBe('submitted first')
+      expect(updatedFirst.value).not.toBe('live second')
+    })
+
     it('preserves current textarea value when incoming html changes its text', () => {
       let container = document.createElement('div')
       container.innerHTML = '<textarea>server</textarea>'

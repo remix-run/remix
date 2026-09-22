@@ -514,9 +514,19 @@ function isPreservedDomElement(node: Node): node is Element {
 
 function nodeTypesComparable(a: Node, b: Node): boolean {
   if (isTextNode(a) && isTextNode(b)) return true
-  if (isElement(a) && isElement(b)) return a.tagName === b.tagName
+  if (isElement(a) && isElement(b)) {
+    if (a.tagName !== b.tagName) return false
+    if (a instanceof HTMLInputElement && b instanceof HTMLInputElement) {
+      return inputIdentitiesMatch(a, b)
+    }
+    return true
+  }
   if (isCommentNode(a) && isCommentNode(b)) return markerKindsMatch(a, b)
   return false
+}
+
+function inputIdentitiesMatch(current: HTMLInputElement, next: HTMLInputElement): boolean {
+  return current.id === next.id && current.name === next.name && current.type === next.type
 }
 
 function getMarkerKind(node: Node): MarkerKind | undefined {
