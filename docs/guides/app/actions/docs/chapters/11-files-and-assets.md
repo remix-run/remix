@@ -51,7 +51,25 @@ Resolve `clientEntry(import.meta.url, ...)` IDs to `href`, `importMap`, and `pre
 
 ## File transforms and transformed-output caches {#asset-file-transforms}
 
-Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits. Use a `FileStorage` cache when transformed output should survive repeated requests or process restarts for the same build.
+Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits.
+
+To cache transformed outputs on disk, add a cache to your asset server:
+
+```ts filename=app/assets.ts
+import { createAssetServer, createFsFileCache } from "remix/assets";
+
+export const assetServer = createAssetServer({
+  basePath: "/assets",
+  allowFiles: ["app/**/public/**"],
+  files: {
+    extensions: [".svg", ".png"],
+    cache: createFsFileCache(),
+    // ...existing transforms
+  },
+});
+```
+
+Caching is disabled by default. See the [assets README](https://github.com/remix-run/remix/tree/main/packages/assets#file-transform-caching) for cache options and reuse across server restarts.
 
 ## Development watching and production fingerprints {#fingerprinting-source-maps-minification}
 
