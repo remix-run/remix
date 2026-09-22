@@ -61,6 +61,50 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
   })
 
+  it('updates a component when an optimized barrel import is retargeted', async (t) => {
+    let fixture = await createHmrFixture()
+    t.after(fixture.close)
+    await write(fixture.rootDir, 'app/package.json', JSON.stringify({ sideEffects: false }))
+    await write(fixture.rootDir, 'app/label-a.ts', "export const buttonText = 'Label A'\n")
+    await write(fixture.rootDir, 'app/label-b.ts', "export const buttonText = 'Label B'\n")
+    await write(
+      fixture.rootDir,
+      'app/label-inner.ts',
+      "export { buttonText } from './label-a.ts'\n",
+    )
+    await write(fixture.rootDir, 'app/label.ts', "export { buttonText } from './label-inner.ts'\n")
+    let counterSource = await fs.readFile(path.join(fixture.rootDir, 'app/Counter.tsx'), 'utf-8')
+    await write(
+      fixture.rootDir,
+      'app/Counter.tsx',
+      [
+        "import { buttonText } from './label.ts'",
+        counterSource.replace('>Increment</button>', '>{buttonText}</button>'),
+      ].join('\n'),
+    )
+
+    let server = await createHmrTestServer(fixture)
+    let compiledCounter = await fetch(new URL('/assets/app/Counter.tsx', server.baseUrl)).then(
+      (response) => response.text(),
+    )
+    assert.match(compiledCounter, /from "\/assets\/app\/label-a\.ts"/)
+    assert.doesNotMatch(compiledCounter, /label(?:-inner)?\.ts/)
+
+    let page = await t.serve(server)
+    await openHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Label A')
+    await page.locator('[data-testid="field"]').fill('keep me')
+
+    await write(
+      fixture.rootDir,
+      'app/label-inner.ts',
+      "export { buttonText } from './label-b.ts'\n",
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Label B')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
+  })
+
   it('reloads the page when a non-component export is added to a component module', async (t) => {
     let fixture = await createHmrFixture()
 

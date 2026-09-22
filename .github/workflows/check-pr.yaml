@@ -169,8 +169,64 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+  test_bun_changed:
+    name: test (bun, ubuntu-latest, changed packages)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base and head refs
+        shell: bash
+        env:
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          git fetch --no-tags origin \
+            "$PR_BASE_REF" \
+            "+refs/pull/$PR_NUMBER/head"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node-pnpm-cache
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Playwright Version
+        id: playwright-version
+        shell: bash
+        run: echo "version=$(pnpm --filter @remix-run/ui exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright Browsers
+        id: cache-browsers
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: steps.cache-browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @remix-run/ui exec playwright install --with-deps
+
+      - name: Run changed package Bun tests
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node ./scripts/detect-changed-packages.ts "$PR_BASE_SHA" "$PR_HEAD_SHA" --script test:bun
+
   test_windows_changed:
-    name: test (windows-latest, changed packages)
+    name: test (windows-latest, full suite)
     runs-on: windows-2025
     steps:
       - name: Checkout
@@ -214,12 +270,8 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
-      - name: Run changed package tests
-        shell: bash
-        env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node ./scripts/detect-changed-packages.ts "$PR_BASE_SHA" "$PR_HEAD_SHA"
+      - name: Run tests
+        run: pnpm test
 
   lint:
     name: Lint

@@ -18,6 +18,10 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": [
+    "./src/index.ts",
+    "./dist/index.js"
+  ],
   "engines": {
     "node": ">=24.3.0"
   },

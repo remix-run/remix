@@ -5,7 +5,7 @@ CSRF protection middleware for Remix. It provides synchronizer-token validation 
 ## Features
 
 - **Session-Backed Tokens** - Creates and persists CSRF tokens in the request session
-- **Flexible Token Extraction** - Reads tokens from headers, form fields, query params, or a custom resolver
+- **Flexible Token Extraction** - Reads tokens from headers, form fields, or a custom resolver
 - **Origin Validation** - Validates `Origin`/`Referer` for unsafe methods with customizable policies
 - **Configurable Enforcement** - Control safe methods, token keys, and failure responses
 
@@ -51,11 +51,20 @@ By default, `csrf()` checks token values in this order:
 
 1. Request headers: `X-Csrf-Token`, `X-Xsrf-Token`, `Csrf-Token`
 2. Form field: `_csrf` (requires `formData()` middleware to parse request bodies)
-3. Query param: `_csrf`
 
-You can override extraction using `value(context)`.
+Query parameters are not read by default. Keep tokens in headers or form fields to avoid exposing them in logs, browser history, and copied URLs.
 
-Headers and form fields are the preferred transports. Query param fallback exists for compatibility, but it is the weakest option because tokens are more likely to be exposed in logs, history, and copied URLs.
+You can replace the default lookup using `value(context)`. Applications that need query parameter tokens can opt in explicitly:
+
+```ts
+csrf({
+  value(context) {
+    return context.url.searchParams.get('_csrf')
+  },
+})
+```
+
+This resolver replaces both header and form field lookup; it does not add another fallback.
 
 ## Origin Validation
 
@@ -69,7 +78,6 @@ For requests whose original method is unsafe (`POST`, `PUT`, `PATCH`, `DELETE`),
 
 - The synchronizer token is the primary defense in `csrf()`. `Origin` and `Referer` checks are an additional signal, not the only protection.
 - By default, unsafe requests with a valid token still pass when `Origin` and `Referer` are both missing. Set `allowMissingOrigin: false` if your deployment wants to require provenance headers on unsafe requests.
-- Query param tokens are supported for compatibility, but they should not be the default recommendation. Prefer headers or hidden form fields when you control the client.
 - If you want to reject more unsafe requests before token validation, especially when browser provenance headers are available, layer [`cop-middleware`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware) in front of `csrf()`.
 
 ## Why This Exists

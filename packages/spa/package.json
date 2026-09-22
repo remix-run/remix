@@ -19,6 +19,7 @@
     "!src/**/*.test*.tsx"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
