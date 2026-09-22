@@ -266,7 +266,6 @@ function parseAssetsConfig(
   if (allowPackages !== undefined) config.allowPackages = allowPackages
   if (denyFiles !== undefined) config.denyFiles = denyFiles
   if (mounts !== undefined) config.mounts = mounts
-
   if (object.files !== undefined) {
     let filesPath = [...objectPath, 'files']
     let files = requireObject(object.files, source, filesPath)

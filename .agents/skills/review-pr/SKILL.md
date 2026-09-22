@@ -40,6 +40,7 @@ Apply the Remix repo conventions while reviewing:
 - Use `import type` and `export type` with `.ts` extensions.
 - Formatting uses single quotes, no semicolons, and spaces instead of tabs.
 - Missing tests, docs, or change files matter when a published package changes.
+- Verify that every published package declares `package.json#sideEffects`, and re-audit it when exports, runtime modules, top-level imports, or evaluation behavior change. If it is `false`, every runtime module must be side-effect-free; if it is an array, its patterns must cover every effectful source and emitted module. The generated `remix` package derives its metadata from each owning package, so incorrect metadata can remove required module evaluation.
 - Use repository-local semantics over generic React assumptions.
 - `remix/ui` code in this repository intentionally uses components that return functions. Before flagging framework-level JSX or component-runtime behavior, compare against nearby package patterns and template examples under `template/app`.
 

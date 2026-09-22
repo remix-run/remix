@@ -20,6 +20,10 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": [
+    "./src/lib/load-route-map-worker.ts",
+    "./dist/lib/load-route-map-worker.js"
+  ],
   "engines": {
     "node": ">=24.3.0"
   },

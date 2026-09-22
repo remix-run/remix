@@ -18,6 +18,7 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:^",
     "@remix-run/response": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
