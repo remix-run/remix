@@ -43,6 +43,12 @@ describe('Cookie', () => {
     assert.ok(setCookie.includes('SameSite=Lax'))
   })
 
+  it('accepts lowercase sameSite values', async () => {
+    let cookie = createCookie('my-cookie', { sameSite: 'lax' })
+    assert.equal(cookie.sameSite, 'lax')
+    assert.ok((await cookie.serialize('hello world')).includes('SameSite=Lax'))
+  })
+
   it('defaults secure to true when partitioned is true', async () => {
     let cookie = createCookie('my-cookie', { partitioned: true })
     assert.equal(cookie.secure, true)

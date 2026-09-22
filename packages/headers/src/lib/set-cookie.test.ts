@@ -156,6 +156,14 @@ describe('SetCookie', () => {
     assert.equal(header.toString(), 'test=value; Expires=Thu, 22 Oct 2015 07:28:00 GMT')
   })
 
+  it('accepts and serializes lowercase SameSite values', () => {
+    let header = new SetCookie({ name: 'test', value: 'value', sameSite: 'lax' })
+    assert.equal(header.toString(), 'test=value; SameSite=Lax')
+
+    header.sameSite = 'strict'
+    assert.equal(header.toString(), 'test=value; SameSite=Strict')
+  })
+
   it('handles SameSite attribute case-insensitively', () => {
     let header = new SetCookie('test=value; SameSite=lax')
     assert.equal(header.sameSite, 'Lax')
