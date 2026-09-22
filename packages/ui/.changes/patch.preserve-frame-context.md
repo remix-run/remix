@@ -1,1 +1,1 @@
-Preserve parent component context for client entries rendered inside a `<Frame>`, including after frame reloads (see #11563).
+Preserve parent component context for client entries rendered inside a `<Frame>`, including setup-time context reads when the provider module loads later and after frame reloads. Keep nested frame content interactive when its owning client entry module is already cached (see #11894).

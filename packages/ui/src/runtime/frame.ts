@@ -153,6 +153,8 @@ type FrameTemplateListener = (fragment: DocumentFragment) => void
 
 const bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
 const frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
+const pendingClientEntryHydrations = new WeakMap<Comment, Promise<void>>()
+const frameClientEntryParents = new WeakMap<Comment, Comment>()
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 
 function createLinkedAbortController(
@@ -556,13 +558,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
       let bodyContainer = createElementContainer(container.doc.body)
       if (isRenderAborted(options.signal)) return
-      scheduleHydrationInContainer(
-        bodyContainer,
-        responseContext,
-        options.reconciliationTracker,
-        options.signal,
-      )
-      let subFramesReady = createSubFrames(bodyContainer.childNodes, responseContext, options)
+      let subFramesReady = hydrateContainer(bodyContainer, responseContext, options)
       options.onCommit?.()
       await subFramesReady
       if (isRenderAborted(options.signal)) return
@@ -598,13 +594,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       signal: options.signal,
     })
 
-    scheduleHydrationInContainer(
-      container,
-      responseContext,
-      options.reconciliationTracker,
-      options.signal,
-    )
-    let subFramesReady = createSubFrames(container.childNodes, responseContext, options)
+    let subFramesReady = hydrateContainer(container, responseContext, options)
     options.onCommit?.()
     await subFramesReady
     if (isRenderAborted(options.signal)) return
@@ -660,8 +650,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if ((await initialClientEntryResources) === false) return
     if (disposed || context.lifecycleSignal.aborted) return
     context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
-    scheduleHydrationInContainer(container, context, reconciliationTracker)
-    let subFramesReady = createSubFrames(container.childNodes, context)
+    let subFramesReady = hydrateContainer(container, context, { reconciliationTracker })
 
     try {
       await subFramesReady
@@ -1225,40 +1214,66 @@ function copyOwnRmxEntries<T>(target: Record<string, T>, source: Record<string, 
   }
 }
 
-function scheduleHydrationInContainer(
+function hydrateContainer(
   container: FrameContainer,
   context: FrameContext,
-  reconciliationTracker?: ReconciliationTracker,
-  signal?: AbortSignal,
-): void {
-  let hydrationMarkers = findHydrationMarkers(container)
-  if (hydrationMarkers.length === 0) return
-
+  options?: RenderOptions,
+): Promise<void> {
   let hydrationData = context.data.h
-  if (!hydrationData) return
+  let hydrationMarkers = findHydrationMarkers(container, hydrationData)
+  let hydrations: Array<{
+    marker: HydrationMarker
+    entry: HydrationData
+    complete: () => void
+  }> = []
 
   for (let marker of hydrationMarkers) {
-    if (!hydrationData[marker.id]) continue
+    let entry = hydrationData?.[marker.id]
+    if (!entry) continue
     if (!context.pendingClientEntries.has(marker.start)) {
       context.pendingClientEntries.set(marker.start, [marker.end, undefined])
     }
+    let { promise, resolve } = Promise.withResolvers<void>()
+    pendingClientEntryHydrations.set(marker.start, promise)
+    hydrations.push({
+      marker,
+      entry,
+      complete() {
+        if (pendingClientEntryHydrations.get(marker.start) === promise) {
+          pendingClientEntryHydrations.delete(marker.start)
+        }
+        resolve()
+      },
+    })
   }
 
-  for (let marker of hydrationMarkers) {
-    let entry = hydrationData[marker.id]
-    if (!entry) continue
-    scheduleHydrationMarker(marker, entry, context, reconciliationTracker, signal)
+  // Register frame metadata before a cached client entry can adopt its frame markers.
+  let subFramesReady = createSubFrames(container.childNodes, context, options)
+  for (let { marker, entry, complete } of hydrations) {
+    scheduleHydrationMarker(
+      marker,
+      entry,
+      context,
+      complete,
+      options?.reconciliationTracker,
+      options?.signal,
+    )
   }
+  return subFramesReady
 }
 
 function scheduleHydrationMarker(
   marker: HydrationMarker,
   entry: HydrationData,
   context: FrameContext,
+  onComplete: () => void,
   reconciliationTracker?: ReconciliationTracker,
   signal?: AbortSignal,
 ): void {
-  if (signal?.aborted || context.lifecycleSignal.aborted) return
+  if (signal?.aborted || context.lifecycleSignal.aborted) {
+    onComplete()
+    return
+  }
 
   let done = reconciliationTracker?.track()
   let key = `${entry.moduleUrl}#${entry.exportName}`
@@ -1275,6 +1290,7 @@ function scheduleHydrationMarker(
     props = undefined
     signal?.removeEventListener('abort', complete)
     context.lifecycleSignal.removeEventListener('abort', complete)
+    onComplete()
     done?.()
   }
 
@@ -1291,15 +1307,18 @@ function scheduleHydrationMarker(
     hydrateRegion(vElement, marker.start, marker.end, identity, context, signal)
   }
 
+  let parentHydration = marker.parent && pendingClientEntryHydrations.get(marker.parent)
   let cached = context.moduleCache.get(key)
-  if (cached) {
+  if (cached && !parentHydration) {
     hydrateWithComponent(cached)
     complete()
     return
   }
 
-  getOrStartModuleLoad(key, identity, marker.id, context)
-    .then((component) => {
+  let component = cached ?? getOrStartModuleLoad(key, identity, marker.id, context)
+  // Imports can finish in any order, but setup must wait for the owning entry's context.
+  Promise.all([component, parentHydration])
+    .then(([component]) => {
       if (component) {
         hydrateWithComponent(component)
       }
@@ -1820,6 +1839,7 @@ type FrameContainer = {
   doc: Document
   root: ParentNode
   childNodes: Node[]
+  regionStart?: Comment
   regionTailRef?: ChildNode | null
   regionParent?: ParentNode | null
 }
@@ -1858,6 +1878,7 @@ function createCommentContainer([start, end]: [Comment, Comment]): FrameContaine
   return {
     doc,
     root: parent,
+    regionStart: start,
     get childNodes() {
       return getChildNodesBetween()
     },
@@ -1884,42 +1905,50 @@ type HydrationMarker = {
   id: string
   start: Comment
   end: Comment
+  parent?: Comment
 }
 
-function findHydrationMarkers(container: FrameContainer): HydrationMarker[] {
-  let results: HydrationMarker[] = []
-
-  forEachComment(container, (comment) => {
-    let trimmed = comment.data.trim()
-    if (!trimmed.startsWith('rmx:h:')) return
-
-    let id = trimmed.slice('rmx:h:'.length)
-    let end = findEndMarker(comment, isHydrationStart, isHydrationEnd)
-    results.push({ id, start: comment, end })
+function findHydrationMarkers(container: FrameContainer, data: RmxData['h']): HydrationMarker[] {
+  let markers: Array<Omit<HydrationMarker, 'end'> & { end?: Comment }> = []
+  let parent = container.regionStart && frameClientEntryParents.get(container.regionStart)
+  visit(container.childNodes, parent)
+  return markers.map(({ id, start, end, parent }) => {
+    if (!end) throw new Error('End marker not found')
+    return { id, start, end, parent }
   })
 
-  return results
-}
+  function visit(nodes: Node[], parent?: Comment): void {
+    let boundaries: typeof markers = []
+    for (let i = 0; i < nodes.length; i++) {
+      let node = nodes[i]
 
-function forEachComment(container: FrameContainer, cb: (comment: Comment) => void): void {
-  walkCommentsInNodes(container.childNodes, cb)
-}
+      // Nested frames discover their own entries, inheriting this pass's enclosing boundary.
+      if (isFrameStart(node)) {
+        if (parent) frameClientEntryParents.set(node, parent)
+        else frameClientEntryParents.delete(node)
+        let end = findEndMarker(node, isFrameStart, isFrameEnd)
+        i = findMarkerRangeEndIndex(nodes, end, i)
+        continue
+      }
 
-function walkCommentsInNodes(nodes: Node[], cb: (comment: Comment) => void): void {
-  for (let i = 0; i < nodes.length; i++) {
-    let node = nodes[i]
-
-    // Frame ownership boundary: hydration markers inside nested frame regions
-    // are discovered and hydrated by the nested frame instance only.
-    if (isFrameStart(node)) {
-      let end = findEndMarker(node, isFrameStart, isFrameEnd)
-      i = findMarkerRangeEndIndex(nodes, end, i)
-      continue
-    }
-
-    if (isCommentNode(node)) cb(node)
-    if (node.childNodes && node.childNodes.length > 0) {
-      walkCommentsInNodes(Array.from(node.childNodes), cb)
+      if (isCommentNode(node)) {
+        if (isHydrationStart(node)) {
+          let id = node.data.trim().slice('rmx:h:'.length)
+          let boundary = { id, start: node, parent }
+          markers.push(boundary)
+          boundaries.push(boundary)
+          if (data?.[id] || pendingClientEntryHydrations.has(node)) parent = node
+        } else if (isHydrationEnd(node)) {
+          let boundary = boundaries.pop()
+          if (boundary) {
+            boundary.end = node
+            parent = boundary.parent
+          }
+        }
+      }
+      if (node.childNodes.length > 0) {
+        visit(Array.from(node.childNodes), parent)
+      }
     }
   }
 }
@@ -1948,7 +1977,7 @@ function getFrameId(start: Comment): string {
 
 function findMarkerRangeEndIndex(nodes: Node[], end: Comment, startIndex: number): number {
   // The snapshot may not contain an end marker moved by a DOM update.
-  return Math.max(startIndex, nodes.indexOf(end))
+  return Math.max(startIndex, nodes.indexOf(end, startIndex))
 }
 
 function findEndMarker(
