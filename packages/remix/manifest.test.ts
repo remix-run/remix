@@ -7,7 +7,7 @@ import * as path from 'node:path'
 import * as url from 'node:url'
 import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
 import { getPackageExportSideEffects } from '../../scripts/utils/package-side-effects.ts'
-import { getRemixGuideCopies } from '../../scripts/utils/remix-guides.ts'
+import { getRemixGuideCopies, syncRemixGuides } from '../../scripts/utils/remix-guides.ts'
 import { createRemixIndex, getRemixIndexEntries } from '../../scripts/utils/remix-index.ts'
 import {
   getRemixReadmeCopies,
@@ -325,43 +325,36 @@ describe('manifest', () => {
     assert.ok(guideCopies.every((copy) => copy.title && copy.description))
   })
 
-  it('rejects published guides that link to unpublished chapters', () => {
+  it('strips unpublished chapter links only from installed guides', async () => {
     let fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-guides-'))
+    let sourceGuidesDir = path.join(fixtureDir, 'source')
+    let remixGuidesDir = path.join(fixtureDir, 'installed')
+    let sourcePath = path.join(sourceGuidesDir, '01-published.md')
+    let draftPath = path.join(sourceGuidesDir, '02-draft.md')
+    let installedPath = path.join(remixGuidesDir, '01-published.md')
+    let source = `---\ntitle: Published\ndescription: Published guide.\n---\n\nRead [Draft](/draft/#section), [**Draft**][draft], and [Published](/published/).\n\n[draft]: /draft/\n\n\`[Draft](/draft/)\`\n\n\`\`\`md\n[Draft](/draft/)\n\`\`\`\n`
 
     try {
+      fs.mkdirSync(sourceGuidesDir)
+      fs.writeFileSync(sourcePath, source)
       fs.writeFileSync(
-        path.join(fixtureDir, '01-published.md'),
-        `---\ntitle: Published\ndescription: Published guide.\n---\n\nRead [Draft][draft].\n\n[draft]: /draft/#section\n`,
-      )
-      fs.writeFileSync(
-        path.join(fixtureDir, '02-draft.md'),
+        draftPath,
         `---\ntitle: Draft\ndescription: Draft guide.\npublished: false\n---\n`,
       )
 
-      assert.throws(
-        () => getRemixGuideCopies({ sourceGuidesDir: fixtureDir }),
-        /01-published\.md:8 links to unpublished guide "Draft" \(\/draft\/#section\)/,
-      )
-    } finally {
-      fs.rmSync(fixtureDir, { recursive: true, force: true })
-    }
-  })
-
-  it('ignores unpublished guide links in code examples', () => {
-    let fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-guides-'))
-
-    try {
-      fs.writeFileSync(
-        path.join(fixtureDir, '01-published.md'),
-        `---\ntitle: Published\ndescription: Published guide.\n---\n\n\`[Draft](/draft/)\`\n\n\`\`\`md\n[Draft](/draft/)\n\`\`\`\n`,
-      )
-      fs.writeFileSync(
-        path.join(fixtureDir, '02-draft.md'),
-        `---\ntitle: Draft\ndescription: Draft guide.\npublished: false\n---\n`,
-      )
-
-      let copies = getRemixGuideCopies({ sourceGuidesDir: fixtureDir })
+      let copies = await syncRemixGuides({ sourceGuidesDir, remixGuidesDir })
       assert.equal(copies.length, 1)
+      let installed = fs.readFileSync(installedPath, 'utf-8')
+      assert.ok(installed.includes('Read Draft, **Draft**, and [Published](/published/).'))
+      assert.ok(installed.includes('`[Draft](/draft/)`'))
+      assert.ok(installed.includes('```md\n[Draft](/draft/)\n```'))
+      assert.ok(!installed.includes('[draft]: /draft/'))
+      assert.equal(fs.readFileSync(sourcePath, 'utf-8'), source)
+
+      fs.writeFileSync(draftPath, `---\ntitle: Draft\ndescription: Draft guide.\n---\n`)
+      copies = await syncRemixGuides({ sourceGuidesDir, remixGuidesDir })
+      assert.equal(copies.length, 2)
+      assert.equal(fs.readFileSync(installedPath, 'utf-8'), source)
     } finally {
       fs.rmSync(fixtureDir, { recursive: true, force: true })
     }

@@ -1,1 +1,1 @@
-Keep installed documentation self-contained by removing links to unpublished guide chapters, rewriting API overview and package README links to bundled README mirrors, and validating future guide links during package generation.
+Installed guides render references to unpublished chapters as plain text instead of linking to missing chapters. The source links remain intact and become available in installed guides when those chapters are published. Links to package overviews and READMEs resolve to the bundled README mirrors instead of hosted documentation (see #11920).

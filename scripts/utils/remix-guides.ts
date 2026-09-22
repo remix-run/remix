@@ -2,7 +2,7 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
-import { getMarkdownLinkDestinations } from 'remix-docs-shared/markdown/parser'
+import { stripMarkdownLinks } from 'remix-docs-shared/markdown/parser'
 import { parse } from 'yaml'
 
 import { getRemixReadmeMappings, rewriteLinksToRemixReadmes } from './remix-readmes.ts'
@@ -36,11 +36,15 @@ interface RemixGuideDirectories {
   remixGuidesDir?: string
 }
 
-export function getRemixGuideCopies({
+export function getRemixGuideCopies(directories: RemixGuideDirectories = {}): RemixGuideCopy[] {
+  return getPublishedGuideCopies(getRemixGuides(directories))
+}
+
+function getRemixGuides({
   sourceGuidesDir = defaultSourceGuidesDir,
   remixGuidesDir = defaultRemixGuidesDir,
-}: RemixGuideDirectories = {}): RemixGuideCopy[] {
-  let guides = fs
+}: RemixGuideDirectories = {}): RemixGuide[] {
+  return fs
     .readdirSync(sourceGuidesDir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && /^\d+-[a-z0-9][a-z0-9-]*\.md$/.test(entry.name))
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -56,8 +60,9 @@ export function getRemixGuideCopies({
         remixGuidePath: path.join(remixGuidesDir, entry.name),
       }
     })
+}
 
-  validatePublishedGuideLinks(guides)
+function getPublishedGuideCopies(guides: RemixGuide[]): RemixGuideCopy[] {
   return guides
     .filter((guide) => guide.published)
     .map(({ title, description, sourceGuidePath, remixGuidePath }) => ({
@@ -68,17 +73,29 @@ export function getRemixGuideCopies({
     }))
 }
 
-export async function syncRemixGuides(): Promise<RemixGuideCopy[]> {
-  let copies = getRemixGuideCopies()
-  await removeRemixGuides()
-
+export async function syncRemixGuides({
+  sourceGuidesDir = defaultSourceGuidesDir,
+  remixGuidesDir = defaultRemixGuidesDir,
+}: RemixGuideDirectories = {}): Promise<RemixGuideCopy[]> {
+  let guides = getRemixGuides({ sourceGuidesDir, remixGuidesDir })
+  let copies = getPublishedGuideCopies(guides)
+  let unpublishedHrefs = new Set(
+    guides.filter((guide) => !guide.published).map((guide) => guide.href),
+  )
   let readmeMappings = getRemixReadmeMappings()
-  await fsp.mkdir(defaultRemixGuidesDir, { recursive: true })
+
+  await fsp.rm(remixGuidesDir, { recursive: true, force: true })
+  await fsp.mkdir(remixGuidesDir, { recursive: true })
   await Promise.all(
     copies.map(async (copy) => {
       let markdown = await fsp.readFile(copy.sourceGuidePath, 'utf-8')
+      let withoutUnpublishedLinks = stripMarkdownLinks(markdown, (href) => {
+        if (!href.startsWith('/') || href.startsWith('//')) return false
+        let { pathname } = new URL(href, 'https://remix.run')
+        return unpublishedHrefs.has(pathname.endsWith('/') ? pathname : `${pathname}/`)
+      })
       let installedMarkdown = rewriteLinksToRemixReadmes(
-        markdown,
+        withoutUnpublishedLinks,
         copy.remixGuidePath,
         readmeMappings,
       )
@@ -86,41 +103,6 @@ export async function syncRemixGuides(): Promise<RemixGuideCopy[]> {
     }),
   )
   return copies
-}
-
-async function removeRemixGuides(): Promise<void> {
-  await fsp.rm(defaultRemixGuidesDir, { recursive: true, force: true })
-}
-
-function validatePublishedGuideLinks(guides: RemixGuide[]): void {
-  let unpublishedGuides = new Map(
-    guides.filter((guide) => !guide.published).map((guide) => [guide.href, guide]),
-  )
-  let invalidLinks: string[] = []
-
-  for (let guide of guides) {
-    if (!guide.published) continue
-
-    let markdown = fs.readFileSync(guide.sourceGuidePath, 'utf-8')
-    for (let { href, line } of getMarkdownLinkDestinations(markdown)) {
-      if (!href.startsWith('/') || href.startsWith('//')) continue
-
-      let { pathname } = new URL(href, 'https://remix.run')
-      let normalizedHref = pathname.endsWith('/') ? pathname : `${pathname}/`
-      let unpublishedGuide = unpublishedGuides.get(normalizedHref)
-      if (!unpublishedGuide) continue
-
-      invalidLinks.push(
-        `${guide.sourceGuidePath}:${line} links to unpublished guide "${unpublishedGuide.title}" (${href})`,
-      )
-    }
-  }
-
-  if (invalidLinks.length > 0) {
-    throw new Error(
-      `Published guides must not link to unpublished guides:\n${invalidLinks.join('\n')}`,
-    )
-  }
 }
 
 function readGuideMetadata(filePath: string): {

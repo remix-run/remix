@@ -6,6 +6,7 @@ import {
   parseMarkdownDocument,
   parseMarkdownFrontmatter,
   rewriteMarkdownLinkDestinations,
+  stripMarkdownLinks,
 } from './parser.ts'
 
 describe('parseMarkdownFrontmatter', () => {
@@ -27,6 +28,48 @@ describe('parseMarkdownDocument', () => {
 
     assert.equal(result.root.children.length, 1)
     assert.equal(result.root.children[0].type, 'heading')
+  })
+})
+
+describe('stripMarkdownLinks', () => {
+  it('keeps link labels and markup while removing links to omitted chapters', () => {
+    let source = [
+      'Read [**Draft**](/draft/#section) and [Published](/published/).',
+      '',
+      'Also [Draft][draft] and [Draft][].',
+      '',
+      '[draft]: /draft/',
+      '',
+      '`[Code](/draft/)`',
+      '',
+      '```md',
+      '[Example](/draft/)',
+      '```',
+      '',
+      '![Image](/draft/)',
+      '',
+    ].join('\n')
+
+    let result = stripMarkdownLinks(source, (href) => href.startsWith('/draft/'))
+    assert.equal(
+      result,
+      [
+        'Read **Draft** and [Published](/published/).',
+        '',
+        'Also Draft and Draft.',
+        '',
+        '',
+        '',
+        '`[Code](/draft/)`',
+        '',
+        '```md',
+        '[Example](/draft/)',
+        '```',
+        '',
+        '![Image](/draft/)',
+        '',
+      ].join('\n'),
+    )
   })
 })
 

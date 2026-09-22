@@ -438,4 +438,4 @@ Use `remix test --config ./config/remix.ci.json` when CI needs a completely sepa
 Both the `--config` path and the default `remix.json` are selected by the Remix CLI; relative paths
 inside either file resolve from that file's directory.
 
-Keep type checking as a separate command. The test runner executes TypeScript, but it does not replace the compiler's project-wide checks. The next chapter, CLI and Tooling, covers the `remix test` flags alongside the rest of the Remix command-line workflow.
+Keep type checking as a separate command. The test runner executes TypeScript, but it does not replace the compiler's project-wide checks. The next chapter, [CLI and Tooling](/cli-and-tooling/), covers the `remix test` flags alongside the rest of the Remix command-line workflow.
