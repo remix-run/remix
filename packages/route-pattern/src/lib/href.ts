@@ -56,6 +56,9 @@ type Optionalize<record extends Record<string, string | undefined>> =
 /**
  * Generate an href from a route pattern and the supplied params.
  *
+ * Pathname wildcards reject `.` and `..` segments. Generated pathnames have one leading
+ * slash; internal and trailing slashes are preserved.
+ *
  * @param pattern The parsed route pattern.
  * @param args Path params and href options.
  * @returns The generated href string.
@@ -93,7 +96,7 @@ export function createHref<source extends string>(
   }
 
   let pathname = hrefPart(pattern, patternParts.pathname, params ?? {})
-  pathname = '/' + pathname
+  pathname = '/' + pathname.replace(/^\/+/, '')
   result += pathname
 
   let search = hrefSearch(patternParts.search, options?.searchParams)
@@ -291,6 +294,11 @@ export type CreateHrefErrorDetails =
       paramName: string
       value: string
     }
+  | {
+      type: 'invalid-pathname-wildcard'
+      value: string
+      segment: string
+    }
 
 /** Error thrown when a route pattern cannot generate an href from the supplied args. */
 export class CreateHrefError extends Error {
@@ -328,6 +336,10 @@ export class CreateHrefError extends Error {
       return `invalid pathname variable param: '${details.paramName}' cannot be empty\n\nPattern: ${details.pattern}\nValue: ${JSON.stringify(details.value)}`
     }
 
+    if (details.type === 'invalid-pathname-wildcard') {
+      return `invalid pathname wildcard param: ${JSON.stringify(details.value)} contains dot segment ${JSON.stringify(details.segment)}`
+    }
+
     unreachable(details)
   }
 }
@@ -350,7 +362,17 @@ export function encodePathnameVariable(value: unknown) {
 }
 
 export function encodePathnameWildcard(value: unknown) {
-  return String(value).split('/').map(encodePathnameSegment).join('/')
+  let serialized = String(value)
+  return serialized
+    .split('/')
+    .map((segment) => {
+      // Percent-encoding dots cannot preserve these segments through URL normalization.
+      if (segment === '.' || segment === '..') {
+        throw new CreateHrefError({ type: 'invalid-pathname-wildcard', value: serialized, segment })
+      }
+      return encodePathnameSegment(segment)
+    })
+    .join('/')
 }
 
 function encodePathnameSegment(value: string): string {

@@ -2,6 +2,7 @@
 title: Markdown Style Demo
 description: A fixture page for reviewing guide markdown, code block chrome, and frame rendering.
 published: false
+listed: false
 ---
 
 This page is a rendering fixture, not product documentation. Use it to review how the guides app styles common Markdown elements and custom docs features.

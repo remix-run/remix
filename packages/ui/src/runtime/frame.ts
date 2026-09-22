@@ -7,7 +7,7 @@ import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle } from './component.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
-import { diffNodes } from './diff-dom.ts'
+import { diffElementAttributes, diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
 import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
@@ -48,7 +48,7 @@ type FrameMarkerData = FrameData & {
   id: string
 }
 
-type PendingClientEntries = Map<Comment, [Comment, RemixElement]>
+type PendingClientEntries = Map<Comment, [Comment, RemixElement | undefined]>
 
 export class NamedFrameRegistry {
   #framesByName = new Map<string, FrameHandle[]>()
@@ -183,20 +183,6 @@ function createLinkedAbortController(
 
 function stripDoctypeMarkup(html: string): string {
   return html.replace(DOCTYPE_PATTERN, '')
-}
-
-function syncElementAttributes(target: Element, source: Element) {
-  for (let attribute of Array.from(target.attributes)) {
-    if (!source.hasAttribute(attribute.name)) {
-      target.removeAttribute(attribute.name)
-    }
-  }
-
-  for (let attribute of Array.from(source.attributes)) {
-    if (target.getAttribute(attribute.name) !== attribute.value) {
-      target.setAttribute(attribute.name, attribute.value)
-    }
-  }
 }
 
 const FRAME_RUNTIME = Symbol('FrameRuntime')
@@ -534,7 +520,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         collectFrameServerStyleTags(createElementContainer(parsed)),
       )
 
-      syncElementAttributes(container.doc.documentElement, parsed.documentElement)
+      diffElementAttributes(container.doc.documentElement, parsed.documentElement)
 
       diffNodes([container.doc.head], [parsed.head], {
         ...responseContext,
@@ -1230,6 +1216,13 @@ function scheduleHydrationInContainer(
   if (!hydrationData) return
 
   for (let marker of hydrationMarkers) {
+    if (!hydrationData[marker.id]) continue
+    if (!context.pendingClientEntries.has(marker.start)) {
+      context.pendingClientEntries.set(marker.start, [marker.end, undefined])
+    }
+  }
+
+  for (let marker of hydrationMarkers) {
     let entry = hydrationData[marker.id]
     if (!entry) continue
     scheduleHydrationMarker(marker, entry, context, reconciliationTracker, signal)
@@ -1270,7 +1263,8 @@ function scheduleHydrationMarker(
     if (signal?.aborted || context.lifecycleSignal.aborted) return
     if (!isHydrationMarkerLive(marker, context)) return
     if (!props) return
-    let vElement = createElement(component, props)
+    let pending = context.pendingClientEntries.get(marker.start)
+    let vElement = pending?.[1] ?? createElement(component, props)
     context.pendingClientEntries.set(marker.start, [marker.end, vElement])
     hydrateRegion(vElement, marker.start, marker.end, identity, context, signal)
   }
@@ -1435,7 +1429,7 @@ function hydrateRegion(
     context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   })
 
-  setClientEntryBoundaryOwner(start, identity, root)
+  setClientEntryBoundaryOwner(start, end, identity, root)
   renderEntry(root)
 }
 

@@ -9,13 +9,16 @@ import { readMarkdownChapterSummary, renderMarkdownChapter } from './markdown/re
 import type { MarkdownChapter, MarkdownChapterSummary } from './markdown/types.ts'
 import { DocsChapter } from './layout.tsx'
 
-export type DocsChapterSummary = Omit<MarkdownChapterSummary, 'published'> & {
+export type DocsChapterSummary = Omit<MarkdownChapterSummary, 'published' | 'listed'> & {
   order: number
   slug: string
   href: string
+  disabled: boolean
 }
 
-export type DocsNavigationItem = Pick<DocsChapterSummary, 'order' | 'slug' | 'href' | 'title'>
+export type DocsNavigationItem = Pick<DocsChapterSummary, 'order' | 'slug' | 'href' | 'title'> & {
+  disabled: boolean
+}
 
 type ChapterFile = {
   order: number
@@ -65,7 +68,23 @@ export async function loadDocsChapterSummaries(
   environment = process.env.NODE_ENV,
 ): Promise<DocsChapterSummary[]> {
   let summaries = await loadChapterSummaries(environment)
-  return summaries.map(toDocsChapterSummary)
+  return summaries.map((summary) => toDocsChapterSummary(summary, environment))
+}
+
+export async function loadDocsIndexChapterSummaries(
+  environment = process.env.NODE_ENV,
+): Promise<DocsChapterSummary[]> {
+  let summaries = await loadAllChapterSummaries()
+  return summaries
+    .filter((summary) => summary.listed)
+    .map((summary) => toDocsChapterSummary(summary, environment))
+}
+
+export async function loadDocsNavigationItems(
+  environment = process.env.NODE_ENV,
+): Promise<DocsNavigationItem[]> {
+  let summaries = await loadAllChapterSummaries()
+  return createDocsNavigationItems(summaries, environment)
 }
 
 async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | undefined> {
@@ -91,7 +110,7 @@ async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | un
     ...chapter,
     slug: summary.slug,
     chapter: summary.chapter,
-    chapters: summaries.map(toDocsNavigationItem),
+    chapters: createDocsNavigationItems(allSummaries, environment),
     previous: getNavigation(previous),
     next: getNavigation(next),
   }
@@ -212,7 +231,10 @@ export function parseChapterFilename(
   return { order, slug: match[2] }
 }
 
-function toDocsChapterSummary(summary: LoadedDocsChapterSummary): DocsChapterSummary {
+function toDocsChapterSummary(
+  summary: LoadedDocsChapterSummary,
+  environment: string | undefined,
+): DocsChapterSummary {
   return {
     order: summary.order,
     slug: summary.slug,
@@ -221,16 +243,27 @@ function toDocsChapterSummary(summary: LoadedDocsChapterSummary): DocsChapterSum
     title: summary.title,
     description: summary.description,
     sections: summary.sections,
+    disabled: isDisabled(summary, environment),
   }
 }
 
-function toDocsNavigationItem(summary: LoadedDocsChapterSummary): DocsNavigationItem {
-  return {
-    order: summary.order,
-    slug: summary.slug,
-    href: summary.href,
-    title: summary.title,
-  }
+function createDocsNavigationItems(
+  summaries: LoadedDocsChapterSummary[],
+  environment: string | undefined,
+): DocsNavigationItem[] {
+  return summaries
+    .filter((summary) => summary.listed)
+    .map((summary) => ({
+      order: summary.order,
+      slug: summary.slug,
+      href: summary.href,
+      title: summary.title,
+      disabled: isDisabled(summary, environment),
+    }))
+}
+
+function isDisabled(summary: LoadedDocsChapterSummary, environment: string | undefined): boolean {
+  return environment === 'production' && !summary.published
 }
 
 function getNavigation(

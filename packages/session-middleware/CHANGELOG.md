@@ -2,6 +2,20 @@
 
 This is the changelog for [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Session middleware now checks configured cookie `maxAge` and `expires` before loading session data from any backend. Existing cookies without expiration metadata start a new session when a lifetime is configured. `maxAge` renews when an updated session emits a cookie; reads alone do not renew it. Sessions without a configured lifetime and backend TTL settings are unchanged. Backend record cleanup remains the storage provider's responsibility.
+
+### Patch Changes
+
+- Session cookies now default to `Secure` for HTTPS request URLs. HTTP development requests and explicit `secure` settings retain their configured behavior. When HTTPS terminates at a proxy, expose the original request URL or configure `secure: true`.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cookie@0.7.0`](https://github.com/remix-run/remix/releases/tag/cookie@0.7.0)
+  - [`fetch-router@0.22.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.1)
+
 ## v0.4.1
 
 ### Patch Changes

@@ -38,7 +38,7 @@ export interface GitHubAuthProfile {
   login: string
   /** Display name returned by GitHub, when available. */
   name?: string | null
-  /** Primary email returned by GitHub, when available. */
+  /** Email returned in the GitHub profile, or a verified fallback address when available. */
   email?: string | null
   /** Avatar image URL returned by GitHub, when available. */
   avatar_url?: string
@@ -148,11 +148,7 @@ function pickGitHubEmail(emails: GitHubAuthProviderEmail[]): string | undefined 
   }
 
   let verified = emails.find((email) => email.verified)
-  if (verified != null) {
-    return verified.email
-  }
-
-  return emails[0]?.email
+  return verified?.email
 }
 
 function validateGitHubProfile(profile: GitHubAuthProfile): GitHubAuthProfile {

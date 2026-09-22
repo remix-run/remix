@@ -19,9 +19,7 @@ on:
       - 'packages/remix/INDEX.md'
       - 'packages/remix/manifest.json'
       - 'scripts/generate-remix.ts'
-      - 'scripts/utils/remix-guides.ts'
-      - 'scripts/utils/remix-index.ts'
-      - 'scripts/utils/remix-readmes.ts'
+      - 'scripts/utils/**'
   pull_request:
     branches-ignore:
       - release-v2
@@ -35,9 +33,7 @@ on:
       - 'packages/remix/INDEX.md'
       - 'packages/remix/manifest.json'
       - 'scripts/generate-remix.ts'
-      - 'scripts/utils/remix-guides.ts'
-      - 'scripts/utils/remix-index.ts'
-      - 'scripts/utils/remix-readmes.ts'
+      - 'scripts/utils/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

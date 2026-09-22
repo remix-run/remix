@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/logger-middleware",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Middleware for logging HTTP requests and responses",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -18,6 +18,7 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
