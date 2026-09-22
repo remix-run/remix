@@ -114,7 +114,7 @@ let response3 = await requestIndex(response2.cookie)
 assert.equal(response3.session.get('userId'), 'mj')
 ```
 
-To delete the old session data when the session is saved, use `session.regenerateId(true)`. This can help to prevent session fixation attacks by deleting the old session data when the session is saved. However, it may not be desirable in a situation with mobile clients on flaky connections that may need to resume the session using an old session ID.
+With server-backed storage, use `session.regenerateId(true)` to delete the old session data when the regenerated session is saved. This can help prevent session fixation attacks. However, deleting the old session may not be desirable for mobile clients on flaky connections that need to resume the session using an old session ID.
 
 ### Destroying Sessions
 
@@ -144,7 +144,9 @@ Cookie storage is suitable for production environments. In this strategy, all se
 
 The main limitation of cookie storage is that the total size of the session cookie is limited to the browser's maximum cookie size, typically 4096 bytes.
 
-Cookie storage has no server-side record to delete. Calling `session.regenerateId(true)` rotates the ID written to the new cookie but cannot invalidate a previously issued cookie, which retains its previous data until it expires.
+Cookie storage has no server-side record to delete. Saving a regenerated session writes a new cookie that replaces the browser's current cookie. However, a copy of the previously issued cookie still contains its old session data and may be replayed while it remains valid. Therefore, `session.regenerateId(true)` cannot immediately revoke old cookie sessions.
+
+Use server-backed session storage when previously issued sessions must be invalidated immediately.
 
 ```ts
 import { createCookieSessionStorage } from 'remix/session-storage/cookie'
