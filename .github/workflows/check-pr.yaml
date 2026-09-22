@@ -226,7 +226,7 @@ jobs:
         run: node ./scripts/detect-changed-packages.ts "$PR_BASE_SHA" "$PR_HEAD_SHA" --script test:bun
 
   test_windows_changed:
-    name: test (windows-latest, full suite)
+    name: test (windows-latest, changed packages)
     runs-on: windows-2025
     steps:
       - name: Checkout
@@ -270,8 +270,12 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
-      - name: Run tests
-        run: pnpm test
+      - name: Run changed package tests
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node ./scripts/detect-changed-packages.ts "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
   lint:
     name: Lint
