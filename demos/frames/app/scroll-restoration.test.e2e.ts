@@ -9,6 +9,7 @@ describe('scroll restoration', () => {
   it('restores traversal scroll when client entry reconciliation shrinks the document', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(routes.scrollRestoration.href())
+    await page.locator('html[data-frames-ready="true"]').waitFor()
 
     let reproduction = page.locator('#store-scroll-reproduction')
     let hydrationCheck = reproduction.getByRole('button', {
