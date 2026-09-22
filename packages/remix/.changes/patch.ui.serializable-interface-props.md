@@ -1,1 +1,1 @@
-- Allow client entry props to use ordinary interfaces by validating their known properties recursively.
+Allow client entry props to use ordinary interfaces by validating their known properties recursively.
