@@ -205,6 +205,28 @@ import * as __remixUIRefresh__ from "@acme/remix/ui/dev/refresh";`,
     assert.match(implementation, /<p>\{__s__\.getLabel\(\)\}<\/p>/)
   })
 
+  it('preserves a hoisted setup function declaration after the render return', () => {
+    let result = transformComponentsForBrowser(
+      `export function Counter(handle) {
+  let count = 0
+  return () => <button onClick={increment}>Count: {count}</button>
+  function increment() {
+    count++
+    handle.update()
+  }
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'Counter')
+    assert.match(
+      implementation,
+      /function increment\(\) \{[\s\S]*__s__\.count\+\+[\s\S]*__s__\.increment = increment;/,
+    )
+    assert.match(implementation, /onClick=\{__s__\.increment\}/)
+  })
+
   it('preserves multiple setup function declarations referenced by render', () => {
     let result = transformComponentsForBrowser(
       `export function Greeting() {

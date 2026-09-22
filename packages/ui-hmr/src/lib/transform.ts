@@ -1206,7 +1206,14 @@ function isSameNodeRange(left: AstNode | null, right: AstNode): boolean {
 function getSetupStatements(body: AstNode): AstNode[] {
   let statements = getNodeArray(body, 'body')
   let returnIndex = statements.findIndex((statement) => statement.type === 'ReturnStatement')
-  return returnIndex === -1 ? statements : statements.slice(0, returnIndex)
+  if (returnIndex === -1) return statements
+
+  return [
+    ...statements.slice(0, returnIndex),
+    ...statements
+      .slice(returnIndex + 1)
+      .filter((statement) => statement.type === 'FunctionDeclaration'),
+  ]
 }
 
 function getRenderArgument(body: AstNode): AstNode | null {
@@ -1342,12 +1349,20 @@ function getParamsSource(node: AstNode, source: string): string {
 }
 
 function getSetupHash(body: AstNode, source: string): string {
-  let returnStatement = getNodeArray(body, 'body').find(
-    (statement) => statement.type === 'ReturnStatement',
-  )
+  let statements = getNodeArray(body, 'body')
+  let returnIndex = statements.findIndex((statement) => statement.type === 'ReturnStatement')
   let setupStart = body.start + 1
+  let returnStatement = statements[returnIndex]
   let setupEnd = returnStatement?.start ?? body.end - 1
-  return hashSource(source.slice(setupStart, setupEnd))
+  let hoistedDeclarations =
+    returnIndex === -1
+      ? []
+      : statements
+          .slice(returnIndex + 1)
+          .filter((statement) => statement.type === 'FunctionDeclaration')
+          .map((statement) => source.slice(statement.start, statement.end))
+
+  return hashSource([source.slice(setupStart, setupEnd), ...hoistedDeclarations].join('\n'))
 }
 
 function isNamedCallExpression(node: AstNode | null, name: string): node is AstNode {
