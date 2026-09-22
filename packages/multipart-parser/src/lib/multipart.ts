@@ -151,10 +151,7 @@ export function* parseMultipart(
     }
   }
 
-  let finalPart = parser.finish()
-  if (finalPart !== undefined) {
-    yield finalPart
-  }
+  parser.finish()
 }
 
 /**
@@ -188,10 +185,7 @@ export async function* parseMultipartStream(
     yield* parser.write(chunk)
   }
 
-  let finalPart = parser.finish()
-  if (finalPart !== undefined) {
-    yield finalPart
-  }
+  parser.finish()
 }
 
 /**
@@ -202,10 +196,9 @@ export type MultipartParserOptions = Omit<ParseMultipartOptions, 'boundary'>
 const MultipartParserStateStart = 0
 const MultipartParserStateAfterBoundary = 1
 const MultipartParserStateBoundaryPadding = 2
-const MultipartParserStateClosingBoundaryPadding = 3
-const MultipartParserStateHeader = 4
-const MultipartParserStateBody = 5
-const MultipartParserStateDone = 6
+const MultipartParserStateHeader = 3
+const MultipartParserStateBody = 4
+const MultipartParserStateDone = 5
 
 const findDoubleNewline = createSearch('\r\n\r\n')
 
@@ -384,11 +377,14 @@ export class MultipartParser {
         }
 
         if (chunk[index] === 45 && chunk[index + 1] === 45) {
-          index += 2
-          this.#state = MultipartParserStateClosingBoundaryPadding
-        } else {
-          this.#state = MultipartParserStateBoundaryPadding
+          this.#state = MultipartParserStateDone
+          if (this.#currentContent !== null) {
+            yield this.#createPart()
+          }
+          break
         }
+
+        this.#state = MultipartParserStateBoundaryPadding
       }
 
       if (this.#state === MultipartParserStateBoundaryPadding) {
@@ -412,32 +408,6 @@ export class MultipartParser {
         index += 2 // Skip \r\n after boundary
 
         this.#state = MultipartParserStateHeader
-      }
-
-      if (this.#state === MultipartParserStateClosingBoundaryPadding) {
-        while (chunk[index] === 32 || chunk[index] === 9) {
-          index++
-        }
-
-        if (index === chunkLength) {
-          break
-        }
-
-        if (chunkLength - index < 2) {
-          this.#buffer = chunk.subarray(index)
-          break
-        }
-
-        if (chunk[index] !== 13 || chunk[index + 1] !== 10) {
-          throw new MultipartParseError('Invalid multipart boundary ending')
-        }
-
-        if (this.#currentContent !== null) {
-          yield this.#createPart()
-        }
-
-        this.#state = MultipartParserStateDone
-        break
       }
 
       if (this.#state === MultipartParserStateHeader) {
@@ -570,21 +540,8 @@ export class MultipartParser {
    *
    * Note: This will throw if the multipart message is incomplete or
    * wasn't properly terminated.
-   *
-   * @returns The final part when the closing delimiter ends at EOF
    */
-  finish(): MultipartPart | undefined {
-    if (this.#state === MultipartParserStateClosingBoundaryPadding) {
-      if (this.#buffer === null || this.#buffer.length === 0) {
-        this.#state = MultipartParserStateDone
-        if (this.#currentContent !== null) {
-          return this.#createPart()
-        }
-      }
-
-      throw new MultipartParseError('Invalid multipart boundary ending')
-    }
-
+  finish(): void {
     if (this.#state !== MultipartParserStateDone) {
       throw new MultipartParseError('Multipart stream not finished')
     }

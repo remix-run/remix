@@ -77,9 +77,10 @@ describe('MultipartParser', () => {
     let message = createMultipartMessage(boundary, { field: 'value' })
 
     assert.deepEqual(Array.from(parser.write(message.subarray(0, -1))), [])
-    assert.deepEqual(Array.from(parser.write(message.subarray(-1))), [])
-    let part = parser.finish()
-    assert.equal(part?.text, 'value')
+    let parts = Array.from(parser.write(message.subarray(-1)))
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, 'value')
+    assert.doesNotThrow(() => parser.finish())
   })
 })
 
@@ -139,69 +140,6 @@ describe('parseMultipart', async () => {
       )
       assert.equal(parts.length, 0)
     }
-  })
-
-  it('rejects invalid closing delimiter endings before yielding a part', () => {
-    for (let ending of ['--X', '--\rX', '--X\n', '-- \tX']) {
-      let message = new TextEncoder().encode(
-        `--${boundary}\r\nContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n--${boundary}${ending}`,
-      )
-      let parts = []
-
-      assert.throws(
-        () => {
-          for (let part of parseMultipart(message, { boundary })) {
-            parts.push(part)
-          }
-        },
-        {
-          name: 'MultipartParseError',
-          message: 'Invalid multipart boundary ending',
-        },
-      )
-      assert.equal(parts.length, 0)
-    }
-  })
-
-  it('rejects invalid closing delimiter endings at every chunk split', () => {
-    let message = new TextEncoder().encode(
-      `--${boundary}\r\nContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n--${boundary}--X`,
-    )
-
-    for (let split = 1; split < message.length; split++) {
-      let chunks = [message.subarray(0, split), message.subarray(split)]
-      let parts = []
-
-      assert.throws(
-        () => {
-          for (let part of parseMultipart(chunks, { boundary })) {
-            parts.push(part)
-          }
-        },
-        {
-          name: 'MultipartParseError',
-          message: 'Invalid multipart boundary ending',
-        },
-      )
-      assert.equal(parts.length, 0)
-    }
-  })
-
-  it('accepts closing delimiters ending at EOF or with padding and CRLF', () => {
-    let eofMessage = createMultipartMessage(boundary, { field: 'value' })
-    let ending = new TextEncoder().encode(' \t\r\n')
-    let crlfMessage = new Uint8Array(eofMessage.length + ending.length)
-    crlfMessage.set(eofMessage)
-    crlfMessage.set(ending, eofMessage.length)
-
-    assert.deepEqual(
-      Array.from(parseMultipart(eofMessage, { boundary })).map((part) => part.text),
-      ['value'],
-    )
-    assert.deepEqual(
-      Array.from(parseMultipart(crlfMessage, { boundary })).map((part) => part.text),
-      ['value'],
-    )
   })
 
   it('parses padded delimiter lines at every chunk split', () => {
