@@ -738,7 +738,7 @@ describe('staticFiles middleware', () => {
       createTestFile('other/file.txt', 'Other file')
       createTestFile('readme.txt', 'Read me')
 
-      let rootPath = fs.realpathSync(tmpDir)
+      let rootPath = await fs.promises.realpath(tmpDir)
       let readdir = t.mock.method(fs.promises, 'readdir')
       let stat = t.mock.method(fs.promises, 'stat')
 
