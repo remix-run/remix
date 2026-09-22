@@ -812,12 +812,14 @@ let accountAction = createAction(routes.account, {
 })
 
 let accountController = createController(routes, {
-  middleware: [requireAuth<AuthIdentity>()],
   actions: {
-    account(context) {
-      let auth = context.get(Auth)
-      return Response.json({ id: auth.identity.id })
-    },
+    account: createAction(routes.account, {
+      middleware: [requireAuth<AuthIdentity>()],
+      handler(context) {
+        let auth = context.get(Auth)
+        return Response.json({ id: auth.identity.id })
+      },
+    }),
   },
 })
 ```
@@ -825,6 +827,8 @@ let accountController = createController(routes, {
 In this example, the router's inline middleware array defines the app context contract. `RouterContext<typeof router>` extracts the request context that the router provides, so `RouterTypes.context` can use that context without storing the middleware chain separately.
 
 Prefer plain inline arrays for `middleware` options on routers, controllers, actions, and route helpers. Inline arrays already give TypeScript enough information to infer middleware-provided context for downstream handlers, so `createAction()` and direct action objects see action middleware context, and `createController()` sees controller middleware context without `createMiddleware()`.
+
+When an action with its own middleware is nested inside `createController()`, wrap that action in `createAction(route, ...)`, as shown above. This preserves the action middleware tuple—and therefore its refined handler context—before the action is stored in the controller.
 
 Use `createMiddleware()` only when a middleware chain is stored somewhere and its exact tuple type needs to survive that boundary. The common cases are deriving `MiddlewareContext<typeof rootMiddleware>` without a router value, exporting a reusable chain, or returning a chain from a factory. A standalone array like `let middleware = [loadSession(), loadDatabase()]` widens to a normal array, so `MiddlewareContext<typeof middleware>` cannot derive the ordered middleware context.
 
