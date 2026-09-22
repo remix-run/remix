@@ -144,6 +144,8 @@ Cookie storage is suitable for production environments. In this strategy, all se
 
 The main limitation of cookie storage is that the total size of the session cookie is limited to the browser's maximum cookie size, typically 4096 bytes.
 
+Cookie storage has no server-side record to delete. Calling `session.regenerateId(true)` rotates the ID written to the new cookie but cannot invalidate a previously issued cookie, which retains its previous data until it expires.
+
 ```ts
 import { createCookieSessionStorage } from 'remix/session-storage/cookie'
 
