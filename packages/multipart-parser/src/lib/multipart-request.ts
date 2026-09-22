@@ -10,8 +10,7 @@ import { MultipartParseError, parseMultipartStream } from './multipart.ts'
  * @returns The boundary string if found, or null if not present
  */
 export function getMultipartBoundary(contentType: string): string | null {
-  let match = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType)
-  return match ? (match[1] ?? match[2]) : null
+  return ContentType.from(contentType).boundary ?? null
 }
 
 /**

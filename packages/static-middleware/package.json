@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/static-middleware",
-  "version": "0.4.15",
+  "version": "0.4.16",
   "description": "Middleware for serving static files from the filesystem",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -18,6 +18,7 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"

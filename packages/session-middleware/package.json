@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/session-middleware",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Middleware for managing sessions with cookie-based storage",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -18,6 +18,7 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"

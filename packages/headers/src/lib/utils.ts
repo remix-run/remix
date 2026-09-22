@@ -14,6 +14,18 @@ export function quoteEtag(tag: string): string {
   return tag === '*' ? tag : /^(W\/)?".*"$/.test(tag) ? tag : `"${tag}"`
 }
 
+export function splitList(value: string): string[] {
+  let pieces = value.split(',')
+
+  // Trim only beside commas, preserving outer whitespace and empty entries.
+  for (let i = 0; i < pieces.length; i++) {
+    if (i > 0) pieces[i] = pieces[i].trimStart()
+    if (i < pieces.length - 1) pieces[i] = pieces[i].trimEnd()
+  }
+
+  return pieces
+}
+
 /**
  * Removes milliseconds from a timestamp, returning seconds.
  * HTTP dates only have second precision, so this is useful for date comparisons.

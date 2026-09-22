@@ -22,4 +22,9 @@ const app = run({
   },
 })
 
-app.ready().catch((error: unknown) => console.error(error))
+app
+  .ready()
+  .then(() => {
+    document.documentElement.dataset.framesReady = 'true'
+  })
+  .catch((error: unknown) => console.error(error))

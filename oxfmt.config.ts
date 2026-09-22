@@ -19,5 +19,6 @@ export default defineConfig({
     '.github/workflows/*.lock.yml',
     'packages/remix/guides/',
     'packages/remix/INDEX.md',
+    'packages/remix/src/**/README.md',
   ],
 })

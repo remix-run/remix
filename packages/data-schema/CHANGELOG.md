@@ -2,6 +2,12 @@
 
 This is the changelog for [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.1
+
+### Patch Changes
+
+- Reduce allocations and improve throughput when validating nested schemas and arrays, while preserving stable paths for custom validators and error maps (see #11689).
+
 ## v0.3.0
 
 ### Minor Changes
