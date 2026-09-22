@@ -76,6 +76,15 @@ const server = http.createServer(createRequestListener(createHmrReadyFetch(hmrRu
 server.listen(hmrProxyPort)
 ```
 
+Because the proxy sets forwarded origin headers, the child app server should trust them while supervised by `node-hmr`:
+
+```ts
+const isHmr = process.env.REMIX_NODE_HMR === '1'
+const server = http.createServer(createRequestListener(handler, { trustProxy: isHmr }))
+```
+
+This lets `cop()` and `csrf()` recognize same-origin form submissions.
+
 By default, `createHmrReadyFetch()` retries `GET` and `HEAD` requests when the wrapped fetch handler throws or returns a `502`, `503`, or `504` response, but only if the server updated or restarted while the request was in flight. You can customize this policy with `shouldRetry`:
 
 ```ts
