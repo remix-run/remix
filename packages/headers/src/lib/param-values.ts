@@ -27,11 +27,8 @@ export function parseParams(
           value += char
         }
       } else {
-        let end = position
-        while (end < input.length && input[end] !== delimiter) {
-          if (input[end] === '\\' && end + 1 < input.length) end++
-          end++
-        }
+        let end = input.indexOf(delimiter, position)
+        if (end === -1) end = input.length
         value = input.slice(position, end).replace(/\\(.)/g, '$1').trim()
         position = end
       }
