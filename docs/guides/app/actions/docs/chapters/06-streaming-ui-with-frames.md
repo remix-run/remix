@@ -354,7 +354,7 @@ with a new error response. Keep the fallback useful, report the error, and let t
 continue when that is safe.
 
 Pass `request.signal` through server frame work and the browser resolver's signal through `fetch()`.
-[Errors and Cancellation](/errors-and-error-boundaries/) covers reporting policy, while
+[Errors and Cancellation](/errors-and-cancellation/) covers reporting policy, while
 [Production](/production/) covers disconnects, compression, and other deployment concerns.
 
 The next chapter, [Animation](/animation/), adds motion to component insertion, removal, and layout
