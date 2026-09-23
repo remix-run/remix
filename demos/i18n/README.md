@@ -78,7 +78,8 @@ The cart needs to translate arbitrary counts without a server response, so its c
 | [app/ui/i18n.tsx](https://github.com/remix-run/remix/blob/main/demos/i18n/app/ui/i18n.tsx)                                             | Request-scoped server component context                       |
 | [app/actions/public/cart-preview.tsx](https://github.com/remix-run/remix/blob/main/demos/i18n/app/actions/public/cart-preview.tsx)     | Browser translator and cart component context                 |
 | [app/actions/public/number-preview.tsx](https://github.com/remix-run/remix/blob/main/demos/i18n/app/actions/public/number-preview.tsx) | Serialized labels, client state, and browser formatting       |
-| [app/assets.ts](https://github.com/remix-run/remix/blob/main/demos/i18n/app/assets.ts)                                                 | Browser compilation and source allowlist                      |
+| [remix.json](https://github.com/remix-run/remix/blob/main/demos/i18n/remix.json)                                                       | Shared asset mounts and browser source allowlist              |
+| [app/assets.ts](https://github.com/remix-run/remix/blob/main/demos/i18n/app/assets.ts)                                                 | Browser compilation and runtime asset settings                |
 
 For a larger app, keep the request-scoped state, use the locale pattern as the base for localized routes, and replace inline resources with your translation backend.
 
@@ -89,4 +90,4 @@ pnpm -C demos/i18n test
 pnpm -C demos/i18n typecheck
 ```
 
-The tests cover negotiation, concurrent translated HTML, locale-specific plural forms, response headers, redirects, and cookies. Chromium tests exercise browser-side pluralization, full-document language switches, LTR/RTL transitions, reset client state, and navigation without JavaScript. The E2E tests use the repository's Playwright setup.
+The tests cover negotiation, concurrent translated HTML, locale-specific plural forms, response headers, redirects, and cookies. Chromium tests exercise browser-side pluralization, full-document language switches, LTR/RTL transitions, reset client state, and navigation without JavaScript. Install the Playwright Chromium browser (`pnpm exec playwright install chromium`) before running the E2E tests.

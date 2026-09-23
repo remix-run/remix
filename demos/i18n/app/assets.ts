@@ -1,22 +1,15 @@
 import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
+import { loadConfig } from 'remix/cli'
 
-import { assetsBase } from './routes.ts'
+const config = await loadConfig(import.meta.dirname)
+if (config.assets === undefined) throw new Error('Missing assets configuration')
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 const isProduction = process.env.NODE_ENV === 'production'
 
 export const assetServer = createAssetServer({
-  basePath: assetsBase,
-  rootDir: path.resolve(import.meta.dirname, '../../..'),
-  allowFiles: ['demos/i18n/app/routes.ts', 'demos/i18n/app/**/public/**'],
-  allowPackages: ['i18next', 'remix'],
-  denyFiles: ['demos/i18n/app/**/*.test.*'],
-  mounts: {
-    app: 'demos/i18n/app',
-    npm: 'node_modules',
-    packages: 'packages',
-  },
+  ...config.assets,
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: isProduction,
   fingerprint: isProduction,

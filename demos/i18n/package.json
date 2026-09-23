@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "playwright": "catalog:",
     "typescript": "catalog:"
   },
   "scripts": {
