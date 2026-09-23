@@ -30,7 +30,7 @@ permissions:
   issues: read
   pull-requests: read
 checkout: false
-model: gpt-5.6-sol
+model: gpt-6-astra
 engine:
   id: codex
   env:
