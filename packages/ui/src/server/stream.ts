@@ -59,6 +59,11 @@ export interface RenderToStreamOptions {
   signal?: AbortSignal
   /** Error hook invoked when rendering work throws. */
   onError?: (error: unknown) => void
+  /**
+   * Content Security Policy nonce to stamp on the `<script>` and `<style>` elements the renderer
+   * emits itself.
+   */
+  nonce?: string
   /** Callback used to resolve nested frame content during streaming SSR. */
   resolveFrame?: (
     src: string,
@@ -184,6 +189,7 @@ interface RenderContext {
   flushKind: FlushKind
   serverIdScope: string
   serverIdCounter: number
+  nonce?: string
 }
 
 interface ResolvedFrameHtml {
@@ -297,6 +303,7 @@ export function renderToStream(
     flushKind: 'fragment',
     serverIdScope: crypto.randomUUID().slice(0, 8),
     serverIdCounter: 0,
+    nonce: options?.nonce,
   }
 
   function cancel(reason: unknown): void {
@@ -721,6 +728,9 @@ function buildImportMapSegment(props: ElementProps, context: RenderContext): Seg
   }
 
   let { value: _value, ...scriptProps } = props
+  if (scriptProps.nonce === undefined && context.nonce !== undefined) {
+    scriptProps.nonce = context.nonce
+  }
   let attrs = renderAttributes('script', scriptProps, false)
   let segment = staticSeg('')
   context.managedImportMaps.push({ attrs, segment, value })
@@ -1388,7 +1398,7 @@ function collectStyleTags(context: RenderContext): string {
 
   let tags: string[] = []
   for (let { selector, css } of context.styleCache.values()) {
-    let tag = renderStyleTag(selector, css)
+    let tag = renderStyleTag(selector, css, context.nonce)
     if (tag) tags.push(tag)
   }
   return tags.join('')
@@ -1407,11 +1417,18 @@ function wrapStyleForLayer(
 function renderStyleTag(
   selector: string,
   css: string,
+  nonce?: string,
   layer: string = REMIX_UI_STYLE_LAYER,
 ): string {
   let wrappedCss = wrapStyleForLayer(selector, css, layer)
   if (!wrappedCss) return ''
-  return `<style data-rmx-style="${escapeHtml(selector)}">${escapeStyleText(wrappedCss)}</style>`
+  return `<style data-rmx-style="${escapeHtml(selector)}"${renderNonceAttribute(nonce)}>${escapeStyleText(
+    wrappedCss,
+  )}</style>`
+}
+
+function renderNonceAttribute(nonce: string | undefined): string {
+  return nonce === undefined ? '' : ` nonce="${escapeHtml(nonce)}"`
 }
 
 function escapeStyleText(css: string): string {
@@ -1451,7 +1468,7 @@ function collectImportMapScript(
   resources: ClientEntryHeadResources,
 ): string {
   let importMap = getImportMapDelta(context, resources.importMap)
-  return importMap ? buildImportMapScript(importMap) : ''
+  return importMap ? buildImportMapScript(importMap, renderNonceAttribute(context.nonce)) : ''
 }
 
 function finalizeManagedImportMap(context: RenderContext): void {

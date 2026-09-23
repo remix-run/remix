@@ -1299,6 +1299,98 @@ describe('stream', () => {
     })
   })
 
+  describe('nonce', () => {
+    function Island() {
+      return () => <section>Island</section>
+    }
+
+    let NonceIsland = clientEntry('/nonce-island.ts#Island', Island)
+
+    function resolveNonceIsland() {
+      return {
+        href: '/assets/nonce-island.js',
+        exportName: 'Island',
+        importMap: { imports: { '/assets/nonce-island.js': '/assets/nonce-island.hash.js' } },
+      }
+    }
+
+    it('stamps the nonce on server style tags', async () => {
+      let html = await drain(
+        renderToStream(<div mix={[css({ color: 'red' })]}>Styled</div>, { nonce: 'r4nd0m' }),
+      )
+
+      expect(html).toMatch(/<style data-rmx-style="rmxc-[a-z0-9]+" nonce="r4nd0m">/)
+    })
+
+    it('stamps the nonce on the import map the renderer emits', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <NonceIsland />
+            </body>
+          </html>,
+          { nonce: 'r4nd0m', resolveClientEntry: resolveNonceIsland },
+        ),
+      )
+
+      expect(html).toContain('<script data-rmx-import-map type="importmap" nonce="r4nd0m">')
+    })
+
+    it('stamps the nonce on an authored import map', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <ImportMap value={{ imports: { app: '/assets/app.js' } }} />
+            </head>
+            <body>Hello</body>
+          </html>,
+          { nonce: 'r4nd0m' },
+        ),
+      )
+
+      expect(html).toContain('<script data-rmx-import-map type="importmap" nonce="r4nd0m">')
+    })
+
+    it('keeps a nonce authored on the import map', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <ImportMap nonce="authored" value={{ imports: { app: '/assets/app.js' } }} />
+            </head>
+            <body>Hello</body>
+          </html>,
+          { nonce: 'r4nd0m' },
+        ),
+      )
+
+      expect(html).toContain('nonce="authored"')
+      expect(html).not.toContain('nonce="r4nd0m"')
+    })
+
+    it('omits the attribute when no nonce is given', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <div mix={[css({ color: 'red' })]}>Styled</div>
+              <NonceIsland />
+            </body>
+          </html>,
+          { resolveClientEntry: resolveNonceIsland },
+        ),
+      )
+
+      expect(html).toContain('<style data-rmx-style=')
+      expect(html).toContain('<script data-rmx-import-map type="importmap">')
+      expect(html).not.toContain('nonce=')
+    })
+  })
+
   describe('client entry preloads', () => {
     function Island() {
       return () => <section>Island</section>
