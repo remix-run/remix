@@ -841,13 +841,26 @@ function createSetupSource(
 ): string {
   let lines: string[] = []
   let initializedStateNames = new Set<string>()
+  let hoistedFunctionStateNames = new Set<string>()
+
+  // Function declarations initialize shared var bindings before any setup statements run.
+  for (let statement of statements) {
+    if (statement.type !== 'FunctionDeclaration') continue
+    let name = getIdentifierName(getNode(statement, 'id'))
+    if (name && setupStateNames.has(name) && renderReferencedDeclarationNames.has(name)) {
+      hoistedFunctionStateNames.add(name)
+    }
+  }
+  for (let name of hoistedFunctionStateNames) {
+    lines.push(`__s__.${name} = ${name};`)
+  }
 
   for (let statement of statements) {
     if (isSetupRuntimeDeclaration(statement)) {
       let name = getIdentifierName(getNode(statement, 'id'))
       if (name && renderReferencedDeclarationNames.has(name)) {
         lines.push(rewriteReferences(statement, setupStateNames, source))
-        lines.push(`__s__.${name} = ${name};`)
+        if (!hoistedFunctionStateNames.has(name)) lines.push(`__s__.${name} = ${name};`)
         continue
       }
     }
@@ -865,6 +878,10 @@ function createSetupSource(
         if (pattern?.type === 'Identifier') {
           let name = names[0]
           if (name === undefined) continue
+          if (!init && statement.kind === 'var' && hoistedFunctionStateNames.has(name)) {
+            initializedStateNames.add(name)
+            continue
+          }
           lines.push(
             init
               ? `__s__.${name} = ${rewriteReferences(init, initializedStateNames, source)};`
@@ -1206,7 +1223,14 @@ function isSameNodeRange(left: AstNode | null, right: AstNode): boolean {
 function getSetupStatements(body: AstNode): AstNode[] {
   let statements = getNodeArray(body, 'body')
   let returnIndex = statements.findIndex((statement) => statement.type === 'ReturnStatement')
-  return returnIndex === -1 ? statements : statements.slice(0, returnIndex)
+  if (returnIndex === -1) return statements
+
+  return [
+    ...statements.slice(0, returnIndex),
+    ...statements
+      .slice(returnIndex + 1)
+      .filter((statement) => statement.type === 'FunctionDeclaration'),
+  ]
 }
 
 function getRenderArgument(body: AstNode): AstNode | null {
@@ -1342,12 +1366,20 @@ function getParamsSource(node: AstNode, source: string): string {
 }
 
 function getSetupHash(body: AstNode, source: string): string {
-  let returnStatement = getNodeArray(body, 'body').find(
-    (statement) => statement.type === 'ReturnStatement',
-  )
+  let statements = getNodeArray(body, 'body')
+  let returnIndex = statements.findIndex((statement) => statement.type === 'ReturnStatement')
   let setupStart = body.start + 1
+  let returnStatement = statements[returnIndex]
   let setupEnd = returnStatement?.start ?? body.end - 1
-  return hashSource(source.slice(setupStart, setupEnd))
+  let hoistedDeclarations =
+    returnIndex === -1
+      ? []
+      : statements
+          .slice(returnIndex + 1)
+          .filter((statement) => statement.type === 'FunctionDeclaration')
+          .map((statement) => source.slice(statement.start, statement.end))
+
+  return hashSource([source.slice(setupStart, setupEnd), ...hoistedDeclarations].join('\n'))
 }
 
 function isNamedCallExpression(node: AstNode | null, name: string): node is AstNode {
