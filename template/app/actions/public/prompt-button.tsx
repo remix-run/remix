@@ -1,11 +1,11 @@
-import { clientEntry, css, on, type Handle, type SerializableProps } from 'remix/ui'
+import { clientEntry, css, on, type Handle } from 'remix/ui'
 
 const FADE_MS = 180
 const HOLD_MS = 1200
 
 type CopyState = 'idle' | 'copied' | 'failed' | 'resetting'
 
-interface PromptButtonProps extends SerializableProps {
+interface PromptButtonProps {
   text: string
 }
 
