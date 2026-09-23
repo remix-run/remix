@@ -258,12 +258,12 @@ function isShallowRepository(): boolean {
 function ensureGitHistoryForVersionLookup() {
   if (isShallowRepository()) {
     console.log('\nRepository is shallow, fetching full history for release tag anchoring...')
-    logAndExec('git fetch --unshallow --tags origin')
+    logAndExec('git', ['fetch', '--unshallow', '--tags', 'origin'])
     return
   }
 
   console.log('\nFetching tags from origin...')
-  logAndExec('git fetch --tags origin')
+  logAndExec('git', ['fetch', '--tags', 'origin'])
 }
 
 function resolveTagPlans(packages: PublishedPackage[]): TagPlan[] {
@@ -577,8 +577,8 @@ async function main() {
 
   // Configure git
   console.log('\nConfiguring git...')
-  logAndExec('git config user.name "Remix Run Bot"')
-  logAndExec('git config user.email "hello@remix.run"')
+  logAndExec('git', ['config', 'user.name', 'Remix Run Bot'])
+  logAndExec('git', ['config', 'user.email', 'hello@remix.run'])
 
   // Create tags (skip if already exist)
   console.log(`\nCreating tag${tagPlans.length === 1 ? '' : 's'} for published packages...`)

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { codeToHtml } from "shiki";
-import { clientEntry, css } from "remix/ui";
+import { clientEntry, css, unsafeHTML } from "remix/ui";
 import type { Handle, RemixNode } from "remix/ui";
 import { shikiThemes } from "remix-docs-shared/markdown/code-blocks";
 
@@ -34,7 +34,11 @@ export function Demo(handle: Handle<DemoProps>) {
         {handle.props.children}
       </div>
       {handle.props.sourceHtml ? (
-        <div data-demo-source mix={sourceCodeStyles} innerHTML={handle.props.sourceHtml} />
+        <div
+          data-demo-source
+          mix={sourceCodeStyles}
+          innerHTML={unsafeHTML(handle.props.sourceHtml)}
+        />
       ) : null}
     </section>
   );

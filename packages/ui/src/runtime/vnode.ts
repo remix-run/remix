@@ -15,7 +15,15 @@ export const TEXT_NODE = Symbol('TEXT_NODE')
 export const NON_RENDER_NODE = Symbol('NON_RENDER_NODE')
 export const ROOT_VNODE = Symbol('ROOT_VNODE')
 
-export type VNodeKind = 'root' | 'empty' | 'text' | 'fragment' | 'host' | 'component' | 'frame'
+export type VNodeKind =
+  | 'root'
+  | 'empty'
+  | 'text'
+  | 'fragment'
+  | 'host'
+  | 'component'
+  | 'client-entry'
+  | 'frame'
 
 export type RuntimeElementProps = {
   [name: string]: unknown
@@ -24,6 +32,8 @@ export type RuntimeElementProps = {
 export type RuntimeHostProps = RuntimeElementProps & {
   children?: RemixNode
   innerHTML?: string
+  srcDoc?: string
+  srcdoc?: string
   mix?: MixinRuntimeValue
 }
 
@@ -140,6 +150,12 @@ export type CommittedComponentNode = MountingComponentNode & {
   _content: CommittedVNode
 }
 
+export type CommittedClientEntryNode = CommittedNodeBase<'client-entry', ElementFunction> & {
+  props: RuntimeElementProps
+  _rangeStart: Comment
+  _rangeEnd: Comment
+}
+
 export interface FrameFallbackRoot {
   render(element: RemixNode): void
   dispose(): void
@@ -166,6 +182,7 @@ export type CommittedVNode =
   | CommittedFragmentNode
   | CommittedHostNode
   | CommittedComponentNode
+  | CommittedClientEntryNode
   | CommittedFrameNode
 
 export type RootVNode = {
@@ -173,6 +190,7 @@ export type RootVNode = {
   type: typeof ROOT_VNODE
   _children: CommittedVNode[]
   _svg: boolean
+  _getContext?: (type: ElementFunction) => unknown
   _rangeStart?: Node
   _rangeEnd?: Node
   _pendingHydrationComponentId?: string
@@ -228,6 +246,10 @@ export function isCommittedComponentNode(node: VNode): node is CommittedComponen
   return node.kind === 'component' && '_content' in node
 }
 
+export function isCommittedClientEntryNode(node: CommittedVNode): node is CommittedClientEntryNode {
+  return node.kind === 'client-entry'
+}
+
 export function isFrameNode(node: VNode): node is FrameNode | CommittedFrameNode {
   return node.kind === 'frame'
 }
@@ -241,6 +263,9 @@ export function findContextFromAncestry(node: VNodeParent, type: ElementFunction
   while (current) {
     if (current.kind === 'component' && current.type === type) {
       return current._handle.getContextValue()
+    }
+    if (current.kind === 'root') {
+      return current._getContext?.(type)
     }
     current = '_parent' in current ? current._parent : undefined
   }

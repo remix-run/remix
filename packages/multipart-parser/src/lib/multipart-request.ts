@@ -1,3 +1,5 @@
+import { ContentType } from '@remix-run/headers/content-type'
+
 import type { MultipartParserOptions, MultipartPart } from './multipart.ts'
 import { MultipartParseError, parseMultipartStream } from './multipart.ts'
 
@@ -8,8 +10,7 @@ import { MultipartParseError, parseMultipartStream } from './multipart.ts'
  * @returns The boundary string if found, or null if not present
  */
 export function getMultipartBoundary(contentType: string): string | null {
-  let match = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType)
-  return match ? (match[1] ?? match[2]) : null
+  return ContentType.from(contentType).boundary ?? null
 }
 
 /**
@@ -19,8 +20,8 @@ export function getMultipartBoundary(contentType: string): string | null {
  * @returns `true` if the request is a multipart request, `false` otherwise
  */
 export function isMultipartRequest(request: Request): boolean {
-  let contentType = request.headers.get('Content-Type')
-  return contentType != null && contentType.startsWith('multipart/')
+  let mediaType = ContentType.from(request.headers.get('Content-Type')).mediaType?.toLowerCase()
+  return mediaType?.startsWith('multipart/') ?? false
 }
 
 /**

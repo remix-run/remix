@@ -1,8 +1,12 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+import { createElement } from '../runtime/create-element.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { css } from '../index.ts'
+import { css, unsafeHTML } from '../index.ts'
+
+const blockedJavaScriptUrl =
+  "javascript:throw new Error('Remix has blocked a javascript: URL as a security precaution.')"
 
 describe('vnode rendering', () => {
   describe('special attributes', () => {
@@ -24,6 +28,150 @@ describe('vnode rendering', () => {
     it.todo('checked')
     it.todo('defaultChecked')
     it.todo('disabled')
+
+    it('ignores invalid host prop names', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(
+        createElement('div', {
+          'data-value': 'ok',
+          'aria-label': 'Example',
+          'invalid name': 'ignored',
+        }),
+      )
+
+      let div = container.querySelector('div')
+      invariant(div instanceof HTMLDivElement)
+      expect(div.getAttributeNames()).toEqual(['data-value', 'aria-label'])
+    })
+
+    it('does not reflect inline event handler properties', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(<div>content</div>)
+
+      let div = container.querySelector('div')
+      invariant(div instanceof HTMLDivElement)
+      let calls = 0
+      root.render(
+        createElement(
+          'div',
+          {
+            onclick: () => calls++,
+          },
+          'content',
+        ),
+      )
+
+      expect(container.querySelector('div')).toBe(div)
+      div.click()
+      expect(calls).toBe(0)
+    })
+
+    it('does not set inline event attributes on SVG elements', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(createElement('svg', { onclick: 'alert(1)', 'data-value': 'ok' }))
+
+      let svg = container.querySelector('svg')
+      invariant(svg instanceof SVGSVGElement)
+      expect(svg.hasAttribute('onclick')).toBe(false)
+      expect(svg.getAttribute('data-value')).toBe('ok')
+    })
+
+    it('does not mutate an element prototype through a host prop', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let props = JSON.parse('{"__proto__":{"changed":true},"id":"target"}')
+
+      root.render(createElement('div', props))
+
+      let div = container.querySelector('#target')
+      invariant(div instanceof HTMLDivElement)
+      expect('changed' in div).toBe(false)
+    })
+
+    it('reflects custom element properties', () => {
+      class HostPropsElement extends HTMLElement {
+        settings: unknown = undefined
+      }
+
+      let tagName = 'x-remix-host-props-test'
+      if (!customElements.get(tagName)) customElements.define(tagName, HostPropsElement)
+
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let settings = { mode: 'compact' }
+      root.render(createElement(tagName, { settings }))
+
+      let element = container.querySelector(tagName)
+      invariant(element instanceof HostPropsElement)
+      expect(element.settings).toBe(settings)
+    })
+
+    it('blocks javascript URLs in executable URL attributes', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(
+        <>
+          <a id="link" href="javascript:alert(1)" />
+          <img id="image" alt="" src={'\u0000 \tJ\na\rv\ta\ns\rc\tr\ni\tp\tt:alert(1)'} />
+          <form id="form" action="javascript:alert(1)" />
+          <button id="button" formAction="javascript:alert(1)" />
+          <svg>
+            <use id="use" xlinkHref="javascript:alert(1)" />
+          </svg>
+          <object id="object" data="javascript:alert(1)" />
+        </>,
+      )
+
+      expect(container.querySelector('#link')?.getAttribute('href')).toBe(blockedJavaScriptUrl)
+      expect(container.querySelector('#image')?.getAttribute('src')).toBe(blockedJavaScriptUrl)
+      expect(container.querySelector('#form')?.getAttribute('action')).toBe(blockedJavaScriptUrl)
+      expect(container.querySelector('#button')?.getAttribute('formaction')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(container.querySelector('#use')?.getAttribute('xlink:href')).toBe(blockedJavaScriptUrl)
+      expect(container.querySelector('#object')?.getAttribute('data')).toBe(blockedJavaScriptUrl)
+    })
+
+    it('preserves allowed URLs and non-executable URL attributes', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(
+        <>
+          <a id="relative" href="/docs" />
+          <a id="mailto" href="mailto:test@example.com" />
+          <a id="blob" href="blob:https://example.com/id" />
+          <img id="data-url" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP" />
+          <img id="srcset" alt="" srcSet="javascript:alert(1) 1x" />
+          <video id="poster" poster="javascript:alert(1)" />
+          {createElement('div', { id: 'ordinary-data', data: 'javascript:alert(1)' })}
+        </>,
+      )
+
+      expect(container.querySelector('#relative')?.getAttribute('href')).toBe('/docs')
+      expect(container.querySelector('#mailto')?.getAttribute('href')).toBe(
+        'mailto:test@example.com',
+      )
+      expect(container.querySelector('#blob')?.getAttribute('href')).toBe(
+        'blob:https://example.com/id',
+      )
+      expect(container.querySelector('#data-url')?.getAttribute('src')).toBe(
+        'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP',
+      )
+      expect(container.querySelector('#srcset')?.getAttribute('srcset')).toBe(
+        'javascript:alert(1) 1x',
+      )
+      expect(container.querySelector('#poster')?.getAttribute('poster')).toBe('javascript:alert(1)')
+      expect(container.querySelector('#ordinary-data')?.getAttribute('data')).toBe(
+        'javascript:alert(1)',
+      )
+    })
   })
 
   describe('framework props', () => {
@@ -78,15 +226,101 @@ describe('vnode rendering', () => {
     it('sets innerHTML on element', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      root.render(<div innerHTML="<span>Hello</span>" />)
+      root.render(<div innerHTML={unsafeHTML('<span>Hello</span>')} />)
       expect(container.innerHTML).toBe('<div><span>Hello</span></div>')
+    })
+
+    it('rejects unbranded innerHTML values', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let props = JSON.parse('{"innerHTML":"<img src=invalid onerror=alert(1)>"}')
+
+      expect(() => root.render(createElement('div', props))).toThrow('Invalid innerHTML prop')
+
+      expect(container.innerHTML).toBe('')
+    })
+
+    it('sets branded iframe srcDoc', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(<iframe srcDoc={unsafeHTML('<p>HTML</p>')} />)
+
+      expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toBe('<p>HTML</p>')
+    })
+
+    it('sets branded iframe srcdoc', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(<iframe srcdoc={unsafeHTML('<p>HTML</p>')} />)
+
+      expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toBe('<p>HTML</p>')
+    })
+
+    it('rejects unbranded iframe srcDoc values before DOM mutation', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      expect(() =>
+        root.render(createElement('iframe', { srcDoc: '<img src=invalid onerror=alert(1)>' })),
+      ).toThrow('Invalid srcDoc prop')
+
+      expect(container.innerHTML).toBe('')
+    })
+
+    it('rejects JSON-shaped iframe srcDoc values before DOM mutation', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      expect(() =>
+        root.render(createElement('iframe', { srcDoc: { value: '<p>HTML</p>' } })),
+      ).toThrow('Invalid srcDoc prop')
+
+      expect(container.innerHTML).toBe('')
+    })
+
+    it('rejects unbranded iframe srcdoc values before DOM mutation', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      expect(() =>
+        root.render(createElement('iframe', { srcdoc: '<img src=invalid onerror=alert(1)>' })),
+      ).toThrow('Invalid srcdoc prop')
+
+      expect(container.innerHTML).toBe('')
+    })
+
+    it('rejects JSON-shaped iframe srcdoc values before DOM mutation', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      expect(() =>
+        root.render(createElement('iframe', { srcdoc: { value: '<p>HTML</p>' } })),
+      ).toThrow('Invalid srcdoc prop')
+
+      expect(container.innerHTML).toBe('')
+    })
+
+    it('rejects outerHTML before replacing a host node', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<div data-existing="yes" />)
+      let existing = container.querySelector('div')
+      invariant(existing)
+
+      expect(() => root.render(createElement('div', { outerHTML: '<p>replacement</p>' }))).toThrow(
+        'Invalid outerHTML prop',
+      )
+
+      expect(container.querySelector('div')).toBe(existing)
+      expect(container.innerHTML).toBe('<div data-existing="yes"></div>')
     })
 
     it('ignores children when innerHTML is set', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       root.render(
-        <div innerHTML="<span>From innerHTML</span>">
+        <div innerHTML={unsafeHTML('<span>From innerHTML</span>')}>
           <p>Ignored child</p>
         </div>,
       )
@@ -96,13 +330,13 @@ describe('vnode rendering', () => {
     it('updates innerHTML on re-render', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      root.render(<div innerHTML="<span>First</span>" />)
+      root.render(<div innerHTML={unsafeHTML('<span>First</span>')} />)
       expect(container.innerHTML).toBe('<div><span>First</span></div>')
 
       let div = container.querySelector('div')
       invariant(div)
 
-      root.render(<div innerHTML="<span>Second</span>" />)
+      root.render(<div innerHTML={unsafeHTML('<span>Second</span>')} />)
       expect(container.innerHTML).toBe('<div><span>Second</span></div>')
       expect(container.querySelector('div')).toBe(div)
     })
@@ -110,7 +344,7 @@ describe('vnode rendering', () => {
     it('clears innerHTML when removed', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      root.render(<div innerHTML="<span>Hello</span>" />)
+      root.render(<div innerHTML={unsafeHTML('<span>Hello</span>')} />)
       expect(container.innerHTML).toBe('<div><span>Hello</span></div>')
 
       root.render(<div />)
@@ -120,7 +354,7 @@ describe('vnode rendering', () => {
     it('switches from innerHTML to children', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      root.render(<div innerHTML="<span>From innerHTML</span>" />)
+      root.render(<div innerHTML={unsafeHTML('<span>From innerHTML</span>')} />)
       expect(container.innerHTML).toBe('<div><span>From innerHTML</span></div>')
 
       root.render(
@@ -141,7 +375,7 @@ describe('vnode rendering', () => {
       )
       expect(container.innerHTML).toBe('<div><p>From children</p></div>')
 
-      root.render(<div innerHTML="<span>From innerHTML</span>" />)
+      root.render(<div innerHTML={unsafeHTML('<span>From innerHTML</span>')} />)
       expect(container.innerHTML).toBe('<div><span>From innerHTML</span></div>')
     })
 
@@ -156,7 +390,7 @@ describe('vnode rendering', () => {
       root.render(<div>From text child</div>)
       expect(container.innerHTML).toBe('<div>From text child</div>')
 
-      root.render(<div innerHTML="<span>From innerHTML</span>" />)
+      root.render(<div innerHTML={unsafeHTML('<span>From innerHTML</span>')} />)
       expect(container.innerHTML).toBe('<div><span>From innerHTML</span></div>')
       expect(renderError).toBeUndefined()
     })

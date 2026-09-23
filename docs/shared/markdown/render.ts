@@ -66,7 +66,10 @@ function rehypeTransformLinks(options: Pick<MarkdownHtmlOptions, 'transformLink'
       }
 
       let href = transformLink(node.properties.href)
-      if (href !== undefined) {
+      if (href === null) {
+        node.tagName = 'span'
+        node.properties = {}
+      } else if (href !== undefined) {
         node.properties.href = href
       }
     })

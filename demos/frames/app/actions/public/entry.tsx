@@ -8,7 +8,7 @@ import { run } from 'remix/ui'
 const app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await importModule(moduleUrl)
-    let exp = (mod as any)[exportName]
+    let exp = mod[exportName]
     if (typeof exp !== 'function') {
       throw new Error(`Export "${exportName}" from "${moduleUrl}" is not a function`)
     }
@@ -22,4 +22,9 @@ const app = run({
   },
 })
 
-app.ready().catch((error: unknown) => console.error(error))
+app
+  .ready()
+  .then(() => {
+    document.documentElement.dataset.framesReady = 'true'
+  })
+  .catch((error: unknown) => console.error(error))

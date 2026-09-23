@@ -29,7 +29,7 @@ export function composeMixedProps(
 ): ElementProps {
   let descriptors = resolveMixDescriptors(props)
   let composedProps = withoutMix(props)
-  let mixinProps = withoutMixinTreeProps(composedProps)
+  let mixinProps = withoutMixinContentProps(composedProps)
 
   for (let index = 0; index < descriptors.length && index < MAX_MIX_DESCRIPTORS; index++) {
     let result = runDescriptor(descriptors[index], index, mixinProps)
@@ -61,7 +61,7 @@ export function composeMixedProps(
     let nextProps = sanitizeReturnedMixinProps(result.props)
     for (let nested of resolveMixDescriptors(nextProps)) descriptors.push(nested)
     composedProps = { ...composedProps, ...withoutMix(nextProps) }
-    mixinProps = withoutMixinTreeProps(composedProps)
+    mixinProps = withoutMixinContentProps(composedProps)
   }
 
   let nextMix = props.mix
@@ -89,18 +89,31 @@ function withoutMix(props: ElementProps): ElementProps {
   return output
 }
 
-function withoutMixinTreeProps(props: ElementProps): ElementProps {
-  if (!('children' in props) && !('innerHTML' in props)) return props
+function withoutMixinContentProps(props: ElementProps): ElementProps {
+  if (!hasMixinContentProps(props)) return props
   let output = { ...props }
   delete output.children
   delete output.innerHTML
+  delete output.srcDoc
+  delete output.srcdoc
+  delete output.outerHTML
   return output
 }
 
 function sanitizeReturnedMixinProps(props: ElementProps): ElementProps {
-  if (!('children' in props) && !('innerHTML' in props)) return props
-  console.error(new Error('mixins must not return children or innerHTML'))
-  return withoutMixinTreeProps(props)
+  if (!hasMixinContentProps(props)) return props
+  console.error(new Error('mixins must not return children or raw HTML props'))
+  return withoutMixinContentProps(props)
+}
+
+function hasMixinContentProps(props: ElementProps): boolean {
+  return (
+    'children' in props ||
+    'innerHTML' in props ||
+    'srcDoc' in props ||
+    'srcdoc' in props ||
+    'outerHTML' in props
+  )
 }
 
 export function isMixinDescriptor(value: unknown): value is MixDescriptor {

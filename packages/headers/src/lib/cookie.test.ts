@@ -59,6 +59,70 @@ describe('Cookie', () => {
     assert.equal(header.get('name2'), 'value2')
   })
 
+  it('keeps cookie pairs separate when quotes span semicolons', () => {
+    let header = Cookie.from('first="one; session=child; session=parent; last=two"')
+
+    assert.deepEqual(Array.from(header), [
+      ['first', '"one'],
+      ['session', 'child'],
+      ['session', 'parent'],
+      ['last', 'two"'],
+    ])
+    assert.equal(header.get('session'), 'child')
+  })
+
+  it('keeps cookie pairs separate when a backslash precedes a semicolon', () => {
+    let header = Cookie.from(String.raw`first="one\; second=two"`)
+
+    assert.deepEqual(Array.from(header), [
+      ['first', '"one\\'],
+      ['second', 'two"'],
+    ])
+  })
+
+  it('preserves existing backslash decoding in cookie values', () => {
+    let header = Cookie.from(String.raw`unquoted=a\b; quoted="c\d"`)
+
+    assert.deepEqual(Array.from(header), [
+      ['unquoted', 'ab'],
+      ['quoted', 'cd'],
+    ])
+  })
+
+  it('preserves trimming and unmatched quotes in cookie values', () => {
+    let header = Cookie.from('first=" \tvalue \t"; second=" \tvalue \t')
+
+    assert.deepEqual(Array.from(header), [
+      ['first', 'value'],
+      ['second', '" \tvalue'],
+    ])
+  })
+
+  it('round trips cookie values containing double quotes', () => {
+    let header = new Cookie({ name: 'a"b' })
+
+    assert.equal(header.toString(), String.raw`name="a\"b"`)
+    assert.equal(Cookie.from(header.toString()).get('name'), 'a"b')
+  })
+
+  it('preserves semicolon encoding when parsing serialized cookie values', () => {
+    let header = new Cookie({ name: 'a;b;c' })
+
+    assert.equal(header.toString(), 'name=a%3Bb%3Bc')
+    assert.deepEqual(Array.from(Cookie.from(header.toString())), [['name', 'a%3Bb%3Bc']])
+  })
+
+  it('unquotes complete values and preserves equals signs and encoded values', () => {
+    let header = Cookie.from('quoted="abc=="; encoded=a%3Bb; empty=""; bare; =ignored; ;')
+
+    assert.deepEqual(Array.from(header), [
+      ['quoted', 'abc=='],
+      ['encoded', 'a%3Bb'],
+      ['empty', ''],
+      ['bare', ''],
+    ])
+  })
+
   it('gets all names', () => {
     let header = new Cookie('name1=value1; name2=value2')
     assert.deepEqual(header.names, ['name1', 'name2'])

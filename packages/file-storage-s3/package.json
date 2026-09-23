@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/file-storage-s3",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "S3 backend for remix/file-storage",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
@@ -18,6 +18,7 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"

@@ -46,7 +46,7 @@ export interface Handle<Props = Record<string, never>, ContextValue = NoContext>
   /**
    * Schedules a task to run after the next update.
    *
-   * @param task
+   * @param task Work receiving a signal aborted on the next render or component removal.
    */
   queueTask(task: Task): void
 
@@ -63,6 +63,12 @@ export interface Handle<Props = Record<string, never>, ContextValue = NoContext>
      * The root frame for the current runtime tree.
      */
     readonly top: FrameHandle
+    /**
+     * Finds a mounted frame by name.
+     *
+     * @param name The `name` prop of the frame to find.
+     * @returns The named frame, or `undefined` when it is not mounted.
+     */
     get(name: string): FrameHandle | undefined
   }
 
@@ -131,16 +137,35 @@ export type ContextFrom<ComponentType> =
  * while different component types remain independent.
  */
 export interface Context<C> {
-  /** Replaces the current context value for this component instance. */
+  /**
+   * Replaces this component's provided value without scheduling a render.
+   * Call `handle.update()` when descendants should render with the new value.
+   *
+   * @param values Value to provide to descendants.
+   */
   set(values: C): void
-  /** Reads the context value from the nearest ancestor instance of the given component type. */
+  /**
+   * Reads the nearest ancestor instance of the given component type.
+   * Read during render to observe replacement values on later renders.
+   *
+   * @param component Provider component whose identity selects the context.
+   * @returns The provider's current value. At runtime, a missing provider returns `undefined`.
+   */
   get<ComponentType>(component: ComponentType): ContextFrom<ComponentType>
-  /** Reads an unknown context value for an untyped lookup. */
+  /**
+   * Reads context without an inferred provider value type.
+   *
+   * @param component Provider component identity.
+   * @returns The provider's current value, or `undefined` when no matching provider exists.
+   */
   get(component: ElementType | symbol): unknown | undefined
 }
 
 /**
  * Content that can be rendered into a frame.
+ *
+ * HTML strings and streams must contain trusted application content. Remix does not sanitize them
+ * before parsing and reconciling them into the current document.
  */
 export type FrameContent = ReadableStream<Uint8Array> | string | RemixNode
 
@@ -158,7 +183,9 @@ export type FrameResolution = FrameContent | Response
  * Events emitted by frame handles during reloads.
  */
 export type FrameHandleEventMap = {
+  /** A direct reload or an ancestor-driven reload has started. */
   reloadStart: Event
+  /** Reload processing has ended, including cancellation or failure. */
   reloadComplete: Event
 }
 
@@ -166,10 +193,25 @@ export type FrameHandleEventMap = {
  * Public API for interacting with a frame instance.
  */
 export type FrameHandle = TypedEventTarget<FrameHandleEventMap> & {
+  /** Source used by the next reload. Assigning it alone does not load content or change history. */
   src: string
+  /**
+   * Resolves the current source and reconciles the frame with its returned content.
+   * A newer reload cancels earlier reload work. Non-cancellation errors reject the promise.
+   *
+   * @returns The reload's signal, which is aborted if that reload is superseded or disposed.
+   */
   reload(): Promise<AbortSignal>
+  /**
+   * Renders supplied trusted content directly without calling the resolver or changing the source.
+   * HTML strings and streams are not sanitized.
+   * This does not emit reload lifecycle events or change browser history.
+   *
+   * @param content HTML, a byte stream, or a Remix node to render into the frame.
+   * @returns A promise that resolves when rendering the supplied content completes.
+   */
   replace(content: FrameContent): Promise<void>
-  // Internal runtime context used by client-rendered Frame reconciliation.
+  /** Internal runtime context used by client-rendered frame reconciliation. */
   $runtime?: unknown
 }
 

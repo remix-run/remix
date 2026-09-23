@@ -2,8 +2,10 @@ import type { ElementProps } from '../jsx.ts'
 import {
   canUseProperty,
   getMergedClassName,
+  isAllowedHostPropName,
   isBooleanishStringAttribute,
   normalizeAttributeName,
+  sanitizeUrlAttribute,
   serializeStyleObject,
   toKebabCase,
 } from './attributes.ts'
@@ -66,6 +68,7 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
   for (let name in curr) {
     if (isFrameworkProp(name)) continue
+    if (!isAllowedHostPropName(name)) continue
     if (name === 'class' || name === 'className') continue
     if (name in next && next[name] != null) continue
 
@@ -80,6 +83,7 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
   for (let name in next) {
     if (isFrameworkProp(name)) continue
+    if (!isAllowedHostPropName(name)) continue
     if (name === 'class' || name === 'className') continue
 
     let nextValue = next[name]
@@ -104,6 +108,7 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
 function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolean): void {
   let { ns, attr } = normalizeAttributeName(name, isSvg)
+  value = sanitizeUrlAttribute(dom.localName, attr, value)
 
   if (attr === 'style' && isStyleObject(value)) {
     patchStyleObject(dom, undefined, value)

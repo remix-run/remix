@@ -192,12 +192,14 @@ export function cors(options: CorsOptions = {}): Middleware {
         corsHeaders.set('Access-Control-Max-Age', String(maxAge))
       }
 
-      if (
-        options.allowPrivateNetwork &&
-        context.headers.get('Access-Control-Request-Private-Network')?.toLowerCase() === 'true'
-      ) {
-        corsHeaders.set('Access-Control-Allow-Private-Network', 'true')
+      if (options.allowPrivateNetwork) {
         vary.add('Access-Control-Request-Private-Network')
+
+        if (
+          context.headers.get('Access-Control-Request-Private-Network')?.toLowerCase() === 'true'
+        ) {
+          corsHeaders.set('Access-Control-Allow-Private-Network', 'true')
+        }
       }
 
       if (!preflightContinue) {

@@ -1,5 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
+import type { Handle } from '../runtime/component.ts'
+import { clientEntry } from '../runtime/client-entries.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -119,6 +121,89 @@ describe('hydration', () => {
 
       expect(container.querySelector('textarea')).toBe(existingTextarea)
       expect(existingTextarea.value).toBe('textarea content')
+    })
+
+    it('preserves an untouched textarea defaultValue across updates', async () => {
+      let update = () => {}
+      let Textarea = clientEntry('/textarea.js#Textarea', function Textarea(handle: Handle) {
+        update = () => handle.update()
+        return () => <textarea defaultValue="default text" />
+      })
+      let html = await renderToString(<Textarea />)
+      container.innerHTML = html
+
+      let existingTextarea = container.querySelector('textarea')
+      invariant(existingTextarea)
+
+      let root = createRoot(container)
+      root.render(<Textarea />)
+      root.flush()
+
+      expect(existingTextarea.value).toBe('default text')
+
+      update()
+      root.flush()
+      expect(existingTextarea.value).toBe('default text')
+
+      update()
+      root.flush()
+      expect(existingTextarea.value).toBe('default text')
+    })
+
+    it('preserves a user-edited textarea defaultValue across updates', async () => {
+      let update = () => {}
+      let Textarea = clientEntry('/textarea.js#Textarea', function Textarea(handle: Handle) {
+        update = () => handle.update()
+        return () => <textarea defaultValue="default text" />
+      })
+      let html = await renderToString(<Textarea />)
+      container.innerHTML = html
+
+      let existingTextarea = container.querySelector('textarea')
+      invariant(existingTextarea)
+
+      let root = createRoot(container)
+      root.render(<Textarea />)
+      root.flush()
+
+      existingTextarea.value = 'user text'
+
+      update()
+      root.flush()
+      expect(existingTextarea.value).toBe('user text')
+
+      update()
+      root.flush()
+      expect(existingTextarea.value).toBe('user text')
+    })
+
+    it('updates a controlled textarea value', async () => {
+      let value = 'first value'
+      let update = () => {}
+      let Textarea = clientEntry('/textarea.js#Textarea', function Textarea(handle: Handle) {
+        update = () => handle.update()
+        return () => <textarea value={value} readOnly />
+      })
+      let html = await renderToString(<Textarea />)
+      container.innerHTML = html
+
+      let existingTextarea = container.querySelector('textarea')
+      invariant(existingTextarea)
+
+      let root = createRoot(container)
+      root.render(<Textarea />)
+      root.flush()
+
+      expect(existingTextarea.value).toBe('first value')
+
+      update()
+      root.flush()
+      expect(existingTextarea.value).toBe('first value')
+
+      value = 'second value'
+      update()
+      root.flush()
+      expect(existingTextarea.value).toBe('second value')
     })
 
     it('hydrates select with selected option', async () => {

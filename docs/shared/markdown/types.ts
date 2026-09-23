@@ -26,5 +26,5 @@ export type HighlightCodeOptions = {
 
 export type MarkdownHtmlOptions = {
   highlightCode?: HighlightCodeOptions
-  transformLink?: (href: string) => string | undefined
+  transformLink?: (href: string) => string | null | undefined
 }

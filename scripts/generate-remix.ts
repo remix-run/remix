@@ -4,6 +4,7 @@
  * 2. Creating source files that re-export from each package and sub-export
  * 3. Generating exports configuration in package.json
  * 4. Setting up dependencies for all referenced packages
+ * 5. Copying package READMEs and published guides and generating the documentation index
  *
  * Run: node scripts/generate-remix.ts
  */
@@ -13,8 +14,11 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
 import { parseSync } from 'oxc-parser'
+import { getPackageExportSideEffects } from './utils/package-side-effects.ts'
 import { logAndExec } from './utils/process.ts'
-import { findReadmeForSpecifier } from './utils/remix-readmes.ts'
+import { syncRemixGuides } from './utils/remix-guides.ts'
+import { syncRemixIndex } from './utils/remix-index.ts'
+import { syncRemixReadmes } from './utils/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '../packages')
@@ -59,8 +63,8 @@ type ExportEntry = {
   reExportFrom: string
   exportMode: ExportMode
   hasDefaultValueExport: boolean
-  // The README file in the owning package to copy next to the generated umbrella export.
-  readmePath?: string
+  hasPublishedSideEffects: boolean
+  hasSourceSideEffects: boolean
 }
 
 type ExportMode = 'value' | 'type' | 'side-effect' | 'type-and-side-effect' | 'type-reference'
@@ -104,6 +108,9 @@ const existingBins = new Set<string>(Object.keys(remixPackageJson.bin || {}))
 
 // Update remixPackageJson in place and output to disk
 await updateRemixPackage()
+await syncRemixReadmes()
+await syncRemixGuides()
+await syncRemixIndex()
 
 // Generate change files
 await outputExportsChangeFiles(remixPackageJson.exports, remixPackageJson.bin || {})
@@ -152,8 +159,7 @@ async function scanPackages(): Promise<RemixRunPackage[]> {
 
 /**
  * Builds ExportEntry list directly from the manifest. Each manifest entry
- * maps a remix/* path to a specifier. READMEs are attached once per generated
- * source file.
+ * maps a remix/* path to a specifier.
  */
 async function buildExportsFromManifest(
   manifest: Record<string, string>,
@@ -161,56 +167,52 @@ async function buildExportsFromManifest(
 ): Promise<ExportEntry[]> {
   let pkgJsonByName = new Map<string, Record<string, unknown>>()
   for (let pkg of packages) {
-    // Eagerly load package.json content for README sub-export lookup
     try {
       pkgJsonByName.set(pkg.name, JSON.parse(await fs.readFile(pkg.packageJsonPath, 'utf-8')))
     } catch {}
   }
 
   let exports: ExportEntry[] = []
-  let readmesWritten = new Set<string>()
 
   for (let [remixPath, specifier] of Object.entries(manifest)) {
     if (remixPath.startsWith('_')) continue // skip comment/metadata keys
     let exportClassification = await getExportClassificationForSpecifier(specifier, pkgJsonByName)
     let exportMode = getExportMode(exportClassification)
+    let packageSideEffects = getPackageSideEffectsForSpecifier(specifier, pkgJsonByName)
     let sourceFile =
       exportMode === 'type-reference'
         ? specifier.replace('@remix-run/', '') + '.d.ts'
         : getSourceFileForManifestEntry(remixPath, specifier)
     let exportPath = './' + remixPath.replace('remix/', '')
 
-    let readmePath: string | undefined
-    if (!readmesWritten.has(sourceFile)) {
-      readmePath = findReadmeForSpecifier(specifier, pkgJsonByName)
-      if (readmePath) readmesWritten.add(sourceFile)
-    }
     exports.push({
       sourceFile,
       exportPath,
       reExportFrom: specifier,
       exportMode,
       hasDefaultValueExport: exportClassification.hasDefaultValueExport,
-      readmePath,
+      hasPublishedSideEffects: hasRuntimeImport(exportMode) && packageSideEffects.published,
+      hasSourceSideEffects: hasRuntimeImport(exportMode) && packageSideEffects.source,
     })
   }
 
   // Add CLI entry — handled separately from the manifest
   let cliPkg = packages.find((p) => p.name === CLI_PACKAGE_NAME)
   if (cliPkg) {
-    let readmePath = findReadmeForSpecifier(CLI_PACKAGE_NAME, pkgJsonByName)
     let exportClassification = await getExportClassificationForSpecifier(
       CLI_PACKAGE_NAME,
       pkgJsonByName,
     )
     let exportMode = getExportMode(exportClassification)
+    let packageSideEffects = getPackageSideEffectsForSpecifier(CLI_PACKAGE_NAME, pkgJsonByName)
     exports.push({
       sourceFile: 'cli.ts',
       exportPath: './cli',
       reExportFrom: CLI_PACKAGE_NAME,
       exportMode,
       hasDefaultValueExport: exportClassification.hasDefaultValueExport,
-      readmePath,
+      hasPublishedSideEffects: hasRuntimeImport(exportMode) && packageSideEffects.published,
+      hasSourceSideEffects: hasRuntimeImport(exportMode) && packageSideEffects.source,
     })
   }
 
@@ -227,9 +229,43 @@ function isFile(filePath: string): boolean {
   return statSync(filePath, { throwIfNoEntry: false })?.isFile() ?? false
 }
 
+function hasRuntimeImport(exportMode: ExportMode): boolean {
+  return exportMode !== 'type' && exportMode !== 'type-reference'
+}
+
+function getGeneratedSideEffectFiles(): string[] {
+  let sourceFiles = new Set<string>()
+  let publishedFiles = new Set<string>()
+
+  if (allExports.some((entry) => entry.exportPath === './cli')) {
+    sourceFiles.add(REMIX_CLI_ENTRY_FILE)
+    publishedFiles.add(getDistFileName(REMIX_CLI_ENTRY_FILE))
+  }
+
+  for (let entry of allExports) {
+    if (entry.hasSourceSideEffects) sourceFiles.add(entry.sourceFile)
+    if (entry.hasPublishedSideEffects) publishedFiles.add(getDistFileName(entry.sourceFile))
+  }
+
+  for (let bin of allBins) {
+    if (isRemixCliBin(bin)) continue
+    sourceFiles.add(`${bin.command}.ts`)
+    publishedFiles.add(`${bin.command}.js`)
+  }
+
+  return [
+    ...[...sourceFiles].sort().map((file) => `./src/${file}`),
+    ...[...publishedFiles].sort().map((file) => `./dist/${file}`),
+  ]
+}
+
+function getDistFileName(sourceFile: string): string {
+  return sourceFile.replace(/\.d\.ts$/, '.d.ts').replace(/\.ts$/, '.js')
+}
+
 async function updateRemixPackage() {
   // Ensure we have a passing linter before generating code
-  logAndExec(`pnpm exec oxlint packages/remix/ --max-warnings=0`)
+  logAndExec('pnpm', ['exec', 'oxlint', 'packages/remix/', '--max-warnings=0'])
 
   // Clear existing source files
   let sourceFolderPath = path.join(remixDir, SOURCE_FOLDER)
@@ -250,22 +286,10 @@ async function updateRemixPackage() {
       let content = createExportSource(entry)
       await fs.writeFile(sourceFilePath, content, 'utf-8')
     }
-
-    if (!entry.readmePath) continue
-
-    // Copy source-adjacent READMEs so agents can discover docs from node_modules/remix.
-    let readmePath = path.join(
-      remixDir,
-      SOURCE_FOLDER,
-      entry.sourceFile.replace(/\.ts$/, ''),
-      'README.md',
-    )
-    await fs.mkdir(path.dirname(readmePath), { recursive: true })
-    await fs.copyFile(entry.readmePath, readmePath)
   }
 
   // Run linter against generated code with --fix (before bin wrappers, which must keep their shebang)
-  logAndExec(`pnpm exec oxlint packages/remix/ --fix --max-warnings=0`)
+  logAndExec('pnpm', ['exec', 'oxlint', 'packages/remix/', '--fix', '--max-warnings=0'])
 
   if (allExports.some((entry) => entry.exportPath === './cli')) {
     let cliEntryPath = path.join(remixDir, SOURCE_FOLDER, REMIX_CLI_ENTRY_FILE)
@@ -300,6 +324,7 @@ async function updateRemixPackage() {
 
   // Update package.json
   console.log('Updating Remix package.json...')
+  remixPackageJson.sideEffects = getGeneratedSideEffectFiles()
   remixPackageJson.exports = {}
   remixPackageJson.publishConfig.exports = {}
 
@@ -462,16 +487,30 @@ async function getExportClassificationForSpecifier(
   specifier: string,
   pkgJsonByName: Map<string, Record<string, unknown>>,
 ): Promise<ExportClassification> {
-  let parts = specifier.split('/')
-  let packageName = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0]
+  let { packageName, packageExportPath } = getPackageSpecifierParts(specifier)
   let packageDirName = packageName.replace('@remix-run/', '')
-  let subPath = parts.slice(packageName.split('/').length).join('/')
   let pkgJson = pkgJsonByName.get(packageName)
-  let exportConfig = (pkgJson?.exports as Record<string, unknown> | undefined)?.[
-    subPath ? `./${subPath}` : '.'
-  ]
+  let exportConfig = isRecord(pkgJson?.exports) ? pkgJson.exports[packageExportPath] : undefined
 
   return getPackageExportClassification(packageDirName, exportConfig)
+}
+
+function getPackageSideEffectsForSpecifier(
+  specifier: string,
+  pkgJsonByName: Map<string, Record<string, unknown>>,
+) {
+  let { packageName, packageExportPath } = getPackageSpecifierParts(specifier)
+  return getPackageExportSideEffects(pkgJsonByName.get(packageName), packageExportPath)
+}
+
+function getPackageSpecifierParts(specifier: string): {
+  packageExportPath: string
+  packageName: string
+} {
+  let parts = specifier.split('/')
+  let packageName = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0]
+  let subPath = parts.slice(packageName.split('/').length).join('/')
+  return { packageExportPath: subPath ? `./${subPath}` : '.', packageName }
 }
 
 function getExportMode(classification: ExportClassification): ExportMode {

@@ -2,7 +2,7 @@ import type { FrameHandle } from './component.ts'
 import { createFrameHandle } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './jsx.ts'
-import { createFrameRuntime, type ResolveFrame } from './frame.ts'
+import { createFrameRuntime, NamedFrameRegistry, type ResolveFrame } from './frame.ts'
 import {
   createComponentErrorEvent,
   getComponentError,
@@ -16,11 +16,13 @@ import { ROOT_VNODE, type CommittedVNode, type ReconcileContext, type RootVNode 
 import { resetStyleState, defaultStyleManager } from './diff-props.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
 import type { StyleManager } from '../style/index.ts'
+import type { ElementFunction } from './element-function.ts'
 
 /**
  * Events emitted by virtual roots.
  */
 export type VirtualRootEventMap = {
+  /** A component render or queued task failed. */
   error: ComponentErrorEvent
 }
 
@@ -28,9 +30,21 @@ export type VirtualRootEventMap = {
  * Root controller returned by {@link createRoot} and {@link createRangeRoot}.
  */
 export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
+  /**
+   * Renders a tree, reusing existing DOM and component instances where possible.
+   * The first render hydrates existing container or range content.
+   *
+   * @param element Tree to render, or `null` to remove the current tree.
+   */
   render: (element: RemixNode) => void
+  /** Renders the most recently supplied tree again, or does nothing before the first render. */
   reconcile: () => void
+  /**
+   * Removes the rendered tree and releases root listeners and component resources.
+   * Host removal can remain pending while mixin teardown callbacks finish.
+   */
   dispose: () => void
+  /** Synchronously drains pending DOM work and tasks without waiting for asynchronous work. */
   flush: () => void
 }
 
@@ -38,12 +52,21 @@ export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
  * Options for creating a virtual DOM root with {@link createRoot} or {@link createRangeRoot}.
  */
 export type VirtualRootOptions = {
+  /** Existing frame runtime to share with this root instead of creating one from `frameInit`. */
   frame?: FrameHandle
+  /** Resolves context from outside this root when no matching provider exists inside it. */
+  getContext?: (type: ElementFunction) => unknown
+  /** Scheduler to share with related roots (defaults to a new scheduler). */
   scheduler?: Scheduler
+  /** Style manager used to adopt server styles and manage generated CSS. */
   styleManager?: StyleManager
+  /** Frame resolution for standalone roots that render `<Frame>` without calling `run()`. */
   frameInit?: {
+    /** Source URL for the root's frame context (defaults to `'/'`). */
     src?: string
+    /** Resolves content for frames rendered inside this root. */
     resolveFrame: ResolveFrame
+    /** Loads client entries encountered in resolved frame content. */
     loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
   }
 }
@@ -63,7 +86,7 @@ function getHydrationComponentIdFromRangeStart(start: Node): string | undefined 
 /**
  * Creates a virtual root bounded by two DOM nodes.
  *
- * @param boundaries Start and end marker nodes that define the render region.
+ * @param boundaries Start and end nodes sharing a parent. Only the content between them is owned.
  * @param options Root configuration.
  * @returns A virtual root controller.
  */
@@ -130,6 +153,7 @@ export function createRangeRoot(
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
+        _getContext: options.getContext,
         _rangeStart: start,
         _rangeEnd: end,
         _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(start),
@@ -238,6 +262,7 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
+        _getContext: options.getContext,
       }
       scheduler.enqueueWork([
         () => {
@@ -308,7 +333,7 @@ function createRootFrameHandle(init: {
     moduleCache: new Map(),
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
-    namedFrames: new Map(),
+    namedFrames: new NamedFrameRegistry(),
   })
   runtime.canResolveFrames = !!init.resolveFrame
   let frame = createFrameHandle({ src: init.src ?? '/', $runtime: runtime })

@@ -195,9 +195,12 @@ export type MultipartParserOptions = Omit<ParseMultipartOptions, 'boundary'>
 
 const MultipartParserStateStart = 0
 const MultipartParserStateAfterBoundary = 1
-const MultipartParserStateHeader = 2
-const MultipartParserStateBody = 3
-const MultipartParserStateDone = 4
+const MultipartParserStateBoundaryPadding = 2
+const MultipartParserStateHeader = 3
+const MultipartParserStateBody = 4
+const MultipartParserStateClosingBoundary = 5
+const MultipartParserStateEpilogue = 6
+const MultipartParserStateDone = 7
 
 const findDoubleNewline = createSearch('\r\n\r\n')
 
@@ -284,6 +287,10 @@ export class MultipartParser {
   /**
    * Write a chunk of data to the parser.
    *
+   * The final part is yielded when both closing hyphens arrive. Consume all chunks
+   * and call {@link MultipartParser.finish} to validate the complete message;
+   * malformed closing suffixes may throw after the final part has been yielded.
+   *
    * @param chunk A chunk of data to write to the parser
    * @yields Parsed {@link MultipartPart} objects that became available from this chunk
    * @returns A generator yielding `MultipartPart` objects as they are parsed
@@ -292,6 +299,7 @@ export class MultipartParser {
     if (this.#state === MultipartParserStateDone) {
       throw new MultipartParseError('Unexpected data after end of stream')
     }
+    if (this.#state === MultipartParserStateEpilogue) return
 
     let index = 0
     let chunkLength = chunk.length
@@ -319,8 +327,6 @@ export class MultipartParser {
           if (carryResult.start > 0) {
             this.#append(carry.subarray(0, carryResult.start))
           }
-
-          yield this.#createPart()
 
           this.#state = MultipartParserStateAfterBoundary
 
@@ -366,8 +372,6 @@ export class MultipartParser {
           this.#append(chunk.subarray(index, boundaryIndex))
         }
 
-        yield this.#createPart()
-
         index = boundaryIndex + this.#boundaryLength
 
         this.#state = MultipartParserStateAfterBoundary
@@ -380,13 +384,41 @@ export class MultipartParser {
         }
 
         if (chunk[index] === 45 && chunk[index + 1] === 45) {
-          this.#state = MultipartParserStateDone
+          index += 2
+          this.#state = MultipartParserStateClosingBoundary
+          if (this.#currentContent !== null) {
+            yield this.#createPart()
+          }
+        } else {
+          this.#state = MultipartParserStateBoundaryPadding
+        }
+      }
+
+      if (
+        this.#state === MultipartParserStateBoundaryPadding ||
+        this.#state === MultipartParserStateClosingBoundary
+      ) {
+        let closing = this.#state === MultipartParserStateClosingBoundary
+        while (chunk[index] === 32 || chunk[index] === 9) {
+          index++
+        }
+
+        if (index === chunkLength || (chunk[index] === 13 && chunkLength - index === 1)) {
+          this.#buffer = chunk.subarray(index)
           break
         }
 
-        index += 2 // Skip \r\n after boundary
+        if (chunk[index] !== 13 || chunk[index + 1] !== 10) {
+          throw new MultipartParseError('Invalid multipart boundary ending')
+        }
 
-        this.#state = MultipartParserStateHeader
+        index += 2 // Skip \r\n after boundary
+        this.#state = closing ? MultipartParserStateEpilogue : MultipartParserStateHeader
+
+        if (!closing && this.#currentContent !== null) {
+          yield this.#createPart()
+        }
+        if (closing) break
       }
 
       if (this.#state === MultipartParserStateHeader) {
@@ -515,12 +547,23 @@ export class MultipartParser {
   }
 
   /**
-   * Should be called after all data has been written to the parser.
+   * Validate completion after all chunks have been written to the parser.
    *
-   * Note: This will throw if the multipart message is incomplete or
-   * wasn't properly terminated.
+   * Throws if the message is incomplete or its closing delimiter is malformed,
+   * even if {@link MultipartParser.write} has already yielded the final part.
    */
   finish(): void {
+    if (this.#state === MultipartParserStateClosingBoundary) {
+      if (this.#buffer !== null && this.#buffer.length > 0) {
+        throw new MultipartParseError('Invalid multipart boundary ending')
+      }
+
+      this.#state = MultipartParserStateDone
+    }
+
+    if (this.#state === MultipartParserStateEpilogue) {
+      this.#state = MultipartParserStateDone
+    }
     if (this.#state !== MultipartParserStateDone) {
       throw new MultipartParseError('Multipart stream not finished')
     }
@@ -627,7 +670,10 @@ export class MultipartPart {
   }
 
   /**
-   * The filename of the part, if it is a file upload.
+   * The filename from the part's `Content-Disposition` header, preferring a decoded `filename*`
+   * over `filename` when available. This is untrusted client input without filesystem sanitization.
+   * Do not use it, or a `File.name` derived from it, directly as a filesystem path. Generate a
+   * storage name in your application instead.
    */
   get filename(): string | undefined {
     return ContentDisposition.from(this.headers['content-disposition'] ?? null).preferredFilename

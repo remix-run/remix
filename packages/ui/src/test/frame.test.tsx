@@ -851,6 +851,60 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('does not hydrate imported client entries through their parent boundary', async () => {
+    let clicks = 0
+    let updateOuter = () => {}
+
+    let Inner = clientEntry('/inner.js#Inner', function Inner() {
+      return () => (
+        <button
+          mix={[
+            on('click', () => {
+              clicks++
+            }),
+          ]}
+        >
+          Inner
+        </button>
+      )
+    })
+
+    let Outer = clientEntry('/outer.js#Outer', function Outer(handle: Handle) {
+      updateOuter = () => {
+        void handle.update()
+      }
+      return () => (
+        <section>
+          <Inner />
+        </section>
+      )
+    })
+
+    document.body.innerHTML = await drain(renderToStream(<Outer />))
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/outer.js' && exportName === 'Outer') return Outer
+        if (moduleUrl === '/inner.js' && exportName === 'Inner') return Inner
+        throw new Error(`Unexpected client entry: ${moduleUrl}#${exportName}`)
+      },
+    })
+    await app.ready()
+
+    let button = document.querySelector('button')
+    invariant(button)
+
+    button.click()
+    expect(clicks).toBe(1)
+
+    updateOuter()
+    app.flush()
+    button.click()
+    expect(clicks).toBe(2)
+
+    app.dispose()
+  })
+
   it('removes orphaned hydration end markers after full-document reloads of adjacent client entries', async () => {
     let FragmentEntry = clientEntry(
       '/js/fragment-entry.js#FragmentEntry',
@@ -2439,6 +2493,70 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
+  it('returns undefined when an internal named frame lookup misses', async () => {
+    document.body.innerHTML = await drain(renderToStream(<main />))
+
+    let app = run({ loadModule: mock.fn() })
+
+    try {
+      await app.ready()
+      expect(getNamedFrame('missing-frame')).toBeUndefined()
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('restores the previous named frame when the latest duplicate unmounts', async () => {
+    let showLatest = true
+    let getDuplicateFrame: undefined | (() => ReturnType<Handle['frames']['get']>)
+    let removeLatestFrame: undefined | (() => Promise<AbortSignal>)
+
+    let DuplicateFrames = clientEntry(
+      '/assets/duplicate-frames.js#DuplicateFrames',
+      function DuplicateFrames(handle: Handle) {
+        getDuplicateFrame = () => handle.frames.get('duplicate')
+        removeLatestFrame = () => {
+          showLatest = false
+          return handle.update()
+        }
+
+        return () => (
+          <>
+            <Frame name="duplicate" src="/first" />
+            {showLatest ? <Frame name="duplicate" src="/latest" /> : null}
+          </>
+        )
+      },
+    )
+
+    let resolveFrame = (src: string) => `<p>${src}</p>`
+    let html = await drain(renderToStream(<DuplicateFrames />, { resolveFrame }))
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/duplicate-frames.js' && exportName === 'DuplicateFrames') {
+          return DuplicateFrames
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+
+    try {
+      await app.ready()
+      invariant(getDuplicateFrame)
+      invariant(removeLatestFrame)
+      expect(getDuplicateFrame()?.src).toBe('/latest')
+
+      await removeLatestFrame()
+
+      expect(getDuplicateFrame()?.src).toBe('/first')
+    } finally {
+      app.dispose()
+    }
+  })
+
   it('exposes the root frame as handle.frames.top', async () => {
     let assertTopFrame: undefined | (() => void)
 
@@ -3759,6 +3877,245 @@ describe('run', () => {
     expect(button.textContent).toBe('Count: 11')
 
     clientFrame.dispose()
+  })
+
+  it('preserves parent context for client entries rendered by a frame', async () => {
+    let contextEvents = 0
+
+    let ContextProvider = clientEntry(
+      '/js/context-provider.js#ContextProvider',
+      function ContextProvider(handle: Handle) {
+        let context = new EventTarget()
+        context.addEventListener('action', () => {
+          contextEvents++
+        })
+        handle.context.set(context)
+
+        return () => <Frame name="context-frame" src="/context-frame" />
+      },
+    )
+
+    let FrameEntry = clientEntry(
+      '/js/frame-entry.js#FrameEntry',
+      function FrameEntry(handle: Handle) {
+        return () => (
+          <button
+            id="context-action"
+            mix={[
+              on('click', () => {
+                handle.context.get(ContextProvider)?.dispatchEvent(new Event('action'))
+              }),
+            ]}
+          >
+            Dispatch context event
+          </button>
+        )
+      },
+    )
+
+    async function renderFrameEntry(): Promise<string> {
+      return await renderFrameContent(<FrameEntry />)
+    }
+
+    document.body.innerHTML = await drain(
+      renderToStream(<ContextProvider />, {
+        resolveFrame: renderFrameEntry,
+      }),
+    )
+    contextEvents = 0
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/context-provider.js' && exportName === 'ContextProvider') {
+          return ContextProvider
+        }
+        if (moduleUrl === '/js/frame-entry.js' && exportName === 'FrameEntry') {
+          return FrameEntry
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame: renderFrameEntry,
+    })
+
+    await app.ready()
+
+    let action = document.getElementById('context-action')
+    invariant(action)
+    action.click()
+    expect(contextEvents).toBe(1)
+
+    let contextFrame = app.frames.get('context-frame')
+    invariant(contextFrame)
+    await contextFrame.reload()
+
+    action = document.getElementById('context-action')
+    invariant(action)
+    action.click()
+    expect(contextEvents).toBe(2)
+
+    app.dispose()
+  })
+
+  it('preserves setup-time context when a frame provider module loads after its consumer', async (t) => {
+    let contextEvents = 0
+    let independentClicks = 0
+    let ContextProvider = clientEntry(
+      '/js/slow-context-provider.js#ContextProvider',
+      function ContextProvider(handle: Handle<Record<string, never>, EventTarget>) {
+        let context = new EventTarget()
+        context.addEventListener('action', () => {
+          contextEvents++
+        })
+        handle.context.set(context)
+        return () => (
+          <section>
+            <Frame src="/context-frame" />
+          </section>
+        )
+      },
+    )
+    let FrameEntry = clientEntry(
+      '/js/setup-context-entry.js#FrameEntry',
+      function FrameEntry(handle: Handle) {
+        let context = handle.context.get(ContextProvider)
+        return () => (
+          <button
+            id="setup-context-action"
+            mix={on('click', () => context?.dispatchEvent(new Event('action')))}
+          >
+            Dispatch context event
+          </button>
+        )
+      },
+    )
+
+    let IndependentEntry = clientEntry(
+      '/js/independent.js#IndependentEntry',
+      function IndependentEntry() {
+        return () => (
+          <button
+            id="independent-action"
+            mix={on('click', () => {
+              independentClicks++
+            })}
+          >
+            Independent action
+          </button>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <>
+          <ContextProvider />
+          <Frame src="/independent-frame" />
+        </>,
+        {
+          resolveFrame(src) {
+            if (src === '/context-frame') return renderFrameContent(<FrameEntry />)
+            if (src === '/independent-frame') return renderFrameContent(<IndependentEntry />)
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      ),
+    )
+
+    let [providerModule, resolveProviderModule] = withResolvers<typeof ContextProvider>()
+    let [providerRequested, markProviderRequested] = withResolvers<void>()
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/slow-context-provider.js' && exportName === 'ContextProvider') {
+          markProviderRequested()
+          return providerModule
+        }
+        if (moduleUrl === '/js/setup-context-entry.js' && exportName === 'FrameEntry') {
+          return FrameEntry
+        }
+        if (moduleUrl === '/js/independent.js' && exportName === 'IndependentEntry') {
+          return IndependentEntry
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+    })
+    t.after(() => app.dispose())
+
+    await providerRequested
+    // Let the immediately available consumer hydrate while the provider import is pending.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    let independentAction = document.getElementById('independent-action')
+    invariant(independentAction instanceof HTMLButtonElement)
+    independentAction.click()
+    expect(independentClicks).toBe(1)
+
+    resolveProviderModule(ContextProvider)
+    await app.ready()
+
+    let action = document.getElementById('setup-context-action')
+    invariant(action instanceof HTMLButtonElement)
+    action.click()
+    expect(contextEvents).toBe(1)
+  })
+
+  it('hydrates nested frame content when its owning client entry module is already cached', async (t) => {
+    let clicks = 0
+    let FrameOwner = clientEntry(
+      '/js/cached-frame-owner.js#FrameOwner',
+      function FrameOwner(handle: Handle<{ src: string }, string>) {
+        handle.context.set(handle.props.src)
+        return () => <Frame src={handle.props.src} />
+      },
+    )
+    let FrameButton = clientEntry(
+      '/js/frame-button.js#FrameButton',
+      function FrameButton(handle: Handle) {
+        let src = handle.context.get(FrameOwner)
+        return () => (
+          <button
+            id="cached-frame-button"
+            mix={on('click', () => {
+              clicks++
+            })}
+          >
+            {src}
+          </button>
+        )
+      },
+    )
+
+    async function resolveFrame(src: string): Promise<string> {
+      if (src === '/outer') {
+        return await drain(renderToStream(<FrameOwner src="/inner" />, { resolveFrame }))
+      }
+      if (src === '/inner') return await renderFrameContent(<FrameButton />)
+      throw new Error(`Unexpected frame src: ${src}`)
+    }
+
+    document.body.innerHTML = await drain(
+      renderToStream(<FrameOwner src="/outer" />, { resolveFrame }),
+    )
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/cached-frame-owner.js' && exportName === 'FrameOwner') {
+          return FrameOwner
+        }
+        if (moduleUrl === '/js/frame-button.js' && exportName === 'FrameButton') {
+          return FrameButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+    t.after(() => app.dispose())
+
+    await app.ready()
+
+    let button = document.getElementById('cached-frame-button')
+    invariant(button instanceof HTMLButtonElement)
+    expect(button.textContent).toBe('/inner')
+    button.click()
+    expect(clicks).toBe(1)
   })
 
   it('deeply nested frames resolve independently at each level', async () => {

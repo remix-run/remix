@@ -1,5 +1,5 @@
 import * as path from 'node:path'
-import * as fsp from 'node:fs/promises'
+import { promises as fsp } from 'node:fs'
 import { html } from '@remix-run/html-template'
 import { createHtmlResponse } from '@remix-run/response/html'
 import { detectMimeType } from '@remix-run/mime'
@@ -26,9 +26,7 @@ export async function generateDirectoryListing(
       let size = 0
       let type = ''
 
-      if (isDirectory) {
-        size = await calculateDirectorySize(fullPath)
-      } else {
+      if (!isDirectory) {
         try {
           let stats = await fsp.stat(fullPath)
           size = stats.size
@@ -97,7 +95,7 @@ export async function generateDirectoryListing(
   for (let entry of entries) {
     let icon = entry.isDirectory ? folderIcon : fileIcon
     let href = pathname.endsWith('/') ? pathname + entry.name : pathname + '/' + entry.name
-    let sizeDisplay = formatFileSize(entry.size)
+    let sizeDisplay = entry.isDirectory ? '' : formatFileSize(entry.size)
     let typeDisplay = entry.isDirectory ? 'Folder' : entry.type
 
     tableRows.push(html`
@@ -277,33 +275,6 @@ export async function generateDirectoryListing(
       </body>
     </html>
   `)
-}
-
-async function calculateDirectorySize(dirPath: string): Promise<number> {
-  let totalSize = 0
-
-  try {
-    let dirents = await fsp.readdir(dirPath, { withFileTypes: true })
-
-    for (let dirent of dirents) {
-      let fullPath = path.join(dirPath, dirent.name)
-
-      try {
-        if (dirent.isDirectory()) {
-          totalSize += await calculateDirectorySize(fullPath)
-        } else if (dirent.isFile()) {
-          let stats = await fsp.stat(fullPath)
-          totalSize += stats.size
-        }
-      } catch {
-        // Skip files/folders we can't access
-      }
-    }
-  } catch {
-    // If we can't read the directory, return 0
-  }
-
-  return totalSize
 }
 
 function formatFileSize(bytes: number): string {

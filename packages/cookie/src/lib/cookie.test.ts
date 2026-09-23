@@ -11,6 +11,14 @@ function getCookieFromSetCookie(setCookie: string): string {
 }
 
 describe('Cookie', () => {
+  it('leaves secure undefined when it is not configured', async () => {
+    let cookie = createCookie('my-cookie')
+    assert.equal(cookie.secure, undefined)
+    assert.equal(new SetCookie(await cookie.serialize('value')).secure, undefined)
+    assert.equal(createCookie('my-cookie', { secure: true }).secure, true)
+    assert.equal(createCookie('my-cookie', { secure: false }).secure, false)
+  })
+
   it('leaves httpOnly undefined by default', () => {
     let cookie = createCookie('my-cookie')
     assert.equal(cookie.httpOnly, undefined)
@@ -33,6 +41,27 @@ describe('Cookie', () => {
     assert.equal(cookie.sameSite, 'Lax')
     let setCookie = await cookie.serialize('hello world')
     assert.ok(setCookie.includes('SameSite=Lax'))
+  })
+
+  it('normalizes lowercase sameSite values', async () => {
+    let cookie = createCookie('my-cookie', { sameSite: 'lax' })
+    assert.equal(cookie.sameSite, 'Lax')
+    assert.ok((await cookie.serialize('hello world')).includes('SameSite=Lax'))
+
+    cookie = createCookie('my-cookie', { sameSite: 'strict' })
+    assert.equal(cookie.sameSite, 'Strict')
+    assert.ok((await cookie.serialize('hello world')).includes('SameSite=Strict'))
+
+    cookie = createCookie('my-cookie', { sameSite: 'none', secure: true })
+    assert.equal(cookie.sameSite, 'None')
+    assert.ok((await cookie.serialize('hello world')).includes('SameSite=None'))
+  })
+
+  it('exposes sameSite values compatible with SetCookie', () => {
+    let cookie = createCookie('my-cookie', { sameSite: 'Lax' })
+    let header = new SetCookie({ name: cookie.name, value: 'value' })
+    header.sameSite = cookie.sameSite
+    assert.equal(header.toString(), 'my-cookie=value; SameSite=Lax')
   })
 
   it('defaults secure to true when partitioned is true', async () => {
