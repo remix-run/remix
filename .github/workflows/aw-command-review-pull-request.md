@@ -30,15 +30,7 @@ permissions:
   issues: read
   pull-requests: read
 checkout: false
-model: gpt-6-astra
-models:
-  # AWF's catalog does not yet include Astra. Standard rates in USD per 1M tokens:
-  # https://developers.openai.com/api/docs/models/gpt-6-astra
-  default-ai-credits-pricing:
-    input: 10
-    output: 50
-    cache_read: 1
-    cache_write: 12.5
+model: gpt-5.6-sol
 engine:
   id: codex
   env:
