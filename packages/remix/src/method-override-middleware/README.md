@@ -16,7 +16,7 @@ npm i remix
 
 ## Usage
 
-This middleware runs after [the `formData` middleware](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) and updates the request context's `context.method` with the value of the method override field. This is useful for simulating RESTful API request methods like PUT and DELETE using HTML forms.
+This middleware runs after [the `formData` middleware](../form-data-middleware/README.md) and updates the request context's `context.method` with the value of the method override field. This is useful for simulating RESTful API request methods like PUT and DELETE using HTML forms.
 
 ```ts
 import { createRouter } from 'remix/router'
@@ -63,8 +63,8 @@ let router = createRouter({
 
 ## Related Packages
 
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
-- [`form-data-middleware`](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) - Required for parsing form data
+- [`fetch-router`](../fetch-router/README.md) - Router for the web Fetch API
+- [`form-data-middleware`](../form-data-middleware/README.md) - Required for parsing form data
 
 ## License
 

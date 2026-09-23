@@ -2345,6 +2345,9 @@ importers:
       picomatch:
         specifier: ^4.0.4
         version: 4.0.4
+      remix-docs-shared:
+        specifier: workspace:*
+        version: link:../docs/shared
       semver:
         specifier: ^7.6.3
         version: 7.6.3

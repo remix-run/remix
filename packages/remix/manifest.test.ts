@@ -2,13 +2,18 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import * as fs from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import * as url from 'node:url'
 import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
 import { getPackageExportSideEffects } from '../../scripts/utils/package-side-effects.ts'
-import { getRemixGuideCopies } from '../../scripts/utils/remix-guides.ts'
+import { getRemixGuideCopies, syncRemixGuides } from '../../scripts/utils/remix-guides.ts'
 import { createRemixIndex, getRemixIndexEntries } from '../../scripts/utils/remix-index.ts'
-import { getRemixReadmeCopies } from '../../scripts/utils/remix-readmes.ts'
+import {
+  getRemixReadmeCopies,
+  getRemixReadmeMappings,
+  rewriteLinksToRemixReadmes,
+} from '../../scripts/utils/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '..')
@@ -264,13 +269,115 @@ describe('manifest', () => {
     assert.equal(new Set(mirrorPaths).size, mirrorPaths.length)
   })
 
+  it('rewrites package documentation links to local README mirrors', () => {
+    let mappings = getRemixReadmeMappings()
+    let guidePath = path.join(__dirname, 'guides', 'example.md')
+    let sessionReadmePath = path.join(__dirname, 'src', 'session', 'README.md')
+
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '[Router](https://api.remix.run/api/remix/router/overview/)',
+        guidePath,
+        mappings,
+      ),
+      '[Router](../src/fetch-router/README.md)',
+    )
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '[Router](https://github.com/remix-run/remix/tree/main/packages/fetch-router#middleware)',
+        sessionReadmePath,
+        mappings,
+      ),
+      '[Router](../fetch-router/README.md#middleware)',
+    )
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '[Router][router]\n\n[router]: https://api.remix.run/api/remix/router/overview/#middleware',
+        guidePath,
+        mappings,
+      ),
+      '[Router][router]\n\n[router]: ../src/fetch-router/README.md#middleware',
+    )
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '`[Router](https://api.remix.run/api/remix/router/overview/)`\n\n```md\n[Router](https://api.remix.run/api/remix/router/overview/)\n```',
+        guidePath,
+        mappings,
+      ),
+      '`[Router](https://api.remix.run/api/remix/router/overview/)`\n\n```md\n[Router](https://api.remix.run/api/remix/router/overview/)\n```',
+    )
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
+        guidePath,
+        mappings,
+      ),
+      '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
+    )
+  })
+
   it('selects published guide chapters', () => {
     let guideNames = guideCopies.map((copy) => path.basename(copy.remixGuidePath))
 
-    assert.ok(guideNames.includes('13-testing.md'))
-    assert.ok(!guideNames.includes('08-data-and-validation.md'))
-    assert.equal(new Set(guideCopies.map((copy) => copy.remixGuidePath)).size, guideCopies.length)
+    assert.ok(guideNames.length > 0)
+    assert.ok(!guideNames.includes('16-markdown-style-demo.md'))
+    assert.equal(new Set(guideNames).size, guideNames.length)
     assert.ok(guideCopies.every((copy) => copy.title && copy.description))
+  })
+
+  it('links unfinished chapters to bundled README mirrors', () => {
+    let unfinishedGuides = guideCopies.filter((copy) =>
+      fs.readFileSync(copy.sourceGuidePath, 'utf-8').includes('This chapter is unfinished.'),
+    )
+    assert.ok(unfinishedGuides.length > 0)
+
+    for (let copy of unfinishedGuides) {
+      let source = fs.readFileSync(copy.sourceGuidePath, 'utf-8')
+      let installed = fs.readFileSync(copy.remixGuidePath, 'utf-8')
+      assert.ok(installed.includes('This chapter is unfinished.'))
+      assert.ok(source.includes('https://github.com/remix-run/remix/blob/main/packages/'))
+      assert.ok(!installed.includes('https://github.com/remix-run/remix/blob/main/packages/'))
+
+      let localReadmes = [...installed.matchAll(/\]\((\.\.\/src\/[^)#]+\/README\.md)\)/g)]
+      assert.ok(localReadmes.length > 0, `Expected local README links in ${copy.remixGuidePath}`)
+      for (let [, href] of localReadmes) {
+        assert.ok(fs.existsSync(path.resolve(path.dirname(copy.remixGuidePath), href)))
+      }
+    }
+  })
+
+  it('copies published guides without changing chapter links', async () => {
+    let fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-guides-'))
+    let sourceGuidesDir = path.join(fixtureDir, 'source')
+    let remixGuidesDir = path.join(fixtureDir, 'installed')
+    let sourcePath = path.join(sourceGuidesDir, '01-published.md')
+    let draftPath = path.join(sourceGuidesDir, '02-draft.md')
+    let installedPath = path.join(remixGuidesDir, '01-published.md')
+    let source = `---\ntitle: Published\ndescription: Published guide.\n---\n\nRead [Draft](/draft/#section), [**Draft**][draft], and [Published](/published/).\n\n[draft]: /draft/\n`
+
+    try {
+      fs.mkdirSync(sourceGuidesDir)
+      fs.writeFileSync(sourcePath, source)
+      fs.writeFileSync(
+        draftPath,
+        `---\ntitle: Draft\ndescription: Draft guide.\npublished: false\n---\n`,
+      )
+
+      let copies = await syncRemixGuides({ sourceGuidesDir, remixGuidesDir })
+      assert.equal(copies.length, 1)
+      let installed = fs.readFileSync(installedPath, 'utf-8')
+      assert.equal(installed, source)
+      assert.ok(!fs.existsSync(path.join(remixGuidesDir, '02-draft.md')))
+      assert.equal(fs.readFileSync(sourcePath, 'utf-8'), source)
+
+      fs.writeFileSync(draftPath, `---\ntitle: Draft\ndescription: Draft guide.\n---\n`)
+      copies = await syncRemixGuides({ sourceGuidesDir, remixGuidesDir })
+      assert.equal(copies.length, 2)
+      assert.equal(fs.readFileSync(installedPath, 'utf-8'), source)
+      assert.ok(fs.existsSync(path.join(remixGuidesDir, '02-draft.md')))
+    } finally {
+      fs.rmSync(fixtureDir, { recursive: true, force: true })
+    }
   })
 
   it('adds installed guides to the package index', () => {

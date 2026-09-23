@@ -369,7 +369,7 @@ shows how to choose that boundary.
 | Composed controls   | `accordion`, `breadcrumbs`, `combobox`, `menu`, `select`, `tabs`         | The surrounding page and the values passed into the control. |
 | Headless primitives | `popover`, `listbox`, `anchor`, and each available `/primitives` subpath | Markup and styling while Remix supplies focused behavior.    |
 
-The [`remix/ui` API overview](https://api.remix.run/api/remix/ui/overview/) links to the complete API
+The [`remix/ui` API overview](../src/ui/README.md) links to the complete API
 for every subpath. The sections below show how to choose among them.
 
 ### Style mixins for native controls {#style-mixins-keep-native-controls-native}

@@ -1,6 +1,6 @@
 # data-table-sqlite
 
-SQLite database driver for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table), backed by a synchronous SQLite client.
+SQLite database driver for [`remix/data-table`](../data-table/README.md), backed by a synchronous SQLite client.
 
 ## Features
 
@@ -90,10 +90,10 @@ let db = createSqliteDatabase(sqlite)
 
 ## Related Packages
 
-- [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) - Core query/relations API
-- [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Schema parsing and validation
-- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database driver
-- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database driver
+- [`data-table`](../data-table/README.md) - Core query/relations API
+- [`data-schema`](../data-schema/README.md) - Schema parsing and validation
+- [`data-table-postgres`](../data-table-postgres/README.md) - PostgreSQL database driver
+- [`data-table-mysql`](../data-table-mysql/README.md) - MySQL database driver
 
 ## License
 

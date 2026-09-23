@@ -5,10 +5,10 @@ description: How Remix serves static files and source assets, accepts bounded up
 
 This chapter is unfinished. The sections below outline what it will cover. For working API examples, see these READMEs:
 
-- [Assets](https://github.com/remix-run/remix/blob/main/packages/assets/README.md)
-- [Form data middleware](https://github.com/remix-run/remix/blob/main/packages/form-data-middleware/README.md)
-- [File storage](https://github.com/remix-run/remix/blob/main/packages/file-storage/README.md)
-- [File responses](https://github.com/remix-run/remix/blob/main/packages/response/README.md)
+- [Assets](../src/assets/README.md)
+- [Form data middleware](../src/form-data-middleware/README.md)
+- [File storage](../src/file-storage/README.md)
+- [File responses](../src/response/README.md)
 
 Remix has separate paths for files that already exist in public form, browser source that needs compilation, and user uploads that must cross a trust boundary. Choose that path before configuring caches or storage.
 
@@ -75,7 +75,7 @@ export const assetServer = createAssetServer({
 });
 ```
 
-Caching is disabled by default. See the [assets README](https://github.com/remix-run/remix/tree/main/packages/assets#file-transform-caching) for cache options and reuse across server restarts.
+Caching is disabled by default. See the [assets README](../src/assets/README.md#file-transform-caching) for cache options and reuse across server restarts.
 
 ## Development watching and production fingerprints {#fingerprinting-source-maps-minification}
 

@@ -487,8 +487,8 @@ finish—useful for debugging failures.
 
 ## Related Packages
 
-- [`assert`](https://github.com/remix-run/remix/tree/main/packages/assert) provides assertions that work in server and browser tests.
-- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) provides the `remix/ui/test` browser rendering utilities.
+- [`assert`](../assert/README.md) provides assertions that work in server and browser tests.
+- [`ui`](../ui/README.md) provides the `remix/ui/test` browser rendering utilities.
 
 ## Related Work
 

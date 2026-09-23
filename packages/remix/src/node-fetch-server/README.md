@@ -318,7 +318,7 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/no
 
 ## Related Packages
 
-- [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
+- [`fetch-proxy`](../fetch-proxy/README.md) - Build HTTP proxy servers using the web fetch API
 
 ## Benchmarks
 

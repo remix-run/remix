@@ -80,7 +80,7 @@ Connection-specific request headers, including any fields named by `Connection`,
 
 Since `fetch` can decompress upstream responses and does not expose raw HTTP transfer framing, `fetch-proxy` strips response headers that may no longer describe the returned body: `Content-Encoding`, related `Content-Length`, and `Transfer-Encoding`.
 
-To support serving compressed responses to the final client, you'll need to compress the response after the proxy returns it, e.g. with the [`compressResponse` helper from `remix/response`](https://github.com/remix-run/remix/tree/main/packages/response#compress-responses):
+To support serving compressed responses to the final client, you'll need to compress the response after the proxy returns it, e.g. with the [`compressResponse` helper from `remix/response`](../response/README.md#compress-responses):
 
 ```ts
 import { createFetchProxy } from 'remix/fetch-proxy'
@@ -97,8 +97,8 @@ async function handleFetch(request: Request): Promise<Response> {
 
 ## Related Packages
 
-- [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server) - Build HTTP servers for Node.js using the web fetch API
-- [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Create, transform, and compress Fetch API responses
+- [`node-fetch-server`](../node-fetch-server/README.md) - Build HTTP servers for Node.js using the web fetch API
+- [`response`](../response/README.md) - Create, transform, and compress Fetch API responses
 
 ## License
 

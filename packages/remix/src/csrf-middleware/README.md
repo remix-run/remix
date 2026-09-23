@@ -17,7 +17,7 @@ npm i remix
 
 ## Usage
 
-This middleware requires [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) to run before it.
+This middleware requires [`session-middleware`](../session-middleware/README.md) to run before it.
 
 ```ts
 import { createCookie } from 'remix/cookie'
@@ -78,7 +78,7 @@ For requests whose original method is unsafe (`POST`, `PUT`, `PATCH`, `DELETE`),
 
 - The synchronizer token is the primary defense in `csrf()`. `Origin` and `Referer` checks are an additional signal, not the only protection.
 - By default, unsafe requests with a valid token still pass when `Origin` and `Referer` are both missing. Set `allowMissingOrigin: false` if your deployment wants to require provenance headers on unsafe requests.
-- If you want to reject more unsafe requests before token validation, especially when browser provenance headers are available, layer [`cop-middleware`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware) in front of `csrf()`.
+- If you want to reject more unsafe requests before token validation, especially when browser provenance headers are available, layer [`cop-middleware`](../cop-middleware/README.md) in front of `csrf()`.
 
 ## Why This Exists
 
@@ -86,14 +86,14 @@ Modern browsers now provide stronger cross-origin signals like `Sec-Fetch-Site`,
 
 Remix cannot assume those guarantees for every app. `csrf()` still exists as the conservative option for apps that want synchronizer tokens in addition to origin checks, especially for session-backed HTML form workflows and mixed deployment environments.
 
-If your deployment can guarantee the prerequisites for the tokenless model, this middleware is optional. In that case, [`cop-middleware`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware) may be a better fit.
+If your deployment can guarantee the prerequisites for the tokenless model, this middleware is optional. In that case, [`cop-middleware`](../cop-middleware/README.md) may be a better fit.
 
 ## Related Packages
 
-- [`cop-middleware`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware) - Middleware for tokenless cross-origin protection using browser provenance headers
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
-- [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Session middleware required by `csrf()`
-- [`form-data-middleware`](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) - Needed for form body token extraction
+- [`cop-middleware`](../cop-middleware/README.md) - Middleware for tokenless cross-origin protection using browser provenance headers
+- [`fetch-router`](../fetch-router/README.md) - Router for the web Fetch API
+- [`session-middleware`](../session-middleware/README.md) - Session middleware required by `csrf()`
+- [`form-data-middleware`](../form-data-middleware/README.md) - Needed for form body token extraction
 
 ## License
 

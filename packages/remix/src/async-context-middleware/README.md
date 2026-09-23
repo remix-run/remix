@@ -87,9 +87,9 @@ Route handlers themselves can still use more precise route-specific params in th
 
 ## Related Packages
 
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router and request context contracts for Remix
-- [`auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) - Request-time auth state and protected route middleware
-- [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Session loading middleware often paired with async request context
+- [`fetch-router`](../fetch-router/README.md) - Router and request context contracts for Remix
+- [`auth-middleware`](../auth-middleware/README.md) - Request-time auth state and protected route middleware
+- [`session-middleware`](../session-middleware/README.md) - Session loading middleware often paired with async request context
 
 ## Related Work
 

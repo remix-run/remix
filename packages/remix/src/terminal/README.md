@@ -84,8 +84,8 @@ terminal.writeLine(terminal.styles.green('ok'))
 
 ## Related Packages
 
-- [`logger-middleware`](https://github.com/remix-run/remix/tree/main/packages/logger-middleware) - HTTP request/response logging middleware
-- [`test`](https://github.com/remix-run/remix/tree/main/packages/test) - Browser-based test framework for Remix components
+- [`logger-middleware`](../logger-middleware/README.md) - HTTP request/response logging middleware
+- [`test`](../test/README.md) - Browser-based test framework for Remix components
 
 ## License
 

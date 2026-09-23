@@ -21,7 +21,7 @@ npm i remix
 
 The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It automatically validates the request is `multipart/form-data`, extracts the multipart boundary from the `Content-Type` header, parses all fields and files in the `request.body` stream, and gives each one to you as a `MultipartPart` object with a rich API for accessing its metadata and content.
 
-`MultipartPart.filename` is untrusted client input from `Content-Disposition`, including decoded `filename*` values when supplied. The parser does not sanitize filenames for filesystem use. Do not use `part.filename`, or a `File.name` derived from it, directly as a filesystem path. Generate a storage name in your application; see [Filename Safety](https://github.com/remix-run/remix/tree/main/packages/headers#filename-safety).
+`MultipartPart.filename` is untrusted client input from `Content-Disposition`, including decoded `filename*` values when supplied. The parser does not sanitize filenames for filesystem use. Do not use `part.filename`, or a `File.name` derived from it, directly as a filesystem path. Generate a storage name in your application; see [Filename Safety](../headers/README.md#filename-safety).
 
 ```ts
 import { MultipartParseError, parseMultipartRequest } from 'remix/multipart-parser'
@@ -250,8 +250,8 @@ Deno 2.3.6
 
 ## Related Packages
 
-- [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser) - Uses `multipart-parser` internally to parse multipart requests and generate `FileUpload`s for storage
-- [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers) - Used internally to parse `Content-Disposition` and `Content-Type` metadata for each `MultipartPart`
+- [`form-data-parser`](../form-data-parser/README.md) - Uses `multipart-parser` internally to parse multipart requests and generate `FileUpload`s for storage
+- [`headers`](../headers/README.md) - Used internally to parse `Content-Disposition` and `Content-Type` metadata for each `MultipartPart`
 
 ## Credits
 

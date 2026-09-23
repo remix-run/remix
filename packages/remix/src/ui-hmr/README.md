@@ -2,7 +2,7 @@
 
 Hot module replacement transforms for Remix UI components, with integrations for Node and `remix/assets`.
 
-`ui-hmr` rewrites supported Remix UI component modules so they can use the standard `import.meta.hot` APIs provided by packages like [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) and [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr).
+`ui-hmr` rewrites supported Remix UI component modules so they can use the standard `import.meta.hot` APIs provided by packages like [`assets`](../assets/README.md) and [`node-hmr`](../node-hmr/README.md).
 
 ## Features
 
@@ -114,9 +114,9 @@ transformComponentsForServer(source, {
 
 ## Related Packages
 
-- [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Runs loaders while compiling assets
-- [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) - Provides the server-side `import.meta.hot` runtime
-- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Component APIs transformed by `ui-hmr`
+- [`assets`](../assets/README.md) - Runs loaders while compiling assets
+- [`node-hmr`](../node-hmr/README.md) - Provides the server-side `import.meta.hot` runtime
+- [`ui`](../ui/README.md) - Component APIs transformed by `ui-hmr`
 
 ## License
 
