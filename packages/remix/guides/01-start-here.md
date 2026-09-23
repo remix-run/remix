@@ -252,7 +252,7 @@ export default createController(routes.albums, {
 });
 ```
 
-For this walkthrough we're going to set up a small in-memory database. The Data and Validation chapter covers real database setup in more detail.
+For this walkthrough we're going to set up a small in-memory database. The [Data and Validation](/data-and-validation/) chapter covers real database setup in more detail.
 
 ```sh
 touch app/actions/albums/data.ts
@@ -558,7 +558,7 @@ declare module "remix/router" {
 // ...
 ```
 
-We'll also use `remix/data-schema/form-data` to turn the raw `FormData` into typed values before updating the album. `remix/data-schema` is a built-in Remix library for validating and parsing all sorts of data. The Data and Validation chapter explores it in more detail.
+We'll also use `remix/data-schema/form-data` to turn the raw `FormData` into typed values before updating the album. `remix/data-schema` is a built-in Remix library for validating and parsing all sorts of data. The [Data and Validation](/data-and-validation/) chapter explores it in more detail.
 
 ```tsx filename=app/actions/albums/edit/controller.tsx lines=[2-5,8,11-15,28-41]
 import { createController } from "remix/router";
@@ -607,13 +607,13 @@ export default createController(routes.albums.edit, {
 });
 ```
 
-The `action` route action validates the parsed Web `FormData`, returns an explicit response for invalid input or a missing album, and redirects back to the album page after a successful update. The Data and Validation chapter shows how to render field-level validation errors back into a form.
+The `action` route action validates the parsed Web `FormData`, returns an explicit response for invalid input or a missing album, and redirects back to the album page after a successful update. The [Data and Validation](/data-and-validation/) chapter shows how to render field-level validation errors back into a form.
 
 Now we can update our album data and set it to the correct year.
 
 ![Changing input with value 1983 to 1982, hitting submit, then being redirected to the corrected page](/images/app/actions/docs/chapters/01-start-here/correct-year.gif)
 
-The [Routing and Controllers](/routing-and-controllers/) and Data and Validation chapters go deeper on request handling, validation, and database-backed mutations.
+The [Routing and Controllers](/routing-and-controllers/) and [Data and Validation](/data-and-validation/) chapters go deeper on request handling, validation, and database-backed mutations.
 
 ## Add your first hydrated component {#add-your-first-hydrated-component}
 
@@ -630,7 +630,7 @@ mkdir -p app/actions/albums/edit/public
 touch app/actions/albums/edit/public/album-edit-form.tsx
 ```
 
-The colocated `public/` directory is the explicit browser-source boundary. The template's asset server allows source beneath `app/**/public/**`, so Remix can turn this component and its local dependencies into browser modules. Keep those local dependencies inside the same `public/` directory; `app/routes.ts` is allowed separately for type-safe links. The template also loads `app/actions/public/entry.ts`, which starts the Remix UI client runtime. The Files and Assets chapter goes deeper into this bundlerless setup.
+The colocated `public/` directory is the explicit browser-source boundary. The template's asset server allows source beneath `app/**/public/**`, so Remix can turn this component and its local dependencies into browser modules. Keep those local dependencies inside the same `public/` directory; `app/routes.ts` is allowed separately for type-safe links. The template also loads `app/actions/public/entry.ts`, which starts the Remix UI client runtime. The [Files and Assets](/files-and-assets/) chapter goes deeper into this bundlerless setup.
 
 Now that we have a place for the form to live, let's pull it into its own component.
 

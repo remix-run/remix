@@ -18,7 +18,7 @@ describe('loadDocsChapterSummaries', () => {
     assert.equal(summaries[9]?.chapter, 'Chapter 10')
   })
 
-  it('omits unpublished chapters from production', async () => {
+  it('publishes unfinished chapters but omits the development fixture', async () => {
     let developmentSummaries = await loadDocsChapterSummaries('development')
     let productionSummaries = await loadDocsChapterSummaries('production')
 
@@ -32,13 +32,13 @@ describe('loadDocsChapterSummaries', () => {
       productionSummaries
         .filter((summary) => summary.order >= 8 && summary.order <= 16)
         .map((summary) => summary.order),
-      [13],
+      [8, 9, 10, 11, 12, 13, 14, 15],
     )
   })
 })
 
 describe('loadDocsIndexChapterSummaries', () => {
-  it('disables unpublished production chapters without listing unlisted chapters', async () => {
+  it('lists unfinished production chapters as enabled without listing fixtures', async () => {
     let summaries = await loadDocsIndexChapterSummaries('production')
 
     assert.deepEqual(
@@ -46,21 +46,21 @@ describe('loadDocsIndexChapterSummaries', () => {
         .filter((chapter) => chapter.order >= 8)
         .map((chapter) => ({ order: chapter.order, disabled: chapter.disabled })),
       [
-        { order: 8, disabled: true },
-        { order: 9, disabled: true },
-        { order: 10, disabled: true },
-        { order: 11, disabled: true },
-        { order: 12, disabled: true },
+        { order: 8, disabled: false },
+        { order: 9, disabled: false },
+        { order: 10, disabled: false },
+        { order: 11, disabled: false },
+        { order: 12, disabled: false },
         { order: 13, disabled: false },
-        { order: 14, disabled: true },
-        { order: 15, disabled: true },
+        { order: 14, disabled: false },
+        { order: 15, disabled: false },
       ],
     )
   })
 })
 
 describe('loadDocsNavigationItems', () => {
-  it('disables unpublished production chapters without listing unlisted chapters', async () => {
+  it('links to unfinished production chapters without listing fixtures', async () => {
     let navigation = await loadDocsNavigationItems('production')
 
     assert.deepEqual(
@@ -68,14 +68,14 @@ describe('loadDocsNavigationItems', () => {
         .filter((chapter) => chapter.order >= 8)
         .map((chapter) => ({ order: chapter.order, disabled: chapter.disabled })),
       [
-        { order: 8, disabled: true },
-        { order: 9, disabled: true },
-        { order: 10, disabled: true },
-        { order: 11, disabled: true },
-        { order: 12, disabled: true },
+        { order: 8, disabled: false },
+        { order: 9, disabled: false },
+        { order: 10, disabled: false },
+        { order: 11, disabled: false },
+        { order: 12, disabled: false },
         { order: 13, disabled: false },
-        { order: 14, disabled: true },
-        { order: 15, disabled: true },
+        { order: 14, disabled: false },
+        { order: 15, disabled: false },
       ],
     )
   })

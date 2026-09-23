@@ -5,10 +5,10 @@ description: How Remix stores per-browser state, resolves identity, protects rou
 
 This chapter is unfinished. The sections below outline what it will cover. For working API examples, see these READMEs:
 
-- [Sessions](https://github.com/remix-run/remix/blob/main/packages/session/README.md)
-- [Auth](https://github.com/remix-run/remix/blob/main/packages/auth/README.md)
-- [Auth middleware](https://github.com/remix-run/remix/blob/main/packages/auth-middleware/README.md)
-- [CSRF middleware](https://github.com/remix-run/remix/blob/main/packages/csrf-middleware/README.md)
+- [Sessions](../src/session/README.md)
+- [Auth](../src/auth/README.md)
+- [Auth middleware](../src/auth-middleware/README.md)
+- [CSRF middleware](../src/csrf-middleware/README.md)
 
 A signed cookie, a session, and an authenticated identity are different layers. Build them in that order, then add authorization and browser-origin defenses around the routes that mutate state.
 

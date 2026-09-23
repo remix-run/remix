@@ -5,9 +5,9 @@ description: How native forms, action responses, validation failures, redirects,
 
 This chapter is unfinished. The sections below outline what it will cover. For working API examples, see these READMEs:
 
-- [Routes and controllers](https://github.com/remix-run/remix/blob/main/packages/fetch-router/README.md)
-- [Form data middleware](https://github.com/remix-run/remix/blob/main/packages/form-data-middleware/README.md)
-- [Form data schemas](https://github.com/remix-run/remix/blob/main/packages/data-schema/README.md)
+- [Routes and controllers](../src/fetch-router/README.md)
+- [Form data middleware](../src/form-data-middleware/README.md)
+- [Form data schemas](../src/data-schema/README.md)
 
 Build the mutation as an HTML form and controller action first. Once the non-JavaScript request returns the right response, the same form can gain pending state, fetch submission, or a targeted frame reload.
 

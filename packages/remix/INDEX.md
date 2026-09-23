@@ -13,7 +13,14 @@ Search this generated index by task, export name, or description. Use the guides
 | [Interactivity](guides/05-interactivity.md) | How server-rendered UI hydrates, handles events, connects components to application models, navigates, and cancels stale work. |
 | [Streaming UI with Frames](guides/06-streaming-ui-with-frames.md) | How to stream and reload route-owned UI with Frame, fallbacks, and server and browser frame resolvers. |
 | [Animation](guides/07-animation.md) | The CSS-first animation model and Remix UI helpers for motion that respects rendering state. |
+| [Data and Validation](guides/08-data-and-validation.md) | How Remix validates inputs, defines relational data, queries databases, and runs SQL migrations. |
+| [Forms and Mutations](guides/09-forms-and-mutations.md) | How native forms, action responses, validation failures, redirects, and enhanced mutations fit together. |
+| [Auth, Sessions, and Security](guides/10-auth-sessions-security.md) | How Remix stores per-browser state, resolves identity, protects routes, and defends browser request boundaries. |
+| [Files and Assets](guides/11-files-and-assets.md) | How Remix serves static files and source assets, accepts bounded uploads, stores files, and returns HTTP file responses. |
+| [Errors and Cancellation](guides/12-errors-and-error-boundaries.md) | How expected HTTP failures, uncaught server errors, rendering failures, client runtime errors, and aborted work propagate through Remix. |
 | [Testing](guides/13-testing.md) | How to choose a test boundary and test Remix routes, stateful request flows, components, and end-to-end behavior. |
+| [CLI and Tooling](guides/14-cli-and-tooling.md) | The Remix command-line workflow for creating, inspecting, testing, checking, and running TypeScript projects. |
+| [Production](guides/15-production.md) | How to configure, start, cache, observe, and shut down a Remix application in production. |
 
 ## Package APIs
 

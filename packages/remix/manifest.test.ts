@@ -320,9 +320,40 @@ describe('manifest', () => {
     let guideNames = guideCopies.map((copy) => path.basename(copy.remixGuidePath))
 
     assert.ok(guideNames.includes('13-testing.md'))
-    assert.ok(!guideNames.includes('08-data-and-validation.md'))
+    assert.ok(guideNames.includes('08-data-and-validation.md'))
+    assert.ok(guideNames.includes('15-production.md'))
+    assert.ok(!guideNames.includes('16-markdown-style-demo.md'))
     assert.equal(new Set(guideCopies.map((copy) => copy.remixGuidePath)).size, guideCopies.length)
     assert.ok(guideCopies.every((copy) => copy.title && copy.description))
+  })
+
+  it('links unfinished chapters to bundled README mirrors', () => {
+    let unfinishedGuideNames = [
+      '08-data-and-validation.md',
+      '09-forms-and-mutations.md',
+      '10-auth-sessions-security.md',
+      '11-files-and-assets.md',
+      '12-errors-and-error-boundaries.md',
+      '14-cli-and-tooling.md',
+      '15-production.md',
+    ]
+
+    for (let guideName of unfinishedGuideNames) {
+      let copy = guideCopies.find((copy) => path.basename(copy.sourceGuidePath) === guideName)
+      assert.ok(copy, `Expected ${guideName} to be published`)
+
+      let source = fs.readFileSync(copy.sourceGuidePath, 'utf-8')
+      let installed = fs.readFileSync(copy.remixGuidePath, 'utf-8')
+      assert.ok(installed.includes('This chapter is unfinished.'))
+      assert.ok(source.includes('https://github.com/remix-run/remix/blob/main/packages/'))
+      assert.ok(!installed.includes('https://github.com/remix-run/remix/blob/main/packages/'))
+
+      let localReadmes = [...installed.matchAll(/\]\((\.\.\/src\/[^)#]+\/README\.md)\)/g)]
+      assert.ok(localReadmes.length > 0, `Expected local README links in ${copy.remixGuidePath}`)
+      for (let [, href] of localReadmes) {
+        assert.ok(fs.existsSync(path.resolve(path.dirname(copy.remixGuidePath), href)))
+      }
+    }
   })
 
   it('strips unpublished chapter links only from installed guides', async () => {

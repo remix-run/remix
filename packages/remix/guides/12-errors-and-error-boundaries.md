@@ -5,9 +5,9 @@ description: How expected HTTP failures, uncaught server errors, rendering failu
 
 This chapter is unfinished. The sections below outline what it will cover. For working API examples, see these READMEs:
 
-- [Router](https://github.com/remix-run/remix/blob/main/packages/fetch-router/README.md)
-- [Node server](https://github.com/remix-run/remix/blob/main/packages/node-fetch-server/README.md)
-- [Rendering middleware](https://github.com/remix-run/remix/blob/main/packages/render-middleware/README.md)
+- [Router](../src/fetch-router/README.md)
+- [Node server](../src/node-fetch-server/README.md)
+- [Rendering middleware](../src/render-middleware/README.md)
 
 Remix does not turn every failure into a component error boundary. Expected outcomes are responses; unexpected exceptions cross the router boundary; rendering and browser runtime errors use explicit reporting hooks.
 

@@ -5,10 +5,10 @@ description: How to configure, start, cache, observe, and shut down a Remix appl
 
 This chapter is unfinished. The sections below outline what it will cover. For working API examples, see these READMEs:
 
-- [Node server](https://github.com/remix-run/remix/blob/main/packages/node-fetch-server/README.md)
-- [Assets](https://github.com/remix-run/remix/blob/main/packages/assets/README.md)
-- [Session middleware](https://github.com/remix-run/remix/blob/main/packages/session-middleware/README.md)
-- [Compression middleware](https://github.com/remix-run/remix/blob/main/packages/compression-middleware/README.md)
+- [Node server](../src/node-fetch-server/README.md)
+- [Assets](../src/assets/README.md)
+- [Session middleware](../src/session-middleware/README.md)
+- [Compression middleware](../src/compression-middleware/README.md)
 
 A production Remix app is still a Fetch handler behind a runtime adapter. Deployment work configures that adapter, initializes durable services, assigns cache policy, and closes resources without inventing a separate application architecture.
 
