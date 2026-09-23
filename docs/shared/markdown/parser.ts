@@ -1,5 +1,5 @@
 import matter from 'gray-matter'
-import type { Definition, Link, LinkReference, Root } from 'mdast'
+import type { Definition, Link, Root } from 'mdast'
 import remarkDirective from 'remark-directive'
 import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
@@ -83,48 +83,6 @@ export function getMarkdownLinkDestinations(source: string): MarkdownLinkDestina
   visit(root, 'definition', (node) => addDestination('definition', node))
 
   return destinations.sort((a, b) => a.startOffset - b.startOffset)
-}
-
-export function stripMarkdownLinks(source: string, shouldStrip: (href: string) => boolean): string {
-  let root = parseMarkdownSource(source)
-  let strippedDefinitions = new Set<string>()
-  let replacements: Array<{ start: number; end: number; text: string }> = []
-
-  visit(root, 'definition', (node) => {
-    if (!shouldStrip(node.url)) return
-    strippedDefinitions.add(node.identifier)
-    let start = node.position?.start.offset
-    let end = node.position?.end.offset
-    if (start !== undefined && end !== undefined) {
-      replacements.push({ start, end, text: '' })
-    }
-  })
-
-  function stripLink(node: Link | LinkReference): void {
-    let start = node.position?.start.offset
-    let end = node.position?.end.offset
-    if (start === undefined || end === undefined) return
-
-    let first = node.children[0]?.position?.start.offset
-    let last = node.children.at(-1)?.position?.end.offset
-    replacements.push({
-      start,
-      end,
-      text: first === undefined || last === undefined ? '' : source.slice(first, last),
-    })
-  }
-
-  visit(root, 'link', (node) => {
-    if (shouldStrip(node.url)) stripLink(node)
-  })
-  visit(root, 'linkReference', (node) => {
-    if (strippedDefinitions.has(node.identifier)) stripLink(node)
-  })
-
-  for (let replacement of replacements.sort((a, b) => b.start - a.start)) {
-    source = source.slice(0, replacement.start) + replacement.text + source.slice(replacement.end)
-  }
-  return source
 }
 
 export function rewriteMarkdownLinkDestinations(

@@ -43,7 +43,7 @@ An optional chapter introduction can go here.
 ## Stable custom anchor {#custom-anchor}
 ```
 
-Chapters are published by default. For an unfinished chapter, keep it published with a note explaining its status and links to the relevant package READMEs. Link to the GitHub README URLs: the installed `remix` copy rewrites those links to its local README mirrors. Set `published: false` only for chapters that should not be publicly accessible, such as development fixtures. The production guide index and sidebar list unpublished chapters as disabled, and links to them render as plain text. Set `listed: false` for fixtures and other pages outside the guide sequence. The `remix` package copies only published chapters and strips links to unpublished chapters from its installed guides. The prerender seeds the crawler with published chapter URLs, so unpublished chapters are not written to the deployed site or added to Pagefind.
+Chapters are published by default. For an unfinished chapter, keep it published with a note explaining its status and links to the relevant package READMEs. Link to the GitHub README URLs: the installed `remix` copy rewrites those links to its local README mirrors. Set `published: false` only for chapters that should not be publicly accessible, such as development fixtures. The production guide index and sidebar list unpublished chapters as disabled, and links to them render as plain text. Set `listed: false` for fixtures and other pages outside the guide sequence. The `remix` package copies only published chapters. The prerender seeds the crawler with published chapter URLs, so unpublished chapters are not written to the deployed site or added to Pagefind.
 
 Code fences support filename headers and line highlighting:
 

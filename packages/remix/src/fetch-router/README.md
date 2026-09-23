@@ -98,7 +98,7 @@ The `routes.home` route is a `Route<'ANY', '/'>`, which means it serves any requ
 
 In addition to describing the structure of your routes, route maps also make it easy to generate type-safe links and form actions using the `href()` function on a route. The example below is a small site with a home page and a "Contact Us" page.
 
-Note: We're using the [`createHtmlResponse` helper from `response`](../response/README.md#readme) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
+Note: We're using the [`createHtmlResponse` helper from `response`](../response/README.md) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
 
 ```ts
 import { route } from 'remix/routes'
@@ -925,7 +925,7 @@ let response = createRedirectResponse('/')
 let response = compressResponse(uncompressedResponse, request)
 ```
 
-See the [`response` documentation](../response/README.md#readme) for more details.
+See the [`response` documentation](../response/README.md) for more details.
 
 ### Working with HTML
 
@@ -970,7 +970,7 @@ let button = html`<button>${icon} Click me</button>` // icon is not escaped
 
 **Warning**: Only use `html.raw` with trusted content. Unlike the regular `html` template tag, `html.raw` does not escape its interpolations, which can lead to XSS vulnerabilities if used with untrusted user input.
 
-See the [`html-template` documentation](../html-template/README.md#readme) for more details.
+See the [`html-template` documentation](../html-template/README.md) for more details.
 
 ### Testing
 

@@ -356,14 +356,14 @@ describe('manifest', () => {
     }
   })
 
-  it('strips unpublished chapter links only from installed guides', async () => {
+  it('copies published guides without changing chapter links', async () => {
     let fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-guides-'))
     let sourceGuidesDir = path.join(fixtureDir, 'source')
     let remixGuidesDir = path.join(fixtureDir, 'installed')
     let sourcePath = path.join(sourceGuidesDir, '01-published.md')
     let draftPath = path.join(sourceGuidesDir, '02-draft.md')
     let installedPath = path.join(remixGuidesDir, '01-published.md')
-    let source = `---\ntitle: Published\ndescription: Published guide.\n---\n\nRead [Draft](/draft/#section), [**Draft**][draft], and [Published](/published/).\n\n[draft]: /draft/\n\n\`[Draft](/draft/)\`\n\n\`\`\`md\n[Draft](/draft/)\n\`\`\`\n`
+    let source = `---\ntitle: Published\ndescription: Published guide.\n---\n\nRead [Draft](/draft/#section), [**Draft**][draft], and [Published](/published/).\n\n[draft]: /draft/\n`
 
     try {
       fs.mkdirSync(sourceGuidesDir)
@@ -376,16 +376,15 @@ describe('manifest', () => {
       let copies = await syncRemixGuides({ sourceGuidesDir, remixGuidesDir })
       assert.equal(copies.length, 1)
       let installed = fs.readFileSync(installedPath, 'utf-8')
-      assert.ok(installed.includes('Read Draft, **Draft**, and [Published](/published/).'))
-      assert.ok(installed.includes('`[Draft](/draft/)`'))
-      assert.ok(installed.includes('```md\n[Draft](/draft/)\n```'))
-      assert.ok(!installed.includes('[draft]: /draft/'))
+      assert.equal(installed, source)
+      assert.ok(!fs.existsSync(path.join(remixGuidesDir, '02-draft.md')))
       assert.equal(fs.readFileSync(sourcePath, 'utf-8'), source)
 
       fs.writeFileSync(draftPath, `---\ntitle: Draft\ndescription: Draft guide.\n---\n`)
       copies = await syncRemixGuides({ sourceGuidesDir, remixGuidesDir })
       assert.equal(copies.length, 2)
       assert.equal(fs.readFileSync(installedPath, 'utf-8'), source)
+      assert.ok(fs.existsSync(path.join(remixGuidesDir, '02-draft.md')))
     } finally {
       fs.rmSync(fixtureDir, { recursive: true, force: true })
     }

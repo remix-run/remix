@@ -1,1 +1,0 @@
-Publish the in-progress guide chapters with an unfinished notice and links to relevant package READMEs. Installed guides rewrite those README links to bundled local copies. References to chapters that remain unpublished render as plain text instead of linking to missing chapters (see #11920).

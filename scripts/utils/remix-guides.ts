@@ -2,7 +2,6 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
-import { stripMarkdownLinks } from 'remix-docs-shared/markdown/parser'
 import { parse } from 'yaml'
 
 import { getRemixReadmeMappings, rewriteLinksToRemixReadmes } from './remix-readmes.ts'
@@ -27,7 +26,6 @@ export interface RemixGuideCopy {
 }
 
 interface RemixGuide extends RemixGuideCopy {
-  href: string
   published: boolean
 }
 
@@ -55,7 +53,6 @@ function getRemixGuides({
         title,
         description,
         published,
-        href: `/${entry.name.replace(/^\d+-|\.md$/g, '')}/`,
         sourceGuidePath,
         remixGuidePath: path.join(remixGuidesDir, entry.name),
       }
@@ -79,9 +76,6 @@ export async function syncRemixGuides({
 }: RemixGuideDirectories = {}): Promise<RemixGuideCopy[]> {
   let guides = getRemixGuides({ sourceGuidesDir, remixGuidesDir })
   let copies = getPublishedGuideCopies(guides)
-  let unpublishedHrefs = new Set(
-    guides.filter((guide) => !guide.published).map((guide) => guide.href),
-  )
   let readmeMappings = getRemixReadmeMappings()
 
   await fsp.rm(remixGuidesDir, { recursive: true, force: true })
@@ -89,13 +83,8 @@ export async function syncRemixGuides({
   await Promise.all(
     copies.map(async (copy) => {
       let markdown = await fsp.readFile(copy.sourceGuidePath, 'utf-8')
-      let withoutUnpublishedLinks = stripMarkdownLinks(markdown, (href) => {
-        if (!href.startsWith('/') || href.startsWith('//')) return false
-        let { pathname } = new URL(href, 'https://remix.run')
-        return unpublishedHrefs.has(pathname.endsWith('/') ? pathname : `${pathname}/`)
-      })
       let installedMarkdown = rewriteLinksToRemixReadmes(
-        withoutUnpublishedLinks,
+        markdown,
         copy.remixGuidePath,
         readmeMappings,
       )
