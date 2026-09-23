@@ -841,13 +841,26 @@ function createSetupSource(
 ): string {
   let lines: string[] = []
   let initializedStateNames = new Set<string>()
+  let hoistedFunctionStateNames = new Set<string>()
+
+  // Function declarations initialize shared var bindings before any setup statements run.
+  for (let statement of statements) {
+    if (statement.type !== 'FunctionDeclaration') continue
+    let name = getIdentifierName(getNode(statement, 'id'))
+    if (name && setupStateNames.has(name) && renderReferencedDeclarationNames.has(name)) {
+      hoistedFunctionStateNames.add(name)
+    }
+  }
+  for (let name of hoistedFunctionStateNames) {
+    lines.push(`__s__.${name} = ${name};`)
+  }
 
   for (let statement of statements) {
     if (isSetupRuntimeDeclaration(statement)) {
       let name = getIdentifierName(getNode(statement, 'id'))
       if (name && renderReferencedDeclarationNames.has(name)) {
         lines.push(rewriteReferences(statement, setupStateNames, source))
-        lines.push(`__s__.${name} = ${name};`)
+        if (!hoistedFunctionStateNames.has(name)) lines.push(`__s__.${name} = ${name};`)
         continue
       }
     }
@@ -865,6 +878,10 @@ function createSetupSource(
         if (pattern?.type === 'Identifier') {
           let name = names[0]
           if (name === undefined) continue
+          if (!init && statement.kind === 'var' && hoistedFunctionStateNames.has(name)) {
+            initializedStateNames.add(name)
+            continue
+          }
           lines.push(
             init
               ? `__s__.${name} = ${rewriteReferences(init, initializedStateNames, source)};`

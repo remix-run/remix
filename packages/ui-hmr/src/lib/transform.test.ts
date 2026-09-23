@@ -227,6 +227,92 @@ import * as __remixUIRefresh__ from "@acme/remix/ui/dev/refresh";`,
     assert.match(implementation, /onClick=\{__s__\.increment\}/)
   })
 
+  it('keeps a var initializer ahead of a hoisted function declaration after return', () => {
+    let result = transformComponentsForBrowser(
+      `export function Component() {
+  var handler = () => 'assigned'
+  return () => handler()
+
+  function handler() {
+    return 'declaration'
+  }
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Component.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'Component')
+    assert.match(
+      implementation,
+      /__s__\.handler = handler;[\s\S]*__s__\.handler = \(\) => 'assigned';/,
+    )
+    assert.match(implementation, /__remixUiHmrHandle__, \(\) => __s__\.handler\(\), Component\)/)
+    assert.equal(implementation.match(/__s__\.handler = handler;/g)?.length, 1)
+  })
+
+  it('does not clear a hoisted function with an uninitialized var declaration', () => {
+    let result = transformComponentsForBrowser(
+      `export function Component() {
+  var handler
+  return () => handler()
+
+  function handler() {
+    return 'declaration'
+  }
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Component.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'Component')
+    assert.match(implementation, /__s__\.handler = handler;/)
+    assert.doesNotMatch(implementation, /__s__\.handler = undefined;/)
+  })
+
+  it('rewrites assignments after an uninitialized var without losing the hoisted function', () => {
+    let result = transformComponentsForBrowser(
+      `export function Component() {
+  var handler
+  handler = () => 'assigned'
+  return () => handler()
+
+  function handler() {
+    return 'declaration'
+  }
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Component.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'Component')
+    assert.match(
+      implementation,
+      /__s__\.handler = handler;[\s\S]*__s__\.handler = \(\) => 'assigned'/,
+    )
+    assert.doesNotMatch(implementation, /__s__\.handler = undefined;/)
+  })
+
+  it('preserves var assignment order when the function declaration precedes the render return', () => {
+    let result = transformComponentsForBrowser(
+      `export function Component() {
+  var handler = () => 'assigned'
+  function handler() {
+    return 'declaration'
+  }
+  return () => handler()
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Component.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'Component')
+    assert.match(
+      implementation,
+      /__s__\.handler = handler;[\s\S]*__s__\.handler = \(\) => 'assigned';/,
+    )
+    assert.equal(implementation.match(/__s__\.handler = handler;/g)?.length, 1)
+  })
+
   it('preserves multiple setup function declarations referenced by render', () => {
     let result = transformComponentsForBrowser(
       `export function Greeting() {
