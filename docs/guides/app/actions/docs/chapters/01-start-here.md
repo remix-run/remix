@@ -78,6 +78,7 @@ my-remix-app/
     ├── router.ts              # middleware, routes, and controller mapping
     ├── middleware/            # request middleware and context providers
     ├── actions/               # controllers, route actions, and route-local UI
+    │   ├── controller.tsx     # root route controller
     │   ├── document.tsx       # app document shell
     │   └── public/
     │       └── entry.ts       # starts the browser runtime
