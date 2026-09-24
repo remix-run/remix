@@ -75,9 +75,9 @@ describe('test command', () => {
 
       assert.equal(result.exitCode, 0, result.stderr)
       assert.match(result.stdout, /Found 3 test file\(s\) \(3 server, 0 browser, 0 e2e\)/)
-      assert.match(result.stdout, /src\/frame\.test\.ts/)
-      assert.match(result.stdout, /src\/frame\.css\.test\.ts/)
-      assert.match(result.stdout, /src\/frame\.test\.integration\.tsx/)
+      assert.match(result.stdout, /src[/\\]frame\.test\.ts/)
+      assert.match(result.stdout, /src[/\\]frame\.css\.test\.ts/)
+      assert.match(result.stdout, /src[/\\]frame\.test\.integration\.tsx/)
       assert.doesNotMatch(result.stdout, /sample\.test\.ts/)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
@@ -109,8 +109,8 @@ describe('test command', () => {
 
       assert.equal(result.exitCode, 0, result.stderr)
       assert.match(result.stdout, /Found 1 test file/)
-      assert.match(result.stdout, /src\/frame\.test\.ts/)
-      assert.doesNotMatch(result.stdout, /frame-excluded|spec\/frame\.spec\.ts/)
+      assert.match(result.stdout, /src[/\\]frame\.test\.ts/)
+      assert.doesNotMatch(result.stdout, /frame-excluded|spec[/\\]frame\.spec\.ts/)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -145,10 +145,10 @@ describe('test command', () => {
 
       assert.equal(result.exitCode, 0, result.stderr)
       assert.match(result.stdout, /Found 3 test file/)
-      assert.match(result.stdout, /src\/frame\.test\.ts/)
-      assert.match(result.stdout, /src\/navigation\.test\.ts/)
-      assert.match(result.stdout, /custom\/check\.ts/)
-      assert.doesNotMatch(result.stdout, /sample\.test\.ts|custom\/excluded\.ts/)
+      assert.match(result.stdout, /src[/\\]frame\.test\.ts/)
+      assert.match(result.stdout, /src[/\\]navigation\.test\.ts/)
+      assert.match(result.stdout, /custom[/\\]check\.ts/)
+      assert.doesNotMatch(result.stdout, /sample\.test\.ts|custom[/\\]excluded\.ts/)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
