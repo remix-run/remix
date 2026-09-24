@@ -7,6 +7,7 @@ import { reloadFrameForNavigation } from '../runtime/frame.ts'
 import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
+import { appendFlushMarker } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
 import { css, navigate, on } from '../index.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
@@ -3376,6 +3377,94 @@ describe('run', () => {
     expect(document.getElementById('reload-error-value')?.textContent).toBe('Initial')
 
     app.dispose()
+  })
+
+  it('cancels the default reload fetch with the caller signal without reporting an error', async (t) => {
+    document.body.innerHTML = '<p id="initial">Initial</p>'
+    let fetchSignal: AbortSignal | null | undefined
+    t.mock.method(window, 'fetch', (_input: RequestInfo | URL, options?: RequestInit) => {
+      fetchSignal = options?.signal
+      return new Promise<Response>((_resolve, reject) => {
+        fetchSignal?.addEventListener('abort', () => reject(fetchSignal?.reason), { once: true })
+      })
+    })
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    let onError = t.mock.fn()
+    let onComplete = t.mock.fn()
+    app.addEventListener('error', onError)
+    app.frames.top.addEventListener('reloadComplete', onComplete)
+    await app.ready()
+    let controller = new AbortController()
+
+    let reload = app.frames.top.reload({ signal: controller.signal })
+    controller.abort()
+
+    expect(fetchSignal?.aborted).toBe(true)
+    expect((await reload).aborted).toBe(true)
+    expect(document.getElementById('initial')?.textContent).toBe('Initial')
+    expect(onError.mock.calls).toHaveLength(0)
+    expect(onComplete.mock.calls).toHaveLength(1)
+  })
+
+  it('finishes a streamed reload after removing the component that supplied its signal', async (t) => {
+    let reload: Promise<AbortSignal> | undefined
+    let eventSignal: AbortSignal | undefined
+    let [removed, markRemoved] = withResolvers<void>()
+    let [tail, resolveTail] = withResolvers<string>()
+    let ReloadButton = clientEntry(
+      '/reload.js#ReloadButton',
+      function ReloadButton(handle: Handle) {
+        return () => (
+          <button
+            id="reload"
+            mix={[
+              on('click', (_event, signal) => {
+                eventSignal = signal
+                signal.addEventListener('abort', () => markRemoved(), { once: true })
+                reload = handle.frame.reload({ signal })
+              }),
+            ]}
+          >
+            Reload
+          </button>
+        )
+      },
+    )
+    document.body.innerHTML = await drain(
+      renderToStream(<Frame src="/reload" />, {
+        resolveFrame: () => renderFrameContent(<ReloadButton />),
+      }),
+    )
+    let fetchSignal: AbortSignal | null | undefined
+    t.mock.method(window, 'fetch', async (_input: RequestInfo | URL, options?: RequestInit) => {
+      fetchSignal = options?.signal
+      return new Response(
+        streamFromChunks([appendFlushMarker('<p id="first">First</p>', 'fragment'), tail]),
+        { headers: { 'Content-Type': 'text/html' } },
+      )
+    })
+    let app = run({ loadModule: () => ReloadButton })
+    t.after(() => {
+      resolveTail('')
+      app.dispose()
+    })
+    await app.ready()
+    let button = document.getElementById('reload')
+    invariant(button)
+
+    button.click()
+    invariant(reload)
+    await removed
+
+    expect(eventSignal?.aborted).toBe(true)
+    expect(fetchSignal?.aborted).toBe(false)
+    expect(document.getElementById('reload')).toBeNull()
+    expect(document.getElementById('first')?.textContent).toBe('First')
+    resolveTail('<p id="last">Last</p>')
+
+    expect((await reload).aborted).toBe(false)
+    expect(document.getElementById('last')?.textContent).toBe('Last')
   })
 
   it('aborts stale frame reloads when reload is re-entered', async () => {

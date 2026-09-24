@@ -190,6 +190,14 @@ export type FrameHandleEventMap = {
 }
 
 /**
+ * Options for reloading a frame's source.
+ */
+export interface FrameReloadOptions {
+  /** Cancels the request until the frame resolver returns; does not cancel rendering its content. */
+  signal?: AbortSignal
+}
+
+/**
  * Public API for interacting with a frame instance.
  */
 export type FrameHandle = TypedEventTarget<FrameHandleEventMap> & {
@@ -198,10 +206,13 @@ export type FrameHandle = TypedEventTarget<FrameHandleEventMap> & {
   /**
    * Resolves the current source and reconciles the frame with its returned content.
    * A newer reload cancels earlier reload work. Non-cancellation errors reject the promise.
+   * An already-aborted caller signal skips the reload. Once the resolver returns, caller
+   * cancellation does not interrupt rendering, including streamed content and hydration.
    *
-   * @returns The reload's signal, which is aborted if that reload is superseded or disposed.
+   * @param options Options for cancelling the request.
+   * @returns The reload's signal, aborted if its request is cancelled or the reload is superseded or disposed.
    */
-  reload(): Promise<AbortSignal>
+  reload(options?: FrameReloadOptions): Promise<AbortSignal>
   /**
    * Renders supplied trusted content directly without calling the resolver or changing the source.
    * HTML strings and streams are not sanitized.
