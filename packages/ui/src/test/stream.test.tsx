@@ -1314,16 +1314,17 @@ describe('stream', () => {
       }
     }
 
-    it('renderToString applies nonce options to generated styles, import maps, and metadata', async () => {
+    it('renderToString applies nonce to styles, import maps, and metadata', async () => {
       let html = await renderToString(
         <html>
-          <head />
+          <head>
+            <ImportMap value={{ imports: { app: '/app.js' } }} />
+          </head>
           <body>
             <div mix={[css({ color: 'red' })]}>Styled</div>
-            <NonceIsland />
           </body>
         </html>,
-        { nonce: 'r4nd0m', resolveClientEntry: resolveNonceIsland },
+        { nonce: 'r4nd0m' },
       )
       let doc = new DOMParser().parseFromString(html, 'text/html')
       let map = doc.head.querySelector<HTMLScriptElement>('script[data-rmx-import-map]')
@@ -1333,7 +1334,7 @@ describe('stream', () => {
       )
       expect(map?.nonce).toBe('r4nd0m')
       expect(JSON.parse(map?.textContent ?? '{}')).toEqual({
-        imports: { '/assets/nonce-island.js': '/assets/nonce-island.hash.js' },
+        imports: { app: '/app.js' },
       })
       expect(doc.head.querySelector<HTMLMetaElement>('meta[name="rmx-nonce"]')?.nonce).toBe(
         'r4nd0m',
@@ -1824,34 +1825,6 @@ describe('stream', () => {
   })
 
   describe('error handling', () => {
-    it('renderToString rejects non-blocking frame errors when onError is omitted', async () => {
-      await expect(
-        renderToString(<Frame src="/failed" fallback={<p>Loading</p>} />, {
-          async resolveFrame() {
-            throw new Error('Frame failed!')
-          },
-        }),
-      ).rejects.toThrow('Frame failed!')
-    })
-
-    it('renderToString calls a supplied error handler and rejects fatal render errors', async () => {
-      let renderError = new Error('Render error!')
-      let errors: unknown[] = []
-      function BadComponent(): () => null {
-        throw renderError
-      }
-
-      await expect(
-        renderToString(<BadComponent />, {
-          nonce: 'r4nd0m',
-          onError(error) {
-            errors.push(error)
-          },
-        }),
-      ).rejects.toThrow('Render error!')
-      expect(errors).toEqual([renderError])
-    })
-
     it('calls onError for errors', async () => {
       let capturedError: unknown
 
