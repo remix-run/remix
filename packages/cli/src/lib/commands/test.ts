@@ -192,9 +192,10 @@ export function resolveTestCommandOptions(
 export function getTestCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
   return formatHelpText(
     {
-      description: 'Run tests for the current project.',
+      description: 'Run tests for the current project. Simple names expand to test file globs.',
       examples: [
         'remix test',
+        'remix test frame',
         'remix test app/**/*.test.ts',
         'remix test --type server --concurrency 1',
         'remix test --coverage',
@@ -245,7 +246,7 @@ function parseTestCommandArgs(argv: string[], pools: readonly RemixTestPool[]) {
     browser: values['glob.browser'],
     e2e: values['glob.e2e'],
     exclude: values['glob.exclude'],
-    test: positionals.length > 0 ? positionals : values['glob.test'],
+    test: positionals.length > 0 ? positionals.map(toTestGlob) : values['glob.test'],
   })
 
   return compactObject({
@@ -266,6 +267,14 @@ function parseTestCommandArgs(argv: string[], pools: readonly RemixTestPool[]) {
     type: values.type,
     watch: resolveBooleanOption(tokens, 'watch', 'no-watch'),
   })
+}
+
+function toTestGlob(pattern: string): string {
+  if (/[*?\[\]{}()\\/]/.test(pattern) || /\.tsx?$/.test(pattern)) {
+    return pattern
+  }
+
+  return `**/*${pattern}*.test*.{ts,tsx}`
 }
 
 function createCoverageOptions(
