@@ -1,1 +1,0 @@
-`remix test` now expands simple patterns to test file globs. For example, `remix test frame` runs files matching `**/*frame*.test*.{ts,tsx}`. File paths and explicit globs pass through unchanged. Positional arguments override configured test globs, respect exclusions, and run overlapping matches only once.

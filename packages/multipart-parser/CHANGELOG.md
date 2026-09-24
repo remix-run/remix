@@ -2,6 +2,21 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
+## v0.16.6
+
+### Patch Changes
+
+- Read multipart boundaries from the complete `boundary` parameter using `ContentType`, honoring quoted values and ignoring boundary-like text in other parameters. Accept an unterminated quoted boundary through the end of the header, matching Fetch's parameter parsing.
+
+- Reject malformed multipart delimiter endings instead of interpreting body content as additional parts. Validate ordinary delimiter endings before yielding parts, including across stream chunks. Accept optional space/tab padding, closing delimiters at EOF, and empty multipart messages, and ignore epilogues after the closing CRLF (see #11901).
+
+  `MultipartParser.write()` continues to yield every part, including the final part, and `finish()` validates completion without returning a value. Invalid closing suffixes are rejected even when the final part has already been delivered.
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.3`](https://github.com/remix-run/remix/releases/tag/headers@0.21.3)
+
 ## v0.16.5
 
 ### Patch Changes

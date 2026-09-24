@@ -2,6 +2,16 @@
 
 This is the changelog for [`fs`](https://github.com/remix-run/remix/tree/main/packages/fs). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.7
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`lazy-file@5.0.7`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.7)
+  - [`mime@0.4.3`](https://github.com/remix-run/remix/releases/tag/mime@0.4.3)
+
 ## v0.4.6
 
 ### Patch Changes

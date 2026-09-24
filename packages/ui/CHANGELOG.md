@@ -2,6 +2,24 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.11.0
+
+### Minor Changes
+
+- Preserve client-owned attributes during frame reloads with `data-rmx-preserve-attrs="class data-theme"` on any matched element, including `<html>` and `<body>` (see #11809). The named attributes keep their live values or absence while other attributes and children reconcile normally. The incoming HTML controls the list; clearing it or removing a name returns those attributes to normal reconciliation.
+
+### Patch Changes
+
+- Treat marker-less HTML that starts with a doctype or `<html>` as a document reload, so pages rendered with `renderToString` can be navigated by the client runtime (see #11808).
+
+- Preserve parent component context for client entries rendered inside a `<Frame>`, including setup-time context reads when the provider module loads later and after frame reloads. Keep nested frame content interactive when its owning client entry module is already cached (see #11894).
+
+- Preserve server-rendered textarea values when a hydrated client entry first updates, without overwriting uncontrolled user edits.
+
+- Allow client entry props to use ordinary interfaces, including nested objects whose properties are all optional (see #11918).
+
+- Document custom mixin setup, lifecycle events, and deferred host removal with `event.persistNode()`, including cancellation and keyed-node reclamation. Expand public API documentation for root, frame, context, anchoring, CSS mixin, and server-rendering helpers, and correct the popover, context, and anchoring examples.
+
 ## v0.10.0
 
 ### Minor Changes

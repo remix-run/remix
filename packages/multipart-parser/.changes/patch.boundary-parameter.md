@@ -1,1 +1,0 @@
-Read multipart boundaries from the complete `boundary` parameter using `ContentType`, honoring quoted values and ignoring boundary-like text in other parameters. Accept an unterminated quoted boundary through the end of the header, matching Fetch's parameter parsing.

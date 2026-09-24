@@ -2,6 +2,18 @@
 
 This is the changelog for [`render-middleware`](https://github.com/remix-run/remix/tree/main/packages/render-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.2
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.8.0`](https://github.com/remix-run/remix/releases/tag/assets@0.8.0)
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+  - [`response@0.3.10`](https://github.com/remix-run/remix/releases/tag/response@0.3.10)
+  - [`ui@0.11.0`](https://github.com/remix-run/remix/releases/tag/ui@0.11.0)
+
 ## v0.3.1
 
 ### Patch Changes
