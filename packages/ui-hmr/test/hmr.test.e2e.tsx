@@ -759,6 +759,83 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
     }
   })
 
+  it('does not refresh the server frame when a pending client update requires a page reload', async (t) => {
+    let fixture = await createNodeHmrFixture({
+      clientFieldExtraExports: 'export const foo = true\n',
+      serverImportsClientField: true,
+    })
+    let server: NodeHmrTestServer | undefined
+    let update = Promise.withResolvers<void>()
+
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await serveNodeHmrFixture(t, server)
+      await page.addInitScript(() => {
+        let NativeEventSource = window.EventSource
+        window.EventSource = class extends NativeEventSource {
+          constructor(url: string | URL, options?: EventSourceInit) {
+            super(url, options)
+            this.addEventListener('message', (event) => {
+              if (JSON.parse(event.data).type === 'server:update') {
+                document.documentElement.dataset.serverUpdateReceived = 'true'
+              }
+            })
+          }
+        }
+      })
+      await openHmrPage(page, { hydrate: true })
+      await page.locator('[data-testid="document-field"]').fill('typed before reload')
+
+      let frameRequests: string[] = []
+      page.on('request', (request) => {
+        if (request.resourceType() === 'fetch' && new URL(request.url()).pathname === '/') {
+          frameRequests.push(request.url())
+        }
+      })
+      let navigations = 0
+      page.on('framenavigated', (frame) => {
+        if (frame.parentFrame() === null) navigations++
+      })
+      let isClientUpdate = (url: URL) =>
+        url.pathname === '/assets/app/ClientField.tsx' && url.searchParams.has('t')
+      // Deliver the server update while the browser is still importing the changed exports.
+      await page.route(isClientUpdate, async (route) => {
+        await update.promise
+        await route.continue()
+      })
+      let updateRequested = page.waitForRequest((request) => isClientUpdate(new URL(request.url())))
+      let reloaded = waitForNavigation(page)
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      await write(
+        fixture.rootDir,
+        'app/ClientField.tsx',
+        getClientFieldSource({ child: 'Client: after shared export removal' }),
+      )
+
+      await updateRequested
+      await page.locator('html[data-server-update-received="true"]').waitFor()
+      update.resolve()
+      await reloaded
+      await adopted
+      await waitForText(
+        page,
+        '[data-testid="server-client-label"]',
+        'Client: after shared export removal',
+      )
+      assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      assert.equal(navigations, 1)
+      assert.equal(
+        frameRequests.length,
+        0,
+        `Unexpected frame refreshes: ${frameRequests.join(', ')}`,
+      )
+    } finally {
+      update.resolve()
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
   it('reloads the page after a server-imported node-hmr client entry changes a non-component export', async (t) => {
     let fixture = await createNodeHmrFixture({
       clientFieldExtraExports: 'export const foo = true\n',
@@ -821,6 +898,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before update')
       await page.locator('[data-testid="document-field"]').fill('document before update')
 
+      let refreshed = waitForConsoleMessage(page, 'Server frame reload complete')
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -835,6 +913,7 @@ describe('ui-hmr e2e', { skip: isBun }, () => {
         '[data-testid="server-client-label"]',
         'Client: shared stable export update',
       )
+      await refreshed
       assert.equal(
         await page.locator('[data-testid="server-client-field"]').inputValue(),
         'typed before update',
@@ -1770,10 +1849,15 @@ function getNodeHmrProxyDevSource(): string {
     '',
     'process.once("SIGINT", closeProxy)',
     'process.once("SIGTERM", closeProxy)',
+    'process.once("message", (message) => {',
+    '  if (message === "shutdown") closeProxy()',
+    '})',
     '',
-    'function closeProxy() {',
+    'async function closeProxy() {',
+    '  await app.close()',
     '  server.closeAllConnections()',
     '  server.close()',
+    '  if (process.connected) process.disconnect()',
     '}',
     '',
     'async function waitForPort(filePath) {',
@@ -2226,8 +2310,9 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
       CHILD_PORT_FILE: childPortFile,
       TEST_SERVER_PORT: '0',
     },
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   })
+  let closed = new Promise<void>((resolve) => child.once('close', () => resolve()))
   let readyEvents: Array<{ pid: number; port: number }> = []
   let readyWaiters: Array<() => void> = []
   let proxyReadyEvents: Array<{ pid: number; port: number }> = []
@@ -2278,7 +2363,7 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
   return {
     baseUrl: `http://127.0.0.1:${ready.port}`,
     async close() {
-      closePromise ??= stopProcess(child)
+      closePromise ??= stopProcess(child, closed)
       await closePromise
     },
     get output() {
@@ -2781,31 +2866,33 @@ function parseProxyReadyEvent(line: string): { pid: number; port: number } | nul
   return null
 }
 
-async function stopProcess(child: ChildProcess): Promise<void> {
-  if (child.exitCode !== null || child.signalCode !== null) return
+async function stopProcess(child: ChildProcess, closed: Promise<void>): Promise<void> {
+  let timeout: ReturnType<typeof setTimeout> | undefined
 
-  if (process.platform === 'win32' && child.pid !== undefined) {
-    // Windows does not run SIGTERM handlers, so stop the child server as well as its parent.
-    await Promise.all([
-      once(child, 'exit'),
-      promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F']),
-    ])
-    return
-  }
-
-  await new Promise<void>((resolve) => {
-    let timeout = setTimeout(() => {
-      child.kill('SIGKILL')
-      resolve()
-    }, 5_000)
-
-    child.once('exit', () => {
-      clearTimeout(timeout)
-      resolve()
+  try {
+    let timedOut = new Promise<boolean>((resolve) => {
+      timeout = setTimeout(() => resolve(true), 5_000)
     })
 
-    child.kill('SIGTERM')
-  })
+    // IPC lets the fixture await app.close() on Windows too.
+    if (child.connected) {
+      await new Promise<void>((resolve, reject) => {
+        child.send('shutdown', (error) => (error ? reject(error) : resolve()))
+      })
+    }
+
+    if (await Promise.race([closed.then(() => false), timedOut])) {
+      if (process.platform === 'win32' && child.pid !== undefined) {
+        await promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F'])
+      } else {
+        child.kill('SIGKILL')
+      }
+    }
+
+    await closed
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 async function write(rootDir: string, rel: string, content: string): Promise<void> {
