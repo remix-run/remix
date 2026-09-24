@@ -892,7 +892,7 @@ Consume the semantic event with `on(...)` like any other DOM event:
 ```
 
 Namespace custom event names to avoid collisions, and keep one-off behavior in the component that
-uses it. The [`remix/ui` API overview](https://api.remix.run/api/remix/ui/overview/) covers the full
+uses it. The [`remix/ui` API overview](../src/ui/README.md) covers the full
 mixin API.
 
 The next chapter uses the same server renderer and browser runtime to stream and reload route-owned

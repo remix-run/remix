@@ -1,0 +1,1 @@
+Document custom mixin setup, lifecycle events, and deferred host removal with `event.persistNode()`, including cancellation and keyed-node reclamation. Expand public API documentation for root, frame, context, anchoring, CSS mixin, and server-rendering helpers, and correct the popover, context, and anchoring examples.

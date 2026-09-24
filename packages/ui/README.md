@@ -21,7 +21,8 @@ npm i remix
 Compose behavior primitives with your own markup and styles:
 
 ```tsx
-import { css } from 'remix/ui'
+import { css, on } from 'remix/ui'
+import type { Handle } from 'remix/ui'
 import * as popover from 'remix/ui/popover'
 
 let triggerCss = css({
@@ -37,16 +38,21 @@ let surfaceCss = css({
   padding: '8px',
 })
 
-function ViewOptions() {
+function ViewOptions(handle: Handle) {
   let open = false
 
   return () => (
     <popover.Context>
       <button
-        mix={[triggerCss, popover.anchor({ placement: 'bottom-end' }), popover.focusOnHide()]}
-        onClick={() => {
-          open = true
-        }}
+        mix={[
+          triggerCss,
+          popover.anchor({ placement: 'bottom-end' }),
+          popover.focusOnHide(),
+          on('click', () => {
+            open = true
+            handle.update()
+          }),
+        ]}
         type="button"
       >
         View options
@@ -58,6 +64,7 @@ function ViewOptions() {
             open,
             onHide() {
               open = false
+              handle.update()
             },
           }),
         ]}
@@ -78,6 +85,10 @@ function Actions() {
   return () => <button mix={button({ tone: 'primary' })}>Create project</button>
 }
 ```
+
+## Custom Mixins
+
+Use `createMixin(...)` to share host behavior, manage DOM resources, or provide default props. The [Mixins guide](https://github.com/remix-run/remix/blob/main/packages/ui/docs/mixins.md) covers setup and render, `MixinHandle`, lifecycle events, and deferred removal with `beforeRemove` and `event.persistNode(...)`.
 
 ## Client Entry Loading
 
@@ -265,6 +276,14 @@ Use `data-rmx-preserve-dom` on the smallest element whose live DOM should belong
 ```
 
 Remix UI still renders the element's children during SSR and still hydrates any initial client entries inside it. On later frame reloads, matched `data-rmx-preserve-dom` elements keep their current attributes and children instead of accepting incoming DOM updates. See [Preserving client-owned DOM](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#preserving-client-owned-dom) for guidance and caveats.
+
+Use `data-rmx-preserve-attrs` when client code owns only specific attributes, such as a theme set on `<html>`:
+
+```html
+<html lang="en" data-rmx-preserve-attrs="data-theme"></html>
+```
+
+On frame reloads, the space-separated attribute names in the incoming HTML keep their live values or absence. Other attributes and children reconcile normally. An empty or omitted list uses normal attribute reconciliation. This works on any matched element; it does not prevent removal or replacement. See [Preserving client-owned attributes](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#preserving-client-owned-attributes) for examples and ownership rules.
 
 ## Cascade Layers
 

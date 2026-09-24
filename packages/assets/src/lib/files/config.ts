@@ -1,4 +1,4 @@
-import type { FileStorage } from '@remix-run/file-storage'
+import type { FileCache } from './file-cache.ts'
 import { supportedScriptExtensions } from '../scripts/resolve.ts'
 
 export interface AssetFileTransformResult {
@@ -112,18 +112,25 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
    */
   globalTransforms?: readonly AssetGlobalTransform[]
   /**
-   * Optional backing store for cached transformed file outputs.
+   * Cache for transformed file outputs. Disabled when omitted.
+   * Use `createFsFileCache()` for an on-disk LRU cache with default directory and
+   * limits, or pass options to customize them. Relative cache directories resolve
+   * from `process.cwd()`, independently of `rootDir`. Supply a custom `FileCache`
+   * for your own persistence and eviction policy.
+   * The built-in cache requires one instance per directory. Use a custom cache
+   * for shared multi-process caching. Read recency is not preserved across restarts.
    */
-  cache?: FileStorage
+  cache?: FileCache
   /**
    * Optional namespace for cached transformed file outputs. Use a stable value such as a
    * commit SHA to reuse transformed files across server restarts for the same deployment.
+   * Defaults to a random value per server. Change it when sources or transforms change.
    */
   cacheKey?: string
 }
 
 export interface ResolvedAssetServerFilesOptions {
-  cache?: FileStorage
+  cache?: FileCache
   cacheKey?: string
   extensions: readonly string[]
   globalTransforms: readonly ResolvedAssetGlobalTransform[]
@@ -303,9 +310,9 @@ export function normalizeFilesOptions<transforms extends AssetRequestTransformMa
       files.cache === null ||
       typeof files.cache !== 'object' ||
       typeof files.cache.get !== 'function' ||
-      typeof files.cache.set !== 'function'
+      typeof files.cache.put !== 'function'
     ) {
-      throw new TypeError('files.cache must implement the FileStorage interface')
+      throw new TypeError('files.cache must implement the FileCache interface (get and put)')
     }
   }
 

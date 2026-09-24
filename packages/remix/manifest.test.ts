@@ -2,12 +2,18 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import * as fs from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import * as url from 'node:url'
 import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
-import { getRemixGuideCopies } from '../../scripts/utils/remix-guides.ts'
+import { getPackageExportSideEffects } from '../../scripts/utils/package-side-effects.ts'
+import { getRemixGuideCopies, syncRemixGuides } from '../../scripts/utils/remix-guides.ts'
 import { createRemixIndex, getRemixIndexEntries } from '../../scripts/utils/remix-index.ts'
-import { getRemixReadmeCopies } from '../../scripts/utils/remix-readmes.ts'
+import {
+  getRemixReadmeCopies,
+  getRemixReadmeMappings,
+  rewriteLinksToRemixReadmes,
+} from '../../scripts/utils/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '..')
@@ -41,6 +47,33 @@ function exportSpecifier(packageName: string, exportPath: string): string {
 
 function packageRelativePath(filePath: string): string {
   return path.relative(packagesDir, filePath).split(path.sep).join('/')
+}
+
+function packageExportPath(specifier: string): string {
+  let packageName = packageNameFromSpecifier(specifier)
+  return specifier === packageName ? '.' : `./${specifier.slice(packageName.length + 1)}`
+}
+
+function getExportTarget(exportConfig: unknown): string | null {
+  if (typeof exportConfig === 'string') return exportConfig
+  if (typeof exportConfig !== 'object' || exportConfig === null) return null
+  if ('default' in exportConfig && typeof exportConfig.default === 'string') {
+    return exportConfig.default
+  }
+  if ('types' in exportConfig && typeof exportConfig.types === 'string') return exportConfig.types
+  return null
+}
+
+function generatedModuleHasRuntimeImport(sourceTarget: string): boolean {
+  if (sourceTarget.endsWith('.d.ts')) return false
+  let source = fs.readFileSync(path.join(__dirname, sourceTarget), 'utf-8')
+  return source
+    .split(/\r?\n/)
+    .some(
+      (line) =>
+        (line.startsWith('import ') && !line.startsWith('import type ')) ||
+        (line.startsWith('export ') && !line.startsWith('export type ') && line !== 'export {}'),
+    )
 }
 
 const referencedPackages = new Set([...specifierMap.keys()].map(packageNameFromSpecifier))
@@ -164,6 +197,45 @@ describe('manifest', () => {
     }
   })
 
+  it('derives generated sideEffects from the owning package exports', () => {
+    let remixPackageJson: {
+      exports: Record<string, unknown>
+      publishConfig: { exports: Record<string, unknown> }
+      sideEffects: string[]
+    } = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'))
+    let sideEffects = new Set(remixPackageJson.sideEffects)
+    let entries = [...Object.entries(manifest), ['remix/cli', '@remix-run/cli'] as const]
+
+    for (let [remixPath, specifier] of entries) {
+      if (remixPath.startsWith('_')) continue
+      let packageName = packageNameFromSpecifier(specifier)
+      let owningPackageJson = JSON.parse(
+        fs.readFileSync(path.join(packagesDir, shortName(packageName), 'package.json'), 'utf-8'),
+      )
+      let expected = getPackageExportSideEffects(owningPackageJson, packageExportPath(specifier))
+      let remixExportPath = `./${remixPath.slice('remix/'.length)}`
+      let sourceTarget = getExportTarget(remixPackageJson.exports[remixExportPath])
+      let publishedTarget = getExportTarget(remixPackageJson.publishConfig.exports[remixExportPath])
+
+      assert.ok(sourceTarget, `Expected a source target for ${remixPath}`)
+      assert.ok(publishedTarget, `Expected a published target for ${remixPath}`)
+      let hasRuntimeImport = generatedModuleHasRuntimeImport(sourceTarget)
+      assert.equal(
+        sideEffects.has(sourceTarget),
+        hasRuntimeImport && expected.source,
+        `${sourceTarget} must match ${specifier}'s source sideEffects metadata`,
+      )
+      assert.equal(
+        sideEffects.has(publishedTarget),
+        hasRuntimeImport && expected.published,
+        `${publishedTarget} must match ${specifier}'s published sideEffects metadata`,
+      )
+    }
+
+    assert.ok(sideEffects.has('./src/cli-entry.ts'))
+    assert.ok(sideEffects.has('./dist/cli-entry.js'))
+  })
+
   it('package README headings use unscoped package names', () => {
     for (let pkgName of allRemixRunPackages) {
       let short = shortName(pkgName)
@@ -207,13 +279,115 @@ describe('manifest', () => {
     assert.equal(new Set(mirrorPaths).size, mirrorPaths.length)
   })
 
+  it('rewrites package documentation links to local README mirrors', () => {
+    let mappings = getRemixReadmeMappings()
+    let guidePath = path.join(__dirname, 'guides', 'example.md')
+    let sessionReadmePath = path.join(__dirname, 'src', 'session', 'README.md')
+
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '[Router](https://api.remix.run/api/remix/router/overview/)',
+        guidePath,
+        mappings,
+      ),
+      '[Router](../src/fetch-router/README.md)',
+    )
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '[Router](https://github.com/remix-run/remix/tree/main/packages/fetch-router#middleware)',
+        sessionReadmePath,
+        mappings,
+      ),
+      '[Router](../fetch-router/README.md#middleware)',
+    )
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '[Router][router]\n\n[router]: https://api.remix.run/api/remix/router/overview/#middleware',
+        guidePath,
+        mappings,
+      ),
+      '[Router][router]\n\n[router]: ../src/fetch-router/README.md#middleware',
+    )
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '`[Router](https://api.remix.run/api/remix/router/overview/)`\n\n```md\n[Router](https://api.remix.run/api/remix/router/overview/)\n```',
+        guidePath,
+        mappings,
+      ),
+      '`[Router](https://api.remix.run/api/remix/router/overview/)`\n\n```md\n[Router](https://api.remix.run/api/remix/router/overview/)\n```',
+    )
+    assert.equal(
+      rewriteLinksToRemixReadmes(
+        '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
+        guidePath,
+        mappings,
+      ),
+      '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
+    )
+  })
+
   it('selects published guide chapters', () => {
     let guideNames = guideCopies.map((copy) => path.basename(copy.remixGuidePath))
 
-    assert.ok(guideNames.includes('13-testing.md'))
-    assert.ok(!guideNames.includes('08-data-and-validation.md'))
-    assert.equal(new Set(guideCopies.map((copy) => copy.remixGuidePath)).size, guideCopies.length)
+    assert.ok(guideNames.length > 0)
+    assert.ok(!guideNames.includes('16-markdown-style-demo.md'))
+    assert.equal(new Set(guideNames).size, guideNames.length)
     assert.ok(guideCopies.every((copy) => copy.title && copy.description))
+  })
+
+  it('links unfinished chapters to bundled README mirrors', () => {
+    let unfinishedGuides = guideCopies.filter((copy) =>
+      fs.readFileSync(copy.sourceGuidePath, 'utf-8').includes('This chapter is unfinished.'),
+    )
+    assert.ok(unfinishedGuides.length > 0)
+
+    for (let copy of unfinishedGuides) {
+      let source = fs.readFileSync(copy.sourceGuidePath, 'utf-8')
+      let installed = fs.readFileSync(copy.remixGuidePath, 'utf-8')
+      assert.ok(installed.includes('This chapter is unfinished.'))
+      assert.ok(source.includes('https://github.com/remix-run/remix/blob/main/packages/'))
+      assert.ok(!installed.includes('https://github.com/remix-run/remix/blob/main/packages/'))
+
+      let localReadmes = [...installed.matchAll(/\]\((\.\.\/src\/[^)#]+\/README\.md)\)/g)]
+      assert.ok(localReadmes.length > 0, `Expected local README links in ${copy.remixGuidePath}`)
+      for (let [, href] of localReadmes) {
+        assert.ok(fs.existsSync(path.resolve(path.dirname(copy.remixGuidePath), href)))
+      }
+    }
+  })
+
+  it('copies published guides without changing chapter links', async () => {
+    let fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-guides-'))
+    let sourceGuidesDir = path.join(fixtureDir, 'source')
+    let remixGuidesDir = path.join(fixtureDir, 'installed')
+    let sourcePath = path.join(sourceGuidesDir, '01-published.md')
+    let draftPath = path.join(sourceGuidesDir, '02-draft.md')
+    let installedPath = path.join(remixGuidesDir, '01-published.md')
+    let source = `---\ntitle: Published\ndescription: Published guide.\n---\n\nRead [Draft](/draft/#section), [**Draft**][draft], and [Published](/published/).\n\n[draft]: /draft/\n`
+
+    try {
+      fs.mkdirSync(sourceGuidesDir)
+      fs.writeFileSync(sourcePath, source)
+      fs.writeFileSync(
+        draftPath,
+        `---\ntitle: Draft\ndescription: Draft guide.\npublished: false\n---\n`,
+      )
+
+      let copies = await syncRemixGuides({ sourceGuidesDir, remixGuidesDir })
+      assert.equal(copies.length, 1)
+      let installed = fs.readFileSync(installedPath, 'utf-8')
+      assert.equal(installed, source)
+      assert.ok(!fs.existsSync(path.join(remixGuidesDir, '02-draft.md')))
+      assert.equal(fs.readFileSync(sourcePath, 'utf-8'), source)
+
+      fs.writeFileSync(draftPath, `---\ntitle: Draft\ndescription: Draft guide.\n---\n`)
+      copies = await syncRemixGuides({ sourceGuidesDir, remixGuidesDir })
+      assert.equal(copies.length, 2)
+      assert.equal(fs.readFileSync(installedPath, 'utf-8'), source)
+      assert.ok(fs.existsSync(path.join(remixGuidesDir, '02-draft.md')))
+    } finally {
+      fs.rmSync(fixtureDir, { recursive: true, force: true })
+    }
   })
 
   it('adds installed guides to the package index', () => {

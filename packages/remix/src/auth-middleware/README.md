@@ -1,6 +1,6 @@
 # auth-middleware
 
-Request-time authentication and route protection for Remix. Use this package to resolve identity into `context.auth` from sessions, bearer tokens, API keys, or your own schemes. Pair it with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need browser login routes that call `verifyCredentials()` or `finishExternalAuth()`, then rotate the session id with `completeAuth()` before writing the auth record.
+Request-time authentication and route protection for Remix. Use this package to resolve identity into `context.auth` from sessions, bearer tokens, API keys, or your own schemes. Pair it with [`remix/auth`](../auth/README.md) when you need browser login routes that call `verifyCredentials()` or `finishExternalAuth()`, then rotate the session id with `completeAuth()` before writing the auth record.
 
 ## Features
 
@@ -79,7 +79,7 @@ router.get(routes.app.dashboard, {
 
 In this example, `createSessionAuthScheme()` turns a persisted session auth record back into request auth state, `auth()` stores that state at `context.auth` (or `context.get(Auth)`), and `requireAuth()` rejects anonymous requests.
 
-If you need to create the login route, start an OAuth redirect, finish a provider callback, or write the session auth record in the first place, use [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth):
+If you need to create the login route, start an OAuth redirect, finish a provider callback, or write the session auth record in the first place, use [`remix/auth`](../auth/README.md):
 
 - `verifyCredentials()` for direct credentials flows
 - `startExternalAuth()` and `finishExternalAuth()` for OAuth and OIDC flows
@@ -110,7 +110,7 @@ This package ships with three built-in auth schemes:
 
 - `createBearerTokenAuthScheme()` for bearer tokens in the [HTTP `Authorization: Bearer <token>` header](https://datatracker.ietf.org/doc/html/rfc6750#section-2.1)
 - `createAPIAuthScheme()` for API keys in a custom request header
-- `createSessionAuthScheme()` for session-backed auth loaded by [a `session()` middleware](https://github.com/remix-run/remix/tree/main/packages/session-middleware)
+- `createSessionAuthScheme()` for session-backed auth loaded by [a `session()` middleware](../session-middleware/README.md)
 
 ## Custom Auth Schemes
 
@@ -228,13 +228,13 @@ router.get('/dashboard', {
 })
 ```
 
-This pattern keeps the auth check app-owned. Use [`remix/middleware/session`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) and [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need server-managed session data, credential verification helpers, or OAuth/OIDC flows.
+This pattern keeps the auth check app-owned. Use [`remix/middleware/session`](../session-middleware/README.md) and [`remix/auth`](../auth/README.md) when you need server-managed session data, credential verification helpers, or OAuth/OIDC flows.
 
 ## Related Packages
 
-- [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth) - Browser auth primitives for credentials, OAuth, and OIDC flows
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router and middleware runtime
-- [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers like redirects
+- [`auth`](../auth/README.md) - Browser auth primitives for credentials, OAuth, and OIDC flows
+- [`fetch-router`](../fetch-router/README.md) - Router and middleware runtime
+- [`response`](../response/README.md) - Response helpers like redirects
 
 ## Related Work
 

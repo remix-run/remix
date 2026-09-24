@@ -1137,11 +1137,13 @@ function insertFrame(
     let end = findFrameEndComment(start)
     if (end) {
       let instance = runtime.frameInstances.get(start)
+      let getContext = (type: ElementFunction) => findContextFromAncestry(vParent, type)
       let src = instance?.handle.src ?? getFrameSrc(node)
       if (!instance) {
         instance = createFrame([start, end], {
           name: getFrameName(node),
           src,
+          getContext,
           errorTarget: runtime.errorTarget,
           loadModule: runtime.loadModule,
           resolveFrame: runtime.resolveFrame,
@@ -1156,6 +1158,9 @@ function insertFrame(
           processClientEntryPreloads: runtime.processClientEntryPreloads,
         })
         runtime.frameInstances.set(start, instance)
+      } else {
+        let instanceRuntime = getFrameRuntime(instance.handle)
+        if (instanceRuntime) instanceRuntime.getContext = getContext
       }
 
       cursor.current = end.nextSibling
@@ -1186,6 +1191,7 @@ function insertFrame(
 
   let fallbackRoot = createRangeRoot([start, end], {
     frame,
+    getContext: (type) => findContextFromAncestry(vParent, type),
     styleManager: styles,
   })
   fallbackRoot.render(node.props.fallback ?? null)
@@ -1193,6 +1199,7 @@ function insertFrame(
   let instance = createFrame([start, end], {
     name: getFrameName(node),
     src: getFrameSrc(node),
+    getContext: (type) => findContextFromAncestry(vParent, type),
     errorTarget: runtime.errorTarget,
     loadModule: runtime.loadModule,
     resolveFrame: runtime.resolveFrame,
@@ -1725,7 +1732,9 @@ function diffChildren(
     return committed as CommittedVNode[]
   }
 
+  // Only bulk-clear when at least one committed child is being removed.
   if (
+    curr.length > 0 &&
     next.length === 0 &&
     anchor === undefined &&
     !parentUsesInnerHTML(vParent) &&

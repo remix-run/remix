@@ -101,8 +101,8 @@ formData.append('document', realFile)
 
 ## Related Packages
 
-- [`fs`](https://github.com/remix-run/remix/tree/main/packages/fs) - Filesystem utilities for reading and writing files using the Web `File` API
-- [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - Storage abstraction for files on disk or in memory
+- [`fs`](../fs/README.md) - Filesystem utilities for reading and writing files using the Web `File` API
+- [`file-storage`](../file-storage/README.md) - Storage abstraction for files on disk or in memory
 
 ## License
 

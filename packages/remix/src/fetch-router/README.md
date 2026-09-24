@@ -1,6 +1,6 @@
 # fetch-router
 
-A minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). Use it to define typed route maps, run middleware, and share request-scoped context across APIs, web services, and server-rendered applications.
+A minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](../route-pattern/README.md). Use it to define typed route maps, run middleware, and share request-scoped context across APIs, web services, and server-rendered applications.
 
 ## Features
 
@@ -98,7 +98,7 @@ The `routes.home` route is a `Route<'ANY', '/'>`, which means it serves any requ
 
 In addition to describing the structure of your routes, route maps also make it easy to generate type-safe links and form actions using the `href()` function on a route. The example below is a small site with a home page and a "Contact Us" page.
 
-Note: We're using the [`createHtmlResponse` helper from `response`](https://github.com/remix-run/remix/tree/main/packages/response#readme) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
+Note: We're using the [`createHtmlResponse` helper from `response`](../response/README.md) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
 
 ```ts
 import { route } from 'remix/routes'
@@ -913,7 +913,7 @@ type AppContext = MiddlewareContext<typeof middleware>
 
 ### Response Helpers
 
-Response helpers for creating common HTTP responses are available in the [`response`](https://github.com/remix-run/remix/tree/main/packages/response) package:
+Response helpers for creating common HTTP responses are available in the [`response`](../response/README.md) package:
 
 ```tsx
 import { createFileResponse } from 'remix/response/file'
@@ -927,11 +927,11 @@ let response = createRedirectResponse('/')
 let response = compressResponse(uncompressedResponse, request)
 ```
 
-See the [`response` documentation](https://github.com/remix-run/remix/tree/main/packages/response#readme) for more details.
+See the [`response` documentation](../response/README.md) for more details.
 
 ### Working with HTML
 
-For working with HTML strings and safe HTML interpolation, see the [`html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template) package. It provides a `html` template tag with automatic escaping to prevent XSS vulnerabilities.
+For working with HTML strings and safe HTML interpolation, see the [`html-template`](../html-template/README.md) package. It provides a `html` template tag with automatic escaping to prevent XSS vulnerabilities.
 
 ```ts
 import { html } from 'remix/html-template'
@@ -972,7 +972,7 @@ let button = html`<button>${icon} Click me</button>` // icon is not escaped
 
 **Warning**: Only use `html.raw` with trusted content. Unlike the regular `html` template tag, `html.raw` does not escape its interpolations, which can lead to XSS vulnerabilities if used with untrusted user input.
 
-See the [`html-template` documentation](https://github.com/remix-run/remix/tree/main/packages/html-template#readme) for more details.
+See the [`html-template` documentation](../html-template/README.md) for more details.
 
 ### Testing
 
@@ -1006,16 +1006,16 @@ No special test harness or mocking required! Just use `fetch()` like you would i
 
 ## Related Packages
 
-- [auth-middleware](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) - Request authentication and route protection helpers
-- [session-middleware](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Load and persist sessions in request context
-- [form-data-middleware](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) - Parse request bodies into `context.formData` (or `context.get(FormData)`)
-- [response](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers for HTML, JSON, files, and redirects
+- [auth-middleware](../auth-middleware/README.md) - Request authentication and route protection helpers
+- [session-middleware](../session-middleware/README.md) - Load and persist sessions in request context
+- [form-data-middleware](../form-data-middleware/README.md) - Parse request bodies into `context.formData` (or `context.get(FormData)`)
+- [response](../response/README.md) - Response helpers for HTML, JSON, files, and redirects
 
 ## Related Work
 
-- [headers](https://github.com/remix-run/remix/tree/main/packages/headers) - A library for working with HTTP headers
-- [form-data-parser](https://github.com/remix-run/remix/tree/main/packages/form-data-parser) - A library for parsing multipart/form-data requests
-- [route-pattern](https://github.com/remix-run/remix/tree/main/packages/route-pattern) - The pattern matching library that powers `fetch-router`
+- [headers](../headers/README.md) - A library for working with HTTP headers
+- [form-data-parser](../form-data-parser/README.md) - A library for parsing multipart/form-data requests
+- [route-pattern](../route-pattern/README.md) - The pattern matching library that powers `fetch-router`
 - [Express](https://expressjs.com/) - The classic Node.js web framework
 
 ## License

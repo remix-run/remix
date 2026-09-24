@@ -42,14 +42,24 @@ Run tests with the CLI:
 remix test
 ```
 
-By default, `remix test` discovers all files matching `**/*.test{,.browser,.e2e}.{ts,tsx}`. Pass one or more globs as positional arguments to override:
+By default, `remix test` discovers all files matching `**/*.test{,.browser,.e2e}.{ts,tsx}`. Pass a partial filename to select matching test files:
+
+```sh
+remix test frame
+remix test frame router
+```
+
+Simple names expand to test globs: `frame` becomes `**/*frame*.test*.{ts,tsx}`, selecting files such as `src/frame.test.ts` and `src/frame.css.test.tsx` while ignoring source files such as `src/frame.ts`. Arguments containing glob syntax, a path separator, or a `.ts` or `.tsx` file extension pass through unchanged.
+
+You can also pass file paths and explicit globs:
 
 ```sh
 remix test "src/**/*.test.ts"
 remix test "src/**/*.test.ts" "tests/**/*.test.tsx"
+remix test src/frame.test.ts
 ```
 
-You may also repeat the `--glob.*` flags. Positional globs take precedence over `--glob.test`.
+You can combine simple names, file paths, and globs; matching files run once. The `--glob.*` flags are repeatable. Positional arguments, including expanded names, override configured test globs and `--glob.test`. Exclusions still apply. Use an explicit glob for custom naming conventions such as `*.spec.ts`.
 
 ### Config File
 
@@ -487,8 +497,8 @@ finish—useful for debugging failures.
 
 ## Related Packages
 
-- [`assert`](https://github.com/remix-run/remix/tree/main/packages/assert) provides assertions that work in server and browser tests.
-- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) provides the `remix/ui/test` browser rendering utilities.
+- [`assert`](../assert/README.md) provides assertions that work in server and browser tests.
+- [`ui`](../ui/README.md) provides the `remix/ui/test` browser rendering utilities.
 
 ## Related Work
 

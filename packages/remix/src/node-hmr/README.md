@@ -18,7 +18,7 @@ npm i remix
 
 ## Usage
 
-Create a development script that starts your app server with HMR enabled, along with any additional Node args, such as the `--import` flag to provide [Node module customization hooks](https://nodejs.org/api/module.html#customization-hooks) for [JSX syntax support](https://github.com/remix-run/remix/tree/main/packages/node-tsx) and [Remix component HMR](https://github.com/remix-run/remix/tree/main/packages/ui-hmr):
+Create a development script that starts your app server with HMR enabled, along with any additional Node args, such as the `--import` flag to provide [Node module customization hooks](https://nodejs.org/api/module.html#customization-hooks) for [JSX syntax support](../node-tsx/README.md) and [Remix component HMR](../ui-hmr/README.md):
 
 ```ts
 // hmr.ts
@@ -46,7 +46,7 @@ Then run the script with Node:
 
 During development, server updates can briefly leave your app unable to handle requests. In a server-only context, requests may be rejected while the child server is restarting. In a browser context, the browser may refresh or revalidate at the same time as a server restart, which can result in failed requests or a broken page.
 
-A stable proxy server can avoid this by continuing to listen on the public port while `node-hmr` updates the child server behind it. `createHmrReadyFetch()` works with any fetch handler, so you can compose it with `createFetchProxy()` from [`remix/fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) to forward requests to the child server while delaying or retrying requests during updates.
+A stable proxy server can avoid this by continuing to listen on the public port while `node-hmr` updates the child server behind it. `createHmrReadyFetch()` works with any fetch handler, so you can compose it with `createFetchProxy()` from [`remix/fetch-proxy`](../fetch-proxy/README.md) to forward requests to the child server while delaying or retrying requests during updates.
 
 ```ts
 // hmr.ts
@@ -75,6 +75,15 @@ const server = http.createServer(createRequestListener(createHmrReadyFetch(hmrRu
 
 server.listen(hmrProxyPort)
 ```
+
+Because the proxy sets forwarded origin headers, the child app server should trust them while supervised by `node-hmr`:
+
+```ts
+const isHmr = process.env.REMIX_NODE_HMR === '1'
+const server = http.createServer(createRequestListener(handler, { trustProxy: isHmr }))
+```
+
+This lets `cop()` and `csrf()` recognize same-origin form submissions.
 
 By default, `createHmrReadyFetch()` retries `GET` and `HEAD` requests when the wrapped fetch handler throws or returns a `502`, `503`, or `504` response, but only if the server updated or restarted while the request was in flight. You can customize this policy with `shouldRetry`:
 
@@ -111,7 +120,7 @@ if (process.env.REMIX_NODE_HMR) {
 
 A browser HMR channel is scoped to the current child process. It gives browser HMR tooling an EventSource URL, a way to report the files it wants watched, and a way to respond to file changes with browser HMR events.
 
-Browser asset servers can use this API to co-ordinate browser HMR with the server, for example, [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) via its `hmr` option to `createAssetServer`:
+Browser asset servers can use this API to co-ordinate browser HMR with the server, for example, [`remix/assets`](../assets/README.md) via its `hmr` option to `createAssetServer`:
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -175,7 +184,7 @@ run('./server.ts', {
 
 ## `import.meta.hot`
 
-The `import.meta.hot` API provided by `node-hmr` is a small runtime contract for modules that can handle updates without restarting the process. It is primarily intended for transforms like [remix/ui-hmr](https://github.com/remix-run/remix/tree/main/packages/ui-hmr), but it can also be used directly.
+The `import.meta.hot` API provided by `node-hmr` is a small runtime contract for modules that can handle updates without restarting the process. It is primarily intended for transforms like [remix/ui-hmr](../ui-hmr/README.md), but it can also be used directly.
 
 To type `import.meta.hot`, add the HMR types to your TypeScript config:
 
@@ -297,9 +306,9 @@ if (import.meta.hot) {
 
 ## Related Packages
 
-- [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Consumes browser HMR channels for coordinating server and browser HMR updates
-- [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Creates fetch handlers for forwarding requests to another server
-- [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) - Provides code transforms and runtime for HMR for Remix UI components
+- [`assets`](../assets/README.md) - Consumes browser HMR channels for coordinating server and browser HMR updates
+- [`fetch-proxy`](../fetch-proxy/README.md) - Creates fetch handlers for forwarding requests to another server
+- [`ui-hmr`](../ui-hmr/README.md) - Provides code transforms and runtime for HMR for Remix UI components
 
 ## License
 

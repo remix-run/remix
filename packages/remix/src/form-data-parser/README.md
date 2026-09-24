@@ -36,7 +36,9 @@ The `parseFormData` interface allows you to define an "upload handler" function 
 
 `parseFormData()` accepts `multipart/*` and `application/x-www-form-urlencoded` media types, matched case-insensitively. Other media types throw `FormDataParseError` before the request body is read.
 
-`FileUpload.name` and `FileUpload.type` describe the submitted multipart metadata. The parser does not verify that the contents match the media type or filename extension. Choose storage names in your application and validate file contents before serving uploads inline. To serve uploads as downloads, set `Content-Disposition: attachment` on the file response; see [File Responses](https://github.com/remix-run/remix/tree/main/packages/response#file-responses).
+`FileUpload.name` and `FileUpload.type` are untrusted client input from the submitted multipart metadata. Filenames are not sanitized for filesystem use, including on files returned in `FormData`. Do not use these names directly as filesystem paths or join them to an upload directory. Generate storage names in your application; see [Filename Safety](../headers/README.md#filename-safety).
+
+The parser does not verify that the contents match the media type or filename extension. Validate file contents before serving uploads inline. To serve uploads as downloads, set `Content-Disposition: attachment` on the file response; see [File Responses](../response/README.md#file-responses).
 
 ```ts
 import * as fsp from 'node:fs/promises'
@@ -47,10 +49,10 @@ import { parseFormData } from 'remix/form-data-parser'
 async function uploadHandler(fileUpload: FileUpload) {
   // Is this file upload from the <input type="file" name="user-avatar"> field?
   if (fileUpload.fieldName === 'user-avatar') {
-    let filename = `/uploads/user-${user.id}-avatar.bin`
+    let filename = `/uploads/${crypto.randomUUID()}`
 
-    // Store the file safely on disk
-    await fsp.writeFile(filename, fileUpload.bytes)
+    // Store under an application-generated name in an existing upload directory
+    await fsp.writeFile(filename, new Uint8Array(await fileUpload.arrayBuffer()), { flag: 'wx' })
 
     // Return the file name to use in the FormData object so we don't
     // keep the file contents around in memory.
@@ -121,7 +123,7 @@ try {
 }
 ```
 
-If you're looking for a more flexible storage solution for `FileUpload` objects, this library pairs really well with [the `file-storage` library](https://github.com/remix-run/remix/tree/main/packages/file-storage) for keeping files in various storage backends.
+If you're looking for a more flexible storage solution for `FileUpload` objects, this library pairs really well with [the `file-storage` library](../file-storage/README.md) for keeping files in various storage backends.
 
 ```ts
 import { createFsFileStorage } from 'remix/file-storage/fs'
@@ -153,9 +155,9 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/fo
 
 ## Related Packages
 
-- [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Tiny, standards-aligned validation with a `form-data` export for `FormData` and `URLSearchParams`
-- [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - A simple key/value interface for storing `FileUpload` objects you get from the parser
-- [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
+- [`data-schema`](../data-schema/README.md) - Tiny, standards-aligned validation with a `form-data` export for `FormData` and `URLSearchParams`
+- [`file-storage`](../file-storage/README.md) - A simple key/value interface for storing `FileUpload` objects you get from the parser
+- [`multipart-parser`](../multipart-parser/README.md) - The parser used internally for parsing `multipart/form-data` HTTP messages
 
 ## License
 

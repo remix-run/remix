@@ -1,6 +1,6 @@
 # auth
 
-Composable browser authentication primitives for Remix. Use this package to verify credentials on your own server, start external OAuth or OIDC redirects, finish provider callbacks, and write an app-owned auth record into the session. Pair it with [`remix/middleware/auth`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) when later requests need to resolve that session data into the current user and protect routes.
+Composable browser authentication primitives for Remix. Use this package to verify credentials on your own server, start external OAuth or OIDC redirects, finish provider callbacks, and write an app-owned auth record into the session. Pair it with [`remix/middleware/auth`](../auth-middleware/README.md) when later requests need to resolve that session data into the current user and protect routes.
 
 ## Features
 
@@ -368,6 +368,8 @@ Default scopes for OAuth providers that don't use OIDC discovery:
 
 Pass `scopes` if you need a different set for a provider.
 
+GitHub uses the email returned in the profile when present. Otherwise, it selects a verified address from the email API, preferring the primary address, and leaves the email `null` or absent if none are verified. The provider account identity remains the GitHub user ID in `result.account.providerAccountId`.
+
 ## Custom Auth Providers
 
 Use `createOIDCAuthProvider()` directly for custom external auth providers. This is the extension point for providers that support OpenID Connect discovery, authorization code flow, and a userinfo endpoint. Reach for a custom OAuth provider implementation only when the provider does not support OIDC.
@@ -465,11 +467,11 @@ The runtime may write a serialized value to `transaction.providerState` during `
 
 ## Related Packages
 
-- [`auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) - Request authentication and route protection helpers
-- [`form-data-middleware`](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) - Form body parsing for `createCredentialsAuthProvider()` routes
-- [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Request-scoped session loading and persistence
-- [`session`](https://github.com/remix-run/remix/tree/main/packages/session) - Session data model and storage backends
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router and middleware runtime
+- [`auth-middleware`](../auth-middleware/README.md) - Request authentication and route protection helpers
+- [`form-data-middleware`](../form-data-middleware/README.md) - Form body parsing for `createCredentialsAuthProvider()` routes
+- [`session-middleware`](../session-middleware/README.md) - Request-scoped session loading and persistence
+- [`session`](../session/README.md) - Session data model and storage backends
+- [`fetch-router`](../fetch-router/README.md) - Router and middleware runtime
 
 ## Related Work
 

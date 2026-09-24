@@ -1,8 +1,13 @@
 ---
 title: Data and Validation
 description: How Remix validates inputs, defines relational data, queries databases, and runs SQL migrations.
-published: false
 ---
+
+This chapter is unfinished. The sections below outline what it will cover. For working API examples, see these READMEs:
+
+- [Data schema](https://github.com/remix-run/remix/blob/main/packages/data-schema/README.md)
+- [Data table](https://github.com/remix-run/remix/blob/main/packages/data-table/README.md)
+- [SQLite adapter](https://github.com/remix-run/remix/blob/main/packages/data-table-sqlite/README.md)
 
 Follow one value from an untrusted request into a validated action payload and then into a typed database write. Request validation and table validation solve different problems and should stay separate in the reader's model.
 

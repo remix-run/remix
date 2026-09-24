@@ -24,7 +24,7 @@ const internalServerErrorBody = [
 export interface RequestListenerOptions {
   /**
    * Overrides the host portion of the incoming request URL. By default the request URL host is
-   * derived from the HTTP `Host` header.
+   * derived from HTTP/2 `:authority`, falling back to the HTTP `Host` header.
    *
    * For example, if you have a `$HOST` environment variable that contains the hostname of your
    * server, you can use it to set the host of all incoming request URLs like so:
@@ -35,8 +35,9 @@ export interface RequestListenerOptions {
    */
   host?: string
   /**
-   * An error handler that determines the response when the request handler throws an error. By
-   * default a 500 Internal Server Error response will be sent.
+   * An error handler that determines the response when request construction or handling throws.
+   * If no response is returned, conflicting HTTP/2 authorities receive a 400 Bad Request response
+   * and other errors receive a 500 Internal Server Error response.
    */
   onError?: ErrorHandler
   /**
@@ -62,6 +63,9 @@ export interface RequestListenerOptions {
  * - [`https.createServer()`](https://nodejs.org/api/https.html#httpscreateserveroptions-requestlistener)
  * - [`http2.createServer()`](https://nodejs.org/api/http2.html#http2createserveroptions-onrequesthandler)
  * - [`http2.createSecureServer()`](https://nodejs.org/api/http2.html#http2createsecureserveroptions-onrequesthandler)
+ *
+ * HTTP/2 requests with conflicting `Host` and `:authority` values are rejected before the handler
+ * is called. They receive a 400 response unless `onError` returns a custom response.
  *
  * Example:
  *
@@ -93,8 +97,15 @@ export function createRequestListener(
   if (handler.length === 0) {
     let handlerWithoutArgs = handler as () => Response | Promise<Response>
 
-    return async (_req, res) => {
+    return async (req, res) => {
       let isResponseClosed = observeResponseClose(res)
+      try {
+        getRequestAuthority(req)
+      } catch (error) {
+        await sendResponseForCreationError(res, onError, error, isResponseClosed)
+        return
+      }
+
       let response: Response
       try {
         response = await handlerWithoutArgs()
@@ -233,16 +244,19 @@ async function sendResponseForRequest(
 
 async function createErrorResponse(onError: ErrorHandler, error: unknown): Promise<Response> {
   try {
-    return (await onError(error)) ?? internalServerError()
+    let response = await onError(error)
+    if (response != null) return response
+    return error instanceof RequestAuthorityError
+      ? new Response('Bad Request', { status: 400 })
+      : internalServerError()
   } catch (error) {
     console.error(`There was an error in the error handler: ${error}`)
     return internalServerError()
   }
 }
 
-function defaultErrorHandler(error: unknown): Response {
+function defaultErrorHandler(error: unknown): void {
   console.error(error)
-  return internalServerError()
 }
 
 function internalServerError(): Response {
@@ -389,6 +403,7 @@ export type RequestOptions = Omit<RequestListenerOptions, 'onError'>
  * @param res The server response object
  * @param options Options for creating the request
  * @returns A `Request` object
+ * @throws If HTTP/2 `Host` and `:authority` values identify different hosts
  */
 export function createRequest(
   req: http.IncomingMessage | http2.Http2ServerRequest,
@@ -459,15 +474,41 @@ function getRequestHost(
   headers: Headers,
   options?: RequestOptions,
 ): string {
-  let authority = req.headers[':authority']
+  let authority = getRequestAuthority(req)
 
   return (
     options?.host ??
     (options?.trustProxy ? getForwardedHost(headers) : undefined) ??
+    authority ??
     headers.get('Host') ??
-    (Array.isArray(authority) ? authority[0] : authority) ??
     'localhost'
   )
+}
+
+class RequestAuthorityError extends Error {}
+
+function getRequestAuthority(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+): string | undefined {
+  let value = req.headers[':authority']
+  let authority = Array.isArray(value) ? value[0] : value
+  let host = req.headers.host
+
+  if (authority != null && host != null) {
+    // Compare using the incoming scheme, before deployment overrides are applied.
+    let scheme = req.headers[':scheme']
+    let protocol =
+      (Array.isArray(scheme) ? scheme[0] : scheme) ??
+      ('encrypted' in req.socket && req.socket.encrypted ? 'https' : 'http')
+    let authorityUrl = URL.parse(`${protocol}://${authority}`)
+    let hostUrl = URL.parse(`${protocol}://${host}`)
+
+    if (authorityUrl == null || hostUrl == null || authorityUrl.host !== hostUrl.host) {
+      throw new RequestAuthorityError('Host header does not match :authority')
+    }
+  }
+
+  return authority
 }
 
 function getForwardedProtocol(headers: Headers): string | undefined {

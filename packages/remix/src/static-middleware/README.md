@@ -33,7 +33,7 @@ router.get('/', () => new Response('Home'))
 
 ### With Cache Control
 
-Internally, the `staticFiles()` middleware uses the [`createFileResponse()` helper from `remix/response`](https://github.com/remix-run/remix/tree/main/packages/response/README.md#file-responses) to send files with full HTTP semantics. This means it also accepts the same options as the `createFileResponse()` helper.
+Internally, the `staticFiles()` middleware uses the [`createFileResponse()` helper from `remix/response`](../response/README.md#file-responses) to send files with full HTTP semantics. This means it also accepts the same options as the `createFileResponse()` helper.
 
 ```ts
 let router = createRouter({
@@ -60,6 +60,18 @@ let router = createRouter({
 })
 ```
 
+### Directory Listings
+
+Set `listFiles: true` to list a directory's immediate files and folders when no index file is found. Listings are disabled by default, and index files take precedence unless `index: false` is set.
+
+```ts
+let router = createRouter({
+  middleware: [staticFiles('./public', { listFiles: true })],
+})
+```
+
+Listings include file sizes and types. Folder sizes are left blank, so generating a listing does not read subdirectory contents.
+
 ### Multiple Directories
 
 ```ts
@@ -81,8 +93,8 @@ let router = createRouter({
 
 ## Related Packages
 
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
-- [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file) - Used internally for streaming file contents
+- [`fetch-router`](../fetch-router/README.md) - Router for the web Fetch API
+- [`lazy-file`](../lazy-file/README.md) - Used internally for streaming file contents
 
 ## License
 

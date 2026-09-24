@@ -21,10 +21,12 @@ npm i remix
 
 The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It automatically validates the request is `multipart/form-data`, extracts the multipart boundary from the `Content-Type` header, parses all fields and files in the `request.body` stream, and gives each one to you as a `MultipartPart` object with a rich API for accessing its metadata and content.
 
+`MultipartPart.filename` is untrusted client input from `Content-Disposition`, including decoded `filename*` values when supplied. The parser does not sanitize filenames for filesystem use. Do not use `part.filename`, or a `File.name` derived from it, directly as a filesystem path. Generate a storage name in your application; see [Filename Safety](../headers/README.md#filename-safety).
+
 ```ts
 import { MultipartParseError, parseMultipartRequest } from 'remix/multipart-parser'
 
-async function handleRequest(request: Request): void {
+async function handleRequest(request: Request): Promise<void> {
   try {
     for await (let part of parseMultipartRequest(request)) {
       if (part.isFile) {
@@ -35,8 +37,9 @@ async function handleRequest(request: Request): void {
         console.log(`Field name: ${part.name}`)
         console.log(`Content-Type header: ${part.headers['content-type']}`)
 
-        // Save to disk, upload to cloud storage, etc.
-        await saveFile(part.filename, part.bytes)
+        // Save under an application-generated name, independent of part.filename
+        let storageName = crypto.randomUUID()
+        await saveFile(storageName, part.bytes)
       } else {
         let text = part.text // string
         console.log(`Field received: ${part.name} = ${JSON.stringify(text)}`)
@@ -162,6 +165,24 @@ for await (let part of parseMultipartStream(message, { boundary })) {
 }
 ```
 
+For direct control over chunk delivery, use `MultipartParser`. Consume all parts yielded by `write()` for every chunk, then call `finish()` at EOF to validate completion.
+
+```ts
+import { MultipartParser } from 'remix/multipart-parser'
+
+let parser = new MultipartParser(boundary)
+
+for await (let chunk of chunks) {
+  for (let part of parser.write(chunk)) {
+    await handlePart(part)
+  }
+}
+
+parser.finish()
+```
+
+`write()` yields the final part when both closing hyphens arrive. A malformed closing suffix can cause a subsequent `write()` or `finish()` to throw after that part was delivered. Processing a part does not guarantee that the entire message is valid. Empty multipart messages yield no parts.
+
 ## Demos
 
 The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos) contains a few working demos of how you can use this library:
@@ -229,8 +250,8 @@ Deno 2.3.6
 
 ## Related Packages
 
-- [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser) - Uses `multipart-parser` internally to parse multipart requests and generate `FileUpload`s for storage
-- [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers) - Used internally to parse `Content-Disposition` and `Content-Type` metadata for each `MultipartPart`
+- [`form-data-parser`](../form-data-parser/README.md) - Uses `multipart-parser` internally to parse multipart requests and generate `FileUpload`s for storage
+- [`headers`](../headers/README.md) - Used internally to parse `Content-Disposition` and `Content-Type` metadata for each `MultipartPart`
 
 ## Credits
 

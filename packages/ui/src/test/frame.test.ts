@@ -17,11 +17,14 @@ import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
 import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
-import { ImportMap, renderToStream } from '../server/stream.ts'
+import { ImportMap, renderToString, renderToStream } from '../server/stream.ts'
 import { createStyleManager } from '../style/index.ts'
 import { drain, withResolvers } from './utils.ts'
 
 const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'
+
+const markerlessDocument =
+  '<!doctype html><html><head><title>Next</title></head><body><main>Next</main></body></html>'
 
 type TestFrameOptions = Partial<Parameters<typeof createFrame>[1]> &
   Pick<Parameters<typeof createFrame>[1], 'resolveFrame'>
@@ -46,6 +49,62 @@ describe('frames', () => {
   afterEach(() => {
     resetDocumentImportMapManager(document)
     document.documentElement.innerHTML = '<head></head><body></body>'
+  })
+
+  it('preserves named html and body attributes across top frame reloads', async () => {
+    let doc = document.implementation.createHTMLDocument('Initial')
+    let nextHtml = [
+      '<html data-rmx-preserve-attrs="class data-theme" class="server" lang="fr">',
+      '<head><title>Next</title></head>',
+      '<body data-rmx-preserve-attrs="class data-client" class="server" data-client="server" title="Next">',
+      '<main>Next</main></body></html>',
+    ].join('')
+    let frame = createTestFrame(doc, {
+      resolveFrame: () => htmlStream([appendFlushMarker(nextHtml, 'document')]),
+    })
+
+    try {
+      await frame.ready()
+      doc.documentElement.setAttribute('class', 'dark')
+      doc.documentElement.setAttribute('data-theme', 'dark')
+      doc.documentElement.setAttribute('lang', 'en')
+      doc.documentElement.setAttribute('data-page', 'initial')
+      doc.body.setAttribute('class', 'scroll-locked')
+
+      await frame.handle.reload()
+
+      expect(doc.documentElement.className).toBe('dark')
+      expect(doc.documentElement.getAttribute('data-theme')).toBe('dark')
+      expect(doc.documentElement.getAttribute('lang')).toBe('fr')
+      expect(doc.documentElement.hasAttribute('data-page')).toBe(false)
+      expect(doc.title).toBe('Next')
+      expect(doc.body.className).toBe('scroll-locked')
+      expect(doc.body.hasAttribute('data-client')).toBe(false)
+      expect(doc.body.getAttribute('title')).toBe('Next')
+      expect(doc.querySelector('main')?.textContent).toBe('Next')
+
+      doc.documentElement.removeAttribute('class')
+      doc.body.removeAttribute('class')
+      await frame.handle.reload()
+
+      expect(doc.documentElement.hasAttribute('class')).toBe(false)
+      expect(doc.body.hasAttribute('class')).toBe(false)
+
+      nextHtml = [
+        '<html data-rmx-preserve-attrs="" class="light"><head><title>Final</title></head>',
+        '<body class="unlocked"><main>Final</main></body></html>',
+      ].join('')
+      await frame.handle.reload()
+
+      expect(doc.documentElement.className).toBe('light')
+      expect(doc.documentElement.hasAttribute('data-theme')).toBe(false)
+      expect(doc.documentElement.hasAttribute('lang')).toBe(false)
+      expect(doc.body.className).toBe('unlocked')
+      expect(doc.body.hasAttribute('data-rmx-preserve-attrs')).toBe(false)
+      expect(doc.querySelector('main')?.textContent).toBe('Final')
+    } finally {
+      frame.dispose()
+    }
   })
 
   it('preserves hydrated client entries while streaming a top frame reload', async () => {
@@ -122,6 +181,79 @@ describe('frames', () => {
       expect(document.querySelector('[data-entry]')?.textContent).toBe('next')
       expect(setupCount).toBe(setupCountBeforeReload)
       expect(disconnectCount).toBe(disconnectCountBeforeReload)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads the document when streamed frame HTML carries no flush marker', async () => {
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([markerlessDocument])
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(document.title).toBe('Next')
+      expect(document.querySelector('main')?.textContent).toBe('Next')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads the document when frame HTML is a string without a flush marker', async () => {
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([])
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.render(markerlessDocument)
+
+      expect(document.title).toBe('Next')
+      expect(document.querySelector('main')?.textContent).toBe('Next')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads the document for renderToString output, which has no flush marker', async () => {
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+
+    let html = await renderToString(
+      jsx('html', {
+        children: [
+          jsx('head', { children: jsx('title', { children: 'Next' }) }),
+          jsx('body', { children: jsx('main', { children: 'Next' }) }),
+        ],
+      }),
+    )
+    expect(html).not.toContain('rmx:flush')
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([html])
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(document.title).toBe('Next')
+      expect(document.querySelector('main')?.textContent).toBe('Next')
     } finally {
       frame.dispose()
     }

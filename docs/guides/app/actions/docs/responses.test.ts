@@ -3,6 +3,7 @@ import { describe, it } from 'remix/test'
 
 import { createGuidesRouter } from '../../router.ts'
 import { routes } from '../../routes.ts'
+
 describe('docs responses', () => {
   it('renders no current chapter on the index', async () => {
     let router = createGuidesRouter()
@@ -16,6 +17,23 @@ describe('docs responses', () => {
     assert.equal(response.headers.get('ETag'), null)
     assert.equal(getChapterNavigationHtml(html).match(/aria-current="page"/g)?.length ?? 0, 0)
     assert.match(html, /href="\/start-here\/"/)
+  })
+
+  it('shows unfinished chapters with links to package READMEs', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(
+        new URL(routes.docs.chapter.href({ chapter: 'data-and-validation' }), 'http://localhost'),
+      ),
+    )
+    let html = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.match(html, /This chapter is unfinished\./)
+    assert.match(
+      html,
+      /https:\/\/github\.com\/remix-run\/remix\/blob\/main\/packages\/data-schema\/README\.md/,
+    )
   })
 
   it('configures Pagefind around the searchable docs content', async () => {

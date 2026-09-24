@@ -4,9 +4,19 @@ import * as path from 'node:path'
 
 import { parse } from 'yaml'
 
+import { getRemixReadmeMappings, rewriteLinksToRemixReadmes } from './remix-readmes.ts'
+
 const rootDir = path.resolve(import.meta.dirname, '..', '..')
-const sourceGuidesDir = path.join(rootDir, 'docs', 'guides', 'app', 'actions', 'docs', 'chapters')
-const remixGuidesDir = path.join(rootDir, 'packages', 'remix', 'guides')
+const defaultSourceGuidesDir = path.join(
+  rootDir,
+  'docs',
+  'guides',
+  'app',
+  'actions',
+  'docs',
+  'chapters',
+)
+const defaultRemixGuidesDir = path.join(rootDir, 'packages', 'remix', 'guides')
 
 export interface RemixGuideCopy {
   title: string
@@ -15,38 +25,73 @@ export interface RemixGuideCopy {
   remixGuidePath: string
 }
 
-export function getRemixGuideCopies(): RemixGuideCopy[] {
+interface RemixGuide extends RemixGuideCopy {
+  published: boolean
+}
+
+interface RemixGuideDirectories {
+  sourceGuidesDir?: string
+  remixGuidesDir?: string
+}
+
+export function getRemixGuideCopies(directories: RemixGuideDirectories = {}): RemixGuideCopy[] {
+  return getPublishedGuideCopies(getRemixGuides(directories))
+}
+
+function getRemixGuides({
+  sourceGuidesDir = defaultSourceGuidesDir,
+  remixGuidesDir = defaultRemixGuidesDir,
+}: RemixGuideDirectories = {}): RemixGuide[] {
   return fs
     .readdirSync(sourceGuidesDir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && /^\d+-[a-z0-9][a-z0-9-]*\.md$/.test(entry.name))
     .sort((a, b) => a.name.localeCompare(b.name))
-    .flatMap((entry) => {
+    .map((entry): RemixGuide => {
       let sourceGuidePath = path.join(sourceGuidesDir, entry.name)
       let { title, description, published } = readGuideMetadata(sourceGuidePath)
-      return published
-        ? [
-            {
-              title,
-              description,
-              sourceGuidePath,
-              remixGuidePath: path.join(remixGuidesDir, entry.name),
-            },
-          ]
-        : []
+      return {
+        title,
+        description,
+        published,
+        sourceGuidePath,
+        remixGuidePath: path.join(remixGuidesDir, entry.name),
+      }
     })
 }
 
-export async function syncRemixGuides(): Promise<RemixGuideCopy[]> {
-  await removeRemixGuides()
-
-  let copies = getRemixGuideCopies()
-  await fsp.mkdir(remixGuidesDir, { recursive: true })
-  await Promise.all(copies.map((copy) => fsp.copyFile(copy.sourceGuidePath, copy.remixGuidePath)))
-  return copies
+function getPublishedGuideCopies(guides: RemixGuide[]): RemixGuideCopy[] {
+  return guides
+    .filter((guide) => guide.published)
+    .map(({ title, description, sourceGuidePath, remixGuidePath }) => ({
+      title,
+      description,
+      sourceGuidePath,
+      remixGuidePath,
+    }))
 }
 
-async function removeRemixGuides(): Promise<void> {
+export async function syncRemixGuides({
+  sourceGuidesDir = defaultSourceGuidesDir,
+  remixGuidesDir = defaultRemixGuidesDir,
+}: RemixGuideDirectories = {}): Promise<RemixGuideCopy[]> {
+  let guides = getRemixGuides({ sourceGuidesDir, remixGuidesDir })
+  let copies = getPublishedGuideCopies(guides)
+  let readmeMappings = getRemixReadmeMappings()
+
   await fsp.rm(remixGuidesDir, { recursive: true, force: true })
+  await fsp.mkdir(remixGuidesDir, { recursive: true })
+  await Promise.all(
+    copies.map(async (copy) => {
+      let markdown = await fsp.readFile(copy.sourceGuidePath, 'utf-8')
+      let installedMarkdown = rewriteLinksToRemixReadmes(
+        markdown,
+        copy.remixGuidePath,
+        readmeMappings,
+      )
+      await fsp.writeFile(copy.remixGuidePath, installedMarkdown)
+    }),
+  )
+  return copies
 }
 
 function readGuideMetadata(filePath: string): {

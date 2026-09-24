@@ -52,7 +52,23 @@ let proxy = createFetchProxy('https://remix.run', {
 
 The proxy also removes `X-Forwarded-For` when this option is enabled. Fetch requests do not expose the client's connection address, so the proxy cannot generate a replacement value. An upstream using `node-fetch-server` with `trustProxy: true` will fall back to the proxy's connection address.
 
-When `xForwardedHeaders` is disabled (the default), existing forwarding headers are passed through unchanged. If the target trusts these headers, the caller must supply them from a trusted source.
+When `xForwardedHeaders` is disabled (the default), existing forwarding headers are passed through unless listed in `Connection`. If the target trusts these headers, the caller must supply them from a trusted source.
+
+## Redirects
+
+Unlike a client-side `fetch`, the proxy returns upstream redirects instead of following them by default. This lets the client receive the redirect status, `Location`, and headers such as `Set-Cookie`.
+
+Every `Request` uses `'follow'` by default, even when the caller did not choose a redirect mode. The proxy treats that implicit default as `'manual'`, meaning it returns the redirect to the client. Input requests using `'manual'` or `'error'` retain those modes.
+
+To follow redirects inside the proxy:
+
+```ts
+let proxy = createFetchProxy('https://remix.run', {
+  redirect: 'follow',
+})
+```
+
+A defined per-call `init.redirect` overrides the proxy option.
 
 ## Encoding and Framing Headers
 
@@ -60,9 +76,11 @@ Since proxying is done via `fetch` rather than raw HTTP messages, some encoding 
 
 The incoming `Accept-Encoding` request header describes the final client, so it is not forwarded to the target server.
 
+Connection-specific request headers, including any fields named by `Connection`, are removed before forwarding. Incoming `Content-Length` and `Transfer-Encoding` are also removed so the outgoing `fetch` determines framing for the streamed body. This applies to custom `fetch` functions as well.
+
 Since `fetch` can decompress upstream responses and does not expose raw HTTP transfer framing, `fetch-proxy` strips response headers that may no longer describe the returned body: `Content-Encoding`, related `Content-Length`, and `Transfer-Encoding`.
 
-To support serving compressed responses to the final client, you'll need to compress the response after the proxy returns it, e.g. with the [`compressResponse` helper from `remix/response`](https://github.com/remix-run/remix/tree/main/packages/response#compress-responses):
+To support serving compressed responses to the final client, you'll need to compress the response after the proxy returns it, e.g. with the [`compressResponse` helper from `remix/response`](../response/README.md#compress-responses):
 
 ```ts
 import { createFetchProxy } from 'remix/fetch-proxy'
@@ -79,8 +97,8 @@ async function handleFetch(request: Request): Promise<Response> {
 
 ## Related Packages
 
-- [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server) - Build HTTP servers for Node.js using the web fetch API
-- [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Create, transform, and compress Fetch API responses
+- [`node-fetch-server`](../node-fetch-server/README.md) - Build HTTP servers for Node.js using the web fetch API
+- [`response`](../response/README.md) - Create, transform, and compress Fetch API responses
 
 ## License
 

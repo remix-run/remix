@@ -99,10 +99,10 @@ Custom renderers are also available through `context.get(Renderer)` when direct-
 
 ## Related Packages
 
-- [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Source asset compilation and browser module URLs
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Request routing and typed context
-- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Remix UI components, frames, and server rendering
-- [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Web `Response` helpers
+- [`assets`](../assets/README.md) - Source asset compilation and browser module URLs
+- [`fetch-router`](../fetch-router/README.md) - Request routing and typed context
+- [`ui`](../ui/README.md) - Remix UI components, frames, and server rendering
+- [`response`](../response/README.md) - Web `Response` helpers
 
 ## Related Work
 

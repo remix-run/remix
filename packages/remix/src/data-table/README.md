@@ -681,10 +681,10 @@ subclass methods are intentionally unavailable inside the callback.
 
 ## Related Packages
 
-- [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Optional schema parsing you can use inside table-level `validate(...)` hooks
-- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL database integration
-- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database integration
-- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database integration
+- [`data-schema`](../data-schema/README.md) - Optional schema parsing you can use inside table-level `validate(...)` hooks
+- [`data-table-postgres`](../data-table-postgres/README.md) - PostgreSQL database integration
+- [`data-table-mysql`](../data-table-mysql/README.md) - MySQL database integration
+- [`data-table-sqlite`](../data-table-sqlite/README.md) - SQLite database integration
 
 ## License
 

@@ -125,6 +125,8 @@ async function handler(request: Request) {
 
 ### Custom Hostname Configuration
 
+Request URLs use HTTP/2 `:authority` when present, falling back to `Host`. If both identify different hosts, `createRequestListener()` rejects the request before calling the handler, and `createRequest()` throws. The listener calls `onError` and defaults to 400 when no custom response is returned. Hostnames and default ports are normalized before comparison.
+
 Configure custom hostnames for deployment on VPS or custom environments. `node-fetch-server` uses the `host` option when constructing `request.url`.
 
 ```ts
@@ -316,7 +318,7 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/no
 
 ## Related Packages
 
-- [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
+- [`fetch-proxy`](../fetch-proxy/README.md) - Build HTTP proxy servers using the web fetch API
 
 ## Benchmarks
 

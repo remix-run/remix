@@ -49,17 +49,20 @@ Use `context.formData` (or `context.get(FormData)`).
 
 You can use a custom upload handler to customize how file uploads are handled. The return value of the upload handler will be used as the value of the form field in the `FormData` object.
 
+`upload.name` and the names of uploaded files in `context.formData` are untrusted client input, not sanitized filesystem paths. Generate storage names in your application instead of using these names directly or joining them to an upload directory; see [Filename Safety](../headers/README.md#filename-safety).
+
 ```ts
 import { formData } from 'remix/middleware/form-data'
+import { createRouter } from 'remix/router'
 import { writeFile } from 'node:fs/promises'
 
 let router = createRouter({
   middleware: [
     formData({
       async uploadHandler(upload) {
-        // Save to disk and return path
-        let path = `./uploads/${upload.name}`
-        await writeFile(path, Buffer.from(await upload.arrayBuffer()))
+        // Save under an application-generated name in an existing upload directory
+        let path = `./uploads/${crypto.randomUUID()}`
+        await writeFile(path, new Uint8Array(await upload.arrayBuffer()), { flag: 'wx' })
         return path
       },
     }),
@@ -100,8 +103,8 @@ let router = createRouter({
 
 ## Related Packages
 
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
-- [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser) - The underlying form data parser
+- [`fetch-router`](../fetch-router/README.md) - Router for the web Fetch API
+- [`form-data-parser`](../form-data-parser/README.md) - The underlying form data parser
 
 ## License
 
