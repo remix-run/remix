@@ -5,11 +5,12 @@ This Vite app uses Remix as a client-only router while preserving the fetch rout
 and hides the response carrier used by the UI runtime. `run(router, { fallback })` renders a live
 Remix fallback while the existing top-frame navigation runtime loads the associated route node.
 
-The application is split by responsibility: `app/main.tsx` configures and starts the SPA,
-`app/routes.ts` defines its URL contract, `app/components.tsx` contains its UI, and `app/utils.ts`
-contains shared support code. The demo covers a direct deep link, client-side links, aborting
-delayed routes, POST form data, and push/replace history behavior. The static `index.html` owns the
-document shell; the fallback and route nodes render into its `body`.
+The application uses the same layout as a server-rendered Remix app: `app/routes.ts` defines its URL
+contract, `app/router.ts` configures the router, and `app/actions/controller.tsx` handles the root
+routes. Route pages live beside the controller, shared UI lives in `app/ui/`, and `app/main.tsx`
+starts the browser runtime. The demo covers a direct deep link, client-side links, aborting delayed
+routes, POST form data, and push/replace history behavior. The static `index.html` owns the document
+shell; the fallback and route nodes render into its `body`.
 
 ## Run It
 
