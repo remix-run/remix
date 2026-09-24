@@ -192,7 +192,7 @@ export function resolveTestCommandOptions(
 export function getTestCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
   return formatHelpText(
     {
-      description: 'Run tests for the current project. Simple names expand to test file globs.',
+      description: 'Run tests for the current project.',
       examples: [
         'remix test',
         'remix test frame',
