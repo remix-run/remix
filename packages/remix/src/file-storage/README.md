@@ -46,6 +46,14 @@ if (fileFromStorage != null) {
 await storage.remove(key)
 ```
 
+Writes stream content to a new `.dat` file, then atomically replace the `.meta.json` file to point to it. Failed writes leave the previous entry intact. This requires a filesystem that supports atomic rename within a directory; it does not guarantee persistence across power loss.
+
+Callers are responsible for coordinating overlapping reads, writes, removals, and listings across all instances and processes sharing the directory. The returned `LazyFile` reads content on demand, so coordination must cover consuming the file or finishing/canceling its stream, not just the `get()` or `put()` call. Replacing or removing a key can delete content referenced by an earlier `LazyFile`.
+
+Existing `.dat`/`.meta.json` entries remain readable and are upgraded when rewritten. Older package versions cannot read rewritten entries, so upgrade all processes sharing a directory together.
+
+Failed writes attempt to remove unpublished files. After a successful replacement, deleting the previous content is best-effort and cannot cause the write to report failure. An interrupted process or failed cleanup can leave temporary metadata or unreferenced `.dat` files, which storage ignores. Reclaim these only while all operations and readers using the directory are stopped, preserving content referenced by current metadata (including the matching `<hash>.dat` for legacy metadata without a content pointer).
+
 ## Related Packages
 
 - [`file-storage-s3`](../file-storage-s3/README.md) - S3 backend for `file-storage`
