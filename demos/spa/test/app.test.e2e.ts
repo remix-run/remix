@@ -3,12 +3,12 @@ import * as assert from 'remix/assert'
 import { beforeAll, describe, it } from 'remix/test'
 import { build, createServer, preview, type PreviewServer, type ViteDevServer } from 'vite'
 
-const root = fileURLToPath(new URL('../', import.meta.url))
+const demoRoot = fileURLToPath(new URL('../', import.meta.url))
 const mode: 'development' | 'production' = 'production'
 
 async function createViteTestServer() {
   let options: Parameters<typeof createServer>[0] | Parameters<typeof preview>[0] = {
-    root,
+    root: demoRoot,
     logLevel: 'silent',
     server: {
       host: '127.0.0.1',
@@ -40,7 +40,7 @@ async function createViteTestServer() {
 
 describe(`SPA (${mode})`, () => {
   beforeAll(async () => {
-    if (mode === 'production') await build({ root, logLevel: 'silent' })
+    if (mode === 'production') await build({ root: demoRoot, logLevel: 'silent' })
   })
 
   it('loads a client route directly through the Vite history fallback', async (t) => {

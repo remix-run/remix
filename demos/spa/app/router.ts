@@ -5,8 +5,6 @@ import rootController from './actions/controller.tsx'
 import { routes } from './routes.ts'
 import { createNotFoundPage } from './ui/app-shell.tsx'
 
-const spaRender = render()
-
 const logSpaRequests: Middleware = async ({ request }, next) => {
   let url = new URL(request.url)
   let start = performance.now()
@@ -18,7 +16,7 @@ const logSpaRequests: Middleware = async ({ request }, next) => {
 }
 
 export const router = createRouter({
-  middleware: [spaRender, logSpaRequests],
+  middleware: [render(), logSpaRequests],
   defaultHandler({ render, url }) {
     return render(createNotFoundPage(url), { status: 404 })
   },
