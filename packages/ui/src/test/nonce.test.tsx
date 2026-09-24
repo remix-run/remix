@@ -4,10 +4,39 @@ import { describe, it, type TestContext } from '@remix-run/test'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { Frame } from '../runtime/component.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { ImportMap, renderToStream } from '../server/stream.ts'
+import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
+import { css } from '../style/css-mixin.ts'
 import { drain } from './utils.ts'
 
 describe('CSP nonces', () => {
+  it('applies renderToString CSS mixin styles under CSP before hydration', async (t) => {
+    let html = await renderToString(
+      <html>
+        <head>
+          <meta httpEquiv="Content-Security-Policy" content="style-src 'nonce-document-nonce'" />
+        </head>
+        <body>
+          <p mix={[css({ color: 'rgb(12, 34, 56)' })]}>Styled</p>
+        </body>
+      </html>,
+      { nonce: 'document-nonce' },
+    )
+    let iframe = document.createElement('iframe')
+    t.after(() => iframe.remove())
+    let loaded = new Promise<void>((resolve) => {
+      iframe.addEventListener('load', () => resolve(), { once: true, signal: t.signal })
+    })
+    iframe.srcdoc = html
+    document.body.append(iframe)
+    await loaded
+
+    let frameWindow = iframe.contentWindow
+    invariant(frameWindow)
+    let paragraph = frameWindow.document.querySelector('p')
+    invariant(paragraph)
+    expect(frameWindow.getComputedStyle(paragraph).color).toBe('rgb(12, 34, 56)')
+  })
+
   it('hoists import maps and preloads from blocking frames rendered with a nonce', async () => {
     let Island = clientEntry('/island.js#Island', function Island() {
       return () => <p>Island</p>

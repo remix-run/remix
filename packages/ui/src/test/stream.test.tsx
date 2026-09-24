@@ -1314,6 +1314,48 @@ describe('stream', () => {
       }
     }
 
+    it('renderToString applies nonce options to generated styles, import maps, and metadata', async () => {
+      let html = await renderToString(
+        <html>
+          <head />
+          <body>
+            <div mix={[css({ color: 'red' })]}>Styled</div>
+            <NonceIsland />
+          </body>
+        </html>,
+        { nonce: 'r4nd0m', resolveClientEntry: resolveNonceIsland },
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+      let map = doc.head.querySelector<HTMLScriptElement>('script[data-rmx-import-map]')
+
+      expect(doc.head.querySelector<HTMLStyleElement>('style[data-rmx-style]')?.nonce).toBe(
+        'r4nd0m',
+      )
+      expect(map?.nonce).toBe('r4nd0m')
+      expect(JSON.parse(map?.textContent ?? '{}')).toEqual({
+        imports: { '/assets/nonce-island.js': '/assets/nonce-island.hash.js' },
+      })
+      expect(doc.head.querySelector<HTMLMetaElement>('meta[name="rmx-nonce"]')?.nonce).toBe(
+        'r4nd0m',
+      )
+      expect(html).not.toContain('<!-- rmx:flush')
+    })
+
+    it('renderToString preserves an authored import map nonce', async () => {
+      let html = await renderToString(
+        <html>
+          <head>
+            <ImportMap nonce="authored" value={{}} />
+          </head>
+          <body>Hello</body>
+        </html>,
+        { nonce: 'r4nd0m' },
+      )
+
+      expect(html).toContain('<script data-rmx-import-map type="importmap" nonce="authored">')
+      expect(html).toContain('<meta name="rmx-nonce" content="" nonce="r4nd0m">')
+    })
+
     it('stamps the nonce on server style tags', async () => {
       let html = await drain(
         renderToStream(<div mix={[css({ color: 'red' })]}>Styled</div>, { nonce: 'r4nd0m' }),
@@ -1782,6 +1824,24 @@ describe('stream', () => {
   })
 
   describe('error handling', () => {
+    it('renderToString calls a supplied error handler and rejects fatal render errors', async () => {
+      let renderError = new Error('Render error!')
+      let errors: unknown[] = []
+      function BadComponent(): () => null {
+        throw renderError
+      }
+
+      await expect(
+        renderToString(<BadComponent />, {
+          nonce: 'r4nd0m',
+          onError(error) {
+            errors.push(error)
+          },
+        }),
+      ).rejects.toThrow('Render error!')
+      expect(errors).toEqual([renderError])
+    })
+
     it('calls onError for errors', async () => {
       let capturedError: unknown
 

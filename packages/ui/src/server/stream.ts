@@ -53,7 +53,7 @@ export function createVNode(type: ElementType, props: ElementProps, key?: Key): 
 }
 
 /**
- * Options for server-side rendering to a byte stream.
+ * Options for server-side rendering to a byte stream or an HTML string.
  */
 export interface RenderToStreamOptions {
   /** Source URL to associate with the current frame render. */
@@ -1809,16 +1809,26 @@ async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
 
 /**
  * Renders a node tree to a complete HTML string.
+ * Render errors reject the returned promise when `onError` is omitted.
  *
  * @param node Node tree to render.
+ * @param options Rendering options.
  * @returns Rendered HTML.
  */
-export async function renderToString(node: RemixNode): Promise<string> {
+export async function renderToString(
+  node: RemixNode,
+  options?: RenderToStreamOptions,
+): Promise<string> {
   return stripFlushMarkers(
     await drain(
       renderToStream(node, {
+        ...options,
         onError(error) {
-          throw error
+          if (options?.onError) {
+            options.onError(error)
+          } else {
+            throw error
+          }
         },
       }),
     ),
