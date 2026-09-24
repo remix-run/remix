@@ -5,16 +5,7 @@ import { router } from './app/router.ts'
 
 const PORT = 44100
 
-const server = http.createServer(
-  createRequestListener(async (request) => {
-    try {
-      return await router.fetch(request)
-    } catch (error) {
-      console.error(error)
-      return new Response('Internal Server Error', { status: 500 })
-    }
-  }),
-)
+const server = http.createServer(createRequestListener(router.fetch))
 
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`)

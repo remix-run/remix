@@ -93,9 +93,7 @@ import { createRequestListener } from "remix/node-fetch-server";
 
 import { router } from "./app/router.ts";
 
-const requestListener = createRequestListener(async (request) => {
-  return await router.fetch(request);
-});
+const requestListener = createRequestListener(router.fetch);
 const server = http.createServer(requestListener);
 
 server.listen(44100, () => {
