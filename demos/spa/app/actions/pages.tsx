@@ -48,6 +48,20 @@ export function AboutPage(handle: Handle<PageProps>) {
   )
 }
 
+export function NotFoundPage(handle: Handle<PageProps>) {
+  return () => (
+    <Layout url={handle.props.url}>
+      <article>
+        <p mix={eyebrowStyle}>404</p>
+        <h1 mix={titleStyle}>Page not found</h1>
+        <p mix={bodyStyle}>
+          Try going back to the <a href={routes.home.href()}>home page</a>.
+        </p>
+      </article>
+    </Layout>
+  )
+}
+
 interface GreetingPageProps extends PageProps {
   isSubmission?: boolean
   name: string

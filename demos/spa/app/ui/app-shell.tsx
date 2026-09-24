@@ -85,24 +85,6 @@ function NavLink(handle: Handle<NavLinkProps>) {
   )
 }
 
-function NotFoundPage(handle: Handle<{ url: URL }>) {
-  return () => (
-    <Layout url={handle.props.url}>
-      <article>
-        <p mix={eyebrowStyle}>404</p>
-        <h1 mix={titleStyle}>Page not found</h1>
-        <p mix={bodyStyle}>
-          Try going back to the <a href={routes.home.href()}>home page</a>.
-        </p>
-      </article>
-    </Layout>
-  )
-}
-
-export function createNotFoundPage(url: URL): RemixNode {
-  return <NotFoundPage url={url} />
-}
-
 export function LoadingIndicator() {
   return () => (
     <div role="status" mix={loadingStyle}>
@@ -150,22 +132,6 @@ const mainStyle = css({
   backgroundColor: 'white',
   boxShadow: '0 1rem 3rem rgb(64 44 120 / 10%)',
   padding: 'clamp(2rem, 8vw, 5rem)',
-})
-const eyebrowStyle = css({
-  margin: '0 0 0.5rem',
-  color: '#6a48d7',
-  fontSize: '0.75rem',
-  fontWeight: 700,
-  letterSpacing: '0.12em',
-  textTransform: 'uppercase',
-})
-const titleStyle = css({ margin: 0, fontSize: 'clamp(2rem, 7vw, 3.5rem)', lineHeight: 1.05 })
-const bodyStyle = css({
-  maxWidth: '38rem',
-  margin: '1.5rem 0 0',
-  color: '#5c5965',
-  fontSize: '1.125rem',
-  lineHeight: 1.7,
 })
 const loadingStyle = css({
   width: '100%',

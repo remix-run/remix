@@ -1,6 +1,6 @@
 import { run } from 'remix/spa'
 
-import { router } from './router.ts'
+import { router } from './router.tsx'
 import { LoadingIndicator } from './ui/app-shell.tsx'
 
 // `run()` from `remix/spa` is a wrapper around `remix/ui`'s `run()` that implements

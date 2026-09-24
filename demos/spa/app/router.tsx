@@ -2,8 +2,8 @@ import { createRouter, type Middleware, type RouterContext } from 'remix/router'
 import { render } from 'remix/spa'
 
 import rootController from './actions/controller.tsx'
+import { NotFoundPage } from './actions/pages.tsx'
 import { routes } from './routes.ts'
-import { createNotFoundPage } from './ui/app-shell.tsx'
 
 const logSpaRequests: Middleware = async ({ request }, next) => {
   let url = new URL(request.url)
@@ -18,7 +18,7 @@ const logSpaRequests: Middleware = async ({ request }, next) => {
 export const router = createRouter({
   middleware: [render(), logSpaRequests],
   defaultHandler({ render, url }) {
-    return render(createNotFoundPage(url), { status: 404 })
+    return render(<NotFoundPage url={url} />, { status: 404 })
   },
 })
 
