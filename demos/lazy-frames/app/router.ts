@@ -20,7 +20,7 @@ const appMiddleware = createMiddleware(
 )
 type AppContext = MiddlewareContext<typeof appMiddleware>
 
-declare module 'remix/router' {
+declare module 'remix' {
   interface RouterTypes {
     context: AppContext
   }
