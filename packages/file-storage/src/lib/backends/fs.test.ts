@@ -547,6 +547,52 @@ describe('fs file storage', () => {
     assert.deepEqual(fs.readdirSync(tmpDir), [])
   })
 
+  it('removes a legacy entry with no stored size when its content is missing', async () => {
+    let { dataPath, metaPath } = await writeLegacyFile(
+      tmpDir,
+      'legacy',
+      new File(['legacy'], 'legacy.txt'),
+    )
+    let record: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+    assert.ok(record !== null && typeof record === 'object')
+    Reflect.deleteProperty(record, 'size')
+    fs.writeFileSync(metaPath, JSON.stringify(record))
+    fs.unlinkSync(dataPath)
+    let storage = createFsFileStorage(tmpDir)
+
+    await storage.remove('legacy')
+
+    assert.equal(await storage.has('legacy'), false)
+    assert.equal(await storage.get('legacy'), null)
+    assert.deepEqual(fs.readdirSync(tmpDir), [])
+  })
+
+  it('replaces a legacy entry with no stored size when its content is missing', async () => {
+    let { dataPath, metaPath } = await writeLegacyFile(
+      tmpDir,
+      'legacy',
+      new File(['legacy'], 'legacy.txt'),
+    )
+    let record: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+    assert.ok(record !== null && typeof record === 'object')
+    Reflect.deleteProperty(record, 'size')
+    fs.writeFileSync(metaPath, JSON.stringify(record))
+    fs.unlinkSync(dataPath)
+    let storage = createFsFileStorage(tmpDir)
+    let replacement = new File(['replacement'], 'new.txt', { type: 'text/plain' })
+
+    await storage.set('legacy', replacement)
+
+    let reopened = createFsFileStorage(tmpDir)
+    let stored = await reopened.get('legacy')
+    assert.ok(stored)
+    assert.equal(await stored.text(), 'replacement')
+    assert.equal(stored.name, replacement.name)
+    assert.equal(stored.type, replacement.type)
+    assert.equal(stored.size, replacement.size)
+    assert.equal((await reopened.list({ includeMetadata: true })).files[0].size, replacement.size)
+  })
+
   it('throws if directory is a file', () => {
     fs.mkdirSync(tmpDir, { recursive: true })
     let filePath = path.join(tmpDir, 'not-a-directory')

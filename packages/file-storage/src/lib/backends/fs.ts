@@ -77,7 +77,7 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
     let published = false
 
     try {
-      let metadata: StoredMetadata
+      let metadata: FileMetadata & { dataFile: string }
       try {
         for await (let chunk of file.stream()) {
           await handle.writeFile(chunk)
@@ -167,7 +167,8 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
           let hash = file.name.slice(0, -10) // Remove ".meta.json"
 
           if (foundCursor) {
-            let record = await readMetadata(path.join(rootDir, subdir.name, file.name))
+            let metaPath = path.join(rootDir, subdir.name, file.name)
+            let record = await readMetadata(metaPath)
             if (record === null) continue
             let { dataFile, ...meta } = record
 
@@ -180,7 +181,11 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
               break outerLoop
             }
 
-            files.push(meta)
+            // Older entries did not store their size in metadata.
+            files.push({
+              ...meta,
+              size: meta.size ?? (await fsp.stat(getDataPath(metaPath, dataFile))).size,
+            })
           } else if (hash === cursor) {
             foundCursor = true
           }
@@ -238,7 +243,8 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
   }
 }
 
-interface StoredMetadata extends FileMetadata {
+interface StoredMetadata extends Omit<FileMetadata, 'size'> {
+  size?: number
   dataFile?: string
 }
 
@@ -283,9 +289,10 @@ async function readMetadata(metaPath: string): Promise<StoredMetadata | null> {
   ) {
     throw new SyntaxError('Invalid stored file content path')
   }
-  // Older entries did not store their size in metadata.
-  let size = 'size' in value ? value.size : (await fsp.stat(getDataPath(metaPath, dataFile))).size
-  if (typeof size !== 'number') throw new SyntaxError('Invalid stored file metadata')
+  let size = 'size' in value ? value.size : undefined
+  if (size !== undefined && typeof size !== 'number') {
+    throw new SyntaxError('Invalid stored file metadata')
+  }
   return {
     key: value.key,
     name: value.name,
