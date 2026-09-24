@@ -27,7 +27,7 @@ export const router = createRouter({
 })
 type AppContext = RouterContext<typeof router>
 
-declare module 'remix/router' {
+declare module 'remix' {
   interface RouterTypes {
     context: AppContext
   }

@@ -1,5 +1,3 @@
-import './globals.ts'
-
 export {
   TarParseError,
   MaxEntrySizeExceededError,

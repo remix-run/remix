@@ -9,7 +9,7 @@ type AppContext = RouterContext<typeof router>
 
 router.map(routes, rootController)
 
-declare module 'remix/router' {
+declare module 'remix' {
   interface RouterTypes {
     context: AppContext
   }

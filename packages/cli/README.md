@@ -64,6 +64,8 @@ remix version
 remix --no-color doctor
 ```
 
+Select test files by partial name with `remix test frame`, which expands to `**/*frame*.test*.{ts,tsx}`. File paths and explicit globs pass through unchanged. Multiple arguments select the union of matching files.
+
 You can also run the CLI programmatically:
 
 ```ts

@@ -776,7 +776,7 @@ router.get('/posts/:id', (context) => {
 
 Route params are only half of a handler's type contract. In many apps, handlers also depend on values that middleware loads into request context, like sessions, database connections, or authenticated users.
 
-`fetch-router` lets you carry that context contract through the router and into direct route registration, stored controllers, and stored actions. A common pattern is to derive one application context type from your middleware, augment `RouterTypes.context` with it, then use `createAction()` and `createController()` to type stored handlers.
+`fetch-router` lets you carry that context contract through the router and into direct route registration, stored controllers, and stored actions. A common pattern in Remix apps is to derive one application context type from your middleware, augment `RouterTypes.context` in the `remix` module, then use `createAction()` and `createController()` to type stored handlers.
 
 ```ts
 import { Auth, requireAuth } from 'remix/middleware/auth'
@@ -797,7 +797,7 @@ export const router = createRouter({
 
 type AppContext = RouterContext<typeof router>
 
-declare module 'remix/router' {
+declare module 'remix' {
   interface RouterTypes {
     context: AppContext
   }
@@ -823,6 +823,8 @@ let accountController = createController(routes, {
 ```
 
 In this example, the router's inline middleware array defines the app context contract. `RouterContext<typeof router>` extracts the request context that the router provides, so `RouterTypes.context` can use that context without storing the middleware chain separately.
+
+Apps that install `@remix-run/fetch-router` directly should augment the `@remix-run/fetch-router` module instead.
 
 Prefer plain inline arrays for `middleware` options on routers, controllers, actions, and route helpers. Inline arrays already give TypeScript enough information to infer middleware-provided context for downstream handlers, so `createAction()` and direct action objects see action middleware context, and `createController()` sees controller middleware context without `createMiddleware()`.
 
