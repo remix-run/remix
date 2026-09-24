@@ -14,5 +14,5 @@
     "jsxImportSource": "remix/ui",
     "types": ["vite/client"]
   },
-  "include": ["app", "test", "vite.config.ts"]
+  "include": ["app", "vite.config.ts"]
 }
