@@ -1,0 +1,1 @@
+Add formatter callbacks to `logger()` for structured request logging. The callback receives the request, response, start and end times, and duration so it can safely serialize selected fields as JSON.
