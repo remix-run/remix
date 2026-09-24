@@ -1824,6 +1824,16 @@ describe('stream', () => {
   })
 
   describe('error handling', () => {
+    it('renderToString rejects non-blocking frame errors when onError is omitted', async () => {
+      await expect(
+        renderToString(<Frame src="/failed" fallback={<p>Loading</p>} />, {
+          async resolveFrame() {
+            throw new Error('Frame failed!')
+          },
+        }),
+      ).rejects.toThrow('Frame failed!')
+    })
+
     it('renderToString calls a supplied error handler and rejects fatal render errors', async () => {
       let renderError = new Error('Render error!')
       let errors: unknown[] = []

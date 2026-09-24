@@ -1823,13 +1823,11 @@ export async function renderToString(
     await drain(
       renderToStream(node, {
         ...options,
-        onError(error) {
-          if (options?.onError) {
-            options.onError(error)
-          } else {
+        onError:
+          options?.onError ??
+          ((error) => {
             throw error
-          }
-        },
+          }),
       }),
     ),
   )
