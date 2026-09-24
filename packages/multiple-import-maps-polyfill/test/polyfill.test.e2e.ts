@@ -397,6 +397,7 @@ describe('multiple import map polyfill', () => {
     )
 
     await page.goto('/')
+    // The fixture adds this marker after preloadShim finishes initializing the runtime.
     await page.locator('#ready').waitFor({ state: 'attached' })
     assert.equal(await page.locator('#global').textContent(), 'undefined')
     assert.equal(await page.locator('script[noshim]').count(), 0)
