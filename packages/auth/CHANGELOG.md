@@ -2,6 +2,18 @@
 
 This is the changelog for [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.3
+
+### Patch Changes
+
+- Leave a missing GitHub profile email unset when the email API returns no verified addresses. Verified primary addresses remain preferred over other verified addresses.
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+  - [`session@0.4.3`](https://github.com/remix-run/remix/releases/tag/session@0.4.3)
+
 ## v0.3.2
 
 ### Patch Changes

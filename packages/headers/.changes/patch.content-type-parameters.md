@@ -1,3 +1,0 @@
-Recognize `ContentType` parameter names case-insensitively while preserving media type and parameter value casing. Keep the first value when a `boundary` or `charset` parameter is repeated, including when the names use different casing.
-
-Read unterminated quoted parameter values through the end of the input, honoring backslash escapes and preserving quoted whitespace without interpreting embedded delimiters as new parameters. `ContentType` follows [WHATWG quoted-string recovery](https://fetch.spec.whatwg.org/#collect-an-http-quoted-string): `boundary="abc` yields `abc`, while `note="value; boundary=abc` does not supply a boundary.

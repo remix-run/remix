@@ -2,6 +2,15 @@
 
 This is the changelog for [`cop-middleware`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.11
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+
 ## v0.1.10
 
 ### Patch Changes

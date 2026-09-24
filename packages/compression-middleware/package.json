@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/compression-middleware",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "Middleware for compressing HTTP responses",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

@@ -2,6 +2,29 @@
 
 This is the changelog for [`csrf-middleware`](https://github.com/remix-run/remix/tree/main/packages/csrf-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `csrf()` now reads submitted tokens from headers and parsed form fields only by default. Requests that supply a token only in the query string are rejected. Applications that need query parameter tokens can retain that behavior with an explicit `value` resolver, which replaces the default lookup:
+
+  ```diff
+  -csrf()
+  +csrf({
+  +  value(context) {
+  +    return context.url.searchParams.get('_csrf')
+  +  },
+  +})
+  ```
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+  - [`session@0.4.3`](https://github.com/remix-run/remix/releases/tag/session@0.4.3)
+
 ## v0.1.10
 
 ### Patch Changes

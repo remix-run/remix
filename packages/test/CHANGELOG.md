@@ -1,3 +1,13 @@
+## v0.6.2
+
+### Patch Changes
+
+- Declare which package modules have side effects.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`node-tsx@0.1.2`](https://github.com/remix-run/remix/releases/tag/node-tsx@0.1.2)
+  - [`terminal@0.1.2`](https://github.com/remix-run/remix/releases/tag/terminal@0.1.2)
+
 ## v0.6.1
 
 ### Patch Changes

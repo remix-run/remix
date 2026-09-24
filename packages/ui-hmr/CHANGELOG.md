@@ -2,6 +2,14 @@
 
 This is the changelog for [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.1
+
+### Patch Changes
+
+- Preserve hoisted component function declarations that appear after the render function's `return`, preventing transformed browser components from referencing missing event handlers or helpers.
+
+- Declare which package modules have side effects.
+
 ## v0.1.0
 
 ### Minor Changes

@@ -1,1 +1,0 @@
-Use HTTP/2 `:authority` before `Host` when constructing request URLs. Requests whose `Host` and `:authority` identify different hosts now receive a 400 response by default from `createRequestListener()`, with custom responses supported through `onError`. Equivalent hostnames and default ports remain accepted.

@@ -2,6 +2,33 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v0.8.0
+
+### Minor Changes
+
+- `remix test` now expands simple patterns to test file globs. For example, `remix test frame` runs files matching `**/*frame*.test*.{ts,tsx}`. File paths and explicit globs pass through unchanged. Positional arguments override configured test globs, respect exclusions, and run overlapping matches only once.
+
+### Patch Changes
+
+- Generated apps now trust forwarded headers while running under `node-hmr`, so `cop()` and `csrf()` compare form origins against the browser-facing URL.
+
+  Existing generated apps can apply the same setup in `server.ts`:
+
+  ```diff
+  +let isHmr = process.env.REMIX_NODE_HMR === '1'
+   let server = http.createServer(
+  -  createRequestListener(handler),
+  +  createRequestListener(handler, { trustProxy: isHmr }),
+   )
+  ```
+
+- Declare which package modules have side effects.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.8.0`](https://github.com/remix-run/remix/releases/tag/assets@0.8.0)
+  - [`terminal@0.1.2`](https://github.com/remix-run/remix/releases/tag/terminal@0.1.2)
+  - [`test@0.6.2`](https://github.com/remix-run/remix/releases/tag/test@0.6.2)
+
 ## v0.7.1
 
 ### Patch Changes

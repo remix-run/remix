@@ -2,6 +2,15 @@
 
 This is the changelog for [`method-override-middleware`](https://github.com/remix-run/remix/tree/main/packages/method-override-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.16
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+
 ## v0.1.15
 
 ### Patch Changes

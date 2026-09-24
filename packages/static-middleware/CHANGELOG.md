@@ -2,6 +2,21 @@
 
 This is the changelog for [`static-middleware`](https://github.com/remix-run/remix/tree/main/packages/static-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.17
+
+### Patch Changes
+
+- Directory listings now leave folder sizes blank instead of totaling their contents, keeping listing work limited to the requested directory's immediate entries. File sizes and types are unchanged.
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+  - [`fs@0.4.7`](https://github.com/remix-run/remix/releases/tag/fs@0.4.7)
+  - [`html-template@0.3.2`](https://github.com/remix-run/remix/releases/tag/html-template@0.3.2)
+  - [`mime@0.4.3`](https://github.com/remix-run/remix/releases/tag/mime@0.4.3)
+  - [`response@0.3.10`](https://github.com/remix-run/remix/releases/tag/response@0.3.10)
+
 ## v0.4.16
 
 ### Patch Changes
