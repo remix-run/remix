@@ -257,8 +257,6 @@ action(context) {
 
 The module augmentation is useful because controllers are created in separate files before they are mapped to this router. Apps with multiple routers should pass explicit context types instead of setting one application-wide default.
 
-The `remix` package root is type-only. Runtime APIs still come from focused imports such as `remix/router` and `remix/middleware/render`.
-
 When a reusable middleware chain must be stored in a variable, `createMiddleware(...)` preserves its tuple type and `MiddlewareContext<typeof middleware>` derives the resulting context. Inline middleware arrays and `RouterContext<typeof router>` are the simpler default.
 
 Request context is still an explicit per-request value, not a global. If a helper outside middleware or an action must reach it, add `asyncContext()` from `remix/middleware/async-context` and call `getContext()` inside that helper. That middleware uses Node's async context support, so passing the needed value as a function argument remains the portable option.
