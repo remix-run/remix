@@ -10,4 +10,6 @@
  })
 ```
 
-A `nonce` authored on `<ImportMap>` keeps its own value; the option only fills in the attribute when it is absent. The `#rmx-data` script is left alone because it is an `application/json` data block the browser never executes, so `script-src` does not apply to it. A nonce that changes with every response stays compatible with frame navigation, because the client copies the nonce already on the document's import map script onto the import maps it installs later.
+A `nonce` authored on `<ImportMap>` keeps its own value; the option only fills in the attribute when it is absent. The `#rmx-data` script is left alone because it is an `application/json` data block the browser never executes, so `script-src` does not apply to it. A nonce that changes with every response stays compatible with frame navigation, because the client uses the original document's import map nonce, falling back to its nonce metadata, for import maps it installs later.
+
+Import maps and preloads from blocking frames are merged into the document head, using the document's import map nonce. Document renders retain the nonce in metadata so client entries introduced by later frames work even when there is no initial import map.

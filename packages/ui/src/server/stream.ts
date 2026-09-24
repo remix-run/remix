@@ -19,7 +19,12 @@ import {
   serializeStyleObject,
   shouldStringifyBooleanAttribute,
 } from '../runtime/core/attributes.ts'
-import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
+import {
+  appendFlushMarker,
+  DOCUMENT_NONCE_META_NAME,
+  type FlushKind,
+  stripFlushMarkers,
+} from '../runtime/stream-protocol.ts'
 import { composeMixedProps, resolveMixDescriptors } from '../runtime/core/mix.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -1272,7 +1277,11 @@ function finalizeHtml(html: string, context: RenderContext): string {
   let preloads = collectModulePreloadTags(context.clientEntryHeadResources)
   let styles = collectStyleTags(context)
   let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
-  let headContent = importMapScript + preloads + styles
+  let nonceMeta =
+    hasHtmlRoot && context.nonce !== undefined
+      ? `<meta name="${DOCUMENT_NONCE_META_NAME}" content=""${renderNonceAttribute(context.nonce)}>`
+      : ''
+  let headContent = nonceMeta + importMapScript + preloads + styles
   if (hasHtmlRoot && headContent) {
     let headCloseIndex = html.indexOf('</head>')
     if (headCloseIndex !== -1) {
@@ -1320,7 +1329,8 @@ const FRAME_HEAD_OPEN_TAG = '<head>'
 const FRAME_HEAD_CLOSE_TAG = '</head>'
 const MARKED_MODULE_PRELOAD_START = '<link data-rmx-module-preload rel="modulepreload" href="'
 const MODULE_PRELOAD_END = '" />'
-const MANAGED_IMPORT_MAP_START = '<script data-rmx-import-map type="importmap">'
+const MANAGED_IMPORT_MAP_OPEN_TAG =
+  /^<script data-rmx-import-map type="importmap"(?: nonce="[^"]*")?>/
 const IMPORT_MAP_SCRIPT_END = '</script>'
 
 function createModulePreloadTag(href: string): string {
@@ -1343,8 +1353,9 @@ function hoistClientEntryResourcesFromFrameHead(
   let preloadTags: string[] = []
   let importMaps: ImportMapData[] = []
   let cursor = FRAME_HEAD_OPEN_TAG.length
-  if (html.startsWith(MANAGED_IMPORT_MAP_START, cursor)) {
-    let contentStart = cursor + MANAGED_IMPORT_MAP_START.length
+  let importMapOpenTag = html.slice(cursor).match(MANAGED_IMPORT_MAP_OPEN_TAG)
+  if (importMapOpenTag) {
+    let contentStart = cursor + importMapOpenTag[0].length
     let scriptEnd = html.indexOf(IMPORT_MAP_SCRIPT_END, contentStart)
     if (scriptEnd === -1 || scriptEnd >= headClose) return html
     importMaps.push(parseFrameworkImportMap(html.slice(contentStart, scriptEnd)))

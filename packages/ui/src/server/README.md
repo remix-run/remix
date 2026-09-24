@@ -67,8 +67,9 @@ return new Response(stream, {
 
 - The `<script type="module">` and stylesheet links you write in your own document need their `nonce` attributes from you.
 - An `<ImportMap nonce="...">` you author keeps its own value; `nonce` only fills in the attribute when you leave it off.
+- Document renders retain the nonce in a `<meta name="rmx-nonce" content="" nonce="...">` tag so client entries introduced by later frames work even when there is no initial import map.
 - The `#rmx-data` script does not take a nonce. It is a `application/json` data block, which the browser never executes, so `script-src` does not apply to it.
-- Frame navigations do not need a matching nonce. The client copies the nonce already on the document's import map script onto the import maps it installs later, so a value that changes with every response is fine.
+- Frame navigations do not need a matching nonce. The client uses the original document's import map nonce, falling back to its nonce metadata, for import maps it installs later. Later responses do not replace that metadata, so a value that changes with every response is fine.
 
 When you render nested frame responses with `renderToStream()` inside `resolveFrame()`, pass `frameSrc` for the frame being rendered and carry `topFrameSrc` forward from the parent context. That preserves `handle.frames.top.src` across the whole SSR frame tree.
 

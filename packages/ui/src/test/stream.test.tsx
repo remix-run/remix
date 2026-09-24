@@ -1352,6 +1352,27 @@ describe('stream', () => {
       )
 
       expect(html).toContain('<script data-rmx-import-map type="importmap" nonce="r4nd0m">')
+      expect(html.match(/<script data-rmx-import-map /g)).toHaveLength(1)
+    })
+
+    it('preserves the document nonce in metadata without emitting an empty import map', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <body>Hello</body>
+          </html>,
+          { nonce: 'r4nd0m' },
+        ),
+      )
+
+      expect(html).toContain('<head><meta name="rmx-nonce" content="" nonce="r4nd0m"></head>')
+      expect(html).not.toContain('data-rmx-import-map')
+    })
+
+    it('does not emit document nonce metadata for a fragment', async () => {
+      let html = await drain(renderToStream(<p>Hello</p>, { nonce: 'r4nd0m' }))
+
+      expect(html).toBe('<p>Hello</p>')
     })
 
     it('keeps a nonce authored on the import map', async () => {
@@ -1367,8 +1388,8 @@ describe('stream', () => {
         ),
       )
 
-      expect(html).toContain('nonce="authored"')
-      expect(html).not.toContain('nonce="r4nd0m"')
+      expect(html).toContain('<script data-rmx-import-map type="importmap" nonce="authored">')
+      expect(html).toContain('<meta name="rmx-nonce" content="" nonce="r4nd0m">')
     })
 
     it('omits the attribute when no nonce is given', async () => {
