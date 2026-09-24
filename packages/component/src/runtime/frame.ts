@@ -4,7 +4,7 @@ import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
 import type { ElementFunction } from './element-function.ts'
-import type { FrameHandle } from './component.ts'
+import type { FrameHandle, FrameReloadOptions } from './component.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffElementAttributes, diffNodes } from './diff-dom.ts'
@@ -130,13 +130,13 @@ export interface ResolveFrameOptions {
   method?: string
   /** Form encoding selected by the form and its submitter. */
   encType?: string
-  /** Aborts the reload when the navigation that started it is cancelled. */
+  /** Cancels the active frame request. Custom resolvers should forward this to `fetch()`. */
   signal?: AbortSignal
 }
 
 type InternalFrameContent = FrameContent | DocumentFragment
 
-type FrameReloadOptions = Omit<ResolveFrameOptions, 'target'>
+type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'>
 
 type FrameReloadResult = {
   signal: AbortSignal
@@ -223,7 +223,7 @@ export type FrameRuntime = {
         blockingFrameTracker?: ReconciliationTracker
       }
     | undefined
-  reloadForNavigation?: (options?: FrameReloadOptions) => FrameReloadTransition
+  reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
 }
 
 export function isFrameRuntime(value: unknown): value is FrameRuntime {
@@ -239,7 +239,7 @@ export function isFrameRuntime(value: unknown): value is FrameRuntime {
  */
 export function reloadFrameForNavigation(
   frame: FrameHandle,
-  options?: FrameReloadOptions,
+  options?: FrameNavigationOptions,
 ): FrameReloadTransition {
   let runtime = frame.$runtime
   invariant(isFrameRuntime(runtime), 'Expected a frame runtime')
@@ -393,7 +393,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let frame = createFrameHandle({
     src: init.src,
     $runtime: runtime,
-    reload: async () => (await reload()).signal,
+    reload: async (options) => (await reload(options)).signal,
     replace: async (content: FrameContent) => {
       await render(content)
     },
@@ -769,20 +769,31 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   async function reload(options?: FrameReloadOptions): Promise<FrameReloadResult> {
-    let transition = startReloadTransition(options)
+    if (options?.signal?.aborted) {
+      return { signal: AbortSignal.abort(options.signal.reason) }
+    }
+    let transition = startReloadTransition(undefined, options?.signal)
     void transition.committed.catch(() => {})
     return await transition.finished
   }
 
-  function startReloadTransition(options?: FrameReloadOptions): FrameReloadTransition {
+  function startReloadTransition(
+    options?: FrameNavigationOptions,
+    requestSignal?: AbortSignal,
+  ): FrameReloadTransition {
     let controller = startReload(options?.signal)
     let committed = Promise.withResolvers<void>()
     let commitStarted = false
-    let finished = resolveAndRenderReload(controller, options, (ready) => {
-      if (commitStarted) return
-      commitStarted = true
-      void ready.then(committed.resolve, committed.reject)
-    })
+    let finished = resolveAndRenderReload(
+      controller,
+      options,
+      (ready) => {
+        if (commitStarted) return
+        commitStarted = true
+        void ready.then(committed.resolve, committed.reject)
+      },
+      requestSignal,
+    )
 
     // Settle committed when a reload is aborted or fails before rendering any content.
     void finished.then(() => committed.resolve(), committed.reject)
@@ -848,15 +859,26 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   async function resolveAndRenderReload(
     controller: AbortController,
-    options?: FrameReloadOptions,
+    options?: FrameNavigationOptions,
     resolveCommit?: (ready: Promise<void>) => void,
+    requestSignal?: AbortSignal,
   ): Promise<FrameReloadResult> {
     try {
-      let resolution = await init.resolveFrame(frame.src, {
-        ...options,
-        signal: controller.signal,
-        target: frameName,
-      })
+      let resolution: FrameResolution
+      let abort = () => controller.abort(requestSignal?.reason)
+      requestSignal?.addEventListener('abort', abort, { once: true })
+      try {
+        if (requestSignal?.aborted) abort()
+        if (controller.signal.aborted) return { signal: controller.signal }
+        resolution = await init.resolveFrame(frame.src, {
+          ...options,
+          signal: controller.signal,
+          target: frameName,
+        })
+      } finally {
+        // Rendering can remove the caller and abort its signal while the response is still streaming.
+        requestSignal?.removeEventListener('abort', abort)
+      }
       if (reloadController !== controller || controller.signal.aborted) {
         return { signal: controller.signal }
       }
@@ -1036,7 +1058,7 @@ export function createFrameRuntime(init: {
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
-  reloadForNavigation?: (options?: FrameReloadOptions) => FrameReloadTransition
+  reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
 }): FrameRuntime {
   return {
     [FRAME_RUNTIME]: true,
