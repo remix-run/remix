@@ -135,6 +135,83 @@ describe('frame navigation', () => {
     await assertDocumentPreserved(page, documentMarker)
   })
 
+  it('retains search focus while filtering courses with replace navigations as you type', async (t) => {
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(routes.main.index.href())
+    await waitForNavigationRuntime(page)
+    let documentMarker = await markDocument(page)
+
+    await page.getByRole('link', { name: 'Courses', exact: true }).click()
+    await page.locator('#courses-heading').waitFor()
+    await page.waitForFunction(() => window.navigation.transition === null)
+
+    let search = page.getByLabel('Filter courses')
+    let results = page.locator('ul[aria-labelledby="course-results"] li')
+    assert.equal(await results.count(), 4)
+    let history = await page.evaluate(() => ({
+      length: window.navigation.entries().length,
+      index: window.navigation.currentEntry?.index,
+    }))
+    await search.focus()
+
+    let searches = [
+      {
+        character: 'a',
+        query: 'a',
+        courses: [
+          'Applied Statistics for Engineers',
+          'Web Accessibility Foundations',
+          'Data Visualization for the Web',
+        ],
+      },
+      { character: 'p', query: 'ap', courses: ['Applied Statistics for Engineers'] },
+      { character: 'p', query: 'app', courses: ['Applied Statistics for Engineers'] },
+    ]
+
+    for (let { character, query, courses } of searches) {
+      let request = page.waitForRequest(
+        (request) =>
+          request.method() === 'GET' &&
+          new URL(request.url()).pathname === routes.main.courses.href() &&
+          new URL(request.url()).searchParams.get('q') === query,
+      )
+      // Keyboard input must use the existing focus; locator typing would refocus a blurred input.
+      await page.keyboard.type(character)
+      await request
+      await page
+        .getByText(
+          `${courses.length} ${courses.length === 1 ? 'course' : 'courses'} matching “${query}”`,
+          { exact: true },
+        )
+        .waitFor()
+      await page.waitForFunction(() => window.navigation.transition === null)
+
+      assert.equal(
+        await search.evaluate((input) => input === document.activeElement),
+        true,
+        `Expected the search input to retain focus after filtering for "${query}"`,
+      )
+      assert.equal(await search.inputValue(), query)
+      assert.deepEqual(await results.allTextContents(), courses)
+      assert.equal(new URL(page.url()).searchParams.get('q'), query)
+      assert.deepEqual(
+        await page.evaluate(() => ({
+          length: window.navigation.entries().length,
+          index: window.navigation.currentEntry?.index,
+        })),
+        history,
+      )
+      await assertDocumentPreserved(page, documentMarker)
+    }
+
+    await page.goBack()
+    await page.getByRole('heading', { name: 'Learning dashboard' }).waitFor()
+    assert.equal(new URL(page.url()).pathname, routes.main.index.href())
+    await assertDocumentPreserved(page, documentMarker)
+  })
+
   it('submits a form and follows its redirect without reloading the document', async (t) => {
     let server = await createTestServer(router.fetch)
     let page = await t.serve(server)
