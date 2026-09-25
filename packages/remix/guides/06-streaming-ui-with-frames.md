@@ -262,9 +262,8 @@ handler:
 The form remains a normal document navigation before the runtime starts. Native constraint
 validation and the form's `submit` event run before Remix intercepts it. `data-rmx-target` chooses a named
 frame, `data-rmx-src` can provide a different request URL for that named frame,
-`data-rmx-reset-scroll="false"` preserves the current scroll position,
-`data-rmx-reset-focus="false"` disables the browser's automatic focus reset, and `data-rmx-document` opts
-out of interception. `data-rmx-history="push|replace"` controls how the navigation updates history.
+`data-rmx-reset-scroll="false"` preserves the current scroll position, and `data-rmx-document` opts out of
+interception. `data-rmx-history="push|replace"` controls how the navigation updates history.
 
 GET controls are already encoded in the destination URL. For non-GET forms, `resolveFrame` receives
 `formData`, `method`, and `encType`. The action should return HTML for the targeted frame when it
