@@ -32,6 +32,7 @@ describe('link mixin', () => {
           target: 'auth',
           history: 'replace',
           resetScroll: false,
+          resetFocus: false,
         })}
       >
         Login
@@ -45,6 +46,7 @@ describe('link mixin', () => {
     expect(anchor.getAttribute('data-rmx-src')).toBe('/partials/login')
     expect(anchor.getAttribute('data-rmx-history')).toBe('replace')
     expect(anchor.getAttribute('data-rmx-reset-scroll')).toBe('false')
+    expect(anchor.getAttribute('data-rmx-reset-focus')).toBe('false')
     expect(anchor.getAttribute('role')).toBeNull()
   })
 
@@ -84,6 +86,7 @@ describe('link mixin', () => {
     expect(anchor.getAttribute('data-rmx-target')).toBeNull()
     expect(anchor.getAttribute('data-rmx-src')).toBeNull()
     expect(anchor.getAttribute('data-rmx-history')).toBeNull()
+    expect(anchor.getAttribute('data-rmx-reset-focus')).toBeNull()
   })
 
   it('navigates on plain click for non-anchor hosts', (t) => {
@@ -98,7 +101,7 @@ describe('link mixin', () => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: 'auth', src: '/login', resetScroll: true, $rmx: true },
+      state: { target: 'auth', src: '/login', resetScroll: true, resetFocus: true, $rmx: true },
       history: undefined,
     })
   })
@@ -115,7 +118,7 @@ describe('link mixin', () => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', resetScroll: true, $rmx: true },
+      state: { target: undefined, src: '/login', resetScroll: true, resetFocus: true, $rmx: true },
       history: 'replace',
     })
   })
@@ -132,7 +135,24 @@ describe('link mixin', () => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', resetScroll: false, $rmx: true },
+      state: { target: undefined, src: '/login', resetScroll: false, resetFocus: true, $rmx: true },
+      history: undefined,
+    })
+  })
+
+  it('passes resetFocus=false through for non-anchor navigation', (t) => {
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
+
+    let { container } = render(<button mix={link('/login', { resetFocus: false })}>Login</button>)
+
+    let button = container.querySelector('button')
+    invariant(button)
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    expect(navigateMock).toHaveBeenCalledWith('/login', {
+      state: { target: undefined, src: '/login', resetScroll: true, resetFocus: false, $rmx: true },
       history: undefined,
     })
   })
@@ -178,7 +198,7 @@ describe('link mixin', () => {
 
     expect(navigateMock).toHaveBeenCalledTimes(1)
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', resetScroll: true, $rmx: true },
+      state: { target: undefined, src: '/login', resetScroll: true, resetFocus: true, $rmx: true },
       history: undefined,
     })
   })
