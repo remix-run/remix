@@ -190,13 +190,32 @@ During SSR, `handle.frame.src` should point at the frame currently being rendere
 
 ## Client-resolved frames
 
-On the client, `run` fetches frame sources by default. The built-in resolver is equivalent to:
+On the client, `run` fetches frame sources by default. Resolver options distinguish document loads from nested frames with `isTopFrame`; `target` alone cannot distinguish the top frame from an unnamed `<Frame>`.
+
+The default resolver uses the same frame-request headers as server-side `render()` middleware:
+
+| Request            | `isTopFrame` | `X-Remix-Frame` | `X-Remix-Target` | `X-Remix-Top-Frame-Src` |
+| ------------------ | ------------ | --------------- | ---------------- | ----------------------- |
+| Top-frame document | `true`       | Omitted         | Omitted          | Omitted                 |
+| Named `<Frame>`    | `false`      | `true`          | Frame name       | `topFrameSrc`           |
+| Unnamed `<Frame>`  | `false`      | `true`          | Omitted          | `topFrameSrc`           |
+
+`topFrameSrc` is the current top-frame source, including the destination of an active navigation. Sending it with nested frame requests preserves the outer document URL for server-rendered components that read `handle.frames.top.src`.
+
+The built-in resolver is equivalent to:
 
 ```js
 async function resolveFrame(src, options) {
+  let headers = new Headers({ Accept: 'text/html' })
+  if (options?.isTopFrame === false) {
+    headers.set('X-Remix-Frame', 'true')
+    headers.set('X-Remix-Top-Frame-Src', options.topFrameSrc)
+    if (options.target != null) headers.set('X-Remix-Target', options.target)
+  }
+
   let response = await fetch(src, {
     body: getRequestBody(options),
-    headers: { Accept: 'text/html' },
+    headers,
     method: options?.method,
     mode: 'same-origin',
     signal: options?.signal,
@@ -212,7 +231,8 @@ async function resolveFrame(src, options) {
 
 function getRequestBody(options) {
   let formData = options?.formData
-  if (!formData || options?.method?.toLowerCase() === 'get') return
+  let method = options?.method
+  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
 
   if (options?.encType === 'text/plain') {
     let body = ''
@@ -243,7 +263,7 @@ calls, link navigations, and form navigations. GET form values are already encod
 submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for
 `text/plain`, and `FormData` for `multipart/form-data`. Provide `resolveFrame` when an app needs
 additional headers, another body encoding, or a different response policy. Custom resolvers receive
-`signal` and `target`; non-GET form submissions also provide `formData`, `method`, and `encType`.
+`isTopFrame`, `topFrameSrc`, `signal`, and the frame name as `target` when named; non-GET form submissions also provide `formData`, `method`, and `encType`.
 
 The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom resolver may return a `Response` with any status when it wants Remix UI to render the response body.
 

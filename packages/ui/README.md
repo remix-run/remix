@@ -148,14 +148,26 @@ Frame navigation requires both `window.navigation` and `NavigateEvent.sourceElem
 missing either capability use document navigation for links, forms, and `navigate()`. Hydration and
 explicit frame reloads still work.
 
+Resolver options include `isTopFrame` to distinguish document loads from nested `<Frame>` loads, and `topFrameSrc` for the current top-frame source. `target` is the frame name and is absent for both top-frame and unnamed frame loads.
+
+The default resolver sends `X-Remix-Frame: true` and `X-Remix-Top-Frame-Src` for nested frames, plus `X-Remix-Target` for named frames. Top-frame navigations omit all three headers to request a full document. It only fetches same-origin sources and follows same-origin redirects.
+
 The default resolver is equivalent to:
 
 ```js
 async function resolveFrame(src, options) {
+  let headers = new Headers({ Accept: 'text/html' })
+  if (options?.isTopFrame === false) {
+    headers.set('X-Remix-Frame', 'true')
+    headers.set('X-Remix-Top-Frame-Src', options.topFrameSrc)
+    if (options.target != null) headers.set('X-Remix-Target', options.target)
+  }
+
   let response = await fetch(src, {
     body: getRequestBody(options),
-    headers: { Accept: 'text/html' },
+    headers,
     method: options?.method,
+    mode: 'same-origin',
     signal: options?.signal,
   })
 
@@ -169,7 +181,8 @@ async function resolveFrame(src, options) {
 
 function getRequestBody(options) {
   let formData = options?.formData
-  if (!formData || options?.method?.toLowerCase() === 'get') return
+  let method = options?.method
+  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
 
   if (options?.encType === 'text/plain') {
     let body = ''

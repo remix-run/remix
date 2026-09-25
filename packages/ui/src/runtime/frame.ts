@@ -109,7 +109,7 @@ export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Func
  * response bodies before parsing and reconciling them into the current document. Frame HTML can
  * select client-entry modules and contribute import maps, styles, and nested frames.
  *
- * @param src Source string from the `<Frame src>` prop.
+ * @param src Frame source or destination URL for a top-frame navigation.
  * @param options Information about the active frame load or form submission.
  * @returns Frame content or a response whose body should be rendered into the frame.
  */
@@ -122,7 +122,11 @@ export type ResolveFrame = (
  * Information available while resolving browser-loaded frame content.
  */
 export interface ResolveFrameOptions {
-  /** Optional name of the frame being loaded or reloaded. */
+  /** Whether this load requests the top-level document rather than a nested `<Frame>`. */
+  isTopFrame: boolean
+  /** Current source of the top-level frame, including the destination of an active navigation. */
+  topFrameSrc: string
+  /** Frame name, absent for both the top-level document and unnamed `<Frame>` loads. */
   target?: string
   /** Form values submitted to the frame source for a non-GET submission. */
   formData?: FormData
@@ -136,7 +140,7 @@ export interface ResolveFrameOptions {
 
 type InternalFrameContent = FrameContent | DocumentFragment
 
-type FrameReloadOptions = Omit<ResolveFrameOptions, 'target'>
+type FrameReloadOptions = Omit<ResolveFrameOptions, 'isTopFrame' | 'topFrameSrc' | 'target'>
 
 type FrameReloadResult = {
   signal: AbortSignal
@@ -854,6 +858,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     try {
       let resolution = await init.resolveFrame(frame.src, {
         ...options,
+        isTopFrame: isDocumentNode(container.root),
+        topFrameSrc: runtime.topFrame?.src ?? frame.src,
         signal: controller.signal,
         target: frameName,
       })
