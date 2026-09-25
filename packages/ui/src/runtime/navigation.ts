@@ -8,6 +8,7 @@ type NavigationState = {
   target: string | undefined
   src: string
   resetScroll: boolean
+  resetFocus: boolean
   $rmx: true
 }
 
@@ -31,6 +32,7 @@ interface FormSubmissionNavigationInfo {
 interface FrameRedirectNavigationInfo {
   type: typeof frameRedirectNavigationInfoType
   resetScroll: boolean
+  resetFocus: boolean
 }
 
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
@@ -81,6 +83,8 @@ export type NavigationOptions = {
   history?: 'push' | 'replace'
   /** Whether the destination resets scroll. (default: `true`) */
   resetScroll?: boolean
+  /** Whether the browser resets focus after the navigation transition. (default: `true`) */
+  resetFocus?: boolean
 }
 
 /**
@@ -96,6 +100,7 @@ export async function navigate(href: string, options?: NavigationOptions) {
     target: options?.target,
     src: options?.src ?? href,
     resetScroll: options?.resetScroll !== false,
+    resetFocus: options?.resetFocus !== false,
     $rmx: true,
   } satisfies NavigationState
   let navigation = getInterceptableNavigation()
@@ -140,7 +145,13 @@ export function startNavigationListenerImpl(
   let resolveFormNavigation = createFormNavigationResolver(signal)
 
   navigation.updateCurrentEntry({
-    state: { target: undefined, src: window.location.href, resetScroll: true, $rmx: true },
+    state: {
+      target: undefined,
+      src: window.location.href,
+      resetScroll: true,
+      resetFocus: true,
+      $rmx: true,
+    },
   })
 
   navigation.addEventListener(
@@ -157,6 +168,7 @@ export function startNavigationListenerImpl(
         interceptNavigation(navigation, event, event.info.resetScroll, {
           async handler() {},
           scroll: 'manual',
+          focusReset: event.info.resetFocus === false ? 'manual' : undefined,
         })
         return
       }
@@ -221,6 +233,7 @@ export function startNavigationListenerImpl(
             info: {
               type: frameRedirectNavigationInfoType,
               resetScroll: state.resetScroll,
+              resetFocus: state.resetFocus !== false,
             } satisfies FrameRedirectNavigationInfo,
           })
         }
@@ -229,6 +242,7 @@ export function startNavigationListenerImpl(
       let interceptOptions = {
         handler,
         scroll: state.resetScroll === false ? 'manual' : undefined,
+        focusReset: state.resetFocus === false ? 'manual' : undefined,
       } satisfies NavigationInterceptOptions
 
       if (runtimeNavigation.getSubmission) {
@@ -317,7 +331,9 @@ function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNa
     'type' in value &&
     value.type === frameRedirectNavigationInfoType &&
     'resetScroll' in value &&
-    typeof value.resetScroll === 'boolean'
+    typeof value.resetScroll === 'boolean' &&
+    'resetFocus' in value &&
+    typeof value.resetFocus === 'boolean'
   )
 }
 
@@ -554,6 +570,7 @@ function getSourceElementNavigation(
         target: linkElement.getAttribute('data-rmx-target') ?? undefined,
         src: linkElement.getAttribute('data-rmx-src') ?? event.destination.url,
         resetScroll: linkElement.getAttribute('data-rmx-reset-scroll') !== 'false',
+        resetFocus: linkElement.getAttribute('data-rmx-reset-focus') !== 'false',
         $rmx: true,
       },
       replaceHistory: getReplaceHistory(linkElement.getAttribute('data-rmx-history'), false),
@@ -572,6 +589,7 @@ function getSourceElementNavigation(
       target: formNavigation.getAttribute('data-rmx-target') ?? undefined,
       src: formNavigation.getAttribute('data-rmx-src') ?? event.destination.url,
       resetScroll: formNavigation.getAttribute('data-rmx-reset-scroll') !== 'false',
+      resetFocus: formNavigation.getAttribute('data-rmx-reset-focus') !== 'false',
       $rmx: true,
     },
     replaceHistory: getReplaceHistory(

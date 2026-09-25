@@ -201,6 +201,14 @@ CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass 
 `resolveFrame` when the server requires additional headers, another body encoding, or a different
 response policy.
 
+Intercepted navigations use the browser's default focus reset after the transition. Set `data-rmx-reset-focus="false"` on a link or form to disable it, or pass `{ resetFocus: false }` to `navigate()` or `link()`:
+
+```tsx
+<a href="/search?page=2" data-rmx-reset-focus="false">
+  Next page
+</a>
+```
+
 Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
 and forms as document navigations while still hydrating client entries and using explicit frames,
 register a listener before calling `run()`:

@@ -179,7 +179,13 @@ describe('navigate', () => {
     })
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: 'auth', src: '/partials/login', resetScroll: true, $rmx: true },
+      state: {
+        target: 'auth',
+        src: '/partials/login',
+        resetScroll: true,
+        resetFocus: true,
+        $rmx: true,
+      },
       history: 'replace',
     })
   })
@@ -194,9 +200,51 @@ describe('navigate', () => {
     })
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', resetScroll: false, $rmx: true },
+      state: { target: undefined, src: '/login', resetScroll: false, resetFocus: true, $rmx: true },
       history: undefined,
     })
+  })
+
+  it('passes resetFocus=false when requested', async (t) => {
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
+
+    await navigate('/login', { resetFocus: false })
+
+    expect(navigateMock).toHaveBeenCalledWith('/login', {
+      state: {
+        target: undefined,
+        src: '/login',
+        resetScroll: true,
+        resetFocus: false,
+        $rmx: true,
+      },
+      history: undefined,
+    })
+  })
+
+  it('resets focus after the transition by default', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, resolveFinished] = withResolvers<StubFrameReloadResult>()
+    let [committed, resolveCommitted] = withResolvers<void>()
+    startNavigationListenerImpl(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed, finished }),
+    })
+    let input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    resolveCommitted()
+    await committed
+    expect(document.activeElement).toBe(input)
+
+    resolveFinished({ signal: controller.signal })
+    await navigated
+    expect(document.activeElement).toBe(document.body)
   })
 
   it('falls back to document navigation when the Navigation API is unavailable', async (t) => {
@@ -521,6 +569,72 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
+  it('opts out of browser focus reset when data-rmx-reset-focus is false', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    anchor.setAttribute('data-rmx-reset-focus', 'false')
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: anchor.href,
+      }),
+    )
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe(undefined)
+  })
+
+  it('opts out of browser focus reset for GET forms', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/search'
+    form.setAttribute('data-rmx-reset-focus', 'false')
+    let intercept = mock.fn()
+
+    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+  })
+
+  it('lets submitters disable browser focus reset for POST forms', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/save'
+    form.method = 'post'
+    form.setAttribute('data-rmx-reset-focus', 'true')
+    let button = document.createElement('button')
+    button.setAttribute('data-rmx-reset-focus', 'false')
+    form.append(button)
+    document.body.append(form)
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+    let intercept = mock.fn()
+
+    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+  })
+
+  it('lets submitters restore browser focus reset for forms', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/search'
+    form.setAttribute('data-rmx-reset-focus', 'false')
+    let button = document.createElement('button')
+    button.setAttribute('data-rmx-reset-focus', 'true')
+    form.append(button)
+    document.body.append(form)
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+    let intercept = mock.fn()
+
+    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+
+    expect(intercept).toHaveBeenCalledTimes(1)
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe(undefined)
+  })
+
   it('opts out of browser scroll restoration on traverse navigations', (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let intercept = mock.fn()
@@ -545,7 +659,7 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
-  it('preserves manual scrolling across frame redirects', (t) => {
+  it('preserves manual scrolling and focus across frame redirects', (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let intercept = mock.fn()
     let event = Object.assign(new Event('navigate'), {
@@ -553,13 +667,14 @@ describe('navigate', () => {
       destination: {
         url: new URL('/redirected', window.location.origin).href,
       },
-      info: { type: 'frame-redirect', resetScroll: false },
+      info: { type: 'frame-redirect', resetScroll: false, resetFocus: false },
       intercept,
     })
 
     dispatchNavigation(event)
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
   })
 
   it('does not scroll again when synchronizing a frame redirect URL', (t) => {
@@ -574,7 +689,7 @@ describe('navigate', () => {
       destination: {
         url: new URL('/redirected', window.location.origin).href,
       },
-      info: { type: 'frame-redirect', resetScroll: true },
+      info: { type: 'frame-redirect', resetScroll: true, resetFocus: true },
       intercept,
     })
 
@@ -848,7 +963,9 @@ describe('navigate', () => {
     let anchor = document.createElement('a')
     anchor.href = destination.href
     anchor.setAttribute('data-rmx-history', 'replace')
+    anchor.setAttribute('data-rmx-reset-focus', 'false')
     document.body.append(anchor)
+    anchor.focus()
 
     let entryCountBeforeNavigation = window.navigation.entries().length
     let didNavigate = false
@@ -863,6 +980,7 @@ describe('navigate', () => {
       expect(entryAfterNavigation.url).toBe(destination.href)
       expect(topFrame.src).toBe(destination.href)
       expect(reload).toHaveBeenCalledTimes(1)
+      expect(document.activeElement).toBe(anchor)
     } finally {
       if (didNavigate) await navigate(originalUrl, { history: 'replace' })
       controller.abort()
@@ -894,11 +1012,16 @@ describe('navigate', () => {
       reloadFrame,
     })
 
+    let input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+
     let entryCountBeforeNavigation = window.navigation.entries().length
     try {
       let redirected = waitForNavigationUrl(redirectedUrl.href)
-      void navigate(requestedUrl.href).catch(() => {})
+      void navigate(requestedUrl.href, { resetFocus: false }).catch(() => {})
       await redirected
+      expect(document.activeElement).toBe(input)
 
       expect(reloadFrame).toHaveBeenCalledTimes(1)
       expect(topFrame.src).toBe(redirectedUrl.href)
@@ -908,13 +1031,17 @@ describe('navigate', () => {
         target: undefined,
         src: redirectedUrl.href,
         resetScroll: true,
+        resetFocus: false,
         $rmx: true,
       })
 
       await window.navigation.back().finished
       expect(topFrame.src).toBe(originalUrl)
+      expect(document.activeElement).toBe(document.body)
+      input.focus()
 
       await window.navigation.forward().finished
+      expect(document.activeElement).toBe(input)
       expect(window.navigation.currentEntry?.url).toBe(redirectedUrl.href)
       expect(topFrame.src).toBe(redirectedUrl.href)
       expect(reloadFrame).toHaveBeenCalledTimes(3)
@@ -964,6 +1091,7 @@ describe('navigate', () => {
         target: 'details',
         src: requestedFrameUrl.href,
         resetScroll: true,
+        resetFocus: true,
         $rmx: true,
       })
     } finally {
@@ -1322,17 +1450,20 @@ describe('form navigation', () => {
     let form = document.createElement('form')
     form.action = window.location.href
     form.method = 'post'
+    form.setAttribute('data-rmx-reset-focus', 'false')
     let input = document.createElement('input')
     input.name = 'displayName'
     input.value = 'Ada'
     form.append(input)
     document.body.append(form)
+    input.focus()
 
     let entryBeforeSubmission = getCurrentNavigationEntry()
     let entryCountBeforeSubmission = window.navigation.entries().length
     let navigationSucceeded = waitForNavigationSuccess()
     form.requestSubmit()
     await navigationSucceeded
+    expect(document.activeElement).toBe(input)
 
     let entryAfterSubmission = getCurrentNavigationEntry()
     expect(window.navigation.entries()).toHaveLength(entryCountBeforeSubmission)
@@ -1360,17 +1491,20 @@ describe('form navigation', () => {
     let form = document.createElement('form')
     form.action = window.location.href
     form.method = 'post'
+    form.setAttribute('data-rmx-reset-focus', 'false')
     let input = document.createElement('input')
     input.name = 'displayName'
     input.value = 'Ada'
     form.append(input)
     document.body.append(form)
+    input.focus()
 
     let entryBeforeSubmission = getCurrentNavigationEntry()
     let entryCountBeforeSubmission = window.navigation.entries().length
     let navigationSucceeded = waitForNavigationSuccess()
     form.requestSubmit()
     await navigationSucceeded
+    expect(document.activeElement).toBe(input)
 
     let entryAfterSubmission = getCurrentNavigationEntry()
     expect(window.navigation.entries()).toHaveLength(entryCountBeforeSubmission)
@@ -1551,6 +1685,7 @@ describe('form navigation', () => {
       target: 'account',
       src: destinationUrl,
       resetScroll: true,
+      resetFocus: true,
       $rmx: true,
     })
 
