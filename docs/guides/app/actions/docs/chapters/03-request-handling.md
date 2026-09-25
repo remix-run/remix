@@ -50,19 +50,7 @@ import { router } from "./app/router.ts";
 
 const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 44100;
 
-const server = http.createServer(
-  createRequestListener(async (request) => {
-    try {
-      return await router.fetch(request);
-    } catch (error) {
-      if (!(request.signal.aborted && error === request.signal.reason)) {
-        console.error(error);
-      }
-
-      return new Response("Internal Server Error", { status: 500 });
-    }
-  }),
-);
+const server = http.createServer(createRequestListener(router.fetch));
 
 server.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);
@@ -83,7 +71,7 @@ Keep that boundary narrow. Code that only needs a URL, headers, cookies, a body,
 - passes the request to your Fetch handler; and
 - writes the returned response status, headers, and streamed body through Node.
 
-The same listener works with `node:http`, `node:https`, and Node's HTTP/2 compatibility API. Most apps only need to pass `router.fetch(...)` through a small error boundary, as shown above. `createRequestListener(...)` also has a default error handler, but handling router errors in `server.ts` lets the app decide what to log and return.
+The same listener works with `node:http`, `node:https`, and Node's HTTP/2 compatibility API. `createRequestListener(...)` logs errors and returns a generic `500` response by default.
 
 The listener accepts a few options when the server boundary needs more information:
 
@@ -97,7 +85,7 @@ The listener accepts a few options when the server boundary needs more informati
 For example, a Node server behind a trusted reverse proxy can let the listener recover the public protocol and host:
 
 ```ts filename=server.ts
-const requestListener = createRequestListener((request) => router.fetch(request), {
+const requestListener = createRequestListener(router.fetch, {
   trustProxy: true,
   onError(error) {
     console.error(error);
@@ -143,9 +131,7 @@ Deno uses the handler in `Deno.serve(...)`:
 ```ts filename=server.ts
 import { router } from "./app/router.ts";
 
-Deno.serve({ port: 44100 }, (request) => {
-  return router.fetch(request);
-});
+Deno.serve({ port: 44100 }, router.fetch);
 ```
 
 A Cloudflare Worker exports an object with a `fetch` method:
@@ -233,7 +219,7 @@ export const router = createRouter({
 
 export type AppContext = RouterContext<typeof router>;
 
-declare module "remix/router" {
+declare module "remix" {
   interface RouterTypes {
     context: AppContext;
   }

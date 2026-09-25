@@ -77,11 +77,7 @@ router.get(routes.index, () => {
   )
 })
 
-let server = http.createServer(
-  createRequestListener(async (request) => {
-    return await router.fetch(request)
-  }),
-)
+let server = http.createServer(createRequestListener(router.fetch))
 
 server.listen(44100, () => {
   console.log('Benchmark server running at http://localhost:44100')
