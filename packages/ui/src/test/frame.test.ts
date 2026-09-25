@@ -1125,6 +1125,300 @@ describe('frames', () => {
     }
   })
 
+  it('submits FormData in one request and renders its response without navigation', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
+      expect(src).toBe('https://example.com/save')
+      expect(options?.formData?.get('name')).toBe('Ada')
+      expect(options?.method).toBe('PATCH')
+      expect(options?.encType).toBe('multipart/form-data')
+      expect(options?.signal).toBeInstanceOf(AbortSignal)
+      return '<p>Saved</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let data = new FormData()
+    data.set('name', 'Ada')
+    let initialUrl = window.location.href
+
+    let signal = await frame.handle.submit({
+      action: 'https://example.com/save',
+      method: 'PATCH',
+      encType: 'multipart/form-data',
+      data,
+    })
+
+    expect(signal.aborted).toBe(false)
+    expect(resolveFrame.mock.calls).toHaveLength(1)
+    expect(root.textContent).toBe('Saved')
+    expect(frame.handle.src).toBe('https://example.com/save')
+    expect(window.location.href).toBe(initialUrl)
+  })
+
+  it('uses the final response URL as the frame source after a redirected submission', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let response = new Response('<p>Saved</p>')
+    Object.defineProperties(response, {
+      redirected: { value: true },
+      url: { value: 'https://example.com/account' },
+    })
+    let frame = createTestFrame(root, {
+      resolveFrame: () => response,
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let initialUrl = window.location.href
+
+    await frame.handle.submit({ action: 'https://example.com/save', data: new FormData() })
+
+    expect(root.textContent).toBe('Saved')
+    expect(frame.handle.src).toBe('https://example.com/account')
+    expect(window.location.href).toBe(initialUrl)
+  })
+
+  it('uses a form action, method, encoding, and submitter values', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let form = document.createElement('form')
+    form.action = 'https://example.com/default'
+    form.method = 'get'
+    let input = document.createElement('input')
+    input.name = 'name'
+    input.value = 'Ada'
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'save'
+    button.setAttribute('formaction', 'https://example.com/save')
+    button.setAttribute('formmethod', 'post')
+    button.setAttribute('formenctype', 'multipart/form-data')
+    form.append(input, button)
+    document.body.append(form)
+    let submit = t.mock.fn()
+    form.addEventListener('submit', submit)
+    let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
+      expect(src).toBe('https://example.com/save')
+      expect(options?.formData?.get('name')).toBe('Ada')
+      expect(options?.formData?.get('intent')).toBe('save')
+      expect(options?.method).toBe('post')
+      expect(options?.encType).toBe('multipart/form-data')
+      return '<p>Saved</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    await frame.handle.submit({ data: form, submitter: button })
+
+    expect(resolveFrame.mock.calls).toHaveLength(1)
+    expect(submit.mock.calls).toHaveLength(0)
+    expect(root.textContent).toBe('Saved')
+  })
+
+  it('encodes GET form entries in the request URL without a request body', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let form = document.createElement('form')
+    form.action = 'https://example.com/search?old=1'
+    let query = document.createElement('input')
+    query.name = 'query'
+    query.value = 'Ada Lovelace'
+    form.append(query)
+    document.body.append(form)
+    let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
+      expect(src).toBe('https://example.com/search?query=Ada+Lovelace')
+      expect(options?.method).toBeUndefined()
+      expect(options?.formData).toBeUndefined()
+      expect(options?.encType).toBeUndefined()
+      return '<p>Found</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    await frame.handle.submit({ data: form })
+
+    expect(resolveFrame.mock.calls).toHaveLength(1)
+    expect(root.textContent).toBe('Found')
+  })
+
+  it('cancels stale submit work when another submission starts', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [staleContent, resolveStaleContent] = withResolvers<string>()
+    let signals: AbortSignal[] = []
+    let resolveFrame = t.mock.fn((_src: string, options?: ResolveFrameOptions) => {
+      if (options?.signal) signals.push(options.signal)
+      return options?.formData?.get('value') === 'first' ? staleContent : '<p>Second</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let firstData = new FormData()
+    firstData.set('value', 'first')
+    let secondData = new FormData()
+    secondData.set('value', 'second')
+
+    let first = frame.handle.submit({ data: firstData })
+    let second = frame.handle.submit({ data: secondData })
+    resolveStaleContent('<p>First</p>')
+
+    expect((await first).aborted).toBe(true)
+    expect((await second).aborted).toBe(false)
+    expect(signals[0]?.aborted).toBe(true)
+    expect(signals[1]?.aborted).toBe(false)
+    expect(root.textContent).toBe('Second')
+  })
+
+  it('lets a reload supersede an active submission', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [staleContent, resolveStaleContent] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      resolveFrame(_src, options) {
+        return options?.method ? staleContent : '<p>Reloaded</p>'
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    let submitted = frame.handle.submit({ data: new FormData() })
+    let reloaded = frame.handle.reload()
+    resolveStaleContent('<p>Stale</p>')
+
+    expect((await submitted).aborted).toBe(true)
+    expect((await reloaded).aborted).toBe(false)
+    expect(root.textContent).toBe('Reloaded')
+  })
+
+  it('lets a submission supersede an active reload', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [staleContent, resolveStaleContent] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      resolveFrame(_src, options) {
+        return options?.method ? '<p>Submitted</p>' : staleContent
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    let reloaded = frame.handle.reload()
+    let submitted = frame.handle.submit({ data: new FormData() })
+    resolveStaleContent('<p>Stale</p>')
+
+    expect((await reloaded).aborted).toBe(true)
+    expect((await submitted).aborted).toBe(false)
+    expect(root.textContent).toBe('Submitted')
+  })
+
+  it('cancels a pending submission when its caller signal aborts', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [content, resolveContent] = withResolvers<string>()
+    let resolverSignal: AbortSignal | undefined
+    let frame = createTestFrame(root, {
+      resolveFrame(_src, options) {
+        resolverSignal = options?.signal
+        return content
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let controller = new AbortController()
+
+    let submitted = frame.handle.submit({ data: new FormData(), signal: controller.signal })
+    controller.abort()
+    resolveContent('<p>Stale</p>')
+
+    expect((await submitted).aborted).toBe(true)
+    expect(resolverSignal?.aborted).toBe(true)
+    expect(root.textContent).toBe('Initial')
+  })
+
+  it('skips an already-aborted submission without superseding the active reload', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [content, resolveContent] = withResolvers<string>()
+    let resolveFrame = t.mock.fn(() => content)
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let activeReload = frame.handle.reload()
+    let originalSrc = frame.handle.src
+
+    let signal = await frame.handle.submit({
+      action: '/save',
+      data: new FormData(),
+      signal: AbortSignal.abort(),
+    })
+
+    expect(signal.aborted).toBe(true)
+    expect(resolveFrame.mock.calls).toHaveLength(1)
+    expect(frame.handle.src).toBe(originalSrc)
+    resolveContent('<p>Fresh</p>')
+    expect((await activeReload).aborted).toBe(false)
+    expect(root.textContent).toBe('Fresh')
+  })
+
+  it('only uses the caller signal while resolving a submission', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [streamRead, markStreamRead] = withResolvers<void>()
+    let [tail, resolveTail] = withResolvers<string>()
+    let encoder = new TextEncoder()
+    let firstChunk = true
+    let stream = new ReadableStream<Uint8Array>(
+      {
+        async pull(controller) {
+          if (firstChunk) {
+            firstChunk = false
+            controller.enqueue(encoder.encode('<p>First</p>'))
+            return
+          }
+          markStreamRead()
+          controller.enqueue(encoder.encode(await tail))
+          controller.close()
+        },
+      },
+      { highWaterMark: 0 },
+    )
+    let resolverSignal: AbortSignal | undefined
+    let frame = createTestFrame(root, {
+      resolveFrame(_src, options) {
+        resolverSignal = options?.signal
+        return stream
+      },
+    })
+    t.after(() => {
+      resolveTail('')
+      frame.dispose()
+    })
+    await frame.ready()
+    let controller = new AbortController()
+    let submission = frame.handle.submit({ data: new FormData(), signal: controller.signal })
+    await streamRead
+
+    controller.abort()
+    expect(resolverSignal?.aborted).toBe(false)
+    resolveTail('<p>Last</p>')
+
+    expect((await submission).aborted).toBe(false)
+    expect(root.textContent).toBe('FirstLast')
+  })
+
   it('ignores late resolver content after the caller cancels a reload', async (t) => {
     let root = document.createElement('div')
     root.innerHTML = '<p>Initial</p>'

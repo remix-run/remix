@@ -197,6 +197,33 @@ export interface FrameReloadOptions {
   signal?: AbortSignal
 }
 
+interface FrameSubmitBaseOptions {
+  /** Request URL. Defaults to the form action or the frame's current source. */
+  action?: string
+  /** Request method. Defaults to the form method or `post` for `FormData`. */
+  method?: string
+  /** Request encoding. Defaults to the form encoding or `application/x-www-form-urlencoded`. */
+  encType?: string
+  /** Cancels the request until the frame resolver returns. */
+  signal?: AbortSignal
+}
+
+/**
+ * Options for submitting data and rendering the response in a frame.
+ */
+export type FrameSubmitOptions =
+  | (FrameSubmitBaseOptions & {
+      /** Form whose successful controls are submitted. */
+      data: HTMLFormElement
+      /** Submit button or input whose value and form attribute overrides are used. */
+      submitter?: HTMLButtonElement | HTMLInputElement
+    })
+  | (FrameSubmitBaseOptions & {
+      /** Entries to submit without a form element. */
+      data: FormData
+      submitter?: never
+    })
+
 /**
  * Public API for interacting with a frame instance.
  */
@@ -213,6 +240,15 @@ export type FrameHandle = TypedEventTarget<FrameHandleEventMap> & {
    * @returns The reload's signal, aborted if its request is cancelled or the reload is superseded or disposed.
    */
   reload(options?: FrameReloadOptions): Promise<AbortSignal>
+  /**
+   * Submits data to the frame's source or a form action and renders the response in one request.
+   * A newer submit or reload cancels earlier client work for this frame. This does not change
+   * browser history or dispatch a native form submit event.
+   *
+   * @param options Form data and optional request settings.
+   * @returns The submission's signal, aborted if cancelled, superseded, or disposed.
+   */
+  submit(options: FrameSubmitOptions): Promise<AbortSignal>
   /**
    * Renders supplied trusted content directly without calling the resolver or changing the source.
    * HTML strings and streams are not sanitized.
@@ -556,6 +592,7 @@ export function createFrameHandle(
     src: string
     replace: FrameHandle['replace']
     reload: FrameHandle['reload']
+    submit: FrameHandle['submit']
     $runtime: FrameHandle['$runtime']
   }>,
 ): FrameHandle {
@@ -565,6 +602,7 @@ export function createFrameHandle(
       src: '/',
       replace: notImplemented('replace not implemented'),
       reload: notImplemented('reload not implemented'),
+      submit: notImplemented('submit not implemented'),
     },
     def,
   )

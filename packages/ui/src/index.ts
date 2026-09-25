@@ -34,6 +34,7 @@ export type {
   FrameContent,
   FrameHandle,
   FrameReloadOptions,
+  FrameSubmitOptions,
   FrameProps,
 } from './runtime/component.ts'
 export type { LoadModule, ResolveFrame, ResolveFrameOptions } from './runtime/frame.ts'

@@ -245,6 +245,16 @@ function AccountPage() {
 
 Native constraint validation and submitter overrides still apply. GET form values arrive in `src`; non-GET forms provide `formData`, `method`, and `encType` to the resolver. See [Frames](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#form-navigation) for targeting, history behavior, request encoding, opt-outs, and server response guidance.
 
+For a frame update without a browser navigation, use `frame.submit()` with a form element or `FormData`:
+
+```tsx
+let data = new FormData()
+data.set('displayName', 'Ada')
+await handle.frames.get('account')?.submit({ action: '/account/edit', data })
+```
+
+This submits and renders with one resolver request. Later submits or reloads supersede earlier client work for that frame. A caller `signal` cancels the pending request; rendering continues after the resolver returns. See [Imperative submission](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#imperative-submission) for form defaults, encoding, and cancellation behavior.
+
 Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 
 ## Single-page Applications

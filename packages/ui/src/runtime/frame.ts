@@ -4,7 +4,7 @@ import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
 import type { ElementFunction } from './element-function.ts'
-import type { FrameHandle, FrameReloadOptions } from './component.ts'
+import type { FrameHandle, FrameReloadOptions, FrameSubmitOptions } from './component.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffElementAttributes, diffNodes } from './diff-dom.ts'
@@ -394,6 +394,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     src: init.src,
     $runtime: runtime,
     reload: async (options) => (await reload(options)).signal,
+    submit: async (options) => (await submit(options)).signal,
     replace: async (content: FrameContent) => {
       await render(content)
     },
@@ -775,6 +776,60 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let transition = startReloadTransition(undefined, options?.signal)
     void transition.committed.catch(() => {})
     return await transition.finished
+  }
+
+  async function submit(options: FrameSubmitOptions): Promise<FrameReloadResult> {
+    if (options.signal?.aborted) {
+      return { signal: AbortSignal.abort(options.signal.reason) }
+    }
+
+    let form = options.data instanceof HTMLFormElement ? options.data : undefined
+    let submitter = options.submitter
+    let action =
+      options.action ??
+      (form
+        ? submitter?.hasAttribute('formaction')
+          ? submitter.formAction
+          : form.action
+        : frame.src)
+    let method =
+      options.method ??
+      (form ? (submitter?.hasAttribute('formmethod') ? submitter.formMethod : form.method) : 'post')
+    let encType =
+      options.encType ??
+      (form
+        ? submitter?.hasAttribute('formenctype')
+          ? submitter.formEnctype
+          : form.enctype
+        : 'application/x-www-form-urlencoded')
+    let formData =
+      options.data instanceof HTMLFormElement ? new FormData(options.data, submitter) : options.data
+
+    if (options.signal?.aborted) {
+      return { signal: AbortSignal.abort(options.signal.reason) }
+    }
+
+    if (method.toLowerCase() === 'get') {
+      let url = new URL(action, container.doc.baseURI)
+      let search = new URLSearchParams()
+      for (let [name, value] of formData) {
+        search.append(name, typeof value === 'string' ? value : value.name)
+      }
+      url.search = search.toString()
+      action = url.href
+    }
+
+    frame.src = action
+    let transition = startReloadTransition(
+      method.toLowerCase() === 'get' ? undefined : { formData, method, encType },
+      options.signal,
+    )
+    void transition.committed.catch(() => {})
+    let result = await transition.finished
+    if (result.redirectedTo && !result.signal.aborted) {
+      frame.src = result.redirectedTo
+    }
+    return result
   }
 
   function startReloadTransition(

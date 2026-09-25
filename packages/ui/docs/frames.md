@@ -321,6 +321,30 @@ Enhanced non-GET submissions to the current URL replace its navigation history e
 
 Forms work as normal document submissions before the client runtime loads and whenever they use `data-rmx-document`, so this behavior remains progressively enhanced. Browsers ignore `data-rmx-history` without the client runtime and use their normal document history behavior.
 
+### Imperative submission
+
+Use `frame.submit()` to send form data through the frame resolver and render the response in the same frame. It makes one resolver request and does not change browser history:
+
+```tsx
+let data = new FormData()
+data.set('displayName', 'Ada')
+await handle.frames.get('account')?.submit({
+  action: '/account/edit',
+  method: 'post',
+  data,
+})
+```
+
+Pass a form element to use its action, method, encoding, and successful controls. An optional `submitter` includes that button or input's value and applies its `formaction`, `formmethod`, and `formenctype` overrides. Explicit `action`, `method`, and `encType` options take precedence:
+
+```tsx
+await handle.frame.submit({ data: form, submitter: saveButton })
+```
+
+`submit()` does not perform native constraint validation or dispatch a `submit` event; call `form.reportValidity()` first when those checks are needed. With `FormData`, the default method is `post`, the default encoding is `application/x-www-form-urlencoded`, and the default action is the frame's current `src`. GET submissions place the entries in the action URL and omit body metadata passed to `resolveFrame`. The frame's `src` becomes the action URL, or the final response URL after a redirect, while the browser URL stays unchanged.
+
+Pass `signal` to cancel the request while `resolveFrame` is pending. After it returns, rendering and streamed content finish even if the caller's component is removed. A newer submit or reload cancels earlier client work for that frame; it cannot undo a mutation the server has already performed. Cancellation resolves with an aborted signal, while other errors reject.
+
 ## Frame lifecycle
 
 1. **Server render** - Frame content is resolved via `resolveFrame` and serialized into the HTML stream. Frame metadata is stored in the `rmx-data` script.
