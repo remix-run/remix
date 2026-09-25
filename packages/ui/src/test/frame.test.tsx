@@ -237,6 +237,38 @@ describe('run', () => {
     }
   })
 
+  it('submits FormData through one default fetch and renders the returned HTML', async (t) => {
+    document.body.innerHTML = '<main id="initial">Initial</main>'
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="saved">Saved</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    await app.ready()
+    let initialUrl = window.location.href
+    let initialEntryCount = window.navigation.entries().length
+    let data = new FormData()
+    data.set('name', 'Ada Lovelace')
+
+    let signal = await app.frames.top.submit({ action: '/account/save', data })
+
+    expect(signal.aborted).toBe(false)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    let [src, init] = fetchMock.mock.calls[0]!.arguments
+    expect(src).toBe('/account/save')
+    expect(init?.method).toBe('post')
+    expect(init?.body).toBeInstanceOf(URLSearchParams)
+    expect(String(init?.body)).toBe('name=Ada+Lovelace')
+    expect(document.getElementById('saved')?.textContent).toBe('Saved')
+    expect(window.location.href).toBe(initialUrl)
+    expect(window.navigation.entries()).toHaveLength(initialEntryCount)
+  })
+
   it('uses same-origin requests for explicitly cross-origin frame sources', async (t) => {
     let fetchMock = t.mock.method(
       globalThis,

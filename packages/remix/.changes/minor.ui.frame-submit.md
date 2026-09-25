@@ -1,0 +1,1 @@
+Submit a form or `FormData` with `frame.submit(options)` from `remix/ui` to update a frame in one request without changing browser history. Form actions, submitter overrides, encoding, and cancellation work through the frame resolver.
