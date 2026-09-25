@@ -724,6 +724,7 @@ the `link(...)` and `navigate(...)` options:
 - `data-rmx-src` provides the URL to fetch for the mounted named frame selected by `data-rmx-target` while `href` remains the browser's destination.
 - `data-rmx-history="push|replace"` controls how the navigation updates history, including overriding a form's default.
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
+- `data-rmx-reset-focus="false"` disables the browser's automatic focus reset after navigation.
 - `data-rmx-document` opts out of interception and lets the browser perform a full-document navigation.
 
 The top frame follows the browser URL. If `data-rmx-target` is omitted, an intercepted navigation

@@ -1797,6 +1797,8 @@ export interface PartialAnchorHTMLProps<
   'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
   /** The `data-rmx-reset-scroll` HTML attribute. */
   'data-rmx-reset-scroll'?: Trackable<string | undefined>
+  /** Set to `"false"` to disable the browser's focus reset after navigation. */
+  'data-rmx-reset-focus'?: Trackable<string | undefined>
 }
 
 export type AnchorAriaRoles =
@@ -2310,6 +2312,8 @@ export interface FormHTMLProps<
   'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
   /** The `data-rmx-reset-scroll` HTML attribute. */
   'data-rmx-reset-scroll'?: Trackable<string | undefined>
+  /** Set to `"false"` to disable the browser's focus reset after navigation. */
+  'data-rmx-reset-focus'?: Trackable<string | undefined>
 }
 
 /**
