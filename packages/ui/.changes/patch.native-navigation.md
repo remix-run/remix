@@ -1,0 +1,1 @@
+Keep hash-only navigations and download requests under browser control without reloading a frame. Preserve downloads even when another navigation listener changes the source link's `download` attribute.

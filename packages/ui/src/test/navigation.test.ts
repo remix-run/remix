@@ -753,6 +753,69 @@ describe('navigate', () => {
     controller.abort()
   })
 
+  it('does not intercept hash-only navigations', async (t) => {
+    let reloadFrame = mock.fn(stubFrames.reloadFrame)
+    let dispatchNavigation = startStubNavigationListener(t, { ...stubFrames, reloadFrame })
+    let anchor = document.createElement('a')
+    anchor.href = '#details'
+    let intercept = mock.fn()
+
+    let transition = dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: anchor.href,
+        hashChange: true,
+      }),
+    )
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('does not intercept download requests with filenames', async (t) => {
+    let reloadFrame = mock.fn(stubFrames.reloadFrame)
+    let dispatchNavigation = startStubNavigationListener(t, { ...stubFrames, reloadFrame })
+    let anchor = document.createElement('a')
+    anchor.href = '/report.csv'
+    let intercept = mock.fn()
+
+    let transition = dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: anchor.href,
+        downloadRequest: 'report.csv',
+      }),
+    )
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('does not intercept download requests with empty filenames', async (t) => {
+    let reloadFrame = mock.fn(stubFrames.reloadFrame)
+    let dispatchNavigation = startStubNavigationListener(t, { ...stubFrames, reloadFrame })
+    let anchor = document.createElement('a')
+    anchor.href = '/report.csv'
+    let intercept = mock.fn()
+
+    let transition = dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: anchor.href,
+        downloadRequest: '',
+      }),
+    )
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
   it('does not intercept anchors marked for download', (t) => {
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
     let updateCurrentEntryMock = mock.fn()
@@ -1818,6 +1881,8 @@ function createAnchorNavigateEvent(
   options: {
     intercept: (options?: NavigationInterceptOptions) => void
     destinationUrl: string
+    hashChange?: boolean
+    downloadRequest?: string | null
     info?: unknown
     scroll?: () => void
     signal?: AbortSignal
@@ -1826,6 +1891,8 @@ function createAnchorNavigateEvent(
   return Object.assign(new Event('navigate'), {
     canIntercept: true,
     navigationType: 'push',
+    hashChange: options.hashChange ?? false,
+    downloadRequest: options.downloadRequest ?? null,
     info: options.info,
     sourceElement: anchor,
     signal: options.signal ?? new AbortController().signal,
