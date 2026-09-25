@@ -21,22 +21,15 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
-    "./routes": "./src/routes.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./routes": {
+      "types": "./dist/routes.d.ts",
+      "default": "./dist/routes.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./routes": {
-        "types": "./dist/routes.d.ts",
-        "default": "./dist/routes.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
@@ -45,7 +38,7 @@
     "typescript": "catalog:"
   },
   "dependencies": {
-    "@remix-run/route-pattern": "workspace:^"
+    "@remix-run/route-pattern": "remix-run/remix#preview/pr-11939&path:packages/route-pattern"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
