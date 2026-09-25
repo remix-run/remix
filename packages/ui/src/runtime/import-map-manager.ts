@@ -1,3 +1,5 @@
+import { DOCUMENT_NONCE_META_NAME } from './stream-protocol.ts'
+
 type ImportMap = {
   imports?: ImportMapImports
   scopes?: Record<string, ImportMapImports>
@@ -22,6 +24,7 @@ interface ImportMapManager {
 
 const MANAGED_IMPORT_MAP_SELECTOR = 'script[data-rmx-import-map][type="importmap"]'
 const IMPORT_MAP_SELECTOR = 'script[type="importmap"]'
+const DOCUMENT_NONCE_META_SELECTOR = `meta[name="${DOCUMENT_NONCE_META_NAME}"]`
 const importMapManagers = new WeakMap<Document, ImportMapManager>()
 
 class ImportMapConflictError extends Error {}
@@ -41,7 +44,10 @@ export function resetDocumentImportMapManager(doc: Document): void {
 }
 
 function createImportMapManager(doc: Document): ImportMapManager {
-  let nonce = doc.head.querySelector<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR)?.nonce
+  let nonceMeta = doc.head.querySelector<HTMLMetaElement>(DOCUMENT_NONCE_META_SELECTOR)
+  let nonce =
+    doc.head.querySelector<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR)?.nonce ??
+    nonceMeta?.nonce
   let installedImportMap = createInstalledImportMap()
   let processedScripts = new WeakSet<HTMLScriptElement>()
   let conflicted = false
@@ -79,6 +85,10 @@ function createImportMapManager(doc: Document): ImportMapManager {
   return {
     consumeImportMaps(source) {
       if (conflicted) return 'blocked'
+      // Later responses cannot replace the nonce established by the original document.
+      for (let meta of source.querySelectorAll(DOCUMENT_NONCE_META_SELECTOR)) {
+        if (meta !== nonceMeta) meta.remove()
+      }
       processMutations(observer.takeRecords())
       processImportMaps()
       let scripts = Array.from(
@@ -126,8 +136,8 @@ function createImportMapManager(doc: Document): ImportMapManager {
     shouldPreserveHeadNode(node) {
       return (
         node.isConnected &&
-        node instanceof HTMLScriptElement &&
-        node.matches(MANAGED_IMPORT_MAP_SELECTOR)
+        (node === nonceMeta ||
+          (node instanceof HTMLScriptElement && node.matches(MANAGED_IMPORT_MAP_SELECTOR)))
       )
     },
   }
