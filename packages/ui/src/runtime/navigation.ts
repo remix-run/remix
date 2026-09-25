@@ -138,6 +138,9 @@ export function startNavigationListenerImpl(
   let navigation = getInterceptableNavigation()
   if (!navigation) return
   let resolveFormNavigation = createFormNavigationResolver(signal)
+  // Hash changes abort the previous navigation before this listener runs. Keep unfinished frame
+  // work pending across aborts so the next navigation can finish loading the destination.
+  let needsFrameReload = false
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, resetScroll: true, $rmx: true },
@@ -148,7 +151,7 @@ export function startNavigationListenerImpl(
     (event) => {
       if (
         isDocumentReload(event.info) ||
-        event.hashChange ||
+        (event.hashChange && !needsFrameReload) ||
         event.downloadRequest != null ||
         !event.canIntercept ||
         // Safari seems to incorrectly set canIntercept to true for sub-domain navigations, so
@@ -196,6 +199,7 @@ export function startNavigationListenerImpl(
         }
       }
 
+      needsFrameReload = true
       let handler = async () => {
         if (event.signal.aborted) return
 
@@ -217,6 +221,8 @@ export function startNavigationListenerImpl(
         if (state.resetScroll) event.scroll()
 
         let { redirectedTo } = await reload.finished
+        if (event.signal.aborted || reload.signal.aborted) return
+        needsFrameReload = false
 
         if (redirectedTo && frame === topFrame) {
           frame.src = redirectedTo

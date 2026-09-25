@@ -9,6 +9,7 @@ import type { FrameHandle } from '../runtime/component.ts'
 import type { ResolveFrameOptions } from '../runtime/frame.ts'
 import { withResolvers } from './utils.ts'
 import { reloadDocument } from '../runtime/document-reload.ts'
+import { run } from '../runtime/run.ts'
 
 type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }
 
@@ -772,6 +773,55 @@ describe('navigate', () => {
 
     expect(intercept).not.toHaveBeenCalled()
     expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('finishes loading the destination when a hash navigation interrupts its frame load', async () => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'pending-hash')
+    let [started, resolveStarted] = withResolvers<AbortSignal>()
+    let [pending, resolvePending] = withResolvers<void>()
+    let requests = 0
+    document.body.innerHTML = '<h1>Initial page</h1><a href="#details">Details</a>'
+
+    let app = run({
+      loadModule: mock.fn(),
+      async resolveFrame(_src, options) {
+        requests++
+        if (requests === 1) {
+          if (!options?.signal) throw new Error('Expected a navigation abort signal')
+          resolveStarted(options.signal)
+          await pending
+        }
+        return '<html><head></head><body><h1 id="details">Destination page</h1></body></html><!-- rmx:flush document -->'
+      },
+    })
+
+    try {
+      await app.ready()
+      let interrupted = navigate(destination.href).catch(() => {})
+      let firstSignal = await started
+      expect(window.location.href).toBe(destination.href)
+      expect(document.querySelector('h1')?.textContent).toBe('Initial page')
+
+      let hashNavigation = waitForNavigationSuccess()
+      document.querySelector('a')?.click()
+      await hashNavigation
+      resolvePending()
+      await interrupted
+
+      expect(firstSignal.aborted).toBe(true)
+      expect(window.location.href).toBe(`${destination.href}#details`)
+      expect(document.querySelector('h1')?.textContent).toBe('Destination page')
+      expect(requests).toBe(2)
+
+      await navigate('#other')
+      expect(requests).toBe(2)
+    } finally {
+      resolvePending()
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
   })
 
   it('does not intercept download requests with filenames', async (t) => {
