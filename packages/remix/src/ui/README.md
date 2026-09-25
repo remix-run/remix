@@ -212,6 +212,16 @@ window.navigation?.addEventListener('navigate', (e) => e.stopImmediatePropagatio
 This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as
 `handle.frame.reload()` continue to use the frame resolver.
 
+Pass an event signal to cancel a pending reload request:
+
+```tsx
+on('click', async (_event, signal) => {
+  await handle.frame.reload({ signal })
+})
+```
+
+The caller's signal applies until `resolveFrame` returns. Rendering and streamed content continue if the reload then removes the calling component. Custom resolvers should forward `options.signal` to `fetch()`.
+
 The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom `resolveFrame` may return a `Response` with any status when it wants Remix UI to render the response body.
 
 Forms remain ordinary HTML forms before the runtime starts. Add `data-rmx-target` to reload a named frame, or `data-rmx-document` to require a full-document submission:
@@ -234,6 +244,16 @@ function AccountPage() {
 ```
 
 Native constraint validation and submitter overrides still apply. GET form values arrive in `src`; non-GET forms provide `formData`, `method`, and `encType` to the resolver. See [Frames](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#form-navigation) for targeting, history behavior, request encoding, opt-outs, and server response guidance.
+
+For a frame update without a browser navigation, use `frame.submit()` with a form element or `FormData`:
+
+```tsx
+let data = new FormData()
+data.set('displayName', 'Ada')
+await handle.frames.get('account')?.submit({ action: '/account/edit', data })
+```
+
+This submits and renders with one resolver request. Later submits or reloads supersede earlier client work for that frame. A caller `signal` cancels the pending request; rendering continues after the resolver returns. See [Imperative submission](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#imperative-submission) for form defaults, encoding, and cancellation behavior.
 
 Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 
