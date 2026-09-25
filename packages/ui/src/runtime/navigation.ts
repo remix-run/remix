@@ -146,15 +146,15 @@ export function startNavigationListenerImpl(
   navigation.addEventListener(
     'navigate',
     (event) => {
-      // Safari seems to incorrectly set canIntercept to true for sub-domain navigations, so
-      // we do an origin check ourselves. The spec is clear that a different host should prevent
-      // interception so this is likely a bug in Safari:
-      // https://html.spec.whatwg.org/multipage/nav-history-apis.html#can-have-its-url-rewritten
       if (
         isDocumentReload(event.info) ||
         event.hashChange ||
         event.downloadRequest != null ||
         !event.canIntercept ||
+        // Safari seems to incorrectly set canIntercept to true for sub-domain navigations, so
+        // we do an origin check ourselves. The spec is clear that a different host should prevent
+        // interception so this is likely a bug in Safari:
+        // https://html.spec.whatwg.org/multipage/nav-history-apis.html#can-have-its-url-rewritten
         !isSameOriginUrl(event.destination.url)
       ) {
         return
