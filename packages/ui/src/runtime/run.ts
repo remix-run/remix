@@ -25,7 +25,9 @@ export interface RunInit {
    * Resolves browser-loaded `<Frame>` content.
    *
    * Defaults to fetching the frame source as HTML with the submitted form data, method, encoding,
-   * and abort signal. The default resolver only fetches from the document origin, including
+   * and abort signal. Nested frames send `X-Remix-Frame: true`, `X-Remix-Top-Frame-Src`, and
+   * `X-Remix-Target` when named. Top-frame loads omit these headers to request a full document.
+   * The default resolver only fetches from the document origin, including
    * redirects, but does not sanitize the returned HTML. Custom resolvers own their request,
    * redirect, and content trust policies.
    */
@@ -111,9 +113,16 @@ function normalizeLineBreaks(value: string): string {
 }
 
 async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
+  let headers = new Headers({ Accept: 'text/html' })
+  if (options?.isTopFrame === false) {
+    headers.set('X-Remix-Frame', 'true')
+    headers.set('X-Remix-Top-Frame-Src', options.topFrameSrc)
+    if (options.target != null) headers.set('X-Remix-Target', options.target)
+  }
+
   let response = await fetch(src, {
     body: getRequestBody(options),
-    headers: { Accept: 'text/html' },
+    headers,
     method: options?.method,
     mode: 'same-origin',
     signal: options?.signal,

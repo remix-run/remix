@@ -1,9 +1,9 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
-import type { Handle, RemixNode } from '../runtime/component.ts'
+import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
 import { Frame } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
-import { reloadFrameForNavigation } from '../runtime/frame.ts'
+import { reloadFrameForNavigation, type ResolveFrameOptions } from '../runtime/frame.ts'
 import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -59,6 +59,24 @@ async function renderDocumentContent(content: RemixNode): Promise<string> {
 
 async function renderFrameContent(content: RemixNode): Promise<string> {
   return await drain(renderToStream(content))
+}
+
+async function setupDefaultFrameRequestTest(t: TestContext, name?: string) {
+  let frame: FrameHandle | undefined
+  let Probe = clientEntry('/js/probe.js#Probe', function Probe(handle: Handle) {
+    frame = handle.frame
+    return () => <p id="frame-content">Frame content</p>
+  })
+  let frameHtml = await renderFrameContent(<Probe />)
+  document.body.innerHTML = await drain(
+    renderToStream(<Frame name={name} src="/frame" />, { resolveFrame: () => frameHtml }),
+  )
+  let fetchMock = t.mock.method(globalThis, 'fetch', async () => new Response(frameHtml))
+  let app = run({ loadModule: () => Probe })
+  t.after(() => app.dispose())
+  await app.ready()
+  invariant(frame, 'Expected frame content to hydrate')
+  return { app, frame, fetchMock }
 }
 
 function waitForElement(
@@ -226,7 +244,11 @@ describe('run', () => {
       let [src, init] = fetchMock.mock.calls[0]!.arguments
       expect(src).toBe('/account')
       expect(init?.body).toBe(formData)
-      expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
+      let headers = new Headers(init?.headers)
+      expect(headers.get('Accept')).toBe('text/html')
+      expect(headers.get('X-Remix-Frame')).toBeNull()
+      expect(headers.get('X-Remix-Target')).toBeNull()
+      expect(headers.get('X-Remix-Top-Frame-Src')).toBeNull()
       expect(init?.method).toBe('post')
       expect(init?.mode).toBe('same-origin')
       expect(init?.signal).toBeInstanceOf(AbortSignal)
@@ -234,6 +256,59 @@ describe('run', () => {
     } finally {
       app.dispose()
     }
+  })
+
+  it('sends frame headers and the target when reloading a named frame', async (t) => {
+    let { app, frame, fetchMock } = await setupDefaultFrameRequestTest(t, 'details')
+    let topFrameSrc = new URL('/dashboard?tab=details', window.location.href).href
+    app.frames.top.src = topFrameSrc
+
+    await frame.reload()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    let [src, init] = fetchMock.mock.calls[0]!.arguments
+    expect(src).toBe('/frame')
+    expect(init?.mode).toBe('same-origin')
+    let headers = new Headers(init?.headers)
+    expect(headers.get('Accept')).toBe('text/html')
+    expect(headers.get('X-Remix-Frame')).toBe('true')
+    expect(headers.get('X-Remix-Target')).toBe('details')
+    expect(headers.get('X-Remix-Top-Frame-Src')).toBe(topFrameSrc)
+    expect(document.getElementById('frame-content')?.textContent).toBe('Frame content')
+  })
+
+  it('sends frame headers without a target when reloading an unnamed frame', async (t) => {
+    let { app, frame, fetchMock } = await setupDefaultFrameRequestTest(t)
+
+    await frame.reload()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    let [src, init] = fetchMock.mock.calls[0]!.arguments
+    expect(src).toBe('/frame')
+    expect(init?.mode).toBe('same-origin')
+    let headers = new Headers(init?.headers)
+    expect(headers.get('Accept')).toBe('text/html')
+    expect(headers.get('X-Remix-Frame')).toBe('true')
+    expect(headers.get('X-Remix-Target')).toBeNull()
+    expect(headers.get('X-Remix-Top-Frame-Src')).toBe(app.frames.top.src)
+    expect(document.getElementById('frame-content')?.textContent).toBe('Frame content')
+  })
+
+  it('exposes top-frame context to custom resolvers', async (t) => {
+    let resolveFrame = t.mock.fn((_src: string, _options?: ResolveFrameOptions) =>
+      renderDocumentContent(<p>Next page</p>),
+    )
+    let app = run({ loadModule: mock.fn(), resolveFrame })
+    t.after(() => app.dispose())
+    await app.ready()
+    app.frames.top.src = new URL('/next', window.location.href).href
+
+    await reloadFrameForNavigation(app.frames.top).finished
+
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    let options = resolveFrame.mock.calls[0]?.arguments[1]
+    expect(options).toMatchObject({ isTopFrame: true, topFrameSrc: app.frames.top.src })
+    expect(options?.target).toBeUndefined()
   })
 
   it('uses same-origin requests for explicitly cross-origin frame sources', async (t) => {
@@ -4629,9 +4704,9 @@ describe('run', () => {
     let pageHtml = await drain(renderToStream(<NamedFrameMount />))
     document.body.innerHTML = pageHtml
 
-    let resolveTargets: Array<string | undefined> = []
-    let resolveFrame = mock.fn(async (_src: string, options) => {
-      resolveTargets.push(options?.target)
+    let resolveOptions: Array<ResolveFrameOptions | undefined> = []
+    let resolveFrame = mock.fn(async (_src: string, options?: ResolveFrameOptions) => {
+      resolveOptions.push(options)
       return '<p id="named-frame-loaded">Loaded</p>'
     })
 
@@ -4657,8 +4732,54 @@ describe('run', () => {
     expect(document.getElementById('named-frame-loaded')?.textContent).toBe('Loaded')
     expect(resolveFrame).toHaveBeenCalledTimes(1)
     // The fresh-insert path resolves the named frame with its name as `target`.
-    expect(resolveTargets).toEqual(['probe'])
+    expect(resolveOptions[0]).toMatchObject({
+      target: 'probe',
+      isTopFrame: false,
+      topFrameSrc: app.frames.top.src,
+    })
+
+    app.frames.top.src = new URL('/updated-document', window.location.href).href
+    let frame = app.frames.get('probe')
+    invariant(frame)
+    await frame.reload()
+    expect(resolveOptions[1]).toMatchObject({
+      target: 'probe',
+      isTopFrame: false,
+      topFrameSrc: app.frames.top.src,
+    })
     app.dispose()
+  })
+
+  it('distinguishes a client-created unnamed frame from the top frame on load and reload', async (t) => {
+    let frame: FrameHandle | undefined
+    function Probe(handle: Handle) {
+      frame = handle.frame
+      return () => <p id="unnamed-frame-content">Unnamed frame</p>
+    }
+    let resolveFrame = t.mock.fn((_src: string, _options?: ResolveFrameOptions) => <Probe />)
+    let root = createRoot(container, {
+      frameInit: { src: '/document', resolveFrame },
+    })
+    t.after(() => root.dispose())
+    root.render(<Frame src="/unnamed-frame" />)
+    root.flush()
+    await waitForElement('#unnamed-frame-content')
+
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(resolveFrame.mock.calls[0]?.arguments[1]).toMatchObject({
+      isTopFrame: false,
+      topFrameSrc: '/document',
+    })
+    expect(resolveFrame.mock.calls[0]?.arguments[1]?.target).toBeUndefined()
+
+    invariant(frame)
+    await frame.reload()
+    expect(resolveFrame).toHaveBeenCalledTimes(2)
+    expect(resolveFrame.mock.calls[1]?.arguments[1]).toMatchObject({
+      isTopFrame: false,
+      topFrameSrc: '/document',
+    })
+    expect(resolveFrame.mock.calls[1]?.arguments[1]?.target).toBeUndefined()
   })
 
   it('does not duplicate initially-mounted Frame hydration in a client entry', async () => {

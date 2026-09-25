@@ -1,0 +1,1 @@
+Align browser frame requests from `remix/ui` with `render()` middleware, preserving the outer document source and requesting full documents for top-frame navigations. Custom resolvers now receive `isTopFrame` and `topFrameSrc` to distinguish top-frame, named-frame, and unnamed-frame loads.
