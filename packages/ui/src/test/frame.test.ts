@@ -1125,6 +1125,96 @@ describe('frames', () => {
     }
   })
 
+  it('ignores late resolver content after the caller cancels a reload', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [content, resolveContent] = withResolvers<string>()
+    let resolverSignal: AbortSignal | undefined
+    let frame = createTestFrame(root, {
+      resolveFrame(_src, options) {
+        resolverSignal = options?.signal
+        return content
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let controller = new AbortController()
+    let reason = new Error('Cancelled by caller')
+    let reload = frame.handle.reload({ signal: controller.signal })
+
+    controller.abort(reason)
+    expect(resolverSignal?.aborted).toBe(true)
+    expect(resolverSignal?.reason).toBe(reason)
+    resolveContent('<p>Stale</p>')
+
+    let signal = await reload
+    expect(signal.aborted).toBe(true)
+    expect(root.textContent).toBe('Initial')
+  })
+
+  it('skips already-aborted reloads without superseding the active reload', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [content, resolveContent] = withResolvers<string>()
+    let resolveFrame = t.mock.fn(() => content)
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let reloadStart = t.mock.fn()
+    frame.handle.addEventListener('reloadStart', reloadStart)
+    let activeReload = frame.handle.reload()
+    let reason = new Error('Already cancelled')
+
+    let cancelledReload = frame.handle.reload({ signal: AbortSignal.abort(reason) })
+    expect(resolveFrame.mock.calls).toHaveLength(1)
+    expect(reloadStart.mock.calls).toHaveLength(1)
+    let signal = await cancelledReload
+    expect(signal.aborted).toBe(true)
+    expect(signal.reason).toBe(reason)
+    resolveContent('<p>Fresh</p>')
+    expect((await activeReload).aborted).toBe(false)
+    expect(root.textContent).toBe('Fresh')
+  })
+
+  it('still cancels a superseded reload stream after detaching the caller signal', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [streamRead, markStreamRead] = withResolvers<void>()
+    let cancel = t.mock.fn()
+    let stream = new ReadableStream<Uint8Array>(
+      {
+        pull() {
+          markStreamRead()
+        },
+        cancel,
+      },
+      { highWaterMark: 0 },
+    )
+    let frame = createTestFrame(root, {
+      resolveFrame(src) {
+        return src.endsWith('/initial') ? stream : '<p>Fresh</p>'
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let controller = new AbortController()
+    let staleReload = frame.handle.reload({ signal: controller.signal })
+    await streamRead
+
+    frame.handle.src = 'https://example.com/fresh'
+    let freshSignal = await frame.handle.reload()
+    let staleSignal = await staleReload
+    controller.abort()
+
+    expect(staleSignal.aborted).toBe(true)
+    expect(freshSignal.aborted).toBe(false)
+    expect(cancel.mock.calls).toHaveLength(1)
+    expect(root.textContent).toBe('Fresh')
+  })
+
   it('aborts the active resolver when the reload signal is aborted', async () => {
     let root = document.createElement('div')
     root.innerHTML = '<p id="initial">Initial</p>'

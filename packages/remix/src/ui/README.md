@@ -212,6 +212,16 @@ window.navigation?.addEventListener('navigate', (e) => e.stopImmediatePropagatio
 This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as
 `handle.frame.reload()` continue to use the frame resolver.
 
+Pass an event signal to cancel a pending reload request:
+
+```tsx
+on('click', async (_event, signal) => {
+  await handle.frame.reload({ signal })
+})
+```
+
+The caller's signal applies until `resolveFrame` returns. Rendering and streamed content continue if the reload then removes the calling component. Custom resolvers should forward `options.signal` to `fetch()`.
+
 The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom `resolveFrame` may return a `Response` with any status when it wants Remix UI to render the response body.
 
 Forms remain ordinary HTML forms before the runtime starts. Add `data-rmx-target` to reload a named frame, or `data-rmx-document` to require a full-document submission:

@@ -77,8 +77,8 @@ export let RefreshButton = clientEntry(
     return () => (
       <button
         mix={[
-          on('click', () => {
-            handle.frame.reload()
+          on('click', async (_event, signal) => {
+            await handle.frame.reload({ signal })
           }),
         ]}
       >
@@ -88,6 +88,10 @@ export let RefreshButton = clientEntry(
   },
 )
 ```
+
+Pass an optional `signal` to cancel the request when the event is interrupted or its component is removed. The signal only applies until `resolveFrame` returns. After that, rendering, streamed content, and hydration finish even if the reload removes the calling component. Custom resolvers should forward `options.signal` to `fetch()`.
+
+An already-aborted signal skips the request without interrupting an active reload. Cancellation resolves with an aborted `AbortSignal`; other errors reject. A newer reload or disposal of the frame still cancels the entire reload.
 
 You can also reload adjacent named frames:
 
