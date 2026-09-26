@@ -19,6 +19,47 @@ describe('jsx', () => {
     expect(element.props.children).toEqual('Hello, world!')
   })
 
+  it('preserves generic component prop types in JSX', () => {
+    type Row = { id: number; label: string }
+    type ListProps<T> = { rows: T[]; renderRow: (row: T) => RemixNode }
+
+    let GenericList =
+      <T,>(handle: Handle<ListProps<T>>) =>
+      () => <div>{handle.props.rows.map(handle.props.renderRow)}</div>
+
+    let explicit = (
+      <GenericList<Row>
+        rows={[{ id: 1, label: 'First' }]}
+        renderRow={(row) => {
+          type InferredRow = Assert<Equal<typeof row, Row>>
+          return row.label
+        }}
+      />
+    )
+
+    let explicitWithWrongRow = (
+      <GenericList<Row>
+        // @ts-expect-error - generic row types still validate the rows prop
+        rows={[{ id: 'wrong', label: 'First' }]}
+        renderRow={(row) => row.label}
+      />
+    )
+
+    let inferred = (
+      <GenericList
+        rows={[{ id: 1, label: 'First' }]}
+        renderRow={(row) => {
+          type InferredRow = Assert<Equal<typeof row, Row>>
+          return row.label
+        }}
+      />
+    )
+
+    expect(explicit).toBeDefined()
+    expect(explicitWithWrongRow).toBeDefined()
+    expect(inferred).toBeDefined()
+  })
+
   /* oxlint-disable eslint/no-unused-vars */
   it('warns when the wrong type of a prop is used', () => {
     let element = <a target="_blank">Hello, world!</a>
