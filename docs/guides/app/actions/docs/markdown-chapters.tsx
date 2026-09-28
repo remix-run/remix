@@ -1,6 +1,8 @@
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
+import { openLazyFile } from 'remix/fs'
+import { createFileResponse } from 'remix/response/file'
 import type { Handle } from 'remix/ui'
 
 import type { AppContext } from '../../router.ts'
@@ -62,6 +64,20 @@ export async function docsChapterHandler(context: DocsChapterRouteContext) {
   }
 
   return context.render(<MarkdownChapterPage {...chapter} />)
+}
+
+export async function docsChapterMarkdownHandler(context: DocsChapterRouteContext) {
+  let summaries = await loadChapterSummaries()
+  let summary = summaries.find((summary) => summary.slug === context.params.chapter)
+
+  if (!summary) {
+    return new Response('Not Found', { status: 404 })
+  }
+
+  return createFileResponse(
+    openLazyFile(summary.filePath, { name: `${summary.slug}.md` }),
+    context.request,
+  )
 }
 
 export async function loadDocsChapterSummaries(
