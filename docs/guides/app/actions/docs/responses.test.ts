@@ -81,6 +81,66 @@ describe('docs responses', () => {
     )
     assert.match(html, /\/assets\/docs-shared\/ui\/public\/code-block-copy\.tsx/)
   })
+
+  it('links chapter pages to their markdown source', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(new URL(routes.docs.chapter.href({ chapter: 'start-here' }), 'http://localhost')),
+    )
+    let html = await response.text()
+
+    assert.match(html, /<link rel="alternate" type="text\/markdown" href="\/start-here\.md"/)
+  })
+
+  it('serves chapter markdown source', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(
+        new URL(routes.docs.markdown.href({ chapter: 'start-here' }), 'http://localhost'),
+      ),
+    )
+    let markdown = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.match(response.headers.get('Content-Type') ?? '', /^text\/markdown/)
+    assert.match(markdown, /^---\ntitle: Start Here\n/)
+    assert.match(markdown, /## What is Remix\?/)
+  })
+
+  it('inlines demo source in place of frames in chapter markdown', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(
+        new URL(routes.docs.markdown.href({ chapter: 'rendering-ui' }), 'http://localhost'),
+      ),
+    )
+    let markdown = await response.text()
+
+    assert.doesNotMatch(markdown, /^::frame/m)
+    assert.match(markdown, /^```tsx\n[^`]*export function ButtonBasic\(/m)
+  })
+
+  it('drops preview-only frames whose source is already in the chapter', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(
+        new URL(routes.docs.markdown.href({ chapter: 'interactivity' }), 'http://localhost'),
+      ),
+    )
+    let markdown = await response.text()
+
+    assert.doesNotMatch(markdown, /^::frame/m)
+    assert.doesNotMatch(markdown, /\/examples\/05-interactivity\/basic-counter\//)
+  })
+
+  it('returns 404 for unknown chapter markdown', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(new URL(routes.docs.markdown.href({ chapter: 'missing' }), 'http://localhost')),
+    )
+
+    assert.equal(response.status, 404)
+  })
 })
 
 function getOpeningTag(html: string, tagName: string, className: string): string {
