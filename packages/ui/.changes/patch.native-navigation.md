@@ -1,0 +1,1 @@
+Keep hash-only navigations within a fully loaded page and download requests under browser control without reloading a frame. If a hash navigation interrupts a pending frame load, reload the destination so the previous page is not left visible. Preserve downloads even when another navigation listener changes the source link's `download` attribute.
