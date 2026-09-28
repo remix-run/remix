@@ -2,6 +2,12 @@
 
 This is the changelog for [`node-tsx`](https://github.com/remix-run/remix/tree/main/packages/node-tsx). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.2
+
+### Patch Changes
+
+- Declare which package modules have side effects.
+
 ## v0.1.1
 
 ### Patch Changes

@@ -2,6 +2,33 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v0.8.0
+
+### Minor Changes
+
+- Customize transformed-file caching through the new `FileCache` interface, which requires only `get` and `put` methods. Existing `FileStorage` backends remain compatible without configuration changes (see #11859).
+
+  The new `createFsFileCache()` factory provides an opt-in filesystem LRU cache with configurable directory, entry count, and per-file and total size limits. It accepts native `File` objects and structurally compatible implementations such as `LazyFile`. Caching remains disabled when `files.cache` is omitted.
+
+  Reduce memory allocations when serving and caching transformed files.
+
+- Optimize named imports through eligible barrel files by rewriting them to their resolved implementation modules. This avoids intermediary requests and removes side-effect-free dependency branches that are no longer reachable while preserving package export restrictions.
+
+### Patch Changes
+
+- Include the configured HMR module importer and its dependencies in generated import maps, so its bare imports remain resolvable even when they are not used by the app entry.
+
+- Improve browser HMR for transitive dependency updates
+
+- Fix incorrect asset responses when concurrent file transforms modify their input bytes in place (see #11859).
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`file-storage@0.13.8`](https://github.com/remix-run/remix/releases/tag/file-storage@0.13.8)
+  - [`headers@0.21.3`](https://github.com/remix-run/remix/releases/tag/headers@0.21.3)
+  - [`mime@0.4.3`](https://github.com/remix-run/remix/releases/tag/mime@0.4.3)
+
 ## v0.7.1
 
 ### Patch Changes

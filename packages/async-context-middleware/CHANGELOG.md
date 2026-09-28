@@ -2,6 +2,15 @@
 
 This is the changelog for [`async-context-middleware`](https://github.com/remix-run/remix/tree/main/packages/async-context-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.8
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+
 ## v0.3.7
 
 ### Patch Changes

@@ -1,1 +1,0 @@
-Remove connection-specific request headers, fields named by `Connection`, and incoming `Content-Length` before forwarding. The outgoing `fetch` now determines framing for the forwarded body, including when a custom `fetch` is provided.

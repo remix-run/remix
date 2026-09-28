@@ -2,6 +2,18 @@
 
 This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
+## v0.13.8
+
+### Patch Changes
+
+- Reduce filesystem storage write overhead in `set()` and `put()` (see #11859).
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fs@0.4.7`](https://github.com/remix-run/remix/releases/tag/fs@0.4.7)
+  - [`lazy-file@5.0.7`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.7)
+
 ## v0.13.7
 
 ### Patch Changes

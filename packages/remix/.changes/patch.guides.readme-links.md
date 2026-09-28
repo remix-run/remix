@@ -1,1 +1,0 @@
-Publish the in-progress guide chapters with an unfinished notice and links to relevant package READMEs. Installed guides and READMEs link to bundled README mirrors instead of hosted documentation (see #11920).
