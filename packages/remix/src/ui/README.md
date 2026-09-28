@@ -150,7 +150,7 @@ explicit frame reloads still work.
 
 The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`; top-frame and unnamed frame requests omit the target. It only fetches same-origin sources and follows same-origin redirects.
 
-Browser frame requests do not send `X-Remix-Top-Frame-Src`. During server rendering of these responses, `handle.frames.top.src` defaults to the requested frame's URL.
+The default browser resolver omits `X-Remix-Top-Frame-Src`. When `render()` middleware handles these requests, the server-rendered `handle.frames.top.src` defaults to the requested frame's URL.
 
 The default resolver is equivalent to:
 

@@ -1,1 +1,1 @@
-Send `X-Remix-Frame: true` from the default browser resolver for all frame loads, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`, allowing handlers to select the same frame content as server-side requests (see #11941).
+Send `X-Remix-Frame: true` from the default browser resolver for all frame loads, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`, allowing handlers to identify and target frame requests consistently across browser and server rendering (see #11941).

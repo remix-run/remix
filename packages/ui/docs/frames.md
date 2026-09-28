@@ -186,11 +186,11 @@ function OuterFrame() {
 
 Nested frames stream independently. The outer frame can resolve and render while the inner frame is still loading.
 
-During SSR, `handle.frame.src` should point at the frame currently being rendered, while `handle.frames.top.src` should stay fixed at the outer document URL. Use `renderToStream({ frameSrc, topFrameSrc })` inside nested `resolveFrame()` handlers to preserve that distinction.
+During server-side frame composition, `handle.frame.src` identifies the frame currently being rendered, while `handle.frames.top.src` identifies the URL of the root render. Use `renderToStream({ frameSrc, topFrameSrc })` inside nested server `resolveFrame()` handlers to preserve that distinction.
 
 ## Client-resolved frames
 
-On the client, `run` fetches frame sources by default. Every resolver request sends `X-Remix-Frame: true`, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`, matching server-side `render()` middleware.
+On the client, `run` fetches frame sources by default. The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`, matching server-side `render()` middleware.
 
 | Request                        | `X-Remix-Frame` | `X-Remix-Target` |
 | ------------------------------ | --------------- | ---------------- |
@@ -200,7 +200,7 @@ On the client, `run` fetches frame sources by default. Every resolver request se
 
 A normal browser document load does not use the resolver and does not send these headers. Top-frame and unnamed frame requests have the same headers; give a frame a name when the handler needs to distinguish it. The handler decides whether to return a full document or a fragment.
 
-Browser frame requests do not send `X-Remix-Top-Frame-Src`. During server rendering of these responses, `handle.frames.top.src` defaults to the requested frame's URL. Server-side `render()` subrequests continue to carry the top-frame source through the server-rendered frame tree. If frame content depends on the containing page, include the relevant context explicitly in the frame's `src`.
+The default browser resolver omits `X-Remix-Top-Frame-Src`. When `render()` middleware handles these requests, the server-rendered `handle.frames.top.src` defaults to the requested frame's URL. Same-origin subrequests created by that render carry its top-frame source to nested renders. If frame content depends on the containing page, include the relevant context explicitly in the frame's `src`.
 
 The built-in resolver is equivalent to:
 
