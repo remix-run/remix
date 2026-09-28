@@ -109,7 +109,7 @@ export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Func
  * response bodies before parsing and reconciling them into the current document. Frame HTML can
  * select client-entry modules and contribute import maps, styles, and nested frames.
  *
- * @param src Source string from the `<Frame src>` prop.
+ * @param src Frame source or destination URL for a top-frame navigation.
  * @param options Information about the active frame load or form submission.
  * @returns Frame content or a response whose body should be rendered into the frame.
  */
@@ -122,7 +122,7 @@ export type ResolveFrame = (
  * Information available while resolving browser-loaded frame content.
  */
 export interface ResolveFrameOptions {
-  /** Optional name of the frame being loaded or reloaded. */
+  /** Frame name, absent for both the top-level document and unnamed `<Frame>` loads. */
   target?: string
   /** Form values submitted to the frame source for a non-GET submission. */
   formData?: FormData

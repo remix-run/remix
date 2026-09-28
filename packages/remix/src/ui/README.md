@@ -148,14 +148,22 @@ Frame navigation requires both `window.navigation` and `NavigateEvent.sourceElem
 missing either capability use document navigation for links, forms, and `navigate()`. Hydration and
 explicit frame reloads still work.
 
+The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`; top-frame and unnamed frame requests omit the target. It only fetches same-origin sources and follows same-origin redirects.
+
+The default browser resolver omits `X-Remix-Top-Frame-Src`. When `render()` middleware handles these requests, the server-rendered `handle.frames.top.src` defaults to the requested frame's URL.
+
 The default resolver is equivalent to:
 
 ```js
 async function resolveFrame(src, options) {
+  let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
+  if (options?.target != null) headers.set('X-Remix-Target', options.target)
+
   let response = await fetch(src, {
     body: getRequestBody(options),
-    headers: { Accept: 'text/html' },
+    headers,
     method: options?.method,
+    mode: 'same-origin',
     signal: options?.signal,
   })
 
@@ -169,7 +177,8 @@ async function resolveFrame(src, options) {
 
 function getRequestBody(options) {
   let formData = options?.formData
-  if (!formData || options?.method?.toLowerCase() === 'get') return
+  let method = options?.method
+  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
 
   if (options?.encType === 'text/plain') {
     let body = ''

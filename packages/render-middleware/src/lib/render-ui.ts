@@ -11,6 +11,9 @@ type RemixNode = Parameters<typeof renderToStream>[0]
 const FRAME_HEADER = 'X-Remix-Frame'
 const FRAME_TARGET_HEADER = 'X-Remix-Target'
 const TOP_FRAME_SRC_HEADER = 'X-Remix-Top-Frame-Src'
+// Internal subrequest errors are reported by the enclosing render. Browser frame requests
+// use the same headers, so identify internal requests by object identity instead.
+const internalFrameRequests = new WeakSet<Request>()
 const MAX_FRAME_REDIRECTS = 20
 const FRAME_REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 const FRAME_REQUEST_HEADERS_TO_REMOVE = [
@@ -66,7 +69,7 @@ export function render(
   return renderWith((context) => {
     let request = context.request
     let topFrameSrc = getTopFrameSrc(request)
-    let onError = request.headers.get(FRAME_HEADER) === 'true' ? () => {} : options.onError
+    let onError = internalFrameRequests.has(request) ? () => {} : options.onError
 
     return function render(node: RemixNode, init?: ResponseInit): Response {
       let stream = renderToStream(node, {
@@ -156,13 +159,13 @@ async function followFrameRedirects(
       headers = createCrossOriginFrameHeaders(headers)
     }
 
-    let response = await context.router.fetch(
-      new Request(url, {
-        method: 'GET',
-        headers,
-        signal: context.request.signal,
-      }),
-    )
+    let request = new Request(url, {
+      method: 'GET',
+      headers,
+      signal: context.request.signal,
+    })
+    internalFrameRequests.add(request)
+    let response = await context.router.fetch(request)
     let location = response.headers.get('Location')
 
     if (location == null || !FRAME_REDIRECT_STATUSES.has(response.status)) {

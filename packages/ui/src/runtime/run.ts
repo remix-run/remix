@@ -22,10 +22,11 @@ export interface RunInit {
   loadModule: LoadModule
 
   /**
-   * Resolves browser-loaded `<Frame>` content.
+   * Resolves browser-loaded frame content, including top-frame navigation and reloads.
    *
    * Defaults to fetching the frame source as HTML with the submitted form data, method, encoding,
-   * and abort signal. The default resolver only fetches from the document origin, including
+   * and abort signal. All requests send `X-Remix-Frame: true`, plus `X-Remix-Target` when named.
+   * The default resolver only fetches from the document origin, including
    * redirects, but does not sanitize the returned HTML. Custom resolvers own their request,
    * redirect, and content trust policies.
    */
@@ -111,9 +112,12 @@ function normalizeLineBreaks(value: string): string {
 }
 
 async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
+  let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
+  if (options?.target != null) headers.set('X-Remix-Target', options.target)
+
   let response = await fetch(src, {
     body: getRequestBody(options),
-    headers: { Accept: 'text/html' },
+    headers,
     method: options?.method,
     mode: 'same-origin',
     signal: options?.signal,

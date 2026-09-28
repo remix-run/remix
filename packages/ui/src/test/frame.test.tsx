@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
-import type { Handle, RemixNode } from '../runtime/component.ts'
+import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
 import { Frame } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import { reloadFrameForNavigation } from '../runtime/frame.ts'
@@ -59,6 +59,24 @@ async function renderDocumentContent(content: RemixNode): Promise<string> {
 
 async function renderFrameContent(content: RemixNode): Promise<string> {
   return await drain(renderToStream(content))
+}
+
+async function setupDefaultFrameRequestTest(t: TestContext, name?: string) {
+  let frame: FrameHandle | undefined
+  let Probe = clientEntry('/js/probe.js#Probe', function Probe(handle: Handle) {
+    frame = handle.frame
+    return () => <p id="frame-content">Frame content</p>
+  })
+  let frameHtml = await renderFrameContent(<Probe />)
+  document.body.innerHTML = await drain(
+    renderToStream(<Frame name={name} src="/frame" />, { resolveFrame: () => frameHtml }),
+  )
+  let fetchMock = t.mock.method(globalThis, 'fetch', async () => new Response(frameHtml))
+  let app = run({ loadModule: () => Probe })
+  t.after(() => app.dispose())
+  await app.ready()
+  invariant(frame, 'Expected frame content to hydrate')
+  return { frame, fetchMock }
 }
 
 function waitForElement(
@@ -226,7 +244,11 @@ describe('run', () => {
       let [src, init] = fetchMock.mock.calls[0]!.arguments
       expect(src).toBe('/account')
       expect(init?.body).toBe(formData)
-      expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
+      let headers = new Headers(init?.headers)
+      expect(headers.get('Accept')).toBe('text/html')
+      expect(headers.get('X-Remix-Frame')).toBe('true')
+      expect(headers.get('X-Remix-Target')).toBeNull()
+      expect(headers.get('X-Remix-Top-Frame-Src')).toBeNull()
       expect(init?.method).toBe('post')
       expect(init?.mode).toBe('same-origin')
       expect(init?.signal).toBeInstanceOf(AbortSignal)
@@ -234,6 +256,65 @@ describe('run', () => {
     } finally {
       app.dispose()
     }
+  })
+
+  it('sends frame headers and the target when reloading a named frame', async (t) => {
+    let { frame, fetchMock } = await setupDefaultFrameRequestTest(t, 'details')
+
+    await frame.reload()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    let [src, init] = fetchMock.mock.calls[0]!.arguments
+    expect(src).toBe('/frame')
+    expect(init?.mode).toBe('same-origin')
+    let headers = new Headers(init?.headers)
+    expect(headers.get('Accept')).toBe('text/html')
+    expect(headers.get('X-Remix-Frame')).toBe('true')
+    expect(headers.get('X-Remix-Target')).toBe('details')
+    expect(headers.get('X-Remix-Top-Frame-Src')).toBeNull()
+    expect(document.getElementById('frame-content')?.textContent).toBe('Frame content')
+  })
+
+  it('sends frame headers without a target when reloading an unnamed frame', async (t) => {
+    let { frame, fetchMock } = await setupDefaultFrameRequestTest(t)
+
+    await frame.reload()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    let [src, init] = fetchMock.mock.calls[0]!.arguments
+    expect(src).toBe('/frame')
+    expect(init?.mode).toBe('same-origin')
+    let headers = new Headers(init?.headers)
+    expect(headers.get('Accept')).toBe('text/html')
+    expect(headers.get('X-Remix-Frame')).toBe('true')
+    expect(headers.get('X-Remix-Target')).toBeNull()
+    expect(headers.get('X-Remix-Top-Frame-Src')).toBeNull()
+    expect(document.getElementById('frame-content')?.textContent).toBe('Frame content')
+  })
+
+  it('sends frame headers without a target when reloading the top frame', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () => new Response(await renderDocumentContent(<p id="next-page">Next page</p>)),
+    )
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    await app.ready()
+    app.frames.top.src = '/next'
+
+    await app.frames.top.reload()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    let [src, init] = fetchMock.mock.calls[0]!.arguments
+    expect(src).toBe('/next')
+    expect(init?.mode).toBe('same-origin')
+    let headers = new Headers(init?.headers)
+    expect(headers.get('Accept')).toBe('text/html')
+    expect(headers.get('X-Remix-Frame')).toBe('true')
+    expect(headers.get('X-Remix-Target')).toBeNull()
+    expect(headers.get('X-Remix-Top-Frame-Src')).toBeNull()
+    expect(document.getElementById('next-page')?.textContent).toBe('Next page')
   })
 
   it('uses same-origin requests for explicitly cross-origin frame sources', async (t) => {
