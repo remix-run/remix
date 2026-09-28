@@ -57,8 +57,7 @@ export function createVNode(type: ElementType, props: ElementProps, key?: Key): 
  */
 export interface RenderToStringOptions {
   /**
-   * Content Security Policy nonce to stamp on the `<script>` and `<style>` elements the renderer
-   * emits itself.
+   * Content Security Policy nonce for generated import maps, module preloads, and CSS mixin styles.
    */
   nonce?: string
 }
@@ -76,8 +75,7 @@ export interface RenderToStreamOptions {
   /** Error hook invoked when rendering work throws. */
   onError?: (error: unknown) => void
   /**
-   * Content Security Policy nonce to stamp on the `<script>` and `<style>` elements the renderer
-   * emits itself.
+   * Content Security Policy nonce for generated import maps, module preloads, and CSS mixin styles.
    */
   nonce?: string
   /** Callback used to resolve nested frame content during streaming SSR. */
@@ -170,6 +168,7 @@ export function ImportMap(handle: Handle<ImportMapProps>): RenderFn {
 }
 
 interface ClientEntryHeadResources {
+  // Preload tags stay nonce-free until the enclosing render serializes its head.
   modulePreloadTags: Set<string>
   importMap?: ImportMapData
 }
@@ -1285,7 +1284,7 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 function finalizeHtml(html: string, context: RenderContext): string {
   let hasHtmlRoot = context.flushKind === 'document'
 
-  let preloads = collectModulePreloadTags(context.clientEntryHeadResources)
+  let preloads = collectModulePreloadTags(context.clientEntryHeadResources, context.nonce)
   let styles = collectStyleTags(context)
   let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
   let nonceMeta =
@@ -1348,8 +1347,10 @@ function createModulePreloadTag(href: string): string {
   return `${MARKED_MODULE_PRELOAD_START}${escapeHtml(href)}${MODULE_PRELOAD_END}`
 }
 
-function collectModulePreloadTags(resources: ClientEntryHeadResources): string {
-  return Array.from(resources.modulePreloadTags).join('')
+function collectModulePreloadTags(resources: ClientEntryHeadResources, nonce?: string): string {
+  return Array.from(resources.modulePreloadTags, (tag) =>
+    tag.replace(' />', () => `${renderNonceAttribute(nonce)} />`),
+  ).join('')
 }
 
 function hoistClientEntryResourcesFromFrameHead(
@@ -1374,10 +1375,18 @@ function hoistClientEntryResourcesFromFrameHead(
   }
 
   while (html.startsWith(MARKED_MODULE_PRELOAD_START, cursor)) {
-    let tagEnd = html.indexOf(MODULE_PRELOAD_END, cursor + MARKED_MODULE_PRELOAD_START.length)
-    if (tagEnd === -1 || tagEnd >= headClose) return html
+    let hrefStart = cursor + MARKED_MODULE_PRELOAD_START.length
+    let hrefEnd = html.indexOf('"', hrefStart)
+    if (hrefEnd === -1 || hrefEnd >= headClose) return html
+
+    let tagEnd = html.indexOf(MODULE_PRELOAD_END, hrefEnd)
+    if (tagEnd === -1) return html
     tagEnd += MODULE_PRELOAD_END.length
-    preloadTags.push(html.slice(cursor, tagEnd))
+    if (tagEnd > headClose) return html
+
+    // Preserve the escaped href and discard the child response's nonce.
+    // The enclosing render applies its nonce when serializing the head.
+    preloadTags.push(html.slice(cursor, hrefEnd) + MODULE_PRELOAD_END)
     cursor = tagEnd
   }
 

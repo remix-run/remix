@@ -9,6 +9,25 @@ import { css } from '../style/css-mixin.ts'
 import { drain } from './utils.ts'
 
 describe('CSP nonces', () => {
+  it('loads generated module preloads under nonce-only CSP', async (t) => {
+    let doc = await renderPreloadUnderCsp(t)
+
+    expect(doc.documentElement.dataset.preloadStatus).toBe('load')
+    expect(doc.head.querySelector<HTMLLinkElement>('link[rel="modulepreload"]')?.nonce).toBe(
+      'document-nonce',
+    )
+  })
+
+  it('loads blocking frame preloads under the document nonce', async (t) => {
+    let doc = await renderPreloadUnderCsp(t, { blockingFrame: true })
+
+    expect(doc.documentElement.dataset.preloadStatus).toBe('load')
+    expect(doc.head.querySelector<HTMLLinkElement>('link[rel="modulepreload"]')?.nonce).toBe(
+      'document-nonce',
+    )
+    expect(doc.body.querySelector('link[rel="modulepreload"]')).toBeNull()
+  })
+
   it('applies renderToString CSS mixin styles under CSP before hydration', async (t) => {
     let html = await renderToString(
       <html>
@@ -49,13 +68,14 @@ describe('CSP nonces', () => {
           </head>
           <body>
             <Frame src="/child" />
+            <Frame src="/sibling" />
           </body>
         </html>,
         {
           nonce: 'document-nonce',
-          resolveFrame() {
+          resolveFrame(src) {
             return renderToStream(<Island />, {
-              nonce: 'frame-response-nonce',
+              nonce: src === '/child' ? 'frame-response-nonce' : 'sibling-response-nonce',
               resolveClientEntry() {
                 return {
                   href: '/island.js',
@@ -80,6 +100,10 @@ describe('CSP nonces', () => {
     expect(doc.head.querySelector('link[rel="modulepreload"]')?.getAttribute('href')).toBe(
       '/island.hash.js',
     )
+    expect(doc.head.querySelector<HTMLLinkElement>('link[rel="modulepreload"]')?.nonce).toBe(
+      'document-nonce',
+    )
+    expect(doc.querySelectorAll('link[rel="modulepreload"]')).toHaveLength(1)
     expect(doc.body.querySelector('script[type="importmap"], link[rel="modulepreload"]')).toBeNull()
   })
 
@@ -151,7 +175,74 @@ describe('CSP nonces', () => {
       metadataNonces: ['document-nonce'],
     })
   })
+
+  it('loads late preloads with the original document nonce after a document reload', async (t) => {
+    let result = await renderLateEntryUnderCsp(t, {
+      nonce: 'document-nonce',
+      reloadDocument: true,
+      preload: true,
+    })
+
+    expect(result.preload).toEqual({ status: 'load', nonce: 'document-nonce' })
+    expect(result.hydrated).toBe(true)
+    expect(result.error).toBe('')
+  })
+
+  it('loads late preloads with an authored import map nonce without a render nonce', async (t) => {
+    let result = await renderLateEntryUnderCsp(t, {
+      nonce: undefined,
+      initialImportMap: true,
+      importMapNonce: 'authored-nonce',
+      preload: true,
+    })
+
+    expect(result.preload).toEqual({ status: 'load', nonce: 'authored-nonce' })
+    expect(result.hydrated).toBe(true)
+    expect(result.error).toBe('')
+  })
 })
+
+async function renderPreloadUnderCsp(t: TestContext, options?: { blockingFrame?: boolean }) {
+  let Island = clientEntry('/island.js#Island', function Island() {
+    return () => 'Island'
+  })
+  let moduleHref = 'data:text/javascript,export%20default%20null'
+  let completionMessage = crypto.randomUUID()
+  function resolveClientEntry() {
+    return { href: moduleHref, exportName: 'default', preloads: [moduleHref] }
+  }
+  let html = await drain(
+    renderToStream(
+      <html>
+        <head>
+          <meta httpEquiv="Content-Security-Policy" content="script-src 'nonce-document-nonce'" />
+          <script nonce="document-nonce">{`
+            function onPreload(event) {
+              if (!event.target.matches?.('link[data-rmx-module-preload]')) return
+              document.documentElement.dataset.preloadStatus = event.type
+              parent.postMessage(${JSON.stringify(completionMessage)}, ${JSON.stringify(location.origin)})
+            }
+            document.addEventListener('load', onPreload, true)
+            document.addEventListener('error', onPreload, true)
+          `}</script>
+        </head>
+        <body>{options?.blockingFrame ? <Frame src="/child" /> : <Island />}</body>
+      </html>,
+      {
+        nonce: 'document-nonce',
+        resolveClientEntry,
+        resolveFrame() {
+          return renderToStream(<Island />, {
+            nonce: 'frame-response-nonce',
+            resolveClientEntry,
+          })
+        },
+      },
+    ),
+  )
+
+  return renderNonceDocument(t, html, completionMessage)
+}
 
 async function renderLateEntryUnderCsp(
   t: TestContext,
@@ -160,6 +251,7 @@ async function renderLateEntryUnderCsp(
     initialImportMap?: boolean
     importMapNonce?: string
     reloadDocument?: boolean
+    preload?: boolean
   },
 ) {
   let policyNonce = options.importMapNonce ?? options.nonce
@@ -180,6 +272,7 @@ async function renderLateEntryUnderCsp(
           href: 'late-island',
           exportName: 'Island',
           importMap: { imports: { 'late-island': moduleHref } },
+          preloads: options.preload ? [moduleHref] : undefined,
         }
       },
     }),
@@ -204,6 +297,16 @@ async function renderLateEntryUnderCsp(
   let bootstrap = `
     import { run } from ${JSON.stringify(runHref)}
     let error = ''
+    let preloaded = ${options.preload === true} ? new Promise((resolve) => {
+      function onPreload(event) {
+        if (!event.target.matches?.('link[data-rmx-module-preload]')) return
+        document.documentElement.dataset.preloadStatus = event.type
+        document.documentElement.dataset.preloadNonce = event.target.nonce
+        resolve()
+      }
+      document.addEventListener('load', onPreload, true)
+      document.addEventListener('error', onPreload, true)
+    }) : Promise.resolve()
     let app = run({
       resolveFrame(src) {
         if (src === '/next') return ${JSON.stringify(documentHtml).replace(/</g, '\\u003c')}
@@ -225,6 +328,7 @@ async function renderLateEntryUnderCsp(
     } catch (cause) {
       error = String(cause)
     }
+    await preloaded
     document.documentElement.dataset.error = error
     document.documentElement.dataset.hydrated = document.querySelector('main').dataset.hydrated ?? ''
     let maps = document.head.querySelectorAll('script[data-rmx-import-map]')
@@ -238,7 +342,7 @@ async function renderLateEntryUnderCsp(
         <head>
           <meta
             httpEquiv="Content-Security-Policy"
-            content={`script-src 'self' data: 'nonce-${policyNonce}'; style-src 'nonce-${policyNonce}'`}
+            content={`script-src ${options.preload ? '' : "'self' data: "}'nonce-${policyNonce}'; style-src 'nonce-${policyNonce}'`}
           />
           {options.initialImportMap && <ImportMap nonce={options.importMapNonce} value={{}} />}
           <script type="module" nonce={policyNonce}>
@@ -258,6 +362,27 @@ async function renderLateEntryUnderCsp(
   expect(initialDocument.querySelectorAll('script[data-rmx-import-map]')).toHaveLength(
     options.initialImportMap ? 1 : 0,
   )
+  let doc = await renderNonceDocument(t, html, completionMessage)
+  return {
+    hydrated: doc.documentElement.dataset.hydrated === 'true',
+    error: doc.documentElement.dataset.error,
+    nonce: doc.documentElement.dataset.nonce,
+    metadataNonces: Array.from(
+      doc.head.querySelectorAll<HTMLMetaElement>('meta[name="rmx-nonce"]'),
+      (meta) => meta.nonce,
+    ),
+    ...(options.preload
+      ? {
+          preload: {
+            status: doc.documentElement.dataset.preloadStatus,
+            nonce: doc.documentElement.dataset.preloadNonce,
+          },
+        }
+      : {}),
+  }
+}
+
+async function renderNonceDocument(t: TestContext, html: string, completionMessage: string) {
   // Each document needs fresh CSP and import-map state, including real script execution.
   let iframe = document.createElement('iframe')
   t.after(() => iframe.remove())
@@ -275,13 +400,5 @@ async function renderLateEntryUnderCsp(
 
   let doc = iframe.contentDocument
   invariant(doc)
-  return {
-    hydrated: doc.documentElement.dataset.hydrated === 'true',
-    error: doc.documentElement.dataset.error,
-    nonce: doc.documentElement.dataset.nonce,
-    metadataNonces: Array.from(
-      doc.head.querySelectorAll<HTMLMetaElement>('meta[name="rmx-nonce"]'),
-      (meta) => meta.nonce,
-    ),
-  }
+  return doc
 }

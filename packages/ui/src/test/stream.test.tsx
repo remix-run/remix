@@ -1311,6 +1311,7 @@ describe('stream', () => {
         href: '/assets/nonce-island.js',
         exportName: 'Island',
         importMap: { imports: { '/assets/nonce-island.js': '/assets/nonce-island.hash.js' } },
+        preloads: ['/assets/nonce-island.hash.js'],
       }
     }
 
