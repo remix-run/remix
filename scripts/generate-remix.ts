@@ -30,6 +30,7 @@ const manifestPath = path.join(remixDir, 'manifest.json')
 const CLI_PACKAGE_NAME = '@remix-run/cli'
 const SOURCE_FOLDER = 'src'
 const REMIX_CLI_ENTRY_FILE = 'cli-entry.ts'
+const REMIX_TYPES_ENTRY_FILE = 'index.ts'
 const DEFAULT_VALUE_RE_EXPORT_SPECIFIERS = new Set([
   '@remix-run/ui/button',
   '@remix-run/ui/checkbox',
@@ -272,6 +273,12 @@ async function updateRemixPackage() {
   await fs.rm(sourceFolderPath, { recursive: true, force: true })
   await fs.mkdir(sourceFolderPath, { recursive: true })
 
+  await fs.writeFile(
+    path.join(sourceFolderPath, REMIX_TYPES_ENTRY_FILE),
+    createRemixTypesSource(),
+    'utf-8',
+  )
+
   // Generate fresh source files
   console.log('Generating Remix source files...')
   let writtenSourceFiles = new Set<string>()
@@ -325,8 +332,16 @@ async function updateRemixPackage() {
   // Update package.json
   console.log('Updating Remix package.json...')
   remixPackageJson.sideEffects = getGeneratedSideEffectFiles()
-  remixPackageJson.exports = {}
-  remixPackageJson.publishConfig.exports = {}
+  remixPackageJson.exports = {
+    '.': {
+      types: `./${SOURCE_FOLDER}/${REMIX_TYPES_ENTRY_FILE}`,
+    },
+  }
+  remixPackageJson.publishConfig.exports = {
+    '.': {
+      types: './dist/index.d.ts',
+    },
+  }
 
   for (let entry of allExports) {
     let exportPath = path.join(SOURCE_FOLDER, entry.sourceFile)
@@ -432,10 +447,8 @@ function createExportSource(entry: ExportEntry): string {
   if (entry.reExportFrom === '@remix-run/fetch-router') {
     return [
       `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
+      `import type { RouterTypes as RemixRouterTypes } from './index.ts'`,
       `export * from '${entry.reExportFrom}'`,
-      ``,
-      `export interface RouterTypes {}`,
-      `type RemixRouterTypes = RouterTypes`,
       ``,
       `declare module '@remix-run/fetch-router' {`,
       `  interface RouterTypes extends RemixRouterTypes {}`,
@@ -481,6 +494,28 @@ function createExportSource(entry: ExportEntry): string {
   }
 
   return unreachableExportMode(entry.exportMode)
+}
+
+function createRemixTypesSource(): string {
+  return `// IMPORTANT: This file is auto-generated, please do not edit manually.
+/**
+ * Ambient router type configuration for application-wide defaults.
+ *
+ * Apps may augment this interface to define the default request context used by
+ * \`createAction()\`, \`createController()\`, and \`getContext()\`.
+ * Apps with multiple routers should pass explicit context types instead.
+ *
+ * @example
+ * \`\`\`ts
+ * declare module 'remix' {
+ *   interface RouterTypes {
+ *     context: AppContext
+ *   }
+ * }
+ * \`\`\`
+ */
+export interface RouterTypes {}
+`
 }
 
 async function getExportClassificationForSpecifier(

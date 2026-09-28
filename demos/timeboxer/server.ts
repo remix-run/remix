@@ -4,16 +4,7 @@ import { createRequestListener } from 'remix/node-fetch-server'
 import { assetServer } from './app/actions/assets/controller.ts'
 import { router } from './app/router.ts'
 
-const server = http.createServer(
-  createRequestListener(async (request) => {
-    try {
-      return await router.fetch(request)
-    } catch (error) {
-      console.error(error)
-      return new Response('Internal Server Error', { status: 500 })
-    }
-  }),
-)
+const server = http.createServer(createRequestListener(router.fetch))
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 

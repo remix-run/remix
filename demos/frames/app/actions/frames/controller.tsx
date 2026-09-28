@@ -1,4 +1,5 @@
-import { createController, type RouterTypes } from 'remix/router'
+import type { RouterTypes } from 'remix'
+import { createController } from 'remix/router'
 import { Frame, css, type RemixNode } from 'remix/ui'
 
 import { Counter } from '../../ui/public/counter.tsx'

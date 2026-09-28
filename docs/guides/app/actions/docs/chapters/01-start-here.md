@@ -78,6 +78,7 @@ my-remix-app/
     ├── router.ts              # middleware, routes, and controller mapping
     ├── middleware/            # request middleware and context providers
     ├── actions/               # controllers, route actions, and route-local UI
+    │   ├── controller.tsx     # root route controller
     │   ├── document.tsx       # app document shell
     │   └── public/
     │       └── entry.ts       # starts the browser runtime
@@ -93,9 +94,7 @@ import { createRequestListener } from "remix/node-fetch-server";
 
 import { router } from "./app/router.ts";
 
-const requestListener = createRequestListener(async (request) => {
-  return await router.fetch(request);
-});
+const requestListener = createRequestListener(router.fetch);
 const server = http.createServer(requestListener);
 
 server.listen(44100, () => {
@@ -549,7 +548,7 @@ export const router = createRouter({
 
 export type AppContext = RouterContext<typeof router>;
 
-declare module "remix/router" {
+declare module "remix" {
   interface RouterTypes {
     context: AppContext;
   }

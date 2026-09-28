@@ -89,6 +89,14 @@ export interface RequestListenerOptions {
  * @returns A Node.js request listener function
  */
 export function createRequestListener(
+  handler: (request: Request) => Response | Promise<Response>,
+  options?: RequestListenerOptions,
+): http.RequestListener
+export function createRequestListener(
+  handler: FetchHandler,
+  options?: RequestListenerOptions,
+): http.RequestListener
+export function createRequestListener(
   handler: FetchHandler,
   options?: RequestListenerOptions,
 ): http.RequestListener {

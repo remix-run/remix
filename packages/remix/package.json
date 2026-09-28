@@ -24,6 +24,9 @@
     "node": ">=24.3.0"
   },
   "exports": {
+    ".": {
+      "types": "./src/index.ts"
+    },
     "./assert": "./src/assert.ts",
     "./assets": "./src/assets.ts",
     "./assets/types/hmr": {
@@ -154,6 +157,9 @@
   },
   "publishConfig": {
     "exports": {
+      ".": {
+        "types": "./dist/index.d.ts"
+      },
       "./assert": {
         "types": "./dist/assert.d.ts",
         "default": "./dist/assert.js"

@@ -96,6 +96,16 @@ const allRemixRunPackages: string[] = fs
 // --- Tests ---
 
 describe('manifest', () => {
+  it('exports application types from the package root', () => {
+    let packageJson: {
+      exports: Record<string, unknown>
+      publishConfig: { exports: Record<string, unknown> }
+    } = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'))
+
+    assert.deepEqual(packageJson.exports['.'], { types: './src/index.ts' })
+    assert.deepEqual(packageJson.publishConfig.exports['.'], { types: './dist/index.d.ts' })
+  })
+
   it('every manifest entry has a valid remix path format', () => {
     for (let [remixPath, specifier] of Object.entries(manifest)) {
       if (remixPath.startsWith('_')) continue
