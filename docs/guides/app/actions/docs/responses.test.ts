@@ -107,6 +107,32 @@ describe('docs responses', () => {
     assert.match(markdown, /## What is Remix\?/)
   })
 
+  it('inlines demo source in place of frames in chapter markdown', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(
+        new URL(routes.docs.markdown.href({ chapter: 'rendering-ui' }), 'http://localhost'),
+      ),
+    )
+    let markdown = await response.text()
+
+    assert.doesNotMatch(markdown, /^::frame/m)
+    assert.match(markdown, /^```tsx\n[^`]*export function ButtonBasic\(/m)
+  })
+
+  it('drops preview-only frames whose source is already in the chapter', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(
+        new URL(routes.docs.markdown.href({ chapter: 'interactivity' }), 'http://localhost'),
+      ),
+    )
+    let markdown = await response.text()
+
+    assert.doesNotMatch(markdown, /^::frame/m)
+    assert.doesNotMatch(markdown, /\/examples\/05-interactivity\/basic-counter\//)
+  })
+
   it('returns 404 for unknown chapter markdown', async () => {
     let router = createGuidesRouter()
     let response = await router.fetch(

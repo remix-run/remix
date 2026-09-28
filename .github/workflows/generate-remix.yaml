@@ -13,6 +13,8 @@ on:
     paths:
       - '.github/workflows/generate-remix.yaml'
       - 'docs/guides/app/actions/docs/chapters/**'
+      - 'docs/guides/app/actions/docs/examples/**'
+      - 'docs/guides/app/actions/docs/markdown/**'
       - 'packages/**/package.json'
       - 'packages/**/README.md'
       - 'packages/remix/guides/**'
@@ -27,6 +29,8 @@ on:
     paths:
       - '.github/workflows/generate-remix.yaml'
       - 'docs/guides/app/actions/docs/chapters/**'
+      - 'docs/guides/app/actions/docs/examples/**'
+      - 'docs/guides/app/actions/docs/markdown/**'
       - 'packages/**/package.json'
       - 'packages/**/README.md'
       - 'packages/remix/guides/**'

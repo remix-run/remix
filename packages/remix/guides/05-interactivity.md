@@ -223,8 +223,6 @@ function Counter(handle: Handle<{ initialCount: number }>) {
 `count` lives in setup scope, so it survives each render without becoming part of the component's
 props.
 
-::frame{src="/examples/05-interactivity/basic-counter/"}
-
 Calling `handle.update()` schedules work and returns a promise. Await it when the next step needs the
 updated DOM:
 
@@ -295,7 +293,98 @@ Keys matter whenever an update changes a list. Use a stable ID, not an array ind
 the list is sorted or a random value created during render. Matching keys let Remix move existing DOM
 and component instances instead of pairing state with the wrong item.
 
-::frame{src="/examples/05-interactivity/keyed-list/"}
+```tsx
+import { on, type Handle } from "remix/ui";
+
+type ListItem = {
+  id: string;
+  label: string;
+};
+
+export function KeyedList(handle: Handle) {
+  let items: ListItem[] = [
+    { id: "a", label: "Item A" },
+    { id: "b", label: "Item B" },
+    { id: "c", label: "Item C" },
+    { id: "d", label: "Item D" },
+  ];
+
+  let shuffleInterval: ReturnType<typeof setInterval> | null = null;
+
+  let moveUp = (index: number) => {
+    if (index === 0) return;
+    let newItems = [...items];
+    [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
+    items = newItems;
+    handle.update();
+  };
+
+  let moveDown = (index: number) => {
+    if (index === items.length - 1) return;
+    let newItems = [...items];
+    [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
+    items = newItems;
+    handle.update();
+  };
+
+  let reverse = () => {
+    items = [...items].reverse();
+    handle.update();
+  };
+
+  let shuffle = () => {
+    let newItems = [...items];
+    for (let i = newItems.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [newItems[i], newItems[j]] = [newItems[j], newItems[i]];
+    }
+    items = newItems;
+    handle.update();
+  };
+
+  let toggleAutoShuffle = () => {
+    if (shuffleInterval !== null) {
+      clearInterval(shuffleInterval);
+      shuffleInterval = null;
+    } else {
+      shuffleInterval = setInterval(() => {
+        shuffle();
+      }, 1000);
+    }
+    handle.update();
+  };
+
+  return () => (
+    <div>
+      <div class="controls">
+        <button mix={[on("click", reverse)]}>Reverse List</button>
+        <button mix={[on("click", shuffle)]}>Shuffle List</button>
+        <button mix={[on("click", toggleAutoShuffle)]}>
+          {shuffleInterval !== null ? "Stop Auto-Shuffle" : "Start Auto-Shuffle"}
+        </button>
+      </div>
+
+      {items.map((item, index) => (
+        <div key={item.id} class="list-item">
+          <input type="text" placeholder={item.label} defaultValue={item.label} />
+          <button
+            // disabled={index === 0}
+            mix={[on("click", () => moveUp(index))]}
+          >
+            ↑
+          </button>
+          <button
+            // disabled={index === items.length - 1}
+            mix={[on("click", () => moveDown(index))]}
+          >
+            ↓
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
 
 Setup-scope variables are a good home for UI state such as whether a menu is open, which field has
 focus, or whether a request is pending. Put business rules and shared application state in ordinary
@@ -393,8 +482,6 @@ function TitleInputs(handle: Handle) {
 Typing changes both inputs. Clicking the button resets the controlled input because its `value`
 comes from `title`. The uncontrolled input keeps its DOM value because `defaultValue` only applies
 its initial value.
-
-::frame{src="/examples/05-interactivity/controlled-uncontrolled-inputs/"}
 
 ## Composing behavior with mix {#the-mix-prop}
 

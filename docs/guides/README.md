@@ -9,6 +9,7 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/actions/controller.tsx` — top-level asset route handling.
 - `app/actions/docs/chapters/*.md` — guide chapters.
 - `app/actions/docs/markdown/render.tsx` — chapter metadata and `::frame` rendering built on the shared unified/remark/rehype pipeline.
+- `app/actions/docs/markdown/chapter-markdown.ts` — the markdown version of a chapter, shared by `/<chapter>.md` and the guides copied into the `remix` package. See [Frames in markdown](#frames-in-markdown).
 - `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, summaries, and mtime-based render caches.
 - `app/actions/docs/layout.tsx` and `chapter-navigation.tsx` — guides-specific content and navigation rendered inside the shell from `../shared/ui/`.
 - `app/actions/docs/public/` — browser behavior owned by the Guides route, including its active-chapter animation.
@@ -127,7 +128,32 @@ A "demo with code" shows a live, hydrated component next to its own highlighted 
 
 The named export matters: `demoWithCode` resolves the client entry from the function's `name`, so the export name and the function name must be the same token (e.g. `export function Counter`), not a `default` export.
 
-For route-style frames that need full control, export a named `handler` that returns a `Response` directly instead of using `demoWithCode`.
+For route-style frames that need full control, export a named `handler` that returns a `Response` directly instead of using `demoWithCode`. To keep their code in the markdown guides, declare a markdown fallback (see below).
+
+### Frames in markdown
+
+Every published chapter is also available as markdown in two places, and both use the same output:
+
+- `/<chapter>.md` on the guides site (for example `/start-here.md`), linked from each chapter page with `<link rel="alternate" type="text/markdown">`
+- `packages/remix/guides/*.md`, copied by `pnpm run generate-remix` so agents can read the guides from `node_modules/remix`
+
+Frames only render on the website, so a frame handler can declare a markdown fallback with `setMarkdownFallback()` from `app/actions/docs/examples/markdown-fallback.ts`. `renderChapterMarkdown()` in `app/actions/docs/markdown/chapter-markdown.ts` imports the handler for each `::frame` and replaces the directive with the file at the fallback's `sourceUrl`, as a `tsx` code block. Frames without a fallback are stripped.
+
+`demoWithCode` declares its demo module as the fallback. `demoPreview` declares none, because the surrounding prose already shows the source. A custom handler can declare its own:
+
+```tsx
+import { setMarkdownFallback } from '../markdown-fallback.ts'
+
+let sourceUrl = new URL('./public/callouts.tsx', import.meta.url)
+
+export async function handler(context: AppContext) {
+  return context.render(<Callouts />)
+}
+
+setMarkdownFallback(handler, { sourceUrl })
+```
+
+In published chapters, prefer frames with a fallback so readers of the markdown guides still see the code.
 
 ## Commands
 
