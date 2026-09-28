@@ -2,6 +2,15 @@
 
 This is the changelog for [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.1
+
+### Patch Changes
+
+- Declare which package modules have side effects.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`terminal@0.1.2`](https://github.com/remix-run/remix/releases/tag/terminal@0.1.2)
+
 ## v0.2.0
 
 ### Minor Changes

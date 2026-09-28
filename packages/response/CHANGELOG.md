@@ -2,6 +2,17 @@
 
 This is the changelog for [`response`](https://github.com/remix-run/remix/tree/main/packages/response). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.10
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.3`](https://github.com/remix-run/remix/releases/tag/headers@0.21.3)
+  - [`html-template@0.3.2`](https://github.com/remix-run/remix/releases/tag/html-template@0.3.2)
+  - [`mime@0.4.3`](https://github.com/remix-run/remix/releases/tag/mime@0.4.3)
+
 ## v0.3.9
 
 ### Patch Changes

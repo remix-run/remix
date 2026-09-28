@@ -2,6 +2,15 @@
 
 This is the changelog for [`session-storage-redis`](https://github.com/remix-run/remix/tree/main/packages/session-storage-redis). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.2
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`session@0.4.3`](https://github.com/remix-run/remix/releases/tag/session@0.4.3)
+
 ## v0.1.1
 
 ### Patch Changes

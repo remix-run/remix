@@ -1,1 +1,0 @@
-Align frame identification and named targeting in the default browser resolver with server-side rendering, including top-frame navigation and reloads. Browser frame requests also report server rendering errors through `render()`'s configured error handler or default reporter (see #11941).

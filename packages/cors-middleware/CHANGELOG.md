@@ -2,6 +2,16 @@
 
 This is the changelog for [`cors-middleware`](https://github.com/remix-run/remix/tree/main/packages/cors-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.1
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+  - [`headers@0.21.3`](https://github.com/remix-run/remix/releases/tag/headers@0.21.3)
+
 ## v0.2.0
 
 ### Minor Changes

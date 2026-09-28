@@ -2,6 +2,22 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## v0.21.3
+
+### Patch Changes
+
+- Improve parsing performance for `Accept`, `Accept-Encoding`, `Accept-Language`, `If-Match`, and `If-None-Match` headers containing long whitespace runs while preserving existing list parsing behavior.
+
+- Recognize `ContentType` parameter names case-insensitively while preserving media type and parameter value casing. Keep the first value when a `boundary` or `charset` parameter is repeated, including when the names use different casing.
+
+  Read unterminated quoted parameter values through the end of the input, honoring backslash escapes and preserving quoted whitespace without interpreting embedded delimiters as new parameters. `ContentType` follows [WHATWG quoted-string recovery](https://fetch.spec.whatwg.org/#collect-an-http-quoted-string): `boundary="abc` yields `abc`, while `note="value; boundary=abc` does not supply a boundary.
+
+- Preserve subsequent `Cookie` pairs when quotes span semicolon delimiters while retaining existing value decoding. `Cookie#toString()` encodes semicolons in values as `%3B`; `Cookie.from()` preserves that encoding, so a value such as `a;b` is parsed back as `a%3Bb` (see #11906).
+
+- `SetCookie` now accepts lowercase `'strict'`, `'lax'`, and `'none'` values for `sameSite` and serializes them using canonical casing.
+
+- Declare package modules as side-effect-free.
+
 ## v0.21.2
 
 ### Patch Changes
