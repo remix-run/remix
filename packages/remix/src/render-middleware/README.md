@@ -73,7 +73,7 @@ The middleware forwards request credentials and session headers to internal fram
 ### Options
 
 - **`assets`** - An asset server that resolves source-based client entry IDs to browser module URLs, import maps, and preload URLs. Omit it when client entries already use public URLs or the app has no client entries.
-- **`onError`** - A callback for server rendering errors. When omitted, the UI renderer uses its default error reporting.
+- **`onError`** - A callback for server rendering errors, including browser-initiated frame requests. Errors from internal frame subrequests are reported by the enclosing render to avoid duplicate reports. When omitted, the UI renderer uses its default error reporting.
 
 ## Custom renderers
 

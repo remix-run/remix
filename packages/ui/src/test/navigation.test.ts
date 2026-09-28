@@ -6,11 +6,9 @@ import {
   startNavigationListenerImpl,
 } from '../runtime/navigation.ts'
 import type { FrameHandle } from '../runtime/component.ts'
-import type { reloadFrameForNavigation } from '../runtime/frame.ts'
+import type { ResolveFrameOptions } from '../runtime/frame.ts'
 import { withResolvers } from './utils.ts'
 import { reloadDocument } from '../runtime/document-reload.ts'
-
-type FrameReloadOptions = NonNullable<Parameters<typeof reloadFrameForNavigation>[1]>
 
 type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }
 
@@ -837,7 +835,7 @@ describe('navigate', () => {
     let originalUrl = window.location.href
     let destination = new URL(originalUrl)
     destination.searchParams.set('frame-navigation', 'replace-link')
-    let reload = mock.fn(async (_options?: FrameReloadOptions) => new AbortController().signal)
+    let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListenerImpl(controller.signal, {
@@ -1310,7 +1308,7 @@ describe('form navigation', () => {
   it('replaces same-location POST submission history before commit when supported', async () => {
     expect(typeof Reflect.get(window, 'NavigationPrecommitController')).toBe('function')
 
-    let reload = mock.fn(async (_options?: FrameReloadOptions) => ({
+    let reload = mock.fn(async (_options?: ResolveFrameOptions) => ({
       signal: new AbortController().signal,
     }))
     let topFrame = { src: '' } as FrameHandle
@@ -1348,7 +1346,7 @@ describe('form navigation', () => {
   it('replays same-location POST submissions as replace navigations without precommit support', async (t) => {
     stubGlobalField(t, 'NavigationPrecommitController', undefined)
 
-    let reload = mock.fn(async (_options?: FrameReloadOptions) => ({
+    let reload = mock.fn(async (_options?: ResolveFrameOptions) => ({
       signal: new AbortController().signal,
     }))
     let topFrame = { src: '' } as FrameHandle
@@ -1392,7 +1390,7 @@ describe('form navigation', () => {
     let getNamedFrame = mock.fn(
       () => (++lookupCount === 1 ? namedFrame : undefined) as FrameHandle | undefined,
     )
-    let reloadFrame = mock.fn((_frame: FrameHandle, _options?: FrameReloadOptions) =>
+    let reloadFrame = mock.fn((_frame: FrameHandle, _options?: ResolveFrameOptions) =>
       createReloadTransition({ signal: new AbortController().signal }),
     )
     let controller = new AbortController()
@@ -1430,7 +1428,7 @@ describe('form navigation', () => {
   })
 
   it('pushes same-location POST history when data-rmx-history is push', async () => {
-    let reload = mock.fn(async (_options?: FrameReloadOptions) => new AbortController().signal)
+    let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListenerImpl(controller.signal, {
@@ -1465,7 +1463,7 @@ describe('form navigation', () => {
   })
 
   it('pushes POST submission history for a different location', async () => {
-    let reload = mock.fn(async (_options?: FrameReloadOptions) => ({
+    let reload = mock.fn(async (_options?: ResolveFrameOptions) => ({
       signal: new AbortController().signal,
     }))
     let topFrame = { src: '' } as FrameHandle
@@ -1503,7 +1501,7 @@ describe('form navigation', () => {
 
   it('reloads a targeted frame with submitter-overridden submission metadata', async () => {
     let topReload = mock.fn(async () => ({ signal: new AbortController().signal }))
-    let namedReload = mock.fn(async (_options?: FrameReloadOptions) => ({
+    let namedReload = mock.fn(async (_options?: ResolveFrameOptions) => ({
       signal: new AbortController().signal,
     }))
     let topFrame = { src: '' } as FrameHandle
@@ -1601,7 +1599,7 @@ describe('form navigation', () => {
   })
 
   it('reloads GET form navigations like link navigations', async () => {
-    let reload = mock.fn(async (_options?: FrameReloadOptions) => ({
+    let reload = mock.fn(async (_options?: ResolveFrameOptions) => ({
       signal: new AbortController().signal,
     }))
     let topFrame = { src: '' } as FrameHandle
@@ -1652,7 +1650,7 @@ describe('form navigation', () => {
     redirectedUrl.searchParams.set('query', 'redirected-frames')
     let topFrame = { src: '' } as FrameHandle
     let shouldRedirect = true
-    let reload = mock.fn(async (_options?: FrameReloadOptions) => {
+    let reload = mock.fn(async (_options?: ResolveFrameOptions) => {
       if (shouldRedirect) {
         shouldRedirect = false
         return {

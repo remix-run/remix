@@ -1143,7 +1143,6 @@ function insertFrame(
         instance = createFrame([start, end], {
           name: getFrameName(node),
           src,
-          topFrame: runtime.topFrame,
           getContext,
           errorTarget: runtime.errorTarget,
           loadModule: runtime.loadModule,
@@ -1200,7 +1199,6 @@ function insertFrame(
   let instance = createFrame([start, end], {
     name: getFrameName(node),
     src: getFrameSrc(node),
-    topFrame: runtime.topFrame,
     getContext: (type) => findContextFromAncestry(vParent, type),
     errorTarget: runtime.errorTarget,
     loadModule: runtime.loadModule,
@@ -1260,8 +1258,6 @@ function resolveClientFrame(
   let resolve = Promise.resolve()
     .then(() =>
       runtime.resolveFrame(frameSrc, {
-        isTopFrame: false,
-        topFrameSrc: runtime.topFrame?.src ?? frameSrc,
         signal: resolveController.signal,
         target: getFrameName(node),
       }),

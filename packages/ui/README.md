@@ -148,20 +148,16 @@ Frame navigation requires both `window.navigation` and `NavigateEvent.sourceElem
 missing either capability use document navigation for links, forms, and `navigate()`. Hydration and
 explicit frame reloads still work.
 
-Resolver options include `isTopFrame` to distinguish document loads from nested `<Frame>` loads, and `topFrameSrc` for the current top-frame source. `target` is the frame name and is absent for both top-frame and unnamed frame loads.
+The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`; top-frame and unnamed frame requests omit the target. It only fetches same-origin sources and follows same-origin redirects.
 
-The default resolver sends `X-Remix-Frame: true` and `X-Remix-Top-Frame-Src` for nested frames, plus `X-Remix-Target` for named frames. Top-frame navigations omit all three headers to request a full document. It only fetches same-origin sources and follows same-origin redirects.
+Browser frame requests do not send `X-Remix-Top-Frame-Src`. During server rendering of these responses, `handle.frames.top.src` defaults to the requested frame's URL.
 
 The default resolver is equivalent to:
 
 ```js
 async function resolveFrame(src, options) {
-  let headers = new Headers({ Accept: 'text/html' })
-  if (options?.isTopFrame === false) {
-    headers.set('X-Remix-Frame', 'true')
-    headers.set('X-Remix-Top-Frame-Src', options.topFrameSrc)
-    if (options.target != null) headers.set('X-Remix-Target', options.target)
-  }
+  let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
+  if (options?.target != null) headers.set('X-Remix-Target', options.target)
 
   let response = await fetch(src, {
     body: getRequestBody(options),

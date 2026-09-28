@@ -1,0 +1,1 @@
+Report server rendering errors for browser-initiated frame requests through `onError`, or the default error reporter when no callback is configured. Internal frame subrequests continue to report errors through the enclosing render to avoid duplicate reports (see #11941).

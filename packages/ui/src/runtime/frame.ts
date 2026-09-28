@@ -122,10 +122,6 @@ export type ResolveFrame = (
  * Information available while resolving browser-loaded frame content.
  */
 export interface ResolveFrameOptions {
-  /** Whether this load requests the top-level document rather than a nested `<Frame>`. */
-  isTopFrame: boolean
-  /** Current source of the top-level frame, including the destination of an active navigation. */
-  topFrameSrc: string
   /** Frame name, absent for both the top-level document and unnamed `<Frame>` loads. */
   target?: string
   /** Form values submitted to the frame source for a non-GET submission. */
@@ -140,7 +136,7 @@ export interface ResolveFrameOptions {
 
 type InternalFrameContent = FrameContent | DocumentFragment
 
-type FrameReloadOptions = Omit<ResolveFrameOptions, 'isTopFrame' | 'topFrameSrc' | 'target'>
+type FrameReloadOptions = Omit<ResolveFrameOptions, 'target'>
 
 type FrameReloadResult = {
   signal: AbortSignal
@@ -858,8 +854,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     try {
       let resolution = await init.resolveFrame(frame.src, {
         ...options,
-        isTopFrame: isDocumentNode(container.root),
-        topFrameSrc: runtime.topFrame?.src ?? frame.src,
         signal: controller.signal,
         target: frameName,
       })
