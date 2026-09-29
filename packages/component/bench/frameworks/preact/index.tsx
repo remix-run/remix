@@ -9,6 +9,7 @@ import {
   buildData,
 } from '../shared.ts'
 import type { Benchmark, Row } from '../shared.ts'
+import { TraceViewer, loadTrace } from './trace-viewer.tsx'
 import { render } from 'preact'
 import { act } from 'preact/test-utils'
 
@@ -655,7 +656,7 @@ function Dashboard({ onSwitchToTable }: { onSwitchToTable: () => void }) {
 function App() {
   let [rows, setRows] = useState<Row[]>([])
   let [selected, setSelected] = useState<number | null>(null)
-  let [view, setView] = useState<'table' | 'dashboard'>('table')
+  let [view, setView] = useState<'table' | 'dashboard' | 'trace-viewer'>('table')
 
   let run = () => {
     setRows(get1000Rows())
@@ -704,8 +705,17 @@ function App() {
     setView('table')
   }
 
+  let switchToTraceViewer = () => {
+    loadTrace()
+    setView('trace-viewer')
+  }
+
   if (view === 'dashboard') {
     return <Dashboard onSwitchToTable={switchToTable} />
+  }
+
+  if (view === 'trace-viewer') {
+    return <TraceViewer onExit={switchToTable} />
   }
 
   return (
@@ -790,6 +800,16 @@ function App() {
                   onClick={switchToDashboard}
                 >
                   Switch to Dashboard
+                </button>
+              </div>
+              <div class="col-sm-6 smallpad">
+                <button
+                  id="switchToTraceViewer"
+                  class="btn btn-primary btn-block"
+                  type="button"
+                  onClick={switchToTraceViewer}
+                >
+                  Switch to Trace Viewer
                 </button>
               </div>
             </div>

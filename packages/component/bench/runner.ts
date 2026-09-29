@@ -477,6 +477,12 @@ const operations: Operation[] = [
       await clear(page)
     },
   },
+  {
+    name: 'traceViewerSearch',
+    setup: (page) => click(page, '#switchToTraceViewer'),
+    action: (page) => clickAndMeasure(page, '#traceViewerSearch', 'traceViewerSearch'),
+    teardown: (page) => click(page, '#switchFromTraceViewer'),
+  },
 ]
 
 // Start the benchmark server

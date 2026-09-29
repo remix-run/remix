@@ -10,7 +10,7 @@ import {
 import type { Benchmark, Row } from '../shared.ts'
 import { createRoot, on } from '@remix-run/component'
 import type { Handle } from '@remix-run/component'
-
+import { TraceViewer, loadTrace } from './trace-viewer.tsx'
 export const name = 'remix'
 
 function Button(handle: Handle<{ id: string; text: string; fn: () => void }>) {
@@ -741,7 +741,7 @@ function Dashboard(handle: Handle<{ onSwitchToTable: () => void }>) {
 function App(handle: Handle) {
   let rows: Row[] = []
   let selected: number | null = null
-  let view: 'table' | 'dashboard' = 'table'
+  let view: 'table' | 'dashboard' | 'trace-viewer' = 'table'
 
   let setRows = (newRows: Row[]) => {
     rows = newRows
@@ -763,9 +763,19 @@ function App(handle: Handle) {
     handle.update()
   }
 
+  let switchToTraceViewer = () => {
+    loadTrace()
+    view = 'trace-viewer'
+    handle.update()
+  }
+
   return () => {
     if (view === 'dashboard') {
       return <Dashboard onSwitchToTable={switchToTable} />
+    }
+
+    if (view === 'trace-viewer') {
+      return <TraceViewer onExit={switchToTable} />
     }
 
     return (
@@ -840,6 +850,11 @@ function App(handle: Handle) {
                   }}
                 />
                 <Button id="switchToDashboard" text="Switch to Dashboard" fn={switchToDashboard} />
+                <Button
+                  id="switchToTraceViewer"
+                  text="Switch to Trace Viewer"
+                  fn={switchToTraceViewer}
+                />
               </div>
             </div>
           </div>

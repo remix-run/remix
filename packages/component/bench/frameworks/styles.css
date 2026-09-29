@@ -156,3 +156,58 @@ tr {
   top: -20px;
   left: -20px;
 }
+
+.trace-viewer-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.trace-viewer-matches {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #fff3b0;
+  font-weight: bold;
+}
+
+.trace-viewer {
+  height: 90vh;
+  overflow: auto;
+  border: 1px solid #e3e3e3;
+  font:
+    12px/1.6 ui-monospace,
+    monospace;
+}
+
+.trace-span {
+  width: fit-content;
+  min-width: 100%;
+}
+
+.trace-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+.trace-row.match {
+  background: #fff3b0;
+}
+
+.trace-name {
+  min-width: 120px;
+}
+
+.trace-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: #7aa7d9;
+}
+
+.trace-children {
+  margin-left: 8px;
+  border-left: 1px solid #e3e3e3;
+}
