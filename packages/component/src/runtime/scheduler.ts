@@ -162,7 +162,7 @@ export function createScheduler(
           let vnodes = Array.from(batch)
           let noScheduledAncestorInBatch = new Set<VNodeParent>()
           let scheduledAncestorInBatch = new Set<VNodeParent>()
-        
+
           for (let [vnode, domParent] of vnodes) {
             if (
               ancestorIsScheduled(
@@ -174,16 +174,16 @@ export function createScheduler(
             ) {
               continue
             }
-        
+
             if (!trackCascadingUpdate(vnode)) return
-        
+
             let curr = vnode._content
             // Calculate anchor at render time from current vdom position (never stale).
             // Needed for fragment self-updates that add children - without this, new children
             // would be appended after siblings. The keyed diff has placement logic, but unkeyed
             // diff relies on anchor for correct positioning.
             let anchor = findNextSiblingDomAnchor(vnode) || undefined
-        
+
             try {
               renderComponent(curr, vnode, domParent, vnode._context, anchor)
             } catch (error) {
@@ -248,7 +248,7 @@ export function createScheduler(
         for (let node of path) noScheduledAncestorInBatch.add(node)
         return false
       }
-  
+
       // Already verified this node has a scheduled ancestor above it
       if (
         scheduledAncestorInBatch.has(current) ||
@@ -257,11 +257,11 @@ export function createScheduler(
         for (let node of path) scheduledAncestorInBatch.add(node)
         return true
       }
-  
+
       path.push(current)
       current = current.kind === 'root' ? undefined : current._parent
     }
-  
+
     // Reached root - mark entire path as having no scheduled ancestor
     // for future lookups in this batch
     for (let node of path) noScheduledAncestorInBatch.add(node)
