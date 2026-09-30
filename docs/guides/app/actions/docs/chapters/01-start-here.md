@@ -606,7 +606,7 @@ export default createController(routes.albums.edit, {
 });
 ```
 
-The `action` route action validates the parsed Web `FormData`, returns an explicit response for invalid input or a missing album, and redirects back to the album page after a successful update. The [Data and Validation](/data-and-validation/) chapter shows how to render field-level validation errors back into a form.
+The `action` route action validates the parsed Web `FormData`, returns an explicit response for invalid input or a missing album, and redirects back to the album page after a successful update. The [Forms and Mutations](/forms-and-mutations/) chapter shows how to render field-level validation errors back into a form.
 
 Now we can update our album data and set it to the correct year.
 

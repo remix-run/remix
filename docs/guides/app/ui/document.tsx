@@ -33,7 +33,6 @@ export function Document(handle: Handle<DocumentProps>) {
           {description ? <meta name="description" content={description} /> : null}
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <title>{title}</title>
-          {head}
           {searchEnabled ? (
             <link rel="stylesheet" href="/assets/pagefind/pagefind-component-ui.css" />
           ) : null}
@@ -50,6 +49,7 @@ export function Document(handle: Handle<DocumentProps>) {
           ) : null}
           {devRefreshScript ? <script type="module" src={devRefreshScript.href}></script> : null}
           <script type="module" src={href}></script>
+          {head}
         </head>
         <body>
           {children}

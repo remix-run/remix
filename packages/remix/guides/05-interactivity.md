@@ -163,8 +163,8 @@ The returned app runtime has three lifecycle methods:
 `run()` hydrates the server-rendered page. It is not a second application router. Browser requests
 still go to the route actions that own the corresponding server behavior.
 
-[Streaming UI with Frames](/streaming-ui-with-frames/) adds the optional `resolveFrame` callback when
-the app needs route-owned regions that load or reload independently.
+[Streaming UI with Frames](/streaming-ui-with-frames/) uses the default browser resolver for
+route-owned regions that load or reload independently.
 
 ## Mount client-only UI with createRoot {#client-only-roots}
 
