@@ -4,8 +4,8 @@ const migrationDirectoryPattern = /^(\d{1,64})_(.+)$/
 /**
  * Parses a migration directory name into `{ id, name }`.
  *
- * Expected format: `<digits>_<name>`, such as `0001_create_users` for a zero-padded sequence
- * or `20260228090000_create_users` for a `YYYYMMDDHHmmss` timestamp (`2026-02-28 09:00:00`).
+ * Expected format: `<digits>_<name>`, such as `0001_create_users` or
+ * `20260228090000_create_users` (`YYYYMMDDHHmmss`).
  * The prefix must contain 1 to 64 digits.
  * @param name Migration directory basename.
  * @returns Parsed migration id and name.

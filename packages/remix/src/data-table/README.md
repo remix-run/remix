@@ -360,19 +360,10 @@ app/
 ```
 
 - Keep migration directories in one parent directory (for example `app/db/migrations`).
-- Each directory is named `<digits>_<slug>`, with a prefix of 1 to 64 digits.
+- Each directory is named `<digits>_<slug>`, such as `0001_create_users` or `20260228090000_create_users` (`YYYYMMDDHHmmss`). Prefixes must contain 1 to 64 digits.
 - All prefixes in the same migration directory must have the same number of digits so string sorting preserves numeric order (for example `0001`, `0002`, `0010`).
 - `up.sql` is required. `down.sql` is optional (omit for irreversible migrations).
 - Scripts may contain multiple statements. `id` and `name` are inferred from the directory name.
-
-Choose a prefix format that suits your workflow:
-
-| Format                       | Example directory             | Why use it?                                      |
-| ---------------------------- | ----------------------------- | ------------------------------------------------ |
-| Zero-padded sequence         | `0001_create_users`           | Short names with explicit numbering.             |
-| Timestamp (`YYYYMMDDHHmmss`) | `20260228090000_create_users` | Records creation time and sorts chronologically. |
-
-`20260228090000` means `2026-02-28 09:00:00`, and `20260301113000` means `2026-03-01 11:30:00`. Use a consistent time zone (for example, UTC) for timestamp prefixes. Each prefix must be unique.
 
 ### Migration File Example
 
