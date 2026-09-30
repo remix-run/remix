@@ -124,6 +124,31 @@ describe('db command', () => {
     }
   })
 
+  it('rejects prefixes longer than 64 digits before applying migrations', async () => {
+    let projectDir = await createDatabaseProject()
+
+    try {
+      await fs.rename(
+        path.join(projectDir, 'db/migrations/20260715120000_create_first'),
+        path.join(projectDir, 'db/migrations', '1'.repeat(65) + '_create_first'),
+      )
+      await fs.rename(
+        path.join(projectDir, 'db/migrations/20260715130000_create_second'),
+        path.join(projectDir, 'db/migrations', '2'.repeat(65) + '_create_second'),
+      )
+
+      let result = await captureOutput(() => runRemix(['db', 'migrate'], { cwd: projectDir }))
+      assert.equal(result.exitCode, 1)
+      assert.match(result.stderr, /Expected format <digits>_<name> with 1 to 64 digits/)
+      let tables = readTableNames(projectDir)
+      assert.equal(tables.includes('first_table'), false)
+      assert.equal(tables.includes('second_table'), false)
+      assert.equal(tables.includes('data_table_migrations'), false)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('applies a targeted migration', async () => {
     let projectDir = await createDatabaseProject()
 

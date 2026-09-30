@@ -690,6 +690,22 @@ describe('migration directory name parsing', () => {
     })
   })
 
+  it('parses 64-digit ids without numeric conversion', () => {
+    let id = '9'.repeat(64)
+
+    assert.deepEqual(parseMigrationDirectoryName(id + '_create_users'), {
+      id,
+      name: 'create_users',
+    })
+  })
+
+  it('rejects ids longer than 64 digits', () => {
+    assert.throws(
+      () => parseMigrationDirectoryName('9'.repeat(65) + '_create_users'),
+      /Expected format <digits>_<name> with 1 to 64 digits/,
+    )
+  })
+
   it('rejects directory names without an id', () => {
     assert.throws(
       () => parseMigrationDirectoryName('create_users'),

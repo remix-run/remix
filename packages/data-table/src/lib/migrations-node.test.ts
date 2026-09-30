@@ -122,6 +122,38 @@ describe('migration node loader', () => {
     }
   })
 
+  it('loads 64-digit ids', async () => {
+    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
+    let id = '9'.repeat(64)
+
+    try {
+      await makeMigration(directory, id + '_create_users', { up: 'select 1' })
+
+      let migrations = await loadMigrations(directory)
+      assert.deepEqual(
+        migrations.map((migration) => migration.id),
+        [id],
+      )
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects ids longer than 64 digits', async () => {
+    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
+
+    try {
+      await makeMigration(directory, '9'.repeat(65) + '_create_users', { up: 'select 1' })
+
+      await assert.rejects(
+        () => loadMigrations(directory),
+        /Expected format <digits>_<name> with 1 to 64 digits/,
+      )
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
   it('rejects ids with different digit counts', async () => {
     let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
 
