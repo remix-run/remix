@@ -1,7 +1,6 @@
 ---
 title: Forms and Mutations
 description: How native forms, action responses, validation failures, redirects, and enhanced mutations fit together.
-published: false
 ---
 
 In [Data and Validation](/data-and-validation/), we moved our albums into SQLite and defined `albumForm` to validate edits.

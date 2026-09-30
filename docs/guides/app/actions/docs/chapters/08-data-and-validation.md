@@ -1,7 +1,6 @@
 ---
 title: Data and Validation
 description: How Remix validates inputs, defines relational data, queries databases, and runs SQL migrations.
-published: false
 ---
 
 In [Start Here](/start-here/), we kept the record store's albums in an array and used a schema to parse an edit form. That was enough to follow a request through the app, but changes disappeared when the server restarted.
@@ -160,7 +159,7 @@ export const router = createRouter({
 
 export type AppContext = RouterContext<typeof router>;
 
-declare module "remix/router" {
+declare module "remix" {
   interface RouterTypes {
     context: AppContext;
   }
@@ -211,6 +210,9 @@ export default createController(routes.albums, {
       if (album === null) return new Response("Album not found", { status: 404 });
 
       return context.render(<AlbumPage album={album} />);
+    },
+    async recommendations(context) {
+      /* ... */
     },
   },
 });
