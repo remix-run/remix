@@ -1,4 +1,6 @@
-Add the initial `@remix-run/component-hmr` package for Remix component HMR runtimes, browser transforms, and Node module hooks.
+First stable release.
+
+The `@remix-run/component-hmr` package provides Remix component HMR runtimes, browser transforms, and Node module hooks.
 
 Applications previously using component HMR from `@remix-run/ui-hmr` should replace that dependency with `@remix-run/component-hmr`:
 
@@ -6,7 +8,7 @@ Applications previously using component HMR from `@remix-run/ui-hmr` should repl
  {
    "devDependencies": {
 -    "@remix-run/ui-hmr": "^0.1.1"
-+    "@remix-run/component-hmr": "^0.1.0"
++    "@remix-run/component-hmr": "^1.0.0"
    }
  }
 ```

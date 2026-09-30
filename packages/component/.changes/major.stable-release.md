@@ -1,3 +1,5 @@
+First stable release.
+
 BREAKING CHANGE: The component runtime has moved from `@remix-run/ui` back to `@remix-run/component`.
 
 The package provides a component runtime with browser rendering and hydration, server rendering, JSX runtimes, testing helpers, styles, and general-purpose mixins.
