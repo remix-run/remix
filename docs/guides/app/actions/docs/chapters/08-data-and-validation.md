@@ -45,18 +45,20 @@ The `id` column is the default primary key, but tables can specify a different k
 
 ## Create the tables with SQL
 
-Each migration has a timestamped directory with an `up.sql` file and, when the change can be reversed, a `down.sql` file:
+Each migration has a numbered directory with an `up.sql` file and, when the change can be reversed, a `down.sql` file:
 
 ```txt
 db/migrations/
-└── 20260923090000_create_albums/
+└── 0001_create_albums/
     ├── up.sql
     └── down.sql
 ```
 
+The numeric prefix determines migration order. Keep every prefix the same width (`0001`, `0002`, and so on).
+
 This SQLite migration creates the tables described above:
 
-```sql filename=db/migrations/20260923090000_create_albums/up.sql
+```sql filename=db/migrations/0001_create_albums/up.sql
 create table albums (
   id text primary key not null,
   title text not null check (length(trim(title)) > 0),
@@ -77,7 +79,7 @@ The foreign key and unique constraint are SQL rules enforced by the database. Th
 
 You can reverse the changes in a `down.sql` file in dependency order:
 
-```sql filename=db/migrations/20260923090000_create_albums/down.sql
+```sql filename=db/migrations/0001_create_albums/down.sql
 drop table tracks;
 drop table albums;
 ```
@@ -119,9 +121,11 @@ import { createContextKey } from "remix/router";
 import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
+import { db } from "../db.ts";
+
 export const databaseContext = createContextKey<Database>();
 
-export function database(db: Database): Middleware<{
+export function loadDatabase(): Middleware<{
   key: typeof databaseContext;
   value: Database;
   property: "db";
@@ -133,11 +137,11 @@ export function database(db: Database): Middleware<{
 }
 ```
 
-`databaseContext` and `database(...)` are application code. The middleware stores the same database instance for each request. It does not open a connection or start a transaction per request.
+`databaseContext` and `loadDatabase()` are application code. The middleware imports the shared database from `app/db.ts` and stores that same instance on each request's context. It does not open a connection or start a transaction per request.
 
 Add it to the router alongside form parsing and rendering, retaining the app's existing static-file middleware and controller mappings:
 
-```ts filename=app/router.ts lines=[8,9,14]
+```ts filename=app/router.ts lines=[8,13]
 import { formData } from "remix/middleware/form-data";
 import { render } from "remix/middleware/render";
 import { staticFiles } from "remix/middleware/static";
@@ -145,13 +149,12 @@ import { createRouter } from "remix/router";
 import type { RouterContext } from "remix/router";
 
 import { assets } from "./assets.ts";
-import { db } from "./db.ts";
-import { database } from "./middleware/database.ts";
+import { loadDatabase } from "./middleware/database.ts";
 
 export const router = createRouter({
   middleware: [
     staticFiles("./public", { index: false }),
-    database(db),
+    loadDatabase(),
     formData(),
     render({ assets }),
   ],

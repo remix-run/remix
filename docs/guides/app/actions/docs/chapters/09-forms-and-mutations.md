@@ -264,7 +264,7 @@ import { methodOverride } from "remix/middleware/method-override";
 export const router = createRouter({
   middleware: [
     staticFiles("./public", { index: false }),
-    database(db),
+    loadDatabase(),
     formData(),
     methodOverride(),
     render({ assets }),
