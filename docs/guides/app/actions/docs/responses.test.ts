@@ -23,7 +23,10 @@ describe('docs responses', () => {
     let router = createGuidesRouter()
     let response = await router.fetch(
       new Request(
-        new URL(routes.docs.chapter.href({ chapter: 'data-and-validation' }), 'http://localhost'),
+        new URL(
+          routes.docs.chapter.href({ chapter: 'auth-sessions-security' }),
+          'http://localhost',
+        ),
       ),
     )
     let html = await response.text()
@@ -32,7 +35,7 @@ describe('docs responses', () => {
     assert.match(html, /This chapter is unfinished\./)
     assert.match(
       html,
-      /https:\/\/github\.com\/remix-run\/remix\/blob\/main\/packages\/data-schema\/README\.md/,
+      /https:\/\/github\.com\/remix-run\/remix\/blob\/main\/packages\/session\/README\.md/,
     )
   })
 
