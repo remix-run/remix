@@ -124,7 +124,7 @@ export async function compressResponse(
   if (selectedEncoding === null) {
     // Client has explicitly rejected all supported encodings, including 'identity'
     return new Response(
-      `Only ${[supportedEncodings, 'identity'].map((encoding) => `'${encoding}'`).join(', ')} encodings are supported`,
+      `Only ${[...supportedEncodings, 'identity'].map((encoding) => `'${encoding}'`).join(', ')} encodings are supported`,
       {
         status: 406,
         statusText: 'Not Acceptable',
