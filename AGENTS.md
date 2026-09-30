@@ -61,7 +61,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 For work on this repository itself, use the skills in `.agents/skills/`:
 
 - `add-package` at `.agents/skills/add-package/SKILL.md`: Create or align a package under `packages/` with repo conventions.
-- `author-ui-components` at `.agents/skills/author-ui-components/SKILL.md`: Build idiomatic headless primitives under `packages/ui`, including accessibility behavior and required structural styles.
+- `author-ui-primitives` at `.agents/skills/author-ui-primitives/SKILL.md`: Build idiomatic headless primitives under `packages/ui`, including accessibility behavior and required structural styles.
 - `fix-issue` at `.agents/skills/fix-issue/SKILL.md`: Fix bugs reported in GitHub issues.
 - `make-changes` at `.agents/skills/make-changes/SKILL.md`: Create or update package change files under `packages/*/.changes`.
 - `make-decision-doc` at `.agents/skills/make-decision-doc/SKILL.md`: Add a numbered decision document under `decisions/` capturing a non-obvious architectural choice.
