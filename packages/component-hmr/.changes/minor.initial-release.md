@@ -11,7 +11,7 @@ Applications previously using component HMR from `@remix-run/ui-hmr` should repl
  }
 ```
 
-Applications using the `remix` umbrella package should rename `remix/ui-hmr` entrypoints to `remix/component-hmr`.
+Applications using the `remix` package should rename `remix/ui-hmr` entrypoints to `remix/component-hmr`.
 
 Rename the asset loader to `componentHmr()`:
 

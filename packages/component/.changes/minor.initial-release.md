@@ -7,7 +7,7 @@ Most applications only need to rename their existing runtime imports:
 +import { createRoot, css, on } from '@remix-run/component'
 ```
 
-Apply the same rename to direct-package runtime subpaths such as `@remix-run/ui/animation`, `@remix-run/ui/server`, `@remix-run/ui/test`, and `@remix-run/ui/dev/refresh`. Applications using the `remix` umbrella package should make the equivalent move from `remix/ui` to `remix/component` and its subpaths.
+Apply the same rename to direct-package runtime subpaths such as `@remix-run/ui/animation`, `@remix-run/ui/server`, `@remix-run/ui/test`, and `@remix-run/ui/dev/refresh`. Applications using the `remix` package should make the equivalent move from `remix/ui` to `remix/component` and its subpaths.
 
 The package now owns the JSX runtime, so direct-package consumers must also update TypeScript's JSX source:
 
@@ -32,4 +32,4 @@ Replace an explicit `@remix-run/ui` runtime dependency with `@remix-run/componen
  }
 ```
 
-If you are upgrading directly from `@remix-run/component@0.7`, note that the runtime continued to evolve while it was published from `@remix-run/ui`. The `addEventListeners`, `keysEvents`, `pressEvents`, and `PressEvent` root exports are no longer available, and animation APIs are now imported from `@remix-run/component/animation` or `remix/component/animation` when using the umbrella package.
+If you are upgrading directly from `@remix-run/component@0.7`, note that the runtime continued to evolve while it was published from `@remix-run/ui`. The `addEventListeners`, `keysEvents`, `pressEvents`, and `PressEvent` root exports are no longer available, and animation APIs are now imported from `@remix-run/component/animation` or `remix/component/animation` when using the `remix` package.

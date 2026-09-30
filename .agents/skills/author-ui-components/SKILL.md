@@ -5,7 +5,7 @@ description: Build idiomatic headless primitives in packages/ui for Remix. Use w
 
 # Author UI Primitives
 
-Use this skill when building or revising the independently versioned `@remix-run/ui` package. The package contains headless, accessible primitives only. It is not part of the `remix` umbrella package, so consumers install it separately and import its public subpaths directly.
+Use this skill when building or revising the independently versioned `@remix-run/ui` package. The package contains headless, accessible primitives only. It is not available through the `remix` package, so consumers install it separately and import its public subpaths directly.
 
 ## Public Boundary
 
@@ -48,7 +48,7 @@ Use `Context`, `ItemContext`, or `GroupContext` for providers, and short role na
 
 Primitives are authored with the same public component APIs available to application code. Import runtime, mixin, styling, and JSX types from `@remix-run/component`; it is a normal dependency of `@remix-run/ui`. Do not reach into private component-runtime modules.
 
-When adding or moving public entries, update both `exports` and `publishConfig.exports` in `packages/ui/package.json`. Keep `@remix-run/ui` versioned independently at `0.x`, and do not add it to the umbrella package manifest.
+When adding or moving public entries, update both `exports` and `publishConfig.exports` in `packages/ui/package.json`. Keep `@remix-run/ui` versioned independently at `0.x`, and do not add it to `packages/remix/manifest.json`.
 
 ## Primitive Responsibilities
 

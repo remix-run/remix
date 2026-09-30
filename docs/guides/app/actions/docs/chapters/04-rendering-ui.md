@@ -354,10 +354,11 @@ properties or TypeScript values.
 
 ## Optional headless UI primitives {#headless-ui-primitives}
 
-`@remix-run/ui` is a separate package of headless, accessible interaction primitives. It does not
-ship through the `remix` umbrella package and it does not provide a theme or visually styled
-components. Install it when an app needs reusable behavior for controls such as accordions,
-comboboxes, listboxes, menus, popovers, selects, tabs, or toggles:
+`@remix-run/ui` is a separate package of headless, accessible interaction primitives. It is not
+available through the `remix` package and does not provide a theme or visually styled components.
+The package is currently unstable and versioned independently. Install it when an app needs
+reusable behavior for controls such as accordions, comboboxes, listboxes, menus, popovers, selects,
+tabs, or toggles:
 
 ```sh
 npm i @remix-run/ui

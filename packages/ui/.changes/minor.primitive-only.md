@@ -28,7 +28,7 @@ Primitive APIs retain their existing contracts but now use flat package subpaths
 
 The package exports only the `accordion`, `anchor`, `combobox`, `listbox`, `menu`, `popover`, `select`, `tabs`, and `toggle` subpaths. The previous styled `breadcrumbs`, `button`, `checkbox`, `input`, and `radio` modules have been removed without replacements.
 
-`@remix-run/ui` is versioned independently, is not included in the `remix` umbrella package, and must be installed and imported directly. For an application that otherwise uses the umbrella package:
+`@remix-run/ui` is currently unstable and versioned independently. It is not available through the `remix` package and must be installed and imported directly. For an application that otherwise uses the `remix` package:
 
 ```sh
 npm i remix @remix-run/ui

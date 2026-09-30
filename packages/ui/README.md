@@ -6,7 +6,7 @@ styles required for correct operation.
 
 ## Installation
 
-`@remix-run/ui` is versioned independently and is not included in the `remix` umbrella package.
+`@remix-run/ui` is currently unstable and versioned independently. It is not available through the `remix` package.
 
 ```sh
 npm i remix @remix-run/ui
