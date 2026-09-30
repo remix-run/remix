@@ -1,0 +1,1 @@
+SQL migrations loaded through `remix/data-table/migrations/node` or `remix db` can now use sequential prefixes such as `0001` as well as timestamps. All prefixes in a migration directory must contain the same number of digits to preserve numeric ordering.

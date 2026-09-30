@@ -7,11 +7,12 @@ import { parseMigrationDirectoryName } from './migrations/directory-name.ts'
 /**
  * Loads SQL-file migrations from a directory on Node.js.
  *
- * Each migration is a directory named `YYYYMMDDHHmmss_<slug>` containing:
+ * Each migration is a directory named `<digits>_<slug>` containing:
  * - `up.sql` (required)
  * - `down.sql` (optional; omit for irreversible migrations)
  *
- * `id` and `name` are inferred from the directory name.
+ * `id` and `name` are inferred from the directory name. All ids in the directory
+ * must have the same number of digits so migrations sort in numeric order.
  * @param directory Absolute or relative directory containing migration directories.
  * @returns A sorted list of loaded migration descriptors.
  * @example
@@ -30,9 +31,23 @@ export async function loadMigrations(directory: string): Promise<MigrationDescri
 
   let migrations: MigrationDescriptor[] = []
   let seenIds = new Set<string>()
+  let idLength: number | undefined
 
   for (let directoryName of directories) {
     let parsed = parseMigrationDirectoryName(directoryName)
+    idLength ??= parsed.id.length
+
+    if (parsed.id.length !== idLength) {
+      throw new Error(
+        'Migration directory "' +
+          directoryName +
+          '" has a ' +
+          parsed.id.length +
+          '-digit prefix; expected ' +
+          idLength +
+          ' digits. All migration prefixes must have the same number of digits.',
+      )
+    }
 
     if (seenIds.has(parsed.id)) {
       throw new Error(

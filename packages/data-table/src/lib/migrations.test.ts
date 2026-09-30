@@ -669,11 +669,64 @@ describe('migration directory name parsing', () => {
     })
   })
 
-  it('rejects invalid migration directory names', () => {
+  it('parses zero-padded sequential ids', () => {
+    assert.deepEqual(parseMigrationDirectoryName('0001_create_users'), {
+      id: '0001',
+      name: 'create_users',
+    })
+  })
+
+  it('parses single-digit ids', () => {
+    assert.deepEqual(parseMigrationDirectoryName('1_create_users'), {
+      id: '1',
+      name: 'create_users',
+    })
+  })
+
+  it('preserves ids longer than timestamps without numeric conversion', () => {
+    assert.deepEqual(parseMigrationDirectoryName('12345678901234567890_create_users'), {
+      id: '12345678901234567890',
+      name: 'create_users',
+    })
+  })
+
+  it('rejects directory names without an id', () => {
     assert.throws(
       () => parseMigrationDirectoryName('create_users'),
-      /Expected format YYYYMMDDHHmmss_name/,
+      /Expected format <digits>_<name>/,
     )
+  })
+
+  it('rejects empty ids', () => {
+    assert.throws(
+      () => parseMigrationDirectoryName('_create_users'),
+      /Expected format <digits>_<name>/,
+    )
+  })
+
+  it('rejects non-digit prefixes', () => {
+    assert.throws(
+      () => parseMigrationDirectoryName('000a_create_users'),
+      /Expected format <digits>_<name>/,
+    )
+  })
+
+  it('rejects signed ids', () => {
+    assert.throws(
+      () => parseMigrationDirectoryName('-0001_create_users'),
+      /Expected format <digits>_<name>/,
+    )
+  })
+
+  it('rejects decimal ids', () => {
+    assert.throws(
+      () => parseMigrationDirectoryName('1.5_create_users'),
+      /Expected format <digits>_<name>/,
+    )
+  })
+
+  it('rejects empty names', () => {
+    assert.throws(() => parseMigrationDirectoryName('0001_'), /Expected format <digits>_<name>/)
   })
 })
 

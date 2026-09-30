@@ -360,7 +360,8 @@ app/
 ```
 
 - Keep migration directories in one parent directory (for example `app/db/migrations`).
-- Each directory is named `YYYYMMDDHHmmss_<slug>`.
+- Each directory is named `<digits>_<slug>`, such as `0001_create_users` or `20260228090000_create_users`.
+- All prefixes in the same migration directory must have the same number of digits. Zero-pad sequential ids (for example `0001`, `0002`, `0010`) so string sorting preserves numeric order. Existing timestamp prefixes remain supported.
 - `up.sql` is required. `down.sql` is optional (omit for irreversible migrations).
 - Scripts may contain multiple statements. `id` and `name` are inferred from the directory name.
 

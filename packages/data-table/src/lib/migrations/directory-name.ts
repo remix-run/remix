@@ -1,9 +1,9 @@
-const migrationDirectoryPattern = /^(\d{14})_(.+)$/
+const migrationDirectoryPattern = /^(\d+)_(.+)$/
 
 /**
  * Parses a migration directory name into `{ id, name }`.
  *
- * Expected format: `YYYYMMDDHHmmss_name`.
+ * Expected format: `<digits>_<name>`, such as `0001_create_users` or `20260101000000_create_users`.
  * @param name Migration directory basename.
  * @returns Parsed migration id and name.
  */
@@ -12,7 +12,7 @@ export function parseMigrationDirectoryName(name: string): { id: string; name: s
 
   if (!match) {
     throw new Error(
-      'Invalid migration directory name "' + name + '". Expected format YYYYMMDDHHmmss_name',
+      'Invalid migration directory name "' + name + '". Expected format <digits>_<name>',
     )
   }
 

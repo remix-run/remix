@@ -54,6 +54,116 @@ describe('migration node loader', () => {
     }
   })
 
+  it('loads zero-padded sequential ids and runs migrations in numeric order', async () => {
+    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
+
+    try {
+      await makeMigration(directory, '0010_add_index', {
+        up: 'create index users_name on users (name)',
+        down: 'drop index users_name',
+      })
+      await makeMigration(directory, '0002_add_name', {
+        up: 'alter table users add column name text',
+        down: 'alter table users drop column name',
+      })
+      await makeMigration(directory, '0001_create_users', {
+        up: 'create table users (id integer)',
+        down: 'drop table users',
+      })
+
+      let migrations = await loadMigrations(directory)
+      assert.deepEqual(
+        migrations.map(({ id, name }) => ({ id, name })),
+        [
+          { id: '0001', name: 'create_users' },
+          { id: '0002', name: 'add_name' },
+          { id: '0010', name: 'add_index' },
+        ],
+      )
+
+      let driver = new MemoryMigrationDriver()
+      let runner = createMigrationRunner(driver, migrations)
+      let applied = await runner.up({ to: '0002_add_name' })
+      assert.deepEqual(
+        applied.applied.map((migration) => migration.id),
+        ['0001', '0002'],
+      )
+
+      let remaining = await runner.up()
+      assert.deepEqual(
+        remaining.applied.map((migration) => migration.id),
+        ['0010'],
+      )
+
+      let reverted = await runner.down({ to: '0002' })
+      assert.deepEqual(
+        reverted.reverted.map((migration) => migration.id),
+        ['0010', '0002'],
+      )
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('loads single-digit ids', async () => {
+    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
+
+    try {
+      await makeMigration(directory, '2_second', { up: 'select 2' })
+      await makeMigration(directory, '1_first', { up: 'select 1' })
+
+      let migrations = await loadMigrations(directory)
+      assert.deepEqual(
+        migrations.map((migration) => migration.id),
+        ['1', '2'],
+      )
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects ids with different digit counts', async () => {
+    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
+
+    try {
+      await makeMigration(directory, '2_second', { up: 'select 2' })
+      await makeMigration(directory, '10_tenth', { up: 'select 10' })
+
+      await assert.rejects(
+        () => loadMigrations(directory),
+        /Migration directory "2_second" has a 1-digit prefix; expected 2 digits/,
+      )
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects mixing sequential ids and timestamps with different digit counts', async () => {
+    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
+
+    try {
+      await makeMigration(directory, '0001_create_users', { up: 'select 1' })
+      await makeMigration(directory, '20260101000000_add_posts', { up: 'select 2' })
+
+      await assert.rejects(
+        () => loadMigrations(directory),
+        /Migration directory "20260101000000_add_posts" has a 14-digit prefix; expected 4 digits/,
+      )
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('loads an empty migration directory', async () => {
+    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
+
+    try {
+      assert.deepEqual(await loadMigrations(directory), [])
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
   it('treats down.sql as optional', async () => {
     let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
 
@@ -89,7 +199,7 @@ describe('migration node loader', () => {
     try {
       await makeMigration(directory, 'create_users', { up: 'select 1' })
 
-      await assert.rejects(() => loadMigrations(directory), /Expected format YYYYMMDDHHmmss_name/)
+      await assert.rejects(() => loadMigrations(directory), /Expected format <digits>_<name>/)
     } finally {
       await rm(directory, { recursive: true, force: true })
     }
@@ -99,8 +209,8 @@ describe('migration node loader', () => {
     let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
 
     try {
-      await makeMigration(directory, '20260101000000_create_users', { up: 'select 1' })
-      await makeMigration(directory, '20260101000000_add_users_index', { up: 'select 1' })
+      await makeMigration(directory, '0001_create_users', { up: 'select 1' })
+      await makeMigration(directory, '0001_add_users_index', { up: 'select 1' })
 
       await assert.rejects(() => loadMigrations(directory), /Duplicate migration id/)
     } finally {
