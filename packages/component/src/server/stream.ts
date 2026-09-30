@@ -1,0 +1,1798 @@
+import type {
+  ComponentHandle,
+  FrameHandle,
+  Handle,
+  Key,
+  RemixNode,
+  RenderFn,
+} from '../runtime/component.ts'
+import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/jsx.ts'
+import type { ElementFunction } from '../runtime/element-function.ts'
+import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
+import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
+import {
+  FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
+  SELF_CLOSING_TAGS,
+  isAllowedHostPropName,
+  normalizeAttributeName,
+  sanitizeUrlAttribute,
+  serializeStyleObject,
+  shouldStringifyBooleanAttribute,
+} from '../runtime/core/attributes.ts'
+import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
+import { composeMixedProps, resolveMixDescriptors } from '../runtime/core/mix.ts'
+import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
+import { invariant } from '../runtime/invariant.ts'
+import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
+
+interface VNode {
+  type: ElementType
+  props: ElementProps
+  key?: Key
+  _handle?: ComponentHandle
+  _parent?: VNode
+}
+
+/**
+ * Creates a server renderer node record from an element type and props.
+ *
+ * Application components normally use JSX or `createElement` from `remix/component` instead.
+ *
+ * @param type Host tag, component, or fragment to render.
+ * @param props Props passed to the element.
+ * @param key Optional reconciliation key.
+ * @returns A node record used by the server renderer.
+ */
+export function createVNode(type: ElementType, props: ElementProps, key?: Key): VNode {
+  return { type, props, key }
+}
+
+/**
+ * Options for server-side rendering to a byte stream.
+ */
+export interface RenderToStreamOptions {
+  /** Source URL to associate with the current frame render. */
+  frameSrc?: string | URL
+  /** Source URL for the top-level frame in nested frame renders. */
+  topFrameSrc?: string | URL
+  /** Signal that cancels pending server rendering work. */
+  signal?: AbortSignal
+  /** Error hook invoked when rendering work throws. */
+  onError?: (error: unknown) => void
+  /** Callback used to resolve nested frame content during streaming SSR. */
+  resolveFrame?: (
+    src: string,
+    target?: string,
+    context?: ResolveFrameContext,
+  ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
+  /**
+   * Callback used to resolve runtime module metadata for client entry modules during SSR.
+   */
+  resolveClientEntry?: (
+    entryId: string,
+    component: EntryComponent,
+  ) => Promise<ResolvedClientEntry> | ResolvedClientEntry
+}
+
+/**
+ * Context passed to `resolveFrame` during server rendering.
+ */
+export interface ResolveFrameContext {
+  /** Source URL for the frame currently being resolved. */
+  currentFrameSrc: string
+  /** Source URL for the top-level frame in the current render. */
+  topFrameSrc: string
+}
+
+interface HydrationData {
+  moduleUrl: string
+  exportName: string
+  props: Record<string, unknown>
+}
+
+interface UnresolvedHydrationData {
+  entryId: string
+  component: EntryComponent
+  props: Record<string, unknown>
+}
+
+interface ResolvedClientEntry {
+  href: string
+  exportName: string
+  /** Browser module hrefs to begin preloading before hydrating this entry. */
+  preloads?: readonly string[]
+  importMap?: ImportMapData
+}
+
+/** Import map data accepted by the server renderer. */
+export interface ImportMapData {
+  /** Top-level module specifier mappings. */
+  imports?: ImportMapImports
+  /** Module specifier mappings scoped by URL. */
+  scopes?: Record<string, ImportMapImports>
+  /** Subresource integrity metadata keyed by module URL. */
+  integrity?: Record<string, string>
+}
+
+type ImportMapAddress = string | null
+type ImportMapImports = Record<string, ImportMapAddress>
+type AuthoredImportMapEntries = Map<string, ImportMapAddress>
+type AuthoredImportMapScope = { imports: AuthoredImportMapEntries }
+type StaticSegment = { kind: 'static'; html: string }
+type ManagedImportMap = {
+  attrs: string
+  segment: StaticSegment
+  value: ImportMapData
+}
+
+/**
+ * Props for {@link ImportMap}, including authored mappings and optional script attributes.
+ * The component owns the script's type and contents; external sources and children are excluded.
+ */
+export type ImportMapProps = Omit<
+  Props<'script'>,
+  'children' | 'innerHTML' | 'integrity' | 'src' | 'type'
+> & {
+  /** Initial import map entries to render and merge with resolved client entries. */
+  value: ImportMapData
+}
+
+/**
+ * Renders the document import map and merges maps from server-resolved client entries.
+ *
+ * @param handle Server component handle containing the initial import map and script attributes.
+ * @returns This component is handled directly by the server renderer.
+ */
+export function ImportMap(handle: Handle<ImportMapProps>): RenderFn {
+  void handle
+  return () => null
+}
+
+interface ClientEntryHeadResources {
+  modulePreloadTags: Set<string>
+  importMap?: ImportMapData
+}
+
+interface FrameData {
+  status: 'pending' | 'resolved'
+  name?: string
+  src: string
+}
+
+interface RenderContext {
+  insideSvg: boolean
+  insideHead: boolean
+  onError: (error: unknown) => void
+  parentVNode?: VNode
+  styleCache: Map<string, { selector: string; css: string }>
+  resolveFrame: (
+    src: string,
+    target?: string,
+    context?: ResolveFrameContext,
+  ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
+  pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
+  hydrationData: Map<string, HydrationData>
+  unresolvedHydrationData: Map<string, UnresolvedHydrationData>
+  authoredImportMapImports: AuthoredImportMapEntries
+  authoredImportMapScopes: Map<string, AuthoredImportMapScope>
+  authoredImportMapIntegrity: Map<string, string>
+  managedImportMaps: ManagedImportMap[]
+  frameData: Map<string, FrameData>
+  clientEntryHeadResources: ClientEntryHeadResources
+  blockingFrameTails: ReadableStream<Uint8Array>[]
+  signal: AbortSignal
+  flushKind: FlushKind
+  serverIdScope: string
+  serverIdCounter: number
+}
+
+interface ResolvedFrameHtml {
+  html: string
+  tail?: ReadableStream<Uint8Array>
+}
+
+interface SsrFrameState {
+  frame: FrameHandle
+  topFrame: FrameHandle
+}
+
+type Segment =
+  | StaticSegment
+  | { kind: 'composite'; parts: Segment[] }
+  | {
+      kind: 'frame'
+      frameId: string
+      content: Segment | null
+      pending?: Promise<void>
+    }
+
+const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
+const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
+
+const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
+function stripDoctypeMarkup(html: string): string {
+  return html.replace(DOCTYPE_PATTERN, '')
+}
+
+function hasRenderableHtml(html: string): boolean {
+  return stripDoctypeMarkup(html).trim() !== ''
+}
+
+function emptyReadableStream(): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      controller.close()
+    },
+  })
+}
+
+function getStyleLayerName(selector: string, layer: string = REMIX_UI_STYLE_LAYER): string {
+  return `${layer}.${selector}`
+}
+
+const SSR_OMITTED_PROPS = RUNTIME_FRAMEWORK_PROPS
+
+const ssrSignal = Object.freeze({
+  get aborted() {
+    return false
+  },
+  get reason() {
+    return undefined
+  },
+  get onabort() {
+    return null
+  },
+  set onabort(_: AbortSignal['onabort']) {},
+  addEventListener(
+    _type: string,
+    _listener: EventListenerOrEventListenerObject | null,
+    _options?: AddEventListenerOptions | boolean,
+  ) {},
+  removeEventListener(
+    _type: string,
+    _listener: EventListenerOrEventListenerObject | null,
+    _options?: EventListenerOptions | boolean,
+  ) {},
+  dispatchEvent(_event: Event) {
+    return true
+  },
+  throwIfAborted() {},
+}) as AbortSignal
+
+/**
+ * Renders a node tree to a streaming HTML response body.
+ *
+ * @param node Node tree to render.
+ * @param options Stream rendering options.
+ * @returns A readable byte stream of HTML.
+ */
+export function renderToStream(
+  node: RemixNode,
+  options?: RenderToStreamOptions,
+): ReadableStream<Uint8Array> {
+  let encoder = new TextEncoder()
+  let onError = options?.onError ?? ((error) => console.error(error))
+  let currentFrameSrc = normalizeFrameSrc(options?.frameSrc ?? options?.topFrameSrc)
+  let topFrameSrc = normalizeFrameSrc(options?.topFrameSrc ?? currentFrameSrc)
+  let rootFrameState = createSsrFrameState(currentFrameSrc, topFrameSrc)
+  let renderAbortController = new AbortController()
+
+  let context: RenderContext = {
+    insideSvg: false,
+    insideHead: false,
+    onError,
+    resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
+    styleCache: new Map(),
+    pendingFrames: [],
+    hydrationData: new Map(),
+    unresolvedHydrationData: new Map(),
+    authoredImportMapImports: new Map(),
+    authoredImportMapScopes: new Map(),
+    authoredImportMapIntegrity: new Map(),
+    managedImportMaps: [],
+    frameData: new Map(),
+    clientEntryHeadResources: { modulePreloadTags: new Set() },
+    blockingFrameTails: [],
+    signal: renderAbortController.signal,
+    flushKind: 'fragment',
+    serverIdScope: crypto.randomUUID().slice(0, 8),
+    serverIdCounter: 0,
+  }
+
+  function cancel(reason: unknown): void {
+    if (!renderAbortController.signal.aborted) {
+      renderAbortController.abort(reason)
+    }
+  }
+
+  let signal = options?.signal
+  if (signal?.aborted) {
+    cancel(signal.reason)
+  } else {
+    signal?.addEventListener('abort', () => cancel(signal.reason), { once: true })
+  }
+
+  return new ReadableStream({
+    async start(controller) {
+      try {
+        let root = buildSegment(node, context, rootFrameState)
+        await resolveBlocking(root)
+        if (closeIfCancelled(controller, context)) return
+        await resolveClientEntries(context, options?.resolveClientEntry)
+        if (closeIfCancelled(controller, context)) return
+        validateClientEntriesForHydration(context)
+        finalizeManagedImportMap(context)
+        let html = serializeSegment(root)
+        let finalHtml = finalizeHtml(html, context)
+        let bytes = encoder.encode(appendFlushMarker(finalHtml, context.flushKind))
+        if (closeIfCancelled(controller, context)) return
+        controller.enqueue(bytes)
+
+        // If we have any tails from blocking frame streams, stream them now.
+        // These contain nested non-blocking frame templates (or other follow-up chunks)
+        // that must come after the initial document chunk.
+        let tailPromise =
+          context.blockingFrameTails.length > 0
+            ? streamByteStreams(context.blockingFrameTails, controller, context)
+            : Promise.resolve()
+
+        // If we have pending non-blocking frames, stream them as they resolve
+        let pendingPromise =
+          context.pendingFrames.length > 0
+            ? streamPendingFrames(context, controller, encoder)
+            : Promise.resolve()
+
+        await Promise.all([tailPromise, pendingPromise])
+
+        if (closeIfCancelled(controller, context)) return
+        controller.close()
+      } catch (error) {
+        if (isSignalAbortError(context.signal, error)) {
+          closeStream(controller)
+          return
+        }
+        onError(error)
+        controller.error(error)
+      }
+    },
+    cancel(reason) {
+      cancel(reason)
+    },
+  })
+}
+
+function isSignalAbortError(signal: AbortSignal, error: unknown): boolean {
+  return signal.aborted && error === signal.reason
+}
+
+function closeIfCancelled(
+  controller: ReadableStreamDefaultController,
+  context: RenderContext,
+): boolean {
+  if (!context.signal.aborted) return false
+  closeStream(controller)
+  return true
+}
+
+function closeStream(controller: ReadableStreamDefaultController): void {
+  try {
+    controller.close()
+  } catch {
+    // The consumer may already have cancelled the stream.
+  }
+}
+
+function defaultResolveFrame(): never {
+  throw new Error('No resolveFrame provided')
+}
+
+function normalizeFrameSrc(value?: string | URL): string {
+  return value == null ? '' : String(value)
+}
+
+function createSsrFrameState(frameSrc: string, topFrameSrc = frameSrc): SsrFrameState {
+  let topFrame = createFrameHandle({ src: topFrameSrc })
+  let frame = frameSrc === topFrameSrc ? topFrame : createFrameHandle({ src: frameSrc })
+  return { frame, topFrame }
+}
+
+function getResolveFrameContext(frameState: SsrFrameState): ResolveFrameContext {
+  return {
+    currentFrameSrc: frameState.frame.src,
+    topFrameSrc: frameState.topFrame.src,
+  }
+}
+
+function randomId(prefix: string): string {
+  return prefix + crypto.randomUUID().slice(0, 8)
+}
+
+function createServerComponentId(context: RenderContext): string {
+  context.serverIdCounter++
+  return `s${context.serverIdScope}-${context.serverIdCounter}`
+}
+
+async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<ResolvedFrameHtml> {
+  let reader = stream.getReader()
+  let decoder = new TextDecoder()
+
+  let first: Uint8Array | undefined
+  while (true) {
+    let { value, done } = await reader.read()
+    if (done || !value) break
+
+    let text = decoder.decode(value, { stream: true })
+    if (hasRenderableHtml(text)) {
+      first = value
+      break
+    }
+  }
+
+  if (!first) {
+    decoder.decode()
+    reader.releaseLock()
+    return { html: '', tail: emptyReadableStream() }
+  }
+
+  let released = false
+  function release() {
+    if (released) return
+    released = true
+    try {
+      reader.releaseLock()
+    } catch {
+      // ignore
+    }
+  }
+
+  let tail = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      let next = await reader.read()
+      if (next.done) {
+        controller.close()
+        release()
+        return
+      }
+      controller.enqueue(next.value)
+    },
+    cancel(reason) {
+      release()
+      return reader.cancel(reason)
+    },
+  })
+
+  return { html: stripFlushMarkers(stripDoctypeMarkup(decoder.decode(first))), tail }
+}
+
+async function resolveFrameHtml(
+  input: string | ReadableStream<Uint8Array>,
+): Promise<ResolvedFrameHtml> {
+  if (typeof input === 'string') {
+    let html = stripFlushMarkers(stripDoctypeMarkup(input))
+    return { html }
+  }
+
+  return splitFirstChunk(input)
+}
+
+function isRemixElement(node: unknown): node is RemixElement {
+  return typeof node === 'object' && node !== null && '$rmx' in node
+}
+
+function staticSeg(html: string): StaticSegment {
+  return { kind: 'static', html }
+}
+
+function compositeSeg(parts: Segment[]): Segment {
+  return { kind: 'composite', parts }
+}
+
+function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFrameState): Segment {
+  if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
+    return staticSeg(escapeTextContent(String(node)))
+  }
+
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return staticSeg('')
+  }
+
+  if (Array.isArray(node)) {
+    return compositeSeg(node.map((child) => buildSegment(child, context, frameState)))
+  }
+
+  if (isRemixElement(node)) {
+    let type = node.type
+    let props = node.props
+
+    if (type === Fragment) {
+      let children = props.children
+      return children != null ? buildSegment(children, context, frameState) : staticSeg('')
+    }
+
+    if (typeof type === 'string') {
+      let tag = type
+
+      if (tag === 'html') {
+        context.flushKind = 'document'
+        return buildElementSegment(tag, props, context, frameState)
+      }
+
+      if (tag === 'head') {
+        return buildHeadElementSegment(tag, props, context, frameState)
+      }
+
+      return buildElementSegment(tag, props, context, frameState)
+    }
+
+    if (isElementFunction(type)) {
+      if (type === ImportMap) {
+        return buildImportMapSegment(props, context)
+      }
+      if (type === Frame) {
+        return buildFrameSegment(node, context, frameState)
+      }
+      if (isEntry(type)) {
+        return buildEntrySegment(type, props, context, frameState)
+      }
+      return buildComponentSegment(
+        type,
+        props,
+        context,
+        createServerComponentId(context),
+        frameState,
+      )
+    }
+  }
+
+  return staticSeg('')
+}
+
+function buildFrameSegment(
+  node: RemixElement,
+  context: RenderContext,
+  frameState: SsrFrameState,
+): Segment {
+  let props = node.props
+  let frameId = randomId('f')
+
+  // Store frame data in context for aggregation
+  context.frameData.set(frameId, {
+    status: props.fallback ? 'pending' : 'resolved',
+    name: props.name,
+    src: props.src,
+  })
+
+  let seg: Segment = {
+    kind: 'frame',
+    frameId,
+    content: null,
+  }
+
+  let resolveFrameContext = getResolveFrameContext(frameState)
+  let nonBlocking = !!props.fallback
+  if (nonBlocking) {
+    seg.content = buildSegment(props.fallback, context, frameState)
+    let framePromise = Promise.resolve(
+      context.resolveFrame(props.src, props.name, resolveFrameContext),
+    ).then(async (resolved) => resolveFrameHtml(resolved))
+    // The response stream can be cancelled before pending frames are drained.
+    // Keep the promise observed so request aborts don't become unhandled.
+    framePromise.catch(() => {})
+    context.pendingFrames.push({ frameId, promise: framePromise })
+  } else {
+    let framePromise = Promise.resolve(
+      context.resolveFrame(props.src, props.name, resolveFrameContext),
+    ).then(async (resolved) => {
+      let { html, tail } = await resolveFrameHtml(resolved)
+      html = hoistClientEntryResourcesFromFrameHead(html, context.clientEntryHeadResources)
+      seg.content = staticSeg(html)
+      if (tail) {
+        context.blockingFrameTails.push(tail)
+      }
+    })
+    // An earlier blocking frame may reject before this promise is awaited.
+    framePromise.catch(() => {})
+    seg.pending = framePromise
+  }
+
+  return seg
+}
+
+function buildElementSegment(
+  tag: string,
+  props: any,
+  context: RenderContext,
+  frameState: SsrFrameState,
+): Segment {
+  let normalizedProps = normalizeUnsafeHTMLProps(props)
+  let innerHTML = normalizedProps.innerHTML
+  let mixedProps = resolveSsrMixedProps(tag, normalizedProps, context, frameState)
+  let processedProps = processStyleProps(mixedProps)
+  // Determine namespace context for the current element and its children
+  let currentIsSvg = context.insideSvg || tag === 'svg'
+
+  if (!currentIsSvg && tag === 'textarea') {
+    return buildTextareaElementSegment(tag, processedProps)
+  }
+
+  let attrs =
+    !currentIsSvg && tag === 'input'
+      ? renderInputAttributes(processedProps)
+      : renderAttributes(tag, processedProps, currentIsSvg)
+
+  if (SELF_CLOSING_TAGS.has(tag)) {
+    return staticSeg(`<${tag}${attrs} />`)
+  }
+
+  if (innerHTML !== undefined) {
+    return staticSeg(`<${tag}${attrs}>${innerHTML}</${tag}>`)
+  }
+
+  if (tag === 'script') {
+    if (typeof props.children === 'string') {
+      if (context.insideHead) {
+        collectAuthoredImportMap(context, tag, processedProps, props.children)
+      }
+      return staticSeg(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
+    }
+    if (props.children != null) {
+      console.error(new Error('script elements with children must have a single string child'))
+    }
+    return staticSeg(`<${tag}${attrs}></${tag}>`)
+  }
+
+  let open = staticSeg(`<${tag}${attrs}>`)
+  // Adjust svg context for children: foreignObject switches back to HTML
+  let previousInsideSvg = context.insideSvg
+  context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
+  let children =
+    props.children != null ? buildSegment(props.children, context, frameState) : staticSeg('')
+  context.insideSvg = previousInsideSvg
+  let close = staticSeg(`</${tag}>`)
+  return compositeSeg([open, children, close])
+}
+
+function buildTextareaElementSegment(tag: string, props: any): Segment {
+  let attrs = renderAttributes(tag, props, false, TEXTAREA_VALUE_PROPS)
+  let value = props.value ?? props.defaultValue ?? ''
+  return staticSeg(`<${tag}${attrs}>${escapeTextContent(String(value))}</${tag}>`)
+}
+
+function collectAuthoredImportMap(
+  context: RenderContext,
+  tag: string,
+  props: Record<string, unknown>,
+  children: unknown,
+): void {
+  if (
+    tag !== 'script' ||
+    typeof props.type !== 'string' ||
+    props.type.toLowerCase() !== 'importmap' ||
+    (props.src !== undefined && props.src !== null && props.src !== false) ||
+    typeof children !== 'string'
+  ) {
+    return
+  }
+
+  let importMap = parseAuthoredImportMap(children)
+  if (!importMap) return
+
+  if (importMap.imports) {
+    collectAuthoredImportMapEntries(context.authoredImportMapImports, importMap.imports)
+  }
+  if (importMap.scopes) {
+    for (let [scope, imports] of Object.entries(importMap.scopes)) {
+      let authoredScope = context.authoredImportMapScopes.get(scope)
+      if (!authoredScope) {
+        authoredScope = { imports: new Map() }
+        context.authoredImportMapScopes.set(scope, authoredScope)
+      }
+      collectAuthoredImportMapEntries(authoredScope.imports, imports)
+    }
+  }
+  if (importMap.integrity) {
+    for (let [url, integrity] of Object.entries(importMap.integrity)) {
+      if (!context.authoredImportMapIntegrity.has(url)) {
+        context.authoredImportMapIntegrity.set(url, integrity)
+      }
+    }
+  }
+}
+
+function collectAuthoredImportMapEntries(
+  target: AuthoredImportMapEntries,
+  source: ImportMapImports,
+): void {
+  for (let [specifier, address] of Object.entries(source)) {
+    if (!target.has(specifier)) target.set(specifier, address)
+  }
+}
+
+function buildImportMapSegment(props: ElementProps, context: RenderContext): Segment {
+  if (context.flushKind !== 'document' || !context.insideHead) {
+    throw new Error('ImportMap must be rendered inside a document head')
+  }
+  if (context.managedImportMaps.length > 0) {
+    throw new Error('Only one ImportMap can be rendered per document')
+  }
+  let value = props.value
+  if (!isImportMap(value)) {
+    throw new TypeError('ImportMap value must be a valid import map')
+  }
+
+  let { value: _value, ...scriptProps } = props
+  let attrs = renderAttributes('script', scriptProps, false)
+  let segment = staticSeg('')
+  context.managedImportMaps.push({ attrs, segment, value })
+  return segment
+}
+
+function renderInputAttributes(props: any): string {
+  let value =
+    props.value === undefined && props.defaultValue !== undefined ? props.defaultValue : props.value
+  let checked =
+    props.checked === undefined && props.defaultChecked !== undefined
+      ? props.defaultChecked
+      : props.checked
+  let inputProps = {
+    ...props,
+    ...(value === undefined ? {} : { value }),
+    ...(checked === undefined ? {} : { checked }),
+  }
+  return renderAttributes('input', inputProps, false, INPUT_DEFAULT_PROPS)
+}
+
+function buildHeadElementSegment(
+  tag: string,
+  props: any,
+  context: RenderContext,
+  frameState: SsrFrameState,
+): Segment {
+  let processedProps = processStyleProps(props)
+  let attrs = renderAttributes(tag, processedProps, false)
+
+  let open = staticSeg(`<${tag}${attrs}>`)
+  let previousInsideHead = context.insideHead
+  context.insideHead = true
+  let children =
+    props.children != null ? buildSegment(props.children, context, frameState) : staticSeg('')
+  context.insideHead = previousInsideHead
+  let close = staticSeg(`</${tag}>`)
+
+  return compositeSeg([open, children, close])
+}
+
+function renderAttributes(
+  tag: string,
+  props: any,
+  isSvg: boolean,
+  excludedProps?: Set<string>,
+): string {
+  let attrs = ''
+
+  for (let key in props) {
+    if (SSR_OMITTED_PROPS.has(key)) continue
+    if (excludedProps?.has(key)) continue
+    if (!isAllowedHostPropName(key)) continue
+
+    let value = props[key]
+    let attrName = transformAttributeName(key, isSvg)
+    let shouldStringifyBoolean = shouldStringifyBooleanAttribute(attrName)
+    if (value === undefined || value === null || (value === false && !shouldStringifyBoolean)) {
+      continue
+    }
+    value = sanitizeUrlAttribute(tag, attrName, value)
+
+    if (typeof value === 'boolean' && shouldStringifyBoolean) {
+      attrs += ` ${attrName}="${escapeHtml(String(value))}"`
+    } else if (value === true) {
+      attrs += ` ${attrName}`
+    } else {
+      attrs += ` ${attrName}="${escapeHtml(String(value))}"`
+    }
+  }
+
+  return attrs
+}
+
+function resolveSsrMixedProps(
+  hostType: string,
+  initialProps: ElementProps,
+  context: RenderContext,
+  frameState: SsrFrameState,
+): ElementProps {
+  if (resolveMixDescriptors(initialProps).length === 0) return initialProps
+
+  return composeMixedProps(hostType, initialProps, (descriptor, _index, mixinProps) => {
+    let runner = resolveSsrMixinRunner(hostType, descriptor, context, frameState)
+    if (!runner) return undefined
+    // Unlike the client runtime, a throwing mixin is isolated here so a
+    // single bad mixin cannot take down the whole stream.
+    try {
+      return runner(...descriptor.args, mixinProps)
+    } catch (error) {
+      console.error(error)
+      return undefined
+    }
+  })
+}
+
+function resolveSsrMixinRunner(
+  hostType: string,
+  descriptor: { type?: unknown; args?: readonly unknown[] },
+  context: RenderContext,
+  frameState: SsrFrameState,
+): ((...args: unknown[]) => unknown) | null {
+  if (typeof descriptor.type !== 'function') return null
+  try {
+    let handle = createSsrMixinHandle(hostType, descriptor, context, frameState)
+    let runner = descriptor.type(handle, hostType)
+    if (typeof runner !== 'function') return null
+    return runner
+  } catch (error) {
+    console.error(error)
+    return null
+  }
+}
+
+function createSsrMixinHandle(
+  hostType: string,
+  _descriptor: { type?: unknown },
+  context: RenderContext,
+  frameState: SsrFrameState,
+) {
+  let element = ((handle: { props: ElementProps; update(): Promise<AbortSignal> }) => () => ({
+    $rmx: true as const,
+    type: hostType,
+    key: null,
+    props: handle.props,
+  })) as ((handle: {
+    props: ElementProps
+    update(): Promise<AbortSignal>
+  }) => () => RemixElement) & {
+    __rmxMixinElementType: string
+  }
+  element.__rmxMixinElementType = hostType
+
+  return {
+    id: 'ssr-mixin',
+    context: {
+      get(providerType: ElementType | symbol) {
+        if (typeof providerType !== 'function') {
+          return undefined
+        }
+
+        let current = context.parentVNode
+        while (current) {
+          if (current.type === providerType) {
+            let providerHandle = current._handle
+            if (providerHandle) {
+              return providerHandle.getContextValue()
+            }
+          }
+          current = current._parent
+        }
+
+        return undefined
+      },
+    },
+    frame: createFrameHandle({
+      src: frameState.frame.src,
+      $runtime: {
+        styleCache: context.styleCache,
+      },
+    }),
+    element,
+    signal: ssrSignal,
+    update: () => {
+      throw new Error('handle.update() is not available during SSR.')
+    },
+    queueTask: () => {},
+    on: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => true,
+  }
+}
+
+function isElementFunction(value: unknown): value is ElementFunction {
+  return typeof value === 'function'
+}
+
+function buildComponentSegment(
+  type: ElementFunction,
+  props: any,
+  context: RenderContext,
+  componentId: string,
+  frameState: SsrFrameState,
+): Segment {
+  let vnode = createVNode(type, props)
+  if (context.parentVNode) {
+    vnode._parent = context.parentVNode
+  }
+
+  let handle = createComponent({
+    id: componentId,
+    type: type,
+    frame: frameState.frame,
+    signal: ssrSignal,
+    getContext(providerType) {
+      let current = vnode._parent
+      while (current) {
+        if (current.type === providerType) {
+          let providerHandle = current._handle
+          // TODO: need better vnode types to avoid defensive checks
+          if (providerHandle) {
+            return providerHandle.getContextValue()
+          }
+        }
+        current = current._parent
+      }
+      return undefined
+    },
+    getFrameByName() {
+      return undefined
+    },
+    getTopFrame() {
+      return frameState.topFrame
+    },
+  })
+
+  vnode._handle = handle
+  let [renderedNode] = handle.render(props)
+  let childContext = { ...context, parentVNode: vnode }
+
+  let rendered = buildSegment(renderedNode, childContext, frameState)
+  if (childContext.flushKind === 'document') {
+    context.flushKind = 'document'
+  }
+  return rendered
+}
+
+function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFrameState) {
+  function unwrapNode(node: RemixNode): unknown {
+    if (node === null || node === undefined || typeof node === 'boolean') return node
+    if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
+      return node
+    }
+    if (Array.isArray(node)) {
+      return node.map((child) => unwrapNode(child))
+    }
+    if (isRemixElement(node)) {
+      return unwrapElement(node)
+    }
+    return node
+  }
+
+  function unwrapElement(element: RemixElement): unknown {
+    let type = element.type
+    let props = element.props
+
+    // Preserve Frame semantics through serialized props by emitting
+    // a dedicated descriptor that can be revived on the client.
+    if (type === Frame) {
+      return {
+        $rmxFrame: true,
+        props: transformProps(props),
+        key: element.key,
+      }
+    }
+
+    // If it's a DOM tag, return a serializable shape with transformed props
+    if (typeof type === 'string') {
+      return { $rmx: true, type, props: transformProps(props) }
+    }
+
+    // Component function: render synchronously, then unwrap its result
+    if (isElementFunction(type)) {
+      let vnode = createVNode(type, props)
+      if (context.parentVNode) {
+        vnode._parent = context.parentVNode
+      }
+
+      let handle = createComponent({
+        id: 'SERIALIZED',
+        type: type,
+        frame: frameState.frame,
+        signal: ssrSignal,
+        getContext(providerType) {
+          let current = vnode._parent
+          while (current) {
+            if (current.type === providerType) {
+              let providerHandle = current._handle
+              if (providerHandle) {
+                return providerHandle.getContextValue()
+              }
+            }
+            current = current._parent
+          }
+          return undefined
+        },
+        getFrameByName() {
+          return undefined
+        },
+        getTopFrame() {
+          return frameState.topFrame
+        },
+      })
+
+      vnode._handle = handle
+      let [renderedNode] = handle.render(props)
+      return unwrapNode(renderedNode)
+    }
+
+    return null
+  }
+
+  function transformProps(input: ElementProps): Record<string, unknown> {
+    let out: Record<string, unknown> = {}
+    for (let key in input) {
+      let value = input[key]
+      if (key === 'children') {
+        out[key] = unwrapNode(value)
+      } else {
+        if (isRemixElement(value)) {
+          out[key] = unwrapNode(value)
+        } else if (Array.isArray(value)) {
+          out[key] = value.map((v) => unwrapNode(v))
+        } else {
+          out[key] = value
+        }
+      }
+    }
+    return out
+  }
+
+  return function replacer(_key: string, value: unknown) {
+    if (isRemixElement(value)) {
+      return unwrapElement(value)
+    }
+    if (Array.isArray(value)) {
+      return value.map((v) => unwrapNode(v))
+    }
+    return value
+  }
+}
+
+function buildEntrySegment(
+  type: EntryComponent,
+  props: any,
+  context: RenderContext,
+  frameState: SsrFrameState,
+): Segment {
+  let instanceId = randomId('h')
+  let rendered = buildComponentSegment(type, props, context, instanceId, frameState)
+
+  // Store hydration data in context for aggregation
+  let replacer = createHydrationPropsReplacer(context, frameState)
+  context.unresolvedHydrationData.set(instanceId, {
+    entryId: type.$entryId,
+    component: type,
+    props: JSON.parse(JSON.stringify(props, replacer)),
+  })
+
+  let start = staticSeg(`<!-- rmx:h:${instanceId} -->`)
+  let end = staticSeg('<!-- /rmx:h -->')
+  return compositeSeg([start, rendered, end])
+}
+
+function resolveDefaultClientEntry(
+  entryId: string,
+  component: EntryComponent,
+): ResolvedClientEntry {
+  let fallbackExportName = component.name || ''
+  let hashIndex = entryId.lastIndexOf('#')
+  if (hashIndex === -1 && fallbackExportName) {
+    return {
+      exportName: fallbackExportName,
+      href: entryId,
+    }
+  }
+
+  if (hashIndex !== -1) {
+    let exportName = entryId.slice(hashIndex + 1) || fallbackExportName
+    if (exportName) {
+      return {
+        exportName,
+        href: entryId.slice(0, hashIndex),
+      }
+    }
+  }
+
+  throw new Error(
+    `clientEntry() requires either an export name in the entry ID (e.g., "/js/module.js#ComponentName"), a named component function, or a resolveClientEntry hook that resolves one. Received "${entryId}".`,
+  )
+}
+
+async function resolveClientEntries(
+  context: RenderContext,
+  resolveClientEntry?: (
+    entryId: string,
+    component: EntryComponent,
+  ) => Promise<ResolvedClientEntry> | ResolvedClientEntry,
+): Promise<void> {
+  if (context.unresolvedHydrationData.size === 0) return
+
+  let resolvedEntries = new Map<EntryComponent, ResolvedClientEntry>()
+
+  for (let [hydrationId, unresolvedHydrationData] of context.unresolvedHydrationData) {
+    let { entryId, component, props } = unresolvedHydrationData
+    let resolvedEntry = resolvedEntries.get(component)
+    if (!resolvedEntry) {
+      resolvedEntry = resolveClientEntry
+        ? await Promise.resolve(resolveClientEntry(entryId, component))
+        : resolveDefaultClientEntry(entryId, component)
+      validateResolvedClientEntry(entryId, resolvedEntry)
+      resolvedEntries.set(component, resolvedEntry)
+      collectResolvedClientEntryResources(context.clientEntryHeadResources, resolvedEntry)
+    }
+
+    context.hydrationData.set(hydrationId, {
+      exportName: resolvedEntry.exportName,
+      moduleUrl: resolvedEntry.href,
+      props,
+    })
+  }
+
+  context.unresolvedHydrationData.clear()
+}
+
+function collectResolvedClientEntryResources(
+  resources: ClientEntryHeadResources,
+  resolvedEntry: ResolvedClientEntry,
+): void {
+  for (let preload of resolvedEntry.preloads ?? []) {
+    resources.modulePreloadTags.add(createModulePreloadTag(preload))
+  }
+  if (resolvedEntry.importMap) {
+    mergeImportMap(resources, resolvedEntry.importMap)
+  }
+}
+
+function validateResolvedClientEntry(
+  entryId: string,
+  resolvedEntry: ResolvedClientEntry,
+): asserts resolvedEntry is ResolvedClientEntry {
+  if (!resolvedEntry || typeof resolvedEntry !== 'object') {
+    throw new Error(
+      `resolveClientEntry must return an object with href and exportName. Received "${entryId}".`,
+    )
+  }
+
+  if (!resolvedEntry.href) {
+    throw new Error(`resolveClientEntry must return a non-empty href. Received "${entryId}".`)
+  }
+
+  if (!resolvedEntry.exportName) {
+    throw new Error(`resolveClientEntry must return a non-empty exportName. Received "${entryId}".`)
+  }
+
+  if (resolvedEntry.preloads !== undefined) {
+    if (!Array.isArray(resolvedEntry.preloads)) {
+      throw new Error(`resolveClientEntry preloads must be an array. Received "${entryId}".`)
+    }
+    for (let preload of resolvedEntry.preloads) {
+      if (typeof preload !== 'string' || preload.length === 0) {
+        throw new Error(
+          `resolveClientEntry preloads must contain non-empty strings. Received "${entryId}".`,
+        )
+      }
+    }
+  }
+
+  if (resolvedEntry.importMap !== undefined && !isImportMap(resolvedEntry.importMap)) {
+    throw new Error(
+      `resolveClientEntry importMap must be a valid import map. Received "${entryId}".`,
+    )
+  }
+}
+
+function validateClientEntriesForHydration(context: RenderContext): void {
+  if (context.unresolvedHydrationData.size > 0) {
+    let [hydrationId, unresolvedHydrationData] = context.unresolvedHydrationData.entries().next()
+      .value as [string, UnresolvedHydrationData]
+    throw new Error(
+      `Client entry was not resolved for hydration. Received "${unresolvedHydrationData.entryId}" (${hydrationId}).`,
+    )
+  }
+}
+
+// Resolve all blocking frame content once
+async function resolveBlocking(segment: Segment): Promise<void> {
+  if (segment.kind === 'frame') {
+    if (segment.pending) {
+      await segment.pending
+      segment.pending = undefined
+    }
+    if (segment.content) await resolveBlocking(segment.content)
+    return
+  }
+  if (segment.kind === 'composite') {
+    for (let part of segment.parts) {
+      await resolveBlocking(part)
+    }
+  }
+}
+
+// Serialize the segment tree to HTML
+function serializeSegment(seg: Segment): string {
+  if (seg.kind === 'static') return seg.html
+  if (seg.kind === 'composite') return seg.parts.map(serializeSegment).join('')
+  // frame
+  let inner = seg.content ? serializeSegment(seg.content) : ''
+  let start = `<!-- rmx:f:${seg.frameId} -->`
+  let end = `<!-- /rmx:f -->`
+  return start + inner + end
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function escapeTextContent(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function escapeTemplateContent(html: string): string {
+  return html.replace(/<\/template/gi, '<\\/template')
+}
+
+const SCRIPT_TAG_PATTERN = /(<\/|<)(s)(cript)/gi
+
+function escapeScriptTextContent(value: string): string {
+  return value.replace(
+    SCRIPT_TAG_PATTERN,
+    (_match, prefix: string, firstLetter: string, suffix: string) =>
+      `${prefix}${firstLetter === 's' ? '\\u0073' : '\\u0053'}${suffix}`,
+  )
+}
+
+function transformAttributeName(name: string, isSvg: boolean): string {
+  return normalizeAttributeName(name, isSvg).attr
+}
+
+function finalizeHtml(html: string, context: RenderContext): string {
+  let hasHtmlRoot = context.flushKind === 'document'
+
+  let preloads = collectModulePreloadTags(context.clientEntryHeadResources)
+  let styles = collectStyleTags(context)
+  let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
+  let headContent = importMapScript + preloads + styles
+  if (hasHtmlRoot && headContent) {
+    let headCloseIndex = html.indexOf('</head>')
+    if (headCloseIndex !== -1) {
+      html = html.slice(0, headCloseIndex) + headContent + html.slice(headCloseIndex)
+    } else {
+      let htmlOpenMatch = html.match(/<html[^>]*>/)
+      if (htmlOpenMatch) {
+        let insertIndex = htmlOpenMatch.index! + htmlOpenMatch[0].length
+        html = html.slice(0, insertIndex) + `<head>${headContent}</head>` + html.slice(insertIndex)
+      } else {
+        html = headContent + html
+      }
+    }
+  }
+
+  if (!hasHtmlRoot && headContent) {
+    html = `<head>${headContent}</head>${html}`
+  }
+
+  // Append aggregated hydration/frame data script at the end
+  let rmxData = buildRmxDataScript(context)
+  if (rmxData) {
+    if (hasHtmlRoot) {
+      // Insert before </body> if present, otherwise before </html>
+      let bodyCloseIndex = html.indexOf('</body>')
+      if (bodyCloseIndex !== -1) {
+        html = html.slice(0, bodyCloseIndex) + rmxData + html.slice(bodyCloseIndex)
+      } else {
+        let htmlCloseIndex = html.indexOf('</html>')
+        if (htmlCloseIndex !== -1) {
+          html = html.slice(0, htmlCloseIndex) + rmxData + html.slice(htmlCloseIndex)
+        } else {
+          html += rmxData
+        }
+      }
+    } else {
+      html += rmxData
+    }
+  }
+
+  return html
+}
+
+const FRAME_HEAD_OPEN_TAG = '<head>'
+const FRAME_HEAD_CLOSE_TAG = '</head>'
+const MARKED_MODULE_PRELOAD_START = '<link data-rmx-module-preload rel="modulepreload" href="'
+const MODULE_PRELOAD_END = '" />'
+const MANAGED_IMPORT_MAP_START = '<script data-rmx-import-map type="importmap">'
+const IMPORT_MAP_SCRIPT_END = '</script>'
+
+function createModulePreloadTag(href: string): string {
+  return `${MARKED_MODULE_PRELOAD_START}${escapeHtml(href)}${MODULE_PRELOAD_END}`
+}
+
+function collectModulePreloadTags(resources: ClientEntryHeadResources): string {
+  return Array.from(resources.modulePreloadTags).join('')
+}
+
+function hoistClientEntryResourcesFromFrameHead(
+  html: string,
+  resources: ClientEntryHeadResources,
+): string {
+  if (!html.startsWith(FRAME_HEAD_OPEN_TAG)) return html
+
+  let headClose = html.indexOf(FRAME_HEAD_CLOSE_TAG, FRAME_HEAD_OPEN_TAG.length)
+  if (headClose === -1) return html
+
+  let preloadTags: string[] = []
+  let importMaps: ImportMapData[] = []
+  let cursor = FRAME_HEAD_OPEN_TAG.length
+  if (html.startsWith(MANAGED_IMPORT_MAP_START, cursor)) {
+    let contentStart = cursor + MANAGED_IMPORT_MAP_START.length
+    let scriptEnd = html.indexOf(IMPORT_MAP_SCRIPT_END, contentStart)
+    if (scriptEnd === -1 || scriptEnd >= headClose) return html
+    importMaps.push(parseFrameworkImportMap(html.slice(contentStart, scriptEnd)))
+    cursor = scriptEnd + IMPORT_MAP_SCRIPT_END.length
+  }
+
+  while (html.startsWith(MARKED_MODULE_PRELOAD_START, cursor)) {
+    let tagEnd = html.indexOf(MODULE_PRELOAD_END, cursor + MARKED_MODULE_PRELOAD_START.length)
+    if (tagEnd === -1 || tagEnd >= headClose) return html
+    tagEnd += MODULE_PRELOAD_END.length
+    preloadTags.push(html.slice(cursor, tagEnd))
+    cursor = tagEnd
+  }
+
+  if (preloadTags.length === 0 && importMaps.length === 0) return html
+
+  for (let tag of preloadTags) {
+    resources.modulePreloadTags.add(tag)
+  }
+  for (let importMap of importMaps) {
+    mergeImportMap(resources, importMap)
+  }
+
+  let remainingHeadHtml = html.slice(cursor, headClose)
+  let contentAfterHead = html.slice(headClose + FRAME_HEAD_CLOSE_TAG.length)
+  if (!remainingHeadHtml) return contentAfterHead
+
+  return `${FRAME_HEAD_OPEN_TAG}${remainingHeadHtml}${FRAME_HEAD_CLOSE_TAG}${contentAfterHead}`
+}
+
+function processStyleProps(props: any): any {
+  let processedProps = { ...props }
+  let classAttr = typeof props.class === 'string' ? props.class : ''
+  let className = typeof props.className === 'string' ? props.className : ''
+  let mergedClassName = [classAttr, className].filter(Boolean).join(' ')
+
+  if (mergedClassName) {
+    processedProps.className = mergedClassName
+    delete processedProps.class
+  }
+
+  if (typeof props.style === 'object') {
+    processedProps.style = serializeStyleObject(props.style)
+  }
+
+  return processedProps
+}
+
+function collectStyleTags(context: RenderContext): string {
+  if (context.styleCache.size === 0) return ''
+
+  let tags: string[] = []
+  for (let { selector, css } of context.styleCache.values()) {
+    let tag = renderStyleTag(selector, css)
+    if (tag) tags.push(tag)
+  }
+  return tags.join('')
+}
+
+function wrapStyleForLayer(
+  selector: string,
+  css: string,
+  layer: string = REMIX_UI_STYLE_LAYER,
+): string {
+  let trimmed = css.trim()
+  if (!trimmed) return ''
+  return `@layer ${getStyleLayerName(selector, layer)} { ${trimmed} }`
+}
+
+function renderStyleTag(
+  selector: string,
+  css: string,
+  layer: string = REMIX_UI_STYLE_LAYER,
+): string {
+  let wrappedCss = wrapStyleForLayer(selector, css, layer)
+  if (!wrappedCss) return ''
+  return `<style data-rmx-style="${escapeHtml(selector)}">${escapeStyleText(wrappedCss)}</style>`
+}
+
+function escapeStyleText(css: string): string {
+  // Only neutralize literal style end tags. Escaping every '<' breaks valid range media queries.
+  return css.replace(/<\/style/gi, '\\3C/style')
+}
+
+function buildRmxDataScript(context: RenderContext): string {
+  if (context.hydrationData.size === 0 && context.frameData.size === 0) {
+    return ''
+  }
+
+  let data: {
+    h?: Record<string, HydrationData>
+    f?: Record<string, FrameData>
+  } = {}
+
+  if (context.hydrationData.size > 0) {
+    data.h = Object.fromEntries(context.hydrationData)
+  }
+
+  if (context.frameData.size > 0) {
+    data.f = Object.fromEntries(context.frameData)
+  }
+
+  let serializedData = escapeScriptJson(JSON.stringify(data))
+  return `<script type="application/json" id="rmx-data">${serializedData}</script>`
+}
+
+function buildImportMapScript(importMap: ImportMapData, attrs: string = ''): string {
+  let serializedData = escapeScriptJson(JSON.stringify(importMap))
+  return `<script data-rmx-import-map type="importmap"${attrs}>${serializedData}</script>`
+}
+
+function collectImportMapScript(
+  context: RenderContext,
+  resources: ClientEntryHeadResources,
+): string {
+  let importMap = getImportMapDelta(context, resources.importMap)
+  return importMap ? buildImportMapScript(importMap) : ''
+}
+
+function finalizeManagedImportMap(context: RenderContext): void {
+  let managed = context.managedImportMaps[0]
+  if (!managed) return
+
+  let resources: ClientEntryHeadResources = { modulePreloadTags: new Set() }
+  mergeImportMap(resources, managed.value)
+  if (context.clientEntryHeadResources.importMap) {
+    mergeImportMap(resources, context.clientEntryHeadResources.importMap)
+  }
+  managed.segment.html = buildImportMapScript(resources.importMap ?? {}, managed.attrs)
+  context.clientEntryHeadResources.importMap = undefined
+}
+
+function getImportMapDelta(
+  context: RenderContext,
+  importMap: ImportMapData | undefined,
+): ImportMapData | null {
+  if (!importMap) return null
+
+  let imports = importMap.imports
+    ? getImportMapImportsDelta(context.authoredImportMapImports, importMap.imports)
+    : undefined
+  let scopes: Record<string, ImportMapImports> = {}
+  for (let [scope, scopedImports] of Object.entries(importMap.scopes ?? {})) {
+    let authoredImports =
+      context.authoredImportMapScopes.get(scope)?.imports ?? new Map<string, ImportMapAddress>()
+    let importsDelta = getImportMapImportsDelta(authoredImports, scopedImports, scope)
+    if (importsDelta) scopes[scope] = importsDelta
+  }
+  let integrity = importMap.integrity
+    ? getImportMapIntegrityDelta(context.authoredImportMapIntegrity, importMap.integrity)
+    : undefined
+
+  if (!imports && Object.keys(scopes).length === 0 && !integrity) return null
+  return {
+    ...(imports ? { imports } : null),
+    ...(Object.keys(scopes).length > 0 ? { scopes } : null),
+    ...(integrity ? { integrity } : null),
+  }
+}
+
+function getImportMapImportsDelta(
+  authoredImports: AuthoredImportMapEntries,
+  discoveredImports: ImportMapImports,
+  scope?: string,
+): ImportMapImports | undefined {
+  let delta: ImportMapImports = {}
+  for (let [specifier, address] of Object.entries(discoveredImports)) {
+    if (!authoredImports.has(specifier)) {
+      delta[specifier] = address
+      continue
+    }
+
+    let authoredAddress = authoredImports.get(specifier)
+    if (authoredAddress === address) continue
+
+    let scopeDescription = scope ? ` in scope "${scope}"` : ''
+    console.warn(
+      `[remix] Ignoring conflicting import map entry for "${specifier}"${scopeDescription}: ` +
+        `${formatImportMapAddress(authoredAddress)} is already authored, but the discovered map points to ${formatImportMapAddress(address)}`,
+    )
+  }
+
+  return Object.keys(delta).length > 0 ? delta : undefined
+}
+
+function getImportMapIntegrityDelta(
+  authoredIntegrity: Map<string, string>,
+  discoveredIntegrity: Record<string, string>,
+): Record<string, string> | undefined {
+  let delta: Record<string, string> = {}
+  for (let [url, integrity] of Object.entries(discoveredIntegrity)) {
+    if (!authoredIntegrity.has(url)) {
+      delta[url] = integrity
+      continue
+    }
+
+    let authoredIntegrityValue = authoredIntegrity.get(url)
+    if (authoredIntegrityValue === integrity) continue
+
+    console.warn(
+      `[remix] Ignoring conflicting import map integrity entry for "${url}": ` +
+        `"${authoredIntegrityValue}" is already authored, but the discovered map points to "${integrity}"`,
+    )
+  }
+
+  return Object.keys(delta).length > 0 ? delta : undefined
+}
+
+function parseAuthoredImportMap(json: string): ImportMapData | null {
+  let value: unknown
+  try {
+    value = JSON.parse(json)
+  } catch {
+    return null
+  }
+  if (!isObjectRecord(value)) return null
+
+  let importMap: ImportMapData = {}
+  if (value.imports !== undefined) {
+    if (!isObjectRecord(value.imports)) return null
+    importMap.imports = parseAuthoredImportMapImports(value.imports)
+  }
+  if (value.scopes !== undefined) {
+    if (!isObjectRecord(value.scopes)) return null
+    let scopes: Array<[string, ImportMapImports]> = []
+    for (let [scope, imports] of Object.entries(value.scopes)) {
+      if (!isObjectRecord(imports)) continue
+      scopes.push([scope, parseAuthoredImportMapImports(imports)])
+    }
+    importMap.scopes = Object.fromEntries(scopes)
+  }
+  if (value.integrity !== undefined) {
+    if (!isObjectRecord(value.integrity)) return null
+    importMap.integrity = Object.fromEntries(
+      Object.entries(value.integrity).filter(
+        (entry): entry is [string, string] => typeof entry[1] === 'string',
+      ),
+    )
+  }
+  return importMap
+}
+
+function parseAuthoredImportMapImports(value: Record<string, unknown>): ImportMapImports {
+  return Object.fromEntries(
+    Object.entries(value).map(([specifier, address]) => [
+      specifier,
+      address === null || typeof address === 'string' ? address : null,
+    ]),
+  )
+}
+
+function parseFrameworkImportMap(json: string): ImportMapData {
+  let value: unknown
+  try {
+    value = JSON.parse(json)
+  } catch {
+    throw new Error('Invalid framework-owned import map in frame head')
+  }
+  if (!isImportMap(value)) {
+    throw new Error('Invalid framework-owned import map in frame head')
+  }
+  return value
+}
+
+function isImportMap(value: unknown): value is ImportMapData {
+  if (!isObjectRecord(value)) return false
+  if (value.imports !== undefined && !isImportMapImports(value.imports)) return false
+  if (value.scopes !== undefined) {
+    if (!isObjectRecord(value.scopes)) return false
+    for (let imports of Object.values(value.scopes)) {
+      if (!isImportMapImports(imports)) return false
+    }
+  }
+  if (value.integrity !== undefined && !isImportMapIntegrity(value.integrity)) return false
+  return true
+}
+
+function isImportMapImports(value: unknown): value is ImportMapImports {
+  if (!isObjectRecord(value)) return false
+  return Object.values(value).every((address) => address === null || typeof address === 'string')
+}
+
+function isImportMapIntegrity(value: unknown): value is Record<string, string> {
+  if (!isObjectRecord(value)) return false
+  return Object.values(value).every((integrity) => typeof integrity === 'string')
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function mergeImportMap(resources: ClientEntryHeadResources, source: ImportMapData): void {
+  let target = (resources.importMap ??= {})
+  if (source.imports) {
+    target.imports ??= {}
+    mergeImportMapImports(target.imports, source.imports)
+  }
+  if (source.scopes) {
+    target.scopes ??= {}
+    for (let [scope, imports] of Object.entries(source.scopes)) {
+      let targetImports = (target.scopes[scope] ??= {})
+      mergeImportMapImports(targetImports, imports, scope)
+    }
+  }
+  if (source.integrity) {
+    target.integrity ??= {}
+    mergeImportMapIntegrity(target.integrity, source.integrity)
+  }
+}
+
+function mergeImportMapImports(
+  target: ImportMapImports,
+  source: ImportMapImports,
+  scope?: string,
+): void {
+  for (let [specifier, address] of Object.entries(source)) {
+    if (!Object.hasOwn(target, specifier)) {
+      target[specifier] = address
+      continue
+    }
+    if (target[specifier] !== address) {
+      let scopeDescription = scope ? ` in scope "${scope}"` : ''
+      throw new Error(
+        `Conflicting framework import map entry for "${specifier}"${scopeDescription}`,
+      )
+    }
+  }
+}
+
+function mergeImportMapIntegrity(
+  target: Record<string, string>,
+  source: Record<string, string>,
+): void {
+  for (let [url, integrity] of Object.entries(source)) {
+    if (!Object.hasOwn(target, url)) {
+      target[url] = integrity
+      continue
+    }
+    if (target[url] !== integrity) {
+      throw new Error(`Conflicting framework import map integrity entry for "${url}"`)
+    }
+  }
+}
+
+function escapeScriptJson(json: string): string {
+  // Avoid prematurely closing the script tag when serialized data contains "</script>".
+  return json.replace(/</g, '\\u003c')
+}
+
+function formatImportMapAddress(address: ImportMapAddress | undefined): string {
+  return address === null ? 'null' : `"${address}"`
+}
+
+// Frame styles work end-to-end when frame handlers use their own `renderToStream`:
+// the handler's `finalizeHtml` emits selector-addressed `<style>` tags in its HTML, and on the client,
+// the `adoptServerStyleTag` MutationObserver (stylesheet.ts) picks it up anywhere in the
+// document and adopts the CSS into an adopted stylesheet.
+//
+// Style tags are intentionally NOT deduped across frame boundaries: each frame
+// owns its style rules independently on the client (per-frame refcounted
+// adoption), so every frame's HTML must carry the full set of style tags its
+// content references — even when a sibling frame or the enclosing document
+// already emitted the same selector.
+async function streamPendingFrames(
+  context: RenderContext,
+  controller: ReadableStreamDefaultController,
+  encoder: TextEncoder,
+): Promise<void> {
+  let processedFrames = new Set<string>()
+
+  while (true) {
+    if (context.signal.aborted) break
+
+    let batch = context.pendingFrames.filter(({ frameId }) => !processedFrames.has(frameId))
+    if (batch.length === 0) break
+
+    await Promise.all(
+      batch.map(async ({ frameId, promise }) => {
+        if (context.signal.aborted) return
+        processedFrames.add(frameId)
+        try {
+          let { html, tail } = await promise
+          if (context.signal.aborted) return
+
+          // Stream as a template element (first chunk only)
+          let templateHtml = `<template id="${frameId}">${escapeTemplateContent(html)}</template>`
+          if (context.signal.aborted) return
+          controller.enqueue(encoder.encode(templateHtml))
+
+          // Forward any additional chunks from a stream-valued resolveFrame result.
+          if (tail) {
+            await streamByteStreams([tail], controller, context)
+          }
+        } catch (error) {
+          if (!isSignalAbortError(context.signal, error)) {
+            context.onError(error)
+          }
+        }
+      }),
+    )
+  }
+}
+
+async function streamByteStreams(
+  streams: ReadableStream<Uint8Array>[],
+  controller: ReadableStreamDefaultController,
+  context: RenderContext,
+): Promise<void> {
+  await Promise.all(
+    streams.map(async (stream) => {
+      let reader = stream.getReader()
+      try {
+        while (true) {
+          if (context.signal.aborted) break
+          let { done, value } = await reader.read()
+          if (done) break
+          if (context.signal.aborted) break
+          controller.enqueue(value)
+        }
+      } catch (error) {
+        if (!isSignalAbortError(context.signal, error)) {
+          context.onError(error)
+        }
+      } finally {
+        reader.releaseLock()
+      }
+    }),
+  )
+}
+
+async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
+  let reader = stream.getReader()
+  let decoder = new TextDecoder()
+  let html = ''
+
+  while (true) {
+    let { done, value } = await reader.read()
+    if (done) break
+    html += decoder.decode(value)
+  }
+
+  return html
+}
+
+/**
+ * Renders a node tree to a complete HTML string.
+ *
+ * @param node Node tree to render.
+ * @returns Rendered HTML.
+ */
+export async function renderToString(node: RemixNode): Promise<string> {
+  return stripFlushMarkers(
+    await drain(
+      renderToStream(node, {
+        onError(error) {
+          throw error
+        },
+      }),
+    ),
+  )
+}

@@ -86,8 +86,8 @@ A "demo with code" shows a live, hydrated component next to its own highlighted 
    ```
 
    ```tsx
-   import { css, on } from 'remix/ui'
-   import type { Handle } from 'remix/ui'
+   import { css, on } from 'remix/component'
+   import type { Handle } from 'remix/component'
 
    export function Counter(handle: Handle) {
      let count = 3

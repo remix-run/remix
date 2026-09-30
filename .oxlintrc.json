@@ -17,7 +17,7 @@
     "**/*.d.ts",
     "**/dist/**",
     "docs/api/**",
-    "packages/ui/docs/**",
+    "packages/component/docs/**",
     "**/demos/bookstore/public/assets/**",
     "**/demos/sse/public/assets/**",
     "**/coverage/**",
@@ -118,7 +118,7 @@
       }
     },
     {
-      "files": ["packages/ui/**/demos/*.demo.tsx"],
+      "files": ["packages/component/**/demos/*.demo.tsx", "packages/ui/**/demos/*.demo.tsx"],
       "plugins": ["jsdoc"],
       "rules": {
         "arrow-body-style": "off",

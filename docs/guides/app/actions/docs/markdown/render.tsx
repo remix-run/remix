@@ -1,6 +1,6 @@
 import type { Root } from 'mdast'
-import { Frame, unsafeHTML } from 'remix/ui'
-import type { Handle, RemixNode } from 'remix/ui'
+import { Frame, unsafeHTML } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { addHeadingIds, readMarkdownHeadingsFromRoot } from 'remix-docs-shared/markdown/headings'
 import { parseMarkdownDocument } from 'remix-docs-shared/markdown/parser'
 import { renderMarkdownHtml } from 'remix-docs-shared/markdown/render'

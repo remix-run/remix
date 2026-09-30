@@ -70,11 +70,11 @@ The runtime adapter passes requests to `router.fetch(request)`. Generate URLs fr
 
 ### Components
 
-Remix UI uses JSX, but it is not React. A component's setup function runs once per instance and returns a render function. Local variables in setup preserve state between renders; event handlers change that state and call `handle.update()` to request another render:
+Remix components use JSX, but they are not React. A component's setup function runs once per instance and returns a render function. Local variables in setup preserve state between renders; event handlers change that state and call `handle.update()` to request another render:
 
 ```tsx
-import { on } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import { on } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 function Counter(handle: Handle) {
   let count = 0

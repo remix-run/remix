@@ -68,8 +68,8 @@ export default createController(routes.albums, {
 Now the page can render that route with `Frame`:
 
 ```tsx filename=app/actions/albums/show-page.tsx
-import { Frame } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { Frame } from "remix/component";
+import type { Handle } from "remix/component";
 
 import { routes } from "../../routes.ts";
 import { Document } from "../document.tsx";
@@ -148,7 +148,7 @@ response type. Normal HTML actions should use the standard `render()` middleware
 continue, such as an email preview or a small embedded fragment:
 
 ```tsx
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 
 // After loading recommendations:
 let html = await renderToString(<AlbumRecommendations albums={recommendations} />);
@@ -164,8 +164,8 @@ be pending, and any frame can reload later. Back in `app/actions/public/entry.ts
 to the existing `run()` options for those requests:
 
 ```ts filename=app/actions/public/entry.ts lines=[1,9-27,29-39]
-import type { ResolveFrameOptions } from "remix/ui";
-import { run } from "remix/ui";
+import type { ResolveFrameOptions } from "remix/component";
+import { run } from "remix/component";
 
 // ...
 
@@ -277,7 +277,7 @@ Start with a form whose action works without browser JavaScript. A client entry 
 same submission, send its `FormData`, and reload a different route after the action succeeds:
 
 ```tsx
-import { on } from "remix/ui";
+import { on } from "remix/component";
 
 // Inside a client-entry component's render function:
 <form

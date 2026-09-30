@@ -6,7 +6,7 @@ import {
   type AppRuntime,
   type RemixNode,
   type ResolveFrameOptions,
-} from '@remix-run/ui'
+} from '@remix-run/component'
 
 /** Creates a response that the SPA runtime can render. */
 export interface Render {

@@ -1,5 +1,5 @@
-import { type Handle, css } from 'remix/ui'
-import type { RemixNode } from 'remix/ui/jsx-runtime'
+import { type Handle, css } from 'remix/component'
+import type { RemixNode } from 'remix/component/jsx-runtime'
 
 import { routes } from '../routes.ts'
 

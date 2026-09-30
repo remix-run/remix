@@ -55,6 +55,8 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [auth](packages/auth): Browser login, OAuth, and OIDC helpers for Remix
 - [auth-middleware](packages/auth-middleware): Pluggable authentication middleware for Remix
 - [cli](packages/cli): Command-line interface for Remix
+- [component](packages/component): Component runtime with server rendering and browser hydration
+- [component-hmr](packages/component-hmr): Hot module replacement runtime and transforms for Remix components
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
 - [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
 - [cop-middleware](packages/cop-middleware): Middleware for tokenless cross-origin protection in Fetch API servers
@@ -93,8 +95,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [tar-parser](packages/tar-parser): A fast, efficient parser for tar streams in any JavaScript environment
 - [terminal](packages/terminal): Terminal output utilities for JavaScript libraries and CLIs
 - [test](packages/test): A test framework for JavaScript and TypeScript projects
-- [ui](packages/ui): View layer with reconciler, component model, and first-party UI components
-- [ui-hmr](packages/ui-hmr): Hot module replacement runtime and transforms for Remix UI components
+- [ui](packages/ui): Headless, accessible UI primitives for Remix components
 
 ## Installation
 

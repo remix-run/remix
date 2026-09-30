@@ -11,7 +11,7 @@ const remixDir = path.join(rootDir, 'packages', 'remix')
 const requiredReadmePaths = [
   'package/src/assert/README.md',
   'package/src/fetch-router/README.md',
-  'package/src/ui/popover/README.md',
+  'package/src/component/animation/README.md',
 ]
 
 const requiredTypeExportPaths = [

@@ -1,7 +1,11 @@
 import type { AssetServer } from '@remix-run/assets'
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 import { createHtmlResponse } from '@remix-run/response/html'
-import { renderToStream, type ImportMapData, type ResolveFrameContext } from '@remix-run/ui/server'
+import {
+  renderToStream,
+  type ImportMapData,
+  type ResolveFrameContext,
+} from '@remix-run/component/server'
 
 import { renderWith, type Renderer } from './render.ts'
 
@@ -46,7 +50,7 @@ const CROSS_ORIGIN_FRAME_HEADERS = [
   FRAME_TARGET_HEADER,
 ] as const
 
-/** Options for the standard Remix UI renderer. */
+/** Options for the standard Remix component renderer. */
 export interface RenderOptions {
   /** Asset server used to turn source-based client entry IDs into browser module metadata. */
   assets?: Pick<AssetServer, 'getScriptEntry'>
@@ -54,11 +58,11 @@ export interface RenderOptions {
   onError?: (error: unknown) => void
 }
 
-/** Renders a Remix UI node as an HTML response. */
+/** Renders a Remix component node as an HTML response. */
 export type RenderFunction = (node: RemixNode, init?: ResponseInit) => Response
 
 /**
- * Adds the standard Remix UI renderer to request context.
+ * Adds the standard Remix component renderer to request context.
  *
  * @param options Rendering integration options.
  * @returns Middleware that installs `context.render(node, init)` for the current request.

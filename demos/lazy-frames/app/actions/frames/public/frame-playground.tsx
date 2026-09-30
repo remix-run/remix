@@ -1,4 +1,4 @@
-import { clientEntry, css, on, type Handle } from 'remix/ui'
+import { clientEntry, css, on, type Handle } from 'remix/component'
 
 type FramePlaygroundProps = {
   initialCount: number

@@ -1,4 +1,4 @@
-import { on, type Handle } from "remix/ui";
+import { on, type Handle } from "remix/component";
 
 type ListItem = {
   id: string;

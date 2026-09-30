@@ -1,6 +1,6 @@
-import { createMixin, css, on } from "remix/ui";
-import type { Handle } from "remix/ui";
-import { spring } from "remix/ui/animation";
+import { createMixin, css, on } from "remix/component";
+import type { Handle } from "remix/component";
+import { spring } from "remix/component/animation";
 
 export function PressStateDemo(handle: Handle) {
   let pressed = false;

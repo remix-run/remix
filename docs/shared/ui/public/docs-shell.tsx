@@ -1,5 +1,5 @@
-import { clientEntry, navigate } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import { clientEntry, navigate } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 interface DocsShellBehaviorProps {
   [key: string]: string

@@ -1,5 +1,5 @@
-import { css, on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { css, on } from "remix/component";
+import type { Handle } from "remix/component";
 
 export function SearchFilterDemo(handle: Handle) {
   let query = "";

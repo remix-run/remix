@@ -1,6 +1,6 @@
 ---
 title: Animation
-description: The CSS-first animation model and Remix UI helpers for motion that respects rendering state.
+description: The CSS-first animation model and Remix component helpers for motion that respects rendering state.
 ---
 
 ## CSS-first visual states {#css-first-visual-states}
@@ -8,8 +8,8 @@ description: The CSS-first animation model and Remix UI helpers for motion that 
 Start with CSS when the browser already owns the state. Hover, focus, active, checked, open, selected, and reduced-motion states do not need JavaScript state unless your render output also depends on them.
 
 ```tsx filename=app/ui/pressable-card.tsx
-import { css } from "remix/ui";
-import type { Handle, RemixNode } from "remix/ui";
+import { css } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 export function PressableCard(handle: Handle<{ children: RemixNode }>) {
   return () => (
@@ -43,9 +43,9 @@ const cardStyle = css({
 Use Remix animation helpers when the motion depends on rendering state: a node enters, a node exits, a keyed item moves, or an event needs an interruptible animation.
 
 ```tsx
-import { createMixin, css, on } from "remix/ui";
-import type { Handle } from "remix/ui";
-import { spring } from "remix/ui/animation";
+import { createMixin, css, on } from "remix/component";
+import type { Handle } from "remix/component";
+import { spring } from "remix/component/animation";
 
 export function PressStateDemo(handle: Handle) {
   let pressed = false;
@@ -123,9 +123,9 @@ const pressableStyles = css({
 `animateEntrance(...)` runs when a host node is inserted. `animateExit(...)` lets a removed node stay in the DOM until its exit animation finishes.
 
 ```tsx filename=app/ui/public/notice.tsx
-import { clientEntry, css, on } from "remix/ui";
-import { animateEntrance, animateExit, spring } from "remix/ui/animation";
-import type { Handle } from "remix/ui";
+import { clientEntry, css, on } from "remix/component";
+import { animateEntrance, animateExit, spring } from "remix/component/animation";
+import type { Handle } from "remix/component";
 
 export const Notice = clientEntry(import.meta.url, function Notice(handle: Handle) {
   let visible = true;
@@ -180,9 +180,9 @@ Keep keys stable when toggling between related elements. A stable key tells Remi
 Pass `true` for the default opacity animation or `false` to disable a mixin without changing the surrounding `mix` array. `animateEntrance({ initial: false })` skips the first insertion for a key but still animates later insertions. If the same keyed element returns before its exit finishes, Remix reclaims that DOM node and animates it back toward its rendered styles.
 
 ```tsx
-import { css, on } from "remix/ui";
-import type { Handle } from "remix/ui";
-import { animateEntrance, animateExit, spring } from "remix/ui/animation";
+import { css, on } from "remix/component";
+import type { Handle } from "remix/component";
+import { animateEntrance, animateExit, spring } from "remix/component/animation";
 
 export function NoticePresenceDemo(handle: Handle) {
   let visible = true;
@@ -257,9 +257,9 @@ const noticeStyles = css({
 `animateLayout(...)` measures a host node before and after a render, then animates the visual delta. This is the right tool for sorted lists, expanding cards, and elements that move because layout changed.
 
 ```tsx filename=app/ui/public/reorder-list.tsx
-import { clientEntry, css, on } from "remix/ui";
-import { animateLayout, spring } from "remix/ui/animation";
-import type { Handle } from "remix/ui";
+import { clientEntry, css, on } from "remix/component";
+import { animateLayout, spring } from "remix/component/animation";
+import type { Handle } from "remix/component";
 
 const initialItems = ["Design", "Build", "Review"];
 
@@ -309,9 +309,9 @@ const itemStyle = css({
 Layout animation includes size projection by default. Pass `size: false` when only position should animate and scaling the element's contents would look wrong.
 
 ```tsx
-import { css } from "remix/ui";
-import type { Handle } from "remix/ui";
-import { animateLayout, spring } from "remix/ui/animation";
+import { css } from "remix/component";
+import type { Handle } from "remix/component";
+import { animateLayout, spring } from "remix/component/animation";
 
 export function ReorderingDemo(handle: Handle) {
   let order = initialOrder;
@@ -388,9 +388,9 @@ const itemStyles = css({
 `spring()` returns an iterator decorated for CSS transitions and Web Animations. Stringify it in CSS, spread it into animation options, or iterate it for custom JavaScript animation.
 
 ```tsx filename=app/ui/public/bouncy-switch.tsx
-import { clientEntry, css, on } from "remix/ui";
-import { spring } from "remix/ui/animation";
-import type { Handle } from "remix/ui";
+import { clientEntry, css, on } from "remix/component";
+import { spring } from "remix/component/animation";
+import type { Handle } from "remix/component";
 
 export const BouncySwitch = clientEntry(import.meta.url, function BouncySwitch(handle: Handle) {
   let enabled = true;
@@ -439,7 +439,7 @@ const thumbStyle = css({
 Use `tween(...)` when you need a time-based value loop rather than CSS or WAAPI timing.
 
 ```ts filename=app/ui/public/count-up.ts
-import { easings, tween } from "remix/ui/animation";
+import { easings, tween } from "remix/component/animation";
 
 export function countUp(from: number, to: number, onValue: (value: number) => void) {
   let animation = tween({ from, to, duration: 300, curve: easings.easeOut });
@@ -461,10 +461,10 @@ export function countUp(from: number, to: number, onValue: (value: number) => vo
 Prefer CSS transitions and animation mixins for ordinary UI. Use `tween` for canvas, custom counters, or values that are not CSS properties.
 
 ```tsx
-import { css, on, ref } from "remix/ui";
-import type { Handle } from "remix/ui";
-import { spring } from "remix/ui/animation";
-import type { SpringPreset } from "remix/ui/animation";
+import { css, on, ref } from "remix/component";
+import type { Handle } from "remix/component";
+import { spring } from "remix/component/animation";
+import type { SpringPreset } from "remix/component/animation";
 
 import { dragVelocityEvents } from "./gallery/drag-release.ts";
 
@@ -681,9 +681,9 @@ const hintStyle = css({
 ```
 
 ```tsx
-import { css, on } from "remix/ui";
-import type { Handle } from "remix/ui";
-import { spring } from "remix/ui/animation";
+import { css, on } from "remix/component";
+import type { Handle } from "remix/component";
+import { spring } from "remix/component/animation";
 
 export function BouncySwitchDemo(handle: Handle) {
   let isOn = true;
@@ -738,7 +738,7 @@ const thumbStyles = css({
 The UI package also keeps a gallery of smaller motion experiments. Keep this kind of broad demo in a bounded frame so it does not take over the surrounding guide page.
 
 ```tsx
-import { css, on, type Handle, type RemixNode } from "remix/ui";
+import { css, on, type Handle, type RemixNode } from "remix/component";
 import { DefaultAnimate } from "./gallery/default-animate.tsx";
 import { EnterAnimation } from "./gallery/enter.tsx";
 import { ExitAnimation } from "./gallery/exit.tsx";
@@ -937,9 +937,9 @@ Event handlers receive abort signals, and animation mixins cancel or replace in-
 For custom imperative animations, keep the current animation in setup scope and cancel it before starting the next one:
 
 ```tsx filename=app/ui/public/ripple-button.tsx
-import { clientEntry, css, on, ref } from "remix/ui";
-import { spring } from "remix/ui/animation";
-import type { Handle } from "remix/ui";
+import { clientEntry, css, on, ref } from "remix/component";
+import { spring } from "remix/component/animation";
+import type { Handle } from "remix/component";
 
 export const RippleButton = clientEntry(import.meta.url, function RippleButton(_handle: Handle) {
   let node: HTMLButtonElement;
@@ -984,8 +984,8 @@ CSS transitions are also interruptible: changing the target value while a transi
 Respect `prefers-reduced-motion` at the CSS boundary first. It works before JavaScript loads, applies to server-rendered frames, and covers static transitions.
 
 ```tsx filename=app/ui/motion-safe-panel.tsx
-import { css } from "remix/ui";
-import type { Handle, RemixNode } from "remix/ui";
+import { css } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 export function MotionSafePanel(handle: Handle<{ children: RemixNode }>) {
   return () => <section mix={panelStyle}>{handle.props.children}</section>;

@@ -1,5 +1,5 @@
-import type { Handle, RemixNode } from 'remix/ui'
-import { ImportMap } from 'remix/ui/server'
+import type { Handle, RemixNode } from 'remix/component'
+import { ImportMap } from 'remix/component/server'
 import { PagefindElements } from 'remix-docs-shared/search'
 
 import {

@@ -5,7 +5,7 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as url from 'node:url'
-import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
+import { buildSpecifierToRemixPath, readRemixManifest } from '../../scripts/utils/manifest.ts'
 import { getPackageExportSideEffects } from '../../scripts/utils/package-side-effects.ts'
 import { getRemixGuideCopies, syncRemixGuides } from '../../scripts/utils/remix-guides.ts'
 import { createRemixIndex, getRemixIndexEntries } from '../../scripts/utils/remix-index.ts'
@@ -18,9 +18,8 @@ import {
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '..')
 
-const manifest: Record<string, string> = JSON.parse(
-  fs.readFileSync(path.join(__dirname, 'manifest.json'), 'utf-8'),
-)
+const { exports: manifest, excludedPackages } = readRemixManifest(packagesDir)
+const excludedPackageNames = new Set(excludedPackages)
 const specifierMap = buildSpecifierToRemixPath(packagesDir)
 
 // Invert for coverage checks: specifier → all remix paths that cover it.
@@ -108,7 +107,6 @@ describe('manifest', () => {
 
   it('every manifest entry has a valid remix path format', () => {
     for (let [remixPath, specifier] of Object.entries(manifest)) {
-      if (remixPath.startsWith('_')) continue
       assert.ok(
         remixPath.startsWith('remix/'),
         `Manifest key "${remixPath}" must start with "remix/"`,
@@ -175,10 +173,25 @@ describe('manifest', () => {
       // @remix-run/cli is intentionally excluded from the manifest — it is handled
       // separately by the generate-remix script via the CLI_PACKAGE_NAME constant.
       if (pkgName === '@remix-run/cli') continue
+      if (excludedPackageNames.has(pkgName)) continue
       assert.ok(
         referencedPackages.has(pkgName),
         `Package "${pkgName}" is not referenced in manifest.json. ` +
           `Add a canonical remix/* entry mapping to "${pkgName}".`,
+      )
+    }
+  })
+
+  it('only excludes public packages that are not referenced in the manifest', () => {
+    assert.equal(excludedPackageNames.size, excludedPackages.length)
+    for (let packageName of excludedPackageNames) {
+      assert.ok(
+        allRemixRunPackages.includes(packageName),
+        `Excluded package "${packageName}" is not a public @remix-run/* workspace package.`,
+      )
+      assert.ok(
+        !referencedPackages.has(packageName),
+        `Package "${packageName}" cannot be both referenced and excluded.`,
       )
     }
   })
@@ -264,11 +277,11 @@ describe('manifest', () => {
       sourceByMirrorPath.get('remix/src/fetch-router/README.md'),
       'fetch-router/README.md',
     )
+    assert.equal(sourceByMirrorPath.get('remix/src/component/README.md'), 'component/README.md')
     assert.equal(
-      sourceByMirrorPath.get('remix/src/ui/popover/README.md'),
-      'ui/src/popover/README.md',
+      sourceByMirrorPath.get('remix/src/component/animation/README.md'),
+      'component/src/animation/README.md',
     )
-    assert.equal(sourceByMirrorPath.get('remix/src/ui/button/README.md'), 'ui/src/button/README.md')
     assert.equal(sourceByMirrorPath.get('remix/src/cli/README.md'), 'cli/README.md')
   })
 
@@ -427,7 +440,7 @@ describe('manifest', () => {
         entriesByExport.set(exportName, entry.docsPath)
       }
     }
-    assert.equal(entriesByExport.get('remix/ui/button'), 'src/ui/button/README.md')
+    assert.equal(entriesByExport.get('remix/component'), 'src/component/README.md')
     assert.equal(entriesByExport.get('remix/headers/cache-control'), 'src/headers/README.md')
     assert.equal(entriesByExport.get('remix/assets/types/hmr'), 'src/assets/README.md')
     assert.equal(entriesByExport.get('remix/response/file'), 'src/response/README.md')

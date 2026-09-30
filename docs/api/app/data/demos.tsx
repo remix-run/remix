@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as url from 'node:url'
-import type { RemixNode } from 'remix/ui'
+import type { RemixNode } from 'remix/component'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
 import { formatWithOxfmt } from '../utils/format.ts'

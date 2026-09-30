@@ -1,4 +1,4 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 export const docsMarkdownContentCss = css({
   color: 'var(--rmx-color-text-primary)',

@@ -1,7 +1,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
-import type { Handle } from 'remix/ui'
+import type { Handle } from 'remix/component'
 
 import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'

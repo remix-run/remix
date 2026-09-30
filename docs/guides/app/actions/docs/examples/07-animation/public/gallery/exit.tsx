@@ -1,7 +1,7 @@
-import type { Handle } from "remix/ui";
-import { css, on } from "remix/ui";
+import type { Handle } from "remix/component";
+import { css, on } from "remix/component";
 
-import { animateEntrance, animateExit, spring } from "remix/ui/animation";
+import { animateEntrance, animateExit, spring } from "remix/component/animation";
 
 export function ExitAnimation(handle: Handle) {
   let isVisible = true;

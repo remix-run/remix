@@ -1,6 +1,6 @@
-import { clientEntry, createMixin, css, on, ref, type Handle } from 'remix/ui'
-import { animateLayout, spring } from 'remix/ui/animation'
-import button from 'remix/ui/button'
+import { clientEntry, createMixin, css, on, ref, type Handle } from 'remix/component'
+import { animateLayout, spring } from 'remix/component/animation'
+import { button } from '../../../ui/public/button.ts'
 import { theme } from '../../../ui/public/design.ts'
 
 import {

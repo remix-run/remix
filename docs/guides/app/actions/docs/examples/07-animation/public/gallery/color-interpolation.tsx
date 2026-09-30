@@ -1,4 +1,4 @@
-import { css, unsafeHTML } from "remix/ui";
+import { css, unsafeHTML } from "remix/component";
 
 /*
  * A comparison of color interpolation methods.

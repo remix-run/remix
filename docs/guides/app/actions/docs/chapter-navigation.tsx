@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/ui'
+import type { Handle } from 'remix/component'
 
 import { ChapterNavigationIndicator } from './public/chapter-navigation-indicator.ts'
 import type { DocsNavigationItem } from './markdown-chapters.tsx'

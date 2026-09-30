@@ -18,7 +18,7 @@ Begin with links and forms that already describe the request the server should r
 form has a real action and method:
 
 ```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { routes } from "../../../../routes.ts";
 
@@ -72,8 +72,8 @@ it needs rather than moving the whole page into browser code.
 can remain server-only while its form hydrates:
 
 ```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx lines=[1,13-15]
-import { clientEntry } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { clientEntry } from "remix/component";
+import type { Handle } from "remix/component";
 
 import { routes } from "../../../../routes.ts";
 
@@ -123,7 +123,7 @@ import {
   importModule,
   preloadShim,
 } from "remix/multiple-import-maps-polyfill";
-import { run } from "remix/ui";
+import { run } from "remix/component";
 
 let app = run({
   async loadModule(moduleUrl, exportName) {
@@ -172,8 +172,8 @@ Use `createRoot(container)` when there is no server-rendered component to hydrat
 imperative widget mounted into a container created by another application.
 
 ```tsx filename=app/actions/public/support-widget.tsx
-import { createRoot } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { createRoot } from "remix/component";
+import type { Handle } from "remix/component";
 
 function SupportWidget(_handle: Handle) {
   return () => <a href="/support">Contact support</a>;
@@ -200,8 +200,8 @@ Component-local UI state lives in setup scope. Change it in an event handler, th
 `handle.update()`:
 
 ```tsx
-import { on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { on } from "remix/component";
+import type { Handle } from "remix/component";
 
 function Counter(handle: Handle<{ initialCount: number }>) {
   let count = handle.props.initialCount;
@@ -233,8 +233,8 @@ throws an error. If rendering discovers work that should run after the commit, s
 with `handle.queueTask()`.
 
 ```tsx
-import { on, ref } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { on, ref } from "remix/component";
+import type { Handle } from "remix/component";
 
 function RenameButton(handle: Handle) {
   let editing = false;
@@ -294,7 +294,7 @@ the list is sorted or a random value created during render. Matching keys let Re
 and component instances instead of pairing state with the wrong item.
 
 ```tsx
-import { on, type Handle } from "remix/ui";
+import { on, type Handle } from "remix/component";
 
 type ListItem = {
   id: string;
@@ -398,8 +398,8 @@ component when an application model changes.
 `currentTarget` is inferred from that host:
 
 ```tsx
-import { on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { on } from "remix/component";
+import type { Handle } from "remix/component";
 
 function AlbumForm(_handle: Handle) {
   return () => (
@@ -436,8 +436,8 @@ value. A controlled input gets its current value from component state instead. I
 copies the DOM value into that state and updates the component:
 
 ```tsx filename=app/ui/public/title-inputs.tsx
-import { on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { on } from "remix/component";
+import type { Handle } from "remix/component";
 
 const initialTitle = "Thriller";
 
@@ -489,17 +489,22 @@ The `mix` prop attaches reusable behavior and styles to host elements. Pass one 
 array when the element needs several:
 
 ```tsx
-import button from "remix/ui/button";
-import { attrs, css, on, ref } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { attrs, css, on, ref } from "remix/component";
+import type { Handle } from "remix/component";
 
-const saveButtonStyle = css({ minWidth: "8rem" });
+const saveButtonStyle = css({
+  minWidth: "8rem",
+  minHeight: "2.5rem",
+  border: 0,
+  borderRadius: "999px",
+  background: "#111",
+  color: "#fff",
+});
 
 function SaveButton(_handle: Handle) {
   return () => (
     <button
       mix={[
-        button({ tone: "primary" }),
         saveButtonStyle,
         attrs({ type: "button" }),
         ref((node) => console.log("Mounted", node)),
@@ -530,8 +535,8 @@ recreating static mixins for every state change.
 observers and element-owned listeners to that signal:
 
 ```tsx
-import { ref } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { ref } from "remix/component";
+import type { Handle } from "remix/component";
 
 function MeasuredPanel(handle: Handle) {
   let width = 0;
@@ -565,8 +570,8 @@ native `addEventListener()`. Schedule browser-only setup after the client commit
 `handle.signal` so the listener is removed when the component disconnects:
 
 ```tsx
-import { clientEntry } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { clientEntry } from "remix/component";
+import type { Handle } from "remix/component";
 
 export const ViewportWidth = clientEntry(import.meta.url, function ViewportWidth(handle: Handle) {
   let width: number | undefined;
@@ -610,8 +615,8 @@ the signal. In this example, the server passes `routes.albums.search.href()` as 
 route returns a short text result. The browser component does not hard-code the endpoint:
 
 ```tsx filename=app/ui/public/album-search.tsx
-import { clientEntry, on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { clientEntry, on } from "remix/component";
+import type { Handle } from "remix/component";
 
 export const AlbumSearch = clientEntry(
   import.meta.url,
@@ -674,7 +679,7 @@ operations in ordinary TypeScript that the component calls.
 A small model makes that boundary concrete. This cart owns its items and quantity changes:
 
 ```ts filename=app/ui/public/cart-model.ts
-import { TypedEventTarget } from "remix/ui";
+import { TypedEventTarget } from "remix/component";
 
 export interface CartItem {
   id: string;
@@ -711,8 +716,8 @@ The component creates the model from serializable props, listens for changes, an
 open state for its details panel:
 
 ```tsx filename=app/ui/public/cart.tsx
-import { clientEntry, on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { clientEntry, on } from "remix/component";
+import type { Handle } from "remix/component";
 
 import { CartModel, type CartItem } from "./cart-model.ts";
 
@@ -763,7 +768,7 @@ navigations through the browser's Navigation API. Cross-origin links, downloads,
 browser cannot intercept continue as normal document requests.
 
 ```tsx filename=app/ui/album-link.tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { routes } from "../routes.ts";
 
@@ -778,8 +783,8 @@ Use `navigate(href, options)` when navigation begins in code. Apply `link(href, 
 host that should behave like a link, such as a card whose whole surface is interactive:
 
 ```tsx filename=app/ui/album-navigation.tsx
-import { link, navigate, on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { link, navigate, on } from "remix/component";
+import type { Handle } from "remix/component";
 
 import { routes } from "../routes.ts";
 
@@ -916,7 +921,7 @@ typed event for consumers.
 This `longPress()` mixin turns a held pointer into an `app:longpress` event:
 
 ```tsx filename=app/ui/public/long-press.tsx
-import { createMixin, on } from "remix/ui";
+import { createMixin, on } from "remix/component";
 
 export const longPressType = "app:longpress" as const;
 
@@ -979,7 +984,7 @@ Consume the semantic event with `on(...)` like any other DOM event:
 ```
 
 Namespace custom event names to avoid collisions, and keep one-off behavior in the component that
-uses it. The [`remix/ui` API overview](../src/ui/README.md) covers the full
+uses it. The [`remix/component` API overview](../src/component/README.md) covers the full
 mixin API.
 
 The next chapter uses the same server renderer and browser runtime to stream and reload route-owned

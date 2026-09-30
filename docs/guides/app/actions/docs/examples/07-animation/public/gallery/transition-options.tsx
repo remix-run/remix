@@ -1,5 +1,5 @@
-import { css } from "remix/ui";
-import { animateEntrance } from "remix/ui/animation";
+import { css } from "remix/component";
+import { animateEntrance } from "remix/component/animation";
 
 export function TransitionOptions() {
   return () => (
