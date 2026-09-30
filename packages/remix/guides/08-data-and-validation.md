@@ -9,7 +9,7 @@ Let's replace that array with SQLite and load an album from the database. Then w
 
 ## Describe the stored rows
 
-The record store needs an albums table with the same fields as our in-memory records, so we'll define our data shape using `table()` which gives us metadata for typed queries, column references, and database value encoding. We'll also define a tracks table so we can load an album's track listing later in the chapter:
+The record store needs an albums table with the same fields as our in-memory records, so we'll define our data shape using `table()` which gives us metadata for typed queries, column references, and database value encoding. We'll also define a tracks table for the relation and transaction examples in the advanced section:
 
 ```ts filename=app/data/tables.ts
 import { column as c, table } from "remix/data-table";
@@ -172,29 +172,21 @@ The `RouterTypes` declaration makes `context.db` (in addition to `context.formDa
 
 ## Read an album
 
-With the migration applied, we can create and retrieve an album in application code:
+With the migration applied, we can create and retrieve an album in application code. First, we need to seed the database with some data. Create and run the following seed script against the database:
 
 ```ts
 import { db } from "./app/db.ts";
 import { albums } from "./app/data/tables.ts";
 
-let album = await db.create(
-  albums,
-  {
-    id: "thriller",
-    title: "Thriller",
-    artist: "Michael Jackson",
-    year: 1982,
-  },
-  { returnRow: true },
-);
-
-let sameAlbum = await db.find(albums, album.id);
+await db.create(albums, {
+  id: "thriller",
+  title: "Thriller",
+  artist: "Michael Jackson",
+  year: 1982,
+});
 ```
 
-Run that insert once against the new database, for example in a seed script. `create(...)` returns write metadata by default, but passing `{ returnRow: true }` asks for the stored row instead. `find(...)` can then be used to look up a row by primary key.
-
-Now replace the array lookup in the album's `show` action:
+Now, replace the array lookup in the album's `show` action:
 
 ```tsx filename=app/actions/albums/controller.tsx lines=[10]
 import { createController } from "remix/router";
@@ -251,9 +243,15 @@ export const albumForm = f.object({
 
 `f.field(...)` reads the first value for each name, rejects files, and passes missing values to the field schema as `undefined`. `f.object(...)` selects only the declared fields, so an extra `id` in the submission won't become part of the update.
 
-[Forms and Mutations](/forms-and-mutations/) will use `albumForm` in the edit action to validate submissions before saving them. For parsing plain objects or individual values, using `parse()` to throw on validation failure, and other schema options, see the [`data-schema` overview](../src/data-schema/README.md).
+For parsing plain objects or individual values, using `parse()` to throw on validation failure, and other schema options, see the [`data-schema` overview](../src/data-schema/README.md).
 
-## Parse query strings and repeated fields
+The album page now reads from SQLite, and `albumForm` defines the values the editor can submit. [Forms and Mutations](/forms-and-mutations/) connects the edit form: validating submissions, saving edits, showing field errors, and adding pending feedback.
+
+## Advanced data and validation
+
+A catalog search needs different input fields, and an album's track listing needs related rows. These examples build on the same schemas, tables, and database connection.
+
+### Parse query strings and repeated fields
 
 The form-data schema helpers also accept `URLSearchParams`. For example, a catalog search can read a query, a page number, and several selected genres:
 
@@ -282,7 +280,7 @@ A few browser conventions affect these schemas:
 - An empty text input is `""`, not `undefined`, so `optional()` and `defaulted()` do not make a blank string valid automatically.
 - Use `f.file(...)` or `f.files(...)` for file entries. The [Files and Assets](/files-and-assets/) chapter covers multipart forms, upload limits, and storage.
 
-## Compose queries and load relations
+### Compose queries and load relations
 
 For a catalog page, we might want only an album's ID, title, and year. Build that query independently of the database connection:
 
@@ -342,9 +340,9 @@ let result = await context.db.exec(sql`
 
 `${artist}` becomes a bound value, not SQL text. Keep table names, column names, and SQL syntax in application code. Raw SQL does not run table lifecycle hooks or infer the result shape from a table definition.
 
-## Enforce rules across writes
+### Enforce rules across writes
 
-The form schema checks browser input, but a seed script or import job can write albums without using that schema. If every write through `data-table` should reject a blank title, add a table-level `validate` hook:
+A seed script or import job can write albums without parsing a browser form. If every write through `data-table` should reject a blank title, add a table-level `validate` hook:
 
 ```ts filename=app/data/tables.ts
 import { column as c, fail, table } from "remix/data-table";
@@ -390,7 +388,7 @@ The other lifecycle hooks run around reads and writes:
 
 Hooks are synchronous and do not open a transaction. An `afterRead` hook may receive a projection such as the catalog query's `{ id, title, year }`, so it must check whether a field is present before transforming it. Predicate values in `where`, `having`, or join conditions are not validated by table hooks.
 
-## Group writes in a transaction
+### Group writes in a transaction
 
 Creating an album and its first track takes two writes. If the track insert fails, we want to undo the album insert too:
 
@@ -419,7 +417,7 @@ Use the callback's `tx` for every operation that belongs to the transaction. The
 
 Transactions do not undo work outside the database, such as sending email or calling another service. Keep that work outside the callback, or record work to perform later in the same transaction.
 
-## Use PostgreSQL or MySQL
+### Use PostgreSQL or MySQL
 
 The examples use SQLite, but the query and table APIs also work with PostgreSQL and MySQL. Replace the database factory and write migrations for the chosen SQL dialect.
 
@@ -449,5 +447,3 @@ export const db = createMysqlDatabase({
 `multipleStatements: true` allows the migration runner to send each SQL file as one script. MySQL does not support SQL `RETURNING`, so query operations that request it, including bulk inserts with `{ returnRows: true }`, are unavailable. Single-row CRUD helpers can retrieve a row with a follow-up query. MySQL also does not support transactional DDL, so a failed migration may need repair before it can run again.
 
 The database instance owns the pool when created from configuration. Close it during application shutdown with `await db.close()`. You can instead pass an existing compatible client or pool when your application already manages its lifecycle.
-
-With our database and input schema in place, [Forms and Mutations](/forms-and-mutations/) connects the edit form: validating submissions, saving edits, showing field errors, and adding pending feedback.

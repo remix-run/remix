@@ -193,6 +193,8 @@ If the destination should display “Album saved,” session flash data can carr
 
 With the app's browser runtime running, Remix handles the form submission as a navigation. It renders validation responses into the page and follows redirects after a successful save.
 
+In [Start Here](/start-here/), we hydrated the whole form and set pending state when its submit event fired. Here, the button can follow the containing frame's reload events, which tell us when the navigation starts and when it finishes.
+
 We can show progress by hydrating just the save button. Put it in the edit action's `public/` directory:
 
 ```tsx filename=app/actions/albums/edit/public/save-button.tsx
@@ -228,7 +230,19 @@ export const SaveButton = clientEntry(import.meta.url, function SaveButton(handl
 });
 ```
 
-Now, replace the plain submit button with `<SaveButton />`. The button listens to its containing frame: `reloadStart` disables it and shows “Saving…”, and `reloadComplete` restores it. Passing `handle.signal` removes the listeners when the component is removed.
+Back in `page.tsx`, import `SaveButton` and replace the plain submit button:
+
+```tsx filename=app/actions/albums/edit/page.tsx
+import { SaveButton } from "./public/save-button.tsx";
+
+// Inside AlbumEditPage's render function:
+<form method="post" action={routes.albums.edit.action.href({ albumId: album.id })}>
+  {/* Keep the existing fields and validation messages. */}
+  <SaveButton />
+</form>;
+```
+
+The button listens to its containing frame: `reloadStart` disables it and shows “Saving…”, and `reloadComplete` restores it after the navigation settles, including a validation response or request failure. Passing `handle.signal` removes the listeners when the component is removed.
 
 ## Use other HTTP methods when the route calls for them
 
