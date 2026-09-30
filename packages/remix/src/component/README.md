@@ -1,6 +1,6 @@
 # component
 
-A minimal component runtime built on JavaScript and DOM primitives. Write components that render on
+A minimal component system built on JavaScript and DOM primitives. Write components that render on
 the server, stream to the browser, and hydrate only where you need interactivity.
 
 ## Features

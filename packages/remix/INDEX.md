@@ -31,11 +31,11 @@ Exports covered by the same README are grouped together.
 | `remix/assert` | Node assert-compatible utilities for any JavaScript environment | [README](src/assert/README.md) |
 | `remix/assets`<br>`remix/assets/types/hmr` | Fetch-based server for compiling browser JS/TS and CSS assets on demand | [README](src/assets/README.md) |
 | `remix/auth` | Browser login, OAuth, and OIDC helpers for Remix | [README](src/auth/README.md) |
-| `remix/component`<br>`remix/component/dev/refresh`<br>`remix/component/jsx-dev-runtime`<br>`remix/component/jsx-runtime` | Component runtime, rendering, and mixins for Remix | [README](src/component/README.md) |
+| `remix/component`<br>`remix/component/dev/refresh`<br>`remix/component/jsx-dev-runtime`<br>`remix/component/jsx-runtime` | Component runtime with server rendering and browser hydration | [README](src/component/README.md) |
 | `remix/component-hmr`<br>`remix/component-hmr/assets`<br>`remix/component-hmr/node`<br>`remix/component-hmr/runtime/browser`<br>`remix/component-hmr/runtime/server` | Hot module replacement runtime and transforms for Remix components | [README](src/component-hmr/README.md) |
-| `remix/component/animation` | Component runtime, rendering, and mixins for Remix | [README](src/component/animation/README.md) |
-| `remix/component/server` | Component runtime, rendering, and mixins for Remix | [README](src/component/server/README.md) |
-| `remix/component/test` | Component runtime, rendering, and mixins for Remix | [README](src/component/test/README.md) |
+| `remix/component/animation` | Component runtime with server rendering and browser hydration | [README](src/component/animation/README.md) |
+| `remix/component/server` | Component runtime with server rendering and browser hydration | [README](src/component/server/README.md) |
+| `remix/component/test` | Component runtime with server rendering and browser hydration | [README](src/component/test/README.md) |
 | `remix/cookie` | A toolkit for working with cookies in JavaScript | [README](src/cookie/README.md) |
 | `remix/data-schema`<br>`remix/data-schema/checks`<br>`remix/data-schema/coerce`<br>`remix/data-schema/form-data`<br>`remix/data-schema/lazy` | Tiny, standards-aligned schema validation | [README](src/data-schema/README.md) |
 | `remix/data-table`<br>`remix/data-table/cli`<br>`remix/data-table/migrations`<br>`remix/data-table/migrations/node`<br>`remix/data-table/operators`<br>`remix/data-table/sql-helpers` | A typed, relational query toolkit for JavaScript | [README](src/data-table/README.md) |

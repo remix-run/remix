@@ -192,7 +192,7 @@ The [Routing and Controllers](/routing-and-controllers/) chapter covers route ma
 
 Let's make this album page a little more interesting by returning HTML from a Remix component.
 
-Remix components use JSX with a two-phase component model. A component is a function that receives a `handle` and returns another function that renders JSX. The outer function is setup: it runs once when the component is created, so normal JavaScript variables declared there can hold local state. The returned function is render: it runs on the first render and every update afterward.
+A component is a function that receives a `handle` and returns another function that renders JSX. The outer function is setup: it runs once when the component is created, so normal JavaScript variables declared there can hold local state. The returned function is render: it runs on the first render and every update afterward.
 
 We'll come back to the component model later. If you want the full model now, check out the [Rendering UI](/rendering-ui/) chapter.
 
