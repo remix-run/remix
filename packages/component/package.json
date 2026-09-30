@@ -2,7 +2,7 @@
   "name": "@remix-run/component",
   "version": "0.7.0",
   "description": "Component runtime with server rendering and browser hydration",
-  "author": "Ryan Florence <rpflorence@gmail.com>",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
