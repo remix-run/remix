@@ -13,8 +13,10 @@ const excludedPackages = readRemixManifest(packagesDir).excludedPackages
  * `@remix-run/session/cookie-storage`) to its canonical `remix/*` import path
  * (e.g. `remix/router` or `remix/session-storage/cookie`).
  *
- * Excluded standalone packages retain their full npm specifier. Other
- * unrecognised packages fall back to the mechanical `remix/<short-name>` path.
+ * Packages listed in the manifest's `_exclude` field are not available through
+ * the `remix` package, so their specifiers are returned unchanged. Other
+ * specifiers without an explicit mapping replace the `@remix-run/` scope with
+ * `remix/`.
  */
 export function mapToRemixPackage(specifier: string): string {
   if (isExcludedRemixPackage(specifier)) return specifier
