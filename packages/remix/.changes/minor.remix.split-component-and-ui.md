@@ -47,4 +47,4 @@ The `remix` package no longer exports UI components or primitives. The visually 
 +import * as accordion from '@remix-run/ui/accordion'
 ```
 
-This applies to all remaining primitives: `accordion`, `anchor`, `combobox`, `listbox`, `menu`, `popover`, `select`, `tabs`, and `toggle`. The previous styled `breadcrumbs`, `button`, `checkbox`, `input`, and `radio` modules have been removed without replacements.
+This applies to all remaining primitives: `accordion`, `anchor`, `combobox`, `listbox`, `menu`, `popover`, `select`, `tabs`, and `toggle`. The previous styled `breadcrumbs`, `button`, `checkbox`, `input`, and `radio` modules have been removed.
