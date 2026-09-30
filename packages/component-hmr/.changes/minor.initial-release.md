@@ -34,9 +34,4 @@ Rename the Node import loader used by development servers:
 +node --import remix/component-hmr/node server.ts
 ```
 
-Direct-package consumers should use `@remix-run/component-hmr/node` instead. The browser and server runtime subpaths have moved in the same way. Rename the import-source type when it is referenced directly:
-
-```diff
--import type { UiHmrImportSource } from '@remix-run/ui-hmr'
-+import type { ComponentHmrImportSource } from '@remix-run/component-hmr'
-```
+Direct-package consumers should use `@remix-run/component-hmr/node` instead. The browser and server runtime subpaths have moved in the same way.

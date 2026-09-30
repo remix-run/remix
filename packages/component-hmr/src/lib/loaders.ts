@@ -3,7 +3,6 @@ import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { transformComponentsForBrowser, transformComponentsForServer } from './transform.ts'
-import type { ComponentHmrImportSource } from './transform.ts'
 
 interface ServerModuleHooks {
   load: ServerModuleLoadHook
@@ -89,7 +88,7 @@ const importPresets = [
   },
 ] as const satisfies ReadonlyArray<{
   browserRuntimeSpecifier: string
-  importSource: ComponentHmrImportSource
+  importSource: string
   refreshSpecifier: string
   serverRuntimeSpecifier: string
 }>
@@ -181,7 +180,7 @@ function getCanonicalUrl(url: string): string {
   return canonicalUrl.href
 }
 
-function detectImportSource(url: string, runtime: Runtime): ComponentHmrImportSource | null {
+function detectImportSource(url: string, runtime: Runtime): string | null {
   let filePath: string
   try {
     filePath = fileURLToPath(url)

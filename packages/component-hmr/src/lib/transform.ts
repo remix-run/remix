@@ -21,19 +21,11 @@ export interface ComponentsHmrTransformResult {
 }
 
 /**
- * Package prefix used for generated component refresh and HMR runtime imports.
- *
- * Use `'remix'` for imports such as `remix/component-hmr/runtime/browser`, `'@remix-run'` for the
- * equivalent scoped packages, or a custom prefix that exposes the same subpaths.
- */
-export type ComponentHmrImportSource = 'remix' | '@remix-run' | (string & {})
-
-/**
  * Options for rewriting browser component modules.
  */
 export interface BrowserComponentsHmrTransformOptions {
-  /** Package prefix used to generate component refresh and browser HMR runtime imports. */
-  importSource: ComponentHmrImportSource
+  /** Package prefix used to generate component refresh and browser HMR runtime imports, typically `'remix'` or `'@remix-run'`. */
+  importSource: string
   /**
    * Stable public URL used to identify this module across browser updates.
    *
@@ -49,8 +41,8 @@ export interface BrowserComponentsHmrTransformOptions {
  * Options for rewriting server component modules.
  */
 export interface ServerComponentsHmrTransformOptions {
-  /** Package prefix used to generate the server HMR runtime import. */
-  importSource: ComponentHmrImportSource
+  /** Package prefix used to generate the server HMR runtime import, typically `'remix'` or `'@remix-run'`. */
+  importSource: string
   /**
    * Stable module URL used to identify this module across server updates, typically its `file:` URL
    * without cache-busting search parameters.
@@ -385,7 +377,7 @@ export function transformComponentsForServer(
   }
 }
 
-function getComponentHmrImportSpecifiers(importSource: ComponentHmrImportSource): {
+function getComponentHmrImportSpecifiers(importSource: string): {
   browserRuntimeSpecifier: string
   refreshSpecifier: string
   serverRuntimeSpecifier: string
