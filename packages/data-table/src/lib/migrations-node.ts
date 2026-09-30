@@ -12,8 +12,10 @@ import { parseMigrationDirectoryName } from './migrations/directory-name.ts'
  * - `down.sql` (optional; omit for irreversible migrations)
  *
  * `id` and `name` are inferred from the directory name. Use zero-padded sequences such as `0001`
- * or timestamps such as `20260101000000`. Ids must contain 1 to 64 digits, with the same number
- * of digits throughout the directory so migrations sort in numeric order.
+ * for short ids, or `YYYYMMDDHHmmss` timestamps to record creation time and sort chronologically.
+ * For example, `20260228090000` represents `2026-02-28 09:00:00`. Use a consistent time zone.
+ * Ids must be unique and contain 1 to 64 digits, with the same number of digits throughout the
+ * directory so migrations sort in numeric order.
  * @param directory Absolute or relative directory containing migration directories.
  * @returns A sorted list of loaded migration descriptors.
  * @example

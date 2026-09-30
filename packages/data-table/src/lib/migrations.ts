@@ -13,7 +13,10 @@ export type MigrationTransactionMode = 'auto' | 'required' | 'none'
  * Migration metadata and SQL consumed by `Database.migrate()`.
  */
 export type MigrationDescriptor = {
-  /** Migration id, such as a zero-padded sequence (`0001`) or timestamp (`20260101000000`). */
+  /**
+   * Migration id, such as a zero-padded sequence (`0001`) or `YYYYMMDDHHmmss` timestamp
+   * (`20260228090000` for `2026-02-28 09:00:00`).
+   */
   id: string
   /** Human-readable migration slug. */
   name: string
