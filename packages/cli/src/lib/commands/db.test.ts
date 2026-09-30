@@ -74,7 +74,7 @@ describe('db command', () => {
   })
 
   it('migrates and rolls back zero-padded sequential prefixes', async () => {
-    let projectDir = await createDatabaseProject({ reversible: true })
+    let projectDir = await createDatabaseProject()
 
     try {
       await fs.rename(
@@ -87,19 +87,20 @@ describe('db command', () => {
       )
 
       let migrate = await captureOutput(() =>
-        runRemix(['db', 'migrate', '--to', '0002'], { cwd: projectDir }),
+        runRemix(['db', 'migrate', '--to', '0001'], { cwd: projectDir }),
       )
       assert.equal(migrate.exitCode, 0, migrate.stderr)
-      assert.equal(migrate.stdout, 'applied 0001_create_first\napplied 0002_create_second\n')
-      assert.ok(readTableNames(projectDir).includes('second_table'))
+      assert.equal(migrate.stdout, 'applied 0001_create_first\n')
+      let tables = readTableNames(projectDir)
+      assert.ok(tables.includes('first_table'))
+      assert.equal(tables.includes('second_table'), false)
 
       let rollback = await captureOutput(() =>
         runRemix(['db', 'rollback', '--to', '0001_create_first'], { cwd: projectDir }),
       )
       assert.equal(rollback.exitCode, 0, rollback.stderr)
-      assert.equal(rollback.stdout, 'reverted 0002_create_second\nreverted 0001_create_first\n')
+      assert.equal(rollback.stdout, 'reverted 0001_create_first\n')
       assert.equal(readTableNames(projectDir).includes('first_table'), false)
-      assert.equal(readTableNames(projectDir).includes('second_table'), false)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }

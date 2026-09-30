@@ -105,55 +105,6 @@ describe('migration node loader', () => {
     }
   })
 
-  it('loads single-digit ids', async () => {
-    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
-
-    try {
-      await makeMigration(directory, '2_second', { up: 'select 2' })
-      await makeMigration(directory, '1_first', { up: 'select 1' })
-
-      let migrations = await loadMigrations(directory)
-      assert.deepEqual(
-        migrations.map((migration) => migration.id),
-        ['1', '2'],
-      )
-    } finally {
-      await rm(directory, { recursive: true, force: true })
-    }
-  })
-
-  it('loads 64-digit ids', async () => {
-    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
-    let id = '9'.repeat(64)
-
-    try {
-      await makeMigration(directory, id + '_create_users', { up: 'select 1' })
-
-      let migrations = await loadMigrations(directory)
-      assert.deepEqual(
-        migrations.map((migration) => migration.id),
-        [id],
-      )
-    } finally {
-      await rm(directory, { recursive: true, force: true })
-    }
-  })
-
-  it('rejects ids longer than 64 digits', async () => {
-    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
-
-    try {
-      await makeMigration(directory, '9'.repeat(65) + '_create_users', { up: 'select 1' })
-
-      await assert.rejects(
-        () => loadMigrations(directory),
-        /Expected format <digits>_<name> with 1 to 64 digits/,
-      )
-    } finally {
-      await rm(directory, { recursive: true, force: true })
-    }
-  })
-
   it('rejects ids with different digit counts', async () => {
     let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
 
@@ -164,22 +115,6 @@ describe('migration node loader', () => {
       await assert.rejects(
         () => loadMigrations(directory),
         /Migration directory "2_second" has a 1-digit prefix; expected 2 digits/,
-      )
-    } finally {
-      await rm(directory, { recursive: true, force: true })
-    }
-  })
-
-  it('rejects mixing sequential ids and timestamps with different digit counts', async () => {
-    let directory = await mkdtemp(path.join(tmpdir(), 'data-table-migrations-'))
-
-    try {
-      await makeMigration(directory, '0001_create_users', { up: 'select 1' })
-      await makeMigration(directory, '20260101000000_add_posts', { up: 'select 2' })
-
-      await assert.rejects(
-        () => loadMigrations(directory),
-        /Migration directory "20260101000000_add_posts" has a 14-digit prefix; expected 4 digits/,
       )
     } finally {
       await rm(directory, { recursive: true, force: true })

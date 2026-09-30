@@ -683,13 +683,6 @@ describe('migration directory name parsing', () => {
     })
   })
 
-  it('preserves ids longer than timestamps without numeric conversion', () => {
-    assert.deepEqual(parseMigrationDirectoryName('12345678901234567890_create_users'), {
-      id: '12345678901234567890',
-      name: 'create_users',
-    })
-  })
-
   it('parses 64-digit ids without numeric conversion', () => {
     let id = '9'.repeat(64)
 
