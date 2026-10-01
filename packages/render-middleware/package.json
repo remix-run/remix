@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/render-middleware",
-  "version": "0.3.1",
-  "description": "Conventional Remix UI and custom request-scoped render middleware",
+  "version": "0.3.3",
+  "description": "Conventional Remix component and custom request-scoped render middleware",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -41,9 +41,9 @@
   },
   "dependencies": {
     "@remix-run/assets": "workspace:^",
+    "@remix-run/component": "workspace:^",
     "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/response": "workspace:^",
-    "@remix-run/ui": "workspace:^"
+    "@remix-run/response": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

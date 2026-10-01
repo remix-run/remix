@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/ui'
+import type { Handle } from 'remix/component'
 
 import type { AppContext } from '../../router.ts'
 import { loadDocsIndexChapterSummaries, loadDocsNavigationItems } from './markdown-chapters.tsx'

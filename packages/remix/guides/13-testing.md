@@ -13,12 +13,12 @@ This chapter starts at that boundary, then moves outward to browser component te
 
 Choose the smallest boundary that includes the behavior you want to prove:
 
-| Test boundary          | Use it for                                                           | How to test it                                                   | Runner type |
-| ---------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
-| Unit test              | A data helper, schema, utility, or other isolated module             | Import it, call it, and assert on the result                     | `server`    |
-| Router test            | An action, response, middleware, session, or database-backed request | Send a request through `router.fetch(...)`                       | `server`    |
-| Browser component test | A component event, DOM update, or browser API                        | Render the component with `remix/ui/test`'s `render()` helper    | `browser`   |
-| End-to-end test        | Navigation or a complete browser/server flow                         | Run the router behind a test server and drive it with Playwright | `e2e`       |
+| Test boundary          | Use it for                                                           | How to test it                                                       | Runner type |
+| ---------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------- |
+| Unit test              | A data helper, schema, utility, or other isolated module             | Import it, call it, and assert on the result                         | `server`    |
+| Router test            | An action, response, middleware, session, or database-backed request | Send a request through `router.fetch(...)`                           | `server`    |
+| Browser component test | A component event, DOM update, or browser API                        | Render the component with `remix/component/test`'s `render()` helper | `browser`   |
+| End-to-end test        | Navigation or a complete browser/server flow                         | Run the router behind a test server and drive it with Playwright     | `e2e`       |
 
 A controller that returns the wrong status belongs in a router test. A submit button that does not enter its pending state belongs in a browser component test. Use an end-to-end test when browser and server behavior must work together, such as submitting a form and following its redirect to the updated page.
 
@@ -219,8 +219,8 @@ npx playwright install
 Consider a small client component that tracks whether an album is a favorite:
 
 ```tsx filename=app/actions/albums/public/favorite-button.tsx
-import { clientEntry, on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { clientEntry, on } from "remix/component";
+import type { Handle } from "remix/component";
 
 export const FavoriteButton = clientEntry(
   import.meta.url,
@@ -247,12 +247,12 @@ export const FavoriteButton = clientEntry(
 );
 ```
 
-`render(...)` from [`remix/ui/test`](../src/ui/test/README.md) mounts the component, flushes its initial render, and returns helpers for querying and interacting with the DOM:
+`render(...)` from [`remix/component/test`](../src/component/test/README.md) mounts the component, flushes its initial render, and returns helpers for querying and interacting with the DOM:
 
 ```tsx filename=app/actions/albums/favorite-button.test.browser.tsx
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
-import { render } from "remix/ui/test";
+import { render } from "remix/component/test";
 
 import { FavoriteButton } from "./public/favorite-button.tsx";
 

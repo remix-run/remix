@@ -2,6 +2,7 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
+import { loadModule } from 'remix/node-tsx/load-module'
 import { parse } from 'yaml'
 
 import { getRemixReadmeMappings, rewriteLinksToRemixReadmes } from './remix-readmes.ts'
@@ -17,6 +18,16 @@ const defaultSourceGuidesDir = path.join(
   'chapters',
 )
 const defaultRemixGuidesDir = path.join(rootDir, 'packages', 'remix', 'guides')
+const chapterMarkdownModulePath = path.join(
+  rootDir,
+  'docs',
+  'guides',
+  'app',
+  'actions',
+  'docs',
+  'markdown',
+  'chapter-markdown.ts',
+)
 
 export interface RemixGuideCopy {
   title: string
@@ -77,6 +88,7 @@ export async function syncRemixGuides({
   let guides = getRemixGuides({ sourceGuidesDir, remixGuidesDir })
   let copies = getPublishedGuideCopies(guides)
   let readmeMappings = getRemixReadmeMappings()
+  let renderChapterMarkdown = await loadRenderChapterMarkdown()
 
   await fsp.rm(remixGuidesDir, { recursive: true, force: true })
   await fsp.mkdir(remixGuidesDir, { recursive: true })
@@ -84,7 +96,7 @@ export async function syncRemixGuides({
     copies.map(async (copy) => {
       let markdown = await fsp.readFile(copy.sourceGuidePath, 'utf-8')
       let installedMarkdown = rewriteLinksToRemixReadmes(
-        markdown,
+        await renderChapterMarkdown(markdown),
         copy.remixGuidePath,
         readmeMappings,
       )
@@ -92,6 +104,25 @@ export async function syncRemixGuides({
     }),
   )
   return copies
+}
+
+// Installed guides use the same markdown as the website's `/<chapter>.md` routes, so
+// `::frame` directives are replaced with demo source (or omitted) rather than copied
+// verbatim. The renderer lives in the guides app and imports `.tsx` example modules.
+async function loadRenderChapterMarkdown(): Promise<(source: string) => Promise<string>> {
+  let mod = await loadModule(chapterMarkdownModulePath, import.meta.url)
+  if (!isRecord(mod) || typeof mod.renderChapterMarkdown !== 'function') {
+    throw new Error(`${chapterMarkdownModulePath} must export renderChapterMarkdown()`)
+  }
+
+  let renderChapterMarkdown = mod.renderChapterMarkdown
+  return async (source) => {
+    let markdown: unknown = await renderChapterMarkdown(source)
+    if (typeof markdown !== 'string') {
+      throw new Error('renderChapterMarkdown() must return a string')
+    }
+    return markdown
+  }
 }
 
 function readGuideMetadata(filePath: string): {

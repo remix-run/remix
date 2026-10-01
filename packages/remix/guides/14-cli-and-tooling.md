@@ -37,7 +37,7 @@ Cover `remix help`, command-level `--help`, `remix version` and `--version`, glo
 
 ## TypeScript and JSX setup {#typescript-and-jsx-setup}
 
-Explain the generated `NodeNext` module settings, `.ts` extensions in relative imports, type-only imports, `jsx: react-jsx`, and `jsxImportSource: remix/ui`. Keep `tsc --noEmit` as a separate typecheck because runtime transformation is not type checking.
+Explain the generated `NodeNext` module settings, `.ts` extensions in relative imports, type-only imports, `jsx: react-jsx`, and `jsxImportSource: remix/component`. Keep `tsc --noEmit` as a separate typecheck because runtime transformation is not type checking.
 
 ## Run source files with remix/node-tsx {#using-remix-node-tsx}
 

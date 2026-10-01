@@ -16,7 +16,7 @@ Visit [http://localhost:44100](http://localhost:44100) and scroll through the pa
 
 ## One Shared Document
 
-A Frame is not an iframe. Its response becomes ordinary DOM inside the parent document, so inherited CSS custom properties theme checked-in HTML, server-rendered Remix UI, and hydrated client components together. The theme control changes `data-theme` on the document root and persists the value in a cookie; existing Frames update in place without losing client state or making another request.
+A Frame is not an iframe. Its response becomes ordinary DOM inside the parent document, so inherited CSS custom properties theme checked-in HTML, server-rendered components, and hydrated client components together. The theme control changes `data-theme` on the document root and persists the value in a cookie; existing Frames update in place without losing client state or making another request.
 
 `LazyFrame` instances with the same `rootMargin` share one load observer. Each host calls `observe()` when inserted and `unobserve()` after its first intersection or when removed. Different margins use different observers because an observer’s options are fixed when it is constructed. For motion content, `pauseAnimationsWhenInactive` also registers the host for shared zero-margin activity observation. `LazyFrame` applies a host-level `css()` mixin while that host is outside the viewport, pausing descendant animations until it returns. The Frame stays mounted throughout; non-motion Frames avoid the activity behavior.
 
@@ -24,9 +24,9 @@ A Frame is not an iframe. Its response becomes ordinary DOM inside the parent do
 
 | Frame route               | Response                                         | Demonstrates                                                    |
 | ------------------------- | ------------------------------------------------ | --------------------------------------------------------------- |
-| `/frames/html/:id`        | A checked-in `.html` fragment streamed from disk | Frames do not require the Remix UI renderer                     |
-| `/frames/ui/:id`          | Server-rendered Remix UI                         | Components and generated styles delivered as frame HTML         |
-| `/frames/interactive/:id` | Remix UI containing a `clientEntry`              | Client components discovered and hydrated after frame insertion |
+| `/frames/html/:id`        | A checked-in `.html` fragment streamed from disk | Frames do not require the Remix component renderer              |
+| `/frames/ui/:id`          | Server-rendered components                       | Components and generated styles delivered as frame HTML         |
+| `/frames/interactive/:id` | Components containing a `clientEntry`            | Client components discovered and hydrated after frame insertion |
 
 ## Explore the Code
 

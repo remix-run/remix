@@ -2,6 +2,12 @@
 
 This is the changelog for [`mime`](https://github.com/remix-run/remix/tree/main/packages/mime). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.3
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
 ## v0.4.2
 
 ### Patch Changes

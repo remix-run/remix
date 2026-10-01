@@ -1,4 +1,4 @@
-import { run } from 'remix/ui'
+import { run } from 'remix/component'
 import {
   detectMultipleImportMapSupport,
   importModule,

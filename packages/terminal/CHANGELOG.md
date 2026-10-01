@@ -2,6 +2,12 @@
 
 This is the changelog for [`terminal`](https://github.com/remix-run/remix/tree/main/packages/terminal). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.2
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
 ## v0.1.1
 
 ### Patch Changes

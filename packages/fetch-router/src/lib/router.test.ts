@@ -9,6 +9,16 @@ import type { RequestContext } from './request-context.ts'
 import { createRouter, type MatchData } from './router.ts'
 
 describe('router.fetch()', () => {
+  it('can be passed as a direct function reference', async () => {
+    let router = createRouter()
+    router.get('/', () => new Response('Home'))
+
+    let fetch = router.fetch
+
+    assert.equal(fetch.length, 1)
+    assert.equal(await (await fetch('https://remix.run')).text(), 'Home')
+  })
+
   it('fetches a route', async () => {
     let router = createRouter()
     router.get('/', () => new Response('Home'))

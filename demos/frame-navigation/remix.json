@@ -12,7 +12,7 @@
       "demos/frame-navigation/app/routes.ts",
       "demos/frame-navigation/app/**/public/**"
     ],
-    "allowPackages": ["remix"],
+    "allowPackages": ["@remix-run/ui", "remix"],
     "denyFiles": ["demos/frame-navigation/app/**/*.test.*"]
   }
 }

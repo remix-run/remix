@@ -3,7 +3,7 @@ import {
   importModule,
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
-import { run } from 'remix/ui'
+import { run } from 'remix/component'
 import { closePagefindSearch, startPagefindSearch } from 'remix-docs-shared/search/browser'
 
 let app = run({

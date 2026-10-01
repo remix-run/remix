@@ -22,7 +22,7 @@ Refer to ./.agents/skills/remix/SKILL.md for the Remix mental model and how to f
 ## Starter Layout
 
 - `app/routes.ts` defines the shared route contract used by server and browser modules for type-safe hrefs
-- `app/router.ts` wires routes to controllers and installs the standard Remix UI renderer used by actions
+- `app/router.ts` wires routes to controllers and installs the standard Remix component renderer used by actions
 - Put top-level route actions in `app/actions/controller.tsx`; add `app/actions/<route-key>/controller.tsx` for nested route maps. `app/actions/controller.test.ts` is the root controller's router smoke test
 - `app/actions/home-page.tsx` and `app/actions/document.tsx` render the route-owned starter UI
 - `app/actions/public/` contains the browser runtime entry and interactive prompt button

@@ -2,6 +2,28 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
+## v0.9.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Return upstream redirects to proxy clients by default so redirect responses retain their status, `Location`, and headers such as `Set-Cookie`. The new `redirect` option supports following redirects internally, and a defined per-call `init.redirect` takes precedence over that option.
+
+  To preserve the previous behavior and keep following redirects inside the proxy:
+
+  ```diff
+  -let proxy = createFetchProxy('https://remix.run')
+  +let proxy = createFetchProxy('https://remix.run', { redirect: 'follow' })
+  ```
+
+### Patch Changes
+
+- Remove connection-specific request headers, fields named by `Connection`, and incoming `Content-Length` before forwarding. The outgoing `fetch` now determines framing for the forwarded body, including when a custom `fetch` is provided.
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.3`](https://github.com/remix-run/remix/releases/tag/headers@0.21.3)
+
 ## v0.8.6
 
 ### Patch Changes

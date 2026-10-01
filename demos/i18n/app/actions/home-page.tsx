@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/ui'
+import type { Handle } from 'remix/component'
 
 import { detectionSources, languageNames, supportedLanguages } from '../i18n/config.ts'
 import { routes } from '../routes.ts'

@@ -225,8 +225,8 @@ let { href, importMap, preloads } = await assetServer.getScriptEntry('app/assets
 This can be used when rendering a document shell:
 
 ```tsx
-import type { Handle, RemixNode } from 'remix/ui'
-import { ImportMap } from 'remix/ui/server'
+import type { Handle, RemixNode } from 'remix/component'
+import { ImportMap } from 'remix/component/server'
 import { assetServer } from './assets.ts'
 
 let { href, importMap, preloads } = await assetServer.getScriptEntry('app/assets/entry.tsx')
@@ -248,10 +248,10 @@ export function Document(handle: Handle<{ children: RemixNode }>) {
 }
 ```
 
-This can also be used for resolved client entries in [`remix/ui`](https://github.com/remix-run/remix/tree/main/packages/ui) when using `import.meta.url` as the client entry ID:
+This can also be used for resolved client entries in [`remix/component`](https://github.com/remix-run/remix/tree/main/packages/component) when using `import.meta.url` as the client entry ID:
 
 ```tsx
-import { renderToStream } from 'remix/ui/server'
+import { renderToStream } from 'remix/component/server'
 import { assetServer } from './assets.ts'
 
 let stream = renderToStream(<App />, {
@@ -324,7 +324,7 @@ let preloads = await assetServer.getPreloads([
 //   '/assets/app/actions/public/entry.ts',
 //   '/assets/app/search/public/search.tsx',
 //   '/assets/app/search/public/utils.ts',
-//   '/assets/npm/remix/ui/index.js',
+//   '/assets/npm/remix/component/index.js',
 //   ...etc
 // ]
 ```
@@ -436,22 +436,22 @@ If only some modules have side effects, `sideEffects` can be set to an array of 
 }
 ```
 
-For example, an application might import `css` from `remix/ui`:
+For example, an application might import `css` from `remix/component`:
 
 ```ts
 // entry.ts
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 ```
 
 That binding passes through two barrel files before reaching its implementation:
 
 ```ts
-// remix/src/ui.ts
-export * from '@remix-run/ui'
+// remix/src/component.ts
+export * from '@remix-run/component'
 ```
 
 ```ts
-// @remix-run/ui/dist/index.js
+// @remix-run/component/dist/index.js
 export { css } from './style/css-mixin.js'
 // ...other exports
 ```
@@ -460,7 +460,7 @@ After optimization, the served `entry.ts` module imports the binding directly fr
 
 ```ts
 // entry.ts
-import { css } from '/assets/npm/@remix-run/ui/dist/style/css-mixin.js'
+import { css } from '/assets/npm/@remix-run/component/dist/style/css-mixin.js'
 ```
 
 ## Script Options
@@ -985,7 +985,7 @@ if (import.meta.hot) {
 
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - A Fetch-based router that pairs naturally with `assets`
 - [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) - Provides the server-side `import.meta.hot` runtime and browser HMR channel used by `hmr`
-- [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) - Provides a Remix UI component HMR loader for `scripts.loaders`
+- [`component-hmr`](https://github.com/remix-run/remix/tree/main/packages/component-hmr) - Provides a Remix component HMR loader for `scripts.loaders`
 
 ## License
 

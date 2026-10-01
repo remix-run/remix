@@ -2,6 +2,17 @@
 
 This is the changelog for [`form-data-middleware`](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.8
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+  - [`form-data-parser@0.17.7`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.7)
+  - [`headers@0.21.3`](https://github.com/remix-run/remix/releases/tag/headers@0.21.3)
+
 ## v0.3.7
 
 ### Patch Changes

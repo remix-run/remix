@@ -1,6 +1,6 @@
-import type { Handle, RemixNode } from 'remix/ui'
-import button from 'remix/ui/button'
+import type { Handle, RemixNode } from 'remix/component'
 
+import { button } from './button.ts'
 import { DocsShellBehavior } from './public/docs-shell.tsx'
 import {
   mobileNavigationBackdropCss,
@@ -57,7 +57,7 @@ export function DocsShell(handle: Handle<DocsShellProps>) {
           type="button"
           aria-controls="docs-navigation"
           aria-expanded="false"
-          mix={[button({ tone: 'ghost' }), mobileNavigationButtonCss]}
+          mix={[button.ghost, mobileNavigationButtonCss]}
         >
           <span>{handle.props.mobileNavigationLabel}</span>
           <Icon name="chevron-d" />
@@ -68,7 +68,7 @@ export function DocsShell(handle: Handle<DocsShellProps>) {
             type="button"
             aria-controls="docs-secondary-navigation"
             aria-expanded="false"
-            mix={[button({ tone: 'ghost' }), mobileNavigationButtonCss]}
+            mix={[button.ghost, mobileNavigationButtonCss]}
           >
             <span>On this page</span>
             <Icon name="chevron-d" />

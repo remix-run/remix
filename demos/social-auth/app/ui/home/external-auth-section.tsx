@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
 
 import { designSystem } from '../design-system.ts'
 import { formatProviderLabel, renderProviderIcon } from '../provider-presentation.tsx'

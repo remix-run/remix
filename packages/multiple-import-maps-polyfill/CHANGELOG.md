@@ -1,3 +1,9 @@
+## v0.1.1
+
+### Patch Changes
+
+- Declare which package modules have side effects.
+
 ## v0.1.0
 
 ### Minor Changes

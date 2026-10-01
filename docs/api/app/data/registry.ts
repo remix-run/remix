@@ -1,4 +1,4 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 import { theme } from './design.ts'
 import type { DemoDocFile } from './demos.tsx'
 import type { ApiDocFile, ApiTypeKind, PackageDocFile } from './markdown.ts'

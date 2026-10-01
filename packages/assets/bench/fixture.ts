@@ -56,10 +56,10 @@ async function readBasicFixture(): Promise<BenchFixture> {
       '/assets/app/summary.@',
       '/assets/bench-packages/shared/strings.@',
       '/assets/bench-packages/ui/panel.@',
-      '/assets/packages/ui/',
+      '/assets/packages/component/',
     ],
     expectedEntrySourceSubstrings: [
-      '@remix-run/ui',
+      '@remix-run/component',
       '#packages/shared/strings.ts',
       '@bench/ui/panel.tsx',
       './summary.ts',
@@ -67,7 +67,7 @@ async function readBasicFixture(): Promise<BenchFixture> {
     expectedPreloadUrlSubstrings: [
       '/assets/bench-packages/shared/strings.@',
       '/assets/bench-packages/ui/panel.@',
-      '/assets/packages/ui/',
+      '/assets/packages/component/',
     ],
     createStats: async () => [
       { label: 'app', value: await countSourceModules(projectRoot) },
@@ -94,7 +94,7 @@ async function readDeepGraphFixture(): Promise<BenchFixture> {
     expectedEntrySourceSubstrings: [],
     expectedPreloadUrlSubstrings: [
       '/assets/bench-packages/ui/',
-      '/assets/packages/ui/',
+      '/assets/packages/component/',
       '/assets/node_modules/%40remix-run/__mock-package/',
       '/assets/node_modules/%40remix-run/__mock-ui/',
       '/assets/node_modules/%40remix-run/__mock-utils/',
@@ -125,7 +125,7 @@ interface CreateBenchFixtureOptions {
 
 async function createBenchFixture(options: CreateBenchFixtureOptions): Promise<BenchFixture> {
   let repoRoot = path.resolve(import.meta.dirname, '../../..')
-  let repoUiRoot = path.join(repoRoot, 'packages/ui')
+  let repoComponentRoot = path.join(repoRoot, 'packages/component')
   let entryPoint = path.join(options.projectRoot, options.entryPointFile)
   let nodeModulesRoot = path.join(path.dirname(options.projectRoot), 'node_modules')
 
@@ -134,14 +134,14 @@ async function createBenchFixture(options: CreateBenchFixtureOptions): Promise<B
     label: options.label,
     entryPoint,
     assetServer: {
-      allowFiles: [path.join(options.projectRoot, 'app'), options.packagesRoot, repoUiRoot],
+      allowFiles: [path.join(options.projectRoot, 'app'), options.packagesRoot, repoComponentRoot],
       allowPackages: options.id === 'deep-graph' ? ['@remix-run/__mock-package'] : undefined,
       basePath: '/assets',
       mounts: {
         app: createFileRoot(repoRoot, path.join(options.projectRoot, 'app')),
         'bench-packages': createFileRoot(repoRoot, options.packagesRoot),
         node_modules: createFileRoot(repoRoot, nodeModulesRoot),
-        'packages/ui': createFileRoot(repoRoot, repoUiRoot),
+        'packages/component': createFileRoot(repoRoot, repoComponentRoot),
       },
     },
     entryPointUrl: options.entryPointUrl,

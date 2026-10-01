@@ -1,8 +1,8 @@
 import * as path from 'node:path'
 
 import type { ScriptEntry } from 'remix/assets'
-import type { Handle, RemixNode } from 'remix/ui'
-import { ImportMap } from 'remix/ui/server'
+import type { Handle, RemixNode } from 'remix/component'
+import { ImportMap } from 'remix/component/server'
 import { PagefindElements, shouldLoadPagefind } from 'remix-docs-shared/search'
 import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'

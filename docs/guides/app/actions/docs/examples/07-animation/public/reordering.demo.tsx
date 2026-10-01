@@ -1,6 +1,6 @@
-import { css } from "remix/ui";
-import type { Handle } from "remix/ui";
-import { animateLayout, spring } from "remix/ui/animation";
+import { css } from "remix/component";
+import type { Handle } from "remix/component";
+import { animateLayout, spring } from "@remix-run/ui/animation";
 
 export function ReorderingDemo(handle: Handle) {
   let order = initialOrder;

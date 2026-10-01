@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/spa",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "Client-rendered application routing for Remix",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -41,9 +41,9 @@
     "typescript": "catalog:"
   },
   "dependencies": {
+    "@remix-run/component": "workspace:^",
     "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/render-middleware": "workspace:^",
-    "@remix-run/ui": "workspace:^"
+    "@remix-run/render-middleware": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

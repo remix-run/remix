@@ -1,4 +1,4 @@
-import { clientEntry, Frame, css, on, type Handle } from 'remix/ui'
+import { clientEntry, Frame, css, on, type Handle } from 'remix/component'
 
 export const ClientFrameExample = clientEntry(
   import.meta.url,

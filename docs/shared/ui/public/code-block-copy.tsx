@@ -1,5 +1,5 @@
-import { clientEntry } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import { clientEntry } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 export const CodeBlockCopyButtons = clientEntry(
   import.meta.url,

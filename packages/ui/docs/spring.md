@@ -5,7 +5,7 @@ A physics-based spring animation function that returns an iterator with CSS easi
 ## Basic Usage
 
 ```tsx
-import { spring } from './spring.ts'
+import { spring } from '@remix-run/ui/animation'
 
 // Using a preset
 spring('bouncy') // bouncy with overshoot

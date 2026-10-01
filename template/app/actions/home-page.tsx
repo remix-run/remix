@@ -1,6 +1,6 @@
 // Delete this file and put your own home page in app/actions/controller.tsx
-import type { Handle, RemixNode } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/component'
+import { css } from 'remix/component'
 
 import { Document } from './document.tsx'
 import { PromptButton } from './public/prompt-button.tsx'
@@ -196,7 +196,6 @@ function CodingWithAiCard() {
         <PromptButton text="I want to build a simple headless Shopify store, what does Remix have available to help scaffold this?" />
         <PromptButton text="Add a sqlite database with a users table and scaffold a signup flow" />
         <PromptButton text="Make a copy to clipboard component that confirms to the user it was copied then resets after a few seconds" />
-        <PromptButton text="Add a page with a remix/ui/select component and remix/ui/button variants" />
         <PromptButton text="Add compression middleware" />
       </div>
     </div>
