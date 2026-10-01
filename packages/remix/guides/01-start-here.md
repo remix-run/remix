@@ -29,7 +29,7 @@ The quickest way to start a Remix app is with the `remix` CLI. It creates a smal
 First run:
 
 ```sh
-npx remix@next new my-remix-app
+npx remix new my-remix-app
 ```
 
 Next, install the project dependencies:

@@ -99,16 +99,16 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 
 ## Installation
 
-To try the current Remix beta, install the `next` dist-tag:
+Install Remix:
 
 ```sh
-npm install remix@next
+npm i remix
 ```
 
-To create a new Remix app with the CLI, use `npx remix@next new`:
+To create a new Remix app with the CLI, use `npx remix new`:
 
 ```sh
-npx remix@next new my-remix-app
+npx remix new my-remix-app
 ```
 
 If you want to play around with the bleeding edge, we also build the latest `main` branch into a `preview/main` branch which can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
