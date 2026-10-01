@@ -2,6 +2,12 @@
 
 This is the changelog for [`html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
 ## v0.3.2
 
 ### Patch Changes

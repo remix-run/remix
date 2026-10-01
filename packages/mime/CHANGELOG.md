@@ -2,6 +2,12 @@
 
 This is the changelog for [`mime`](https://github.com/remix-run/remix/tree/main/packages/mime). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
 ## v0.4.3
 
 ### Patch Changes

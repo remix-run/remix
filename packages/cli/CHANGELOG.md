@@ -2,6 +2,25 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- New-app examples now use the stable Remix release.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.0`](https://github.com/remix-run/remix/releases/tag/assets@1.0.0)
+  - [`data-table@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table@1.0.0)
+  - [`data-table-mysql@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@1.0.0)
+  - [`data-table-postgres@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@1.0.0)
+  - [`data-table-sqlite@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@1.0.0)
+  - [`terminal@1.0.0`](https://github.com/remix-run/remix/releases/tag/terminal@1.0.0)
+  - [`test@1.0.0`](https://github.com/remix-run/remix/releases/tag/test@1.0.0)
+
 ## v0.8.1
 
 ### Patch Changes

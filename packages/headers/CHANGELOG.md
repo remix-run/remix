@@ -2,6 +2,12 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
 ## v0.21.3
 
 ### Patch Changes

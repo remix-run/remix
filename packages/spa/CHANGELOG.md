@@ -2,6 +2,19 @@
 
 This is the changelog for [`spa`](https://github.com/remix-run/remix/tree/main/packages/spa). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`component@1.0.0`](https://github.com/remix-run/remix/releases/tag/component@1.0.0)
+  - [`fetch-router@1.0.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@1.0.0)
+  - [`render-middleware@1.0.0`](https://github.com/remix-run/remix/releases/tag/render-middleware@1.0.0)
+
 ## v0.1.4
 
 ### Patch Changes

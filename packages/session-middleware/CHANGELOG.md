@@ -2,6 +2,19 @@
 
 This is the changelog for [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cookie@1.0.0`](https://github.com/remix-run/remix/releases/tag/cookie@1.0.0)
+  - [`fetch-router@1.0.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@1.0.0)
+  - [`session@1.0.0`](https://github.com/remix-run/remix/releases/tag/session@1.0.0)
+
 ## v0.5.1
 
 ### Patch Changes
