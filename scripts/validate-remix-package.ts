@@ -8,11 +8,7 @@ import { cliSchemaPath } from './utils/remix-schema.ts'
 const rootDir = path.resolve(import.meta.dirname, '..')
 const remixDir = path.join(rootDir, 'packages', 'remix')
 
-const requiredReadmePaths = [
-  'package/src/assert/README.md',
-  'package/src/fetch-router/README.md',
-  'package/src/component/animation/README.md',
-]
+const requiredReadmePaths = ['package/src/assert/README.md', 'package/src/fetch-router/README.md']
 
 const requiredTypeExportPaths = [
   'package/dist/assets/types/hmr.d.ts',

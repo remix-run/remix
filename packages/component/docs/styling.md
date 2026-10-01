@@ -578,4 +578,4 @@ This example demonstrates:
 
 ## See Also
 
-- [Spring API](./spring.md) - Physics-based animation easing
+- [Spring API](https://github.com/remix-run/remix/blob/main/packages/ui/docs/spring.md) - Physics-based animation easing

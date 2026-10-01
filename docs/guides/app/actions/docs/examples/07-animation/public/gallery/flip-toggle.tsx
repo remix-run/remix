@@ -1,5 +1,5 @@
 import { css, on, type Handle } from "remix/component";
-import { animateLayout } from "remix/component/animation";
+import { animateLayout } from "@remix-run/ui/animation";
 
 export function FlipToggle(handle: Handle) {
   let isOn = false;

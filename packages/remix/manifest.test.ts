@@ -278,10 +278,6 @@ describe('manifest', () => {
       'fetch-router/README.md',
     )
     assert.equal(sourceByMirrorPath.get('remix/src/component/README.md'), 'component/README.md')
-    assert.equal(
-      sourceByMirrorPath.get('remix/src/component/animation/README.md'),
-      'component/src/animation/README.md',
-    )
     assert.equal(sourceByMirrorPath.get('remix/src/cli/README.md'), 'cli/README.md')
   })
 

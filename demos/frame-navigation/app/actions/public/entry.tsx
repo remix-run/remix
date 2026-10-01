@@ -6,7 +6,7 @@ import {
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
 
-import { animateEntrance, spring } from 'remix/component/animation'
+import { animateEntrance, spring } from '@remix-run/ui/animation'
 
 import { routes } from '../../routes.ts'
 

@@ -1,6 +1,6 @@
 # ui
 
-Headless, accessible UI primitives for Remix components.
+Headless, accessible UI primitives and animation utilities for Remix components.
 
 ## Installation
 
@@ -81,6 +81,29 @@ function ViewOptions(handle: Handle) {
 - [`@remix-run/ui/select`](https://github.com/remix-run/remix/blob/main/packages/ui/src/select/README.md)
 - [`@remix-run/ui/tabs`](https://github.com/remix-run/remix/blob/main/packages/ui/src/tabs/README.md)
 - [`@remix-run/ui/toggle`](https://github.com/remix-run/remix/blob/main/packages/ui/src/toggle/README.md)
+
+## Animation
+
+Use the animation utilities for entrance, exit, layout, spring, and tween animation:
+
+```tsx
+import { animateEntrance, animateExit, spring } from '@remix-run/ui/animation'
+
+function Toast() {
+  return () => (
+    <div
+      mix={[
+        animateEntrance({ opacity: 0, ...spring('snappy') }),
+        animateExit({ opacity: 0, ...spring('snappy') }),
+      ]}
+    >
+      Saved
+    </div>
+  )
+}
+```
+
+See the [`animation` module README](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) for layout animation, CSS transitions, Web Animations API options, and imperative animation.
 
 ## License
 

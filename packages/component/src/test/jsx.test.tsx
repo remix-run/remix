@@ -4,7 +4,6 @@ import type { Assert, Equal } from './utils.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 import { createMixin, on, ref, unsafeHTML } from '../index.ts'
 
-import { animateLayout } from '../animation/index.ts'
 import type { Dispatched, MixInput, MixinDescriptor, MixinHandle, Props } from '../index.ts'
 
 type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix
@@ -326,12 +325,6 @@ describe('jsx', () => {
             }),
           ]}
         />
-      )
-    })
-
-    it('accepts animateLayout mixin usage', () => {
-      let element = (
-        <div mix={[animateLayout(), animateLayout({ duration: 300, easing: 'linear' })]} />
       )
     })
 

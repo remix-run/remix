@@ -1,7 +1,7 @@
 import { css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
-import { spring } from "remix/component/animation";
-import type { SpringPreset } from "remix/component/animation";
+import { spring } from "@remix-run/ui/animation";
+import type { SpringPreset } from "@remix-run/ui/animation";
 
 import { dragVelocityEvents } from "./gallery/drag-release.ts";
 

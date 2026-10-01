@@ -42,6 +42,12 @@ const cardStyle = css({
 
 Use Remix animation helpers when the motion depends on rendering state: a node enters, a node exits, a keyed item moves, or an event needs an interruptible animation.
 
+The animation helpers are provided by `@remix-run/ui`. This package is currently unstable and versioned independently. It is not available through the `remix` package, so install it separately:
+
+```sh
+npm i remix @remix-run/ui
+```
+
 ::frame{src="/examples/07-animation/press-state/"}
 
 ## Entrance and exit animations {#entrance-and-exit-animations}
@@ -50,7 +56,7 @@ Use Remix animation helpers when the motion depends on rendering state: a node e
 
 ```tsx filename=app/ui/public/notice.tsx
 import { clientEntry, css, on } from "remix/component";
-import { animateEntrance, animateExit, spring } from "remix/component/animation";
+import { animateEntrance, animateExit, spring } from "@remix-run/ui/animation";
 import type { Handle } from "remix/component";
 
 export const Notice = clientEntry(import.meta.url, function Notice(handle: Handle) {
@@ -113,7 +119,7 @@ Pass `true` for the default opacity animation or `false` to disable a mixin with
 
 ```tsx filename=app/ui/public/reorder-list.tsx
 import { clientEntry, css, on } from "remix/component";
-import { animateLayout, spring } from "remix/component/animation";
+import { animateLayout, spring } from "@remix-run/ui/animation";
 import type { Handle } from "remix/component";
 
 const initialItems = ["Design", "Build", "Review"];
@@ -171,7 +177,7 @@ Layout animation includes size projection by default. Pass `size: false` when on
 
 ```tsx filename=app/ui/public/bouncy-switch.tsx
 import { clientEntry, css, on } from "remix/component";
-import { spring } from "remix/component/animation";
+import { spring } from "@remix-run/ui/animation";
 import type { Handle } from "remix/component";
 
 export const BouncySwitch = clientEntry(import.meta.url, function BouncySwitch(handle: Handle) {
@@ -221,7 +227,7 @@ const thumbStyle = css({
 Use `tween(...)` when you need a time-based value loop rather than CSS or WAAPI timing.
 
 ```ts filename=app/ui/public/count-up.ts
-import { easings, tween } from "remix/component/animation";
+import { easings, tween } from "@remix-run/ui/animation";
 
 export function countUp(from: number, to: number, onValue: (value: number) => void) {
   let animation = tween({ from, to, duration: 300, curve: easings.easeOut });
@@ -258,7 +264,7 @@ For custom imperative animations, keep the current animation in setup scope and 
 
 ```tsx filename=app/ui/public/ripple-button.tsx
 import { clientEntry, css, on, ref } from "remix/component";
-import { spring } from "remix/component/animation";
+import { spring } from "@remix-run/ui/animation";
 import type { Handle } from "remix/component";
 
 export const RippleButton = clientEntry(import.meta.url, function RippleButton(_handle: Handle) {

@@ -29,10 +29,6 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./animation": {
-      "types": "./src/animation.ts",
-      "default": "./src/animation.ts"
-    },
     "./dev/refresh": {
       "types": "./src/dev/refresh.ts",
       "default": "./src/dev/refresh.ts"
@@ -60,10 +56,6 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      },
-      "./animation": {
-        "types": "./dist/animation.d.ts",
-        "default": "./dist/animation.js"
       },
       "./dev/refresh": {
         "types": "./dist/dev/refresh.d.ts",

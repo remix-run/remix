@@ -1,6 +1,6 @@
 import { css, on } from "remix/component";
 import type { Handle } from "remix/component";
-import { animateEntrance, animateExit, spring } from "remix/component/animation";
+import { animateEntrance, animateExit, spring } from "@remix-run/ui/animation";
 
 export function NoticePresenceDemo(handle: Handle) {
   let visible = true;

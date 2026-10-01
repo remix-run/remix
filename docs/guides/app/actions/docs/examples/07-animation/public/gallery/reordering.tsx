@@ -1,5 +1,5 @@
 import { css, type Handle } from "remix/component";
-import { animateLayout, spring } from "remix/component/animation";
+import { animateLayout, spring } from "@remix-run/ui/animation";
 
 const initialOrder = ["#ff0088", "#dd00ee", "#9911ff", "#0d63f8"];
 

@@ -1,5 +1,5 @@
 import { css, on, type Handle } from "remix/component";
-import { animateEntrance, animateLayout } from "remix/component/animation";
+import { animateEntrance, animateLayout } from "@remix-run/ui/animation";
 
 export function DefaultAnimate(handle: Handle) {
   let nextId = 1;

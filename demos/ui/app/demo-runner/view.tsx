@@ -250,12 +250,12 @@ function groupDemosBySection(demos: DemoFile[]): DemoSection[] {
   return [
     {
       title: 'Component runtime',
-      description: 'Rendering, interaction, animation, and mixin demos for @remix-run/component.',
+      description: 'Rendering, interaction, and mixin demos for @remix-run/component.',
       groups: groupDemosByModule(componentDemos),
     },
     {
-      title: 'UI primitives',
-      description: 'Headless primitive demos with app-owned markup and visual styles.',
+      title: 'UI',
+      description: 'Headless primitive and animation utility demos for @remix-run/ui.',
       groups: groupDemosByModule(uiDemos),
     },
   ].filter((section) => section.groups.length > 0)

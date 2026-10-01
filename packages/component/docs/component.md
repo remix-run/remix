@@ -716,9 +716,6 @@ function List(handle: Handle) {
 - [Composition](./composition.md)
 - [Patterns](./patterns.md)
 - [Test](../src/test/README.md)
-- Animations
-  - [spring](./spring.md)
-  - [tween](./tween.md)
 - [Server](../src/server/README.md)
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

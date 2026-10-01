@@ -1,5 +1,5 @@
 import { css } from "remix/component";
-import { animateEntrance, spring } from "remix/component/animation";
+import { animateEntrance, spring } from "@remix-run/ui/animation";
 
 export function EnterAnimation() {
   return () => (

@@ -95,7 +95,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [tar-parser](packages/tar-parser): A fast, efficient parser for tar streams in any JavaScript environment
 - [terminal](packages/terminal): Terminal output utilities for JavaScript libraries and CLIs
 - [test](packages/test): A test framework for JavaScript and TypeScript projects
-- [ui](packages/ui): Headless, accessible UI primitives for Remix components
+- [ui](packages/ui): Headless, accessible UI primitives and animation utilities for Remix components
 
 ## Installation
 

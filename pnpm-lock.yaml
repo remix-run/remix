@@ -97,6 +97,9 @@ importers:
 
   demos/frame-navigation:
     dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
@@ -218,6 +221,9 @@ importers:
 
   demos/timeboxer:
     dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
       remix:
         specifier: workspace:*
         version: link:../../packages/remix

@@ -1,7 +1,7 @@
 import type { Handle } from "remix/component";
 import { css, on } from "remix/component";
 
-import { animateEntrance, animateExit } from "remix/component/animation";
+import { animateEntrance, animateExit } from "@remix-run/ui/animation";
 
 export function MixinPresenceList(handle: Handle) {
   let nextId = 1;

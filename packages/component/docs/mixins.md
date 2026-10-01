@@ -93,7 +93,7 @@ const observeSize = createMixin<HTMLElement>((handle) => {
 
 ## Deferring removal with `persistNode`
 
-For ordinary exit animations, use `animateExit` from `remix/component/animation`. Custom mixins can use the same underlying lifecycle API when they need control over teardown:
+For ordinary exit animations, use `animateExit` from `@remix-run/ui/animation`. Custom mixins can use the same underlying lifecycle API when they need control over teardown:
 
 ```tsx
 import { createMixin } from 'remix/component'
@@ -152,4 +152,4 @@ Without reclamation, `beforeRemove` runs first, then the teardown callbacks sett
 - `link(href, options?)` adds navigation behavior and link semantics.
 - `css(styles)` applies generated styles through `mix`.
 
-See [Event Mixins](https://github.com/remix-run/remix/blob/main/packages/component/docs/interactions.md) for custom event composition and [Animation](https://github.com/remix-run/remix/blob/main/packages/component/src/animation/README.md) for entrance, exit, and layout helpers.
+See [Event Mixins](https://github.com/remix-run/remix/blob/main/packages/component/docs/interactions.md) for custom event composition and [Animation](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) for entrance, exit, and layout helpers.

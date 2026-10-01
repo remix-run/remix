@@ -40,7 +40,6 @@
     "./component-hmr/node": "./src/component-hmr/node.ts",
     "./component-hmr/runtime/browser": "./src/component-hmr/runtime/browser.ts",
     "./component-hmr/runtime/server": "./src/component-hmr/runtime/server.ts",
-    "./component/animation": "./src/component/animation.ts",
     "./component/dev/refresh": "./src/component/dev/refresh.ts",
     "./component/jsx-dev-runtime": "./src/component/jsx-dev-runtime.ts",
     "./component/jsx-runtime": "./src/component/jsx-runtime.ts",
@@ -182,10 +181,6 @@
       "./component-hmr/runtime/server": {
         "types": "./dist/component-hmr/runtime/server.d.ts",
         "default": "./dist/component-hmr/runtime/server.js"
-      },
-      "./component/animation": {
-        "types": "./dist/component/animation.d.ts",
-        "default": "./dist/component/animation.js"
       },
       "./component/dev/refresh": {
         "types": "./dist/component/dev/refresh.d.ts",

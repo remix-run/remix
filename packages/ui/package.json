@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/ui",
   "version": "0.11.0",
-  "description": "Headless, accessible UI primitives for Remix",
+  "description": "Headless, accessible UI primitives and animation utilities for Remix components",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -15,6 +15,8 @@
     "README.md",
     "dist",
     "src",
+    "!dist/**/demos",
+    "!src/**/demos",
     "!src/**/*.demo.ts",
     "!src/**/*.demo.tsx",
     "!src/**/*.test.ts",
@@ -30,6 +32,10 @@
     "./anchor": {
       "types": "./src/anchor.ts",
       "default": "./src/anchor.ts"
+    },
+    "./animation": {
+      "types": "./src/animation.ts",
+      "default": "./src/animation.ts"
     },
     "./combobox": {
       "types": "./src/combobox.tsx",
@@ -70,6 +76,10 @@
       "./anchor": {
         "types": "./dist/anchor.d.ts",
         "default": "./dist/anchor.js"
+      },
+      "./animation": {
+        "types": "./dist/animation.d.ts",
+        "default": "./dist/animation.js"
       },
       "./combobox": {
         "types": "./dist/combobox.d.ts",
@@ -129,6 +139,7 @@
     "ui",
     "headless",
     "accessible",
-    "primitives"
+    "primitives",
+    "animation"
   ]
 }

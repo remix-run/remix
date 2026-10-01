@@ -11,7 +11,6 @@
   "remix/component-hmr/node": "@remix-run/component-hmr/node",
   "remix/component-hmr/runtime/browser": "@remix-run/component-hmr/runtime/browser",
   "remix/component-hmr/runtime/server": "@remix-run/component-hmr/runtime/server",
-  "remix/component/animation": "@remix-run/component/animation",
   "remix/component/dev/refresh": "@remix-run/component/dev/refresh",
   "remix/component/jsx-dev-runtime": "@remix-run/component/jsx-dev-runtime",
   "remix/component/jsx-runtime": "@remix-run/component/jsx-runtime",

@@ -15,7 +15,7 @@ export const assetServer = createAssetServer({
     'docs/guides/app/**/public/**',
     'docs/shared/**/public/**',
   ],
-  allowPackages: ['remix'],
+  allowPackages: ['@remix-run/ui', 'remix'],
   denyFiles: ['**/*.test.*'],
   mounts: {
     app: 'docs/guides/app',

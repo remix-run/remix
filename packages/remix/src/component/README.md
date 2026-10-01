@@ -7,7 +7,7 @@ the server, stream to the browser, and hydrate only where you need interactivity
 
 - Component runtime APIs for rendering, hydration, link and form frame navigation, and JSX
 - Server rendering APIs for streaming component trees and frames
-- `mix` composition with event, ref, CSS, and animation helpers
+- `mix` composition with event, ref, and CSS helpers
 - Lower-level utilities for events, refs, attributes, and rendering lifecycle
 
 ## Installation
