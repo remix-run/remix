@@ -18,7 +18,7 @@ describe('asset import maps during navigation', () => {
     await fs.writeFile(
       path.join(fixtureDir, 'entry.ts'),
       `
-      import { run } from '../../packages/ui/src/index.ts'
+      import { run } from '../../packages/component/src/index.ts'
       import { version } from './shared.ts'
       let app = run({ loadModule: (href) => import(href) })
       await app.ready()
@@ -29,8 +29,11 @@ describe('asset import maps during navigation', () => {
       return createAssetServer({
         rootDir: workspaceDir,
         basePath: '/assets',
-        mounts: { app: path.relative(workspaceDir, fixtureDir), ui: 'packages/ui/src' },
-        allowFiles: [path.relative(workspaceDir, fixtureDir) + '/**', 'packages/ui/src/**'],
+        mounts: {
+          app: path.relative(workspaceDir, fixtureDir),
+          component: 'packages/component/src',
+        },
+        allowFiles: [path.relative(workspaceDir, fixtureDir) + '/**', 'packages/component/src/**'],
         fingerprint: true,
         watch: false,
       })

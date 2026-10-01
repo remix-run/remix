@@ -1,4 +1,4 @@
-import { css, on, ref } from "remix/ui";
+import { css, on, ref } from "remix/component";
 
 export function InterruptibleKeyframes() {
   let box: HTMLDivElement;

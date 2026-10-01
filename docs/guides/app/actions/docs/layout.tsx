@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 
-import type { Handle, RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/component'
 import { shouldLoadPagefind } from 'remix-docs-shared/search'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'

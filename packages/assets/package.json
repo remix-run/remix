@@ -57,10 +57,10 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@remix-run/component": "workspace:*",
     "@remix-run/node-hmr": "workspace:^",
     "@remix-run/node-tsx": "workspace:^",
     "@remix-run/test": "workspace:*",
-    "@remix-run/ui": "workspace:*",
     "@types/node": "catalog:",
     "@types/picomatch": "^4.0.3",
     "playwright": "catalog:",

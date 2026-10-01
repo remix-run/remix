@@ -47,7 +47,7 @@ The page needs to distinguish the stored album from an unsuccessful edit. Add op
 
 ```tsx filename=app/actions/albums/edit/page.tsx lines=[1,10-11,22,28,31-33,41-42,44-45,47]
 import type { Issue } from "remix/data-schema";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import type { Album } from "../../../data/tables.ts";
 import { routes } from "../../../routes.ts";
@@ -198,8 +198,8 @@ In [Start Here](/start-here/), we hydrated the whole form and set pending state 
 We can show progress by hydrating just the save button. Put it in the edit action's `public/` directory:
 
 ```tsx filename=app/actions/albums/edit/public/save-button.tsx
-import { clientEntry } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { clientEntry } from "remix/component";
+import type { Handle } from "remix/component";
 
 export const SaveButton = clientEntry(import.meta.url, function SaveButton(handle: Handle) {
   let pending = false;

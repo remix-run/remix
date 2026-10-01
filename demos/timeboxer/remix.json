@@ -9,7 +9,7 @@
       "packages": "packages"
     },
     "allowFiles": ["demos/timeboxer/app/routes.ts", "demos/timeboxer/app/**/public/**"],
-    "allowPackages": ["remix"],
+    "allowPackages": ["@remix-run/ui", "remix"],
     "denyFiles": ["demos/timeboxer/app/**/*.test.*"]
   },
   "db": {

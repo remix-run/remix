@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 
 import { codeToHtml } from "shiki";
-import { clientEntry, css, unsafeHTML } from "remix/ui";
-import type { Handle, RemixNode } from "remix/ui";
+import { clientEntry, css, unsafeHTML } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 import { shikiThemes } from "remix-docs-shared/markdown/code-blocks";
 
 import type { AppContext } from "../../../router.ts";

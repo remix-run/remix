@@ -1,6 +1,5 @@
-import { css, ref } from "remix/ui";
-import { anchor } from "remix/ui/anchor";
-import button from "remix/ui/button";
+import { css, ref } from "remix/component";
+import { anchor } from "@remix-run/ui/anchor";
 
 /**
  * @name Anchor
@@ -32,7 +31,7 @@ export function AnchorPositioning() {
     <div mix={demoCss}>
       <button
         mix={[
-          button(),
+          buttonCss,
           ref((node, signal) => {
             if (!(node instanceof HTMLElement)) return;
 
@@ -82,6 +81,15 @@ const demoCss = css({
   placeItems: "center",
   minHeight: "9rem",
   width: "min(100%, 24rem)",
+});
+
+const buttonCss = css({
+  minHeight: "30px",
+  paddingInline: "12px",
+  border: "1px solid #d1d1d1",
+  borderRadius: "999px",
+  background: "#fff",
+  color: "#101010",
 });
 
 const floatingCss = css({

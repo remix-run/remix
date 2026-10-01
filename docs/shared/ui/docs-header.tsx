@@ -1,6 +1,6 @@
-import { css, type Handle } from 'remix/ui'
-import button from 'remix/ui/button'
+import { css, type Handle } from 'remix/component'
 
+import { button } from './button.ts'
 import { Icon } from './icon.tsx'
 
 export interface DocsNavigationLink {
@@ -80,7 +80,7 @@ export function DocsHeader(handle: Handle<DocsHeaderProps>) {
         id="site-menu-toggle"
         type="button"
         popovertarget="site-primary-navigation"
-        mix={[button({ tone: 'ghost' }), menuToggleCss]}
+        mix={[button.ghost, menuToggleCss]}
       >
         <span aria-hidden="true" mix={menuIconCss}>
           <span />

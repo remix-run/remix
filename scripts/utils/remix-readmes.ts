@@ -3,11 +3,11 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
 import { rewriteMarkdownLinkDestinations } from 'remix-docs-shared/markdown/parser'
+import { readRemixManifest } from './manifest.ts'
 
 const packagesDir = path.resolve(import.meta.dirname, '..', '..', 'packages')
 const remixDir = path.join(packagesDir, 'remix')
 const remixSrcDir = path.join(remixDir, 'src')
-const remixManifestPath = path.join(remixDir, 'manifest.json')
 const cliPackageName = '@remix-run/cli'
 
 export interface RemixReadmeCopy {
@@ -22,13 +22,11 @@ type PackageJson = {
 }
 
 export function getRemixReadmeMappings(): RemixReadmeCopy[] {
-  let manifest: Record<string, string> = JSON.parse(fs.readFileSync(remixManifestPath, 'utf-8'))
+  let manifest = readRemixManifest(packagesDir).exports
   let packageJsonByName = readPackageJsonByName()
   let mappings: RemixReadmeCopy[] = []
 
   for (let [remixPath, specifier] of Object.entries(manifest)) {
-    if (remixPath.startsWith('_')) continue
-
     let mapping = getRemixReadmeMapping(remixPath, specifier, packageJsonByName)
     if (mapping) {
       mappings.push(mapping)

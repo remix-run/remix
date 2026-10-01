@@ -1,6 +1,6 @@
 import { deepEqual, equal, ok } from 'remix/assert'
 import { describe as suite, it as test } from 'remix/test'
-import { render as renderComponent } from 'remix/ui/test'
+import { render as renderComponent } from 'remix/component/test'
 
 import { ScheduleGrid, type GridScheduleDocument } from './schedule-grid.tsx'
 

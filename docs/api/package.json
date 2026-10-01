@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@remix-run/ui": "workspace:^",
     "oxfmt": "catalog:",
     "remix": "workspace:*",
     "remix-docs-shared": "workspace:*",

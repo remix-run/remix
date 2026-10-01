@@ -2,7 +2,14 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createRouter, type MiddlewareContext } from '@remix-run/fetch-router'
-import { clientEntry, createElement, css, Frame, type Handle, type RemixNode } from '@remix-run/ui'
+import {
+  clientEntry,
+  createElement,
+  css,
+  Frame,
+  type Handle,
+  type RemixNode,
+} from '@remix-run/component'
 
 import { render } from '../index.ts'
 
@@ -14,7 +21,7 @@ type IsEqual<left, right> =
 function expectTypeEquality<_check extends true>() {}
 
 describe('render', () => {
-  it('adds a typed Remix UI renderer to request context', async () => {
+  it('adds a typed Remix component renderer to request context', async () => {
     let middleware = render()
     type AppContext = MiddlewareContext<[typeof middleware]>
     let router = createRouter<AppContext>({ middleware: [middleware] })

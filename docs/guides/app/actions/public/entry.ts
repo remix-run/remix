@@ -1,5 +1,5 @@
-import type { FrameContent } from 'remix/ui'
-import { run } from 'remix/ui'
+import type { FrameContent } from 'remix/component'
+import { run } from 'remix/component'
 import {
   detectMultipleImportMapSupport,
   importModule,
@@ -66,16 +66,16 @@ function getRequestBody(
 }
 
 app.addEventListener('error', (event) => {
-  console.error('Remix UI runtime error:', event.error)
+  console.error('Remix component runtime error:', event.error)
 })
 
 app.ready().catch(() => {})
 
-// HACK: `remix/ui` currently intercepts reloads and same-document hash
+// HACK: `remix/component` currently intercepts reloads and same-document hash
 // navigations because the current Navigation API entry has Remix runtime state.
 // That prevents dev refresh from reloading the document and breaks native hash
 // scrolling/history. Stop these navigations before the Remix listener sees them
-// so the browser keeps owning their behavior. Remove this once `remix/ui` ignores
+// so the browser keeps owning their behavior. Remove this once `remix/component` ignores
 // reloads and same-document hash navigations itself.
 function startNavigationGuard() {
   let navigation = (window as Window & { navigation?: EventTarget }).navigation

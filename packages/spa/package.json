@@ -41,9 +41,9 @@
     "typescript": "catalog:"
   },
   "dependencies": {
+    "@remix-run/component": "workspace:^",
     "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/render-middleware": "workspace:^",
-    "@remix-run/ui": "workspace:^"
+    "@remix-run/render-middleware": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

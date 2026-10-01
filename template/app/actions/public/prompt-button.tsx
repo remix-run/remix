@@ -1,4 +1,4 @@
-import { clientEntry, css, on, type Handle } from 'remix/ui'
+import { clientEntry, css, on, type Handle } from 'remix/component'
 
 const FADE_MS = 180
 const HOLD_MS = 1200

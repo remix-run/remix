@@ -120,7 +120,7 @@ describe('docs responses', () => {
     let markdown = await response.text()
 
     assert.doesNotMatch(markdown, /^::frame/m)
-    assert.match(markdown, /^```tsx\n[^`]*export function ButtonBasic\(/m)
+    assert.match(markdown, /^```tsx\n[^`]*export function AccordionPrimitives\(/m)
   })
 
   it('drops preview-only frames whose source is already in the chapter', async () => {

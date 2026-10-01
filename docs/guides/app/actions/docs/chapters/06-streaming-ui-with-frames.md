@@ -68,8 +68,8 @@ export default createController(routes.albums, {
 Now the page can render that route with `Frame`:
 
 ```tsx filename=app/actions/albums/show-page.tsx
-import { Frame } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { Frame } from "remix/component";
+import type { Handle } from "remix/component";
 
 import { routes } from "../../routes.ts";
 import { Document } from "../document.tsx";
@@ -148,7 +148,7 @@ response type. Normal HTML actions should use the standard `render()` middleware
 continue, such as an email preview or a small embedded fragment:
 
 ```tsx
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 
 // After loading recommendations:
 let html = await renderToString(<AlbumRecommendations albums={recommendations} />);
@@ -168,7 +168,7 @@ and encoding, and cancels requests when a frame is removed or its request is sup
 keeps the redirect destination available so navigation can update the browser URL after a form saves.
 
 If your app needs different request or response handling, you can provide your own `resolveFrame`
-function in the `run()` options. The [`remix/ui` API overview](https://api.remix.run/api/remix/ui/overview/)
+function in the `run()` options. The [`remix/component` API overview](https://api.remix.run/api/remix/component/overview/)
 covers the callback's arguments and return values.
 
 Remix does not sanitize returned HTML before reconciling it into the current document, and
@@ -234,7 +234,7 @@ Start with a form whose action works without browser JavaScript. A client entry 
 same submission, send its `FormData`, and reload a different route after the action succeeds:
 
 ```tsx
-import { on } from "remix/ui";
+import { on } from "remix/component";
 
 // Inside a client-entry component's render function:
 <form

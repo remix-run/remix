@@ -1,10 +1,10 @@
 # render-middleware
 
-Request-scoped response rendering for Remix. It provides the conventional Remix UI renderer and a low-level escape hatch for custom renderers.
+Request-scoped response rendering for Remix. It provides the conventional Remix component renderer and a low-level escape hatch for custom renderers.
 
 ## Features
 
-- **Remix UI rendering** - Stream nodes to HTML responses with `render()`
+- **Remix component rendering** - Stream nodes to HTML responses with `render()`
 - **Framework-owned frames** - Resolve nested and targeted `<Frame>` requests through the current router
 - **Client entry assets** - Resolve source-based `clientEntry()` modules, import maps, and preloads through an asset server
 - **Typed context** - Preserve renderer input and response option types on `context.render`
@@ -25,7 +25,7 @@ import { createAssetServer } from 'remix/assets'
 import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 import { createRouter } from 'remix/router'
-import { Frame } from 'remix/ui'
+import { Frame } from 'remix/component'
 
 let assets = createAssetServer({
   basePath: '/assets',
@@ -77,7 +77,7 @@ The middleware forwards request credentials and session headers to internal fram
 
 ## Custom renderers
 
-Use `renderWith()` when the input is not a Remix UI node or the application owns a fully custom response pipeline. The factory runs once per request and may read the current request context.
+Use `renderWith()` when the input is not a Remix component node or the application owns a fully custom response pipeline. The factory runs once per request and may read the current request context.
 
 ```ts
 import { renderWith } from 'remix/middleware/render'
@@ -101,7 +101,7 @@ Custom renderers are also available through `context.get(Renderer)` when direct-
 
 - [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Source asset compilation and browser module URLs
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Request routing and typed context
-- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Remix UI components, frames, and server rendering
+- [`component`](https://github.com/remix-run/remix/tree/main/packages/component) - Remix components, frames, and server rendering
 - [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Web `Response` helpers
 
 ## Related Work

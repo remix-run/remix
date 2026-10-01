@@ -1,4 +1,4 @@
-import { Frame, css, type Handle } from 'remix/ui'
+import { Frame, css, type Handle } from 'remix/component'
 
 import { exhibits, motionArtifact, type Exhibit } from '../data/exhibits.ts'
 import type { DemoLatency } from '../middleware/demo-latency.ts'
@@ -56,8 +56,8 @@ export function HomePage(handle: Handle<{ latency: DemoLatency; theme: Theme }>)
             LazyFrame works with every response type
           </h2>
           <p mix={introCopyStyle}>
-            The examples alternate between checked-in HTML, server-rendered Remix UI, and Remix UI
-            with a client component. The loading behavior does not change.
+            The examples alternate between checked-in HTML, server-rendered components, and
+            components with a client entry. The loading behavior does not change.
           </p>
         </section>
 
@@ -225,9 +225,9 @@ function categoryLabel(kind: Exhibit['kind']): string {
     case 'html':
       return 'Static HTML'
     case 'ui':
-      return 'Server Remix UI'
+      return 'Server-rendered components'
     case 'interactive':
-      return 'Remix UI + client entry'
+      return 'Components + client entry'
   }
 }
 

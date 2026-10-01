@@ -245,7 +245,7 @@ import { routes } from "../../../routes.ts";
 return redirect(routes.albums.show.href({ albumId: context.params.albumId }), 303);
 ```
 
-For HTML outside the Remix UI render pipeline, the `html` template tag escapes interpolated values and `createHtmlResponse(...)` sets the HTML content type and adds a doctype:
+For HTML outside the Remix component render pipeline, the `html` template tag escapes interpolated values and `createHtmlResponse(...)` sets the HTML content type and adds a doctype:
 
 ```ts
 import { html } from "remix/html-template";

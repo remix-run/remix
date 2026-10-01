@@ -1,7 +1,11 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as s from 'remix/data-schema'
-import { hasRemixPackage, mapToRemixPackage } from '../../app/utils/package-manifest.ts'
+import {
+  hasRemixPackage,
+  isExcludedRemixPackage,
+  mapToRemixPackage,
+} from '../../app/utils/package-manifest.ts'
 import { info, invariant, warn } from './utils.ts'
 
 type PackageOverview = {
@@ -221,25 +225,40 @@ function warnOnInvalidReadmeCodeFenceSyntax(
 ) {
   let relativeReadmePath = path.relative(process.cwd(), readmePath)
 
-  if (
-    JAVASCRIPT_CODE_FENCE_LANGUAGES.has(codeFence.lang) &&
-    (/\bfrom\s+['"]@remix-run\//.test(code) || /\bimport\s*\(\s*['"]@remix-run\//.test(code))
-  ) {
+  if (JAVASCRIPT_CODE_FENCE_LANGUAGES.has(codeFence.lang) && hasUmbrellaImportSpecifier(code)) {
     warn(
       `Potential invalid import syntax in ${relativeReadmePath}:${codeFence.line}. ` +
         `Prefer importing from \`remix/*\` instead of \`@remix-run/*\`.`,
     )
   }
 
-  if (
-    SHELL_CODE_FENCE_LANGUAGES.has(codeFence.lang) &&
-    /\b(?:npm\s+(?:i|install)|pnpm\s+add|yarn\s+add|bun\s+add)\s+[^\n]*@remix-run\//.test(code)
-  ) {
+  if (SHELL_CODE_FENCE_LANGUAGES.has(codeFence.lang) && hasUmbrellaInstallSpecifier(code)) {
     warn(
       `Potential invalid install syntax in ${relativeReadmePath}:${codeFence.line}. ` +
         `Prefer installing \`remix\` instead of \`@remix-run/*\`.`,
     )
   }
+}
+
+function hasUmbrellaImportSpecifier(code: string): boolean {
+  let imports = code.matchAll(
+    /\b(?:from\s+|import\s*\(\s*|import\s+)['"](@remix-run\/[\w-]+(?:\/[\w./-]+)?)['"]/g,
+  )
+  for (let [, specifier] of imports) {
+    if (!isExcludedRemixPackage(specifier)) return true
+  }
+  return false
+}
+
+function hasUmbrellaInstallSpecifier(code: string): boolean {
+  let commands = code.matchAll(
+    /\b(?:npm\s+(?:i|install)|pnpm\s+add|yarn\s+add|bun\s+add)\s+([^\n]*)/g,
+  )
+  for (let [, packages] of commands) {
+    let specifiers = packages.match(/@remix-run\/[\w-]+(?:\/[\w./-]+)?/g) ?? []
+    if (specifiers.some((specifier) => !isExcludedRemixPackage(specifier))) return true
+  }
+  return false
 }
 
 function getDocsPackageName(packageName: string): string {

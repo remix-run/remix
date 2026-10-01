@@ -1,6 +1,6 @@
 import type { RouterTypes } from 'remix'
 import { createController } from 'remix/router'
-import { Frame, css, type RemixNode } from 'remix/ui'
+import { Frame, css, type RemixNode } from 'remix/component'
 
 import { Counter } from '../../ui/public/counter.tsx'
 import { ReloadScope } from '../../ui/public/reload-scope.tsx'
