@@ -1,1 +1,0 @@
-Migration directories accept prefixes of 1 to 64 digits, such as `0001_create_users` or `20260228090000_create_users` (`YYYYMMDDHHmmss`). `loadMigrations()` requires every prefix in the same migration directory to have the same number of digits so string sorting preserves numeric order (for example `0001`, `0002`, `0010`).
