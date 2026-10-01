@@ -22,4 +22,3 @@ This is the changelog for [`component`](https://github.com/remix-run/remix/tree/
   -import { animateEntrance, spring } from '@remix-run/component'
   +import { animateEntrance, spring } from '@remix-run/ui/animation'
   ```
-

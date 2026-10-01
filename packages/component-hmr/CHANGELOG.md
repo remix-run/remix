@@ -43,4 +43,3 @@ This is the changelog for [`component-hmr`](https://github.com/remix-run/remix/t
   ```
 
   Direct-package consumers should use `@remix-run/component-hmr/node` instead. The browser and server runtime subpaths have moved in the same way.
-
