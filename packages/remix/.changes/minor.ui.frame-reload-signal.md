@@ -1,0 +1,1 @@
+Frame handles from `remix/ui` now accept `reload({ signal })` to cancel pending requests. Once the frame resolver returns, removing the calling component does not interrupt rendering or streamed content.
