@@ -23,6 +23,10 @@ export function mapToRemixPackage(specifier: string): string {
   return specifierMap.get(specifier) ?? specifier.replace(/^@remix-run\//, 'remix/')
 }
 
+export function getDocsPackagePath(packageName: string): string {
+  return packageName.replace(/^@/, '')
+}
+
 export function hasRemixPackage(specifier: string): boolean {
   return specifierMap.has(specifier)
 }
