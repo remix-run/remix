@@ -22,7 +22,7 @@ export function getApiRouteHref(href: string, version: string | undefined): stri
   if (!href.startsWith('/api/')) return undefined
 
   let url = new URL(href, 'http://localhost')
-  let pathname = url.pathname
+  let pathname = url.pathname.replace(/^\/api\/(?:@|%40)/, '/api/')
   if (pathname === '/api/') return undefined
 
   if (!pathname.endsWith('.md')) {

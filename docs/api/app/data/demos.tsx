@@ -5,7 +5,11 @@ import type { RemixNode } from 'remix/component'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
 import { formatWithOxfmt } from '../utils/format.ts'
-import { hasRemixPackage, mapToRemixPackage } from '../utils/package-manifest.ts'
+import {
+  getDocsPackagePath,
+  hasRemixPackage,
+  mapToRemixPackage,
+} from '../utils/package-manifest.ts'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const DEMO_BUILD_DIR = path.join(DOCS_DIR, 'build', 'demos')
@@ -108,7 +112,7 @@ async function getDemoFile(filePath: string): Promise<DemoDocFile> {
     slug,
     source: formattedSource,
     sourceUrl: `${SOURCE_URL_BASE}/${relativePath}`,
-    urlPath: `${packageName}/demos/${slug}`,
+    urlPath: `${getDocsPackagePath(packageName)}/demos/${slug}`,
   }
 }
 
