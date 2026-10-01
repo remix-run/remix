@@ -2,6 +2,12 @@
 
 This is the changelog for [`terminal`](https://github.com/remix-run/remix/tree/main/packages/terminal). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
 ## v0.1.2
 
 ### Patch Changes

@@ -1,3 +1,9 @@
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
 ## v0.1.1
 
 ### Patch Changes
