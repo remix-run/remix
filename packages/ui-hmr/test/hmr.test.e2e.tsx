@@ -1849,15 +1849,10 @@ function getNodeHmrProxyDevSource(): string {
     '',
     'process.once("SIGINT", closeProxy)',
     'process.once("SIGTERM", closeProxy)',
-    'process.once("message", (message) => {',
-    '  if (message === "shutdown") closeProxy()',
-    '})',
     '',
-    'async function closeProxy() {',
-    '  await app.close()',
+    'function closeProxy() {',
     '  server.closeAllConnections()',
     '  server.close()',
-    '  if (process.connected) process.disconnect()',
     '}',
     '',
     'async function waitForPort(filePath) {',
@@ -2310,9 +2305,8 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
       CHILD_PORT_FILE: childPortFile,
       TEST_SERVER_PORT: '0',
     },
-    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+    stdio: ['ignore', 'pipe', 'pipe'],
   })
-  let closed = new Promise<void>((resolve) => child.once('close', () => resolve()))
   let readyEvents: Array<{ pid: number; port: number }> = []
   let readyWaiters: Array<() => void> = []
   let proxyReadyEvents: Array<{ pid: number; port: number }> = []
@@ -2363,7 +2357,7 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
   return {
     baseUrl: `http://127.0.0.1:${ready.port}`,
     async close() {
-      closePromise ??= stopProcess(child, closed)
+      closePromise ??= stopProcess(child)
       await closePromise
     },
     get output() {
@@ -2866,33 +2860,31 @@ function parseProxyReadyEvent(line: string): { pid: number; port: number } | nul
   return null
 }
 
-async function stopProcess(child: ChildProcess, closed: Promise<void>): Promise<void> {
-  let timeout: ReturnType<typeof setTimeout> | undefined
+async function stopProcess(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return
 
-  try {
-    let timedOut = new Promise<boolean>((resolve) => {
-      timeout = setTimeout(() => resolve(true), 5_000)
+  if (process.platform === 'win32' && child.pid !== undefined) {
+    // Windows does not run SIGTERM handlers, so stop the child server as well as its parent.
+    await Promise.all([
+      once(child, 'exit'),
+      promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F']),
+    ])
+    return
+  }
+
+  await new Promise<void>((resolve) => {
+    let timeout = setTimeout(() => {
+      child.kill('SIGKILL')
+      resolve()
+    }, 5_000)
+
+    child.once('exit', () => {
+      clearTimeout(timeout)
+      resolve()
     })
 
-    // IPC lets the fixture await app.close() on Windows too.
-    if (child.connected) {
-      await new Promise<void>((resolve, reject) => {
-        child.send('shutdown', (error) => (error ? reject(error) : resolve()))
-      })
-    }
-
-    if (await Promise.race([closed.then(() => false), timedOut])) {
-      if (process.platform === 'win32' && child.pid !== undefined) {
-        await promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F'])
-      } else {
-        child.kill('SIGKILL')
-      }
-    }
-
-    await closed
-  } finally {
-    clearTimeout(timeout)
-  }
+    child.kill('SIGTERM')
+  })
 }
 
 async function write(rootDir: string, rel: string, content: string): Promise<void> {
