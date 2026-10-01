@@ -1,1 +1,0 @@
-SQL migrations loaded through `remix/data-table/migrations/node` or `remix db` accept prefixes of 1 to 64 digits, such as `0001` or `20260228090000` (`YYYYMMDDHHmmss`). All prefixes in a migration directory must contain the same number of digits to preserve numeric ordering.
