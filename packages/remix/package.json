@@ -644,10 +644,12 @@
     "./src/cli-entry.ts",
     "./src/component-hmr/node.ts",
     "./src/node-hmr/runtime.ts",
+    "./src/node-serve.ts",
     "./src/node-tsx.ts",
     "./dist/cli-entry.js",
     "./dist/component-hmr/node.js",
     "./dist/node-hmr/runtime.js",
+    "./dist/node-serve.js",
     "./dist/node-tsx.js"
   ]
 }
