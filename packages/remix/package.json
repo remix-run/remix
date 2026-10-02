@@ -33,6 +33,7 @@
       "types": "./src/assets/types/hmr.d.ts"
     },
     "./auth": "./src/auth.ts",
+    "./auth/browser": "./src/auth/browser.ts",
     "./cli": "./src/cli.ts",
     "./component": "./src/component.ts",
     "./component-hmr": "./src/component-hmr.ts",
@@ -153,6 +154,10 @@
       "./auth": {
         "types": "./dist/auth.d.ts",
         "default": "./dist/auth.js"
+      },
+      "./auth/browser": {
+        "types": "./dist/auth/browser.d.ts",
+        "default": "./dist/auth/browser.js"
       },
       "./cli": {
         "types": "./dist/cli.d.ts",

@@ -5,6 +5,7 @@
   "remix/assets": "@remix-run/assets",
   "remix/assets/types/hmr": "@remix-run/assets/types/hmr",
   "remix/auth": "@remix-run/auth",
+  "remix/auth/browser": "@remix-run/auth/browser",
   "remix/component": "@remix-run/component",
   "remix/component-hmr": "@remix-run/component-hmr",
   "remix/component-hmr/assets": "@remix-run/component-hmr/assets",
