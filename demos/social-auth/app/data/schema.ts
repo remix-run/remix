@@ -6,9 +6,10 @@ export const users = table({
   columns: {
     id: c.integer().primaryKey().autoIncrement(),
     email: c.text().unique(),
-    password_hash: c.text(),
+    password_hash: c.text().nullable(),
     name: c.text(),
     avatar_url: c.text(),
+    email_verified_at: c.integer().nullable(),
     created_at: c.integer().notNull(),
     updated_at: c.integer().notNull(),
   },
@@ -101,6 +102,16 @@ export const passwordResetTokens = table({
       .notNull()
       .references('users', 'id', 'password_reset_tokens_user_id_fk')
       .onDelete('cascade'),
+    expires_at: c.integer().notNull(),
+  },
+})
+
+export const emailAuthEntries = table({
+  name: 'email_auth_entries',
+  primaryKey: ['key'],
+  columns: {
+    key: c.text().primaryKey(),
+    value: c.text().notNull(),
     expires_at: c.integer().notNull(),
   },
 })
