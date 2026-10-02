@@ -1,4 +1,4 @@
-Add passwordless email sign-in with magic links and one-time codes. `createMagicLinkAuthProvider()` with `sendMagicLink()` and `verifyMagicLink()` signs people in with single-use links. `createEmailOTPAuthProvider()` with `sendEmailOTP()` and `verifyEmailOTP()` sends numeric codes that people type into the app, so they can read email on one device and sign in on another.
+Add passwordless email sign-in with magic links and one-time codes. `createMagicLinkAuthProvider()` with `sendMagicLink()` and `verifyMagicLink()` signs people in with single-use links. `createEmailOTPAuthProvider()` with `sendEmailOTP()` and `verifyEmailOTP()` sends numeric codes that people type into the app, so they can read email on one device and sign in on another (see #11964).
 
 ```ts
 let magicLinkProvider = createMagicLinkAuthProvider({
