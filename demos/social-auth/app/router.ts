@@ -7,9 +7,13 @@ import { session } from 'remix/middleware/session'
 import { staticFiles } from 'remix/middleware/static'
 
 import { createAuthController } from './actions/auth/controller.tsx'
+import { emailCodeController } from './actions/auth/email-code/controller.tsx'
+import { emailCodeVerifyController } from './actions/auth/email-code-verify/controller.tsx'
 import { forgotPasswordController } from './actions/auth/forgot-password/controller.tsx'
 import { createGitHubAuthController } from './actions/auth/github/controller.ts'
 import { createGoogleAuthController } from './actions/auth/google/controller.ts'
+import { magicLinkController } from './actions/auth/magic-link/controller.tsx'
+import { magicLinkVerifyController } from './actions/auth/magic-link-verify/controller.tsx'
 import { resetPasswordController } from './actions/auth/reset-password/controller.tsx'
 import { signupController } from './actions/auth/signup/controller.tsx'
 import { createXAuthController } from './actions/auth/x/controller.ts'
@@ -46,6 +50,10 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   router.map(routes.auth.signup, signupController)
   router.map(routes.auth.forgotPassword, forgotPasswordController)
   router.map(routes.auth.resetPassword, resetPasswordController)
+  router.map(routes.auth.magicLink, magicLinkController)
+  router.map(routes.auth.magicLinkVerify, magicLinkVerifyController)
+  router.map(routes.auth.emailCode, emailCodeController)
+  router.map(routes.auth.emailCodeVerify, emailCodeVerifyController)
   router.map(routes.auth.google, createGoogleAuthController(providers))
   router.map(routes.auth.github, createGitHubAuthController(providers))
   router.map(routes.auth.x, createXAuthController(providers))

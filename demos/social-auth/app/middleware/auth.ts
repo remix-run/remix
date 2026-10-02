@@ -15,6 +15,8 @@ import { verifyPassword } from '../utils/password-hash.ts'
 import { routes } from '../routes.ts'
 import { databaseContext } from './database.ts'
 
+const returnToBaseUrl = 'https://social-auth.local'
+
 const loginSchema = f.object({
   email: f.field(s.defaulted(s.string(), '')),
   password: f.field(s.defaulted(s.string(), '')),
@@ -109,10 +111,21 @@ export function getReturnToHrefOptions(url: URL): { searchParams: { returnTo?: s
 }
 
 function getSafeReturnTo(returnTo: string | null): string | undefined {
-  if (returnTo == null || returnTo === '') {
+  if (returnTo == null || !returnTo.startsWith('/')) {
     return undefined
   }
 
-  let isSafePath = returnTo.startsWith('/') && returnTo.startsWith('//') === false
-  return isSafePath ? returnTo : undefined
+  // Browsers treat backslashes as slashes and drop tabs and newlines, so check the normalized URL.
+  let url: URL
+  try {
+    url = new URL(returnTo, returnToBaseUrl)
+  } catch {
+    return undefined
+  }
+
+  if (url.origin !== returnToBaseUrl || url.pathname.startsWith('//')) {
+    return undefined
+  }
+
+  return url.pathname + url.search + url.hash
 }
