@@ -49,11 +49,21 @@ if (downloaded) {
   await fs.mkdir(path.dirname(cache), { recursive: true })
   let temporary = `${cache}.${process.pid}`
   await fs.writeFile(temporary, archive)
-  await fs.rename(temporary, cache)
+  try {
+    // Keep the shared archive immutable while other builds are reading it.
+    await fs.link(temporary, cache)
+  } catch (error) {
+    if (!(error instanceof Error) || !('code' in error) || error.code !== 'EEXIST') throw error
+  } finally {
+    await fs.rm(temporary)
+  }
 }
 
 function readUpstream(file: string): Buffer {
-  return execFileSync('tar', ['-xOzf', cache, prefix + file], { maxBuffer: 16 * 1024 * 1024 })
+  return execFileSync('tar', ['-xOzf', path.basename(cache), prefix + file], {
+    cwd: path.dirname(cache),
+    maxBuffer: 16 * 1024 * 1024,
+  })
 }
 
 if (readUpstream('source_commit').toString().trim() !== upstream.sourceCommit) {
