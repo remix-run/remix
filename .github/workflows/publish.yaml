@@ -58,7 +58,7 @@ jobs:
 
       - name: Get Playwright Version
         id: playwright-version
-        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: node -p "'version=' + require('./packages/component/node_modules/playwright/package.json').version" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright Browsers
         uses: actions/cache@v5
