@@ -3,7 +3,7 @@ import * as s from 'remix/data-schema'
 import type { AuthAccount, User } from '../data/schema.ts'
 import type { ExternalProviderName } from './external-auth.ts'
 
-export type AuthMethod = 'credentials' | ExternalProviderName
+export type AuthMethod = 'credentials' | 'passkey' | ExternalProviderName
 
 export interface AuthSession {
   userId: number
@@ -22,6 +22,7 @@ const authSessionSchema = s.object({
   userId: s.number().refine(Number.isInteger, 'Expected an integer userId'),
   loginMethod: s.union([
     s.literal('credentials'),
+    s.literal('passkey'),
     s.literal('google'),
     s.literal('github'),
     s.literal('x'),
@@ -62,5 +63,11 @@ export function parseProviderProfile(authAccount: AuthAccount | null): unknown |
 }
 
 function isAuthMethod(value: string): value is AuthMethod {
-  return value === 'credentials' || value === 'google' || value === 'github' || value === 'x'
+  return (
+    value === 'credentials' ||
+    value === 'passkey' ||
+    value === 'google' ||
+    value === 'github' ||
+    value === 'x'
+  )
 }
