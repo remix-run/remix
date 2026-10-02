@@ -10,6 +10,7 @@ import {
   buildData,
 } from '../shared.ts'
 import type { Benchmark, Row } from '../shared.ts'
+import { TraceViewer, loadTrace } from './trace-viewer.tsx'
 
 export const name = 'solid'
 
@@ -678,7 +679,7 @@ function Dashboard(props: { onSwitchToTable: () => void }) {
 function App() {
   let [rows, setRows] = createSignal<Row[]>([])
   let [selected, setSelected] = createSignal<number | null>(null)
-  let [view, setView] = createSignal<'table' | 'dashboard'>('table')
+  let [view, setView] = createSignal<'table' | 'dashboard' | 'trace-viewer'>('table')
 
   let run = () => {
     setRows(get1000Rows())
@@ -727,12 +728,19 @@ function App() {
     setView('table')
   }
 
+  let switchToTraceViewer = () => {
+    loadTrace()
+    setView('trace-viewer')
+  }
+
   let isSelected = createSelector(selected)
 
   return (
     <>
       {view() === 'dashboard' ? (
         <Dashboard onSwitchToTable={switchToTable} />
+      ) : view() === 'trace-viewer' ? (
+        <TraceViewer onExit={switchToTable} />
       ) : (
         <div class="container">
           <div class="jumbotron">
@@ -820,6 +828,16 @@ function App() {
                       onClick={switchToDashboard}
                     >
                       Switch to Dashboard
+                    </button>
+                  </div>
+                  <div class="col-sm-6 smallpad">
+                    <button
+                      id="switchToTraceViewer"
+                      class="btn btn-primary btn-block"
+                      type="button"
+                      onClick={switchToTraceViewer}
+                    >
+                      Switch to Trace Viewer
                     </button>
                   </div>
                 </div>

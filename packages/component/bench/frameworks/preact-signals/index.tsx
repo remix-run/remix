@@ -3,6 +3,7 @@ import { For } from '@preact/signals/utils'
 import { render } from 'preact'
 import { buildData as buildPlainData, sortRows as sortPlainRows, get1000Rows } from '../shared.ts'
 import type { Benchmark, Row as PlainRow } from '../shared.ts'
+import { TraceViewer, loadTrace } from './trace-viewer.tsx'
 
 export const name = 'preact-signals'
 
@@ -19,7 +20,7 @@ function buildSignalData(count: number): Row[] {
 // Top-level signals for state
 let data = signal<Row[]>([])
 let selected = signal<number | null>(null)
-let view = signal<'table' | 'dashboard'>('table')
+let view = signal<'table' | 'dashboard' | 'trace-viewer'>('table')
 
 let run = () => {
   data.value = buildSignalData(1000)
@@ -109,6 +110,11 @@ let switchToDashboard = () => {
 
 let switchToTable = () => {
   view.value = 'table'
+}
+
+let switchToTraceViewer = () => {
+  loadTrace()
+  view.value = 'trace-viewer'
 }
 
 // Stateful Metric Card Component
@@ -792,6 +798,10 @@ function App() {
     return <Dashboard onSwitchToTable={switchToTable} />
   }
 
+  if (currentView === 'trace-viewer') {
+    return <TraceViewer onExit={switchToTable} />
+  }
+
   return (
     <div class="container">
       <div class="jumbotron">
@@ -874,6 +884,16 @@ function App() {
                   onClick={switchToDashboard}
                 >
                   Switch to Dashboard
+                </button>
+              </div>
+              <div class="col-sm-6 smallpad">
+                <button
+                  id="switchToTraceViewer"
+                  class="btn btn-primary btn-block"
+                  type="button"
+                  onClick={switchToTraceViewer}
+                >
+                  Switch to Trace Viewer
                 </button>
               </div>
             </div>
