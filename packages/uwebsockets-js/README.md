@@ -32,6 +32,18 @@ The sync script verifies the archive before extracting the upstream wrappers, ty
 
 When updating upstream, update the pin and verified checksum, sync all packages, and add change files for the facade and platform packages. The facade uses exact optional workspace versions so each release selects matching platform packages. `remix.internal` keeps these implementation packages out of the umbrella package's direct dependencies and exports.
 
+The [update workflow](https://github.com/remix-run/remix/blob/main/.github/workflows/update-uwebsockets.yaml) checks for stable upstream releases daily at 08:23 UTC and can also run manually. It refreshes one PR with the new pins, vendored files, documentation, and change files after validation. Updates that change supported Node ABIs open as drafts for runtime support review. It uses the existing `GH_REMIX_PAT` secret so PR checks run automatically.
+
+Preview an update locally without changing files or publishing a PR:
+
+```sh
+node scripts/update-uwebsockets.ts --preview
+```
+
+Authenticate `gh` first, or set `GH_TOKEN`. The preview checks the archive and all platform binaries and prints the proposed pin and PR body. Run without `--preview` to prepare the files locally; only the workflow pushes a branch and opens a PR.
+
+Incomplete platform/ABI matrices fail the check. New Node ABIs require a version mapping in the updater before it can generate accurate support documentation.
+
 ## Related Packages
 
 - [node-serve](https://github.com/remix-run/remix/tree/main/packages/node-serve) — Fetch API server using this transport

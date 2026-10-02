@@ -64,12 +64,15 @@ if (!requested || requested === '--facade') {
   let dir = path.join(root, 'packages/uwebsockets-js')
   await fs.writeFile(path.join(dir, 'LICENSE'), readUpstream('LICENSE'))
   await fs.writeFile(path.join(dir, 'src/index.d.ts'), readUpstream('index.d.ts'))
-  let wrapper = readUpstream('ESM_wrapper.mjs').toString().replace('"./uws.js"', '"./index.cjs"')
+  let wrapper = readUpstream('ESM_wrapper.mjs')
+    .toString()
+    .replace(/(['"])\.\/(?:uws|index)\.js\1/, '$1./index.cjs$1')
+  if (!wrapper.includes('export const DeclarativeResponse')) {
+    wrapper += '\nexport const DeclarativeResponse = uws.DeclarativeResponse;\n'
+  }
   await fs.writeFile(
     path.join(dir, 'src/index.mjs'),
-    '// Adapted from the upstream ESM wrapper; see upstream.json and LICENSE.\n' +
-      wrapper +
-      '\nexport const DeclarativeResponse = uws.DeclarativeResponse;\n',
+    '// Adapted from the upstream ESM wrapper; see upstream.json and LICENSE.\n' + wrapper,
   )
 }
 
