@@ -5,7 +5,11 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
-import { hasRemixPackage, mapToRemixPackage } from '../app/utils/package-manifest.ts'
+import {
+  hasRemixPackage,
+  isExcludedRemixPackage,
+  mapToRemixPackage,
+} from '../app/utils/package-manifest.ts'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..', '..')
@@ -21,7 +25,7 @@ const TEST_FILE_RE = /\.test(?:\.(?:browser|e2e))?\.tsx?$/
 
 function rewriteImports(source: string): string {
   return source.replace(REMIX_RUN_IMPORT_RE, (_match, prefix: string, specifier: string) => {
-    if (!hasRemixPackage(specifier)) {
+    if (!hasRemixPackage(specifier) && !isExcludedRemixPackage(specifier)) {
       throw new Error(`No remix manifest entry found for import "${specifier}"`)
     }
     return `${prefix}${mapToRemixPackage(specifier)}`

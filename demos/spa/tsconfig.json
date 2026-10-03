@@ -11,7 +11,7 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "remix/ui",
+    "jsxImportSource": "remix/component",
     "types": ["vite/client"]
   },
   "include": ["app", "vite.config.ts"]

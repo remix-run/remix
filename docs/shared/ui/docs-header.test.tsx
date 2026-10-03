@@ -1,6 +1,6 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
-import { renderToString } from 'remix/ui/server'
+import { renderToString } from 'remix/component/server'
 
 import { createDocsNavigationLinks, DocsHeader } from './docs-header.tsx'
 import type { DocsNavigationLink } from './docs-header.tsx'

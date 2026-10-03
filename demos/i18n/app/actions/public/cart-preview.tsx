@@ -1,5 +1,5 @@
 import { createInstance, type TFunction } from 'i18next'
-import { clientEntry, css, on, type Handle } from 'remix/ui'
+import { clientEntry, css, on, type Handle } from 'remix/component'
 
 import type { SupportedLanguage, TranslationTable } from '../../i18n/config.ts'
 

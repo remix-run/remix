@@ -1,5 +1,5 @@
-import { css } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { css } from "remix/component";
+import type { Handle } from "remix/component";
 
 export function StylingCardDemo() {
   return () => (

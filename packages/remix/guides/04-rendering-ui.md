@@ -17,7 +17,7 @@ A Remix component is a setup function that returns a render function. Setup runs
 creates the component. Render runs immediately after setup and again whenever the component updates.
 
 ```tsx filename=app/ui/album-heading.tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 type AlbumHeadingProps = {
   artist: string;
@@ -48,7 +48,7 @@ components, strings, numbers, booleans, `null`, `undefined`, and nested arrays o
 Fragments let you return siblings without adding another DOM element:
 
 ```tsx filename=app/ui/album-byline.tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 export function AlbumByline(handle: Handle<{ artist: string; year: number }>) {
   return () => (
@@ -63,7 +63,76 @@ export function AlbumByline(handle: Handle<{ artist: string; year: number }>) {
 The same component can render to HTML on the server, mount into a client-only root, or hydrate inside
 a server-rendered page. Only the last two cases execute it in the browser.
 
-::frame{src="/examples/04-rendering-ui/component-model/"}
+```tsx
+import { css, on } from "remix/component";
+import type { Handle } from "remix/component";
+
+export function ComponentModelDemo() {
+  return () => (
+    <div mix={counterDemoStyles}>
+      <Counter initialCount={2} label="Inbox" />
+      <Counter initialCount={8} label="Deploys" />
+    </div>
+  );
+}
+
+function Counter(handle: Handle<{ initialCount: number; label: string }>) {
+  let count = handle.props.initialCount;
+
+  return () => (
+    <button
+      mix={[
+        counterStyles,
+        on("click", () => {
+          count++;
+          handle.update();
+        }),
+      ]}
+      type="button"
+    >
+      <span mix={counterValueStyles}>{count}</span>
+      <span>{handle.props.label}</span>
+    </button>
+  );
+}
+
+const counterDemoStyles = css({
+  display: "flex",
+  flexWrap: "wrap",
+  justifyContent: "center",
+  gap: "0.75rem",
+});
+
+const counterStyles = css({
+  display: "grid",
+  minWidth: "9rem",
+  gap: "0.35rem",
+  padding: "1rem",
+  border: "1px solid #d6d6d6",
+  borderRadius: "16px",
+  background: "white",
+  color: "#151515",
+  cursor: "pointer",
+  font: "inherit",
+  textAlign: "left",
+  boxShadow: "0 8px 24px rgba(15, 17, 21, 0.08)",
+  "&:hover": {
+    boxShadow: "0 12px 32px rgba(15, 17, 21, 0.12)",
+    transform: "translateY(-2px)",
+  },
+  "&:active": {
+    transform: "translateY(0)",
+  },
+});
+
+const counterValueStyles = css({
+  color: "#d83a5a",
+  fontSize: "2.75rem",
+  fontWeight: "900",
+  lineHeight: "0.9",
+  letterSpacing: "-0.08em",
+});
+```
 
 ## Props, local state, context, and updates {#handle-props-setup-render-and-updates}
 
@@ -73,7 +142,7 @@ Destructuring the object is safe. Destructuring one of its properties in setup c
 initial value.
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 function AlbumTitle(handle: Handle<{ title: string }>) {
   let { props } = handle;
@@ -87,8 +156,8 @@ Local state is ordinary JavaScript declared in setup scope. Store values that af
 derive everything else inside render:
 
 ```tsx filename=app/ui/album-list.tsx
-import { on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { on } from "remix/component";
+import type { Handle } from "remix/component";
 
 type Album = {
   id: string;
@@ -134,7 +203,7 @@ list changes order. [Interactivity](/interactivity/) covers event handlers, upda
 needs to connect a label, input, description, or ARIA relationship without requiring an `id` prop:
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 function AlbumSearch(handle: Handle) {
   return () => (
@@ -150,7 +219,7 @@ Use component context when descendants need a value that does not belong on ever
 component. The provider type is the context key, so `get()` remains typed:
 
 ```tsx filename=app/ui/catalog.tsx
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 type CatalogContext = {
   currency: "USD" | "EUR";
@@ -224,8 +293,8 @@ Pages should render a complete document through one shared component. The defaul
 `app/actions/document.tsx`:
 
 ```tsx filename=app/actions/document.tsx
-import type { Handle, RemixNode } from "remix/ui";
-import { ImportMap } from "remix/ui/server";
+import type { Handle, RemixNode } from "remix/component";
+import { ImportMap } from "remix/component/server";
 
 import { scriptEntry } from "../assets.ts";
 
@@ -278,8 +347,8 @@ Use `css(...)` for static rules. It supports pseudo-selectors, pseudo-elements, 
 attribute selectors, and media queries with normal CSS nesting:
 
 ```tsx filename=app/ui/album-card.tsx
-import { css } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { css } from "remix/component";
+import type { Handle } from "remix/component";
 
 const cardStyle = css({
   border: "1px solid #d6d6d6",
@@ -315,12 +384,143 @@ During server rendering, Remix collects generated rules, deduplicates them, and 
 `<style data-rmx-style>` tags into the document head. A server-rendered page does not wait for browser
 JavaScript to receive its component styles.
 
-::frame{src="/examples/04-rendering-ui/styling-card/"}
+```tsx
+import { css } from "remix/component";
+import type { Handle } from "remix/component";
+
+export function StylingCardDemo() {
+  return () => (
+    <ProductCard
+      title="Noise-canceling headphones"
+      price={199}
+      description="Hover the card to let nested CSS selectors update the title and button."
+    />
+  );
+}
+
+function ProductCard(handle: Handle<{ description: string; price: number; title: string }>) {
+  return () => (
+    <article mix={productCardStyles}>
+      <div mix={productImageStyles} aria-hidden="true">
+        <svg viewBox="0 0 120 80" fill="none">
+          <path
+            d="M30 43c0-18 12-31 30-31s30 13 30 31"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-width="8"
+          />
+          <rect width="24" height="34" x="18" y="38" fill="currentColor" rx="12" />
+          <rect width="24" height="34" x="78" y="38" fill="currentColor" rx="12" />
+        </svg>
+      </div>
+      <div mix={productBodyStyles}>
+        <h4 class="title" mix={productTitleStyles}>
+          {handle.props.title}
+        </h4>
+        <p mix={productDescriptionStyles}>{handle.props.description}</p>
+        <div mix={productFooterStyles}>
+          <span mix={productPriceStyles}>${handle.props.price}</span>
+          <button mix={productButtonStyles} type="button">
+            Add to cart
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+const productCardStyles = css({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 10rem) minmax(0, 1fr)",
+  maxWidth: "34rem",
+  overflow: "hidden",
+  border: "1px solid #d6d6d6",
+  borderRadius: "18px",
+  background: "white",
+  boxShadow: "0 12px 32px rgba(15, 17, 21, 0.08)",
+  transition: "transform 180ms ease, box-shadow 180ms ease",
+  "&:hover": {
+    boxShadow: "0 18px 44px rgba(15, 17, 21, 0.14)",
+    transform: "translateY(-3px)",
+    "& .title": {
+      color: "#d83a5a",
+    },
+    "& button": {
+      backgroundColor: "#b8324d",
+    },
+  },
+  "@media (max-width: 560px)": {
+    gridTemplateColumns: "1fr",
+  },
+});
+
+const productImageStyles = css({
+  display: "grid",
+  placeItems: "center",
+  minHeight: "12rem",
+  background: "linear-gradient(135deg, #ffe5eb, #f8fafc)",
+  color: "#d83a5a",
+  "& svg": {
+    width: "7rem",
+    height: "auto",
+  },
+});
+
+const productBodyStyles = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "0.75rem",
+  padding: "1rem",
+});
+
+const productTitleStyles = css({
+  margin: 0,
+  fontSize: "1.15rem",
+  fontWeight: "800",
+  letterSpacing: "-0.03em",
+  transition: "color 180ms ease",
+});
+
+const productDescriptionStyles = css({
+  margin: 0,
+  color: "#4f4f4f",
+  lineHeight: "1.6",
+});
+
+const productFooterStyles = css({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "1rem",
+  marginTop: "auto",
+});
+
+const productPriceStyles = css({
+  fontSize: "1.5rem",
+  fontWeight: "900",
+  letterSpacing: "-0.06em",
+});
+
+const productButtonStyles = css({
+  border: "1px solid #d83a5a",
+  borderRadius: "999px",
+  background: "#d83a5a",
+  color: "white",
+  cursor: "pointer",
+  font: "inherit",
+  fontWeight: "700",
+  padding: "0.7rem 1rem",
+  transition: "background-color 180ms ease, transform 120ms ease",
+  "&:active": {
+    transform: "scale(0.98)",
+  },
+});
+```
 
 ## Cascade layers and app-owned design tokens {#theme-tokens-and-cascade-layers}
 
-Generated `css(...)` rules, including styles from first-party UI components, live in the native
-`rmx` cascade layer. If your app uses its own layers, declare the complete order once:
+Generated `css(...)` rules live in the native `rmx` cascade layer. If your app uses its own layers,
+declare the complete order once:
 
 ```css filename=app/actions/public/app.css
 @layer base, rmx, app;
@@ -345,119 +545,151 @@ Generated `css(...)` rules, including styles from first-party UI components, liv
 }
 ```
 
-Layers before `rmx` provide defaults that Remix component styles can override. Layers after `rmx`
-can override component styles deliberately. Unlayered author CSS outranks normal layered CSS, so use
-it intentionally when the rest of the app has an explicit layer order.
+Layers before `rmx` provide defaults that generated styles can override. Layers after `rmx` can
+override generated styles deliberately. Unlayered author CSS outranks normal layered CSS, so use it
+intentionally when the rest of the app has an explicit layer order.
 
-Remix supplies behavior and a small set of component styles, not an application theme. Keep brand
-colors, spacing, typography, radii, and other design tokens in app-owned CSS custom properties or
-TypeScript values.
+Keep brand colors, spacing, typography, radii, and other design tokens in app-owned CSS custom
+properties or TypeScript values.
 
-## First-party UI building blocks {#first-party-ui-components}
+## Optional headless UI primitives {#headless-ui-primitives}
 
-The `remix/ui/*` subpaths cover three levels of ownership. Start with the highest-level API whose
-markup fits the product, then move down only when the app needs control the composed component does
-not expose.
+`@remix-run/ui` is a separate package of headless, accessible interaction primitives. The package
+is currently unstable and versioned independently. It is not available through the `remix` package.
+Install it when an app needs reusable behavior for controls such as accordions, comboboxes,
+listboxes, menus, popovers, selects, tabs, or toggles:
 
-These APIs all render on the server. Controls that handle browser events must also be inside a
-`clientEntry(...)` boundary, either directly or through an interactive ancestor. The next chapter
-shows how to choose that boundary.
+```sh
+npm i @remix-run/ui
+```
 
-| Level               | Subpaths                                                                 | What the app owns                                            |
-| ------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------ |
-| Style mixins        | `button`, `input`, `checkbox`, `radio`, `toggle`                         | The native control, its label, layout, and state.            |
-| Composed controls   | `accordion`, `breadcrumbs`, `combobox`, `menu`, `select`, `tabs`         | The surrounding page and the values passed into the control. |
-| Headless primitives | `popover`, `listbox`, `anchor`, and each available `/primitives` subpath | Markup and styling while Remix supplies focused behavior.    |
+Import each primitive from its package subpath. For example:
 
-The [`remix/ui` API overview](../src/ui/README.md) links to the complete API
-for every subpath. The sections below show how to choose among them.
+```tsx
+import { css } from "remix/component";
+import * as accordion from "@remix-run/ui/accordion";
+```
 
-### Style mixins for native controls {#style-mixins-keep-native-controls-native}
+The primitives supply structural attributes, keyboard interaction, focus management, and state
+coordination. Your app supplies the markup and all visual styling. Controls that handle browser
+events must also be inside a `clientEntry(...)` boundary, either directly or through an interactive
+ancestor. The next chapter shows how to choose that boundary.
 
-Style mixins keep native form behavior in the element you render:
+Preserve native elements when they fit, keep labels and ARIA relationships intact, and test pointer
+and keyboard behavior. A custom select, for example, still needs a provider, trigger, popover,
+list, options, and hidden input if it participates in a form.
 
-```tsx filename=app/ui/album-actions.tsx
-import button from "remix/ui/button";
-import checkbox from "remix/ui/checkbox";
-import { css } from "remix/ui";
+```tsx
+import { css } from "remix/component";
+import * as accordion from "@remix-run/ui/accordion";
 
-const actionRowStyle = css({
-  display: "flex",
-  alignItems: "center",
-  gap: "0.75rem",
+/**
+ * @name Accordion Primitives
+ * @description Headless accordion behavior with minimal local styles.
+ * @layout center
+ */
+export function AccordionPrimitives() {
+  return () => (
+    <accordion.Context defaultValue="shipping">
+      <div mix={[rootCss, accordion.root()]}>
+        <accordion.ItemContext value="shipping">
+          <div mix={[itemCss, accordion.item()]}>
+            <h3 mix={headingCss}>
+              <button mix={[triggerCss, accordion.trigger()]} type="button">
+                Shipping
+              </button>
+            </h3>
+            <div mix={[contentCss, accordion.content()]}>
+              Default carrier, cutoff time, and delivery windows.
+            </div>
+          </div>
+        </accordion.ItemContext>
+
+        <accordion.ItemContext value="billing">
+          <div mix={[itemCss, accordion.item()]}>
+            <h3 mix={headingCss}>
+              <button mix={[triggerCss, accordion.trigger()]} type="button">
+                Billing
+              </button>
+            </h3>
+            <div mix={[contentCss, accordion.content()]}>
+              Invoice cadence, billing contact, and tax settings.
+            </div>
+          </div>
+        </accordion.ItemContext>
+
+        <accordion.ItemContext disabled value="archived">
+          <div mix={[itemCss, accordion.item()]}>
+            <h3 mix={headingCss}>
+              <button mix={[triggerCss, accordion.trigger()]} type="button">
+                Archived
+              </button>
+            </h3>
+            <div mix={[contentCss, accordion.content()]}>Unavailable settings.</div>
+          </div>
+        </accordion.ItemContext>
+      </div>
+    </accordion.Context>
+  );
+}
+
+const rootCss = css({
+  display: "grid",
+  width: "24rem",
+  maxWidth: "100%",
+  border: "1px solid #d8d8d8",
+  borderRadius: "8px",
+  background: "#ffffff",
 });
 
-export function AlbumActions() {
-  return () => (
-    <div mix={actionRowStyle}>
-      <button mix={button({ tone: "primary" })}>Add to cart</button>
-      <label>
-        <input mix={checkbox()} name="gift" type="checkbox" />
-        This is a gift
-      </label>
-    </div>
-  );
-}
+const itemCss = css({
+  borderBlockStart: "1px solid #e8e8e8",
+  "&:first-child": {
+    borderBlockStart: 0,
+  },
+  "&[data-disabled]": {
+    opacity: 0.45,
+  },
+});
+
+const headingCss = css({
+  margin: 0,
+});
+
+const triggerCss = css({
+  appearance: "none",
+  display: "flex",
+  justifyContent: "space-between",
+  width: "100%",
+  border: 0,
+  background: "transparent",
+  color: "#101010",
+  font: '600 13px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  letterSpacing: 0,
+  padding: "10px 12px",
+  textAlign: "left",
+  "&::after": {
+    content: '"+"',
+  },
+  '&[data-state="open"]::after': {
+    content: '"-"',
+  },
+  "&:focus-visible": {
+    outline: "2px solid #3573f6",
+    outlineOffset: "-2px",
+  },
+});
+
+const contentCss = css({
+  color: "#4f4f4f",
+  font: '500 13px/20px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  letterSpacing: 0,
+  padding: "0 12px 12px",
+  '&[data-state="closed"]': {
+    display: "none",
+  },
+});
 ```
-
-The checkbox remains a checkbox, participates in `FormData`, and gets its keyboard behavior from the
-browser. The mixin supplies visuals. Compose an array in `mix` when a host also needs app-owned styles
-or behavior.
-
-::frame{src="/examples/04-rendering-ui/button-basic/"}
-
-### Composed controls for common interactions {#composed-components-cover-common-product-ui}
-
-Composed controls own the relationships among several elements. For example, `Accordion` connects
-triggers to content regions and manages disclosure state:
-
-```tsx filename=app/ui/shipping-details.tsx
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "remix/ui/accordion";
-
-export function ShippingDetails() {
-  return () => (
-    <Accordion defaultValue="returns">
-      <AccordionItem value="delivery">
-        <AccordionTrigger>Delivery</AccordionTrigger>
-        <AccordionContent>Ships in two business days.</AccordionContent>
-      </AccordionItem>
-      <AccordionItem value="returns">
-        <AccordionTrigger>Returns</AccordionTrigger>
-        <AccordionContent>Return unopened albums within 30 days.</AccordionContent>
-      </AccordionItem>
-    </Accordion>
-  );
-}
-```
-
-Use a `default*` prop when the control should own its initial state. Use the corresponding controlled
-prop and change callback when the parent must own that state. The exact names differ by component:
-for example, accordion uses `defaultValue`/`value`, while tabs uses
-`defaultActiveTab`/`activeTab`.
-
-Selection and disclosure events bubble where a component's API documents them, so a parent can
-observe changes without threading a callback through every item. Controls that accept `name`, such
-as `Select` and `Combobox`, render a hidden input so the selected value participates in a normal form.
-Disabled state, accessible names, focus movement, and keyboard behavior remain part of each
-component's contract.
-
-::frame{src="/examples/04-rendering-ui/accordion-overview/"}
-
-::frame{src="/examples/04-rendering-ui/select-overview/"}
-
-### Headless primitives for custom markup {#primitives-keep-behavior-reusable-when-markup-changes}
-
-Reach for primitives when the product requires different markup, not merely different colors or
-spacing. `popover` supplies anchored-surface behavior, `listbox` supplies option highlighting and
-selection, and `anchor` handles lower-level floating-element placement. Accordion, combobox, menu,
-select, tabs, and toggle also expose `/primitives` subpaths.
-
-The primitives are smaller, but the app takes on more responsibility. Preserve native elements when
-they fit, keep labels and ARIA relationships intact, and test pointer and keyboard behavior. A custom
-select, for example, still needs a provider, trigger, popover, list, options, and hidden input if it
-participates in a form.
-
-::frame{src="/examples/04-rendering-ui/accordion-primitives/"}
 
 ## Rendering HTML without the component runtime {#rendering-html-without-the-component-runtime}
 

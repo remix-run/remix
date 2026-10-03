@@ -1,5 +1,5 @@
 import { createController } from 'remix/router'
-import { clientEntry } from 'remix/ui'
+import { clientEntry } from 'remix/component'
 
 import type { DocsContext, Versions } from '../../data/docs.ts'
 import { loadDemoComponent, renderDemoSource } from '../../data/demos.tsx'

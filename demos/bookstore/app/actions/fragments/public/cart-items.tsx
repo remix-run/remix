@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { css, clientEntry, on } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css, clientEntry, on } from 'remix/component'
 
 import { routes } from '../../../routes.ts'
 

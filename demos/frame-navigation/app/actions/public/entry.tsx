@@ -1,12 +1,12 @@
-import type { Handle, RemixNode, ResolveFrameOptions } from 'remix/ui'
-import { createRoot, css, on, run } from 'remix/ui'
+import type { Handle, RemixNode, ResolveFrameOptions } from 'remix/component'
+import { createRoot, css, on, run } from 'remix/component'
 import {
   detectMultipleImportMapSupport,
   importModule,
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
 
-import { animateEntrance, spring } from 'remix/ui/animation'
+import { animateEntrance, spring } from '@remix-run/ui/animation'
 
 import { routes } from '../../routes.ts'
 

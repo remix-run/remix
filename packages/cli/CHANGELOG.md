@@ -2,6 +2,62 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- New-app examples now use the stable Remix release.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.0`](https://github.com/remix-run/remix/releases/tag/assets@1.0.0)
+  - [`data-table@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table@1.0.0)
+  - [`data-table-mysql@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@1.0.0)
+  - [`data-table-postgres@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@1.0.0)
+  - [`data-table-sqlite@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@1.0.0)
+  - [`terminal@1.0.0`](https://github.com/remix-run/remix/releases/tag/terminal@1.0.0)
+  - [`test@1.0.0`](https://github.com/remix-run/remix/releases/tag/test@1.0.0)
+
+## v0.8.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.7.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.7.0)
+  - [`data-table-mysql@0.5.4`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.4)
+  - [`data-table-postgres@0.5.4`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.4)
+  - [`data-table-sqlite@0.6.4`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.4)
+
+## v0.8.0
+
+### Minor Changes
+
+- `remix test` now expands simple patterns to test file globs. For example, `remix test frame` runs files matching `**/*frame*.test*.{ts,tsx}`. File paths and explicit globs pass through unchanged. Positional arguments override configured test globs, respect exclusions, and run overlapping matches only once.
+
+### Patch Changes
+
+- Generated apps now trust forwarded headers while running under `node-hmr`, so `cop()` and `csrf()` compare form origins against the browser-facing URL.
+
+  Existing generated apps can apply the same setup in `server.ts`:
+
+  ```diff
+  +let isHmr = process.env.REMIX_NODE_HMR === '1'
+   let server = http.createServer(
+  -  createRequestListener(handler),
+  +  createRequestListener(handler, { trustProxy: isHmr }),
+   )
+  ```
+
+- Declare which package modules have side effects.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.8.0`](https://github.com/remix-run/remix/releases/tag/assets@0.8.0)
+  - [`terminal@0.1.2`](https://github.com/remix-run/remix/releases/tag/terminal@0.1.2)
+  - [`test@0.6.2`](https://github.com/remix-run/remix/releases/tag/test@0.6.2)
+
 ## v0.7.1
 
 ### Patch Changes

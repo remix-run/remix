@@ -37,7 +37,11 @@ Pass a release tag when generated source links should target that tag:
 pnpm --filter remix-api run docs --tag remix@3.0.0
 ```
 
-`docs` accepts `--entryPoints` to change the TypeDoc inputs or `--input` to reuse an existing TypeDoc JSON file. Build the discovered demos separately:
+`docs` accepts `--entryPoints` to change the TypeDoc inputs or `--input` to reuse an existing TypeDoc JSON file.
+
+Unsupported JSDoc `@link` targets emit warnings and render as plain text so reference generation can continue.
+
+Build the discovered demos separately:
 
 ```sh
 pnpm --filter remix-api run build

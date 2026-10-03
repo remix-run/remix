@@ -1,5 +1,5 @@
-import { css, type Handle, type RemixNode } from 'remix/ui'
-import { ImportMap } from 'remix/ui/server'
+import { css, type Handle, type RemixNode } from 'remix/component'
+import { ImportMap } from 'remix/component/server'
 
 import { getAssetEntry } from '../middleware/asset-entry.ts'
 import type { Theme } from './public/theme.ts'

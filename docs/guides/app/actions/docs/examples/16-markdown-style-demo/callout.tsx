@@ -1,5 +1,5 @@
-import { css } from "remix/ui";
-import type { Handle, RemixNode } from "remix/ui";
+import { css } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import type { AppContext } from "../../../../router.ts";
 

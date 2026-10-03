@@ -1,4 +1,4 @@
-import { clientEntry, css, on, type Handle } from 'remix/ui'
+import { clientEntry, css, on, type Handle } from 'remix/component'
 
 import { themeCookieMaxAge, themeCookieName, type Theme } from './theme.ts'
 

@@ -1,1 +1,0 @@
-Preserve subsequent `Cookie` pairs when quotes span semicolon delimiters while retaining existing value decoding. `Cookie#toString()` encodes semicolons in values as `%3B`; `Cookie.from()` preserves that encoding, so a value such as `a;b` is parsed back as `a%3Bb` (see #11906).

@@ -63,7 +63,7 @@ export function i18nMiddleware(): Middleware<{
       supportedLngs: supportedLanguages,
       resources,
       interpolation: {
-        // Remix UI escapes rendered text, so i18next must not escape it first.
+        // The component runtime escapes rendered text, so i18next must not escape it first.
         escapeValue: false,
       },
     })

@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { unsafeHTML } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { unsafeHTML } from 'remix/component'
 
 import { TableOfContentsBehavior } from './public/table-of-contents.tsx'
 
