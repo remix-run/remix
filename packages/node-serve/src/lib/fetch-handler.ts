@@ -23,8 +23,9 @@ export interface ClientAddress {
 }
 
 /**
- * A function that handles an error that occurred during request handling. May return a response to
- * send to the client, or `undefined` to allow the server to send a default error response.
+ * Handles request construction, handler, or response body errors before headers are sent. May
+ * return a response to send to the client, or `undefined` for the default error response. Response
+ * body failures after headers are sent close the connection.
  *
  * [MDN `Response` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Response)
  *

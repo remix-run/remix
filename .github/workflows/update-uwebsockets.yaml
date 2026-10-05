@@ -77,6 +77,9 @@ jobs:
           fi
           git checkout -B "$branch"
           git add packages/uwebsockets-js* packages/node-serve/README.md packages/remix/src/node-serve/README.md
+          for changes in packages/node-serve/.changes packages/remix/.changes; do
+            if [ -d "$changes" ]; then git add "$changes"; fi
+          done
           if [ -n "$pr" ] && [ "$(git write-tree)" = "$(git rev-parse "$existing_sha^{tree}")" ]; then
             echo "Update PR is already current."
             exit 0

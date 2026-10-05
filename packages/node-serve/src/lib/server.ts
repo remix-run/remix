@@ -2,7 +2,7 @@ import { STATUS_CODES } from 'node:http'
 import * as uWS from '@remix-run/uwebsockets-js'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
-import { createUwsRequest, type UwsResponseState } from './uws-request.ts'
+import { createUwsRequest, getAbortSignal, type UwsResponseState } from './uws-request.ts'
 
 // "Internal Server Error"
 const internalServerErrorBody = [
@@ -23,8 +23,8 @@ export interface UwsRequestHandlerOptions {
    */
   protocol?: string
   /**
-   * An error handler that determines the response when the request handler throws an error. By
-   * default a 500 Internal Server Error response will be sent.
+   * Handles request construction, handler, and response body errors before headers are sent.
+   * Defaults to a 500 Internal Server Error response. Body errors after headers close the connection.
    */
   onError?: ErrorHandler
 }
@@ -73,8 +73,8 @@ export interface ServeOptions {
    */
   protocol?: string
   /**
-   * An error handler that determines the response when the request handler throws an error. By
-   * default a 500 Internal Server Error response will be sent.
+   * Handles request construction, handler, and response body errors before headers are sent.
+   * Defaults to a 500 Internal Server Error response. Body errors after headers close the connection.
    */
   onError?: ErrorHandler
   /**
@@ -151,14 +151,14 @@ export function createUwsRequestHandler(
       if (isPromiseLike(response)) {
         void response.then(
           (response) => {
-            void sendUwsResponse(res, state, method, response)
+            void sendUwsResponse(res, state, method, response, onError)
           },
           (error) => {
             void sendErrorResponse(res, state, method, onError, error)
           },
         )
       } else {
-        void sendUwsResponse(res, state, method, response)
+        void sendUwsResponse(res, state, method, response, onError)
       }
     }
   }
@@ -169,10 +169,9 @@ export function createUwsRequestHandler(
     return (res, req) => {
       let state = createUwsResponseState(res)
       let method = req.getCaseSensitiveMethod()
-      let request = createUwsRequest(req, res, state, options, method)
-
       let response: Response | Promise<Response>
       try {
+        let request = createUwsRequest(req, res, state, options, method)
         response = requestHandler(request)
       } catch (error) {
         void sendErrorResponse(res, state, method, onError, error)
@@ -182,14 +181,14 @@ export function createUwsRequestHandler(
       if (isPromiseLike(response)) {
         void response.then(
           (response) => {
-            void sendUwsResponse(res, state, method, response)
+            void sendUwsResponse(res, state, method, response, onError)
           },
           (error) => {
             void sendErrorResponse(res, state, method, onError, error)
           },
         )
       } else {
-        void sendUwsResponse(res, state, method, response)
+        void sendUwsResponse(res, state, method, response, onError)
       }
     }
   }
@@ -197,11 +196,10 @@ export function createUwsRequestHandler(
   return (res, req) => {
     let state = createUwsResponseState(res)
     let method = req.getCaseSensitiveMethod()
-    let request = createUwsRequest(req, res, state, options, method)
-    let client = createClientAddress(res)
-
     let response: Response | Promise<Response>
     try {
+      let request = createUwsRequest(req, res, state, options, method)
+      let client = createClientAddress(res)
       response = handler(request, client)
     } catch (error) {
       void sendErrorResponse(res, state, method, onError, error)
@@ -211,14 +209,14 @@ export function createUwsRequestHandler(
     if (isPromiseLike(response)) {
       void response.then(
         (response) => {
-          void sendUwsResponse(res, state, method, response)
+          void sendUwsResponse(res, state, method, response, onError)
         },
         (error) => {
           void sendErrorResponse(res, state, method, onError, error)
         },
       )
     } else {
-      void sendUwsResponse(res, state, method, response)
+      void sendUwsResponse(res, state, method, response, onError)
     }
   }
 }
@@ -305,59 +303,81 @@ async function sendUwsResponse(
   state: UwsResponseState,
   method: string,
   response: Response,
+  onError: ErrorHandler,
 ): Promise<void> {
-  if (state.aborted) return
+  try {
+    await writeUwsResponse(res, state, method, response)
+  } catch (error) {
+    if (state.aborted || state.completed) return
+    if (state.responseStarted) {
+      closeUwsResponse(res, state)
+      return
+    }
+    try {
+      await writeUwsResponse(res, state, method, await createErrorResponse(onError, error))
+    } catch {
+      closeUwsResponse(res, state)
+    }
+  }
+}
+
+async function writeUwsResponse(
+  res: uWS.HttpResponse,
+  state: UwsResponseState,
+  method: string,
+  response: Response,
+): Promise<void> {
+  if (state.aborted || state.completed) {
+    void response.body?.cancel().catch(() => undefined)
+    return
+  }
 
   if (method === 'HEAD' || response.body == null) {
-    endUwsResponse(res, state, response, undefined)
+    void response.body?.cancel().catch(() => undefined)
+    endUwsResponse(res, state, response)
     return
   }
 
   let reader = response.body.getReader()
+  // Native pause stops writes too; drain unused uploads before starting a response.
+  if (!state.requestBody?.locked) state.abortBody?.()
+  let signal = getAbortSignal(state)
+  function cancelBody() {
+    void reader.cancel(signal.reason).catch(() => undefined)
+  }
+  signal.addEventListener('abort', cancelBody, { once: true })
   try {
-    let first = await reader.read()
+    let result = await reader.read()
     if (state.aborted) return
 
-    if (first.done) {
-      endUwsResponse(res, state, response, undefined)
-      return
-    }
-
-    let second = await reader.read()
-    if (state.aborted) return
-
-    if (second.done) {
-      endUwsResponse(res, state, response, first.value)
+    if (result.done) {
+      endUwsResponse(res, state, response)
       return
     }
 
     writeResponseStart(res, state, response)
-
-    if (!writeChunk(res, state, first.value)) {
-      await waitForWritable(res)
+    while (!result.done) {
       if (state.aborted) return
-    }
-
-    if (!writeChunk(res, state, second.value)) {
-      await waitForWritable(res)
-      if (state.aborted) return
-    }
-
-    while (true) {
-      let result = await reader.read()
-      if (state.aborted) return
-      if (result.done) break
-
-      if (!writeChunk(res, state, result.value)) {
-        await waitForWritable(res)
+      if (result.value.byteLength !== 0 && !writeChunk(res, state, result.value)) {
+        await waitForWritable(res, state)
         if (state.aborted) return
       }
+      result = await reader.read()
     }
+    if (!state.aborted) {
+      res.cork(() => {
+        state.abortBody?.()
+        res.end()
+        state.completed = true
+      })
+    }
+  } catch (error) {
+    void reader.cancel(error).catch(() => undefined)
+    throw error
   } finally {
+    signal.removeEventListener('abort', cancelBody)
     reader.releaseLock()
   }
-
-  if (!state.aborted) res.end()
 }
 
 function writeResponseStart(
@@ -369,47 +389,53 @@ function writeResponseStart(
 
   res.cork(() => {
     if (state.aborted) return
-
+    state.responseStarted = true
     writeStatus(res, response)
     for (let [key, value] of response.headers) {
+      // uWS supplies framing headers when streaming with write().
+      if (key === 'content-length' || key === 'transfer-encoding') continue
       res.writeHeader(key, value)
     }
   })
 }
 
-function endUwsResponse(
-  res: uWS.HttpResponse,
-  state: UwsResponseState,
-  response: Response,
-  body?: Uint8Array,
-): void {
+function endUwsResponse(res: uWS.HttpResponse, state: UwsResponseState, response: Response): void {
   if (state.aborted) return
 
   res.cork(() => {
     if (state.aborted) return
-
+    state.responseStarted = true
     writeStatus(res, response)
     for (let [key, value] of response.headers) {
       res.writeHeader(key, value)
     }
 
-    if (body == null) {
-      res.endWithoutBody()
-    } else {
-      res.end(body)
-    }
+    state.abortBody?.()
+    res.endWithoutBody()
+    state.completed = true
   })
 }
 
 function writeChunk(res: uWS.HttpResponse, state: UwsResponseState, chunk: Uint8Array): boolean {
   if (state.aborted) return true
-  return res.write(chunk)
+  let writable = true
+  res.cork(() => {
+    if (!state.aborted) writable = res.write(chunk)
+  })
+  return writable
 }
 
-function waitForWritable(res: uWS.HttpResponse): Promise<void> {
+function waitForWritable(res: uWS.HttpResponse, state: UwsResponseState): Promise<void> {
+  if (state.aborted || state.completed) return Promise.resolve()
+  let signal = getAbortSignal(state)
   return new Promise((resolve) => {
-    res.onWritable(() => {
+    function finish() {
+      signal.removeEventListener('abort', finish)
       resolve()
+    }
+    signal.addEventListener('abort', finish, { once: true })
+    res.onWritable(() => {
+      finish()
       return true
     })
   })
@@ -422,8 +448,16 @@ async function sendErrorResponse(
   onError: ErrorHandler,
   error: unknown,
 ): Promise<void> {
+  if (state.aborted || state.completed) return
   let response = await createErrorResponse(onError, error)
-  await sendUwsResponse(res, state, method, response)
+  await sendUwsResponse(res, state, method, response, defaultErrorHandler)
+}
+
+function closeUwsResponse(res: uWS.HttpResponse, state: UwsResponseState): void {
+  if (state.aborted || state.completed) return
+  state.completed = true
+  state.abortBody?.()
+  res.close()
 }
 
 async function createErrorResponse(onError: ErrorHandler, error: unknown): Promise<Response> {
@@ -456,6 +490,9 @@ function isPromiseLike<value>(value: value | PromiseLike<value>): value is Promi
 function createUwsResponseState(res: uWS.HttpResponse): UwsResponseState {
   let state: UwsResponseState = {
     aborted: false,
+    completed: false,
+    responseStarted: false,
+    requestBody: undefined,
     abortBody: undefined,
     controller: undefined,
   }

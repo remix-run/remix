@@ -23,6 +23,8 @@ npm i remix
 
 ## Usage
 
+Request bodies stream with backpressure rather than buffering the complete upload. Response chunks are sent as they arrive, and disconnecting clients cancel pending response reads. Use `onError` to handle request construction, handler, or response body failures before headers are sent; failures after headers close the connection.
+
 Use `serve()` to start a Node.js server that calls your fetch handler for every incoming request:
 
 ```ts

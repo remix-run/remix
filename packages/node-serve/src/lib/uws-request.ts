@@ -16,6 +16,9 @@ export interface UwsRequestOptions {
 
 export interface UwsResponseState {
   aborted: boolean
+  completed: boolean
+  responseStarted: boolean
+  requestBody: ReadableStream<Uint8Array> | undefined
   abortBody: (() => void) | undefined
   controller: AbortController | undefined
 }
@@ -34,7 +37,7 @@ export function createUwsRequest(
   }
 
   if (requestMethodCanHaveBody(method)) {
-    init.body = createBodyStream(readUwsRequestBody(res, state))
+    init.body = state.requestBody = createBodyStream(res, state)
     ;(init as { duplex: 'half' }).duplex = 'half'
   }
 
@@ -49,7 +52,7 @@ function createRequestHeaders(req: HttpRequest): Headers {
   return createUwsHeaders(entries)
 }
 
-function getAbortSignal(state: UwsResponseState): AbortSignal {
+export function getAbortSignal(state: UwsResponseState): AbortSignal {
   let controller = (state.controller ??= new AbortController())
   if (state.aborted) controller.abort()
   return controller.signal
@@ -62,67 +65,56 @@ function createRequestUrl(req: HttpRequest, options: UwsRequestOptions | undefin
   return `${protocol}//${host}${req.getUrl()}${query === '' ? '' : `?${query}`}`
 }
 
-function createBodyStream(body: Promise<Buffer>): ReadableStream<Uint8Array> {
-  let sent = false
+function createBodyStream(res: HttpResponse, state: UwsResponseState): ReadableStream<Uint8Array> {
+  let closed = false
+  let paused = false
 
-  return new ReadableStream({
-    pull: async (controller) => {
-      if (sent) return
-      sent = true
+  function resume() {
+    // Native resume restores the event mask captured by pause.
+    if (paused && !state.aborted && !state.completed) {
+      paused = false
+      res.resume()
+    }
+  }
 
-      let buffer = await body
-      if (buffer.byteLength !== 0) controller.enqueue(bufferToBytes(buffer))
-      controller.close()
+  return new ReadableStream<Uint8Array>(
+    {
+      start(controller) {
+        state.abortBody = () => {
+          if (closed) return
+          closed = true
+          state.abortBody = undefined
+          controller.error(new Error('Request aborted'))
+          resume()
+        }
+
+        res.onData((chunk, isLast) => {
+          if (closed || state.aborted || state.completed) return
+          if (chunk.byteLength !== 0) controller.enqueue(new Uint8Array(chunk).slice())
+          if (isLast) {
+            closed = true
+            state.abortBody = undefined
+            controller.close()
+            resume()
+          } else if (!paused && controller.desiredSize !== null && controller.desiredSize <= 0) {
+            paused = true
+            res.pause()
+          }
+        })
+      },
+      pull() {
+        if (!closed) resume()
+      },
+      cancel() {
+        closed = true
+        state.abortBody = undefined
+        resume()
+      },
     },
-  })
+    new ByteLengthQueuingStrategy({ highWaterMark: 64 * 1024 }),
+  )
 }
 
 function requestMethodCanHaveBody(method: string): boolean {
   return method !== 'GET' && method !== 'HEAD'
-}
-
-function bufferToBytes(buffer: Buffer): Uint8Array<ArrayBuffer> {
-  let bytes = new Uint8Array(buffer.byteLength)
-  bytes.set(buffer)
-  return bytes
-}
-
-function readUwsRequestBody(res: HttpResponse, state: UwsResponseState): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    let firstChunk: Buffer | undefined
-    let chunks: Buffer[] | undefined
-    let length = 0
-
-    state.abortBody = () => {
-      reject(new Error('Request aborted'))
-    }
-
-    res.onData((chunk, isLast) => {
-      if (state.aborted) return
-
-      if (chunk.byteLength !== 0) {
-        let buffer = Buffer.from(new Uint8Array(chunk))
-        length += buffer.byteLength
-
-        if (firstChunk == null) {
-          firstChunk = buffer
-        } else {
-          chunks ??= [firstChunk]
-          chunks.push(buffer)
-        }
-      }
-
-      if (isLast) {
-        state.abortBody = undefined
-
-        if (firstChunk == null) {
-          resolve(Buffer.alloc(0))
-        } else if (chunks == null) {
-          resolve(firstChunk)
-        } else {
-          resolve(Buffer.concat(chunks, length))
-        }
-      }
-    })
-  })
 }

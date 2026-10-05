@@ -1,4 +1,5 @@
 import * as https from 'node:https'
+import * as http from 'node:http'
 import * as net from 'node:net'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -13,6 +14,163 @@ const fixturesDir = path.resolve(
 )
 
 describeUws('serve', () => {
+  it('uses native chunked framing when a streamed response declares its own framing headers', async () => {
+    let server = serve(
+      () =>
+        new Response('fixed', {
+          headers: { 'Content-Length': '5', 'Transfer-Encoding': 'chunked' },
+        }),
+      { port: 0 },
+    )
+    await server.ready
+    try {
+      let response = await fetch(`http://127.0.0.1:${server.port}/test`)
+      assert.equal(await response.text(), 'fixed')
+      assert.equal(response.headers.get('Content-Length'), null)
+      assert.equal(response.headers.get('Transfer-Encoding'), 'chunked')
+    } finally {
+      server.close()
+    }
+  })
+
+  it('sends the configured error response when the response body fails before headers', async () => {
+    let failure = new Error('response body failed')
+    let caught: unknown
+    let server = serve(
+      () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(failure)
+            },
+          }),
+        ),
+      {
+        port: 0,
+        onError(error) {
+          caught = error
+          return new Response('recovered', { status: 502 })
+        },
+      },
+    )
+    await server.ready
+    try {
+      let response = await fetch(`http://127.0.0.1:${server.port}/test`)
+      assert.equal(response.status, 502)
+      assert.equal(await response.text(), 'recovered')
+      assert.equal(caught, failure)
+    } finally {
+      server.close()
+    }
+  })
+
+  it('closes the socket when a response stream fails after its first chunk', async () => {
+    let controller: ReadableStreamDefaultController<Uint8Array> | undefined
+    let errorHandlerCalled = false
+    let server = serve(
+      () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(value) {
+              controller = value
+              value.enqueue(new TextEncoder().encode('first'))
+            },
+          }),
+        ),
+      {
+        port: 0,
+        onError() {
+          errorHandlerCalled = true
+        },
+      },
+    )
+    await server.ready
+    try {
+      let response = await fetch(`http://127.0.0.1:${server.port}/test`)
+      assert.ok(response.body)
+      let reader = response.body.getReader()
+      try {
+        assert.equal(new TextDecoder().decode((await reader.read()).value), 'first')
+        controller?.error(new Error('committed body failed'))
+        await assert.rejects(
+          withTimeout(reader.read(), 'Timed out closing failed response'),
+          /terminated/,
+        )
+        assert.equal(errorHandlerCalled, false)
+      } finally {
+        reader.releaseLock()
+      }
+    } finally {
+      server.close()
+    }
+  })
+
+  it('streams an initial event immediately and cancels it when the client disconnects', async () => {
+    let cancelled = Promise.withResolvers<void>()
+    let server = serve(
+      () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('data: first\n\n'))
+            },
+            cancel() {
+              cancelled.resolve()
+            },
+          }),
+          { headers: { 'Content-Type': 'text/event-stream' } },
+        ),
+      { port: 0 },
+    )
+    await server.ready
+    try {
+      let response = await withTimeout(
+        fetch(`http://127.0.0.1:${server.port}/events`),
+        'Timed out receiving first event headers',
+      )
+      assert.ok(response.body)
+      let reader = response.body.getReader()
+      try {
+        let first = await withTimeout(reader.read(), 'Timed out receiving first event')
+        assert.equal(new TextDecoder().decode(first.value), 'data: first\n\n')
+        await reader.cancel()
+        await withTimeout(cancelled.promise, 'Timed out cancelling disconnected response')
+      } finally {
+        reader.releaseLock()
+      }
+    } finally {
+      server.close()
+    }
+  })
+
+  it('echoes upload chunks before the client finishes sending its body', async () => {
+    let server = serve((request) => new Response(request.body), { port: 0 })
+    await server.ready
+    let first = Promise.withResolvers<string>()
+    let complete = Promise.withResolvers<void>()
+    let client = http.request(
+      { hostname: '127.0.0.1', port: server.port, method: 'POST' },
+      (response) => {
+        response.on('data', (chunk: Buffer) => first.resolve(chunk.toString()))
+        response.on('end', complete.resolve)
+        response.on('error', complete.reject)
+      },
+    )
+    client.on('error', (error) => {
+      first.reject(error)
+      complete.reject(error)
+    })
+    try {
+      client.write('first')
+      assert.equal(await withTimeout(first.promise, 'Timed out echoing partial upload'), 'first')
+      client.end('last')
+      await withTimeout(complete.promise, 'Timed out completing upload echo')
+    } finally {
+      client.destroy()
+      server.close()
+    }
+  })
+
   it('runs setup before listening and exposes the configured app', async () => {
     let events: string[] = []
     let setupApp: unknown
