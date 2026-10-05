@@ -3,8 +3,8 @@ import { createHash } from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import semver from 'semver'
-import upstream from '../packages/uwebsockets-js/upstream.json' with { type: 'json' }
 import facade from '../packages/uwebsockets-js/package.json' with { type: 'json' }
+import upstream from '../packages/uwebsockets-js/upstream.json' with { type: 'json' }
 import { getRootDir } from './utils/process.ts'
 
 const repository = 'uNetworking/uWebSockets.js'
@@ -13,7 +13,8 @@ const packageDirs = [
   'uwebsockets-js',
   ...Object.keys(facade.optionalDependencies).map((name) => name.replace('@remix-run/', '')),
 ]
-// ponytail: documented Node ABIs are explicit; add a mapping when upstream adds a new runtime.
+
+// documented Node ABIs are explicit; add a mapping when upstream adds a new runtime.
 const nodeVersions = new Map([
   [115, 20],
   [127, 22],
@@ -90,6 +91,37 @@ export function getNodeVersions(abis: number[]): string {
       return version
     })
     .join(', ')
+}
+
+export async function writeConsumerSupportChanges(
+  rootDir: string,
+  previousAbis: number[],
+  nextAbis: number[],
+): Promise<void> {
+  if (previousAbis.join(',') === nextAbis.join(',')) return
+  let removedAbis = previousAbis.filter((abi) => !nextAbis.includes(abi))
+  let runtimes = getNodeVersions(nextAbis)
+  for (let dir of ['node-serve', 'remix']) {
+    let packageDir = path.join(rootDir, 'packages', dir)
+    let metadata: unknown = JSON.parse(
+      await fs.readFile(path.join(packageDir, 'package.json'), 'utf8'),
+    )
+    if (
+      typeof metadata !== 'object' ||
+      metadata === null ||
+      !('version' in metadata) ||
+      typeof metadata.version !== 'string' ||
+      !semver.valid(metadata.version)
+    ) {
+      throw new Error(`Invalid package version for ${dir}.`)
+    }
+    let bump = removedAbis.length > 0 && semver.major(metadata.version) > 0 ? 'major' : 'minor'
+    let specifier = dir === 'remix' ? 'remix/node-serve' : 'node-serve'
+    let slug = dir === 'remix' ? 'node-serve.node-support' : 'node-support'
+    let note = `${removedAbis.length > 0 ? 'BREAKING CHANGE: ' : ''}Supported Node.js versions for \`${specifier}\` are now ${runtimes}.${removedAbis.length > 0 ? ` Support for Node.js ${getNodeVersions(removedAbis)} has been removed. Upgrade to a supported Node.js version before updating.` : ''}\n`
+    await fs.mkdir(path.join(packageDir, '.changes'), { recursive: true })
+    await fs.writeFile(path.join(packageDir, `.changes/${bump}.${slug}.md`), note)
+  }
 }
 
 async function main() {
@@ -172,6 +204,7 @@ async function main() {
     await fs.writeFile(readme, content)
   }
   if (supportChanged) {
+    await writeConsumerSupportChanges(root, upstream.nodeAbis, next.nodeAbis)
     for (let dir of ['packages/node-serve', 'packages/remix/src/node-serve']) {
       let readme = path.join(root, dir, 'README.md')
       let content = await fs.readFile(readme, 'utf8')
