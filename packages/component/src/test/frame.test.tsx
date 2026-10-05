@@ -3011,6 +3011,406 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('renders the frame fallback during a successful reload when fallbackOnReloads is enabled', async () => {
+    let reload: undefined | (() => Promise<AbortSignal>)
+    let [reloadContent, resolveReloadContent] = withResolvers<string>()
+    let renderCount = 0
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-fallback.js#ReloadFallback',
+      function ReloadFallback(handle: Handle) {
+        reload = () => handle.frame.reload()
+        return () => <button id="reload-fallback-trigger">Reload</button>
+      },
+    )
+
+    async function resolveFrame() {
+      renderCount++
+      if (renderCount === 1) {
+        return await drain(
+          renderToStream(
+            <section>
+              <p id="reload-fallback-content">Initial content</p>
+              <ReloadButton />
+            </section>,
+          ),
+        )
+      }
+      return await reloadContent
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame
+            src="/reload-fallback"
+            fallback={<p id="reload-fallback">Loading frame…</p>}
+            fallbackOnReloads
+          />
+        </main>,
+        { resolveFrame },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload-fallback.js' && exportName === 'ReloadFallback') {
+          return ReloadButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reload)
+    let reloadPromise = reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('reload-fallback')).not.toBe(null)
+    expect(document.getElementById('reload-fallback-content')).toBe(null)
+
+    resolveReloadContent('<section><p id="reload-fallback-content">Updated content</p></section>')
+    await reloadPromise
+
+    expect(document.getElementById('reload-fallback')).toBe(null)
+    expect(document.getElementById('reload-fallback-content')?.textContent).toBe('Updated content')
+    app.dispose()
+  })
+
+  it('rehydrates client entries inside the fallback on reload', async () => {
+    let reload: undefined | (() => Promise<AbortSignal>)
+    let [reloadContent, resolveReloadContent] = withResolvers<string>()
+    let renderCount = 0
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-fallback-entry.js#ReloadFallbackEntry',
+      function ReloadFallbackEntry(handle: Handle) {
+        let clickCount = 0
+        return () => (
+          <button
+            id="reload-fallback-entry"
+            mix={on('click', () => {
+              clickCount++
+              handle.update()
+            })}
+          >
+            Loading {clickCount}
+          </button>
+        )
+      },
+    )
+
+    let ReloadTrigger = clientEntry(
+      '/assets/reload-fallback-trigger.js#ReloadFallbackTrigger',
+      function ReloadFallbackTrigger(handle: Handle) {
+        reload = () => handle.frame.reload()
+        return () => <button id="reload-fallback-trigger">Reload</button>
+      },
+    )
+
+    async function resolveFrame() {
+      renderCount++
+      if (renderCount === 1) {
+        return await drain(renderToStream(<ReloadTrigger />))
+      }
+      return await reloadContent
+    }
+
+    let html = await drain(
+      renderToStream(
+        <Frame src="/reload-fallback-entry" fallback={<ReloadButton />} fallbackOnReloads />,
+        { resolveFrame },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-fallback-entry.js' &&
+          exportName === 'ReloadFallbackEntry'
+        ) {
+          return ReloadButton
+        }
+        if (
+          moduleUrl === '/assets/reload-fallback-trigger.js' &&
+          exportName === 'ReloadFallbackTrigger'
+        ) {
+          return ReloadTrigger
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reload)
+    let reloadPromise = reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let fallbackButton = document.getElementById('reload-fallback-entry')
+    expect(fallbackButton?.textContent).toBe('Loading 0')
+    fallbackButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(document.getElementById('reload-fallback-entry')?.textContent).toBe('Loading 1')
+
+    resolveReloadContent('<p id="reload-fallback-entry-content">Updated</p>')
+    await reloadPromise
+    expect(document.getElementById('reload-fallback-entry')).toBeNull()
+    expect(document.getElementById('reload-fallback-entry-content')?.textContent).toBe('Updated')
+    app.dispose()
+  })
+
+  it('uses an updated fallback prop on a later reload', async () => {
+    let reload: undefined | (() => Promise<AbortSignal>)
+    let updateFallback: undefined | (() => void)
+    let [reloadContent, resolveReloadContent] = withResolvers<string>()
+    let renderCount = 0
+
+    let FrameControls = clientEntry(
+      '/assets/reload-fallback-update.js#ReloadFallbackUpdate',
+      function ReloadFallbackUpdate(handle: Handle) {
+        let fallbackVersion = 1
+        updateFallback = () => {
+          fallbackVersion = 2
+          void handle.update()
+        }
+        reload = () => {
+          let frame = handle.frames.get('fallback-update')
+          invariant(frame, 'Expected named frame to be mounted')
+          return frame.reload()
+        }
+
+        return () => (
+          <Frame
+            name="fallback-update"
+            src="/reload-fallback-update"
+            fallbackOnReloads
+            fallback={
+              fallbackVersion === 1 ? (
+                <p id="reload-fallback-v1">Loading version 1</p>
+              ) : (
+                <p id="reload-fallback-v2">Loading version 2</p>
+              )
+            }
+          />
+        )
+      },
+    )
+
+    async function resolveFrame() {
+      renderCount++
+      if (renderCount === 1) {
+        return await drain(renderToStream(<p id="reload-fallback-update-content">Initial</p>))
+      }
+      return await reloadContent
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <FrameControls />
+        </main>,
+        { resolveFrame },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-fallback-update.js' &&
+          exportName === 'ReloadFallbackUpdate'
+        ) {
+          return FrameControls
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(updateFallback)
+    updateFallback()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reload)
+    let reloadPromise = reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('reload-fallback-v1')).toBeNull()
+    expect(document.getElementById('reload-fallback-v2')?.textContent).toBe('Loading version 2')
+
+    resolveReloadContent('<p id="reload-fallback-update-content">Updated</p>')
+    await reloadPromise
+    expect(document.getElementById('reload-fallback-v2')).toBeNull()
+    expect(document.getElementById('reload-fallback-update-content')?.textContent).toBe('Updated')
+    app.dispose()
+  })
+
+  it('reloads nested frames when rendering a saved fallback', async () => {
+    let reloadOuter: undefined | (() => Promise<AbortSignal>)
+    let [outerReloadContent, resolveOuterReloadContent] = withResolvers<string>()
+    let [nestedReloadContent, resolveNestedReloadContent] = withResolvers<string>()
+    let [nestedReloadStarted, markNestedReloadStarted] = withResolvers<void>()
+    let outerRenderCount = 0
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-fallback-nested.js#ReloadFallbackNested',
+      function ReloadFallbackNested(handle: Handle) {
+        reloadOuter = () => handle.frame.reload()
+        return () => <button id="reload-fallback-nested-trigger">Reload</button>
+      },
+    )
+
+    async function resolveInitialFrame(src: string) {
+      if (src === '/outer') {
+        outerRenderCount++
+        if (outerRenderCount === 1) return await drain(renderToStream(<ReloadButton />))
+        return await outerReloadContent
+      }
+      if (src === '/nested') {
+        return await drain(renderToStream(<p id="nested-frame-content">Server nested content</p>))
+      }
+      throw new Error(`Unexpected server frame src: ${src}`)
+    }
+
+    let html = await drain(
+      renderToStream(
+        <Frame
+          src="/outer"
+          fallback={
+            <section>
+              <p id="outer-reload-fallback">Loading outer frame…</p>
+              <Frame
+                name="nested-fallback-frame"
+                src="/nested"
+                fallback={<p id="nested-reload-fallback">Loading nested frame…</p>}
+              />
+            </section>
+          }
+          fallbackOnReloads
+        />,
+        { resolveFrame: resolveInitialFrame },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-fallback-nested.js' &&
+          exportName === 'ReloadFallbackNested'
+        ) {
+          return ReloadButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/outer') return outerReloadContent
+        if (src === '/nested') {
+          markNestedReloadStarted()
+          return nestedReloadContent
+        }
+        throw new Error(`Unexpected client frame src: ${src}`)
+      },
+    })
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reloadOuter)
+    let outerReloadPromise = reloadOuter()
+    await nestedReloadStarted
+
+    expect(document.getElementById('outer-reload-fallback')).not.toBeNull()
+    expect(document.getElementById('nested-reload-fallback')).not.toBeNull()
+    resolveNestedReloadContent('<p id="nested-frame-content">Reloaded nested content</p>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(document.getElementById('nested-frame-content')?.textContent).toBe(
+      'Reloaded nested content',
+    )
+
+    resolveOuterReloadContent('<p id="outer-reload-content">Reloaded outer content</p>')
+    await outerReloadPromise
+    expect(document.getElementById('outer-reload-fallback')).toBeNull()
+    expect(document.getElementById('nested-frame-content')).toBeNull()
+    expect(document.getElementById('outer-reload-content')?.textContent).toBe(
+      'Reloaded outer content',
+    )
+    app.dispose()
+  })
+
+  it('keeps the frame fallback visible when a reload with fallbackOnReloads fails', async () => {
+    let reload: undefined | (() => Promise<AbortSignal>)
+    let reloadError = new TypeError('Failed to fetch')
+    let renderCount = 0
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-fallback-error.js#ReloadFallbackError',
+      function ReloadFallbackError(handle: Handle) {
+        reload = () => handle.frame.reload()
+        return () => <button id="reload-fallback-error-trigger">Reload</button>
+      },
+    )
+
+    async function resolveFrame() {
+      renderCount++
+      if (renderCount === 1) {
+        return await drain(
+          renderToStream(
+            <section>
+              <p id="reload-fallback-error-content">Initial content</p>
+              <ReloadButton />
+            </section>,
+          ),
+        )
+      }
+      throw reloadError
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame
+            src="/reload-fallback-error"
+            fallback={<p id="reload-fallback-error">Loading frame…</p>}
+            fallbackOnReloads
+          />
+        </main>,
+        { resolveFrame },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-fallback-error.js' &&
+          exportName === 'ReloadFallbackError'
+        ) {
+          return ReloadButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reload)
+    let caught = await reload().catch((error) => error)
+
+    expect(caught).toBe(reloadError)
+    expect(document.getElementById('reload-fallback-error')).not.toBe(null)
+    expect(document.getElementById('reload-fallback-error-content')).toBe(null)
+    app.dispose()
+  })
+
   it('dispatches reloadStart and reloadComplete events for non-blocking child frames during top frame reloads', async () => {
     let childReloadStartEvents = 0
     let childReloadCompleteEvents = 0
@@ -3063,6 +3463,7 @@ describe('run', () => {
                 name="event-child"
                 src="/event-child"
                 fallback={<span id="event-child-frame-fallback">Loading child...</span>}
+                fallbackOnReloads
               />
             </main>
           </body>
@@ -3121,8 +3522,8 @@ describe('run', () => {
 
     expect(childReloadStartEvents).toBe(1)
     expect(childReloadCompleteEvents).toBe(0)
-    expect(document.getElementById('event-child-frame-fallback')).toBeNull()
-    expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Initial child')
+    expect(document.getElementById('event-child-frame-fallback')).not.toBeNull()
+    expect(document.getElementById('event-child-frame-label')).toBeNull()
 
     releaseSecondChunk(secondChunk.value)
     await reloadPromise
@@ -3489,7 +3890,11 @@ describe('run', () => {
     let html = await drain(
       renderToStream(
         <main>
-          <Frame src="/reload-abort" fallback={<div>Loading…</div>} />
+          <Frame
+            src="/reload-abort"
+            fallback={<div id="reload-abort-fallback">Loading…</div>}
+            fallbackOnReloads
+          />
         </main>,
         { resolveFrame: renderInitial },
       ),
@@ -3526,11 +3931,14 @@ describe('run', () => {
     let firstReloadPromise = reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(firstSignal?.aborted).toBe(false)
+    expect(document.getElementById('reload-abort-fallback')).not.toBeNull()
+    expect(document.getElementById('reload-value')).toBeNull()
 
     let secondReloadPromise = reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(firstSignal?.aborted).toBe(true)
     expect(secondSignal?.aborted).toBe(false)
+    expect(document.getElementById('reload-abort-fallback')).not.toBeNull()
 
     resolveFirstReloadContent('<section><p id="reload-value">Stale</p></section>')
     let firstReloadSignal = await firstReloadPromise
@@ -3539,7 +3947,8 @@ describe('run', () => {
     expect(firstReloadSignal.aborted).toBe(true)
 
     // First reload should be ignored because it was superseded.
-    expect(document.getElementById('reload-value')?.textContent).toBe('Initial')
+    expect(document.getElementById('reload-abort-fallback')).not.toBeNull()
+    expect(document.getElementById('reload-value')).toBeNull()
 
     resolveSecondReloadContent('<section><p id="reload-value">Fresh</p></section>')
     let secondReloadSignal = await secondReloadPromise
@@ -3548,6 +3957,7 @@ describe('run', () => {
     expect(secondReloadSignal.aborted).toBe(false)
 
     expect(document.getElementById('reload-value')?.textContent).toBe('Fresh')
+    expect(document.getElementById('reload-abort-fallback')).toBeNull()
     clientFrame.dispose()
   })
 

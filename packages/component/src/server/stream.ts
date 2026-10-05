@@ -157,6 +157,24 @@ interface FrameData {
   status: 'pending' | 'resolved'
   name?: string
   src: string
+  fallback?: FrameFallbackData
+}
+
+interface FrameFallbackData {
+  html: string
+  hydrationIds: string[]
+  frameIds: string[]
+}
+
+interface SerializedFrameData extends Omit<FrameData, 'fallback'> {
+  reloadOnAdopt?: boolean
+  fallback?: {
+    html: string
+    data: {
+      h?: Record<string, HydrationData>
+      f?: Record<string, SerializedFrameData>
+    }
+  }
 }
 
 interface RenderContext {
@@ -556,11 +574,12 @@ function buildFrameSegment(
   let frameId = randomId('f')
 
   // Store frame data in context for aggregation
-  context.frameData.set(frameId, {
+  let frameData: FrameData = {
     status: props.fallback ? 'pending' : 'resolved',
     name: props.name,
     src: props.src,
-  })
+  }
+  context.frameData.set(frameId, frameData)
 
   let seg: Segment = {
     kind: 'frame',
@@ -571,7 +590,18 @@ function buildFrameSegment(
   let resolveFrameContext = getResolveFrameContext(frameState)
   let nonBlocking = !!props.fallback
   if (nonBlocking) {
+    let knownHydrationIds = new Set(context.unresolvedHydrationData.keys())
+    let knownFrameIds = new Set(context.frameData.keys())
     seg.content = buildSegment(props.fallback, context, frameState)
+    if (props.fallbackOnReloads) {
+      frameData.fallback = {
+        html: serializeSegment(seg.content),
+        hydrationIds: Array.from(context.unresolvedHydrationData.keys()).filter(
+          (id) => !knownHydrationIds.has(id),
+        ),
+        frameIds: Array.from(context.frameData.keys()).filter((id) => !knownFrameIds.has(id)),
+      }
+    }
     let framePromise = Promise.resolve(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
     ).then(async (resolved) => resolveFrameHtml(resolved))
@@ -1426,7 +1456,7 @@ function buildRmxDataScript(context: RenderContext): string {
 
   let data: {
     h?: Record<string, HydrationData>
-    f?: Record<string, FrameData>
+    f?: Record<string, SerializedFrameData>
   } = {}
 
   if (context.hydrationData.size > 0) {
@@ -1434,11 +1464,58 @@ function buildRmxDataScript(context: RenderContext): string {
   }
 
   if (context.frameData.size > 0) {
-    data.f = Object.fromEntries(context.frameData)
+    data.f = Object.fromEntries(
+      Array.from(context.frameData, ([id, frameData]) => [
+        id,
+        materializeFrameData(frameData, context),
+      ]),
+    )
   }
 
   let serializedData = escapeScriptJson(JSON.stringify(data))
   return `<script type="application/json" id="rmx-data">${serializedData}</script>`
+}
+
+function materializeFrameData(
+  frameData: FrameData,
+  context: RenderContext,
+  reloadOnAdopt = false,
+): SerializedFrameData {
+  if (!frameData.fallback) {
+    return {
+      status: reloadOnAdopt ? 'resolved' : frameData.status,
+      name: frameData.name,
+      src: frameData.src,
+      ...(reloadOnAdopt ? { reloadOnAdopt: true } : {}),
+    }
+  }
+
+  let { fallback, ...rest } = frameData
+  let hydrationData = Object.fromEntries(
+    fallback.hydrationIds.flatMap((id) => {
+      let data = context.hydrationData.get(id)
+      return data ? [[id, data]] : []
+    }),
+  )
+  let frameDataEntries = Object.fromEntries(
+    fallback.frameIds.flatMap((id) => {
+      let data = context.frameData.get(id)
+      return data ? [[id, materializeFrameData(data, context, true)]] : []
+    }),
+  )
+
+  return {
+    ...rest,
+    status: reloadOnAdopt ? 'resolved' : rest.status,
+    ...(reloadOnAdopt ? { reloadOnAdopt: true } : {}),
+    fallback: {
+      html: fallback.html,
+      data: {
+        ...(Object.keys(hydrationData).length > 0 ? { h: hydrationData } : {}),
+        ...(Object.keys(frameDataEntries).length > 0 ? { f: frameDataEntries } : {}),
+      },
+    },
+  }
 }
 
 function buildImportMapScript(importMap: ImportMapData, attrs: string = ''): string {

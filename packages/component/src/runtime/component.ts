@@ -225,6 +225,8 @@ export interface FrameProps {
   src: string
   /** Fallback content to render while the frame is pending. */
   fallback?: Renderable
+  /** Whether to render `fallback` while a resolved frame reloads. */
+  fallbackOnReloads?: boolean
   /** Event handlers invoked for events dispatched from the frame element. */
   on?: Record<string, (event: Event, signal: AbortSignal) => void | Promise<void>>
 }
