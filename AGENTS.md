@@ -69,7 +69,7 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 - `make-pr` at `.agents/skills/make-pr/SKILL.md`: Prepare and open clear, reviewer-friendly pull requests.
 - `make-tracking-issue` at `.agents/skills/make-tracking-issue/SKILL.md`: Create or revise focused GitHub tracking issues with implementor context, a concise work plan, and required gates.
 - `publish-placeholder-package` at `.agents/skills/publish-placeholder-package/SKILL.md`: Publish a `0.0.0` placeholder package to reserve an npm name.
-- `review-pr` at `.agents/skills/review-pr/SKILL.md`: Review Remix pull requests from a local checkout.
+- `review-pr` at `.agents/skills/review-pr/SKILL.md`: Review Remix pull requests from a local agent or an agentic workflow.
 - `remix` at `.agents/skills/remix/SKILL.md`: Build, review, and refactor Remix apps end to end, including project layout, routes, controllers, middleware, validation, data access, auth, sessions, uploads, UI, hydration, navigation, animations, and tests.
 - `supersede-pr` at `.agents/skills/supersede-pr/SKILL.md`: Replace one pull request with another and close the superseded PR safely.
 - `typescript-expert` at `.agents/skills/typescript-expert/SKILL.md`: Write, refactor, or review TypeScript with strict, precise, maintainable types.
