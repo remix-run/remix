@@ -132,9 +132,12 @@ declare global {
       ? ExpandMixProp<Parameters<ReturnType<component>>[0]>
       : component extends () => RenderFn
         ? ExpandMixProp<Record<string, never>>
-        : props extends Handle<infer P, any>
+        : props extends { props: infer P }
           ? ExpandMixProp<P>
-          : ExpandMixProp<props>
+          : component extends (handle: Handle<infer P, any>) => RenderFn
+            ? // Handles typed without a props member still use signature inference.
+              ExpandMixProp<P>
+            : ExpandMixProp<props>
 
     export interface IntrinsicSVGElements {
       svg: dom.SVGProps<SVGSVGElement>
