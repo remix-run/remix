@@ -1,1 +1,1 @@
-`remix/component` supports `data-rmx-reset-focus="false"` and the `resetFocus: false` option for `navigate()` and `link()` to disable automatic focus resets during intercepted navigation.
+`remix/component` supports disabling automatic focus resets during intercepted navigation. Scroll and focus controls accept `"after-transition"` and `"manual"` in `navigate()` / `link()` options and HTML attributes, while existing boolean values remain supported (see #11939).

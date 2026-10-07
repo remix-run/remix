@@ -36,7 +36,7 @@ export function MainCoursesPage(handle: Handle<MainCoursesPageProps>) {
           action={routes.main.courses.href()}
           data-rmx-target={frames.courses}
           data-rmx-history="replace"
-          data-rmx-reset-focus="false"
+          data-rmx-reset-focus="manual"
           mix={filterFormStyle}
         >
           <label for="course-filter" mix={filterLabelStyle}>

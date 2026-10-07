@@ -50,6 +50,58 @@ describe('link mixin', () => {
     expect(anchor.getAttribute('role')).toBeNull()
   })
 
+  it('adds manual scroll and focus attributes to anchors', () => {
+    let { container } = render(
+      <a mix={link('/login', { resetScroll: 'manual', resetFocus: 'manual' })}>Login</a>,
+    )
+
+    let anchor = container.querySelector('a')
+    invariant(anchor)
+    expect(anchor.getAttribute('data-rmx-reset-scroll')).toBe('manual')
+    expect(anchor.getAttribute('data-rmx-reset-focus')).toBe('manual')
+  })
+
+  it('lets after-transition options override manual anchor attributes', () => {
+    let { container } = render(
+      <a
+        data-rmx-reset-scroll="manual"
+        data-rmx-reset-focus="manual"
+        mix={link('/login', { resetScroll: 'after-transition', resetFocus: 'after-transition' })}
+      >
+        Login
+      </a>,
+    )
+
+    let anchor = container.querySelector('a')
+    invariant(anchor)
+    expect(anchor.getAttribute('data-rmx-reset-scroll')).toBe('after-transition')
+    expect(anchor.getAttribute('data-rmx-reset-focus')).toBe('after-transition')
+  })
+
+  it('passes manual scroll and focus options through for non-anchor navigation', (t) => {
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
+
+    let { container } = render(
+      <button mix={link('/login', { resetScroll: 'manual', resetFocus: 'manual' })}>Login</button>,
+    )
+    let button = container.querySelector('button')
+    invariant(button)
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    expect(navigateMock).toHaveBeenCalledWith('/login', {
+      state: {
+        target: undefined,
+        src: '/login',
+        resetScroll: false,
+        resetFocus: false,
+        $rmx: true,
+      },
+      history: undefined,
+    })
+  })
+
   it('adds push history to anchors', () => {
     let { container } = render(<a mix={link('/login', { history: 'push' })}>Login</a>)
 

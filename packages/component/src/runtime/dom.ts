@@ -1795,9 +1795,9 @@ export interface PartialAnchorHTMLProps<
   'data-rmx-src'?: Trackable<string | undefined>
   /** Controls how activating this anchor updates the current history entry. */
   'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
-  /** The `data-rmx-reset-scroll` HTML attribute. */
+  /** Scroll behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
   'data-rmx-reset-scroll'?: Trackable<string | undefined>
-  /** Set to `"false"` to disable the browser's focus reset after navigation. */
+  /** Focus reset behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
   'data-rmx-reset-focus'?: Trackable<string | undefined>
 }
 
@@ -2310,9 +2310,9 @@ export interface FormHTMLProps<
   'data-rmx-src'?: Trackable<string | undefined>
   /** Overrides how submitting this form updates the current history entry. */
   'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
-  /** The `data-rmx-reset-scroll` HTML attribute. */
+  /** Scroll behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
   'data-rmx-reset-scroll'?: Trackable<string | undefined>
-  /** Set to `"false"` to disable the browser's focus reset after navigation. */
+  /** Focus reset behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
   'data-rmx-reset-focus'?: Trackable<string | undefined>
 }
 

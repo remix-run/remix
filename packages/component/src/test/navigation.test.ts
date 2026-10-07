@@ -225,6 +225,38 @@ describe('navigate', () => {
     })
   })
 
+  it('accepts manual scroll and focus options', async (t) => {
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
+
+    await navigate('/login', { resetScroll: 'manual', resetFocus: 'manual' })
+
+    expect(navigateMock).toHaveBeenCalledWith('/login', {
+      state: {
+        target: undefined,
+        src: '/login',
+        resetScroll: false,
+        resetFocus: false,
+        $rmx: true,
+      },
+      history: undefined,
+    })
+  })
+
+  it('accepts after-transition scroll and focus options', async (t) => {
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
+
+    await navigate('/login', { resetScroll: 'after-transition', resetFocus: 'after-transition' })
+
+    expect(navigateMock).toHaveBeenCalledWith('/login', {
+      state: { target: undefined, src: '/login', resetScroll: true, resetFocus: true, $rmx: true },
+      history: undefined,
+    })
+  })
+
   it('resets focus after the transition by default', async (t) => {
     let controller = new AbortController()
     t.after(() => controller.abort())
@@ -568,6 +600,81 @@ describe('navigate', () => {
     )
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+  })
+
+  it('opts out of scrolling and focus reset for manual link attributes', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    anchor.setAttribute('data-rmx-reset-scroll', 'manual')
+    anchor.setAttribute('data-rmx-reset-focus', 'manual')
+    let intercept = mock.fn()
+    let event = createAnchorNavigateEvent(anchor, { intercept, destinationUrl: anchor.href })
+    let scroll = mock.fn()
+    Object.assign(event, { scroll })
+
+    let transition = dispatchNavigation(event)
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+    expect(scroll).not.toHaveBeenCalled()
+  })
+
+  it('uses default scrolling and focus reset for after-transition link attributes', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    anchor.setAttribute('data-rmx-reset-scroll', 'after-transition')
+    anchor.setAttribute('data-rmx-reset-focus', 'after-transition')
+    let intercept = mock.fn()
+    let event = createAnchorNavigateEvent(anchor, { intercept, destinationUrl: anchor.href })
+    let scroll = mock.fn()
+    Object.assign(event, { scroll })
+
+    let transition = dispatchNavigation(event)
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe(undefined)
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe(undefined)
+    expect(scroll).toHaveBeenCalledTimes(1)
+  })
+
+  it('accepts manual scroll and focus attributes on GET forms', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/search'
+    form.setAttribute('data-rmx-reset-scroll', 'manual')
+    form.setAttribute('data-rmx-reset-focus', 'manual')
+    let intercept = mock.fn()
+
+    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+  })
+
+  it('lets after-transition submitters override manual POST form attributes', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/save'
+    form.method = 'post'
+    form.setAttribute('data-rmx-reset-scroll', 'manual')
+    form.setAttribute('data-rmx-reset-focus', 'manual')
+    let button = document.createElement('button')
+    button.setAttribute('data-rmx-reset-scroll', 'after-transition')
+    button.setAttribute('data-rmx-reset-focus', 'after-transition')
+    form.append(button)
+    document.body.append(form)
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+    let intercept = mock.fn()
+
+    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe(undefined)
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe(undefined)
   })
 
   it('opts out of browser focus reset when data-rmx-reset-focus is false', (t) => {

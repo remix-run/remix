@@ -81,10 +81,16 @@ export type NavigationOptions = {
   target?: string
   /** How the destination updates browser history. */
   history?: 'push' | 'replace'
-  /** Whether the destination resets scroll. (default: `true`) */
-  resetScroll?: boolean
-  /** Whether the browser resets focus after the navigation transition. (default: `true`) */
-  resetFocus?: boolean
+  /**
+   * Scroll behavior. `true` aliases `"after-transition"` and `false` aliases `"manual"`.
+   * (default: `"after-transition"`)
+   */
+  resetScroll?: NavigationInterceptOptions['scroll'] | boolean
+  /**
+   * Focus reset behavior. `true` aliases `"after-transition"` and `false` aliases `"manual"`.
+   * (default: `"after-transition"`)
+   */
+  resetFocus?: NavigationInterceptOptions['focusReset'] | boolean
 }
 
 /**
@@ -99,8 +105,8 @@ export async function navigate(href: string, options?: NavigationOptions) {
   let state = {
     target: options?.target,
     src: options?.src ?? href,
-    resetScroll: options?.resetScroll !== false,
-    resetFocus: options?.resetFocus !== false,
+    resetScroll: shouldReset(options?.resetScroll),
+    resetFocus: shouldReset(options?.resetFocus),
     $rmx: true,
   } satisfies NavigationState
   let navigation = getInterceptableNavigation()
@@ -582,8 +588,8 @@ function getSourceElementNavigation(
       state: {
         target: linkElement.getAttribute('data-rmx-target') ?? undefined,
         src: linkElement.getAttribute('data-rmx-src') ?? event.destination.url,
-        resetScroll: linkElement.getAttribute('data-rmx-reset-scroll') !== 'false',
-        resetFocus: linkElement.getAttribute('data-rmx-reset-focus') !== 'false',
+        resetScroll: shouldReset(linkElement.getAttribute('data-rmx-reset-scroll')),
+        resetFocus: shouldReset(linkElement.getAttribute('data-rmx-reset-focus')),
         $rmx: true,
       },
       replaceHistory: getReplaceHistory(linkElement.getAttribute('data-rmx-history'), false),
@@ -601,8 +607,8 @@ function getSourceElementNavigation(
     state: {
       target: formNavigation.getAttribute('data-rmx-target') ?? undefined,
       src: formNavigation.getAttribute('data-rmx-src') ?? event.destination.url,
-      resetScroll: formNavigation.getAttribute('data-rmx-reset-scroll') !== 'false',
-      resetFocus: formNavigation.getAttribute('data-rmx-reset-focus') !== 'false',
+      resetScroll: shouldReset(formNavigation.getAttribute('data-rmx-reset-scroll')),
+      resetFocus: shouldReset(formNavigation.getAttribute('data-rmx-reset-focus')),
       $rmx: true,
     },
     replaceHistory: getReplaceHistory(
@@ -611,6 +617,10 @@ function getSourceElementNavigation(
     ),
     getSubmission: formNavigation.getSubmission,
   }
+}
+
+function shouldReset(value: string | boolean | null | undefined): boolean {
+  return value !== false && value !== 'false' && value !== 'manual'
 }
 
 function getReplaceHistory(value: string | null, defaultValue: boolean): boolean {
