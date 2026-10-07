@@ -158,7 +158,7 @@ describe('frame navigation', () => {
 
     let searches = [
       {
-        character: 'a',
+        key: 'a',
         query: 'a',
         courses: [
           'Applied Statistics for Engineers',
@@ -166,11 +166,33 @@ describe('frame navigation', () => {
           'Data Visualization for the Web',
         ],
       },
-      { character: 'p', query: 'ap', courses: ['Applied Statistics for Engineers'] },
-      { character: 'p', query: 'app', courses: ['Applied Statistics for Engineers'] },
+      { key: 'p', query: 'ap', courses: ['Applied Statistics for Engineers'] },
+      { key: 'p', query: 'app', courses: ['Applied Statistics for Engineers'] },
+      { key: 'z', query: 'appz', courses: [] },
+      { key: 'Backspace', query: 'app', courses: ['Applied Statistics for Engineers'] },
+      { key: 'Backspace', query: 'ap', courses: ['Applied Statistics for Engineers'] },
+      {
+        key: 'Backspace',
+        query: 'a',
+        courses: [
+          'Applied Statistics for Engineers',
+          'Web Accessibility Foundations',
+          'Data Visualization for the Web',
+        ],
+      },
+      {
+        key: 'Backspace',
+        query: '',
+        courses: [
+          'Introduction to Product Design',
+          'Applied Statistics for Engineers',
+          'Web Accessibility Foundations',
+          'Data Visualization for the Web',
+        ],
+      },
     ]
 
-    for (let { character, query, courses } of searches) {
+    for (let { key, query, courses } of searches) {
       let request = page.waitForRequest(
         (request) =>
           request.method() === 'GET' &&
@@ -178,11 +200,13 @@ describe('frame navigation', () => {
           new URL(request.url()).searchParams.get('q') === query,
       )
       // Keyboard input must use the existing focus; locator typing would refocus a blurred input.
-      await page.keyboard.type(character)
+      await page.keyboard.press(key)
       await request
       await page
         .getByText(
-          `${courses.length} ${courses.length === 1 ? 'course' : 'courses'} matching “${query}”`,
+          query
+            ? `${courses.length} ${courses.length === 1 ? 'course' : 'courses'} matching “${query}”`
+            : `${courses.length} courses`,
           { exact: true },
         )
         .waitFor()

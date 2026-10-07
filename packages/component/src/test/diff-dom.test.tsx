@@ -110,9 +110,51 @@ describe('diffNodes', () => {
       expect(container.innerHTML).toBe('<div><p>Goodbye, world!</p></div>')
       expect(container.firstChild).toBe(div)
     })
+
+    it('retains focus when a following sibling changes element type', (t) => {
+      let container = document.createElement('div')
+      container.innerHTML = '<form><input></form><ul><li>Result</li></ul>'
+      document.body.append(container)
+      t.after(() => container.remove())
+      let input = container.querySelector('input')
+      invariant(input)
+      input.focus()
+      expect(document.activeElement).toBe(input)
+
+      diffDom(container, '<form><input></form><p>No results</p>')
+
+      expect(container.innerHTML).toBe('<form><input></form><p>No results</p>')
+      expect(container.querySelector('input')).toBe(input)
+      expect(document.activeElement).toBe(input)
+    })
   })
 
   describe('comments', () => {
+    it('retains focus in a live hydration range when a following sibling is removed', (t) => {
+      let container = document.createElement('div')
+      container.innerHTML =
+        '<!-- rmx:h:old --><input><!-- /rmx:h --><button>Filter</button><a>Clear</a>'
+      document.body.append(container)
+      t.after(() => container.remove())
+      let start = container.firstChild
+      invariant(start instanceof Comment)
+      attachClientEntryOwner(start)
+      let input = container.querySelector('input')
+      invariant(input)
+      input.focus()
+      expect(document.activeElement).toBe(input)
+
+      diffDom(container, '<!-- rmx:h:new --><input><!-- /rmx:h --><button>Filter</button>', {
+        h: {
+          new: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} },
+        },
+      })
+
+      expect(container.querySelector('a')).toBe(null)
+      expect(container.querySelector('input')).toBe(input)
+      expect(document.activeElement).toBe(input)
+    })
+
     it('retains comments', () => {
       let container = document.createElement('div')
       container.innerHTML = '<!-- start --><div>hello</div><!-- end -->'
