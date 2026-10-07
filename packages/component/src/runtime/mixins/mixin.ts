@@ -377,6 +377,23 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
   }
   let handle = scopedHandle
   let hostType = input.hostType
+  let removedScopes: symbol[] = []
+  let insertedEntries: Array<{ binding: MixinRuntimeBinding; entry: RunnerEntry }> = []
+  let lifecycleCommitQueued = false
+
+  function queueLifecycleCommit() {
+    if (lifecycleCommitQueued) return
+    lifecycleCommitQueued = true
+    handle.queueCommitTask(() => {
+      for (let scope of removedScopes) {
+        handle.dispatchScopedEvent(scope, new Event('remove'))
+        handle.releaseScope(scope)
+      }
+      for (let { binding, entry } of insertedEntries) {
+        dispatchMixinInsert(handle, entry.scope, binding.node, binding.parent, binding.key)
+      }
+    })
+  }
 
   let runnerCount = 0
   let props = composeMixedProps(hostType, input.props, (descriptor, index, mixinProps) => {
@@ -384,7 +401,8 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
     let entry = state.runners[index]
     if (!entry || entry.type !== descriptor.type) {
       if (entry) {
-        queueMixinRemove(handle, entry.scope)
+        removedScopes.push(entry.scope)
+        queueLifecycleCommit()
       }
       let scope = Symbol('mixin-scope')
       handle.setActiveScope(scope)
@@ -400,7 +418,8 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
       state.runners[index] = entry
       let binding = state.binding
       if (binding?.node) {
-        queueMixinInsert(handle, entry.scope, binding.node, binding.parent, binding.key)
+        insertedEntries.push({ binding, entry })
+        queueLifecycleCommit()
       }
     }
 
@@ -813,13 +832,6 @@ function queueMixinReclaimed(
 ) {
   handle.queueCommitTask(() => {
     dispatchMixinReclaimed(handle, scope, node, parent, key)
-  })
-}
-
-function queueMixinRemove(handle: ScopedAnyMixinHandle, scope: symbol) {
-  handle.queueCommitTask(() => {
-    handle.dispatchScopedEvent(scope, new Event('remove'))
-    handle.releaseScope(scope)
   })
 }
 
