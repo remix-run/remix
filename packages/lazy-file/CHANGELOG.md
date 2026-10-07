@@ -2,6 +2,13 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
+## v5.0.8
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`mime@1.0.0`](https://github.com/remix-run/remix/releases/tag/mime@1.0.0)
+
 ## v5.0.7
 
 ### Patch Changes

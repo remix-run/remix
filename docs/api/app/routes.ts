@@ -22,17 +22,14 @@ export function getApiRouteHref(href: string, version: string | undefined): stri
   if (!href.startsWith('/api/')) return undefined
 
   let url = new URL(href, 'http://localhost')
-  let slug = url.pathname.slice('/api/'.length)
-  if (slug.length === 0) return undefined
+  let pathname = url.pathname
+  if (pathname === '/api/') return undefined
 
-  let routeHref: string
-  if (slug.endsWith('.md')) {
-    routeHref = routes.api.markdown.href({ slug: slug.slice(0, -'.md'.length) })
-  } else {
-    routeHref = routes.api.document.href({ slug: slug.replace(/\/$/, '') })
+  if (!pathname.endsWith('.md')) {
+    pathname = pathname.replace(/\/?$/, '/')
   }
 
-  return `${withVersion(routeHref, version)}${url.search}${url.hash}`
+  return `${withVersion(pathname, version)}${url.search}${url.hash}`
 }
 
 function encodePathSegment(value: string): string {

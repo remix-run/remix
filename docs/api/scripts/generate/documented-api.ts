@@ -777,7 +777,9 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
               warn('Missing MDN link for TypeScript symbol: ', target.qualifiedName)
             }
           } else {
-            throw new Error(`Unsupported @link target: ${target.qualifiedName}`)
+            warn(
+              `Unsupported @link target: ${target.qualifiedName}; using plain text: ${part.text}`,
+            )
           }
         } else if (target instanceof typedoc.Reflection) {
           // oxfmt-ignore
@@ -790,14 +792,18 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
             target.kind === typedoc.ReflectionKind.Variable ? getVariableLinkType(target) : null;
 
           if (!type) {
-            throw new Error(`Unsupported @link target kind: ${typedoc.ReflectionKind[target.kind]}`)
+            warn(
+              `Unsupported @link target kind: ${typedoc.ReflectionKind[target.kind]} ` +
+                `(${target.getFriendlyFullName()}); using plain text: ${part.text}`,
+            )
+            return acc + transformed
           }
 
           let path = getApiFilePath(target.getFriendlyFullName(), type).replace(/\.md$/, '')
           href = `${WEBSITE_DOCS_PATH}/${path}/`
           transformed = `[\`${part.text}\`](${href})`
         } else {
-          throw new Error(`Missing/invalid target for @link content: ${part.text}`)
+          warn(`Missing/invalid target for @link content: ${part.text}; using plain text`)
         }
       }
     }
