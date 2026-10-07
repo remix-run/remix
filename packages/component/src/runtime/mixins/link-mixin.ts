@@ -37,12 +37,12 @@ export const link: MixinFactory<
           ...(options?.target == null ? {} : { 'data-rmx-target': options.target }),
           ...(options?.src == null ? {} : { 'data-rmx-src': options.src }),
           ...(options?.history == null ? {} : { 'data-rmx-history': options.history }),
-          ...(options?.resetScroll === false || typeof options?.resetScroll === 'string'
-            ? { 'data-rmx-reset-scroll': String(options.resetScroll) }
-            : {}),
-          ...(options?.resetFocus === false || typeof options?.resetFocus === 'string'
-            ? { 'data-rmx-reset-focus': String(options.resetFocus) }
-            : {}),
+          ...(options?.resetScroll == null
+            ? {}
+            : { 'data-rmx-reset-scroll': String(options.resetScroll) }),
+          ...(options?.resetFocus == null
+            ? {}
+            : { 'data-rmx-reset-focus': String(options.resetFocus) }),
         })
       }
 
