@@ -282,8 +282,21 @@ soft-navigation behavior applies even when the page does not render an explicit 
 - `data-rmx-target="name"` reloads a named frame.
 - `data-rmx-src="/frame"` overrides the source of the mounted frame selected by `data-rmx-target`, while `href` remains the navigation destination.
 - `data-rmx-history="push|replace"` controls how the navigation updates history.
-- `data-rmx-reset-scroll="false"` preserves the current scroll position.
+- `data-rmx-reset-scroll="manual"` preserves the current scroll position.
+- `data-rmx-reset-focus="manual"` disables the browser's automatic focus reset after navigation.
 - `data-rmx-document` leaves the link as a normal document navigation.
+
+Both controls accept the Navigation API values `"after-transition"` (the default) and `"manual"`. A submit button's value takes precedence over its form's value. The equivalent options for `navigate()` and `link()` are `resetScroll: 'manual'` and `resetFocus: 'manual'`:
+
+```tsx
+<a href="/search?page=2" data-rmx-reset-scroll="manual" data-rmx-reset-focus="manual">
+  Next page
+</a>
+```
+
+Boolean options and the `"true"` / `"false"` attribute values remain supported. `true` corresponds to `"after-transition"` and `false` to `"manual"`. Omitting a control keeps the default behavior.
+
+Disabling the reset does not retain focus if navigation removes the focused element.
 
 During navigation, the top frame's source stays in sync with the browser URL. `data-rmx-src` only changes the requested URL when `data-rmx-target` resolves to a mounted named frame. If the target is omitted, an intercepted navigation reloads the top frame from `href`. If a specified target does not match a mounted frame, Remix leaves fresh link, form, and `navigate()` navigations to the browser. Back and forward traversal reloads the destination document instead of reconciling stale frame content. Native form navigation preserves the selected method, body, files, and submitter overrides.
 
@@ -308,7 +321,8 @@ Eligible same-origin form submissions use the same frame navigation path as link
 - `data-rmx-target="name"` reloads a named frame.
 - `data-rmx-src="/frame"` overrides the source of the mounted frame selected by `data-rmx-target`, while the form action remains the navigation destination.
 - `data-rmx-history="push|replace"` overrides how the navigation updates history.
-- `data-rmx-reset-scroll="false"` preserves the current scroll position.
+- `data-rmx-reset-scroll="manual"` preserves the current scroll position.
+- `data-rmx-reset-focus="manual"` disables the browser's automatic focus reset after navigation.
 - `data-rmx-document` leaves the submission as a normal document navigation.
 - Submitter overrides such as `formmethod`, `formenctype`, and `formtarget` take precedence over the form attributes.
 - Cross-origin submissions, `method="dialog"`, and `target="_blank"` are left to the browser.

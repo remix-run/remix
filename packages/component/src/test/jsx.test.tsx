@@ -103,6 +103,24 @@ describe('jsx', () => {
       expect(lowercase.props.srcdoc).toBeDefined()
     })
 
+    it('accepts navigation reset values and rejects unsupported values', () => {
+      let manual = <a data-rmx-reset-scroll="manual" data-rmx-reset-focus="manual" />
+      let afterTransition = (
+        <form data-rmx-reset-scroll="after-transition" data-rmx-reset-focus="after-transition" />
+      )
+      let legacyFalse = <a data-rmx-reset-scroll="false" data-rmx-reset-focus="false" />
+      let legacyTrue = <form data-rmx-reset-scroll="true" data-rmx-reset-focus="true" />
+
+      // @ts-expect-error scroll accepts only Navigation API values and legacy boolean strings
+      let badAnchorScroll = <a data-rmx-reset-scroll="automatic" />
+      // @ts-expect-error focus accepts only Navigation API values and legacy boolean strings
+      let badAnchorFocus = <a data-rmx-reset-focus="automatic" />
+      // @ts-expect-error scroll accepts only Navigation API values and legacy boolean strings
+      let badFormScroll = <form data-rmx-reset-scroll="automatic" />
+      // @ts-expect-error focus accepts only Navigation API values and legacy boolean strings
+      let badFormFocus = <form data-rmx-reset-focus="automatic" />
+    })
+
     it('accepts booleanish string attributes', () => {
       let contentEditable = <div contentEditable="false" />
       let draggable = <img alt="" draggable="false" />
