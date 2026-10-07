@@ -7,6 +7,7 @@ import { reloadFrameForNavigation } from '../runtime/frame.ts'
 import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
+import { FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
 import { css, navigate, on } from '../index.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
@@ -59,6 +60,54 @@ async function renderDocumentContent(content: RemixNode): Promise<string> {
 
 async function renderFrameContent(content: RemixNode): Promise<string> {
   return await drain(renderToStream(content))
+}
+
+async function renderSplitFrameTemplate(
+  t: TestContext,
+  scenario: 'observer' | 'hydrate',
+  completion: 'marker' | 'sibling' | 'document' = 'marker',
+): Promise<void> {
+  let chunks = readChunks(
+    renderToStream(
+      <html>
+        <head />
+        <body>
+          <Frame src="/items" fallback={<p id="fallback">Loading...</p>} />
+        </body>
+      </html>,
+      { resolveFrame: () => '<p data-item="1">First</p><p data-item="2">Second</p>' },
+    ),
+  )
+  let shell = await chunks.next()
+  let template = await chunks.next()
+  invariant(!shell.done && !template.done)
+  let templateHtml = template.value
+  if (completion !== 'marker') {
+    templateHtml = templateHtml.replace(`<!--${FRAME_TEMPLATE_END_MARKER}-->`, '')
+  }
+  let split = templateHtml.indexOf('<p data-item="2"')
+  invariant(split !== -1)
+
+  document.open()
+  document.write(shell.value)
+  if (scenario === 'hydrate') document.write(templateHtml.slice(0, split))
+
+  let app = run({ loadModule: mock.fn() })
+  t.after(() => {
+    app.dispose()
+    document.close()
+  })
+  await app.ready()
+
+  if (scenario === 'observer') document.write(templateHtml.slice(0, split))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  expect(document.querySelector('#fallback')?.textContent).toBe('Loading...')
+  expect(document.querySelectorAll('[data-item]').length).toBe(0)
+  document.write(templateHtml.slice(split))
+  if (completion === 'sibling') document.write('<!-- after template -->')
+  if (completion === 'document') document.close()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  if (completion !== 'document') expect(document.readyState).toBe('loading')
 }
 
 async function setupDefaultFrameRequestTest(t: TestContext, name?: string) {
@@ -2165,6 +2214,38 @@ describe('run', () => {
     expect(nav.textContent).toBe('Loaded')
 
     frame.dispose()
+  })
+
+  it('renders every sibling when an observed frame template is parsed in two parts', async (t) => {
+    await renderSplitFrameTemplate(t, 'observer')
+
+    expect(
+      Array.from(document.querySelectorAll('[data-item]'), (node) => node.textContent),
+    ).toEqual(['First', 'Second'])
+    expect(document.querySelector('#fallback')).toBe(null)
+  })
+
+  it('renders every sibling when hydration starts during frame template parsing', async (t) => {
+    await renderSplitFrameTemplate(t, 'hydrate')
+
+    expect(
+      Array.from(document.querySelectorAll('[data-item]'), (node) => node.textContent),
+    ).toEqual(['First', 'Second'])
+    expect(document.querySelector('#fallback')).toBe(null)
+  })
+
+  it('renders older frame templates when the parser reaches a following sibling', async (t) => {
+    await renderSplitFrameTemplate(t, 'observer', 'sibling')
+
+    expect(document.querySelectorAll('[data-item]').length).toBe(2)
+    expect(document.querySelector('#fallback')).toBe(null)
+  })
+
+  it('renders older frame templates when the document finishes parsing', async (t) => {
+    await renderSplitFrameTemplate(t, 'hydrate', 'document')
+
+    expect(document.querySelectorAll('[data-item]').length).toBe(2)
+    expect(document.querySelector('#fallback')).toBe(null)
   })
 
   it('merges hydration data across multiple rmx-data scripts', async () => {
