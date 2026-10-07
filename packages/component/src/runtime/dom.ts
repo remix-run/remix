@@ -1796,9 +1796,9 @@ export interface PartialAnchorHTMLProps<
   /** Controls how activating this anchor updates the current history entry. */
   'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
   /** Scroll behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
-  'data-rmx-reset-scroll'?: Trackable<string | undefined>
+  'data-rmx-reset-scroll'?: Trackable<NavigationInterceptOptions['scroll'] | 'true' | 'false'>
   /** Focus reset behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
-  'data-rmx-reset-focus'?: Trackable<string | undefined>
+  'data-rmx-reset-focus'?: Trackable<NavigationInterceptOptions['focusReset'] | 'true' | 'false'>
 }
 
 export type AnchorAriaRoles =
@@ -2311,9 +2311,9 @@ export interface FormHTMLProps<
   /** Overrides how submitting this form updates the current history entry. */
   'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
   /** Scroll behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
-  'data-rmx-reset-scroll'?: Trackable<string | undefined>
+  'data-rmx-reset-scroll'?: Trackable<NavigationInterceptOptions['scroll'] | 'true' | 'false'>
   /** Focus reset behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
-  'data-rmx-reset-focus'?: Trackable<string | undefined>
+  'data-rmx-reset-focus'?: Trackable<NavigationInterceptOptions['focusReset'] | 'true' | 'false'>
 }
 
 /**
