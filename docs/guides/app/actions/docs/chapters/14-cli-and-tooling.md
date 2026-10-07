@@ -13,7 +13,7 @@ The installed `remix` package provides the CLI and the runtime subpaths used by 
 
 ## Create an app with remix new {#remix-new}
 
-Use `npx remix@next new <target-dir>` before the package is installed locally, or `remix new <target-dir>` afterward. Cover `--app-name`, `--force`, the generated `app/actions` layout, and the scripts in the starter `package.json`.
+Use `npx remix new <target-dir>` before the package is installed locally, or `remix new <target-dir>` afterward. Cover `--app-name`, `--force`, the generated `app/actions` layout, and the scripts in the starter `package.json`.
 
 ## Inspect route ownership with remix routes {#remix-routes}
 

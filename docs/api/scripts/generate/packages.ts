@@ -271,7 +271,9 @@ function getDocsPackageName(packageName: string): string {
 }
 
 function frontmatter(overview: PackageOverview): string {
-  return ['---', 'type: package', `title: ${overview.docsPackage}`, '---'].join('\n')
+  return ['---', 'type: "package"', `title: ${JSON.stringify(overview.docsPackage)}`, '---'].join(
+    '\n',
+  )
 }
 
 function getMissingReadmeMarkdown(docsPackage: string, packageDir: string): string {
