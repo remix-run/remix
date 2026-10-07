@@ -111,8 +111,8 @@ describe('link mixin', () => {
       state: {
         target: undefined,
         src: '/login',
-        resetScroll: false,
-        resetFocus: false,
+        resetScroll: 'manual',
+        resetFocus: 'manual',
         $rmx: true,
       },
       history: undefined,
@@ -170,7 +170,13 @@ describe('link mixin', () => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: 'auth', src: '/login', resetScroll: true, resetFocus: true, $rmx: true },
+      state: {
+        target: 'auth',
+        src: '/login',
+        resetScroll: 'after-transition',
+        resetFocus: 'after-transition',
+        $rmx: true,
+      },
       history: undefined,
     })
   })
@@ -187,7 +193,13 @@ describe('link mixin', () => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', resetScroll: true, resetFocus: true, $rmx: true },
+      state: {
+        target: undefined,
+        src: '/login',
+        resetScroll: 'after-transition',
+        resetFocus: 'after-transition',
+        $rmx: true,
+      },
       history: 'replace',
     })
   })
@@ -204,7 +216,13 @@ describe('link mixin', () => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', resetScroll: false, resetFocus: true, $rmx: true },
+      state: {
+        target: undefined,
+        src: '/login',
+        resetScroll: 'manual',
+        resetFocus: 'after-transition',
+        $rmx: true,
+      },
       history: undefined,
     })
   })
@@ -221,7 +239,13 @@ describe('link mixin', () => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', resetScroll: true, resetFocus: false, $rmx: true },
+      state: {
+        target: undefined,
+        src: '/login',
+        resetScroll: 'after-transition',
+        resetFocus: 'manual',
+        $rmx: true,
+      },
       history: undefined,
     })
   })
@@ -267,7 +291,13 @@ describe('link mixin', () => {
 
     expect(navigateMock).toHaveBeenCalledTimes(1)
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', resetScroll: true, resetFocus: true, $rmx: true },
+      state: {
+        target: undefined,
+        src: '/login',
+        resetScroll: 'after-transition',
+        resetFocus: 'after-transition',
+        $rmx: true,
+      },
       history: undefined,
     })
   })
