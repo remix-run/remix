@@ -77,8 +77,8 @@ export let RefreshButton = clientEntry(
     return () => (
       <button
         mix={[
-          on('click', async () => {
-            await handle.frame.reload()
+          on('click', () => {
+            handle.frame.reload()
           }),
         ]}
       >
@@ -209,15 +209,8 @@ async function resolveFrame(src, options) {
   let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
   if (options?.target != null) headers.set('X-Remix-Target', options.target)
 
-  if (
-    options?.body != null &&
-    !(options.body instanceof FormData) &&
-    !(options.body instanceof URLSearchParams) &&
-    options.encType
-  ) {
-    headers.set('Content-Type', options.encType)
-  }
-  let body = getRequestBody(options)
+  let { body, encType } = getRequestBody(options)
+  if (encType) headers.set('Content-Type', encType)
   let requestInit = {
     body,
     headers,
@@ -242,16 +235,21 @@ function getRequestBody(options) {
     requestBody instanceof FormData || requestBody instanceof URLSearchParams
       ? requestBody
       : options?.formData
-  if (!formData) return requestBody ?? undefined
-  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return
+  if (!formData) {
+    return {
+      body: requestBody ?? undefined,
+      encType: requestBody == null ? undefined : options?.encType,
+    }
+  }
+  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return {}
 
   let encType = options?.encType?.toLowerCase()
 
   if (encType === 'multipart/form-data') {
-    if (formData instanceof FormData) return formData
+    if (formData instanceof FormData) return { body: formData }
     let body = new FormData()
     for (let [name, value] of formData) body.append(name, value)
-    return body
+    return { body }
   }
 
   if (encType === 'text/plain') {
@@ -261,7 +259,7 @@ function getRequestBody(options) {
       value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
       body += `${name}=${value}\r\n`
     }
-    return new Blob([body], { type: 'text/plain' })
+    return { body: new Blob([body], { type: 'text/plain' }) }
   }
 
   let body = new URLSearchParams()
@@ -271,7 +269,7 @@ function getRequestBody(options) {
       normalizeLineBreaks(typeof value === 'string' ? value : value.name),
     )
   }
-  return body
+  return { body }
 }
 
 function normalizeLineBreaks(value) {

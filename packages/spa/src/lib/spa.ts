@@ -91,16 +91,9 @@ export function run(router: Router, options: RunOptions = {}): Runtime {
     },
     async resolveFrame(src, options) {
       let url = new URL(src, document.baseURI)
-      let body = getRequestBody(options)
+      let { body, encType } = getRequestBody(options)
       let headers = new Headers()
-      if (
-        options?.body != null &&
-        !(options.body instanceof FormData) &&
-        !(options.body instanceof URLSearchParams) &&
-        options.encType
-      ) {
-        headers.set('Content-Type', options.encType)
-      }
+      if (encType) headers.set('Content-Type', encType)
       let requestInit: RequestInit & { duplex?: 'half' } = {
         method: options?.method,
         body,
@@ -169,22 +162,30 @@ async function followFrameRedirects(
   throw new TypeError(`SPA route exceeded ${maxRedirects} redirects`)
 }
 
-function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+function getRequestBody(options?: ResolveFrameOptions): {
+  body?: BodyInit
+  encType?: string
+} {
   let requestBody = options?.body
   let formData =
     requestBody instanceof FormData || requestBody instanceof URLSearchParams
       ? requestBody
       : options?.formData
-  if (!formData) return requestBody ?? undefined
-  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return
+  if (!formData) {
+    return {
+      body: requestBody ?? undefined,
+      encType: requestBody == null ? undefined : options?.encType,
+    }
+  }
+  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return {}
 
   let encType = options?.encType?.toLowerCase()
 
   if (encType === 'multipart/form-data') {
-    if (formData instanceof FormData) return formData
+    if (formData instanceof FormData) return { body: formData }
     let body = new FormData()
     for (let [name, value] of formData) body.append(name, value)
-    return body
+    return { body }
   }
 
   if (encType === 'text/plain') {
@@ -194,7 +195,7 @@ function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
       value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
       body += `${name}=${value}\r\n`
     }
-    return new Blob([body], { type: 'text/plain' })
+    return { body: new Blob([body], { type: 'text/plain' }) }
   }
 
   let body = new URLSearchParams()
@@ -204,7 +205,7 @@ function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
       normalizeLineBreaks(typeof value === 'string' ? value : value.name),
     )
   }
-  return body
+  return { body }
 }
 
 function normalizeLineBreaks(value: string): string {
