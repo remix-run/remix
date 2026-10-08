@@ -1147,6 +1147,25 @@ describe('frames', () => {
     expect(window.location.href).toBe(initialUrl)
   })
 
+  it('omits submission options from plain reloads', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let resolveFrame = t.mock.fn((_src: string, options?: ResolveFrameOptions) => {
+      expect(Object.keys(options ?? {}).sort()).toEqual(['signal', 'target'])
+      return '<p>Reloaded</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    await frame.handle.reload()
+    await frame.handle.reload({ src: '/new' })
+
+    expect(resolveFrame.mock.calls).toHaveLength(2)
+    expect(root.textContent).toBe('Reloaded')
+  })
+
   it('submits FormData in one request and renders its response without navigation', async (t) => {
     let root = document.createElement('div')
     root.innerHTML = '<p>Initial</p>'
@@ -1265,8 +1284,8 @@ describe('frames', () => {
     let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
       expect(src).toBe('https://example.com/search?query=Ada+Lovelace')
       expect(options?.method).toBe('get')
-      expect(options?.formData).toBeUndefined()
-      expect(options?.encType).toBeUndefined()
+      expect(options && Reflect.has(options, 'formData')).toBe(false)
+      expect(options && Reflect.has(options, 'encType')).toBe(false)
       return '<p>Found</p>'
     })
     let frame = createTestFrame(root, { resolveFrame })

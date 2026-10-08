@@ -795,7 +795,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       }
     }
     frame.src = src
-    let transition = startReloadTransition({ method, encType, formData })
+    let reloadOptions: FrameNavigationOptions = {}
+    if (method !== undefined) reloadOptions.method = method
+    if (encType !== undefined) reloadOptions.encType = encType
+    if (formData !== undefined) reloadOptions.formData = formData
+    let transition = startReloadTransition(reloadOptions)
     void transition.committed.catch(() => {})
     return await transition.finished
   }
