@@ -1,0 +1,100 @@
+name: Update vendored uWebSockets.js
+
+on:
+  schedule:
+    - cron: '23 8 * * *'
+  workflow_dispatch:
+    inputs:
+      preview:
+        description: Check the latest release without changing files or publishing a PR
+        type: boolean
+        default: false
+
+concurrency: update-uwebsockets
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    if: github.repository == 'remix-run/remix' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GH_REMIX_PAT }}
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          token: ${{ secrets.GH_REMIX_PAT }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node-pnpm-cache
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check upstream release
+        id: update
+        env:
+          PREVIEW: ${{ inputs.preview }}
+        run: |
+          if [ "$PREVIEW" = 'true' ]; then
+            node scripts/update-uwebsockets.ts --preview
+          else
+            node scripts/update-uwebsockets.ts
+          fi
+
+      - name: Validate update
+        if: steps.update.outputs.updated == 'true'
+        run: |
+          pnpm validate-package-meta
+          pnpm lint
+          pnpm --filter remix-the-scripts --filter @remix-run/uwebsockets-js --filter @remix-run/node-serve run test --quiet
+          pnpm --filter remix-the-scripts --filter @remix-run/uwebsockets-js --filter @remix-run/node-serve run typecheck
+          pnpm changes:validate
+          pnpm changes:preview
+
+      - name: Open or refresh update PR
+        if: steps.update.outputs.updated == 'true'
+        env:
+          VERSION: ${{ steps.update.outputs.version }}
+          DRAFT: ${{ steps.update.outputs.draft }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          author=$(gh api user --jq .login)
+          branch="$author/update-uwebsockets"
+          title="Update vendored uWebSockets.js to v$VERSION"
+          pr=$(gh pr list --head "$branch" --base "$BASE_BRANCH" --state open --json number --jq '.[0].number // empty')
+          existing_sha=$(git ls-remote origin "refs/heads/$branch" | cut -f1)
+          if [ -n "$existing_sha" ]; then
+            git fetch origin "$branch"
+            existing_sha=$(git rev-parse FETCH_HEAD)
+          fi
+          git checkout -B "$branch"
+          git add packages/uwebsockets-js* packages/node-serve/README.md packages/remix/src/node-serve/README.md
+          for changes in packages/node-serve/.changes packages/remix/.changes; do
+            if [ -d "$changes" ]; then git add "$changes"; fi
+          done
+          if [ -n "$pr" ] && [ "$(git write-tree)" = "$(git rev-parse "$existing_sha^{tree}")" ]; then
+            echo "Update PR is already current."
+            exit 0
+          fi
+          git config user.name "$author"
+          git config user.email "$author@users.noreply.github.com"
+          git -c commit.gpgsign=false commit -m "chore: update vendored uWebSockets.js to v$VERSION"
+          git push origin "HEAD:refs/heads/$branch" "--force-with-lease=refs/heads/$branch:$existing_sha"
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --title "$title" --body-file .tmp/uwebsockets/pr-body.md
+            if [ "$DRAFT" = 'true' ] && [ "$(gh pr view "$pr" --json isDraft --jq .isDraft)" = 'false' ]; then
+              gh pr ready "$pr" --undo
+            fi
+          else
+            draft_args=()
+            if [ "$DRAFT" = 'true' ]; then draft_args+=(--draft); fi
+            gh pr create --head "$branch" --base "$BASE_BRANCH" --title "$title" --body-file .tmp/uwebsockets/pr-body.md "${draft_args[@]}"
+          fi

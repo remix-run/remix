@@ -1,6 +1,14 @@
 {
   "_comment": "Canonical remix/* aliases for @remix-run/* workspace packages.",
-  "_exclude": ["@remix-run/ui"],
+  "_exclude": [
+    "@remix-run/ui",
+    "@remix-run/uwebsockets-js",
+    "@remix-run/uwebsockets-js-darwin-arm64",
+    "@remix-run/uwebsockets-js-darwin-x64",
+    "@remix-run/uwebsockets-js-linux-arm64-gnu",
+    "@remix-run/uwebsockets-js-linux-x64-gnu",
+    "@remix-run/uwebsockets-js-win32-x64"
+  ],
   "remix/assert": "@remix-run/assert",
   "remix/assets": "@remix-run/assets",
   "remix/assets/types/hmr": "@remix-run/assets/types/hmr",
@@ -77,6 +85,7 @@
   "remix/node-hmr": "@remix-run/node-hmr",
   "remix/node-hmr/runtime": "@remix-run/node-hmr/runtime",
   "remix/node-hmr/types": "@remix-run/node-hmr/types",
+  "remix/node-serve": "@remix-run/node-serve",
   "remix/node-tsx": "@remix-run/node-tsx",
   "remix/node-tsx/load-module": "@remix-run/node-tsx/load-module",
   "remix/response/compress": "@remix-run/response/compress",

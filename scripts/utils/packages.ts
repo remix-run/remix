@@ -136,13 +136,15 @@ const getPackageInfoMap = (() => {
           let version = packageJson.version as string
 
           // Collect @remix-run/* dependencies from the dependencies field
+          // Optional native packages must also be released before their consumers.
           let dependencies: string[] = []
-          let deps = packageJson.dependencies as Record<string, string> | undefined
-          if (deps) {
-            for (let depName of Object.keys(deps)) {
-              if (depName.startsWith('@remix-run/') || depName === 'remix') {
-                dependencies.push(depName)
-              }
+          let deps = {
+            ...packageJson.dependencies,
+            ...packageJson.optionalDependencies,
+          }
+          for (let depName of Object.keys(deps)) {
+            if (depName.startsWith('@remix-run/') || depName === 'remix') {
+              dependencies.push(depName)
             }
           }
 
