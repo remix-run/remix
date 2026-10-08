@@ -1,1 +1,1 @@
-Streamed `<Frame>` content no longer loses items when the browser receives its template in multiple network chunks during initial page loading (see #11968).
+Streamed `<Frame>` content no longer loses items when the browser receives its template in multiple network chunks during initial page loading, including when a script appends a sibling before parsing finishes. Waiting for frame content also preserves application-owned `<template>` elements (see #11975).

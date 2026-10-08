@@ -9,7 +9,12 @@ import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffElementAttributes, diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
-import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
+import {
+  findFlushMarker,
+  FRAME_TEMPLATE_ATTRIBUTE,
+  FRAME_TEMPLATE_END_MARKER,
+  type FlushKind,
+} from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './frame-resolution.ts'
 import {
@@ -992,7 +997,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       return
     }
 
-    stopPendingTemplateObserver = setupTemplateObserver()
+    stopPendingTemplateObserver = setupTemplateObserver(marker.id)
     let unsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
       if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
       if (pendingTemplateMarkerId !== marker.id) return
@@ -1608,6 +1613,8 @@ function isFrameTemplateComplete(template: HTMLTemplateElement): boolean {
   let end = template.content.lastChild
   if (isCommentNode(end) && end.data === FRAME_TEMPLATE_END_MARKER) return true
   if (template.ownerDocument.readyState !== 'loading') return true
+  // A script can append a sibling before the parser reaches the end marker.
+  if (template.hasAttribute(FRAME_TEMPLATE_ATTRIBUTE)) return false
 
   // Older server output has no completion marker. Wait until the parser adds
   // a following sibling or finishes the document before consuming its contents.
@@ -1622,7 +1629,7 @@ function takeFrameTemplateContent(template: HTMLTemplateElement): DocumentFragme
   return fragment
 }
 
-function setupTemplateObserver(): () => void {
+function setupTemplateObserver(id: string): () => void {
   let root = document.body ?? document.documentElement ?? document
   let pending = new Set<HTMLTemplateElement>()
   let observer = new MutationObserver((mutations) => {
@@ -1635,7 +1642,7 @@ function setupTemplateObserver(): () => void {
   })
 
   function observeTemplate(template: HTMLTemplateElement): void {
-    if (!template.id || pending.has(template)) return
+    if (template.id !== id || pending.has(template)) return
     pending.add(template)
     // Template contents are a separate fragment, outside the observed document subtree.
     observer.observe(template.content, { childList: true })

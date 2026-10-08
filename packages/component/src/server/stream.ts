@@ -21,6 +21,7 @@ import {
 } from '../runtime/core/attributes.ts'
 import {
   appendFlushMarker,
+  FRAME_TEMPLATE_ATTRIBUTE,
   FRAME_TEMPLATE_END_MARKER,
   type FlushKind,
   stripFlushMarkers,
@@ -1725,7 +1726,7 @@ async function streamPendingFrames(
           if (context.signal.aborted) return
 
           // Stream as a template element (first chunk only)
-          let templateHtml = `<template id="${frameId}">${escapeTemplateContent(html)}<!--${FRAME_TEMPLATE_END_MARKER}--></template>`
+          let templateHtml = `<template id="${frameId}" ${FRAME_TEMPLATE_ATTRIBUTE}>${escapeTemplateContent(html)}<!--${FRAME_TEMPLATE_END_MARKER}--></template>`
           if (context.signal.aborted) return
           controller.enqueue(encoder.encode(templateHtml))
 
