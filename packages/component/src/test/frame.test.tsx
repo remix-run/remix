@@ -7,7 +7,7 @@ import { reloadFrameForNavigation } from '../runtime/frame.ts'
 import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { appendFlushMarker } from '../runtime/stream-protocol.ts'
+import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
 import { css, navigate, on } from '../index.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
@@ -77,6 +77,50 @@ async function renderDocumentContent(content: RemixNode): Promise<string> {
 
 async function renderFrameContent(content: RemixNode): Promise<string> {
   return await drain(renderToStream(content))
+}
+
+async function renderSplitFrameTemplate(
+  t: TestContext,
+  scenario: 'observer' | 'hydrate',
+  beforeCompletion?: () => Promise<void>,
+): Promise<void> {
+  let chunks = readChunks(
+    renderToStream(
+      <html>
+        <head />
+        <body>
+          <Frame src="/items" fallback={<p id="fallback">Loading...</p>} />
+        </body>
+      </html>,
+      { resolveFrame: () => '<p data-item="1">First</p><p data-item="2">Second</p>' },
+    ),
+  )
+  let shell = await chunks.next()
+  let template = await chunks.next()
+  invariant(!shell.done && !template.done)
+  let templateHtml = template.value
+  let split = templateHtml.indexOf('<p data-item="2"')
+  invariant(split !== -1)
+
+  document.open()
+  document.write(shell.value)
+  if (scenario === 'hydrate') document.write(templateHtml.slice(0, split))
+
+  let app = run({ loadModule: mock.fn() })
+  t.after(() => {
+    app.dispose()
+    document.close()
+  })
+  await app.ready()
+
+  if (scenario === 'observer') document.write(templateHtml.slice(0, split))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  expect(document.querySelector('#fallback')?.textContent).toBe('Loading...')
+  expect(document.querySelectorAll('[data-item]').length).toBe(0)
+  await beforeCompletion?.()
+  document.write(templateHtml.slice(split))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  expect(document.readyState).toBe('loading')
 }
 
 async function setupDefaultFrameRequestTest(t: TestContext, name?: string) {
@@ -2336,6 +2380,112 @@ describe('run', () => {
     expect(nav.textContent).toBe('Loaded')
 
     frame.dispose()
+  })
+
+  it('renders every sibling when an observed frame template is parsed in two parts', async (t) => {
+    await renderSplitFrameTemplate(t, 'observer')
+
+    expect(
+      Array.from(document.querySelectorAll('[data-item]'), (node) => node.textContent),
+    ).toEqual(['First', 'Second'])
+    expect(document.querySelector('#fallback')).toBe(null)
+  })
+
+  it('renders every sibling when hydration starts during frame template parsing', async (t) => {
+    await renderSplitFrameTemplate(t, 'hydrate')
+
+    expect(
+      Array.from(document.querySelectorAll('[data-item]'), (node) => node.textContent),
+    ).toEqual(['First', 'Second'])
+    expect(document.querySelector('#fallback')).toBe(null)
+  })
+
+  it('waits for document parsing to finish when a frame template has no end marker', async (t) => {
+    let chunks = readChunks(
+      renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame src="/items" fallback={<p id="fallback">Loading...</p>} />
+          </body>
+        </html>,
+        { resolveFrame: () => '<p id="loaded">Loaded</p>' },
+      ),
+    )
+    let shell = await chunks.next()
+    let template = await chunks.next()
+    invariant(!shell.done && !template.done)
+
+    document.open()
+    document.write(shell.value)
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => {
+      app.dispose()
+      document.close()
+    })
+    await app.ready()
+
+    document.write(template.value.replace(`<!--${FRAME_TEMPLATE_END_MARKER}-->`, ''))
+    document.write('<div>Following sibling</div>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.readyState).toBe('loading')
+    expect(document.querySelector('#fallback')?.textContent).toBe('Loading...')
+    expect(document.querySelector('#loaded')).toBe(null)
+
+    document.close()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.readyState).not.toBe('loading')
+    expect(document.querySelector('#loaded')?.textContent).toBe('Loaded')
+    expect(document.querySelector('#fallback')).toBe(null)
+  })
+
+  it('preserves every streamed frame item when a script appends a sibling mid-template', async (t) => {
+    await renderSplitFrameTemplate(t, 'observer', async () => {
+      document.body.append(document.createElement('div'))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    document.close()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(
+      Array.from(document.querySelectorAll('[data-item]'), (node) => node.textContent),
+    ).toEqual(['First', 'Second'])
+    expect(document.querySelector('#fallback')).toBe(null)
+  })
+
+  it('preserves pre-existing application templates while waiting for a streamed frame', async (t) => {
+    let chunks = readChunks(
+      renderToStream(
+        <div>
+          <template id="row-template">
+            <p>Application row</p>
+          </template>
+          <Frame src="/items" fallback={<p id="fallback">Loading...</p>} />
+        </div>,
+        { resolveFrame: () => '<p id="loaded">Loaded</p>' },
+      ),
+    )
+    let shell = await chunks.next()
+    invariant(!shell.done)
+    document.body.innerHTML = shell.value
+    let rowTemplate = document.querySelector('#row-template')
+    invariant(rowTemplate instanceof HTMLTemplateElement)
+
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    await app.ready()
+    expect(document.querySelector('#fallback')?.textContent).toBe('Loading...')
+
+    let template = await chunks.next()
+    invariant(!template.done)
+    document.body.insertAdjacentHTML('beforeend', template.value)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.querySelector('#loaded')?.textContent).toBe('Loaded')
+    expect(document.querySelector('#row-template')).toBe(rowTemplate)
+    expect(rowTemplate.content.querySelector('p')?.textContent).toBe('Application row')
   })
 
   it('merges hydration data across multiple rmx-data scripts', async () => {

@@ -9,7 +9,7 @@ import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffElementAttributes, diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
-import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
+import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './frame-resolution.ts'
 import {
@@ -346,7 +346,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let currentMarker = init.marker
   let displayedContentStatus: 'pending' | 'resolved' = init.marker?.status ?? 'resolved'
   let pendingTemplateMarkerId: string | undefined
-  let pendingTemplateObserver: MutationObserver | undefined
+  let stopPendingTemplateObserver: (() => void) | undefined
   let pendingTemplateUnsubscribe: (() => void) | undefined
   let inheritedReloadPending = false
   let inheritedReloadAbortUnsubscribe: (() => void) | undefined
@@ -992,8 +992,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   function clearPendingFrameTemplateWatch(): void {
     pendingTemplateUnsubscribe?.()
     pendingTemplateUnsubscribe = undefined
-    pendingTemplateObserver?.disconnect()
-    pendingTemplateObserver = undefined
+    stopPendingTemplateObserver?.()
+    stopPendingTemplateObserver = undefined
     pendingTemplateMarkerId = undefined
   }
 
@@ -1022,8 +1022,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       return
     }
 
-    let observer = setupTemplateObserver()
-    pendingTemplateObserver = observer
+    stopPendingTemplateObserver = setupTemplateObserver(marker.id)
     let unsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
       if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
       if (pendingTemplateMarkerId !== marker.id) return
@@ -1629,31 +1628,73 @@ function disposeSubFrames(nodes: Node[], context: FrameContext): void {
 
 function getEarlyFrameContent(id: string): DocumentFragment | null {
   let template = document.querySelector(`template#${id}`)
-  if (template instanceof HTMLTemplateElement) {
-    let fragment = template.content
-    template.remove()
-    return fragment
+  if (template instanceof HTMLTemplateElement && isFrameTemplateComplete(template)) {
+    return takeFrameTemplateContent(template)
   }
   return null
 }
 
-function setupTemplateObserver(): MutationObserver {
+function isFrameTemplateComplete(template: HTMLTemplateElement): boolean {
+  let end = template.content.lastChild
+  return (
+    (isCommentNode(end) && end.data === FRAME_TEMPLATE_END_MARKER) ||
+    template.ownerDocument.readyState !== 'loading'
+  )
+}
+
+function takeFrameTemplateContent(template: HTMLTemplateElement): DocumentFragment {
+  let fragment = template.content
+  let end = fragment.lastChild
+  if (isCommentNode(end) && end.data === FRAME_TEMPLATE_END_MARKER) end.remove()
+  template.remove()
+  return fragment
+}
+
+function setupTemplateObserver(id: string): () => void {
   let root = document.body ?? document.documentElement ?? document
+  let pending = new Set<HTMLTemplateElement>()
   let observer = new MutationObserver((mutations) => {
     for (let mutation of mutations) {
       for (let node of mutation.addedNodes) {
-        collectAndPublishTemplates(node)
+        collectFrameTemplates(node, observeTemplate)
       }
     }
+    publishCompleteTemplates()
   })
 
+  function observeTemplate(template: HTMLTemplateElement): void {
+    if (template.id !== id || pending.has(template)) return
+    pending.add(template)
+    // Template contents are a separate fragment, outside the observed document subtree.
+    observer.observe(template.content, { childList: true })
+  }
+
+  function publishCompleteTemplates(): void {
+    for (let template of pending) {
+      if (!template.isConnected) {
+        pending.delete(template)
+        continue
+      }
+      if (!isFrameTemplateComplete(template)) continue
+      pending.delete(template)
+      publishFrameTemplate(template.id, takeFrameTemplateContent(template))
+    }
+  }
+
   observer.observe(root, { childList: true, subtree: true })
-  return observer
+  collectFrameTemplates(root, observeTemplate)
+  document.addEventListener('DOMContentLoaded', publishCompleteTemplates, { once: true })
+
+  return () => {
+    observer.disconnect()
+    pending.clear()
+    document.removeEventListener('DOMContentLoaded', publishCompleteTemplates)
+  }
 }
 
-function collectAndPublishTemplates(node: Node): void {
+function collectFrameTemplates(node: Node, collect: (template: HTMLTemplateElement) => void): void {
   if (node instanceof HTMLTemplateElement) {
-    publishFrameTemplateElement(node)
+    collect(node)
     return
   }
 
@@ -1661,14 +1702,8 @@ function collectAndPublishTemplates(node: Node): void {
   let templates = Array.from(node.querySelectorAll('template'))
   for (let template of templates) {
     if (!(template instanceof HTMLTemplateElement)) continue
-    publishFrameTemplateElement(template)
+    collect(template)
   }
-}
-
-function publishFrameTemplateElement(template: HTMLTemplateElement): void {
-  if (!template.id) return
-  template.remove()
-  publishFrameTemplate(template.id, template.content)
 }
 
 export function publishFrameTemplate(id: string, fragment: DocumentFragment): void {
@@ -1752,7 +1787,7 @@ function extractTemplatesFromBuffer(
       let parsed = createFragmentFromString(doc, fullMatch)
       let template = parsed.querySelector('template')
       if (template instanceof HTMLTemplateElement && template.id) {
-        onTemplate(template.id, template.content)
+        onTemplate(template.id, takeFrameTemplateContent(template))
       }
     }
 
