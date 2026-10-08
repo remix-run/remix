@@ -1153,10 +1153,8 @@ describe('frames', () => {
     document.body.append(root)
     let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
       expect(src).toBe('https://example.com/save')
-      expect((options?.body instanceof FormData ? options.body : undefined)?.get('name')).toBe(
-        'Ada',
-      )
-      expect(options?.method).toBe('PATCH')
+      expect(options?.formData?.get('name')).toBe('Ada')
+      expect(options?.method).toBe('post')
       expect(options?.encType).toBe('multipart/form-data')
       expect(options?.signal).toBeInstanceOf(AbortSignal)
       return '<p>Saved</p>'
@@ -1170,7 +1168,7 @@ describe('frames', () => {
 
     let signal = await frame.handle.reload({
       src: 'https://example.com/save',
-      method: 'PATCH',
+      method: 'POST',
       encType: 'multipart/form-data',
       body: data,
     })
@@ -1231,12 +1229,8 @@ describe('frames', () => {
     form.addEventListener('submit', submit)
     let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
       expect(src).toBe('https://example.com/save')
-      expect((options?.body instanceof FormData ? options.body : undefined)?.get('name')).toBe(
-        'Ada',
-      )
-      expect((options?.body instanceof FormData ? options.body : undefined)?.get('intent')).toBe(
-        'save',
-      )
+      expect(options?.formData?.get('name')).toBe('Ada')
+      expect(options?.formData?.get('intent')).toBe('save')
       expect(options?.method).toBe('post')
       expect(options?.encType).toBe('multipart/form-data')
       return '<p>Saved</p>'
@@ -1271,7 +1265,6 @@ describe('frames', () => {
     let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
       expect(src).toBe('https://example.com/search?query=Ada+Lovelace')
       expect(options?.method).toBe('get')
-      expect(options?.body).toBeUndefined()
       expect(options?.formData).toBeUndefined()
       expect(options?.encType).toBeUndefined()
       return '<p>Found</p>'
@@ -1299,10 +1292,7 @@ describe('frames', () => {
     let signals: AbortSignal[] = []
     let resolveFrame = t.mock.fn((_src: string, options?: ResolveFrameOptions) => {
       if (options?.signal) signals.push(options.signal)
-      return (options?.body instanceof FormData ? options.body : undefined)?.get('value') ===
-        'first'
-        ? staleContent
-        : '<p>Second</p>'
+      return options?.formData?.get('value') === 'first' ? staleContent : '<p>Second</p>'
     })
     let frame = createTestFrame(root, { resolveFrame })
     t.after(() => frame.dispose())
@@ -1330,7 +1320,7 @@ describe('frames', () => {
     let [staleContent, resolveStaleContent] = withResolvers<string>()
     let frame = createTestFrame(root, {
       resolveFrame(_src, options) {
-        return options?.method ? staleContent : '<p>Reloaded</p>'
+        return options?.method === 'post' ? staleContent : '<p>Reloaded</p>'
       },
     })
     t.after(() => frame.dispose())
@@ -1352,7 +1342,7 @@ describe('frames', () => {
     let [staleContent, resolveStaleContent] = withResolvers<string>()
     let frame = createTestFrame(root, {
       resolveFrame(_src, options) {
-        return options?.method ? '<p>Submitted</p>' : staleContent
+        return options?.method === 'post' ? '<p>Submitted</p>' : staleContent
       },
     })
     t.after(() => frame.dispose())

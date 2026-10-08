@@ -124,12 +124,7 @@ export type ResolveFrame = (
 export interface ResolveFrameOptions {
   /** Frame name, absent for both the top-level document and unnamed `<Frame>` loads. */
   target?: string
-  /**
-   * Body supplied by an imperative reload. GET form values are already encoded in `src`.
-   * Form bodies for other methods should be serialized according to `encType`.
-   */
-  body?: BodyInit | null
-  /** Form values submitted to the frame source for a non-GET navigation. */
+  /** Form values submitted to the frame source for a POST reload or navigation. */
   formData?: FormData
   /** HTTP method selected by the reload options or the form and its submitter. */
   method?: string
@@ -775,13 +770,15 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   async function reload(options?: FrameReloadOptions): Promise<FrameReloadResult> {
     let src = options?.src ?? frame.src
-    let body = options?.body
-    let encType = options?.encType
-    if (body instanceof FormData || body instanceof URLSearchParams) {
-      if ((options?.method ?? 'get').toLowerCase() === 'get') {
+    let method = options?.method?.toLowerCase()
+    if (method !== undefined && method !== 'post') method = 'get'
+    let formData = options?.body
+    let encType
+    if (formData) {
+      if (method !== 'post') {
         let url = new URL(src, container.doc.baseURI)
         let query = new URLSearchParams()
-        for (let [name, value] of body) {
+        for (let [name, value] of formData) {
           query.append(
             name.replace(/\r\n|\r|\n/g, '\r\n'),
             (typeof value === 'string' ? value : value.name).replace(/\r\n|\r|\n/g, '\r\n'),
@@ -789,17 +786,16 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         }
         url.search = `?${query}`
         src = url.href
-        body = undefined
-        encType = undefined
+        formData = undefined
       } else {
-        encType = encType?.toLowerCase()
+        encType = options?.encType?.toLowerCase()
         if (encType !== 'multipart/form-data' && encType !== 'text/plain') {
           encType = 'application/x-www-form-urlencoded'
         }
       }
     }
     frame.src = src
-    let transition = startReloadTransition({ method: options?.method, encType, body })
+    let transition = startReloadTransition({ method, encType, formData })
     void transition.committed.catch(() => {})
     return await transition.finished
   }

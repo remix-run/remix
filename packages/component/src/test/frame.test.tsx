@@ -338,7 +338,9 @@ describe('run', () => {
 
   it('retains the requested source without retaining the previous method or body', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
-    await app.frames.top.reload({ src: '/save', method: 'post', body: 'Ada' })
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ src: '/save', method: 'post', body })
     await app.frames.top.reload()
 
     expect(requests).toHaveLength(2)
@@ -346,63 +348,6 @@ describe('run', () => {
     expect(requests[1]!.method).toBe('GET')
     expect(requests[1]!.url).toBe(new URL('/save', document.baseURI).href)
     expect(requests[1]!.body).toBeNull()
-  })
-
-  it('reloads with a JSON string body and the requested content type', async (t) => {
-    let { app, requests } = await setupReloadBodyTest(t)
-    await app.frames.top.reload({
-      method: 'post',
-      encType: 'application/json',
-      body: '{"name":"Ada"}',
-    })
-
-    expect(requests).toHaveLength(1)
-    let request = requests[0]!
-    expect(request.headers.get('Content-Type')).toBe('application/json')
-    expect(await request.text()).toBe('{"name":"Ada"}')
-    expect(document.body.textContent).toBe('Saved')
-  })
-
-  it('reloads with a URLSearchParams body using its native encoding', async (t) => {
-    let { app, requests } = await setupReloadBodyTest(t)
-    await app.frames.top.reload({
-      method: 'post',
-      body: new URLSearchParams({ name: 'Ada Lovelace' }),
-    })
-
-    expect(requests).toHaveLength(1)
-    let request = requests[0]!
-    expect(request.headers.get('Content-Type')).toBe(
-      'application/x-www-form-urlencoded;charset=UTF-8',
-    )
-    expect(await request.text()).toBe('name=Ada+Lovelace')
-  })
-
-  it('reloads with a Blob body using its native content type', async (t) => {
-    let { app, requests } = await setupReloadBodyTest(t)
-    await app.frames.top.reload({
-      method: 'post',
-      body: new Blob(['Ada'], { type: 'text/custom' }),
-    })
-
-    expect(requests).toHaveLength(1)
-    let request = requests[0]!
-    expect(request.headers.get('Content-Type')).toBe('text/custom')
-    expect(await request.text()).toBe('Ada')
-  })
-
-  it('reloads with a stream body', async (t) => {
-    let { app, requests } = await setupReloadBodyTest(t)
-    let body = new ReadableStream({
-      start(controller) {
-        controller.enqueue(new TextEncoder().encode('Ada'))
-        controller.close()
-      },
-    })
-    await app.frames.top.reload({ method: 'post', body })
-
-    expect(requests).toHaveLength(1)
-    expect(await requests[0]!.text()).toBe('Ada')
   })
 
   it('reloads with multipart FormData and lets Fetch generate its boundary', async (t) => {
@@ -465,40 +410,34 @@ describe('run', () => {
 
     expect(requests).toHaveLength(1)
     let request = requests[0]!
-    expect(request.headers.get('Content-Type')).toBe(
-      'application/x-www-form-urlencoded;charset=UTF-8',
-    )
+    expect(request.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
     expect(await request.text()).toBe('name%0D%0Aline=Ada%0D%0ALovelace&file=notes.txt')
   })
 
-  it('encodes URLSearchParams as text/plain when requested', async (t) => {
+  it('defaults an invalid form method to GET and encodes its fields in the query', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
-    await app.frames.top.reload({
-      method: 'post',
-      encType: 'TEXT/PLAIN',
-      body: new URLSearchParams({ name: 'Ada' }),
-    })
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ src: '/search?old=1', method: 'PATCH', body })
 
     expect(requests).toHaveLength(1)
-    let request = requests[0]!
-    expect(request.headers.get('Content-Type')).toBe('text/plain')
-    expect(await request.text()).toBe('name=Ada\r\n')
+    expect(requests[0]!.method).toBe('GET')
+    expect(requests[0]!.url).toBe(new URL('/search?name=Ada', document.baseURI).href)
+    expect(requests[0]!.body).toBeNull()
+    expect(requests[0]!.headers.get('Content-Type')).toBeNull()
   })
 
-  it('encodes URLSearchParams as multipart form data when requested', async (t) => {
+  it('accepts case-insensitive form methods and encodings', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
-    await app.frames.top.reload({
-      method: 'post',
-      encType: 'multipart/form-data',
-      body: new URLSearchParams({ name: 'Ada' }),
-    })
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ method: 'PoSt', encType: 'TEXT/PLAIN', body })
 
     expect(requests).toHaveLength(1)
     let request = requests[0]!
-    expect(request.headers.get('Content-Type')?.startsWith('multipart/form-data; boundary=')).toBe(
-      true,
-    )
-    expect((await request.formData()).get('name')).toBe('Ada')
+    expect(request.method).toBe('POST')
+    expect(request.headers.get('Content-Type')).toBe('text/plain')
+    expect(await request.text()).toBe('name=Ada\r\n')
   })
 
   it('falls back to URL encoding for an invalid FormData encoding', async (t) => {
@@ -508,6 +447,7 @@ describe('run', () => {
     await app.frames.top.reload({ method: 'post', encType: 'invalid', body })
 
     expect(requests).toHaveLength(1)
+    expect(requests[0]!.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
     expect(await requests[0]!.text()).toBe('name=Ada')
   })
 

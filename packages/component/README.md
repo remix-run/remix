@@ -124,7 +124,6 @@ async function resolveFrame(src, options) {
     mode: 'same-origin',
     signal: options?.signal,
   }
-  if (body instanceof ReadableStream) requestInit.duplex = 'half'
   let response = await fetch(src, requestInit)
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
@@ -136,27 +135,13 @@ async function resolveFrame(src, options) {
 }
 
 function getRequestBody(options) {
-  let requestBody = options?.body
-  let formData =
-    requestBody instanceof FormData || requestBody instanceof URLSearchParams
-      ? requestBody
-      : options?.formData
-  if (!formData) {
-    return {
-      body: requestBody ?? undefined,
-      encType: requestBody == null ? undefined : options?.encType,
-    }
-  }
+  let formData = options?.formData
+  if (!formData) return {}
   if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return {}
 
   let encType = options?.encType?.toLowerCase()
 
-  if (encType === 'multipart/form-data') {
-    if (formData instanceof FormData) return { body: formData }
-    let body = new FormData()
-    for (let [name, value] of formData) body.append(name, value)
-    return { body }
-  }
+  if (encType === 'multipart/form-data') return { body: formData }
 
   if (encType === 'text/plain') {
     let body = ''
@@ -165,7 +150,7 @@ function getRequestBody(options) {
       value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
       body += `${name}=${value}\r\n`
     }
-    return { body: new Blob([body], { type: 'text/plain' }) }
+    return { body: new Blob([body], { type: 'text/plain' }), encType: 'text/plain' }
   }
 
   let body = new URLSearchParams()
@@ -175,7 +160,7 @@ function getRequestBody(options) {
       normalizeLineBreaks(typeof value === 'string' ? value : value.name),
     )
   }
-  return { body }
+  return { body, encType: 'application/x-www-form-urlencoded' }
 }
 
 function normalizeLineBreaks(value) {
@@ -247,7 +232,7 @@ await handle.frame.reload({
 })
 ```
 
-`src` becomes the source for subsequent reloads. The method defaults to GET, which encodes `FormData` and `URLSearchParams` into the source query. POST defaults to `application/x-www-form-urlencoded`; use `encType` to select `multipart/form-data` or `text/plain`. Other Fetch body types, including strings, blobs, and streams, use their native encoding unless `encType` supplies a content type. See [Reload requests](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#reload-requests) for request and cancellation behavior.
+`src` becomes the source for subsequent reloads. Pass `FormData` as `body` to submit fields. The method defaults to GET, which encodes the fields into the source query. POST defaults to `application/x-www-form-urlencoded`; use `encType` to select `multipart/form-data` or `text/plain`. Methods and encodings are case-insensitive; unsupported values use the defaults. See [Reload requests](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#reload-requests) for request and cancellation behavior.
 
 Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 

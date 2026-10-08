@@ -195,16 +195,15 @@ export type FrameHandleEventMap = {
 export interface FrameReloadOptions {
   /** Source to reload and retain for subsequent reloads. Defaults to the current source. */
   src?: string
-  /** Request method. Defaults to `GET`. */
+  /** Form request method: `GET` or `POST`, case-insensitive. Other values default to `GET`. */
   method?: string
   /**
-   * Encoding for `FormData` or `URLSearchParams` (default `application/x-www-form-urlencoded`).
-   * Also accepts `multipart/form-data` or `text/plain`; ignored for GET form values.
-   * For other Fetch bodies, sets the content type instead of using the body's native encoding.
+   * Form encoding: `application/x-www-form-urlencoded` (default), `multipart/form-data`,
+   * or `text/plain`. Case-insensitive; invalid values use the default. Ignored for GET.
    */
   encType?: string
-  /** Fetch body. GET encodes `FormData` and `URLSearchParams` into the source query instead. */
-  body?: BodyInit | null
+  /** Form values to submit. GET encodes them into the source query instead of a request body. */
+  body?: FormData
 }
 
 /**

@@ -29,9 +29,7 @@ describe('render', () => {
     let router = createRouter({ middleware: [render()] })
     router.get(new URL(initialUrl).pathname, ({ render }) => render(<p>Initial</p>))
     router.post('/save', async ({ request, render }) => {
-      expect(request.headers.get('Content-Type')).toBe(
-        'application/x-www-form-urlencoded;charset=UTF-8',
-      )
+      expect(request.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
       return render(<p>{(await request.formData()).get('name')?.toString()}</p>)
     })
     let app = run(router)
@@ -63,10 +61,9 @@ describe('render', () => {
     let app = run(router)
     t.after(() => app.dispose())
     await app.ready()
-    let body = new URLSearchParams([
-      ['name', 'Ada Lovelace'],
-      ['name', 'Grace'],
-    ])
+    let body = new FormData()
+    body.append('name', 'Ada Lovelace')
+    body.append('name', 'Grace')
 
     await app.frames.top.reload({ src: '/search?old=1', body })
 
@@ -74,30 +71,6 @@ describe('render', () => {
     expect(app.frames.top.src).toBe(
       new URL('/search?name=Ada+Lovelace&name=Grace', initialUrl).href,
     )
-    expect(window.location.href).toBe(initialUrl)
-  })
-
-  it('reloads with a streamed body and explicit content type', async (t) => {
-    let initialUrl = window.location.href
-    let router = createRouter({ middleware: [render()] })
-    router.get(new URL(initialUrl).pathname, ({ render }) => render(<p>Initial</p>))
-    router.post('/save', async ({ request, render }) => {
-      expect(request.headers.get('Content-Type')).toBe('text/custom')
-      return render(<p>{await request.text()}</p>)
-    })
-    let app = run(router)
-    t.after(() => app.dispose())
-    await app.ready()
-    let body = new ReadableStream({
-      start(controller) {
-        controller.enqueue(new TextEncoder().encode('Ada'))
-        controller.close()
-      },
-    })
-
-    await app.frames.top.reload({ src: '/save', method: 'post', encType: 'text/custom', body })
-
-    expect(document.body.textContent).toBe('Ada')
     expect(window.location.href).toBe(initialUrl)
   })
 
@@ -304,15 +277,13 @@ describe('run', () => {
     t.after(() => app.dispose())
     await app.ready()
 
-    await app.frames.top.reload({
-      src: '/save',
-      method: 'post',
-      encType: 'application/json',
-      body: '{"name":"Ada"}',
-    })
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ src: '/save', method: 'post', body })
 
     expect(requests.map((request) => request.method)).toEqual(['POST', 'GET'])
-    expect(requests[0]!.headers.get('Content-Type')).toBe('application/json')
+    expect(requests[0]!.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
+    expect(await requests[0]!.text()).toBe('name=Ada')
     expect(requests[1]!.headers.get('Content-Type')).toBeNull()
     expect(requests[1]!.body).toBeNull()
     expect(document.body.textContent).toBe('Saved')

@@ -218,7 +218,6 @@ async function resolveFrame(src, options) {
     mode: 'same-origin',
     signal: options?.signal,
   }
-  if (body instanceof ReadableStream) requestInit.duplex = 'half'
   let response = await fetch(src, requestInit)
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
@@ -230,27 +229,13 @@ async function resolveFrame(src, options) {
 }
 
 function getRequestBody(options) {
-  let requestBody = options?.body
-  let formData =
-    requestBody instanceof FormData || requestBody instanceof URLSearchParams
-      ? requestBody
-      : options?.formData
-  if (!formData) {
-    return {
-      body: requestBody ?? undefined,
-      encType: requestBody == null ? undefined : options?.encType,
-    }
-  }
+  let formData = options?.formData
+  if (!formData) return {}
   if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return {}
 
   let encType = options?.encType?.toLowerCase()
 
-  if (encType === 'multipart/form-data') {
-    if (formData instanceof FormData) return { body: formData }
-    let body = new FormData()
-    for (let [name, value] of formData) body.append(name, value)
-    return { body }
-  }
+  if (encType === 'multipart/form-data') return { body: formData }
 
   if (encType === 'text/plain') {
     let body = ''
@@ -259,7 +244,7 @@ function getRequestBody(options) {
       value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
       body += `${name}=${value}\r\n`
     }
-    return { body: new Blob([body], { type: 'text/plain' }) }
+    return { body: new Blob([body], { type: 'text/plain' }), encType: 'text/plain' }
   }
 
   let body = new URLSearchParams()
@@ -269,7 +254,7 @@ function getRequestBody(options) {
       normalizeLineBreaks(typeof value === 'string' ? value : value.name),
     )
   }
-  return { body }
+  return { body, encType: 'application/x-www-form-urlencoded' }
 }
 
 function normalizeLineBreaks(value) {
@@ -390,11 +375,11 @@ await handle.frames.get('account')?.reload({
 })
 ```
 
-The method defaults to GET. With `FormData` or `URLSearchParams`, GET replaces the source's query with URL-encoded fields and sends no request body, regardless of `encType`. Repeated fields and the URL fragment are preserved, and the resulting URL becomes the source for subsequent reloads.
+`body` accepts `FormData`. The supported request methods are GET and POST, case-insensitive; missing or invalid methods default to GET. GET replaces the source's query with URL-encoded fields and sends no request body, regardless of `encType`. Repeated fields and the URL fragment are preserved, and the resulting URL becomes the source for subsequent reloads.
 
 For POST, form data defaults to `application/x-www-form-urlencoded`. Set `encType` to `multipart/form-data` to send files and let Fetch generate the boundary, or `text/plain` to send CRLF-delimited entries. Encoding names are case-insensitive; missing or invalid encodings fall back to URL encoding. URL-encoded and plain-text submissions use file names in place of file contents and normalize line breaks to CRLF.
 
-`body` also accepts other standard Fetch body types, including strings, blobs, streams, and binary data. For these bodies, `encType` sets `Content-Type`; without it, Fetch uses the body's native content type. Additional HTTP methods such as PATCH are supported. Raw bodies cannot be sent with GET or HEAD. Omitted `body` means no request body, including on subsequent reloads after a POST.
+Omitted `body` means no request body, including on subsequent reloads after a POST.
 
 For a POST form, construct form data explicitly from the form element. Reloads do not perform constraint validation or dispatch a submit event:
 
@@ -409,7 +394,7 @@ if (form.reportValidity()) {
 }
 ```
 
-Custom resolvers receive the requested `src`, `body`, `method`, `encType`, and `signal`. GET form values are already encoded in `src`, with `body` and `encType` omitted. For other methods, form bodies are passed through with a normalized `encType`; the resolver applies that encoding. Navigation form submissions continue to provide `formData`. Redirect responses render their final content without changing the frame's requested source or the browser URL.
+Custom resolvers receive the requested `src`, `method`, and `signal`. GET form values are already encoded in `src`, with `formData` and `encType` omitted. POST reloads provide `formData` and a normalized `encType`, using the same resolver options as navigation form submissions; the resolver applies that encoding. Redirect responses render their final content without changing the frame's requested source or the browser URL.
 
 A newer reload cancels earlier client work for that frame, including pending requests and streamed content. Disposing the frame also cancels its active reload. Cancellation resolves with an aborted signal; other errors reject. Cancelling client work cannot undo a mutation the server has already performed.
 
