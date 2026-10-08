@@ -7,10 +7,27 @@ import { reloadFrameForNavigation } from '../runtime/frame.ts'
 import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
+import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
 import { css, navigate, on } from '../index.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
+
+async function setupReloadBodyTest(t: TestContext) {
+  document.body.innerHTML = '<main>Initial</main>'
+  let requests: Request[] = []
+  t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push(
+      new Request(typeof input === 'string' ? new URL(input, document.baseURI) : input, init),
+    )
+    return new Response(
+      '<!DOCTYPE html><html><head></head><body><main>Saved</main></body></html><!-- rmx:flush document -->',
+    )
+  })
+  let app = run({ loadModule: mock.fn() })
+  t.after(() => app.dispose())
+  await app.ready()
+  return { app, requests }
+}
 
 function getCommentMarkerId(html: string, prefix: 'rmx:f:' | 'rmx:h:'): string {
   let re = prefix === 'rmx:f:' ? /<!--\s*rmx:f:([^ ]+)\s*-->/ : /<!--\s*rmx:h:([^ ]+)\s*-->/
@@ -282,6 +299,7 @@ describe('run', () => {
       await reloadFrameForNavigation(app.frames.top, {
         formData,
         method: 'post',
+        encType: 'multipart/form-data',
         signal,
       }).finished
 
@@ -360,6 +378,158 @@ describe('run', () => {
     expect(headers.get('X-Remix-Target')).toBeNull()
     expect(headers.get('X-Remix-Top-Frame-Src')).toBeNull()
     expect(document.getElementById('next-page')?.textContent).toBe('Next page')
+  })
+
+  it('retains the requested source without retaining the previous method or body', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ src: '/save', method: 'post', body })
+    await app.frames.top.reload()
+
+    expect(requests).toHaveLength(2)
+    expect(requests[0]!.method).toBe('POST')
+    expect(requests[1]!.method).toBe('GET')
+    expect(requests[1]!.url).toBe(new URL('/save', document.baseURI).href)
+    expect(requests[1]!.body).toBeNull()
+  })
+
+  it('reloads with multipart FormData and lets Fetch generate its boundary', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ method: 'post', encType: 'multipart/form-data', body })
+
+    expect(requests).toHaveLength(1)
+    let request = requests[0]!
+    expect(request.headers.get('Content-Type')?.startsWith('multipart/form-data; boundary=')).toBe(
+      true,
+    )
+    expect((await request.formData()).get('name')).toBe('Ada')
+  })
+
+  it('reloads with text/plain FormData and normalizes line breaks', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name', 'Ada\nLovelace')
+    await app.frames.top.reload({ method: 'post', encType: 'text/plain', body })
+
+    expect(requests).toHaveLength(1)
+    let request = requests[0]!
+    expect(request.headers.get('Content-Type')).toBe('text/plain')
+    expect(await request.text()).toBe('name=Ada\r\nLovelace\r\n')
+  })
+
+  it('defaults FormData reloads to GET and replaces the source query without a body', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.append('name', 'Ada Lovelace')
+    body.append('name', 'Grace')
+    body.append('file', new File(['contents'], 'notes.txt'))
+    await app.frames.top.reload({
+      src: '/search?old=1#results',
+      encType: 'multipart/form-data',
+      body,
+    })
+
+    expect(requests).toHaveLength(1)
+    let request = requests[0]!
+    let expectedUrl = new URL(
+      '/search?name=Ada+Lovelace&name=Grace&file=notes.txt#results',
+      document.baseURI,
+    ).href
+    expect(request.url).toBe(expectedUrl)
+    expect(request.method).toBe('GET')
+    expect(request.body).toBeNull()
+    expect(app.frames.top.src).toBe(expectedUrl)
+    expect(document.body.textContent).toBe('Saved')
+  })
+
+  it('defaults POST FormData to URL encoding with normalized line breaks and file names', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name\nline', 'Ada\nLovelace')
+    body.set('file', new File(['contents'], 'notes.txt'))
+    await app.frames.top.reload({ method: 'post', body })
+
+    expect(requests).toHaveLength(1)
+    let request = requests[0]!
+    expect(request.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
+    expect(await request.text()).toBe('name%0D%0Aline=Ada%0D%0ALovelace&file=notes.txt')
+  })
+
+  it('defaults an invalid form method to GET and encodes its fields in the query', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ src: '/search?old=1', method: 'PATCH', body })
+
+    expect(requests).toHaveLength(1)
+    expect(requests[0]!.method).toBe('GET')
+    expect(requests[0]!.url).toBe(new URL('/search?name=Ada', document.baseURI).href)
+    expect(requests[0]!.body).toBeNull()
+    expect(requests[0]!.headers.get('Content-Type')).toBeNull()
+  })
+
+  it('accepts case-insensitive form methods and encodings', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ method: 'PoSt', encType: 'TEXT/PLAIN', body })
+
+    expect(requests).toHaveLength(1)
+    let request = requests[0]!
+    expect(request.method).toBe('POST')
+    expect(request.headers.get('Content-Type')).toBe('text/plain')
+    expect(await request.text()).toBe('name=Ada\r\n')
+  })
+
+  it('falls back to URL encoding for an invalid FormData encoding', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ method: 'post', encType: 'invalid', body })
+
+    expect(requests).toHaveLength(1)
+    expect(requests[0]!.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
+    expect(await requests[0]!.text()).toBe('name=Ada')
+  })
+
+  it('submits FormData through one default fetch and renders the returned HTML', async (t) => {
+    document.body.innerHTML = '<main id="initial">Initial</main>'
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="saved">Saved</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    await app.ready()
+    let initialUrl = window.location.href
+    let initialEntryCount = window.navigation.entries().length
+    let data = new FormData()
+    data.set('name', 'Ada Lovelace')
+
+    let signal = await app.frames.top.reload({
+      src: '/account/save',
+      method: 'post',
+      encType: 'application/x-www-form-urlencoded',
+      body: data,
+    })
+
+    expect(signal.aborted).toBe(false)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    let [src, init] = fetchMock.mock.calls[0]!.arguments
+    expect(src).toBe('/account/save')
+    expect(init?.method).toBe('post')
+    expect(init?.body).toBeInstanceOf(URLSearchParams)
+    expect(String(init?.body)).toBe('name=Ada+Lovelace')
+    expect(document.getElementById('saved')?.textContent).toBe('Saved')
+    expect(window.location.href).toBe(initialUrl)
+    expect(window.navigation.entries()).toHaveLength(initialEntryCount)
   })
 
   it('uses same-origin requests for explicitly cross-origin frame sources', async (t) => {
@@ -3608,6 +3778,95 @@ describe('run', () => {
     expect(document.getElementById('reload-error-value')?.textContent).toBe('Initial')
 
     app.dispose()
+  })
+
+  it('cancels a superseded reload fetch without reporting an error', async (t) => {
+    document.body.innerHTML = '<p id="initial">Initial</p>'
+    let fetchSignal: AbortSignal | null | undefined
+    let callCount = 0
+    t.mock.method(window, 'fetch', async (_input: RequestInfo | URL, options?: RequestInit) => {
+      if (callCount++ === 0) {
+        fetchSignal = options?.signal
+        return new Promise<Response>((_resolve, reject) => {
+          fetchSignal?.addEventListener('abort', () => reject(fetchSignal?.reason), { once: true })
+        })
+      }
+      return new Response(await renderDocumentContent(<p id="current">Current</p>))
+    })
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    let onError = t.mock.fn()
+    app.addEventListener('error', onError)
+    await app.ready()
+
+    let staleReload = app.frames.top.reload()
+    let currentReload = app.frames.top.reload()
+
+    expect(fetchSignal?.aborted).toBe(true)
+    expect((await staleReload).aborted).toBe(true)
+    expect((await currentReload).aborted).toBe(false)
+    expect(document.getElementById('current')?.textContent).toBe('Current')
+    expect(onError.mock.calls).toHaveLength(0)
+  })
+
+  it('finishes a streamed reload after removing its calling component', async (t) => {
+    let reload: Promise<AbortSignal> | undefined
+    let eventSignal: AbortSignal | undefined
+    let [removed, markRemoved] = withResolvers<void>()
+    let [tail, resolveTail] = withResolvers<string>()
+    let ReloadButton = clientEntry(
+      '/reload.js#ReloadButton',
+      function ReloadButton(handle: Handle) {
+        return () => (
+          <button
+            id="reload"
+            mix={[
+              on('click', (_event, signal) => {
+                eventSignal = signal
+                signal.addEventListener('abort', () => markRemoved(), { once: true })
+                reload = handle.frame.reload()
+              }),
+            ]}
+          >
+            Reload
+          </button>
+        )
+      },
+    )
+    document.body.innerHTML = await drain(
+      renderToStream(<Frame src="/reload" />, {
+        resolveFrame: () => renderFrameContent(<ReloadButton />),
+      }),
+    )
+    let fetchSignal: AbortSignal | null | undefined
+    t.mock.method(window, 'fetch', async (_input: RequestInfo | URL, options?: RequestInit) => {
+      fetchSignal = options?.signal
+      return new Response(
+        streamFromChunks([appendFlushMarker('<p id="first">First</p>', 'fragment'), tail]),
+        { headers: { 'Content-Type': 'text/html' } },
+      )
+    })
+    let app = run({ loadModule: () => ReloadButton })
+    t.after(() => {
+      resolveTail('')
+      app.dispose()
+    })
+    await app.ready()
+    let button = document.getElementById('reload')
+    invariant(button)
+
+    button.click()
+    invariant(reload)
+    await removed
+
+    expect(eventSignal?.aborted).toBe(true)
+    expect(fetchSignal?.aborted).toBe(false)
+    expect(document.getElementById('reload')).toBeNull()
+    expect(document.getElementById('first')?.textContent).toBe('First')
+    resolveTail('<p id="last">Last</p>')
+
+    expect((await reload).aborted).toBe(false)
+    expect(document.getElementById('last')?.textContent).toBe('Last')
   })
 
   it('aborts stale frame reloads when reload is re-entered', async () => {

@@ -94,6 +94,7 @@ function startStubNavigationListener(
   let stubNavigation = Object.assign(new EventTarget(), {
     updateCurrentEntry: mock.fn(),
     navigate: mock.fn(),
+    entries: mock.fn(() => []),
     transition: null as NavigationTransition | null,
   })
   stubGlobalField(t, 'navigation', stubNavigation)
@@ -132,6 +133,21 @@ function startStubNavigationListener(
       },
     }
   }
+}
+
+function createTraverseNavigateEvent(state: unknown) {
+  return Object.assign(new Event('navigate'), {
+    canIntercept: true,
+    navigationType: 'traverse',
+    signal: new AbortController().signal,
+    destination: {
+      url: new URL('/previous', window.location.origin).href,
+      key: 'previous',
+      getState: () => state,
+    },
+    intercept: mock.fn(),
+    scroll: mock.fn(),
+  })
 }
 
 describe('navigate', () => {
@@ -180,12 +196,18 @@ describe('navigate', () => {
     })
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: 'auth', src: '/partials/login', resetScroll: true, $rmx: true },
+      state: {
+        target: 'auth',
+        src: '/partials/login',
+        resetScroll: 'after-transition',
+        resetFocus: 'after-transition',
+        $rmx: true,
+      },
       history: 'replace',
     })
   })
 
-  it('passes resetScroll=false when requested', async (t) => {
+  it('normalizes resetScroll=false to manual history state', async (t) => {
     let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
       finished: Promise.resolve(),
     }))
@@ -195,9 +217,95 @@ describe('navigate', () => {
     })
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', resetScroll: false, $rmx: true },
+      state: {
+        target: undefined,
+        src: '/login',
+        resetScroll: 'manual',
+        resetFocus: 'after-transition',
+        $rmx: true,
+      },
       history: undefined,
     })
+  })
+
+  it('normalizes resetFocus=false to manual history state', async (t) => {
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
+
+    await navigate('/login', { resetFocus: false })
+
+    expect(navigateMock).toHaveBeenCalledWith('/login', {
+      state: {
+        target: undefined,
+        src: '/login',
+        resetScroll: 'after-transition',
+        resetFocus: 'manual',
+        $rmx: true,
+      },
+      history: undefined,
+    })
+  })
+
+  it('accepts manual scroll and focus options', async (t) => {
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
+
+    await navigate('/login', { resetScroll: 'manual', resetFocus: 'manual' })
+
+    expect(navigateMock).toHaveBeenCalledWith('/login', {
+      state: {
+        target: undefined,
+        src: '/login',
+        resetScroll: 'manual',
+        resetFocus: 'manual',
+        $rmx: true,
+      },
+      history: undefined,
+    })
+  })
+
+  it('accepts after-transition scroll and focus options', async (t) => {
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
+
+    await navigate('/login', { resetScroll: 'after-transition', resetFocus: 'after-transition' })
+
+    expect(navigateMock).toHaveBeenCalledWith('/login', {
+      state: {
+        target: undefined,
+        src: '/login',
+        resetScroll: 'after-transition',
+        resetFocus: 'after-transition',
+        $rmx: true,
+      },
+      history: undefined,
+    })
+  })
+
+  it('resets focus after the transition by default', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, resolveFinished] = withResolvers<StubFrameReloadResult>()
+    let [committed, resolveCommitted] = withResolvers<void>()
+    startNavigationListenerImpl(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed, finished }),
+    })
+    let input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    resolveCommitted()
+    await committed
+    expect(document.activeElement).toBe(input)
+
+    resolveFinished({ signal: controller.signal })
+    await navigated
+    expect(document.activeElement).toBe(document.body)
   })
 
   it('falls back to document navigation when the Navigation API is unavailable', async (t) => {
@@ -319,7 +427,7 @@ describe('navigate', () => {
     )
 
     let interceptOptions = intercept.mock.calls[0]?.arguments[0]
-    expect(interceptOptions?.scroll).toBe(undefined)
+    expect(interceptOptions?.scroll).toBe('after-transition')
     await interceptOptions?.handler?.()
     expect(scroll).toHaveBeenCalledTimes(1)
     await transition.succeed()
@@ -522,7 +630,148 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
   })
 
-  it('opts out of browser scroll restoration on traverse navigations', (t) => {
+  it('opts out of scrolling and focus reset for manual link attributes', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    anchor.setAttribute('data-rmx-reset-scroll', 'manual')
+    anchor.setAttribute('data-rmx-reset-focus', 'manual')
+    let intercept = mock.fn()
+    let event = createAnchorNavigateEvent(anchor, { intercept, destinationUrl: anchor.href })
+    let scroll = mock.fn()
+    Object.assign(event, { scroll })
+
+    let transition = dispatchNavigation(event)
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+    expect(scroll).not.toHaveBeenCalled()
+  })
+
+  it('uses default scrolling and focus reset for after-transition link attributes', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    anchor.setAttribute('data-rmx-reset-scroll', 'after-transition')
+    anchor.setAttribute('data-rmx-reset-focus', 'after-transition')
+    let intercept = mock.fn()
+    let event = createAnchorNavigateEvent(anchor, { intercept, destinationUrl: anchor.href })
+    let scroll = mock.fn()
+    Object.assign(event, { scroll })
+
+    let transition = dispatchNavigation(event)
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
+    expect(scroll).toHaveBeenCalledTimes(1)
+  })
+
+  it('accepts manual scroll and focus attributes on GET forms', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/search'
+    form.setAttribute('data-rmx-reset-scroll', 'manual')
+    form.setAttribute('data-rmx-reset-focus', 'manual')
+    let intercept = mock.fn()
+
+    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+  })
+
+  it('lets after-transition submitters override manual POST form attributes', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/save'
+    form.method = 'post'
+    form.setAttribute('data-rmx-reset-scroll', 'manual')
+    form.setAttribute('data-rmx-reset-focus', 'manual')
+    let button = document.createElement('button')
+    button.setAttribute('data-rmx-reset-scroll', 'after-transition')
+    button.setAttribute('data-rmx-reset-focus', 'after-transition')
+    form.append(button)
+    document.body.append(form)
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+    let intercept = mock.fn()
+
+    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
+  })
+
+  it('opts out of browser focus reset when data-rmx-reset-focus is false', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    anchor.setAttribute('data-rmx-reset-focus', 'false')
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept,
+        destinationUrl: anchor.href,
+      }),
+    )
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
+  })
+
+  it('opts out of browser focus reset for GET forms', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/search'
+    form.setAttribute('data-rmx-reset-focus', 'false')
+    let intercept = mock.fn()
+
+    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+  })
+
+  it('lets submitters disable browser focus reset for POST forms', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/save'
+    form.method = 'post'
+    form.setAttribute('data-rmx-reset-focus', 'true')
+    let button = document.createElement('button')
+    button.setAttribute('data-rmx-reset-focus', 'false')
+    form.append(button)
+    document.body.append(form)
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+    let intercept = mock.fn()
+
+    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+  })
+
+  it('lets submitters restore browser focus reset for forms', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.action = '/search'
+    form.setAttribute('data-rmx-reset-focus', 'false')
+    let button = document.createElement('button')
+    button.setAttribute('data-rmx-reset-focus', 'true')
+    form.append(button)
+    document.body.append(form)
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+    let intercept = mock.fn()
+
+    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+
+    expect(intercept).toHaveBeenCalledTimes(1)
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
+  })
+
+  it('preserves legacy boolean scroll and focus settings on traverse navigations', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let intercept = mock.fn()
     let event = Object.assign(new Event('navigate'), {
@@ -535,18 +784,81 @@ describe('navigate', () => {
           target: undefined,
           src: '/previous',
           resetScroll: false,
+          resetFocus: false,
           $rmx: true,
         }),
       },
       intercept,
+      scroll: mock.fn(),
     })
 
-    dispatchNavigation(event)
+    let transition = dispatchNavigation(event)
+    await transition.runHandler()
+    await transition.succeed()
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+    expect(event.scroll).not.toHaveBeenCalled()
   })
 
-  it('preserves manual scrolling across frame redirects', (t) => {
+  it('preserves canonical scroll and focus settings on traverse navigations', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let event = createTraverseNavigateEvent({
+      target: undefined,
+      src: '/previous',
+      resetScroll: 'manual',
+      resetFocus: 'manual',
+      $rmx: true,
+    })
+    let intercept = event.intercept
+
+    let transition = dispatchNavigation(event)
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+    expect(event.scroll).not.toHaveBeenCalled()
+  })
+
+  it('honors legacy true settings on traverse navigations', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let event = createTraverseNavigateEvent({
+      target: undefined,
+      src: '/previous',
+      resetScroll: true,
+      resetFocus: true,
+      $rmx: true,
+    })
+    let intercept = event.intercept
+
+    let transition = dispatchNavigation(event)
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
+    expect(event.scroll).toHaveBeenCalledTimes(1)
+  })
+
+  it('defaults missing reset settings when Safari reads traversal state from entries', async (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    stubGlobalMethod(t, 'navigation', 'entries', () => [
+      { key: 'previous', getState: () => ({ target: undefined, src: '/previous', $rmx: true }) },
+    ])
+    let event = createTraverseNavigateEvent(null)
+    let intercept = event.intercept
+
+    let transition = dispatchNavigation(event)
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
+    expect(event.scroll).toHaveBeenCalledTimes(1)
+  })
+
+  it('preserves manual scrolling and focus across frame redirects', (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let intercept = mock.fn()
     let event = Object.assign(new Event('navigate'), {
@@ -554,13 +866,48 @@ describe('navigate', () => {
       destination: {
         url: new URL('/redirected', window.location.origin).href,
       },
-      info: { type: 'frame-redirect', resetScroll: false },
+      info: { type: 'frame-redirect', resetScroll: 'manual', resetFocus: 'manual' },
       intercept,
     })
 
     dispatchNavigation(event)
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
+  })
+
+  it('preserves legacy history state while normalizing frame redirect info', async (t) => {
+    let redirectedTo = new URL('/redirected', window.location.origin).href
+    let dispatchNavigation = startStubNavigationListener(t, {
+      ...stubFrames,
+      reloadFrame: () =>
+        createReloadTransition({ signal: new AbortController().signal, redirectedTo }),
+    })
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
+    let updateCurrentEntry = stubGlobalMethod(t, 'navigation', 'updateCurrentEntry', () => {})
+    let state = {
+      target: undefined,
+      src: '/previous',
+      resetScroll: false,
+      resetFocus: false,
+      $rmx: true,
+    }
+    let event = createTraverseNavigateEvent(state)
+
+    let transition = dispatchNavigation(event)
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(navigateMock).toHaveBeenCalledWith(redirectedTo, {
+      history: 'replace',
+      state: { ...state, src: redirectedTo },
+      info: { type: 'frame-redirect', resetScroll: 'manual', resetFocus: 'manual' },
+    })
+    expect(state.resetScroll).toBe(false)
+    expect(state.resetFocus).toBe(false)
+    expect(updateCurrentEntry).not.toHaveBeenCalled()
   })
 
   it('does not scroll again when synchronizing a frame redirect URL', (t) => {
@@ -575,7 +922,11 @@ describe('navigate', () => {
       destination: {
         url: new URL('/redirected', window.location.origin).href,
       },
-      info: { type: 'frame-redirect', resetScroll: true },
+      info: {
+        type: 'frame-redirect',
+        resetScroll: 'after-transition',
+        resetFocus: 'after-transition',
+      },
       intercept,
     })
 
@@ -644,7 +995,7 @@ describe('navigate', () => {
       })
       await Promise.resolve()
 
-      expect(interceptOptions.scroll).toBe(undefined)
+      expect(interceptOptions.scroll).toBe('after-transition')
       expect(handlerSettled).toBe(false)
       expect(scroll).not.toHaveBeenCalled()
       expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
@@ -961,7 +1312,9 @@ describe('navigate', () => {
     let anchor = document.createElement('a')
     anchor.href = destination.href
     anchor.setAttribute('data-rmx-history', 'replace')
+    anchor.setAttribute('data-rmx-reset-focus', 'false')
     document.body.append(anchor)
+    anchor.focus()
 
     let entryCountBeforeNavigation = window.navigation.entries().length
     let didNavigate = false
@@ -976,6 +1329,7 @@ describe('navigate', () => {
       expect(entryAfterNavigation.url).toBe(destination.href)
       expect(topFrame.src).toBe(destination.href)
       expect(reload).toHaveBeenCalledTimes(1)
+      expect(document.activeElement).toBe(anchor)
     } finally {
       if (didNavigate) await navigate(originalUrl, { history: 'replace' })
       controller.abort()
@@ -1007,11 +1361,16 @@ describe('navigate', () => {
       reloadFrame,
     })
 
+    let input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+
     let entryCountBeforeNavigation = window.navigation.entries().length
     try {
       let redirected = waitForNavigationUrl(redirectedUrl.href)
-      void navigate(requestedUrl.href).catch(() => {})
+      void navigate(requestedUrl.href, { resetFocus: false }).catch(() => {})
       await redirected
+      expect(document.activeElement).toBe(input)
 
       expect(reloadFrame).toHaveBeenCalledTimes(1)
       expect(topFrame.src).toBe(redirectedUrl.href)
@@ -1020,14 +1379,18 @@ describe('navigate', () => {
       expect(window.navigation.currentEntry?.getState()).toEqual({
         target: undefined,
         src: redirectedUrl.href,
-        resetScroll: true,
+        resetScroll: 'after-transition',
+        resetFocus: 'manual',
         $rmx: true,
       })
 
       await window.navigation.back().finished
       expect(topFrame.src).toBe(originalUrl)
+      expect(document.activeElement).toBe(document.body)
+      input.focus()
 
       await window.navigation.forward().finished
+      expect(document.activeElement).toBe(input)
       expect(window.navigation.currentEntry?.url).toBe(redirectedUrl.href)
       expect(topFrame.src).toBe(redirectedUrl.href)
       expect(reloadFrame).toHaveBeenCalledTimes(3)
@@ -1076,7 +1439,8 @@ describe('navigate', () => {
       expect(window.navigation.currentEntry?.getState()).toEqual({
         target: 'details',
         src: requestedFrameUrl.href,
-        resetScroll: true,
+        resetScroll: 'after-transition',
+        resetFocus: 'after-transition',
         $rmx: true,
       })
     } finally {
@@ -1435,17 +1799,20 @@ describe('form navigation', () => {
     let form = document.createElement('form')
     form.action = window.location.href
     form.method = 'post'
+    form.setAttribute('data-rmx-reset-focus', 'false')
     let input = document.createElement('input')
     input.name = 'displayName'
     input.value = 'Ada'
     form.append(input)
     document.body.append(form)
+    input.focus()
 
     let entryBeforeSubmission = getCurrentNavigationEntry()
     let entryCountBeforeSubmission = window.navigation.entries().length
     let navigationSucceeded = waitForNavigationSuccess()
     form.requestSubmit()
     await navigationSucceeded
+    expect(document.activeElement).toBe(input)
 
     let entryAfterSubmission = getCurrentNavigationEntry()
     expect(window.navigation.entries()).toHaveLength(entryCountBeforeSubmission)
@@ -1473,17 +1840,20 @@ describe('form navigation', () => {
     let form = document.createElement('form')
     form.action = window.location.href
     form.method = 'post'
+    form.setAttribute('data-rmx-reset-focus', 'false')
     let input = document.createElement('input')
     input.name = 'displayName'
     input.value = 'Ada'
     form.append(input)
     document.body.append(form)
+    input.focus()
 
     let entryBeforeSubmission = getCurrentNavigationEntry()
     let entryCountBeforeSubmission = window.navigation.entries().length
     let navigationSucceeded = waitForNavigationSuccess()
     form.requestSubmit()
     await navigationSucceeded
+    expect(document.activeElement).toBe(input)
 
     let entryAfterSubmission = getCurrentNavigationEntry()
     expect(window.navigation.entries()).toHaveLength(entryCountBeforeSubmission)
@@ -1663,7 +2033,8 @@ describe('form navigation', () => {
     expect(window.navigation.currentEntry?.getState()).toEqual({
       target: 'account',
       src: destinationUrl,
-      resetScroll: true,
+      resetScroll: 'after-transition',
+      resetFocus: 'after-transition',
       $rmx: true,
     })
 
