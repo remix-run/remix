@@ -91,11 +91,24 @@ export function run(router: Router, options: RunOptions = {}): Runtime {
     },
     async resolveFrame(src, options) {
       let url = new URL(src, document.baseURI)
-      let { response, redirectedTo } = await followFrameRedirects(router, url, {
+      let body = getRequestBody(options)
+      let headers = new Headers()
+      if (
+        options?.body != null &&
+        !(options.body instanceof FormData) &&
+        !(options.body instanceof URLSearchParams) &&
+        options.encType
+      ) {
+        headers.set('Content-Type', options.encType)
+      }
+      let requestInit: RequestInit & { duplex?: 'half' } = {
         method: options?.method,
-        body: getRequestBody(options),
+        body,
+        headers,
         signal: options?.signal,
-      })
+      }
+      if (body instanceof ReadableStream) requestInit.duplex = 'half'
+      let { response, redirectedTo } = await followFrameRedirects(router, url, requestInit)
       return spaResponse.finalize(response, redirectedTo)
     },
   })
@@ -120,10 +133,11 @@ async function followFrameRedirects(
   let initialOrigin = url.origin
   let method = init.method?.toUpperCase() ?? 'GET'
   let body = init.body
+  let headers = new Headers(init.headers)
   let redirectedTo: string | undefined
 
   for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount++) {
-    let response = await router.fetch(url, { ...init, method, body })
+    let response = await router.fetch(url, { ...init, method, body, headers })
     if (!redirectStatuses.has(response.status)) {
       return { response, redirectedTo }
     }
@@ -145,6 +159,7 @@ async function followFrameRedirects(
     ) {
       method = 'GET'
       body = undefined
+      headers.delete('Content-Type')
     }
 
     url = nextUrl
@@ -154,14 +169,23 @@ async function followFrameRedirects(
   throw new TypeError(`SPA route exceeded ${maxRedirects} redirects`)
 }
 
-// Frame reloads can receive raw FormData without going through form navigation. Encode it here so
-// manual reloads use the requested form encoding instead of always sending multipart bodies.
 function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
-  let formData = options?.formData
-  let method = options?.method
-  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
+  let requestBody = options?.body
+  let formData =
+    requestBody instanceof FormData || requestBody instanceof URLSearchParams
+      ? requestBody
+      : options?.formData
+  if (!formData) return requestBody ?? undefined
+  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return
 
-  let encType = options?.encType
+  let encType = options?.encType?.toLowerCase()
+
+  if (encType === 'multipart/form-data') {
+    if (formData instanceof FormData) return formData
+    let body = new FormData()
+    for (let [name, value] of formData) body.append(name, value)
+    return body
+  }
 
   if (encType === 'text/plain') {
     let body = ''
@@ -173,11 +197,12 @@ function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
     return new Blob([body], { type: 'text/plain' })
   }
 
-  if (encType !== 'application/x-www-form-urlencoded') return formData
-
   let body = new URLSearchParams()
   for (let [name, value] of formData) {
-    body.append(name, typeof value === 'string' ? value : value.name)
+    body.append(
+      normalizeLineBreaks(name),
+      normalizeLineBreaks(typeof value === 'string' ? value : value.name),
+    )
   }
   return body
 }

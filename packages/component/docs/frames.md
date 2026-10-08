@@ -77,8 +77,8 @@ export let RefreshButton = clientEntry(
     return () => (
       <button
         mix={[
-          on('click', () => {
-            handle.frame.reload()
+          on('click', async () => {
+            await handle.frame.reload()
           }),
         ]}
       >
@@ -209,13 +209,24 @@ async function resolveFrame(src, options) {
   let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
   if (options?.target != null) headers.set('X-Remix-Target', options.target)
 
-  let response = await fetch(src, {
-    body: getRequestBody(options),
+  if (
+    options?.body != null &&
+    !(options.body instanceof FormData) &&
+    !(options.body instanceof URLSearchParams) &&
+    options.encType
+  ) {
+    headers.set('Content-Type', options.encType)
+  }
+  let body = getRequestBody(options)
+  let requestInit = {
+    body,
     headers,
     method: options?.method,
     mode: 'same-origin',
     signal: options?.signal,
-  })
+  }
+  if (body instanceof ReadableStream) requestInit.duplex = 'half'
+  let response = await fetch(src, requestInit)
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
   if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
@@ -226,11 +237,24 @@ async function resolveFrame(src, options) {
 }
 
 function getRequestBody(options) {
-  let formData = options?.formData
-  let method = options?.method
-  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
+  let requestBody = options?.body
+  let formData =
+    requestBody instanceof FormData || requestBody instanceof URLSearchParams
+      ? requestBody
+      : options?.formData
+  if (!formData) return requestBody ?? undefined
+  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return
 
-  if (options?.encType === 'text/plain') {
+  let encType = options?.encType?.toLowerCase()
+
+  if (encType === 'multipart/form-data') {
+    if (formData instanceof FormData) return formData
+    let body = new FormData()
+    for (let [name, value] of formData) body.append(name, value)
+    return body
+  }
+
+  if (encType === 'text/plain') {
     let body = ''
     for (let [name, value] of formData) {
       name = normalizeLineBreaks(name)
@@ -240,11 +264,12 @@ function getRequestBody(options) {
     return new Blob([body], { type: 'text/plain' })
   }
 
-  if (options?.encType !== 'application/x-www-form-urlencoded') return formData
-
   let body = new URLSearchParams()
   for (let [name, value] of formData) {
-    body.append(name, typeof value === 'string' ? value : value.name)
+    body.append(
+      normalizeLineBreaks(name),
+      normalizeLineBreaks(typeof value === 'string' ? value : value.name),
+    )
   }
   return body
 }
@@ -346,6 +371,49 @@ The action should return HTML suitable for the targeted frame while retaining it
 Enhanced non-GET submissions to the current URL replace its navigation history entry instead of pushing a duplicate. Submissions to a different URL push a new entry, as do GET submissions whose values are represented in the destination URL. The `data-rmx-history` attribute overrides that default: use `data-rmx-history="replace"` to force replacement or `data-rmx-history="push"` to force a push. Non-GET `FormData` is used only for the active frame reload and is not retained in history.
 
 Forms work as normal document submissions before the client runtime loads and whenever they use `data-rmx-document`, so this behavior remains progressively enhanced. Browsers ignore `data-rmx-history` without the client runtime and use their normal document history behavior.
+
+### Reload requests
+
+Pass `src` to reload a different source in one call. It becomes the frame's source for subsequent reloads, just as assigning `frame.src` before calling `reload()` would:
+
+```tsx
+await handle.frame.reload({ src: '/account/edit' })
+```
+
+Pass `method`, `encType`, and `body` to send data through the frame resolver and render its response. Reloads make one resolver request and do not change browser history:
+
+```tsx
+let body = new FormData()
+body.set('displayName', 'Ada')
+await handle.frames.get('account')?.reload({
+  src: '/account/edit',
+  method: 'post',
+  body,
+})
+```
+
+The method defaults to GET. With `FormData` or `URLSearchParams`, GET replaces the source's query with URL-encoded fields and sends no request body, regardless of `encType`. Repeated fields and the URL fragment are preserved, and the resulting URL becomes the source for subsequent reloads.
+
+For POST, form data defaults to `application/x-www-form-urlencoded`. Set `encType` to `multipart/form-data` to send files and let Fetch generate the boundary, or `text/plain` to send CRLF-delimited entries. Encoding names are case-insensitive; missing or invalid encodings fall back to URL encoding. URL-encoded and plain-text submissions use file names in place of file contents and normalize line breaks to CRLF.
+
+`body` also accepts other standard Fetch body types, including strings, blobs, streams, and binary data. For these bodies, `encType` sets `Content-Type`; without it, Fetch uses the body's native content type. Additional HTTP methods such as PATCH are supported. Raw bodies cannot be sent with GET or HEAD. Omitted `body` means no request body, including on subsequent reloads after a POST.
+
+For a POST form, construct form data explicitly from the form element. Reloads do not perform constraint validation or dispatch a submit event:
+
+```tsx
+if (form.reportValidity()) {
+  await handle.frame.reload({
+    src: form.action,
+    method: form.method,
+    encType: form.enctype,
+    body: new FormData(form, saveButton),
+  })
+}
+```
+
+Custom resolvers receive the requested `src`, `body`, `method`, `encType`, and `signal`. GET form values are already encoded in `src`, with `body` and `encType` omitted. For other methods, form bodies are passed through with a normalized `encType`; the resolver applies that encoding. Navigation form submissions continue to provide `formData`. Redirect responses render their final content without changing the frame's requested source or the browser URL.
+
+A newer reload cancels earlier client work for that frame, including pending requests and streamed content. Disposing the frame also cancels its active reload. Cancellation resolves with an aborted signal; other errors reject. Cancelling client work cannot undo a mutation the server has already performed.
 
 ## Frame lifecycle
 

@@ -4,7 +4,7 @@ import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
 import type { ElementFunction } from './element-function.ts'
-import type { FrameHandle } from './component.ts'
+import type { FrameHandle, FrameReloadOptions } from './component.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffElementAttributes, diffNodes } from './diff-dom.ts'
@@ -124,19 +124,24 @@ export type ResolveFrame = (
 export interface ResolveFrameOptions {
   /** Frame name, absent for both the top-level document and unnamed `<Frame>` loads. */
   target?: string
-  /** Form values submitted to the frame source for a non-GET submission. */
+  /**
+   * Body supplied by an imperative reload. GET form values are already encoded in `src`.
+   * Form bodies for other methods should be serialized according to `encType`.
+   */
+  body?: BodyInit | null
+  /** Form values submitted to the frame source for a non-GET navigation. */
   formData?: FormData
-  /** HTTP method selected by the form and its submitter. */
+  /** HTTP method selected by the reload options or the form and its submitter. */
   method?: string
-  /** Form encoding selected by the form and its submitter. */
+  /** Body encoding selected by the reload options or the form and its submitter. */
   encType?: string
-  /** Aborts the reload when the navigation that started it is cancelled. */
+  /** Cancels the active frame request. Custom resolvers should forward this to `fetch()`. */
   signal?: AbortSignal
 }
 
 type InternalFrameContent = FrameContent | DocumentFragment
 
-type FrameReloadOptions = Omit<ResolveFrameOptions, 'target'>
+type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'>
 
 type FrameReloadResult = {
   signal: AbortSignal
@@ -223,7 +228,7 @@ export type FrameRuntime = {
         blockingFrameTracker?: ReconciliationTracker
       }
     | undefined
-  reloadForNavigation?: (options?: FrameReloadOptions) => FrameReloadTransition
+  reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
 }
 
 export function isFrameRuntime(value: unknown): value is FrameRuntime {
@@ -239,7 +244,7 @@ export function isFrameRuntime(value: unknown): value is FrameRuntime {
  */
 export function reloadFrameForNavigation(
   frame: FrameHandle,
-  options?: FrameReloadOptions,
+  options?: FrameNavigationOptions,
 ): FrameReloadTransition {
   let runtime = frame.$runtime
   invariant(isFrameRuntime(runtime), 'Expected a frame runtime')
@@ -393,7 +398,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let frame = createFrameHandle({
     src: init.src,
     $runtime: runtime,
-    reload: async () => (await reload()).signal,
+    reload: async (options) => (await reload(options)).signal,
     replace: async (content: FrameContent) => {
       await render(content)
     },
@@ -769,12 +774,37 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   async function reload(options?: FrameReloadOptions): Promise<FrameReloadResult> {
-    let transition = startReloadTransition(options)
+    let src = options?.src ?? frame.src
+    let body = options?.body
+    let encType = options?.encType
+    if (body instanceof FormData || body instanceof URLSearchParams) {
+      if ((options?.method ?? 'get').toLowerCase() === 'get') {
+        let url = new URL(src, container.doc.baseURI)
+        let query = new URLSearchParams()
+        for (let [name, value] of body) {
+          query.append(
+            name.replace(/\r\n|\r|\n/g, '\r\n'),
+            (typeof value === 'string' ? value : value.name).replace(/\r\n|\r|\n/g, '\r\n'),
+          )
+        }
+        url.search = `?${query}`
+        src = url.href
+        body = undefined
+        encType = undefined
+      } else {
+        encType = encType?.toLowerCase()
+        if (encType !== 'multipart/form-data' && encType !== 'text/plain') {
+          encType = 'application/x-www-form-urlencoded'
+        }
+      }
+    }
+    frame.src = src
+    let transition = startReloadTransition({ method: options?.method, encType, body })
     void transition.committed.catch(() => {})
     return await transition.finished
   }
 
-  function startReloadTransition(options?: FrameReloadOptions): FrameReloadTransition {
+  function startReloadTransition(options?: FrameNavigationOptions): FrameReloadTransition {
     let controller = startReload(options?.signal)
     let committed = Promise.withResolvers<void>()
     let commitStarted = false
@@ -848,7 +878,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   async function resolveAndRenderReload(
     controller: AbortController,
-    options?: FrameReloadOptions,
+    options?: FrameNavigationOptions,
     resolveCommit?: (ready: Promise<void>) => void,
   ): Promise<FrameReloadResult> {
     try {
@@ -1036,7 +1066,7 @@ export function createFrameRuntime(init: {
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
-  reloadForNavigation?: (options?: FrameReloadOptions) => FrameReloadTransition
+  reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
 }): FrameRuntime {
   return {
     [FRAME_RUNTIME]: true,

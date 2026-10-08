@@ -79,14 +79,23 @@ export function getNamedFrame(name: string): FrameHandle | undefined {
   return namedFrames.get(name)
 }
 
-// Frame reloads can receive raw FormData without going through form navigation. Encode it here so
-// manual reloads use the requested form encoding instead of always sending multipart bodies.
 function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
-  let formData = options?.formData
-  let method = options?.method
-  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
+  let requestBody = options?.body
+  let formData =
+    requestBody instanceof FormData || requestBody instanceof URLSearchParams
+      ? requestBody
+      : options?.formData
+  if (!formData) return requestBody ?? undefined
+  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return
 
-  let encType = options?.encType
+  let encType = options?.encType?.toLowerCase()
+
+  if (encType === 'multipart/form-data') {
+    if (formData instanceof FormData) return formData
+    let body = new FormData()
+    for (let [name, value] of formData) body.append(name, value)
+    return body
+  }
 
   if (encType === 'text/plain') {
     let body = ''
@@ -98,11 +107,12 @@ function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
     return new Blob([body], { type: 'text/plain' })
   }
 
-  if (encType !== 'application/x-www-form-urlencoded') return formData
-
   let body = new URLSearchParams()
   for (let [name, value] of formData) {
-    body.append(name, typeof value === 'string' ? value : value.name)
+    body.append(
+      normalizeLineBreaks(name),
+      normalizeLineBreaks(typeof value === 'string' ? value : value.name),
+    )
   }
   return body
 }
@@ -115,13 +125,24 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
   let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
   if (options?.target != null) headers.set('X-Remix-Target', options.target)
 
-  let response = await fetch(src, {
-    body: getRequestBody(options),
+  if (
+    options?.body != null &&
+    !(options.body instanceof FormData) &&
+    !(options.body instanceof URLSearchParams) &&
+    options.encType
+  ) {
+    headers.set('Content-Type', options.encType)
+  }
+  let body = getRequestBody(options)
+  let requestInit: RequestInit & { duplex?: 'half' } = {
+    body,
     headers,
     method: options?.method,
     mode: 'same-origin',
     signal: options?.signal,
-  })
+  }
+  if (body instanceof ReadableStream) requestInit.duplex = 'half'
+  let response = await fetch(src, requestInit)
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
   if (response.status >= 500 || (response.status >= 300 && !isHtml)) {

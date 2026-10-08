@@ -24,6 +24,83 @@ describe('render', () => {
     document.body.textContent = ''
   })
 
+  it('defaults POST FormData to URL encoding without navigating', async (t) => {
+    let initialUrl = window.location.href
+    let router = createRouter({ middleware: [render()] })
+    router.get(new URL(initialUrl).pathname, ({ render }) => render(<p>Initial</p>))
+    router.post('/save', async ({ request, render }) => {
+      expect(request.headers.get('Content-Type')).toBe(
+        'application/x-www-form-urlencoded;charset=UTF-8',
+      )
+      return render(<p>{(await request.formData()).get('name')?.toString()}</p>)
+    })
+    let app = run(router)
+    t.after(() => app.dispose())
+    await app.ready()
+    let body = new FormData()
+    body.set('name', 'Ada')
+
+    await app.frames.top.reload({
+      src: '/save',
+      method: 'post',
+      body,
+    })
+
+    expect(document.body.textContent).toBe('Ada')
+    expect(app.frames.top.src).toBe('/save')
+    expect(window.location.href).toBe(initialUrl)
+  })
+
+  it('reloads GET form values in the source query without navigating', async (t) => {
+    let initialUrl = window.location.href
+    let router = createRouter({ middleware: [render()] })
+    router.get(new URL(initialUrl).pathname, ({ render }) => render(<p>Initial</p>))
+    router.get('/search', ({ request, render }) => {
+      expect(request.body).toBeNull()
+      expect(new URL(request.url).search).toBe('?name=Ada+Lovelace&name=Grace')
+      return render(<p>Found</p>)
+    })
+    let app = run(router)
+    t.after(() => app.dispose())
+    await app.ready()
+    let body = new URLSearchParams([
+      ['name', 'Ada Lovelace'],
+      ['name', 'Grace'],
+    ])
+
+    await app.frames.top.reload({ src: '/search?old=1', body })
+
+    expect(document.body.textContent).toBe('Found')
+    expect(app.frames.top.src).toBe(
+      new URL('/search?name=Ada+Lovelace&name=Grace', initialUrl).href,
+    )
+    expect(window.location.href).toBe(initialUrl)
+  })
+
+  it('reloads with a streamed body and explicit content type', async (t) => {
+    let initialUrl = window.location.href
+    let router = createRouter({ middleware: [render()] })
+    router.get(new URL(initialUrl).pathname, ({ render }) => render(<p>Initial</p>))
+    router.post('/save', async ({ request, render }) => {
+      expect(request.headers.get('Content-Type')).toBe('text/custom')
+      return render(<p>{await request.text()}</p>)
+    })
+    let app = run(router)
+    t.after(() => app.dispose())
+    await app.ready()
+    let body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('Ada'))
+        controller.close()
+      },
+    })
+
+    await app.frames.top.reload({ src: '/save', method: 'post', encType: 'text/custom', body })
+
+    expect(document.body.textContent).toBe('Ada')
+    expect(window.location.href).toBe(initialUrl)
+  })
+
   it('adds a request-aware node renderer to an ordinary router context', async (t) => {
     let initialUrl = window.location.href
     let routeUrl = new URL('/hello', initialUrl)
@@ -207,6 +284,40 @@ describe('run', () => {
     let request = await submittedRequest.promise
     expect(request.headers.get('Content-Type')).toBe('text/plain')
     expect(await request.text()).toBe('note=first\r\nsecond\r\ncity=Paris\r\n')
+  })
+
+  it('drops the body and its content type when a POST reload redirects to GET', async (t) => {
+    let initialUrl = window.location.href
+    let requests: Request[] = []
+    let router: Router = {
+      async fetch(input, init) {
+        let request = input instanceof Request ? input : new Request(input, init)
+        if (new URL(request.url).pathname === '/save') {
+          requests.push(request)
+          return new Response(null, { status: 303, headers: { Location: '/saved' } })
+        }
+        if (new URL(request.url).pathname === '/saved') requests.push(request)
+        return spaResponse.create(<p>Saved</p>)
+      },
+    }
+    let app = run(router)
+    t.after(() => app.dispose())
+    await app.ready()
+
+    await app.frames.top.reload({
+      src: '/save',
+      method: 'post',
+      encType: 'application/json',
+      body: '{"name":"Ada"}',
+    })
+
+    expect(requests.map((request) => request.method)).toEqual(['POST', 'GET'])
+    expect(requests[0]!.headers.get('Content-Type')).toBe('application/json')
+    expect(requests[1]!.headers.get('Content-Type')).toBeNull()
+    expect(requests[1]!.body).toBeNull()
+    expect(document.body.textContent).toBe('Saved')
+    expect(app.frames.top.src).toBe('/save')
+    expect(window.location.href).toBe(initialUrl)
   })
 
   it('follows same-origin redirects and applies Fetch redirect method semantics', async (t) => {

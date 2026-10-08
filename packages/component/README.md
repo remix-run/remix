@@ -115,13 +115,24 @@ async function resolveFrame(src, options) {
   let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
   if (options?.target != null) headers.set('X-Remix-Target', options.target)
 
-  let response = await fetch(src, {
-    body: getRequestBody(options),
+  if (
+    options?.body != null &&
+    !(options.body instanceof FormData) &&
+    !(options.body instanceof URLSearchParams) &&
+    options.encType
+  ) {
+    headers.set('Content-Type', options.encType)
+  }
+  let body = getRequestBody(options)
+  let requestInit = {
+    body,
     headers,
     method: options?.method,
     mode: 'same-origin',
     signal: options?.signal,
-  })
+  }
+  if (body instanceof ReadableStream) requestInit.duplex = 'half'
+  let response = await fetch(src, requestInit)
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
   if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
@@ -132,11 +143,24 @@ async function resolveFrame(src, options) {
 }
 
 function getRequestBody(options) {
-  let formData = options?.formData
-  let method = options?.method
-  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
+  let requestBody = options?.body
+  let formData =
+    requestBody instanceof FormData || requestBody instanceof URLSearchParams
+      ? requestBody
+      : options?.formData
+  if (!formData) return requestBody ?? undefined
+  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return
 
-  if (options?.encType === 'text/plain') {
+  let encType = options?.encType?.toLowerCase()
+
+  if (encType === 'multipart/form-data') {
+    if (formData instanceof FormData) return formData
+    let body = new FormData()
+    for (let [name, value] of formData) body.append(name, value)
+    return body
+  }
+
+  if (encType === 'text/plain') {
     let body = ''
     for (let [name, value] of formData) {
       name = normalizeLineBreaks(name)
@@ -146,11 +170,12 @@ function getRequestBody(options) {
     return new Blob([body], { type: 'text/plain' })
   }
 
-  if (options?.encType !== 'application/x-www-form-urlencoded') return formData
-
   let body = new URLSearchParams()
   for (let [name, value] of formData) {
-    body.append(name, typeof value === 'string' ? value : value.name)
+    body.append(
+      normalizeLineBreaks(name),
+      normalizeLineBreaks(typeof value === 'string' ? value : value.name),
+    )
   }
   return body
 }
@@ -209,6 +234,22 @@ function AccountPage() {
 ```
 
 Native constraint validation and submitter overrides still apply. GET form values arrive in `src`; non-GET forms provide `formData`, `method`, and `encType` to the resolver. See [Frames](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#form-navigation) for targeting, history behavior, request encoding, opt-outs, and server response guidance.
+
+Reload another source or send a request body without changing browser history:
+
+```tsx
+await handle.frame.reload({ src: '/account/edit' })
+
+let body = new FormData()
+body.set('displayName', 'Ada')
+await handle.frame.reload({
+  src: '/account/edit',
+  method: 'post',
+  body,
+})
+```
+
+`src` becomes the source for subsequent reloads. The method defaults to GET, which encodes `FormData` and `URLSearchParams` into the source query. POST defaults to `application/x-www-form-urlencoded`; use `encType` to select `multipart/form-data` or `text/plain`. Other Fetch body types, including strings, blobs, and streams, use their native encoding unless `encType` supplies a content type. See [Reload requests](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#reload-requests) for request and cancellation behavior.
 
 Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 
