@@ -9,12 +9,7 @@ import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffElementAttributes, diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
-import {
-  findFlushMarker,
-  FRAME_TEMPLATE_ATTRIBUTE,
-  FRAME_TEMPLATE_END_MARKER,
-  type FlushKind,
-} from './stream-protocol.ts'
+import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './frame-resolution.ts'
 import {
@@ -1611,14 +1606,10 @@ function getEarlyFrameContent(id: string): DocumentFragment | null {
 
 function isFrameTemplateComplete(template: HTMLTemplateElement): boolean {
   let end = template.content.lastChild
-  if (isCommentNode(end) && end.data === FRAME_TEMPLATE_END_MARKER) return true
-  if (template.ownerDocument.readyState !== 'loading') return true
-  // A script can append a sibling before the parser reaches the end marker.
-  if (template.hasAttribute(FRAME_TEMPLATE_ATTRIBUTE)) return false
-
-  // Older server output has no completion marker. Wait until the parser adds
-  // a following sibling or finishes the document before consuming its contents.
-  return template.nextSibling !== null
+  return (
+    (isCommentNode(end) && end.data === FRAME_TEMPLATE_END_MARKER) ||
+    template.ownerDocument.readyState !== 'loading'
+  )
 }
 
 function takeFrameTemplateContent(template: HTMLTemplateElement): DocumentFragment {

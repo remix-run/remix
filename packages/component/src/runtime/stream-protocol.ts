@@ -1,7 +1,6 @@
 export type FlushKind = 'document' | 'fragment'
 
 export const FRAME_TEMPLATE_END_MARKER = 'rmx:template-end'
-export const FRAME_TEMPLATE_ATTRIBUTE = 'data-rmx-frame'
 
 const FLUSH_MARKER_PATTERN = /<!--\s*rmx:flush\s+(document|fragment)\s*-->/g
 

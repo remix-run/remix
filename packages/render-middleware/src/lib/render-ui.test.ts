@@ -249,7 +249,7 @@ describe('render', () => {
     // The non-blocking frame body streams as a template chunk
     assert.match(
       html,
-      /<template id="f[^"]+" data-rmx-frame>[\s\S]*?Async content[\s\S]*?<\/template>/,
+      /<template id="f[^"]+">[\s\S]*?Async content[\s\S]*?<!--rmx:template-end--><\/template>/,
     )
     // The frame responses' own doctypes are stripped from the outer document
     assert.doesNotMatch(html.slice('<!DOCTYPE html>'.length), /<!DOCTYPE html>/i)
