@@ -1125,6 +1125,292 @@ describe('frames', () => {
     }
   })
 
+  it('reloads a new source and uses it for subsequent reloads without navigation', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let resolveFrame = t.mock.fn((src: string) => `<p>${src}</p>`)
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let initialUrl = window.location.href
+
+    await frame.handle.reload({ src: '/new' })
+    expect(frame.handle.src).toBe('/new')
+    await frame.handle.reload()
+
+    expect(frame.handle.src).toBe('/new')
+    expect(resolveFrame.mock.calls).toHaveLength(2)
+    expect(resolveFrame.mock.calls[0]?.arguments[0]).toBe('/new')
+    expect(resolveFrame.mock.calls[1]?.arguments[0]).toBe('/new')
+    expect(root.textContent).toBe('/new')
+    expect(window.location.href).toBe(initialUrl)
+  })
+
+  it('omits submission options from plain reloads', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let resolveFrame = t.mock.fn((_src: string, options?: ResolveFrameOptions) => {
+      expect(Object.keys(options ?? {}).sort()).toEqual(['signal', 'target'])
+      return '<p>Reloaded</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    await frame.handle.reload()
+    await frame.handle.reload({ src: '/new' })
+
+    expect(resolveFrame.mock.calls).toHaveLength(2)
+    expect(root.textContent).toBe('Reloaded')
+  })
+
+  it('submits FormData in one request and renders its response without navigation', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
+      expect(src).toBe('https://example.com/save')
+      expect(options?.formData?.get('name')).toBe('Ada')
+      expect(options?.method).toBe('post')
+      expect(options?.encType).toBe('multipart/form-data')
+      expect(options?.signal).toBeInstanceOf(AbortSignal)
+      return '<p>Saved</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let data = new FormData()
+    data.set('name', 'Ada')
+    let initialUrl = window.location.href
+
+    let signal = await frame.handle.reload({
+      src: 'https://example.com/save',
+      method: 'POST',
+      encType: 'multipart/form-data',
+      body: data,
+    })
+
+    expect(signal.aborted).toBe(false)
+    expect(resolveFrame.mock.calls).toHaveLength(1)
+    expect(root.textContent).toBe('Saved')
+    expect(frame.handle.src).toBe('https://example.com/save')
+    expect(window.location.href).toBe(initialUrl)
+  })
+
+  it('renders a redirected reload response while retaining its requested source', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let response = new Response('<p>Saved</p>')
+    Object.defineProperties(response, {
+      redirected: { value: true },
+      url: { value: 'https://example.com/account' },
+    })
+    let frame = createTestFrame(root, {
+      resolveFrame: () => response,
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let initialUrl = window.location.href
+
+    await frame.handle.reload({
+      src: 'https://example.com/save',
+      method: 'post',
+      body: new FormData(),
+    })
+
+    expect(root.textContent).toBe('Saved')
+    expect(frame.handle.src).toBe('https://example.com/save')
+    expect(window.location.href).toBe(initialUrl)
+  })
+
+  it('reloads with explicitly supplied form settings and successful controls', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let form = document.createElement('form')
+    form.action = 'https://example.com/default'
+    form.method = 'get'
+    let input = document.createElement('input')
+    input.name = 'name'
+    input.value = 'Ada'
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'save'
+    button.setAttribute('formaction', 'https://example.com/save')
+    button.setAttribute('formmethod', 'post')
+    button.setAttribute('formenctype', 'multipart/form-data')
+    form.append(input, button)
+    document.body.append(form)
+    let submit = t.mock.fn()
+    form.addEventListener('submit', submit)
+    let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
+      expect(src).toBe('https://example.com/save')
+      expect(options?.formData?.get('name')).toBe('Ada')
+      expect(options?.formData?.get('intent')).toBe('save')
+      expect(options?.method).toBe('post')
+      expect(options?.encType).toBe('multipart/form-data')
+      return '<p>Saved</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    await frame.handle.reload({
+      src: button.formAction,
+      method: button.formMethod,
+      encType: button.formEnctype,
+      body: new FormData(form, button),
+    })
+
+    expect(resolveFrame.mock.calls).toHaveLength(1)
+    expect(submit.mock.calls).toHaveLength(0)
+    expect(root.textContent).toBe('Saved')
+  })
+
+  it('reloads a GET source with query parameters without body metadata', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let form = document.createElement('form')
+    form.action = 'https://example.com/search?old=1'
+    let query = document.createElement('input')
+    query.name = 'query'
+    query.value = 'Ada Lovelace'
+    form.append(query)
+    document.body.append(form)
+    let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
+      expect(src).toBe('https://example.com/search?query=Ada+Lovelace')
+      expect(options?.method).toBe('get')
+      expect(options && Reflect.has(options, 'formData')).toBe(false)
+      expect(options && Reflect.has(options, 'encType')).toBe(false)
+      return '<p>Found</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    await frame.handle.reload({
+      src: form.action,
+      method: 'get',
+      encType: 'multipart/form-data',
+      body: new FormData(form),
+    })
+
+    expect(resolveFrame.mock.calls).toHaveLength(1)
+    expect(root.textContent).toBe('Found')
+  })
+
+  it('cancels stale reload bodies when another reload starts', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [staleContent, resolveStaleContent] = withResolvers<string>()
+    let signals: AbortSignal[] = []
+    let resolveFrame = t.mock.fn((_src: string, options?: ResolveFrameOptions) => {
+      if (options?.signal) signals.push(options.signal)
+      return options?.formData?.get('value') === 'first' ? staleContent : '<p>Second</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let firstData = new FormData()
+    firstData.set('value', 'first')
+    let secondData = new FormData()
+    secondData.set('value', 'second')
+
+    let first = frame.handle.reload({ method: 'post', body: firstData })
+    let second = frame.handle.reload({ method: 'post', body: secondData })
+    resolveStaleContent('<p>First</p>')
+
+    expect((await first).aborted).toBe(true)
+    expect((await second).aborted).toBe(false)
+    expect(signals[0]?.aborted).toBe(true)
+    expect(signals[1]?.aborted).toBe(false)
+    expect(root.textContent).toBe('Second')
+  })
+
+  it('lets a reload supersede an active submission', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [staleContent, resolveStaleContent] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      resolveFrame(_src, options) {
+        return options?.method === 'post' ? staleContent : '<p>Reloaded</p>'
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    let submitted = frame.handle.reload({ method: 'post', body: new FormData() })
+    let reloaded = frame.handle.reload()
+    resolveStaleContent('<p>Stale</p>')
+
+    expect((await submitted).aborted).toBe(true)
+    expect((await reloaded).aborted).toBe(false)
+    expect(root.textContent).toBe('Reloaded')
+  })
+
+  it('lets a submission supersede an active reload', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [staleContent, resolveStaleContent] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      resolveFrame(_src, options) {
+        return options?.method === 'post' ? '<p>Submitted</p>' : staleContent
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    let reloaded = frame.handle.reload()
+    let submitted = frame.handle.reload({ method: 'post', body: new FormData() })
+    resolveStaleContent('<p>Stale</p>')
+
+    expect((await reloaded).aborted).toBe(true)
+    expect((await submitted).aborted).toBe(false)
+    expect(root.textContent).toBe('Submitted')
+  })
+
+  it('cancels a superseded reload stream', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [streamRead, markStreamRead] = withResolvers<void>()
+    let cancel = t.mock.fn()
+    let stream = new ReadableStream<Uint8Array>(
+      {
+        pull() {
+          markStreamRead()
+        },
+        cancel,
+      },
+      { highWaterMark: 0 },
+    )
+    let frame = createTestFrame(root, {
+      resolveFrame(src) {
+        return src.endsWith('/initial') ? stream : '<p>Fresh</p>'
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let staleReload = frame.handle.reload()
+    await streamRead
+
+    frame.handle.src = 'https://example.com/fresh'
+    let freshSignal = await frame.handle.reload()
+    let staleSignal = await staleReload
+
+    expect(staleSignal.aborted).toBe(true)
+    expect(freshSignal.aborted).toBe(false)
+    expect(cancel.mock.calls).toHaveLength(1)
+    expect(root.textContent).toBe('Fresh')
+  })
+
   it('aborts the active resolver when the reload signal is aborted', async () => {
     let root = document.createElement('div')
     root.innerHTML = '<p id="initial">Initial</p>'
