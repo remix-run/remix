@@ -1,5 +1,22 @@
 {
   "$schema": "node_modules/remix/schema/remix.json",
+  "assets": {
+    "rootDir": "../..",
+    "basePath": "/assets",
+    "mounts": {
+      "app": "demos/social-auth/app",
+      "npm": "node_modules",
+      "packages": "packages"
+    },
+    "allowFiles": [
+      "demos/social-auth/app/routes.ts",
+      "demos/social-auth/app/ui/design-system.ts",
+      "demos/social-auth/app/ui/styles.ts",
+      "demos/social-auth/app/**/public/**"
+    ],
+    "allowPackages": ["remix"],
+    "denyFiles": ["demos/social-auth/app/**/*.test.*"]
+  },
   "db": {
     "adapter": {
       "type": "sqlite",
