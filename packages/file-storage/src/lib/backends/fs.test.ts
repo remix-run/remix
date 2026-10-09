@@ -7,7 +7,8 @@ import { parseFormData } from '@remix-run/form-data-parser'
 import { LazyFile } from '@remix-run/lazy-file'
 
 import type { FileLike, FileStorage } from '../file-storage.ts'
-import { createFsFileStorage } from './fs.ts'
+import { createFsFileStorage } from '../../fs.ts'
+import type { FsFileStorageOptions } from '../../fs.ts'
 
 // Compile-time API contract checks. These expressions are never executed, but TypeScript will
 // fail this file if FileLike stops accepting native File/LazyFile values, or if the filesystem
@@ -99,6 +100,103 @@ describe('fs file storage', () => {
         lastModified: file.lastModified,
       },
     ])
+  })
+
+  it('writes new entries in the legacy format by default', async () => {
+    let storage = createFsFileStorage(tmpDir)
+    let file = new File(['original'], 'original.txt', { type: 'text/plain', lastModified: 123 })
+
+    await storage.set('file', file)
+
+    let entries = fs.readdirSync(tmpDir, { recursive: true, encoding: 'utf-8' })
+    let metadata = entries.find((name) => name.endsWith('.meta.json'))
+    assert.ok(metadata)
+    let metaPath = path.join(tmpDir, metadata)
+    let dataPath = metaPath.replace(/\.meta\.json$/, '.dat')
+    assert.equal(fs.readFileSync(dataPath, 'utf-8'), 'original')
+    assert.deepEqual(JSON.parse(fs.readFileSync(metaPath, 'utf-8')), {
+      key: 'file',
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      lastModified: file.lastModified,
+    })
+    assert.deepEqual(fs.readdirSync(path.dirname(metaPath)).sort(), [
+      path.basename(dataPath),
+      path.basename(metaPath),
+    ])
+  })
+
+  it('keeps legacy entries in the legacy format without opting in', async () => {
+    let { dataPath, metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['old'], 'old.txt'))
+    let storage = createFsFileStorage(tmpDir)
+    let originalMetadata = fs.readFileSync(metaPath, 'utf-8')
+
+    let original = await storage.get('file')
+    assert.ok(original)
+    assert.equal(await original.text(), 'old')
+    assert.equal(fs.readFileSync(metaPath, 'utf-8'), originalMetadata)
+    let stored = await storage.put('file', new File(['replacement'], 'new.txt'))
+
+    assert.equal(await stored.text(), 'replacement')
+    assert.equal(fs.readFileSync(dataPath, 'utf-8'), 'replacement')
+    let record: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+    assert.ok(record !== null && typeof record === 'object')
+    assert.equal('dataFile' in record, false)
+  })
+
+  it('writes new entries in the legacy format when atomic writes are explicitly disabled', async () => {
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: false })
+    let stored = await storage.put('file', new File(['content'], 'file.txt'))
+
+    assert.equal(await stored.text(), 'content')
+    let entries = fs.readdirSync(tmpDir, { recursive: true, encoding: 'utf-8' })
+    let metadata = entries.find((name) => name.endsWith('.meta.json'))
+    assert.ok(metadata)
+    let metaPath = path.join(tmpDir, metadata)
+    assert.equal(fs.readFileSync(metaPath.replace(/\.meta\.json$/, '.dat'), 'utf-8'), 'content')
+    let record: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+    assert.ok(record !== null && typeof record === 'object')
+    assert.equal('dataFile' in record, false)
+  })
+
+  it('keeps migrated entries versioned when the option is omitted', async () => {
+    let { dataPath, metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['old'], 'old.txt'))
+    let storage = createFsFileStorage(tmpDir)
+    let atomicStorage = createFsFileStorage(tmpDir, { atomicWrites: true })
+    await atomicStorage.set('file', new File(['migrated'], 'migrated.txt'))
+
+    await storage.set('file', new File(['replacement'], 'new.txt'))
+
+    assert.equal(fs.existsSync(dataPath), false)
+    let record: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+    assert.ok(record !== null && typeof record === 'object' && 'dataFile' in record)
+    let stored = await storage.get('file')
+    assert.ok(stored)
+    assert.equal(await stored.text(), 'replacement')
+    assert.equal(stored.name, 'new.txt')
+  })
+
+  it('preserves migrated entries on failure even when atomic writes are explicitly disabled', async () => {
+    let atomicStorage = createFsFileStorage(tmpDir, { atomicWrites: true })
+    await atomicStorage.set('file', new File(['original'], 'original.txt'))
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: false })
+    let upload = new File(['replacement'], 'new.txt')
+    let failure = new Error('Metadata unavailable')
+    Object.defineProperty(upload, 'name', {
+      get() {
+        throw failure
+      },
+    })
+
+    await assert.rejects(async () => storage.put('file', upload), failure)
+
+    let stored = await storage.get('file')
+    assert.ok(stored)
+    assert.equal(await stored.text(), 'original')
+    assert.equal(stored.name, 'original.txt')
+    stored = await storage.put('file', new File(['replacement'], 'new.txt'))
+    assert.equal(await stored.text(), 'replacement')
   })
 
   it('removes empty hash directories after removing files', async () => {
@@ -217,10 +315,10 @@ describe('fs file storage', () => {
     assert.equal(await retrieved2.text(), 'Hello, universe!')
   })
 
-  it('preserves the stored file when an upload fails', async () => {
-    let storage = createFsFileStorage(tmpDir)
+  it('preserves the legacy entry when an atomic upload fails', async () => {
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
     let original = new File(['original content'], 'original.txt', { type: 'text/plain' })
-    await storage.set('file', original)
+    await writeLegacyFile(tmpDir, 'file', original)
     let entries = fs.readdirSync(tmpDir, { recursive: true, encoding: 'utf-8' })
     let failure = new Error('Upload interrupted')
     let upload = new LazyFile(
@@ -252,7 +350,7 @@ describe('fs file storage', () => {
   })
 
   it('cleans up an unpublished upload when its stream fails', async () => {
-    let storage = createFsFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
     let failure = new Error('Upload interrupted')
     let upload = new LazyFile(
       {
@@ -277,7 +375,7 @@ describe('fs file storage', () => {
   })
 
   it('preserves the stored file when reading upload metadata fails', async () => {
-    let storage = createFsFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
     await storage.set('file', new File(['original'], 'original.txt'))
     let upload = new File(['replacement'], 'replacement.txt')
     let failure = new Error('Metadata unavailable')
@@ -299,7 +397,7 @@ describe('fs file storage', () => {
       'file',
       new File(['original'], 'original.txt'),
     )
-    let storage = createFsFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
     let entries = fs.readdirSync(tmpDir, { recursive: true, encoding: 'utf-8' })
     let blocker: string | undefined
     let upload = new File(['replacement'], 'replacement.txt')
@@ -331,7 +429,7 @@ describe('fs file storage', () => {
 
   it('preserves the stored file and cleans up when publication fails', async () => {
     let { metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['original'], 'original.txt'))
-    let storage = createFsFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
     let entries = fs.readdirSync(tmpDir, { recursive: true, encoding: 'utf-8' })
     let backup = `${metaPath}.backup`
     let upload = new File(['replacement'], 'replacement.txt')
@@ -359,7 +457,7 @@ describe('fs file storage', () => {
 
   it('succeeds after publication even if old content cannot be removed', async () => {
     let { dataPath } = await writeLegacyFile(tmpDir, 'file', new File(['original'], 'original.txt'))
-    let storage = createFsFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
     let upload = new File(['replacement'], 'replacement.txt')
     Object.defineProperty(upload, 'name', {
       get() {
@@ -380,7 +478,7 @@ describe('fs file storage', () => {
   })
 
   it('replaces versioned content and removes the previous data file', async () => {
-    let storage = createFsFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
     await storage.set('file', new File(['original'], 'original.txt'))
     let entries = fs.readdirSync(tmpDir, { recursive: true, encoding: 'utf-8' })
     let oldData = entries.find((name) => name.endsWith('.dat'))
@@ -411,7 +509,7 @@ describe('fs file storage', () => {
   })
 
   it('reads empty files, binary content, and slices', async () => {
-    let storage = createFsFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
     let empty = await storage.put('empty', new LazyFile([], 'empty.txt'))
     assert.equal(empty.size, 0)
     assert.equal(await empty.text(), '')
@@ -430,7 +528,8 @@ describe('fs file storage', () => {
       lastModified: 123,
     })
     let { dataPath, metaPath } = await writeLegacyFile(tmpDir, 'legacy', original)
-    let storage = createFsFileStorage(tmpDir)
+    let originalMetadata = fs.readFileSync(metaPath, 'utf-8')
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
     let stored = await storage.get('legacy')
     assert.ok(stored)
     assert.equal(await stored.text(), 'legacy content')
@@ -439,6 +538,8 @@ describe('fs file storage', () => {
     assert.equal(stored.lastModified, original.lastModified)
     assert.equal(await storage.has('legacy'), true)
     assert.deepEqual((await storage.list()).files, [{ key: 'legacy' }])
+    assert.equal(fs.readFileSync(metaPath, 'utf-8'), originalMetadata)
+    assert.equal(fs.readFileSync(dataPath, 'utf-8'), 'legacy content')
 
     await storage.set('legacy', new File(['replacement'], 'new.txt'))
     assert.equal(fs.existsSync(dataPath), false)
@@ -509,7 +610,7 @@ describe('fs file storage', () => {
 
   it('removes content for a key with corrupt metadata without removing unrelated files', async () => {
     let { dataPath, metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['old'], 'old.txt'))
-    let storage = createFsFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
     await storage.set('file', new File(['replacement'], 'new.txt'))
     fs.writeFileSync(dataPath, 'unused legacy content')
     fs.writeFileSync(path.join(path.dirname(metaPath), 'unrelated.dat'), 'unrelated')
@@ -528,7 +629,7 @@ describe('fs file storage', () => {
     assert.ok(record !== null && typeof record === 'object')
     Reflect.deleteProperty(record, 'size')
     fs.writeFileSync(metaPath, JSON.stringify(record))
-    let storage = createFsFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
 
     let stored = await storage.get('legacy')
     assert.ok(stored)
@@ -578,7 +679,7 @@ describe('fs file storage', () => {
     Reflect.deleteProperty(record, 'size')
     fs.writeFileSync(metaPath, JSON.stringify(record))
     fs.unlinkSync(dataPath)
-    let storage = createFsFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
     let replacement = new File(['replacement'], 'new.txt', { type: 'text/plain' })
 
     await storage.set('legacy', replacement)
@@ -626,6 +727,29 @@ describe('fs file storage', () => {
   })
 
   describe('integration with form-data-parser', () => {
+    it('stores file uploads with atomic writes enabled', async () => {
+      let options: FsFileStorageOptions = { atomicWrites: true }
+      let storage = createFsFileStorage(tmpDir, options)
+      let body = new FormData()
+      body.set('avatar', new File(['new avatar'], 'avatar.txt', { type: 'text/plain' }))
+      let request = new Request('http://example.com', { method: 'POST', body })
+
+      let formData = await parseFormData(request, async (file) => {
+        await storage.set('avatar', file)
+        return 'avatar'
+      })
+
+      assert.equal(formData.get('avatar'), 'avatar')
+      let reopened = createFsFileStorage(tmpDir)
+      let stored = await reopened.get('avatar')
+      assert.ok(stored)
+      assert.equal(await stored.text(), 'new avatar')
+      assert.equal(stored.name, 'avatar.txt')
+      assert.equal(stored.type, normalizeFileType('text/plain'))
+      assert.equal(stored.size, 10)
+      assert.equal((await reopened.list({ includeMetadata: true })).files[0].size, 10)
+    })
+
     it('stores and lists file uploads', async () => {
       let storage = createFsFileStorage(tmpDir)
 

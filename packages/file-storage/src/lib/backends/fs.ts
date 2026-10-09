@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { openLazyFile } from '@remix-run/fs'
+import { openLazyFile, writeFile } from '@remix-run/fs'
 import type { LazyFile } from '@remix-run/lazy-file'
 
 import type {
@@ -13,14 +13,32 @@ import type {
 } from '../file-storage.ts'
 
 /**
+ * Options for filesystem-backed file storage.
+ */
+export interface FsFileStorageOptions {
+  /**
+   * Preserves the previous entry if a replacement write fails. Enable this when reusing keys for
+   * uploads whose existing content must survive an interrupted upload. Defaults to `false`.
+   *
+   * Writes use a versioned storage format that older package versions cannot read. Upgrade all
+   * processes sharing the directory before enabling this option. Migrated entries continue to use
+   * atomic writes even if the option is later omitted or disabled; reads never migrate entries.
+   * Callers must still coordinate overlapping operations. Power-loss durability is not guaranteed.
+   */
+  atomicWrites?: boolean
+}
+
+/**
  * Creates a {@link FileStorage} that is backed by a filesystem directory using `node:fs`.
  *
  * Important: No attempt is made to avoid overwriting existing files, so the directory used should
  * be a new directory solely dedicated to this storage object.
  *
- * Failed writes preserve the previous file. Callers must coordinate overlapping reads, writes,
- * removals, and listings across all instances and processes sharing the directory. This includes
- * consuming files returned by `get()` or `put()` before allowing replacement or removal.
+ * By default, replacing a legacy entry writes directly to its content file, so a failed write can
+ * damage the previous content. Set `atomicWrites: true` to preserve the previous entry on failure.
+ * Callers must coordinate overlapping reads, writes, removals, and listings across all instances
+ * and processes sharing the directory. This includes consuming files returned by `get()` or
+ * `put()` before allowing replacement or removal.
  *
  * Note: Keys have no correlation to file names on disk, so they may be any string including
  * characters that are not valid in file names. Additionally, individual `File` names have no
@@ -28,10 +46,15 @@ import type {
  * same storage object.
  *
  * @param directory The directory where files are stored
+ * @param options Storage options (defaults to non-atomic writes for new and legacy entries)
  * @returns A new {@link FileStorage} backed by a filesystem directory
  */
-export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
+export function createFsFileStorage(
+  directory: string,
+  options: FsFileStorageOptions = {},
+): FileStorage<LazyFile> {
   let rootDir = path.resolve(directory)
+  let { atomicWrites = false } = options
 
   try {
     let stats = fs.statSync(rootDir)
@@ -67,11 +90,27 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
   ): Promise<result> {
     let { directory, filePath, metaPath } = await getPaths(key)
     let previous = await readMetadata(metaPath)
+
+    await fsp.mkdir(directory, { recursive: true })
+
+    // Keep migrated entries atomic even if this instance has not opted in.
+    if (!atomicWrites && previous?.dataFile === undefined) {
+      await writeFile(filePath, file)
+      let metadata: FileMetadata = {
+        key,
+        lastModified: file.lastModified,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      }
+      await fsp.writeFile(metaPath, JSON.stringify(metadata))
+      return prepareResult(filePath, metadata)
+    }
+
     let version = crypto.randomUUID()
     let dataPath = filePath.replace(/\.dat$/, `.${version}.dat`)
     let tempMetaPath = `${metaPath}.${version}.tmp`
 
-    await fsp.mkdir(directory, { recursive: true })
     let handle = await fsp.open(dataPath, 'wx')
     let tempMetadataCreated = false
     let published = false

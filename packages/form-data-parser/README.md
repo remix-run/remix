@@ -130,8 +130,8 @@ import { createFsFileStorage } from 'remix/file-storage/fs'
 import type { FileUpload } from 'remix/form-data-parser'
 import { parseFormData } from 'remix/form-data-parser'
 
-// Set up storage for uploaded files
-const fileStorage = createFsFileStorage('/uploads/user-avatars')
+// Preserve the previous avatar if a replacement upload fails.
+let fileStorage = createFsFileStorage('/uploads/user-avatars', { atomicWrites: true })
 
 // Define how to handle incoming file uploads
 async function uploadHandler(fileUpload: FileUpload) {
@@ -139,13 +139,15 @@ async function uploadHandler(fileUpload: FileUpload) {
   if (fileUpload.fieldName === 'user-avatar') {
     let storageKey = `user-${user.id}-avatar`
 
-    // Put the file in storage and return the stored LazyFile
-    return fileStorage.put(storageKey, fileUpload)
+    await fileStorage.set(storageKey, fileUpload)
+    return storageKey
   }
 
   // Ignore unrecognized fields
 }
 ```
+
+This example reuses each user's avatar key, so `atomicWrites: true` keeps their previous avatar intact if a replacement upload fails. The returned storage key becomes the field's value in the parsed `FormData`. Applications must still coordinate overlapping operations, including consuming stored files. Before enabling atomic writes on an existing shared directory, upgrade every process that accesses it; see [filesystem storage's upgrade guidance](https://github.com/remix-run/remix/tree/main/packages/file-storage#upgrading-existing-storage).
 
 ## Demos
 
