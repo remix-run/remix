@@ -1,11 +1,19 @@
 # animation
 
-`animation` provides small primitives for entrance, exit, layout, spring, and tween animation. Use these helpers with Remix UI mixins, CSS transitions, the Web Animations API, and imperative `requestAnimationFrame` loops.
+`animation` provides utilities for entrance, exit, layout, spring, and tween animation. Use these helpers with component mixins, CSS transitions, the Web Animations API, and imperative `requestAnimationFrame` loops.
+
+## Installation
+
+`@remix-run/ui` is currently unstable and versioned independently. It is not available through the `remix` package.
+
+```sh
+npm i remix @remix-run/ui
+```
 
 ## Usage
 
 ```tsx
-import { animateEntrance, animateExit, animateLayout, spring } from 'remix/ui/animation'
+import { animateEntrance, animateExit, animateLayout, spring } from '@remix-run/ui/animation'
 
 let panelTransition = spring.transition(['opacity', 'transform'], 'snappy')
 
@@ -30,7 +38,7 @@ function Panel() {
 `animateEntrance` animates an element from the provided keyframe into its natural styles when the element is inserted.
 
 ```tsx
-import { animateEntrance, spring } from 'remix/ui/animation'
+import { animateEntrance, spring } from '@remix-run/ui/animation'
 
 function Toast() {
   return () => (
@@ -52,8 +60,8 @@ function Toast() {
 `animateExit` keeps a removed keyed element in the DOM long enough to animate from its natural styles to the provided keyframe.
 
 ```tsx
-import type { Handle } from 'remix/ui'
-import { animateExit } from 'remix/ui/animation'
+import type { Handle } from 'remix/component'
+import { animateExit } from '@remix-run/ui/animation'
 
 function Item(handle: Handle<{ id: string; label: string }>) {
   return () => (
@@ -101,15 +109,15 @@ Pass `initial: false` to skip only the first keyed entrance for an element withi
 
 Exit animations can reclaim a removed keyed node if the same keyed element is rendered again before the exit finishes. The reclaimed node retargets toward its natural styles instead of simply reversing the exit animation.
 
-For custom teardown, `createMixin` exposes `event.persistNode(callback)` in its `beforeRemove` event. It keeps the host in the DOM until the callback settles and supplies an abort signal for cancellation when a keyed node is reclaimed. See [Deferring removal](https://github.com/remix-run/remix/blob/main/packages/ui/docs/mixins.md#deferring-removal-with-persistnode) for a complete example and lifecycle ordering.
+For custom teardown, `createMixin` exposes `event.persistNode(callback)` in its `beforeRemove` event. It keeps the host in the DOM until the callback settles and supplies an abort signal for cancellation when a keyed node is reclaimed. See [Deferring removal](https://github.com/remix-run/remix/blob/main/packages/component/docs/mixins.md#deferring-removal-with-persistnode) for a complete example and lifecycle ordering.
 
 ## Layout Animation
 
 `animateLayout` animates layout changes with a FLIP-style transform projection. Use it on elements whose position or size can change between renders.
 
 ```tsx
-import type { Handle } from 'remix/ui'
-import { animateLayout, spring } from 'remix/ui/animation'
+import type { Handle } from 'remix/component'
+import { animateLayout, spring } from '@remix-run/ui/animation'
 
 function Card(handle: Handle<{ expanded: boolean }>) {
   return () => (
@@ -140,7 +148,7 @@ Passing `true` or no argument enables the default layout animation. Passing `fal
 `spring` returns a decorated iterator. It can be iterated for JavaScript animation, spread into Web Animations API options, or stringified for CSS transition syntax.
 
 ```tsx
-import { spring } from 'remix/ui/animation'
+import { spring } from '@remix-run/ui/animation'
 
 spring('bouncy')
 spring('snappy')
@@ -233,7 +241,7 @@ spring({
 `tween` creates a generator that interpolates a numeric value over time with a cubic-bezier curve. Call `next()` once to initialize the generator, then pass `requestAnimationFrame` timestamps into `next(timestamp)`.
 
 ```ts
-import { easings, tween } from 'remix/ui/animation'
+import { easings, tween } from '@remix-run/ui/animation'
 
 let animation = tween({
   from: 0,

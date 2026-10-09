@@ -99,9 +99,9 @@ Custom `encode` functions are used as the full cookie value codec. Their return 
 
 ## Related Packages
 
-- [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers) - Type-safe HTTP header manipulation
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Build HTTP routers using the web fetch API
-- [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server) - Build HTTP servers on Node.js using the web fetch API
+- [`headers`](../headers/README.md) - Type-safe HTTP header manipulation
+- [`fetch-router`](../fetch-router/README.md) - Build HTTP routers using the web fetch API
+- [`node-fetch-server`](../node-fetch-server/README.md) - Build HTTP servers on Node.js using the web fetch API
 
 ## License
 

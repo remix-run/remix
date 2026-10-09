@@ -25,7 +25,7 @@ export type AppContext = MiddlewareContext<
   [ReturnType<typeof loadAssetEntry>, ReturnType<typeof render>]
 >
 
-declare module 'remix/router' {
+declare module 'remix' {
   interface RouterTypes {
     context: AppContext
   }

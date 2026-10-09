@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 
-import type { Handle, RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/component'
 import { shouldLoadPagefind } from 'remix-docs-shared/search'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
@@ -32,6 +32,7 @@ type DocsDocumentProps = {
   chapters: DocsNavigationItem[]
   currentChapterSlug?: string
   hasSecondaryNavigation?: boolean
+  head?: RemixNode
   children: RemixNode
 }
 
@@ -60,7 +61,12 @@ export function DocsDocument(handle: Handle<DocsDocumentProps>) {
     let searchEnabled = shouldLoadPagefind(pagefindModulePath)
 
     return (
-      <Document title={title} description={handle.props.description} searchEnabled={searchEnabled}>
+      <Document
+        title={title}
+        description={handle.props.description}
+        head={handle.props.head}
+        searchEnabled={searchEnabled}
+      >
         <DocsShell
           header={
             <DocsHeader
@@ -99,6 +105,14 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
         chapters={handle.props.chapters}
         currentChapterSlug={handle.props.slug}
         hasSecondaryNavigation
+        head={
+          <link
+            rel="alternate"
+            type="text/markdown"
+            href={routes.docs.markdown.href({ chapter: handle.props.slug })}
+            title={`Markdown for ${handle.props.title}`}
+          />
+        }
       >
         <div class="docs-layout" data-rmx-key={`docs-chapter-${handle.props.slug}`}>
           <article class="docs-article">

@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/ui'
+import type { Handle } from 'remix/component'
 
 import { PasswordIcon } from '../../../ui/icons.tsx'
 import { TextField } from '../../../ui/form-field.tsx'

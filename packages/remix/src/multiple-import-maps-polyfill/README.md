@@ -34,7 +34,7 @@ feature.openSearch()
 
 `importModule` uses native `import()` when the browser supports multiple import maps. In other browsers, it loads the module through the polyfill using every import map currently installed in the document.
 
-Use `detectMultipleImportMapSupport` and `preloadShim` when an integration also manages module preloads. For example, configure Remix UI to load client entries discovered during navigation:
+Use `detectMultipleImportMapSupport` and `preloadShim` when an integration also manages module preloads. For example, configure the component runtime to load client entries discovered during navigation:
 
 ```ts
 import {
@@ -42,7 +42,7 @@ import {
   importModule,
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
-import { run } from 'remix/ui'
+import { run } from 'remix/component'
 
 run({
   async loadModule(moduleUrl, exportName) {
@@ -99,8 +99,8 @@ The module importer and its dependencies must be available through the document'
 
 ## Related Packages
 
-- [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Compiles and serves browser assets
-- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Loads client entries discovered during navigation
+- [`assets`](../assets/README.md) - Compiles and serves browser assets
+- [`component`](../component/README.md) - Loads client entries discovered during navigation
 
 ## License
 

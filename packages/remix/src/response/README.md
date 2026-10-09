@@ -139,7 +139,7 @@ let response = createHtmlResponse('<h1>Hello, World!</h1>')
 // Body: <!DOCTYPE html><h1>Hello, World!</h1>
 ```
 
-The helper automatically prepends `<!DOCTYPE html>` if not already present. It works with strings, `SafeHtml` [from `remix/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template), Blobs/Files, ArrayBuffers, and ReadableStreams.
+The helper automatically prepends `<!DOCTYPE html>` if not already present. It works with strings, `SafeHtml` [from `remix/html-template`](../html-template/README.md), Blobs/Files, ArrayBuffers, and ReadableStreams.
 
 ```ts
 import { html } from 'remix/html-template'
@@ -240,11 +240,11 @@ Range requests and compression are mutually exclusive. When `Accept-Ranges: byte
 
 ## Related Packages
 
-- [`remix/headers`](https://github.com/remix-run/remix/tree/main/packages/headers) - Type-safe HTTP header manipulation
-- [`remix/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template) - Safe HTML templating with automatic escaping
-- [`remix/fs`](https://github.com/remix-run/remix/tree/main/packages/fs) - File system utilities including `openFile`
-- [`remix/router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Build HTTP routers using the web fetch API
-- [`remix/mime`](https://github.com/remix-run/remix/tree/main/packages/mime) - MIME type utilities
+- [`remix/headers`](../headers/README.md) - Type-safe HTTP header manipulation
+- [`remix/html-template`](../html-template/README.md) - Safe HTML templating with automatic escaping
+- [`remix/fs`](../fs/README.md) - File system utilities including `openFile`
+- [`remix/router`](../fetch-router/README.md) - Build HTTP routers using the web fetch API
+- [`remix/mime`](../mime/README.md) - MIME type utilities
 
 ## License
 

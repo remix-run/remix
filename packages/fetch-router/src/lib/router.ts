@@ -588,7 +588,8 @@ export function createRouter<
 
   let router: Router<RouterContext> = {
     ...rootBuilder,
-    fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+    fetch(input: string | URL | Request, ...args: [init?: RequestInit]): Promise<Response> {
+      let [init] = args
       let context = createRequestContext(input, init)
       context.router = router
 

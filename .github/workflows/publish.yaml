@@ -21,7 +21,7 @@ jobs:
         id: check
         run: |
           # Look for change files in any package's .changes directory (excluding README.md)
-          change_files=$(find packages/*/.changes -name "*.md" ! -name "README.md" 2>/dev/null)
+          change_files=$(find packages -maxdepth 3 -type f -path 'packages/*/.changes/*.md' ! -name "README.md")
           if [ -n "$change_files" ]; then
             echo "Change files found (blocking publish):"
             echo "$change_files"
@@ -37,7 +37,7 @@ jobs:
     if: needs.check.outputs.has_change_files == 'false'
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.get_tag.outputs.tag }}
+      tag: ${{ steps.publish.outputs.tag }}
 
     permissions:
       contents: write # Required for creating tags and GitHub releases
@@ -58,7 +58,7 @@ jobs:
 
       - name: Get Playwright Version
         id: playwright-version
-        run: echo "version=$(pnpm --filter @remix-run/ui exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
         uses: actions/cache@v5
@@ -70,7 +70,7 @@ jobs:
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/ui exec playwright install --with-deps
+        run: pnpm --filter @remix-run/component exec playwright install --with-deps
 
       - name: Run tests
         run: pnpm test
@@ -82,13 +82,10 @@ jobs:
         run: pnpm run validate-remix-package
 
       - name: Publish to npm and create releases
+        id: publish
         run: node ./scripts/publish.ts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Output tag
-        id: get_tag
-        run: echo "tag=$(git tag --points-at HEAD | grep -e '^remix@3')" >> $GITHUB_OUTPUT
 
   docs:
     name: Update API Docs

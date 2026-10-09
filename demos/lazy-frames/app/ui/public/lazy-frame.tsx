@@ -6,7 +6,7 @@ import {
   type Handle,
   type RemixElement,
   type RemixNode,
-} from 'remix/ui'
+} from 'remix/component'
 
 export type LazyFrameProps = {
   src: string

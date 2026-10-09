@@ -1,6 +1,6 @@
 # session-storage-memcache
 
-Memcache session storage for [`remix/session`](https://github.com/remix-run/remix/tree/main/packages/session).
+Memcache session storage for [`remix/session`](../session/README.md).
 
 ## Installation
 
@@ -29,8 +29,8 @@ Note: Memcache storage uses TCP sockets and requires a Node.js runtime.
 
 ## Related Packages
 
-- [`remix/session`](https://github.com/remix-run/remix/tree/main/packages/session) - Core session primitives and storage interface
-- [`remix/middleware/session`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Middleware for wiring session storage into request handling
+- [`remix/session`](../session/README.md) - Core session primitives and storage interface
+- [`remix/middleware/session`](../session-middleware/README.md) - Middleware for wiring session storage into request handling
 
 ## License
 

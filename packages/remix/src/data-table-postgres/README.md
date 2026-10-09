@@ -1,6 +1,6 @@
 # data-table-postgres
 
-PostgreSQL database driver for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table), backed by `pg`.
+PostgreSQL database driver for [`remix/data-table`](../data-table/README.md), backed by `pg`.
 
 ## Features
 
@@ -88,10 +88,10 @@ podman rm -f postgres
 
 ## Related Packages
 
-- [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) - Core query/relations API
-- [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Schema parsing and validation
-- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL database driver
-- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite database driver
+- [`data-table`](../data-table/README.md) - Core query/relations API
+- [`data-schema`](../data-schema/README.md) - Schema parsing and validation
+- [`data-table-mysql`](../data-table-mysql/README.md) - MySQL database driver
+- [`data-table-sqlite`](../data-table-sqlite/README.md) - SQLite database driver
 
 ## License
 

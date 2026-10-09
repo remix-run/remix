@@ -13,7 +13,7 @@ import { assets } from './utils/assets.ts'
 const appMiddleware = createMiddleware(asyncContext(), loadAssetEntry(), render({ assets }))
 type AppContext = MiddlewareContext<typeof appMiddleware>
 
-declare module 'remix/router' {
+declare module 'remix' {
   interface RouterTypes {
     context: AppContext
   }

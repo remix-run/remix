@@ -1,10 +1,11 @@
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
-import type { Handle } from 'remix/ui'
+import type { Handle } from 'remix/component'
 
 import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
+import { renderChapterMarkdown } from './markdown/chapter-markdown.ts'
 import { readMarkdownChapterSummary, renderMarkdownChapter } from './markdown/render.tsx'
 import type { MarkdownChapter, MarkdownChapterSummary } from './markdown/types.ts'
 import { DocsChapter } from './layout.tsx'
@@ -62,6 +63,20 @@ export async function docsChapterHandler(context: DocsChapterRouteContext) {
   }
 
   return context.render(<MarkdownChapterPage {...chapter} />)
+}
+
+export async function docsChapterMarkdownHandler(context: DocsChapterRouteContext) {
+  let summaries = await loadChapterSummaries()
+  let summary = summaries.find((summary) => summary.slug === context.params.chapter)
+
+  if (!summary) {
+    return new Response('Not Found', { status: 404 })
+  }
+
+  let markdown = await readFile(summary.fileUrl, 'utf8')
+  return new Response(await renderChapterMarkdown(markdown), {
+    headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
+  })
 }
 
 export async function loadDocsChapterSummaries(

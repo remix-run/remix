@@ -1,5 +1,5 @@
-import { css, type Handle } from "remix/ui";
-import * as combobox from "remix/ui/combobox/primitives";
+import { css, type Handle } from "remix/component";
+import * as combobox from "@remix-run/ui/combobox";
 
 /**
  * @name Combobox Primitives

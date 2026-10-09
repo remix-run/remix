@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { openLazyFile } from 'remix/fs'
 import { createFileResponse } from 'remix/response/file'
 import { createController } from 'remix/router'
-import { css, type Handle } from 'remix/ui'
+import { css, type Handle } from 'remix/component'
 
 import {
   getExhibit,

@@ -49,7 +49,7 @@ export function rewriteExtensionsToJs(html: string): string {
   // github.com/.../basic.demo.tsx and code examples inside <pre>/<code>
   // blocks.
   //
-  // Preserve comments so Remix UI's hydration markers (`<!-- rmx:h:* -->`,
+  // Preserve comments so the component runtime's hydration markers (`<!-- rmx:h:* -->`,
   // `<!-- /rmx:h -->`, `<!-- rmx:flush document -->`) survive the
   // parse/serialize round-trip. Without them, frame navigation fails with
   // a "Can't insert an element before a doctype" HierarchyRequestError.

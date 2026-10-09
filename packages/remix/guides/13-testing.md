@@ -13,12 +13,12 @@ This chapter starts at that boundary, then moves outward to browser component te
 
 Choose the smallest boundary that includes the behavior you want to prove:
 
-| Test boundary          | Use it for                                                           | How to test it                                                   | Runner type |
-| ---------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
-| Unit test              | A data helper, schema, utility, or other isolated module             | Import it, call it, and assert on the result                     | `server`    |
-| Router test            | An action, response, middleware, session, or database-backed request | Send a request through `router.fetch(...)`                       | `server`    |
-| Browser component test | A component event, DOM update, or browser API                        | Render the component with `remix/ui/test`'s `render()` helper    | `browser`   |
-| End-to-end test        | Navigation or a complete browser/server flow                         | Run the router behind a test server and drive it with Playwright | `e2e`       |
+| Test boundary          | Use it for                                                           | How to test it                                                       | Runner type |
+| ---------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------- |
+| Unit test              | A data helper, schema, utility, or other isolated module             | Import it, call it, and assert on the result                         | `server`    |
+| Router test            | An action, response, middleware, session, or database-backed request | Send a request through `router.fetch(...)`                           | `server`    |
+| Browser component test | A component event, DOM update, or browser API                        | Render the component with `remix/component/test`'s `render()` helper | `browser`   |
+| End-to-end test        | Navigation or a complete browser/server flow                         | Run the router behind a test server and drive it with Playwright     | `e2e`       |
 
 A controller that returns the wrong status belongs in a router test. A submit button that does not enter its pending state belongs in a browser component test. Use an end-to-end test when browser and server behavior must work together, such as submitting a form and following its redirect to the updated page.
 
@@ -50,7 +50,7 @@ By default, the runner maps each runner type to a file pattern and execution mod
 
 The `server` runner type covers both unit tests and router tests. It describes the execution model, not the test boundary.
 
-All three use the same `describe(...)` and `it(...)` API from `remix/test`. The [`remix/test` overview](https://api.remix.run/api/remix/test/overview/) covers lifecycle hooks, test context, mocks, fake timers, and runner configuration. The [`remix/assert` overview](https://api.remix.run/api/remix/assert/overview/) lists the available assertion functions and `expect(...)` matchers. Both work in every test environment:
+All three use the same `describe(...)` and `it(...)` API from `remix/test`. The [`remix/test` overview](../src/test/README.md) covers lifecycle hooks, test context, mocks, fake timers, and runner configuration. The [`remix/assert` overview](../src/assert/README.md) lists the available assertion functions and `expect(...)` matchers. Both work in every test environment:
 
 ```ts filename=app/actions/albums/data.test.ts
 import * as assert from "remix/assert";
@@ -84,7 +84,7 @@ test/
 
 ## Test routes with router.fetch
 
-A router test sends the same `Request` that a runtime adapter would send in production. Router, controller, and action middleware run normally, and the test receives the final `Response`. The [`remix/router` overview](https://api.remix.run/api/remix/router/overview/) covers the complete router API, while this chapter uses its Fetch boundary for app tests.
+A router test sends the same `Request` that a runtime adapter would send in production. Router, controller, and action middleware run normally, and the test receives the final `Response`. The [`remix/router` overview](../src/fetch-router/README.md) covers the complete router API, while this chapter uses its Fetch boundary for app tests.
 
 This test exercises the album show route without opening a network socket:
 
@@ -158,7 +158,7 @@ Middleware does not need a separate app test harness. Send a request through the
 
 The router itself is request-driven, but the values supplied by its middleware may be stateful. Sessions, databases, upload storage, caches, and module-level arrays can all leak changes into the next test.
 
-Stateful tests are easier when `app/router.ts` exports a `createAppRouter(options)` factory in addition to the production `router`. The factory keeps the middleware and controller mappings in one place while allowing tests to replace infrastructure. A test helper can provide [memory-backed session storage](https://api.remix.run/api/remix/session-storage/memory/overview/):
+Stateful tests are easier when `app/router.ts` exports a `createAppRouter(options)` factory in addition to the production `router`. The factory keeps the middleware and controller mappings in one place while allowing tests to replace infrastructure. A test helper can provide [memory-backed session storage](../src/session/README.md):
 
 ```ts filename=test/router.ts
 import { createCookie } from "remix/cookie";
@@ -203,7 +203,7 @@ let accountResponse = await router.fetch(
 
 Database state needs the same boundary. For SQLite, create a database backed by `:memory:`, apply the app's migrations, and seed only the records the test needs. PostgreSQL and MySQL tests should use a dedicated test database or schema and reset changed rows between tests. Do not point tests at development or production data.
 
-The [`remix/file-storage/memory` overview](https://api.remix.run/api/remix/file-storage/memory/overview/) provides `createMemoryFileStorage()` for upload tests. A fresh temporary directory also works. Register cleanup with `t.after(...)` when a fixture opens a database connection, starts a server, or creates files that outlive the request.
+The [`remix/file-storage/memory` overview](../src/file-storage/README.md) provides `createMemoryFileStorage()` for upload tests. A fresh temporary directory also works. Register cleanup with `t.after(...)` when a fixture opens a database connection, starts a server, or creates files that outlive the request.
 
 ## Test Remix components in the browser
 
@@ -219,8 +219,8 @@ npx playwright install
 Consider a small client component that tracks whether an album is a favorite:
 
 ```tsx filename=app/actions/albums/public/favorite-button.tsx
-import { clientEntry, on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { clientEntry, on } from "remix/component";
+import type { Handle } from "remix/component";
 
 export const FavoriteButton = clientEntry(
   import.meta.url,
@@ -247,12 +247,12 @@ export const FavoriteButton = clientEntry(
 );
 ```
 
-`render(...)` from [`remix/ui/test`](https://api.remix.run/api/remix/ui/test/overview/) mounts the component, flushes its initial render, and returns helpers for querying and interacting with the DOM:
+`render(...)` from [`remix/component/test`](../src/component/test/README.md) mounts the component, flushes its initial render, and returns helpers for querying and interacting with the DOM:
 
 ```tsx filename=app/actions/albums/favorite-button.test.browser.tsx
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
-import { render } from "remix/ui/test";
+import { render } from "remix/component/test";
 
 import { FavoriteButton } from "./public/favorite-button.tsx";
 

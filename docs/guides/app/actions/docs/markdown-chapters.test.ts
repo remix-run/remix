@@ -9,100 +9,61 @@ import {
 } from './markdown-chapters.tsx'
 
 describe('loadDocsChapterSummaries', () => {
-  it('retains numeric chapter order for presentation-specific labels', async () => {
-    let summaries = await loadDocsChapterSummaries()
+  it('sorts chapters numerically and labels them by order', async () => {
+    let summaries = await loadDocsChapterSummaries('development')
+    let orders = summaries.map((summary) => summary.order)
 
-    assert.equal(summaries[0]?.order, 1)
-    assert.equal(summaries[0]?.chapter, 'Chapter 1')
-    assert.equal(summaries[9]?.order, 10)
-    assert.equal(summaries[9]?.chapter, 'Chapter 10')
+    assert.ok(orders.length > 1)
+    assert.deepEqual(
+      orders,
+      [...orders].sort((a, b) => a - b),
+    )
+    assert.ok(summaries.every((summary) => summary.chapter === `Chapter ${summary.order}`))
   })
 
-  it('omits unpublished chapters from production', async () => {
+  it('excludes unpublished chapters in production', async () => {
     let developmentSummaries = await loadDocsChapterSummaries('development')
     let productionSummaries = await loadDocsChapterSummaries('production')
 
-    assert.deepEqual(
-      developmentSummaries
-        .filter((summary) => summary.order >= 8 && summary.order <= 16)
-        .map((summary) => summary.order),
-      [8, 9, 10, 11, 12, 13, 14, 15, 16],
-    )
-    assert.deepEqual(
-      productionSummaries
-        .filter((summary) => summary.order >= 8 && summary.order <= 16)
-        .map((summary) => summary.order),
-      [13],
-    )
+    assert.ok(developmentSummaries.some((summary) => summary.slug === 'markdown-style-demo'))
+    assert.ok(!productionSummaries.some((summary) => summary.slug === 'markdown-style-demo'))
+    assert.ok(productionSummaries.length > 0)
   })
 })
 
 describe('loadDocsIndexChapterSummaries', () => {
-  it('disables unpublished production chapters without listing unlisted chapters', async () => {
+  it('omits unlisted chapters from the index and navigation', async () => {
     let summaries = await loadDocsIndexChapterSummaries('production')
-
-    assert.deepEqual(
-      summaries
-        .filter((chapter) => chapter.order >= 8)
-        .map((chapter) => ({ order: chapter.order, disabled: chapter.disabled })),
-      [
-        { order: 8, disabled: true },
-        { order: 9, disabled: true },
-        { order: 10, disabled: true },
-        { order: 11, disabled: true },
-        { order: 12, disabled: true },
-        { order: 13, disabled: false },
-        { order: 14, disabled: true },
-        { order: 15, disabled: true },
-      ],
-    )
-  })
-})
-
-describe('loadDocsNavigationItems', () => {
-  it('disables unpublished production chapters without listing unlisted chapters', async () => {
     let navigation = await loadDocsNavigationItems('production')
 
+    assert.ok(summaries.length > 0)
+    assert.ok(!summaries.some((summary) => summary.slug === 'markdown-style-demo'))
     assert.deepEqual(
-      navigation
-        .filter((chapter) => chapter.order >= 8)
-        .map((chapter) => ({ order: chapter.order, disabled: chapter.disabled })),
-      [
-        { order: 8, disabled: true },
-        { order: 9, disabled: true },
-        { order: 10, disabled: true },
-        { order: 11, disabled: true },
-        { order: 12, disabled: true },
-        { order: 13, disabled: false },
-        { order: 14, disabled: true },
-        { order: 15, disabled: true },
-      ],
+      navigation.map(({ slug, href, disabled }) => ({ slug, href, disabled })),
+      summaries.map(({ slug, href, disabled }) => ({ slug, href, disabled })),
     )
   })
 })
 
 describe('parseChapterFilename', () => {
   it('parses an order prefix and slug', () => {
-    assert.deepEqual(parseChapterFilename('01-start-here.md'), { order: 1, slug: 'start-here' })
-    assert.deepEqual(parseChapterFilename('10-files-and-assets.md'), {
+    assert.deepEqual(parseChapterFilename('01-intro.md'), { order: 1, slug: 'intro' })
+    assert.deepEqual(parseChapterFilename('10-another-topic.md'), {
       order: 10,
-      slug: 'files-and-assets',
+      slug: 'another-topic',
     })
   })
 
   it('parses a numeric slug segment', () => {
-    assert.deepEqual(parseChapterFilename('16-markdown-style-demo.md'), {
-      order: 16,
-      slug: 'markdown-style-demo',
-    })
+    assert.deepEqual(parseChapterFilename('16-topic-2.md'), { order: 16, slug: 'topic-2' })
   })
 
   it('rejects a missing .md extension', () => {
-    assert.equal(parseChapterFilename('01-start-here'), undefined)
+    assert.equal(parseChapterFilename('01-intro'), undefined)
   })
 
   it('rejects a file without an order prefix', () => {
-    assert.equal(parseChapterFilename('start-here.md'), undefined)
+    assert.equal(parseChapterFilename('intro.md'), undefined)
   })
 
   it('rejects a zero order prefix', () => {
@@ -110,7 +71,7 @@ describe('parseChapterFilename', () => {
   })
 
   it('rejects an uppercase slug', () => {
-    assert.equal(parseChapterFilename('01-StartHere.md'), undefined)
+    assert.equal(parseChapterFilename('01-Intro.md'), undefined)
   })
 
   it('rejects a non-markdown file', () => {

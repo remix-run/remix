@@ -1,6 +1,6 @@
 # auth
 
-Composable browser authentication primitives for Remix. Use this package to verify credentials on your own server, start external OAuth or OIDC redirects, finish provider callbacks, and write an app-owned auth record into the session. Pair it with [`remix/middleware/auth`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) when later requests need to resolve that session data into the current user and protect routes.
+Composable browser authentication primitives for Remix. Use this package to verify credentials on your own server, start external OAuth or OIDC redirects, finish provider callbacks, and write an app-owned auth record into the session. Pair it with [`remix/middleware/auth`](../auth-middleware/README.md) when later requests need to resolve that session data into the current user and protect routes.
 
 ## Features
 
@@ -467,11 +467,11 @@ The runtime may write a serialized value to `transaction.providerState` during `
 
 ## Related Packages
 
-- [`auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) - Request authentication and route protection helpers
-- [`form-data-middleware`](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) - Form body parsing for `createCredentialsAuthProvider()` routes
-- [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Request-scoped session loading and persistence
-- [`session`](https://github.com/remix-run/remix/tree/main/packages/session) - Session data model and storage backends
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router and middleware runtime
+- [`auth-middleware`](../auth-middleware/README.md) - Request authentication and route protection helpers
+- [`form-data-middleware`](../form-data-middleware/README.md) - Form body parsing for `createCredentialsAuthProvider()` routes
+- [`session-middleware`](../session-middleware/README.md) - Request-scoped session loading and persistence
+- [`session`](../session/README.md) - Session data model and storage backends
+- [`fetch-router`](../fetch-router/README.md) - Router and middleware runtime
 
 ## Related Work
 

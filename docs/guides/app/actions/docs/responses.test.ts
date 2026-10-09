@@ -3,6 +3,7 @@ import { describe, it } from 'remix/test'
 
 import { createGuidesRouter } from '../../router.ts'
 import { routes } from '../../routes.ts'
+
 describe('docs responses', () => {
   it('renders no current chapter on the index', async () => {
     let router = createGuidesRouter()
@@ -16,6 +17,26 @@ describe('docs responses', () => {
     assert.equal(response.headers.get('ETag'), null)
     assert.equal(getChapterNavigationHtml(html).match(/aria-current="page"/g)?.length ?? 0, 0)
     assert.match(html, /href="\/start-here\/"/)
+  })
+
+  it('shows unfinished chapters with links to package READMEs', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(
+        new URL(
+          routes.docs.chapter.href({ chapter: 'auth-sessions-security' }),
+          'http://localhost',
+        ),
+      ),
+    )
+    let html = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.match(html, /This chapter is unfinished\./)
+    assert.match(
+      html,
+      /https:\/\/github\.com\/remix-run\/remix\/blob\/main\/packages\/session\/README\.md/,
+    )
   })
 
   it('configures Pagefind around the searchable docs content', async () => {
@@ -62,6 +83,66 @@ describe('docs responses', () => {
       /data-rmx-key="docs-chapter-start-here"/,
     )
     assert.match(html, /\/assets\/docs-shared\/ui\/public\/code-block-copy\.tsx/)
+  })
+
+  it('links chapter pages to their markdown source', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(new URL(routes.docs.chapter.href({ chapter: 'start-here' }), 'http://localhost')),
+    )
+    let html = await response.text()
+
+    assert.match(html, /<link rel="alternate" type="text\/markdown" href="\/start-here\.md"/)
+  })
+
+  it('serves chapter markdown source', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(
+        new URL(routes.docs.markdown.href({ chapter: 'start-here' }), 'http://localhost'),
+      ),
+    )
+    let markdown = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.match(response.headers.get('Content-Type') ?? '', /^text\/markdown/)
+    assert.match(markdown, /^---\ntitle: Start Here\n/)
+    assert.match(markdown, /## What is Remix\?/)
+  })
+
+  it('inlines demo source in place of frames in chapter markdown', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(
+        new URL(routes.docs.markdown.href({ chapter: 'rendering-ui' }), 'http://localhost'),
+      ),
+    )
+    let markdown = await response.text()
+
+    assert.doesNotMatch(markdown, /^::frame/m)
+    assert.match(markdown, /^```tsx\n[^`]*export function AccordionPrimitives\(/m)
+  })
+
+  it('drops preview-only frames whose source is already in the chapter', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(
+        new URL(routes.docs.markdown.href({ chapter: 'interactivity' }), 'http://localhost'),
+      ),
+    )
+    let markdown = await response.text()
+
+    assert.doesNotMatch(markdown, /^::frame/m)
+    assert.doesNotMatch(markdown, /\/examples\/05-interactivity\/basic-counter\//)
+  })
+
+  it('returns 404 for unknown chapter markdown', async () => {
+    let router = createGuidesRouter()
+    let response = await router.fetch(
+      new Request(new URL(routes.docs.markdown.href({ chapter: 'missing' }), 'http://localhost')),
+    )
+
+    assert.equal(response.status, 404)
   })
 })
 

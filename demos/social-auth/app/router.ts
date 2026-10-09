@@ -23,7 +23,7 @@ import { externalProviderRegistry, type ExternalProviderRegistry } from './utils
 type AppMiddleware = ReturnType<typeof createSocialAuthMiddleware>
 type AppContext = MiddlewareContext<AppMiddleware>
 
-declare module 'remix/router' {
+declare module 'remix' {
   interface RouterTypes {
     context: AppContext
   }

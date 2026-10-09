@@ -1,5 +1,5 @@
-import type { Handle, RemixNode } from 'remix/ui'
-import { unsafeHTML } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/component'
+import { unsafeHTML } from 'remix/component'
 
 import type { DemoDocFile } from '../../data/demos.tsx'
 

@@ -116,7 +116,7 @@ Node.js v22.8.0
 
 ## Related Packages
 
-- [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser) - Fast, streaming multipart parser for JavaScript
+- [`multipart-parser`](../multipart-parser/README.md) - Fast, streaming multipart parser for JavaScript
 
 ## Credits
 

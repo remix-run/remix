@@ -1,4 +1,4 @@
-import { on, type Handle } from "remix/ui";
+import { on, type Handle } from "remix/component";
 
 export function BasicCounter(handle: Handle) {
   let count = 0;

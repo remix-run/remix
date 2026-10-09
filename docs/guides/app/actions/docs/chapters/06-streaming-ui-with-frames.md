@@ -68,8 +68,8 @@ export default createController(routes.albums, {
 Now the page can render that route with `Frame`:
 
 ```tsx filename=app/actions/albums/show-page.tsx
-import { Frame } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { Frame } from "remix/component";
+import type { Handle } from "remix/component";
 
 import { routes } from "../../routes.ts";
 import { Document } from "../document.tsx";
@@ -148,7 +148,7 @@ response type. Normal HTML actions should use the standard `render()` middleware
 continue, such as an email preview or a small embedded fragment:
 
 ```tsx
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 
 // After loading recommendations:
 let html = await renderToString(<AlbumRecommendations albums={recommendations} />);
@@ -160,62 +160,19 @@ frames with fallbacks arrive after the initial HTML.
 ## Resolve frames in the browser
 
 A blocking frame resolves before the browser receives the page. A frame with a fallback may still
-be pending, and any frame can reload later. Back in `app/actions/public/entry.ts`, add `resolveFrame`
-to the existing `run()` options for those requests:
+be pending, and any frame can reload later. The `run()` call in `app/actions/public/entry.ts` already
+provides a default browser resolver, so these requests need no additional configuration.
 
-```ts filename=app/actions/public/entry.ts lines=[1,9-27,29-39]
-import type { ResolveFrameOptions } from "remix/ui";
-import { run } from "remix/ui";
+The default resolver fetches same-origin HTML, follows redirects, preserves form submission methods
+and encoding, and cancels requests when a frame is removed or its request is superseded. It also
+keeps the redirect destination available so navigation can update the browser URL after a form saves.
 
-// ...
+If your app needs different request or response handling, you can provide your own `resolveFrame`
+function in the `run()` options. The [`remix/component` API overview](https://api.remix.run/api/remix/component/overview/)
+covers the callback's arguments and return values.
 
-let app = run({
-  // ...
-
-  async resolveFrame(src, options) {
-    let headers = new Headers({ Accept: "text/html", "X-Remix-Frame": "true" });
-    if (options?.target) headers.set("X-Remix-Target", options.target);
-
-    let response = await fetch(src, {
-      body: getRequestBody(options),
-      credentials: "same-origin",
-      headers,
-      method: options?.method,
-      mode: "same-origin",
-      signal: options?.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Frame request failed with status ${response.status}`);
-    }
-
-    return response.body ?? response.text();
-  },
-});
-
-function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
-  let formData = options?.formData;
-  if (!formData) return;
-  if (options.encType !== "application/x-www-form-urlencoded") return formData;
-
-  let body = new URLSearchParams();
-  for (let [name, value] of formData) {
-    body.append(name, typeof value === "string" ? value : value.name);
-  }
-  return body;
-}
-```
-
-The default resolver only makes same-origin requests, including redirects. This custom resolver
-keeps that restriction with `mode: "same-origin"`; omit it only when the application explicitly
-trusts a cross-origin source. Remix does not sanitize returned HTML before reconciling it into the
-current document, and same-origin user-generated HTML is not implicitly safe. Sanitize untrusted
-content before returning it.
-
-Pass `options.signal` to `fetch()` instead of letting a removed or superseded frame request
-continue. GET forms already include their values in `src`. For non-GET forms, the resolver receives
-the browser's `FormData`, method, and encoding. This example preserves URL-encoded and multipart
-form bodies; the resolver remains the place to apply other encoding or `_method` conventions.
+Remix does not sanitize returned HTML before reconciling it into the current document, and
+same-origin user-generated HTML is not implicitly safe. Sanitize untrusted content before returning it.
 
 ## Name and reload frames {#frames-and-partial-server-rendered-ui}
 
@@ -245,9 +202,8 @@ setup state and receive current server props.
 
 ## Navigate a frame with a form
 
-Once `run({ resolveFrame })` starts, an eligible same-origin form follows the same frame navigation
-path as a link. This GET form reloads the recommendations frame without a client entry or submit
-handler:
+Once `run()` starts, an eligible same-origin form follows the same frame navigation path as a link.
+This GET form reloads the recommendations frame without a client entry or submit handler:
 
 ```tsx
 <form
@@ -265,11 +221,12 @@ frame, `data-rmx-src` can provide a different request URL for that named frame,
 `data-rmx-reset-scroll="false"` preserves the current scroll position, and `data-rmx-document` opts out of
 interception. `data-rmx-history="push|replace"` controls how the navigation updates history.
 
-GET controls are already encoded in the destination URL. For non-GET forms, `resolveFrame` receives
-`formData`, `method`, and `encType`. The action should return HTML for the targeted frame when it
-receives a frame request, while keeping its normal document response or redirect for unenhanced
-submissions. Non-GET submissions to the current URL replace that history entry; GET submissions and
-submissions to a different URL push one. The `data-rmx-history` attribute overrides those defaults.
+GET controls are already encoded in the destination URL. For non-GET forms, the default resolver
+sends the form's body with its method and encoding. The action should return HTML for the targeted
+frame when it receives a frame request, while keeping its normal document response or redirect for
+unenhanced submissions. Non-GET submissions to the current URL replace that history entry; GET
+submissions and submissions to a different URL push one. The `data-rmx-history` attribute overrides
+those defaults.
 
 ## Coordinate a mutation and a separate frame reload {#coordinating-forms-fetches-frame-reloads-and-navigation}
 
@@ -277,7 +234,7 @@ Start with a form whose action works without browser JavaScript. A client entry 
 same submission, send its `FormData`, and reload a different route after the action succeeds:
 
 ```tsx
-import { on } from "remix/ui";
+import { on } from "remix/component";
 
 // Inside a client-entry component's render function:
 <form
@@ -308,7 +265,7 @@ import { on } from "remix/ui";
 
 This custom handler is useful because the mutation response and recommendations frame are two
 different requests. When the form action itself returns the HTML that belongs in the target frame,
-prefer `data-rmx-target` and let the runtime submit it through `resolveFrame`.
+prefer `data-rmx-target` and let the runtime submit it.
 
 The handler above keeps the mutation in its existing action and the recommendations HTML in its
 existing `GET` action. The browser component coordinates the two requests without duplicating either
@@ -345,16 +302,17 @@ Add `data-rmx-history="replace"` when it should replace the current history entr
 
 ## Handle failures and cancellation
 
-The server renderer's `onError` and the browser app's `error` event are reporting hooks. The app's
-frame resolver decides whether a non-success response should become bounded HTML for that region or
-an error reported through those hooks.
+The server renderer's `onError` and the browser app's `error` event are reporting hooks. The default
+browser resolver renders HTML validation responses such as `400`, but reports server errors (`500`
+and above) and non-HTML error responses through the browser app's `error` event.
 
 If a deferred frame fails after its fallback has been sent, the server cannot replace the whole page
 with a new error response. Keep the fallback useful, report the error, and let the surrounding page
 continue when that is safe.
 
-Pass `request.signal` through server frame work and the browser resolver's signal through `fetch()`.
-[Errors and Cancellation](/errors-and-error-boundaries/) covers reporting policy, while
+Pass `request.signal` through server frame work. The default browser resolver forwards its cancellation
+signal to `fetch()`; a custom resolver should do the same.
+[Errors and Cancellation](/errors-and-cancellation/) covers reporting policy, while
 [Production](/production/) covers disconnects, compression, and other deployment concerns.
 
 The next chapter, [Animation](/animation/), adds motion to component insertion, removal, and layout

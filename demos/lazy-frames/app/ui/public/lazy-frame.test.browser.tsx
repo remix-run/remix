@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it, type TestContext } from 'remix/test'
-import { on, type Handle } from 'remix/ui'
-import { render, type RenderResult } from 'remix/ui/test'
+import { on, type Handle } from 'remix/component'
+import { render, type RenderResult } from 'remix/component/test'
 
 import { LazyFrame } from './lazy-frame.tsx'
 

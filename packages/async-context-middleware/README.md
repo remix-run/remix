@@ -5,7 +5,7 @@ Request-scoped async context middleware for Remix. It stores each request contex
 ## Features
 
 - **Request context access** - Read the current `RequestContext` from anywhere in the same async execution flow
-- **App-typed `getContext()`** - Reuses your fetch-router `RouterTypes.context` by default
+- **App-typed `getContext()`** - Reuses your `RouterTypes.context` from the `remix` module by default
 - **Simple router integration** - Add a single middleware at the router level
 - **Node async hooks** - Built on `node:async_hooks` `AsyncLocalStorage`
 
@@ -44,7 +44,7 @@ This middleware requires support for `node:async_hooks`, so it is intended for N
 
 ## Typed `getContext()`
 
-`getContext()` is global and out-of-band, so it reuses your fetch-router `RouterTypes.context` by default.
+`getContext()` is global and out-of-band, so it reuses your `RouterTypes.context` from the `remix` module by default.
 
 ```ts
 import { requireAuth } from 'remix/middleware/auth'
@@ -65,7 +65,7 @@ export type AuthenticatedAppContext<params extends AnyParams = {}> = ContextWith
   params
 >
 
-declare module 'remix/router' {
+declare module 'remix' {
   interface RouterTypes {
     context: AppContext
   }

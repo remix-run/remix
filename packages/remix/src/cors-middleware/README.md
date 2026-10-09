@@ -163,9 +163,9 @@ let router = createRouter({
 
 ## Related Packages
 
-- [`cop-middleware`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware) - Browser-origin protection middleware for unsafe cross-origin requests
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
-- [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers) - Typed HTTP header utilities
+- [`cop-middleware`](../cop-middleware/README.md) - Browser-origin protection middleware for unsafe cross-origin requests
+- [`fetch-router`](../fetch-router/README.md) - Router for the web Fetch API
+- [`headers`](../headers/README.md) - Typed HTTP header utilities
 
 ## Related Work
 

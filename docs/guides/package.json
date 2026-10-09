@@ -15,6 +15,7 @@
     "node": ">=24.3.0"
   },
   "dependencies": {
+    "@remix-run/ui": "workspace:^",
     "mdast-util-directive": "3.1.0",
     "remix": "workspace:^",
     "remix-docs-shared": "workspace:*",
