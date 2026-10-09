@@ -2,6 +2,13 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.1`](https://github.com/remix-run/remix/releases/tag/assets@1.0.1)
+
 ## v1.0.0
 
 ### Major Changes

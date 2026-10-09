@@ -2,6 +2,12 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Avoid competing frame refreshes when a browser HMR update requires a full page reload. Server updates now wait for pending browser updates before refreshing server-rendered content.
+
 ## v1.0.0
 
 ### Major Changes
