@@ -230,7 +230,6 @@ describe('asset server HMR', () => {
 
   it('loads the current version when an updated module is requested later as an entry', async (t) => {
     let fixture = await createHmrFixture({ counterBareImport: true })
-    t.after(fixture.close)
     let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
     let entrySource = await fs.readFile(entryPath, 'utf-8')
     await fs.writeFile(entryPath, `import './hmr-consumer.ts'\n${entrySource}`)
@@ -261,9 +260,8 @@ describe('asset server HMR', () => {
     let server = await createHmrTestServer(fixture)
     let initialEntry = await server.getScriptEntry(entryPath)
     let page = await t.serve(server)
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     assert.equal(await page.locator('body').getAttribute('data-hmr-value'), 'before')
     await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
     let installedImportMap = await page.locator('script[type="importmap"]').textContent()
@@ -315,6 +313,85 @@ describe('asset server HMR', () => {
     assert.doesNotMatch(lateEntrySource, /shared-barrel\.ts/)
     await page.evaluate(async (href) => import(href), lateEntry.href)
     assert.equal(await page.locator('body').getAttribute('data-late-value'), 'after again')
+  })
+
+  it('evaluates updated side-effect modules once through optimized barrel imports', async (t) => {
+    let fixture = await createHmrFixture()
+    let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
+    let entrySource = await fs.readFile(entryPath, 'utf-8')
+    await fs.writeFile(entryPath, `import './hmr-consumer.ts'\n${entrySource}`)
+    await write(
+      fixture.rootDir,
+      'app/package.json',
+      JSON.stringify({ sideEffects: ['./shared.ts'] }),
+    )
+    let sharedSource = [
+      'document.body.dataset.sharedEvaluations = String(',
+      '  Number(document.body.dataset.sharedEvaluations ?? 0) + 1,',
+      ')',
+      "export const shared = 'before'",
+    ].join('\n')
+    await write(fixture.rootDir, 'app/shared.ts', sharedSource)
+    await write(fixture.rootDir, 'app/unused.ts', "import './shared.ts'\nexport const unused = 0")
+    await write(
+      fixture.rootDir,
+      'app/value.ts',
+      "import { shared } from './shared.ts'\nexport const value = shared",
+    )
+    await write(
+      fixture.rootDir,
+      'app/shared-barrel.ts',
+      "export { unused } from './unused.ts'\nexport { value } from './value.ts'",
+    )
+    await write(
+      fixture.rootDir,
+      'app/hmr-consumer.ts',
+      [
+        "import { value } from './shared-barrel.ts'",
+        'document.body.dataset.hmrValue = value',
+        'if (import.meta.hot) import.meta.hot.accept()',
+      ].join('\n'),
+    )
+    let lateEntryPath = path.join(fixture.rootDir, 'app/late.ts')
+    await write(
+      fixture.rootDir,
+      'app/late.ts',
+      "import { value } from './shared-barrel.ts'\ndocument.body.dataset.lateValue = value",
+    )
+
+    let server = await createHmrTestServer(fixture)
+    let page = await t.serve(server)
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    assert.equal(await page.locator('body').getAttribute('data-hmr-value'), 'before')
+    assert.equal(await page.locator('body').getAttribute('data-shared-evaluations'), '1')
+
+    let accepted = waitForConsoleMessage(
+      page,
+      '[remix] HMR accepted update /assets/app/hmr-consumer.ts',
+    )
+    await write(fixture.rootDir, 'app/shared.ts', sharedSource.replace("'before'", "'after'"))
+    await page.locator('body[data-hmr-value="after"]').waitFor()
+    await accepted
+    assert.equal(await page.locator('body').getAttribute('data-shared-evaluations'), '2')
+
+    let lateEntry = await server.getScriptEntry(lateEntryPath)
+    let lateEntrySource = await fetch(new URL(lateEntry.href, server.baseUrl)).then((response) =>
+      response.text(),
+    )
+    // A removed branch reaches shared.ts before value.ts, so the optimiser must emit this
+    // side-effect-only import as well as the named import of value.ts.
+    assert.ok(lateEntrySource.includes('import "/assets/app/shared.ts'))
+    assert.doesNotMatch(lateEntrySource, /shared-barrel\.ts|unused\.ts/)
+    await page.evaluate(async (href) => import(href), lateEntry.href)
+    assert.equal(await page.locator('body').getAttribute('data-late-value'), 'after')
+    assert.equal(await page.locator('body').getAttribute('data-shared-evaluations'), '2')
+
+    // A new document has neither URL cached, so inconsistent import URLs would execute shared.ts
+    // twice rather than silently reuse its pre-update instance.
+    await navigateToHmrPage(page)
+    assert.equal(await page.locator('body').getAttribute('data-hmr-value'), 'after')
+    assert.equal(await page.locator('body').getAttribute('data-shared-evaluations'), '1')
   })
 
   it('recovers an accepted browser module after a failed transform is fixed', async (t) => {
