@@ -26,94 +26,49 @@
   "sideEffects": false,
   "exports": {
     "./accordion": {
-      "types": "./src/accordion.tsx",
-      "default": "./src/accordion.tsx"
+      "types": "./dist/accordion.d.ts",
+      "default": "./dist/accordion.js"
     },
     "./anchor": {
-      "types": "./src/anchor.ts",
-      "default": "./src/anchor.ts"
+      "types": "./dist/anchor.d.ts",
+      "default": "./dist/anchor.js"
     },
     "./animation": {
-      "types": "./src/animation.ts",
-      "default": "./src/animation.ts"
+      "types": "./dist/animation.d.ts",
+      "default": "./dist/animation.js"
     },
     "./combobox": {
-      "types": "./src/combobox.tsx",
-      "default": "./src/combobox.tsx"
+      "types": "./dist/combobox.d.ts",
+      "default": "./dist/combobox.js"
     },
     "./listbox": {
-      "types": "./src/listbox.ts",
-      "default": "./src/listbox.ts"
+      "types": "./dist/listbox.d.ts",
+      "default": "./dist/listbox.js"
     },
     "./menu": {
-      "types": "./src/menu.tsx",
-      "default": "./src/menu.tsx"
+      "types": "./dist/menu.d.ts",
+      "default": "./dist/menu.js"
     },
     "./popover": {
-      "types": "./src/popover.ts",
-      "default": "./src/popover.ts"
+      "types": "./dist/popover.d.ts",
+      "default": "./dist/popover.js"
     },
     "./select": {
-      "types": "./src/select.tsx",
-      "default": "./src/select.tsx"
+      "types": "./dist/select.d.ts",
+      "default": "./dist/select.js"
     },
     "./tabs": {
-      "types": "./src/tabs.ts",
-      "default": "./src/tabs.ts"
+      "types": "./dist/tabs.d.ts",
+      "default": "./dist/tabs.js"
     },
     "./toggle": {
-      "types": "./src/toggle.ts",
-      "default": "./src/toggle.ts"
+      "types": "./dist/toggle.d.ts",
+      "default": "./dist/toggle.js"
     },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      "./accordion": {
-        "types": "./dist/accordion.d.ts",
-        "default": "./dist/accordion.js"
-      },
-      "./anchor": {
-        "types": "./dist/anchor.d.ts",
-        "default": "./dist/anchor.js"
-      },
-      "./animation": {
-        "types": "./dist/animation.d.ts",
-        "default": "./dist/animation.js"
-      },
-      "./combobox": {
-        "types": "./dist/combobox.d.ts",
-        "default": "./dist/combobox.js"
-      },
-      "./listbox": {
-        "types": "./dist/listbox.d.ts",
-        "default": "./dist/listbox.js"
-      },
-      "./menu": {
-        "types": "./dist/menu.d.ts",
-        "default": "./dist/menu.js"
-      },
-      "./popover": {
-        "types": "./dist/popover.d.ts",
-        "default": "./dist/popover.js"
-      },
-      "./select": {
-        "types": "./dist/select.d.ts",
-        "default": "./dist/select.js"
-      },
-      "./tabs": {
-        "types": "./dist/tabs.d.ts",
-        "default": "./dist/tabs.js"
-      },
-      "./toggle": {
-        "types": "./dist/toggle.d.ts",
-        "default": "./dist/toggle.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/component": "workspace:^"
+    "@remix-run/component": "remix-run/remix#preview/pr-11909&path:packages/component"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
