@@ -640,6 +640,38 @@ describe('fs file storage', () => {
     assert.equal(await stored.text(), 'replacement')
   })
 
+  it('lists keys when a legacy entry has no stored size and its content is missing', async () => {
+    let { dataPath, metaPath } = await writeLegacyFile(
+      tmpDir,
+      'legacy',
+      new File(['legacy'], 'legacy.txt'),
+    )
+    let record: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+    assert.ok(record !== null && typeof record === 'object')
+    Reflect.deleteProperty(record, 'size')
+    fs.writeFileSync(metaPath, JSON.stringify(record))
+    fs.unlinkSync(dataPath)
+    let storage = createFsFileStorage(tmpDir)
+    await storage.set('healthy', new File(['healthy'], 'healthy.txt'))
+    let expected = [{ key: 'healthy' }, { key: 'legacy' }]
+
+    let { files } = await storage.list()
+    assert.deepEqual(
+      files.sort((a, b) => a.key.localeCompare(b.key)),
+      expected,
+    )
+
+    let atomicStorage = createFsFileStorage(tmpDir, { atomicWrites: true })
+    let atomicResult = await atomicStorage.list({ includeMetadata: false })
+    assert.deepEqual(
+      atomicResult.files.sort((a, b) => a.key.localeCompare(b.key)),
+      expected,
+    )
+
+    await storage.remove('legacy')
+    assert.deepEqual((await storage.list()).files, [{ key: 'healthy' }])
+  })
+
   it('removes a legacy entry without requiring it to be rewritten', async () => {
     await writeLegacyFile(tmpDir, 'legacy', new File(['legacy'], 'legacy.txt'))
     let storage = createFsFileStorage(tmpDir)

@@ -7,6 +7,7 @@ import type { LazyFile } from '@remix-run/lazy-file'
 import type {
   FileStorage,
   FileLike,
+  FileKey,
   FileMetadata,
   ListOptions,
   ListResult,
@@ -192,7 +193,7 @@ export function createFsFileStorage(
     async list<opts extends ListOptions>(options?: opts): Promise<ListResult<opts>> {
       let { cursor, includeMetadata = false, limit = 32, prefix } = options ?? {}
 
-      let files: FileMetadata[] = []
+      let files: (FileKey | FileMetadata)[] = []
       let foundCursor = cursor === undefined
       let nextCursor: string | undefined
       let lastHash: string | undefined
@@ -220,11 +221,15 @@ export function createFsFileStorage(
               break outerLoop
             }
 
-            // Older entries did not store their size in metadata.
-            files.push({
-              ...meta,
-              size: meta.size ?? (await fsp.stat(getDataPath(metaPath, dataFile))).size,
-            })
+            if (includeMetadata) {
+              // Older entries did not store their size in metadata.
+              files.push({
+                ...meta,
+                size: meta.size ?? (await fsp.stat(getDataPath(metaPath, dataFile))).size,
+              })
+            } else {
+              files.push({ key: meta.key })
+            }
           } else if (hash === cursor) {
             foundCursor = true
           }
@@ -235,9 +240,7 @@ export function createFsFileStorage(
 
       return {
         cursor: nextCursor,
-        files: (includeMetadata
-          ? files
-          : files.map(({ key }) => ({ key }))) as ListResult<opts>['files'],
+        files: files as ListResult<opts>['files'],
       }
     },
     put(key: string, file: FileLike): Promise<LazyFile> {
