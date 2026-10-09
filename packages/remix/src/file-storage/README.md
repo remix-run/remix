@@ -19,10 +19,12 @@ npm i remix
 
 ### File System
 
+The examples below enable `atomicWrites` to preserve existing content if a replacement fails. For an existing storage directory, first follow the [upgrade guidance](#upgrading-existing-storage).
+
 ```ts
 import { createFsFileStorage } from 'remix/file-storage/fs'
 
-let storage = createFsFileStorage('./user/files')
+let storage = createFsFileStorage('./user/files', { atomicWrites: true })
 
 let file = new File(['hello world'], 'hello.txt', { type: 'text/plain' })
 let key = 'hello-key'
@@ -48,7 +50,7 @@ await storage.remove(key)
 
 ### Atomic Writes
 
-By default, new files and existing legacy entries are written directly to their content files. If you replace a file under the same key and the upload fails or the process is interrupted, the previous content can be lost or partially overwritten. This can happen even when only one operation is running.
+When `atomicWrites` is omitted or `false`, new files and existing legacy entries are written directly to their content files. If you replace a file under the same key and the upload fails or the process is interrupted, the previous content can be lost or partially overwritten. This can happen even when only one operation is running.
 
 Enable `atomicWrites` when a failed replacement must preserve the previous file. For example, an avatar upload usually reuses a key for each user:
 
