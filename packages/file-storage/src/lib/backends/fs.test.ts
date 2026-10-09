@@ -596,16 +596,126 @@ describe('fs file storage', () => {
     let storage = createFsFileStorage(tmpDir)
 
     await assert.rejects(async () => storage.get('file'), /Invalid stored file content path/)
-    await assert.rejects(
-      async () => storage.set('file', new File(['new'], 'new.txt')),
-      /Invalid stored file content path/,
-    )
     assert.equal(fs.readFileSync(unrelatedPath, 'utf-8'), 'unrelated')
     assert.equal(fs.readFileSync(dataPath, 'utf-8'), 'original')
     await storage.remove('file')
     assert.equal(fs.readFileSync(unrelatedPath, 'utf-8'), 'unrelated')
     assert.equal(fs.existsSync(dataPath), false)
     assert.equal(await storage.has('file'), false)
+  })
+
+  it('replaces corrupt metadata without following its content pointer', async () => {
+    let { metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['old'], 'old.txt'))
+    let record: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+    assert.ok(record !== null && typeof record === 'object')
+    fs.writeFileSync(metaPath, JSON.stringify({ ...record, dataFile: '../unrelated.dat' }))
+    let unrelatedPath = path.join(tmpDir, 'unrelated.dat')
+    fs.writeFileSync(unrelatedPath, 'unrelated')
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
+
+    let stored = await storage.put('file', new File(['replacement'], 'new.txt'))
+
+    assert.equal(await stored.text(), 'replacement')
+    assert.equal(fs.readFileSync(unrelatedPath, 'utf-8'), 'unrelated')
+    await storage.remove('file')
+    assert.equal(fs.readFileSync(unrelatedPath, 'utf-8'), 'unrelated')
+  })
+
+  it('retries legacy writes after metadata is truncated without migrating the entry', async () => {
+    let { dataPath, metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['old'], 'old.txt'))
+    let storage = createFsFileStorage(tmpDir)
+    fs.writeFileSync(metaPath, '')
+
+    await storage.set('file', new File(['replacement'], 'new.txt'))
+
+    let stored = await storage.get('file')
+    assert.ok(stored)
+    assert.equal(await stored.text(), 'replacement')
+    assert.equal(stored.name, 'new.txt')
+    assert.equal(fs.readFileSync(dataPath, 'utf-8'), 'replacement')
+    fs.writeFileSync(metaPath, '{"key":')
+
+    stored = await storage.put('file', new File(['retried'], 'retried.txt'))
+
+    assert.equal(await stored.text(), 'retried')
+    assert.deepEqual(fs.readdirSync(path.dirname(metaPath)).sort(), [
+      path.basename(dataPath),
+      path.basename(metaPath),
+    ])
+    let record: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+    assert.ok(record !== null && typeof record === 'object')
+    assert.equal('dataFile' in record, false)
+  })
+
+  it('keeps corrupt migrated entries atomic when writes are explicitly disabled', async () => {
+    let { dataPath, metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['old'], 'old.txt'))
+    await createFsFileStorage(tmpDir, { atomicWrites: true }).set(
+      'file',
+      new File(['migrated'], 'migrated.txt'),
+    )
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: false })
+    let entries = fs.readdirSync(path.dirname(metaPath)).sort()
+    let oldData = entries.find((name) => name.endsWith('.dat'))
+    assert.ok(oldData)
+    fs.writeFileSync(metaPath, '{')
+    let upload = new File(['replacement'], 'new.txt')
+    let failure = new Error('Metadata unavailable')
+    Object.defineProperty(upload, 'name', {
+      get() {
+        throw failure
+      },
+    })
+
+    await assert.rejects(async () => storage.put('file', upload), failure)
+
+    assert.equal(fs.readFileSync(metaPath, 'utf-8'), '{')
+    assert.equal(fs.readFileSync(path.join(path.dirname(metaPath), oldData), 'utf-8'), 'migrated')
+    assert.deepEqual(fs.readdirSync(path.dirname(metaPath)).sort(), entries)
+    let stored = await storage.put('file', new File(['replacement'], 'new.txt'))
+    assert.equal(await stored.text(), 'replacement')
+    assert.equal(fs.existsSync(dataPath), false)
+    assert.equal(fs.readdirSync(path.dirname(metaPath)).length, 2)
+    let record: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+    assert.ok(record !== null && typeof record === 'object' && 'dataFile' in record)
+    await assert.rejects(async () => storage.set('file', upload), failure)
+    let recovered = await storage.get('file')
+    assert.ok(recovered)
+    assert.equal(await recovered.text(), 'replacement')
+  })
+
+  it('removes a partial legacy upload when no metadata was published', async () => {
+    let storage = createFsFileStorage(tmpDir)
+    let failure = new Error('Upload interrupted')
+    let upload = new LazyFile(
+      {
+        byteLength: 100_000,
+        stream() {
+          let sent = false
+          return new ReadableStream({
+            pull(controller) {
+              if (sent) throw failure
+              sent = true
+              controller.enqueue(new Uint8Array(64 * 1024).fill(65))
+            },
+          })
+        },
+      },
+      'file.txt',
+    )
+
+    await assert.rejects(async () => storage.set('file', upload), failure)
+
+    let entries = fs.readdirSync(tmpDir, { recursive: true, encoding: 'utf-8' })
+    let dataPath = entries.find((name) => name.endsWith('.dat'))
+    assert.ok(dataPath)
+    assert.equal(fs.statSync(path.join(tmpDir, dataPath)).size, 64 * 1024)
+    assert.equal(await storage.has('file'), false)
+    assert.equal(await storage.get('file'), null)
+
+    await storage.remove('file')
+
+    assert.deepEqual(fs.readdirSync(tmpDir), [])
+    await storage.remove('file')
   })
 
   it('removes content for a key with corrupt metadata without removing unrelated files', async () => {

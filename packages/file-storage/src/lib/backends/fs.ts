@@ -90,12 +90,22 @@ export function createFsFileStorage(
     prepareResult: (filePath: string, meta: FileMetadata) => result,
   ): Promise<result> {
     let { directory, filePath, metaPath } = await getPaths(key)
-    let previous = await readMetadata(metaPath)
+    let previousDataPaths: string[]
+    let writeAtomically = atomicWrites
+    try {
+      let previous = await readMetadata(metaPath)
+      previousDataPaths = previous === null ? [] : [getDataPath(metaPath, previous.dataFile)]
+      writeAtomically ||= previous?.dataFile !== undefined
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error
+      previousDataPaths = await findDataPaths(filePath)
+      // Without usable metadata, existing content versions keep recovery writes atomic.
+      writeAtomically ||= previousDataPaths.some((dataPath) => dataPath !== filePath)
+    }
 
     await fsp.mkdir(directory, { recursive: true })
 
-    // Keep migrated entries atomic even if this instance has not opted in.
-    if (!atomicWrites && previous?.dataFile === undefined) {
+    if (!writeAtomically) {
       await writeFile(filePath, file)
       let metadata: FileMetadata = {
         key,
@@ -150,8 +160,8 @@ export function createFsFileStorage(
       published = true
 
       // Cleanup must not turn a committed replacement into a reported failure.
-      if (previous !== null) {
-        await fsp.rm(getDataPath(metaPath, previous.dataFile), { force: true }).catch(() => {})
+      for (let previousDataPath of previousDataPaths) {
+        await fsp.rm(previousDataPath, { force: true }).catch(() => {})
       }
       return result
     } finally {
@@ -251,16 +261,12 @@ export function createFsFileStorage(
       let dataPaths: string[]
       try {
         let metadata = await readMetadata(metaPath)
-        if (metadata === null) return
-        dataPaths = [getDataPath(metaPath, metadata.dataFile)]
+        dataPaths = [getDataPath(metaPath, metadata?.dataFile)]
       } catch (error) {
         if (!(error instanceof SyntaxError)) throw error
         // Corrupt metadata cannot identify the current version. Callers serialize removal, so
         // all content versions belonging to this key can be removed without following its pointer.
-        let hash = path.basename(filePath, '.dat')
-        dataPaths = (await fsp.readdir(directory))
-          .filter((name) => name === `${hash}.dat` || isVersionedDataFile(name, hash))
-          .map((name) => path.join(directory, name))
+        dataPaths = await findDataPaths(filePath)
       }
 
       await fsp.rm(metaPath, { force: true })
@@ -298,6 +304,14 @@ function getDataPath(metaPath: string, dataFile?: string): string {
 
 function isVersionedDataFile(name: string, hash: string): boolean {
   return /^[a-f0-9]{64}\.[a-f0-9-]{36}\.dat$/.test(name) && name.startsWith(`${hash}.`)
+}
+
+async function findDataPaths(filePath: string): Promise<string[]> {
+  let directory = path.dirname(filePath)
+  let hash = path.basename(filePath, '.dat')
+  return (await fsp.readdir(directory))
+    .filter((name) => name === `${hash}.dat` || isVersionedDataFile(name, hash))
+    .map((name) => path.join(directory, name))
 }
 
 async function readMetadata(metaPath: string): Promise<StoredMetadata | null> {
