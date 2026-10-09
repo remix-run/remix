@@ -1,6 +1,6 @@
 import { createAssetServer } from 'remix/assets'
 import { loadConfig } from 'remix/cli'
-import { uiHmr } from 'remix/ui-hmr/assets'
+import { componentHmr } from 'remix/component-hmr/assets'
 
 const config = await loadConfig(import.meta.dirname)
 if (config.assets === undefined) throw new Error('Missing assets configuration')
@@ -21,6 +21,6 @@ export const assets = createAssetServer({
       }
     : undefined,
   scripts: {
-    loaders: isHmr ? [uiHmr()] : undefined,
+    loaders: isHmr ? [componentHmr()] : undefined,
   },
 })

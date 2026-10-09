@@ -7,8 +7,8 @@
     "moduleResolution": "NodeNext",
     "target": "ESNext",
     "paths": {
-      "remix/ui/jsx-dev-runtime": ["../packages/remix/src/ui/jsx-dev-runtime.ts"],
-      "remix/ui/jsx-runtime": ["../packages/remix/src/ui/jsx-runtime.ts"]
+      "remix/component/jsx-dev-runtime": ["../packages/remix/src/component/jsx-dev-runtime.ts"],
+      "remix/component/jsx-runtime": ["../packages/remix/src/component/jsx-runtime.ts"]
     },
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
@@ -16,7 +16,7 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "remix/ui",
+    "jsxImportSource": "remix/component",
     "noEmit": true
   }
 }

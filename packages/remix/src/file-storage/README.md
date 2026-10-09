@@ -93,9 +93,9 @@ Failed atomic writes attempt to remove unpublished files. After a successful ato
 
 ## Related Packages
 
-- [`file-storage-s3`](https://github.com/remix-run/remix/tree/main/packages/file-storage-s3) - S3 backend for `file-storage`
-- [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser) - Pairs well with this library for storing `FileUpload` objects received in `multipart/form-data` requests
-- [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file) - The streaming `File` implementation used internally to stream files from storage
+- [`file-storage-s3`](../file-storage-s3/README.md) - S3 backend for `file-storage`
+- [`form-data-parser`](../form-data-parser/README.md) - Pairs well with this library for storing `FileUpload` objects received in `multipart/form-data` requests
+- [`lazy-file`](../lazy-file/README.md) - The streaming `File` implementation used internally to stream files from storage
 
 ## License
 

@@ -1,10 +1,10 @@
 # fs
 
-Lazy, streaming filesystem utilities for JavaScript. This package provides utilities for working with files on the local filesystem using the [`LazyFile`](https://github.com/remix-run/remix/tree/main/packages/lazy-file)/ native [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) API.
+Lazy, streaming filesystem utilities for JavaScript. This package provides utilities for working with files on the local filesystem using the [`LazyFile`](../lazy-file/README.md)/ native [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) API.
 
 ## Features
 
-- **Web Standards** - Uses [`LazyFile`](https://github.com/remix-run/remix/tree/main/packages/lazy-file) which matches the native [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) API and provides `.stream()`, `.toFile()`, and `.toBlob()` for converting to native types.
+- **Web Standards** - Uses [`LazyFile`](../lazy-file/README.md) which matches the native [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) API and provides `.stream()`, `.toFile()`, and `.toBlob()` for converting to native types.
 - **Seamless Node.js Compat** - Works seamlessly with Node.js file descriptors and handles
 
 ## Installation
@@ -52,8 +52,8 @@ await handle.close()
 
 ## Related Packages
 
-- [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file) - Lazy, streaming `Blob`/`File` implementation
-- [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - Storage abstraction for files
+- [`lazy-file`](../lazy-file/README.md) - Lazy, streaming `Blob`/`File` implementation
+- [`file-storage`](../file-storage/README.md) - Storage abstraction for files
 
 ## License
 

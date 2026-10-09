@@ -3,11 +3,11 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
 import { getRemixGuideCopies } from './remix-guides.ts'
+import { readRemixManifest } from './manifest.ts'
 import { getRemixReadmeMappings } from './remix-readmes.ts'
 
 const packagesDir = path.resolve(import.meta.dirname, '..', '..', 'packages')
 const remixDir = path.join(packagesDir, 'remix')
-const remixManifestPath = path.join(remixDir, 'manifest.json')
 
 export const remixIndexPath = path.join(remixDir, 'INDEX.md')
 
@@ -18,7 +18,7 @@ export interface RemixIndexEntry {
 }
 
 export function getRemixIndexEntries(): RemixIndexEntry[] {
-  let manifest = readStringRecord(remixManifestPath)
+  let manifest = readRemixManifest(packagesDir).exports
   let packageDescriptions = readPackageDescriptions()
   let readmePaths = new Map(
     getRemixReadmeMappings().map((copy) => [
@@ -29,8 +29,6 @@ export function getRemixIndexEntries(): RemixIndexEntry[] {
   let entriesByDocsPath = new Map<string, RemixIndexEntry>()
 
   for (let [exportName, specifier] of Object.entries(manifest)) {
-    if (exportName.startsWith('_')) continue
-
     let packageName = getPackageName(specifier)
     let description = packageDescriptions.get(packageName)
     if (!description) {
@@ -113,23 +111,6 @@ function readPackageDescriptions(): Map<string, string> {
   }
 
   return descriptions
-}
-
-function readStringRecord(filePath: string): Record<string, string> {
-  let value: unknown = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-  if (!isRecord(value)) {
-    throw new Error(`Expected ${filePath} to contain an object of strings`)
-  }
-
-  let result: Record<string, string> = {}
-  for (let [key, item] of Object.entries(value)) {
-    if (typeof item !== 'string') {
-      throw new Error(`Expected ${filePath} to contain an object of strings`)
-    }
-    result[key] = item
-  }
-
-  return result
 }
 
 function getPackageName(specifier: string): string {

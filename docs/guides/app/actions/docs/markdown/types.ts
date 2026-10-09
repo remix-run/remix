@@ -1,6 +1,6 @@
 import type { RootContent } from 'mdast'
 
-import type { RemixNode } from 'remix/ui'
+import type { RemixNode } from 'remix/component'
 import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
 
 export type MarkdownOptions = {

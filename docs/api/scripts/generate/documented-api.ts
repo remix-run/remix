@@ -1,5 +1,9 @@
 import * as typedoc from 'typedoc'
-import { hasRemixPackage, mapToRemixPackage } from '../../app/utils/package-manifest.ts'
+import {
+  getDocsPackagePath,
+  hasRemixPackage,
+  mapToRemixPackage,
+} from '../../app/utils/package-manifest.ts'
 import { MDN_SYMBOLS } from '../../app/utils/symbols.ts'
 import { getApiNameFromFullName, invariant, unimplemented, warn } from './utils.ts'
 
@@ -558,8 +562,8 @@ function getApiFilePath(
   // typedoc.ts).
   let rawPkg = nameParts.shift() ?? ''
   // If the remaining segments combined with the package name form a more
-  // specific manifest entry (e.g. @remix-run/ui + accordion →
-  // @remix-run/ui/accordion → remix/ui/accordion), consume
+  // specific manifest entry (e.g. @remix-run/data-schema + checks →
+  // @remix-run/data-schema/checks → remix/data-schema/checks), consume
   // the longest matching prefix so APIs from sub-exports land under the right
   // canonical path.
   if (rawPkg.startsWith('@remix-run/') && nameParts.length > 1) {
@@ -574,7 +578,7 @@ function getApiFilePath(
   }
   let pkg = rawPkg.startsWith('@remix-run/') ? mapToRemixPackage(rawPkg) : rawPkg
   let name = nameParts.pop()
-  return [pkg, ...nameParts, type, `${name}.md`].filter(Boolean).join('/')
+  return [getDocsPackagePath(pkg), ...nameParts, type, `${name}.md`].filter(Boolean).join('/')
 }
 
 function getApiDescription(typedocComment: typedoc.Comment): string {
@@ -777,7 +781,9 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
               warn('Missing MDN link for TypeScript symbol: ', target.qualifiedName)
             }
           } else {
-            throw new Error(`Unsupported @link target: ${target.qualifiedName}`)
+            warn(
+              `Unsupported @link target: ${target.qualifiedName}; using plain text: ${part.text}`,
+            )
           }
         } else if (target instanceof typedoc.Reflection) {
           // oxfmt-ignore
@@ -790,14 +796,18 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
             target.kind === typedoc.ReflectionKind.Variable ? getVariableLinkType(target) : null;
 
           if (!type) {
-            throw new Error(`Unsupported @link target kind: ${typedoc.ReflectionKind[target.kind]}`)
+            warn(
+              `Unsupported @link target kind: ${typedoc.ReflectionKind[target.kind]} ` +
+                `(${target.getFriendlyFullName()}); using plain text: ${part.text}`,
+            )
+            return acc + transformed
           }
 
           let path = getApiFilePath(target.getFriendlyFullName(), type).replace(/\.md$/, '')
           href = `${WEBSITE_DOCS_PATH}/${path}/`
           transformed = `[\`${part.text}\`](${href})`
         } else {
-          throw new Error(`Missing/invalid target for @link content: ${part.text}`)
+          warn(`Missing/invalid target for @link content: ${part.text}; using plain text`)
         }
       }
     }

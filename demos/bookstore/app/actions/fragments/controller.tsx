@@ -1,5 +1,5 @@
 import { createController } from 'remix/router'
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 import { CartButton } from './public/cart-button.tsx'
 import { CartItems } from './public/cart-items.tsx'

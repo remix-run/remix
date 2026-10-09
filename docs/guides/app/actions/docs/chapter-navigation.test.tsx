@@ -1,6 +1,6 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
-import { renderToString } from 'remix/ui/server'
+import { renderToString } from 'remix/component/server'
 
 import { ChapterNavigationContent } from './chapter-navigation.tsx'
 import type { DocsNavigationItem } from './markdown-chapters.tsx'

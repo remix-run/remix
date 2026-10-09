@@ -1,0 +1,8182 @@
+import { expect } from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
+import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
+import { Frame } from '../runtime/component.ts'
+import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
+import { reloadFrameForNavigation } from '../runtime/frame.ts'
+import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
+import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
+import { invariant } from '../runtime/invariant.ts'
+import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
+import { renderToStream } from '../server/stream.ts'
+import { css, navigate, on } from '../index.ts'
+import { drain, readChunks, withResolvers } from './utils.ts'
+
+async function setupReloadBodyTest(t: TestContext) {
+  document.body.innerHTML = '<main>Initial</main>'
+  let requests: Request[] = []
+  t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push(
+      new Request(typeof input === 'string' ? new URL(input, document.baseURI) : input, init),
+    )
+    return new Response(
+      '<!DOCTYPE html><html><head></head><body><main>Saved</main></body></html><!-- rmx:flush document -->',
+    )
+  })
+  let app = run({ loadModule: mock.fn() })
+  t.after(() => app.dispose())
+  await app.ready()
+  return { app, requests }
+}
+
+function getCommentMarkerId(html: string, prefix: 'rmx:f:' | 'rmx:h:'): string {
+  let re = prefix === 'rmx:f:' ? /<!--\s*rmx:f:([^ ]+)\s*-->/ : /<!--\s*rmx:h:([^ ]+)\s*-->/
+  let match = html.match(re)
+  invariant(match, `Expected comment marker "${prefix}"`)
+  return match[1]!
+}
+
+function streamFromChunks(chunks: Array<string | Promise<string>>): ReadableStream<Uint8Array> {
+  let encoder = new TextEncoder()
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      for (let chunk of chunks) {
+        let value = typeof chunk === 'string' ? chunk : await chunk
+        controller.enqueue(encoder.encode(value))
+      }
+      controller.close()
+    },
+  })
+}
+
+async function drainWithProtocol(stream: ReadableStream<Uint8Array>): Promise<string> {
+  let chunks = readChunks(stream)
+  let html = ''
+
+  while (true) {
+    let chunk = await chunks.next()
+    if (chunk.done) break
+    html += chunk.value
+  }
+
+  return html
+}
+
+async function renderDocumentContent(content: RemixNode): Promise<string> {
+  return await drainWithProtocol(
+    renderToStream(
+      <html>
+        <head />
+        <body>
+          <main>{content}</main>
+        </body>
+      </html>,
+    ),
+  )
+}
+
+async function renderFrameContent(content: RemixNode): Promise<string> {
+  return await drain(renderToStream(content))
+}
+
+async function renderSplitFrameTemplate(
+  t: TestContext,
+  scenario: 'observer' | 'hydrate',
+  beforeCompletion?: () => Promise<void>,
+): Promise<void> {
+  let chunks = readChunks(
+    renderToStream(
+      <html>
+        <head />
+        <body>
+          <Frame src="/items" fallback={<p id="fallback">Loading...</p>} />
+        </body>
+      </html>,
+      { resolveFrame: () => '<p data-item="1">First</p><p data-item="2">Second</p>' },
+    ),
+  )
+  let shell = await chunks.next()
+  let template = await chunks.next()
+  invariant(!shell.done && !template.done)
+  let templateHtml = template.value
+  let split = templateHtml.indexOf('<p data-item="2"')
+  invariant(split !== -1)
+
+  document.open()
+  document.write(shell.value)
+  if (scenario === 'hydrate') document.write(templateHtml.slice(0, split))
+
+  let app = run({ loadModule: mock.fn() })
+  t.after(() => {
+    app.dispose()
+    document.close()
+  })
+  await app.ready()
+
+  if (scenario === 'observer') document.write(templateHtml.slice(0, split))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  expect(document.querySelector('#fallback')?.textContent).toBe('Loading...')
+  expect(document.querySelectorAll('[data-item]').length).toBe(0)
+  await beforeCompletion?.()
+  document.write(templateHtml.slice(split))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  expect(document.readyState).toBe('loading')
+}
+
+async function setupDefaultFrameRequestTest(t: TestContext, name?: string) {
+  let frame: FrameHandle | undefined
+  let Probe = clientEntry('/js/probe.js#Probe', function Probe(handle: Handle) {
+    frame = handle.frame
+    return () => <p id="frame-content">Frame content</p>
+  })
+  let frameHtml = await renderFrameContent(<Probe />)
+  document.body.innerHTML = await drain(
+    renderToStream(<Frame name={name} src="/frame" />, { resolveFrame: () => frameHtml }),
+  )
+  let fetchMock = t.mock.method(globalThis, 'fetch', async () => new Response(frameHtml))
+  let app = run({ loadModule: () => Probe })
+  t.after(() => app.dispose())
+  await app.ready()
+  invariant(frame, 'Expected frame content to hydrate')
+  return { frame, fetchMock }
+}
+
+function waitForElement(
+  selector: string,
+  predicate: (element: Element) => boolean = () => true,
+): Promise<Element> {
+  let element = document.querySelector(selector)
+  if (element && predicate(element)) return Promise.resolve(element)
+
+  return new Promise((resolve) => {
+    let observer = new MutationObserver(() => {
+      let element = document.querySelector(selector)
+      if (!element || !predicate(element)) return
+      observer.disconnect()
+      resolve(element)
+    })
+    observer.observe(document.documentElement, { childList: true, subtree: true })
+  })
+}
+
+function createDisposableEntry(id: string, onDispose: () => void) {
+  return clientEntry(id, function Entry(handle: Handle) {
+    handle.signal.addEventListener('abort', onDispose)
+    return () => <section>Entry</section>
+  })
+}
+
+function createObsoleteEntryContent(Entry: EntryComponent): RemixNode {
+  return <Entry />
+}
+
+function createReplacementContent(): RemixNode {
+  return (
+    <>
+      <section id="gallery">Gallery</section>
+      <section id="details">Details</section>
+    </>
+  )
+}
+
+async function waitForTransitionWindow(): Promise<void> {
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+  await new Promise<void>((resolve) => setTimeout(resolve, 120))
+}
+
+async function setupFrameNavigationTest(t: TestContext) {
+  let initialUrl = window.location.href
+  let initialEntryKey = window.navigation.currentEntry?.key
+  let baseUrl = new URL('/', initialUrl).href
+  window.history.replaceState(null, '', baseUrl)
+
+  function renderPage() {
+    return renderToStream(
+      <html>
+        <head />
+        <body>
+          <Frame name="target" src="/frame" />
+        </body>
+      </html>,
+      {
+        resolveFrame(src, target) {
+          expect(src).toBe('/frame')
+          expect(target).toBe('target')
+          return '<p id="frame-content">Frame</p>'
+        },
+      },
+    )
+  }
+
+  let initialDocument = new DOMParser().parseFromString(await drain(renderPage()), 'text/html')
+  document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+  let requests: Array<{ src: string; target: string | undefined }> = []
+  let app = run({
+    loadModule: mock.fn(),
+    async resolveFrame(src, options) {
+      let target = options?.target
+      requests.push({ src, target })
+      if (target === 'target') return '<p id="frame-content">Targeted frame</p>'
+      return renderPage()
+    },
+  })
+
+  t.after(async () => {
+    if (initialEntryKey && window.navigation.currentEntry?.key !== initialEntryKey) {
+      await window.navigation.traverseTo(initialEntryKey).finished
+    }
+    app.dispose()
+    window.history.replaceState(null, '', initialUrl)
+  })
+
+  await app.ready()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  return {
+    baseUrl,
+    requests,
+    frames() {
+      return {
+        top: getTopFrame(),
+        target: getNamedFrame('target'),
+      }
+    },
+  }
+}
+
+async function navigateWithLink(
+  href: string,
+  options: { target: string; src?: string },
+): Promise<void> {
+  let link = document.createElement('a')
+  link.href = href
+  link.setAttribute('data-rmx-target', options.target)
+  if (options.src !== undefined) link.setAttribute('data-rmx-src', options.src)
+  document.body.append(link)
+
+  link.click()
+  let transition = window.navigation.transition
+  invariant(transition, 'Expected link click to start a navigation transition')
+  await transition.finished
+  link.remove()
+}
+
+describe('run', () => {
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    container = document.createElement('div')
+    document.body.appendChild(container)
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+    for (let node of Array.from(document.head.childNodes)) {
+      document.head.removeChild(node)
+    }
+  })
+
+  it('uses fetch to request HTML by default and posts form data', async (t) => {
+    let formData = new FormData()
+    formData.set('name', 'Ada')
+    let signal = new AbortController().signal
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="account">Ada</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        formData,
+        method: 'post',
+        encType: 'multipart/form-data',
+        signal,
+      }).finished
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      let [src, init] = fetchMock.mock.calls[0]!.arguments
+      expect(src).toBe('/account')
+      expect(init?.body).toBe(formData)
+      let headers = new Headers(init?.headers)
+      expect(headers.get('Accept')).toBe('text/html')
+      expect(headers.get('X-Remix-Frame')).toBe('true')
+      expect(headers.get('X-Remix-Target')).toBeNull()
+      expect(headers.get('X-Remix-Top-Frame-Src')).toBeNull()
+      expect(init?.method).toBe('post')
+      expect(init?.mode).toBe('same-origin')
+      expect(init?.signal).toBeInstanceOf(AbortSignal)
+      expect(document.getElementById('account')?.textContent).toBe('Ada')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('sends frame headers and the target when reloading a named frame', async (t) => {
+    let { frame, fetchMock } = await setupDefaultFrameRequestTest(t, 'details')
+
+    await frame.reload()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    let [src, init] = fetchMock.mock.calls[0]!.arguments
+    expect(src).toBe('/frame')
+    expect(init?.mode).toBe('same-origin')
+    let headers = new Headers(init?.headers)
+    expect(headers.get('Accept')).toBe('text/html')
+    expect(headers.get('X-Remix-Frame')).toBe('true')
+    expect(headers.get('X-Remix-Target')).toBe('details')
+    expect(headers.get('X-Remix-Top-Frame-Src')).toBeNull()
+    expect(document.getElementById('frame-content')?.textContent).toBe('Frame content')
+  })
+
+  it('sends frame headers without a target when reloading an unnamed frame', async (t) => {
+    let { frame, fetchMock } = await setupDefaultFrameRequestTest(t)
+
+    await frame.reload()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    let [src, init] = fetchMock.mock.calls[0]!.arguments
+    expect(src).toBe('/frame')
+    expect(init?.mode).toBe('same-origin')
+    let headers = new Headers(init?.headers)
+    expect(headers.get('Accept')).toBe('text/html')
+    expect(headers.get('X-Remix-Frame')).toBe('true')
+    expect(headers.get('X-Remix-Target')).toBeNull()
+    expect(headers.get('X-Remix-Top-Frame-Src')).toBeNull()
+    expect(document.getElementById('frame-content')?.textContent).toBe('Frame content')
+  })
+
+  it('sends frame headers without a target when reloading the top frame', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () => new Response(await renderDocumentContent(<p id="next-page">Next page</p>)),
+    )
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    await app.ready()
+    app.frames.top.src = '/next'
+
+    await app.frames.top.reload()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    let [src, init] = fetchMock.mock.calls[0]!.arguments
+    expect(src).toBe('/next')
+    expect(init?.mode).toBe('same-origin')
+    let headers = new Headers(init?.headers)
+    expect(headers.get('Accept')).toBe('text/html')
+    expect(headers.get('X-Remix-Frame')).toBe('true')
+    expect(headers.get('X-Remix-Target')).toBeNull()
+    expect(headers.get('X-Remix-Top-Frame-Src')).toBeNull()
+    expect(document.getElementById('next-page')?.textContent).toBe('Next page')
+  })
+
+  it('retains the requested source without retaining the previous method or body', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ src: '/save', method: 'post', body })
+    await app.frames.top.reload()
+
+    expect(requests).toHaveLength(2)
+    expect(requests[0]!.method).toBe('POST')
+    expect(requests[1]!.method).toBe('GET')
+    expect(requests[1]!.url).toBe(new URL('/save', document.baseURI).href)
+    expect(requests[1]!.body).toBeNull()
+  })
+
+  it('reloads with multipart FormData and lets Fetch generate its boundary', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ method: 'post', encType: 'multipart/form-data', body })
+
+    expect(requests).toHaveLength(1)
+    let request = requests[0]!
+    expect(request.headers.get('Content-Type')?.startsWith('multipart/form-data; boundary=')).toBe(
+      true,
+    )
+    expect((await request.formData()).get('name')).toBe('Ada')
+  })
+
+  it('reloads with text/plain FormData and normalizes line breaks', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name', 'Ada\nLovelace')
+    await app.frames.top.reload({ method: 'post', encType: 'text/plain', body })
+
+    expect(requests).toHaveLength(1)
+    let request = requests[0]!
+    expect(request.headers.get('Content-Type')).toBe('text/plain')
+    expect(await request.text()).toBe('name=Ada\r\nLovelace\r\n')
+  })
+
+  it('defaults FormData reloads to GET and replaces the source query without a body', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.append('name', 'Ada Lovelace')
+    body.append('name', 'Grace')
+    body.append('file', new File(['contents'], 'notes.txt'))
+    await app.frames.top.reload({
+      src: '/search?old=1#results',
+      encType: 'multipart/form-data',
+      body,
+    })
+
+    expect(requests).toHaveLength(1)
+    let request = requests[0]!
+    let expectedUrl = new URL(
+      '/search?name=Ada+Lovelace&name=Grace&file=notes.txt#results',
+      document.baseURI,
+    ).href
+    expect(request.url).toBe(expectedUrl)
+    expect(request.method).toBe('GET')
+    expect(request.body).toBeNull()
+    expect(app.frames.top.src).toBe(expectedUrl)
+    expect(document.body.textContent).toBe('Saved')
+  })
+
+  it('defaults POST FormData to URL encoding with normalized line breaks and file names', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name\nline', 'Ada\nLovelace')
+    body.set('file', new File(['contents'], 'notes.txt'))
+    await app.frames.top.reload({ method: 'post', body })
+
+    expect(requests).toHaveLength(1)
+    let request = requests[0]!
+    expect(request.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
+    expect(await request.text()).toBe('name%0D%0Aline=Ada%0D%0ALovelace&file=notes.txt')
+  })
+
+  it('defaults an invalid form method to GET and encodes its fields in the query', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ src: '/search?old=1', method: 'PATCH', body })
+
+    expect(requests).toHaveLength(1)
+    expect(requests[0]!.method).toBe('GET')
+    expect(requests[0]!.url).toBe(new URL('/search?name=Ada', document.baseURI).href)
+    expect(requests[0]!.body).toBeNull()
+    expect(requests[0]!.headers.get('Content-Type')).toBeNull()
+  })
+
+  it('accepts case-insensitive form methods and encodings', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ method: 'PoSt', encType: 'TEXT/PLAIN', body })
+
+    expect(requests).toHaveLength(1)
+    let request = requests[0]!
+    expect(request.method).toBe('POST')
+    expect(request.headers.get('Content-Type')).toBe('text/plain')
+    expect(await request.text()).toBe('name=Ada\r\n')
+  })
+
+  it('falls back to URL encoding for an invalid FormData encoding', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ method: 'post', encType: 'invalid', body })
+
+    expect(requests).toHaveLength(1)
+    expect(requests[0]!.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
+    expect(await requests[0]!.text()).toBe('name=Ada')
+  })
+
+  it('submits FormData through one default fetch and renders the returned HTML', async (t) => {
+    document.body.innerHTML = '<main id="initial">Initial</main>'
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="saved">Saved</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    await app.ready()
+    let initialUrl = window.location.href
+    let initialEntryCount = window.navigation.entries().length
+    let data = new FormData()
+    data.set('name', 'Ada Lovelace')
+
+    let signal = await app.frames.top.reload({
+      src: '/account/save',
+      method: 'post',
+      encType: 'application/x-www-form-urlencoded',
+      body: data,
+    })
+
+    expect(signal.aborted).toBe(false)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    let [src, init] = fetchMock.mock.calls[0]!.arguments
+    expect(src).toBe('/account/save')
+    expect(init?.method).toBe('post')
+    expect(init?.body).toBeInstanceOf(URLSearchParams)
+    expect(String(init?.body)).toBe('name=Ada+Lovelace')
+    expect(document.getElementById('saved')?.textContent).toBe('Saved')
+    expect(window.location.href).toBe(initialUrl)
+    expect(window.navigation.entries()).toHaveLength(initialEntryCount)
+  })
+
+  it('uses same-origin requests for explicitly cross-origin frame sources', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="external">External frame</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = 'https://frames.example/partial'
+
+    try {
+      await app.frames.top.reload()
+      expect(fetchMock.mock.calls[0]?.arguments[0]).toBe('https://frames.example/partial')
+      expect(fetchMock.mock.calls[0]?.arguments[1]?.mode).toBe('same-origin')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('uses same-origin requests when the document base is cross-origin', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="external">External frame</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+    let base = document.createElement('base')
+    base.href = 'https://frames.example/partials/'
+    document.head.prepend(base)
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = 'details'
+
+    try {
+      await app.frames.top.reload()
+      expect(fetchMock.mock.calls[0]?.arguments[0]).toBe('details')
+      expect(fetchMock.mock.calls[0]?.arguments[1]?.mode).toBe('same-origin')
+    } finally {
+      app.dispose()
+      base.remove()
+    }
+  })
+
+  it('allows custom resolvers to fetch cross-origin frame sources', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="external">External frame</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src, options) {
+        return fetch(src, { mode: 'cors', signal: options?.signal })
+      },
+    })
+    await app.ready()
+    app.frames.top.src = 'https://frames.example/partial'
+
+    try {
+      await app.frames.top.reload()
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(fetchMock.mock.calls[0]?.arguments[0]).toBe('https://frames.example/partial')
+      expect(fetchMock.mock.calls[0]?.arguments[1]?.mode).toBe('cors')
+      expect(document.getElementById('external')?.textContent).toBe('External frame')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('renders 3xx HTML responses from the default resolver', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="choices">Multiple choices</main></body></html><!-- rmx:flush document -->',
+          {
+            headers: { 'Content-Type': 'text/html' },
+            status: 300,
+            statusText: 'Multiple Choices',
+          },
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/choices'
+
+    try {
+      await app.frames.top.reload()
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(document.getElementById('choices')?.textContent).toBe('Multiple choices')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('rejects non-HTML 3xx responses from the default resolver', async (t) => {
+    document.body.innerHTML = '<main id="initial">Initial</main>'
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response('{"next":"/account"}', {
+          headers: { 'Content-Type': 'application/json' },
+          status: 300,
+          statusText: 'Multiple Choices',
+        }),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    let reportedError: unknown
+    app.addEventListener('error', (event) => {
+      reportedError = event.error
+    })
+
+    try {
+      await app.ready()
+      app.frames.top.src = '/choices'
+
+      await expect(app.frames.top.reload()).rejects.toThrow(
+        'Failed to resolve frame: 300 Multiple Choices',
+      )
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(reportedError).toBeInstanceOf(Error)
+      expect((reportedError as Error).message).toBe('Failed to resolve frame: 300 Multiple Choices')
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('renders 4xx HTML responses from the default resolver', async (t) => {
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><p role="alert">Name is required</p></body></html><!-- rmx:flush document -->',
+          {
+            headers: { 'Content-Type': 'Text/HTML; charset=utf-8' },
+            status: 422,
+            statusText: 'Unprocessable Content',
+          },
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        formData: new FormData(),
+        method: 'post',
+      }).finished
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(document.querySelector('[role="alert"]')?.textContent).toBe('Name is required')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('rejects non-HTML 4xx responses from the default resolver', async (t) => {
+    document.body.innerHTML = '<main id="initial">Initial</main>'
+    let unhandledRejections: unknown[] = []
+    let onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      event.preventDefault()
+      unhandledRejections.push(event.reason)
+    }
+    window.addEventListener('unhandledrejection', onUnhandledRejection)
+    t.after(() => window.removeEventListener('unhandledrejection', onUnhandledRejection))
+
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response('Not Found', {
+          headers: { 'Content-Type': 'text/plain' },
+          status: 404,
+          statusText: 'Not Found',
+        }),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    let reportedError: unknown
+    app.addEventListener('error', (event) => {
+      reportedError = event.error
+    })
+
+    try {
+      await app.ready()
+      app.frames.top.src = '/account'
+
+      await expect(app.frames.top.reload()).rejects.toThrow(
+        'Failed to resolve frame: 404 Not Found',
+      )
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(unhandledRejections).toEqual([])
+      expect(reportedError).toBeInstanceOf(Error)
+      expect((reportedError as Error).message).toBe('Failed to resolve frame: 404 Not Found')
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('rejects 5xx HTML responses from the default resolver', async (t) => {
+    document.body.innerHTML = '<main id="initial">Initial</main>'
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response('<main id="error">Internal Server Error</main>', {
+          headers: { 'Content-Type': 'text/html' },
+          status: 500,
+          statusText: 'Internal Server Error',
+        }),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    let reportedError: unknown
+    app.addEventListener('error', (event) => {
+      reportedError = event.error
+    })
+
+    try {
+      await app.ready()
+      app.frames.top.src = '/account'
+
+      await expect(app.frames.top.reload()).rejects.toThrow(
+        'Failed to resolve frame: 500 Internal Server Error',
+      )
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(reportedError).toBeInstanceOf(Error)
+      expect((reportedError as Error).message).toBe(
+        'Failed to resolve frame: 500 Internal Server Error',
+      )
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+      expect(document.getElementById('error')).toBeNull()
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('encodes urlencoded form data with URLSearchParams by default', async (t) => {
+    let formData = new FormData()
+    formData.set('name', 'Ada Lovelace')
+    formData.set('avatar', new File([], 'avatar.png'))
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="account">Ada</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        encType: 'application/x-www-form-urlencoded',
+        formData,
+        method: 'post',
+      }).finished
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      let [, init] = fetchMock.mock.calls[0]!.arguments
+      expect(init?.body).toBeInstanceOf(URLSearchParams)
+      expect(String(init?.body)).toBe('name=Ada+Lovelace&avatar=avatar.png')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('encodes text/plain form data with CRLF-delimited entries by default', async (t) => {
+    let formData = new FormData()
+    formData.set('name', 'Ada Lovelace')
+    formData.set('bio', 'First programmer\nMathematician')
+    formData.set('avatar', new File([], 'avatar.png'))
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          '<!DOCTYPE html><html><head></head><body><main id="account">Ada</main></body></html><!-- rmx:flush document -->',
+        ),
+    )
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    app.frames.top.src = '/account'
+
+    try {
+      await reloadFrameForNavigation(app.frames.top, {
+        encType: 'text/plain',
+        formData,
+        method: 'post',
+      }).finished
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      let [, init] = fetchMock.mock.calls[0]!.arguments
+      let request = new Request('https://example.com/account', init)
+      expect(request.headers.get('Content-Type')).toBe('text/plain')
+      expect(await request.text()).toBe(
+        'name=Ada Lovelace\r\nbio=First programmer\r\nMathematician\r\navatar=avatar.png\r\n',
+      )
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('hydrates a single component', async () => {
+    let Counter = clientEntry(
+      '/js/counter.js#Counter',
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
+        return () => (
+          <button
+            mix={[
+              on('click', () => {
+                count++
+                handle.update()
+              }),
+            ]}
+          >
+            Count: {count}
+          </button>
+        )
+      },
+    )
+
+    let stream = renderToStream(<Counter initialCount={5} />)
+    let html = await drain(stream)
+
+    document.body.innerHTML = html
+
+    let loadModule = mock.fn(() => Promise.resolve(Counter))
+
+    let frame = run({ loadModule })
+    await frame.ready()
+
+    expect(loadModule).toHaveBeenCalledWith('/js/counter.js', 'Counter')
+
+    let button = document.querySelector('button')
+    expect(button?.textContent).toBe('Count: 5')
+
+    button?.click()
+    frame.flush()
+
+    expect(button?.textContent).toBe('Count: 6')
+
+    frame.dispose()
+  })
+
+  it('hydrates function-valued children passed to a component', async () => {
+    function FormatValue(handle: Handle<{ children: (value: number) => RemixNode }>) {
+      return () => <output>{handle.props.children(2)}</output>
+    }
+
+    let Interactive = clientEntry(
+      '/js/interactive.js#Interactive',
+      function Interactive(handle: Handle) {
+        let count = 0
+
+        return () => (
+          <div>
+            <FormatValue>{(value) => <>Value: {value}</>}</FormatValue>
+            <button
+              mix={on('click', () => {
+                count++
+                handle.update()
+              })}
+            >
+              Count: {count}
+            </button>
+          </div>
+        )
+      },
+    )
+
+    let html = await drain(renderToStream(<Interactive />))
+    document.body.innerHTML = html
+
+    expect(document.querySelector('output')?.textContent).toBe('Value: 2')
+
+    let app = run({ loadModule: mock.fn(() => Promise.resolve(Interactive)) })
+    try {
+      await app.ready()
+
+      let button = document.querySelector('button')
+      button?.click()
+      app.flush()
+
+      expect(button?.textContent).toBe('Count: 1')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('forwards hydrated client entry root error events to app listeners', async () => {
+    let error = new Error('hydrated client entry root error')
+    let Broken = clientEntry('/js/broken.js#Broken', function Broken() {
+      return () => <button>Trigger</button>
+    })
+
+    let html = await drain(renderToStream(<Broken />))
+    document.body.innerHTML = html
+
+    let app = run({ loadModule: mock.fn(() => Promise.resolve(Broken)) })
+    let forwarded: unknown
+    app.addEventListener('error', (event) => {
+      forwarded = (event as ErrorEvent).error
+    })
+
+    await app.ready()
+
+    let marker = Array.from(document.body.childNodes).find(
+      (node): node is Comment & { $rmx: EventTarget } => node instanceof Comment && '$rmx' in node,
+    )
+    invariant(marker, 'Expected hydrated client entry marker')
+    marker.$rmx.dispatchEvent(new ErrorEvent('error', { error }))
+
+    expect(forwarded).toBe(error)
+
+    app.dispose()
+  })
+
+  it('dispatches ready() rejections to app error listeners', async () => {
+    document.body.innerHTML = '<!-- rmx:h:broken --><button>Broken</button>'
+
+    let app = run({ loadModule: mock.fn() })
+    let forwarded: unknown
+    app.addEventListener('error', (event) => {
+      forwarded = event.error
+    })
+
+    let readyError = await app.ready().catch((error) => error)
+
+    expect(readyError).toBeInstanceOf(Error)
+    expect((readyError as Error).message).toBe('End marker not found')
+    expect(forwarded).toBe(readyError)
+
+    app.dispose()
+  })
+
+  it('hydrates multiple components', async () => {
+    let Button = clientEntry(
+      '/js/button.js#Button',
+      function Button(handle: Handle<{ text: string }>) {
+        let clicked = false
+        return () => (
+          <button
+            mix={[
+              on('click', () => {
+                clicked = true
+                handle.update()
+              }),
+            ]}
+          >
+            {clicked ? `${handle.props.text} clicked!` : handle.props.text}
+          </button>
+        )
+      },
+    )
+
+    let stream = renderToStream(
+      <div>
+        <Button text="First" />
+        <Button text="Second" />
+      </div>,
+    )
+    let html = await drain(stream)
+
+    document.body.innerHTML = html
+
+    let loadModule = mock.fn(() => Promise.resolve(Button))
+
+    let frame = run({ loadModule })
+    await frame.ready()
+
+    // Module is cached by moduleUrl+exportName
+    expect(loadModule).toHaveBeenCalledTimes(1)
+
+    let buttons = document.querySelectorAll('button')
+    expect(buttons).toHaveLength(2)
+    expect(buttons[0]?.textContent).toBe('First')
+    expect(buttons[1]?.textContent).toBe('Second')
+
+    buttons[0]?.click()
+    frame.flush()
+
+    expect(buttons[0]?.textContent).toBe('First clicked!')
+    expect(buttons[1]?.textContent).toBe('Second')
+
+    frame.dispose()
+  })
+
+  it('hydrates nested client entries without duplicating events or DOM ownership', async () => {
+    let outerSetupCount = 0
+    let toggleSetupCount = 0
+    let toggleClickCount = 0
+
+    let Outer = clientEntry(
+      '/js/outer.js#Outer',
+      function Outer(handle: Handle<{ children?: RemixNode }>) {
+        outerSetupCount++
+        return () => handle.props.children ?? null
+      },
+    )
+
+    let Toggle = clientEntry('/js/toggle.js#Toggle', function Toggle(handle: Handle) {
+      toggleSetupCount++
+      let wrapped = false
+
+      function toggle() {
+        toggleClickCount++
+        wrapped = !wrapped
+        handle.update()
+      }
+
+      return () =>
+        wrapped ? (
+          <div id="wrapper">
+            <button id="wrapped-button" type="button" mix={[on('click', toggle)]}>
+              Wrapped
+            </button>
+          </div>
+        ) : (
+          <button id="bare-button" type="button" mix={[on('click', toggle)]}>
+            Bare
+          </button>
+        )
+    })
+
+    let html = await drain(
+      renderToStream(
+        <Outer>
+          <Toggle />
+        </Outer>,
+      ),
+    )
+    document.body.innerHTML = html
+    outerSetupCount = 0
+    toggleSetupCount = 0
+    toggleClickCount = 0
+
+    let outerStart = document.body.firstChild
+    invariant(outerStart instanceof Comment)
+    let outerId = outerStart.data.trim().slice('rmx:h:'.length)
+    let innerStart = outerStart.nextSibling
+    invariant(innerStart instanceof Comment)
+    let innerId = innerStart.data.trim().slice('rmx:h:'.length)
+
+    function expectBodyHtml(innerHtml: string) {
+      expect(document.body.innerHTML).toBe(
+        `<!-- rmx:h:${outerId} --><!-- rmx:h:${innerId} -->${innerHtml}<!-- /rmx:h --><!-- /rmx:h -->`,
+      )
+    }
+
+    function getButton(id: string): HTMLButtonElement {
+      let button = document.getElementById(id)
+      invariant(button instanceof HTMLButtonElement)
+      return button
+    }
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/outer.js' && exportName === 'Outer') return Outer
+        if (moduleUrl === '/js/toggle.js' && exportName === 'Toggle') return Toggle
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+    })
+
+    await app.ready()
+
+    expect(outerSetupCount).toBe(1)
+    expect(toggleSetupCount).toBe(1)
+    expect(toggleClickCount).toBe(0)
+    expectBodyHtml('<button id="bare-button" type="button">Bare</button>')
+
+    getButton('bare-button').click()
+    app.flush()
+
+    expect(toggleClickCount).toBe(1)
+    expectBodyHtml(
+      '<div id="wrapper"><button id="wrapped-button" type="button">Wrapped</button></div>',
+    )
+
+    getButton('wrapped-button').click()
+    app.flush()
+
+    expect(toggleClickCount).toBe(2)
+    expectBodyHtml('<button id="bare-button" type="button">Bare</button>')
+
+    app.dispose()
+  })
+
+  it('does not hydrate imported client entries through their parent boundary', async () => {
+    let clicks = 0
+    let updateOuter = () => {}
+
+    let Inner = clientEntry('/inner.js#Inner', function Inner() {
+      return () => (
+        <button
+          mix={[
+            on('click', () => {
+              clicks++
+            }),
+          ]}
+        >
+          Inner
+        </button>
+      )
+    })
+
+    let Outer = clientEntry('/outer.js#Outer', function Outer(handle: Handle) {
+      updateOuter = () => {
+        void handle.update()
+      }
+      return () => (
+        <section>
+          <Inner />
+        </section>
+      )
+    })
+
+    document.body.innerHTML = await drain(renderToStream(<Outer />))
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/outer.js' && exportName === 'Outer') return Outer
+        if (moduleUrl === '/inner.js' && exportName === 'Inner') return Inner
+        throw new Error(`Unexpected client entry: ${moduleUrl}#${exportName}`)
+      },
+    })
+    await app.ready()
+
+    let button = document.querySelector('button')
+    invariant(button)
+
+    button.click()
+    expect(clicks).toBe(1)
+
+    updateOuter()
+    app.flush()
+    button.click()
+    expect(clicks).toBe(2)
+
+    app.dispose()
+  })
+
+  it('removes orphaned hydration end markers after full-document reloads of adjacent client entries', async () => {
+    let FragmentEntry = clientEntry(
+      '/js/fragment-entry.js#FragmentEntry',
+      function FragmentEntry() {
+        return () => <div />
+      },
+    )
+
+    async function renderInitialBody() {
+      return await drain(
+        renderToStream(
+          <div>
+            <FragmentEntry />
+            <FragmentEntry />
+          </div>,
+        ),
+      )
+    }
+
+    async function renderReloadDocument() {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <body>
+              <div>
+                <FragmentEntry />
+              </div>
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    document.body.innerHTML = await renderInitialBody()
+
+    let app = run({
+      loadModule: mock.fn(() => Promise.resolve(FragmentEntry)),
+      async resolveFrame(src: string) {
+        if (src === '/b') return await renderReloadDocument()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+
+    let topFrame = app.frames.top
+
+    topFrame.src = '/b'
+    await topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let bodyHtml = document.body.innerHTML
+    let hydrationStarts = bodyHtml.match(/<!--\s*rmx:h:/g)?.length ?? 0
+    let hydrationEnds = bodyHtml.match(/<!--\s*\/rmx:h\s*-->/g)?.length ?? 0
+
+    expect(hydrationStarts).toBe(hydrationEnds)
+
+    app.dispose()
+  })
+
+  it('keeps siblings inserted while obsolete client entries are disposed during document reloads', async () => {
+    let disposeCount = 0
+
+    let Entry = createDisposableEntry('/js/entry.js#Entry', () => {
+      disposeCount++
+    })
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderDocumentContent(createObsoleteEntryContent(Entry)),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/entry.js' && exportName === 'Entry') return Entry
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/destination') {
+          return await renderDocumentContent(createReplacementContent())
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    try {
+      await app.ready()
+
+      let topFrame = app.frames.top
+      topFrame.src = '/destination'
+      await topFrame.reload()
+
+      expect(document.querySelector('main')?.innerHTML).toBe(
+        '<section id="gallery">Gallery</section><section id="details">Details</section>',
+      )
+      expect(disposeCount).toBe(1)
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('keeps siblings inserted while obsolete client entries are disposed during frame reloads', async () => {
+    let disposeCount = 0
+
+    let Entry = createDisposableEntry('/js/frame-entry.js#FrameEntry', () => {
+      disposeCount++
+    })
+
+    let html = await drain(
+      renderToStream(<Frame name="target" src="/initial" />, {
+        resolveFrame(src) {
+          if (src === '/initial') {
+            return renderFrameContent(
+              <>
+                {createObsoleteEntryContent(Entry)}
+                <section id="trailing">Trailing</section>
+              </>,
+            )
+          }
+          throw new Error(`Unexpected server frame src: ${src}`)
+        },
+      }),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/frame-entry.js' && exportName === 'FrameEntry') return Entry
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src) {
+        if (src === '/destination') return renderFrameContent(createReplacementContent())
+        throw new Error(`Unexpected client frame src: ${src}`)
+      },
+    })
+
+    try {
+      await app.ready()
+
+      let trailingSibling = document.querySelector('#trailing')
+      invariant(trailingSibling)
+
+      let targetFrame = app.frames.get('target')
+      invariant(targetFrame)
+      targetFrame.src = '/destination'
+      await targetFrame.reload()
+
+      expect(document.body.innerHTML).toContain(
+        '<section id="gallery">Gallery</section><section id="details">Details</section>',
+      )
+      expect(document.querySelector('#details')).toBe(trailingSibling)
+      expect(disposeCount).toBe(1)
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('preserves hydrated client entries across full-document reloads', async () => {
+    let setupCount = 0
+    let removeCount = 0
+
+    function createRootEntryRender(handle: Handle<{ label: string }>) {
+      let count = 0
+      return () => (
+        <button
+          id="root-entry"
+          mix={[
+            on('click', () => {
+              count++
+              handle.update()
+            }),
+          ]}
+        >
+          {handle.props.label}: {count}
+        </button>
+      )
+    }
+
+    let ServerRootEntry = clientEntry(
+      '/js/root-entry.js#RootEntry',
+      function RootEntry(handle: Handle<{ label: string }>) {
+        return createRootEntryRender(handle)
+      },
+    )
+
+    let ClientRootEntry = clientEntry(
+      '/js/root-entry.js#RootEntry',
+      function RootEntry(handle: Handle<{ label: string }>) {
+        setupCount++
+        handle.signal.addEventListener('abort', () => {
+          removeCount++
+        })
+
+        return createRootEntryRender(handle)
+      },
+    )
+
+    async function renderDocument(label: string) {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <div>
+                <ServerRootEntry label={label} />
+              </div>
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderDocument('Initial'),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/root-entry.js' && exportName === 'RootEntry') return ClientRootEntry
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/root') return await renderDocument('Reloaded')
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+
+    let button = document.getElementById('root-entry') as HTMLButtonElement | null
+    invariant(button)
+    expect(button.textContent).toBe('Initial: 0')
+    expect(setupCount).toBe(1)
+
+    button.click()
+    app.flush()
+    expect(button.textContent).toBe('Initial: 1')
+
+    let topFrame = app.frames.top
+    topFrame.src = '/root'
+    await topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('root-entry')).toBe(button)
+    expect(button.textContent).toBe('Reloaded: 1')
+    expect(setupCount).toBe(1)
+    expect(removeCount).toBe(0)
+
+    app.dispose()
+  })
+
+  it('disposes hydrated client entries removed by full-document reloads', async () => {
+    let removeCount = 0
+
+    let ServerRemovedEntry = clientEntry(
+      '/js/removed-entry.js#RemovedEntry',
+      function RemovedEntry() {
+        return () => <button id="removed-entry">Removed entry</button>
+      },
+    )
+
+    let ClientRemovedEntry = clientEntry(
+      '/js/removed-entry.js#RemovedEntry',
+      function RemovedEntry(handle: Handle) {
+        handle.signal.addEventListener('abort', () => {
+          removeCount++
+        })
+
+        return () => <button id="removed-entry">Removed entry</button>
+      },
+    )
+
+    async function renderDocument(includeEntry: boolean) {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>{includeEntry ? <ServerRemovedEntry /> : <p id="replacement">Gone</p>}</main>
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(await renderDocument(true), 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/removed-entry.js' && exportName === 'RemovedEntry') {
+          return ClientRemovedEntry
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/without-entry') return await renderDocument(false)
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+
+    expect(document.getElementById('removed-entry')).toBeInstanceOf(HTMLButtonElement)
+    expect(removeCount).toBe(0)
+
+    let topFrame = app.frames.top
+    topFrame.src = '/without-entry'
+    await topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('removed-entry')).toBeNull()
+    expect(document.getElementById('replacement')?.textContent).toBe('Gone')
+    expect(removeCount).toBe(1)
+
+    app.dispose()
+  })
+
+  it('shows destination SSR while a different client entry module is loading', async () => {
+    let pageTitleDisposeCount = 0
+    let collectionGridDisposeCount = 0
+
+    let PageTitle = clientEntry('/js/page-title.js#PageTitle', function PageTitle(handle: Handle) {
+      handle.signal.addEventListener('abort', () => {
+        pageTitleDisposeCount++
+      })
+      return () => <h1 id="collection-title">All products</h1>
+    })
+
+    let CollectionGrid = clientEntry(
+      '/js/collection-grid.js#CollectionGrid',
+      function CollectionGrid(handle: Handle) {
+        handle.signal.addEventListener('abort', () => {
+          collectionGridDisposeCount++
+        })
+        return () => (
+          <section id="collection-grid">
+            <a href="/products/test-product">Test product</a>
+          </section>
+        )
+      },
+    )
+
+    let ProductDetails = clientEntry(
+      '/js/product-details.js#ProductDetails',
+      function ProductDetails(handle: Handle) {
+        let added = false
+        return () => (
+          <article id="product-details">
+            <h1>Test product</h1>
+            <button
+              type="button"
+              mix={on('click', () => {
+                added = true
+                handle.update()
+              })}
+            >
+              {added ? 'Added' : 'Add to cart'}
+            </button>
+          </article>
+        )
+      },
+    )
+
+    async function renderCollectionDocument() {
+      return await renderDocumentContent(
+        <>
+          <PageTitle />
+          <CollectionGrid />
+        </>,
+      )
+    }
+
+    async function renderProductDocument() {
+      return await renderDocumentContent(<ProductDetails />)
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderCollectionDocument(),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [productModuleRequested, markProductModuleRequested] = withResolvers<void>()
+    let [productModuleGate, allowProductModule] = withResolvers<void>()
+    let app = run({
+      async loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/page-title.js' && exportName === 'PageTitle') return PageTitle
+        if (moduleUrl === '/js/collection-grid.js' && exportName === 'CollectionGrid') {
+          return CollectionGrid
+        }
+        if (moduleUrl === '/js/product-details.js' && exportName === 'ProductDetails') {
+          markProductModuleRequested()
+          await productModuleGate
+          return ProductDetails
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/products/test-product') return await renderProductDocument()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    try {
+      await app.ready()
+      expect(document.getElementById('collection-title')).not.toBeNull()
+      expect(document.getElementById('collection-grid')).not.toBeNull()
+
+      let topFrame = app.frames.top
+      topFrame.src = '/products/test-product'
+      let reloadPromise = topFrame.reload()
+      await productModuleRequested
+
+      expect(document.getElementById('collection-title')).toBeNull()
+      expect(document.getElementById('collection-grid')).toBeNull()
+      expect(document.getElementById('product-details')).not.toBeNull()
+      expect(pageTitleDisposeCount).toBe(1)
+      expect(collectionGridDisposeCount).toBe(1)
+
+      allowProductModule()
+      await reloadPromise
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      let addButton = document.querySelector('#product-details button')
+      invariant(addButton instanceof HTMLButtonElement)
+      addButton.click()
+      app.flush()
+      expect(addButton.textContent).toBe('Added')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('shows the replacement entry styled while its module is loading', async () => {
+    // Regression test for the demo-to-demo navigation FOUC: a full-document
+    // reload commits a different client entry's server-rendered DOM before its
+    // module finishes loading, so its adopted server styles must already be live.
+
+    function rulePresent(selector: string): boolean {
+      return Array.from(document.adoptedStyleSheets).some((sheet) =>
+        Array.from(sheet.cssRules).some((rule) => rule.cssText.includes(`.${selector}`)),
+      )
+    }
+
+    function findClassByPrefix(host: ParentNode, idAttr: string): string | undefined {
+      let el = host.querySelector(`#${idAttr}`)
+      let classes = el?.getAttribute('class')?.split(/\s+/).filter(Boolean) ?? []
+      return classes.find((c) => c.startsWith('rmxc-'))
+    }
+
+    function adoptInitialDocument(html: string): void {
+      let parsed = new DOMParser().parseFromString(html, 'text/html')
+      let live = document.documentElement
+      while (live.firstChild) live.removeChild(live.firstChild)
+      for (let child of Array.from(parsed.documentElement.childNodes)) {
+        live.appendChild(document.importNode(child, true))
+      }
+    }
+
+    let aStyle = css({ color: 'rgb(10, 20, 30)' })
+    let bStyle = css({ color: 'rgb(40, 50, 60)' })
+
+    let EntryA = clientEntry('/js/entry-a.js#EntryA', function EntryA() {
+      return () => (
+        <div id="entry-a" mix={[aStyle]}>
+          A
+        </div>
+      )
+    })
+
+    let EntryB = clientEntry('/js/entry-b.js#EntryB', function EntryB() {
+      return () => (
+        <div id="entry-b" mix={[bStyle]}>
+          B
+        </div>
+      )
+    })
+
+    async function renderDocument(useA: boolean) {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>{useA ? <EntryA /> : <EntryB />}</main>
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    adoptInitialDocument(await renderDocument(true))
+
+    // Capture the SSR class names from the live document before hydration, so
+    // we can assert against the actual hashed selectors the css() calls
+    // produced rather than recomputing them.
+    let aSelector = findClassByPrefix(document, 'entry-a')
+    invariant(aSelector, 'expected SSR markup to carry an rmxc-* class for entry-a')
+
+    let [bModuleRequested, markBModuleRequested] = withResolvers<void>()
+    let [bModuleGate, allowBModule] = withResolvers<void>()
+    let app = run({
+      async loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/entry-a.js' && exportName === 'EntryA') return EntryA
+        if (moduleUrl === '/js/entry-b.js' && exportName === 'EntryB') {
+          markBModuleRequested()
+          await bModuleGate
+          return EntryB
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/b') return await renderDocument(false)
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    expect(rulePresent(aSelector)).toBe(true)
+
+    // Begin the reload but hold EntryB's module load to inspect its server DOM
+    // before hydration makes it interactive.
+    let topFrame = app.frames.top
+    topFrame.src = '/b'
+    let reloadSettled = false
+    let reloadPromise = topFrame.reload().then(() => {
+      reloadSettled = true
+    })
+    await bModuleRequested
+
+    // Pull EntryB's hashed selector from the SSR markup that replaceServerStyles
+    // just adopted into adoptedStyleSheets.
+    let bDocHtml = await renderDocument(false)
+    let bDoc = new DOMParser().parseFromString(bDocHtml, 'text/html')
+    let bSelectorFromB = findClassByPrefix(bDoc, 'entry-b')
+    invariant(bSelectorFromB, 'expected SSR markup to carry an rmxc-* class for entry-b')
+
+    expect(document.getElementById('entry-a')).toBeNull()
+    expect(document.getElementById('entry-b')).not.toBeNull()
+    expect(rulePresent(bSelectorFromB)).toBe(true)
+    expect(reloadSettled).toBe(false)
+
+    // Allow the module load to finish and hydrate the destination SSR.
+    allowBModule()
+    await reloadPromise
+
+    expect(document.getElementById('entry-a')).toBeNull()
+    expect(document.getElementById('entry-b')).not.toBeNull()
+    // entry-a's rule was server-adopted, so it is pinned and stays in the
+    // registry even after its mixin tears down — content-addressed rules are
+    // only ever unused, never wrong.
+    expect(rulePresent(aSelector)).toBe(true)
+    expect(rulePresent(bSelectorFromB)).toBe(true)
+
+    app.dispose()
+  })
+
+  it('does not start transitions when hydrating adopted server styles', async () => {
+    let knobStyle = css({
+      '--offset': '8px',
+      display: 'block',
+      width: '30px',
+      height: '18px',
+      '&::before': {
+        content: '""',
+        display: 'block',
+        width: '10px',
+        height: '14px',
+        transform: 'translateX(0)',
+        transition: 'transform 80ms ease, width 80ms ease',
+      },
+      '&[data-state="checked"]::before': {
+        width: '18px',
+        transform: 'translateX(var(--offset))',
+      },
+    })
+
+    let HydratedKnob = clientEntry(
+      '/assets/hydrated-knob.js#HydratedKnob',
+      function HydratedKnob() {
+        return () => <div id="hydrated-knob" data-state="checked" mix={[knobStyle]} />
+      },
+    )
+
+    let html = await drain(renderToStream(<HydratedKnob />))
+    document.body.innerHTML = html
+
+    let target = document.getElementById('hydrated-knob')
+    invariant(target instanceof HTMLDivElement)
+
+    let beforeTransform = getComputedStyle(target, '::before').transform
+    let beforeWidth = getComputedStyle(target, '::before').width
+    expect(beforeTransform).toBe('matrix(1, 0, 0, 1, 8, 0)')
+    expect(beforeWidth).toBe('18px')
+
+    let transitionRuns: string[] = []
+    target.addEventListener('transitionrun', (event) => {
+      let transition = event as TransitionEvent
+      transitionRuns.push(`${transition.pseudoElement}:${transition.propertyName}`)
+    })
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/hydrated-knob.js' && exportName === 'HydratedKnob') {
+          return HydratedKnob
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+    })
+
+    await app.ready()
+    await waitForTransitionWindow()
+
+    expect(getComputedStyle(target, '::before').transform).toBe(beforeTransform)
+    expect(getComputedStyle(target, '::before').width).toBe(beforeWidth)
+    expect(transitionRuns).toEqual([])
+
+    app.dispose()
+  })
+
+  it('disposes named frames replaced by client entries during full-document reloads', async () => {
+    let readNamedFrame: (() => unknown) | undefined
+
+    let Probe = clientEntry('/js/probe.js#Probe', function Probe(handle: Handle) {
+      readNamedFrame = () => handle.frames.get('replace-me')
+      return () => <button id="probe">Probe</button>
+    })
+
+    let Replacement = clientEntry('/js/replacement.js#Replacement', function Replacement() {
+      return () => <p id="replacement">Replacement</p>
+    })
+
+    async function renderDocument(includeFrame: boolean) {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Probe />
+                {includeFrame ? (
+                  <Frame
+                    name="replace-me"
+                    src="/frame"
+                    fallback={<span id="frame-fallback">Loading frame...</span>}
+                  />
+                ) : (
+                  <Replacement />
+                )}
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/frame') return '<p id="frame-content">Frame content</p>'
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(await renderDocument(true), 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/probe.js' && exportName === 'Probe') return Probe
+        if (moduleUrl === '/js/replacement.js' && exportName === 'Replacement') return Replacement
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/without-frame') return await renderDocument(false)
+        if (src === '/frame') return '<p id="frame-content">Frame content</p>'
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+
+    invariant(readNamedFrame)
+    expect(readNamedFrame()).toBeDefined()
+
+    let topFrame = app.frames.top
+    topFrame.src = '/without-frame'
+    await topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('replacement')?.textContent).toBe('Replacement')
+    expect(readNamedFrame()).toBeUndefined()
+
+    app.dispose()
+  })
+
+  it('hydrates ready modules before slower modules while ready() stays pending', async () => {
+    let Fast = clientEntry('/js/fast.js#Fast', function Fast(handle: Handle) {
+      let clicked = false
+      return () => (
+        <button
+          id="fast"
+          mix={[
+            on('click', () => {
+              clicked = true
+              handle.update()
+            }),
+          ]}
+        >
+          {clicked ? 'Fast!' : 'Fast'}
+        </button>
+      )
+    })
+
+    let Slow = clientEntry('/js/slow.js#Slow', function Slow(handle: Handle) {
+      let clicked = false
+      return () => (
+        <button
+          id="slow"
+          mix={[
+            on('click', () => {
+              clicked = true
+              handle.update()
+            }),
+          ]}
+        >
+          {clicked ? 'Slow!' : 'Slow'}
+        </button>
+      )
+    })
+
+    let html = await drain(
+      renderToStream(
+        <div>
+          <Fast />
+          <Slow />
+        </div>,
+      ),
+    )
+    document.body.innerHTML = html
+
+    let [slowModulePromise, resolveSlowModule] = withResolvers<Function>()
+    let loadModule = mock.fn((moduleUrl: string, exportName: string) => {
+      if (moduleUrl === '/js/fast.js' && exportName === 'Fast') return Fast
+      if (moduleUrl === '/js/slow.js' && exportName === 'Slow') return slowModulePromise
+      throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
+    })
+
+    let app = run({ loadModule })
+
+    let readySettled = false
+    let readyPromise = app.ready().then(() => {
+      readySettled = true
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let fastButton = document.getElementById('fast')
+    let slowButton = document.getElementById('slow')
+    invariant(fastButton instanceof HTMLButtonElement)
+    invariant(slowButton instanceof HTMLButtonElement)
+
+    fastButton.click()
+    app.flush()
+    expect(fastButton.textContent).toBe('Fast!')
+
+    slowButton.click()
+    app.flush()
+    expect(slowButton.textContent).toBe('Slow')
+
+    expect(readySettled).toBe(false)
+
+    resolveSlowModule(Slow)
+    await readyPromise
+
+    slowButton.click()
+    app.flush()
+    expect(slowButton.textContent).toBe('Slow!')
+
+    app.dispose()
+  })
+
+  it('shows updated SSR when reloading an entry whose initial module is still loading', async () => {
+    let reloadPromise: Promise<AbortSignal> | undefined
+    let markFastHydrated: (() => void) | undefined
+    let Fast = clientEntry('/js/partial-fast.js#Fast', function Fast(handle: Handle) {
+      markFastHydrated?.()
+      markFastHydrated = undefined
+      return () => (
+        <button
+          id="partial-fast"
+          type="button"
+          mix={on('click', () => {
+            reloadPromise = handle.frame.reload()
+          })}
+        >
+          Reload
+        </button>
+      )
+    })
+
+    let Slow = clientEntry(
+      '/js/partial-slow.js#Slow',
+      function Slow(handle: Handle<{ label: string }>) {
+        return () => <p id="partial-slow">{handle.props.label}</p>
+      },
+    )
+
+    async function renderDocument(label: string) {
+      return await renderDocumentContent(
+        <>
+          <Fast />
+          <Slow label={label} />
+        </>,
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderDocument('Initial'),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [fastHydrated, resolveFastHydrated] = withResolvers<void>()
+    markFastHydrated = resolveFastHydrated
+    let [slowModulePromise, resolveSlowModule] = withResolvers<Function>()
+    let slowLoadCount = 0
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/partial-fast.js' && exportName === 'Fast') return Fast
+        if (moduleUrl === '/js/partial-slow.js' && exportName === 'Slow') {
+          slowLoadCount++
+          return slowModulePromise
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src) {
+        if (src === '/reloaded') return await renderDocument('Reloaded')
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    try {
+      await fastHydrated
+
+      let fastButton = document.getElementById('partial-fast')
+      invariant(fastButton instanceof HTMLButtonElement)
+      let initialSlow = document.getElementById('partial-slow')
+      invariant(initialSlow instanceof HTMLParagraphElement)
+
+      app.frames.top.src = '/reloaded'
+      let reloadedSlowReady = waitForElement(
+        '#partial-slow',
+        (element) => element !== initialSlow && element.textContent === 'Reloaded',
+      )
+      fastButton.click()
+      invariant(reloadPromise)
+      let reloadSettled = false
+      void reloadPromise.then(() => {
+        reloadSettled = true
+      })
+      await reloadedSlowReady
+
+      let reloadedSlow = document.getElementById('partial-slow')
+      invariant(reloadedSlow instanceof HTMLParagraphElement)
+      expect(reloadedSlow).not.toBe(initialSlow)
+      expect(reloadedSlow.textContent).toBe('Reloaded')
+      expect(slowLoadCount).toBe(1)
+      expect(reloadSettled).toBe(false)
+
+      resolveSlowModule(Slow)
+      await Promise.all([reloadPromise, app.ready()])
+      expect(document.getElementById('partial-slow')?.textContent).toBe('Reloaded')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('shows updated SSR when reloading a named frame entry whose module is still loading', async () => {
+    let entrySetupCount = 0
+    let Slow = clientEntry(
+      '/js/named-partial-slow.js#Slow',
+      function Slow(handle: Handle<{ label: string }>) {
+        entrySetupCount++
+        return () => <p id="named-partial-slow">{handle.props.label}</p>
+      },
+    )
+
+    async function renderEntry(label: string) {
+      return await drain(renderToStream(<Slow label={label} />))
+    }
+
+    let initialHtml = await drain(
+      renderToStream(<Frame name="partial-target" src="/initial" />, {
+        resolveFrame: () => renderEntry('Initial'),
+      }),
+    )
+    document.body.innerHTML = initialHtml
+
+    let [slowModulePromise, resolveSlowModule] = withResolvers<Function>()
+    let [moduleRequested, markModuleRequested] = withResolvers<void>()
+    let slowLoadCount = 0
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/named-partial-slow.js' && exportName === 'Slow') {
+          slowLoadCount++
+          markModuleRequested()
+          return slowModulePromise
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src, options) {
+        expect(options?.target).toBe('partial-target')
+        if (src === '/reloaded') return await renderEntry('Reloaded')
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    try {
+      await moduleRequested
+
+      let initialSlow = document.getElementById('named-partial-slow')
+      invariant(initialSlow instanceof HTMLParagraphElement)
+      let targetFrame = app.frames.get('partial-target')
+      invariant(targetFrame)
+
+      targetFrame.src = '/reloaded'
+      let reloadedSlowReady = waitForElement(
+        '#named-partial-slow',
+        (element) => element !== initialSlow && element.textContent === 'Reloaded',
+      )
+      let reloadSettled = false
+      let reloadPromise = targetFrame.reload().then(() => {
+        reloadSettled = true
+      })
+      await reloadedSlowReady
+
+      let reloadedSlow = document.getElementById('named-partial-slow')
+      invariant(reloadedSlow instanceof HTMLParagraphElement)
+      expect(reloadedSlow).not.toBe(initialSlow)
+      expect(reloadedSlow.textContent).toBe('Reloaded')
+      expect(slowLoadCount).toBe(1)
+      expect(reloadSettled).toBe(false)
+
+      let setupCountBeforeHydration = entrySetupCount
+      resolveSlowModule(Slow)
+      await reloadPromise
+
+      expect(document.getElementById('named-partial-slow')?.textContent).toBe('Reloaded')
+      expect(entrySetupCount).toBe(setupCountBeforeHydration + 1)
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('handles complex props', async () => {
+    let Card = clientEntry(
+      '/js/card.js#Card',
+      function Card(
+        handle: Handle<{ title: string; count: number; enabled: boolean; items: string[] }>,
+      ) {
+        return () => (
+          <div>
+            <h2>{handle.props.title}</h2>
+            <p>Count: {handle.props.count}</p>
+            <p>Enabled: {String(handle.props.enabled)}</p>
+            <ul>
+              {handle.props.items.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )
+      },
+    )
+
+    let stream = renderToStream(
+      <Card title="Test" count={42} enabled={true} items={['one', 'two', 'three']} />,
+    )
+    let html = await drain(stream)
+
+    document.body.innerHTML = html
+
+    let loadModule = mock.fn(() => Promise.resolve(Card))
+
+    let frame = run({ loadModule })
+    await frame.ready()
+
+    expect(loadModule).toHaveBeenCalledWith('/js/card.js', 'Card')
+    expect(document.querySelector('h2')?.textContent).toBe('Test')
+    expect(document.querySelector('p')?.textContent).toBe('Count: 42')
+    expect(document.querySelectorAll('li')).toHaveLength(3)
+
+    frame.dispose()
+  })
+
+  it('ready() does not wait for hydration markers from later frame templates', async () => {
+    let Initial = clientEntry('/js/initial.js#Initial', function Initial(handle: Handle) {
+      let clicked = false
+      return () => (
+        <button
+          id="initial"
+          mix={[
+            on('click', () => {
+              clicked = true
+              handle.update()
+            }),
+          ]}
+        >
+          {clicked ? 'Initial!' : 'Initial'}
+        </button>
+      )
+    })
+
+    let Late = clientEntry('/js/late.js#Late', function Late(handle: Handle) {
+      let clicked = false
+      return () => (
+        <button
+          id="late"
+          mix={[
+            on('click', () => {
+              clicked = true
+              handle.update()
+            }),
+          ]}
+        >
+          {clicked ? 'Late!' : 'Late'}
+        </button>
+      )
+    })
+
+    let pageStream = renderToStream(
+      <div>
+        <Initial />
+        <Frame src="/late-frame" fallback={<span id="frame-fallback">Loading…</span>} />
+      </div>,
+      { resolveFrame: () => new Promise<string>(() => {}) },
+    )
+    let pageChunks = readChunks(pageStream)
+    let first = await pageChunks.next()
+    invariant(!first.done)
+    document.body.innerHTML = first.value
+
+    let frameId = getCommentMarkerId(first.value, 'rmx:f:')
+    let [lateModulePromise, resolveLateModule] = withResolvers<Function>()
+
+    let loadModule = mock.fn((moduleUrl: string, exportName: string) => {
+      if (moduleUrl === '/js/initial.js' && exportName === 'Initial') return Initial
+      if (moduleUrl === '/js/late.js' && exportName === 'Late') return lateModulePromise
+      throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
+    })
+
+    let app = run({ loadModule })
+    await app.ready()
+
+    // Only initial adopted-document markers block ready().
+    expect(loadModule).toHaveBeenCalledTimes(1)
+
+    let template = document.createElement('template')
+    template.id = frameId
+    template.innerHTML = await drain(renderToStream(<Late />))
+    document.body.appendChild(template)
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Late template markers hydrate after ready() and are not part of initial barrier.
+    expect(loadModule).toHaveBeenCalledTimes(2)
+
+    let lateButton = document.getElementById('late')
+    invariant(lateButton instanceof HTMLButtonElement)
+    lateButton.click()
+    app.flush()
+    expect(lateButton.textContent).toBe('Late')
+
+    resolveLateModule(Late)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    lateButton.click()
+    app.flush()
+    expect(lateButton.textContent).toBe('Late!')
+
+    app.dispose()
+  })
+
+  it('does nothing when no rmx-data script exists', async () => {
+    document.body.innerHTML = '<div>No hydration here</div>'
+
+    let loadModule = mock.fn()
+
+    let frame = run({ loadModule })
+    await frame.ready()
+
+    expect(loadModule).not.toHaveBeenCalled()
+
+    frame.dispose()
+  })
+
+  it('does nothing when rmx-data has no hydration data', async () => {
+    document.body.innerHTML = `
+      <div>Static content</div>
+      <script type="application/json" id="rmx-data">{}</script>
+    `
+
+    let loadModule = mock.fn()
+
+    let frame = run({ loadModule })
+    await frame.ready()
+
+    expect(loadModule).not.toHaveBeenCalled()
+
+    frame.dispose()
+  })
+
+  it('adopts existing DOM nodes during hydration', async () => {
+    let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
+      return () => (
+        <div>
+          <span>Static text</span>
+        </div>
+      )
+    })
+
+    let stream = renderToStream(<Counter />)
+    let html = await drain(stream)
+
+    document.body.innerHTML = html
+
+    let existingSpan = document.querySelector('span')
+    expect(existingSpan).toBeTruthy()
+
+    let loadModule = mock.fn(() => Promise.resolve(Counter))
+
+    let frame = run({ loadModule })
+    await frame.ready()
+
+    let spanAfterHydration = document.querySelector('span')
+    expect(spanAfterHydration).toBe(existingSpan)
+
+    frame.dispose()
+  })
+
+  it('replaces pending frame regions when streamed templates arrive', async () => {
+    let stream = renderToStream(
+      <div>
+        <h1>Title</h1>
+        <Frame src="/x" fallback={<nav>Loading...</nav>} />
+        <p>Main</p>
+      </div>,
+      { resolveFrame: () => '<nav>Loaded</nav>' },
+    )
+
+    let chunks = readChunks(stream)
+    let first = await chunks.next()
+    invariant(!first.done)
+    document.body.innerHTML = first.value
+
+    let h1 = document.querySelector('h1')
+    let p = document.querySelector('p')
+    let nav = document.querySelector('nav')
+    invariant(h1 && p && nav)
+    expect(nav.textContent).toBe('Loading...')
+
+    let frame = run({ loadModule: mock.fn() })
+    await frame.ready()
+
+    let second = await chunks.next()
+    invariant(!second.done)
+    document.body.insertAdjacentHTML('beforeend', second.value)
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.querySelector('h1')).toBe(h1)
+    expect(document.querySelector('p')).toBe(p)
+    expect(document.querySelector('nav')).toBe(nav)
+    expect(nav.textContent).toBe('Loaded')
+
+    frame.dispose()
+  })
+
+  it('renders every sibling when an observed frame template is parsed in two parts', async (t) => {
+    await renderSplitFrameTemplate(t, 'observer')
+
+    expect(
+      Array.from(document.querySelectorAll('[data-item]'), (node) => node.textContent),
+    ).toEqual(['First', 'Second'])
+    expect(document.querySelector('#fallback')).toBe(null)
+  })
+
+  it('renders every sibling when hydration starts during frame template parsing', async (t) => {
+    await renderSplitFrameTemplate(t, 'hydrate')
+
+    expect(
+      Array.from(document.querySelectorAll('[data-item]'), (node) => node.textContent),
+    ).toEqual(['First', 'Second'])
+    expect(document.querySelector('#fallback')).toBe(null)
+  })
+
+  it('waits for document parsing to finish when a frame template has no end marker', async (t) => {
+    let chunks = readChunks(
+      renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame src="/items" fallback={<p id="fallback">Loading...</p>} />
+          </body>
+        </html>,
+        { resolveFrame: () => '<p id="loaded">Loaded</p>' },
+      ),
+    )
+    let shell = await chunks.next()
+    let template = await chunks.next()
+    invariant(!shell.done && !template.done)
+
+    document.open()
+    document.write(shell.value)
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => {
+      app.dispose()
+      document.close()
+    })
+    await app.ready()
+
+    document.write(template.value.replace(`<!--${FRAME_TEMPLATE_END_MARKER}-->`, ''))
+    document.write('<div>Following sibling</div>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.readyState).toBe('loading')
+    expect(document.querySelector('#fallback')?.textContent).toBe('Loading...')
+    expect(document.querySelector('#loaded')).toBe(null)
+
+    document.close()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.readyState).not.toBe('loading')
+    expect(document.querySelector('#loaded')?.textContent).toBe('Loaded')
+    expect(document.querySelector('#fallback')).toBe(null)
+  })
+
+  it('preserves every streamed frame item when a script appends a sibling mid-template', async (t) => {
+    await renderSplitFrameTemplate(t, 'observer', async () => {
+      document.body.append(document.createElement('div'))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    document.close()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(
+      Array.from(document.querySelectorAll('[data-item]'), (node) => node.textContent),
+    ).toEqual(['First', 'Second'])
+    expect(document.querySelector('#fallback')).toBe(null)
+  })
+
+  it('preserves pre-existing application templates while waiting for a streamed frame', async (t) => {
+    let chunks = readChunks(
+      renderToStream(
+        <div>
+          <template id="row-template">
+            <p>Application row</p>
+          </template>
+          <Frame src="/items" fallback={<p id="fallback">Loading...</p>} />
+        </div>,
+        { resolveFrame: () => '<p id="loaded">Loaded</p>' },
+      ),
+    )
+    let shell = await chunks.next()
+    invariant(!shell.done)
+    document.body.innerHTML = shell.value
+    let rowTemplate = document.querySelector('#row-template')
+    invariant(rowTemplate instanceof HTMLTemplateElement)
+
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    await app.ready()
+    expect(document.querySelector('#fallback')?.textContent).toBe('Loading...')
+
+    let template = await chunks.next()
+    invariant(!template.done)
+    document.body.insertAdjacentHTML('beforeend', template.value)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.querySelector('#loaded')?.textContent).toBe('Loaded')
+    expect(document.querySelector('#row-template')).toBe(rowTemplate)
+    expect(rowTemplate.content.querySelector('p')?.textContent).toBe('Application row')
+  })
+
+  it('merges hydration data across multiple rmx-data scripts', async () => {
+    function A(handle: Handle) {
+      let clicked = false
+      return () => (
+        <button
+          id="a"
+          mix={[
+            on('click', () => {
+              clicked = true
+              handle.update()
+            }),
+          ]}
+        >
+          {clicked ? 'A!' : 'A'}
+        </button>
+      )
+    }
+
+    function B(handle: Handle) {
+      let clicked = false
+      return () => (
+        <button
+          id="b"
+          mix={[
+            on('click', () => {
+              clicked = true
+              handle.update()
+            }),
+          ]}
+        >
+          {clicked ? 'B!' : 'B'}
+        </button>
+      )
+    }
+
+    document.body.innerHTML = `
+      <!-- rmx:h:h1 --><button id="a">A</button><!-- /rmx:h -->
+      <!-- rmx:h:h2 --><button id="b">B</button><!-- /rmx:h -->
+      <script type="application/json" id="rmx-data">
+        {"h":{"h1":{"moduleUrl":"/a.js","exportName":"A","props":{}}}}
+      </script>
+      <script type="application/json" id="rmx-data">
+        {"h":{"h2":{"moduleUrl":"/b.js","exportName":"B","props":{}}}}
+      </script>
+    `
+
+    let loadModule = mock.fn((moduleUrl: string, exportName: string) => {
+      if (moduleUrl === '/a.js' && exportName === 'A') return A
+      if (moduleUrl === '/b.js' && exportName === 'B') return B
+      throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
+    })
+
+    let frame = run({ loadModule })
+    await frame.ready()
+
+    expect(loadModule).toHaveBeenCalledTimes(2)
+
+    let a = document.getElementById('a')
+    let b = document.getElementById('b')
+    invariant(a instanceof HTMLButtonElement)
+    invariant(b instanceof HTMLButtonElement)
+
+    expect(a.textContent).toBe('A')
+    expect(b.textContent).toBe('B')
+
+    a.click()
+    b.click()
+    frame.flush()
+
+    expect(a.textContent).toBe('A!')
+    expect(b.textContent).toBe('B!')
+
+    frame.dispose()
+  })
+
+  it('ignores prototype-polluting keys when merging rmx-data scripts', async () => {
+    function A() {
+      return () => <button id="a">A</button>
+    }
+
+    document.body.innerHTML = `
+      <!-- rmx:h:h1 --><button id="a">A</button><!-- /rmx:h -->
+      <!-- rmx:h:h2 --><button id="b">B</button><!-- /rmx:h -->
+      <script type="application/json" id="rmx-data">
+        {"h":{"__proto__":{"h2":{"moduleUrl":"/evil.js","exportName":"Evil","props":{}}}}}
+      </script>
+      <script type="application/json" id="rmx-data">
+        {"h":{"h1":{"moduleUrl":"/a.js","exportName":"A","props":{}}}}
+      </script>
+    `
+
+    let loadModule = mock.fn((moduleUrl: string, exportName: string) => {
+      if (moduleUrl === '/a.js' && exportName === 'A') return A
+      throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
+    })
+
+    let frame = run({ loadModule })
+    await frame.ready()
+
+    expect(loadModule).toHaveBeenCalledTimes(1)
+    expect(loadModule).toHaveBeenCalledWith('/a.js', 'A')
+
+    frame.dispose()
+  })
+
+  it('reloads a frame region and preserves static DOM nodes', async () => {
+    let renderCount = 0
+
+    let reload: undefined | (() => Promise<AbortSignal>)
+
+    let ReloadButton = clientEntry('/assets/reload.js#Reload', function Reload(handle: Handle) {
+      reload = () => handle.frame.reload()
+      return () => <button>Reload</button>
+    })
+
+    async function renderTimeFragment() {
+      renderCount++
+      let stream = renderToStream(
+        <section>
+          <h2>Activity</h2>
+          <p>Server: {renderCount}</p>
+          <ul>
+            <li>First</li>
+            <li>Second</li>
+          </ul>
+          <ReloadButton />
+        </section>,
+        {
+          onError(error) {
+            console.error(error)
+          },
+        },
+      )
+      return await drain(stream)
+    }
+
+    let stream = renderToStream(
+      <main>
+        <Frame src="/time" fallback={<div>Loading…</div>} />
+      </main>,
+      { resolveFrame: renderTimeFragment },
+    )
+
+    let html = await drain(stream)
+    document.body.innerHTML = html
+
+    // Ensure template exists so the pending frame can render immediately.
+    let frameId = getCommentMarkerId(html, 'rmx:f:')
+    expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
+
+    let clientFrame = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload.js' && exportName === 'Reload') return ReloadButton
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame: renderTimeFragment,
+    })
+
+    await clientFrame.ready()
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.querySelector('p')?.textContent).toBe('Server: 1')
+    invariant(reload)
+
+    // Capture references to every element before reload.
+    let section = document.querySelector('section')
+    let heading = document.querySelector('h2')
+    let paragraph = document.querySelector('p')
+    let list = document.querySelector('ul')
+    let items = document.querySelectorAll('li')
+    let button = document.querySelector('button')
+    invariant(section && heading && paragraph && list && button)
+    invariant(items.length === 2)
+
+    await reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Dynamic text updated.
+    expect(document.querySelector('p')?.textContent).toBe('Server: 2')
+
+    // Static elements are the exact same DOM nodes — not replaced.
+    expect(document.querySelector('section')).toBe(section)
+    expect(document.querySelector('h2')).toBe(heading)
+    expect(document.querySelector('p')).toBe(paragraph)
+    expect(document.querySelector('ul')).toBe(list)
+    expect(document.querySelectorAll('li')[0]).toBe(items[0])
+    expect(document.querySelectorAll('li')[1]).toBe(items[1])
+    expect(document.querySelector('button')).toBe(button)
+
+    // Static text preserved.
+    expect(heading.textContent).toBe('Activity')
+    expect(items[0].textContent).toBe('First')
+    expect(items[1].textContent).toBe('Second')
+
+    clientFrame.dispose()
+  })
+
+  it('clears frame content when reload resolves to an empty stream', async () => {
+    let reload: undefined | (() => Promise<AbortSignal>)
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-empty.js#ReloadEmpty',
+      function ReloadEmpty(handle: Handle) {
+        reload = () => handle.frame.reload()
+        return () => <button id="reload-empty">Reload empty</button>
+      },
+    )
+
+    async function renderInitial(): Promise<string> {
+      return await drain(
+        renderToStream(
+          <section id="frame-content">
+            <p id="frame-value">Initial content</p>
+            <ReloadButton />
+          </section>,
+        ),
+      )
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/reload-empty" fallback={<div>Loading…</div>} />
+        </main>,
+        { resolveFrame: renderInitial },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let clientFrame = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload-empty.js' && exportName === 'ReloadEmpty') {
+          return ReloadButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src !== '/reload-empty') throw new Error(`Unexpected frame src: ${src}`)
+        return new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.close()
+          },
+        })
+      },
+    })
+
+    await clientFrame.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(document.getElementById('frame-value')?.textContent).toBe('Initial content')
+
+    invariant(reload)
+    await reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('frame-content')).toBeNull()
+    expect(document.getElementById('frame-value')).toBeNull()
+
+    clientFrame.dispose()
+  })
+
+  it('ignores updates from a client entry removed by a frame reload', async () => {
+    let pending = false
+    let showCartItems = true
+    let removeLastItem: undefined | (() => Promise<void>)
+
+    let CartItems = clientEntry(
+      '/assets/cart-items.js#CartItems',
+      function CartItems(handle: Handle) {
+        removeLastItem = async () => {
+          pending = true
+          await handle.update()
+          showCartItems = false
+          await handle.frame.reload()
+          pending = false
+          handle.update()
+        }
+
+        return () => (
+          <>
+            {pending ? <p id="cart-pending">Updating your cart...</p> : null}
+            <table id="cart-items">
+              <tbody>
+                <tr>
+                  <td>Book</td>
+                  <td>
+                    <button>Remove</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div id="cart-total">Total: $16.99</div>
+          </>
+        )
+      },
+    )
+
+    async function renderCartItems(): Promise<string> {
+      return await drain(
+        renderToStream(showCartItems ? <CartItems /> : <p id="empty-cart">Your cart is empty.</p>),
+      )
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/cart-items" />
+        </main>,
+        { resolveFrame: renderCartItems },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let errors: unknown[] = []
+    let clientFrame = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/cart-items.js' && exportName === 'CartItems') {
+          return CartItems
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/cart-items') return renderCartItems()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+    clientFrame.addEventListener('error', (event) => {
+      errors.push(event.error)
+    })
+
+    await clientFrame.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('cart-items')).toBeInstanceOf(HTMLElement)
+    invariant(removeLastItem)
+
+    await removeLastItem()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('cart-items')).toBeNull()
+    expect(document.getElementById('empty-cart')?.textContent).toBe('Your cart is empty.')
+    expect(errors).toEqual([])
+
+    clientFrame.dispose()
+  })
+
+  it('looks up named adjacent frames from handle.frames.get(name)', async () => {
+    let summaryRenderCount = 0
+    let reloadSummary: undefined | (() => Promise<void>)
+
+    let RowAction = clientEntry(
+      '/assets/row-action.js#RowAction',
+      function RowAction(handle: Handle) {
+        reloadSummary = async () => {
+          expect(handle.frames.get('missing-frame')).toBeUndefined()
+          await handle.frames.get('cart-summary')?.reload()
+        }
+        return () => <button id="row-action">Update</button>
+      },
+    )
+
+    async function resolveFrame(src: string) {
+      if (src === '/summary') {
+        summaryRenderCount++
+        let stream = renderToStream(<p id="summary">Summary: {summaryRenderCount}</p>)
+        return await drain(stream)
+      }
+      if (src === '/row') {
+        let stream = renderToStream(<RowAction />)
+        return await drain(stream)
+      }
+      return '<p>Unexpected frame</p>'
+    }
+
+    let stream = renderToStream(
+      <main>
+        <Frame name="cart-summary" src="/summary" fallback={<div>Loading summary…</div>} />
+        <Frame src="/row" fallback={<div>Loading row…</div>} />
+      </main>,
+      { resolveFrame },
+    )
+
+    let html = await drain(stream)
+    document.body.innerHTML = html
+
+    let clientFrame = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/row-action.js' && exportName === 'RowAction') return RowAction
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+
+    await clientFrame.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.querySelector('#summary')?.textContent).toBe('Summary: 1')
+
+    invariant(reloadSummary)
+    await reloadSummary()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.querySelector('#summary')?.textContent).toBe('Summary: 2')
+
+    clientFrame.dispose()
+  })
+
+  it('returns undefined when an internal named frame lookup misses', async () => {
+    document.body.innerHTML = await drain(renderToStream(<main />))
+
+    let app = run({ loadModule: mock.fn() })
+
+    try {
+      await app.ready()
+      expect(getNamedFrame('missing-frame')).toBeUndefined()
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('restores the previous named frame when the latest duplicate unmounts', async () => {
+    let showLatest = true
+    let getDuplicateFrame: undefined | (() => ReturnType<Handle['frames']['get']>)
+    let removeLatestFrame: undefined | (() => Promise<AbortSignal>)
+
+    let DuplicateFrames = clientEntry(
+      '/assets/duplicate-frames.js#DuplicateFrames',
+      function DuplicateFrames(handle: Handle) {
+        getDuplicateFrame = () => handle.frames.get('duplicate')
+        removeLatestFrame = () => {
+          showLatest = false
+          return handle.update()
+        }
+
+        return () => (
+          <>
+            <Frame name="duplicate" src="/first" />
+            {showLatest ? <Frame name="duplicate" src="/latest" /> : null}
+          </>
+        )
+      },
+    )
+
+    let resolveFrame = (src: string) => `<p>${src}</p>`
+    let html = await drain(renderToStream(<DuplicateFrames />, { resolveFrame }))
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/duplicate-frames.js' && exportName === 'DuplicateFrames') {
+          return DuplicateFrames
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+
+    try {
+      await app.ready()
+      invariant(getDuplicateFrame)
+      invariant(removeLatestFrame)
+      expect(getDuplicateFrame()?.src).toBe('/latest')
+
+      await removeLatestFrame()
+
+      expect(getDuplicateFrame()?.src).toBe('/first')
+    } finally {
+      app.dispose()
+    }
+  })
+
+  it('exposes the root frame as handle.frames.top', async () => {
+    let assertTopFrame: undefined | (() => void)
+
+    let ReloadTop = clientEntry(
+      '/assets/reload-top.js#ReloadTop',
+      function ReloadTop(handle: Handle) {
+        assertTopFrame = () => {
+          expect(handle.frames.top).not.toBe(handle.frame)
+        }
+        return () => <button id="reload-top">Check top frame</button>
+      },
+    )
+
+    async function renderInner() {
+      let stream = renderToStream(<ReloadTop />)
+      return await drain(stream)
+    }
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/inner" />
+        </main>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/inner') return renderInner()
+            throw new Error(`Unexpected page frame src: ${src}`)
+          },
+        },
+      ),
+    )
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload-top.js' && exportName === 'ReloadTop') {
+          return ReloadTop
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/inner') {
+          return await renderInner()
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(assertTopFrame)
+    assertTopFrame()
+    app.dispose()
+  })
+
+  it('updates and reloads the top frame for ordinary navigation', async (t) => {
+    let fixture = await setupFrameNavigationTest(t)
+    let destinationUrl = new URL('/next', window.location.href).href
+
+    await navigate(destinationUrl, {
+      history: 'replace',
+      resetScroll: false,
+    })
+
+    expect(window.location.href).toBe(destinationUrl)
+    expect(fixture.frames().top.src).toBe(window.location.href)
+    expect(fixture.requests).toEqual([{ src: destinationUrl, target: undefined }])
+  })
+
+  it('reloads only the target frame using the public destination without data-rmx-src', async (t) => {
+    let fixture = await setupFrameNavigationTest(t)
+    let destinationUrl = new URL('/destination', window.location.href).href
+
+    await navigateWithLink(destinationUrl, { target: 'target' })
+
+    let frames = fixture.frames()
+    expect(window.location.href).toBe(destinationUrl)
+    expect(frames.top.src).toBe(window.location.href)
+    expect(frames.target.src).toBe(destinationUrl)
+    expect(fixture.requests).toEqual([{ src: destinationUrl, target: 'target' }])
+  })
+
+  it('preserves a targeted src while later top frame reloads use the public destination', async (t) => {
+    let fixture = await setupFrameNavigationTest(t)
+    let destinationUrl = new URL('/destination', window.location.href).href
+    let targetSrc = '/target-frame'
+
+    await navigateWithLink(destinationUrl, { target: 'target', src: targetSrc })
+
+    let frames = fixture.frames()
+    expect(window.location.href).toBe(destinationUrl)
+    expect(frames.top.src).toBe(window.location.href)
+    expect(frames.target.src).toBe(targetSrc)
+    expect(fixture.requests).toEqual([{ src: targetSrc, target: 'target' }])
+
+    await frames.top.reload()
+    expect(fixture.requests).toEqual([
+      { src: targetSrc, target: 'target' },
+      { src: destinationUrl, target: undefined },
+    ])
+  })
+
+  it('restores top and targeted frame sources during back and forward traversal', async (t) => {
+    let fixture = await setupFrameNavigationTest(t)
+    let firstDestinationUrl = new URL('/first', window.location.href).href
+    let secondDestinationUrl = new URL('/second', window.location.href).href
+    let firstTargetSrc = '/first-frame'
+    let secondTargetSrc = '/second-frame'
+
+    await navigate(firstDestinationUrl, {
+      target: 'target',
+      src: firstTargetSrc,
+      resetScroll: false,
+    })
+    await navigate(secondDestinationUrl, {
+      target: 'target',
+      src: secondTargetSrc,
+      resetScroll: false,
+    })
+    await window.navigation.back().finished
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let frames = fixture.frames()
+    expect(window.location.href).toBe(firstDestinationUrl)
+    expect(frames.top.src).toBe(window.location.href)
+    expect(frames.target.src).toBe(firstTargetSrc)
+
+    await window.navigation.forward().finished
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    frames = fixture.frames()
+    expect(window.location.href).toBe(secondDestinationUrl)
+    expect(frames.top.src).toBe(window.location.href)
+    expect(frames.target.src).toBe(secondTargetSrc)
+    expect(fixture.requests).toEqual([
+      { src: firstTargetSrc, target: 'target' },
+      { src: secondTargetSrc, target: 'target' },
+      { src: firstTargetSrc, target: 'target' },
+      { src: secondTargetSrc, target: 'target' },
+    ])
+  })
+
+  it('restores traversal scroll after a preserved entry resolves a blocking frame', async (t) => {
+    let initialUrl = window.location.href
+    let initialEntryKey = window.navigation.currentEntry?.key
+    let listUrl = new URL('/scroll-list', initialUrl).href
+    let detailUrl = new URL('/scroll-detail', initialUrl).href
+    window.history.replaceState(null, '', listUrl)
+
+    let StoreEntry = clientEntry(
+      '/js/scroll-store.js#ScrollStore',
+      function ScrollStore(handle: Handle<{ variant: 'list' | 'detail' }>) {
+        let showItems = false
+
+        return () =>
+          handle.props.variant === 'list' ? (
+            <main id="scroll-list-page">
+              <button
+                id="show-scroll-list-items"
+                type="button"
+                mix={on('click', () => {
+                  showItems = true
+                  handle.update()
+                })}
+              >
+                Show list items
+              </button>
+              {showItems ? <Frame src="/list-items" /> : <p>List items hidden</p>}
+            </main>
+          ) : (
+            <main id="scroll-detail-page" style={{ display: 'block', height: '1000px' }}>
+              Detail
+            </main>
+          )
+      },
+    )
+
+    async function renderStoreDocument(variant: 'list' | 'detail') {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <StoreEntry variant={variant} />
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderStoreDocument('list'),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let listItemsContent = '<div id="scroll-list-items" style="height:4000px"></div>'
+    let [deferredListItems, resolveDeferredListItems] = withResolvers<string>()
+    let [deferredListItemsRequested, markDeferredListItemsRequested] = withResolvers<void>()
+    let listItemsRequestCount = 0
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/scroll-store.js' && exportName === 'ScrollStore') return StoreEntry
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        let pathname = new URL(src, window.location.href).pathname
+        if (pathname === '/scroll-list') return await renderStoreDocument('list')
+        if (pathname === '/scroll-detail') return await renderStoreDocument('detail')
+        if (pathname === '/list-items') {
+          listItemsRequestCount++
+          if (listItemsRequestCount === 1) return listItemsContent
+          markDeferredListItemsRequested()
+          return await deferredListItems
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    t.after(async () => {
+      resolveDeferredListItems(listItemsContent)
+      if (initialEntryKey && window.navigation.currentEntry?.key !== initialEntryKey) {
+        await window.navigation.traverseTo(initialEntryKey).finished
+      }
+      app.dispose()
+      window.history.replaceState(null, '', initialUrl)
+      window.scrollTo(0, 0)
+    })
+
+    await app.ready()
+    let initialListItems = waitForElement('#scroll-list-items')
+    let showItemsButton = document.getElementById('show-scroll-list-items')
+    invariant(showItemsButton instanceof HTMLButtonElement)
+    showItemsButton.click()
+    app.flush()
+    await initialListItems
+
+    window.scrollTo(0, 2500)
+    expect(window.scrollY).toBe(2500)
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+    await navigate(detailUrl)
+    expect(document.getElementById('scroll-detail-page')?.textContent).toContain('Detail')
+
+    let didScroll = false
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        let scroll = event.scroll.bind(event)
+        Object.defineProperty(event, 'scroll', {
+          value() {
+            didScroll = true
+            scroll()
+          },
+        })
+      },
+      { once: true },
+    )
+
+    let backNavigation = window.navigation.back().finished
+    await deferredListItemsRequested
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    )
+
+    expect(didScroll).toBe(false)
+
+    resolveDeferredListItems(listItemsContent)
+    await backNavigation
+
+    expect(didScroll).toBe(true)
+    expect(document.getElementById('scroll-list-items')).not.toBe(null)
+    expect(window.scrollY).toBe(2500)
+  })
+
+  it('dispatches reloadStart and reloadComplete events for handle.frame and handle.frames.get(name)', async () => {
+    let summaryReloadStartEvents = 0
+    let rowReloadStartEvents = 0
+    let summaryReloadCompleteEvents = 0
+    let rowReloadCompleteEvents = 0
+    let triggerReloads: undefined | (() => Promise<void>)
+    let summaryRenderCount = 0
+
+    let RowAction = clientEntry(
+      '/assets/reload-events.js#ReloadEvents',
+      function ReloadEvents(handle: Handle) {
+        triggerReloads = async () => {
+          let summaryFrame = handle.frames.get('cart-summary')
+          invariant(summaryFrame)
+          summaryFrame.addEventListener(
+            'reloadStart',
+            () => {
+              summaryReloadStartEvents++
+            },
+            { once: true },
+          )
+          summaryFrame.addEventListener(
+            'reloadComplete',
+            () => {
+              summaryReloadCompleteEvents++
+            },
+            { once: true },
+          )
+          handle.frame.addEventListener(
+            'reloadStart',
+            () => {
+              rowReloadStartEvents++
+            },
+            { once: true },
+          )
+          handle.frame.addEventListener(
+            'reloadComplete',
+            () => {
+              rowReloadCompleteEvents++
+            },
+            { once: true },
+          )
+          await Promise.all([summaryFrame.reload(), handle.frame.reload()])
+        }
+
+        return () => <button id="reload-events">Reload events</button>
+      },
+    )
+
+    async function resolveFrame(src: string) {
+      if (src === '/summary') {
+        summaryRenderCount++
+        return await drain(renderToStream(<p id="summary-events">Summary: {summaryRenderCount}</p>))
+      }
+      if (src === '/row') {
+        return await drain(renderToStream(<RowAction />))
+      }
+      throw new Error(`Unexpected frame src: ${src}`)
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame name="cart-summary" src="/summary" fallback={<div>Loading summary…</div>} />
+          <Frame src="/row" fallback={<div>Loading row…</div>} />
+        </main>,
+        { resolveFrame },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload-events.js' && exportName === 'ReloadEvents') {
+          return RowAction
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('summary-events')?.textContent).toBe('Summary: 1')
+
+    invariant(triggerReloads)
+    await triggerReloads()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(summaryReloadStartEvents).toBe(1)
+    expect(rowReloadStartEvents).toBe(1)
+    expect(summaryReloadCompleteEvents).toBe(1)
+    expect(rowReloadCompleteEvents).toBe(1)
+    expect(document.getElementById('summary-events')?.textContent).toBe('Summary: 2')
+
+    app.dispose()
+  })
+
+  it('dispatches reloadStart and reloadComplete events for non-blocking child frames during top frame reloads', async () => {
+    let childReloadStartEvents = 0
+    let childReloadCompleteEvents = 0
+    let reloadTopFromChild: undefined | (() => Promise<AbortSignal>)
+
+    let ChildReloadObserver = clientEntry(
+      '/assets/child-reload-observer.js#ChildReloadObserver',
+      function ChildReloadObserver(handle: Handle) {
+        reloadTopFromChild = async () => {
+          handle.frame.addEventListener(
+            'reloadStart',
+            () => {
+              childReloadStartEvents++
+            },
+            { once: true },
+          )
+          handle.frame.addEventListener(
+            'reloadComplete',
+            () => {
+              childReloadCompleteEvents++
+            },
+            { once: true },
+          )
+          return await handle.frames.top.reload()
+        }
+
+        return () => <button id="reload-top-from-child">Reload top</button>
+      },
+    )
+
+    async function renderChildFrame(label: string) {
+      return await drain(
+        renderToStream(
+          <section id="event-child-frame-content">
+            <p id="event-child-frame-label">{label}</p>
+            <ChildReloadObserver />
+          </section>,
+        ),
+      )
+    }
+
+    function renderDocument(childContent: string | Promise<string>) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <main>
+              <p id="event-top-frame-label">Top frame</p>
+              <Frame
+                name="event-child"
+                src="/event-child"
+                fallback={<span id="event-child-frame-fallback">Loading child...</span>}
+              />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/event-child') return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderDocument(renderChildFrame('Initial child'))),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [childReloadPromise, resolveChildReload] = withResolvers<string>()
+    let streamedReload = renderDocument(childReloadPromise)
+    let streamedChunks = readChunks(streamedReload)
+    let firstChunk = await streamedChunks.next()
+    invariant(!firstChunk.done)
+    resolveChildReload(await renderChildFrame('Reloaded child'))
+    let secondChunk = await streamedChunks.next()
+    invariant(!secondChunk.done)
+    let [secondChunkPromise, releaseSecondChunk] = withResolvers<string>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/child-reload-observer.js' &&
+          exportName === 'ChildReloadObserver'
+        ) {
+          return ChildReloadObserver
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks(['<!DOCTYPE html>', firstChunk.value, secondChunkPromise])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Initial child')
+
+    invariant(reloadTopFromChild)
+    let reloadPromise = reloadTopFromChild()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(childReloadStartEvents).toBe(1)
+    expect(childReloadCompleteEvents).toBe(0)
+    expect(document.getElementById('event-child-frame-fallback')).toBeNull()
+    expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Initial child')
+
+    releaseSecondChunk(secondChunk.value)
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(childReloadStartEvents).toBe(1)
+    expect(childReloadCompleteEvents).toBe(1)
+    expect(document.getElementById('event-child-frame-fallback')).toBeNull()
+    expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Reloaded child')
+
+    app.dispose()
+  })
+
+  it('reloads a frame region when the response uses css mixins', async () => {
+    let renderCount = 0
+
+    let reload: undefined | (() => Promise<AbortSignal>)
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-css.js#ReloadCss',
+      function ReloadCss(handle: Handle) {
+        reload = () => handle.frame.reload()
+        return () => <button mix={[css({ color: '#fff' })]}>Reload</button>
+      },
+    )
+
+    async function renderTimeFragmentWithCss() {
+      renderCount++
+      let stream = renderToStream(
+        <section mix={[css({ padding: 8 })]}>
+          <p mix={[css({ margin: 0 })]}>Server: {renderCount}</p>
+          <ReloadButton />
+        </section>,
+        {
+          onError(error) {
+            console.error(error)
+          },
+        },
+      )
+      return await drain(stream)
+    }
+
+    let stream = renderToStream(
+      <main mix={[css({ color: '#0bf' })]}>
+        <Frame src="/time-css" fallback={<div>Loading…</div>} />
+      </main>,
+      { resolveFrame: renderTimeFragmentWithCss },
+    )
+
+    let html = await drain(stream)
+    document.body.innerHTML = html
+
+    let frameId = getCommentMarkerId(html, 'rmx:f:')
+    expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
+
+    let clientFrame = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload-css.js' && exportName === 'ReloadCss') return ReloadButton
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame: renderTimeFragmentWithCss,
+    })
+
+    await clientFrame.ready()
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.querySelector('p')?.textContent).toBe('Server: 1')
+    invariant(reload)
+
+    let section = document.querySelector('section')
+    let paragraph = document.querySelector('p')
+    let button = document.querySelector('button')
+    invariant(section && paragraph && button)
+
+    await reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(document.querySelector('p')?.textContent).toBe('Server: 2')
+
+    // Regression guard: reload should preserve node identity even with css-prop styles.
+    expect(document.querySelector('section')).toBe(section)
+    expect(document.querySelector('p')).toBe(paragraph)
+    expect(document.querySelector('button')).toBe(button)
+
+    clientFrame.dispose()
+  })
+
+  it('keeps shared css rules when a frame reload removes one keyed item', async () => {
+    type Item = {
+      id: string
+      label: string
+    }
+
+    let items: Item[] = [
+      { id: 'a', label: 'Ash & Smoke' },
+      { id: 'b', label: 'Heavy Metal Guitar Riffs' },
+    ]
+    let reload: undefined | (() => Promise<AbortSignal>)
+
+    let CartItems = clientEntry(
+      '/assets/cart-items-css.js#CartItemsCss',
+      function CartItemsCss(handle: Handle<{ items: Item[] }>) {
+        reload = () => handle.frame.reload()
+
+        return () => (
+          <section>
+            {handle.props.items.map((item) => (
+              <form
+                key={item.id}
+                data-row={item.id}
+                mix={[css({ display: 'inline-flex', gap: '4px', alignItems: 'center' })]}
+              >
+                <span mix={[css({ color: 'rgb(10, 20, 30)' })]}>{item.label}</span>
+                <input
+                  aria-label={`${item.label} quantity`}
+                  defaultValue="1"
+                  mix={[css({ width: '70px' })]}
+                />
+                <button
+                  type="button"
+                  mix={[
+                    css({
+                      color: 'rgb(255, 255, 255)',
+                      backgroundColor: 'rgb(1, 2, 3)',
+                    }),
+                  ]}
+                >
+                  Update
+                </button>
+              </form>
+            ))}
+          </section>
+        )
+      },
+    )
+
+    async function renderCartItems(): Promise<string> {
+      return await drain(renderToStream(<CartItems items={items} />))
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/cart-items-css" />
+        </main>,
+        { resolveFrame: renderCartItems },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/cart-items-css.js' && exportName === 'CartItemsCss') {
+          return CartItems
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/cart-items-css') return renderCartItems()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let survivingRow = document.querySelector('[data-row="b"]')
+    invariant(survivingRow instanceof HTMLFormElement)
+    let survivingLabel = survivingRow.querySelector('span')
+    let survivingInput = survivingRow.querySelector('input')
+    let survivingButton = survivingRow.querySelector('button')
+    invariant(survivingLabel && survivingInput && survivingButton)
+
+    expect(getComputedStyle(survivingLabel).color).toBe('rgb(10, 20, 30)')
+    expect(getComputedStyle(survivingInput).width).toBe('70px')
+    expect(getComputedStyle(survivingButton).backgroundColor).toBe('rgb(1, 2, 3)')
+
+    items = [{ id: 'b', label: 'Heavy Metal Guitar Riffs' }]
+    invariant(reload)
+    await reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.querySelector('[data-row="a"]')).toBeNull()
+    expect(document.querySelector('[data-row="b"]')).toBe(survivingRow)
+    expect(getComputedStyle(survivingLabel).color).toBe('rgb(10, 20, 30)')
+    expect(getComputedStyle(survivingInput).width).toBe('70px')
+    expect(getComputedStyle(survivingButton).backgroundColor).toBe('rgb(1, 2, 3)')
+
+    app.dispose()
+  })
+
+  it('keeps client-only css rules across a frame reload that omits them from server HTML', async () => {
+    let itemCount = 2
+    let startPendingReload: undefined | (() => Promise<AbortSignal>)
+
+    let CartSummary = clientEntry(
+      '/assets/cart-summary-css.js#CartSummaryCss',
+      function CartSummaryCss(handle: Handle<{ itemCount: number }>) {
+        let pending = false
+
+        startPendingReload = async () => {
+          pending = true
+          await handle.update()
+          return await handle.frame.reload()
+        }
+
+        return () => (
+          <section>
+            {pending ? (
+              <p id="pending-message" mix={[css({ color: 'rgb(200, 0, 0)' })]}>
+                Updating your cart...
+              </p>
+            ) : null}
+            <p id="item-count" mix={[css({ color: 'rgb(0, 0, 200)' })]}>
+              Items: {handle.props.itemCount}
+            </p>
+          </section>
+        )
+      },
+    )
+
+    async function renderCartSummary(): Promise<string> {
+      return await drain(renderToStream(<CartSummary itemCount={itemCount} />))
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/cart-summary-css" />
+        </main>,
+        { resolveFrame: renderCartSummary },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/cart-summary-css.js' && exportName === 'CartSummaryCss') {
+          return CartSummary
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/cart-summary-css') return renderCartSummary()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('pending-message')).toBeNull()
+    expect(getComputedStyle(document.getElementById('item-count')!).color).toBe('rgb(0, 0, 200)')
+
+    itemCount = 1
+    invariant(startPendingReload)
+    await startPendingReload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let pendingMessage = document.getElementById('pending-message')
+    invariant(pendingMessage)
+    expect(pendingMessage.textContent).toBe('Updating your cart...')
+    expect(getComputedStyle(pendingMessage).color).toBe('rgb(200, 0, 0)')
+    expect(document.getElementById('item-count')?.textContent).toBe('Items: 1')
+    expect(getComputedStyle(document.getElementById('item-count')!).color).toBe('rgb(0, 0, 200)')
+
+    app.dispose()
+  })
+
+  it('dispatches reload rejections to app error listeners', async () => {
+    let reload: undefined | (() => Promise<AbortSignal>)
+    let reloadError = new TypeError('Failed to fetch')
+    let renderCount = 0
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-error.js#ReloadError',
+      function ReloadError(handle: Handle) {
+        reload = () => handle.frame.reload()
+        return () => <button id="reload-error">Reload error</button>
+      },
+    )
+
+    async function resolveFrame(src: string) {
+      if (src !== '/reload-error') throw new Error(`Unexpected frame src: ${src}`)
+      renderCount++
+      if (renderCount === 1) {
+        return await drain(
+          renderToStream(
+            <section>
+              <p id="reload-error-value">Initial</p>
+              <ReloadButton />
+            </section>,
+          ),
+        )
+      }
+      throw reloadError
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/reload-error" fallback={<div>Loading…</div>} />
+        </main>,
+        { resolveFrame },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload-error.js' && exportName === 'ReloadError') {
+          return ReloadButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+    let forwarded: unknown
+    app.addEventListener('error', (event) => {
+      forwarded = event.error
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reload)
+
+    let caught = await reload().catch((error) => error)
+
+    expect(caught).toBe(reloadError)
+    expect(forwarded).toBe(reloadError)
+    expect(document.getElementById('reload-error-value')?.textContent).toBe('Initial')
+
+    app.dispose()
+  })
+
+  it('cancels a superseded reload fetch without reporting an error', async (t) => {
+    document.body.innerHTML = '<p id="initial">Initial</p>'
+    let fetchSignal: AbortSignal | null | undefined
+    let callCount = 0
+    t.mock.method(window, 'fetch', async (_input: RequestInfo | URL, options?: RequestInit) => {
+      if (callCount++ === 0) {
+        fetchSignal = options?.signal
+        return new Promise<Response>((_resolve, reject) => {
+          fetchSignal?.addEventListener('abort', () => reject(fetchSignal?.reason), { once: true })
+        })
+      }
+      return new Response(await renderDocumentContent(<p id="current">Current</p>))
+    })
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    let onError = t.mock.fn()
+    app.addEventListener('error', onError)
+    await app.ready()
+
+    let staleReload = app.frames.top.reload()
+    let currentReload = app.frames.top.reload()
+
+    expect(fetchSignal?.aborted).toBe(true)
+    expect((await staleReload).aborted).toBe(true)
+    expect((await currentReload).aborted).toBe(false)
+    expect(document.getElementById('current')?.textContent).toBe('Current')
+    expect(onError.mock.calls).toHaveLength(0)
+  })
+
+  it('finishes a streamed reload after removing its calling component', async (t) => {
+    let reload: Promise<AbortSignal> | undefined
+    let eventSignal: AbortSignal | undefined
+    let [removed, markRemoved] = withResolvers<void>()
+    let [tail, resolveTail] = withResolvers<string>()
+    let ReloadButton = clientEntry(
+      '/reload.js#ReloadButton',
+      function ReloadButton(handle: Handle) {
+        return () => (
+          <button
+            id="reload"
+            mix={[
+              on('click', (_event, signal) => {
+                eventSignal = signal
+                signal.addEventListener('abort', () => markRemoved(), { once: true })
+                reload = handle.frame.reload()
+              }),
+            ]}
+          >
+            Reload
+          </button>
+        )
+      },
+    )
+    document.body.innerHTML = await drain(
+      renderToStream(<Frame src="/reload" />, {
+        resolveFrame: () => renderFrameContent(<ReloadButton />),
+      }),
+    )
+    let fetchSignal: AbortSignal | null | undefined
+    t.mock.method(window, 'fetch', async (_input: RequestInfo | URL, options?: RequestInit) => {
+      fetchSignal = options?.signal
+      return new Response(
+        streamFromChunks([appendFlushMarker('<p id="first">First</p>', 'fragment'), tail]),
+        { headers: { 'Content-Type': 'text/html' } },
+      )
+    })
+    let app = run({ loadModule: () => ReloadButton })
+    t.after(() => {
+      resolveTail('')
+      app.dispose()
+    })
+    await app.ready()
+    let button = document.getElementById('reload')
+    invariant(button)
+
+    button.click()
+    invariant(reload)
+    await removed
+
+    expect(eventSignal?.aborted).toBe(true)
+    expect(fetchSignal?.aborted).toBe(false)
+    expect(document.getElementById('reload')).toBeNull()
+    expect(document.getElementById('first')?.textContent).toBe('First')
+    resolveTail('<p id="last">Last</p>')
+
+    expect((await reload).aborted).toBe(false)
+    expect(document.getElementById('last')?.textContent).toBe('Last')
+  })
+
+  it('aborts stale frame reloads when reload is re-entered', async () => {
+    let reload: undefined | (() => Promise<AbortSignal>)
+    let callCount = 0
+    let firstSignal: AbortSignal | undefined
+    let secondSignal: AbortSignal | undefined
+    let [firstReloadContent, resolveFirstReloadContent] = withResolvers<string>()
+    let [secondReloadContent, resolveSecondReloadContent] = withResolvers<string>()
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-abort.js#ReloadAbort',
+      function ReloadAbort(handle: Handle) {
+        reload = () => handle.frame.reload()
+        return () => <button id="reload-abort">Reload abort</button>
+      },
+    )
+
+    async function renderInitial() {
+      return await drain(
+        renderToStream(
+          <section>
+            <p id="reload-value">Initial</p>
+            <ReloadButton />
+          </section>,
+        ),
+      )
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/reload-abort" fallback={<div>Loading…</div>} />
+        </main>,
+        { resolveFrame: renderInitial },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let clientFrame = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload-abort.js' && exportName === 'ReloadAbort') {
+          return ReloadButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string, options) {
+        if (src !== '/reload-abort') throw new Error(`Unexpected frame src: ${src}`)
+        callCount++
+        if (callCount === 1) {
+          firstSignal = options?.signal
+          return firstReloadContent
+        }
+        if (callCount === 2) {
+          secondSignal = options?.signal
+          return secondReloadContent
+        }
+        throw new Error(`Unexpected reload call count: ${callCount}`)
+      },
+    })
+
+    await clientFrame.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reload)
+
+    let firstReloadPromise = reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(firstSignal?.aborted).toBe(false)
+
+    let secondReloadPromise = reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(firstSignal?.aborted).toBe(true)
+    expect(secondSignal?.aborted).toBe(false)
+
+    resolveFirstReloadContent('<section><p id="reload-value">Stale</p></section>')
+    let firstReloadSignal = await firstReloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(firstReloadSignal).toBe(firstSignal)
+    expect(firstReloadSignal.aborted).toBe(true)
+
+    // First reload should be ignored because it was superseded.
+    expect(document.getElementById('reload-value')?.textContent).toBe('Initial')
+
+    resolveSecondReloadContent('<section><p id="reload-value">Fresh</p></section>')
+    let secondReloadSignal = await secondReloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(secondReloadSignal).toBe(secondSignal)
+    expect(secondReloadSignal.aborted).toBe(false)
+
+    expect(document.getElementById('reload-value')?.textContent).toBe('Fresh')
+    clientFrame.dispose()
+  })
+
+  it('keeps head-like elements inside the frame when a frame reloads', async () => {
+    let renderCount = 0
+    let reload: undefined | (() => Promise<AbortSignal>)
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-head.js#ReloadHead',
+      function ReloadHead(handle: Handle) {
+        reload = () => handle.frame.reload()
+        return () => <button id="reload-head">Reload head</button>
+      },
+    )
+
+    async function renderHeadFragment() {
+      renderCount++
+      let stream = renderToStream(
+        <>
+          <title>Frame title {renderCount}</title>
+          <meta name="frame-description" content={`frame-${renderCount}`} />
+          <script type="application/ld+json">{`{"count":${renderCount}}`}</script>
+          <script type="text/javascript">{`window.__frameRegular = ${renderCount}`}</script>
+          <section>
+            <p>Frame body {renderCount}</p>
+            <ReloadButton />
+          </section>
+        </>,
+      )
+
+      return await drain(stream)
+    }
+
+    let stream = renderToStream(
+      <main>
+        <Frame src="/head-frame" fallback={<div>Loading…</div>} />
+      </main>,
+      { resolveFrame: renderHeadFragment },
+    )
+
+    let html = await drain(stream)
+    document.body.innerHTML = html
+
+    let frameId = getCommentMarkerId(html, 'rmx:f:')
+    expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
+
+    let clientFrame = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload-head.js' && exportName === 'ReloadHead')
+          return ReloadButton
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame: renderHeadFragment,
+    })
+
+    await clientFrame.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let main = document.querySelector('main')
+    invariant(main)
+    expect(main.querySelector('title')?.textContent).toBe('Frame title 1')
+    expect(main.querySelector('meta[name="frame-description"]')?.getAttribute('content')).toBe(
+      'frame-1',
+    )
+    expect(main.querySelector('script[type="application/ld+json"]')?.textContent).toBe(
+      '{"count":1}',
+    )
+    expect(main.querySelector('script[type="text/javascript"]')?.textContent).toBe(
+      'window.__frameRegular = 1',
+    )
+    expect(document.head.querySelector('title')).toBeNull()
+    expect(document.head.querySelector('meta[name="frame-description"]')).toBeNull()
+    expect(document.head.querySelector('script[type="application/ld+json"]')).toBeNull()
+
+    invariant(reload)
+    await reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let titles = main.querySelectorAll('title')
+    expect(titles).toHaveLength(1)
+    expect(titles[0]?.textContent).toBe('Frame title 2')
+
+    let metas = main.querySelectorAll('meta[name="frame-description"]')
+    expect(metas).toHaveLength(1)
+    expect(metas[0]?.getAttribute('content')).toBe('frame-2')
+
+    let ldJsonScripts = main.querySelectorAll('script[type="application/ld+json"]')
+    expect(ldJsonScripts).toHaveLength(1)
+    expect(ldJsonScripts[0]?.textContent).toBe('{"count":2}')
+    expect(main.querySelector('script[type="text/javascript"]')?.textContent).toBe(
+      'window.__frameRegular = 2',
+    )
+    expect(document.querySelector('p')?.textContent).toBe('Frame body 2')
+
+    clientFrame.dispose()
+  })
+
+  it('hydrates client entries in blocking frame content without redefining virtual roots', async () => {
+    let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
+      return () => (
+        <button id="counter" type="button">
+          Count
+        </button>
+      )
+    })
+
+    async function renderInner(): Promise<string> {
+      return await drain(renderToStream(<Counter />))
+    }
+
+    let stream = renderToStream(
+      <main>
+        <Frame src="/inner" />
+      </main>,
+      { resolveFrame: renderInner },
+    )
+
+    let html = await drain(stream)
+    document.body.innerHTML = html
+
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let loadModule = mock.fn(async () => modulePromise)
+    let clientFrame = run({ loadModule })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    resolveModule(Counter)
+
+    await expect(clientFrame.ready()).resolves.toBeUndefined()
+
+    let button = document.getElementById('counter') as HTMLButtonElement | null
+    invariant(button)
+    expect(button.textContent).toContain('Count')
+    expect(loadModule).toHaveBeenCalled()
+
+    clientFrame.dispose()
+  })
+
+  it('hydrates components without waiting for pending frames', async () => {
+    let Counter = clientEntry(
+      '/js/counter.js#Counter',
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
+        return () => (
+          <button
+            id="counter"
+            mix={[
+              on('click', () => {
+                count++
+                handle.update()
+              }),
+            ]}
+          >
+            Count: {count}
+          </button>
+        )
+      },
+    )
+
+    let [framePromise, resolveFramePromise] = withResolvers<string>()
+
+    let stream = renderToStream(
+      <div>
+        <Counter initialCount={0} />
+        <Frame src="/slow" fallback={<span id="frame">Loading…</span>} />
+      </div>,
+      { resolveFrame: () => framePromise },
+    )
+
+    // Get first chunk only (fallback + counter HTML).
+    let chunks = readChunks(stream)
+    let first = await chunks.next()
+    invariant(!first.done)
+    document.body.innerHTML = first.value
+
+    // Frame shows fallback.
+    expect(document.getElementById('frame')!.textContent).toBe('Loading…')
+
+    let clientFrame = run({
+      loadModule: mock.fn(() => Promise.resolve(Counter)),
+    })
+    await clientFrame.ready()
+
+    // Counter is hydrated and interactive BEFORE frame resolves.
+    let button = document.getElementById('counter') as HTMLButtonElement
+    expect(button.textContent).toBe('Count: 0')
+    button.click()
+    clientFrame.flush()
+    expect(button.textContent).toBe('Count: 1')
+
+    // Frame still shows fallback.
+    expect(document.getElementById('frame')!.textContent).toBe('Loading…')
+
+    // Now resolve the frame and inject the template.
+    resolveFramePromise('<span id="frame">Loaded!</span>')
+    let second = await chunks.next()
+    invariant(!second.done)
+    document.body.insertAdjacentHTML('beforeend', second.value)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Frame is now rendered.
+    expect(document.getElementById('frame')!.textContent).toBe('Loaded!')
+
+    // Counter still works.
+    button.click()
+    clientFrame.flush()
+    expect(button.textContent).toBe('Count: 2')
+
+    clientFrame.dispose()
+  })
+
+  it('pending frames resolve independently as their templates arrive', async () => {
+    let [fastPromise, resolveFast] = withResolvers<string>()
+    let [slowPromise, resolveSlow] = withResolvers<string>()
+
+    let stream = renderToStream(
+      <div>
+        <Frame src="/fast" fallback={<span id="fast">Loading fast…</span>} />
+        <Frame src="/slow" fallback={<span id="slow">Loading slow…</span>} />
+      </div>,
+      {
+        resolveFrame(src: string) {
+          if (src === '/fast') return fastPromise
+          if (src === '/slow') return slowPromise
+          throw new Error(`Unexpected frame src: ${src}`)
+        },
+      },
+    )
+
+    // Get the first chunk (both fallbacks).
+    let chunks = readChunks(stream)
+    let first = await chunks.next()
+    invariant(!first.done)
+    document.body.innerHTML = first.value
+
+    expect(document.getElementById('fast')!.textContent).toBe('Loading fast…')
+    expect(document.getElementById('slow')!.textContent).toBe('Loading slow…')
+
+    let clientFrame = run({ loadModule: mock.fn() })
+    await clientFrame.ready()
+
+    // Resolve the fast frame first.
+    resolveFast('<span id="fast">Fast loaded</span>')
+    let second = await chunks.next()
+    invariant(!second.done)
+    document.body.insertAdjacentHTML('beforeend', second.value)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Fast frame is rendered; slow frame still shows fallback.
+    expect(document.getElementById('fast')!.textContent).toBe('Fast loaded')
+    expect(document.getElementById('slow')!.textContent).toBe('Loading slow…')
+
+    // Now resolve the slow frame.
+    resolveSlow('<span id="slow">Slow loaded</span>')
+    let third = await chunks.next()
+    invariant(!third.done)
+    document.body.insertAdjacentHTML('beforeend', third.value)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Both frames are now rendered.
+    expect(document.getElementById('fast')!.textContent).toBe('Fast loaded')
+    expect(document.getElementById('slow')!.textContent).toBe('Slow loaded')
+
+    clientFrame.dispose()
+  })
+
+  it('pending frames resolve while modules are still loading', async () => {
+    // Uses manual HTML because renderToStream + readChunks with a deferred
+    // loadModule has a timing issue in the Chromium test environment where
+    // the hydration markers aren't found by the tree walker.
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let moduleLoaded = false
+
+    function Counter() {
+      return () => <button id="counter">Counter</button>
+    }
+
+    document.body.innerHTML =
+      '<div>' +
+      '<!-- rmx:h:h1 --><button id="counter">Counter</button><!-- /rmx:h -->' +
+      '<!-- rmx:f:f1 --><span id="frame">Loading…</span><!-- /rmx:f -->' +
+      '</div>' +
+      '<script type="application/json" id="rmx-data">' +
+      '{"h":{"h1":{"moduleUrl":"/counter.js","exportName":"Counter","props":{}}},' +
+      '"f":{"f1":{"status":"pending","src":"/slow"}}}' +
+      '</script>'
+
+    let loadModuleFn = mock.fn(async () => {
+      let mod = await modulePromise
+      moduleLoaded = true
+      return mod
+    })
+
+    let clientFrame = run({ loadModule: loadModuleFn })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // loadModule must have been called (hydration marker was found).
+    expect(loadModuleFn).toHaveBeenCalled()
+    expect(moduleLoaded).toBe(false)
+
+    // Frame still shows fallback (template hasn't arrived).
+    expect(document.getElementById('frame')!.textContent).toBe('Loading…')
+
+    // Simulate frame template arriving via MutationObserver.
+    let template = document.createElement('template')
+    template.id = 'f1'
+    template.innerHTML = '<span id="frame">Loaded!</span>'
+    document.body.appendChild(template)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Frame rendered even though module hasn't loaded yet.
+    expect(document.getElementById('frame')!.textContent).toBe('Loaded!')
+    expect(moduleLoaded).toBe(false)
+
+    // Now resolve the module and let hydration complete.
+    resolveModule(Counter)
+    await clientFrame.ready()
+
+    expect(moduleLoaded).toBe(true)
+
+    clientFrame.dispose()
+  })
+
+  it('hydrates a component inside a nested frame', async () => {
+    let Counter = clientEntry(
+      '/js/counter.js#Counter',
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
+        return () => (
+          <button
+            id="nested-counter"
+            mix={[
+              on('click', () => {
+                count++
+                handle.update()
+              }),
+            ]}
+          >
+            Count: {count}
+          </button>
+        )
+      },
+    )
+
+    // Use renderToStream to produce proper HTML for each level.
+    let neverResolve = () => new Promise<string>(() => {})
+
+    // Render inner frame content (hydrated Counter).
+    let innerContent = await drain(renderToStream(<Counter initialCount={10} />))
+
+    // Render outer frame content (pending inner frame with fallback).
+    let outerStream = renderToStream(
+      <div>
+        <Frame src="/inner" fallback={<span id="inner">Loading inner…</span>} />
+      </div>,
+      { resolveFrame: neverResolve },
+    )
+    let outerChunks = readChunks(outerStream)
+    let outerFirst = await outerChunks.next()
+    invariant(!outerFirst.done)
+    let outerContent = outerFirst.value
+    let innerFrameId = getCommentMarkerId(outerContent, 'rmx:f:')
+
+    // Render initial page (pending outer frame with fallback).
+    let pageStream = renderToStream(
+      <div>
+        <Frame src="/outer" fallback={<span id="outer">Loading outer…</span>} />
+      </div>,
+      { resolveFrame: neverResolve },
+    )
+    let pageChunks = readChunks(pageStream)
+    let pageFirst = await pageChunks.next()
+    invariant(!pageFirst.done)
+    document.body.innerHTML = pageFirst.value
+    let outerFrameId = getCommentMarkerId(pageFirst.value, 'rmx:f:')
+
+    let clientFrame = run({
+      loadModule: mock.fn(() => Promise.resolve(Counter)),
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Outer frame still shows fallback.
+    expect(document.getElementById('outer')!.textContent).toBe('Loading outer…')
+
+    // Outer frame template arrives.
+    let outerTemplate = document.createElement('template')
+    outerTemplate.id = outerFrameId
+    outerTemplate.innerHTML = outerContent
+    document.body.appendChild(outerTemplate)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Outer frame rendered, inner frame shows fallback.
+    expect(document.getElementById('inner')!.textContent).toBe('Loading inner…')
+
+    // Inner frame template arrives.
+    let innerTemplate = document.createElement('template')
+    innerTemplate.id = innerFrameId
+    innerTemplate.innerHTML = innerContent
+    document.body.appendChild(innerTemplate)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Counter inside the nested frame is hydrated and interactive.
+    let button = document.getElementById('nested-counter') as HTMLButtonElement
+    expect(button.textContent).toBe('Count: 10')
+    button.click()
+    clientFrame.flush()
+    expect(button.textContent).toBe('Count: 11')
+
+    clientFrame.dispose()
+  })
+
+  it('preserves parent context for client entries rendered by a frame', async () => {
+    let contextEvents = 0
+
+    let ContextProvider = clientEntry(
+      '/js/context-provider.js#ContextProvider',
+      function ContextProvider(handle: Handle) {
+        let context = new EventTarget()
+        context.addEventListener('action', () => {
+          contextEvents++
+        })
+        handle.context.set(context)
+
+        return () => <Frame name="context-frame" src="/context-frame" />
+      },
+    )
+
+    let FrameEntry = clientEntry(
+      '/js/frame-entry.js#FrameEntry',
+      function FrameEntry(handle: Handle) {
+        return () => (
+          <button
+            id="context-action"
+            mix={[
+              on('click', () => {
+                handle.context.get(ContextProvider)?.dispatchEvent(new Event('action'))
+              }),
+            ]}
+          >
+            Dispatch context event
+          </button>
+        )
+      },
+    )
+
+    async function renderFrameEntry(): Promise<string> {
+      return await renderFrameContent(<FrameEntry />)
+    }
+
+    document.body.innerHTML = await drain(
+      renderToStream(<ContextProvider />, {
+        resolveFrame: renderFrameEntry,
+      }),
+    )
+    contextEvents = 0
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/context-provider.js' && exportName === 'ContextProvider') {
+          return ContextProvider
+        }
+        if (moduleUrl === '/js/frame-entry.js' && exportName === 'FrameEntry') {
+          return FrameEntry
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame: renderFrameEntry,
+    })
+
+    await app.ready()
+
+    let action = document.getElementById('context-action')
+    invariant(action)
+    action.click()
+    expect(contextEvents).toBe(1)
+
+    let contextFrame = app.frames.get('context-frame')
+    invariant(contextFrame)
+    await contextFrame.reload()
+
+    action = document.getElementById('context-action')
+    invariant(action)
+    action.click()
+    expect(contextEvents).toBe(2)
+
+    app.dispose()
+  })
+
+  it('preserves setup-time context when a frame provider module loads after its consumer', async (t) => {
+    let contextEvents = 0
+    let independentClicks = 0
+    let ContextProvider = clientEntry(
+      '/js/slow-context-provider.js#ContextProvider',
+      function ContextProvider(handle: Handle<Record<string, never>, EventTarget>) {
+        let context = new EventTarget()
+        context.addEventListener('action', () => {
+          contextEvents++
+        })
+        handle.context.set(context)
+        return () => (
+          <section>
+            <Frame src="/context-frame" />
+          </section>
+        )
+      },
+    )
+    let FrameEntry = clientEntry(
+      '/js/setup-context-entry.js#FrameEntry',
+      function FrameEntry(handle: Handle) {
+        let context = handle.context.get(ContextProvider)
+        return () => (
+          <button
+            id="setup-context-action"
+            mix={on('click', () => context?.dispatchEvent(new Event('action')))}
+          >
+            Dispatch context event
+          </button>
+        )
+      },
+    )
+
+    let IndependentEntry = clientEntry(
+      '/js/independent.js#IndependentEntry',
+      function IndependentEntry() {
+        return () => (
+          <button
+            id="independent-action"
+            mix={on('click', () => {
+              independentClicks++
+            })}
+          >
+            Independent action
+          </button>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <>
+          <ContextProvider />
+          <Frame src="/independent-frame" />
+        </>,
+        {
+          resolveFrame(src) {
+            if (src === '/context-frame') return renderFrameContent(<FrameEntry />)
+            if (src === '/independent-frame') return renderFrameContent(<IndependentEntry />)
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      ),
+    )
+
+    let [providerModule, resolveProviderModule] = withResolvers<typeof ContextProvider>()
+    let [providerRequested, markProviderRequested] = withResolvers<void>()
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/slow-context-provider.js' && exportName === 'ContextProvider') {
+          markProviderRequested()
+          return providerModule
+        }
+        if (moduleUrl === '/js/setup-context-entry.js' && exportName === 'FrameEntry') {
+          return FrameEntry
+        }
+        if (moduleUrl === '/js/independent.js' && exportName === 'IndependentEntry') {
+          return IndependentEntry
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+    })
+    t.after(() => app.dispose())
+
+    await providerRequested
+    // Let the immediately available consumer hydrate while the provider import is pending.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    let independentAction = document.getElementById('independent-action')
+    invariant(independentAction instanceof HTMLButtonElement)
+    independentAction.click()
+    expect(independentClicks).toBe(1)
+
+    resolveProviderModule(ContextProvider)
+    await app.ready()
+
+    let action = document.getElementById('setup-context-action')
+    invariant(action instanceof HTMLButtonElement)
+    action.click()
+    expect(contextEvents).toBe(1)
+  })
+
+  it('hydrates nested frame content when its owning client entry module is already cached', async (t) => {
+    let clicks = 0
+    let FrameOwner = clientEntry(
+      '/js/cached-frame-owner.js#FrameOwner',
+      function FrameOwner(handle: Handle<{ src: string }, string>) {
+        handle.context.set(handle.props.src)
+        return () => <Frame src={handle.props.src} />
+      },
+    )
+    let FrameButton = clientEntry(
+      '/js/frame-button.js#FrameButton',
+      function FrameButton(handle: Handle) {
+        let src = handle.context.get(FrameOwner)
+        return () => (
+          <button
+            id="cached-frame-button"
+            mix={on('click', () => {
+              clicks++
+            })}
+          >
+            {src}
+          </button>
+        )
+      },
+    )
+
+    async function resolveFrame(src: string): Promise<string> {
+      if (src === '/outer') {
+        return await drain(renderToStream(<FrameOwner src="/inner" />, { resolveFrame }))
+      }
+      if (src === '/inner') return await renderFrameContent(<FrameButton />)
+      throw new Error(`Unexpected frame src: ${src}`)
+    }
+
+    document.body.innerHTML = await drain(
+      renderToStream(<FrameOwner src="/outer" />, { resolveFrame }),
+    )
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/cached-frame-owner.js' && exportName === 'FrameOwner') {
+          return FrameOwner
+        }
+        if (moduleUrl === '/js/frame-button.js' && exportName === 'FrameButton') {
+          return FrameButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+    t.after(() => app.dispose())
+
+    await app.ready()
+
+    let button = document.getElementById('cached-frame-button')
+    invariant(button instanceof HTMLButtonElement)
+    expect(button.textContent).toBe('/inner')
+    button.click()
+    expect(clicks).toBe(1)
+  })
+
+  it('deeply nested frames resolve independently at each level', async () => {
+    // Page has outer frame → outer has middle frame → middle has inner frame.
+    // Each level resolves independently via MutationObserver.
+    let neverResolve = () => new Promise<string>(() => {})
+
+    // Render inner content (leaf — no sub-frames).
+    let innerContent = await drain(renderToStream(<p id="inner-content">Inner loaded</p>))
+
+    // Render middle content (pending inner frame with fallback).
+    let middleStream = renderToStream(
+      <div>
+        <p id="middle-content">Middle loaded</p>
+        <Frame src="/inner" fallback={<span id="inner">Loading inner…</span>} />
+      </div>,
+      { resolveFrame: neverResolve },
+    )
+    let middleChunks = readChunks(middleStream)
+    let middleFirst = await middleChunks.next()
+    invariant(!middleFirst.done)
+    let middleContent = middleFirst.value
+    let innerFrameId = getCommentMarkerId(middleContent, 'rmx:f:')
+
+    // Render outer content (pending middle frame with fallback).
+    let outerStream = renderToStream(
+      <div>
+        <p id="outer-content">Outer loaded</p>
+        <Frame src="/middle" fallback={<span id="middle">Loading middle…</span>} />
+      </div>,
+      { resolveFrame: neverResolve },
+    )
+    let outerChunks = readChunks(outerStream)
+    let outerFirst = await outerChunks.next()
+    invariant(!outerFirst.done)
+    let outerContent = outerFirst.value
+    let middleFrameId = getCommentMarkerId(outerContent, 'rmx:f:')
+
+    // Render initial page (pending outer frame with fallback).
+    let pageStream = renderToStream(
+      <div>
+        <h1 id="title">Page</h1>
+        <Frame src="/outer" fallback={<span id="outer">Loading outer…</span>} />
+      </div>,
+      { resolveFrame: neverResolve },
+    )
+    let pageChunks = readChunks(pageStream)
+    let pageFirst = await pageChunks.next()
+    invariant(!pageFirst.done)
+    document.body.innerHTML = pageFirst.value
+    let outerFrameId = getCommentMarkerId(pageFirst.value, 'rmx:f:')
+
+    let clientFrame = run({ loadModule: mock.fn() })
+    await clientFrame.ready()
+
+    // Page content is visible, outer frame shows fallback.
+    expect(document.getElementById('title')!.textContent).toBe('Page')
+    expect(document.getElementById('outer')!.textContent).toBe('Loading outer…')
+
+    // Outer frame template arrives — contains a middle frame.
+    let outerTemplate = document.createElement('template')
+    outerTemplate.id = outerFrameId
+    outerTemplate.innerHTML = outerContent
+    document.body.appendChild(outerTemplate)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Outer content rendered, middle shows fallback.
+    expect(document.getElementById('outer-content')!.textContent).toBe('Outer loaded')
+    expect(document.getElementById('middle')!.textContent).toBe('Loading middle…')
+
+    // Middle frame template arrives — contains an inner frame.
+    let middleTemplate = document.createElement('template')
+    middleTemplate.id = middleFrameId
+    middleTemplate.innerHTML = middleContent
+    document.body.appendChild(middleTemplate)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Middle content rendered, inner shows fallback.
+    expect(document.getElementById('middle-content')!.textContent).toBe('Middle loaded')
+    expect(document.getElementById('inner')!.textContent).toBe('Loading inner…')
+
+    // Inner frame template arrives.
+    let innerTemplate = document.createElement('template')
+    innerTemplate.id = innerFrameId
+    innerTemplate.innerHTML = innerContent
+    document.body.appendChild(innerTemplate)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // All three levels rendered.
+    expect(document.getElementById('outer-content')!.textContent).toBe('Outer loaded')
+    expect(document.getElementById('middle-content')!.textContent).toBe('Middle loaded')
+    expect(document.getElementById('inner-content')!.textContent).toBe('Inner loaded')
+
+    // Page content preserved throughout.
+    expect(document.getElementById('title')!.textContent).toBe('Page')
+
+    clientFrame.dispose()
+  })
+
+  it('reloads a frame that is nested inside another frame', async () => {
+    let reloadInner: undefined | (() => Promise<AbortSignal>)
+    let renderCount = 0
+
+    let ReloadButton = clientEntry(
+      '/js/reload.js#ReloadButton',
+      function ReloadButton(handle: Handle) {
+        reloadInner = () => handle.frame.reload()
+        return () => <button id="reload-btn">Reload</button>
+      },
+    )
+
+    async function renderInner() {
+      renderCount++
+      return await drain(
+        renderToStream(
+          <div>
+            <p id="inner-text">Render {renderCount}</p>
+            <ReloadButton />
+          </div>,
+        ),
+      )
+    }
+
+    // Render outer content with a pending inner frame.
+    let outerStream = renderToStream(
+      <div>
+        <p id="outer-text">Outer</p>
+        <Frame src="/inner" fallback={<span id="inner-fallback">Loading…</span>} />
+      </div>,
+      { resolveFrame: () => new Promise<string>(() => {}) },
+    )
+    let outerChunks = readChunks(outerStream)
+    let outerFirst = await outerChunks.next()
+    invariant(!outerFirst.done)
+    let outerContent = outerFirst.value
+    let innerFrameId = getCommentMarkerId(outerContent, 'rmx:f:')
+
+    // Render page with a blocking outer frame that resolves to the outer content.
+    let pageStream = renderToStream(
+      <div>
+        <Frame src="/outer" />
+      </div>,
+      { resolveFrame: () => outerContent },
+    )
+    let pageHtml = await drain(pageStream)
+    document.body.innerHTML = pageHtml
+
+    let clientFrame = run({
+      loadModule: mock.fn(() => Promise.resolve(ReloadButton)),
+      resolveFrame: renderInner,
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Outer is resolved, inner shows fallback.
+    expect(document.getElementById('outer-text')!.textContent).toBe('Outer')
+    expect(document.getElementById('inner-fallback')!.textContent).toBe('Loading…')
+
+    // Inner frame template arrives.
+    let innerTemplate = document.createElement('template')
+    innerTemplate.id = innerFrameId
+    innerTemplate.innerHTML = await renderInner()
+    document.body.appendChild(innerTemplate)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Inner frame rendered with hydrated ReloadButton.
+    expect(document.getElementById('inner-text')!.textContent).toBe('Render 1')
+    invariant(reloadInner)
+
+    // Reload the inner frame — only the inner frame should update.
+    await reloadInner()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('inner-text')!.textContent).toBe('Render 2')
+    expect(document.getElementById('outer-text')!.textContent).toBe('Outer')
+
+    clientFrame.dispose()
+  })
+
+  it('renders a client-created Frame with createRoot frameInit', async () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        resolveFrame: async () => '<p id="resolved-frame">Resolved frame</p>',
+      },
+    })
+
+    root.render(<Frame src="/client-frame" fallback={<p id="fallback-frame">Loading…</p>} />)
+    root.flush()
+
+    expect(rootContainer.querySelector('#fallback-frame')?.textContent).toBe('Loading…')
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#resolved-frame')?.textContent).toBe('Resolved frame')
+    root.dispose()
+  })
+
+  it('renders a client-created Frame with createRangeRoot frameInit', async () => {
+    let host = document.createElement('div')
+    document.body.appendChild(host)
+    let start = document.createComment('start')
+    let end = document.createComment('end')
+    host.append(start, end)
+
+    let root = createRangeRoot([start, end], {
+      frameInit: {
+        src: '/range-root',
+        resolveFrame: async () => '<p id="resolved-range-frame">Resolved range frame</p>',
+        loadModule: async () =>
+          function Module() {
+            return () => null
+          },
+      },
+    })
+
+    root.render(
+      <Frame src="/client-range-frame" fallback={<p id="fallback-range-frame">Loading…</p>} />,
+    )
+    root.flush()
+
+    expect(host.querySelector('#fallback-range-frame')?.textContent).toBe('Loading…')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(host.querySelector('#resolved-range-frame')?.textContent).toBe('Resolved range frame')
+    root.dispose()
+  })
+
+  it('dispatches a clear error for createRoot Frame without frameInit', () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    let root = createRoot(rootContainer)
+    let error: unknown
+    root.addEventListener('error', (event) => {
+      error = (event as ErrorEvent).error
+    })
+
+    root.render(<Frame src="/missing-runtime" fallback={<p>Loading…</p>} />)
+    root.flush()
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toContain('Cannot render <Frame /> without frame runtime')
+  })
+
+  it('dispatches a clear error for createRangeRoot Frame without frameInit', () => {
+    let host = document.createElement('div')
+    let start = document.createComment('start')
+    let end = document.createComment('end')
+    host.append(start, end)
+
+    let root = createRangeRoot([start, end])
+    let error: unknown
+    root.addEventListener('error', (event) => {
+      error = (event as ErrorEvent).error
+    })
+
+    root.render(<Frame src="/missing-range-runtime" fallback={<p>Loading…</p>} />)
+    root.flush()
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toContain('Cannot render <Frame /> without frame runtime')
+  })
+
+  it('throws from the root runtime resolveFrame fallback without frameInit', () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    let runtime: { resolveFrame(src: string): unknown } | undefined
+    function CaptureRuntime(handle: Handle) {
+      runtime = handle.frame.$runtime as { resolveFrame(src: string): unknown }
+      return () => null
+    }
+
+    let root = createRoot(rootContainer)
+    root.render(<CaptureRuntime />)
+    root.flush()
+
+    expect(runtime).toBeDefined()
+    expect(() => runtime!.resolveFrame('/missing-runtime')).toThrow(
+      'Cannot render <Frame /> without frame runtime',
+    )
+  })
+
+  it('strips doctype markup from client resolveFrame content', async () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        async resolveFrame() {
+          return '<!DOCTYPE html><section id="resolved-frame">Resolved</section>'
+        },
+      },
+    })
+
+    root.render(<Frame src="/doctype-frame" fallback={<p>Loading…</p>} />)
+    root.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#resolved-frame')?.textContent).toBe('Resolved')
+    expect(rootContainer.textContent).not.toContain('DOCTYPE')
+
+    root.dispose()
+  })
+
+  it('logs a clear error when hydrating client entries without loadModule', async () => {
+    let Counter = clientEntry(
+      '/js/counter.js#Counter',
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
+        return () => <button>{count}</button>
+      },
+    )
+
+    let html = await drain(renderToStream(<Counter initialCount={2} />))
+    let container = document.createElement('div')
+    let consoleError = mock.method(console, 'error', () => {})
+
+    try {
+      let root = createRoot(container, {
+        frameInit: {
+          resolveFrame: async () => html,
+        },
+      })
+
+      root.render(<Frame src="/counter-frame" fallback={<p>Loading…</p>} />)
+      root.flush()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(consoleError).toHaveBeenCalled()
+      expect(
+        consoleError.mock.calls.some((call) =>
+          String(call.arguments[0]).includes('Failed to load module'),
+        ),
+      ).toBe(true)
+      expect(
+        consoleError.mock.calls.some((call) =>
+          call.arguments.some((value) =>
+            String(value).includes(
+              'loadModule is required to hydrate client entries inside <Frame />',
+            ),
+          ),
+        ),
+      ).toBe(true)
+    } finally {
+      consoleError.mock.restore!()
+    }
+  })
+
+  it('logs a clear error when loadModule resolves to a non-function export', async () => {
+    let Counter = clientEntry(
+      '/js/counter.js#Counter',
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
+        return () => <button>{count}</button>
+      },
+    )
+
+    let html = await drain(renderToStream(<Counter initialCount={3} />))
+    let container = document.createElement('div')
+    let consoleError = mock.method(console, 'error', () => {})
+
+    try {
+      let root = createRoot(container, {
+        frameInit: {
+          resolveFrame: async () => html,
+          loadModule: async () => ({ not: 'a function' }) as any,
+        },
+      })
+
+      root.render(<Frame src="/bad-export-frame" fallback={<p>Loading…</p>} />)
+      root.flush()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(consoleError).toHaveBeenCalled()
+      expect(
+        consoleError.mock.calls.some((call) =>
+          call.arguments.some((value) => String(value).includes('is not a function')),
+        ),
+      ).toBe(true)
+    } finally {
+      consoleError.mock.restore!()
+    }
+  })
+
+  it('reloads client-created Frame in place when src changes', async () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    let [nextFramePromise, resolveNextFrame] = withResolvers<string>()
+
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        resolveFrame: async (src) => {
+          if (src === '/a') return '<p id="frame-a">A</p>'
+          return await nextFramePromise
+        },
+      },
+    })
+
+    root.render(<Frame src="/a" fallback={<p id="fallback-a">Loading A…</p>} />)
+    root.flush()
+    expect(rootContainer.querySelector('#fallback-a')?.textContent).toBe('Loading A…')
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(rootContainer.querySelector('#frame-a')?.textContent).toBe('A')
+
+    let frameA = rootContainer.querySelector('#frame-a')
+    invariant(frameA instanceof HTMLParagraphElement)
+
+    root.render(<Frame src="/b" fallback={<p id="fallback-b">Loading B…</p>} />)
+    root.flush()
+
+    // src updates should behave like reloads: existing content remains mounted
+    // while the new source resolves.
+    expect(rootContainer.querySelector('#fallback-b')).toBeNull()
+    expect(rootContainer.querySelector('#frame-a')).toBe(frameA)
+
+    resolveNextFrame('<p id="frame-b">B</p>')
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(rootContainer.querySelector('#frame-b')?.textContent).toBe('B')
+    root.dispose()
+  })
+
+  it('renders a client-created Frame after run() from a hydrated entry component', async () => {
+    let mounted = false
+    let showFrame: undefined | (() => void)
+
+    let PostRunFrame = clientEntry(
+      '/js/post-run.js#PostRunFrame',
+      function PostRunFrame(handle: Handle) {
+        showFrame = () => {
+          mounted = true
+          handle.update()
+        }
+
+        return () => (
+          <section>
+            {mounted ? (
+              <Frame
+                src="/post-run-frame"
+                fallback={<p id="post-run-fallback">Loading post-run…</p>}
+              />
+            ) : (
+              <p id="before-post-run">Before frame</p>
+            )}
+          </section>
+        )
+      },
+    )
+
+    let pageHtml = await drain(renderToStream(<PostRunFrame />))
+    document.body.innerHTML = pageHtml
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/post-run.js' && exportName === 'PostRunFrame') return PostRunFrame
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame: async () => '<p id="post-run-loaded">Post-run loaded</p>',
+    })
+
+    await app.ready()
+    invariant(showFrame)
+    showFrame()
+    app.flush()
+
+    expect(document.getElementById('post-run-fallback')?.textContent).toBe('Loading post-run…')
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('post-run-loaded')?.textContent).toBe('Post-run loaded')
+    app.dispose()
+  })
+
+  it('forwards the frame name as the resolve target when mounting a named Frame on the client', async () => {
+    // Regression test for #11500: the client fresh-insert path (resolveClientFrame)
+    // must forward the frame's name as the third `target` argument, like the reload
+    // path (frame.ts) and the server path (server/stream.ts) already do.
+    let mounted = false
+    let showFrame: undefined | (() => void)
+
+    let NamedFrameMount = clientEntry(
+      '/js/named-frame-mount.js#NamedFrameMount',
+      function NamedFrameMount(handle: Handle) {
+        showFrame = () => {
+          mounted = true
+          handle.update()
+        }
+
+        return () => (
+          <section>
+            {mounted ? (
+              <Frame
+                name="probe"
+                src="/named-frame"
+                fallback={<p id="named-frame-fallback">Loading…</p>}
+              />
+            ) : (
+              <p id="before-named-frame">Before frame</p>
+            )}
+          </section>
+        )
+      },
+    )
+
+    let pageHtml = await drain(renderToStream(<NamedFrameMount />))
+    document.body.innerHTML = pageHtml
+
+    let resolveTargets: Array<string | undefined> = []
+    let resolveFrame = mock.fn(async (_src: string, options) => {
+      resolveTargets.push(options?.target)
+      return '<p id="named-frame-loaded">Loaded</p>'
+    })
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/named-frame-mount.js' && exportName === 'NamedFrameMount') {
+          return NamedFrameMount
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+
+    await app.ready()
+    expect(resolveFrame).not.toHaveBeenCalled()
+
+    invariant(showFrame)
+    showFrame()
+    app.flush()
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('named-frame-loaded')?.textContent).toBe('Loaded')
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    // The fresh-insert path resolves the named frame with its name as `target`.
+    expect(resolveTargets).toEqual(['probe'])
+    app.dispose()
+  })
+
+  it('does not duplicate initially-mounted Frame hydration in a client entry', async () => {
+    let MountedFrame = clientEntry('/js/mounted-frame.js#MountedFrame', function MountedFrame() {
+      let showFrame = true
+      return () =>
+        showFrame ? (
+          <section>
+            <Frame src="/outer" fallback={<p id="outer-fallback">Loading outer…</p>} />
+          </section>
+        ) : null
+    })
+
+    let outerStream = renderToStream(
+      <div id="outer-root">
+        <Frame src="/nested" fallback={<span id="nested-fallback">Loading nested…</span>} />
+      </div>,
+      { resolveFrame: () => new Promise<string>(() => {}) },
+    )
+    let outerChunks = readChunks(outerStream)
+    let outerFirst = await outerChunks.next()
+    invariant(!outerFirst.done)
+    let outerInitialHtml = outerFirst.value
+    let nestedFrameId = getCommentMarkerId(outerInitialHtml, 'rmx:f:')
+
+    let [outerPromise, resolveOuter] = withResolvers<string>()
+    let pageStream = renderToStream(<MountedFrame />, {
+      resolveFrame(src: string) {
+        if (src === '/outer') return outerPromise
+        throw new Error(`Unexpected src during page render: ${src}`)
+      },
+    })
+    let pageChunks = readChunks(pageStream)
+    let pageFirst = await pageChunks.next()
+    invariant(!pageFirst.done)
+    document.body.innerHTML = pageFirst.value
+
+    expect(document.querySelectorAll('#outer-fallback')).toHaveLength(1)
+
+    let clientResolveFrame = mock.fn(
+      async (src: string) => `<p data-client-resolve="${src}">client resolve ${src}</p>`,
+    )
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/mounted-frame.js' && exportName === 'MountedFrame') {
+          return MountedFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame: clientResolveFrame,
+    })
+
+    await app.ready()
+    expect(clientResolveFrame).not.toHaveBeenCalled()
+
+    resolveOuter(outerInitialHtml)
+    let pageSecond = await pageChunks.next()
+    invariant(!pageSecond.done)
+    document.body.insertAdjacentHTML('beforeend', pageSecond.value)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(clientResolveFrame).not.toHaveBeenCalled()
+    expect(document.querySelectorAll('#outer-root')).toHaveLength(1)
+    expect(document.querySelectorAll('#nested-fallback')).toHaveLength(1)
+
+    let nestedTemplate = document.createElement('template')
+    nestedTemplate.id = nestedFrameId
+    nestedTemplate.innerHTML = '<span id="nested-loaded">Nested loaded</span>'
+    document.body.appendChild(nestedTemplate)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(clientResolveFrame).not.toHaveBeenCalled()
+    expect(document.querySelectorAll('#nested-loaded')).toHaveLength(1)
+    expect(document.querySelectorAll('#nested-fallback')).toHaveLength(0)
+
+    app.dispose()
+  })
+
+  it('adopts a Fragment-nested Frame hydration marker at a clientEntry boundary', async () => {
+    // Regression test for #11501: a <Frame> that is the first child of a bare
+    // Fragment returned by a clientEntry must adopt its server-rendered hydration
+    // marker rather than taking the fresh-insert path (which re-fetches src on the
+    // client and duplicates the streamed subtree). A host-element wrapper already
+    // works (see the test above); this covers the bare-Fragment-first-child case,
+    // where the clientEntry boundary's comment-skip would otherwise swallow the
+    // frame-start marker.
+    let FragmentFrame = clientEntry(
+      '/js/fragment-frame.js#FragmentFrame',
+      function FragmentFrame() {
+        return () => (
+          <>
+            <Frame name="frag" src="/frag" fallback={<p id="frag-fallback">Loading frag…</p>} />
+            <span id="frag-sibling">sibling</span>
+          </>
+        )
+      },
+    )
+
+    // Leave the frame pending on the server so the first chunk carries the frame's
+    // fallback and its rmx:f start/end markers.
+    let [framePromise] = withResolvers<string>()
+    let pageStream = renderToStream(<FragmentFrame />, {
+      resolveFrame(src: string) {
+        if (src === '/frag') return framePromise
+        throw new Error(`Unexpected src during page render: ${src}`)
+      },
+    })
+    let pageChunks = readChunks(pageStream)
+    let first = await pageChunks.next()
+    invariant(!first.done)
+    document.body.innerHTML = first.value
+
+    expect(document.querySelectorAll('#frag-fallback')).toHaveLength(1)
+    expect(document.querySelectorAll('#frag-sibling')).toHaveLength(1)
+
+    let clientResolveFrame = mock.fn(async (src: string) => `<p data-client="${src}">client</p>`)
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/fragment-frame.js' && exportName === 'FragmentFrame') {
+          return FragmentFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame: clientResolveFrame,
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Marker adopted: no client re-fetch, fallback not duplicated, sibling intact.
+    expect(clientResolveFrame).not.toHaveBeenCalled()
+    expect(document.querySelectorAll('#frag-fallback')).toHaveLength(1)
+    expect(document.querySelectorAll('#frag-sibling')).toHaveLength(1)
+    expect(document.querySelectorAll('[data-client]')).toHaveLength(0)
+
+    app.dispose()
+  })
+
+  it('renders Frame semantics from entry children during initial hydration', async () => {
+    let Card = clientEntry('/js/card.js#Card', function Card(handle: Handle<{ children?: any }>) {
+      return () => <section>{handle.props.children}</section>
+    })
+
+    let [framePromise, resolveFramePromise] = withResolvers<string>()
+    let pageStream = renderToStream(
+      <Card>
+        <Frame src="/child-frame" fallback={<span id="child-frame">Loading child frame…</span>} />
+      </Card>,
+      { resolveFrame: () => framePromise },
+    )
+    let chunks = readChunks(pageStream)
+    let first = await chunks.next()
+    invariant(!first.done)
+    document.body.innerHTML = first.value
+
+    expect(document.getElementById('child-frame')?.textContent).toBe('Loading child frame…')
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/card.js' && exportName === 'Card') return Card
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+    })
+
+    await app.ready()
+    expect(document.getElementById('child-frame')?.textContent).toBe('Loading child frame…')
+
+    resolveFramePromise('<span id="child-frame">Loaded child frame</span>')
+    let second = await chunks.next()
+    invariant(!second.done)
+    document.body.insertAdjacentHTML('beforeend', second.value)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('child-frame')?.textContent).toBe('Loaded child frame')
+    app.dispose()
+  })
+
+  it('does not dispose managed stylesheets when removing a client-created Frame', async () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    function Shell(handle: Handle) {
+      let mounted = true
+
+      return () => (
+        <main mix={[css({ color: '#0bf' })]}>
+          <button
+            id="toggle-frame"
+            type="button"
+            mix={[
+              on('click', () => {
+                mounted = !mounted
+                handle.update()
+              }),
+            ]}
+          >
+            Toggle
+          </button>
+          {mounted ? (
+            <Frame
+              src="/style-frame"
+              fallback={<div mix={[css({ color: '#f0b' })]}>Loading style frame…</div>}
+            />
+          ) : null}
+        </main>
+      )
+    }
+
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        resolveFrame: async () => '<section class="frame-loaded">Frame loaded</section>',
+      },
+    })
+
+    root.render(<Shell />)
+    root.flush()
+
+    let before = document.adoptedStyleSheets.length
+    let button = rootContainer.querySelector('#toggle-frame')
+    invariant(button instanceof HTMLButtonElement)
+
+    button.click()
+    root.flush()
+
+    let after = document.adoptedStyleSheets.length
+    expect(after).toBeGreaterThan(0)
+    expect(after).toBeGreaterThanOrEqual(before)
+
+    root.dispose()
+  })
+
+  it('streams client resolveFrame templates and updates nested placeholders incrementally', async () => {
+    let reload: undefined | (() => Promise<AbortSignal>)
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-stream.js#ReloadStream',
+      function ReloadStream(handle: Handle) {
+        reload = () => handle.frame.reload()
+        return () => (
+          <button id="reload-stream" type="button">
+            Reload streamed
+          </button>
+        )
+      },
+    )
+
+    async function renderInitial(): Promise<string> {
+      return await drain(
+        renderToStream(
+          <section>
+            <p id="outer">Initial outer</p>
+            <ReloadButton />
+          </section>,
+        ),
+      )
+    }
+
+    let [nestedResolvePromise, resolveNested] = withResolvers<string>()
+    let streamedReload = renderToStream(
+      <section>
+        <p id="outer">Reloaded outer</p>
+        <Frame src="/nested" fallback={<span id="nested">Loading nested…</span>} />
+        <ReloadButton />
+      </section>,
+      {
+        resolveFrame(src: string) {
+          if (src === '/nested') return nestedResolvePromise
+          throw new Error(`Unexpected nested src: ${src}`)
+        },
+      },
+    )
+
+    let streamedChunks = readChunks(streamedReload)
+    let firstChunk = await streamedChunks.next()
+    invariant(!firstChunk.done)
+    resolveNested('<span id="nested">Nested loaded</span>')
+    let secondChunk = await streamedChunks.next()
+    invariant(!secondChunk.done)
+
+    let [secondChunkPromise, releaseSecondChunk] = withResolvers<string>()
+    let serverHtml = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/reload-streamed" fallback={<div id="frame-fallback">Loading…</div>} />
+        </main>,
+        {
+          resolveFrame: renderInitial,
+        },
+      ),
+    )
+    document.body.innerHTML = serverHtml
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload-stream.js' && exportName === 'ReloadStream') {
+          return ReloadButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/reload-streamed') {
+          return streamFromChunks([firstChunk.value, secondChunkPromise])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reload)
+    let reloadPromise = reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('outer')?.textContent).toBe('Reloaded outer')
+    expect(document.getElementById('nested')?.textContent).toBe('Loading nested…')
+
+    releaseSecondChunk(secondChunk.value)
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('nested')?.textContent).toBe('Nested loaded')
+  })
+
+  it('streams nested frame templates after a client-triggered top frame reload', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+
+    let ReloadTopButton = clientEntry(
+      '/assets/reload-top-stream.js#ReloadTopStream',
+      function ReloadTopStream(handle: Handle) {
+        reloadTop = () => handle.frames.top.reload()
+        return () => (
+          <button id="reload-top-stream" type="button">
+            Reload top
+          </button>
+        )
+      },
+    )
+
+    async function renderControls(): Promise<string> {
+      return await drain(
+        renderToStream(
+          <section>
+            <p id="controls">Initial controls</p>
+            <ReloadTopButton />
+          </section>,
+        ),
+      )
+    }
+
+    let serverHtml = await drain(
+      renderToStream(
+        <html>
+          <body>
+            <main>
+              <p id="top-state">Initial top</p>
+              <Frame src="/controls" fallback={<span id="controls">Loading controls…</span>} />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/controls') return renderControls()
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      ),
+    )
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [nestedResolvePromise, resolveNested] = withResolvers<string>()
+    let streamedReload = renderToStream(
+      <html>
+        <body>
+          <main>
+            <p id="top-state">Reloaded top</p>
+            <Frame src="/nested" fallback={<span id="nested">Loading nested…</span>} />
+          </main>
+        </body>
+      </html>,
+      {
+        resolveFrame(src: string) {
+          if (src === '/nested') return nestedResolvePromise
+          throw new Error(`Unexpected nested src: ${src}`)
+        },
+      },
+    )
+
+    let streamedChunks = readChunks(streamedReload)
+    let firstChunk = await streamedChunks.next()
+    invariant(!firstChunk.done)
+    resolveNested('<span id="nested">Nested loaded</span>')
+    let secondChunk = await streamedChunks.next()
+    invariant(!secondChunk.done)
+    let [secondChunkPromise, releaseSecondChunk] = withResolvers<string>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload-top-stream.js' && exportName === 'ReloadTopStream') {
+          return ReloadTopButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks(['<!DOCTYPE html>', firstChunk.value, secondChunkPromise])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reloadTop)
+    let reloadPromise = reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('top-state')?.textContent).toBe('Reloaded top')
+    expect(document.getElementById('nested')?.textContent).toBe('Loading nested…')
+
+    releaseSecondChunk(secondChunk.value)
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('nested')?.textContent).toBe('Nested loaded')
+    app.dispose()
+  })
+
+  it('preserves resolved non-blocking child frame content during top frame reloads', async () => {
+    async function renderChildFrame(label: string) {
+      return await drain(
+        renderToStream(
+          <section id="child-frame-content">
+            <p id="child-frame-label">{label}</p>
+            <input id="child-frame-input" />
+          </section>,
+        ),
+      )
+    }
+
+    function renderDocument(childContent: string | Promise<string>) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <main>
+              <p id="top-frame-label">Top frame</p>
+              <Frame
+                name="child"
+                src="/child"
+                fallback={<span id="child-frame-fallback">Loading child...</span>}
+              />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/child') return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderDocument(renderChildFrame('Initial child'))),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [childReloadPromise, resolveChildReload] = withResolvers<string>()
+    let streamedReload = renderDocument(childReloadPromise)
+    let streamedChunks = readChunks(streamedReload)
+    let firstChunk = await streamedChunks.next()
+    invariant(!firstChunk.done)
+    resolveChildReload(await renderChildFrame('Reloaded child'))
+    let secondChunk = await streamedChunks.next()
+    invariant(!secondChunk.done)
+    let [secondChunkPromise, releaseSecondChunk] = withResolvers<string>()
+
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks(['<!DOCTYPE html>', firstChunk.value, secondChunkPromise])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let input = document.getElementById('child-frame-input')
+    invariant(input instanceof HTMLInputElement)
+    expect(document.getElementById('child-frame-label')?.textContent).toBe('Initial child')
+    input.value = 'typed child value'
+
+    let topFrame = app.frames.top
+    let reloadPromise = topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('child-frame-fallback')).toBeNull()
+    expect(document.getElementById('child-frame-input')).toBe(input)
+    expect(document.getElementById('child-frame-label')?.textContent).toBe('Initial child')
+    expect(input.value).toBe('typed child value')
+
+    releaseSecondChunk(secondChunk.value)
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('child-frame-fallback')).toBeNull()
+    expect(document.getElementById('child-frame-input')).toBe(input)
+    expect(document.getElementById('child-frame-label')?.textContent).toBe('Reloaded child')
+    expect(input.value).toBe('typed child value')
+
+    app.dispose()
+  })
+
+  it('diffs pending child frame fallbacks and ignores stale templates during top frame reloads', async () => {
+    let [initialChildPromise] = withResolvers<string>()
+    let [reloadedChildPromise] = withResolvers<string>()
+    let childReloadStartEvents = 0
+    let childReloadCompleteEvents = 0
+    let reloadTopWithPendingChild: undefined | (() => Promise<AbortSignal>)
+
+    let PendingChildFrameObserver = clientEntry(
+      '/assets/pending-child-frame-observer.js#PendingChildFrameObserver',
+      function PendingChildFrameObserver(handle: Handle) {
+        reloadTopWithPendingChild = async () => {
+          let childFrame = handle.frames.get('child')
+          invariant(childFrame)
+          childFrame.addEventListener(
+            'reloadStart',
+            () => {
+              childReloadStartEvents++
+            },
+            { once: true },
+          )
+          childFrame.addEventListener(
+            'reloadComplete',
+            () => {
+              childReloadCompleteEvents++
+            },
+            { once: true },
+          )
+          return await handle.frames.top.reload()
+        }
+
+        return () => <button id="reload-top-with-pending-child">Reload top</button>
+      },
+    )
+
+    function renderDocument(childContent: Promise<string>, fallbackLabel: string) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <main>
+              <p id="top-frame-label">Top frame</p>
+              <PendingChildFrameObserver />
+              <Frame
+                name="child"
+                src="/child"
+                fallback={
+                  <span id="child-frame-fallback" data-label={fallbackLabel}>
+                    {fallbackLabel}
+                  </span>
+                }
+              />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/child') return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialChunks = readChunks(renderDocument(initialChildPromise, 'Initial fallback'))
+    let initialChunk = await initialChunks.next()
+    invariant(!initialChunk.done)
+    let initialMarkerId = getCommentMarkerId(initialChunk.value, 'rmx:f:')
+
+    let initialDocument = new DOMParser().parseFromString(initialChunk.value, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let reloadedChunks = readChunks(renderDocument(reloadedChildPromise, 'Reloaded fallback'))
+    let reloadedChunk = await reloadedChunks.next()
+    invariant(!reloadedChunk.done)
+    let reloadedMarkerId = getCommentMarkerId(reloadedChunk.value, 'rmx:f:')
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/pending-child-frame-observer.js' &&
+          exportName === 'PendingChildFrameObserver'
+        ) {
+          return PendingChildFrameObserver
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks(['<!DOCTYPE html>', reloadedChunk.value])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let fallback = document.getElementById('child-frame-fallback')
+    invariant(fallback instanceof HTMLSpanElement)
+    expect(fallback.textContent).toBe('Initial fallback')
+    expect(fallback.getAttribute('data-label')).toBe('Initial fallback')
+
+    invariant(reloadTopWithPendingChild)
+    let reloadPromise = reloadTopWithPendingChild()
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(childReloadStartEvents).toBe(1)
+    expect(childReloadCompleteEvents).toBe(0)
+    expect(document.getElementById('child-frame-fallback')).toBe(fallback)
+    expect(fallback.textContent).toBe('Reloaded fallback')
+    expect(fallback.getAttribute('data-label')).toBe('Reloaded fallback')
+
+    let staleTemplate = document.createElement('template')
+    staleTemplate.id = initialMarkerId
+    staleTemplate.innerHTML = '<span id="stale-child-content">Stale child</span>'
+    document.body.appendChild(staleTemplate)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('stale-child-content')).toBeNull()
+    expect(document.getElementById('child-frame-fallback')).toBe(fallback)
+    expect(fallback.textContent).toBe('Reloaded fallback')
+
+    let freshTemplate = document.createElement('template')
+    freshTemplate.id = reloadedMarkerId
+    freshTemplate.innerHTML = '<span id="fresh-child-content">Fresh child</span>'
+    document.body.appendChild(freshTemplate)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('stale-child-content')).toBeNull()
+    expect(document.getElementById('fresh-child-content')?.textContent).toBe('Fresh child')
+    expect(document.getElementById('child-frame-fallback')).toBeNull()
+    expect(childReloadStartEvents).toBe(1)
+    expect(childReloadCompleteEvents).toBe(1)
+
+    app.dispose()
+  })
+
+  it('preserves resolved direct child frame content during parent frame reloads', async () => {
+    let reloadParent: undefined | (() => Promise<AbortSignal>)
+
+    let ReloadDirectParent = clientEntry(
+      '/assets/reload-direct-parent.js#ReloadDirectParent',
+      function ReloadDirectParent(handle: Handle) {
+        reloadParent = () => handle.frame.reload()
+        return () => <button id="reload-direct-parent">Reload parent</button>
+      },
+    )
+
+    async function renderChildFrame(label: string) {
+      return await drain(
+        renderToStream(
+          <>
+            <p id="direct-child-frame-label">{label}</p>
+            <input id="direct-child-frame-input" />
+          </>,
+        ),
+      )
+    }
+
+    function renderParentFrame(childContent: string | Promise<string>) {
+      return renderToStream(
+        <>
+          <Frame
+            name="direct-child"
+            src="/direct-child"
+            fallback={<span id="direct-child-frame-fallback">Loading child...</span>}
+          />
+          <p id="direct-parent-sibling">Parent sibling</p>
+          <ReloadDirectParent />
+        </>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/direct-child') return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Frame name="direct-parent" src="/direct-parent" />
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/direct-parent') {
+                return renderParentFrame(renderChildFrame('Initial direct child'))
+              }
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      ),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [childReloadPromise, resolveChildReload] = withResolvers<string>()
+    let streamedReload = renderParentFrame(childReloadPromise)
+    let streamedChunks = readChunks(streamedReload)
+    let firstChunk = await streamedChunks.next()
+    invariant(!firstChunk.done)
+    resolveChildReload(await renderChildFrame('Reloaded direct child'))
+    let secondChunk = await streamedChunks.next()
+    invariant(!secondChunk.done)
+    let [secondChunkPromise, releaseSecondChunk] = withResolvers<string>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-direct-parent.js' &&
+          exportName === 'ReloadDirectParent'
+        ) {
+          return ReloadDirectParent
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/direct-parent') {
+          return streamFromChunks([firstChunk.value, secondChunkPromise])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let input = document.getElementById('direct-child-frame-input')
+    invariant(input instanceof HTMLInputElement)
+    expect(document.getElementById('direct-child-frame-label')?.textContent).toBe(
+      'Initial direct child',
+    )
+    input.value = 'typed direct child value'
+
+    invariant(reloadParent)
+    let reloadPromise = reloadParent()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('direct-child-frame-fallback')).toBeNull()
+    expect(document.getElementById('direct-child-frame-input')).toBe(input)
+    expect(document.getElementById('direct-child-frame-label')?.textContent).toBe(
+      'Initial direct child',
+    )
+    expect(input.value).toBe('typed direct child value')
+    expect(document.getElementById('direct-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    releaseSecondChunk(secondChunk.value)
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('direct-child-frame-fallback')).toBeNull()
+    expect(document.getElementById('direct-child-frame-input')).toBe(input)
+    expect(document.getElementById('direct-child-frame-label')?.textContent).toBe(
+      'Reloaded direct child',
+    )
+    expect(input.value).toBe('typed direct child value')
+    expect(document.getElementById('direct-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    app.dispose()
+  })
+
+  it('keeps blocking child frame handles reloadable after top frame reloads', async () => {
+    let childReloadCount = 0
+
+    let ReloadBlockingChild = clientEntry(
+      '/assets/reload-blocking-child.js#ReloadBlockingChild',
+      function ReloadBlockingChild(handle: Handle) {
+        let pending = false
+
+        handle.frame.addEventListener('reloadStart', () => {
+          pending = true
+          handle.update()
+        })
+
+        handle.frame.addEventListener('reloadComplete', () => {
+          pending = false
+          handle.update()
+        })
+
+        return () => (
+          <button
+            id="reload-blocking-child"
+            mix={on('click', () => {
+              void handle.frame.reload()
+            })}
+          >
+            {pending ? 'Reloading child' : 'Reload child'}
+          </button>
+        )
+      },
+    )
+
+    async function renderChildFrame(label: string) {
+      return await drain(
+        renderToStream(
+          <>
+            <p id="blocking-child-frame-label">{label}</p>
+            <ReloadBlockingChild />
+          </>,
+        ),
+      )
+    }
+
+    function renderDocument(childLabel: string) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <main>
+              <Frame name="blocking-child" src="/blocking-child" />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/blocking-child') return renderChildFrame(childLabel)
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderDocument('Initial blocking child')),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [topReloadPromise, resolveTopReload] = withResolvers<ReadableStream<Uint8Array>>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-blocking-child.js' &&
+          exportName === 'ReloadBlockingChild'
+        ) {
+          return ReloadBlockingChild
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return topReloadPromise
+        }
+        if (src === '/blocking-child') {
+          childReloadCount++
+          return renderChildFrame(`Reloaded by child frame ${childReloadCount}`)
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('blocking-child-frame-label')?.textContent).toBe(
+      'Initial blocking child',
+    )
+
+    let topReload = app.frames.top.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('reload-blocking-child')?.textContent).toBe('Reloading child')
+
+    resolveTopReload(renderDocument('Reloaded by top frame'))
+    await topReload
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('blocking-child-frame-label')?.textContent).toBe(
+      'Reloaded by top frame',
+    )
+    expect(document.getElementById('reload-blocking-child')?.textContent).toBe('Reload child')
+
+    let reloadChildButton = document.getElementById('reload-blocking-child')
+    invariant(reloadChildButton instanceof HTMLButtonElement)
+    reloadChildButton.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('blocking-child-frame-label')?.textContent).toBe(
+      'Reloaded by child frame 1',
+    )
+
+    app.dispose()
+  })
+
+  it('removes direct child frame content during parent frame reloads', async () => {
+    let reloadParent: undefined | (() => Promise<AbortSignal>)
+    let showChildFrame = true
+
+    let ReloadDirectParent = clientEntry(
+      '/assets/remove-direct-child-frame.js#RemoveDirectChildFrame',
+      function RemoveDirectChildFrame(handle: Handle) {
+        reloadParent = async () => {
+          showChildFrame = false
+          return await handle.frame.reload()
+        }
+        return () => <button id="remove-direct-child-frame">Remove child</button>
+      },
+    )
+
+    function renderParentFrame() {
+      return renderToStream(
+        <>
+          {showChildFrame ? <Frame name="removed-child" src="/removed-child" /> : null}
+          <p id="remove-direct-parent-sibling">Parent sibling</p>
+          <ReloadDirectParent />
+        </>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/removed-child') {
+              return '<p id="removed-child-content">Child content</p><input id="removed-child-input" />'
+            }
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Frame name="remove-direct-parent" src="/remove-direct-parent" />
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/remove-direct-parent') return renderParentFrame()
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      ),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/remove-direct-child-frame.js' &&
+          exportName === 'RemoveDirectChildFrame'
+        ) {
+          return ReloadDirectParent
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/remove-direct-parent') return renderParentFrame()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('removed-child-content')?.textContent).toBe('Child content')
+    expect(document.getElementById('remove-direct-parent-sibling')?.textContent).toBe(
+      'Parent sibling',
+    )
+
+    invariant(reloadParent)
+    await reloadParent()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('removed-child-content')).toBeNull()
+    expect(document.getElementById('removed-child-input')).toBeNull()
+    expect(document.getElementById('remove-direct-parent-sibling')?.textContent).toBe(
+      'Parent sibling',
+    )
+
+    app.dispose()
+  })
+
+  it('replaces direct child frame content when frame src changes during parent frame reloads', async () => {
+    let reloadParent: undefined | (() => Promise<AbortSignal>)
+    let childSrc = '/direct-src-a'
+
+    let ReloadDirectParent = clientEntry(
+      '/assets/replace-direct-child-frame.js#ReplaceDirectChildFrame',
+      function ReplaceDirectChildFrame(handle: Handle) {
+        reloadParent = async () => {
+          childSrc = '/direct-src-b'
+          return await handle.frame.reload()
+        }
+        return () => <button id="replace-direct-child-frame">Replace child</button>
+      },
+    )
+
+    function renderParentFrame(childContent: string | Promise<string>) {
+      return renderToStream(
+        <>
+          <Frame
+            name="direct-src-child"
+            src={childSrc}
+            fallback={<span id="direct-src-child-fallback">Loading replacement...</span>}
+          />
+          <p id="direct-src-parent-sibling">Parent sibling</p>
+          <ReloadDirectParent />
+        </>,
+        {
+          resolveFrame(src: string) {
+            if (src === childSrc) return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Frame name="direct-src-parent" src="/direct-src-parent" />
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/direct-src-parent') {
+                return renderParentFrame(
+                  '<p id="direct-src-child-content">Initial child</p><input id="direct-src-child-input" />',
+                )
+              }
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      ),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [childReloadPromise, resolveChildReload] = withResolvers<string>()
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/replace-direct-child-frame.js' &&
+          exportName === 'ReplaceDirectChildFrame'
+        ) {
+          return ReloadDirectParent
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/direct-src-parent') {
+          return renderParentFrame(childReloadPromise)
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let input = document.getElementById('direct-src-child-input')
+    invariant(input instanceof HTMLInputElement)
+    input.value = 'typed value'
+    expect(document.getElementById('direct-src-child-content')?.textContent).toBe('Initial child')
+
+    invariant(reloadParent)
+    let reloadPromise = reloadParent()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('direct-src-child-content')).toBeNull()
+    expect(document.getElementById('direct-src-child-input')).toBeNull()
+    expect(document.getElementById('direct-src-child-fallback')?.textContent).toBe(
+      'Loading replacement...',
+    )
+    expect(document.getElementById('direct-src-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    resolveChildReload('<p id="direct-src-child-content">Replacement child</p>')
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('direct-src-child-fallback')).toBeNull()
+    expect(document.getElementById('direct-src-child-content')?.textContent).toBe(
+      'Replacement child',
+    )
+    expect(document.getElementById('direct-src-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    app.dispose()
+  })
+
+  it('replaces nested child frame content when frame src changes during parent frame reloads', async () => {
+    let reloadParent: undefined | (() => Promise<AbortSignal>)
+    let childSrc = '/nested-src-a'
+
+    let ReloadNestedParent = clientEntry(
+      '/assets/replace-nested-child-frame.js#ReplaceNestedChildFrame',
+      function ReplaceNestedChildFrame(handle: Handle) {
+        reloadParent = async () => {
+          childSrc = '/nested-src-b'
+          return await handle.frame.reload()
+        }
+        return () => <button id="replace-nested-child-frame">Replace child</button>
+      },
+    )
+
+    function renderParentFrame(childContent: string | Promise<string>) {
+      return renderToStream(
+        <>
+          <section id="nested-src-child-shell">
+            <Frame
+              name="nested-src-child"
+              src={childSrc}
+              fallback={<span id="nested-src-child-fallback">Loading replacement...</span>}
+            />
+          </section>
+          <p id="nested-src-parent-sibling">Parent sibling</p>
+          <ReloadNestedParent />
+        </>,
+        {
+          resolveFrame(src: string) {
+            if (src === childSrc) return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Frame name="nested-src-parent" src="/nested-src-parent" />
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/nested-src-parent') {
+                return renderParentFrame(
+                  '<p id="nested-src-child-content">Initial child</p><input id="nested-src-child-input" />',
+                )
+              }
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      ),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [childReloadPromise, resolveChildReload] = withResolvers<string>()
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/replace-nested-child-frame.js' &&
+          exportName === 'ReplaceNestedChildFrame'
+        ) {
+          return ReloadNestedParent
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/nested-src-parent') {
+          return renderParentFrame(childReloadPromise)
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let input = document.getElementById('nested-src-child-input')
+    invariant(input instanceof HTMLInputElement)
+    input.value = 'typed value'
+    expect(document.getElementById('nested-src-child-content')?.textContent).toBe('Initial child')
+
+    invariant(reloadParent)
+    let reloadPromise = reloadParent()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('nested-src-child-content')).toBeNull()
+    expect(document.getElementById('nested-src-child-input')).toBeNull()
+    expect(document.getElementById('nested-src-child-fallback')?.textContent).toBe(
+      'Loading replacement...',
+    )
+    expect(document.getElementById('nested-src-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    resolveChildReload('<p id="nested-src-child-content">Replacement child</p>')
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('nested-src-child-fallback')).toBeNull()
+    expect(document.getElementById('nested-src-child-content')?.textContent).toBe(
+      'Replacement child',
+    )
+    expect(document.getElementById('nested-src-child-input')).toBeNull()
+    expect(document.getElementById('nested-src-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    app.dispose()
+  })
+
+  it('re-resolves a nested clientEntry frame with its target on a non-root ancestor reload', async () => {
+    // Regression test for #11502: a <Frame> wrapped in a clientEntry and nested
+    // inside a parent (non-root ancestor) frame re-resolves on the *client* when
+    // the parent reloads and the clientEntry remounts it (key change). That client
+    // re-resolve must carry the frame's name as its `target` (the same
+    // resolveClientFrame path as #11500) instead of resolving target-less.
+    let reloadParent: undefined | (() => Promise<AbortSignal>)
+    let issue = 'a'
+    let islandClientTargets: Array<string | undefined> = []
+
+    let CommentsIsland = clientEntry(
+      '/assets/comments-island.js#CommentsIsland',
+      function CommentsIsland(handle: Handle<{ issue: string }>) {
+        return () => (
+          <div className="comments-island">
+            <Frame
+              name="island"
+              key={handle.props.issue}
+              src={`/comments?issue=${handle.props.issue}`}
+              fallback={<span id="island-fallback">Loading island…</span>}
+            />
+          </div>
+        )
+      },
+    )
+
+    let IslandParent = clientEntry(
+      '/assets/island-parent.js#IslandParent',
+      function IslandParent(handle: Handle) {
+        reloadParent = async () => {
+          issue = 'b'
+          return await handle.frame.reload()
+        }
+        return () => <button id="reload-island-parent">Reload detail</button>
+      },
+    )
+
+    function renderParentFrame() {
+      return renderToStream(
+        <>
+          <section id="island-shell">
+            <CommentsIsland issue={issue} />
+          </section>
+          <IslandParent />
+        </>,
+        {
+          // Server resolves the island in-stream with its target.
+          resolveFrame(src: string) {
+            if (src.startsWith('/comments')) {
+              return `<p id="island-content" data-server-issue="${issue}">island ${issue}</p>`
+            }
+            throw new Error(`Unexpected frame src during parent render: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Frame name="detail" src="/detail" />
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/detail') return renderParentFrame()
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      ),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/comments-island.js' && exportName === 'CommentsIsland') {
+          return CommentsIsland
+        }
+        if (moduleUrl === '/assets/island-parent.js' && exportName === 'IslandParent') {
+          return IslandParent
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string, options) {
+        if (src === '/detail') return renderParentFrame()
+        if (src.startsWith('/comments')) {
+          // The client re-resolve of the nested clientEntry frame on ancestor reload.
+          islandClientTargets.push(options?.target)
+          return `<p id="island-content" data-client-issue="${issue}">island ${issue} (client)</p>`
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Initial load: the island was server-resolved and adopted (no client re-resolve).
+    expect(islandClientTargets).toEqual([])
+    expect(document.getElementById('island-content')?.getAttribute('data-server-issue')).toBe('a')
+
+    invariant(reloadParent)
+    let reloadPromise = reloadParent()
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // The ancestor reload remounts the clientEntry's keyed frame, which re-resolves
+    // on the client exactly once. That re-resolve must carry the frame's name as its
+    // target; pinning the count also guards against a silent marker-adoption regression.
+    expect(islandClientTargets).toEqual(['island'])
+
+    app.dispose()
+  })
+
+  it('reloads frames inside preserved client entries after server-driven entry rerenders', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+    let entryFrameEvents: string[] = []
+    let entryFrameServerResolveCount = 0
+
+    let EntryWithFrame = clientEntry(
+      '/assets/entry-with-frame.js#EntryWithFrame',
+      function EntryWithFrame(handle: Handle<{ label: string }>) {
+        reloadTop = () => handle.frames.top.reload()
+        return () => (
+          <section>
+            <p id="entry-label">{handle.props.label}</p>
+            <Frame
+              name="entry-frame"
+              src="/entry-frame"
+              fallback={<span id="entry-frame">Loading entry frame...</span>}
+            />
+          </section>
+        )
+      },
+    )
+
+    let EntryFrameObserver = clientEntry(
+      '/assets/entry-frame-observer.js#EntryFrameObserver',
+      function EntryFrameObserver(handle: Handle) {
+        let listening = false
+        return () => {
+          handle.queueTask(() => {
+            if (!listening) {
+              let entryFrame = handle.frames.get('entry-frame')
+              invariant(entryFrame, 'Expected entry frame handle')
+              entryFrame.addEventListener('reloadStart', () => entryFrameEvents.push('start'), {
+                signal: handle.signal,
+              })
+              entryFrame.addEventListener(
+                'reloadComplete',
+                () => entryFrameEvents.push('complete'),
+                {
+                  signal: handle.signal,
+                },
+              )
+              listening = true
+            }
+          })
+
+          return null
+        }
+      },
+    )
+
+    async function renderPage(label: string, frameLabel: string): Promise<string> {
+      return await drain(renderPageStream(label, frameLabel))
+    }
+
+    function renderPageStream(label: string, frameLabel: string): ReadableStream<Uint8Array> {
+      return renderToStream(
+        <html>
+          <body>
+            <main>
+              <EntryFrameObserver />
+              <EntryWithFrame label={label} />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/entry-frame') {
+              entryFrameServerResolveCount++
+              return `<span id="entry-frame">${frameLabel}</span>`
+            }
+            throw new Error(`Unexpected frame src during server render: ${src}`)
+          },
+        },
+      )
+    }
+
+    let serverHtml = await renderPage('Initial entry', 'Initial entry frame')
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let entryFrameResolveCount = 0
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/entry-with-frame.js' && exportName === 'EntryWithFrame') {
+          return EntryWithFrame
+        }
+        if (
+          moduleUrl === '/assets/entry-frame-observer.js' &&
+          exportName === 'EntryFrameObserver'
+        ) {
+          return EntryFrameObserver
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return renderPageStream('Reloaded entry', 'Unused streamed entry frame')
+        }
+        if (src === '/entry-frame') {
+          entryFrameResolveCount++
+          return '<span id="entry-frame">Reloaded entry frame</span>'
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
+    expect(entryFrameEvents).toEqual([])
+    expect(entryFrameServerResolveCount).toBe(1)
+    expect(entryFrameResolveCount).toBe(0)
+
+    invariant(reloadTop)
+    await reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
+    expect(entryFrameEvents).toEqual(['start', 'complete'])
+    expect(entryFrameServerResolveCount).toBe(2)
+    expect(entryFrameResolveCount).toBe(1)
+    app.dispose()
+  })
+
+  it('reloads blocking frames inside preserved client entries after server-driven entry rerenders', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+    let serverFrameResolveCount = 0
+    let clientFrameResolveCount = 0
+
+    let EntryWithFrame = clientEntry(
+      '/assets/entry-with-server-frame.js#EntryWithServerFrame',
+      function EntryWithServerFrame(handle: Handle<{ label: string }>) {
+        reloadTop = () => handle.frames.top.reload()
+        return () => (
+          <section>
+            <p id="entry-label">{handle.props.label}</p>
+            <Frame name="entry-frame" src="/entry-frame" />
+          </section>
+        )
+      },
+    )
+
+    async function renderPage(label: string, frameLabel: string): Promise<string> {
+      return await drain(renderPageStream(label, frameLabel))
+    }
+
+    async function renderPageWithProtocol(label: string, frameLabel: string): Promise<string> {
+      return await drainWithProtocol(renderPageStream(label, frameLabel))
+    }
+
+    function renderPageStream(label: string, frameLabel: string): ReadableStream<Uint8Array> {
+      return renderToStream(
+        <html>
+          <body>
+            <main>
+              <EntryWithFrame label={label} />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/entry-frame') {
+              serverFrameResolveCount++
+              return `<span id="entry-frame">${frameLabel}</span>`
+            }
+            throw new Error(`Unexpected frame src during server render: ${src}`)
+          },
+        },
+      )
+    }
+
+    let serverHtml = await renderPage('Initial entry', 'Initial entry frame')
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-server-frame.js' &&
+          exportName === 'EntryWithServerFrame'
+        ) {
+          return EntryWithFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks([
+            await renderPageWithProtocol('Reloaded entry', 'Server-provided entry frame'),
+          ])
+        }
+        if (src === '/entry-frame') {
+          clientFrameResolveCount++
+          return '<span id="entry-frame">Reloaded entry frame</span>'
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
+    expect(serverFrameResolveCount).toBe(1)
+    expect(clientFrameResolveCount).toBe(0)
+
+    invariant(reloadTop)
+    await reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
+    expect(serverFrameResolveCount).toBe(2)
+    expect(clientFrameResolveCount).toBe(1)
+    app.dispose()
+  })
+
+  it('reloads nested frames inside blocking frames rendered by preserved client entries', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+    let renderClientOnlyFrame = false
+    let blockingFrameServerResolveCount = 0
+    let blockingFrameClientResolveCount = 0
+    let clientOnlyFrameClientResolveCount = 0
+
+    let ClientOnlyFrameEntry = clientEntry(
+      '/assets/blocking-frame-client-only-entry.js#BlockingFrameClientOnlyEntry',
+      function BlockingFrameClientOnlyEntry(handle: Handle<{ label: string }>) {
+        return () => {
+          handle.queueTask(() => {
+            if (renderClientOnlyFrame) return
+            renderClientOnlyFrame = true
+            void handle.update()
+          })
+
+          return (
+            <section>
+              <p id="blocking-entry-label">{handle.props.label}</p>
+              {renderClientOnlyFrame ? (
+                <Frame
+                  name="blocking-client-only-frame"
+                  src="/blocking-client-only-frame"
+                  fallback={
+                    <span id="blocking-client-only-frame">Loading blocking client frame...</span>
+                  }
+                />
+              ) : null}
+            </section>
+          )
+        }
+      },
+    )
+
+    let EntryWithBlockingFrame = clientEntry(
+      '/assets/entry-with-blocking-frame.js#EntryWithBlockingFrame',
+      function EntryWithBlockingFrame(handle: Handle<{ label: string }>) {
+        reloadTop = () => handle.frames.top.reload()
+        return () => (
+          <section>
+            <p id="entry-label">{handle.props.label}</p>
+            <Frame name="blocking-frame" src="/blocking-frame" />
+          </section>
+        )
+      },
+    )
+
+    async function renderBlockingFrame(label: string): Promise<string> {
+      let previousRenderClientOnlyFrame = renderClientOnlyFrame
+      renderClientOnlyFrame = false
+      return await drain(
+        renderToStream(<ClientOnlyFrameEntry label={label} />, {
+          resolveFrame(src: string) {
+            throw new Error(`Unexpected blocking frame src during server render: ${src}`)
+          },
+        }),
+      ).finally(() => {
+        renderClientOnlyFrame = previousRenderClientOnlyFrame
+      })
+    }
+
+    async function renderPage(label: string, blockingLabel: string): Promise<string> {
+      return await drain(renderPageStream(label, blockingLabel))
+    }
+
+    async function renderPageWithProtocol(label: string, blockingLabel: string): Promise<string> {
+      return await drainWithProtocol(renderPageStream(label, blockingLabel))
+    }
+
+    function renderPageStream(label: string, blockingLabel: string): ReadableStream<Uint8Array> {
+      return renderToStream(
+        <html>
+          <body>
+            <main>
+              <EntryWithBlockingFrame label={label} />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/blocking-frame') {
+              blockingFrameServerResolveCount++
+              return renderBlockingFrame(blockingLabel)
+            }
+            throw new Error(`Unexpected frame src during server render: ${src}`)
+          },
+        },
+      )
+    }
+
+    let serverHtml = await renderPage('Initial entry', 'Initial blocking entry')
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-blocking-frame.js' &&
+          exportName === 'EntryWithBlockingFrame'
+        ) {
+          return EntryWithBlockingFrame
+        }
+        if (
+          moduleUrl === '/assets/blocking-frame-client-only-entry.js' &&
+          exportName === 'BlockingFrameClientOnlyEntry'
+        ) {
+          return ClientOnlyFrameEntry
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks([
+            await renderPageWithProtocol('Reloaded entry', 'Reloaded blocking entry'),
+          ])
+        }
+        if (src === '/blocking-frame') {
+          blockingFrameClientResolveCount++
+          return await renderBlockingFrame('Reloaded blocking entry from browser')
+        }
+        if (src === '/blocking-client-only-frame') {
+          clientOnlyFrameClientResolveCount++
+          return `<span id="blocking-client-only-frame">Blocking client-only frame ${clientOnlyFrameClientResolveCount}</span>`
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    app.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
+    expect(document.getElementById('blocking-entry-label')?.textContent).toBe(
+      'Initial blocking entry',
+    )
+    expect(document.getElementById('blocking-client-only-frame')?.textContent).toBe(
+      'Blocking client-only frame 1',
+    )
+    expect(blockingFrameServerResolveCount).toBe(1)
+    expect(blockingFrameClientResolveCount).toBe(0)
+    expect(clientOnlyFrameClientResolveCount).toBe(1)
+
+    invariant(reloadTop)
+    await reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
+    expect(document.getElementById('blocking-entry-label')?.textContent).toBe(
+      'Reloaded blocking entry from browser',
+    )
+    expect(document.getElementById('blocking-client-only-frame')?.textContent).toBe(
+      'Blocking client-only frame 2',
+    )
+    expect(blockingFrameServerResolveCount).toBe(2)
+    expect(blockingFrameClientResolveCount).toBe(1)
+    expect(clientOnlyFrameClientResolveCount).toBe(2)
+    app.dispose()
+  })
+
+  it('reloads all frames rendered by preserved client entries when they share a src', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+    let renderClientOnlyFrame = false
+    let serverFrameResolveCount = 0
+    let clientFrameResolveCount = 0
+
+    let EntryWithSharedFrame = clientEntry(
+      '/assets/entry-with-shared-frame.js#EntryWithSharedFrame',
+      function EntryWithSharedFrame(handle: Handle<{ label: string }>) {
+        reloadTop = () => handle.frames.top.reload()
+        return () => {
+          handle.queueTask(() => {
+            if (renderClientOnlyFrame) return
+            renderClientOnlyFrame = true
+            void handle.update()
+          })
+
+          return (
+            <section>
+              <p id="entry-label">{handle.props.label}</p>
+              <Frame
+                src="/shared-frame"
+                fallback={<span id="server-shared-frame">Loading server frame...</span>}
+              />
+              {renderClientOnlyFrame ? (
+                <Frame
+                  src="/shared-frame"
+                  fallback={<span id="client-shared-frame">Loading client frame...</span>}
+                />
+              ) : null}
+            </section>
+          )
+        }
+      },
+    )
+
+    async function renderPage(label: string, serverFrameLabel: string): Promise<string> {
+      let previousRenderClientOnlyFrame = renderClientOnlyFrame
+      renderClientOnlyFrame = false
+      try {
+        return await drain(renderPageStream(label, serverFrameLabel))
+      } finally {
+        renderClientOnlyFrame = previousRenderClientOnlyFrame
+      }
+    }
+
+    async function renderPageWithProtocol(
+      label: string,
+      serverFrameLabel: string,
+    ): Promise<string> {
+      let previousRenderClientOnlyFrame = renderClientOnlyFrame
+      renderClientOnlyFrame = false
+      try {
+        return await drainWithProtocol(renderPageStream(label, serverFrameLabel))
+      } finally {
+        renderClientOnlyFrame = previousRenderClientOnlyFrame
+      }
+    }
+
+    function renderPageStream(label: string, serverFrameLabel: string): ReadableStream<Uint8Array> {
+      return renderToStream(
+        <html>
+          <body>
+            <main>
+              <EntryWithSharedFrame label={label} />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/shared-frame') {
+              serverFrameResolveCount++
+              return `<span id="server-shared-frame">${serverFrameLabel}</span>`
+            }
+            throw new Error(`Unexpected frame src during server render: ${src}`)
+          },
+        },
+      )
+    }
+
+    let serverHtml = await renderPage('Initial entry', 'Initial server frame')
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-shared-frame.js' &&
+          exportName === 'EntryWithSharedFrame'
+        ) {
+          return EntryWithSharedFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks([
+            await renderPageWithProtocol('Reloaded entry', 'Reloaded server frame'),
+          ])
+        }
+        if (src === '/shared-frame') {
+          clientFrameResolveCount++
+          return `<span data-shared-frame="client">Client shared frame ${clientFrameResolveCount}</span>`
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    app.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
+    expect(document.getElementById('server-shared-frame')?.textContent).toBe('Initial server frame')
+    expect(
+      Array.from(document.querySelectorAll('[data-shared-frame="client"]')).map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(['Client shared frame 1'])
+    expect(serverFrameResolveCount).toBe(1)
+    expect(clientFrameResolveCount).toBe(1)
+
+    invariant(reloadTop)
+    await reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
+    expect(
+      Array.from(document.querySelectorAll('[data-shared-frame="client"]')).map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(['Client shared frame 2', 'Client shared frame 3'])
+    expect(serverFrameResolveCount).toBe(2)
+    expect(clientFrameResolveCount).toBe(3)
+    app.dispose()
+  })
+
+  it('reloads frames inside nested frames rendered by preserved client entries', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+    let renderClientOnlyFrame = false
+    let outerFrameServerResolveCount = 0
+    let middleFrameServerResolveCount = 0
+    let outerFrameClientResolveCount = 0
+    let middleFrameClientResolveCount = 0
+    let clientOnlyFrameClientResolveCount = 0
+
+    let ClientOnlyFrameEntry = clientEntry(
+      '/assets/nested-client-only-frame-entry.js#NestedClientOnlyFrameEntry',
+      function NestedClientOnlyFrameEntry(handle: Handle<{ label: string }>) {
+        return () => {
+          handle.queueTask(() => {
+            if (renderClientOnlyFrame) return
+            renderClientOnlyFrame = true
+            void handle.update()
+          })
+
+          return (
+            <section>
+              <p id="middle-entry-label">{handle.props.label}</p>
+              {renderClientOnlyFrame ? (
+                <Frame
+                  name="client-only-inner-frame"
+                  src="/client-only-inner-frame"
+                  fallback={<span id="client-only-inner-frame">Loading client-only frame...</span>}
+                />
+              ) : null}
+            </section>
+          )
+        }
+      },
+    )
+
+    let NestedEntryWithMiddleFrame = clientEntry(
+      '/assets/nested-entry-with-middle-frame.js#NestedEntryWithMiddleFrame',
+      function NestedEntryWithMiddleFrame(handle: Handle<{ label: string }>) {
+        return () => (
+          <section>
+            <p id="nested-entry-label">{handle.props.label}</p>
+            <Frame
+              name="middle-frame"
+              src="/middle-frame"
+              fallback={<span id="middle-frame">Loading middle frame...</span>}
+            />
+          </section>
+        )
+      },
+    )
+
+    let EntryWithOuterFrame = clientEntry(
+      '/assets/entry-with-outer-frame.js#EntryWithOuterFrame',
+      function EntryWithOuterFrame(handle: Handle<{ label: string }>) {
+        reloadTop = () => handle.frames.top.reload()
+        return () => (
+          <section>
+            <p id="entry-label">{handle.props.label}</p>
+            <Frame
+              name="outer-frame"
+              src="/outer-frame"
+              fallback={<span id="outer-frame">Loading outer frame...</span>}
+            />
+          </section>
+        )
+      },
+    )
+
+    async function renderMiddleFrame(label: string): Promise<string> {
+      let previousRenderClientOnlyFrame = renderClientOnlyFrame
+      renderClientOnlyFrame = false
+      return await drain(
+        renderToStream(<ClientOnlyFrameEntry label={label} />, {
+          resolveFrame(src: string) {
+            throw new Error(`Unexpected nested frame src during server render: ${src}`)
+          },
+        }),
+      ).finally(() => {
+        renderClientOnlyFrame = previousRenderClientOnlyFrame
+      })
+    }
+
+    async function renderOuterFrame(label: string, middleLabel: string): Promise<string> {
+      return await drain(
+        renderToStream(<NestedEntryWithMiddleFrame label={label} />, {
+          resolveFrame(src: string) {
+            if (src === '/middle-frame') {
+              middleFrameServerResolveCount++
+              return renderMiddleFrame(middleLabel)
+            }
+            throw new Error(`Unexpected outer frame src during server render: ${src}`)
+          },
+        }),
+      )
+    }
+
+    async function renderPage(
+      label: string,
+      nestedLabel: string,
+      middleLabel: string,
+    ): Promise<string> {
+      return await drain(renderPageStream(label, nestedLabel, middleLabel))
+    }
+
+    async function renderPageWithProtocol(
+      label: string,
+      nestedLabel: string,
+      middleLabel: string,
+    ): Promise<string> {
+      return await drainWithProtocol(renderPageStream(label, nestedLabel, middleLabel))
+    }
+
+    function renderPageStream(
+      label: string,
+      nestedLabel: string,
+      middleLabel: string,
+    ): ReadableStream<Uint8Array> {
+      return renderToStream(
+        <html>
+          <body>
+            <main>
+              <EntryWithOuterFrame label={label} />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/outer-frame') {
+              outerFrameServerResolveCount++
+              return renderOuterFrame(nestedLabel, middleLabel)
+            }
+            throw new Error(`Unexpected frame src during server render: ${src}`)
+          },
+        },
+      )
+    }
+
+    let serverHtml = await renderPage(
+      'Initial entry',
+      'Initial nested entry',
+      'Initial middle entry',
+    )
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-outer-frame.js' &&
+          exportName === 'EntryWithOuterFrame'
+        ) {
+          return EntryWithOuterFrame
+        }
+        if (
+          moduleUrl === '/assets/nested-entry-with-middle-frame.js' &&
+          exportName === 'NestedEntryWithMiddleFrame'
+        ) {
+          return NestedEntryWithMiddleFrame
+        }
+        if (
+          moduleUrl === '/assets/nested-client-only-frame-entry.js' &&
+          exportName === 'NestedClientOnlyFrameEntry'
+        ) {
+          return ClientOnlyFrameEntry
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks([
+            await renderPageWithProtocol(
+              'Reloaded entry',
+              'Reloaded nested entry',
+              'Reloaded middle entry',
+            ),
+          ])
+        }
+        if (src === '/outer-frame') {
+          outerFrameClientResolveCount++
+          return await renderOuterFrame(
+            'Reloaded nested entry from browser',
+            'Reloaded middle entry from browser',
+          )
+        }
+        if (src === '/middle-frame') {
+          middleFrameClientResolveCount++
+          return await renderMiddleFrame('Reloaded middle entry from browser')
+        }
+        if (src === '/client-only-inner-frame') {
+          clientOnlyFrameClientResolveCount++
+          return `<span id="client-only-inner-frame">Client-only inner frame ${clientOnlyFrameClientResolveCount}</span>`
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    app.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
+    expect(document.getElementById('nested-entry-label')?.textContent).toBe('Initial nested entry')
+    expect(document.getElementById('middle-entry-label')?.textContent).toBe('Initial middle entry')
+    expect(document.getElementById('client-only-inner-frame')?.textContent).toBe(
+      'Client-only inner frame 1',
+    )
+    expect(outerFrameServerResolveCount).toBe(1)
+    expect(middleFrameServerResolveCount).toBe(1)
+    expect(outerFrameClientResolveCount).toBe(0)
+    expect(middleFrameClientResolveCount).toBe(0)
+    expect(clientOnlyFrameClientResolveCount).toBe(1)
+
+    invariant(reloadTop)
+    await reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
+    expect(document.getElementById('nested-entry-label')?.textContent).toBe(
+      'Reloaded nested entry from browser',
+    )
+    expect(document.getElementById('middle-entry-label')?.textContent).toBe(
+      'Reloaded middle entry from browser',
+    )
+    expect(document.getElementById('client-only-inner-frame')?.textContent).toBe(
+      'Client-only inner frame 2',
+    )
+    expect(outerFrameServerResolveCount).toBe(2)
+    expect(middleFrameServerResolveCount).toBe(3)
+    expect(outerFrameClientResolveCount).toBe(1)
+    expect(middleFrameClientResolveCount).toBe(1)
+    expect(clientOnlyFrameClientResolveCount).toBe(2)
+    app.dispose()
+  })
+
+  it('does not wait for frames inside preserved client entries to finish reloading', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+    let entryFrameEvents: string[] = []
+
+    let EntryWithPendingFrame = clientEntry(
+      '/assets/entry-with-pending-frame.js#EntryWithPendingFrame',
+      function EntryWithPendingFrame(handle: Handle<{ label: string }>) {
+        reloadTop = () => handle.frames.top.reload()
+        handle.queueTask(() => {
+          let entryFrame = handle.frames.get('entry-frame')
+          invariant(entryFrame, 'Expected entry frame handle')
+          entryFrame.addEventListener('reloadStart', () => entryFrameEvents.push('start'), {
+            signal: handle.signal,
+          })
+          entryFrame.addEventListener('reloadComplete', () => entryFrameEvents.push('complete'), {
+            signal: handle.signal,
+          })
+        })
+        return () => (
+          <section>
+            <p id="entry-label">{handle.props.label}</p>
+            <Frame
+              name="entry-frame"
+              src="/entry-frame"
+              fallback={<span id="entry-frame">Loading entry frame...</span>}
+            />
+          </section>
+        )
+      },
+    )
+
+    async function renderPage(label: string, frameLabel: string): Promise<string> {
+      return await drain(renderPageStream(label, frameLabel))
+    }
+
+    async function renderPageWithProtocol(label: string, frameLabel: string): Promise<string> {
+      return await drainWithProtocol(renderPageStream(label, frameLabel))
+    }
+
+    function renderPageStream(label: string, frameLabel: string): ReadableStream<Uint8Array> {
+      return renderToStream(
+        <html>
+          <body>
+            <main>
+              <EntryWithPendingFrame label={label} />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/entry-frame') {
+              return `<span id="entry-frame">${frameLabel}</span>`
+            }
+            throw new Error(`Unexpected frame src during server render: ${src}`)
+          },
+        },
+      )
+    }
+
+    let serverHtml = await renderPage('Initial entry', 'Initial entry frame')
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [entryFrameContentPromise, resolveEntryFrameContent] = withResolvers<string>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-pending-frame.js' &&
+          exportName === 'EntryWithPendingFrame'
+        ) {
+          return EntryWithPendingFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks([
+            await renderPageWithProtocol('Reloaded entry', 'Unused streamed entry frame'),
+          ])
+        }
+        if (src === '/entry-frame') {
+          return entryFrameContentPromise
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reloadTop)
+    let topReloadSettled = false
+    let topReloadPromise = reloadTop().then(() => {
+      topReloadSettled = true
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    let topReloadSettledBeforeEntryFrame = topReloadSettled
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
+    expect(entryFrameEvents).toEqual(['start'])
+
+    resolveEntryFrameContent('<span id="entry-frame">Reloaded entry frame</span>')
+    await topReloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(topReloadSettledBeforeEntryFrame).toBe(true)
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
+    expect(entryFrameEvents).toEqual(['start', 'complete'])
+    app.dispose()
+  })
+
+  it('restarts pending frames inside preserved client entries during ancestor reloads', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+    let renderClientFrame = false
+
+    let EntryWithPendingFrame = clientEntry(
+      '/assets/entry-with-initially-pending-frame.js#EntryWithInitiallyPendingFrame',
+      function EntryWithInitiallyPendingFrame(handle: Handle<{ label: string }>) {
+        reloadTop = () => handle.frames.top.reload()
+        return () => {
+          handle.queueTask(() => {
+            if (renderClientFrame) return
+            renderClientFrame = true
+            void handle.update()
+          })
+
+          return (
+            <section>
+              <p id="entry-label">{handle.props.label}</p>
+              {renderClientFrame ? (
+                <Frame
+                  name="entry-frame"
+                  src="/entry-frame"
+                  fallback={<span id="entry-frame">Loading entry frame...</span>}
+                />
+              ) : null}
+            </section>
+          )
+        }
+      },
+    )
+
+    async function renderPageWithProtocol(label: string): Promise<string> {
+      let previousRenderClientFrame = renderClientFrame
+      renderClientFrame = false
+      try {
+        return await drainWithProtocol(
+          renderToStream(
+            <html>
+              <body>
+                <main>
+                  <EntryWithPendingFrame label={label} />
+                </main>
+              </body>
+            </html>,
+          ),
+        )
+      } finally {
+        renderClientFrame = previousRenderClientFrame
+      }
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderPageWithProtocol('Initial entry'),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let entryFrameSignals: AbortSignal[] = []
+    let entryFrameResolvers: Array<(content: string) => void> = []
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-initially-pending-frame.js' &&
+          exportName === 'EntryWithInitiallyPendingFrame'
+        ) {
+          return EntryWithPendingFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string, options) {
+        let signal = options?.signal
+        if (src === document.location.href) {
+          return streamFromChunks([await renderPageWithProtocol('Reloaded entry')])
+        }
+        if (src === '/entry-frame') {
+          invariant(signal, 'Expected entry frame resolve signal')
+          let [contentPromise, resolveContent] = withResolvers<string>()
+          entryFrameSignals.push(signal)
+          entryFrameResolvers.push(resolveContent)
+          return contentPromise
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(entryFrameSignals).toHaveLength(1)
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Loading entry frame...')
+
+    invariant(reloadTop)
+    await reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(entryFrameSignals).toHaveLength(2)
+    expect(entryFrameSignals[0]?.aborted).toBe(true)
+    expect(entryFrameSignals[1]?.aborted).toBe(false)
+
+    entryFrameResolvers[0]?.('<span id="entry-frame">Stale entry frame</span>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Loading entry frame...')
+
+    entryFrameResolvers[1]?.('<span id="entry-frame">Reloaded entry frame</span>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
+    app.dispose()
+  })
+
+  it('cancels an inherited frame reload when a client update changes its src', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+    let changeFrameSrc: undefined | (() => Promise<AbortSignal>)
+    let frameSrc = '/entry-frame-a'
+
+    let EntryWithChangingFrame = clientEntry(
+      '/assets/entry-with-racing-frame.js#EntryWithRacingFrame',
+      function EntryWithRacingFrame(handle: Handle<{ label: string }>) {
+        reloadTop = () => handle.frames.top.reload()
+        changeFrameSrc = async () => {
+          frameSrc = '/entry-frame-b'
+          return await handle.update()
+        }
+        return () => (
+          <section>
+            <p id="entry-label">{handle.props.label}</p>
+            <Frame
+              name="entry-frame"
+              src={frameSrc}
+              fallback={<span id="entry-frame">Loading entry frame...</span>}
+            />
+          </section>
+        )
+      },
+    )
+
+    async function renderPageWithProtocol(label: string, frameLabel: string): Promise<string> {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <body>
+              <main>
+                <EntryWithChangingFrame label={label} />
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/entry-frame-a') {
+                return `<span id="entry-frame">${frameLabel}</span>`
+              }
+              throw new Error(`Unexpected frame src during server render: ${src}`)
+            },
+          },
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderPageWithProtocol('Initial entry', 'Initial entry frame'),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let inheritedFrameSignal: AbortSignal | undefined
+    let [inheritedFrameContentPromise, resolveInheritedFrameContent] = withResolvers<string>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-racing-frame.js' &&
+          exportName === 'EntryWithRacingFrame'
+        ) {
+          return EntryWithChangingFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string, options) {
+        let signal = options?.signal
+        if (src === document.location.href) {
+          return streamFromChunks([
+            await renderPageWithProtocol('Reloaded entry', 'Unused streamed entry frame'),
+          ])
+        }
+        if (src === '/entry-frame-a') {
+          inheritedFrameSignal = signal
+          return inheritedFrameContentPromise
+        }
+        if (src === '/entry-frame-b') {
+          return '<span id="entry-frame">Updated entry frame</span>'
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reloadTop)
+    invariant(changeFrameSrc)
+    let clientChangeFrameSrc = changeFrameSrc
+    await reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(inheritedFrameSignal?.aborted).toBe(false)
+
+    await clientChangeFrameSrc()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(inheritedFrameSignal?.aborted).toBe(true)
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Updated entry frame')
+
+    resolveInheritedFrameContent('<span id="entry-frame">Stale inherited frame</span>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Updated entry frame')
+    app.dispose()
+  })
+
+  it('ignores stale frame reloads from superseded preserved client entry rerenders', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+
+    let EntryWithPendingFrame = clientEntry(
+      '/assets/entry-with-superseded-frame.js#EntryWithSupersededFrame',
+      function EntryWithSupersededFrame(handle: Handle<{ label: string }>) {
+        reloadTop = () => handle.frames.top.reload()
+        return () => (
+          <section>
+            <p id="entry-label">{handle.props.label}</p>
+            <Frame
+              name="entry-frame"
+              src="/entry-frame"
+              fallback={<span id="entry-frame">Loading entry frame...</span>}
+            />
+          </section>
+        )
+      },
+    )
+
+    async function renderPage(label: string, frameLabel: string): Promise<string> {
+      return await drain(renderPageStream(label, frameLabel))
+    }
+
+    async function renderPageWithProtocol(label: string, frameLabel: string): Promise<string> {
+      return await drainWithProtocol(renderPageStream(label, frameLabel))
+    }
+
+    function renderPageStream(label: string, frameLabel: string): ReadableStream<Uint8Array> {
+      return renderToStream(
+        <html>
+          <body>
+            <main>
+              <EntryWithPendingFrame label={label} />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/entry-frame') {
+              return `<span id="entry-frame">${frameLabel}</span>`
+            }
+            throw new Error(`Unexpected frame src during server render: ${src}`)
+          },
+        },
+      )
+    }
+
+    let serverHtml = await renderPage('Initial entry', 'Initial entry frame')
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let topReloadCount = 0
+    let [secondTopContentPromise, resolveSecondTopContent] = withResolvers<string>()
+    let entryFrameResolvers: Array<(content: string) => void> = []
+    let entryFrameSignals: AbortSignal[] = []
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-superseded-frame.js' &&
+          exportName === 'EntryWithSupersededFrame'
+        ) {
+          return EntryWithPendingFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string, options) {
+        let signal = options?.signal
+        if (src === document.location.href) {
+          topReloadCount++
+          if (topReloadCount === 1) {
+            return streamFromChunks([
+              await renderPageWithProtocol('First reload', 'Unused first streamed entry frame'),
+            ])
+          }
+          if (topReloadCount === 2) {
+            return streamFromChunks([secondTopContentPromise])
+          }
+          throw new Error(`Unexpected top reload count: ${topReloadCount}`)
+        }
+        if (src === '/entry-frame') {
+          invariant(signal, 'Expected entry frame reload signal')
+          let [entryFrameContentPromise, resolveEntryFrameContent] = withResolvers<string>()
+          entryFrameSignals.push(signal)
+          entryFrameResolvers.push(resolveEntryFrameContent)
+          return entryFrameContentPromise
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reloadTop)
+    let clientReloadTop = reloadTop
+    await clientReloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('First reload')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
+    expect(entryFrameResolvers).toHaveLength(1)
+
+    let secondReloadPromise = clientReloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(entryFrameSignals[0]?.aborted).toBe(true)
+    entryFrameResolvers[0]?.('<span id="entry-frame">Stale entry frame</span>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('First reload')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
+
+    resolveSecondTopContent(
+      await renderPageWithProtocol('Second reload', 'Unused second streamed entry frame'),
+    )
+    await secondReloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Second reload')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
+    expect(entryFrameResolvers).toHaveLength(2)
+
+    entryFrameResolvers[1]?.('<span id="entry-frame">Second entry frame</span>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Second entry frame')
+    app.dispose()
+  })
+
+  it('reports reload failures for frames inside preserved client entries', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+    let entryFrameEvents: string[] = []
+    let reloadError = new TypeError('Failed to reload entry frame')
+
+    let EntryWithFailingFrame = clientEntry(
+      '/assets/entry-with-failing-frame.js#EntryWithFailingFrame',
+      function EntryWithFailingFrame(handle: Handle<{ label: string }>) {
+        reloadTop = () => handle.frames.top.reload()
+        handle.queueTask(() => {
+          let entryFrame = handle.frames.get('entry-frame')
+          invariant(entryFrame, 'Expected entry frame handle')
+          entryFrame.addEventListener('reloadStart', () => entryFrameEvents.push('start'), {
+            signal: handle.signal,
+          })
+          entryFrame.addEventListener('reloadComplete', () => entryFrameEvents.push('complete'), {
+            signal: handle.signal,
+          })
+        })
+        return () => (
+          <section>
+            <p id="entry-label">{handle.props.label}</p>
+            <Frame
+              name="entry-frame"
+              src="/entry-frame"
+              fallback={<span id="entry-frame">Loading entry frame...</span>}
+            />
+          </section>
+        )
+      },
+    )
+
+    async function renderPage(label: string, frameLabel: string): Promise<string> {
+      return await drain(renderPageStream(label, frameLabel))
+    }
+
+    async function renderPageWithProtocol(label: string, frameLabel: string): Promise<string> {
+      return await drainWithProtocol(renderPageStream(label, frameLabel))
+    }
+
+    function renderPageStream(label: string, frameLabel: string): ReadableStream<Uint8Array> {
+      return renderToStream(
+        <html>
+          <body>
+            <main>
+              <EntryWithFailingFrame label={label} />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/entry-frame') {
+              return `<span id="entry-frame">${frameLabel}</span>`
+            }
+            throw new Error(`Unexpected frame src during server render: ${src}`)
+          },
+        },
+      )
+    }
+
+    let serverHtml = await renderPage('Initial entry', 'Initial entry frame')
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let reloadedPage = await renderPageWithProtocol('Reloaded entry', 'Unused streamed entry frame')
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-failing-frame.js' &&
+          exportName === 'EntryWithFailingFrame'
+        ) {
+          return EntryWithFailingFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks([reloadedPage])
+        }
+        if (src === '/entry-frame') {
+          throw reloadError
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+    let forwarded: unknown
+    app.addEventListener('error', (event) => {
+      forwarded = event.error
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reloadTop)
+    await reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(forwarded).toBe(reloadError)
+    expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
+    expect(entryFrameEvents).toEqual(['start', 'complete'])
+    app.dispose()
+  })
+
+  it('does not reload client-created frames during ordinary client updates', async () => {
+    let updateEntry: undefined | (() => Promise<AbortSignal>)
+    let renderCount = 0
+    let entryFrameResolveCount = 0
+
+    let EntryWithFrame = clientEntry(
+      '/assets/entry-with-client-update.js#EntryWithClientUpdate',
+      function EntryWithClientUpdate(handle: Handle) {
+        updateEntry = () => handle.update()
+        return () => (
+          <section>
+            <p id="entry-render-count">Entry render: {renderCount++}</p>
+            <Frame
+              name="entry-frame"
+              src="/entry-frame"
+              fallback={<span id="entry-frame">Loading entry frame...</span>}
+            />
+          </section>
+        )
+      },
+    )
+
+    let serverHtml = await drain(
+      renderToStream(
+        <html>
+          <body>
+            <main>
+              <EntryWithFrame />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/entry-frame') {
+              return '<span id="entry-frame">Initial entry frame</span>'
+            }
+            throw new Error(`Unexpected frame src during server render: ${src}`)
+          },
+        },
+      ),
+    )
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-client-update.js' &&
+          exportName === 'EntryWithClientUpdate'
+        ) {
+          return EntryWithFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/entry-frame') {
+          entryFrameResolveCount++
+          return '<span id="entry-frame">Reloaded entry frame</span>'
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-render-count')?.textContent).toBe('Entry render: 1')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
+    expect(entryFrameResolveCount).toBe(0)
+
+    invariant(updateEntry)
+    await updateEntry()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-render-count')?.textContent).toBe('Entry render: 2')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
+    expect(entryFrameResolveCount).toBe(0)
+    app.dispose()
+  })
+
+  it('keeps resolved client frame content after rerendering while resolution is pending', async () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+    let [contentPromise, resolveContent] = withResolvers<string>()
+
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        resolveFrame() {
+          return contentPromise
+        },
+      },
+    })
+
+    root.render(<Frame src="/pending" fallback={<p id="fallback">Loading first…</p>} />)
+    root.flush()
+    root.render(<Frame src="/pending" fallback={<p id="fallback">Loading second…</p>} />)
+    root.flush()
+
+    resolveContent('<p id="result">Resolved content</p>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#result')?.textContent).toBe('Resolved content')
+    expect(rootContainer.querySelector('#fallback')).toBe(null)
+
+    root.render(<Frame src="/pending" fallback={<p id="fallback">Loading third…</p>} />)
+    root.flush()
+
+    expect(rootContainer.querySelector('#result')?.textContent).toBe('Resolved content')
+    expect(rootContainer.querySelector('#fallback')).toBe(null)
+    root.dispose()
+  })
+
+  it('loads new client-created frame src values during server-driven entry rerenders', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+    let frameSrc = '/entry-frame-a'
+    let entryFrameEvents: string[] = []
+
+    let EntryWithChangingFrame = clientEntry(
+      '/assets/entry-with-changing-frame.js#EntryWithChangingFrame',
+      function EntryWithChangingFrame(handle: Handle<{ label: string }>) {
+        let listening = false
+        reloadTop = () => handle.frames.top.reload()
+        return () => {
+          handle.queueTask(() => {
+            if (listening) return
+            let entryFrame = handle.frames.get('entry-frame')
+            invariant(entryFrame, 'Expected entry frame handle')
+            entryFrame.addEventListener('reloadStart', () => entryFrameEvents.push('start'), {
+              signal: handle.signal,
+            })
+            entryFrame.addEventListener('reloadComplete', () => entryFrameEvents.push('complete'), {
+              signal: handle.signal,
+            })
+            listening = true
+          })
+
+          return (
+            <section>
+              <p id="entry-label">{handle.props.label}</p>
+              <Frame
+                name="entry-frame"
+                src={frameSrc}
+                fallback={<span id="entry-frame">Loading entry frame...</span>}
+              />
+            </section>
+          )
+        }
+      },
+    )
+
+    async function renderPage(label: string, frameLabel: string): Promise<string> {
+      return await drain(renderPageStream(label, frameLabel))
+    }
+
+    async function renderPageWithProtocol(label: string, frameLabel: string): Promise<string> {
+      return await drainWithProtocol(renderPageStream(label, frameLabel))
+    }
+
+    function renderPageStream(label: string, frameLabel: string): ReadableStream<Uint8Array> {
+      return renderToStream(
+        <html>
+          <body>
+            <main>
+              <EntryWithChangingFrame label={label} />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === frameSrc) {
+              return `<span id="entry-frame">${frameLabel}</span>`
+            }
+            throw new Error(`Unexpected frame src during server render: ${src}`)
+          },
+        },
+      )
+    }
+
+    let serverHtml = await renderPage('Initial entry', 'Initial entry frame')
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let resolvedClientFrameSrcs: string[] = []
+    let topReloadCount = 0
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/entry-with-changing-frame.js' &&
+          exportName === 'EntryWithChangingFrame'
+        ) {
+          return EntryWithChangingFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === document.location.href) {
+          topReloadCount++
+          frameSrc = topReloadCount === 1 ? '/entry-frame-b' : '/entry-frame-c'
+          return streamFromChunks([
+            await renderPageWithProtocol('Reloaded entry', 'Unused streamed entry frame'),
+          ])
+        }
+        if (src === '/entry-frame-b' || src === '/entry-frame-c') {
+          resolvedClientFrameSrcs.push(src)
+          return '<span id="entry-frame">Reloaded entry frame</span>'
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
+    expect(resolvedClientFrameSrcs).toEqual([])
+    expect(entryFrameEvents).toEqual([])
+
+    invariant(reloadTop)
+    let clientReloadTop = reloadTop
+    await clientReloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
+    expect(resolvedClientFrameSrcs).toEqual(['/entry-frame-b'])
+    expect(entryFrameEvents).toEqual(['start', 'complete'])
+
+    await clientReloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(resolvedClientFrameSrcs).toEqual(['/entry-frame-b', '/entry-frame-c'])
+    expect(entryFrameEvents).toEqual(['start', 'complete', 'start', 'complete'])
+    app.dispose()
+  })
+
+  it('cancels stale client frame streams when src changes', async () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    let [slowChunkPromise, resolveSlowChunk] = withResolvers<string>()
+
+    function Shell(handle: Handle) {
+      let src = '/slow'
+      return () => (
+        <main>
+          <button
+            id="switch-src"
+            type="button"
+            mix={[
+              on('click', () => {
+                src = '/fast'
+                handle.update()
+              }),
+            ]}
+          >
+            Switch
+          </button>
+          <Frame src={src} fallback={<p id="fallback">Loading…</p>} />
+        </main>
+      )
+    }
+
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        resolveFrame(src: string) {
+          if (src === '/slow') {
+            return streamFromChunks([slowChunkPromise])
+          }
+          if (src === '/fast') {
+            return '<p id="result">Fast result</p>'
+          }
+          throw new Error(`Unexpected src: ${src}`)
+        },
+      },
+    })
+
+    root.render(<Shell />)
+    root.flush()
+
+    expect(rootContainer.querySelector('#fallback')?.textContent).toBe('Loading…')
+
+    let switchButton = rootContainer.querySelector('#switch-src')
+    invariant(switchButton instanceof HTMLButtonElement)
+    switchButton.click()
+    root.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#result')?.textContent).toBe('Fast result')
+
+    resolveSlowChunk('<p id="result">Slow result</p>')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#result')?.textContent).toBe('Fast result')
+    root.dispose()
+  })
+
+  it('renders RemixNode results from client resolveFrame', async () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        resolveFrame(src: string) {
+          if (src === '/html') {
+            return '<div id="stale">Stale content</div>'
+          }
+
+          if (src === '/error') {
+            return (
+              <section id="frame-error">
+                <h2>Frame Error</h2>
+                <p>Retry the page.</p>
+              </section>
+            )
+          }
+
+          throw new Error(`Unexpected src: ${src}`)
+        },
+      },
+    })
+
+    root.render(<Frame src="/html" fallback={<p id="fallback">Loading…</p>} />)
+    root.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#stale')?.textContent).toBe('Stale content')
+
+    root.render(<Frame src="/error" fallback={<p id="fallback">Loading…</p>} />)
+    root.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#frame-error h2')?.textContent).toBe('Frame Error')
+    expect(rootContainer.querySelector('#frame-error p')?.textContent).toBe('Retry the page.')
+    expect(rootContainer.querySelector('#stale')).toBeNull()
+
+    root.dispose()
+  })
+})

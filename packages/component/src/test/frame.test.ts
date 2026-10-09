@@ -1,0 +1,2492 @@
+import { expect } from '@remix-run/assert'
+import { afterEach, describe, it, type TestContext } from '@remix-run/test'
+
+import { Frame, type Handle } from '../runtime/component.ts'
+import { clientEntry } from '../runtime/client-entries.ts'
+import {
+  consumeFrameTemplate,
+  createFrame,
+  NamedFrameRegistry,
+  publishFrameTemplate,
+  reloadFrameForNavigation,
+  type LoadModule,
+  type ResolveFrameOptions,
+} from '../runtime/frame.ts'
+import { jsx } from '../runtime/jsx.ts'
+import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
+import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
+import { createScheduler } from '../runtime/scheduler.ts'
+import { appendFlushMarker } from '../runtime/stream-protocol.ts'
+import { ImportMap, renderToString, renderToStream } from '../server/stream.ts'
+import { createStyleManager } from '../style/index.ts'
+import { drain, withResolvers } from './utils.ts'
+
+const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'
+
+const markerlessDocument =
+  '<!doctype html><html><head><title>Next</title></head><body><main>Next</main></body></html>'
+
+type TestFrameOptions = Partial<Parameters<typeof createFrame>[1]> &
+  Pick<Parameters<typeof createFrame>[1], 'resolveFrame'>
+
+function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestFrameOptions) {
+  return createFrame(root, {
+    src: 'https://example.com/initial',
+    errorTarget: new EventTarget(),
+    loadModule: () => () => () => null,
+    pendingClientEntries: new Map(),
+    scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+    data: {},
+    moduleCache: new Map(),
+    moduleLoads: new Map(),
+    frameInstances: new WeakMap(),
+    namedFrames: new NamedFrameRegistry(),
+    ...options,
+  })
+}
+
+describe('frames', () => {
+  afterEach(() => {
+    resetDocumentImportMapManager(document)
+    document.documentElement.innerHTML = '<head></head><body></body>'
+  })
+
+  it('preserves named html and body attributes across top frame reloads', async () => {
+    let doc = document.implementation.createHTMLDocument('Initial')
+    let nextHtml = [
+      '<html data-rmx-preserve-attrs="class data-theme" class="server" lang="fr">',
+      '<head><title>Next</title></head>',
+      '<body data-rmx-preserve-attrs="class data-client" class="server" data-client="server" title="Next">',
+      '<main>Next</main></body></html>',
+    ].join('')
+    let frame = createTestFrame(doc, {
+      resolveFrame: () => htmlStream([appendFlushMarker(nextHtml, 'document')]),
+    })
+
+    try {
+      await frame.ready()
+      doc.documentElement.setAttribute('class', 'dark')
+      doc.documentElement.setAttribute('data-theme', 'dark')
+      doc.documentElement.setAttribute('lang', 'en')
+      doc.documentElement.setAttribute('data-page', 'initial')
+      doc.body.setAttribute('class', 'scroll-locked')
+
+      await frame.handle.reload()
+
+      expect(doc.documentElement.className).toBe('dark')
+      expect(doc.documentElement.getAttribute('data-theme')).toBe('dark')
+      expect(doc.documentElement.getAttribute('lang')).toBe('fr')
+      expect(doc.documentElement.hasAttribute('data-page')).toBe(false)
+      expect(doc.title).toBe('Next')
+      expect(doc.body.className).toBe('scroll-locked')
+      expect(doc.body.hasAttribute('data-client')).toBe(false)
+      expect(doc.body.getAttribute('title')).toBe('Next')
+      expect(doc.querySelector('main')?.textContent).toBe('Next')
+
+      doc.documentElement.removeAttribute('class')
+      doc.body.removeAttribute('class')
+      await frame.handle.reload()
+
+      expect(doc.documentElement.hasAttribute('class')).toBe(false)
+      expect(doc.body.hasAttribute('class')).toBe(false)
+
+      nextHtml = [
+        '<html data-rmx-preserve-attrs="" class="light"><head><title>Final</title></head>',
+        '<body class="unlocked"><main>Final</main></body></html>',
+      ].join('')
+      await frame.handle.reload()
+
+      expect(doc.documentElement.className).toBe('light')
+      expect(doc.documentElement.hasAttribute('data-theme')).toBe(false)
+      expect(doc.documentElement.hasAttribute('lang')).toBe(false)
+      expect(doc.body.className).toBe('unlocked')
+      expect(doc.body.hasAttribute('data-rmx-preserve-attrs')).toBe(false)
+      expect(doc.querySelector('main')?.textContent).toBe('Final')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('preserves hydrated client entries while streaming a top frame reload', async () => {
+    let setupCount = 0
+    let disconnectCount = 0
+
+    function StreamingEntry(handle: Handle<{ label: string }>) {
+      setupCount++
+      handle.signal.addEventListener('abort', () => {
+        disconnectCount++
+      })
+
+      return () => jsx('section', { 'data-entry': '', children: handle.props.label })
+    }
+
+    document.documentElement.innerHTML = [
+      '<head><title>Initial</title></head>',
+      '<body>',
+      '<main>',
+      '<!-- rmx:h:h1 -->',
+      '<section data-entry="">initial</section>',
+      '<!-- /rmx:h -->',
+      '</main>',
+      rmxDataScript('initial'),
+      '</body>',
+    ].join('')
+
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let loadModule = ((moduleUrl: string, exportName: string) => {
+      expect(moduleUrl).toBe('/entry.js')
+      expect(exportName).toBe('StreamingEntry')
+      return StreamingEntry
+    }) satisfies LoadModule
+    let data = {}
+
+    let frame = createFrame(document, {
+      src: 'https://example.com/initial',
+      errorTarget,
+      loadModule,
+      resolveFrame() {
+        return htmlStream([
+          '<!doctype html><html><head><title>Next</title></head>',
+          [
+            '<body><main>',
+            '<!-- rmx:h:h1 -->',
+            '<section data-entry="">next</section>',
+            '<!-- /rmx:h -->',
+            rmxDataScript('next'),
+            appendFlushMarker('</main></body></html>', 'document'),
+          ].join(''),
+        ])
+      },
+      pendingClientEntries: new Map(),
+      scheduler,
+      styleManager,
+      data,
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+
+    try {
+      await frame.ready()
+      expect(data).toEqual({})
+      expect(document.querySelector('[data-entry]')?.textContent).toBe('initial')
+      let setupCountBeforeReload = setupCount
+      let disconnectCountBeforeReload = disconnectCount
+
+      await frame.handle.reload()
+
+      expect(document.querySelector('[data-entry]')?.textContent).toBe('next')
+      expect(setupCount).toBe(setupCountBeforeReload)
+      expect(disconnectCount).toBe(disconnectCountBeforeReload)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads the document when streamed frame HTML carries no flush marker', async () => {
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([markerlessDocument])
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(document.title).toBe('Next')
+      expect(document.querySelector('main')?.textContent).toBe('Next')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads the document when frame HTML is a string without a flush marker', async () => {
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([])
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.render(markerlessDocument)
+
+      expect(document.title).toBe('Next')
+      expect(document.querySelector('main')?.textContent).toBe('Next')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads the document for renderToString output, which has no flush marker', async () => {
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+
+    let html = await renderToString(
+      jsx('html', {
+        children: [
+          jsx('head', { children: jsx('title', { children: 'Next' }) }),
+          jsx('body', { children: jsx('main', { children: 'Next' }) }),
+        ],
+      }),
+    )
+    expect(html).not.toContain('rmx:flush')
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([html])
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(document.title).toBe('Next')
+      expect(document.querySelector('main')?.textContent).toBe('Next')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('preserves installed import maps while diffing a reloaded document head', async () => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      '<title>Initial</title>',
+      importMapScript({ imports: { '/authored.js': '/authored.hash.js' } }),
+      '<meta name="after-import-map" content="initial">',
+      remixImportMapScript({ imports: { '/initial.js': '/initial.hash.js' } }),
+      '</head>',
+      '<body><main>Initial</main></body>',
+    ].join('')
+
+    let frame = createFrame(document, {
+      src: 'https://example.com/initial',
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return htmlStream([
+          appendFlushMarker(
+            [
+              '<!doctype html><html><head><title>Next</title>',
+              importMapScript({ imports: { '/authored.js': '/authored.hash.js' } }),
+              '<meta name="after-import-map" content="next">',
+              remixImportMapScript({ imports: { '/late.js': '/late.hash.js' } }),
+              '</head><body><main>Next</main></body></html>',
+            ].join(''),
+            'document',
+          ),
+        ])
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+
+    try {
+      await frame.ready()
+      let initialScripts = getImportMapScripts()
+      let hmrImportMap = document.createElement('script')
+      hmrImportMap.type = 'importmap'
+      hmrImportMap.setAttribute('data-rmx-import-map', '')
+      hmrImportMap.textContent = JSON.stringify({
+        imports: { '/hmr.js': '/hmr.hash.js' },
+      })
+      document.head.appendChild(hmrImportMap)
+
+      await frame.handle.reload()
+
+      let scripts = getImportMapScripts()
+      expect(document.title).toBe('Next')
+      expect(scripts).toHaveLength(4)
+      expect(scripts[0]).toBe(initialScripts[0])
+      expect(scripts[1]).toBe(initialScripts[1])
+      expect(scripts[2]).toBe(hmrImportMap)
+      expect(scripts[0]?.nextElementSibling?.getAttribute('name')).toBe('after-import-map')
+      expect(scripts[1]?.previousElementSibling?.getAttribute('name')).toBe('after-import-map')
+      expect(parseImportMapScript(scripts[3]!)).toEqual({
+        imports: { '/late.js': '/late.hash.js' },
+      })
+      expect(scripts[3]?.hasAttribute('data-rmx-import-map')).toBe(true)
+      expect(document.head.lastElementChild).toBe(scripts[3])
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('keeps import maps introduced by document reloads after existing module scripts', async () => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      '<title>Initial</title>',
+      '<script type="module" src="/initial-entry.js"></script>',
+      '</head>',
+      '<body><main>Initial</main></body>',
+    ].join('')
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([
+          appendFlushMarker(
+            [
+              '<!doctype html><html><head><title>Next</title>',
+              remixImportMapScript({ imports: { '/late.js': '/late.hash.js' } }),
+              '<script type="module" src="/next-entry.js"></script>',
+              '</head><body><main>Next</main></body></html>',
+            ].join(''),
+            'document',
+          ),
+        ])
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      let children = Array.from(document.head.children)
+      let moduleScriptIndex = children.findIndex(
+        (element) => element instanceof HTMLScriptElement && element.type === 'module',
+      )
+      let importMapIndex = children.findIndex(
+        (element) =>
+          element instanceof HTMLScriptElement &&
+          element.matches('script[data-rmx-import-map][type="importmap"]'),
+      )
+      expect(moduleScriptIndex).toBeGreaterThanOrEqual(0)
+      expect(importMapIndex).toBeGreaterThanOrEqual(0)
+      expect(moduleScriptIndex).toBeLessThan(importMapIndex)
+      expect(parseImportMapScript(getImportMapScripts()[0]!)).toEqual({
+        imports: { '/late.js': '/late.hash.js' },
+      })
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('resolves after committing reload content', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    let [contentPromise, resolveContent] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      resolveFrame: () => contentPromise,
+    })
+
+    try {
+      await frame.ready()
+      let reload = reloadFrameForNavigation(frame.handle).finished
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+
+      resolveContent('<p id="next">Next</p>')
+      await reload
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(document.getElementById('next')?.textContent).toBe('Next')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('commits streamed reload content before the response stream finishes', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    let streamController!: ReadableStreamDefaultController<Uint8Array>
+    let responseStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        streamController = controller
+      },
+    })
+    let frame = createTestFrame(root, {
+      resolveFrame: () => responseStream,
+    })
+
+    try {
+      await frame.ready()
+      let committed = false
+      let finished = false
+      let reload = reloadFrameForNavigation(frame.handle)
+      void reload.committed.then(() => {
+        committed = true
+      })
+      void reload.finished.then(() => {
+        finished = true
+      })
+
+      streamController.enqueue(
+        new TextEncoder().encode(appendFlushMarker('<p id="next">Next</p>', 'fragment')),
+      )
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(document.getElementById('next')?.textContent).toBe('Next')
+      expect(committed).toBe(true)
+      expect(finished).toBe(false)
+
+      streamController.close()
+      await reload.finished
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for client entry reconciliation before a reload resolves', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    function ReloadedEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('p', { id: 'reloaded', children: handle.props.label })
+    }
+
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let frame = createTestFrame(root, {
+      loadModule: () => modulePromise,
+      resolveFrame: () =>
+        [
+          '<!-- rmx:h:h1 --><p id="reloaded">Server</p><!-- /rmx:h -->',
+          rmxDataScript('Hydrated', '/reloaded.js', 'ReloadedEntry'),
+        ].join(''),
+    })
+
+    try {
+      await frame.ready()
+      let committed = false
+      let finished = false
+      let reload = reloadFrameForNavigation(frame.handle)
+      void reload.committed.then(() => {
+        committed = true
+      })
+      void reload.finished.then(() => {
+        finished = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('reloaded')?.textContent).toBe('Server')
+      expect(committed).toBe(true)
+      expect(finished).toBe(false)
+      resolveModule(ReloadedEntry)
+      await reload.finished
+
+      expect(document.getElementById('reloaded')?.textContent).toBe('Hydrated')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for blocking frames created by client entry reconciliation', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = [
+      '<!-- rmx:h:h1 --><p id="detail">Detail</p><!-- /rmx:h -->',
+      rmxDataScript('detail', '/store-entry.js', 'StoreEntry'),
+    ].join('')
+    document.body.append(root)
+
+    function StoreEntry(handle: Handle<{ label: string }>) {
+      return () =>
+        handle.props.label === 'collection'
+          ? jsx(Frame, { src: '/collection' })
+          : jsx('p', { id: 'detail', children: 'Detail' })
+    }
+
+    let [collectionPromise, resolveCollection] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      loadModule: () => StoreEntry,
+      resolveFrame(src) {
+        if (src === '/collection') return collectionPromise
+        return [
+          '<!-- rmx:h:h1 --><p id="server-collection">Server collection</p><!-- /rmx:h -->',
+          rmxDataScript('collection', '/store-entry.js', 'StoreEntry'),
+        ].join('')
+      },
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).finished.then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveCollection('<p id="collection">Collection</p>')
+      await reload
+
+      expect(document.getElementById('collection')?.textContent).toBe('Collection')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for blocking frames created by newly hydrated client entries', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    function StoreEntry() {
+      return () => jsx(Frame, { src: '/collection' })
+    }
+
+    let [collectionPromise, resolveCollection] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      loadModule: () => StoreEntry,
+      resolveFrame(src) {
+        if (src === '/collection') return collectionPromise
+        return [
+          '<!-- rmx:h:h1 --><p id="server-collection">Server collection</p><!-- /rmx:h -->',
+          rmxDataScript('collection', '/store-entry.js', 'StoreEntry'),
+        ].join('')
+      },
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).finished.then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveCollection('<p id="collection">Collection</p>')
+      await reload
+
+      expect(document.getElementById('collection')?.textContent).toBe('Collection')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for blocking frames rendered from RemixNode content', async () => {
+    document.body.innerHTML = '<p id="initial">Initial</p>'
+
+    let streamController!: ReadableStreamDefaultController<Uint8Array>
+    let collectionStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        streamController = controller
+      },
+    })
+    let frame = createTestFrame(document, {
+      resolveFrame(src) {
+        if (src === '/collection') return collectionStream
+        return jsx(Frame, { src: '/collection' })
+      },
+    })
+
+    try {
+      await frame.ready()
+      let committed = false
+      let finished = false
+      let reload = reloadFrameForNavigation(frame.handle)
+      void reload.committed.then(() => {
+        committed = true
+      })
+      void reload.finished.then(() => {
+        finished = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(committed).toBe(false)
+      expect(finished).toBe(false)
+
+      streamController.enqueue(
+        new TextEncoder().encode(
+          appendFlushMarker('<p id="collection">Collection</p>', 'fragment'),
+        ),
+      )
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('collection')?.textContent).toBe('Collection')
+      expect(committed).toBe(true)
+      expect(finished).toBe(false)
+
+      streamController.close()
+      await reload.finished
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for nested blocking frames rendered from RemixNode frame content', async () => {
+    document.body.innerHTML = '<p id="initial">Initial</p>'
+
+    let [grandchildPromise, resolveGrandchild] = withResolvers<string>()
+    let [grandchildRequested, markGrandchildRequested] = withResolvers<void>()
+    let frame = createTestFrame(document, {
+      resolveFrame(src) {
+        if (src === '/child') return jsx(Frame, { src: '/grandchild' })
+        if (src === '/grandchild') {
+          markGrandchildRequested()
+          return grandchildPromise
+        }
+        return jsx(Frame, { src: '/child' })
+      },
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).finished.then(() => {
+        reloadSettled = true
+      })
+
+      await grandchildRequested
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(reloadSettled).toBe(false)
+
+      resolveGrandchild('<p id="grandchild">Grandchild</p>')
+      await reload
+
+      expect(document.getElementById('grandchild')?.textContent).toBe('Grandchild')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('resolves after committing fallback for frames created by client entry reconciliation', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = [
+      '<!-- rmx:h:h1 --><p id="detail">Detail</p><!-- /rmx:h -->',
+      rmxDataScript('detail', '/store-entry.js', 'StoreEntry'),
+    ].join('')
+    document.body.append(root)
+
+    function StoreEntry(handle: Handle<{ label: string }>) {
+      return () =>
+        handle.props.label === 'collection'
+          ? jsx(Frame, {
+              src: '/collection',
+              fallback: jsx('p', { id: 'loading', children: 'Loading' }),
+            })
+          : jsx('p', { id: 'detail', children: 'Detail' })
+    }
+
+    let [collectionPromise, resolveCollection] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      loadModule: () => StoreEntry,
+      resolveFrame(src) {
+        if (src === '/collection') return collectionPromise
+        return [
+          '<!-- rmx:h:h1 --><p id="server-collection">Server collection</p><!-- /rmx:h -->',
+          rmxDataScript('collection', '/store-entry.js', 'StoreEntry'),
+        ].join('')
+      },
+    })
+
+    try {
+      await frame.ready()
+      await reloadFrameForNavigation(frame.handle).finished
+
+      expect(document.getElementById('loading')?.textContent).toBe('Loading')
+      resolveCollection('<p id="collection">Collection</p>')
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(document.getElementById('collection')?.textContent).toBe('Collection')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('commits server-rendered blocking child frames before hydration finishes', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    function BlockingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('p', { id: 'blocking-entry', children: handle.props.label })
+    }
+
+    let data = {
+      h: {
+        h1: {
+          moduleUrl: '/blocking.js',
+          exportName: 'BlockingEntry',
+          props: { label: 'Hydrated blocking frame' },
+        },
+      },
+      f: {
+        f1: {
+          status: 'resolved',
+          src: '/blocking',
+        },
+      },
+    }
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let frame = createTestFrame(root, {
+      loadModule: () => modulePromise,
+      resolveFrame: () =>
+        [
+          '<!-- rmx:f:f1 -->',
+          '<!-- rmx:h:h1 --><p id="blocking-entry">Server</p><!-- /rmx:h -->',
+          '<!-- /rmx:f -->',
+          `<script type="application/json" id="rmx-data">${JSON.stringify(data)}</script>`,
+        ].join(''),
+    })
+
+    try {
+      await frame.ready()
+      let committed = false
+      let finished = false
+      let reload = reloadFrameForNavigation(frame.handle)
+      void reload.committed.then(() => {
+        committed = true
+      })
+      void reload.finished.then(() => {
+        finished = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(document.getElementById('blocking-entry')?.textContent).toBe('Server')
+      expect(committed).toBe(true)
+      expect(finished).toBe(false)
+      resolveModule(BlockingEntry)
+      await reload.finished
+
+      expect(document.getElementById('blocking-entry')?.textContent).toBe('Hydrated blocking frame')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for preserved blocking child frames to reconcile before a reload resolves', async () => {
+    let root = document.createElement('div')
+    let initialData = {
+      h: {
+        h1: {
+          moduleUrl: '/initial-blocking.js',
+          exportName: 'InitialBlockingEntry',
+          props: { label: 'Initial blocking frame' },
+        },
+      },
+      f: {
+        f1: {
+          status: 'resolved',
+          src: '/blocking',
+        },
+      },
+    }
+    root.innerHTML = [
+      '<!-- rmx:f:f1 -->',
+      '<!-- rmx:h:h1 --><p id="blocking-entry">Initial server</p><!-- /rmx:h -->',
+      '<!-- /rmx:f -->',
+      `<script type="application/json" id="rmx-data">${JSON.stringify(initialData)}</script>`,
+    ].join('')
+    document.body.append(root)
+
+    function InitialBlockingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('p', { id: 'blocking-entry', children: handle.props.label })
+    }
+
+    function ReloadedBlockingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('p', { id: 'blocking-entry', children: handle.props.label })
+    }
+
+    let nextData = {
+      h: {
+        h2: {
+          moduleUrl: '/reloaded-blocking.js',
+          exportName: 'ReloadedBlockingEntry',
+          props: { label: 'Reloaded blocking frame' },
+        },
+      },
+      f: initialData.f,
+    }
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let frame = createTestFrame(root, {
+      loadModule(moduleUrl) {
+        if (moduleUrl === '/initial-blocking.js') return InitialBlockingEntry
+        if (moduleUrl === '/reloaded-blocking.js') return modulePromise
+        throw new Error(`Unexpected module: ${moduleUrl}`)
+      },
+      resolveFrame: () =>
+        [
+          '<!-- rmx:f:f1 -->',
+          '<!-- rmx:h:h2 --><p id="blocking-entry">Reloaded server</p><!-- /rmx:h -->',
+          '<!-- /rmx:f -->',
+          `<script type="application/json" id="rmx-data">${JSON.stringify(nextData)}</script>`,
+        ].join(''),
+    })
+
+    try {
+      await frame.ready()
+      let reloadSettled = false
+      let reload = reloadFrameForNavigation(frame.handle).finished.then(() => {
+        reloadSettled = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(reloadSettled).toBe(false)
+      resolveModule(ReloadedBlockingEntry)
+      await reload
+
+      expect(document.getElementById('blocking-entry')?.textContent).toBe('Reloaded blocking frame')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('resolves after committing a pending child frame fallback', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+
+    let data = {
+      f: {
+        f1: {
+          status: 'pending',
+          src: '/pending',
+        },
+      },
+    }
+    let frame = createTestFrame(root, {
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame: () =>
+        [
+          '<!-- rmx:f:f1 --><p id="pending-fallback">Loading</p><!-- /rmx:f -->',
+          `<script type="application/json" id="rmx-data">${JSON.stringify(data)}</script>`,
+        ].join(''),
+    })
+
+    try {
+      await frame.ready()
+      await reloadFrameForNavigation(frame.handle).finished
+
+      expect(document.getElementById('pending-fallback')?.textContent).toBe('Loading')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('releases pending hydration metadata when its frame is disposed', async () => {
+    document.body.innerHTML = [
+      '<!-- rmx:h:h1 -->',
+      '<section data-entry="">initial</section>',
+      '<!-- /rmx:h -->',
+      rmxDataScript('initial'),
+    ].join('')
+
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let data = {}
+    let frame = createFrame(document, {
+      src: 'https://example.com/initial',
+      errorTarget: new EventTarget(),
+      loadModule: () => modulePromise,
+      resolveFrame: () => '',
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data,
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(data).not.toEqual({})
+
+    frame.dispose()
+    await frame.ready()
+
+    expect(data).toEqual({})
+
+    resolveModule(() => () => jsx('section', { children: 'late' }))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(document.querySelector('[data-entry]')?.textContent).toBe('initial')
+  })
+
+  it('does not render a pending template after its frame is disposed', async () => {
+    let markerId = 'disposed-pending-frame'
+    let start = document.createComment(` rmx:f:${markerId} `)
+    let fallback = document.createElement('p')
+    fallback.textContent = 'Fallback'
+    let end = document.createComment(' /rmx:f ')
+    document.body.append(start, fallback, end)
+
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let frame = createFrame([start, end], {
+      src: '/child',
+      marker: { id: markerId, src: '/child', status: 'pending' },
+      errorTarget,
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame: () => '',
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, errorTarget, styleManager),
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+
+    frame.dispose()
+    start.remove()
+    fallback.remove()
+    end.remove()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    let fragment = document.createDocumentFragment()
+    let late = document.createElement('p')
+    late.id = 'late-frame-content'
+    fragment.append(late)
+    publishFrameTemplate(markerId, fragment)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    consumeFrameTemplate(markerId)
+    expect(document.getElementById('late-frame-content')).toBeNull()
+    await frame.ready()
+  })
+
+  it('renders a redirected response without changing the frame source', async () => {
+    let redirectedUrl = 'https://example.com/settings/overview'
+    let frameSrc = 'https://example.com/settings'
+    let response = new Response('<main id="result">Settings overview</main>')
+    Object.defineProperties(response, {
+      redirected: { value: true },
+      url: { value: redirectedUrl },
+    })
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let frame = createFrame(root, {
+      src: frameSrc,
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return response
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+
+    try {
+      await frame.ready()
+      let result = await reloadFrameForNavigation(frame.handle).finished
+
+      expect(document.getElementById('result')?.textContent).toBe('Settings overview')
+      expect(frame.handle.src).toBe(frameSrc)
+      expect(result.redirectedTo).toBe(redirectedUrl)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('renders 4xx response bodies from custom resolvers', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let errorTarget = new EventTarget()
+    let frame = createFrame(root, {
+      src: 'https://example.com/account',
+      errorTarget,
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return new Response('<main id="not-found">Account not found</main>', {
+          status: 404,
+          statusText: 'Not Found',
+        })
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, errorTarget, createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(document.getElementById('not-found')?.textContent).toBe('Account not found')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('renders 5xx response bodies from custom resolvers', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let errorTarget = new EventTarget()
+    let frame = createFrame(root, {
+      src: 'https://example.com/account',
+      errorTarget,
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return new Response('<main id="error">Account unavailable</main>', {
+          status: 503,
+          statusText: 'Service Unavailable',
+        })
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, errorTarget, createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(document.getElementById('initial')).toBeNull()
+      expect(document.getElementById('error')?.textContent).toBe('Account unavailable')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('passes form submission options to a streaming frame resolver', async () => {
+    let resolvedOptions: ResolveFrameOptions | undefined
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let frame = createFrame(root, {
+      src: 'https://example.com/account',
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame(_src, options) {
+        resolvedOptions = options
+        return htmlStream(['<main id="result">Saved</main>'])
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+    let formData = new FormData()
+    formData.set('displayName', 'Ada')
+
+    try {
+      await frame.ready()
+      await reloadFrameForNavigation(frame.handle, {
+        formData,
+        method: 'post',
+        encType: 'multipart/form-data',
+      }).finished
+
+      expect(resolvedOptions?.formData).toBe(formData)
+      expect(resolvedOptions?.method).toBe('post')
+      expect(resolvedOptions?.encType).toBe('multipart/form-data')
+      expect(resolvedOptions?.signal).toBeInstanceOf(AbortSignal)
+      expect(document.getElementById('result')?.textContent).toBe('Saved')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads a new source and uses it for subsequent reloads without navigation', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let resolveFrame = t.mock.fn((src: string) => `<p>${src}</p>`)
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let initialUrl = window.location.href
+
+    await frame.handle.reload({ src: '/new' })
+    expect(frame.handle.src).toBe('/new')
+    await frame.handle.reload()
+
+    expect(frame.handle.src).toBe('/new')
+    expect(resolveFrame.mock.calls).toHaveLength(2)
+    expect(resolveFrame.mock.calls[0]?.arguments[0]).toBe('/new')
+    expect(resolveFrame.mock.calls[1]?.arguments[0]).toBe('/new')
+    expect(root.textContent).toBe('/new')
+    expect(window.location.href).toBe(initialUrl)
+  })
+
+  it('omits submission options from plain reloads', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let resolveFrame = t.mock.fn((_src: string, options?: ResolveFrameOptions) => {
+      expect(Object.keys(options ?? {}).sort()).toEqual(['signal', 'target'])
+      return '<p>Reloaded</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    await frame.handle.reload()
+    await frame.handle.reload({ src: '/new' })
+
+    expect(resolveFrame.mock.calls).toHaveLength(2)
+    expect(root.textContent).toBe('Reloaded')
+  })
+
+  it('submits FormData in one request and renders its response without navigation', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
+      expect(src).toBe('https://example.com/save')
+      expect(options?.formData?.get('name')).toBe('Ada')
+      expect(options?.method).toBe('post')
+      expect(options?.encType).toBe('multipart/form-data')
+      expect(options?.signal).toBeInstanceOf(AbortSignal)
+      return '<p>Saved</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let data = new FormData()
+    data.set('name', 'Ada')
+    let initialUrl = window.location.href
+
+    let signal = await frame.handle.reload({
+      src: 'https://example.com/save',
+      method: 'POST',
+      encType: 'multipart/form-data',
+      body: data,
+    })
+
+    expect(signal.aborted).toBe(false)
+    expect(resolveFrame.mock.calls).toHaveLength(1)
+    expect(root.textContent).toBe('Saved')
+    expect(frame.handle.src).toBe('https://example.com/save')
+    expect(window.location.href).toBe(initialUrl)
+  })
+
+  it('renders a redirected reload response while retaining its requested source', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let response = new Response('<p>Saved</p>')
+    Object.defineProperties(response, {
+      redirected: { value: true },
+      url: { value: 'https://example.com/account' },
+    })
+    let frame = createTestFrame(root, {
+      resolveFrame: () => response,
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let initialUrl = window.location.href
+
+    await frame.handle.reload({
+      src: 'https://example.com/save',
+      method: 'post',
+      body: new FormData(),
+    })
+
+    expect(root.textContent).toBe('Saved')
+    expect(frame.handle.src).toBe('https://example.com/save')
+    expect(window.location.href).toBe(initialUrl)
+  })
+
+  it('reloads with explicitly supplied form settings and successful controls', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let form = document.createElement('form')
+    form.action = 'https://example.com/default'
+    form.method = 'get'
+    let input = document.createElement('input')
+    input.name = 'name'
+    input.value = 'Ada'
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'save'
+    button.setAttribute('formaction', 'https://example.com/save')
+    button.setAttribute('formmethod', 'post')
+    button.setAttribute('formenctype', 'multipart/form-data')
+    form.append(input, button)
+    document.body.append(form)
+    let submit = t.mock.fn()
+    form.addEventListener('submit', submit)
+    let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
+      expect(src).toBe('https://example.com/save')
+      expect(options?.formData?.get('name')).toBe('Ada')
+      expect(options?.formData?.get('intent')).toBe('save')
+      expect(options?.method).toBe('post')
+      expect(options?.encType).toBe('multipart/form-data')
+      return '<p>Saved</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    await frame.handle.reload({
+      src: button.formAction,
+      method: button.formMethod,
+      encType: button.formEnctype,
+      body: new FormData(form, button),
+    })
+
+    expect(resolveFrame.mock.calls).toHaveLength(1)
+    expect(submit.mock.calls).toHaveLength(0)
+    expect(root.textContent).toBe('Saved')
+  })
+
+  it('reloads a GET source with query parameters without body metadata', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let form = document.createElement('form')
+    form.action = 'https://example.com/search?old=1'
+    let query = document.createElement('input')
+    query.name = 'query'
+    query.value = 'Ada Lovelace'
+    form.append(query)
+    document.body.append(form)
+    let resolveFrame = t.mock.fn((src: string, options?: ResolveFrameOptions) => {
+      expect(src).toBe('https://example.com/search?query=Ada+Lovelace')
+      expect(options?.method).toBe('get')
+      expect(options && Reflect.has(options, 'formData')).toBe(false)
+      expect(options && Reflect.has(options, 'encType')).toBe(false)
+      return '<p>Found</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    await frame.handle.reload({
+      src: form.action,
+      method: 'get',
+      encType: 'multipart/form-data',
+      body: new FormData(form),
+    })
+
+    expect(resolveFrame.mock.calls).toHaveLength(1)
+    expect(root.textContent).toBe('Found')
+  })
+
+  it('cancels stale reload bodies when another reload starts', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [staleContent, resolveStaleContent] = withResolvers<string>()
+    let signals: AbortSignal[] = []
+    let resolveFrame = t.mock.fn((_src: string, options?: ResolveFrameOptions) => {
+      if (options?.signal) signals.push(options.signal)
+      return options?.formData?.get('value') === 'first' ? staleContent : '<p>Second</p>'
+    })
+    let frame = createTestFrame(root, { resolveFrame })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let firstData = new FormData()
+    firstData.set('value', 'first')
+    let secondData = new FormData()
+    secondData.set('value', 'second')
+
+    let first = frame.handle.reload({ method: 'post', body: firstData })
+    let second = frame.handle.reload({ method: 'post', body: secondData })
+    resolveStaleContent('<p>First</p>')
+
+    expect((await first).aborted).toBe(true)
+    expect((await second).aborted).toBe(false)
+    expect(signals[0]?.aborted).toBe(true)
+    expect(signals[1]?.aborted).toBe(false)
+    expect(root.textContent).toBe('Second')
+  })
+
+  it('lets a reload supersede an active submission', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [staleContent, resolveStaleContent] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      resolveFrame(_src, options) {
+        return options?.method === 'post' ? staleContent : '<p>Reloaded</p>'
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    let submitted = frame.handle.reload({ method: 'post', body: new FormData() })
+    let reloaded = frame.handle.reload()
+    resolveStaleContent('<p>Stale</p>')
+
+    expect((await submitted).aborted).toBe(true)
+    expect((await reloaded).aborted).toBe(false)
+    expect(root.textContent).toBe('Reloaded')
+  })
+
+  it('lets a submission supersede an active reload', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [staleContent, resolveStaleContent] = withResolvers<string>()
+    let frame = createTestFrame(root, {
+      resolveFrame(_src, options) {
+        return options?.method === 'post' ? '<p>Submitted</p>' : staleContent
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    let reloaded = frame.handle.reload()
+    let submitted = frame.handle.reload({ method: 'post', body: new FormData() })
+    resolveStaleContent('<p>Stale</p>')
+
+    expect((await reloaded).aborted).toBe(true)
+    expect((await submitted).aborted).toBe(false)
+    expect(root.textContent).toBe('Submitted')
+  })
+
+  it('cancels a superseded reload stream', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let [streamRead, markStreamRead] = withResolvers<void>()
+    let cancel = t.mock.fn()
+    let stream = new ReadableStream<Uint8Array>(
+      {
+        pull() {
+          markStreamRead()
+        },
+        cancel,
+      },
+      { highWaterMark: 0 },
+    )
+    let frame = createTestFrame(root, {
+      resolveFrame(src) {
+        return src.endsWith('/initial') ? stream : '<p>Fresh</p>'
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    let staleReload = frame.handle.reload()
+    await streamRead
+
+    frame.handle.src = 'https://example.com/fresh'
+    let freshSignal = await frame.handle.reload()
+    let staleSignal = await staleReload
+
+    expect(staleSignal.aborted).toBe(true)
+    expect(freshSignal.aborted).toBe(false)
+    expect(cancel.mock.calls).toHaveLength(1)
+    expect(root.textContent).toBe('Fresh')
+  })
+
+  it('aborts the active resolver when the reload signal is aborted', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let resolverSignal: AbortSignal | undefined
+    let frame = createFrame(root, {
+      src: 'https://example.com/account',
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame(_src, options) {
+        resolverSignal = options?.signal
+        return new Promise<string>((resolve) => {
+          options?.signal?.addEventListener('abort', () => resolve('<p>Aborted</p>'), {
+            once: true,
+          })
+        })
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+    let controller = new AbortController()
+
+    try {
+      await frame.ready()
+      let reload = reloadFrameForNavigation(frame.handle, { signal: controller.signal })
+      controller.abort()
+      await reload.committed
+      let result = await reload.finished
+
+      expect(result.signal.aborted).toBe(true)
+      expect(resolverSignal?.aborted).toBe(true)
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('stops reading the active response stream when the reload signal is aborted', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let [streamRead, markStreamRead] = withResolvers<void>()
+    let frame = createFrame(root, {
+      src: 'https://example.com/account',
+      errorTarget: new EventTarget(),
+      loadModule() {
+        throw new Error('Unexpected client entry')
+      },
+      resolveFrame() {
+        return new ReadableStream<Uint8Array>({
+          pull() {
+            markStreamRead()
+          },
+        })
+      },
+      pendingClientEntries: new Map(),
+      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+    let controller = new AbortController()
+
+    try {
+      await frame.ready()
+      let reload = reloadFrameForNavigation(frame.handle, { signal: controller.signal })
+      await streamRead
+      controller.abort()
+      let result = await reload.finished
+
+      expect(result.signal.aborted).toBe(true)
+      expect(document.getElementById('initial')?.textContent).toBe('Initial')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('leaves authored import maps in frame content', async () => {
+    document.documentElement.innerHTML = '<head></head><body></body>'
+
+    let frame = createClientEntryResourceTestFrame()
+
+    try {
+      await frame.ready()
+      await frame.render(
+        `${importMapScript({ imports: { '/authored.js': '/authored.hash.js' } })}<main>Loaded</main>`,
+      )
+
+      expect(getImportMapScripts()).toHaveLength(0)
+      expect(document.body.querySelector('script[type="importmap"]')?.textContent).toBe(
+        '{"imports":{"/authored.js":"/authored.hash.js"}}',
+      )
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('installs merged managed and client entry import maps from fresh frame content', async () => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      importMapScript({ imports: { shared: '/shared.hash.js' } }),
+      '</head>',
+      '<body></body>',
+    ].join('')
+
+    let Counter = clientEntry('file:///app/counter.tsx', function Counter() {
+      return () => jsx('main', { children: 'Loaded' })
+    })
+    let frameHtml = await drain(
+      renderToStream(
+        jsx('html', {
+          children: [
+            jsx('head', {
+              children: jsx(ImportMap, {
+                value: {
+                  imports: {
+                    shared: '/shared.hash.js',
+                    authored: '/authored.hash.js',
+                  },
+                },
+              }),
+            }),
+            jsx('body', { children: jsx(Counter, {}) }),
+          ],
+        }),
+        {
+          resolveClientEntry() {
+            return {
+              href: '/counter.hash.js',
+              exportName: 'Counter',
+              importMap: {
+                imports: {
+                  shared: '/shared.hash.js',
+                  clientEntry: '/counter.hash.js',
+                },
+              },
+            }
+          },
+        },
+      ),
+    )
+
+    let rendered = new DOMParser().parseFromString(frameHtml, 'text/html')
+    let renderedImportMaps = rendered.querySelectorAll<HTMLScriptElement>(
+      'script[data-rmx-import-map][type="importmap"]',
+    )
+    expect(renderedImportMaps).toHaveLength(1)
+    expect(parseImportMapScript(renderedImportMaps[0]!)).toEqual({
+      imports: {
+        shared: '/shared.hash.js',
+        authored: '/authored.hash.js',
+        clientEntry: '/counter.hash.js',
+      },
+    })
+
+    let start = document.createComment('frame:start')
+    let end = document.createComment('frame:end')
+    document.body.append(start, end)
+    let frame = createTestFrame([start, end], {
+      resolveFrame() {
+        return ''
+      },
+      loadModule() {
+        return Counter
+      },
+    })
+
+    try {
+      await frame.ready()
+      await frame.render(frameHtml)
+
+      let installedImportMaps = getImportMapScripts()
+      expect(installedImportMaps).toHaveLength(2)
+      expect(parseImportMapScript(installedImportMaps[1]!)).toEqual({
+        imports: {
+          authored: '/authored.hash.js',
+          clientEntry: '/counter.hash.js',
+        },
+      })
+      expect(document.body.querySelector('script[type="importmap"]')).toBeNull()
+      expect(document.querySelector('main')?.textContent).toBe('Loaded')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('installs only new entries from late Remix import maps', async () => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      importMapScript({
+        imports: { '/a.js': '/a.hash.js' },
+        scopes: { '/scope/': { pkg: '/pkg.hash.js' } },
+        integrity: { '/a.hash.js': 'sha256-a' },
+      }),
+      '</head>',
+      '<body></body>',
+    ].join('')
+
+    let frame = createClientEntryResourceTestFrame()
+    let lateImportMap = {
+      imports: {
+        '/a.js': '/a.hash.js',
+        '/b.js': '/b.hash.js',
+      },
+      scopes: {
+        '/scope/': {
+          pkg: '/pkg.hash.js',
+          other: '/other.hash.js',
+        },
+      },
+      integrity: {
+        '/a.hash.js': 'sha256-a',
+        '/b.hash.js': 'sha256-b',
+      },
+    }
+
+    try {
+      await frame.ready()
+      await frame.render(`${remixImportMapHead(lateImportMap)}<main>Loaded</main>`)
+
+      let scripts = getImportMapScripts()
+      expect(scripts).toHaveLength(2)
+      expect(parseImportMapScript(scripts[1]!)).toEqual({
+        imports: { '/b.js': '/b.hash.js' },
+        scopes: { '/scope/': { other: '/other.hash.js' } },
+        integrity: { '/b.hash.js': 'sha256-b' },
+      })
+      expect(scripts[1]?.hasAttribute('data-rmx-import-map')).toBe(true)
+      expect(document.body.querySelector('head')).toBeNull()
+
+      await frame.render(`${remixImportMapHead(lateImportMap)}<main>Reloaded</main>`)
+
+      expect(getImportMapScripts()).toHaveLength(2)
+      expect(document.body.querySelector('head')).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('applies the initial Remix import map nonce to late Remix import maps', async () => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      '<script data-rmx-import-map type="importmap" nonce="nonce-value">',
+      '{"imports":{"/initial.js":"/initial.hash.js"}}',
+      '</script>',
+      '</head>',
+      '<body></body>',
+    ].join('')
+
+    let frame = createClientEntryResourceTestFrame()
+
+    try {
+      await frame.ready()
+      await frame.render(
+        `${remixImportMapHead({ imports: { '/late.js': '/late.hash.js' } })}<main>Loaded</main>`,
+      )
+
+      let scripts = getImportMapScripts()
+      expect(scripts).toHaveLength(2)
+      expect(scripts[1]?.nonce).toBe('nonce-value')
+      expect(parseImportMapScript(scripts[1]!)).toEqual({
+        imports: { '/late.js': '/late.hash.js' },
+      })
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('compares late Remix import maps with maps added externally after startup', async (t) => {
+    document.documentElement.innerHTML = '<head></head><body></body>'
+
+    let frame = createClientEntryResourceTestFrame()
+    let warn = t.mock.method(console, 'warn', () => {})
+    let navigate = mockDocumentNavigation(t)
+
+    try {
+      await frame.ready()
+
+      let externalImportMap = document.createElement('script')
+      externalImportMap.type = 'importmap'
+      externalImportMap.textContent = JSON.stringify({
+        imports: {
+          '/external.js': '/external.hash.js',
+          '/conflict.js': '/old.hash.js',
+        },
+      })
+      document.head.appendChild(externalImportMap)
+
+      await frame.render(
+        `${remixImportMapHead({
+          imports: {
+            '/external.js': '/external.hash.js',
+            '/conflict.js': '/new.hash.js',
+            '/late.js': '/late.hash.js',
+          },
+        })}<main>Loaded</main>`,
+      )
+
+      let scripts = getImportMapScripts()
+      expect(scripts).toHaveLength(1)
+      expect(scripts[0]).toBe(externalImportMap)
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(document.querySelector('main')).toBeNull()
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0]?.arguments[0]).toBe(
+        '[remix] Reloading page after import map conflict for "/conflict.js": ' +
+          '"/old.hash.js" is already installed, but the new map points to "/new.hash.js"',
+      )
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('compares late Remix import maps with maps added outside the head after startup', async () => {
+    document.documentElement.innerHTML = '<head></head><body></body>'
+
+    let frame = createClientEntryResourceTestFrame()
+
+    try {
+      await frame.ready()
+
+      let container = document.createElement('section')
+      document.body.appendChild(container)
+      let externalImportMap = document.createElement('script')
+      externalImportMap.type = 'importmap'
+      externalImportMap.textContent = JSON.stringify({
+        imports: { '/external.js': '/external.hash.js' },
+      })
+      container.appendChild(externalImportMap)
+
+      await frame.render(
+        `${remixImportMapHead({
+          imports: {
+            '/external.js': '/external.hash.js',
+            '/late.js': '/late.hash.js',
+          },
+        })}<main>Loaded</main>`,
+      )
+
+      let scripts = getImportMapScripts()
+      expect(scripts).toHaveLength(1)
+      expect(parseImportMapScript(scripts[0]!)).toEqual({
+        imports: { '/late.js': '/late.hash.js' },
+      })
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('retains import map state after its script and owning frame are removed', async () => {
+    document.documentElement.innerHTML = '<head></head><body></body>'
+
+    let initialFrame = createClientEntryResourceTestFrame()
+
+    try {
+      await initialFrame.ready()
+      let installedScript = document.createElement('script')
+      installedScript.type = 'importmap'
+      installedScript.textContent = JSON.stringify({
+        imports: { '/installed.js': '/installed.hash.js' },
+      })
+      document.head.appendChild(installedScript)
+      installedScript.remove()
+    } finally {
+      initialFrame.dispose()
+    }
+
+    let nextFrame = createClientEntryResourceTestFrame()
+
+    try {
+      await nextFrame.ready()
+      await nextFrame.render(
+        `${remixImportMapHead({
+          imports: {
+            '/installed.js': '/installed.hash.js',
+            '/late.js': '/late.hash.js',
+          },
+        })}<main>Loaded</main>`,
+      )
+
+      let scripts = getImportMapScripts()
+      expect(scripts).toHaveLength(1)
+      expect(parseImportMapScript(scripts[0]!)).toEqual({
+        imports: { '/late.js': '/late.hash.js' },
+      })
+    } finally {
+      nextFrame.dispose()
+    }
+  })
+
+  it('retains import map state after an installed script is changed', async (t) => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      importMapScript({ imports: { '/installed.js': '/installed.hash.js' } }),
+      '</head>',
+      '<body></body>',
+    ].join('')
+
+    let frame = createClientEntryResourceTestFrame()
+    let warn = t.mock.method(console, 'warn', () => {})
+    let navigate = mockDocumentNavigation(t)
+
+    try {
+      await frame.ready()
+      let installedScript = getImportMapScripts()[0]!
+      installedScript.textContent = JSON.stringify({
+        imports: { '/installed.js': '/changed.hash.js' },
+      })
+
+      await frame.render(
+        `${remixImportMapHead({
+          imports: { '/installed.js': '/changed.hash.js' },
+        })}<main>Loaded</main>`,
+      )
+
+      expect(getImportMapScripts()).toHaveLength(1)
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0]?.arguments[0]).toBe(
+        '[remix] Reloading page after import map conflict for "/installed.js": ' +
+          '"/installed.hash.js" is already installed, but the new map points to "/changed.hash.js"',
+      )
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('dedupes normalized and null entries from late Remix import maps', async () => {
+    let baseUrl = new URL('/app/page', document.baseURI)
+    document.documentElement.innerHTML = [
+      '<head>',
+      importMapScript({
+        imports: {
+          './shared.js': './shared.hash.js',
+          blocked: null,
+          invalidAddress: 'https://[',
+        },
+        scopes: {
+          './features/': { pkg: '../pkg.hash.js' },
+          'https://[': { ignored: '/ignored.js' },
+        },
+      }),
+      '</head>',
+      '<body></body>',
+    ].join('')
+    document.head.insertAdjacentHTML('afterbegin', `<base href="${baseUrl}">`)
+
+    let frame = createClientEntryResourceTestFrame()
+
+    try {
+      await frame.ready()
+      await frame.render(
+        `${remixImportMapHead({
+          imports: {
+            [new URL('./shared.js', baseUrl).href]: new URL('./shared.hash.js', baseUrl).href,
+            blocked: null,
+            invalidAddress: null,
+            added: '/added.hash.js',
+          },
+          scopes: {
+            [new URL('./features/', baseUrl).href]: {
+              pkg: new URL('../pkg.hash.js', baseUrl).href,
+              other: '/other.hash.js',
+            },
+          },
+        })}<main>Loaded</main>`,
+      )
+
+      expect(parseImportMapScript(getImportMapScripts()[1]!)).toEqual({
+        imports: { added: '/added.hash.js' },
+        scopes: {
+          [new URL('./features/', baseUrl).href]: { other: '/other.hash.js' },
+        },
+      })
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads without applying any maps or content when a late import map conflicts', async (t) => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      importMapScript({
+        imports: { '/conflict.js': '/old.hash.js' },
+        scopes: { '/conflict-scope/': { scopedPkg: '/old-pkg.hash.js' } },
+      }),
+      '</head>',
+      '<body></body>',
+    ].join('')
+
+    let frame = createClientEntryResourceTestFrame()
+    let otherFrame = createClientEntryResourceTestFrame()
+    let warn = t.mock.method(console, 'warn', () => {})
+    let navigate = mockDocumentNavigation(t)
+
+    try {
+      await frame.ready()
+      await otherFrame.ready()
+      await frame.render(
+        `${remixImportMapHead({
+          imports: {
+            '/conflict.js': '/new.hash.js',
+            '/added.js': '/added.hash.js',
+          },
+          scopes: {
+            '/conflict-scope/': {
+              scopedPkg: '/new-pkg.hash.js',
+              addedPkg: '/added-pkg.hash.js',
+            },
+          },
+        })}<main>Loaded</main>`,
+      )
+
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(navigate.mock.calls[0]?.arguments[0]).toBe(document.location.href)
+      expect(getImportMapScripts()).toHaveLength(1)
+      expect(document.querySelector('main')).toBeNull()
+      await frame.render('<main>Another chunk</main>')
+      await otherFrame.render('<main>Another frame</main>')
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(document.querySelector('main')).toBeNull()
+    } finally {
+      frame.dispose()
+      otherFrame.dispose()
+    }
+  })
+
+  it('checks every incoming map before installing any of them', async (t) => {
+    document.head.innerHTML = importMapScript({
+      scopes: { '/app/': { shared: '/shared.old.js' } },
+    })
+    let frame = createClientEntryResourceTestFrame()
+    let navigate = mockDocumentNavigation(t)
+    t.mock.method(console, 'warn', () => {})
+    try {
+      await frame.ready()
+      await frame.render(
+        remixImportMapHead({ imports: { added: '/added.js' } }) +
+          remixImportMapHead({ scopes: { '/app/': { shared: '/shared.new.js' } } }) +
+          '<main>New content</main>',
+      )
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(getImportMapScripts()).toHaveLength(1)
+      expect(document.querySelector('main')).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('loads the redirected document after an import map conflict without preloading or hydrating', async (t) => {
+    document.head.innerHTML = importMapScript({ imports: { shared: '/shared.old.js' } })
+    document.body.innerHTML = '<main>Old content</main>'
+    let navigate = mockDocumentNavigation(t)
+    let processPreloads = t.mock.fn((preloads: string[]) => preloads)
+    let loadModule = t.mock.fn(() => () => () => null)
+    t.mock.method(console, 'warn', () => {})
+    let destination = new URL('/redirected', document.location.href).href
+    let frame = createTestFrame(document, {
+      src: new URL('/next', document.location.href).href,
+      loadModule,
+      processClientEntryPreloads: processPreloads,
+      resolveFrame() {
+        let response = new Response(
+          appendFlushMarker(
+            '<!doctype html><html>' +
+              remixImportMapHead({ imports: { shared: '/shared.new.js' } }) +
+              '<body><main>New content</main></body></html>',
+            'document',
+          ),
+        )
+        Object.defineProperties(response, {
+          redirected: { value: true },
+          url: { value: destination },
+        })
+        return response
+      },
+    })
+    try {
+      await frame.ready()
+      await reloadFrameForNavigation(frame.handle, { method: 'POST', formData: new FormData() })
+        .finished
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(navigate.mock.calls[0]?.arguments[0]).toBe(destination)
+      expect(document.querySelector('main')?.textContent).toBe('Old content')
+      expect(processPreloads).not.toHaveBeenCalled()
+      expect(loadModule).not.toHaveBeenCalled()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('reloads when late import map integrity metadata conflicts', async (t) => {
+    document.documentElement.innerHTML = [
+      '<head>',
+      importMapScript({ integrity: { '/shared.js': 'sha256-old' } }),
+      '</head>',
+      '<body></body>',
+    ].join('')
+
+    let frame = createClientEntryResourceTestFrame()
+    let warn = t.mock.method(console, 'warn', () => {})
+    let navigate = mockDocumentNavigation(t)
+
+    try {
+      await frame.ready()
+      await frame.render(
+        `${remixImportMapHead({
+          integrity: {
+            '/shared.js': 'sha256-new',
+            '/added.js': 'sha256-added',
+          },
+        })}<main>Loaded</main>`,
+      )
+
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0]?.arguments[0]).toBe(
+        '[remix] Reloading page after import map integrity conflict for "/shared.js": ' +
+          '"sha256-old" is already installed, but the new map points to "sha256-new"',
+      )
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(getImportMapScripts()).toHaveLength(1)
+      expect(document.querySelector('main')).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('does not loop when a nested frame range escapes its region', async () => {
+    let outerStart = document.createComment(' rmx:f:outer ')
+    let innerStart = document.createComment(' rmx:f:inner ')
+    let innerEnd = document.createComment(' /rmx:f ')
+    let outerEnd = document.createComment(' /rmx:f ')
+    document.body.append(outerStart, innerStart, innerEnd, outerEnd)
+
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let frame = createFrame([outerStart, outerEnd], {
+      src: 'https://example.com/outer',
+      errorTarget,
+      loadModule: () => () => null,
+      resolveFrame: () => '',
+      pendingClientEntries: new Map(),
+      scheduler,
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+
+    await frame.ready()
+
+    // Simulate the outer region being truncated during a DOM update.
+    outerEnd.after(innerEnd)
+    let scans = countMarkerScans(innerStart, 100)
+    frame.dispose()
+
+    expect(scans.count).toBeLessThan(100)
+  })
+
+  it('starts preloads from a document reload before hydrating its client entries', async () => {
+    document.documentElement.innerHTML = '<head><title>Initial</title></head><body></body>'
+
+    function StreamingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('section', { children: handle.props.label })
+    }
+
+    let preloadWasPresent = false
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let frame = createFrame(document, {
+      src: 'https://example.com/initial',
+      errorTarget,
+      loadModule() {
+        let preload = Array.from(
+          document.head.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"]'),
+        ).find((link) => new URL(link.href).pathname === '/entry.js')
+        preloadWasPresent = preload !== undefined
+        preload?.dispatchEvent(new Event('load'))
+        return StreamingEntry
+      },
+      resolveFrame() {
+        return appendFlushMarker(
+          [
+            '<!doctype html><html><head><title>Next</title>',
+            '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
+            '</head><body><!-- rmx:h:h1 --><section>next</section><!-- /rmx:h -->',
+            rmxDataScript('next'),
+            '</body></html>',
+          ].join(''),
+          'document',
+        )
+      },
+      pendingClientEntries: new Map(),
+      scheduler,
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+      expect(preloadWasPresent).toBe(true)
+      expect(document.querySelector(managedModulePreloadSelector)).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('waits for async preload processing before hydrating client entries', async () => {
+    document.documentElement.innerHTML = '<head><title>Initial</title></head><body></body>'
+
+    function StreamingEntry(handle: Handle<{ label: string }>) {
+      return () => jsx('section', { children: handle.props.label })
+    }
+
+    let [includePreload, resolveIncludePreload] = withResolvers<boolean>()
+    let [processingStarted, resolveProcessingStarted] = withResolvers<void>()
+    let moduleLoaded = false
+    let frame = createTestFrame(document, {
+      loadModule() {
+        moduleLoaded = true
+        return StreamingEntry
+      },
+      processClientEntryPreloads(preloads) {
+        expect(preloads).toEqual(['/entry.js'])
+        resolveProcessingStarted()
+        return includePreload.then((include) => (include ? preloads : []))
+      },
+      resolveFrame() {
+        return appendFlushMarker(
+          [
+            '<!doctype html><html><head><title>Next</title>',
+            '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
+            '</head><body><!-- rmx:h:h1 --><section>next</section><!-- /rmx:h -->',
+            rmxDataScript('next'),
+            '</body></html>',
+          ].join(''),
+          'document',
+        )
+      },
+    })
+
+    try {
+      await frame.ready()
+      let reload = frame.handle.reload()
+      await processingStarted
+
+      expect(moduleLoaded).toBe(false)
+      resolveIncludePreload(true)
+      await reload
+
+      expect(moduleLoaded).toBe(true)
+      document.head
+        .querySelector<HTMLLinkElement>(managedModulePreloadSelector)
+        ?.dispatchEvent(new Event('load'))
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('starts preloads from a nested frame reload before hydrating its client entries', async () => {
+    let start = document.createComment(' rmx:f:frame ')
+    let end = document.createComment(' /rmx:f ')
+    document.body.append(start, end)
+
+    function FragmentEntry() {
+      return () => jsx('section', { children: 'fragment' })
+    }
+
+    let preloadWasPresent = false
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let frame = createFrame([start, end], {
+      src: 'https://example.com/frame',
+      errorTarget,
+      loadModule() {
+        let preload = Array.from(
+          document.head.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"]'),
+        ).find((link) => new URL(link.href).pathname === '/fragment-entry.js')
+        preloadWasPresent = preload !== undefined
+        preload?.dispatchEvent(new Event('load'))
+        return FragmentEntry
+      },
+      resolveFrame() {
+        return [
+          '<head><link data-rmx-module-preload rel="modulepreload" href="/fragment-entry.js" /></head>',
+          '<!-- rmx:h:h1 --><section>fragment</section><!-- /rmx:h -->',
+          rmxDataScript('fragment', '/fragment-entry.js', 'FragmentEntry'),
+        ].join('')
+      },
+      pendingClientEntries: new Map(),
+      scheduler,
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+      expect(preloadWasPresent).toBe(true)
+      expect(document.querySelector(managedModulePreloadSelector)).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('installs late import maps before starting their module preloads', async () => {
+    document.documentElement.innerHTML = '<head></head><body></body>'
+
+    let frame = createClientEntryResourceTestFrame()
+
+    try {
+      await frame.ready()
+      await frame.render(
+        [
+          '<head>',
+          '<link data-rmx-module-preload rel="modulepreload" href="/import-map-order-entry.js" />',
+          remixImportMapScript({ imports: { pkg: '/pkg.js' } }),
+          '</head>',
+          '<main>Loaded</main>',
+        ].join(''),
+      )
+
+      let managedResources = document.head.querySelectorAll(
+        'script[data-rmx-import-map][type="importmap"], link[data-rmx-module-preload][rel="modulepreload"]',
+      )
+      expect(managedResources).toHaveLength(2)
+      expect(managedResources[0]).toBeInstanceOf(HTMLScriptElement)
+      expect(managedResources[1]).toBeInstanceOf(HTMLLinkElement)
+
+      managedResources[1]?.dispatchEvent(new Event('load'))
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('keeps active initial preloads connected across a document reload', async () => {
+    document.documentElement.innerHTML = [
+      '<head><title>Initial</title>',
+      '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
+      '</head><body></body>',
+    ].join('')
+
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let frame = createFrame(document, {
+      src: 'https://example.com/initial',
+      errorTarget,
+      loadModule: () => () => null,
+      resolveFrame() {
+        return appendFlushMarker(
+          '<!doctype html><html><head><title>Next</title></head><body></body></html>',
+          'document',
+        )
+      },
+      pendingClientEntries: new Map(),
+      scheduler,
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+
+    try {
+      await frame.ready()
+      let activePreloads = Array.from(
+        document.head.querySelectorAll<HTMLLinkElement>(managedModulePreloadSelector),
+      )
+      expect(activePreloads).toHaveLength(2)
+
+      await frame.handle.reload()
+
+      expect(document.title).toBe('Next')
+      expect(activePreloads[0]?.isConnected).toBe(true)
+      expect(activePreloads[1]?.isConnected).toBe(true)
+      expect(document.head.querySelectorAll(managedModulePreloadSelector)).toHaveLength(2)
+
+      activePreloads[1]?.dispatchEvent(new Event('load'))
+      expect(document.head.querySelector(managedModulePreloadSelector)).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('keeps active frame preloads connected across a document reload', async () => {
+    document.documentElement.innerHTML = '<head><title>Initial</title></head><body></body>'
+
+    let errorTarget = new EventTarget()
+    let styleManager = createStyleManager()
+    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let frame = createFrame(document, {
+      src: 'https://example.com/initial',
+      errorTarget,
+      loadModule: () => () => null,
+      resolveFrame() {
+        return appendFlushMarker(
+          '<!doctype html><html><head><title>Next</title></head><body></body></html>',
+          'document',
+        )
+      },
+      pendingClientEntries: new Map(),
+      scheduler,
+      styleManager,
+      data: {},
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+      frameInstances: new WeakMap(),
+      namedFrames: new NamedFrameRegistry(),
+    })
+
+    try {
+      await frame.ready()
+      let response = document.createElement('template')
+      response.innerHTML =
+        '<link data-rmx-module-preload rel="modulepreload" href="/frame-entry.js" />'
+      getDocumentModulePreloader(document).consumePreloadLinks(response.content)
+      let activePreload = document.head.querySelector<HTMLLinkElement>(managedModulePreloadSelector)
+      expect(activePreload).not.toBeNull()
+
+      await frame.handle.reload()
+
+      expect(document.title).toBe('Next')
+      expect(activePreload?.isConnected).toBe(true)
+      expect(document.head.querySelector(managedModulePreloadSelector)).toBe(activePreload)
+
+      activePreload?.dispatchEvent(new Event('load'))
+      expect(document.head.querySelector(managedModulePreloadSelector)).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+})
+
+function mockDocumentNavigation(t: TestContext) {
+  let entry = window.navigation.currentEntry
+  if (!entry) throw new Error('Expected a current navigation entry')
+  return t.mock.method(window.navigation, 'navigate', () => ({
+    committed: Promise.resolve(entry),
+    finished: Promise.resolve(entry),
+  }))
+}
+
+function createClientEntryResourceTestFrame(): ReturnType<typeof createFrame> {
+  let errorTarget = new EventTarget()
+  let styleManager = createStyleManager()
+  let scheduler = createScheduler(document, errorTarget, styleManager)
+  let loadModule = (() => {
+    throw new Error('Unexpected module load')
+  }) satisfies LoadModule
+  let start = document.createComment('frame:start')
+  let end = document.createComment('frame:end')
+  document.body.append(start, end)
+
+  return createFrame([start, end], {
+    src: 'https://example.com/',
+    errorTarget,
+    loadModule,
+    resolveFrame() {
+      return ''
+    },
+    pendingClientEntries: new Map(),
+    scheduler,
+    styleManager,
+    data: {},
+    moduleCache: new Map(),
+    moduleLoads: new Map(),
+    frameInstances: new WeakMap(),
+    namedFrames: new NamedFrameRegistry(),
+  })
+}
+
+function importMapScript(importMap: {
+  imports?: Record<string, string | null>
+  scopes?: Record<string, Record<string, string | null>>
+  integrity?: Record<string, string>
+}): string {
+  return `<script type="importmap">${JSON.stringify(importMap)}</script>`
+}
+
+function remixImportMapHead(importMap: {
+  imports?: Record<string, string | null>
+  scopes?: Record<string, Record<string, string | null>>
+  integrity?: Record<string, string>
+}): string {
+  return `<head><script data-rmx-import-map type="importmap">${JSON.stringify(importMap)}</script></head>`
+}
+
+function remixImportMapScript(importMap: {
+  imports?: Record<string, string | null>
+  scopes?: Record<string, Record<string, string | null>>
+  integrity?: Record<string, string>
+}): string {
+  return `<script data-rmx-import-map type="importmap">${JSON.stringify(importMap)}</script>`
+}
+
+function getImportMapScripts(): HTMLScriptElement[] {
+  return Array.from(document.head.querySelectorAll('script[type="importmap"]'))
+}
+
+function parseImportMapScript(script: HTMLScriptElement): unknown {
+  return JSON.parse(script.textContent ?? '{}')
+}
+
+function countMarkerScans(marker: Comment, limit: number): { count: number } {
+  let data = marker.data
+  let scans = { count: 0 }
+
+  Object.defineProperty(marker, 'data', {
+    get() {
+      scans.count++
+      if (scans.count > limit) {
+        throw new Error(`Marker read ${limit} times; the frame region scan is looping`)
+      }
+      return data
+    },
+    set(next: string) {
+      data = next
+    },
+  })
+
+  return scans
+}
+
+function rmxDataScript(
+  label: string,
+  moduleUrl = '/entry.js',
+  exportName = 'StreamingEntry',
+): string {
+  let data = {
+    h: {
+      h1: {
+        moduleUrl,
+        exportName,
+        props: { label },
+      },
+    },
+  }
+
+  return `<script type="application/json" id="rmx-data">${JSON.stringify(data)}</script>`
+}
+
+function htmlStream(chunks: string[]): ReadableStream<Uint8Array> {
+  let encoder = new TextEncoder()
+
+  return new ReadableStream({
+    start(controller) {
+      for (let chunk of chunks) {
+        controller.enqueue(encoder.encode(chunk))
+      }
+      controller.close()
+    },
+  })
+}

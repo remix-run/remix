@@ -1,7 +1,5 @@
-import { createMixin } from '../runtime/mixins/mixin.ts'
-import type { ElementProps } from '../runtime/jsx.ts'
-import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { createMixin } from '@remix-run/component'
+import type { ElementProps, MixinDescriptor } from '@remix-run/component'
 
 type AnimateTiming = {
   duration: number
@@ -237,7 +235,7 @@ const animateExitMixin = createMixin<Element, [config: AnimationConfig], Element
     let config = resolveExitConfig(currentConfig)
     if (!config) return
     event.persistNode(async (signal) => {
-      invariant(node)
+      if (!node) throw new Error('Cannot animate an element before it is inserted')
       let current = animatingNodes.get(node)
       if (current && current.animation.playState === 'running') {
         current.animation.reverse()

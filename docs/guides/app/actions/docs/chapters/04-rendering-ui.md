@@ -17,7 +17,7 @@ A Remix component is a setup function that returns a render function. Setup runs
 creates the component. Render runs immediately after setup and again whenever the component updates.
 
 ```tsx filename=app/ui/album-heading.tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 type AlbumHeadingProps = {
   artist: string;
@@ -48,7 +48,7 @@ components, strings, numbers, booleans, `null`, `undefined`, and nested arrays o
 Fragments let you return siblings without adding another DOM element:
 
 ```tsx filename=app/ui/album-byline.tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 export function AlbumByline(handle: Handle<{ artist: string; year: number }>) {
   return () => (
@@ -73,7 +73,7 @@ Destructuring the object is safe. Destructuring one of its properties in setup c
 initial value.
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 function AlbumTitle(handle: Handle<{ title: string }>) {
   let { props } = handle;
@@ -87,8 +87,8 @@ Local state is ordinary JavaScript declared in setup scope. Store values that af
 derive everything else inside render:
 
 ```tsx filename=app/ui/album-list.tsx
-import { on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { on } from "remix/component";
+import type { Handle } from "remix/component";
 
 type Album = {
   id: string;
@@ -134,7 +134,7 @@ list changes order. [Interactivity](/interactivity/) covers event handlers, upda
 needs to connect a label, input, description, or ARIA relationship without requiring an `id` prop:
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 function AlbumSearch(handle: Handle) {
   return () => (
@@ -150,7 +150,7 @@ Use component context when descendants need a value that does not belong on ever
 component. The provider type is the context key, so `get()` remains typed:
 
 ```tsx filename=app/ui/catalog.tsx
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 type CatalogContext = {
   currency: "USD" | "EUR";
@@ -224,8 +224,8 @@ Pages should render a complete document through one shared component. The defaul
 `app/actions/document.tsx`:
 
 ```tsx filename=app/actions/document.tsx
-import type { Handle, RemixNode } from "remix/ui";
-import { ImportMap } from "remix/ui/server";
+import type { Handle, RemixNode } from "remix/component";
+import { ImportMap } from "remix/component/server";
 
 import { scriptEntry } from "../assets.ts";
 
@@ -278,8 +278,8 @@ Use `css(...)` for static rules. It supports pseudo-selectors, pseudo-elements, 
 attribute selectors, and media queries with normal CSS nesting:
 
 ```tsx filename=app/ui/album-card.tsx
-import { css } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { css } from "remix/component";
+import type { Handle } from "remix/component";
 
 const cardStyle = css({
   border: "1px solid #d6d6d6",
@@ -319,8 +319,8 @@ JavaScript to receive its component styles.
 
 ## Cascade layers and app-owned design tokens {#theme-tokens-and-cascade-layers}
 
-Generated `css(...)` rules, including styles from first-party UI components, live in the native
-`rmx` cascade layer. If your app uses its own layers, declare the complete order once:
+Generated `css(...)` rules live in the native `rmx` cascade layer. If your app uses its own layers,
+declare the complete order once:
 
 ```css filename=app/actions/public/app.css
 @layer base, rmx, app;
@@ -345,117 +345,39 @@ Generated `css(...)` rules, including styles from first-party UI components, liv
 }
 ```
 
-Layers before `rmx` provide defaults that Remix component styles can override. Layers after `rmx`
-can override component styles deliberately. Unlayered author CSS outranks normal layered CSS, so use
-it intentionally when the rest of the app has an explicit layer order.
+Layers before `rmx` provide defaults that generated styles can override. Layers after `rmx` can
+override generated styles deliberately. Unlayered author CSS outranks normal layered CSS, so use it
+intentionally when the rest of the app has an explicit layer order.
 
-Remix supplies behavior and a small set of component styles, not an application theme. Keep brand
-colors, spacing, typography, radii, and other design tokens in app-owned CSS custom properties or
-TypeScript values.
+Keep brand colors, spacing, typography, radii, and other design tokens in app-owned CSS custom
+properties or TypeScript values.
 
-## First-party UI building blocks {#first-party-ui-components}
+## Optional headless UI primitives {#headless-ui-primitives}
 
-The `remix/ui/*` subpaths cover three levels of ownership. Start with the highest-level API whose
-markup fits the product, then move down only when the app needs control the composed component does
-not expose.
+`@remix-run/ui` is a separate package of headless, accessible interaction primitives. The package
+is currently unstable and versioned independently. It is not available through the `remix` package.
+Install it when an app needs reusable behavior for controls such as accordions, comboboxes,
+listboxes, menus, popovers, selects, tabs, or toggles:
 
-These APIs all render on the server. Controls that handle browser events must also be inside a
-`clientEntry(...)` boundary, either directly or through an interactive ancestor. The next chapter
-shows how to choose that boundary.
-
-| Level               | Subpaths                                                                 | What the app owns                                            |
-| ------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------ |
-| Style mixins        | `button`, `input`, `checkbox`, `radio`, `toggle`                         | The native control, its label, layout, and state.            |
-| Composed controls   | `accordion`, `breadcrumbs`, `combobox`, `menu`, `select`, `tabs`         | The surrounding page and the values passed into the control. |
-| Headless primitives | `popover`, `listbox`, `anchor`, and each available `/primitives` subpath | Markup and styling while Remix supplies focused behavior.    |
-
-The [`remix/ui` API overview](https://api.remix.run/api/remix/ui/overview/) links to the complete API
-for every subpath. The sections below show how to choose among them.
-
-### Style mixins for native controls {#style-mixins-keep-native-controls-native}
-
-Style mixins keep native form behavior in the element you render:
-
-```tsx filename=app/ui/album-actions.tsx
-import button from "remix/ui/button";
-import checkbox from "remix/ui/checkbox";
-import { css } from "remix/ui";
-
-const actionRowStyle = css({
-  display: "flex",
-  alignItems: "center",
-  gap: "0.75rem",
-});
-
-export function AlbumActions() {
-  return () => (
-    <div mix={actionRowStyle}>
-      <button mix={button({ tone: "primary" })}>Add to cart</button>
-      <label>
-        <input mix={checkbox()} name="gift" type="checkbox" />
-        This is a gift
-      </label>
-    </div>
-  );
-}
+```sh
+npm i @remix-run/ui
 ```
 
-The checkbox remains a checkbox, participates in `FormData`, and gets its keyboard behavior from the
-browser. The mixin supplies visuals. Compose an array in `mix` when a host also needs app-owned styles
-or behavior.
+Import each primitive from its package subpath. For example:
 
-::frame{src="/examples/04-rendering-ui/button-basic/"}
-
-### Composed controls for common interactions {#composed-components-cover-common-product-ui}
-
-Composed controls own the relationships among several elements. For example, `Accordion` connects
-triggers to content regions and manages disclosure state:
-
-```tsx filename=app/ui/shipping-details.tsx
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "remix/ui/accordion";
-
-export function ShippingDetails() {
-  return () => (
-    <Accordion defaultValue="returns">
-      <AccordionItem value="delivery">
-        <AccordionTrigger>Delivery</AccordionTrigger>
-        <AccordionContent>Ships in two business days.</AccordionContent>
-      </AccordionItem>
-      <AccordionItem value="returns">
-        <AccordionTrigger>Returns</AccordionTrigger>
-        <AccordionContent>Return unopened albums within 30 days.</AccordionContent>
-      </AccordionItem>
-    </Accordion>
-  );
-}
+```tsx
+import { css } from "remix/component";
+import * as accordion from "@remix-run/ui/accordion";
 ```
 
-Use a `default*` prop when the control should own its initial state. Use the corresponding controlled
-prop and change callback when the parent must own that state. The exact names differ by component:
-for example, accordion uses `defaultValue`/`value`, while tabs uses
-`defaultActiveTab`/`activeTab`.
+The primitives supply structural attributes, keyboard interaction, focus management, and state
+coordination. Your app supplies the markup and all visual styling. Controls that handle browser
+events must also be inside a `clientEntry(...)` boundary, either directly or through an interactive
+ancestor. The next chapter shows how to choose that boundary.
 
-Selection and disclosure events bubble where a component's API documents them, so a parent can
-observe changes without threading a callback through every item. Controls that accept `name`, such
-as `Select` and `Combobox`, render a hidden input so the selected value participates in a normal form.
-Disabled state, accessible names, focus movement, and keyboard behavior remain part of each
-component's contract.
-
-::frame{src="/examples/04-rendering-ui/accordion-overview/"}
-
-::frame{src="/examples/04-rendering-ui/select-overview/"}
-
-### Headless primitives for custom markup {#primitives-keep-behavior-reusable-when-markup-changes}
-
-Reach for primitives when the product requires different markup, not merely different colors or
-spacing. `popover` supplies anchored-surface behavior, `listbox` supplies option highlighting and
-selection, and `anchor` handles lower-level floating-element placement. Accordion, combobox, menu,
-select, tabs, and toggle also expose `/primitives` subpaths.
-
-The primitives are smaller, but the app takes on more responsibility. Preserve native elements when
-they fit, keep labels and ARIA relationships intact, and test pointer and keyboard behavior. A custom
-select, for example, still needs a provider, trigger, popover, list, options, and hidden input if it
-participates in a form.
+Preserve native elements when they fit, keep labels and ARIA relationships intact, and test pointer
+and keyboard behavior. A custom select, for example, still needs a provider, trigger, popover,
+list, options, and hidden input if it participates in a form.
 
 ::frame{src="/examples/04-rendering-ui/accordion-primitives/"}
 

@@ -12,8 +12,15 @@ Search this generated index by task, export name, or description. Use the guides
 | [Rendering UI](guides/04-rendering-ui.md) | How to build pages from Remix components, props, context, document shells, styles, and first-party UI. |
 | [Interactivity](guides/05-interactivity.md) | How server-rendered UI hydrates, handles events, connects components to application models, navigates, and cancels stale work. |
 | [Streaming UI with Frames](guides/06-streaming-ui-with-frames.md) | How to stream and reload route-owned UI with Frame, fallbacks, and server and browser frame resolvers. |
-| [Animation](guides/07-animation.md) | The CSS-first animation model and Remix UI helpers for motion that respects rendering state. |
+| [Animation](guides/07-animation.md) | The CSS-first animation model and Remix component helpers for motion that respects rendering state. |
+| [Data and Validation](guides/08-data-and-validation.md) | How Remix validates inputs, defines relational data, queries databases, and runs SQL migrations. |
+| [Forms and Mutations](guides/09-forms-and-mutations.md) | How native forms, action responses, validation failures, redirects, and enhanced mutations fit together. |
+| [Auth, Sessions, and Security](guides/10-auth-sessions-security.md) | How Remix stores per-browser state, resolves identity, protects routes, and defends browser request boundaries. |
+| [Files and Assets](guides/11-files-and-assets.md) | How Remix serves static files and source assets, accepts bounded uploads, stores files, and returns HTTP file responses. |
+| [Errors and Cancellation](guides/12-errors-and-cancellation.md) | How expected HTTP failures, uncaught server errors, rendering failures, client runtime errors, and aborted work propagate through Remix. |
 | [Testing](guides/13-testing.md) | How to choose a test boundary and test Remix routes, stateful request flows, components, and end-to-end behavior. |
+| [CLI and Tooling](guides/14-cli-and-tooling.md) | The Remix command-line workflow for creating, inspecting, testing, checking, and running TypeScript projects. |
+| [Production](guides/15-production.md) | How to configure, start, cache, observe, and shut down a Remix application in production. |
 
 ## Package APIs
 
@@ -24,6 +31,10 @@ Exports covered by the same README are grouped together.
 | `remix/assert` | Node assert-compatible utilities for any JavaScript environment | [README](src/assert/README.md) |
 | `remix/assets`<br>`remix/assets/types/hmr` | Fetch-based server for compiling browser JS/TS and CSS assets on demand | [README](src/assets/README.md) |
 | `remix/auth` | Browser login, OAuth, and OIDC helpers for Remix | [README](src/auth/README.md) |
+| `remix/component`<br>`remix/component/dev/refresh`<br>`remix/component/jsx-dev-runtime`<br>`remix/component/jsx-runtime` | Component runtime with server rendering and browser hydration | [README](src/component/README.md) |
+| `remix/component-hmr`<br>`remix/component-hmr/assets`<br>`remix/component-hmr/node`<br>`remix/component-hmr/runtime/browser`<br>`remix/component-hmr/runtime/server` | Hot module replacement runtime and transforms for Remix components | [README](src/component-hmr/README.md) |
+| `remix/component/server` | Component runtime with server rendering and browser hydration | [README](src/component/server/README.md) |
+| `remix/component/test` | Component runtime with server rendering and browser hydration | [README](src/component/test/README.md) |
 | `remix/cookie` | A toolkit for working with cookies in JavaScript | [README](src/cookie/README.md) |
 | `remix/data-schema`<br>`remix/data-schema/checks`<br>`remix/data-schema/coerce`<br>`remix/data-schema/form-data`<br>`remix/data-schema/lazy` | Tiny, standards-aligned schema validation | [README](src/data-schema/README.md) |
 | `remix/data-table`<br>`remix/data-table/cli`<br>`remix/data-table/migrations`<br>`remix/data-table/migrations/node`<br>`remix/data-table/operators`<br>`remix/data-table/sql-helpers` | A typed, relational query toolkit for JavaScript | [README](src/data-table/README.md) |
@@ -47,7 +58,7 @@ Exports covered by the same README are grouped together.
 | `remix/middleware/form-data` | Middleware for parsing FormData from request bodies | [README](src/form-data-middleware/README.md) |
 | `remix/middleware/logger` | Middleware for logging HTTP requests and responses | [README](src/logger-middleware/README.md) |
 | `remix/middleware/method-override` | Middleware for overriding HTTP request methods from form data | [README](src/method-override-middleware/README.md) |
-| `remix/middleware/render` | Conventional Remix UI and custom request-scoped render middleware | [README](src/render-middleware/README.md) |
+| `remix/middleware/render` | Conventional Remix component and custom request-scoped render middleware | [README](src/render-middleware/README.md) |
 | `remix/middleware/session` | Middleware for managing sessions with cookie-based storage | [README](src/session-middleware/README.md) |
 | `remix/middleware/static` | Middleware for serving static files from the filesystem | [README](src/static-middleware/README.md) |
 | `remix/mime` | Utilities for working with MIME types | [README](src/mime/README.md) |
@@ -66,22 +77,3 @@ Exports covered by the same README are grouped together.
 | `remix/tar-parser` | A fast, efficient parser for tar streams in any JavaScript environment | [README](src/tar-parser/README.md) |
 | `remix/terminal` | Terminal output utilities for JavaScript libraries and CLIs | [README](src/terminal/README.md) |
 | `remix/test`<br>`remix/test/cli` | A test framework for JavaScript and TypeScript projects | [README](src/test/README.md) |
-| `remix/ui`<br>`remix/ui/dev/refresh`<br>`remix/ui/jsx-dev-runtime`<br>`remix/ui/jsx-runtime` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/README.md) |
-| `remix/ui-hmr`<br>`remix/ui-hmr/assets`<br>`remix/ui-hmr/node`<br>`remix/ui-hmr/runtime/browser`<br>`remix/ui-hmr/runtime/server` | Hot module replacement runtime and transforms for Remix UI components | [README](src/ui-hmr/README.md) |
-| `remix/ui/accordion`<br>`remix/ui/accordion/primitives` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/accordion/README.md) |
-| `remix/ui/anchor` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/anchor/README.md) |
-| `remix/ui/animation` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/animation/README.md) |
-| `remix/ui/breadcrumbs` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/breadcrumbs/README.md) |
-| `remix/ui/button` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/button/README.md) |
-| `remix/ui/checkbox` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/checkbox/README.md) |
-| `remix/ui/combobox`<br>`remix/ui/combobox/primitives` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/combobox/README.md) |
-| `remix/ui/input` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/input/README.md) |
-| `remix/ui/listbox` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/listbox/README.md) |
-| `remix/ui/menu`<br>`remix/ui/menu/primitives` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/menu/README.md) |
-| `remix/ui/popover` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/popover/README.md) |
-| `remix/ui/radio` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/radio/README.md) |
-| `remix/ui/select`<br>`remix/ui/select/primitives` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/select/README.md) |
-| `remix/ui/server` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/server/README.md) |
-| `remix/ui/tabs`<br>`remix/ui/tabs/primitives` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/tabs/README.md) |
-| `remix/ui/test` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/test/README.md) |
-| `remix/ui/toggle`<br>`remix/ui/toggle/primitives` | UI runtime, headless primitives, and styled components for Remix | [README](src/ui/toggle/README.md) |

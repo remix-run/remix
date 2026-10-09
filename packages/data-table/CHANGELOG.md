@@ -2,6 +2,18 @@
 
 This is the changelog for [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+## v0.7.0
+
+### Minor Changes
+
+- Migration directories accept prefixes of 1 to 64 digits, such as `0001_create_users` or `20260228090000_create_users` (`YYYYMMDDHHmmss`). `loadMigrations()` requires every prefix in the same migration directory to have the same number of digits so string sorting preserves numeric order (for example `0001`, `0002`, `0010`).
+
 ## v0.6.0
 
 ### Minor Changes

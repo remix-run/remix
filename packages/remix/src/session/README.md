@@ -47,7 +47,7 @@ let response3 = await handleRequest(response2.cookie)
 assert.equal(response3.session.get('count'), 3)
 ```
 
-The example above is a low-level illustration of how to use this package for session management. In practice, you would use the `session` middleware in [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) to automatically manage the session for you.
+The example above is a low-level illustration of how to use this package for session management. In practice, you would use the `session` middleware in [`fetch-router`](../fetch-router/README.md) to automatically manage the session for you.
 
 ### Flash Messages
 
@@ -162,9 +162,9 @@ let sessionStorage = createMemorySessionStorage()
 
 ## Related Packages
 
-- [`remix/cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie) - Cookie parsing and serialization
-- [`remix/router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router with built-in session middleware
-- [`remix/session-storage/memcache`](https://github.com/remix-run/remix/tree/main/packages/session-storage-memcache) - Memcache-backed session storage
+- [`remix/cookie`](../cookie/README.md) - Cookie parsing and serialization
+- [`remix/router`](../fetch-router/README.md) - Router with built-in session middleware
+- [`remix/session-storage/memcache`](../session-storage-memcache/README.md) - Memcache-backed session storage
 
 ## License
 

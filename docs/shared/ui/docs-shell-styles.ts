@@ -1,4 +1,4 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 const mobileSubheaderHeight = '48px'
 const mobileNavigationTop = `var(--docs-mobile-navigation-top, calc(var(--site-header-height) + ${mobileSubheaderHeight}))`

@@ -1,14 +1,19 @@
 ---
 title: CLI and Tooling
 description: The Remix command-line workflow for creating, inspecting, testing, checking, and running TypeScript projects.
-published: false
 ---
+
+This chapter is unfinished. The sections below outline what it will cover. For command usage and API examples, see these READMEs:
+
+- [CLI](https://github.com/remix-run/remix/blob/main/packages/cli/README.md)
+- [Node TypeScript loader](https://github.com/remix-run/remix/blob/main/packages/node-tsx/README.md)
+- [Terminal utilities](https://github.com/remix-run/remix/blob/main/packages/terminal/README.md)
 
 The installed `remix` package provides the CLI and the runtime subpaths used by an app. This chapter covers the commands that exist in Remix 3 and the TypeScript loader used by the generated Node project.
 
 ## Create an app with remix new {#remix-new}
 
-Use `npx remix@next new <target-dir>` before the package is installed locally, or `remix new <target-dir>` afterward. Cover `--app-name`, `--force`, the generated `app/actions` layout, and the scripts in the starter `package.json`.
+Use `npx remix new <target-dir>` before the package is installed locally, or `remix new <target-dir>` afterward. Cover `--app-name`, `--force`, the generated `app/actions` layout, and the scripts in the starter `package.json`.
 
 ## Inspect route ownership with remix routes {#remix-routes}
 
@@ -32,7 +37,7 @@ Cover `remix help`, command-level `--help`, `remix version` and `--version`, glo
 
 ## TypeScript and JSX setup {#typescript-and-jsx-setup}
 
-Explain the generated `NodeNext` module settings, `.ts` extensions in relative imports, type-only imports, `jsx: react-jsx`, and `jsxImportSource: remix/ui`. Keep `tsc --noEmit` as a separate typecheck because runtime transformation is not type checking.
+Explain the generated `NodeNext` module settings, `.ts` extensions in relative imports, type-only imports, `jsx: react-jsx`, and `jsxImportSource: remix/component`. Keep `tsc --noEmit` as a separate typecheck because runtime transformation is not type checking.
 
 ## Run source files with remix/node-tsx {#using-remix-node-tsx}
 

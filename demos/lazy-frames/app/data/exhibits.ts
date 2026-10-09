@@ -36,18 +36,19 @@ export const exhibits: Exhibit[] = [
     kind: 'html',
     id: 'field-notes',
     title: 'Stream a checked-in fragment',
-    description: 'A file response supplies Frame content without invoking the Remix UI renderer.',
+    description:
+      'A file response supplies Frame content without invoking the Remix component renderer.',
   },
   {
     kind: 'ui',
     id: 'signal-board',
     title: 'Three kinds of Frame response',
     description:
-      'A server-rendered component returns Remix UI, generated CSS, and request-time data.',
+      'A server-rendered component returns component output, generated CSS, and request-time data.',
     metric: '3',
     metricLabel: 'Response types in this demo',
     trend: 'All three use the same LazyFrame boundary.',
-    details: ['HTML streamed from disk', 'Server-rendered Remix UI', 'Remix UI + client entry'],
+    details: ['HTML streamed from disk', 'Server-rendered components', 'Components + client entry'],
   },
   {
     kind: 'interactive',

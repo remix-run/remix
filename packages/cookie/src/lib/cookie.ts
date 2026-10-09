@@ -80,6 +80,14 @@ export class Cookie implements CookieProperties {
       sameSite = 'Lax',
     } = options ?? {}
 
+    if (sameSite === 'strict') {
+      sameSite = 'Strict'
+    } else if (sameSite === 'lax') {
+      sameSite = 'Lax'
+    } else if (sameSite === 'none') {
+      sameSite = 'None'
+    }
+
     if (partitioned === true) {
       // Partitioned cookies must be set with Secure
       // See https://developer.mozilla.org/en-US/docs/Web/Privacy/Guides/Privacy_sandbox/Partitioned_cookies
@@ -187,7 +195,7 @@ export class Cookie implements CookieProperties {
   }
 
   /**
-   * The `SameSite` attribute of the cookie.
+   * The `SameSite` attribute of the cookie, normalized to `Strict`, `Lax`, or `None`.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value)
    *

@@ -1,11 +1,15 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as url from 'node:url'
-import type { RemixNode } from 'remix/ui'
+import type { RemixNode } from 'remix/component'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
 import { formatWithOxfmt } from '../utils/format.ts'
-import { hasRemixPackage, mapToRemixPackage } from '../utils/package-manifest.ts'
+import {
+  getDocsPackagePath,
+  hasRemixPackage,
+  mapToRemixPackage,
+} from '../utils/package-manifest.ts'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const DEMO_BUILD_DIR = path.join(DOCS_DIR, 'build', 'demos')
@@ -108,7 +112,7 @@ async function getDemoFile(filePath: string): Promise<DemoDocFile> {
     slug,
     source: formattedSource,
     sourceUrl: `${SOURCE_URL_BASE}/${relativePath}`,
-    urlPath: `${packageName}/demos/${slug}`,
+    urlPath: `${getDocsPackagePath(packageName)}/demos/${slug}`,
   }
 }
 
@@ -122,7 +126,7 @@ function getDemoPackageSpecifier(
   slug: string,
 ): string {
   let modulePath = moduleParts.filter((part) => part !== 'demos').join('/')
-  let packageSpecifier = `@remix-run/${packageSegment}/${modulePath}`
+  let packageSpecifier = ['@remix-run', packageSegment, modulePath].filter(Boolean).join('/')
 
   if (packageSegment === 'ui' && moduleParts[0] === 'components') {
     let primitivesSpecifier = `${packageSpecifier}/primitives`

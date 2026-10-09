@@ -3,6 +3,7 @@ import { parseParams, quote } from './param-values.ts'
 import { capitalize, isValidDate } from './utils.ts'
 
 type SameSiteValue = 'Strict' | 'Lax' | 'None'
+type SameSiteInput = SameSiteValue | Lowercase<SameSiteValue>
 
 /**
  * Properties for a `Set-Cookie` header value.
@@ -46,12 +47,13 @@ export interface CookieProperties {
    */
   path?: string
   /**
-   * The `SameSite` attribute of the cookie. This attribute lets servers require that a cookie shouldn't be sent with
-   * cross-site requests, which provides some protection against cross-site request forgery attacks.
+   * The `SameSite` attribute of the cookie. Values are case-insensitive. This attribute lets
+   * servers require that a cookie shouldn't be sent with cross-site requests, which provides some
+   * protection against cross-site request forgery attacks.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value)
    */
-  sameSite?: SameSiteValue
+  sameSite?: SameSiteInput
   /**
    * Indicates the cookie should only be sent over HTTPS.
    *
@@ -171,7 +173,7 @@ export class SetCookie implements HeaderValue, SetCookieInit {
       parts.push(`Path=${this.path}`)
     }
     if (this.sameSite) {
-      parts.push(`SameSite=${this.sameSite}`)
+      parts.push(`SameSite=${capitalize(this.sameSite)}`)
     }
     if (this.secure) {
       parts.push('Secure')
@@ -245,7 +247,7 @@ export class SetCookie implements HeaderValue, SetCookieInit {
         header.name = value.name
         header.partitioned = value.partitioned
         header.path = value.path
-        header.sameSite = value.sameSite
+        header.sameSite = value.sameSite ? (capitalize(value.sameSite) as SameSiteValue) : undefined
         header.secure = value.secure
         header.value = value.value
       }

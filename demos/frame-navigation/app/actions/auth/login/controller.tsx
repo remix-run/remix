@@ -1,6 +1,6 @@
 import { createController } from 'remix/router'
-import { css } from 'remix/ui'
-import { ImportMap } from 'remix/ui/server'
+import { css } from 'remix/component'
+import { ImportMap } from 'remix/component/server'
 import { redirect } from 'remix/response/redirect'
 
 import { getAssetEntry } from '../../../middleware/asset-entry.ts'

@@ -110,9 +110,9 @@ router.post('/logout', ({ session }) => {
 
 ## Related Packages
 
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
-- [`session`](https://github.com/remix-run/remix/tree/main/packages/session) - Session management and storage
-- [`cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie) - Cookie parsing and serialization
+- [`fetch-router`](../fetch-router/README.md) - Router for the web Fetch API
+- [`session`](../session/README.md) - Session management and storage
+- [`cookie`](../cookie/README.md) - Cookie parsing and serialization
 
 ## License
 

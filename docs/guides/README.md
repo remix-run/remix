@@ -9,6 +9,7 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/actions/controller.tsx` — top-level asset route handling.
 - `app/actions/docs/chapters/*.md` — guide chapters.
 - `app/actions/docs/markdown/render.tsx` — chapter metadata and `::frame` rendering built on the shared unified/remark/rehype pipeline.
+- `app/actions/docs/markdown/chapter-markdown.ts` — the markdown version of a chapter, shared by `/<chapter>.md` and the guides copied into the `remix` package. See [Frames in markdown](#frames-in-markdown).
 - `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, summaries, and mtime-based render caches.
 - `app/actions/docs/layout.tsx` and `chapter-navigation.tsx` — guides-specific content and navigation rendered inside the shell from `../shared/ui/`.
 - `app/actions/docs/public/` — browser behavior owned by the Guides route, including its active-chapter animation.
@@ -43,7 +44,7 @@ An optional chapter introduction can go here.
 ## Stable custom anchor {#custom-anchor}
 ```
 
-Set `published: false` in a chapter's frontmatter to keep it available locally while omitting it from production responses. Chapters are published by default when this field is absent. The production guide index and sidebar still list unpublished chapters as disabled so the full guide sequence remains visible. Set `listed: false` for development fixtures and other pages that are not part of that sequence. In production, links to unpublished chapters render as plain text. The prerender seeds the crawler with published chapter URLs, so unpublished chapters are not written to the deployed site or added to Pagefind.
+Chapters are published by default. For an unfinished chapter, keep it published with a note explaining its status and links to the relevant package READMEs. Link to the GitHub README URLs: the installed `remix` copy rewrites those links to its local README mirrors. Set `published: false` only for chapters that should not be publicly accessible, such as development fixtures. The production guide index and sidebar list unpublished chapters as disabled, and links to them render as plain text. Set `listed: false` for fixtures and other pages outside the guide sequence. The `remix` package copies only published chapters. The prerender seeds the crawler with published chapter URLs, so unpublished chapters are not written to the deployed site or added to Pagefind.
 
 Code fences support filename headers and line highlighting:
 
@@ -85,8 +86,8 @@ A "demo with code" shows a live, hydrated component next to its own highlighted 
    ```
 
    ```tsx
-   import { css, on } from 'remix/ui'
-   import type { Handle } from 'remix/ui'
+   import { css, on } from 'remix/component'
+   import type { Handle } from 'remix/component'
 
    export function Counter(handle: Handle) {
      let count = 3
@@ -127,7 +128,32 @@ A "demo with code" shows a live, hydrated component next to its own highlighted 
 
 The named export matters: `demoWithCode` resolves the client entry from the function's `name`, so the export name and the function name must be the same token (e.g. `export function Counter`), not a `default` export.
 
-For route-style frames that need full control, export a named `handler` that returns a `Response` directly instead of using `demoWithCode`.
+For route-style frames that need full control, export a named `handler` that returns a `Response` directly instead of using `demoWithCode`. To keep their code in the markdown guides, declare a markdown fallback (see below).
+
+### Frames in markdown
+
+Every published chapter is also available as markdown in two places, and both use the same output:
+
+- `/<chapter>.md` on the guides site (for example `/start-here.md`), linked from each chapter page with `<link rel="alternate" type="text/markdown">`
+- `packages/remix/guides/*.md`, copied by `pnpm run generate-remix` so agents can read the guides from `node_modules/remix`
+
+Frames only render on the website, so a frame handler can declare a markdown fallback with `setMarkdownFallback()` from `app/actions/docs/examples/markdown-fallback.ts`. `renderChapterMarkdown()` in `app/actions/docs/markdown/chapter-markdown.ts` imports the handler for each `::frame` and replaces the directive with the file at the fallback's `sourceUrl`, as a `tsx` code block. Frames without a fallback are stripped.
+
+`demoWithCode` declares its demo module as the fallback. `demoPreview` declares none, because the surrounding prose already shows the source. A custom handler can declare its own:
+
+```tsx
+import { setMarkdownFallback } from '../markdown-fallback.ts'
+
+let sourceUrl = new URL('./public/callouts.tsx', import.meta.url)
+
+export async function handler(context: AppContext) {
+  return context.render(<Callouts />)
+}
+
+setMarkdownFallback(handler, { sourceUrl })
+```
+
+In published chapters, prefer frames with a fallback so readers of the markdown guides still see the code.
 
 ## Commands
 

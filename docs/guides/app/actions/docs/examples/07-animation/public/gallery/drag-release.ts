@@ -1,4 +1,4 @@
-import { createMixin } from "remix/ui";
+import { createMixin } from "remix/component";
 
 export const dragVelocityReleaseEventType = "rmx:drag-velocity-release" as const;
 

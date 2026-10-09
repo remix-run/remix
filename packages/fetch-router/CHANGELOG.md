@@ -2,6 +2,28 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`route-pattern@1.0.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@1.0.0)
+
+## v0.22.2
+
+### Patch Changes
+
+- Allow `router.fetch` to be passed directly to request-only adapters such as `createRequestListener(router.fetch)` without receiving client metadata as `RequestInit`.
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`route-pattern@0.25.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.25.0)
+
 ## v0.22.1
 
 ### Patch Changes

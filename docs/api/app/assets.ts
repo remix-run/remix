@@ -20,7 +20,7 @@ export function createAssetServer(version?: string): DocsAssetServer {
       'docs/api/app/**/public/**',
       'docs/shared/**/public/**',
     ],
-    allowPackages: ['remix'],
+    allowPackages: ['@remix-run/ui', 'remix'],
     denyFiles: ['**/*.test.*'],
     mounts: {
       app: 'docs/api/app',

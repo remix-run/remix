@@ -36,14 +36,14 @@ For requests whose original method is unsafe (`POST`, `PUT`, `PATCH`, `DELETE`),
 - If `Sec-Fetch-Site` is missing, compare `Origin` to the request host
 - If both `Sec-Fetch-Site` and `Origin` are missing, allow the request
 
-This middleware is intentionally tokenless. If you cannot guarantee the deployment assumptions behind that model, prefer [`csrf-middleware`](https://github.com/remix-run/remix/tree/main/packages/csrf-middleware).
+This middleware is intentionally tokenless. If you cannot guarantee the deployment assumptions behind that model, prefer [`csrf-middleware`](../csrf-middleware/README.md).
 
 ## Caveats
 
 - `cop()` is a browser-origin guard, not a universal CSRF solution. It is designed for deployments that can rely on modern browser provenance signals and same-origin request handling.
 - If both `Sec-Fetch-Site` and `Origin` are missing on an unsafe request, `cop()` allows the request to continue. This is intentional so older clients and non-browser callers do not fail closed by default.
 - If `Sec-Fetch-Site` is missing, `cop()` only rejects when `Origin` is present and does not match the request host.
-- If you need stronger guarantees for session-backed form workflows, mixed deployment environments, or requests that should not fall through when browser provenance headers are missing, use [`csrf-middleware`](https://github.com/remix-run/remix/tree/main/packages/csrf-middleware) or layer both middlewares together.
+- If you need stronger guarantees for session-backed form workflows, mixed deployment environments, or requests that should not fall through when browser provenance headers are missing, use [`csrf-middleware`](../csrf-middleware/README.md) or layer both middlewares together.
 
 ## Using with csrf-middleware
 
@@ -109,8 +109,8 @@ let router = createRouter({
 
 ## Related Packages
 
-- [`csrf-middleware`](https://github.com/remix-run/remix/tree/main/packages/csrf-middleware) - Session-backed CSRF protection with synchronizer tokens
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
+- [`csrf-middleware`](../csrf-middleware/README.md) - Session-backed CSRF protection with synchronizer tokens
+- [`fetch-router`](../fetch-router/README.md) - Router for the web Fetch API
 
 ## License
 

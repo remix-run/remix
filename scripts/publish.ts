@@ -654,6 +654,11 @@ async function main() {
     process.exit(1)
   }
 
+  let remixRelease = packagesNeedingTagsOrReleases.find((pkg) => pkg.packageName === 'remix')
+  if (remixRelease !== undefined && process.env.GITHUB_OUTPUT) {
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `tag=${remixRelease.tag}\n`)
+  }
+
   console.log('\n✅ Done.')
 }
 

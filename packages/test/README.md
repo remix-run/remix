@@ -7,7 +7,7 @@ A test framework for JavaScript and TypeScript projects.
 - `describe`/`it` test structure with `before`/`after`/`beforeEach`/`afterEach` hooks
 - Server-side unit testing
 - Playwright E2E testing via `t.serve`
-- In-browser component testing (pair with `render` from `remix/ui/test`)
+- In-browser component testing (pair with `render` from `remix/component/test`)
 - Mock functions and method spies via `t.mock.fn` / `t.mock.method`
 - Per-test and hook timeouts with `t.signal` abort support
 - Unified code coverage reporting across unit and E2E tests
@@ -42,14 +42,24 @@ Run tests with the CLI:
 remix test
 ```
 
-By default, `remix test` discovers all files matching `**/*.test{,.browser,.e2e}.{ts,tsx}`. Pass one or more globs as positional arguments to override:
+By default, `remix test` discovers all files matching `**/*.test{,.browser,.e2e}.{ts,tsx}`. Pass a partial filename to select matching test files:
+
+```sh
+remix test frame
+remix test frame router
+```
+
+Simple names expand to test globs: `frame` becomes `**/*frame*.test*.{ts,tsx}`, selecting files such as `src/frame.test.ts` and `src/frame.css.test.tsx` while ignoring source files such as `src/frame.ts`. Arguments containing glob syntax, a path separator, or a `.ts` or `.tsx` file extension pass through unchanged.
+
+You can also pass file paths and explicit globs:
 
 ```sh
 remix test "src/**/*.test.ts"
 remix test "src/**/*.test.ts" "tests/**/*.test.tsx"
+remix test src/frame.test.ts
 ```
 
-You may also repeat the `--glob.*` flags. Positional globs take precedence over `--glob.test`.
+You can combine simple names, file paths, and globs; matching files run once. The `--glob.*` flags are repeatable. Positional arguments, including expanded names, override configured test globs and `--glob.test`. Exclusions still apply. Use an explicit glob for custom naming conventions such as `*.spec.ts`.
 
 ### Config File
 
@@ -392,12 +402,12 @@ Browser tests run components in an actual browser environment via Playwright and
 
 #### `render()`
 
-`render`, exported from `remix/ui/test`, mounts a component into the DOM and returns a `RenderResult`:
+`render`, exported from `remix/component/test`, mounts a component into the DOM and returns a `RenderResult`:
 
 ```ts
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
-import { render } from 'remix/ui/test'
+import { render } from 'remix/component/test'
 import { Counter } from './counter.tsx'
 
 describe('Counter', () => {
@@ -488,7 +498,7 @@ finish—useful for debugging failures.
 ## Related Packages
 
 - [`assert`](https://github.com/remix-run/remix/tree/main/packages/assert) provides assertions that work in server and browser tests.
-- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) provides the `remix/ui/test` browser rendering utilities.
+- [`component`](https://github.com/remix-run/remix/tree/main/packages/component) provides the `remix/component/test` browser rendering utilities.
 
 ## Related Work
 

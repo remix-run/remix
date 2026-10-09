@@ -10,7 +10,7 @@ autoresearch-results/
 /demos/tmp/
 /packages/cli/template/
 /packages/remix/schema/
-/packages/ui/demo/.artifacts/
+/packages/component/demo/.artifacts/
 *.db
 *.db-*
 *.sqlite

@@ -1,8 +1,14 @@
 ---
 title: Files and Assets
 description: How Remix serves static files and source assets, accepts bounded uploads, stores files, and returns HTTP file responses.
-published: false
 ---
+
+This chapter is unfinished. The sections below outline what it will cover. For working API examples, see these READMEs:
+
+- [Assets](https://github.com/remix-run/remix/blob/main/packages/assets/README.md)
+- [Form data middleware](https://github.com/remix-run/remix/blob/main/packages/form-data-middleware/README.md)
+- [File storage](https://github.com/remix-run/remix/blob/main/packages/file-storage/README.md)
+- [File responses](https://github.com/remix-run/remix/blob/main/packages/response/README.md)
 
 Remix has separate paths for files that already exist in public form, browser source that needs compilation, and user uploads that must cross a trust boundary. Choose that path before configuring caches or storage.
 

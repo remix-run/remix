@@ -125,7 +125,7 @@ let router = createRouter({
 
 ## Related Packages
 
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
+- [`fetch-router`](../fetch-router/README.md) - Router for the web Fetch API
 
 ## License
 

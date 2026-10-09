@@ -13,7 +13,7 @@ These APIs ship together through focused subpath imports from the `remix` packag
 
 The design of Remix comes from six core principles:
 
-1. **Agent-First Development.** Remix optimizes source code, documentation, tooling, and abstractions for LLMs, and provides primitives for using models inside the products you build.
+1. **Model-First Development.** Remix optimizes source code, documentation, tooling, and abstractions for LLMs, and provides primitives for using models inside the products you build.
 2. **Build on Web APIs.** Remix builds on `Request`, `Response`, `URL`, `FormData`, headers, cookies, and JavaScript because shared platform APIs reduce context switching across the full stack while keeping your application portable.
 3. **Religiously Runtime.** Remix APIs do not depend on bundlers, type generation, or static analysis. Routes, middleware, controllers, and tests should run as ordinary runtime code.
 4. **Avoid Dependencies.** Remix chooses dependencies carefully, wraps them behind its own boundaries, and works toward replacing them with focused packages when the framework needs long-term control.
@@ -29,7 +29,7 @@ The quickest way to start a Remix app is with the `remix` CLI. It creates a smal
 First run:
 
 ```sh
-npx remix@next new my-remix-app
+npx remix new my-remix-app
 ```
 
 Next, install the project dependencies:
@@ -78,6 +78,7 @@ my-remix-app/
     ├── router.ts              # middleware, routes, and controller mapping
     ├── middleware/            # request middleware and context providers
     ├── actions/               # controllers, route actions, and route-local UI
+    │   ├── controller.tsx     # root route controller
     │   ├── document.tsx       # app document shell
     │   └── public/
     │       └── entry.ts       # starts the browser runtime
@@ -93,9 +94,7 @@ import { createRequestListener } from "remix/node-fetch-server";
 
 import { router } from "./app/router.ts";
 
-const requestListener = createRequestListener(async (request) => {
-  return await router.fetch(request);
-});
+const requestListener = createRequestListener(router.fetch);
 const server = http.createServer(requestListener);
 
 server.listen(44100, () => {
@@ -193,14 +192,14 @@ The [Routing and Controllers](/routing-and-controllers/) chapter covers route ma
 
 Let's make this album page a little more interesting by returning HTML from a Remix component.
 
-Remix UI uses JSX with a two-phase component model. A component is a function that receives a `handle` and returns another function that renders JSX. The outer function is setup: it runs once when the component is created, so normal JavaScript variables declared there can hold local state. The returned function is render: it runs on the first render and every update afterward.
+A component is a function that receives a `handle` and returns another function that renders JSX. The outer function is setup: it runs once when the component is created, so normal JavaScript variables declared there can hold local state. The returned function is render: it runs on the first render and every update afterward.
 
 We'll come back to the component model later. If you want the full model now, check out the [Rendering UI](/rendering-ui/) chapter.
 
 ```tsx
 function MyComponent(handle) {
   // Setup phase: runs once when this component is created.
-  // The handle gives the component access to props and other Remix UI APIs.
+  // The handle gives the component access to props and other Remix component APIs.
 
   return () => {
     // Render phase: runs on the first render and every update afterward.
@@ -218,7 +217,7 @@ touch app/actions/albums/show-page.tsx
 ```
 
 ```tsx filename=app/actions/albums/show-page.tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Document } from "../document.tsx";
 
@@ -321,7 +320,7 @@ export default createController(routes.albums, {
 Let's tweak our `AlbumPage` component to display the album data:
 
 ```tsx filename=app/actions/albums/show-page.tsx lines=[3,6,8,11,13-16]
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import type { Album } from "./data.ts";
 import { Document } from "../document.tsx";
@@ -349,8 +348,8 @@ Now the page displays the album title, artist, and year.
 Center it and add a little spacing with the `css` function and `mix` prop. The [Rendering UI](/rendering-ui/) chapter covers this helper and prop in more detail.
 
 ```tsx filename=app/actions/albums/show-page.tsx lines=[2,14-18,20]
-import type { Handle } from "remix/ui";
-import { css } from "remix/ui";
+import type { Handle } from "remix/component";
+import { css } from "remix/component";
 
 import type { Album } from "./data.ts";
 import { Document } from "../document.tsx";
@@ -455,8 +454,8 @@ router.map(routes.albums.edit, albumsEditController);
 Now we can create the form page. It's a very simple form that displays the existing data and submits a POST request to our edit action.
 
 ```tsx filename=app/actions/albums/edit/page.tsx
-import { css } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { css } from "remix/component";
+import type { Handle } from "remix/component";
 
 import { routes } from "../../../routes.ts";
 import { Document } from "../../document.tsx";
@@ -549,7 +548,7 @@ export const router = createRouter({
 
 export type AppContext = RouterContext<typeof router>;
 
-declare module "remix/router" {
+declare module "remix" {
   interface RouterTypes {
     context: AppContext;
   }
@@ -607,7 +606,7 @@ export default createController(routes.albums.edit, {
 });
 ```
 
-The `action` route action validates the parsed Web `FormData`, returns an explicit response for invalid input or a missing album, and redirects back to the album page after a successful update. The [Data and Validation](/data-and-validation/) chapter shows how to render field-level validation errors back into a form.
+The `action` route action validates the parsed Web `FormData`, returns an explicit response for invalid input or a missing album, and redirects back to the album page after a successful update. The [Forms and Mutations](/forms-and-mutations/) chapter shows how to render field-level validation errors back into a form.
 
 Now we can update our album data and set it to the correct year.
 
@@ -630,13 +629,13 @@ mkdir -p app/actions/albums/edit/public
 touch app/actions/albums/edit/public/album-edit-form.tsx
 ```
 
-The colocated `public/` directory is the explicit browser-source boundary. The template's asset server allows source beneath `app/**/public/**`, so Remix can turn this component and its local dependencies into browser modules. Keep those local dependencies inside the same `public/` directory; `app/routes.ts` is allowed separately for type-safe links. The template also loads `app/actions/public/entry.ts`, which starts the Remix UI client runtime. The [Files and Assets](/files-and-assets/) chapter goes deeper into this bundlerless setup.
+The colocated `public/` directory is the explicit browser-source boundary. The template's asset server allows source beneath `app/**/public/**`, so Remix can turn this component and its local dependencies into browser modules. Keep those local dependencies inside the same `public/` directory; `app/routes.ts` is allowed separately for type-safe links. The template also loads `app/actions/public/entry.ts`, which starts the Remix component client runtime. The [Files and Assets](/files-and-assets/) chapter goes deeper into this bundlerless setup.
 
 Now that we have a place for the form to live, let's pull it into its own component.
 
 ```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx
-import { css } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { css } from "remix/component";
+import type { Handle } from "remix/component";
 
 import { routes } from "../../../../routes.ts";
 
@@ -686,8 +685,8 @@ export function AlbumEditForm(handle: Handle<{ album: Album }>) {
 Let's update the edit page to render this new `AlbumEditForm` component:
 
 ```tsx filename=app/actions/albums/edit/page.tsx lines=[4,16]
-import type { Handle } from "remix/ui";
-import { css } from "remix/ui";
+import type { Handle } from "remix/component";
+import { css } from "remix/component";
 
 import { AlbumEditForm } from "./public/album-edit-form.tsx";
 import { Document } from "../../document.tsx";
@@ -714,8 +713,8 @@ Everything should look like it did before.
 Next mark the form as a client entry. [`import.meta.url`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import.meta) tells our asset server which source file should be turned into a browser-loadable module:
 
 ```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx lines=[1,13-15,18]
-import { clientEntry, css } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { clientEntry, css } from "remix/component";
+import type { Handle } from "remix/component";
 
 import { routes } from "../../../../routes.ts";
 
@@ -753,11 +752,11 @@ export const AlbumEditForm = clientEntry(
 );
 ```
 
-When the form submits, we flip the `pending` variable from `false` to `true` and call `handle.update()`. `handle.update()` tells Remix UI to render this component again with the new local state. To listen for the submit, we add an event listener via the `on` helper and pass an array into the `mix` prop.
+When the form submits, we flip the `pending` variable from `false` to `true` and call `handle.update()`. `handle.update()` tells the component runtime to render this component again with the new local state. To listen for the submit, we add an event listener via the `on` helper and pass an array into the `mix` prop.
 
 ```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx lines=[1,25,27-31,34-36]
-import { clientEntry, css, on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { clientEntry, css, on } from "remix/component";
+import type { Handle } from "remix/component";
 
 import { routes } from "../../../../routes.ts";
 

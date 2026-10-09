@@ -1,5 +1,5 @@
-import type { Handle } from "remix/ui";
-import { css, ref } from "remix/ui";
+import type { Handle } from "remix/component";
+import { css, ref } from "remix/component";
 
 export function Cube(handle: Handle) {
   let cube: HTMLDivElement;

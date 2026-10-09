@@ -1,11 +1,12 @@
 import { readFile } from "node:fs/promises";
 
 import { codeToHtml } from "shiki";
-import { clientEntry, css, unsafeHTML } from "remix/ui";
-import type { Handle, RemixNode } from "remix/ui";
+import { clientEntry, css, unsafeHTML } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 import { shikiThemes } from "remix-docs-shared/markdown/code-blocks";
 
 import type { AppContext } from "../../../router.ts";
+import { setMarkdownFallback } from "./markdown-fallback.ts";
 
 type DemoComponent = (handle: Handle) => () => RemixNode;
 
@@ -45,7 +46,8 @@ export function Demo(handle: Handle<DemoProps>) {
 }
 
 // Builds a frame handler for a "demo with code": hydrates `component`, highlights
-// the source at `demoModuleUrl`, and renders both in the shared <Demo> shell.
+// the source at `demoModuleUrl`, and renders both in the shared <Demo> shell. In
+// markdown, the frame is replaced with that same source.
 //
 // `component` must be a named export of the `.demo.tsx` module whose name
 // matches the function name, so `clientEntry` can resolve the export via
@@ -54,7 +56,7 @@ export function demoWithCode(
   demoModuleUrl: URL,
   component: DemoComponent,
 ): (context: AppContext) => Promise<Response> {
-  return async function handler(context) {
+  async function handler(context: AppContext) {
     let sourceHtml = await loadDemoSource(demoModuleUrl);
     let DemoComponent = clientEntry(demoModuleUrl.href, component);
 
@@ -63,15 +65,19 @@ export function demoWithCode(
         <DemoComponent />
       </Demo>,
     );
-  };
+  }
+
+  setMarkdownFallback(handler, { sourceUrl: demoModuleUrl });
+  return handler;
 }
 
-// Renders only the live preview when the chapter already includes the source.
+// Renders only the live preview when the chapter already includes the source. It
+// declares no markdown fallback, so the markdown version strips the frame.
 export function demoPreview(
   demoModuleUrl: URL,
   component: DemoComponent,
 ): (context: AppContext) => Response {
-  return function handler(context) {
+  function handler(context: AppContext) {
     let DemoComponent = clientEntry(demoModuleUrl.href, component);
 
     return context.render(
@@ -79,7 +85,9 @@ export function demoPreview(
         <DemoComponent />
       </Demo>,
     );
-  };
+  }
+
+  return handler;
 }
 
 const frameStyles = css({

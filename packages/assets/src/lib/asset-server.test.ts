@@ -5398,18 +5398,18 @@ describe('asset-server', () => {
     await write(
       dir,
       'app/entry.ts',
-      'import { css } from "@remix-run/ui"\nexport const button = css({ color: "red" })',
+      'import { css } from "@remix-run/component"\nexport const button = css({ color: "red" })',
     )
     let assetServer = createTestServer(dir, {
       scripts: {
-        external: ['@remix-run/ui'],
+        external: ['@remix-run/component'],
       },
     })
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
     let body = await response.text()
-    assert.match(body, /from "@remix-run\/ui"/)
+    assert.match(body, /from "@remix-run\/component"/)
   })
 
   it('leaves data and http(s) URL imports unchanged', async () => {
@@ -5464,32 +5464,32 @@ describe('asset-server', () => {
     try {
       let uiStorePath = path.join(
         caseDir,
-        'app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui',
+        'app/node_modules/.pnpm/@remix-run+component@1.0.0/node_modules/@remix-run/component',
       )
       await writeJson(
         caseDir,
         'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/package.json',
         {
           dependencies: {
-            '@remix-run/ui': '1.0.0',
+            '@remix-run/component': '1.0.0',
           },
           name: 'remix',
           type: 'module',
           exports: {
-            './ui': './dist/ui.js',
+            './component': './dist/component.js',
           },
         },
       )
       await write(
         caseDir,
-        'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/dist/ui.js',
-        'import { ui } from "@remix-run/ui"\nexport { ui }',
+        'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/dist/component.js',
+        'import { ui } from "@remix-run/component"\nexport { ui }',
       )
       await writeJson(
         caseDir,
-        'app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui/package.json',
+        'app/node_modules/.pnpm/@remix-run+component@1.0.0/node_modules/@remix-run/component/package.json',
         {
-          name: '@remix-run/ui',
+          name: '@remix-run/component',
           type: 'module',
           exports: {
             '.': './dist/index.js',
@@ -5498,24 +5498,27 @@ describe('asset-server', () => {
       )
       await write(
         caseDir,
-        'app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui/dist/index.js',
+        'app/node_modules/.pnpm/@remix-run+component@1.0.0/node_modules/@remix-run/component/dist/index.js',
         'export const ui = true',
       )
       await symlinkDirectory(
         path.join(caseDir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix'),
         path.join(caseDir, 'app/node_modules/remix'),
       )
-      await symlinkDirectory(uiStorePath, path.join(caseDir, 'app/node_modules/@remix-run/ui'))
       await symlinkDirectory(
         uiStorePath,
-        path.join(caseDir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui'),
+        path.join(caseDir, 'app/node_modules/@remix-run/component'),
+      )
+      await symlinkDirectory(
+        uiStorePath,
+        path.join(caseDir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/component'),
       )
       await write(
         caseDir,
         'app/entry.ts',
         [
-          'import { ui as appUi } from "@remix-run/ui"',
-          'import { ui as packageUi } from "remix/ui"',
+          'import { ui as appUi } from "@remix-run/component"',
+          'import { ui as packageUi } from "remix/component"',
           'export const values = [appUi, packageUi]',
         ].join('\n'),
       )
@@ -5524,14 +5527,14 @@ describe('asset-server', () => {
       try {
         let importMap = await assetServer.getImportMap('app/entry.ts')
         let uiUrls = [
-          importMap.scopes?.['/assets/app/']?.['@remix-run/ui'],
+          importMap.scopes?.['/assets/app/']?.['@remix-run/component'],
           importMap.scopes?.[
             '/assets/app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/dist/'
-          ]?.['@remix-run/ui'],
+          ]?.['@remix-run/component'],
         ].filter((url): url is string => url != null)
 
         let expectedUiUrls = [
-          '/assets/app/node_modules/.pnpm/%40remix-run%2Bui%401.0.0/node_modules/%40remix-run/ui/dist/index.js',
+          '/assets/app/node_modules/.pnpm/%40remix-run%2Bcomponent%401.0.0/node_modules/%40remix-run/component/dist/index.js',
         ]
         assert.deepEqual(uiUrls, expectedUiUrls)
       } finally {
@@ -5760,7 +5763,7 @@ describe('asset-server', () => {
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/ui',
+          jsxImportSource: '@remix-run/component',
         },
       })
       await writeJson(caseDir, 'tsconfig.json', {
@@ -5768,7 +5771,7 @@ describe('asset-server', () => {
       })
       await write(
         caseDir,
-        'app/node_modules/@remix-run/ui/jsx-runtime.ts',
+        'app/node_modules/@remix-run/component/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("fragment")',
       )
       await write(caseDir, 'app/entry.tsx', 'export let entry = <div />')
@@ -5778,7 +5781,7 @@ describe('asset-server', () => {
       })
 
       let urls = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(urls.some((url) => url.includes('%40remix-run/ui/jsx-runtime.@')))
+      assert.ok(urls.some((url) => url.includes('%40remix-run/component/jsx-runtime.@')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -5790,7 +5793,7 @@ describe('asset-server', () => {
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/ui-a',
+          jsxImportSource: '@remix-run/component-a',
         },
       })
       await writeJson(caseDir, 'tsconfig.json', {
@@ -5798,12 +5801,12 @@ describe('asset-server', () => {
       })
       await write(
         caseDir,
-        'app/node_modules/@remix-run/ui-a/jsx-runtime.ts',
+        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
       )
       await write(
         caseDir,
-        'app/node_modules/@remix-run/ui-b/jsx-runtime.ts',
+        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
       )
       await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
@@ -5811,24 +5814,26 @@ describe('asset-server', () => {
       let firstServer = createTestServer(caseDir)
 
       let before = await firstServer.getPreloads('app/entry.tsx')
-      assert.ok(before.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
-      assert.ok(!before.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
+      assert.ok(before.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.ts')))
+      assert.ok(!before.some((url) => url.includes('%40remix-run/component-b/jsx-runtime.ts')))
 
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/ui-b',
+          jsxImportSource: '@remix-run/component-b',
         },
       })
 
       let sameServer = await firstServer.getPreloads('app/entry.tsx')
-      assert.ok(sameServer.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
-      assert.ok(!sameServer.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
+      assert.ok(sameServer.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.ts')))
+      assert.ok(!sameServer.some((url) => url.includes('%40remix-run/component-b/jsx-runtime.ts')))
 
       let secondServer = createTestServer(caseDir)
       let afterRestart = await secondServer.getPreloads('app/entry.tsx')
-      assert.ok(afterRestart.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
-      assert.ok(!afterRestart.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
+      assert.ok(afterRestart.some((url) => url.includes('%40remix-run/component-b/jsx-runtime.ts')))
+      assert.ok(
+        !afterRestart.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.ts')),
+      )
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -5840,7 +5845,7 @@ describe('asset-server', () => {
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/ui-a',
+          jsxImportSource: '@remix-run/component-a',
         },
       })
       await writeJson(caseDir, 'tsconfig.json', {
@@ -5848,12 +5853,12 @@ describe('asset-server', () => {
       })
       await write(
         caseDir,
-        'app/node_modules/@remix-run/ui-a/jsx-runtime.ts',
+        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
       )
       await write(
         caseDir,
-        'app/node_modules/@remix-run/ui-b/jsx-runtime.ts',
+        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
       )
       await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
@@ -5863,19 +5868,19 @@ describe('asset-server', () => {
       })
 
       let before = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(before.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.@')))
-      assert.ok(!before.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.@')))
+      assert.ok(before.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.@')))
+      assert.ok(!before.some((url) => url.includes('%40remix-run/component-b/jsx-runtime.@')))
 
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/ui-b',
+          jsxImportSource: '@remix-run/component-b',
         },
       })
 
       let after = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(after.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.@')))
-      assert.ok(!after.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.@')))
+      assert.ok(after.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.@')))
+      assert.ok(!after.some((url) => url.includes('%40remix-run/component-b/jsx-runtime.@')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -7637,7 +7642,7 @@ describe('asset-server', () => {
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/ui-a',
+          jsxImportSource: '@remix-run/component-a',
         },
       })
       await writeJson(caseDir, 'tsconfig.json', {
@@ -7645,12 +7650,12 @@ describe('asset-server', () => {
       })
       await write(
         caseDir,
-        'app/node_modules/@remix-run/ui-a/jsx-runtime.ts',
+        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
       )
       await write(
         caseDir,
-        'app/node_modules/@remix-run/ui-b/jsx-runtime.ts',
+        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
       )
       await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
@@ -7659,20 +7664,20 @@ describe('asset-server', () => {
 
       try {
         let before = await assetServer.getPreloads('app/entry.tsx')
-        assert.ok(before.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
+        assert.ok(before.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.ts')))
 
         let tsconfigPath = await writeJson(caseDir, 'tsconfig.base.json', {
           compilerOptions: {
             jsx: 'react-jsx',
-            jsxImportSource: '@remix-run/ui-b',
+            jsxImportSource: '@remix-run/component-b',
           },
         })
         await emitWatchEvent(assetServer, tsconfigPath, 'change')
 
         let after = await assetServer.getPreloads('app/entry.tsx')
 
-        assert.ok(after.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
-        assert.ok(!after.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
+        assert.ok(after.some((url) => url.includes('%40remix-run/component-b/jsx-runtime.ts')))
+        assert.ok(!after.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.ts')))
       } finally {
         await assetServer.close()
       }
@@ -7687,7 +7692,7 @@ describe('asset-server', () => {
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/ui-a',
+          jsxImportSource: '@remix-run/component-a',
         },
       })
       await writeJson(caseDir, 'tsconfig.json', {
@@ -7695,12 +7700,12 @@ describe('asset-server', () => {
       })
       await write(
         caseDir,
-        'app/node_modules/@remix-run/ui-a/jsx-runtime.ts',
+        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
       )
       await write(
         caseDir,
-        'app/node_modules/@remix-run/ui-b/jsx-runtime.ts',
+        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
       )
       await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
@@ -7712,19 +7717,19 @@ describe('asset-server', () => {
 
       try {
         let before = await assetServer.getPreloads('app/entry.tsx')
-        assert.ok(before.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
+        assert.ok(before.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.ts')))
 
         let tsconfigPath = await writeJson(caseDir, 'tsconfig.base.json', {
           compilerOptions: {
             jsx: 'react-jsx',
-            jsxImportSource: '@remix-run/ui-b',
+            jsxImportSource: '@remix-run/component-b',
           },
         })
         await emitWatchEvent(assetServer, tsconfigPath, 'change')
 
         let after = await assetServer.getPreloads('app/entry.tsx')
-        assert.ok(after.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
-        assert.ok(!after.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
+        assert.ok(after.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.ts')))
+        assert.ok(!after.some((url) => url.includes('%40remix-run/component-b/jsx-runtime.ts')))
       } finally {
         await assetServer.close()
       }
@@ -10187,16 +10192,16 @@ describe('asset-server', () => {
           'tsconfig.json': {
             compilerOptions: {
               jsx: 'react-jsx',
-              jsxImportSource: '@remix-run/ui',
+              jsxImportSource: '@remix-run/component',
             },
           },
-          'app/node_modules/@remix-run/ui/jsx-runtime.ts':
+          'app/node_modules/@remix-run/component/jsx-runtime.ts':
             'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("fragment")',
           'app/entry.tsx': 'export let entry = <div />',
         },
         async ({ assetServer }) => {
           let urls = await assetServer.getPreloads('app/entry.tsx')
-          assert.ok(urls.some((url) => url.includes('%40remix-run/ui/jsx-runtime.ts')))
+          assert.ok(urls.some((url) => url.includes('%40remix-run/component/jsx-runtime.ts')))
         },
       )
     })

@@ -6,7 +6,7 @@ import {
   type AppRuntime,
   type RemixNode,
   type ResolveFrameOptions,
-} from '@remix-run/ui'
+} from '@remix-run/component'
 
 /** Creates a response that the SPA runtime can render. */
 export interface Render {
@@ -91,11 +91,16 @@ export function run(router: Router, options: RunOptions = {}): Runtime {
     },
     async resolveFrame(src, options) {
       let url = new URL(src, document.baseURI)
-      let { response, redirectedTo } = await followFrameRedirects(router, url, {
+      let { body, encType } = getRequestBody(options)
+      let headers = new Headers()
+      if (encType) headers.set('Content-Type', encType)
+      let requestInit: RequestInit = {
         method: options?.method,
-        body: getRequestBody(options),
+        body,
+        headers,
         signal: options?.signal,
-      })
+      }
+      let { response, redirectedTo } = await followFrameRedirects(router, url, requestInit)
       return spaResponse.finalize(response, redirectedTo)
     },
   })
@@ -120,10 +125,11 @@ async function followFrameRedirects(
   let initialOrigin = url.origin
   let method = init.method?.toUpperCase() ?? 'GET'
   let body = init.body
+  let headers = new Headers(init.headers)
   let redirectedTo: string | undefined
 
   for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount++) {
-    let response = await router.fetch(url, { ...init, method, body })
+    let response = await router.fetch(url, { ...init, method, body, headers })
     if (!redirectStatuses.has(response.status)) {
       return { response, redirectedTo }
     }
@@ -145,6 +151,7 @@ async function followFrameRedirects(
     ) {
       method = 'GET'
       body = undefined
+      headers.delete('Content-Type')
     }
 
     url = nextUrl
@@ -154,14 +161,17 @@ async function followFrameRedirects(
   throw new TypeError(`SPA route exceeded ${maxRedirects} redirects`)
 }
 
-// Frame reloads can receive raw FormData without going through form navigation. Encode it here so
-// manual reloads use the requested form encoding instead of always sending multipart bodies.
-function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+function getRequestBody(options?: ResolveFrameOptions): {
+  body?: BodyInit
+  encType?: string
+} {
   let formData = options?.formData
-  let method = options?.method
-  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
+  if (!formData) return {}
+  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return {}
 
-  let encType = options?.encType
+  let encType = options?.encType?.toLowerCase()
+
+  if (encType === 'multipart/form-data') return { body: formData }
 
   if (encType === 'text/plain') {
     let body = ''
@@ -170,16 +180,17 @@ function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
       value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
       body += `${name}=${value}\r\n`
     }
-    return new Blob([body], { type: 'text/plain' })
+    return { body: new Blob([body], { type: 'text/plain' }), encType: 'text/plain' }
   }
-
-  if (encType !== 'application/x-www-form-urlencoded') return formData
 
   let body = new URLSearchParams()
   for (let [name, value] of formData) {
-    body.append(name, typeof value === 'string' ? value : value.name)
+    body.append(
+      normalizeLineBreaks(name),
+      normalizeLineBreaks(typeof value === 'string' ? value : value.name),
+    )
   }
-  return body
+  return { body, encType: 'application/x-www-form-urlencoded' }
 }
 
 function normalizeLineBreaks(value: string): string {
