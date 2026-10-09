@@ -300,7 +300,6 @@ export function createModuleStore<transformed, resolved, emitted>(
   }
 
   function invalidateGraph(record: MutableModuleRecord<transformed, resolved, emitted>) {
-    record.hmrUpdateTimestamp = undefined
     invalidateContent(record, { retainStale: false })
   }
 

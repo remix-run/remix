@@ -6185,7 +6185,10 @@ describe('asset-server', () => {
         )
         let restoredResponse = await getByFile(assetServer, 'app/nested/entry.ts')
         assert.ok(restoredResponse)
-        assert.match(await restoredResponse.text(), /from "\.\/outer\.ts"/)
+        let outerHref = await assetServer.getHref(outerPath)
+        assert.match(outerHref, /^\/assets\/app\/nested\/outer\.ts\?t=\d{13}$/)
+        assert.ok((await restoredResponse.text()).includes(`from ${JSON.stringify(outerHref)}`))
+        assert.ok((await assetServer.getPreloads(entryPath)).includes(outerHref))
 
         await write(
           caseDir,

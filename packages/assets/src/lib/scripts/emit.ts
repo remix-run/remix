@@ -32,8 +32,7 @@ type EmitResult =
     }
 
 type RewriteImportsOptions = {
-  getHmrImportTimestamp(identityPath: string): number | null
-  getServedUrl(identityPath: string): Promise<string>
+  getImportSpecifier(identityPath: string, originalSpecifier?: string): string
   getStableUrl(identityPath: string): string
 }
 
@@ -41,15 +40,14 @@ export async function emitResolvedModule(
   resolvedModule: ResolvedModule,
   options: {
     fingerprintAssets: boolean
-    getHmrImportTimestamp(identityPath: string): number | null
-    getServedUrl(identityPath: string): Promise<string>
+    getImportSpecifier(identityPath: string, originalSpecifier?: string): string
     getStableUrl(identityPath: string): string
     hmrClientPathname?: string
     sourceMaps?: 'external' | 'inline'
   },
 ): Promise<EmitResult> {
   try {
-    let rewriteResult = await rewriteImports(resolvedModule, options)
+    let rewriteResult = rewriteImports(resolvedModule, options)
     let finalCode = prependHmrContext(resolvedModule, rewriteResult.code, options)
     let sourceMap = rewriteResult.sourceMap
       ? await createEmittedAsset(rewriteResult.sourceMap)
@@ -85,10 +83,10 @@ export async function emitResolvedModule(
   }
 }
 
-async function rewriteImports(
+function rewriteImports(
   resolvedModule: ResolvedModule,
   options: RewriteImportsOptions,
-): Promise<{ code: string; sourceMap: string | null }> {
+): { code: string; sourceMap: string | null } {
   let rewrittenSource = new MagicString(resolvedModule.rawCode)
   let changed = false
   let edits: Array<{ end: number; replacementLength: number; start: number }> = []
@@ -106,7 +104,7 @@ async function rewriteImports(
   for (let declaration of resolvedModule.importRewrites) {
     let replacement = ''
     for (let { depPath, sourceStart, specifiers } of declaration.imports) {
-      let url = options.getStableUrl(depPath)
+      let url = options.getImportSpecifier(depPath)
       if (replacement.length > 0) replacement += '\n'
       replacement += specifiers.length === 0 ? 'import ' : 'import { '
       for (let index = 0; index < specifiers.length; index++) {
@@ -150,16 +148,8 @@ async function rewriteImports(
     ) {
       continue
     }
-    let hmrImportTimestamp = options.getHmrImportTimestamp(imported.depPath)
-    let replacementSpecifier = imported.specifier
-    if (hmrImportTimestamp !== null) {
-      replacementSpecifier = addTimestampQuery(
-        await options.getServedUrl(imported.depPath),
-        hmrImportTimestamp,
-      )
-    } else if (imported.compiledSpecifier === imported.specifier) {
-      continue
-    }
+    let replacementSpecifier = options.getImportSpecifier(imported.depPath, imported.specifier)
+    if (replacementSpecifier === imported.compiledSpecifier) continue
 
     overwrite(
       imported.start,
@@ -217,10 +207,6 @@ function getGeneratedOffset(
     }
   }
   return generatedOffset
-}
-
-function addTimestampQuery(pathname: string, timestamp: number): string {
-  return `${pathname}${pathname.includes('?') ? '&' : '?'}t=${timestamp}`
 }
 
 function prependHmrContext(

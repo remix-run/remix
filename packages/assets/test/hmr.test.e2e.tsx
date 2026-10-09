@@ -228,6 +228,95 @@ describe('asset server HMR', () => {
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
   })
 
+  it('loads the current version when an updated module is requested later as an entry', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImport: true })
+    t.after(fixture.close)
+    let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
+    let entrySource = await fs.readFile(entryPath, 'utf-8')
+    await fs.writeFile(entryPath, `import './hmr-consumer.ts'\n${entrySource}`)
+    let sharedPath = path.join(fixture.rootDir, 'app/shared.ts')
+    await write(fixture.rootDir, 'app/shared.ts', "export const value = 'before'")
+    await write(fixture.rootDir, 'app/package.json', JSON.stringify({ sideEffects: false }))
+    await write(fixture.rootDir, 'app/shared-barrel.ts', "export { value } from './shared.ts'")
+    let hmrConsumerPath = path.join(fixture.rootDir, 'app/hmr-consumer.ts')
+    await fs.writeFile(
+      hmrConsumerPath,
+      [
+        "import { value } from './shared.ts'",
+        'document.body.dataset.hmrValue = value',
+        "if (import.meta.hot) import.meta.hot.accept('./shared.ts', module => {",
+        '  document.body.dataset.hmrValue = module?.value',
+        '})',
+      ].join('\n'),
+    )
+    let lateEntryPath = path.join(fixture.rootDir, 'app/late.ts')
+    await write(
+      fixture.rootDir,
+      'app/late.ts',
+      [
+        "import { value } from './shared-barrel.ts'",
+        'document.body.dataset.lateValue = value',
+      ].join('\n'),
+    )
+    let server = await createHmrTestServer(fixture)
+    let initialEntry = await server.getScriptEntry(entryPath)
+    let page = await t.serve(server)
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+    await page.goto('/')
+    await connected
+    assert.equal(await page.locator('body').getAttribute('data-hmr-value'), 'before')
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
+    let installedImportMap = await page.locator('script[type="importmap"]').textContent()
+    assert.ok(installedImportMap)
+    assert.deepEqual(JSON.parse(installedImportMap), initialEntry.importMap)
+    assert.deepEqual(JSON.parse(installedImportMap).scopes['/assets/app/'], {
+      'test-package': '/assets/app/test-package.ts',
+    })
+
+    await fs.writeFile(sharedPath, "export const value = 'after'")
+    await page.locator('body[data-hmr-value="after"]').waitFor()
+
+    let currentEntry = await server.getScriptEntry(entryPath)
+    assert.deepEqual(currentEntry.importMap, initialEntry.importMap)
+    assert.doesNotMatch(JSON.stringify(currentEntry.importMap), /[?&]t=/)
+    assert.equal(await page.locator('script[type="importmap"]').textContent(), installedImportMap)
+
+    let updatedEntry = await server.getScriptEntry(sharedPath)
+    assert.match(updatedEntry.href, /\/shared\.ts\?t=\d+$/)
+    assert.ok(updatedEntry.preloads.includes(updatedEntry.href))
+
+    let updatedBoundaryEntry = await server.getScriptEntry(hmrConsumerPath)
+    assert.match(updatedBoundaryEntry.href, /\/hmr-consumer\.ts\?t=\d+$/)
+    assert.ok(updatedBoundaryEntry.preloads.includes(updatedBoundaryEntry.href))
+
+    await fs.writeFile(sharedPath, "export const value = 'after again'")
+    await page.locator('body[data-hmr-value="after again"]').waitFor()
+
+    let latestEntry = await server.getScriptEntry(sharedPath)
+    assert.match(latestEntry.href, /\/shared\.ts\?t=\d+$/)
+    assert.notEqual(latestEntry.href, updatedEntry.href)
+    assert.ok(latestEntry.preloads.includes(latestEntry.href))
+
+    let latestBoundaryEntry = await server.getScriptEntry(hmrConsumerPath)
+    assert.match(latestBoundaryEntry.href, /\/hmr-consumer\.ts\?t=\d+$/)
+    assert.notEqual(latestBoundaryEntry.href, updatedBoundaryEntry.href)
+    assert.ok(latestBoundaryEntry.preloads.includes(latestBoundaryEntry.href))
+    assert.deepEqual(latestBoundaryEntry.importMap, updatedBoundaryEntry.importMap)
+    assert.doesNotMatch(JSON.stringify(latestBoundaryEntry.importMap), /[?&]t=/)
+
+    let lateEntry = await server.getScriptEntry(lateEntryPath)
+    assert.match(lateEntry.href, /\/late\.ts$/)
+    assert.ok(lateEntry.preloads.includes(latestEntry.href))
+    assert.doesNotMatch(JSON.stringify(lateEntry.importMap), /[?&]t=/)
+    let lateEntrySource = await fetch(new URL(lateEntry.href, server.baseUrl)).then((response) =>
+      response.text(),
+    )
+    assert.ok(lateEntrySource.includes(latestEntry.href))
+    assert.doesNotMatch(lateEntrySource, /shared-barrel\.ts/)
+    await page.evaluate(async (href) => import(href), lateEntry.href)
+    assert.equal(await page.locator('body').getAttribute('data-late-value'), 'after again')
+  })
+
   it('recovers an accepted browser module after a failed transform is fixed', async (t) => {
     let fixture = await createHmrFixture()
 
@@ -1103,6 +1192,7 @@ type NodeHmrFixture = {
 type HmrTestServer = {
   baseUrl: string
   close(): Promise<void>
+  getScriptEntry(filePath: string): ReturnType<AssetServer['getScriptEntry']>
   restartAssets(): Promise<void>
   startAssets(): Promise<void>
   stopAssets(): Promise<void>
@@ -2118,6 +2208,10 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
 
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
+    getScriptEntry(filePath) {
+      if (!assetServer) throw new Error('Asset server is not running')
+      return assetServer.getScriptEntry(filePath)
+    },
     async restartAssets() {
       await stopAssets()
       await startAssets()
