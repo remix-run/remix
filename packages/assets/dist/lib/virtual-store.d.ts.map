@@ -1,0 +1,1 @@
+{"version":3,"file":"virtual-store.d.ts","sourceRoot":"","sources":["../../src/lib/virtual-store.ts"],"names":[],"mappings":"AAkBA,wBAAgB,2BAA2B,CAAC,OAAO,EAAE;IACnD,MAAM,EAAE,QAAQ,CAAC,MAAM,CAAC,MAAM,EAAE,MAAM,CAAC,CAAC,CAAA;IACxC,OAAO,EAAE,MAAM,CAAA;CAChB,GAAG;IACF,MAAM,EAAE,MAAM,CAAC,MAAM,EAAE,MAAM,CAAC,CAAA;IAC9B,OAAO,EAAE,MAAM,CAAA;CAChB,EAAE,CAcF"}
