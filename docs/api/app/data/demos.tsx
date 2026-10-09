@@ -126,7 +126,7 @@ function getDemoPackageSpecifier(
   slug: string,
 ): string {
   let modulePath = moduleParts.filter((part) => part !== 'demos').join('/')
-  let packageSpecifier = `@remix-run/${packageSegment}/${modulePath}`
+  let packageSpecifier = ['@remix-run', packageSegment, modulePath].filter(Boolean).join('/')
 
   if (packageSegment === 'ui' && moduleParts[0] === 'components') {
     let primitivesSpecifier = `${packageSpecifier}/primitives`
