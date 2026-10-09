@@ -1,0 +1,1 @@
+`remix/component` supports disabling automatic focus resets during intercepted navigation. Scroll and focus controls accept `"after-transition"` and `"manual"` in `navigate()` / `link()` options and HTML attributes, while existing boolean values remain supported (see #11939).

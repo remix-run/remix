@@ -2,6 +2,12 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
 ## v0.14.2
 
 ### Patch Changes

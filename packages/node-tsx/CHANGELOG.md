@@ -2,6 +2,12 @@
 
 This is the changelog for [`node-tsx`](https://github.com/remix-run/remix/tree/main/packages/node-tsx). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
 ## v0.1.2
 
 ### Patch Changes

@@ -2,6 +2,17 @@
 
 This is the changelog for [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table@1.0.0)
+
 ## v0.6.4
 
 ### Patch Changes

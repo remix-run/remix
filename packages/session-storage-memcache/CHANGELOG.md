@@ -2,6 +2,17 @@
 
 This is the changelog for [`session-storage-memcache`](https://github.com/remix-run/remix/tree/main/packages/session-storage-memcache). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`session@1.0.0`](https://github.com/remix-run/remix/releases/tag/session@1.0.0)
+
 ## v0.1.3
 
 ### Patch Changes

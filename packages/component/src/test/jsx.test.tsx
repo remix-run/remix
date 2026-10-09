@@ -18,6 +18,47 @@ describe('jsx', () => {
     expect(element.props.children).toEqual('Hello, world!')
   })
 
+  it('preserves generic component prop types in JSX', () => {
+    type Row = { id: number; label: string }
+    type ListProps<T> = { rows: T[]; renderRow: (row: T) => RemixNode }
+
+    let GenericList =
+      <T,>(handle: Handle<ListProps<T>>) =>
+      () => <div>{handle.props.rows.map(handle.props.renderRow)}</div>
+
+    let explicit = (
+      <GenericList<Row>
+        rows={[{ id: 1, label: 'First' }]}
+        renderRow={(row) => {
+          type InferredRow = Assert<Equal<typeof row, Row>>
+          return row.label
+        }}
+      />
+    )
+
+    let explicitWithWrongRow = (
+      <GenericList<Row>
+        // @ts-expect-error - generic row types still validate the rows prop
+        rows={[{ id: 'wrong', label: 'First' }]}
+        renderRow={(row) => row.label}
+      />
+    )
+
+    let inferred = (
+      <GenericList
+        rows={[{ id: 1, label: 'First' }]}
+        renderRow={(row) => {
+          type InferredRow = Assert<Equal<typeof row, Row>>
+          return row.label
+        }}
+      />
+    )
+
+    expect(explicit).toBeDefined()
+    expect(explicitWithWrongRow).toBeDefined()
+    expect(inferred).toBeDefined()
+  })
+
   /* oxlint-disable eslint/no-unused-vars */
   it('warns when the wrong type of a prop is used', () => {
     let element = <a target="_blank">Hello, world!</a>
@@ -103,6 +144,24 @@ describe('jsx', () => {
       expect(lowercase.props.srcdoc).toBeDefined()
     })
 
+    it('accepts navigation reset values and rejects unsupported values', () => {
+      let manual = <a data-rmx-reset-scroll="manual" data-rmx-reset-focus="manual" />
+      let afterTransition = (
+        <form data-rmx-reset-scroll="after-transition" data-rmx-reset-focus="after-transition" />
+      )
+      let legacyFalse = <a data-rmx-reset-scroll="false" data-rmx-reset-focus="false" />
+      let legacyTrue = <form data-rmx-reset-scroll="true" data-rmx-reset-focus="true" />
+
+      // @ts-expect-error scroll accepts only Navigation API values and legacy boolean strings
+      let badAnchorScroll = <a data-rmx-reset-scroll="automatic" />
+      // @ts-expect-error focus accepts only Navigation API values and legacy boolean strings
+      let badAnchorFocus = <a data-rmx-reset-focus="automatic" />
+      // @ts-expect-error scroll accepts only Navigation API values and legacy boolean strings
+      let badFormScroll = <form data-rmx-reset-scroll="automatic" />
+      // @ts-expect-error focus accepts only Navigation API values and legacy boolean strings
+      let badFormFocus = <form data-rmx-reset-focus="automatic" />
+    })
+
     it('accepts booleanish string attributes', () => {
       let contentEditable = <div contentEditable="false" />
       let draggable = <img alt="" draggable="false" />
@@ -152,6 +211,60 @@ describe('jsx', () => {
       let good = <Counter initialCount={10} label="Count" />
       // @ts-expect-error - wrong type
       let bad = <Counter initialCount={{ initial: 10 }} label={10} />
+    })
+
+    it('infers component props from a partial handle', () => {
+      function Label(handle: Pick<Handle<{ label: string }>, 'props'>) {
+        return () => <span>{handle.props.label}</span>
+      }
+
+      let element = <Label label="Hello" />
+      // @ts-expect-error - label must be a string
+      let wrongType = <Label label={123} />
+      // @ts-expect-error - component props must be passed as JSX attributes
+      let nestedProps = <Label props={{ label: 'Hello' }} />
+
+      expect(element.props).toEqual({ label: 'Hello' })
+    })
+
+    it('preserves generic component props from a partial handle', () => {
+      function GenericLabel<value>(
+        handle: Pick<Handle<{ value: value; renderValue: (value: value) => RemixNode }>, 'props'>,
+      ) {
+        return () => <span>{handle.props.renderValue(handle.props.value)}</span>
+      }
+
+      let explicit = (
+        <GenericLabel<string>
+          value="Hello"
+          renderValue={(value) => {
+            type InferredValue = Assert<Equal<typeof value, string>>
+            return value
+          }}
+        />
+      )
+      let inferred = (
+        <GenericLabel
+          value="Hello"
+          renderValue={(value) => {
+            type InferredValue = Assert<Equal<typeof value, string>>
+            return value
+          }}
+        />
+      )
+
+      expect(explicit.props.value).toBe('Hello')
+      expect(inferred.props.value).toBe('Hello')
+    })
+
+    it('accepts components with handles typed without props', () => {
+      function Identifier(handle: Pick<Handle, 'id'>) {
+        return () => <span>{handle.id}</span>
+      }
+
+      let element = <Identifier />
+
+      expect(element.props).toEqual({})
     })
 
     it('infers component props with context', () => {

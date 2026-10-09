@@ -2,6 +2,12 @@
 
 This is the changelog for [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
 ## v0.7.0
 
 ### Minor Changes
