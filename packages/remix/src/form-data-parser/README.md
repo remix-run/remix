@@ -147,7 +147,7 @@ async function uploadHandler(fileUpload: FileUpload) {
 }
 ```
 
-This example reuses each user's avatar key, so `atomicWrites: true` keeps their previous avatar intact if a replacement upload fails. The returned storage key becomes the field's value in the parsed `FormData`. Applications must still coordinate overlapping operations, including consuming stored files. Before enabling atomic writes on an existing shared directory, upgrade every process that accesses it; see [filesystem storage's upgrade guidance](https://github.com/remix-run/remix/tree/main/packages/file-storage#upgrading-existing-storage).
+This example reuses each user's avatar key, so `atomicWrites: true` keeps their previous avatar intact if a replacement upload fails. The returned storage key becomes the field's value in the parsed `FormData`. Applications must still coordinate overlapping operations, including consuming stored files. Before enabling atomic writes on an existing shared directory, upgrade every process that accesses it; see [filesystem storage's upgrade guidance](../file-storage/README.md#upgrading-existing-storage).
 
 ## Demos
 
