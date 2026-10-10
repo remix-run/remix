@@ -368,6 +368,125 @@ describe('vnode mixins', () => {
     expect(persistApiSeenOnRemoveB).toBe(false)
   })
 
+  it('removes old mixins and aborts their signals before inserting new mixins', () => {
+    let events: string[] = []
+    let createTrackedMixin = (name: string) =>
+      createMixin((handle) => {
+        handle.addEventListener('insert', () => {
+          events.push(`${name} insert`)
+        })
+        handle.addEventListener('remove', () => {
+          events.push(`${name} remove`)
+        })
+        handle.signal.addEventListener('abort', () => {
+          events.push(`${name} abort`)
+        })
+      })
+    let firstChild = createTrackedMixin('first child')
+    let secondChild = createTrackedMixin('second child')
+    let firstParent = createMixin((handle) => {
+      handle.addEventListener('insert', () => {
+        events.push('first parent insert')
+      })
+      handle.addEventListener('remove', () => {
+        events.push('first parent remove')
+      })
+      handle.signal.addEventListener('abort', () => {
+        events.push('first parent abort')
+      })
+      return () => firstChild()
+    })
+    let secondParent = createMixin((handle) => {
+      handle.addEventListener('insert', () => {
+        events.push('second parent insert')
+      })
+      handle.addEventListener('remove', () => {
+        events.push('second parent remove')
+      })
+      handle.signal.addEventListener('abort', () => {
+        events.push('second parent abort')
+      })
+      return () => secondChild()
+    })
+    let root = createRoot(document.createElement('div'))
+
+    root.render(<button mix={firstParent()} />)
+    root.flush()
+    events = []
+    root.render(<button mix={secondParent()} />)
+    root.flush()
+
+    expect(events).toEqual([
+      'first parent remove',
+      'first parent abort',
+      'first child remove',
+      'first child abort',
+      'second parent insert',
+      'second child insert',
+    ])
+  })
+
+  it('finishes replacement and trailing removal cleanup before insertion without removing retained mixins', () => {
+    let events: string[] = []
+    let retainedSignal = AbortSignal.abort()
+    let retained = createMixin((handle) => {
+      retainedSignal = handle.signal
+      handle.addEventListener('insert', () => {
+        events.push('retained insert')
+      })
+      handle.addEventListener('remove', () => {
+        events.push('retained remove')
+      })
+      handle.signal.addEventListener('abort', () => {
+        events.push('retained abort')
+      })
+    })
+    function createTrackedMixin(name: string) {
+      return createMixin((handle) => {
+        handle.addEventListener('insert', () => {
+          events.push(`${name} insert`)
+        })
+        handle.addEventListener('remove', () => {
+          events.push(`${name} remove`)
+        })
+        handle.signal.addEventListener('abort', () => {
+          events.push(`${name} abort`)
+        })
+      })
+    }
+    let first = createTrackedMixin('first')
+    let second = createTrackedMixin('second')
+    let trailing = createTrackedMixin('trailing')
+    let nextFirst = createTrackedMixin('next first')
+    let nextSecond = createTrackedMixin('next second')
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    root.render(<button mix={[retained(), first(), second(), trailing()]} />)
+    root.flush()
+    let button = container.querySelector('button')
+    invariant(button)
+    let initialRetainedSignal = retainedSignal
+    events = []
+
+    root.render(<button mix={[retained(), nextFirst(), nextSecond()]} />)
+    root.flush()
+
+    let cleanupEvents = [
+      'first remove',
+      'first abort',
+      'second remove',
+      'second abort',
+      'trailing remove',
+      'trailing abort',
+    ]
+    expect(events.slice(0, cleanupEvents.length).sort()).toEqual(cleanupEvents.sort())
+    expect(events.slice(cleanupEvents.length)).toEqual(['next first insert', 'next second insert'])
+    expect(retainedSignal).toBe(initialRetainedSignal)
+    expect(retainedSignal.aborted).toBe(false)
+    expect(container.querySelector('button')).toBe(button)
+  })
+
   it('exposes persistNode in beforeRemove lifecycle', () => {
     let beforeRemoveCalls = 0
     let persistApiSeen = false
@@ -495,6 +614,41 @@ describe('vnode mixins', () => {
     expect(div.dataset.b).toBe('1')
     expect(div.dataset.base).toBe('1')
     expect(new Set(calls)).toEqual(new Set(['a', 'b', 'base']))
+  })
+
+  it('preserves a nested ref when an unrelated conditional mixin changes', () => {
+    let getNode: () => Element | null = () => null
+    let before = createMixin(() => {})
+    let after = createMixin(() => {})
+    let stableStyle = createMixin(() => {})
+    let activeStyle = createMixin(() => {})
+    let composite = createMixin(() => {
+      let node: Element | null = null
+      getNode = () => node
+
+      return () => [
+        before(),
+        ref((nextNode, signal) => {
+          node = nextNode
+          signal.addEventListener('abort', () => {
+            if (node === nextNode) {
+              node = null
+            }
+          })
+        }),
+        after(),
+      ]
+    })
+    let active = true
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    for (let index = 0; index < 4; index++) {
+      root.render(<button mix={[composite(), stableStyle(), ...(active ? [activeStyle()] : [])]} />)
+      root.flush()
+      expect(getNode()).toBe(container.querySelector('button'))
+      active = !active
+    }
   })
 
   it('composes on mixins across nested mixins', () => {
