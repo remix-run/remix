@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import { SourceMapConsumer } from 'source-map-js/source-map.js'
 
 import { transformComponentsForBrowser, transformComponentsForServer } from './transform.ts'
@@ -1311,58 +1311,95 @@ function getLineAndColumn(source: string, search: string): { column: number; lin
   }
 }
 
-
-
-for (let [name, transform] of [
-  ['server', transformComponentsForServer],
-  ['browser', transformComponentsForBrowser],
-] as const) {
-  describe(`${name} client-entry boundary compatibility`, () => {
-    let plain = `export function Counter() { return () => 'Count' }`
-    let wrapped = `export const Counter = clientEntry(import.meta.url, function Counter() { return () => 'Count' })`
-
-    it('invalidates while evaluating an added or removed client entry', () => {
-      for (let [before, after] of [[plain, wrapped], [wrapped, plain]]) {
-        let data = {}
-        assert.deepEqual(evaluateBoundary(before, data), [])
-        assert.deepEqual(evaluateBoundary(after, data), [
-          'Updated component module changed its client entries',
-        ])
-      }
-    })
-
-    it('accepts repeated render-only edits with unchanged entry status', () => {
-      for (let initial of [plain, wrapped]) {
-        let data = {}
-        for (let label of ['One', 'Two', 'Three']) {
-          assert.deepEqual(evaluateBoundary(initial.replace("'Count'", JSON.stringify(label)), data), [])
-        }
-      }
-    })
-
-    it('accepts an unchanged module containing plain and client-entry components', () => {
-      let data = {}
-      let source = `${plain}\n${wrapped.replaceAll('Counter', 'Other')}`
-      assert.deepEqual(evaluateBoundary(source, data), [])
-      assert.deepEqual(evaluateBoundary(source, data), [])
-    })
-
-    function evaluateBoundary(source: string, data: object): string[] {
-      let result = transform(source, { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' })
-      assert.equal(result.transformed, true)
-      let index = result.code.indexOf('if (import.meta.hot) {')
-      assert.notEqual(index, -1)
-      let messages: string[] = []
-      let hot = {
-        data,
-        accept() {},
-        invalidate(message: string) { messages.push(message) },
-      }
-      // Execute the generated module-evaluation boundary check, before acceptance.
-      new Function('hot', 'Counter', 'Other', result.code.slice(index).replaceAll('import.meta.hot', 'hot'))(
-        hot, () => {}, () => {},
-      )
-      return messages
-    }
+describe('server client-entry boundary compatibility', () => {
+  it('invalidates while evaluating an added or removed client entry', () => {
+    assertClientEntryStatusChanges(transformComponentsForServer)
   })
+
+  it('accepts repeated render-only edits with unchanged entry status', () => {
+    assertClientEntryRenderEdits(transformComponentsForServer)
+  })
+
+  it('accepts an unchanged module containing plain and client-entry components', () => {
+    let data = {}
+    let source = `${plainComponentSource}\n${clientEntryComponentSource.replaceAll('Counter', 'Other')}`
+    assert.deepEqual(evaluateBoundary(transformComponentsForServer, source, data), [])
+    assert.deepEqual(evaluateBoundary(transformComponentsForServer, source, data), [])
+  })
+})
+
+describe('browser client-entry boundary compatibility', () => {
+  it('invalidates while evaluating an added or removed client entry', () => {
+    assertClientEntryStatusChanges(transformComponentsForBrowser)
+  })
+
+  it('accepts repeated render-only edits with unchanged entry status', () => {
+    assertClientEntryRenderEdits(transformComponentsForBrowser)
+  })
+
+  it('accepts an unchanged module containing plain and client-entry components', () => {
+    let data = {}
+    let source = `${plainComponentSource}\n${clientEntryComponentSource.replaceAll('Counter', 'Other')}`
+    assert.deepEqual(evaluateBoundary(transformComponentsForBrowser, source, data), [])
+    assert.deepEqual(evaluateBoundary(transformComponentsForBrowser, source, data), [])
+  })
+})
+
+const plainComponentSource = `export function Counter() { return () => 'Count' }`
+const clientEntryComponentSource = `export const Counter = clientEntry(import.meta.url, function Counter() { return () => 'Count' })`
+
+function assertClientEntryStatusChanges(transform: typeof transformComponentsForServer): void {
+  for (let [before, after] of [
+    [plainComponentSource, clientEntryComponentSource],
+    [clientEntryComponentSource, plainComponentSource],
+  ]) {
+    let data = {}
+    assert.deepEqual(evaluateBoundary(transform, before, data), [])
+    assert.deepEqual(evaluateBoundary(transform, after, data), [
+      'Updated component module changed its client entries',
+    ])
+  }
+}
+
+function assertClientEntryRenderEdits(transform: typeof transformComponentsForServer): void {
+  for (let initial of [plainComponentSource, clientEntryComponentSource]) {
+    let data = {}
+    for (let label of ['One', 'Two', 'Three']) {
+      assert.deepEqual(
+        evaluateBoundary(transform, initial.replace("'Count'", JSON.stringify(label)), data),
+        [],
+      )
+    }
+  }
+}
+
+function evaluateBoundary(
+  transform: typeof transformComponentsForServer,
+  source: string,
+  data: object,
+): string[] {
+  let result = transform(source, { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' })
+  assert.equal(result.transformed, true)
+  let index = result.code.indexOf('if (import.meta.hot) {')
+  assert.notEqual(index, -1)
+  let messages: string[] = []
+  let hot = {
+    data,
+    accept() {},
+    invalidate(message: string) {
+      messages.push(message)
+    },
+  }
+  // Execute the generated module-evaluation boundary check, before acceptance.
+  new Function(
+    'hot',
+    'Counter',
+    'Other',
+    result.code.slice(index).replaceAll('import.meta.hot', 'hot'),
+  )(
+    hot,
+    () => {},
+    () => {},
+  )
+  return messages
 }

@@ -675,6 +675,61 @@ describe('component-hmr e2e', { skip: isBun }, () => {
     }
   })
 
+  it('adds hydration boundaries in fresh responses when clientEntry is added through node-hmr', async () => {
+    let fixture = await createNodeHmrFixture({ serverImportsClientField: true })
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      await write(
+        fixture.rootDir,
+        'app/ClientField.tsx',
+        getClientFieldSource({ clientEntry: false, child: 'Client: plain' }),
+      )
+      server = await startNodeHmrFixtureServer(fixture)
+      await assertFreshClientFieldResponses(server, 'Client: plain', false)
+
+      await editClientField(fixture, server, 'Client: plain render edit', false)
+      assert.equal(server.readyCount, 1)
+
+      await editClientField(fixture, server, 'Client: entry added', true)
+      await server.waitForReady(1)
+      assert.equal(server.readyCount, 2)
+
+      await editClientField(fixture, server, 'Client: entry render edit', true)
+      assert.equal(server.readyCount, 2)
+    } catch (error) {
+      throw new Error(`${String(error)}\n${server?.output}`, { cause: error })
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
+  it('removes hydration boundaries in fresh responses when clientEntry is removed through node-hmr', async () => {
+    let fixture = await createNodeHmrFixture({ serverImportsClientField: true })
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      await assertFreshClientFieldResponses(server, 'Client: before', true)
+
+      await editClientField(fixture, server, 'Client: entry render edit', true)
+      assert.equal(server.readyCount, 1)
+
+      await editClientField(fixture, server, 'Client: entry removed', false)
+      await server.waitForReady(1)
+      assert.equal(server.readyCount, 2)
+
+      await editClientField(fixture, server, 'Client: plain render edit', false)
+      assert.equal(server.readyCount, 2)
+    } catch (error) {
+      throw new Error(`${String(error)}\n${server?.output}`, { cause: error })
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
   it('reloads the page after a server-imported node-hmr client entry export is added', async (t) => {
     let fixture = await createNodeHmrFixture({ serverImportsClientField: true })
     let server: NodeHmrTestServer | undefined
@@ -1706,6 +1761,7 @@ async function removeFixtureDir(fixturePath: string): Promise<void> {
 
 function getClientFieldSource(
   options: {
+    clientEntry?: boolean
     child?: string
     extraExports?: string
   } = {},
@@ -1714,7 +1770,9 @@ function getClientFieldSource(
     "import { type Handle, clientEntry } from '@remix-run/component'",
     "import { ClientMessage } from './client-message.tsx'",
     '',
-    'export const ClientField = clientEntry(import.meta.url, function ClientField(handle: Handle) {',
+    options.clientEntry === false
+      ? 'export function ClientField(handle: Handle) {'
+      : 'export const ClientField = clientEntry(import.meta.url, function ClientField(handle: Handle) {',
     '  void handle',
     '  return () => (',
     '    <>',
@@ -1722,10 +1780,71 @@ function getClientFieldSource(
     `      <span data-testid="server-client-label">${options.child ?? '<ClientMessage />'}</span>`,
     '    </>',
     '  )',
-    '})',
+    options.clientEntry === false ? '}' : '})',
     '',
     options.extraExports ?? '',
   ].join('\n')
+}
+
+async function editClientField(
+  fixture: NodeHmrFixture,
+  server: NodeHmrTestServer,
+  text: string,
+  clientEntry: boolean,
+): Promise<void> {
+  let filePath = path.join(fixture.rootDir, 'app/ClientField.tsx')
+  let temporaryPath = `${filePath}.tmp`
+  await fs.writeFile(temporaryPath, getClientFieldSource({ child: text, clientEntry }))
+  await fs.rename(temporaryPath, filePath)
+
+  await waitFor(
+    async () => {
+      try {
+        let response = await fetch(server.baseUrl, { signal: AbortSignal.timeout(5000) })
+        let html = await response.text()
+        return response.ok && html.includes(text)
+      } catch (error) {
+        // A request can reach the previous child while HMR is restarting it.
+        if (
+          error instanceof TypeError ||
+          (error instanceof Error && error.name === 'TimeoutError')
+        ) {
+          return false
+        }
+        throw error
+      }
+    },
+    () => `Timed out waiting for fresh response containing ${text}.\n${server.output}`,
+    browserStartupTimeout,
+  )
+  await assertFreshClientFieldResponses(server, text, clientEntry)
+}
+
+async function assertFreshClientFieldResponses(
+  server: NodeHmrTestServer,
+  text: string,
+  clientEntry: boolean,
+): Promise<void> {
+  // Check a second request too: stale wrapper metadata persists beyond the first response.
+  for (let request = 0; request < 2; request++) {
+    let response = await fetch(server.baseUrl, { signal: AbortSignal.timeout(5000) })
+    let html = await response.text()
+    assert.equal(response.status, 200, html)
+    assert.ok(html.includes(text), html)
+    let boundaries = [...html.matchAll(/<!-- rmx:h:([^ ]+) -->/g)]
+    assert.equal(boundaries.length, clientEntry ? 1 : 0, html)
+    assert.equal([...html.matchAll(/<!-- \/rmx:h -->/g)].length, clientEntry ? 1 : 0, html)
+
+    let dataScript = html.match(/<script type="application\/json" id="rmx-data">(.*?)<\/script>/s)
+    if (clientEntry) {
+      assert.ok(dataScript, html)
+      let data = JSON.parse(dataScript[1])
+      assert.deepEqual(Object.keys(data.h), [boundaries[0][1]])
+      assert.equal(data.h[boundaries[0][1]].exportName, 'ClientField')
+    } else {
+      assert.equal(dataScript, null, html)
+    }
+  }
 }
 
 function getNodeHmrProxyDevSource(): string {
@@ -2732,10 +2851,11 @@ async function get(page: TestPage, pathname: string): Promise<void> {
 async function waitFor(
   check: () => boolean | Promise<boolean>,
   getTimeoutMessage: () => string = () => 'Timed out waiting for condition',
+  timeoutMs = 5_000,
 ): Promise<void> {
   let start = Date.now()
 
-  while (Date.now() - start < 5_000) {
+  while (Date.now() - start < timeoutMs) {
     if (await check()) return
     await new Promise((resolve) => setTimeout(resolve, 25))
   }
