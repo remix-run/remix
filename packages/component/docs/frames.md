@@ -209,13 +209,16 @@ async function resolveFrame(src, options) {
   let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
   if (options?.target != null) headers.set('X-Remix-Target', options.target)
 
-  let response = await fetch(src, {
-    body: getRequestBody(options),
+  let { body, encType } = getRequestBody(options)
+  if (encType) headers.set('Content-Type', encType)
+  let requestInit = {
+    body,
     headers,
     method: options?.method,
     mode: 'same-origin',
     signal: options?.signal,
-  })
+  }
+  let response = await fetch(src, requestInit)
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
   if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
@@ -227,26 +230,31 @@ async function resolveFrame(src, options) {
 
 function getRequestBody(options) {
   let formData = options?.formData
-  let method = options?.method
-  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
+  if (!formData) return {}
+  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return {}
 
-  if (options?.encType === 'text/plain') {
+  let encType = options?.encType?.toLowerCase()
+
+  if (encType === 'multipart/form-data') return { body: formData }
+
+  if (encType === 'text/plain') {
     let body = ''
     for (let [name, value] of formData) {
       name = normalizeLineBreaks(name)
       value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
       body += `${name}=${value}\r\n`
     }
-    return new Blob([body], { type: 'text/plain' })
+    return { body: new Blob([body], { type: 'text/plain' }), encType: 'text/plain' }
   }
-
-  if (options?.encType !== 'application/x-www-form-urlencoded') return formData
 
   let body = new URLSearchParams()
   for (let [name, value] of formData) {
-    body.append(name, typeof value === 'string' ? value : value.name)
+    body.append(
+      normalizeLineBreaks(name),
+      normalizeLineBreaks(typeof value === 'string' ? value : value.name),
+    )
   }
-  return body
+  return { body, encType: 'application/x-www-form-urlencoded' }
 }
 
 function normalizeLineBreaks(value) {
@@ -282,8 +290,21 @@ soft-navigation behavior applies even when the page does not render an explicit 
 - `data-rmx-target="name"` reloads a named frame.
 - `data-rmx-src="/frame"` overrides the source of the mounted frame selected by `data-rmx-target`, while `href` remains the navigation destination.
 - `data-rmx-history="push|replace"` controls how the navigation updates history.
-- `data-rmx-reset-scroll="false"` preserves the current scroll position.
+- `data-rmx-reset-scroll="manual"` preserves the current scroll position.
+- `data-rmx-reset-focus="manual"` disables the browser's automatic focus reset after navigation.
 - `data-rmx-document` leaves the link as a normal document navigation.
+
+Both controls accept the Navigation API values `"after-transition"` (the default) and `"manual"`. A submit button's value takes precedence over its form's value. The equivalent options for `navigate()` and `link()` are `resetScroll: 'manual'` and `resetFocus: 'manual'`:
+
+```tsx
+<a href="/search?page=2" data-rmx-reset-scroll="manual" data-rmx-reset-focus="manual">
+  Next page
+</a>
+```
+
+Boolean options and the `"true"` / `"false"` attribute values remain supported. `true` corresponds to `"after-transition"` and `false` to `"manual"`. Omitting a control keeps the default behavior.
+
+Disabling the reset does not retain focus if navigation removes the focused element.
 
 During navigation, the top frame's source stays in sync with the browser URL. `data-rmx-src` only changes the requested URL when `data-rmx-target` resolves to a mounted named frame. If the target is omitted, an intercepted navigation reloads the top frame from `href`. If a specified target does not match a mounted frame, Remix leaves fresh link, form, and `navigate()` navigations to the browser. Back and forward traversal reloads the destination document instead of reconciling stale frame content. Native form navigation preserves the selected method, body, files, and submitter overrides.
 
@@ -308,7 +329,8 @@ Eligible same-origin form submissions use the same frame navigation path as link
 - `data-rmx-target="name"` reloads a named frame.
 - `data-rmx-src="/frame"` overrides the source of the mounted frame selected by `data-rmx-target`, while the form action remains the navigation destination.
 - `data-rmx-history="push|replace"` overrides how the navigation updates history.
-- `data-rmx-reset-scroll="false"` preserves the current scroll position.
+- `data-rmx-reset-scroll="manual"` preserves the current scroll position.
+- `data-rmx-reset-focus="manual"` disables the browser's automatic focus reset after navigation.
 - `data-rmx-document` leaves the submission as a normal document navigation.
 - Submitter overrides such as `formmethod`, `formenctype`, and `formtarget` take precedence over the form attributes.
 - Cross-origin submissions, `method="dialog"`, and `target="_blank"` are left to the browser.
@@ -332,6 +354,49 @@ The action should return HTML suitable for the targeted frame while retaining it
 Enhanced non-GET submissions to the current URL replace its navigation history entry instead of pushing a duplicate. Submissions to a different URL push a new entry, as do GET submissions whose values are represented in the destination URL. The `data-rmx-history` attribute overrides that default: use `data-rmx-history="replace"` to force replacement or `data-rmx-history="push"` to force a push. Non-GET `FormData` is used only for the active frame reload and is not retained in history.
 
 Forms work as normal document submissions before the client runtime loads and whenever they use `data-rmx-document`, so this behavior remains progressively enhanced. Browsers ignore `data-rmx-history` without the client runtime and use their normal document history behavior.
+
+### Reload requests
+
+Pass `src` to reload a different source in one call. It becomes the frame's source for subsequent reloads, just as assigning `frame.src` before calling `reload()` would:
+
+```tsx
+await handle.frame.reload({ src: '/account/edit' })
+```
+
+Pass `method`, `encType`, and `body` to send data through the frame resolver and render its response. Reloads make one resolver request and do not change browser history:
+
+```tsx
+let body = new FormData()
+body.set('displayName', 'Ada')
+await handle.frames.get('account')?.reload({
+  src: '/account/edit',
+  method: 'post',
+  body,
+})
+```
+
+`body` accepts `FormData`. The supported request methods are GET and POST, case-insensitive; missing or invalid methods default to GET. GET replaces the source's query with URL-encoded fields and sends no request body, regardless of `encType`. Repeated fields and the URL fragment are preserved, and the resulting URL becomes the source for subsequent reloads.
+
+For POST, form data defaults to `application/x-www-form-urlencoded`. Set `encType` to `multipart/form-data` to send files and let Fetch generate the boundary, or `text/plain` to send CRLF-delimited entries. Encoding names are case-insensitive; missing or invalid encodings fall back to URL encoding. URL-encoded and plain-text submissions use file names in place of file contents and normalize line breaks to CRLF.
+
+Omitted `body` means no request body, including on subsequent reloads after a POST.
+
+For a POST form, construct form data explicitly from the form element. Reloads do not perform constraint validation or dispatch a submit event:
+
+```tsx
+if (form.reportValidity()) {
+  await handle.frame.reload({
+    src: form.action,
+    method: form.method,
+    encType: form.enctype,
+    body: new FormData(form, saveButton),
+  })
+}
+```
+
+Custom resolvers receive the requested `src`, `method`, and `signal`. GET form values are already encoded in `src`, with `formData` and `encType` omitted. POST reloads provide `formData` and a normalized `encType`, using the same resolver options as navigation form submissions; the resolver applies that encoding. Redirect responses render their final content without changing the frame's requested source or the browser URL.
+
+A newer reload cancels earlier client work for that frame, including pending requests and streamed content. Disposing the frame also cancels its active reload. Cancellation resolves with an aborted signal; other errors reject. Cancelling client work cannot undo a mutation the server has already performed.
 
 ## Frame lifecycle
 

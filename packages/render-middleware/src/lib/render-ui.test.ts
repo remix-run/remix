@@ -247,7 +247,10 @@ describe('render', () => {
     assert.match(slot?.[1] ?? '', /<h2>Blocking content<\/h2>/)
     assert.ok(html.indexOf('Blocking content') < html.indexOf('<p>after</p>'))
     // The non-blocking frame body streams as a template chunk
-    assert.match(html, /<template id="f[^"]+">[\s\S]*?Async content[\s\S]*?<\/template>/)
+    assert.match(
+      html,
+      /<template id="f[^"]+">[\s\S]*?Async content[\s\S]*?<!--rmx:template-end--><\/template>/,
+    )
     // The frame responses' own doctypes are stripped from the outer document
     assert.doesNotMatch(html.slice('<!DOCTYPE html>'.length), /<!DOCTYPE html>/i)
   })

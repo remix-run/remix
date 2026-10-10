@@ -115,13 +115,16 @@ async function resolveFrame(src, options) {
   let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
   if (options?.target != null) headers.set('X-Remix-Target', options.target)
 
-  let response = await fetch(src, {
-    body: getRequestBody(options),
+  let { body, encType } = getRequestBody(options)
+  if (encType) headers.set('Content-Type', encType)
+  let requestInit = {
+    body,
     headers,
     method: options?.method,
     mode: 'same-origin',
     signal: options?.signal,
-  })
+  }
+  let response = await fetch(src, requestInit)
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
   if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
@@ -133,26 +136,31 @@ async function resolveFrame(src, options) {
 
 function getRequestBody(options) {
   let formData = options?.formData
-  let method = options?.method
-  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
+  if (!formData) return {}
+  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return {}
 
-  if (options?.encType === 'text/plain') {
+  let encType = options?.encType?.toLowerCase()
+
+  if (encType === 'multipart/form-data') return { body: formData }
+
+  if (encType === 'text/plain') {
     let body = ''
     for (let [name, value] of formData) {
       name = normalizeLineBreaks(name)
       value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
       body += `${name}=${value}\r\n`
     }
-    return new Blob([body], { type: 'text/plain' })
+    return { body: new Blob([body], { type: 'text/plain' }), encType: 'text/plain' }
   }
-
-  if (options?.encType !== 'application/x-www-form-urlencoded') return formData
 
   let body = new URLSearchParams()
   for (let [name, value] of formData) {
-    body.append(name, typeof value === 'string' ? value : value.name)
+    body.append(
+      normalizeLineBreaks(name),
+      normalizeLineBreaks(typeof value === 'string' ? value : value.name),
+    )
   }
-  return body
+  return { body, encType: 'application/x-www-form-urlencoded' }
 }
 
 function normalizeLineBreaks(value) {
@@ -165,6 +173,16 @@ The default resolver requests HTML. GET form values are already encoded in `src`
 CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass a custom
 `resolveFrame` when the server requires additional headers, another body encoding, or a different
 response policy.
+
+Scroll and focus controls accept the Navigation API values `"after-transition"` (the default) and `"manual"`. Set `data-rmx-reset-scroll="manual"` or `data-rmx-reset-focus="manual"` on a link or form to disable the corresponding automatic behavior. The equivalent options for `navigate()` and `link()` are `resetScroll: 'manual'` and `resetFocus: 'manual'`:
+
+```tsx
+<a href="/search?page=2" data-rmx-reset-scroll="manual" data-rmx-reset-focus="manual">
+  Next page
+</a>
+```
+
+Existing boolean options and `"true"` / `"false"` attribute values remain supported: `true` corresponds to `"after-transition"` and `false` to `"manual"`.
 
 Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
 and forms as document navigations while still hydrating client entries and using explicit frames,
@@ -199,6 +217,22 @@ function AccountPage() {
 ```
 
 Native constraint validation and submitter overrides still apply. GET form values arrive in `src`; non-GET forms provide `formData`, `method`, and `encType` to the resolver. See [Frames](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#form-navigation) for targeting, history behavior, request encoding, opt-outs, and server response guidance.
+
+Reload another source or send a request body without changing browser history:
+
+```tsx
+await handle.frame.reload({ src: '/account/edit' })
+
+let body = new FormData()
+body.set('displayName', 'Ada')
+await handle.frame.reload({
+  src: '/account/edit',
+  method: 'post',
+  body,
+})
+```
+
+`src` becomes the source for subsequent reloads. Pass `FormData` as `body` to submit fields. The method defaults to GET, which encodes the fields into the source query. POST defaults to `application/x-www-form-urlencoded`; use `encType` to select `multipart/form-data` or `text/plain`. Methods and encodings are case-insensitive; unsupported values use the defaults. See [Reload requests](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#reload-requests) for request and cancellation behavior.
 
 Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 

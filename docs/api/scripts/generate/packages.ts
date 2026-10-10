@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as s from 'remix/data-schema'
 import {
+  getDocsPackagePath,
   hasRemixPackage,
   isExcludedRemixPackage,
   mapToRemixPackage,
@@ -106,9 +107,10 @@ async function discoverPackageSubpathOverviews(
 
 export async function writePackageOverviewFiles(overviews: PackageOverview[], docsDir: string) {
   for (let overview of overviews) {
-    let mdPath = path.join(docsDir, overview.docsPackage, 'overview.md')
+    let packagePath = getDocsPackagePath(overview.docsPackage)
+    let mdPath = path.join(docsDir, packagePath, 'overview.md')
     await fs.mkdir(path.dirname(mdPath), { recursive: true })
-    await fs.rm(path.join(docsDir, overview.docsPackage, 'index.md'), { force: true })
+    await fs.rm(path.join(docsDir, packagePath, 'index.md'), { force: true })
 
     let body: string
     if (overview.readmePath) {
