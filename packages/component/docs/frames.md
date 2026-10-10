@@ -22,6 +22,7 @@ function App() {
 
 - **`src`** (required) - The URL to fetch the frame content from.
 - **`fallback`** (optional) - Content to show while the frame is loading. When provided, the frame streams non-blocking (the initial page renders immediately with the fallback, and the real content arrives later). Without a fallback, the frame blocks rendering until its content resolves.
+- **`fallbackOnReloads`** (optional) - Also show `fallback` while a resolved frame reloads. If the reload fails, the fallback remains visible and the error is reported through the app's error handling.
 - **`name`** (optional) - Registers the frame for lookup via `handle.frames.get(name)` from client entries.
 
 ## Blocking vs non-blocking
@@ -38,6 +39,12 @@ The presence of a `fallback` prop determines streaming behavior:
 
 ```tsx
 <Frame src="/recommendations" fallback={<div>Loading...</div>} />
+```
+
+By default, later reloads keep the current content visible until the new content is ready. Set `fallbackOnReloads` to show the fallback during each reload too:
+
+```tsx
+<Frame src="/recommendations" fallback={<div>Loading...</div>} fallbackOnReloads />
 ```
 
 ## Resolving frame content
