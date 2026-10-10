@@ -21,6 +21,7 @@ import {
 } from '../runtime/core/attributes.ts'
 import {
   appendFlushMarker,
+  DOCUMENT_NONCE_META_NAME,
   FRAME_TEMPLATE_END_MARKER,
   type FlushKind,
   stripFlushMarkers,
@@ -53,6 +54,16 @@ export function createVNode(type: ElementType, props: ElementProps, key?: Key): 
 }
 
 /**
+ * Options for server-side rendering to an HTML string.
+ */
+export interface RenderToStringOptions {
+  /**
+   * Content Security Policy nonce for generated import maps, module preloads, and CSS mixin styles.
+   */
+  nonce?: string
+}
+
+/**
  * Options for server-side rendering to a byte stream.
  */
 export interface RenderToStreamOptions {
@@ -64,6 +75,10 @@ export interface RenderToStreamOptions {
   signal?: AbortSignal
   /** Error hook invoked when rendering work throws. */
   onError?: (error: unknown) => void
+  /**
+   * Content Security Policy nonce for generated import maps, module preloads, and CSS mixin styles.
+   */
+  nonce?: string
   /** Callback used to resolve nested frame content during streaming SSR. */
   resolveFrame?: (
     src: string,
@@ -154,6 +169,7 @@ export function ImportMap(handle: Handle<ImportMapProps>): RenderFn {
 }
 
 interface ClientEntryHeadResources {
+  // Preload tags stay nonce-free until the enclosing render serializes its head.
   modulePreloadTags: Set<string>
   importMap?: ImportMapData
 }
@@ -189,6 +205,7 @@ interface RenderContext {
   flushKind: FlushKind
   serverIdScope: string
   serverIdCounter: number
+  nonce?: string
 }
 
 interface ResolvedFrameHtml {
@@ -302,6 +319,7 @@ export function renderToStream(
     flushKind: 'fragment',
     serverIdScope: crypto.randomUUID().slice(0, 8),
     serverIdCounter: 0,
+    nonce: options?.nonce,
   }
 
   function cancel(reason: unknown): void {
@@ -726,6 +744,9 @@ function buildImportMapSegment(props: ElementProps, context: RenderContext): Seg
   }
 
   let { value: _value, ...scriptProps } = props
+  if (scriptProps.nonce === undefined && context.nonce !== undefined) {
+    scriptProps.nonce = context.nonce
+  }
   let attrs = renderAttributes('script', scriptProps, false)
   let segment = staticSeg('')
   context.managedImportMaps.push({ attrs, segment, value })
@@ -1264,10 +1285,14 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 function finalizeHtml(html: string, context: RenderContext): string {
   let hasHtmlRoot = context.flushKind === 'document'
 
-  let preloads = collectModulePreloadTags(context.clientEntryHeadResources)
+  let preloads = collectModulePreloadTags(context.clientEntryHeadResources, context.nonce)
   let styles = collectStyleTags(context)
   let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
-  let headContent = importMapScript + preloads + styles
+  let nonceMeta =
+    hasHtmlRoot && context.nonce !== undefined
+      ? `<meta name="${DOCUMENT_NONCE_META_NAME}" content=""${renderNonceAttribute(context.nonce)}>`
+      : ''
+  let headContent = nonceMeta + importMapScript + preloads + styles
   if (hasHtmlRoot && headContent) {
     let headCloseIndex = html.indexOf('</head>')
     if (headCloseIndex !== -1) {
@@ -1315,15 +1340,18 @@ const FRAME_HEAD_OPEN_TAG = '<head>'
 const FRAME_HEAD_CLOSE_TAG = '</head>'
 const MARKED_MODULE_PRELOAD_START = '<link data-rmx-module-preload rel="modulepreload" href="'
 const MODULE_PRELOAD_END = '" />'
-const MANAGED_IMPORT_MAP_START = '<script data-rmx-import-map type="importmap">'
+const MANAGED_IMPORT_MAP_OPEN_TAG =
+  /^<script data-rmx-import-map type="importmap"(?: nonce="[^"]*")?>/
 const IMPORT_MAP_SCRIPT_END = '</script>'
 
 function createModulePreloadTag(href: string): string {
   return `${MARKED_MODULE_PRELOAD_START}${escapeHtml(href)}${MODULE_PRELOAD_END}`
 }
 
-function collectModulePreloadTags(resources: ClientEntryHeadResources): string {
-  return Array.from(resources.modulePreloadTags).join('')
+function collectModulePreloadTags(resources: ClientEntryHeadResources, nonce?: string): string {
+  return Array.from(resources.modulePreloadTags, (tag) =>
+    tag.replace(' />', () => `${renderNonceAttribute(nonce)} />`),
+  ).join('')
 }
 
 function hoistClientEntryResourcesFromFrameHead(
@@ -1338,8 +1366,9 @@ function hoistClientEntryResourcesFromFrameHead(
   let preloadTags: string[] = []
   let importMaps: ImportMapData[] = []
   let cursor = FRAME_HEAD_OPEN_TAG.length
-  if (html.startsWith(MANAGED_IMPORT_MAP_START, cursor)) {
-    let contentStart = cursor + MANAGED_IMPORT_MAP_START.length
+  let importMapOpenTag = html.slice(cursor).match(MANAGED_IMPORT_MAP_OPEN_TAG)
+  if (importMapOpenTag) {
+    let contentStart = cursor + importMapOpenTag[0].length
     let scriptEnd = html.indexOf(IMPORT_MAP_SCRIPT_END, contentStart)
     if (scriptEnd === -1 || scriptEnd >= headClose) return html
     importMaps.push(parseFrameworkImportMap(html.slice(contentStart, scriptEnd)))
@@ -1347,10 +1376,18 @@ function hoistClientEntryResourcesFromFrameHead(
   }
 
   while (html.startsWith(MARKED_MODULE_PRELOAD_START, cursor)) {
-    let tagEnd = html.indexOf(MODULE_PRELOAD_END, cursor + MARKED_MODULE_PRELOAD_START.length)
-    if (tagEnd === -1 || tagEnd >= headClose) return html
+    let hrefStart = cursor + MARKED_MODULE_PRELOAD_START.length
+    let hrefEnd = html.indexOf('"', hrefStart)
+    if (hrefEnd === -1 || hrefEnd >= headClose) return html
+
+    let tagEnd = html.indexOf(MODULE_PRELOAD_END, hrefEnd)
+    if (tagEnd === -1) return html
     tagEnd += MODULE_PRELOAD_END.length
-    preloadTags.push(html.slice(cursor, tagEnd))
+    if (tagEnd > headClose) return html
+
+    // Preserve the escaped href and discard the child response's nonce.
+    // The enclosing render applies its nonce when serializing the head.
+    preloadTags.push(html.slice(cursor, hrefEnd) + MODULE_PRELOAD_END)
     cursor = tagEnd
   }
 
@@ -1393,7 +1430,7 @@ function collectStyleTags(context: RenderContext): string {
 
   let tags: string[] = []
   for (let { selector, css } of context.styleCache.values()) {
-    let tag = renderStyleTag(selector, css)
+    let tag = renderStyleTag(selector, css, context.nonce)
     if (tag) tags.push(tag)
   }
   return tags.join('')
@@ -1412,11 +1449,18 @@ function wrapStyleForLayer(
 function renderStyleTag(
   selector: string,
   css: string,
+  nonce?: string,
   layer: string = REMIX_UI_STYLE_LAYER,
 ): string {
   let wrappedCss = wrapStyleForLayer(selector, css, layer)
   if (!wrappedCss) return ''
-  return `<style data-rmx-style="${escapeHtml(selector)}">${escapeStyleText(wrappedCss)}</style>`
+  return `<style data-rmx-style="${escapeHtml(selector)}"${renderNonceAttribute(nonce)}>${escapeStyleText(
+    wrappedCss,
+  )}</style>`
+}
+
+function renderNonceAttribute(nonce: string | undefined): string {
+  return nonce === undefined ? '' : ` nonce="${escapeHtml(nonce)}"`
 }
 
 function escapeStyleText(css: string): string {
@@ -1456,7 +1500,7 @@ function collectImportMapScript(
   resources: ClientEntryHeadResources,
 ): string {
   let importMap = getImportMapDelta(context, resources.importMap)
-  return importMap ? buildImportMapScript(importMap) : ''
+  return importMap ? buildImportMapScript(importMap, renderNonceAttribute(context.nonce)) : ''
 }
 
 function finalizeManagedImportMap(context: RenderContext): void {
@@ -1786,14 +1830,20 @@ async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
 
 /**
  * Renders a node tree to a complete HTML string.
+ * Render errors reject the returned promise.
  *
  * @param node Node tree to render.
+ * @param options Rendering options.
  * @returns Rendered HTML.
  */
-export async function renderToString(node: RemixNode): Promise<string> {
+export async function renderToString(
+  node: RemixNode,
+  options?: RenderToStringOptions,
+): Promise<string> {
   return stripFlushMarkers(
     await drain(
       renderToStream(node, {
+        nonce: options?.nonce,
         onError(error) {
           throw error
         },
