@@ -1,5 +1,9 @@
 import * as typedoc from 'typedoc'
-import { hasRemixPackage, mapToRemixPackage } from '../../app/utils/package-manifest.ts'
+import {
+  getDocsPackagePath,
+  hasRemixPackage,
+  mapToRemixPackage,
+} from '../../app/utils/package-manifest.ts'
 import { MDN_SYMBOLS } from '../../app/utils/symbols.ts'
 import { getApiNameFromFullName, invariant, unimplemented, warn } from './utils.ts'
 
@@ -574,7 +578,7 @@ function getApiFilePath(
   }
   let pkg = rawPkg.startsWith('@remix-run/') ? mapToRemixPackage(rawPkg) : rawPkg
   let name = nameParts.pop()
-  return [pkg, ...nameParts, type, `${name}.md`].filter(Boolean).join('/')
+  return [getDocsPackagePath(pkg), ...nameParts, type, `${name}.md`].filter(Boolean).join('/')
 }
 
 function getApiDescription(typedocComment: typedoc.Comment): string {
