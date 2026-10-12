@@ -241,7 +241,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         for (let identityPath of frontier) {
           let resolvedModule = graph.get(identityPath)
           if (!resolvedModule) continue
-          layer.push(await getServedUrl(resolvedModule.identityPath))
+          layer.push(await getCurrentServedUrl(resolvedModule.identityPath))
 
           for (let dep of resolvedModule.staticDeps) {
             if (visited.has(dep)) continue
@@ -332,7 +332,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
     async getHref(filePath) {
       let resolvedModule = resolveServedScriptOrThrow(resolveInputFilePath(filePath))
-      return getServedUrl(resolvedModule.identityPath)
+      return getCurrentServedUrl(resolvedModule.identityPath)
     },
 
     async resolveSpecifierFromRoot(specifier) {
@@ -347,7 +347,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
       let resolvedModule = resolveServedScriptOrThrow(resolutionResult.path)
       return {
-        href: await getServedUrl(resolvedModule.identityPath),
+        href: await getCurrentServedUrl(resolvedModule.identityPath),
         identityPath: resolvedModule.identityPath,
       }
     },
@@ -661,8 +661,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       if (!root) throw new Error(`Failed to resolve script graph for ${record.identityPath}`)
       let emitResolvedModuleResult = await emitResolvedModule(root, {
         fingerprintAssets: resolvedOptions.fingerprintAssets,
-        getHmrImportTimestamp,
-        getServedUrl,
+        getImportSpecifier,
         getStableUrl,
         hmrClientPathname: resolvedOptions.hmr?.clientPathname,
         sourceMaps: resolvedOptions.sourceMaps,
@@ -761,6 +760,21 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     return formatFingerprintedPathname(resolvedModule.stableUrlPathname, emittedModule.fingerprint)
   }
 
+  async function getCurrentServedUrl(identityPath: string): Promise<string> {
+    let servedUrl = await getServedUrl(identityPath)
+    let timestamp = getHmrImportTimestamp(identityPath)
+    return timestamp === null ? servedUrl : addTimestampQuery(servedUrl, timestamp)
+  }
+
+  function getImportSpecifier(identityPath: string, originalSpecifier?: string): string {
+    let timestamp = getHmrImportTimestamp(identityPath)
+    if (timestamp !== null) {
+      // HMR and fingerprinting are mutually exclusive, so updated imports use stable paths.
+      return addTimestampQuery(getStableUrl(identityPath), timestamp)
+    }
+    return originalSpecifier ?? getStableUrl(identityPath)
+  }
+
   function getStableUrl(identityPath: string): string {
     let stableUrlPathname = resolvedOptions.routes.toUrlPathname(identityPath)
     if (!stableUrlPathname) {
@@ -809,6 +823,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     let boundaries = findHmrBoundaries(sourceFilePath)
     if (sourceFilePath !== undefined && boundaries) {
       for (let boundary of boundaries) {
+        scriptStore.setHmrUpdateTimestamp(boundary.boundaryModule.identityPath, timestamp)
         for (let identityPath of boundary.propagationPath) {
           scriptStore.setHmrUpdateTimestamp(identityPath, timestamp)
         }
@@ -894,6 +909,10 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   function isWatchIgnored(filePath: string): boolean {
     return resolvedOptions.watchIgnoreMatchers.some((matcher) => matcher(filePath))
   }
+}
+
+function addTimestampQuery(pathname: string, timestamp: number): string {
+  return `${pathname}${pathname.includes('?') ? '&' : '?'}t=${timestamp}`
 }
 
 function resolveImportMapUrlSpecifier(specifier: string, importerUrlPathname: string): string {
