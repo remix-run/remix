@@ -19,7 +19,12 @@ import {
   serializeStyleObject,
   shouldStringifyBooleanAttribute,
 } from '../runtime/core/attributes.ts'
-import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
+import {
+  appendFlushMarker,
+  FRAME_TEMPLATE_END_MARKER,
+  type FlushKind,
+  stripFlushMarkers,
+} from '../runtime/stream-protocol.ts'
 import { composeMixedProps, resolveMixDescriptors } from '../runtime/core/mix.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -1720,7 +1725,7 @@ async function streamPendingFrames(
           if (context.signal.aborted) return
 
           // Stream as a template element (first chunk only)
-          let templateHtml = `<template id="${frameId}">${escapeTemplateContent(html)}</template>`
+          let templateHtml = `<template id="${frameId}">${escapeTemplateContent(html)}<!--${FRAME_TEMPLATE_END_MARKER}--></template>`
           if (context.signal.aborted) return
           controller.enqueue(encoder.encode(templateHtml))
 

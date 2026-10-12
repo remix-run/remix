@@ -1,0 +1,1 @@
+Use `frame.reload({ src, method, encType, body })` from `remix/component` to reload another source or submit data and render the response without changing browser history. `FormData` follows GET query and POST encoding defaults, with multipart and plain-text encodings available (see #11938).

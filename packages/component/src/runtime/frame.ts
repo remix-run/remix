@@ -4,12 +4,12 @@ import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
 import type { ElementFunction } from './element-function.ts'
-import type { FrameHandle } from './component.ts'
+import type { FrameHandle, FrameReloadOptions } from './component.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffElementAttributes, diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
-import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
+import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './frame-resolution.ts'
 import {
@@ -124,19 +124,19 @@ export type ResolveFrame = (
 export interface ResolveFrameOptions {
   /** Frame name, absent for both the top-level document and unnamed `<Frame>` loads. */
   target?: string
-  /** Form values submitted to the frame source for a non-GET submission. */
+  /** Form values submitted to the frame source for a POST reload or navigation. */
   formData?: FormData
-  /** HTTP method selected by the form and its submitter. */
+  /** HTTP method selected by the reload options or the form and its submitter. */
   method?: string
-  /** Form encoding selected by the form and its submitter. */
+  /** Body encoding selected by the reload options or the form and its submitter. */
   encType?: string
-  /** Aborts the reload when the navigation that started it is cancelled. */
+  /** Cancels the active frame request. Custom resolvers should forward this to `fetch()`. */
   signal?: AbortSignal
 }
 
 type InternalFrameContent = FrameContent | DocumentFragment
 
-type FrameReloadOptions = Omit<ResolveFrameOptions, 'target'>
+type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'>
 
 type FrameReloadResult = {
   signal: AbortSignal
@@ -223,7 +223,7 @@ export type FrameRuntime = {
         blockingFrameTracker?: ReconciliationTracker
       }
     | undefined
-  reloadForNavigation?: (options?: FrameReloadOptions) => FrameReloadTransition
+  reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
 }
 
 export function isFrameRuntime(value: unknown): value is FrameRuntime {
@@ -239,7 +239,7 @@ export function isFrameRuntime(value: unknown): value is FrameRuntime {
  */
 export function reloadFrameForNavigation(
   frame: FrameHandle,
-  options?: FrameReloadOptions,
+  options?: FrameNavigationOptions,
 ): FrameReloadTransition {
   let runtime = frame.$runtime
   invariant(isFrameRuntime(runtime), 'Expected a frame runtime')
@@ -346,7 +346,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let currentMarker = init.marker
   let displayedContentStatus: 'pending' | 'resolved' = init.marker?.status ?? 'resolved'
   let pendingTemplateMarkerId: string | undefined
-  let pendingTemplateObserver: MutationObserver | undefined
+  let stopPendingTemplateObserver: (() => void) | undefined
   let pendingTemplateUnsubscribe: (() => void) | undefined
   let inheritedReloadPending = false
   let inheritedReloadAbortUnsubscribe: (() => void) | undefined
@@ -393,7 +393,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let frame = createFrameHandle({
     src: init.src,
     $runtime: runtime,
-    reload: async () => (await reload()).signal,
+    reload: async (options) => (await reload(options)).signal,
     replace: async (content: FrameContent) => {
       await render(content)
     },
@@ -769,12 +769,42 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   async function reload(options?: FrameReloadOptions): Promise<FrameReloadResult> {
-    let transition = startReloadTransition(options)
+    let src = options?.src ?? frame.src
+    let method = options?.method?.toLowerCase()
+    if (method !== undefined && method !== 'post') method = 'get'
+    let formData = options?.body
+    let encType
+    if (formData) {
+      if (method !== 'post') {
+        let url = new URL(src, container.doc.baseURI)
+        let query = new URLSearchParams()
+        for (let [name, value] of formData) {
+          query.append(
+            name.replace(/\r\n|\r|\n/g, '\r\n'),
+            (typeof value === 'string' ? value : value.name).replace(/\r\n|\r|\n/g, '\r\n'),
+          )
+        }
+        url.search = `?${query}`
+        src = url.href
+        formData = undefined
+      } else {
+        encType = options?.encType?.toLowerCase()
+        if (encType !== 'multipart/form-data' && encType !== 'text/plain') {
+          encType = 'application/x-www-form-urlencoded'
+        }
+      }
+    }
+    frame.src = src
+    let reloadOptions: FrameNavigationOptions = {}
+    if (method !== undefined) reloadOptions.method = method
+    if (encType !== undefined) reloadOptions.encType = encType
+    if (formData !== undefined) reloadOptions.formData = formData
+    let transition = startReloadTransition(reloadOptions)
     void transition.committed.catch(() => {})
     return await transition.finished
   }
 
-  function startReloadTransition(options?: FrameReloadOptions): FrameReloadTransition {
+  function startReloadTransition(options?: FrameNavigationOptions): FrameReloadTransition {
     let controller = startReload(options?.signal)
     let committed = Promise.withResolvers<void>()
     let commitStarted = false
@@ -848,7 +878,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   async function resolveAndRenderReload(
     controller: AbortController,
-    options?: FrameReloadOptions,
+    options?: FrameNavigationOptions,
     resolveCommit?: (ready: Promise<void>) => void,
   ): Promise<FrameReloadResult> {
     try {
@@ -962,8 +992,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   function clearPendingFrameTemplateWatch(): void {
     pendingTemplateUnsubscribe?.()
     pendingTemplateUnsubscribe = undefined
-    pendingTemplateObserver?.disconnect()
-    pendingTemplateObserver = undefined
+    stopPendingTemplateObserver?.()
+    stopPendingTemplateObserver = undefined
     pendingTemplateMarkerId = undefined
   }
 
@@ -992,8 +1022,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       return
     }
 
-    let observer = setupTemplateObserver()
-    pendingTemplateObserver = observer
+    stopPendingTemplateObserver = setupTemplateObserver(marker.id)
     let unsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
       if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
       if (pendingTemplateMarkerId !== marker.id) return
@@ -1036,7 +1065,7 @@ export function createFrameRuntime(init: {
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
-  reloadForNavigation?: (options?: FrameReloadOptions) => FrameReloadTransition
+  reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
 }): FrameRuntime {
   return {
     [FRAME_RUNTIME]: true,
@@ -1599,31 +1628,73 @@ function disposeSubFrames(nodes: Node[], context: FrameContext): void {
 
 function getEarlyFrameContent(id: string): DocumentFragment | null {
   let template = document.querySelector(`template#${id}`)
-  if (template instanceof HTMLTemplateElement) {
-    let fragment = template.content
-    template.remove()
-    return fragment
+  if (template instanceof HTMLTemplateElement && isFrameTemplateComplete(template)) {
+    return takeFrameTemplateContent(template)
   }
   return null
 }
 
-function setupTemplateObserver(): MutationObserver {
+function isFrameTemplateComplete(template: HTMLTemplateElement): boolean {
+  let end = template.content.lastChild
+  return (
+    (isCommentNode(end) && end.data === FRAME_TEMPLATE_END_MARKER) ||
+    template.ownerDocument.readyState !== 'loading'
+  )
+}
+
+function takeFrameTemplateContent(template: HTMLTemplateElement): DocumentFragment {
+  let fragment = template.content
+  let end = fragment.lastChild
+  if (isCommentNode(end) && end.data === FRAME_TEMPLATE_END_MARKER) end.remove()
+  template.remove()
+  return fragment
+}
+
+function setupTemplateObserver(id: string): () => void {
   let root = document.body ?? document.documentElement ?? document
+  let pending = new Set<HTMLTemplateElement>()
   let observer = new MutationObserver((mutations) => {
     for (let mutation of mutations) {
       for (let node of mutation.addedNodes) {
-        collectAndPublishTemplates(node)
+        collectFrameTemplates(node, observeTemplate)
       }
     }
+    publishCompleteTemplates()
   })
 
+  function observeTemplate(template: HTMLTemplateElement): void {
+    if (template.id !== id || pending.has(template)) return
+    pending.add(template)
+    // Template contents are a separate fragment, outside the observed document subtree.
+    observer.observe(template.content, { childList: true })
+  }
+
+  function publishCompleteTemplates(): void {
+    for (let template of pending) {
+      if (!template.isConnected) {
+        pending.delete(template)
+        continue
+      }
+      if (!isFrameTemplateComplete(template)) continue
+      pending.delete(template)
+      publishFrameTemplate(template.id, takeFrameTemplateContent(template))
+    }
+  }
+
   observer.observe(root, { childList: true, subtree: true })
-  return observer
+  collectFrameTemplates(root, observeTemplate)
+  document.addEventListener('DOMContentLoaded', publishCompleteTemplates, { once: true })
+
+  return () => {
+    observer.disconnect()
+    pending.clear()
+    document.removeEventListener('DOMContentLoaded', publishCompleteTemplates)
+  }
 }
 
-function collectAndPublishTemplates(node: Node): void {
+function collectFrameTemplates(node: Node, collect: (template: HTMLTemplateElement) => void): void {
   if (node instanceof HTMLTemplateElement) {
-    publishFrameTemplateElement(node)
+    collect(node)
     return
   }
 
@@ -1631,14 +1702,8 @@ function collectAndPublishTemplates(node: Node): void {
   let templates = Array.from(node.querySelectorAll('template'))
   for (let template of templates) {
     if (!(template instanceof HTMLTemplateElement)) continue
-    publishFrameTemplateElement(template)
+    collect(template)
   }
-}
-
-function publishFrameTemplateElement(template: HTMLTemplateElement): void {
-  if (!template.id) return
-  template.remove()
-  publishFrameTemplate(template.id, template.content)
 }
 
 export function publishFrameTemplate(id: string, fragment: DocumentFragment): void {
@@ -1722,7 +1787,7 @@ function extractTemplatesFromBuffer(
       let parsed = createFragmentFromString(doc, fullMatch)
       let template = parsed.querySelector('template')
       if (template instanceof HTMLTemplateElement && template.id) {
-        onTemplate(template.id, template.content)
+        onTemplate(template.id, takeFrameTemplateContent(template))
       }
     }
 
