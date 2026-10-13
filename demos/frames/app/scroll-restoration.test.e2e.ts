@@ -71,13 +71,23 @@ describe('scroll restoration', () => {
     await page.getByRole('heading', { name: 'Short detail view' }).waitFor()
     await reproduction.getByRole('button', { name: 'Hydration check: 1', exact: true }).waitFor()
     await page.waitForFunction(() => window.navigation.transition === null)
-    await page.evaluate(() => window.scrollTo(0, 0))
-    assert.equal(await page.evaluate(() => window.scrollY), 0)
+    await page.evaluate(() => window.scrollTo(0, 150))
+    let detailScrollPosition = await page.evaluate(() => window.scrollY)
+    assert.equal(detailScrollPosition, 150)
 
     await page.getByRole('button', { name: 'Select size without resetting scroll' }).click()
     await page.waitForURL((url) => url.searchParams.get('size') === 'small')
     await page.waitForFunction(() => window.navigation.transition === null)
-    assert.equal(await page.evaluate(() => window.scrollY), 0)
+    assert.equal(await page.evaluate(() => window.scrollY), detailScrollPosition)
+    assert.equal(
+      await page.evaluate(() => {
+        let state = window.navigation.currentEntry?.getState()
+        return typeof state === 'object' && state !== null && 'resetScroll' in state
+          ? state.resetScroll
+          : undefined
+      }),
+      'manual',
+    )
 
     await page.goBack()
     await page.getByText('List row 48', { exact: true }).waitFor()
@@ -90,13 +100,16 @@ describe('scroll restoration', () => {
     await page.goForward()
     await page.getByRole('heading', { name: 'Short detail view' }).waitFor()
     await reproduction.getByRole('button', { name: 'Hydration check: 1', exact: true }).waitFor()
-    await page.waitForFunction(() => window.navigation.transition === null && window.scrollY === 0)
+    await page.waitForFunction(
+      ({ expected, tolerance }) =>
+        window.navigation.transition === null && Math.abs(window.scrollY - expected) < tolerance,
+      { expected: detailScrollPosition, tolerance: 50 },
+    )
     let detailRestoredPosition = await page.evaluate(() => window.scrollY)
 
-    assert.equal(
-      detailRestoredPosition,
-      0,
-      `Expected forward traversal to restore detail scroll position 0, got ${detailRestoredPosition}`,
+    assert.ok(
+      Math.abs(detailRestoredPosition - detailScrollPosition) < 50,
+      `Expected forward traversal to restore detail scroll position ${detailScrollPosition}, got ${detailRestoredPosition}`,
     )
   })
 })
