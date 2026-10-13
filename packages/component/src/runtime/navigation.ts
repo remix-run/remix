@@ -82,12 +82,13 @@ export type NavigationOptions = {
   /** How the destination updates browser history. */
   history?: 'push' | 'replace'
   /**
-   * Scroll behavior. `true` aliases `"after-transition"` and `false` aliases `"manual"`.
-   * (default: `"after-transition"`)
+   * Scroll behavior for this navigation. `true` aliases `"after-transition"` and `false` aliases
+   * `"manual"`. Does not affect later back or forward traversals. (default: `"after-transition"`)
    */
   resetScroll?: NavigationInterceptOptions['scroll'] | boolean
   /**
-   * Focus reset behavior. `true` aliases `"after-transition"` and `false` aliases `"manual"`.
+   * Focus reset behavior for this navigation. `true` aliases `"after-transition"` and `false`
+   * aliases `"manual"`. Does not affect later back or forward traversals.
    * (default: `"after-transition"`)
    */
   resetFocus?: NavigationInterceptOptions['focusReset'] | boolean
@@ -198,8 +199,9 @@ export function startNavigationListenerImpl(
         : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
-      let scroll = normalizeResetBehavior(state.resetScroll)
-      let focusReset = normalizeResetBehavior(state.resetFocus)
+      let isTraverse = event.navigationType === 'traverse'
+      let scroll = isTraverse ? 'after-transition' : normalizeResetBehavior(state.resetScroll)
+      let focusReset = isTraverse ? 'after-transition' : normalizeResetBehavior(state.resetFocus)
       if (!isSameOriginUrl(state.src)) {
         fallbackToDocumentNavigation(navigation, event)
         return

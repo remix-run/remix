@@ -771,7 +771,7 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
   })
 
-  it('preserves legacy boolean scroll and focus settings on traverse navigations', async (t) => {
+  it('ignores legacy boolean scroll and focus settings on traverse navigations', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let intercept = mock.fn()
     let event = Object.assign(new Event('navigate'), {
@@ -796,12 +796,12 @@ describe('navigate', () => {
     await transition.runHandler()
     await transition.succeed()
 
-    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
-    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
-    expect(event.scroll).not.toHaveBeenCalled()
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
+    expect(event.scroll).toHaveBeenCalledTimes(1)
   })
 
-  it('preserves canonical scroll and focus settings on traverse navigations', async (t) => {
+  it('ignores manual scroll and focus settings on traverse navigations', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let event = createTraverseNavigateEvent({
       target: undefined,
@@ -812,13 +812,16 @@ describe('navigate', () => {
     })
     let intercept = event.intercept
 
+    let adoptedStyleSheetCount = document.adoptedStyleSheets.length
     let transition = dispatchNavigation(event)
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
     await transition.runHandler()
     await transition.succeed()
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
 
-    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
-    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
-    expect(event.scroll).not.toHaveBeenCalled()
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
+    expect(event.scroll).toHaveBeenCalledTimes(1)
   })
 
   it('honors legacy true settings on traverse navigations', async (t) => {
@@ -876,7 +879,7 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
   })
 
-  it('preserves legacy history state while normalizing frame redirect info', async (t) => {
+  it('preserves legacy history state while using default reset settings for traversal redirects', async (t) => {
     let redirectedTo = new URL('/redirected', window.location.origin).href
     let dispatchNavigation = startStubNavigationListener(t, {
       ...stubFrames,
@@ -903,7 +906,11 @@ describe('navigate', () => {
     expect(navigateMock).toHaveBeenCalledWith(redirectedTo, {
       history: 'replace',
       state: { ...state, src: redirectedTo },
-      info: { type: 'frame-redirect', resetScroll: 'manual', resetFocus: 'manual' },
+      info: {
+        type: 'frame-redirect',
+        resetScroll: 'after-transition',
+        resetFocus: 'after-transition',
+      },
     })
     expect(state.resetScroll).toBe(false)
     expect(state.resetFocus).toBe(false)
@@ -1390,7 +1397,7 @@ describe('navigate', () => {
       input.focus()
 
       await window.navigation.forward().finished
-      expect(document.activeElement).toBe(input)
+      expect(document.activeElement).toBe(document.body)
       expect(window.navigation.currentEntry?.url).toBe(redirectedUrl.href)
       expect(topFrame.src).toBe(redirectedUrl.href)
       expect(reloadFrame).toHaveBeenCalledTimes(3)

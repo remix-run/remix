@@ -182,7 +182,7 @@ Scroll and focus controls accept the Navigation API values `"after-transition"` 
 </a>
 ```
 
-Existing boolean options and `"true"` / `"false"` attribute values remain supported: `true` corresponds to `"after-transition"` and `false` to `"manual"`.
+Existing boolean options and `"true"` / `"false"` attribute values remain supported: `true` corresponds to `"after-transition"` and `false` to `"manual"`. These controls apply only to the navigation they are set on; later back and forward traversals always use `"after-transition"` so the browser can restore scroll position and reset focus normally.
 
 Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
 and forms as document navigations while still hydrating client entries and using explicit frames,
