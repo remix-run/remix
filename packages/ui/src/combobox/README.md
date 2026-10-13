@@ -95,14 +95,14 @@ Mirrors the committed value into a hidden input for forms. Apply it to an `<inpu
 ### Types
 
 - `ComboboxOpenStrategy`: initial active-option strategy when the popup opens.
-- `ComboboxHandle`: imperative ref for reading or updating the combobox value and draft label.
-- `ComboboxContextProps`, `ComboboxProps`, `ComboboxOptionOptions`, and `ComboboxOptionProps`: context prop and option types for custom composition.
+- `ComboboxHandle`: imperative ref for reading current state and opening or closing the popup.
+- `ComboboxContextProps` and `ComboboxOptionOptions`: provider props and option mixin options for custom composition.
 
 ## Behavior Notes
 
 - Typing opens the popup in hint mode when there are matches.
 - If typing leaves no matches, the popup closes immediately without the navigation fade-out.
-- Selecting from the list flashes the option, then closes the popup and finally commits the visible input label.
+- Selecting from the list sets `data-combobox-flash` for app-owned flash styling, then closes the popup and finally commits the visible input label.
 - Typing clears the committed value immediately. The hidden form value becomes empty until the user commits again.
 - Blur commits an exact `label` or `searchValue` match. A non-matching blur clears the draft text and committed value.
 - Escape keeps exact-match draft text but clears non-matching draft text and selection.
