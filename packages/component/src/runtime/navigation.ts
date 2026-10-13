@@ -82,13 +82,12 @@ export type NavigationOptions = {
   /** How the destination updates browser history. */
   history?: 'push' | 'replace'
   /**
-   * Scroll behavior for this navigation. `true` aliases `"after-transition"` and `false` aliases
-   * `"manual"`. Does not affect later back or forward traversals. (default: `"after-transition"`)
+   * Scroll behavior. `true` aliases `"after-transition"` and `false` aliases `"manual"`.
+   * (default: `"after-transition"`)
    */
   resetScroll?: NavigationInterceptOptions['scroll'] | boolean
   /**
-   * Focus reset behavior for this navigation. `true` aliases `"after-transition"` and `false`
-   * aliases `"manual"`. Does not affect later back or forward traversals.
+   * Focus reset behavior. `true` aliases `"after-transition"` and `false` aliases `"manual"`.
    * (default: `"after-transition"`)
    */
   resetFocus?: NavigationInterceptOptions['focusReset'] | boolean

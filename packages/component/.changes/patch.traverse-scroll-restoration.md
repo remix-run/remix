@@ -1,1 +1,1 @@
-Restore scroll position on back and forward traversals to history entries that were created or replaced with `resetScroll: false` / `"manual"` or `data-rmx-reset-scroll="false"` / `"manual"`
+Restore scroll position when navigating back or forward to a page that previously used `resetScroll: false` or `data-rmx-reset-scroll="false"` (see #11989).

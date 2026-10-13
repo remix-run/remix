@@ -733,8 +733,7 @@ the `link(...)` and `navigate(...)` options:
 - `data-rmx-document` opts out of interception and lets the browser perform a full-document navigation.
 
 Use `resetScroll: "manual"` or `resetFocus: "manual"` for the same behavior in `link(...)` and
-`navigate(...)`. Both controls also accept `"after-transition"`, the default, and apply only to the
-navigation they are set on rather than later back or forward traversals. Existing boolean options
+`navigate(...)`. Both controls also accept `"after-transition"`, the default. Existing boolean options
 and `"true"` / `"false"` attribute values still work: `true` corresponds to `"after-transition"` and
 `false` to `"manual"`.
 

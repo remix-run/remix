@@ -302,7 +302,7 @@ Both controls accept the Navigation API values `"after-transition"` (the default
 </a>
 ```
 
-Boolean options and the `"true"` / `"false"` attribute values remain supported. `true` corresponds to `"after-transition"` and `false` to `"manual"`. Omitting a control keeps the default behavior. Both controls apply only to the navigation they are set on; later back and forward traversals always use `"after-transition"`.
+Boolean options and the `"true"` / `"false"` attribute values remain supported. `true` corresponds to `"after-transition"` and `false` to `"manual"`. Omitting a control keeps the default behavior.
 
 Disabling the reset does not retain focus if navigation removes the focused element.
 
