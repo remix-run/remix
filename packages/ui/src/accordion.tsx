@@ -7,7 +7,6 @@ import {
   type ElementProps,
   type Handle,
   type MixinHandle,
-  type Props,
   type RemixNode,
 } from '@remix-run/component'
 
@@ -49,7 +48,6 @@ export type AccordionType = 'single' | 'multiple'
 export type AccordionValue = string | null | string[]
 export type AccordionSingleValue = string | null
 export type AccordionMultipleValue = string[]
-export type AccordionHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6
 
 type FocusDirection = 'first' | 'last' | 'next' | 'previous'
 
@@ -62,7 +60,6 @@ type RegisteredItem = {
 interface AccordionContextValue {
   readonly collapsible: boolean
   readonly disabled: boolean
-  readonly headingLevel: AccordionHeadingLevel
   readonly type: AccordionType
   focusItem(value: string, direction: FocusDirection): void
   getPanelId(value: string): string
@@ -76,7 +73,6 @@ interface AccordionContextValue {
 
 interface AccordionItemContextValue {
   readonly disabled: boolean
-  readonly headingLevel: AccordionHeadingLevel
   readonly lockedOpen: boolean
   readonly open: boolean
   readonly panelId: string
@@ -88,7 +84,6 @@ interface AccordionItemContextValue {
 export interface AccordionBaseContextProps {
   children?: RemixNode
   disabled?: boolean
-  headingLevel?: AccordionHeadingLevel
 }
 
 export interface AccordionSingleContextProps extends AccordionBaseContextProps {
@@ -108,8 +103,6 @@ export interface AccordionMultipleContextProps extends AccordionBaseContextProps
 
 export type AccordionContextProps = AccordionSingleContextProps | AccordionMultipleContextProps
 
-export interface AccordionRootOptions {}
-
 export interface AccordionItemOptions {
   disabled?: boolean
   value: string
@@ -117,25 +110,6 @@ export interface AccordionItemOptions {
 
 export interface AccordionTriggerOptions {
   disabled?: boolean
-}
-
-export interface AccordionContentOptions {}
-
-export type AccordionProps = Props<'div'> & AccordionContextProps
-
-export type AccordionItemProps = Omit<Props<'div'>, 'children'> &
-  AccordionItemOptions & {
-    children?: RemixNode
-  }
-
-export type AccordionTriggerProps = Omit<Props<'button'>, 'children' | 'type'> &
-  AccordionTriggerOptions & {
-    children?: RemixNode
-    type?: 'button' | 'submit' | 'reset'
-  }
-
-export type AccordionContentProps = Omit<Props<'div'>, 'children'> & {
-  children?: RemixNode
 }
 
 function isMultipleProps(
@@ -306,9 +280,6 @@ function AccordionProvider(
     focusItem,
     getPanelId,
     getTriggerId,
-    get headingLevel() {
-      return handle.props.headingLevel ?? 3
-    },
     isOpen,
     registerItem,
     registerRoot(node) {
@@ -338,7 +309,6 @@ function AccordionItemProvider(
   let triggerId = `${handle.id}-trigger`
   let panelId = `${handle.id}-panel`
   let disabled = false
-  let headingLevel: AccordionHeadingLevel = 3
   let lockedOpen = false
   let open = false
   let value = handle.props.value
@@ -346,9 +316,6 @@ function AccordionItemProvider(
   handle.context.set({
     get disabled() {
       return disabled
-    },
-    get headingLevel() {
-      return headingLevel
     },
     get lockedOpen() {
       return lockedOpen
@@ -374,7 +341,6 @@ function AccordionItemProvider(
     let accordion = getAccordionContext(handle)
     value = handle.props.value
     disabled = accordion.disabled || handle.props.disabled === true
-    headingLevel = accordion.headingLevel
     open = accordion.isOpen(handle.props.value)
     lockedOpen = accordion.type === 'single' && !accordion.collapsible && open
 
@@ -388,41 +354,37 @@ function AccordionItemProvider(
   }
 }
 
-const rootMixin = createMixin<HTMLElement, [options?: AccordionRootOptions], ElementProps>(
-  (handle) => {
-    let context = getAccordionContext(handle)
-    let rootNode: HTMLElement | null = null
+const rootMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
+  let context = getAccordionContext(handle)
+  let rootNode: HTMLElement | null = null
 
-    handle.queueTask((node, signal) => {
-      rootNode = node
-      context.registerRoot(node)
-      signal.addEventListener('abort', () => {
-        if (rootNode === node) {
-          rootNode = null
-        }
-        context.unregisterRoot(node)
-      })
+  handle.queueTask((node, signal) => {
+    rootNode = node
+    context.registerRoot(node)
+    signal.addEventListener('abort', () => {
+      if (rootNode === node) {
+        rootNode = null
+      }
+      context.unregisterRoot(node)
     })
+  })
 
-    return () =>
-      attrs({
-        'data-disabled': context.disabled ? '' : undefined,
-        'data-type': context.type,
-      })
-  },
-)
+  return () =>
+    attrs({
+      'data-disabled': context.disabled ? '' : undefined,
+      'data-type': context.type,
+    })
+})
 
-const itemMixin = createMixin<HTMLElement, [options?: AccordionItemOptions], ElementProps>(
-  (handle) => {
-    let item = getAccordionItemContext(handle)
+const itemMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
+  let item = getAccordionItemContext(handle)
 
-    return () =>
-      attrs({
-        'data-disabled': item.disabled ? '' : undefined,
-        'data-state': item.open ? 'open' : 'closed',
-      })
-  },
-)
+  return () =>
+    attrs({
+      'data-disabled': item.disabled ? '' : undefined,
+      'data-state': item.open ? 'open' : 'closed',
+    })
+})
 
 const triggerMixin = createMixin<
   HTMLButtonElement,
@@ -480,20 +442,18 @@ const triggerMixin = createMixin<
   }
 })
 
-const contentMixin = createMixin<HTMLElement, [options?: AccordionContentOptions], ElementProps>(
-  (handle) => {
-    let item = getAccordionItemContext(handle)
+const contentMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
+  let item = getAccordionItemContext(handle)
 
-    return () =>
-      attrs({
-        'aria-hidden': item.open ? undefined : true,
-        'aria-labelledby': item.triggerId,
-        'data-state': item.open ? 'open' : 'closed',
-        id: item.panelId,
-        inert: item.open ? undefined : true,
-      })
-  },
-)
+  return () =>
+    attrs({
+      'aria-hidden': item.open ? undefined : true,
+      'aria-labelledby': item.triggerId,
+      'data-state': item.open ? 'open' : 'closed',
+      id: item.panelId,
+      inert: item.open ? undefined : true,
+    })
+})
 
 export const Context = AccordionProvider
 export const ItemContext: (
