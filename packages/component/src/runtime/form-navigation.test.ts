@@ -78,4 +78,53 @@ describe('form navigation', () => {
       if (didNavigate) await window.navigation.back().finished
     }
   })
+
+  it('resolves form navigation when the submitter is detached before navigate fires', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        formNavigation = resolveFormNavigation(event)
+        event.intercept({ handler: async () => {} })
+      },
+      { signal: controller.signal },
+    )
+
+    let destination = new URL(window.location.href)
+    destination.searchParams.set('form-navigation', 'detached-submitter')
+    let form = document.createElement('form')
+    form.action = destination.href
+    form.method = 'post'
+    document.body.append(form)
+
+    // Simulate a component that appends a temporary button, clicks it, and immediately removes it —
+    // the button is detached before the `navigate` event fires.
+    let tempButton = document.createElement('button')
+    form.append(tempButton)
+
+    let navigationSucceeded = Promise.withResolvers<void>()
+    window.navigation.addEventListener('navigatesuccess', () => navigationSucceeded.resolve(), {
+      once: true,
+      signal: controller.signal,
+    })
+
+    let didNavigate = false
+    try {
+      form.requestSubmit(tempButton)
+      tempButton.remove()
+
+      await navigationSucceeded.promise
+      didNavigate = true
+
+      // The resolver must still return a FormNavigation (not undefined) despite the detached button.
+      expect(formNavigation).toBeDefined()
+    } finally {
+      form.remove()
+      controller.abort()
+      if (didNavigate) await window.navigation.back().finished
+    }
+  })
 })
