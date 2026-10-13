@@ -316,6 +316,8 @@ it('mocks and spies', (t) => {
 })
 ```
 
+`t.mock` provides `fn()` and `method()`. Every spy created with `t.mock.method()` is restored automatically when the test finishes, or early via `spy.mock.restore?.()`.
+
 #### Cleanup
 
 You can register local test cleanup logic with `t.after()`:

@@ -18,7 +18,7 @@ Search this generated index by task, export name, or description. Use the guides
 | [Auth, Sessions, and Security](guides/10-auth-sessions-security.md) | How Remix stores per-browser state, resolves identity, protects routes, and defends browser request boundaries. |
 | [Files and Assets](guides/11-files-and-assets.md) | How Remix serves static files and source assets, accepts bounded uploads, stores files, and returns HTTP file responses. |
 | [Errors and Cancellation](guides/12-errors-and-cancellation.md) | How expected HTTP failures, uncaught server errors, rendering failures, client runtime errors, and aborted work propagate through Remix. |
-| [Testing](guides/13-testing.md) | How to choose a test boundary and test Remix routes, stateful request flows, components, and end-to-end behavior. |
+| [Testing](guides/13-testing.md) | How to choose a test boundary and test Remix routes, stateful request flows, browser components, and end-to-end behavior. |
 | [CLI and Tooling](guides/14-cli-and-tooling.md) | The Remix command-line workflow for creating, inspecting, testing, checking, and running TypeScript projects. |
 | [Production](guides/15-production.md) | How to configure, start, cache, observe, and shut down a Remix application in production. |
 
@@ -31,10 +31,10 @@ Exports covered by the same README are grouped together.
 | `remix/assert` | Node assert-compatible utilities for any JavaScript environment | [README](src/assert/README.md) |
 | `remix/assets`<br>`remix/assets/types/hmr` | Fetch-based server for compiling browser JS/TS and CSS assets on demand | [README](src/assets/README.md) |
 | `remix/auth` | Browser login, OAuth, and OIDC helpers for Remix | [README](src/auth/README.md) |
-| `remix/component`<br>`remix/component/dev/refresh`<br>`remix/component/jsx-dev-runtime`<br>`remix/component/jsx-runtime` | Component runtime with server rendering and browser hydration | [README](src/component/README.md) |
+| `remix/component`<br>`remix/component/dev/refresh`<br>`remix/component/jsx-dev-runtime`<br>`remix/component/jsx-runtime` | Component runtime with server rendering, browser hydration, mixins, and frame navigation | [README](src/component/README.md) |
 | `remix/component-hmr`<br>`remix/component-hmr/assets`<br>`remix/component-hmr/node`<br>`remix/component-hmr/runtime/browser`<br>`remix/component-hmr/runtime/server` | Hot module replacement runtime and transforms for Remix components | [README](src/component-hmr/README.md) |
-| `remix/component/server` | Component runtime with server rendering and browser hydration | [README](src/component/server/README.md) |
-| `remix/component/test` | Component runtime with server rendering and browser hydration | [README](src/component/test/README.md) |
+| `remix/component/server` | Component runtime with server rendering, browser hydration, mixins, and frame navigation | [README](src/component/server/README.md) |
+| `remix/component/test` | Component runtime with server rendering, browser hydration, mixins, and frame navigation | [README](src/component/test/README.md) |
 | `remix/cookie` | A toolkit for working with cookies in JavaScript | [README](src/cookie/README.md) |
 | `remix/data-schema`<br>`remix/data-schema/checks`<br>`remix/data-schema/coerce`<br>`remix/data-schema/form-data`<br>`remix/data-schema/lazy` | Tiny, standards-aligned schema validation | [README](src/data-schema/README.md) |
 | `remix/data-table`<br>`remix/data-table/cli`<br>`remix/data-table/migrations`<br>`remix/data-table/migrations/node`<br>`remix/data-table/operators`<br>`remix/data-table/sql-helpers` | A typed, relational query toolkit for JavaScript | [README](src/data-table/README.md) |
@@ -76,4 +76,4 @@ Exports covered by the same README are grouped together.
 | `remix/spa` | Client-rendered application routing for Remix | [README](src/spa/README.md) |
 | `remix/tar-parser` | A fast, efficient parser for tar streams in any JavaScript environment | [README](src/tar-parser/README.md) |
 | `remix/terminal` | Terminal output utilities for JavaScript libraries and CLIs | [README](src/terminal/README.md) |
-| `remix/test`<br>`remix/test/cli` | A test framework for JavaScript and TypeScript projects | [README](src/test/README.md) |
+| `remix/test`<br>`remix/test/cli` | Server, browser, and end-to-end test framework for JavaScript and TypeScript projects | [README](src/test/README.md) |
