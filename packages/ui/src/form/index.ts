@@ -1,8 +1,20 @@
-import { createMixin, on } from '@remix-run/ui'
+import { createElement, createMixin, on } from '@remix-run/ui'
 import type { ElementProps, MixinDescriptor } from '@remix-run/ui'
 
 type ValidatableControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 type FormMixin = MixinDescriptor<HTMLFormElement, [], ElementProps>
+type InputValidator = (input: HTMLInputElement) => void
+type InputMixin = MixinDescriptor<
+  HTMLInputElement,
+  [attrs: object, validate: InputValidator],
+  ElementProps
+>
+
+interface InputFormDefinition<fields extends Readonly<Record<string, unknown>>, submission> {
+  readonly fields: fields
+  getInputAttrs<field extends keyof fields & string>(field: field, submission?: submission): object
+  createInputValidator<field extends keyof fields & string>(field: field): InputValidator
+}
 
 const formValidity = createMixin<HTMLFormElement, [], ElementProps>(() => () => [
   on<HTMLFormElement>('focusout', (event) => {
@@ -43,6 +55,39 @@ const formValidity = createMixin<HTMLFormElement, [], ElementProps>(() => () => 
     true,
   ),
 ])
+
+const inputValidity = createMixin<
+  HTMLInputElement,
+  [attrs: object, validate: InputValidator],
+  ElementProps
+>(
+  (handle) => (attrs, validate, props) =>
+    createElement(handle.element, {
+      ...attrs,
+      ...props,
+      mix: on<HTMLInputElement>('input', (event) => validate(event.currentTarget)),
+    }),
+)
+
+/**
+ * Creates a field-aware input mixin factory from a form definition.
+ *
+ * Each resulting mixin applies the form's generated attributes during server rendering and runs
+ * its synchronous field validator as the input changes. Explicit host props override generated
+ * attributes.
+ *
+ * @param formDefinition Form definition that provides input attributes and field validators.
+ * @returns A mixin factory for the form's input fields.
+ */
+export function createInputMixin<fields extends Readonly<Record<string, unknown>>, submission>(
+  formDefinition: InputFormDefinition<fields, submission>,
+): <field extends keyof fields & string>(field: field, submission?: submission) => InputMixin {
+  return (field, submission) =>
+    inputValidity(
+      formDefinition.getInputAttrs(field, submission),
+      formDefinition.createInputValidator(field),
+    )
+}
 
 /**
  * Enhances native form validation with touched state and accessible invalid attributes.

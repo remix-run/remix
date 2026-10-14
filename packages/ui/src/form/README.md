@@ -1,23 +1,42 @@
 # form
 
-`form()` progressively enhances native constraint validation with touched and accessible invalid state. It does not replace the browser's validation or own any form markup.
+`form()` progressively enhances native constraint validation with touched and accessible invalid state. `createInputMixin()` connects model-backed form definitions to native inputs without owning their markup.
 
 ```tsx
-import { form } from 'remix/ui/form'
+import * as s from 'remix/data-schema'
+import { createForm } from 'remix/data-schema/form'
+import { createInputMixin, form } from 'remix/ui/form'
 import input from 'remix/ui/input'
 
-function SignupForm() {
+let Signup = createForm(s.object({ email: s.string() }), {
+  fields: { email: { label: 'Email', type: 'email' } },
+})
+let signupInput = createInputMixin(Signup)
+
+function SignupPage() {
   return () => (
     <form method="post" mix={form()}>
       <label htmlFor="email">Email</label>
-      <input id="email" name="email" required type="email" mix={input()} />
+      <input autoComplete="email" mix={[signupInput('email'), input()]} />
       <button type="submit">Create account</button>
     </form>
   )
 }
 ```
 
-The mixin:
+## `createInputMixin(formDefinition)`
+
+Creates one input mixin factory for a model-backed form definition. Each field mixin:
+
+- applies generated ids, names, types, native constraints, restored values, and server error attributes during SSR
+- runs the field's synchronous schema validator on `input` and reports its first issue through `setCustomValidity()`
+- preserves explicit host props, so authored attributes such as `autoComplete` or an intentional `type` override win
+
+Apply the returned mixin to every projected input, including fields whose schemas map entirely to native constraints. This keeps native and custom validation on one rendering path.
+
+## `form()`
+
+Apply this mixin to the containing native form. It:
 
 - leaves fields unmarked while the user types before their first blur
 - sets `data-touched` and synchronizes `aria-invalid` after blur

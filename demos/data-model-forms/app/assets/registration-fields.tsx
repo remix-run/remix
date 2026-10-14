@@ -1,16 +1,16 @@
 import type { ErrorAttributes, FormRawValue } from 'remix/data-schema/form'
-import { clientEntry, on } from 'remix/ui'
+import { clientEntry } from 'remix/ui'
 import type { Handle } from 'remix/ui'
 import button from 'remix/ui/button'
 import checkbox from 'remix/ui/checkbox'
-import { form as formValidation } from 'remix/ui/form'
+import { createInputMixin, form as formValidation } from 'remix/ui/form'
 import input from 'remix/ui/input'
 
 import { RegistrationForm } from '../actions/registration/registration-form.ts'
 import * as styles from '../actions/registration/styles.ts'
 import { routes } from '../routes.ts'
 
-const validateDisplayName = RegistrationForm.createInputValidator('displayName')
+const registrationInput = createInputMixin(RegistrationForm)
 
 export const RegistrationFields = clientEntry(
   import.meta.url,
@@ -52,14 +52,9 @@ export const RegistrationFields = clientEntry(
                   )}
                 </label>
                 <input
-                  {...RegistrationForm.getInputAttrs('displayName', submission)}
                   autoComplete="name"
                   placeholder="Ada Lovelace"
-                  mix={[
-                    input(),
-                    styles.control,
-                    on('input', (event) => validateDisplayName(event.currentTarget)),
-                  ]}
+                  mix={[registrationInput('displayName', submission), input(), styles.control]}
                 />
                 <FieldErrors
                   attrs={RegistrationForm.getErrorAttrs('displayName')}
@@ -77,10 +72,9 @@ export const RegistrationFields = clientEntry(
                   )}
                 </label>
                 <input
-                  {...RegistrationForm.getInputAttrs('email', submission)}
                   autoComplete="email"
                   placeholder="ada@example.com"
-                  mix={[input(), styles.control]}
+                  mix={[registrationInput('email', submission), input(), styles.control]}
                 />
                 <FieldErrors
                   attrs={RegistrationForm.getErrorAttrs('email')}
@@ -98,10 +92,9 @@ export const RegistrationFields = clientEntry(
                   )}
                 </label>
                 <input
-                  {...RegistrationForm.getInputAttrs('age', submission)}
                   inputMode="numeric"
                   placeholder="36"
-                  mix={[input(), styles.control]}
+                  mix={[registrationInput('age', submission), input(), styles.control]}
                 />
                 <FieldErrors
                   attrs={RegistrationForm.getErrorAttrs('age')}
@@ -119,10 +112,9 @@ export const RegistrationFields = clientEntry(
                   )}
                 </label>
                 <input
-                  {...RegistrationForm.getInputAttrs('website', submission)}
                   autoComplete="url"
                   placeholder="https://example.com"
-                  mix={[input(), styles.control]}
+                  mix={[registrationInput('website', submission), input(), styles.control]}
                 />
                 <FieldErrors
                   attrs={RegistrationForm.getErrorAttrs('website')}
@@ -141,10 +133,9 @@ export const RegistrationFields = clientEntry(
                 )}
               </label>
               <input
-                {...RegistrationForm.getInputAttrs('password', submission)}
                 autoComplete="new-password"
                 placeholder="At least 8 characters"
-                mix={[input(), styles.control]}
+                mix={[registrationInput('password', submission), input(), styles.control]}
               />
               <FieldErrors
                 attrs={RegistrationForm.getErrorAttrs('password')}
@@ -153,7 +144,7 @@ export const RegistrationFields = clientEntry(
             </div>
 
             <div mix={styles.checkboxField}>
-              <input {...RegistrationForm.getInputAttrs('terms', submission)} mix={checkbox()} />
+              <input mix={[registrationInput('terms', submission), checkbox()]} />
               <label {...RegistrationForm.getLabelAttrs('terms')} mix={styles.checkboxLabel}>
                 {RegistrationForm.fields.terms.label}
                 {RegistrationForm.fields.terms.required ? (

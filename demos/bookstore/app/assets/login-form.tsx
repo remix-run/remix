@@ -1,10 +1,12 @@
 import type { FormRawValue } from 'remix/data-schema/form'
 import { clientEntry, css } from 'remix/ui'
 import type { Handle } from 'remix/ui'
-import { form as formValidation } from 'remix/ui/form'
+import { createInputMixin, form as formValidation } from 'remix/ui/form'
 import input from 'remix/ui/input'
 
 import { LoginForm } from '../actions/auth/login/login-form.ts'
+
+const loginInput = createInputMixin(LoginForm)
 
 export const LoginFields = clientEntry(
   import.meta.url,
@@ -29,11 +31,7 @@ export const LoginFields = clientEntry(
           <form method="POST" action={formAction} mix={formValidation()}>
             <div class="form-group">
               <label {...LoginForm.getLabelAttrs('email')}>{LoginForm.fields.email.label}</label>
-              <input
-                {...LoginForm.getInputAttrs('email', submission)}
-                autoComplete="email"
-                mix={input()}
-              />
+              <input autoComplete="email" mix={[loginInput('email', submission), input()]} />
               {emailErrors.length > 0 ? (
                 <p {...LoginForm.getErrorAttrs('email')} role="alert">
                   {emailErrors.join(' ')}
@@ -46,9 +44,8 @@ export const LoginFields = clientEntry(
                 {LoginForm.fields.password.label}
               </label>
               <input
-                {...LoginForm.getInputAttrs('password', submission)}
                 autoComplete="current-password"
-                mix={input()}
+                mix={[loginInput('password', submission), input()]}
               />
               {passwordErrors.length > 0 ? (
                 <p {...LoginForm.getErrorAttrs('password')} role="alert">

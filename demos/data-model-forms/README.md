@@ -99,22 +99,18 @@ The router creates a `DatabaseSync(':memory:')` instance and exposes the resulti
 The page owns its DOM structure and applies the generated attributes directly:
 
 ```tsx
+import { createInputMixin } from 'remix/ui/form'
 import input from 'remix/ui/input'
-import { on } from 'remix/ui'
 
-let validateDisplayName = RegistrationForm.createInputValidator('displayName')
+let registrationInput = createInputMixin(RegistrationForm)
 
 <label {...RegistrationForm.getLabelAttrs('displayName')}>
   {RegistrationForm.fields.displayName.label}
   {RegistrationForm.fields.displayName.required ? <span>Required</span> : null}
 </label>
 <input
-  {...RegistrationForm.getInputAttrs('displayName', submission)}
   autoComplete="name"
-  mix={[
-    input(),
-    on('input', (event) => validateDisplayName(event.currentTarget)),
-  ]}
+  mix={[registrationInput('displayName', submission), input()]}
 />
 ```
 
@@ -171,7 +167,7 @@ return redirect(routes.registration.index.href(), 303)
 
 The redirect makes the successful flow POST-redirect-GET. The following GET queries SQLite and renders every stored account, proving that the form payload reached the persistent data layer without retaining the raw password.
 
-The form controls live inside a small `clientEntry()` component so the `form()` mixin can attach its blur and input listeners. `createInputValidator()` reuses the configured field's schema and input decoder, then reports the first issue through the input's native `setCustomValidity()` method. The form mixin only presents that invalid state after the field has blurred once. Everything still renders on the server first. If JavaScript is unavailable, native constraints still block representable errors and the server returns accessible error markup for every schema issue.
+The form controls live inside a small `clientEntry()` component so the mixins can attach their input and blur listeners. `createInputMixin()` gives every field one validation mixin: it applies `getInputAttrs()` during SSR, then uses `createInputValidator()` in the browser to report synchronous schema issues through the input's native `setCustomValidity()` method. The form mixin only presents invalid state after the field has blurred once. If JavaScript is unavailable, native constraints still block representable errors and the server returns accessible error markup for every schema issue.
 
 With JavaScript enabled, add a leading or trailing space to the display name to see its non-native model refinement participate in client-side constraint validation. Try `a@b` as the email address to see the server-error path: browsers accept it as a native email value, while the data model's email rule requires a dotted domain. The returned page keeps the email and checkbox state, highlights the email error, and leaves the password blank.
 

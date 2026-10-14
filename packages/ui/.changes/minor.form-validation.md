@@ -1,1 +1,1 @@
-Added a low-level `form()` mixin that layers touched and accessible invalid state onto native constraint validation, plus matching invalid styles for the built-in input and checkbox mixins.
+Added a low-level `form()` mixin that layers touched and accessible invalid state onto native constraint validation, plus matching invalid styles for the built-in input and checkbox mixins. `createInputMixin()` adapts a model-backed form definition into one per-field mixin that applies generated native attributes during SSR and synchronous schema validation as the input changes.
