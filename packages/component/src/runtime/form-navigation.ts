@@ -61,8 +61,8 @@ export function createFormNavigationResolver(
     }
   }
 
-  // Cache the authoritative submitter for the matching `navigate` event and, for Chromium's
-  // non-POST-to-POST override case, the later `formdata` event. Unmatched submits expire.
+  // Cache the authoritative submitter and native POST data for the matching `navigate` event.
+  // Unmatched submits expire.
   document.addEventListener(
     'submit',
     (event) => {
@@ -79,10 +79,9 @@ export function createFormNavigationResolver(
           : null
       let removeFormDataListener = () => {}
       let method = getFormMethod(form, submitter).toLowerCase()
-      // Chromium omits formData from the `navigate` event when a submitter overrides a non-POST form
-      // to POST, so we have to capture that via the `formdata` event so we can grab it from the
-      // `navigate` event handler
-      if (method === 'post' && form.method.toLowerCase() !== 'post') {
+      // Chromium can omit formData from `navigate` when a submitter is detached or overrides a
+      // non-POST form to POST. Capture the browser's original data, including the submitter's value.
+      if (method === 'post') {
         let onFormData = (event: FormDataEvent) => {
           let pending = pendingSubmissions.get(form)
           if (pending) pending.formData = event.formData

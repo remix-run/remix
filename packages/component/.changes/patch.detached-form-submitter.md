@@ -1,1 +1,1 @@
-Fix frame navigation for forms whose submit button is removed immediately after submission, including buttons reused across forms while an earlier submission is still pending (see #11987).
+Fix frame navigation for forms whose submit button is removed immediately after submission, preserving POST data and handling buttons reused across forms while an earlier submission is still pending (see #11987).
