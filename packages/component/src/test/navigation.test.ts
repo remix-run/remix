@@ -2133,6 +2133,58 @@ describe('form navigation', () => {
     }
   })
 
+  it('reloads a targeted frame when a temporary submitter is removed during submission', async () => {
+    let topReload = mock.fn(async () => ({ signal: new AbortController().signal }))
+    let namedReload = mock.fn(async () => ({ signal: new AbortController().signal }))
+    let topFrame = { src: '' } as FrameHandle
+    let namedFrame = { src: '' } as FrameHandle
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame(name) {
+        expect(name).toBe('items')
+        return namedFrame
+      },
+      reloadFrame: (frame) =>
+        createReloadTransition(frame === namedFrame ? namedReload() : topReload()),
+    })
+
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'get'
+    form.setAttribute('data-rmx-target', 'items')
+    let input = document.createElement('input')
+    input.name = 'filter'
+    input.value = 'example'
+    form.append(input)
+    document.body.append(form)
+
+    let didNavigate = false
+    try {
+      let navigationSucceeded = waitForNavigationSuccess()
+      // Custom element libraries submit through a temporary native button, then remove it before
+      // the `navigate` event fires.
+      let submitter = document.createElement('button')
+      submitter.type = 'submit'
+      submitter.hidden = true
+      form.append(submitter)
+      submitter.click()
+      submitter.remove()
+      await navigationSucceeded
+      didNavigate = true
+
+      let entryAfterSubmission = getCurrentNavigationEntry()
+      expect(new URL(entryAfterSubmission.url ?? '').searchParams.get('filter')).toBe('example')
+      expect(topReload).not.toHaveBeenCalled()
+      expect(namedReload).toHaveBeenCalledTimes(1)
+      expect(namedFrame.src).toBe(entryAfterSubmission.url)
+    } finally {
+      form.remove()
+      if (didNavigate) await window.navigation.back().finished
+      controller.abort()
+    }
+  })
+
   it('replaces marked GET form history across frame redirects without submission metadata', async () => {
     expect(typeof Reflect.get(window, 'NavigationPrecommitController')).toBe('function')
 

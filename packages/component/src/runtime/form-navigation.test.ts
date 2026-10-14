@@ -78,4 +78,74 @@ describe('form navigation', () => {
       if (didNavigate) await window.navigation.back().finished
     }
   })
+
+  it('resolves submissions from a submitter removed before navigation', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let resolvedSubmission = Promise.withResolvers<FormSubmission>()
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        let navigation = resolveFormNavigation(event)
+        formNavigation = navigation
+        let getSubmission = navigation?.getSubmission
+        if (!getSubmission) return
+
+        event.intercept({
+          async handler() {
+            resolvedSubmission.resolve(await getSubmission())
+          },
+        })
+      },
+      { signal: controller.signal },
+    )
+
+    let destination = new URL(window.location.href)
+    destination.searchParams.set('form-navigation', 'detached-submitter')
+    let form = document.createElement('form')
+    form.action = destination.href
+    form.method = 'post'
+    form.setAttribute('data-rmx-target', 'items')
+
+    let input = document.createElement('input')
+    input.name = 'item'
+    input.value = '42'
+    form.append(input)
+    document.body.append(form)
+
+    let navigationSucceeded = Promise.withResolvers<void>()
+    window.navigation.addEventListener('navigatesuccess', () => navigationSucceeded.resolve(), {
+      once: true,
+      signal: controller.signal,
+    })
+
+    let didNavigate = false
+    try {
+      let submitter = document.createElement('button')
+      submitter.name = 'intent'
+      submitter.value = 'start'
+      submitter.setAttribute('formenctype', 'multipart/form-data')
+      submitter.hidden = true
+      form.append(submitter)
+      submitter.click()
+      submitter.remove()
+      await navigationSucceeded.promise
+      didNavigate = true
+
+      expect(formNavigation?.getAttribute('data-rmx-target')).toBe('items')
+      let submission = await resolvedSubmission.promise
+      expect(submission.method).toBe('post')
+      expect(submission.encType).toBe('multipart/form-data')
+      expect(Array.from(submission.formData?.entries() ?? [])).toEqual([
+        ['item', '42'],
+        ['intent', 'start'],
+      ])
+    } finally {
+      form.remove()
+      controller.abort()
+      if (didNavigate) await window.navigation.back().finished
+    }
+  })
 })

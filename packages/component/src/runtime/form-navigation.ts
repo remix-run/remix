@@ -47,9 +47,24 @@ export function createFormNavigationResolver(
   signal: AbortSignal,
 ): (event: NavigateEvent) => FormNavigation | undefined {
   let pendingFormSubmissions = new WeakMap<HTMLFormElement, PendingFormSubmission>()
+  // Some custom elements submit by clicking a temporary native button and removing it before the
+  // `navigate` event, which leaves `sourceElement.form` null. Remember the submitter's form until
+  // its pending submission is handled or expires.
+  let pendingSubmitterForms = new WeakMap<SubmitterElement, HTMLFormElement>()
 
-  // Cache the authoritative submitter for the matching `navigate` event and, for Chromium's
-  // non-POST-to-POST override case, the later `formdata` event. Unmatched submits expire.
+  function releasePending(form: HTMLFormElement, pending: PendingFormSubmission) {
+    clearTimeout(pending.timeout)
+    pending.removeFormDataListener()
+    if (pendingFormSubmissions.get(form) === pending) {
+      pendingFormSubmissions.delete(form)
+    }
+    if (pending.submitter && pendingSubmitterForms.get(pending.submitter) === form) {
+      pendingSubmitterForms.delete(pending.submitter)
+    }
+  }
+
+  // Cache the authoritative submitter for the matching `navigate` event and, for POST submissions,
+  // the `formdata` event. Unmatched submits expire.
   document.addEventListener(
     'submit',
     (event) => {
@@ -57,10 +72,7 @@ export function createFormNavigationResolver(
       if (!(form instanceof HTMLFormElement)) return
 
       let existing = pendingFormSubmissions.get(form)
-      if (existing) {
-        clearTimeout(existing.timeout)
-        existing.removeFormDataListener()
-      }
+      if (existing) releasePending(form, existing)
 
       let eventSubmitter = event instanceof SubmitEvent ? event.submitter : null
       let submitter =
@@ -70,9 +82,9 @@ export function createFormNavigationResolver(
       let removeFormDataListener = () => {}
       let method = getFormMethod(form, submitter).toLowerCase()
       // Chromium omits formData from the `navigate` event when a submitter overrides a non-POST form
-      // to POST, so we have to capture that via the `formdata` event so we can grab it from the
-      // `navigate` event handler
-      if (method === 'post' && form.method.toLowerCase() !== 'post') {
+      // to POST, or when the submitter is removed before `navigate`, so we capture it via the
+      // `formdata` event so we can grab it from the `navigate` event handler
+      if (method === 'post') {
         let onFormData = (event: FormDataEvent) => {
           let pending = pendingFormSubmissions.get(form)
           if (pending) pending.formData = event.formData
@@ -82,15 +94,11 @@ export function createFormNavigationResolver(
       }
       let pending: PendingFormSubmission = {
         submitter,
-        timeout: setTimeout(() => {
-          if (pendingFormSubmissions.get(form) === pending) {
-            pendingFormSubmissions.delete(form)
-          }
-          pending.removeFormDataListener()
-        }, PENDING_FORM_SUBMISSION_TIMEOUT),
+        timeout: setTimeout(() => releasePending(form, pending), PENDING_FORM_SUBMISSION_TIMEOUT),
         removeFormDataListener,
       }
       pendingFormSubmissions.set(form, pending)
+      if (submitter) pendingSubmitterForms.set(submitter, form)
     },
     { capture: true, signal },
   )
@@ -99,7 +107,7 @@ export function createFormNavigationResolver(
     let sourceElement = (event as SourceElementNavigateEvent).sourceElement
     if (!(sourceElement instanceof Element)) return
 
-    let form = getSourceForm(sourceElement)
+    let form = getSourceForm(sourceElement, pendingSubmitterForms)
     if (!form) return
 
     let pending = pendingFormSubmissions.get(form)
@@ -111,12 +119,7 @@ export function createFormNavigationResolver(
 
     let formEvent = event as FormNavigateEvent
     let clearPending = () => {
-      if (!pending) return
-      clearTimeout(pending.timeout)
-      pending.removeFormDataListener()
-      if (pendingFormSubmissions.get(form) === pending) {
-        pendingFormSubmissions.delete(form)
-      }
+      if (pending) releasePending(form, pending)
     }
     let getSubmission: FormNavigation['getSubmission']
     if (method.toLowerCase() === 'get') {
@@ -147,12 +150,15 @@ export function createFormNavigationResolver(
   }
 }
 
-function getSourceForm(sourceElement: Element): HTMLFormElement | undefined {
+function getSourceForm(
+  sourceElement: Element,
+  pendingSubmitterForms: WeakMap<SubmitterElement, HTMLFormElement>,
+): HTMLFormElement | undefined {
   // A form navigation's source element is the submitted form or its submit button.
   // https://html.spec.whatwg.org/multipage/nav-history-apis.html#dom-navigateevent-sourceelement
   if (sourceElement instanceof HTMLFormElement) return sourceElement
   if (sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement) {
-    return sourceElement.form ?? undefined
+    return sourceElement.form ?? pendingSubmitterForms.get(sourceElement)
   }
 }
 
