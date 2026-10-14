@@ -61,7 +61,7 @@ export function createFormNavigationResolver(
     }
   }
 
-  // Cache the authoritative submitter and native POST data for the matching `navigate` event.
+  // Cache the authoritative submitter and native data for the matching `navigate` event.
   // Unmatched submits expire.
   document.addEventListener(
     'submit',
@@ -77,26 +77,24 @@ export function createFormNavigationResolver(
         eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
           ? eventSubmitter
           : null
-      let removeFormDataListener = () => {}
-      let method = getFormMethod(form, submitter).toLowerCase()
-      // Chromium can omit formData from `navigate` when a submitter is detached or overrides a
-      // non-POST form to POST. Capture the browser's original data, including the submitter's value.
-      if (method === 'post') {
-        let onFormData = (event: FormDataEvent) => {
-          let pending = pendingSubmissions.get(form)
-          if (pending) pending.formData = event.formData
-        }
-        form.addEventListener('formdata', onFormData, { signal })
-        removeFormDataListener = () => form.removeEventListener('formdata', onFormData)
+      function onFormData(formDataEvent: FormDataEvent) {
+        // Native formdata follows an uncanceled submit. Ignore snapshots made in submit handlers
+        // or after cancellation, and stop listening before later snapshots can replace this data.
+        if (event.eventPhase !== Event.NONE || event.defaultPrevented) return
+        pending.formData = formDataEvent.formData
+        if (submitter) pendingSubmissions.set(submitter, pending)
+        pending.removeFormDataListener()
       }
       let pending: PendingFormSubmission = {
         form,
         submitter,
         timeout: setTimeout(() => clearPending(pending), PENDING_FORM_SUBMISSION_TIMEOUT),
-        removeFormDataListener,
+        removeFormDataListener() {
+          form.removeEventListener('formdata', onFormData)
+        },
       }
+      form.addEventListener('formdata', onFormData, { signal })
       pendingSubmissions.set(form, pending)
-      if (submitter) pendingSubmissions.set(submitter, pending)
     },
     { capture: true, signal },
   )
@@ -121,7 +119,8 @@ export function createFormNavigationResolver(
       if (pending) clearPending(pending)
     } else {
       getSubmission = async () => {
-        // Chromium may dispatch `formdata` after `navigate` for submitter-overridden POSTs.
+        // Chromium can omit formData for detached submitters or submitter-overridden POSTs,
+        // and may dispatch the fallback `formdata` event after `navigate`.
         if (!formEvent.formData && pending && !pending.formData) {
           await new Promise<void>((resolve) => setTimeout(resolve, 0))
         }
