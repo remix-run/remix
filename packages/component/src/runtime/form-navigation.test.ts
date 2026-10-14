@@ -135,6 +135,121 @@ describe('form navigation', () => {
     }
   })
 
+  it('preserves a newer submission on the same form when an older POST callback completes', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+    let initialKey = window.navigation.currentEntry?.key
+
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'post'
+    form.setAttribute('data-rmx-target', 'form')
+    let oldButton = document.createElement('button')
+    oldButton.name = 'intent'
+    oldButton.value = 'first'
+    let newButton = document.createElement('button')
+    newButton.name = 'intent'
+    newButton.value = 'second'
+    newButton.setAttribute('data-rmx-target', 'new-submitter')
+    form.append(oldButton, newButton)
+    document.body.append(form)
+
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        formNavigation = resolveFormNavigation(event)
+        event.intercept({ handler: async () => {} })
+      },
+      { signal: controller.signal },
+    )
+
+    try {
+      let firstNavigation = nextNavigation(controller.signal)
+      form.requestSubmit(oldButton)
+      await firstNavigation
+      let finishOldPost = formNavigation?.getSubmission
+      expect(finishOldPost).toBeDefined()
+
+      let secondNavigation = nextNavigation(controller.signal)
+      form.requestSubmit(newButton)
+      newButton.remove()
+      // Complete the old callback after the new submit, but before its navigate event.
+      let firstSubmission = await finishOldPost?.()
+      await secondNavigation
+
+      expect(newButton.form).toBe(null)
+      expect(formNavigation?.getAttribute('data-rmx-target')).toBe('new-submitter')
+      let secondSubmission = await formNavigation?.getSubmission?.()
+      expect(Array.from(firstSubmission?.formData?.entries() ?? [])).toEqual([['intent', 'first']])
+      expect(Array.from(secondSubmission?.formData?.entries() ?? [])).toEqual([
+        ['intent', 'second'],
+      ])
+    } finally {
+      form.remove()
+      controller.abort()
+      if (initialKey) await window.navigation.traverseTo(initialKey).finished
+    }
+  })
+
+  it('preserves a submitter reused by another form when an older POST callback completes', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+    let initialKey = window.navigation.currentEntry?.key
+
+    let previousForm = document.createElement('form')
+    previousForm.action = window.location.href
+    previousForm.method = 'post'
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'post'
+    form.setAttribute('data-rmx-target', 'new-form')
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'first'
+    previousForm.append(button)
+    document.body.append(previousForm, form)
+
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        formNavigation = resolveFormNavigation(event)
+        event.intercept({ handler: async () => {} })
+      },
+      { signal: controller.signal },
+    )
+
+    try {
+      let firstNavigation = nextNavigation(controller.signal)
+      previousForm.requestSubmit(button)
+      await firstNavigation
+      let finishOldPost = formNavigation?.getSubmission
+      expect(finishOldPost).toBeDefined()
+
+      form.append(button)
+      button.value = 'second'
+      let secondNavigation = nextNavigation(controller.signal)
+      form.requestSubmit(button)
+      button.remove()
+      let firstSubmission = await finishOldPost?.()
+      await secondNavigation
+
+      expect(button.form).toBe(null)
+      expect(formNavigation?.getAttribute('data-rmx-target')).toBe('new-form')
+      let secondSubmission = await formNavigation?.getSubmission?.()
+      expect(Array.from(firstSubmission?.formData?.entries() ?? [])).toEqual([['intent', 'first']])
+      expect(Array.from(secondSubmission?.formData?.entries() ?? [])).toEqual([
+        ['intent', 'second'],
+      ])
+    } finally {
+      previousForm.remove()
+      form.remove()
+      controller.abort()
+      if (initialKey) await window.navigation.traverseTo(initialKey).finished
+    }
+  })
+
   it('preserves browser form data when the submitter is detached before navigate fires', async () => {
     let controller = new AbortController()
     let resolveFormNavigation = createFormNavigationResolver(controller.signal)
@@ -207,3 +322,9 @@ describe('form navigation', () => {
     }
   })
 })
+
+function nextNavigation(signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    window.navigation.addEventListener('navigatesuccess', () => resolve(), { once: true, signal })
+  })
+}
