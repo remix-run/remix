@@ -373,6 +373,117 @@ describe('form navigation', () => {
     }
   })
 
+  it('preserves a pending GET when the same form has a canceled duplicate submit', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let initialKey = window.navigation.currentEntry?.key
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+    let destination: string | undefined
+
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'get'
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'search'
+    button.setAttribute('data-rmx-target', 'original-frame')
+    form.append(button)
+    document.body.append(form)
+
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        destination = event.destination.url
+        formNavigation = resolveFormNavigation(event)
+        event.intercept({ handler: async () => {} })
+      },
+      { signal: controller.signal },
+    )
+
+    try {
+      let navigationSucceeded = nextNavigation(controller.signal)
+      form.requestSubmit(button)
+      form.addEventListener('submit', (event) => event.preventDefault(), { once: true })
+      form.requestSubmit(button)
+      button.remove()
+      await navigationSucceeded
+
+      expect(button.form).toBe(null)
+      expect(formNavigation?.getAttribute('data-rmx-target')).toBe('original-frame')
+      expect(formNavigation?.getSubmission).toBeUndefined()
+      expect(destination).toBeDefined()
+      expect(new URL(destination ?? '').searchParams.get('intent')).toBe('search')
+    } finally {
+      form.remove()
+      controller.abort()
+      if (initialKey) await window.navigation.traverseTo(initialKey).finished
+    }
+  })
+
+  it('preserves a pending POST when the same form has a canceled submit with another button', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let initialKey = window.navigation.currentEntry?.key
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+    let submission: FormSubmission | undefined
+
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'post'
+    let input = document.createElement('input')
+    input.name = 'name'
+    input.value = 'Ada'
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'save'
+    button.setAttribute('formenctype', 'multipart/form-data')
+    button.setAttribute('data-rmx-target', 'original-frame')
+    let canceledButton = document.createElement('button')
+    canceledButton.name = 'intent'
+    canceledButton.value = 'search'
+    canceledButton.setAttribute('formmethod', 'get')
+    canceledButton.setAttribute('data-rmx-target', 'canceled-frame')
+    form.append(input, button, canceledButton)
+    document.body.append(form)
+
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        formNavigation = resolveFormNavigation(event)
+        event.intercept({
+          async handler() {
+            submission = await formNavigation?.getSubmission?.()
+          },
+        })
+      },
+      { signal: controller.signal },
+    )
+
+    try {
+      let navigationSucceeded = nextNavigation(controller.signal)
+      form.requestSubmit(button)
+      input.value = 'Grace'
+      form.addEventListener('submit', (event) => event.preventDefault(), { once: true })
+      form.requestSubmit(canceledButton)
+      button.remove()
+      new FormData(form)
+      await navigationSucceeded
+
+      expect(button.form).toBe(null)
+      expect(formNavigation?.getAttribute('data-rmx-target')).toBe('original-frame')
+      expect(submission?.method).toBe('post')
+      expect(submission?.encType).toBe('multipart/form-data')
+      expect(Array.from(submission?.formData?.entries() ?? [])).toEqual([
+        ['name', 'Ada'],
+        ['intent', 'save'],
+      ])
+    } finally {
+      form.remove()
+      controller.abort()
+      if (initialKey) await window.navigation.traverseTo(initialKey).finished
+    }
+  })
+
   it('preserves browser form data when the submitter is detached before navigate fires', async () => {
     let controller = new AbortController()
     let resolveFormNavigation = createFormNavigationResolver(controller.signal)

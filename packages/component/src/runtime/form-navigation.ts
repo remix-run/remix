@@ -69,9 +69,6 @@ export function createFormNavigationResolver(
       let form = event.target
       if (!(form instanceof HTMLFormElement)) return
 
-      let existing = pendingSubmissions.get(form)
-      if (existing) clearPending(existing)
-
       let eventSubmitter = event instanceof SubmitEvent ? event.submitter : null
       let submitter =
         eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
@@ -81,7 +78,11 @@ export function createFormNavigationResolver(
         // Native formdata follows an uncanceled submit. Ignore snapshots made in submit handlers
         // or after cancellation, and stop listening before later snapshots can replace this data.
         if (event.eventPhase !== Event.NONE || event.defaultPrevented) return
+        // A canceled retry must not replace a submission whose navigation is still pending.
+        let existing = pendingSubmissions.get(pending.form)
+        if (existing) clearPending(existing)
         pending.formData = formDataEvent.formData
+        pendingSubmissions.set(pending.form, pending)
         if (submitter) pendingSubmissions.set(submitter, pending)
         pending.removeFormDataListener()
       }
@@ -94,7 +95,6 @@ export function createFormNavigationResolver(
         },
       }
       form.addEventListener('formdata', onFormData, { signal })
-      pendingSubmissions.set(form, pending)
     },
     { capture: true, signal },
   )
