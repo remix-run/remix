@@ -39,7 +39,18 @@ export async function loadExample(name: string): Promise<LoadedExample> {
 }
 
 export async function highlightSource(source: string, lang = 'tsx'): Promise<string> {
-  return renderMarkdownHtml({ type: 'root', children: [{ type: 'code', lang, value: source }] })
+  let lines = source.split('\n')
+  let indent = Infinity
+  for (let line of lines) {
+    if (line.trim() !== '') {
+      indent = Math.min(indent, line.length - line.trimStart().length)
+    }
+  }
+  let value = lines
+    .map((line) => line.slice(indent))
+    .join('\n')
+    .trim()
+  return renderMarkdownHtml({ type: 'root', children: [{ type: 'code', lang, value }] })
 }
 
 function isDemoComponent(value: unknown): value is DemoComponent {

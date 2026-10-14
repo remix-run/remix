@@ -21,20 +21,22 @@ const disabledExample = await loadExample('accordion/disabled')
 const disabledItem = await loadExample('accordion/disabled-item')
 const changeEvents = await loadExample('accordion/events')
 
-const anatomyCode = await highlightSource(`import * as accordion from '@remix-run/ui/accordion'
+const anatomyCode = await highlightSource(`
+  import * as accordion from '@remix-run/ui/accordion'
 
-<accordion.Context>
-  <div mix={accordion.root()}>
-    <accordion.ItemContext value="shipping">
-      <section mix={accordion.item()}>
-        <h3>
-          <button type="button" mix={accordion.trigger()}>Shipping</button>
-        </h3>
-        <div mix={accordion.content()}>Delivery preferences</div>
-      </section>
-    </accordion.ItemContext>
-  </div>
-</accordion.Context>`)
+  <accordion.Context>
+    <div mix={accordion.root()}>
+      <accordion.ItemContext value="shipping">
+        <section mix={accordion.item()}>
+          <h3>
+            <button type="button" mix={accordion.trigger()}>Shipping</button>
+          </h3>
+          <div mix={accordion.content()}>Delivery preferences</div>
+        </section>
+      </accordion.ItemContext>
+    </div>
+  </accordion.Context>
+`)
 
 export const preview = basic
 

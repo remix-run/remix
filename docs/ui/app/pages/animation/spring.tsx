@@ -18,30 +18,38 @@ const custom = await loadExample('animation/spring/custom')
 const webAnimationsExample = await loadExample('animation/spring/web-animations')
 const iteratorExample = await loadExample('animation/spring/iterator')
 
-const anatomyCode = await highlightSource(`import { css } from 'remix/component'
-import { spring } from '@remix-run/ui/animation'
+const anatomyCode = await highlightSource(`
+  import { css } from 'remix/component'
+  import { spring } from '@remix-run/ui/animation'
 
-<div mix={css({
-  transform: moved ? 'translateX(200px)' : 'translateX(0)',
-  transition: spring.transition('transform', 'snappy'),
-})} />`)
+  <div mix={css({
+    transform: moved ? 'translateX(200px)' : 'translateX(0)',
+    transition: spring.transition('transform', 'snappy'),
+  })} />
+`)
 
-const cssCode = await highlightSource(`<div mix={css({
-  opacity: visible ? 1 : 0,
-  transform: visible ? 'translateY(0)' : 'translateY(8px)',
-  transition: spring.transition(['transform', 'opacity'], 'snappy'),
-})} />`)
+const cssCode = await highlightSource(`
+  <div mix={css({
+    opacity: visible ? 1 : 0,
+    transform: visible ? 'translateY(0)' : 'translateY(8px)',
+    transition: spring.transition(['transform', 'opacity'], 'snappy'),
+  })} />
+`)
 
-const mixinsCode = await highlightSource(`<div mix={[
-  animateEntrance({ opacity: 0, ...spring('snappy') }),
-  animateExit({ opacity: 0, ...spring('snappy') }),
-]}>Saved</div>`)
+const mixinsCode = await highlightSource(`
+  <div mix={[
+    animateEntrance({ opacity: 0, ...spring('snappy') }),
+    animateExit({ opacity: 0, ...spring('snappy') }),
+  ]}>Saved</div>
+`)
 
-const accessibilityCode = await highlightSource(`<div mix={css({
-  transform: moved ? 'translateX(200px)' : 'translateX(0)',
-  transition: spring.transition('transform', 'snappy'),
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-})} />`)
+const accessibilityCode = await highlightSource(`
+  <div mix={css({
+    transform: moved ? 'translateX(200px)' : 'translateX(0)',
+    transition: spring.transition('transform', 'snappy'),
+    '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+  })} />
+`)
 
 export const preview = billing
 

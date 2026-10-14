@@ -19,54 +19,59 @@ const disabledExample = await loadExample('select/disabled')
 const formExample = await loadExample('select/form')
 const eventsExample = await loadExample('select/events')
 
-const anatomyCode = await highlightSource(`import * as select from '@remix-run/ui/select'
-import * as popover from '@remix-run/ui/popover'
+const anatomyCode = await highlightSource(`
+  import * as select from '@remix-run/ui/select'
+  import * as popover from '@remix-run/ui/popover'
 
-<select.Context defaultLabel="Choose delivery">
-  <button type="button" mix={select.trigger()}><SelectedLabel /></button>
-  <popover.Context>
-    <div mix={select.popover()}>
-      <div aria-label="Delivery methods" mix={select.list()}>
-        <div mix={select.option({ label: 'Standard', value: 'standard' })}>Standard</div>
-        <div mix={select.option({ label: 'Express', value: 'express' })}>Express</div>
+  <select.Context defaultLabel="Choose delivery">
+    <button type="button" mix={select.trigger()}><SelectedLabel /></button>
+    <popover.Context>
+      <div mix={select.popover()}>
+        <div aria-label="Delivery methods" mix={select.list()}>
+          <div mix={select.option({ label: 'Standard', value: 'standard' })}>Standard</div>
+          <div mix={select.option({ label: 'Express', value: 'express' })}>Express</div>
+        </div>
       </div>
-    </div>
-  </popover.Context>
-</select.Context>
+    </popover.Context>
+  </select.Context>
 
-function SelectedLabel(handle: Handle) {
-  let context = handle.context.get(select.Context)
-  return () => <span>{context.displayedLabel}</span>
-}`)
+  function SelectedLabel(handle: Handle) {
+    let context = handle.context.get(select.Context)
+    return () => <span>{context.displayedLabel}</span>
+  }
+`)
 
-const initialCode =
-  await highlightSource(`<select.Context defaultValue="standard" defaultLabel="Standard delivery">
-  {/* Trigger and options */}
-</select.Context>`)
+const initialCode = await highlightSource(`
+  <select.Context defaultValue="standard" defaultLabel="Standard delivery">
+    {/* Trigger and options */}
+  </select.Context>
+`)
 
-const feedbackCode =
-  await highlightSource(`<select.Context defaultLabel="Choose delivery" labelSwapDelayMs={0}>
-  <button mix={select.trigger()}><SelectedLabel /></button>
-  <popover.Context>
-    <div mix={[
-      css({
-        opacity: 0,
-        transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-        '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
-        '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-      }),
-      select.popover(),
-    ]}>
-      {/* List and options */}
-    </div>
-  </popover.Context>
-</select.Context>`)
+const feedbackCode = await highlightSource(`
+  <select.Context defaultLabel="Choose delivery" labelSwapDelayMs={0}>
+    <button mix={select.trigger()}><SelectedLabel /></button>
+    <popover.Context>
+      <div mix={[
+        css({
+          opacity: 0,
+          transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+          '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
+          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+        }),
+        select.popover(),
+      ]}>
+        {/* List and options */}
+      </div>
+    </popover.Context>
+  </select.Context>
+`)
 
-const accessibilityCode =
-  await highlightSource(`<button aria-label="Delivery method" type="button" mix={select.trigger()}>
-  <SelectedLabel />
-</button>
-<div aria-label="Delivery methods" mix={select.list()} />`)
+const accessibilityCode = await highlightSource(`
+  <button aria-label="Delivery method" type="button" mix={select.trigger()}>
+    <SelectedLabel />
+  </button>
+  <div aria-label="Delivery methods" mix={select.list()} />
+`)
 
 export default function SelectPage(handle: Handle<PageProps>) {
   return () => (

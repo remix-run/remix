@@ -18,63 +18,71 @@ const basic = await loadExample('listbox/basic')
 const richOptionsExample = await loadExample('listbox/rich-options')
 const settledExample = await loadExample('listbox/settled')
 
-const anatomyCode = await highlightSource(`import * as listbox from '@remix-run/ui/listbox'
+const anatomyCode = await highlightSource(`
+  import * as listbox from '@remix-run/ui/listbox'
 
-<listbox.Context
-  value={value}
-  activeValue={activeValue}
-  onSelect={(next) => { value = next
-    handle.update() }}
-  onHighlight={(next) => { activeValue = next
-    handle.update() }}
->
-  <div tabIndex={0} aria-label="Teams" mix={listbox.list()}>
-    <div mix={listbox.option({ label: 'Design', value: 'design' })}>Design</div>
-    <div mix={listbox.option({ label: 'Engineering', value: 'engineering' })}>Engineering</div>
-  </div>
-</listbox.Context>`)
+  <listbox.Context
+    value={value}
+    activeValue={activeValue}
+    onSelect={(next) => { value = next
+      handle.update() }}
+    onHighlight={(next) => { activeValue = next
+      handle.update() }}
+  >
+    <div tabIndex={0} aria-label="Teams" mix={listbox.list()}>
+      <div mix={listbox.option({ label: 'Design', value: 'design' })}>Design</div>
+      <div mix={listbox.option({ label: 'Engineering', value: 'engineering' })}>Engineering</div>
+    </div>
+  </listbox.Context>
+`)
 
-const stateCode = await highlightSource(`let value: string | null = null
-let activeValue: string | null = null
-let activeId: string | undefined
+const stateCode = await highlightSource(`
+  let value: string | null = null
+  let activeValue: string | null = null
+  let activeId: string | undefined
 
-<listbox.Context
-  value={value}
-  activeValue={activeValue}
-  onSelect={(next) => { value = next
-    handle.update() }}
-  onHighlight={(next, option) => {
-    activeValue = next
-    activeId = option?.id
-    handle.update()
-  }}
->
-  <div tabIndex={0} aria-label="Teams" aria-activedescendant={activeId} mix={listbox.list()}>
-    {/* Options */}
-  </div>
-</listbox.Context>`)
+  <listbox.Context
+    value={value}
+    activeValue={activeValue}
+    onSelect={(next) => { value = next
+      handle.update() }}
+    onHighlight={(next, option) => {
+      activeValue = next
+      activeId = option?.id
+      handle.update()
+    }}
+  >
+    <div tabIndex={0} aria-label="Teams" aria-activedescendant={activeId} mix={listbox.list()}>
+      {/* Options */}
+    </div>
+  </listbox.Context>
+`)
 
-const imperativeCode = await highlightSource(`let control: listbox.ListboxRef | undefined
+const imperativeCode = await highlightSource(`
+  let control: listbox.ListboxRef | undefined
 
-<listbox.Context
-  value={value}
-  activeValue={activeValue}
-  onSelect={onSelect}
-  onHighlight={onHighlight}
-  ref={(next) => { control = next }}
->
-  {/* List and options */}
-</listbox.Context>
+  <listbox.Context
+    value={value}
+    activeValue={activeValue}
+    onSelect={onSelect}
+    onHighlight={onHighlight}
+    ref={(next) => { control = next }}
+  >
+    {/* List and options */}
+  </listbox.Context>
 
-control?.highlightSearchMatch('design')
-await control?.selectActive()`)
+  control?.highlightSearchMatch('design')
+  await control?.selectActive()
+`)
 
-const accessibilityCode = await highlightSource(`<div
-  tabIndex={0}
-  aria-label="Teams"
-  aria-activedescendant={activeId}
-  mix={listbox.list()}
-/>`)
+const accessibilityCode = await highlightSource(`
+  <div
+    tabIndex={0}
+    aria-label="Teams"
+    aria-activedescendant={activeId}
+    mix={listbox.list()}
+  />
+`)
 
 export default function ListboxPage(handle: Handle<PageProps>) {
   return () => (

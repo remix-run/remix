@@ -15,24 +15,30 @@ export const meta = {
 const reordering = await loadExample('animation/layout/reordering')
 const selection = await loadExample('animation/layout/selection')
 
-const anatomyCode = await highlightSource(`import { animateLayout } from '@remix-run/ui/animation'
+const anatomyCode = await highlightSource(`
+  import { animateLayout } from '@remix-run/ui/animation'
 
-{items.map((item) => (
-  <div key={item.id} mix={animateLayout()}>{item.title}</div>
-))}`)
+  {items.map((item) => (
+    <div key={item.id} mix={animateLayout()}>{item.title}</div>
+  ))}
+`)
 
-const optionsCode = await highlightSource(
-  `<div mix={animateLayout({ ...spring('snappy'), size: false })}>Revenue</div>`,
-)
+const optionsCode = await highlightSource(`
+  <div mix={animateLayout({ ...spring('snappy'), size: false })}>Revenue</div>
+`)
 
-const transformsCode = await highlightSource(`<div mix={animateLayout()}>
-  <div mix={css({ transform: 'rotate(-2deg)' })}>Preview</div>
-</div>`)
+const transformsCode = await highlightSource(`
+  <div mix={animateLayout()}>
+    <div mix={css({ transform: 'rotate(-2deg)' })}>Preview</div>
+  </div>
+`)
 
 const reducedMotionCode = await highlightSource(
-  `let reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  `
+    let reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-animateLayout(reducedMotion ? false : { ...spring('smooth') })`,
+    animateLayout(reducedMotion ? false : { ...spring('smooth') })
+  `,
   'ts',
 )
 

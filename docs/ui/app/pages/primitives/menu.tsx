@@ -18,49 +18,59 @@ const checkboxExample = await loadExample('menu/checkbox')
 const radioExample = await loadExample('menu/radio')
 const submenuExample = await loadExample('menu/submenu')
 
-const anatomyCode = await highlightSource(`import * as menu from '@remix-run/ui/menu'
+const anatomyCode = await highlightSource(`
+  import * as menu from '@remix-run/ui/menu'
 
-<menu.Context label="Project actions">
-  <button type="button" mix={menu.trigger()}>Actions</button>
-  <div mix={menu.popover()}>
-    <div mix={menu.list()}>
-      <div mix={menu.item({ name: 'duplicate' })}>Duplicate project</div>
-      <div mix={menu.item({ name: 'archive', disabled: true })}>Archive project</div>
+  <menu.Context label="Project actions">
+    <button type="button" mix={menu.trigger()}>Actions</button>
+    <div mix={menu.popover()}>
+      <div mix={menu.list()}>
+        <div mix={menu.item({ name: 'duplicate' })}>Duplicate project</div>
+        <div mix={menu.item({ name: 'archive', disabled: true })}>Archive project</div>
+      </div>
     </div>
+  </menu.Context>
+`)
+
+const actionsCode = await highlightSource(`
+  <div mix={menu.onMenuSelect((event) => {
+    if (event.item.name === 'duplicate') {
+      duplicateProject()
+    }
+  })}>
+    {/* Menu */}
   </div>
-</menu.Context>`)
+`)
 
-const actionsCode = await highlightSource(`<div mix={menu.onMenuSelect((event) => {
-  if (event.item.name === 'duplicate') {
-    duplicateProject()
-  }
-})}>
-  {/* Menu */}
-</div>`)
+const contextMenuCode = await highlightSource(`
+  <menu.Context label="File actions">
+    <div tabIndex={0} mix={menu.contextTrigger()}>Project brief.pdf</div>
+    {/* Surface and menu items */}
+  </menu.Context>
+`)
 
-const contextMenuCode = await highlightSource(`<menu.Context label="File actions">
-  <div tabIndex={0} mix={menu.contextTrigger()}>Project brief.pdf</div>
-  {/* Surface and menu items */}
-</menu.Context>`)
+const labelsCode = await highlightSource(`
+  <div mix={menu.item({
+    name: 'move',
+    label: 'Move to workspace',
+    searchValue: ['move', 'workspace'],
+  })}>
+    Move to workspace <ChevronRightIcon />
+  </div>
+`)
 
-const labelsCode = await highlightSource(`<div mix={menu.item({
-  name: 'move',
-  label: 'Move to workspace',
-  searchValue: ['move', 'workspace'],
-})}>
-  Move to workspace <ChevronRightIcon />
-</div>`)
-
-const motionCode = await highlightSource(`<div mix={[
-  css({
-    opacity: 0,
-    transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-    '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
-    '&[data-close-animation="none"]': { transition: 'none' },
-    '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-  }),
-  menu.popover(),
-]} />`)
+const motionCode = await highlightSource(`
+  <div mix={[
+    css({
+      opacity: 0,
+      transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+      '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
+      '&[data-close-animation="none"]': { transition: 'none' },
+      '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+    }),
+    menu.popover(),
+  ]} />
+`)
 
 export default function MenuPage(handle: Handle<PageProps>) {
   return () => (

@@ -15,56 +15,65 @@ export const meta = {
 const timing = await loadExample('animation/tween/timing')
 
 const anatomyCode = await highlightSource(
-  `import { easings, tween } from '@remix-run/ui/animation'
+  `
+    import { easings, tween } from '@remix-run/ui/animation'
 
-let animation = tween({ from: 0, to: 200, duration: 600, curve: easings.easeOut })
-animation.next()
-let next = animation.next(timestamp)`,
+    let animation = tween({ from: 0, to: 200, duration: 600, curve: easings.easeOut })
+    animation.next()
+    let next = animation.next(timestamp)
+  `,
   'ts',
 )
 
-const framesCode =
-  await highlightSource(`let animation = tween({ from: position, to: target, duration: 600, curve: easings.easeOut })
-animation.next()
-let frame = requestAnimationFrame(tick)
+const framesCode = await highlightSource(`
+  let animation = tween({ from: position, to: target, duration: 600, curve: easings.easeOut })
+  animation.next()
+  let frame = requestAnimationFrame(tick)
 
-function tick(timestamp: number) {
-  let next = animation.next(timestamp)
-  position = next.value
-  handle.update()
-  if (!next.done) frame = requestAnimationFrame(tick)
-}
+  function tick(timestamp: number) {
+    let next = animation.next(timestamp)
+    position = next.value
+    handle.update()
+    if (!next.done) frame = requestAnimationFrame(tick)
+  }
 
-<div mix={css({ transform: \`translateX(\${position}px)\` })} />`)
+  <div mix={css({ transform: \`translateX(\${position}px)\` })} />
+`)
 
 const curvesCode = await highlightSource(
-  `tween({
-  from: 0,
-  to: 1,
-  duration: 400,
-  curve: { x1: 0.2, y1: 0, x2: 0.3, y2: 1.4 },
-})`,
+  `
+    tween({
+      from: 0,
+      to: 1,
+      duration: 400,
+      curve: { x1: 0.2, y1: 0, x2: 0.3, y2: 1.4 },
+    })
+  `,
   'ts',
 )
 
 const retargetingCode = await highlightSource(
-  `cancelAnimationFrame(frame)
-let animation = tween({ from: position, to: target, duration: 600, curve: easings.easeOut })
-animation.next()
-frame = requestAnimationFrame(tick)`,
+  `
+    cancelAnimationFrame(frame)
+    let animation = tween({ from: position, to: target, duration: 600, curve: easings.easeOut })
+    animation.next()
+    frame = requestAnimationFrame(tick)
+  `,
   'ts',
 )
 
 const reducedMotionCode = await highlightSource(
-  `cancelAnimationFrame(frame)
-if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-  position = target
-  handle.update()
-} else {
-  animation = tween({ from: position, to: target, duration: 600, curve: easings.easeOut })
-  animation.next()
-  frame = requestAnimationFrame(tick)
-}`,
+  `
+    cancelAnimationFrame(frame)
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      position = target
+      handle.update()
+    } else {
+      animation = tween({ from: position, to: target, duration: 600, curve: easings.easeOut })
+      animation.next()
+      frame = requestAnimationFrame(tick)
+    }
+  `,
   'ts',
 )
 

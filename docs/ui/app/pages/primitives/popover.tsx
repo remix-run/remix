@@ -16,56 +16,67 @@ export const meta = {
 const basic = await loadExample('popover/basic')
 const editableAnchorExample = await loadExample('popover/editable-anchor')
 
-const anatomyCode = await highlightSource(`import * as popover from '@remix-run/ui/popover'
+const anatomyCode = await highlightSource(`
+  import * as popover from '@remix-run/ui/popover'
 
-<popover.Context>
-  <button
-    type="button"
-    mix={[
-      popover.anchor({ placement: 'bottom-start', offset: 8 }),
-      popover.focusOnHide(),
-      on('click', () => { open = true
-        handle.update() }),
-    ]}
-  >Filters</button>
-  <div mix={popover.surface({
+  <popover.Context>
+    <button
+      type="button"
+      mix={[
+        popover.anchor({ placement: 'bottom-start', offset: 8 }),
+        popover.focusOnHide(),
+        on('click', () => { open = true
+          handle.update() }),
+      ]}
+    >Filters</button>
+    <div mix={popover.surface({
+      open,
+      onHide() { open = false
+        handle.update() },
+    })}>
+      <input aria-label="Filter projects" mix={popover.focusOnShow()} />
+    </div>
+  </popover.Context>
+`)
+
+const stateCode = await highlightSource(`
+  popover.surface({
     open,
-    onHide() { open = false
-      handle.update() },
-  })}>
+    onHide(request) {
+      open = false
+      handle.update()
+    },
+  })
+`)
+
+const positionCode = await highlightSource(`
+  popover.anchor({ placement: 'bottom-end', offset: 8 })
+`)
+
+const focusCode = await highlightSource(`
+  <button mix={popover.focusOnHide()}>Open filters</button>
+
+  <div mix={popover.surface({ open, onHide, restoreFocusOnHide: false })}>
     <input aria-label="Filter projects" mix={popover.focusOnShow()} />
   </div>
-</popover.Context>`)
+`)
 
-const stateCode = await highlightSource(`popover.surface({
-  open,
-  onHide(request) {
-    open = false
-    handle.update()
-  },
-})`)
+const motionCode = await highlightSource(`
+  <div mix={[
+    css({
+      opacity: 0,
+      transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+      '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
+      '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+    }),
+    popover.surface({ open, onHide }),
+  ]} />
+`)
 
-const positionCode = await highlightSource(`popover.anchor({ placement: 'bottom-end', offset: 8 })`)
-
-const focusCode = await highlightSource(`<button mix={popover.focusOnHide()}>Open filters</button>
-
-<div mix={popover.surface({ open, onHide, restoreFocusOnHide: false })}>
-  <input aria-label="Filter projects" mix={popover.focusOnShow()} />
-</div>`)
-
-const motionCode = await highlightSource(`<div mix={[
-  css({
-    opacity: 0,
-    transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-    '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
-    '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-  }),
-  popover.surface({ open, onHide }),
-]} />`)
-
-const accessibilityCode =
-  await highlightSource(`<button aria-expanded={open} aria-controls="project-filters">Filters</button>
-<div id="project-filters" role="dialog" aria-label="Project filters" mix={popover.surface({ open, onHide })} />`)
+const accessibilityCode = await highlightSource(`
+  <button aria-expanded={open} aria-controls="project-filters">Filters</button>
+  <div id="project-filters" role="dialog" aria-label="Project filters" mix={popover.surface({ open, onHide })} />
+`)
 
 export default function PopoverPage(handle: Handle<PageProps>) {
   return () => (

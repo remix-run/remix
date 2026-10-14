@@ -49,12 +49,16 @@ Load examples and highlight snippets once at module scope. Example names are rel
 ```tsx
 const basic = await loadExample('accordion/basic')
 
-const anatomyCode = await highlightSource(`import * as accordion from '@remix-run/ui/accordion'
+const anatomyCode = await highlightSource(`
+  import * as accordion from '@remix-run/ui/accordion'
 
-<div mix={accordion.root()}>
-  {/* Accordion items */}
-</div>`)
+  <div mix={accordion.root()}>
+    {/* Accordion items */}
+  </div>
+`)
 ```
+
+`highlightSource` removes shared indentation and outer whitespace before highlighting. Internal indentation and blank lines stay in the displayed and copied code.
 
 Examples remain beside the UI implementation in `packages/ui/src/**/*.example.tsx`. Each default exports a normal Remix component. Keep each example self-contained, including its styles, so readers can copy the whole file. The site reads the file for highlighted source and hydrates its default export with `clientEntry`; no source macros, generated copies or import rewriting are involved. Example modules are excluded from the published package and its build.
 

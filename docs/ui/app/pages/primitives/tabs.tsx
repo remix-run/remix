@@ -19,36 +19,42 @@ const disabledItemExample = await loadExample('tabs/disabled-item')
 const disabledExample = await loadExample('tabs/disabled')
 const eventsExample = await loadExample('tabs/events')
 
-const anatomyCode = await highlightSource(`import * as tabs from '@remix-run/ui/tabs'
+const anatomyCode = await highlightSource(`
+  import * as tabs from '@remix-run/ui/tabs'
 
-<tabs.Context defaultActiveTab="overview">
-  <div mix={tabs.root()}>
-    <div aria-label="Project sections" mix={tabs.list()}>
-      <button mix={tabs.tab({ name: 'overview' })}>Overview</button>
-      <button mix={tabs.tab({ name: 'activity' })}>Activity</button>
+  <tabs.Context defaultActiveTab="overview">
+    <div mix={tabs.root()}>
+      <div aria-label="Project sections" mix={tabs.list()}>
+        <button mix={tabs.tab({ name: 'overview' })}>Overview</button>
+        <button mix={tabs.tab({ name: 'activity' })}>Activity</button>
+      </div>
+      <div mix={tabs.panel({ name: 'overview' })}>Project summary</div>
+      <div mix={tabs.panel({ name: 'activity' })}>Recent changes</div>
     </div>
-    <div mix={tabs.panel({ name: 'overview' })}>Project summary</div>
-    <div mix={tabs.panel({ name: 'activity' })}>Recent changes</div>
+  </tabs.Context>
+`)
+
+const contextCode = await highlightSource(`
+  function ActivityLink(handle: Handle) {
+    let context = handle.context.get(tabs.Context)
+    return () => (
+      <button
+        type="button"
+        disabled={context.activeTab === 'activity'}
+        mix={on('click', () => context.activateTab('activity'))}
+      >View activity</button>
+    )
+  }
+`)
+
+const accessibilityCode = await highlightSource(`
+  <div
+    tabIndex={0}
+    mix={tabs.panel({ name: 'overview' })}
+  >
+    Project summary
   </div>
-</tabs.Context>`)
-
-const contextCode = await highlightSource(`function ActivityLink(handle: Handle) {
-  let context = handle.context.get(tabs.Context)
-  return () => (
-    <button
-      type="button"
-      disabled={context.activeTab === 'activity'}
-      mix={on('click', () => context.activateTab('activity'))}
-    >View activity</button>
-  )
-}`)
-
-const accessibilityCode = await highlightSource(`<div
-  tabIndex={0}
-  mix={tabs.panel({ name: 'overview' })}
->
-  Project summary
-</div>`)
+`)
 
 export default function TabsPage(handle: Handle<PageProps>) {
   return () => (

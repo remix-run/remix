@@ -21,40 +21,48 @@ const formExample = await loadExample('combobox/form')
 const eventsExample = await loadExample('combobox/events')
 const imperativeExample = await loadExample('combobox/imperative')
 
-const anatomyCode = await highlightSource(`import * as combobox from '@remix-run/ui/combobox'
+const anatomyCode = await highlightSource(`
+  import * as combobox from '@remix-run/ui/combobox'
 
-<combobox.Context name="state">
+  <combobox.Context name="state">
+    <label for="state">State</label>
+    <input id="state" mix={combobox.input()} />
+    <div mix={combobox.popover()}>
+      <div aria-label="US states" mix={combobox.list()}>
+        <div mix={combobox.option({ label: 'California', value: 'CA' })}>California</div>
+        <div mix={combobox.option({ label: 'New York', value: 'NY' })}>New York</div>
+      </div>
+    </div>
+    <input mix={combobox.hiddenInput()} />
+  </combobox.Context>
+`)
+
+const draftsCode = await highlightSource(`
+  <combobox.Context name="state">
+    <input aria-label="State" mix={combobox.input()} />
+    {/* Popup options */}
+    <input mix={combobox.hiddenInput()} />
+  </combobox.Context>
+`)
+
+const feedbackCode = await highlightSource(`
+  <div mix={[
+    css({
+      opacity: 0,
+      transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+      '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
+      '&[data-show-reason="hint"]': { transition: 'none' },
+      '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+    }),
+    combobox.popover(),
+  ]} />
+`)
+
+const accessibilityCode = await highlightSource(`
   <label for="state">State</label>
   <input id="state" mix={combobox.input()} />
-  <div mix={combobox.popover()}>
-    <div aria-label="US states" mix={combobox.list()}>
-      <div mix={combobox.option({ label: 'California', value: 'CA' })}>California</div>
-      <div mix={combobox.option({ label: 'New York', value: 'NY' })}>New York</div>
-    </div>
-  </div>
-  <input mix={combobox.hiddenInput()} />
-</combobox.Context>`)
-
-const draftsCode = await highlightSource(`<combobox.Context name="state">
-  <input aria-label="State" mix={combobox.input()} />
-  {/* Popup options */}
-  <input mix={combobox.hiddenInput()} />
-</combobox.Context>`)
-
-const feedbackCode = await highlightSource(`<div mix={[
-  css({
-    opacity: 0,
-    transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-    '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
-    '&[data-show-reason="hint"]': { transition: 'none' },
-    '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-  }),
-  combobox.popover(),
-]} />`)
-
-const accessibilityCode = await highlightSource(`<label for="state">State</label>
-<input id="state" mix={combobox.input()} />
-<div aria-label="US states" mix={combobox.list()} />`)
+  <div aria-label="US states" mix={combobox.list()} />
+`)
 
 export default function ComboboxPage(handle: Handle<PageProps>) {
   return () => (

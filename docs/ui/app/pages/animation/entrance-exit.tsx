@@ -14,37 +14,46 @@ export const meta = {
 
 const presence = await loadExample('animation/entrance-exit/presence')
 
-const anatomyCode =
-  await highlightSource(`import { animateEntrance, animateExit } from '@remix-run/ui/animation'
+const anatomyCode = await highlightSource(`
+  import { animateEntrance, animateExit } from '@remix-run/ui/animation'
 
-{visible && (
-  <div key="notification" mix={[animateEntrance(), animateExit()]}>
-    Changes saved
-  </div>
-)}`)
+  {visible && (
+    <div key="notification" mix={[animateEntrance(), animateExit()]}>
+      Changes saved
+    </div>
+  )}
+`)
 
-const timingCode = await highlightSource(`<div mix={[
-  animateEntrance({ opacity: 0, transform: 'translateY(12px)', ...spring('snappy') }),
-  animateExit({ opacity: 0, transform: 'translateY(-12px)', duration: 200, easing: 'ease-in' }),
-]}>Changes saved</div>`)
+const timingCode = await highlightSource(`
+  <div mix={[
+    animateEntrance({ opacity: 0, transform: 'translateY(12px)', ...spring('snappy') }),
+    animateExit({ opacity: 0, transform: 'translateY(-12px)', duration: 200, easing: 'ease-in' }),
+  ]}>Changes saved</div>
+`)
 
-const identityCode = await highlightSource(`{visible && (
-  <div key="notification" mix={[animateEntrance(), animateExit()]}>
-    Changes saved
-  </div>
-)}`)
+const identityCode = await highlightSource(`
+  {visible && (
+    <div key="notification" mix={[animateEntrance(), animateExit()]}>
+      Changes saved
+    </div>
+  )}
+`)
 
 const initialEntranceCode = await highlightSource(
-  `animateEntrance({ opacity: 0, ...spring('snappy'), initial: false })`,
+  `
+    animateEntrance({ opacity: 0, ...spring('snappy'), initial: false })
+  `,
   'ts',
 )
 
 const reducedMotionCode = await highlightSource(
-  `let reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-let timing = reducedMotion ? { duration: 0 } : { ...spring('snappy') }
+  `
+    let reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    let timing = reducedMotion ? { duration: 0 } : { ...spring('snappy') }
 
-animateEntrance({ opacity: 0, ...timing })
-animateExit({ opacity: 0, ...timing })`,
+    animateEntrance({ opacity: 0, ...timing })
+    animateExit({ opacity: 0, ...timing })
+  `,
   'ts',
 )
 

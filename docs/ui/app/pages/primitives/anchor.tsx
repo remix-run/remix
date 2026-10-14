@@ -17,49 +17,57 @@ const basic = await loadExample('anchor/basic')
 const coordinatesExample = await loadExample('anchor/coordinates')
 const relativeExample = await loadExample('anchor/relative')
 
-const anatomyCode = await highlightSource(`import { anchor } from '@remix-run/ui/anchor'
+const anatomyCode = await highlightSource(`
+  import { anchor } from '@remix-run/ui/anchor'
 
-let cleanup = anchor(surface, trigger, {
-  placement: 'bottom-start',
-  offset: 8,
-})
+  let cleanup = anchor(surface, trigger, {
+    placement: 'bottom-start',
+    offset: 8,
+  })
 
-cleanup()`)
+  cleanup()
+`)
 
-const placementCode =
-  await highlightSource(`anchor(surface, trigger, { placement: 'right-start', offset: 8 })
+const placementCode = await highlightSource(`
+  anchor(surface, trigger, { placement: 'right-start', offset: 8 })
 
-<div mix={css({
-  '&[data-anchor-placement^="right"]': { transformOrigin: 'left center' },
-  '&[data-anchor-placement^="left"]': { transformOrigin: 'right center' },
-})} />`)
+  <div mix={css({
+    '&[data-anchor-placement^="right"]': { transformOrigin: 'left center' },
+    '&[data-anchor-placement^="left"]': { transformOrigin: 'right center' },
+  })} />
+`)
 
-const offsetsCode = await highlightSource(`anchor(surface, trigger, {
-  placement: 'bottom-start',
-  offset: 8,
-  offsetX: 4,
-  offsetY: (floating) => floating.offsetHeight / 20,
-})`)
+const offsetsCode = await highlightSource(`
+  anchor(surface, trigger, {
+    placement: 'bottom-start',
+    offset: 8,
+    offsetX: 4,
+    offsetY: (floating) => floating.offsetHeight / 20,
+  })
+`)
 
-const lifetimeCode = await highlightSource(`let cleanup = () => {}
+const lifetimeCode = await highlightSource(`
+  let cleanup = () => {}
 
-<div popover="auto" mix={[
-  ref((node, signal) => {
-    signal.addEventListener('abort', () => cleanup(), { once: true })
-  }),
-  on('beforetoggle', (event) => {
-    cleanup()
-    if (event.newState === 'open') {
-      cleanup = anchor(event.currentTarget, trigger, { offset: 8 })
-    }
-  }),
-]} />`)
+  <div popover="auto" mix={[
+    ref((node, signal) => {
+      signal.addEventListener('abort', () => cleanup(), { once: true })
+    }),
+    on('beforetoggle', (event) => {
+      cleanup()
+      if (event.newState === 'open') {
+        cleanup = anchor(event.currentTarget, trigger, { offset: 8 })
+      }
+    }),
+  ]} />
+`)
 
-const accessibilityCode =
-  await highlightSource(`<button type="button" popovertarget="project-details">Project details</button>
-<div id="project-details" popover="auto">
-  {/* Positioned content */}
-</div>`)
+const accessibilityCode = await highlightSource(`
+  <button type="button" popovertarget="project-details">Project details</button>
+  <div id="project-details" popover="auto">
+    {/* Positioned content */}
+  </div>
+`)
 
 export default function AnchorPage(handle: Handle<PageProps>) {
   return () => (

@@ -21,19 +21,23 @@ const readOnlyExample = await loadExample('toggle/read-only')
 const formExample = await loadExample('toggle/form')
 const eventsExample = await loadExample('toggle/events')
 
-const anatomyCode = await highlightSource(`import { toggle } from '@remix-run/ui/toggle'
+const anatomyCode = await highlightSource(`
+  import { toggle } from '@remix-run/ui/toggle'
 
-<label>
-  Email notifications
-  <input type="checkbox" mix={toggle({ defaultChecked: true })} />
-</label>`)
+  <label>
+    Email notifications
+    <input type="checkbox" mix={toggle({ defaultChecked: true })} />
+  </label>
+`)
 
-const accessibilityCode = await highlightSource(`<button
-  type="button"
-  disabled
-  aria-label="Security alerts"
-  mix={toggle({ disabled: true, defaultChecked: true })}
-/>`)
+const accessibilityCode = await highlightSource(`
+  <button
+    type="button"
+    disabled
+    aria-label="Security alerts"
+    mix={toggle({ disabled: true, defaultChecked: true })}
+  />
+`)
 
 export default function TogglePage(handle: Handle<PageProps>) {
   return () => (
