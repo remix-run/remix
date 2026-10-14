@@ -79,6 +79,62 @@ describe('form navigation', () => {
     }
   })
 
+  it('preserves a reused submitter when its previous form submits again', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+    let submitterForm: HTMLFormElement | null | undefined
+
+    let previousForm = document.createElement('form')
+    previousForm.addEventListener('submit', (event) => event.preventDefault())
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'get'
+    form.setAttribute('data-rmx-target', 'items')
+    let button = document.createElement('button')
+    button.name = 'filter'
+    button.value = 'example'
+    previousForm.append(button)
+    document.body.append(previousForm, form)
+
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        submitterForm = button.form
+        formNavigation = resolveFormNavigation(event)
+        event.intercept({ handler: async () => {} })
+      },
+      { signal: controller.signal },
+    )
+    let navigationSucceeded = Promise.withResolvers<void>()
+    window.navigation.addEventListener('navigatesuccess', () => navigationSucceeded.resolve(), {
+      once: true,
+      signal: controller.signal,
+    })
+
+    let didNavigate = false
+    try {
+      previousForm.requestSubmit(button)
+      form.append(button)
+      form.requestSubmit(button)
+      button.remove()
+      previousForm.requestSubmit()
+
+      await navigationSucceeded.promise
+      didNavigate = true
+
+      expect(submitterForm).toBe(null)
+      expect(formNavigation?.getAttribute('data-rmx-target')).toBe('items')
+      expect(formNavigation?.getSubmission).toBeUndefined()
+      expect(new URL(window.location.href).searchParams.get('filter')).toBe('example')
+    } finally {
+      previousForm.remove()
+      form.remove()
+      controller.abort()
+      if (didNavigate) await window.navigation.back().finished
+    }
+  })
+
   it('resolves form navigation when the submitter is detached before navigate fires', async () => {
     let controller = new AbortController()
     let resolveFormNavigation = createFormNavigationResolver(controller.signal)

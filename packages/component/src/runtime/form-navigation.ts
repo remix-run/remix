@@ -63,7 +63,9 @@ export function createFormNavigationResolver(
       if (existing) {
         clearTimeout(existing.timeout)
         existing.removeFormDataListener()
-        if (existing.submitter) pendingSubmitterForms.delete(existing.submitter)
+        if (existing.submitter && pendingSubmitterForms.get(existing.submitter) === form) {
+          pendingSubmitterForms.delete(existing.submitter)
+        }
       }
 
       let eventSubmitter = event instanceof SubmitEvent ? event.submitter : null
@@ -89,8 +91,10 @@ export function createFormNavigationResolver(
         timeout: setTimeout(() => {
           if (pendingFormSubmissions.get(form) === pending) {
             pendingFormSubmissions.delete(form)
+            if (submitter && pendingSubmitterForms.get(submitter) === form) {
+              pendingSubmitterForms.delete(submitter)
+            }
           }
-          if (submitter) pendingSubmitterForms.delete(submitter)
           pending.removeFormDataListener()
         }, PENDING_FORM_SUBMISSION_TIMEOUT),
         removeFormDataListener,
@@ -120,9 +124,11 @@ export function createFormNavigationResolver(
       if (!pending) return
       clearTimeout(pending.timeout)
       pending.removeFormDataListener()
-      if (pending.submitter) pendingSubmitterForms.delete(pending.submitter)
       if (pendingFormSubmissions.get(form) === pending) {
         pendingFormSubmissions.delete(form)
+        if (pending.submitter && pendingSubmitterForms.get(pending.submitter) === form) {
+          pendingSubmitterForms.delete(pending.submitter)
+        }
       }
     }
     let getSubmission: FormNavigation['getSubmission']
