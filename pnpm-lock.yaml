@@ -427,6 +427,31 @@ importers:
         specifier: 4.0.15
         version: 4.0.15(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
 
+  docs/ui:
+    dependencies:
+      '@remix-run/component':
+        specifier: workspace:^
+        version: link:../../packages/component
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
+      remix:
+        specifier: workspace:^
+        version: link:../../packages/remix
+      remix-docs-shared:
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      pagefind:
+        specifier: 'catalog:'
+        version: 1.5.2
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+
   packages/assert:
     devDependencies:
       '@types/node':
@@ -2358,6 +2383,9 @@ importers:
       playwright:
         specifier: 'catalog:'
         version: 1.60.0
+      remix:
+        specifier: workspace:^
+        version: link:../remix
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
