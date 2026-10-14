@@ -4,7 +4,7 @@ import { parse } from './html-parser.ts'
 
 const SCRIPT_FILE_EXT = /\.(?:tsx?|jsx|mts)$/
 const SCRIPT_EXT_IN_PATH = /\.(?:tsx?|jsx|mts)(?=[?#]|$)/
-const SCRIPT_EXT_IN_JS_IMPORT = /\.(?:tsx?|jsx|mts)(?=["'?#])/g
+const SCRIPT_EXT_IN_JS_IMPORT = /\.(?:tsx?|jsx|mts)(?=["'`?#])/g
 
 export async function writeResult(
   outputDir: string,
