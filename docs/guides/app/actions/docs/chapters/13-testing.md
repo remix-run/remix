@@ -1,6 +1,6 @@
 ---
 title: Testing
-description: How to choose a test boundary and test Remix routes, stateful request flows, components, and end-to-end behavior.
+description: How to choose a test boundary and test Remix routes, stateful request flows, browser components, and end-to-end behavior.
 ---
 
 Remix includes `remix/test`, whose three runner types—`server`, `browser`, and `e2e`—determine how and where a test runs. They do not determine how much application code the test exercises. `remix/assert` provides assertions in all three.
@@ -204,6 +204,8 @@ let accountResponse = await router.fetch(
 Database state needs the same boundary. For SQLite, create a database backed by `:memory:`, apply the app's migrations, and seed only the records the test needs. PostgreSQL and MySQL tests should use a dedicated test database or schema and reset changed rows between tests. Do not point tests at development or production data.
 
 The [`remix/file-storage/memory` overview](https://api.remix.run/api/remix/file-storage/memory/overview/) provides `createMemoryFileStorage()` for upload tests. A fresh temporary directory also works. Register cleanup with `t.after(...)` when a fixture opens a database connection, starts a server, or creates files that outlive the request.
+
+When a test needs a function spy or method override, use `t.mock.fn(...)` or `t.mock.method(object, "methodName", impl)` on the test context. Method spies created through `t.mock` are restored automatically when the test finishes, or early with `spy.mock.restore?.()`.
 
 ## Test Remix components in the browser
 
