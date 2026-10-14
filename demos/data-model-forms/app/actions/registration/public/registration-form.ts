@@ -2,7 +2,7 @@ import * as s from 'remix/data-schema'
 import { maxLength, minLength } from 'remix/data-schema/checks'
 import { createForm } from 'remix/data-schema/form'
 
-import { Account } from '../../data/account-schema.ts'
+import { Account } from '../../../data/public/account-schema.ts'
 
 export const RegistrationForm = createForm(Account, {
   fields: {

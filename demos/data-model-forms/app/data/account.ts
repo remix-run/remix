@@ -1,7 +1,7 @@
 import * as s from 'remix/data-schema'
 import { column as c, table } from 'remix/data-table'
 
-import { Account } from './account-schema.ts'
+import { Account } from './public/account-schema.ts'
 
 export const accounts = table({
   name: 'accounts',

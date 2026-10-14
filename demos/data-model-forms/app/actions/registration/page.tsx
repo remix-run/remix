@@ -2,12 +2,9 @@ import type { FormFailure } from 'remix/data-schema/form'
 import type { TableRow } from 'remix/data-table'
 import type { Handle } from 'remix/component'
 
-import {
-  RegistrationFields,
-  type RegistrationSubmission,
-} from '../../assets/registration-fields.tsx'
+import { RegistrationFields, type RegistrationSubmission } from './public/registration-fields.tsx'
 import type { accounts } from '../../data/account.ts'
-import * as styles from './styles.ts'
+import * as styles from './public/styles.ts'
 
 interface RegistrationPageProps {
   storedAccounts: Array<TableRow<typeof accounts>>

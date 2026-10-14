@@ -9,7 +9,7 @@ export interface AssetEntryValue {
 }
 
 export const AssetEntry = createContextKey<AssetEntryValue>()
-const scriptEntry = path.resolve(import.meta.dirname, '../assets/entry.ts')
+const scriptEntry = path.resolve(import.meta.dirname, '../actions/public/entry.ts')
 
 export function loadAssetEntry(): Middleware<{ key: typeof AssetEntry; value: AssetEntryValue }> {
   return async (context, next) => {

@@ -223,6 +223,34 @@ export const checkboxLabel = css({
   lineHeight: 1.4,
 })
 
+export const formActions = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '0.75rem',
+  '@media (max-width: 32rem)': {
+    flexDirection: 'column',
+  },
+})
+
+export const fillButton = css({
+  padding: '0.625rem 1rem',
+  border: `1px solid ${color.borderStrong}`,
+  borderRadius: '0.5rem',
+  background: color.surface,
+  color: color.text,
+  font: 'inherit',
+  fontWeight: 650,
+  cursor: 'pointer',
+  '&:focus-visible': {
+    outline: `2px solid ${color.accent}`,
+    outlineOffset: '2px',
+  },
+  '&:disabled': {
+    opacity: 0.5,
+    cursor: 'default',
+  },
+})
+
 export const submitButton = css({
   justifySelf: 'start',
   padding: '0.625rem 1rem',

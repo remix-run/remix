@@ -4,7 +4,7 @@ import { redirect } from 'remix/response/redirect'
 import { accounts } from '../../data/account.ts'
 import { routes } from '../../routes.ts'
 import { RegistrationPage } from './page.tsx'
-import { RegistrationForm } from './registration-form.ts'
+import { RegistrationForm } from './public/registration-form.ts'
 
 export default createController(routes.registration, {
   actions: {

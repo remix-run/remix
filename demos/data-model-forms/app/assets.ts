@@ -8,14 +8,9 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 export const assetServer = createAssetServer({
   basePath: assetsBase,
   rootDir: path.resolve(import.meta.dirname, '../../..'),
-  allowFiles: [
-    'demos/data-model-forms/app/assets/**',
-    'demos/data-model-forms/app/actions/registration/registration-form.ts',
-    'demos/data-model-forms/app/actions/registration/styles.ts',
-    'demos/data-model-forms/app/data/account-schema.ts',
-    'demos/data-model-forms/app/routes.ts',
-  ],
+  allowFiles: ['demos/data-model-forms/app/**/public/**', 'demos/data-model-forms/app/routes.ts'],
   allowPackages: ['remix', '@remix-run/ui'],
+  denyFiles: ['demos/data-model-forms/app/**/*.test.*'],
   mounts: {
     app: 'demos/data-model-forms/app',
     npm: 'node_modules',

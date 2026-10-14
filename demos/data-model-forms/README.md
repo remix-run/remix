@@ -30,7 +30,7 @@ Each router owns an in-memory SQLite database. It persists across requests for t
 
 ## How it works
 
-The account schema remains the source of truth for persisted account data in `app/data/account-schema.ts`. `createForm()` selects the account fields this UI needs and adds request-only password and terms fields separately:
+The account schema remains the source of truth for persisted account data in `app/data/public/account-schema.ts`. `createForm()` selects the account fields this UI needs and adds request-only password and terms fields separately:
 
 ```ts
 import * as s from 'remix/data-schema'
@@ -169,6 +169,16 @@ The redirect makes the successful flow POST-redirect-GET. The following GET quer
 The form controls live inside a small `clientEntry()` component so the mixins can attach their input and blur listeners. `createInputMixin()` gives every field one validation mixin: it applies `getInputAttrs()` during SSR, then uses `createInputValidator()` in the browser to report synchronous schema issues through the input's native `setCustomValidity()` method. The form mixin only presents invalid state after the field has blurred once. If JavaScript is unavailable, native constraints still block representable errors and the server returns accessible error markup for every schema issue.
 
 With JavaScript enabled, add a leading or trailing space to the display name to see its non-native model refinement participate in client-side constraint validation. Try `a@b` as the email address to see the server-error path: browsers accept it as a native email value, while the data model's email rule requires a dotted domain. The returned page keeps the email and checkbox state, highlights the email error, and leaves the password blank.
+
+## Browser assets
+
+Browser source lives in colocated `public/` directories, following the bookstore demo:
+
+- `app/actions/public/entry.ts` starts the browser runtime.
+- `app/actions/registration/public/` contains the hydrated form, form definition, and styles.
+- `app/data/public/account-schema.ts` contains the shared schema used by both the form and database validation.
+
+The asset server allows `app/**/public/**` and the shared route map, while denying test files. Controllers, database setup, and table definitions remain outside the browser asset boundary.
 
 ## Verify the demo
 

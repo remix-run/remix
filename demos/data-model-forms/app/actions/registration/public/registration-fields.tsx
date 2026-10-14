@@ -1,17 +1,24 @@
 import type { ErrorAttributes, FormRawValue } from 'remix/data-schema/form'
-import { clientEntry } from 'remix/component'
+import { clientEntry, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 import { createInputMixin, form as formValidation } from '@remix-run/ui/form'
 
-import { RegistrationForm } from '../actions/registration/registration-form.ts'
-import * as styles from '../actions/registration/styles.ts'
-import { routes } from '../routes.ts'
+import { RegistrationForm } from './registration-form.ts'
+import * as styles from './styles.ts'
+import { routes } from '../../../routes.ts'
 
 const registrationInput = createInputMixin(RegistrationForm)
 
 export const RegistrationFields = clientEntry(
   import.meta.url,
   function RegistrationFields(handle: Handle<{ submission?: RegistrationSubmission }>) {
+    let hydrated = false
+
+    handle.queueTask(() => {
+      hydrated = true
+      handle.update()
+    })
+
     return () => {
       let { submission } = handle.props
 
@@ -154,9 +161,47 @@ export const RegistrationFields = clientEntry(
               />
             </div>
 
-            <button type="submit" mix={styles.submitButton}>
-              Validate account
-            </button>
+            <div mix={styles.formActions}>
+              <button type="submit" mix={styles.submitButton}>
+                Validate account
+              </button>
+              <button
+                type="button"
+                disabled={!hydrated}
+                mix={[
+                  styles.fillButton,
+                  on('click', (event) => {
+                    let form = event.currentTarget.form
+                    if (!form) return
+
+                    let values = {
+                      displayName: 'Ada Lovelace',
+                      email: 'ada@example.com',
+                      age: '36',
+                      website: 'https://example.com',
+                      password: 'demo-password-123',
+                      terms: true,
+                    }
+
+                    for (let [name, value] of Object.entries(values)) {
+                      let input = form.elements.namedItem(name)
+                      if (!(input instanceof HTMLInputElement)) continue
+
+                      if (typeof value === 'boolean') {
+                        input.checked = value
+                      } else {
+                        input.value = value
+                      }
+
+                      input.dispatchEvent(new Event('input', { bubbles: true }))
+                      input.dispatchEvent(new Event('change', { bubbles: true }))
+                    }
+                  }),
+                ]}
+              >
+                Fill demo values
+              </button>
+            </div>
           </form>
         </section>
       )
