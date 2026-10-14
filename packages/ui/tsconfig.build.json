@@ -14,7 +14,6 @@
     "src/**/*.demo.tsx",
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
-    "src/test",
-    "src/**/*.example.tsx"
+    "src/test"
   ]
 }

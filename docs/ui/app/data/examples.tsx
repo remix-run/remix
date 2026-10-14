@@ -11,13 +11,13 @@ export interface LoadedExample {
   sourceHtml: string
 }
 
-const uiSourceUrl = new URL('../../../../packages/ui/src/', import.meta.url)
+const examplesUrl = new URL('../examples/', import.meta.url)
 
 export async function loadExample(name: string): Promise<LoadedExample> {
   if (!/^[\w-]+(?:\/[\w-]+)+$/.test(name)) {
     throw new Error(`Invalid UI example name: ${name}`)
   }
-  let module = new URL(`${name}.example.tsx`, uiSourceUrl)
+  let module = new URL(`${name}.example.tsx`, examplesUrl)
   let mod: unknown = await import(module.href)
   if (
     mod === null ||

@@ -2383,9 +2383,6 @@ importers:
       playwright:
         specifier: 'catalog:'
         version: 1.60.0
-      remix:
-        specifier: workspace:^
-        version: link:../remix
       typescript:
         specifier: 'catalog:'
         version: 7.0.2

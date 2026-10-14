@@ -20,11 +20,7 @@
     "!src/**/*.demo.ts",
     "!src/**/*.demo.tsx",
     "!src/**/*.test.ts",
-    "!src/**/*.test.tsx",
-    "!src/**/*.example.tsx",
-    "!dist/**/*.example.js",
-    "!dist/**/*.example.d.ts",
-    "!dist/**/*.example.js.map"
+    "!src/**/*.test.tsx"
   ],
   "type": "module",
   "sideEffects": false,
@@ -125,8 +121,7 @@
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
     "playwright": "catalog:",
-    "typescript": "catalog:",
-    "remix": "workspace:^"
+    "typescript": "catalog:"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

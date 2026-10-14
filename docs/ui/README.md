@@ -44,7 +44,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
 
 `PageLayout` reads the `Section` and titled `Example` elements in its children to build the table of contents. Keep these elements in the page JSX, including inside fragments or arrays; headings hidden inside another component's render function are not collected. Section and example IDs must be unique within a page. Give an example a `title` and optional `description` when it needs its own heading. Use `compact` for a shorter preview.
 
-Load examples and highlight snippets once at module scope. Example names are relative to `packages/ui/src/`, without the `.example.tsx` suffix. For example, use `accordion/basic` or `animation/spring/billing`:
+Load examples and highlight snippets once at module scope. Example names are relative to `app/examples/`, without the `.example.tsx` suffix. For example, use `accordion/basic` or `animation/spring/billing`:
 
 ```tsx
 const basic = await loadExample('accordion/basic')
@@ -60,13 +60,14 @@ const anatomyCode = await highlightSource(`
 
 `highlightSource` removes shared indentation and outer whitespace before highlighting. Internal indentation and blank lines stay in the displayed and copied code.
 
-Examples remain beside the UI implementation in `packages/ui/src/**/*.example.tsx`. Each default exports a normal Remix component. Keep each example self-contained, including its styles, so readers can copy the whole file. The site reads the file for highlighted source and hydrates its default export with `clientEntry`; no source macros, generated copies or import rewriting are involved. Example modules are excluded from the published package and its build.
+Examples live in `app/examples/**/*.example.tsx`. Each default exports a normal Remix component. Keep each example self-contained, including its styles, so readers can copy the whole file. The site reads the file for highlighted source and hydrates its default export with `clientEntry`; no source macros, generated copies or import rewriting are involved. These files belong to the site and import the UI package through its public exports.
 
 Page components and their helpers stay on the server. Only example modules and the docs shell are sent to the browser. Export a loaded example as `preview` and include it in the page list to show it on Getting Started. Landing previews are decorative: server-rendered without hydration, inert and hidden from assistive technology.
 
 ## Site ownership
 
 - `app/pages/` owns page content, metadata and shared page helpers.
+- `app/examples/` owns the runnable examples and their copyable source.
 - `app/data/` lists pages and loads examples.
 - `app/actions/docs/` owns the docs controller and Getting Started.
 - `app/actions/public/` owns browser startup and site-specific styles.

@@ -29,7 +29,7 @@ describe('UI docs', () => {
     assert.doesNotMatch(html, /billing\.example[^"<]*\.tsx/)
   })
 
-  it('renders package-owned examples and sections on the primitive page', async () => {
+  it('renders live examples and sections on the primitive page', async () => {
     let response = await createUiRouter().fetch(
       new Request('http://localhost/primitives/accordion/'),
     )
@@ -168,9 +168,7 @@ describe('UI docs', () => {
   it('serves example modules but keeps page components and controllers private', async () => {
     let router = createUiRouter()
     let [example, page, controller] = await Promise.all([
-      router.fetch(
-        new Request('http://localhost/assets/packages/ui/src/accordion/basic.example.tsx'),
-      ),
+      router.fetch(new Request('http://localhost/assets/app/examples/accordion/basic.example.tsx')),
       router.fetch(new Request('http://localhost/assets/app/pages/primitives/accordion.tsx')),
       router.fetch(new Request('http://localhost/assets/app/actions/docs/controller.tsx')),
     ])

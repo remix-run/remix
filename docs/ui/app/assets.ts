@@ -10,7 +10,7 @@ export const assetServer = createAssetServer({
   allowFiles: [
     'docs/ui/app/**/public/**',
     'docs/shared/**/public/**',
-    'packages/ui/src/**/*.example.tsx',
+    'docs/ui/app/examples/**/*.example.tsx',
   ],
   allowPackages: ['@remix-run/component', '@remix-run/ui', 'remix'],
   denyFiles: ['**/*.test.*'],
