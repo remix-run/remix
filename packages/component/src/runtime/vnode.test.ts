@@ -66,7 +66,10 @@ describe('VNode lifecycle types', () => {
   })
 
   it('validates framework props at the element boundary', () => {
-    assert.throws(() => toVNode(jsx('div', { innerHTML: 42 })), /Invalid innerHTML prop/)
+    assert.throws(
+      () => toVNode(jsx('div', { innerHTML: 42 })),
+      /Invalid innerHTML prop: expected a value created with unsafeHTML\(\)/,
+    )
     assert.throws(() => toVNode(jsx('div', { mix: {} })), /Invalid mix prop/)
   })
 })
