@@ -1,4 +1,4 @@
-import { clientEntry, Frame, css, on, type Handle } from 'remix/component'
+import { clientEntry, Frame, css, navigate, on, type Handle } from 'remix/component'
 
 import { routes } from '../../routes.ts'
 import { leadStyle, mutedStyle, panelStyle, sectionHeadingStyle } from '../../ui/public/styles.ts'
@@ -140,6 +140,22 @@ export const StoreScrollReproduction = clientEntry(
                 The top-level client entry now renders much less content than the collection. Use
                 the browser Back button while this short layout is present.
               </p>
+              <button
+                type="button"
+                mix={[
+                  newsletterButtonStyle,
+                  on('click', () => {
+                    void navigate(
+                      routes.scrollRestorationDetail.href(undefined, {
+                        searchParams: { size: 'small' },
+                      }),
+                      { history: 'replace', resetScroll: false },
+                    )
+                  }),
+                ]}
+              >
+                Select size without resetting scroll
+              </button>
             </div>
             <p mix={[leadStyle, css({ marginBottom: 0 })]}>Use the browser Back button now.</p>
           </article>

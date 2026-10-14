@@ -198,8 +198,9 @@ export function startNavigationListenerImpl(
         : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
-      let scroll = normalizeResetBehavior(state.resetScroll)
-      let focusReset = normalizeResetBehavior(state.resetFocus)
+      let isTraverse = event.navigationType === 'traverse'
+      let scroll = isTraverse ? 'after-transition' : normalizeResetBehavior(state.resetScroll)
+      let focusReset = isTraverse ? 'after-transition' : normalizeResetBehavior(state.resetFocus)
       if (!isSameOriginUrl(state.src)) {
         fallbackToDocumentNavigation(navigation, event)
         return
