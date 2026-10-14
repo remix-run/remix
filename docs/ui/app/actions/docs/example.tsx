@@ -2,27 +2,26 @@ import { unsafeHTML } from 'remix/component'
 import type { Handle } from 'remix/component'
 import type { LoadedExample } from '../../data/examples.tsx'
 
-export function Example(handle: Handle<{ example: LoadedExample; showHeading?: boolean }>) {
+interface ExampleProps {
+  id: string
+  example: LoadedExample
+  title?: string
+  description?: string
+  hero?: boolean
+  compact?: boolean
+}
+
+export function Example(handle: Handle<ExampleProps>) {
   return () => {
-    let { definition, Component, sourceHtml } = handle.props.example
+    let { id, example, title, description, hero, compact } = handle.props
+    let { Component, sourceHtml } = example
     return (
-      <div
-        id={definition.id}
-        class={definition.section ? 'ui-example' : 'ui-example ui-example-hero'}
-      >
-        {definition.section && handle.props.showHeading ? (
-          <>
-            <h3>{definition.title}</h3>
-            {definition.description ? <p>{definition.description}</p> : null}
-          </>
-        ) : null}
+      <div id={id} class={hero ? 'ui-example ui-example-hero' : 'ui-example'}>
+        {title ? <h3>{title}</h3> : null}
+        {description ? <p>{description}</p> : null}
         <div class="ui-demo">
           <div
-            class={
-              definition.previewSize === 'compact'
-                ? 'ui-demo-preview ui-demo-preview-compact'
-                : 'ui-demo-preview'
-            }
+            class={compact ? 'ui-demo-preview ui-demo-preview-compact' : 'ui-demo-preview'}
             data-pagefind-ignore
           >
             <Component />

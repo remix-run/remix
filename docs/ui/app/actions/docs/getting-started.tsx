@@ -1,11 +1,11 @@
 import { unsafeHTML } from 'remix/component'
 import type { Handle } from 'remix/component'
-import type { UiDocs } from '../../../../../packages/ui/src/docs/types.ts'
+import type { UiPage } from '../../data/page.ts'
 import type { LoadedExample } from '../../data/examples.tsx'
 import { routes } from '../../routes.ts'
 
 interface GettingStartedProps {
-  previews: { page: UiDocs; example?: LoadedExample }[]
+  previews: { page: UiPage; example?: LoadedExample }[]
   installHtml: string
   configHtml: string
 }

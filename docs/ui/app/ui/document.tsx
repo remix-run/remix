@@ -8,7 +8,7 @@ import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs
 import { DocsShell, DocsSecondaryNavigation } from 'remix-docs-shared/ui/docs-shell'
 import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
-import type { UiDocs } from '../../../../packages/ui/src/docs/types.ts'
+import type { PageMeta, UiPage } from '../data/page.ts'
 
 import { scriptEntry, stylesheetHref, stylesheetPreloads } from '../assets.ts'
 import { routes } from '../routes.ts'
@@ -16,8 +16,9 @@ import { routes } from '../routes.ts'
 interface UiDocumentProps {
   title: string
   description: string
-  pages: UiDocs[]
-  currentPage?: UiDocs
+  pages: UiPage[]
+  currentPage?: PageMeta
+  headings?: DocsHeadingLink[]
   children: RemixNode
 }
 
@@ -33,27 +34,13 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
     let links = createDocsNavigationLinks()
     links.set('ui', { href: routes.docs.index.href(), label: 'UI', current: 'location' })
     let contentId = `${handle.id}-content`
-    let sections = currentPage
-      ? [
-          ...(currentPage.sections ?? []).flatMap(({ id, title }) => {
-            let examples = currentPage.examples.filter((example) => example.section === id)
-            return [
-              { id, title, depth: 2 as const },
-              ...(examples.length > 1
-                ? examples.map(({ id, title }) => ({ id, title, depth: 3 as const }))
-                : []),
-            ]
-          }),
-        ]
-      : [
-          { id: 'installation', title: 'Installation', depth: 2 as const },
-          { id: 'using-ui', title: 'Using the library', depth: 2 as const },
-          { id: 'explore', title: 'Explore the library', depth: 2 as const },
-        ]
-    let headings: DocsHeadingLink[] = sections.map((section) => ({
-      ...section,
-      titleHtml: section.title,
-    }))
+    let headings =
+      handle.props.headings ??
+      ([
+        { id: 'installation', title: 'Installation', titleHtml: 'Installation', depth: 2 },
+        { id: 'using-ui', title: 'Using the library', titleHtml: 'Using the library', depth: 2 },
+        { id: 'explore', title: 'Explore the library', titleHtml: 'Explore the library', depth: 2 },
+      ] satisfies DocsHeadingLink[])
     return (
       <html lang="en">
         <head>
@@ -112,7 +99,7 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
   }
 }
 
-function Sidebar(handle: Handle<{ pages: UiDocs[]; currentPage?: UiDocs }>) {
+function Sidebar(handle: Handle<{ pages: UiPage[]; currentPage?: PageMeta }>) {
   return () => (
     <>
       <a
@@ -133,7 +120,12 @@ function Sidebar(handle: Handle<{ pages: UiDocs[]; currentPage?: UiDocs }>) {
                   <a
                     class="ui-nav-link"
                     href={routes.docs.page.href({ category, slug: page.slug })}
-                    aria-current={handle.props.currentPage === page ? 'page' : undefined}
+                    aria-current={
+                      handle.props.currentPage?.category === page.category &&
+                      handle.props.currentPage?.slug === page.slug
+                        ? 'page'
+                        : undefined
+                    }
                   >
                     {page.title}
                   </a>

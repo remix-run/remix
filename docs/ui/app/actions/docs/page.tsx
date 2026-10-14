@@ -1,48 +1,30 @@
 import { unsafeHTML } from 'remix/component'
-import type { Handle } from 'remix/component'
-import type { UiDocs } from '../../../../../packages/ui/src/docs/types.ts'
-import type { LoadedExample, LoadedSection } from '../../data/examples.tsx'
+import type { Handle, RemixNode } from 'remix/component'
+import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
+import type { PageMeta, UiPage } from '../../data/page.ts'
+import { UiDocument } from '../../ui/document.tsx'
 import { Example } from './example.tsx'
 
-export function FeaturePage(
-  handle: Handle<{ page: UiDocs; examples: LoadedExample[]; sections: LoadedSection[] }>,
+export function PageLayout(
+  handle: Handle<{ page: PageMeta; pages: UiPage[]; children: RemixNode }>,
 ) {
   return () => {
-    let { page, examples, sections } = handle.props
+    let { page, pages, children } = handle.props
     return (
-      <>
+      <UiDocument
+        title={page.title}
+        description={page.description}
+        pages={pages}
+        currentPage={page}
+        headings={readPageHeadings(children)}
+      >
         <header class="ui-page-header">
           <p class="ui-eyebrow">{page.category === 'primitives' ? 'Primitives' : 'Animation'}</p>
           <h1 class="rmx-page-title">{page.title}</h1>
           <p class="ui-description">{page.description}</p>
           <code class="ui-import">{page.importPath}</code>
         </header>
-        {examples
-          .filter((example) => !example.definition.section)
-          .map((example) => (
-            <Example key={example.definition.id} example={example} />
-          ))}
-        {sections.map(({ definition: section, codeHtml }) => {
-          let sectionExamples = examples.filter(
-            (example) => example.definition.section === section.id,
-          )
-          return (
-            <section key={section.id} id={section.id} class="ui-doc-section">
-              <h2>{section.title}</h2>
-              {section.content()}
-              {codeHtml.map((html, index) => (
-                <div key={index} data-code-block innerHTML={unsafeHTML(html)} />
-              ))}
-              {sectionExamples.map((example) => (
-                <Example
-                  key={example.definition.id}
-                  example={example}
-                  showHeading={sectionExamples.length > 1}
-                />
-              ))}
-            </section>
-          )
-        })}
+        {children}
         <aside class="ui-reference-link">
           <p>
             <a href={`https://api.remix.run/${page.importPath.replace(/^@/, '')}`}>
@@ -50,7 +32,55 @@ export function FeaturePage(
             </a>
           </p>
         </aside>
-      </>
+      </UiDocument>
     )
   }
+}
+
+export function Section(handle: Handle<{ id: string; title: string; children: RemixNode }>) {
+  return () => (
+    <section id={handle.props.id} class="ui-doc-section">
+      <h2>{handle.props.title}</h2>
+      {handle.props.children}
+    </section>
+  )
+}
+
+export function CodeBlock(handle: Handle<{ html: string }>) {
+  return () => <div data-code-block innerHTML={unsafeHTML(handle.props.html)} />
+}
+
+export function readPageHeadings(children: RemixNode): DocsHeadingLink[] {
+  let headings: DocsHeadingLink[] = []
+  let ids = new Set<string>()
+
+  function visit(node: unknown): void {
+    if (Array.isArray(node)) {
+      node.forEach(visit)
+      return
+    }
+    if (!isRecord(node) || !isRecord(node.props)) return
+    let { id, title, children } = node.props
+    if (node.type === Section || node.type === Example) {
+      if (typeof id !== 'string') throw new Error('A docs section or example needs an ID')
+      if (ids.has(id)) throw new Error(`Duplicate docs ID: ${id}`)
+      ids.add(id)
+      if (typeof title === 'string') {
+        headings.push({
+          id,
+          title,
+          titleHtml: title.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'),
+          depth: node.type === Section ? 2 : 3,
+        })
+      }
+    }
+    visit(children)
+  }
+
+  visit(children)
+  return headings
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object'
 }

@@ -13,7 +13,7 @@ export const assetServer = createAssetServer({
     'packages/ui/src/**/*.example.tsx',
   ],
   allowPackages: ['@remix-run/component', '@remix-run/ui', 'remix'],
-  denyFiles: ['**/*.test.*', '**/*.docs.*'],
+  denyFiles: ['**/*.test.*'],
   mounts: {
     app: 'docs/ui/app',
     'docs-shared': 'docs/shared',

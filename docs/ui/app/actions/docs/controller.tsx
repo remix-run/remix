@@ -1,23 +1,16 @@
 import { createController } from 'remix/router'
-import { loadDocs } from '../../data/docs.ts'
-import { highlightSource, loadExample, loadSection } from '../../data/examples.tsx'
+import { pages } from '../../data/docs.ts'
+import { highlightSource } from '../../data/examples.tsx'
 import { routes } from '../../routes.ts'
 import { UiDocument } from '../../ui/document.tsx'
 import { GettingStarted } from './getting-started.tsx'
-import { FeaturePage } from './page.tsx'
 
 export default createController(routes.docs, {
   actions: {
     async index({ render }) {
-      let pages = await loadDocs()
-      let previews = await Promise.all(
-        pages
-          .filter((page) => page.slug === 'accordion' || page.slug === 'spring')
-          .map(async (page) => ({
-            page,
-            example: page.examples[0] ? await loadExample(page.examples[0]) : undefined,
-          })),
-      )
+      let previews = pages
+        .filter((page) => page.preview)
+        .map((page) => ({ page, example: page.preview }))
       return render(
         <UiDocument
           title="Remix UI"
@@ -39,8 +32,7 @@ export default createController(routes.docs, {
         </UiDocument>,
       )
     },
-    async page({ params, render }) {
-      let pages = await loadDocs()
+    page({ params, render }) {
       let page = pages.find(
         (page) => page.category === params.category && page.slug === params.slug,
       )
@@ -59,20 +51,8 @@ export default createController(routes.docs, {
           { status: 404 },
         )
       }
-      let [examples, sections] = await Promise.all([
-        Promise.all(page.examples.map(loadExample)),
-        Promise.all((page.sections ?? []).map(loadSection)),
-      ])
-      return render(
-        <UiDocument
-          title={page.title}
-          description={page.description}
-          pages={pages}
-          currentPage={page}
-        >
-          <FeaturePage page={page} examples={examples} sections={sections} />
-        </UiDocument>,
-      )
+      let Page = page.Component
+      return render(<Page pages={pages} />)
     },
   },
 })

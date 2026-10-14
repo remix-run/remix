@@ -1,4 +1,4 @@
-import type { RemixNode } from '@remix-run/component'
+import type { RemixNode } from 'remix/component'
 
 export function referenceTable(
   columns: readonly string[],

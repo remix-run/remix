@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import { createUiRouter } from '../../router.ts'
-import { loadDocs } from '../../data/docs.ts'
+import { pages } from '../../data/docs.ts'
 
 describe('UI docs', () => {
   it('introduces the standalone package and links to both sections', async () => {
@@ -152,8 +152,7 @@ describe('UI docs', () => {
 
   it('renders every primitive with a hero, visible source and a complete reference', async () => {
     let router = createUiRouter()
-    let pages = (await loadDocs()).filter((page) => page.category === 'primitives')
-    for (let page of pages) {
+    for (let page of pages.filter((page) => page.category === 'primitives')) {
       let response = await router.fetch(new Request(`http://localhost/primitives/${page.slug}/`))
       let html = await response.text()
       assert.equal(response.status, 200)
@@ -161,25 +160,23 @@ describe('UI docs', () => {
       assert.ok(html.indexOf('data-demo-source') < html.indexOf('id="anatomy"'))
       assert.ok(html.indexOf('id="accessibility"') < html.indexOf('id="api-reference"'))
       assert.match(html, /<table>/)
-      for (let example of page.examples) {
-        assert.ok(html.includes(`id="${example.id}"`))
-        assert.ok(html.includes(example.module.pathname.split('/').at(-1) ?? ''))
-      }
+      assert.match(html, /basic\.example[^"<]*\.tsx/)
+      assert.match(html, new RegExp(`href="/primitives/${page.slug}/" aria-current="page"`))
     }
   })
 
-  it('serves example modules but keeps docs definitions and controllers private', async () => {
+  it('serves example modules but keeps page components and controllers private', async () => {
     let router = createUiRouter()
-    let [example, definition, controller] = await Promise.all([
+    let [example, page, controller] = await Promise.all([
       router.fetch(
         new Request('http://localhost/assets/packages/ui/src/accordion/basic.example.tsx'),
       ),
-      router.fetch(new Request('http://localhost/assets/packages/ui/src/accordion.docs.tsx')),
+      router.fetch(new Request('http://localhost/assets/app/pages/primitives/accordion.tsx')),
       router.fetch(new Request('http://localhost/assets/app/actions/docs/controller.tsx')),
     ])
     assert.equal(example.status, 200)
     assert.match(await example.text(), /export/)
-    assert.equal(definition.status, 404)
+    assert.equal(page.status, 404)
     assert.equal(controller.status, 404)
   })
 })

@@ -4,7 +4,7 @@ import { parseArgs } from 'node:util'
 import { discoverPublicModuleHrefs } from 'remix-docs-shared/prerender/public-modules'
 import { prerender } from 'remix-docs-shared/prerender/run'
 import { assetServer } from '../app/assets.ts'
-import { loadDocs } from '../app/data/docs.ts'
+import { pages } from '../app/data/docs.ts'
 import { router } from '../app/router.ts'
 import { routes } from '../app/routes.ts'
 
@@ -19,15 +19,10 @@ const publicModules = await discoverPublicModuleHrefs(assetServer, [
   path.join(uiDir, 'app'),
   sharedDir,
 ])
-const pages = await loadDocs()
-const examples = await Promise.all(
-  pages.flatMap((page) => page.examples.map((example) => assetServer.getHref(example.module.href))),
-)
 const paths = [
   routes.docs.index.href(),
   ...pages.map((page) => routes.docs.page.href({ category: page.category, slug: page.slug })),
   ...publicModules,
-  ...examples,
 ]
 
 await fs.rm(outputDir, { recursive: true, force: true })
