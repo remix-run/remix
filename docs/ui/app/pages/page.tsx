@@ -1,8 +1,8 @@
 import { unsafeHTML } from 'remix/component'
 import type { Handle, RemixNode } from 'remix/component'
 import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
-import type { PageMeta, UiPage } from '../../data/page.ts'
-import { UiDocument } from '../../ui/document.tsx'
+import type { PageMeta, UiPage } from '../data/page.ts'
+import { UiDocument } from '../ui/document.tsx'
 import { Example } from './example.tsx'
 
 export function PageLayout(

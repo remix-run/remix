@@ -22,7 +22,7 @@ Prerender writes the documentation pages, example modules, shared assets and Pag
 
 Pages are normal Remix components in `app/pages/primitives/` and `app/pages/animation/`. Each exports a small `meta` object with its title, category, slug, description and package import path. Add the component and its metadata to [the page list](https://github.com/remix-run/remix/blob/main/docs/ui/app/data/docs.ts) to include it in routing, navigation and prerendering.
 
-Write the body as JSX inside `PageLayout`. Place prose, code blocks and examples where readers should see them:
+Write the body as JSX inside `PageLayout`. Shared helpers live beside the page folders in `app/pages/page.tsx`, `app/pages/example.tsx` and `app/pages/reference-table.tsx`. Place prose, code blocks and examples where readers should see them:
 
 ```tsx
 export default function AccordionPage(handle: Handle<PageProps>) {
@@ -66,9 +66,9 @@ Page components and their helpers stay on the server. Only example modules and t
 
 ## Site ownership
 
-- `app/pages/` owns page content and metadata.
+- `app/pages/` owns page content, metadata and shared page helpers.
 - `app/data/` lists pages and loads examples.
-- `app/actions/docs/` owns Getting Started and shared page, section, code and example rendering.
+- `app/actions/docs/` owns the docs controller and Getting Started.
 - `app/actions/public/` owns browser startup and site-specific styles.
 - `app/ui/document.tsx` composes the shared docs header, sidebar, table of contents and footer.
 - `scripts/prerender.ts` generates static output with the shared crawler, including the example modules linked from rendered pages.

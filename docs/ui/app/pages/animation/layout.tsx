@@ -1,8 +1,8 @@
 import type { Handle } from 'remix/component'
 import type { PageMeta, PageProps } from '../../data/page.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
-import { Example } from '../../actions/docs/example.tsx'
-import { CodeBlock, PageLayout, Section } from '../../actions/docs/page.tsx'
+import { Example } from '../example.tsx'
+import { CodeBlock, PageLayout, Section } from '../page.tsx'
 
 export const meta = {
   title: 'Layout',

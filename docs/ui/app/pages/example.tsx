@@ -1,6 +1,6 @@
 import { unsafeHTML } from 'remix/component'
 import type { Handle } from 'remix/component'
-import type { LoadedExample } from '../../data/examples.tsx'
+import type { LoadedExample } from '../data/examples.tsx'
 
 interface ExampleProps {
   id: string
