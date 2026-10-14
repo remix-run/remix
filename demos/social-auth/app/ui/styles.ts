@@ -326,3 +326,106 @@ export const dataDump = css({
   fontSize: '0.85rem',
   lineHeight: 1.5,
 })
+
+export const passkeySignIn = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.space.xs,
+  marginTop: tokens.space.lg,
+})
+
+export const passkeyMessage = css({
+  color: theme.text.body,
+  fontSize: tokens.typography.size.sm,
+  textAlign: 'center',
+})
+
+export const passkeyHint = css({
+  marginTop: tokens.space.lg,
+  color: theme.text.muted,
+  fontSize: tokens.typography.size.sm,
+  textAlign: 'center',
+})
+
+export const sectionHeading = css({
+  marginTop: tokens.space.xxl,
+  marginBottom: tokens.space.md,
+  color: theme.text.heading,
+  fontSize: '1.125rem',
+})
+
+export const passkeyList = css({
+  listStyle: 'none',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.space.md,
+  marginBottom: tokens.space.lg,
+})
+
+export const passkeyItem = css({
+  padding: tokens.space.md,
+  border: theme.border.subtle,
+  borderRadius: tokens.radius.md,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.space.xs,
+})
+
+export const passkeyItemName = css({
+  color: theme.text.heading,
+  fontWeight: tokens.typography.weight.medium,
+})
+
+export const passkeyItemMeta = css({
+  color: theme.text.muted,
+  fontSize: tokens.typography.size.sm,
+})
+
+export const inlineForm = css({
+  display: 'flex',
+  gap: tokens.space.xs,
+  alignItems: 'center',
+})
+
+export const plainInput = css({
+  flex: '1',
+  minWidth: 0,
+  padding: `${tokens.space.xs} ${tokens.space.md}`,
+  border: theme.border.subtle,
+  borderRadius: tokens.radius.md,
+  fontSize: tokens.typography.size.sm,
+  backgroundColor: theme.surface.card,
+  '&:focus': {
+    outline: 'none',
+    borderColor: 'transparent',
+    boxShadow: theme.action.focusRing,
+  },
+})
+
+export const smallButton = css({
+  padding: `${tokens.space.xs} ${tokens.space.md}`,
+  border: theme.border.subtle,
+  borderRadius: tokens.radius.md,
+  backgroundColor: theme.surface.card,
+  color: theme.text.label,
+  cursor: 'pointer',
+  fontSize: tokens.typography.size.sm,
+  '&:hover': {
+    backgroundColor: theme.surface.subtleHover,
+  },
+})
+
+export const dangerButton = css({
+  color: '#b91c1c',
+})
+
+export const disabledButton = css({
+  '&:disabled': {
+    opacity: 0.55,
+    cursor: 'not-allowed',
+  },
+})
+
+export const fullWidth = css({
+  width: '100%',
+})

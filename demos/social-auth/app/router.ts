@@ -1,3 +1,4 @@
+import type { PasskeyAuthProvider } from 'remix/auth'
 import { createMiddleware, createRouter, type MiddlewareContext } from 'remix/router'
 import type { Cookie } from 'remix/cookie'
 import { formData } from 'remix/middleware/form-data'
@@ -10,15 +11,19 @@ import { createAuthController } from './actions/auth/controller.tsx'
 import { forgotPasswordController } from './actions/auth/forgot-password/controller.tsx'
 import { createGitHubAuthController } from './actions/auth/github/controller.ts'
 import { createGoogleAuthController } from './actions/auth/google/controller.ts'
+import { createPasskeyAuthController } from './actions/auth/passkey/controller.ts'
 import { resetPasswordController } from './actions/auth/reset-password/controller.tsx'
 import { signupController } from './actions/auth/signup/controller.tsx'
 import { createXAuthController } from './actions/auth/x/controller.ts'
 import { createRootController } from './actions/controller.tsx'
+import { createPasskeysController } from './actions/passkeys/controller.ts'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
+import { assets } from './utils/assets.ts'
 import { externalProviderRegistry, type ExternalProviderRegistry } from './utils/external-auth.ts'
+import { passkeyProvider as defaultPasskeyProvider } from './utils/passkey-auth.ts'
 
 type AppMiddleware = ReturnType<typeof createSocialAuthMiddleware>
 type AppContext = MiddlewareContext<AppMiddleware>
@@ -33,16 +38,20 @@ export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie
   sessionStorage?: SessionStorage
   externalProviderRegistry?: ExternalProviderRegistry
+  passkeyProvider?: PasskeyAuthProvider
 }
 
 export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   let cookie = options?.sessionCookie ?? sessionCookie
   let storage = options?.sessionStorage ?? sessionStorage
   let providers = options?.externalProviderRegistry ?? externalProviderRegistry
+  let passkeyProvider = options?.passkeyProvider ?? defaultPasskeyProvider
   let router = createRouter({ middleware: createSocialAuthMiddleware(cookie, storage) })
 
-  router.map(routes, createRootController(providers))
+  router.map(routes, createRootController(providers, passkeyProvider))
+  router.map(routes.passkeys, createPasskeysController(passkeyProvider))
   router.map(routes.auth, createAuthController())
+  router.map(routes.auth.passkey, createPasskeyAuthController(passkeyProvider))
   router.map(routes.auth.signup, signupController)
   router.map(routes.auth.forgotPassword, forgotPasswordController)
   router.map(routes.auth.resetPassword, resetPasswordController)
@@ -64,6 +73,6 @@ function createSocialAuthMiddleware(cookie: Cookie, storage: SessionStorage) {
     session(cookie, storage),
     loadDatabase(),
     loadAuth(),
-    render(),
+    render({ assets }),
   )
 }

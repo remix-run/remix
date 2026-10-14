@@ -30,7 +30,7 @@ Exports covered by the same README are grouped together.
 | --- | --- | --- |
 | `remix/assert` | Node assert-compatible utilities for any JavaScript environment | [README](src/assert/README.md) |
 | `remix/assets`<br>`remix/assets/types/hmr` | Fetch-based server for compiling browser JS/TS and CSS assets on demand | [README](src/assets/README.md) |
-| `remix/auth` | Browser login, OAuth, and OIDC helpers for Remix | [README](src/auth/README.md) |
+| `remix/auth`<br>`remix/auth/browser` | Browser login, OAuth, OIDC, and passkey helpers for Remix | [README](src/auth/README.md) |
 | `remix/component`<br>`remix/component/dev/refresh`<br>`remix/component/jsx-dev-runtime`<br>`remix/component/jsx-runtime` | Component runtime with server rendering and browser hydration | [README](src/component/README.md) |
 | `remix/component-hmr`<br>`remix/component-hmr/assets`<br>`remix/component-hmr/node`<br>`remix/component-hmr/runtime/browser`<br>`remix/component-hmr/runtime/server` | Hot module replacement runtime and transforms for Remix components | [README](src/component-hmr/README.md) |
 | `remix/component/server` | Component runtime with server rendering and browser hydration | [README](src/component/server/README.md) |

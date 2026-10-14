@@ -105,8 +105,48 @@ export const passwordResetTokens = table({
   },
 })
 
+export const passkeys = table({
+  name: 'passkeys',
+  columns: {
+    id: c.text().primaryKey(),
+    user_id: c
+      .integer()
+      .notNull()
+      .references('users', 'id', 'passkeys_user_id_fk')
+      .onDelete('cascade'),
+    name: c.text().notNull(),
+    public_key: c.text().notNull(),
+    counter: c.integer().notNull(),
+    transports: c.text().notNull(),
+    backup_eligible: c.boolean().notNull(),
+    backed_up: c.boolean().notNull(),
+    aaguid: c.text(),
+    created_at: c.integer().notNull(),
+    last_used_at: c.integer(),
+  },
+  beforeWrite({ value }) {
+    let next = { ...value }
+
+    if (typeof next.name === 'string') {
+      next.name = normalizeText(next.name)
+    }
+
+    return { value: next }
+  },
+})
+
+export const passkeyChallenges = table({
+  name: 'passkey_challenges',
+  primaryKey: ['challenge'],
+  columns: {
+    challenge: c.text().primaryKey(),
+    expires_at: c.integer().notNull(),
+  },
+})
+
 export type User = TableRow<typeof users>
 export type AuthAccount = TableRow<typeof authAccounts>
+export type Passkey = TableRow<typeof passkeys>
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()

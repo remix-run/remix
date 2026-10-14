@@ -1,27 +1,37 @@
 import type { Handle } from 'remix/component'
 
 import type { ExternalProviderLink } from '../../utils/external-auth.ts'
+import type { PasskeySupport } from '../../utils/passkey-auth.ts'
 import { AuthCard } from '../auth-card.tsx'
 import { Document } from '../document.tsx'
 import { TextField } from '../form-field.tsx'
 import { EmailIcon, PasswordIcon } from '../icons.tsx'
 import { Notice } from '../notice.tsx'
+import { PasskeyOriginHint } from '../passkey-origin-hint.tsx'
+import { PasskeySignIn } from '../public/passkey-sign-in.tsx'
 import * as styles from '../styles.ts'
 import { ExternalAuthSection } from './external-auth-section.tsx'
 import { LoginFooter } from './footer.tsx'
+
+type PasskeyLoginProps = PasskeySupport & {
+  optionsAction: string
+  loginAction: string
+}
 
 interface LoginPageProps {
   formAction: string
   signupHref: string
   forgotPasswordHref: string
   providers: ExternalProviderLink[]
+  passkey: PasskeyLoginProps
   error?: string
   success?: string
 }
 
 export function LoginPage(handle: Handle<LoginPageProps>) {
   return () => {
-    let { formAction, signupHref, forgotPasswordHref, providers, error, success } = handle.props
+    let { formAction, signupHref, forgotPasswordHref, providers, passkey, error, success } =
+      handle.props
 
     return (
       <Document title="Social Auth Demo">
@@ -40,7 +50,7 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
               type="email"
               label="Email"
               placeholder="Enter your email"
-              autoComplete="email"
+              autoComplete="username webauthn"
               required
               icon={<EmailIcon mix={styles.fieldIcon} />}
             />
@@ -70,6 +80,15 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
               Sign In
             </button>
           </form>
+
+          {passkey.available ? (
+            <PasskeySignIn
+              optionsAction={passkey.optionsAction}
+              loginAction={passkey.loginAction}
+            />
+          ) : (
+            <PasskeyOriginHint href={passkey.passkeyHref} action="sign in with a passkey" />
+          )}
 
           <ExternalAuthSection providers={providers} />
         </AuthCard>

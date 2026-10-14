@@ -8,6 +8,7 @@ import {
   getExternalProviderLabel,
   getExternalProviderStatus,
 } from './app/utils/external-auth.ts'
+import { getPasskeyOrigin } from './app/utils/passkey-auth.ts'
 
 const router = createSocialAuthRouter()
 
@@ -23,6 +24,10 @@ server.listen(port, () => {
   console.log('Demo accounts:')
   console.log('  admin@example.com / password123')
   console.log('  user@example.com / password123')
+  console.log('')
+  console.log(
+    `Passkeys: open ${getPasskeyOrigin()} (browsers do not allow passkeys on IP addresses)`,
+  )
   console.log('')
   console.log('Social auth providers:')
 

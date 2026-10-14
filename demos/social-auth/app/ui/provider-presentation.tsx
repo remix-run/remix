@@ -24,5 +24,9 @@ export function formatProviderLabel(provider: AuthMethod): string {
     return 'Credentials'
   }
 
+  if (provider === 'passkey') {
+    return 'Passkey'
+  }
+
   return getExternalProviderLabel(provider)
 }
