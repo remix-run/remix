@@ -381,6 +381,21 @@ list, options, and hidden input if it participates in a form.
 
 ::frame{src="/examples/04-rendering-ui/accordion-primitives/"}
 
+## Raw HTML with unsafeHTML {#raw-html-with-unsafehtml}
+
+When a component needs to insert pre-rendered HTML, pass `unsafeHTML(...)` to the element's `innerHTML` prop:
+
+```tsx filename=app/ui/album-notes.tsx
+import { unsafeHTML } from "remix/component";
+import type { Handle } from "remix/component";
+
+export function AlbumNotes(handle: Handle<{ notesHtml: string }>) {
+  return () => <section innerHTML={unsafeHTML(handle.props.notesHtml)} />;
+}
+```
+
+Raw strings are rejected on `innerHTML` and iframe `srcDoc` props so untrusted prop spreads cannot inject markup. `unsafeHTML(...)` marks the string as authorized without sanitizing it, so sanitize user-supplied HTML before passing it in. When `innerHTML` is present, the element ignores its `children`.
+
 ## Rendering HTML without the component runtime {#rendering-html-without-the-component-runtime}
 
 Not every HTML response needs a component tree. `remix/html-template` produces escaped `SafeHtml`
