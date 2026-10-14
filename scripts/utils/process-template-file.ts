@@ -1,4 +1,4 @@
-import * as prettier from 'prettier'
+import { formatWithOxfmt } from './format.ts'
 
 const TEMPLATE_REMOVE_BLOCK_PATTERN =
   /\/\*\s*remix-template:remove-start\b[\s\S]*?\*\/[\s\S]*?\/\*\s*remix-template:remove-end\s*\*\//g
@@ -19,13 +19,20 @@ export async function processTemplateFile(content: string, filePath: string): Pr
     return processed
   }
 
-  let fileInfo = await prettier.getFileInfo(filePath)
-  if (fileInfo.inferredParser) {
-    let config = await prettier.resolveConfig(filePath)
-    processed = await prettier.format(processed, { ...config, filepath: filePath })
-  }
+  processed = await formatTemplateFile(filePath, processed)
 
   return processed
+}
+
+async function formatTemplateFile(filePath: string, content: string): Promise<string> {
+  try {
+    return await formatWithOxfmt(filePath, content)
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Unsupported file type: ')) {
+      return content
+    }
+    throw error
+  }
 }
 
 function validateTemplateDirectives(content: string): void {

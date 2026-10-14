@@ -7,7 +7,7 @@ import { type BuildRouteMap, createRoutes } from '../route-map.ts'
  */
 export type ResourcesMethod = 'index' | 'new' | 'show' | 'create' | 'edit' | 'update' | 'destroy'
 
-// prettier-ignore
+// oxfmt-ignore
 export const ResourcesMethods = ['index', 'new', 'show', 'create', 'edit', 'update', 'destroy'] as const
 
 /**
@@ -128,7 +128,7 @@ type BuildResourcesMap<base extends string, options extends ResourcesOptions> = 
   >
 >
 
-// prettier-ignore
+// oxfmt-ignore
 type BuildResourcesRoutes<
   options extends ResourcesOptions,
   method extends ResourcesMethod,
@@ -156,6 +156,6 @@ type ResourcesRoutes<param extends string> = {
   destroy: { method: 'DELETE'; pattern: `/:${param}` }
 }
 
-// prettier-ignore
+// oxfmt-ignore
 type GetParam<options extends ResourcesOptions> =
   options extends { param: infer param extends string } ? param : 'id'

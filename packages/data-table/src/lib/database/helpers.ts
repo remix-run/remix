@@ -80,7 +80,7 @@ export function resolveCreateRowWhere<table extends AnyTable>(
       throw new DataTableQueryError(
         'create({ returnRow: true }) requires primary key values for table "' +
           getTableName(table) +
-          '" when adapter does not support RETURNING',
+          '" when the database does not support RETURNING',
       )
     }
 

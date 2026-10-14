@@ -38,7 +38,6 @@ type ResolvedDependency =
 export type ResolvedStyle = {
   dependencies: ResolvedDependency[]
   deps: string[]
-  fingerprint: string | null
   identityPath: string
   rawCode: string
   resolvedPath: string
@@ -131,7 +130,6 @@ export async function resolveStyle(
     value: {
       dependencies,
       deps: [...deps],
-      fingerprint: transformed.fingerprint,
       identityPath: record.identityPath,
       rawCode: transformed.rawCode,
       resolvedPath: transformed.resolvedPath,
@@ -163,17 +161,21 @@ export function resolveServedStyleOrThrow(
   }
 
   if (!args.isAllowed(identityPath)) {
-    throw createAssetServerCompilationError(`File is not allowed: ${identityPath}`, {
-      code: 'FILE_NOT_ALLOWED',
-    })
+    throw createAssetServerCompilationError(
+      `File "${identityPath}" is not allowed by the asset server access configuration. ` +
+        `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles rule.`,
+      {
+        code: 'FILE_NOT_ALLOWED',
+      },
+    )
   }
 
   let stableUrlPathname = args.routes.toUrlPathname(identityPath)
   if (!stableUrlPathname) {
     throw createAssetServerCompilationError(
-      `File ${identityPath} is outside all configured fileMap entries.`,
+      `File ${identityPath} is outside all configured mounts.`,
       {
-        code: 'FILE_OUTSIDE_FILE_MAP',
+        code: 'FILE_OUTSIDE_MOUNTS',
       },
     )
   }
@@ -218,8 +220,8 @@ function resolveImportDependency(
 
   if (!args.isAllowed(identityPath)) {
     throw createAssetServerCompilationError(
-      `Import "${url}" in ${importerPath}, resolved to "${identityPath}", is not allowed by the asset server allow/deny configuration. ` +
-        `Add a matching allow rule for this file path, remove a conflicting deny rule for this file path, or mark this import as external.`,
+      `Import "${url}" in ${importerPath}, resolved to "${identityPath}", is not allowed by the asset server access configuration. ` +
+        `Add a matching allowFiles or allowPackages rule, remove a conflicting denyFiles rule, or mark this import as external.`,
       {
         code: 'IMPORT_NOT_ALLOWED',
       },
@@ -228,10 +230,10 @@ function resolveImportDependency(
 
   if (!args.routes.toUrlPathname(identityPath)) {
     throw createAssetServerCompilationError(
-      `Import "${url}" in ${importerPath}, resolved to "${identityPath}", is outside all configured fileMap entries. ` +
-        `Add a matching fileMap entry for this file path, or mark this import as external.`,
+      `Import "${url}" in ${importerPath}, resolved to "${identityPath}", is outside all configured mounts. ` +
+        `Add a matching mount for this file path, or mark this import as external.`,
       {
-        code: 'IMPORT_OUTSIDE_FILE_MAP',
+        code: 'IMPORT_OUTSIDE_MOUNTS',
       },
     )
   }
@@ -288,8 +290,8 @@ function resolveUrlDependency(
 
   if (!args.isAllowed(identityPath)) {
     throw createAssetServerCompilationError(
-      `URL "${url}" in ${importerPath}, resolved to "${identityPath}", is not allowed by the asset server allow/deny configuration. ` +
-        `Add a matching allow rule for this file path or remove a conflicting deny rule for this file path.`,
+      `URL "${url}" in ${importerPath}, resolved to "${identityPath}", is not allowed by the asset server access configuration. ` +
+        `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles rule.`,
       {
         code: 'URL_NOT_ALLOWED',
       },
@@ -298,10 +300,10 @@ function resolveUrlDependency(
 
   if (!args.routes.toUrlPathname(identityPath)) {
     throw createAssetServerCompilationError(
-      `URL "${url}" in ${importerPath}, resolved to "${identityPath}", is outside all configured fileMap entries. ` +
-        `Add a matching fileMap entry for this file path.`,
+      `URL "${url}" in ${importerPath}, resolved to "${identityPath}", is outside all configured mounts. ` +
+        `Add a matching mount for this file path.`,
       {
-        code: 'URL_OUTSIDE_FILE_MAP',
+        code: 'URL_OUTSIDE_MOUNTS',
       },
     )
   }

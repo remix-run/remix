@@ -6,7 +6,7 @@ export type JoinPatterns<A extends string, B extends string> = string extends A 
   ? string
   : _JoinPatterns<Parse<A>, Parse<B>>
 
-// prettier-ignore
+// oxfmt-ignore
 type _JoinPatterns<A, B> =
   A extends never ? never :
   B extends never ? never :
@@ -22,14 +22,14 @@ type _JoinPatterns<A, B> =
       never :
     never
 
-// prettier-ignore
+// oxfmt-ignore
 type JoinOriginField<
   A extends ParsedPattern,
   B extends ParsedPattern,
   Field extends 'protocol' | 'hostname' | 'port'
 > = B[Field] extends undefined ? A[Field] : B[Field]
 
-// prettier-ignore
+// oxfmt-ignore
 type JoinPathnames<A extends Token[] | undefined, B extends Token[] | undefined> =
   B extends undefined ? A :
   B extends [] ? A :
@@ -40,17 +40,17 @@ type JoinPathnames<A extends Token[] | undefined, B extends Token[] | undefined>
     never :
   never
 
-// prettier-ignore
+// oxfmt-ignore
 type RemoveTrailingSeparator<T extends Token[]> =
   T extends [...infer Rest extends Token[], Separator] ? Rest : T
 
-// prettier-ignore
+// oxfmt-ignore
 type JoinPathnameTokens<A extends Token[], B extends Token[]> =
   B extends [Separator] ? A :
   StartsWithSeparator<B> extends true ? [...A, ...B] :
   [...A, Separator, ...B]
 
-// prettier-ignore
+// oxfmt-ignore
 type JoinSearch<A extends string | undefined, B extends string | undefined> =
   B extends undefined ? A :
   A extends undefined ? B :

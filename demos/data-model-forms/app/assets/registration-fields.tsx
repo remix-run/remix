@@ -1,10 +1,7 @@
 import type { ErrorAttributes, FormRawValue } from 'remix/data-schema/form'
-import { clientEntry } from 'remix/ui'
-import type { Handle } from 'remix/ui'
-import button from 'remix/ui/button'
-import checkbox from 'remix/ui/checkbox'
-import { createInputMixin, form as formValidation } from 'remix/ui/form'
-import input from 'remix/ui/input'
+import { clientEntry } from 'remix/component'
+import type { Handle } from 'remix/component'
+import { createInputMixin, form as formValidation } from '@remix-run/ui/form'
 
 import { RegistrationForm } from '../actions/registration/registration-form.ts'
 import * as styles from '../actions/registration/styles.ts'
@@ -54,7 +51,7 @@ export const RegistrationFields = clientEntry(
                 <input
                   autoComplete="name"
                   placeholder="Ada Lovelace"
-                  mix={[registrationInput('displayName', submission), input(), styles.control]}
+                  mix={[registrationInput('displayName', submission), styles.control]}
                 />
                 <FieldErrors
                   attrs={RegistrationForm.getErrorAttrs('displayName')}
@@ -74,7 +71,7 @@ export const RegistrationFields = clientEntry(
                 <input
                   autoComplete="email"
                   placeholder="ada@example.com"
-                  mix={[registrationInput('email', submission), input(), styles.control]}
+                  mix={[registrationInput('email', submission), styles.control]}
                 />
                 <FieldErrors
                   attrs={RegistrationForm.getErrorAttrs('email')}
@@ -94,7 +91,7 @@ export const RegistrationFields = clientEntry(
                 <input
                   inputMode="numeric"
                   placeholder="36"
-                  mix={[registrationInput('age', submission), input(), styles.control]}
+                  mix={[registrationInput('age', submission), styles.control]}
                 />
                 <FieldErrors
                   attrs={RegistrationForm.getErrorAttrs('age')}
@@ -114,7 +111,7 @@ export const RegistrationFields = clientEntry(
                 <input
                   autoComplete="url"
                   placeholder="https://example.com"
-                  mix={[registrationInput('website', submission), input(), styles.control]}
+                  mix={[registrationInput('website', submission), styles.control]}
                 />
                 <FieldErrors
                   attrs={RegistrationForm.getErrorAttrs('website')}
@@ -135,7 +132,7 @@ export const RegistrationFields = clientEntry(
               <input
                 autoComplete="new-password"
                 placeholder="At least 8 characters"
-                mix={[registrationInput('password', submission), input(), styles.control]}
+                mix={[registrationInput('password', submission), styles.control]}
               />
               <FieldErrors
                 attrs={RegistrationForm.getErrorAttrs('password')}
@@ -144,7 +141,7 @@ export const RegistrationFields = clientEntry(
             </div>
 
             <div mix={styles.checkboxField}>
-              <input mix={[registrationInput('terms', submission), checkbox()]} />
+              <input mix={[registrationInput('terms', submission), styles.checkbox]} />
               <label {...RegistrationForm.getLabelAttrs('terms')} mix={styles.checkboxLabel}>
                 {RegistrationForm.fields.terms.label}
                 {RegistrationForm.fields.terms.required ? (
@@ -157,7 +154,7 @@ export const RegistrationFields = clientEntry(
               />
             </div>
 
-            <button type="submit" mix={[button({ tone: 'primary' }), styles.submitButton]}>
+            <button type="submit" mix={styles.submitButton}>
               Validate account
             </button>
           </form>

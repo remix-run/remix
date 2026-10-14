@@ -26,11 +26,53 @@ export class TarParseError extends Error {
 }
 
 /**
+ * An error thrown when a tar entry exceeds the maximum allowed body size.
+ */
+export class MaxEntrySizeExceededError extends TarParseError {
+  /**
+   * @param maxEntrySize The maximum entry size that was exceeded
+   */
+  constructor(maxEntrySize: number) {
+    super(`Tar entry size exceeds maximum allowed size of ${maxEntrySize} bytes`)
+    this.name = 'MaxEntrySizeExceededError'
+  }
+}
+
+/**
+ * An error thrown when a tar archive exceeds the maximum allowed total size.
+ */
+export class MaxTotalSizeExceededError extends TarParseError {
+  /**
+   * @param maxTotalSize The maximum total size that was exceeded
+   */
+  constructor(maxTotalSize: number) {
+    super(`Tar archive size exceeds maximum allowed size of ${maxTotalSize} bytes`)
+    this.name = 'MaxTotalSizeExceededError'
+  }
+}
+
+/**
+ * An error thrown when a tar archive exceeds the maximum allowed number of entries.
+ */
+export class MaxEntriesExceededError extends TarParseError {
+  /**
+   * @param maxEntries The maximum entry count that was exceeded
+   */
+  constructor(maxEntries: number) {
+    super(`Tar entry count exceeds maximum allowed count of ${maxEntries}`)
+    this.name = 'MaxEntriesExceededError'
+  }
+}
+
+/**
  * The parsed header of a tar entry.
  */
 export interface TarHeader {
   /**
    * Entry path stored in the archive.
+   * By default, parsed names are relative paths without parent components, Windows drive
+   * prefixes, backslashes, or NULs. The `preserve` path policy disables these checks.
+   * Filesystem containment still requires consumer validation.
    */
   name: string
 
@@ -50,7 +92,7 @@ export interface TarHeader {
   gid: number | null
 
   /**
-   * Entry size in bytes.
+   * Entry size in bytes. Parsed sizes are non-negative safe integers.
    */
   size: number
 
@@ -66,6 +108,10 @@ export interface TarHeader {
 
   /**
    * Linked path target for link entries, or `null` when not present.
+   * By default, symlink targets must stay within the archive when resolved relative to the
+   * link's parent, and hard-link targets when resolved relative to the archive root.
+   * Targets retain their relative spelling. Filesystem containment still requires consumer
+   * validation. The `preserve` path policy disables target checks.
    */
   linkname: string | null
 
@@ -135,16 +181,79 @@ export interface ParseTarHeaderOptions {
    * @default 'utf-8'
    */
   filenameEncoding?: string
+  /**
+   * Policy for entry names and link targets. Defaults to `relative`, which rejects empty
+   * paths, absolute paths, Windows drive prefixes, backslashes, and NULs. Entry names
+   * cannot contain parent components. Symlink targets are checked relative to the link's
+   * parent, and hard-link targets relative to the archive root; parent components are
+   * allowed only when they do not traverse above the archive root. Valid paths are preserved.
+   * Set to `preserve` to skip path checks. Archive limits and header validation still apply.
+   * Neither policy guarantees containment on the destination filesystem.
+   */
+  pathPolicy?: 'relative' | 'preserve'
 }
 
 /**
  * Parses a tar header block.
+ * With the default `relative` path policy, throws {@link TarParseError} for invalid
+ * entry names or link targets, including paths that traverse above the archive root.
  *
  * @param block The tar header block
  * @param options Options that control how the header is parsed
  * @returns The parsed tar header
  */
 export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOptions): TarHeader {
+  let header = decodeTarHeader(block, options)
+  validatePaths(header, options?.pathPolicy)
+  return { ...header, size: parseEntrySize(block.subarray(124, 136)) }
+}
+
+function validatePaths(
+  header: Pick<TarHeader, 'name' | 'type' | 'linkname'>,
+  policy: ParseTarHeaderOptions['pathPolicy'] = 'relative',
+): void {
+  if (policy === 'preserve') return
+
+  let parts = header.name.split('/')
+  if (!isRelativePath(header.name) || parts.includes('..')) {
+    throw new TarParseError('Invalid tar entry name')
+  }
+
+  if (header.type !== 'symlink' && header.type !== 'link') return
+
+  let target = header.linkname
+  if (target === null || !isRelativePath(target)) {
+    throw new TarParseError('Invalid tar link target')
+  }
+
+  let depth =
+    header.type === 'symlink'
+      ? Math.max(0, parts.filter((part) => part !== '' && part !== '.').length - 1)
+      : 0
+  for (let part of target.split('/')) {
+    if (part === '..') {
+      if (depth === 0) throw new TarParseError('Invalid tar link target')
+      depth--
+    } else if (part !== '' && part !== '.') {
+      depth++
+    }
+  }
+}
+
+function isRelativePath(path: string): boolean {
+  return (
+    path !== '' &&
+    !path.startsWith('/') &&
+    !path.includes('\\') &&
+    !path.includes('\0') &&
+    !/^(?:\.\/+)*[a-z]:/i.test(path)
+  )
+}
+
+function decodeTarHeader(
+  block: Uint8Array,
+  options?: ParseTarHeaderOptions,
+): Omit<TarHeader, 'size'> {
   if (block.length !== TarBlockSize) {
     throw new TarParseError('Invalid tar header size')
   }
@@ -179,12 +288,11 @@ export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOption
   }
 
   let typeFlag = block[156] === 0 ? 0 : block[156] - ZeroOffset
-  let header: TarHeader = {
+  let header: Omit<TarHeader, 'size'> = {
     name: getString(block, 0, 100, filenameEncoding),
     mode: getOctal(block, 100, 8),
     uid: getOctal(block, 108, 8),
     gid: getOctal(block, 116, 8),
-    size: getOctal(block, 124, 12) ?? 0,
     mtime: getOctal(block, 136, 12),
     type: TarFileTypes[typeFlag] ?? 'unknown',
     linkname: block[157] === 0 ? null : getString(block, 157, 100, filenameEncoding),
@@ -212,6 +320,33 @@ export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOption
   return header
 }
 
+function parseEntrySize(value: Uint8Array | string): number {
+  let size: number | null
+  if (typeof value === 'string') {
+    size = value === '' || /[^0-9]/.test(value) ? null : Number(value)
+  } else if (value[0] & 0x80) {
+    size = value[0] === 0x80 ? getOctal(value, 0, value.length) : null
+  } else {
+    let octal = new TextDecoder().decode(value).replace(/^[\0 ]+|[\0 ]+$/g, '')
+    size = /[^0-7]/.test(octal) ? null : parseInt(octal || '0', 8)
+  }
+
+  if (size === null || !Number.isSafeInteger(size) || size < 0) {
+    throw new TarParseError('Invalid tar entry size')
+  }
+
+  return size
+}
+
+function isLongHeader(type: string): boolean {
+  return (
+    type === 'gnu-long-path' ||
+    type === 'gnu-long-link-path' ||
+    type === 'pax-global-header' ||
+    type === 'pax-header'
+  )
+}
+
 type TarArchiveSource =
   | ReadableStream<Uint8Array>
   | Uint8Array
@@ -223,10 +358,35 @@ type TarEntryHandler = (entry: TarEntry) => void | Promise<void>
 /**
  * Options for parsing a tar archive.
  */
-export type ParseTarOptions = ParseTarHeaderOptions
+export interface ParseTarOptions extends ParseTarHeaderOptions {
+  /**
+   * Maximum entry body size in bytes, including PAX/GNU metadata entries.
+   * Checked before reading the body or calling the handler. Exceeding the limit
+   * throws a {@link MaxEntrySizeExceededError}. Defaults to 2 MiB (2097152 bytes).
+   * Must be a non-negative safe integer, or `Infinity` to disable the limit.
+   */
+  maxEntrySize?: number
+  /**
+   * Maximum archive size in bytes, including headers, padding, and metadata.
+   * Counts all input bytes, after decompression if performed upstream. Exceeding
+   * the limit throws a {@link MaxTotalSizeExceededError}. Defaults to 20 MiB
+   * (20971520 bytes). Must be a non-negative safe integer, or `Infinity` to disable
+   * the limit.
+   */
+  maxTotalSize?: number
+  /**
+   * Maximum number of entries, including PAX/GNU metadata entries. Padding and
+   * end-of-archive markers do not count. Checked before processing each entry;
+   * exceeding the limit throws a {@link MaxEntriesExceededError}. Defaults to 5000.
+   * Must be a non-negative safe integer, or `Infinity` to disable the limit.
+   */
+  maxEntries?: number
+}
 
 /**
  * Parse a tar archive and call the given handler for each entry it contains.
+ * Applies the configured path policy, as in {@link parseTarHeader}, before
+ * calling the handler.
  *
  * ```ts
  * import { parseTar } from 'remix/tar-parser';
@@ -241,6 +401,16 @@ export type ParseTarOptions = ParseTarHeaderOptions
  * @returns A promise that resolves when the parse is finished
  */
 export async function parseTar(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void>
+/**
+ * Parse a tar archive with the given options and call the handler for each entry.
+ * Applies the configured path policy, as in {@link parseTarHeader}, before
+ * calling the handler.
+ *
+ * @param archive The tar archive source data
+ * @param options Options that control parsing and size limits
+ * @param handler A function to call for each entry in the archive
+ * @returns A promise that resolves when parsing and all handlers finish
+ */
 export async function parseTar(
   archive: TarArchiveSource,
   options: ParseTarOptions,
@@ -265,17 +435,35 @@ export async function parseTar(
 /**
  * Options for configuring a {@link TarParser}.
  */
-export type TarParserOptions = ParseTarHeaderOptions
+export type TarParserOptions = ParseTarOptions
 
 /**
  * A parser for tar archives.
  */
 export class TarParser {
+  /**
+   * Maximum entry body size in bytes, including PAX/GNU metadata entries.
+   */
+  readonly maxEntrySize: number
+
+  /**
+   * Maximum archive input size in bytes, including headers, padding, and metadata.
+   */
+  readonly maxTotalSize: number
+
+  /**
+   * Maximum number of entries, including PAX/GNU metadata entries.
+   */
+  readonly maxEntries: number
+
   #buffer: Uint8Array | null = null
+  #totalSize = 0
+  #entryCount = 0
   #missing = 0
   #header: TarHeader | null = null
   #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null
   #longHeader = false
+  #longHeaderBuffer: Uint8Array | null = null
   #gnuLongPath: string | null = null
   #gnuLongLinkPath: string | null = null
   #paxGlobal: Record<string, string> | null = null
@@ -286,7 +474,26 @@ export class TarParser {
   /**
    * @param options Options that control how the tar archive is parsed
    */
-  constructor(options?: TarParserOptions) {
+  constructor(options: TarParserOptions = {}) {
+    let {
+      maxEntrySize = 2 * 1024 * 1024,
+      maxTotalSize = 20 * 1024 * 1024,
+      maxEntries = 5000,
+    } = options
+
+    if (maxEntrySize !== Infinity && (!Number.isSafeInteger(maxEntrySize) || maxEntrySize < 0)) {
+      throw new TypeError('maxEntrySize must be a non-negative safe integer or Infinity')
+    }
+    if (maxTotalSize !== Infinity && (!Number.isSafeInteger(maxTotalSize) || maxTotalSize < 0)) {
+      throw new TypeError('maxTotalSize must be a non-negative safe integer or Infinity')
+    }
+    if (maxEntries !== Infinity && (!Number.isSafeInteger(maxEntries) || maxEntries < 0)) {
+      throw new TypeError('maxEntries must be a non-negative safe integer or Infinity')
+    }
+
+    this.maxEntrySize = maxEntrySize
+    this.maxTotalSize = maxTotalSize
+    this.maxEntries = maxEntries
     this.#options = options
   }
 
@@ -301,43 +508,55 @@ export class TarParser {
   async parse(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void> {
     this.#reset()
 
-    let results: unknown[] = []
+    let results: Promise<void>[] = []
 
     function handleEntry(entry: TarEntry): void {
-      results.push(handler(entry))
+      let result = Promise.resolve(handler(entry))
+      // A handler may reject before the archive finishes streaming.
+      result.catch(() => {})
+      results.push(result)
     }
 
-    if (archive instanceof ReadableStream) {
-      for await (let chunk of readStream(archive)) {
-        this.#write(chunk, handleEntry)
+    try {
+      if (archive instanceof ReadableStream) {
+        for await (let chunk of readStream(archive)) {
+          this.#write(chunk, handleEntry)
+        }
+      } else if (isAsyncIterable(archive)) {
+        for await (let chunk of archive) {
+          this.#write(chunk, handleEntry)
+        }
+      } else if (archive instanceof Uint8Array) {
+        this.#write(archive, handleEntry)
+      } else if (isIterable(archive)) {
+        for (let chunk of archive) {
+          this.#write(chunk, handleEntry)
+        }
+      } else {
+        throw new TypeError('Cannot parse tar archive; expected a stream or buffer')
       }
-    } else if (isAsyncIterable(archive)) {
-      for await (let chunk of archive) {
-        this.#write(chunk, handleEntry)
-      }
-    } else if (archive instanceof Uint8Array) {
-      this.#write(archive, handleEntry)
-    } else if (isIterable(archive)) {
-      for (let chunk of archive) {
-        this.#write(chunk, handleEntry)
-      }
-    } else {
-      throw new TypeError('Cannot parse tar archive; expected a stream or buffer')
-    }
 
-    if (this.#missing !== 0) {
-      throw new TarParseError('Unexpected end of archive')
-    }
+      if (this.#missing !== 0) {
+        throw new TarParseError('Unexpected end of archive')
+      }
 
-    await Promise.all(results)
+      await Promise.all(results)
+    } catch (error) {
+      this.#bodyController?.error(error)
+      this.#bodyController = null
+      throw error
+    }
   }
 
   #reset(): void {
     this.#buffer = null
+    this.#totalSize = 0
+    this.#entryCount = 0
     this.#missing = 0
     this.#header = null
     this.#bodyController = null
     this.#longHeader = false
+    this.#longHeaderBuffer = null
     this.#gnuLongPath = null
     this.#gnuLongLinkPath = null
     this.#paxGlobal = null
@@ -345,6 +564,11 @@ export class TarParser {
   }
 
   #write(chunk: Uint8Array, handler: TarEntryHandler): void {
+    if (chunk.byteLength > this.maxTotalSize - this.#totalSize) {
+      throw new MaxTotalSizeExceededError(this.maxTotalSize)
+    }
+    this.#totalSize += chunk.byteLength
+
     if (this.#buffer !== null) {
       this.#buffer = concatChunks(this.#buffer, chunk)
     } else {
@@ -359,7 +583,6 @@ export class TarParser {
         }
 
         if (this.#longHeader) {
-          if (this.#missing > this.#buffer.length) break
           this.#parseLongHeader()
           continue
         }
@@ -387,35 +610,48 @@ export class TarParser {
       return
     }
 
-    this.#header = parseTarHeader(block, this.#options)
-
-    switch (this.#header.type) {
-      case 'gnu-long-path':
-      case 'gnu-long-link-path':
-      case 'pax-global-header':
-      case 'pax-header':
-        this.#longHeader = true
-        this.#missing = this.#header.size
-        return
+    if (++this.#entryCount > this.maxEntries) {
+      throw new MaxEntriesExceededError(this.maxEntries)
     }
 
-    if (this.#gnuLongPath) {
+    let header = decodeTarHeader(block, this.#options)
+    this.#longHeader = isLongHeader(header.type)
+    let pax = this.#pax
+    if (this.#paxGlobal !== null) {
+      pax = { ...this.#paxGlobal, ...pax }
+    }
+    this.#header = {
+      ...header,
+      size: parseEntrySize((!this.#longHeader && pax?.size) || block.subarray(124, 136)),
+    }
+
+    if (this.#header.size > this.maxEntrySize) {
+      throw new MaxEntrySizeExceededError(this.maxEntrySize)
+    }
+
+    if (this.#longHeader) {
+      this.#missing = this.#header.size
+      return
+    }
+
+    if (this.#gnuLongPath !== null) {
       this.#header.name = this.#gnuLongPath
       this.#gnuLongPath = null
     }
 
-    if (this.#gnuLongLinkPath) {
+    if (this.#gnuLongLinkPath !== null) {
       this.#header.linkname = this.#gnuLongLinkPath
       this.#gnuLongLinkPath = null
     }
 
-    if (this.#pax) {
-      if (this.#pax.path) this.#header.name = this.#pax.path
-      if (this.#pax.linkpath) this.#header.linkname = this.#pax.linkpath
-      if (this.#pax.size) this.#header.size = parseInt(this.#pax.size, 10)
-      this.#header.pax = this.#pax
+    if (pax) {
+      if (pax.path) this.#header.name = pax.path
+      if (pax.linkpath) this.#header.linkname = pax.linkpath
+      this.#header.pax = pax
       this.#pax = null
     }
+
+    validatePaths(this.#header, this.#options?.pathPolicy)
 
     if (this.#header.size === 0 || this.#header.type === 'directory') {
       let emptyBody = new ReadableStream({
@@ -442,9 +678,33 @@ export class TarParser {
   }
 
   #parseLongHeader(): void {
-    this.#longHeader = false
+    let offset = this.#header!.size - this.#missing
+    let chunk = this.#read(Math.min(this.#missing, this.#buffer!.length))
+    let length = offset + chunk.length
+    let buffer = this.#longHeaderBuffer
 
-    let buffer = this.#read(this.#header!.size)
+    if (buffer !== null || chunk.length < this.#missing) {
+      if (buffer === null || buffer.length < length) {
+        // Grow with received bytes so fragmented metadata takes linear copying work.
+        let capacity = Math.min(this.#header!.size, Math.max(length, (buffer?.length ?? 0) * 2))
+        let next = new Uint8Array(capacity)
+        if (buffer !== null) next.set(buffer.subarray(0, offset))
+        buffer = next
+      }
+      buffer.set(chunk, offset)
+      this.#longHeaderBuffer = buffer
+    } else {
+      buffer = chunk
+    }
+
+    this.#missing -= chunk.length
+    if (this.#missing > 0) {
+      this.#buffer = null
+      return
+    }
+
+    this.#longHeader = false
+    this.#longHeaderBuffer = null
 
     switch (this.#header!.type) {
       case 'gnu-long-path':
@@ -454,13 +714,10 @@ export class TarParser {
         this.#gnuLongLinkPath = decodeLongPath(buffer)
         break
       case 'pax-global-header':
-        this.#paxGlobal = decodePax(buffer)
+        this.#paxGlobal = { ...this.#paxGlobal, ...decodePax(buffer) }
         break
       case 'pax-header':
-        this.#pax =
-          this.#paxGlobal !== null
-            ? Object.assign({}, this.#paxGlobal, decodePax(buffer))
-            : decodePax(buffer)
+        this.#pax = decodePax(buffer)
         break
     }
 
@@ -541,7 +798,8 @@ export class TarEntry {
   }
 
   /**
-   * The content of this entry buffered into a single typed array.
+   * The content of this entry buffered into a single typed array using the bytes received.
+   * Rejects if parsing fails before the entry's body is complete.
    *
    * @returns A promise that resolves to a `Uint8Array`
    */
@@ -552,9 +810,16 @@ export class TarEntry {
 
     this.#bodyUsed = true
 
-    let result = new Uint8Array(this.size)
-    let offset = 0
+    let chunks: Uint8Array[] = []
+    let length = 0
     for await (let chunk of readStream(this.#body)) {
+      chunks.push(new Uint8Array(chunk))
+      length += chunk.length
+    }
+
+    let result = new Uint8Array(length)
+    let offset = 0
+    for (let chunk of chunks) {
       result.set(chunk, offset)
       offset += chunk.length
     }
@@ -571,6 +836,8 @@ export class TarEntry {
 
   /**
    * The name of this entry.
+   * Parsed names include ustar prefixes and GNU/PAX overrides and follow the same
+   * path policy as {@link parseTarHeader}.
    */
   get name(): string {
     return this.header.name

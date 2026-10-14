@@ -1,28 +1,23 @@
 # ui
 
-Runtime UI primitives for Remix apps, including the component runtime, server rendering, frame hydration, reusable mixins, and headless first-party behavior primitives.
-
-## Features
-
-- Component runtime APIs for rendering, hydration, frame navigation, and JSX
-- Server rendering APIs for streaming Remix UI trees and frames
-- `mix` composition with event, ref, CSS, and animation helpers
-- Headless behavior primitives for controls such as menus, listboxes, popovers, selects, and comboboxes
-- Lower-level utilities for keyboard events, typeahead search, refs, attributes, and CSS transition timing
+Headless, accessible UI primitives and animation utilities for Remix components.
 
 ## Installation
 
+`@remix-run/ui` is currently unstable and versioned independently. It is not available through the `remix` package.
+
 ```sh
-npm i remix
+npm i remix @remix-run/ui
 ```
 
 ## Usage
 
-Compose behavior primitives with your own markup and styles:
+Compose behavioral primitives with your own markup and styles:
 
 ```tsx
-import { css } from 'remix/ui'
-import * as popover from 'remix/ui/popover'
+import { css, on } from 'remix/component'
+import type { Handle } from 'remix/component'
+import * as popover from '@remix-run/ui/popover'
 
 let triggerCss = css({
   border: '1px solid #d1d5db',
@@ -37,16 +32,21 @@ let surfaceCss = css({
   padding: '8px',
 })
 
-function ViewOptions() {
+function ViewOptions(handle: Handle) {
   let open = false
 
   return () => (
     <popover.Context>
       <button
-        mix={[triggerCss, popover.anchor({ placement: 'bottom-end' }), popover.focusOnHide()]}
-        onClick={() => {
-          open = true
-        }}
+        mix={[
+          triggerCss,
+          popover.anchor({ placement: 'bottom-end' }),
+          popover.focusOnHide(),
+          on('click', () => {
+            open = true
+            handle.update()
+          }),
+        ]}
         type="button"
       >
         View options
@@ -58,6 +58,7 @@ function ViewOptions() {
             open,
             onHide() {
               open = false
+              handle.update()
             },
           }),
         ]}
@@ -69,49 +70,41 @@ function ViewOptions() {
 }
 ```
 
-Button styling is available as a composable mixin:
+## Primitives
+
+- [`@remix-run/ui/accordion`](https://github.com/remix-run/remix/blob/main/packages/ui/src/accordion/README.md)
+- [`@remix-run/ui/anchor`](https://github.com/remix-run/remix/blob/main/packages/ui/src/anchor/README.md)
+- [`@remix-run/ui/combobox`](https://github.com/remix-run/remix/blob/main/packages/ui/src/combobox/README.md)
+- [`@remix-run/ui/listbox`](https://github.com/remix-run/remix/blob/main/packages/ui/src/listbox/README.md)
+- [`@remix-run/ui/menu`](https://github.com/remix-run/remix/blob/main/packages/ui/src/menu/README.md)
+- [`@remix-run/ui/popover`](https://github.com/remix-run/remix/blob/main/packages/ui/src/popover/README.md)
+- [`@remix-run/ui/select`](https://github.com/remix-run/remix/blob/main/packages/ui/src/select/README.md)
+- [`@remix-run/ui/tabs`](https://github.com/remix-run/remix/blob/main/packages/ui/src/tabs/README.md)
+- [`@remix-run/ui/toggle`](https://github.com/remix-run/remix/blob/main/packages/ui/src/toggle/README.md)
+
+## Animation
+
+Use the animation utilities for entrance, exit, layout, spring, and tween animation:
 
 ```tsx
-import button from 'remix/ui/button'
+import { animateEntrance, animateExit, spring } from '@remix-run/ui/animation'
 
-function Actions() {
-  return () => <button mix={button({ tone: 'primary' })}>Create project</button>
+function Toast() {
+  return () => (
+    <div
+      mix={[
+        animateEntrance({ opacity: 0, ...spring('snappy') }),
+        animateExit({ opacity: 0, ...spring('snappy') }),
+      ]}
+    >
+      Saved
+    </div>
+  )
 }
 ```
 
-## Preserving Client-Owned DOM
-
-Use `rmx-preserve-dom` on the smallest element whose live DOM should belong to client code after initial render, such as a custom element or third-party widget:
-
-```tsx
-<pagefind-ui data-key="search" rmx-preserve-dom>
-  <button type="button">Search</button>
-</pagefind-ui>
-```
-
-Remix UI still renders the element's children during SSR and still hydrates any initial client entries inside it. On later frame reloads, matched `rmx-preserve-dom` elements keep their current attributes and children instead of accepting incoming DOM updates. See [Preserving client-owned DOM](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#preserving-client-owned-dom) for guidance and caveats.
-
-## Cascade Layers
-
-Remix UI emits generated `css(...)` rules under the `rmx` cascade layer. Unlayered CSS outranks layered CSS, so use explicit layer order when mixing Remix UI with global styles.
-
-Put layers that should lose to Remix UI before `rmx`:
-
-```css
-@layer base, rmx;
-
-@layer base {
-  button,
-  input,
-  textarea,
-  select {
-    font: inherit;
-    margin: 0;
-    padding: 0;
-  }
-}
-```
+See the [`animation` module README](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) for layout animation, CSS transitions, Web Animations API options, and imperative animation.
 
 ## License
 
-See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE).

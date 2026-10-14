@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS schedule_blocks;
+DROP TABLE IF EXISTS schedules;
+DROP TABLE IF EXISTS user_passwords;
+DROP TABLE IF EXISTS users;

@@ -256,6 +256,59 @@ describe('RoutePattern', () => {
     assert.equal(pattern.source, '/posts/:id')
     assert.equal(pattern.toString(), '/posts/:id')
   })
+
+  it('accepts repeated capture names', () => {
+    assert.doesNotThrow(() => RoutePattern.parse('://:id.example.com/:id/:id'))
+  })
+
+  it('rejects adjacent wildcards', () => {
+    assert.throws(
+      () => RoutePattern.parse('/*left*right'),
+      new ParseError('adjacent wildcards', '/*left*right', 6),
+    )
+  })
+
+  it('rejects wildcards that become adjacent when an optional is omitted', () => {
+    assert.throws(
+      () => RoutePattern.parse('/*left(/middle)*right'),
+      new ParseError('adjacent wildcards', '/*left(/middle)*right', 15),
+    )
+  })
+
+  it('rejects params followed by non-delimiter text', () => {
+    assert.throws(
+      () => RoutePattern.parse('/:year-:month'),
+      new ParseError('invalid param delimiter', '/:year-:month', 6),
+    )
+  })
+
+  it('rejects params followed by non-delimiter text after an optional', () => {
+    assert.throws(
+      () => RoutePattern.parse('/:id(/details)-suffix'),
+      new ParseError('invalid param delimiter', '/:id(/details)-suffix', 14),
+    )
+  })
+
+  it('rejects params followed by non-delimiter text after a nested optional', () => {
+    assert.throws(
+      () => parsePattern('/:id((/details)-suffix)'),
+      new ParseError('invalid param delimiter', '/:id((/details)-suffix)', 15),
+    )
+  })
+
+  it('rejects empty optional groups', () => {
+    assert.throws(
+      () => RoutePattern.parse('/users()'),
+      new ParseError('empty optional', '/users()', 6),
+    )
+  })
+
+  it('rejects optional branches with ambiguous capture schemas', () => {
+    assert.throws(
+      () => RoutePattern.parse('/users(/:id)(/:slug)'),
+      new ParseError('ambiguous optional captures', '/users(/:id)(/:slug)', 12),
+    )
+  })
 })
 
 describe('parsePattern', () => {

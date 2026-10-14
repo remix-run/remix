@@ -44,11 +44,7 @@ const benchmarks: Benchmark[] = [
       let fixture = await getBasicFixture()
       return async function run() {
         let assetServer = createBenchAssetServer(fixture)
-        let source = await readHandledResponseText(
-          assetServer,
-          await assetServer.getHref(fixture.entryPoint),
-        )
-        assertContainsSubstrings(source, fixture.expectedEntryUrlSubstrings, fixture.label)
+        await readAndAssertScriptEntry(assetServer, fixture)
       }
     },
   },
@@ -58,17 +54,9 @@ const benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getBasicFixture()
       let assetServer = createBenchAssetServer(fixture)
-      let source = await readHandledResponseText(
-        assetServer,
-        await assetServer.getHref(fixture.entryPoint),
-      )
-      assertContainsSubstrings(source, fixture.expectedEntryUrlSubstrings, fixture.label)
+      await readAndAssertScriptEntry(assetServer, fixture)
       return async function run() {
-        let nextSource = await readHandledResponseText(
-          assetServer,
-          await assetServer.getHref(fixture.entryPoint),
-        )
-        assertContainsSubstrings(nextSource, fixture.expectedEntryUrlSubstrings, fixture.label)
+        await readAndAssertScriptEntry(assetServer, fixture)
       }
     },
   },
@@ -79,11 +67,7 @@ const benchmarks: Benchmark[] = [
       let fixture = await getBasicFixture()
       return async function run() {
         let assetServer = createBenchAssetServer(fixture, { minify: true })
-        let source = await readHandledResponseText(
-          assetServer,
-          await assetServer.getHref(fixture.entryPoint),
-        )
-        assertContainsSubstrings(source, fixture.expectedEntryUrlSubstrings, fixture.label)
+        await readAndAssertScriptEntry(assetServer, fixture)
       }
     },
   },
@@ -141,21 +125,21 @@ const benchmarks: Benchmark[] = [
   },
   {
     id: 'deep-graph-module-burst',
-    name: 'deep-graph fixture / warm internal module burst',
+    name: 'deep-graph fixture / warm module burst',
     async prepare() {
       let fixture = await getDeepGraphFixture()
       let assetServer = createBenchAssetServer(fixture)
       let preloadUrls = await assetServer.getPreloads(fixture.entryPoint)
       assertPreloadUrls(preloadUrls, fixture)
-      let internalUrls = preloadUrls.filter((url) => url.includes('.@'))
-      assert.ok(internalUrls.length > 0, 'expected fingerprinted internal module URLs')
+      let moduleUrls = preloadUrls.slice(1)
+      assert.ok(moduleUrls.length > 0, 'expected module URLs')
       assertContainsSubstrings(
-        internalUrls.join('\n'),
+        moduleUrls.join('\n'),
         fixture.expectedPreloadUrlSubstrings,
         fixture.label,
       )
       return async function run() {
-        await Promise.all(internalUrls.map((url) => readHandledResponse(assetServer, url)))
+        await Promise.all(moduleUrls.map((url) => readHandledResponse(assetServer, url)))
       }
     },
   },
@@ -185,17 +169,13 @@ function createBenchAssetServer(
   fixture: BenchFixture,
   overrides: Partial<AssetServerOptions> = {},
 ): AssetServer {
-  let defaultFingerprint: AssetServerOptions['fingerprint'] = {
-    buildId: String(Date.now()),
-  }
   let options: AssetServerOptions = {
-    allow: overrides.allow ?? fixture.assetServer.allow,
+    allowFiles: overrides.allowFiles ?? fixture.assetServer.allowFiles,
+    allowPackages: overrides.allowPackages ?? fixture.assetServer.allowPackages,
     basePath: overrides.basePath ?? fixture.assetServer.basePath,
-    fileMap: overrides.fileMap ?? fixture.assetServer.fileMap,
-    deny: overrides.deny,
-    fingerprint: Object.hasOwn(overrides, 'fingerprint')
-      ? overrides.fingerprint
-      : defaultFingerprint,
+    mounts: overrides.mounts ?? fixture.assetServer.mounts,
+    denyFiles: overrides.denyFiles,
+    fingerprint: Object.hasOwn(overrides, 'fingerprint') ? overrides.fingerprint : true,
     minify: overrides.minify,
     onError: overrides.onError,
     rootDir: overrides.rootDir ?? path.resolve(import.meta.dirname, '../../..'),
@@ -235,6 +215,20 @@ async function readHandledResponseText(
   assert.ok(response, `expected response for ${pathname}`)
   assert.equal(response.status, 200, `expected 200 response for ${pathname}`)
   return response.text()
+}
+
+async function readAndAssertScriptEntry(
+  assetServer: AssetServer,
+  fixture: BenchFixture,
+): Promise<void> {
+  let { href, importMap } = await assetServer.getScriptEntry(fixture.entryPoint)
+  let source = await readHandledResponseText(assetServer, href)
+  assertContainsSubstrings(source, fixture.expectedEntrySourceSubstrings, fixture.label)
+  assertContainsSubstrings(
+    JSON.stringify(importMap),
+    fixture.expectedEntryImportMapUrlSubstrings,
+    fixture.label,
+  )
 }
 
 function assertContainsSubstrings(

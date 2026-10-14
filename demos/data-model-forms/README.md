@@ -99,8 +99,7 @@ The router creates a `DatabaseSync(':memory:')` instance and exposes the resulti
 The page owns its DOM structure and applies the generated attributes directly:
 
 ```tsx
-import { createInputMixin } from 'remix/ui/form'
-import input from 'remix/ui/input'
+import { createInputMixin } from '@remix-run/ui/form'
 
 let registrationInput = createInputMixin(RegistrationForm)
 
@@ -110,7 +109,7 @@ let registrationInput = createInputMixin(RegistrationForm)
 </label>
 <input
   autoComplete="name"
-  mix={[registrationInput('displayName', submission), input()]}
+  mix={registrationInput('displayName', submission)}
 />
 ```
 

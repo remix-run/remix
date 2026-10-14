@@ -1,7 +1,5 @@
-import { createMixin } from '../runtime/mixins/mixin.ts'
-import type { ElementProps } from '../runtime/jsx.ts'
-import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
-import type { LayoutAnimationConfig } from '../runtime/dom.ts'
+import { createMixin } from '@remix-run/component'
+import type { ElementProps, LayoutAnimationConfig, MixinDescriptor } from '@remix-run/component'
 
 type LayoutConfig = true | false | null | undefined | LayoutAnimationConfig
 

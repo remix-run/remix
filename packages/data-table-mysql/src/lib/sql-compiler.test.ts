@@ -4,7 +4,6 @@ import {
   and,
   between,
   column,
-  createDatabase,
   table,
   eq,
   gt,
@@ -17,11 +16,11 @@ import {
   ne,
   notInList,
   notNull,
-  type DataManipulationOperation,
-  type DatabaseAdapter,
   or,
 } from '@remix-run/data-table'
+import { type DataManipulationOperation } from '@remix-run/data-table'
 
+import { createRecordingDriver, TestDatabase } from '../../../data-table/test/recording-driver.ts'
 import { compileMysqlOperation } from './sql-compiler.ts'
 
 const accounts = table({
@@ -45,19 +44,18 @@ const tasks = table({
 
 let statements: DataManipulationOperation[] = []
 
-const fakeAdapter = {
+const recording = createRecordingDriver({
   capabilities: {
     upsert: true,
     returning: false,
   },
-
-  execute: async (request) => {
+  async execute(request) {
     statements.push(request.operation)
     return {}
   },
-} as DatabaseAdapter
+})
 
-const db = createDatabase(fakeAdapter)
+const db = new TestDatabase(recording.driver)
 
 describe('mysql sql-compiler', () => {
   beforeEach(() => {
@@ -248,6 +246,28 @@ describe('mysql sql-compiler', () => {
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` limit ? offset ?',
         values: [10, 5],
+      })
+    })
+
+    it('compile ordering', async () => {
+      await db.query(accounts).orderBy('email', 'asc').orderBy('id', 'desc').all()
+
+      let compiled = compileMysqlOperation(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from `accounts` order by `email` ASC, `id` DESC',
+        values: [],
+      })
+    })
+
+    it('reject invalid order by directions', async () => {
+      await db
+        .query(accounts)
+        .orderBy('id', 'ascending' as 'asc')
+        .all()
+
+      assert.throws(() => compileMysqlOperation(statements[0]), {
+        name: 'TypeError',
+        message: 'Invalid order by direction: expected "asc" or "desc"',
       })
     })
 

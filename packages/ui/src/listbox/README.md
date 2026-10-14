@@ -2,12 +2,12 @@
 
 `listbox` is a headless option-list primitive for controlled selection and highlighting. Use it under components like select and combobox, or directly when you need custom listbox markup.
 
-## Primitive Usage
+## Usage
 
 ```tsx
-import type { Handle } from 'remix/ui'
-import * as listbox from 'remix/ui/listbox'
-import type { ListboxValue } from 'remix/ui/listbox'
+import { type Handle } from 'remix/component'
+import * as listbox from '@remix-run/ui/listbox'
+import type { ListboxValue } from '@remix-run/ui/listbox'
 import { listStyle, optionStyle } from './listbox.styles'
 
 function FrameworkListbox(handle: Handle) {
@@ -63,11 +63,11 @@ Use `textValue` when the visible label is not the best string for typeahead sear
 </div>
 ```
 
-## `remix/ui/listbox`
+## `@remix-run/ui/listbox`
 
-- `listbox.Context`: provider for controlled `value` and `activeValue`, option registration, selection, highlighting, optional ref access, `flashSelection`, `selectionFlashAttribute`, and `onSelectSettled`.
-- `listbox.list()`: mixin that wires `role="listbox"`, default `tabIndex={-1}`, keyboard navigation, focus scrolling, and typeahead highlighting.
-- `listbox.option(options)`: mixin that registers an option with required `label` and `value`, optional `disabled` and `textValue`, and wires `role="option"`, id, selected, disabled, highlighted, mouse, and click behavior.
+- `Context`: provider for controlled `value` and `activeValue`, option registration, selection, highlighting, optional ref access, `flashSelection`, `selectionFlashAttribute`, and `onSelectSettled`.
+- `list()`: wires `role="listbox"`, default `tabIndex={-1}`, keyboard navigation, focus scrolling, and typeahead highlighting.
+- `option(options)`: registers an option with required `label` and `value`, optional `disabled` and `textValue`, and wires `role="option"`, id, selected, disabled, highlighted, mouse, and click behavior.
 - `ListboxValue`: selected or active value, represented as `string | null`.
 - `ListboxContext` and `ListboxProviderProps`: provider context and prop types for controlled listboxes.
 - `ListboxOption`: option input shape with `label`, `value`, optional `disabled`, and optional `textValue`.

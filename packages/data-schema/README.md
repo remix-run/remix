@@ -154,14 +154,12 @@ if (!submission.success) {
 await createAccount(submission.value)
 ```
 
-The same form definition produces low-level attribute bags. Markup remains application-owned, while Remix UI supplies styling and the small progressive enhancement for touched state:
+The same form definition produces low-level attribute bags. Markup and styling remain application-owned, while `@remix-run/ui/form` supplies the small progressive enhancement for touched state:
 
 ```tsx
 import type { FormFailure } from 'remix/data-schema/form'
-import type { Handle } from 'remix/ui'
-import checkbox from 'remix/ui/checkbox'
-import { createInputMixin, form as formValidation } from 'remix/ui/form'
-import input from 'remix/ui/input'
+import type { Handle } from 'remix/component'
+import { createInputMixin, form as formValidation } from '@remix-run/ui/form'
 
 let accountInput = createInputMixin(AccountForm)
 
@@ -177,11 +175,11 @@ function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
           {AccountForm.fields.email.label}
           {AccountForm.fields.email.required ? <span>Required</span> : null}
         </label>
-        <input autoComplete="email" mix={[accountInput('email', submission), input()]} />
+        <input autoComplete="email" mix={accountInput('email', submission)} />
         {emailError ? <p {...AccountForm.getErrorAttrs('email')}>{emailError}</p> : null}
 
         <label>
-          <input mix={[accountInput('terms', submission), checkbox()]} />
+          <input mix={accountInput('terms', submission)} />
           {AccountForm.fields.terms.label}
         </label>
         {termsError ? <p {...AccountForm.getErrorAttrs('terms')}>{termsError}</p> : null}

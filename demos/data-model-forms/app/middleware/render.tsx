@@ -1,7 +1,7 @@
 import { renderWith } from 'remix/middleware/render'
 import { createHtmlResponse } from 'remix/response/html'
-import type { RemixNode } from 'remix/ui'
-import { renderToStream } from 'remix/ui/server'
+import type { RemixNode } from 'remix/component'
+import { renderToStream } from 'remix/component/server'
 
 import { assetServer } from '../assets.ts'
 import { Document } from '../ui/document.tsx'
@@ -42,10 +42,7 @@ export function render() {
               throw new Error(`Unable to resolve a client entry export for '${entryId}'`)
             }
 
-            return {
-              href: await assetServer.getHref(entryId),
-              exportName,
-            }
+            return { ...(await assetServer.getScriptEntry(entryId.split('#')[0])), exportName }
           },
           onError(error) {
             console.error(error)

@@ -1,4 +1,4 @@
-import type { Handle, Props } from 'remix/ui'
+import type { Handle, Props } from 'remix/component'
 
 export function UserIcon(handle: Handle<Props<'svg'>>) {
   return () => (

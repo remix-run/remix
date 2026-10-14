@@ -2,6 +2,45 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.0.0`](https://github.com/remix-run/remix/releases/tag/headers@1.0.0)
+  - [`multipart-parser@1.0.0`](https://github.com/remix-run/remix/releases/tag/multipart-parser@1.0.0)
+
+## v0.17.7
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.3`](https://github.com/remix-run/remix/releases/tag/headers@0.21.3)
+  - [`multipart-parser@0.16.6`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.6)
+
+## v0.17.6
+
+### Patch Changes
+
+- Apply upload handlers and parser limits consistently for mixed-case form media types. Reject unsupported media types before reading the request body, including on Bun, so they cannot bypass parser limits.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+  - [`multipart-parser@0.16.5`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.5)
+
+## v0.17.5
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`multipart-parser@0.16.4`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.4)
+
 ## v0.17.4
 
 ### Patch Changes

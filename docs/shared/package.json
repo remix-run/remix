@@ -1,0 +1,52 @@
+{
+  "name": "remix-docs-shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./markdown/code-blocks": "./markdown/code-blocks.ts",
+    "./markdown/headings": "./markdown/headings.ts",
+    "./markdown/parser": "./markdown/parser.ts",
+    "./markdown/render": "./markdown/render.ts",
+    "./markdown/types": "./markdown/types.ts",
+    "./prerender/public-modules": "./prerender/public-modules.ts",
+    "./prerender/crawl": "./prerender/crawl.ts",
+    "./prerender/run": "./prerender/run.ts",
+    "./prerender/utils": "./prerender/utils.ts",
+    "./search": "./search/index.ts",
+    "./search/browser": "./search/public/pagefind-search.ts",
+    "./server": "./server.ts",
+    "./ui/code-block-copy": "./ui/public/code-block-copy.tsx",
+    "./ui/icon": "./ui/icon.tsx",
+    "./ui/docs-footer": "./ui/docs-footer.tsx",
+    "./ui/docs-header": "./ui/docs-header.tsx",
+    "./ui/docs-shell": "./ui/docs-shell.tsx",
+    "./ui/markdown-content": "./ui/markdown-content.ts",
+    "./ui/table-of-contents": "./ui/table-of-contents.tsx",
+    "./ui/selection-indicator": "./ui/public/selection-indicator.ts"
+  },
+  "dependencies": {
+    "github-slugger": "catalog:",
+    "gray-matter": "4.0.3",
+    "hast-util-to-html": "9.0.5",
+    "mdast-util-to-string": "4.0.0",
+    "rehype-stringify": "10.0.1",
+    "remark-directive": "4.0.0",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
+    "remark-rehype": "11.1.2",
+    "remix": "workspace:^",
+    "shiki": "catalog:",
+    "unified": "11.0.5",
+    "unist-util-visit": "5.1.0"
+  },
+  "devDependencies": {
+    "@types/hast": "catalog:",
+    "@types/mdast": "4.0.4",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  },
+  "scripts": {
+    "test": "remix test",
+    "typecheck": "tsc --noEmit"
+  }
+}

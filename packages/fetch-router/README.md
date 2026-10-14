@@ -98,7 +98,7 @@ The `routes.home` route is a `Route<'ANY', '/'>`, which means it serves any requ
 
 In addition to describing the structure of your routes, route maps also make it easy to generate type-safe links and form actions using the `href()` function on a route. The example below is a small site with a home page and a "Contact Us" page.
 
-Note: We're using the [`createHtmlResponse` helper from `response`](https://github.com/remix-run/remix/tree/main/packages/response#readme) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
+Note: We're using the [`createHtmlResponse` helper from `response`](https://github.com/remix-run/remix/tree/main/packages/response) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
 
 ```ts
 import { route } from 'remix/routes'
@@ -236,6 +236,45 @@ router.map(routes.contact, {
   },
 })
 ```
+
+#### Method Not Allowed Responses
+
+When a request URL matches one or more route patterns, but none of those routes are registered for the request method, the router first falls through to any less specific route that can handle the method (including `ANY` routes). If no route can handle the request, the router responds with `405 Method Not Allowed` and an [`Allow` header](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Allow) listing the methods that are registered for that URL, instead of treating the request as a 404.
+
+```ts
+import { createRouter } from 'remix/router'
+
+let router = createRouter()
+
+router.get('/users/:id', ({ params }) => new Response(`User ${params.id}`))
+router.put('/users/:id', ({ params }) => new Response(`Updated ${params.id}`))
+
+let response = await router.fetch('https://remix.run/users/1', { method: 'DELETE' })
+// 405 Method Not Allowed
+// Allow: GET, HEAD, PUT
+```
+
+If you want a handler to receive every request method at a given URL instead, register an `ANY` route for it.
+
+#### HEAD Requests
+
+Routes registered for `GET` also serve `HEAD` requests. The `GET` handler runs as usual, and the router strips the body from its response, so a `HEAD` request observes the same status and headers as the equivalent `GET` request.
+
+```ts
+let router = createRouter()
+
+router.get(
+  '/report',
+  () => new Response('report data', { headers: { 'Content-Type': 'text/csv' } }),
+)
+
+let response = await router.fetch('https://remix.run/report', { method: 'HEAD' })
+// 200 OK
+// Content-Type: text/csv
+// (empty body)
+```
+
+If you register an explicit `HEAD` route for the same pattern, it takes precedence over the `GET` route for `HEAD` requests.
 
 ### Composing Route Groups
 
@@ -737,7 +776,7 @@ router.get('/posts/:id', (context) => {
 
 Route params are only half of a handler's type contract. In many apps, handlers also depend on values that middleware loads into request context, like sessions, database connections, or authenticated users.
 
-`fetch-router` lets you carry that context contract through the router and into direct route registration, stored controllers, and stored actions. A common pattern is to derive one application context type from your middleware, augment `RouterTypes.context` with it, then use `createAction()` and `createController()` to type stored handlers.
+`fetch-router` lets you carry that context contract through the router and into direct route registration, stored controllers, and stored actions. A common pattern in Remix apps is to derive one application context type from your middleware, augment `RouterTypes.context` in the `remix` module, then use `createAction()` and `createController()` to type stored handlers.
 
 ```ts
 import { Auth, requireAuth } from 'remix/middleware/auth'
@@ -758,7 +797,7 @@ export const router = createRouter({
 
 type AppContext = RouterContext<typeof router>
 
-declare module 'remix/router' {
+declare module 'remix' {
   interface RouterTypes {
     context: AppContext
   }
@@ -784,6 +823,8 @@ let accountController = createController(routes, {
 ```
 
 In this example, the router's inline middleware array defines the app context contract. `RouterContext<typeof router>` extracts the request context that the router provides, so `RouterTypes.context` can use that context without storing the middleware chain separately.
+
+Apps that install `@remix-run/fetch-router` directly should augment the `@remix-run/fetch-router` module instead.
 
 Prefer plain inline arrays for `middleware` options on routers, controllers, actions, and route helpers. Inline arrays already give TypeScript enough information to infer middleware-provided context for downstream handlers, so `createAction()` and direct action objects see action middleware context, and `createController()` sees controller middleware context without `createMiddleware()`.
 
@@ -886,7 +927,7 @@ let response = createRedirectResponse('/')
 let response = compressResponse(uncompressedResponse, request)
 ```
 
-See the [`response` documentation](https://github.com/remix-run/remix/tree/main/packages/response#readme) for more details.
+See the [`response` documentation](https://github.com/remix-run/remix/tree/main/packages/response) for more details.
 
 ### Working with HTML
 
@@ -931,7 +972,7 @@ let button = html`<button>${icon} Click me</button>` // icon is not escaped
 
 **Warning**: Only use `html.raw` with trusted content. Unlike the regular `html` template tag, `html.raw` does not escape its interpolations, which can lead to XSS vulnerabilities if used with untrusted user input.
 
-See the [`html-template` documentation](https://github.com/remix-run/remix/tree/main/packages/html-template#readme) for more details.
+See the [`html-template` documentation](https://github.com/remix-run/remix/tree/main/packages/html-template) for more details.
 
 ### Testing
 

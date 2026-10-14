@@ -6,11 +6,12 @@
     "node": ">=24.3.0"
   },
   "dependencies": {
+    "@remix-run/ui": "workspace:^",
     "remix": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
     "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",

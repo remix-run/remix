@@ -41,8 +41,8 @@ export interface CompressResponseOptions {
   /**
    * node:zlib options for gzip/deflate compression.
    *
-   * For SSE responses (text/event-stream), `flush: Z_SYNC_FLUSH` is automatically
-   * applied unless you explicitly set a flush value.
+   * For HTML and SSE responses (`text/html` and `text/event-stream`),
+   * `flush: Z_SYNC_FLUSH` is automatically applied unless you explicitly set a flush value.
    *
    * See: https://nodejs.org/api/zlib.html#class-options
    */
@@ -51,8 +51,9 @@ export interface CompressResponseOptions {
   /**
    * node:zlib options for Brotli compression.
    *
-   * For SSE responses (text/event-stream), `flush: BROTLI_OPERATION_FLUSH` is
-   * automatically applied unless you explicitly set a flush value.
+   * For HTML and SSE responses (`text/html` and `text/event-stream`),
+   * `flush: BROTLI_OPERATION_FLUSH` is automatically applied unless you explicitly set a flush
+   * value.
    *
    * See: https://nodejs.org/api/zlib.html#class-brotlioptions
    */
@@ -63,7 +64,7 @@ export interface CompressResponseOptions {
  * Compresses a Response based on the client's Accept-Encoding header.
  *
  * Compression is skipped for:
- * - Responses with no Accept-Encoding header (RFC 7231)
+ * - Requests with no Accept-Encoding header (RFC 7231)
  * - Empty responses
  * - Already compressed responses
  * - Responses with Content-Length below threshold (default: 1024 bytes)
@@ -71,17 +72,20 @@ export interface CompressResponseOptions {
  * - Responses advertising range support (Accept-Ranges: bytes)
  * - Partial content responses (206 status)
  *
+ * Responses eligible for content-coding negotiation include `Accept-Encoding` in
+ * the `Vary` header, even when identity is selected or the request does not include
+ * `Accept-Encoding`.
+ *
  * When compressing, this function:
  * - Sets Content-Encoding header
  * - Removes Content-Length header
  * - Sets Accept-Ranges to 'none'
- * - Adds 'Accept-Encoding' to Vary header
  * - Converts strong ETags to weak ETags (per RFC 7232)
  *
  * @param response The response to compress
  * @param request The request (needed to check Accept-Encoding header)
  * @param options Optional compression settings
- * @returns A compressed Response or the original if no compression is suitable
+ * @returns A response with the negotiated content coding and cache metadata
  */
 export async function compressResponse(
   response: Response,
@@ -101,7 +105,6 @@ export async function compressResponse(
   let cacheControl = CacheControl.from(responseHeaders.get('Cache-Control'))
 
   if (
-    !acceptEncodingHeader ||
     supportedEncodings.length === 0 ||
     // Empty response
     (request.method !== 'HEAD' && !response.body) ||
@@ -119,8 +122,11 @@ export async function compressResponse(
     return response
   }
 
-  let acceptEncoding = AcceptEncoding.from(acceptEncodingHeader)
-  let selectedEncoding = negotiateEncoding(acceptEncoding, supportedEncodings)
+  addVaryAcceptEncoding(responseHeaders)
+
+  let selectedEncoding = acceptEncodingHeader
+    ? negotiateEncoding(AcceptEncoding.from(acceptEncodingHeader), supportedEncodings)
+    : 'identity'
   if (selectedEncoding === null) {
     // Client has explicitly rejected all supported encodings, including 'identity'
     return new Response(
@@ -128,12 +134,17 @@ export async function compressResponse(
       {
         status: 406,
         statusText: 'Not Acceptable',
+        headers: { Vary: responseHeaders.get('Vary') ?? 'Accept-Encoding' },
       },
     )
   }
 
   if (selectedEncoding === 'identity') {
-    return response
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+    })
   }
 
   // For HEAD requests, set compression headers without actually compressing
@@ -169,15 +180,16 @@ function negotiateEncoding(
   return preferred
 }
 
+function addVaryAcceptEncoding(headers: Headers): void {
+  let vary = Vary.from(headers.get('Vary'))
+  vary.add('Accept-Encoding')
+  headers.set('Vary', vary.toString())
+}
+
 function setCompressionHeaders(headers: Headers, encoding: string): void {
   headers.set('Content-Encoding', encoding)
   headers.set('Accept-Ranges', 'none')
   headers.delete('Content-Length')
-
-  // Update Vary header to include Accept-Encoding
-  let vary = Vary.from(headers.get('Vary'))
-  vary.add('Accept-Encoding')
-  headers.set('Vary', vary.toString())
 
   // Convert strong ETags to weak since compressed representation is byte-different
   let etagHeader = headers.get('ETag')
@@ -220,18 +232,18 @@ export function createCompressionOptions(
   options: CompressResponseOptions,
 ): CompressResponseOptions {
   let contentTypeHeader = responseHeaders.get('Content-Type')
-  let mediaType = contentTypeHeader?.split(';')[0].trim()
-  let isSSE = mediaType === 'text/event-stream'
+  let mediaType = contentTypeHeader?.split(';')[0].trim().toLowerCase()
+  let shouldFlush = mediaType === 'text/event-stream' || mediaType === 'text/html'
 
   return {
     ...options,
     brotli: {
       ...options.brotli,
-      ...(isSSE && options.brotli?.flush === undefined ? brotliFlushOptions : null),
+      ...(shouldFlush && options.brotli?.flush === undefined ? brotliFlushOptions : null),
     },
     zlib: {
       ...options.zlib,
-      ...(isSSE && options.zlib?.flush === undefined ? zlibFlushOptions : null),
+      ...(shouldFlush && options.zlib?.flush === undefined ? zlibFlushOptions : null),
     },
   }
 }

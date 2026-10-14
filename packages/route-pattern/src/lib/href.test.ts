@@ -5,6 +5,7 @@ import dedent from 'dedent'
 
 import { CreateHrefError, createHref } from './href.ts'
 import { joinPatterns } from './join.ts'
+import { createMatcher } from './match.ts'
 import { RoutePattern } from './route-pattern.ts'
 
 describe('createHref', () => {
@@ -113,6 +114,40 @@ describe('createHref', () => {
         hrefError('invalid-hostname-wildcard'),
       )
     })
+
+    it('rejects backslashes in hostname variables', () => {
+      assert.throws(
+        () => createHref('://:tenant.example.com/path', { tenant: 'preview\\' }),
+        new CreateHrefError({
+          type: 'invalid-hostname-variable',
+          value: 'preview\\',
+          char: '\\',
+        }),
+      )
+    })
+
+    it('rejects backslashes in hostname wildcards', () => {
+      assert.throws(
+        () => createHref('://*tenant.example.com/path', { tenant: 'preview.test\\' }),
+        new CreateHrefError({
+          type: 'invalid-hostname-wildcard',
+          value: 'preview.test\\',
+          char: '\\',
+        }),
+      )
+    })
+
+    it('preserves host labels in generated URLs', () => {
+      let variableURL = new URL(createHref('://:tenant.example.com/path', { tenant: 'café' }))
+      let wildcardURL = new URL(
+        createHref('://*tenant.example.com/path', { tenant: 'preview.café' }),
+      )
+
+      assert.equal(variableURL.hostname, 'xn--caf-dma.example.com')
+      assert.equal(wildcardURL.hostname, 'preview.xn--caf-dma.example.com')
+      assert.equal(variableURL.pathname, '/path')
+      assert.equal(wildcardURL.pathname, '/path')
+    })
   })
 
   describe('port', () => {
@@ -203,6 +238,93 @@ describe('createHref', () => {
       assert.equal(createHref('/files/*path', { path: '' }), '/files/')
     })
 
+    it('normalizes a leading wildcard slash on the current origin', () => {
+      let pattern = '/*path' as const
+      let href = createHref(pattern, { path: '/files/readme.md' })
+      let url = new URL(href, 'https://example.com/current/page')
+
+      assert.equal(url.origin, 'https://example.com')
+      assert.equal(url.pathname, '/files/readme.md')
+      assert.equal(href, '/files/readme.md')
+      assert.deepEqual(createMatcher(pattern).match(url)?.params, { path: 'files/readme.md' })
+    })
+
+    it('normalizes repeated leading wildcard slashes on the current origin', () => {
+      let pattern = '/*path' as const
+      let href = createHref(pattern, { path: '//files/readme.md' })
+      let url = new URL(href, 'https://example.com/current/page')
+
+      assert.equal(url.origin, 'https://example.com')
+      assert.equal(url.pathname, '/files/readme.md')
+      assert.equal(href, '/files/readme.md')
+      assert.deepEqual(createMatcher(pattern).match(url)?.params, { path: 'files/readme.md' })
+    })
+
+    it('preserves internal wildcard slashes when normalizing the pathname', () => {
+      assert.equal(
+        createHref('/files/*path', { path: '/docs//readme.md/' }),
+        '/files//docs//readme.md/',
+      )
+      assert.equal(
+        createHref('https://example.com/*path', { path: '//docs//readme.md/' }),
+        'https://example.com/docs//readme.md/',
+      )
+    })
+
+    it('normalizes slash-only wildcard paths to the root pathname', () => {
+      assert.equal(createHref('/*path', { path: '///' }), '/')
+      assert.equal(createHref('https://example.com/*path', { path: '///' }), 'https://example.com/')
+    })
+
+    it('rejects parent segments in pathname wildcards', () => {
+      assert.throws(() => createHref('/files/*path', { path: '../../admin' }), {
+        details: { type: 'invalid-pathname-wildcard', value: '../../admin', segment: '..' },
+      })
+      assert.throws(() => createHref('/files/*path', { path: 'docs/../readme.md' }), {
+        details: { type: 'invalid-pathname-wildcard', value: 'docs/../readme.md', segment: '..' },
+      })
+      assert.throws(() => createHref('/files/*path', { path: 'docs/..' }), {
+        details: { type: 'invalid-pathname-wildcard', value: 'docs/..', segment: '..' },
+      })
+    })
+
+    it('rejects current-directory segments in pathname wildcards', () => {
+      assert.throws(() => createHref('/files/*path', { path: '.' }), {
+        details: { type: 'invalid-pathname-wildcard', value: '.', segment: '.' },
+      })
+      assert.throws(() => createHref('/files/*path', { path: 'docs/./readme.md' }), {
+        details: { type: 'invalid-pathname-wildcard', value: 'docs/./readme.md', segment: '.' },
+      })
+    })
+
+    it('rejects dot segments in optional wildcards and relative hrefs', () => {
+      assert.throws(() => createHref('/files(/*path)', { path: '../readme.md' }), {
+        details: { type: 'invalid-pathname-wildcard', value: '../readme.md', segment: '..' },
+      })
+      assert.throws(
+        () =>
+          createHref(
+            '/files/*path',
+            { path: '../readme.md' },
+            {
+              baseURL: 'https://example.com/files/current',
+            },
+          ),
+        { details: { type: 'invalid-pathname-wildcard', value: '../readme.md', segment: '..' } },
+      )
+    })
+
+    it('round trips dotted filenames and encoded text in pathname wildcards', () => {
+      let pattern = '/files/*path' as const
+      let path = '.hidden/.../readme..md/%2e%2e/%2F/\\draft\n'
+      let href = createHref(pattern, { path })
+      let url = new URL(href, 'https://example.com/current')
+
+      assert.equal(href, '/files/.hidden/.../readme..md/%252e%252e/%252F/%5Cdraft%0A')
+      assert.equal(url.pathname, href)
+      assert.deepEqual(createMatcher(pattern).match(url)?.params, { path })
+    })
+
     it('throws for unnamed wildcard', () => {
       let pattern = '/files/*' as const
       // @ts-expect-error - nameless wildcard
@@ -218,6 +340,14 @@ describe('createHref', () => {
         }),
         '/en/users/42/en/posts/123',
       )
+    })
+
+    it('encodes dots in variables so they remain capture data', () => {
+      assert.equal(createHref('/users/:id', { id: 'a.b' }), '/users/a%2Eb')
+    })
+
+    it('uses one value for every repeated capture name', () => {
+      assert.equal(createHref('/:id/:id', { id: 'same' }), '/same/same')
     })
 
     it('encodes structural URL chars including `/` for variables', () => {
@@ -345,35 +475,53 @@ describe('createHref', () => {
     describe('with multiple optionals', () => {
       it('includes both when both provided', () => {
         assert.equal(
-          createHref('/posts(/:id)(/:action)', { id: '123', action: 'edit' }),
-          '/posts/123/edit',
+          createHref('/posts(/id/:id)(/action/:action)', { id: '123', action: 'edit' }),
+          '/posts/id/123/action/edit',
         )
       })
 
       it('includes only first when second omitted', () => {
-        assert.equal(createHref('/posts(/:id)(/:action)', { id: '123' }), '/posts/123')
+        assert.equal(createHref('/posts(/id/:id)(/action/:action)', { id: '123' }), '/posts/id/123')
       })
 
       it('includes only second when first omitted', () => {
-        assert.equal(createHref('/posts(/:id)(/:action)', { action: 'edit' }), '/posts/edit')
+        assert.equal(
+          createHref('/posts(/id/:id)(/action/:action)', { action: 'edit' }),
+          '/posts/action/edit',
+        )
       })
 
       it('omits both when neither provided', () => {
-        assert.equal(createHref('/posts(/:id)(/:action)'), '/posts')
+        assert.equal(createHref('/posts(/id/:id)(/action/:action)'), '/posts')
       })
     })
 
     it('normalizes to slash when entire pattern is omitted optional', () => {
-      assert.equal(createHref('(/:locale)(/:page)'), '/')
+      assert.equal(createHref('(/locale/:locale)(/page/:page)'), '/')
     })
   })
 
   describe('search params', () => {
     it('works with no constraints', () => {
       assert.equal(
-        createHref('/posts', undefined, { category: ['books', 'electronics'] }),
+        createHref('/posts', undefined, {
+          searchParams: { category: ['books', 'electronics'] },
+        }),
         '/posts?category=books&category=electronics',
       )
+    })
+
+    it('accepts URLSearchParams without losing duplicate order or mutating it', () => {
+      let searchParams = new URLSearchParams([
+        ['tag', 'featured'],
+        ['tag', 'popular'],
+      ])
+
+      assert.equal(
+        createHref('/posts?sort=recent', undefined, { searchParams }),
+        '/posts?tag=featured&tag=popular&sort=recent',
+      )
+      assert.equal(searchParams.toString(), 'tag=featured&tag=popular')
     })
 
     describe('with key-only constraint (?q)', () => {
@@ -383,20 +531,28 @@ describe('createHref', () => {
 
       it('uses user param value', () => {
         assert.equal(
-          createHref('/posts?filter', undefined, { filter: 'active' }),
+          createHref('/posts?filter', undefined, { searchParams: { filter: 'active' } }),
           '/posts?filter=active',
         )
       })
 
       it('keeps the key when user params are nullish or empty', () => {
         assert.equal(
-          createHref('/posts?filter', undefined, { filter: undefined }),
+          createHref('/posts?filter', undefined, { searchParams: { filter: undefined } }),
           '/posts?filter=',
         )
-        assert.equal(createHref('/posts?filter', undefined, { filter: null }), '/posts?filter=')
-        assert.equal(createHref('/posts?filter', undefined, { filter: [] }), '/posts?filter=')
         assert.equal(
-          createHref('/posts?filter', undefined, { filter: [null, undefined] }),
+          createHref('/posts?filter', undefined, { searchParams: { filter: null } }),
+          '/posts?filter=',
+        )
+        assert.equal(
+          createHref('/posts?filter', undefined, { searchParams: { filter: [] } }),
+          '/posts?filter=',
+        )
+        assert.equal(
+          createHref('/posts?filter', undefined, {
+            searchParams: { filter: [null, undefined] },
+          }),
           '/posts?filter=',
         )
       })
@@ -417,14 +573,16 @@ describe('createHref', () => {
 
       it('prepends user params', () => {
         assert.equal(
-          createHref('/posts?sort=asc', undefined, { sort: 'desc' }),
+          createHref('/posts?sort=asc', undefined, { searchParams: { sort: 'desc' } }),
           '/posts?sort=desc&sort=asc',
         )
       })
 
       it('deduplicates when user matches pattern', () => {
         assert.equal(
-          createHref('/posts?tag=featured', undefined, { tag: 'featured' }),
+          createHref('/posts?tag=featured', undefined, {
+            searchParams: { tag: 'featured' },
+          }),
           '/posts?tag=featured',
         )
       })
@@ -432,7 +590,7 @@ describe('createHref', () => {
       it('deduplicates when user matches one of multiple pattern values', () => {
         assert.equal(
           createHref('/posts?tag=featured&tag=popular', undefined, {
-            tag: 'featured',
+            searchParams: { tag: 'featured' },
           }),
           '/posts?tag=featured&tag=popular',
         )
@@ -441,7 +599,7 @@ describe('createHref', () => {
       it('handles array values', () => {
         assert.equal(
           createHref('/posts?tag=featured&tag=popular', undefined, {
-            tag: ['tutorial', 'beginner'],
+            searchParams: { tag: ['tutorial', 'beginner'] },
           }),
           '/posts?tag=tutorial&tag=beginner&tag=featured&tag=popular',
         )
@@ -450,9 +608,128 @@ describe('createHref', () => {
 
     it('supports additional user params', () => {
       assert.equal(
-        createHref('/posts?sort=asc', undefined, { page: '2' }),
+        createHref('/posts?sort=asc', undefined, { searchParams: { page: '2' } }),
         '/posts?page=2&sort=asc',
       )
+    })
+  })
+
+  describe('base URL', () => {
+    it('requires a base URL that can resolve same-origin targets', () => {
+      assert.throws(() => createHref('/users', undefined, { baseURL: '/admin/settings' }))
+      assert.throws(() => createHref('/users', undefined, { baseURL: 'mailto:user@example.com' }))
+      assert.equal(
+        createHref('https://example.com/users', undefined, {
+          baseURL: 'mailto:user@example.com',
+        }),
+        'https://example.com/users',
+      )
+    })
+
+    it('returns path-relative hrefs for same-origin targets', () => {
+      assert.equal(
+        createHref(
+          '/users/:id',
+          { id: '123' },
+          {
+            baseURL: 'https://example.com/admin/settings',
+          },
+        ),
+        '../users/123',
+      )
+      assert.equal(
+        createHref(
+          '/admin/users/:id',
+          { id: '123' },
+          {
+            baseURL: new URL('https://example.com/admin/settings'),
+          },
+        ),
+        'users/123',
+      )
+      assert.equal(
+        createHref('/admin/', undefined, { baseURL: 'https://example.com/admin/settings' }),
+        './',
+      )
+      assert.equal(
+        createHref('/', undefined, { baseURL: 'https://example.com/admin/settings' }),
+        '../',
+      )
+    })
+
+    it('relativizes explicit same-origin patterns and keeps cross-origin targets absolute', () => {
+      assert.equal(
+        createHref(
+          'https://example.com/users/:id',
+          { id: '123' },
+          {
+            baseURL: 'https://example.com/admin/settings',
+          },
+        ),
+        '../users/123',
+      )
+      assert.equal(
+        createHref(
+          'https://cdn.example.com/users/:id',
+          { id: '123' },
+          {
+            baseURL: 'https://example.com/admin/settings',
+          },
+        ),
+        'https://cdn.example.com/users/123',
+      )
+    })
+
+    it('uses ./ when the first relative path segment could be parsed as a scheme', () => {
+      assert.equal(
+        createHref('/docs\\:latest', undefined, {
+          baseURL: 'https://example.com/current',
+        }),
+        './docs:latest',
+      )
+    })
+
+    it('normalizes leading wildcard slashes before generating relative hrefs', () => {
+      let baseURL = 'https://example.com/current'
+      let slashHref = createHref('/*path', { path: '//files' }, { baseURL })
+
+      assert.equal(slashHref, 'files')
+      assert.equal(new URL(slashHref, baseURL).href, 'https://example.com/files')
+      assert.equal(createHref('/*path', { path: '///' }, { baseURL }), './')
+      assert.equal(
+        createHref(
+          'https://example.com/*path',
+          { path: '//files' },
+          {
+            baseURL: 'https://example.com/admin/current',
+          },
+        ),
+        '../files',
+      )
+      assert.equal(
+        createHref('https://cdn.example.com/*path', { path: '//files' }, { baseURL }),
+        'https://cdn.example.com/files',
+      )
+    })
+
+    it('uses ./ when leading backslashes could be parsed as an authority', () => {
+      let baseURL = 'https://example.com/current'
+      let backslashHref = createHref('/\\\\\\\\host/path', undefined, { baseURL })
+
+      assert.equal(backslashHref, './\\\\host/path')
+      assert.equal(new URL(backslashHref, baseURL).href, 'https://example.com///host/path')
+    })
+
+    it('round trips params, search constraints, encoded delimiters, and trailing slashes', () => {
+      let baseURL = 'https://example.com/admin/settings'
+      let pattern = '/files/:name.:ext/?view=full' as const
+      let href = createHref(pattern, { name: 'read/me.v1', ext: 'txt' }, { baseURL })
+
+      assert.equal(href, '../files/read%2Fme%2Ev1.txt/?view=full')
+      assert.deepEqual(createMatcher(pattern).match(href, { baseURL })?.params, {
+        name: 'read/me.v1',
+        ext: 'txt',
+      })
     })
   })
 

@@ -32,6 +32,7 @@ export interface CompressionOptions {
   /**
    * node:zlib options for gzip/deflate compression.
    * Can be static or a function that returns options based on the response.
+   * HTML and SSE responses use `Z_SYNC_FLUSH` unless you explicitly set a flush value.
    *
    * See: https://nodejs.org/api/zlib.html#class-options
    */
@@ -40,6 +41,7 @@ export interface CompressionOptions {
   /**
    * node:zlib options for Brotli compression.
    * Can be static or a function that returns options based on the response.
+   * HTML and SSE responses use `BROTLI_OPERATION_FLUSH` unless you explicitly set a flush value.
    *
    * See: https://nodejs.org/api/zlib.html#class-brotlioptions
    */
@@ -49,7 +51,8 @@ export interface CompressionOptions {
 /**
  * Creates a middleware handler that automatically compresses responses based on the
  * client's Accept-Encoding header, along with an additional Content-Type filter
- * by default to only apply compression to appropriate media types.
+ * by default to only apply compression to appropriate media types. Eligible responses
+ * vary on `Accept-Encoding`, including when identity is selected.
  *
  * @param options Optional compression settings
  * @returns A middleware handler that automatically compresses responses based on the client's Accept-Encoding header

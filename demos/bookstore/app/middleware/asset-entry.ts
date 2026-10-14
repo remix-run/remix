@@ -1,33 +1,31 @@
 import * as path from 'node:path'
 import { createContextKey, type Middleware } from 'remix/router'
 import { getContext } from 'remix/middleware/async-context'
+import type { ScriptEntry } from 'remix/assets'
 
-import { assetServer } from '../utils/assets.ts'
+import { assets } from '../utils/assets.ts'
 
 interface AssetEntry {
-  scriptSrc: string
-  scriptPreloads: string[]
+  scriptEntry: ScriptEntry
   stylesheetHref: string
 }
 
 const assetsEntryKey = createContextKey<AssetEntry>()
-const defaultScriptEntry = path.resolve(import.meta.dirname, '../assets/entry.tsx')
-const defaultStylesheetEntry = path.resolve(import.meta.dirname, '../assets/app.css')
+const defaultScriptEntry = path.resolve(import.meta.dirname, '../actions/public/entry.tsx')
+const defaultStylesheetEntry = path.resolve(import.meta.dirname, '../actions/public/app.css')
 
 export function loadAssetEntry(
   scriptEntry = defaultScriptEntry,
   stylesheetEntry = defaultStylesheetEntry,
 ): Middleware<{ key: typeof assetsEntryKey; value: AssetEntry }> {
   return async (context, next) => {
-    let [scriptSrc, scriptPreloads, stylesheetHref] = await Promise.all([
-      assetServer.getHref(scriptEntry),
-      assetServer.getPreloads(scriptEntry).catch(() => []),
-      assetServer.getHref(stylesheetEntry),
+    let [resolvedScriptEntry, stylesheetHref] = await Promise.all([
+      assets.getScriptEntry(scriptEntry),
+      assets.getHref(stylesheetEntry),
     ])
 
     context.set(assetsEntryKey, {
-      scriptSrc,
-      scriptPreloads,
+      scriptEntry: resolvedScriptEntry,
       stylesheetHref,
     })
     return next()

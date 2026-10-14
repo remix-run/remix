@@ -23,7 +23,9 @@ export function createSearch(pattern: string): SearchFunction {
     search = (haystack, start = 0) => BufferClass.prototype.indexOf.call(haystack, needle, start)
   } else {
     let needleEnd = needle.length - 1
-    let skipTable = new Uint8Array(256).fill(needle.length)
+    // Uint32Array instead of Uint8Array to keep skip distances for long needles from wrapping
+    // back to 0 and stalling the search.
+    let skipTable = new Uint32Array(256).fill(needle.length)
     for (let i = 0; i < needleEnd; ++i) {
       skipTable[needle[i]] = needleEnd - i
     }

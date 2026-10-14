@@ -1,7 +1,7 @@
 import type { Assert, IsEqual } from './utils.ts'
 import type { JoinPatterns } from './join.ts'
 
-// prettier-ignore
+// oxfmt-ignore
 export type Tests = [
   // empty input/base
   Assert<IsEqual<JoinPatterns<'', ''>, '/'>>,

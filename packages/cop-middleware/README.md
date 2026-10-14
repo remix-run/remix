@@ -28,7 +28,7 @@ let router = createRouter({
 
 ## Behavior
 
-For unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`), `cop()` follows the same broad model as Go's `CrossOriginProtection`:
+For requests whose original method is unsafe (`POST`, `PUT`, `PATCH`, `DELETE`), `cop()` follows the same broad model as Go's `CrossOriginProtection`. Routing middleware may change `context.method`, but method overrides do not change whether `cop()` checks the request:
 
 - Allow `Sec-Fetch-Site: same-origin`
 - Allow `Sec-Fetch-Site: none`
@@ -86,7 +86,7 @@ Trusted origins must be exact origin values in the form `scheme://host[:port]`.
 
 ## Insecure Bypass Patterns
 
-Bypass patterns intentionally weaken protection for specific endpoints. They support:
+Bypass patterns intentionally weaken protection for specific endpoints. Method prefixes match the original request method, even when routing middleware overrides `context.method`. They support:
 
 - Optional method prefixes, for example `POST /webhooks/{provider}`
 - Exact paths, for example `/healthz`

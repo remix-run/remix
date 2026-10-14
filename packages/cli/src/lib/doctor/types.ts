@@ -18,10 +18,7 @@ export type DoctorFindingCode =
   | 'route-map-invalid-json'
   | 'route-map-loader-signal'
   | 'missing-owner'
-  | 'duplicate-owner-file'
-  | 'incomplete-controller'
-  | 'orphan-controller'
-  | 'orphan-route-directory'
+  | 'missing-route-directory'
 
 export type DoctorFixKind = 'create-directory' | 'create-file' | 'update-file'
 
@@ -70,6 +67,10 @@ export interface DoctorReport {
   suites: DoctorSuiteResult[]
 }
 
+export function hasWarningFindings(findings: DoctorFinding[]): boolean {
+  return findings.some((finding) => finding.severity === 'warn')
+}
+
 export function createDoctorSuite(
   name: DoctorSuiteName,
   findings: DoctorFinding[],
@@ -77,7 +78,7 @@ export function createDoctorSuite(
   return {
     findings,
     name,
-    status: findings.some((finding) => finding.severity === 'warn') ? 'issues' : 'ok',
+    status: hasWarningFindings(findings) ? 'issues' : 'ok',
   }
 }
 

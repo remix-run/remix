@@ -9,10 +9,10 @@
   "devDependencies": {
     "@types/bun": "^1.1.6",
     "@types/tmp": "^0.2.6",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "scripts": {
     "start": "bun run server.ts",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   }
 }

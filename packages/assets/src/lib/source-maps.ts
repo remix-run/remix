@@ -2,6 +2,61 @@ import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 
 import { normalizeFilePath } from './paths.ts'
 
+type SourceMapOffsetMapping = {
+  generatedOffset: number
+  originalOffset: number
+  name?: string
+}
+
+export function replaceSourceMapMappings(
+  sourceMap: string,
+  generatedSource: string,
+  originalSource: string,
+  replacements: readonly SourceMapOffsetMapping[],
+): string {
+  if (replacements.length === 0) return sourceMap
+
+  let consumer = new SourceMapConsumer(JSON.parse(sourceMap))
+  let generatedLineStarts = getLineStarts(generatedSource)
+  let originalLineStarts = getLineStarts(originalSource)
+  let positions = replacements.map((replacement) => ({
+    generated: getLineAndColumn(generatedLineStarts, replacement.generatedOffset),
+    name: replacement.name,
+    original: getLineAndColumn(originalLineStarts, replacement.originalOffset),
+  }))
+  let replacedGeneratedPositions = new Set(
+    positions.map(({ generated }) => `${generated.line}:${generated.column}`),
+  )
+  let generator = new SourceMapGenerator({
+    file: consumer.file ?? undefined,
+    sourceRoot: consumer.sourceRoot ?? undefined,
+  })
+
+  consumer.eachMapping((mapping) => {
+    if (replacedGeneratedPositions.has(`${mapping.generatedLine}:${mapping.generatedColumn}`)) {
+      return
+    }
+    generator.addMapping({
+      generated: { line: mapping.generatedLine, column: mapping.generatedColumn },
+      original:
+        mapping.originalLine === null || mapping.originalColumn === null
+          ? undefined
+          : { line: mapping.originalLine, column: mapping.originalColumn },
+      source: mapping.source,
+      name: mapping.name,
+    })
+  })
+
+  let source = consumer.sources[0] ?? ''
+  for (let position of positions) {
+    generator.addMapping({ ...position, source })
+  }
+  for (let source of consumer.sources) {
+    generator.setSourceContent(source, consumer.sourceContentFor(source, true))
+  }
+  return generator.toString()
+}
+
 export function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: string): string {
   let rewriteConsumer = new SourceMapConsumer(JSON.parse(rewriteSourceMap))
   let transformConsumer = new SourceMapConsumer(JSON.parse(transformSourceMap))
@@ -72,4 +127,26 @@ export function stringifySourceMap(map: unknown): string | null {
   }
   if (typeof map === 'object' && map !== null) return JSON.stringify(map)
   return String(map)
+}
+
+function getLineStarts(source: string): number[] {
+  let starts = [0]
+  for (let index = 0; index < source.length; index++) {
+    if (source[index] === '\n') starts.push(index + 1)
+  }
+  return starts
+}
+
+function getLineAndColumn(
+  lineStarts: readonly number[],
+  offset: number,
+): { line: number; column: number } {
+  let low = 0
+  let high = lineStarts.length
+  while (low + 1 < high) {
+    let middle = Math.floor((low + high) / 2)
+    if (lineStarts[middle] <= offset) low = middle
+    else high = middle
+  }
+  return { line: low + 1, column: offset - lineStarts[low] }
 }

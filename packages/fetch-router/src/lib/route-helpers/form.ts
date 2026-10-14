@@ -46,7 +46,7 @@ export function createFormRoutes<pattern extends string, const options extends F
   }) as BuildFormMap<pattern, options>
 }
 
-// prettier-ignore
+// oxfmt-ignore
 type BuildFormMap<pattern extends string, options extends FormOptions> = BuildRouteMap<
   pattern,
   {

@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "types": ["node", "dom-navigation"],
     "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
     "module": "NodeNext",
@@ -12,7 +13,7 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "@remix-run/ui"
+    "jsxImportSource": "@remix-run/component"
   },
   "exclude": ["bench", "demo", "demos", "dist"]
 }

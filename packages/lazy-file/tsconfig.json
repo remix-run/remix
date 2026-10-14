@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
+    "types": ["node"],
     "strict": true,
-    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ESNext",

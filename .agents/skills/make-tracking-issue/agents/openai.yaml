@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Make Tracking Issue'
+  short_description: 'Create focused implementation tracking issues'
+  default_prompt: 'Use $make-tracking-issue to create a concise tracking issue for this change.'

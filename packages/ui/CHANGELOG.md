@@ -1,6 +1,253 @@
-# `theme` CHANGELOG
+# `ui` CHANGELOG
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
+
+## v0.12.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`component@1.0.0`](https://github.com/remix-run/remix/releases/tag/component@1.0.0)
+
+## v0.12.0
+
+### Minor Changes
+
+- BREAKING CHANGE: The core component APIs provided by `@remix-run/ui` have now moved to `@remix-run/component`. `@remix-run/ui` now provides headless, accessible UI primitives and animation utilities for Remix components.
+
+  The package root and its JSX runtime, server-rendering, test, development-refresh, and styled-component exports are no longer available. Move runtime imports to `@remix-run/component` or `remix/component`:
+
+  ```diff
+  -import { createRoot, css, on } from '@remix-run/ui'
+  +import { createRoot, css, on } from '@remix-run/component'
+  ```
+
+  If `jsxImportSource` currently points to `@remix-run/ui` or `remix/ui`, move it to the corresponding component entrypoint:
+
+  ```diff
+   {
+     "compilerOptions": {
+       "jsx": "react-jsx",
+  -    "jsxImportSource": "@remix-run/ui"
+  +    "jsxImportSource": "@remix-run/component"
+     }
+   }
+  ```
+
+  Primitive APIs retain their existing contracts but now use flat package subpaths:
+
+  ```diff
+  -import * as accordion from '@remix-run/ui/accordion/primitives'
+  +import * as accordion from '@remix-run/ui/accordion'
+  ```
+
+  The package exports the `accordion`, `anchor`, `animation`, `combobox`, `listbox`, `menu`, `popover`, `select`, `tabs`, and `toggle` subpaths. The previous styled `breadcrumbs`, `button`, `checkbox`, `input`, and `radio` modules have been removed.
+
+  `@remix-run/ui` is currently unstable and versioned independently. It is not available through the `remix` package and must be installed and imported directly. For an application that otherwise uses the `remix` package:
+
+  ```sh
+  npm i remix @remix-run/ui
+  ```
+
+  If the asset server restricts imports with `allowPackages`, add `@remix-run/ui` now that these APIs are imported from the standalone package:
+
+  ```diff
+   {
+     "assets": {
+  -    "allowPackages": ["remix"]
+  +    "allowPackages": ["@remix-run/ui", "remix"]
+     }
+   }
+  ```
+
+  Direct-package consumers should install both `@remix-run/component` and `@remix-run/ui` when they use the component runtime with the primitives or animation utilities.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`component@0.8.0`](https://github.com/remix-run/remix/releases/tag/component@0.8.0)
+
+## v0.11.0
+
+### Minor Changes
+
+- Preserve client-owned attributes during frame reloads with `data-rmx-preserve-attrs="class data-theme"` on any matched element, including `<html>` and `<body>` (see #11809). The named attributes keep their live values or absence while other attributes and children reconcile normally. The incoming HTML controls the list; clearing it or removing a name returns those attributes to normal reconciliation.
+
+### Patch Changes
+
+- Send `X-Remix-Frame: true` from the default browser resolver for all frame loads, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`, allowing handlers to identify and target frame requests consistently across browser and server rendering (see #11941).
+
+- Treat marker-less HTML that starts with a doctype or `<html>` as a document reload, so pages rendered with `renderToString` can be navigated by the client runtime (see #11808).
+
+- Keep hash-only navigations within a fully loaded page and download requests under browser control without reloading a frame. If a hash navigation interrupts a pending frame load, reload the destination so the previous page is not left visible. Preserve downloads even when another navigation listener changes the source link's `download` attribute.
+
+- Preserve parent component context for client entries rendered inside a `<Frame>`, including setup-time context reads when the provider module loads later and after frame reloads. Keep nested frame content interactive when its owning client entry module is already cached (see #11894).
+
+- Preserve server-rendered textarea values when a hydrated client entry first updates, without overwriting uncontrolled user edits.
+
+- Allow client entry props to use ordinary interfaces, including nested objects whose properties are all optional (see #11918).
+
+- Document custom mixin setup, lifecycle events, and deferred host removal with `event.persistNode()`, including cancellation and keyed-node reclamation. Expand public API documentation for root, frame, context, anchoring, CSS mixin, and server-rendering helpers, and correct the popover, context, and anchoring examples.
+
+## v0.10.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Navigations that specify a named frame that is not currently mounted now perform a document navigation instead of reloading the top frame. Fresh links, forms, and `navigate()` calls are left to the browser, preserving native form methods and bodies, while back and forward traversal reloads the destination document. Omit the target when the navigation should always reload the top frame:
+
+  ```diff
+  -<a href="/account" data-rmx-target="optional-account">
+  +<a href="/account">
+  ```
+
+- BREAKING CHANGE: The default `resolveFrame` now only fetches same-origin sources and follows same-origin redirects. Apps that load cross-origin frame content must provide a custom `resolveFrame` to `run()`.
+
+  Validate navigation source overrides regardless of the target, falling back to document navigation for invalid or cross-origin overrides.
+
+- BREAKING CHANGE: Raw HTML props now require an opaque value created by `unsafeHTML()`. This applies to `innerHTML` and both iframe `srcDoc` spellings (`srcDoc` and `srcdoc`). It prevents attacker-controlled prop spreads from activating HTML parsing with plain strings or JSON-shaped objects. `outerHTML` is not supported because it would replace a reconciler-owned element. `unsafeHTML()` is an explicit authorization boundary; it does not sanitize or otherwise modify its input.
+
+  ```diff
+  -import type { Handle } from 'remix/ui'
+  +import { unsafeHTML } from 'remix/ui'
+  +import type { Handle } from 'remix/ui'
+
+   function Content(handle: Handle<{ html: string }>) {
+  -  return () => <div innerHTML={handle.props.html} />
+  +  return () => <div innerHTML={unsafeHTML(handle.props.html)} />
+   }
+  ```
+
+### Patch Changes
+
+- Ignore invalid host prop names and reserved DOM mutation properties during server rendering and client reconciliation. Block `javascript:` URLs in executable URL attributes while preserving other URL schemes and non-executable attributes. Use the `on()` mixin for events; the explicit `innerHTML` API and standard DOM, `data-*`, `aria-*`, SVG, and custom-element properties continue to work as before.
+
+- Fix duplicated text during hydration when a browser splits long server-rendered text into multiple DOM nodes, including chunks that span adjacent text children (see #11591).
+
+- Avoid attaching duplicate event handlers when a client entry imports and renders another client entry, including through fragments and wrapper components. Preserve deferred removal and exit animations when removing nested client entries (see #11844).
+
+- Restore the previous named frame from `handle.frames.get(name)` when a more recently mounted frame with the same name unmounts.
+
+## v0.9.0
+
+### Minor Changes
+
+- Client entries can now provide import maps through `resolveClientEntry()`. The `<ImportMap>` component from `remix/ui/server` combines your mappings with those from blocking client entries so the initial document contains one complete import map. New mappings from later frame responses are installed before their client entries load. Plain `<script type="importmap">` elements remain supported when you do not need to combine mappings (see #11706).
+
+  When a frame response changes an installed import mapping or integrity value, Remix loads a fresh document so navigation after a deployment cannot mix old and new modules.
+
+- `run()` now accepts a `processClientEntryPreloads` callback to handle preloads for client entries discovered after the initial page load. Use it with `remix/multiple-import-maps-polyfill` to preload modules in browsers that need the polyfill, returning an empty array to skip native modulepreload links. See the [client entry setup example](https://github.com/remix-run/remix/tree/main/packages/multiple-import-maps-polyfill#usage) (see #11706).
+
+### Patch Changes
+
+- `handle.update()` now warns and skips the extra render when called during component setup. Calls during rendering, or before the initial commit from outside setup, report a clear component error. Move these updates into an event handler or a `handle.queueTask()` callback (see #11795).
+
+- Fixed delayed scroll resets and history scroll restoration during frame navigation. Scroll now updates once the destination and its blocking frames first render, without waiting for the rest of the streamed content or client entry hydration. Also fixed scroll jumps in Chromium and stale or repeated scroll changes during redirects and overlapping reloads (see #11755).
+
+  Failed `frame.reload()` calls no longer cause a second unhandled promise rejection when the caller already handles the error.
+
+- Browsers without `NavigateEvent.sourceElement` support now use full document navigation, so links and forms keep working when frame navigation is unavailable (see #11820).
+
+- Frames now render HTML responses with `3xx` and `4xx` status codes, so form validation messages and error pages appear in the frame when using the default resolver. HTML content types are now recognized regardless of case (see #11823).
+
+## v0.8.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remix UI framework-owned DOM attributes now consistently use the `data-rmx-*` namespace. Rename `rmx-document`, `rmx-target`, `rmx-src`, `rmx-history`, `rmx-reset-scroll`, `rmx-preserve-dom`, and `data-key` to `data-rmx-document`, `data-rmx-target`, `data-rmx-src`, `data-rmx-history`, `data-rmx-reset-scroll`, `data-rmx-preserve-dom`, and `data-rmx-key`. Generated style and module preload markers now use `data-rmx-style` and `data-rmx-module-preload` instead of `data-rmx`.
+
+- BREAKING CHANGE: During server rendering, script elements with non-string children previously serialized those children as escaped HTML text. They now render empty and report an error. Pass a single string child, such as `JSON.stringify(value)`, to embed script content without HTML entity escaping. Script-tag sequences that could terminate the element remain escaped.
+
+- BREAKING CHANGE: Remove `addEventListeners()`. Use native `target.addEventListener(type, listener, { signal })` instead. If a listener used the helper's second callback argument, create an `AbortController` and abort it when the listener runs again or its lifetime signal aborts.
+
+- Added a browser-only SPA response protocol to `remix/ui` for associating bodyless route responses with Remix UI nodes. Application code uses the higher-level `render()` and `run()` APIs from `remix/spa`.
+
+### Patch Changes
+
+- Prevent aborted `renderToStream` requests with multiple blocking `Frame`s from producing unhandled promise rejections that can crash Node servers.
+
+- Changed the scheduler's cascading update guard to warn when many component updates happen in one event-loop turn and only throw the infinite-loop error when a single component instance repeatedly updates itself. This keeps large `clientEntry` hydration bursts interactive while still surfacing component names and counts for diagnosis.
+
+- Fixed `mix` prop types to accept argument-bearing mixins authored for a base element type on compatible subtype elements.
+
+- Gracefully degrade to document navigations for browsers that do not support the Navigation API (see #11665).
+
+- Fix `data-rmx-reset-scroll="false"` and `navigate(..., { resetScroll: false })` to preserve the current scroll position. Default navigations now leave scroll resets and history restoration to the browser.
+
+- Adjust CSS escaping to preserve CSS range media queries such as `@media (width < 900px)` in server-rendered `css()` output while continuing to neutralize literal closing `</style>` tags.
+
+- Restore saved scroll positions for intercepted back and forward navigations when client entry reconciliation temporarily shrinks the document or triggers scroll anchoring, while continuing to wait for nested blocking frames before the Navigation API restores scrolling.
+
+- Prevent Safari Navigation API scroll resets from desynchronizing page hit testing after intercepted push and replace navigations (see [WebKit bug 309542](https://bugs.webkit.org/show_bug.cgi?id=309542)).
+
+## v0.7.0
+
+### Minor Changes
+
+- `run()` now uses a default browser frame resolver when `resolveFrame` is omitted. Apps that supplied a resolver only to fetch frame HTML can remove it:
+
+  ```diff
+   let app = run({
+     loadModule,
+  -  resolveFrame(src, options) {
+  -    return fetch(src, {
+  -      headers: { Accept: 'text/html' },
+  -      signal: options?.signal,
+  -    })
+  -  },
+   })
+  ```
+
+  All `run()` calls now enable frame reloads and same-origin link and form navigation through the Navigation API. The default resolver submits the requested method, encoding, and form data, and rejects non-OK responses. Keep a custom `resolveFrame` when the app needs custom request headers, body encoding, response handling, or error UI. Add `rmx-document` to a link or form to leave that navigation to the browser (see #11693).
+
+## v0.6.0
+
+### Minor Changes
+
+- Allow `resolveClientEntry()` to return module preload hrefs so client entries can preload their browser module graphs
+
+## v0.5.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Browser `resolveFrame` callbacks now receive a single options object instead of positional signal and target arguments. Update `resolveFrame(src, signal, target)` implementations to use `resolveFrame(src, options)` and read `options?.signal` and `options?.target`.
+
+- Added `frames` to the `app` object returned from `run()`, mirroring the existing `handle.frames` API
+
+- Added `@remix-run/ui/dev/refresh` for development tooling that needs to reconcile mounted roots after component modules update.
+
+- Same-origin forms now progressively enhance into frame navigations when `run({ resolveFrame })` is configured. Native constraint validation runs before interception, submissions target the top frame by default, `rmx-target` selects a named frame, and `rmx-document` opts back into document navigation. For non-GET submissions, resolvers receive the browser's native `FormData` plus the selected method and encoding, and remain responsible for request encoding and `_method` conventions. Non-GET submissions to the current URL replace its history entry without retaining their `FormData`; submissions to a different URL and GET submissions push a new entry.
+
+- Browser frame resolvers may now return a `Response`. Its body is streamed into the frame, and when a top-frame navigation follows a redirect, the final response URL replaces the current navigation entry and becomes the frame's canonical `src` without loading the frame a second time. Direct reloads and named-frame navigations render the redirected response without replacing their canonical `src` with the final response URL.
+
+- Add an `rmx-history="push|replace"` attribute for anchors and forms that overrides the history behavior of enhanced frame navigations. Native anchors using `link(href, { history })` emit the corresponding attribute value automatically.
+
+- Add an `rmx-preserve-dom` attribute that tells the DOM reconciler to preserve a matching element's current attributes and children during reloads, allowing client-owned subtrees such as custom elements to manage their own DOM.
+
+### Patch Changes
+
+- Allow element-wide mixins such as `css()` to be used on subtype hosts like `<select>` without TypeScript assignability errors.
+
+- Built-in styled components now use adaptive `light-dark(...)` colors for their internal surfaces, text, borders, focus rings, and control states so they render correctly in dark color schemes.
+
+- Escape less-than characters in server-rendered `css()` output so style values cannot terminate the generated `<style>` element.
+
+- Fix hydrated component updates that could lose content when adding elements before existing content in a fragment
+
+- Prevent navigation and reloads from hanging when a nested `Frame` marker moves outside a frame region while the DOM is being updated.
+
+- Preserve client entry and frame state only for live boundaries with matching semantic identities, while replacing pending client entry SSR during reloads and releasing temporary response metadata after hydration or cancellation.
+
+- Prevent client-side document navigation and `Frame` updates from stalling after navigating between pages with different `Frame` layouts. A frame's end marker could be reused as the start marker of an incoming frame, which left the frame's region bounds and instance pointing at the wrong nodes.
+
+- Preserve resolved client-created frame content when its parent rerenders while the frame is still pending (see #11659).
+
+- Prevent document and frame reloads from dropping newly rendered sibling elements when client entries from the previous content are disposed.
+
+- Reload frames rendered within preserved client entries during ancestor frame reloads
+
+- Show complete destination server-rendered client entry content during document and frame reloads while replacement modules load, instead of retaining only positionally matched source content.
+
+- Fix top frame reloads using the previous URL after navigation targets a named frame.
 
 ## v0.4.0
 
@@ -43,7 +290,6 @@ This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/pa
 
   BREAKING CHANGE: Removed root helper exports that were only intended for first-party
   component internals:
-
   - `flashAttribute`
   - `hiddenTypeahead`
   - `matchNextItemBySearchText`
@@ -215,7 +461,6 @@ This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/pa
 - Document the `run()` `loadModule` and `resolveFrame` hooks so editor hints explain how to hydrate client entries and resolve browser-loaded frames.
 
 - Optimize UI runtime hot paths.
-
   - Fast path for plain `on()` mixins that patches host listeners in place.
   - Lazy direct listener closures for event listeners managed by the runtime.
   - Lazy mixin scope signals to avoid unnecessary AbortController work.

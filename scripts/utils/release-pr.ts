@@ -5,6 +5,14 @@ import { generateChangelogContent } from './changes.ts'
 const maxBodyLength = 60_000
 
 /**
+ * Generates the title for a release PR
+ */
+export function generatePrTitle(releases: PackageRelease[]): string {
+  let remixRelease = releases.find((release) => release.packageDirName === 'remix')
+  return remixRelease ? `Release v${remixRelease.nextVersion}` : 'Release'
+}
+
+/**
  * Generates the PR body for a release PR
  */
 export function generatePrBody(releases: PackageRelease[]): string {

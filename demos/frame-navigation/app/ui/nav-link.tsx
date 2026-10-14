@@ -1,4 +1,4 @@
-import type { Handle, RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/component'
 import type { Route } from 'remix/routes'
 
 type NavLinkProps = {
@@ -18,8 +18,8 @@ export function NavLink(handle: Handle<NavLinkProps>) {
       <a
         href={href}
         aria-current={active ? 'page' : undefined}
-        rmx-target={frameTarget}
-        rmx-src={frameSrc}
+        data-rmx-target={frameTarget}
+        data-rmx-src={frameSrc}
       >
         {children}
       </a>

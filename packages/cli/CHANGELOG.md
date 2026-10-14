@@ -2,6 +2,145 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- New-app examples now use the stable Remix release.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.0`](https://github.com/remix-run/remix/releases/tag/assets@1.0.0)
+  - [`data-table@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table@1.0.0)
+  - [`data-table-mysql@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@1.0.0)
+  - [`data-table-postgres@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@1.0.0)
+  - [`data-table-sqlite@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@1.0.0)
+  - [`terminal@1.0.0`](https://github.com/remix-run/remix/releases/tag/terminal@1.0.0)
+  - [`test@1.0.0`](https://github.com/remix-run/remix/releases/tag/test@1.0.0)
+
+## v0.8.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.7.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.7.0)
+  - [`data-table-mysql@0.5.4`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.4)
+  - [`data-table-postgres@0.5.4`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.4)
+  - [`data-table-sqlite@0.6.4`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.4)
+
+## v0.8.0
+
+### Minor Changes
+
+- `remix test` now expands simple patterns to test file globs. For example, `remix test frame` runs files matching `**/*frame*.test*.{ts,tsx}`. File paths and explicit globs pass through unchanged. Positional arguments override configured test globs, respect exclusions, and run overlapping matches only once.
+
+### Patch Changes
+
+- Generated apps now trust forwarded headers while running under `node-hmr`, so `cop()` and `csrf()` compare form origins against the browser-facing URL.
+
+  Existing generated apps can apply the same setup in `server.ts`:
+
+  ```diff
+  +let isHmr = process.env.REMIX_NODE_HMR === '1'
+   let server = http.createServer(
+  -  createRequestListener(handler),
+  +  createRequestListener(handler, { trustProxy: isHmr }),
+   )
+  ```
+
+- Declare which package modules have side effects.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.8.0`](https://github.com/remix-run/remix/releases/tag/assets@0.8.0)
+  - [`terminal@0.1.2`](https://github.com/remix-run/remix/releases/tag/terminal@0.1.2)
+  - [`test@0.6.2`](https://github.com/remix-run/remix/releases/tag/test@0.6.2)
+
+## v0.7.1
+
+### Patch Changes
+
+- Simplify the Remix skill bundled with new apps to start with documentation discovery through the installed package's `INDEX.md`. It keeps a compact routing and component mental model, an interactive component example, and explicit browser hydration guidance, while leaving workflows and API details to the installed guides and READMEs.
+
+  Scaffolded apps now run `remix test` from `npm test` and include a router smoke test at `app/actions/controller.test.ts`.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.7.1`](https://github.com/remix-run/remix/releases/tag/assets@0.7.1)
+  - [`data-table@0.6.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.6.0)
+  - [`data-table-mysql@0.5.3`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.3)
+  - [`data-table-postgres@0.5.3`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.3)
+  - [`data-table-sqlite@0.6.3`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.3)
+  - [`test@0.6.1`](https://github.com/remix-run/remix/releases/tag/test@0.6.1)
+
+## v0.7.0
+
+### Minor Changes
+
+- Updated the default `remix new` app template to use import maps for browser scripts, client entries, and HMR. Generated apps include the multiple import maps polyfill for browsers that need it. For existing apps, follow the [asset server migration steps](https://github.com/remix-run/remix/blob/main/packages/assets/CHANGELOG.md#v070) (see #11706).
+
+### Patch Changes
+
+- Fixed redirect handling during frame navigation in generated apps. Existing apps can get the same fix by removing the custom `resolveFrame` callback from `run()` in `app/actions/public/entry.ts` to use the default resolver (see #11821).
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.7.0`](https://github.com/remix-run/remix/releases/tag/assets@0.7.0)
+  - [`data-table@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table@0.5.1)
+  - [`data-table-mysql@0.5.2`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.2)
+  - [`data-table-postgres@0.5.2`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.2)
+  - [`data-table-sqlite@0.6.2`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.2)
+
+## v0.6.0
+
+### Minor Changes
+
+- Add `remix db rollback`, which reverts applied migrations by running their `down.sql`.
+
+  `Database.migrate()` already accepted `direction`, `to`, `step`, and `dryRun`, but the CLI never passed them, so a migration's `down.sql` was unreachable from `remix db` — `--to` only bounds forward progress. `rollback` reverts newest first, bounded by `--step <count>` (default `1`) or `--to <migration>`, which reverts back through that migration inclusive. `--dry-run` reports what would be reverted without running it. It also takes `--migrations`, `--journal-table`, and `--connection-env` (see #11723).
+
+- Add a shared `assets` section to `remix.json`, export `loadConfig(fileOrDirectory)` from `remix/cli`, and add `remix assets`. The command lists browser-reachable assets as stable URL-to-file mappings, while `remix assets inspect <url-or-file>` explains the mapping, file type, access rules, and status for one URL or file path (see #11726).
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.6.0`](https://github.com/remix-run/remix/releases/tag/assets@0.6.0)
+  - [`data-table@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.5.0)
+  - [`data-table-mysql@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.1)
+  - [`data-table-postgres@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.1)
+  - [`data-table-sqlite@0.6.1`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.1)
+
+## v0.5.0
+
+### Minor Changes
+
+- Updated the default `remix new` app template to provide preloads for client entries
+
+## v0.4.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Added an optional static `remix.json` configuration file for Remix CLI commands, covering database adapters, migrations, and seeds; every `remix test` setting; and strict mode for `remix doctor`. The CLI parses the file as JSONC, resolves its relative paths and globs from the config file's directory, and lets explicit flags and positional arguments take precedence. Use the global `--config <path>` option to select another file. Negative flags such as `remix doctor --no-strict`, `--no-watch`, `--no-coverage`, `--no-quiet`, `--no-browser.open`, and `--no-browser.echo` can override configured `true` values. The former test-specific meaning of `--config` and automatic `remix-test.config.ts` or `.js` discovery have been removed; move those values under `remix.json#test` (see #11628, #11638, #11639).
+
+- Added `remix db` commands for wiping, migrating, inspecting, seeding, and resetting the current app database. Static `remix.json` configuration selects a built-in SQLite, PostgreSQL, or MySQL adapter, names environment-backed connection values, and configures migrations, the journal table, and an optional SQL seed file. Database commands find the nearest config from a project subdirectory, while global `--config` and command flags remain authoritative. Destructive commands (`remix db wipe` and `remix db reset`) require `--force` (see #11608, #11639).
+
+- New projects now include an `npm run hmr` command and `hmr.ts` runner
+
+- Added complete `remix test` argument parsing, help, validation, and shell completion to the main Remix CLI. The command delegates typed runner options to `@remix-run/test/cli` while preserving positional globs, repeated flags, aliases, configuration precedence, coverage, filtering, and watch behavior (see #11623).
+
+### Patch Changes
+
+- Limit `remix doctor` action checks to the directory and controller paths required by `app/routes.ts`. Unrelated files and directories under `app/actions` are ignored, and `remix doctor --fix` no longer generates action controllers.
+
+- Scaffold browser-reachable source in colocated `public/` directories throughout `app/`, with the browser runtime entry at `app/actions/public/entry.ts`, while keeping the shared `app/routes.ts` contract browser-readable.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.4.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.4.0)
+  - [`data-table-mysql@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.5.0)
+  - [`data-table-postgres@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.5.0)
+  - [`data-table-sqlite@0.6.0`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.6.0)
+  - [`test@0.6.0`](https://github.com/remix-run/remix/releases/tag/test@0.6.0)
+
 ## v0.3.4
 
 ### Patch Changes

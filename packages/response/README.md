@@ -41,6 +41,16 @@ let response = await createFileResponse(lazyFile, request, {
 })
 ```
 
+File responses use `file.type` for `Content-Type` and include `X-Content-Type-Options: nosniff`, including partial, conditional, and error responses. The helper preserves media types such as HTML, JavaScript, and SVG so it can serve application assets. `nosniff` does not stop a browser from rendering content declared as HTML or SVG.
+
+Uploaded file names and types come from the submitted metadata. Validate the contents before serving uploads inline, or serve them as downloads:
+
+```ts
+let response = await createFileResponse(uploadedFile, request)
+response.headers.set('Content-Disposition', 'attachment')
+return response
+```
+
 #### Features
 
 - **Content-Type** and **Content-Length** headers
@@ -165,7 +175,7 @@ let response = createRedirectResponse('/dashboard', {
 
 ### Compress Responses
 
-The `compressResponse` helper compresses a `Response` based on the client's `Accept-Encoding` header:
+The `compressResponse` helper negotiates a `Response` representation based on the client's `Accept-Encoding` header:
 
 ```ts
 import { compressResponse } from 'remix/response/compress'
@@ -176,9 +186,11 @@ let response = new Response(JSON.stringify(data), {
 let compressed = await compressResponse(response, request)
 ```
 
+Eligible responses include `Accept-Encoding` in `Vary`, including when the client explicitly requests `identity` or omits `Accept-Encoding`. This prevents a shared cache from reusing an identity response for a client that supports compression. Existing `Vary` values are preserved.
+
 Compression is automatically skipped for:
 
-- Responses with no `Accept-Encoding` header
+- Requests with no `Accept-Encoding` header (the identity representation is used)
 - Responses that are already compressed (existing `Content-Encoding`)
 - Responses with `Cache-Control: no-transform`
 - Responses with `Content-Length` below threshold (default: 1024 bytes)
@@ -201,16 +213,16 @@ await compressResponse(response, request, {
   encodings: ['br', 'gzip', 'deflate'],
 
   // node:zlib options for gzip/deflate compression.
-  // For SSE responses (text/event-stream), flush: Z_SYNC_FLUSH
-  // is automatically applied unless you explicitly set a flush value.
+  // For HTML and SSE responses (text/html and text/event-stream),
+  // flush: Z_SYNC_FLUSH is applied unless you explicitly set a flush value.
   // See: https://nodejs.org/api/zlib.html#class-options
   zlib: {
     level: 6,
   },
 
   // node:zlib options for Brotli compression.
-  // For SSE responses (text/event-stream), flush: BROTLI_OPERATION_FLUSH
-  // is automatically applied unless you explicitly set a flush value.
+  // For HTML and SSE responses (text/html and text/event-stream),
+  // flush: BROTLI_OPERATION_FLUSH is applied unless you explicitly set a flush value.
   // See: https://nodejs.org/api/zlib.html#class-brotlioptions
   brotli: {
     params: {
@@ -219,6 +231,8 @@ await compressResponse(response, request, {
   },
 })
 ```
+
+The HTML and SSE flush defaults keep each compressed response chunk available to clients without waiting for the stream to finish. Set `zlib.flush` or `brotli.flush` explicitly to override this behavior.
 
 #### Range Requests and Compression
 

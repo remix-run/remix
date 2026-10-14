@@ -1,4 +1,4 @@
-import { run } from 'remix/ui'
+import { run } from 'remix/component'
 
 const app = run({
   async loadModule(moduleUrl, exportName) {

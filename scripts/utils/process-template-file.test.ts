@@ -16,7 +16,7 @@ test('processTemplateFile removes inline template remove blocks', async () => {
       ].join('\n'),
       'template.ts',
     ),
-    "export const values = ['app', 'node_modules']\n",
+    ['export const values = [', "  'app',", '', "  'node_modules',", ']', ''].join('\n'),
   )
 })
 

@@ -4,7 +4,6 @@ import * as net from 'node:net'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
 import type { RequestLifecycle } from './request-abort.ts'
-import { createLazyRequestFactory } from './lazy-request.ts'
 import {
   createRequestAbortError,
   createRequestLifecycle,
@@ -25,7 +24,7 @@ const internalServerErrorBody = [
 export interface RequestListenerOptions {
   /**
    * Overrides the host portion of the incoming request URL. By default the request URL host is
-   * derived from the HTTP `Host` header.
+   * derived from HTTP/2 `:authority`, falling back to the HTTP `Host` header.
    *
    * For example, if you have a `$HOST` environment variable that contains the hostname of your
    * server, you can use it to set the host of all incoming request URLs like so:
@@ -36,8 +35,9 @@ export interface RequestListenerOptions {
    */
   host?: string
   /**
-   * An error handler that determines the response when the request handler throws an error. By
-   * default a 500 Internal Server Error response will be sent.
+   * An error handler that determines the response when request construction or handling throws.
+   * If no response is returned, conflicting HTTP/2 authorities receive a 400 Bad Request response
+   * and other errors receive a 500 Internal Server Error response.
    */
   onError?: ErrorHandler
   /**
@@ -64,6 +64,9 @@ export interface RequestListenerOptions {
  * - [`http2.createServer()`](https://nodejs.org/api/http2.html#http2createserveroptions-onrequesthandler)
  * - [`http2.createSecureServer()`](https://nodejs.org/api/http2.html#http2createsecureserveroptions-onrequesthandler)
  *
+ * HTTP/2 requests with conflicting `Host` and `:authority` values are rejected before the handler
+ * is called. They receive a 400 response unless `onError` returns a custom response.
+ *
  * Example:
  *
  * ```ts
@@ -86,25 +89,31 @@ export interface RequestListenerOptions {
  * @returns A Node.js request listener function
  */
 export function createRequestListener(
+  handler: (request: Request) => Response | Promise<Response>,
+  options?: RequestListenerOptions,
+): http.RequestListener
+export function createRequestListener(
+  handler: FetchHandler,
+  options?: RequestListenerOptions,
+): http.RequestListener
+export function createRequestListener(
   handler: FetchHandler,
   options?: RequestListenerOptions,
 ): http.RequestListener {
   let onError = options?.onError ?? defaultErrorHandler
-  let createLazyRequest = createLazyRequestFactory(
-    options,
-    createRequestWithLifecycle,
-    createHeaders,
-    {
-      createLifecycle: createRequestLifecycle,
-      observeResponseForLifecycle: observeResponseForRequestLifecycle,
-    },
-  )
 
   if (handler.length === 0) {
     let handlerWithoutArgs = handler as () => Response | Promise<Response>
 
-    return async (_req, res) => {
+    return async (req, res) => {
       let isResponseClosed = observeResponseClose(res)
+      try {
+        getRequestAuthority(req)
+      } catch (error) {
+        await sendResponseForCreationError(res, onError, error, isResponseClosed)
+        return
+      }
+
       let response: Response
       try {
         response = await handlerWithoutArgs()
@@ -121,12 +130,20 @@ export function createRequestListener(
 
     return (req, res) => {
       let isResponseClosed = observeResponseClose(res)
-      let request = createLazyRequest(req, res)
+
+      let request: Request
+      try {
+        request = createRequest(req, res, options)
+      } catch (error) {
+        void sendResponseForCreationError(res, onError, error, isResponseClosed)
+        return
+      }
 
       let response: Response | Promise<Response>
       try {
         response = requestHandler(request)
       } catch (error) {
+        if (isRequestAbortError(request, error)) return
         void sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
         return
       }
@@ -149,8 +166,16 @@ export function createRequestListener(
 
   return async (req, res) => {
     let isResponseClosed = observeResponseClose(res)
-    let request = createLazyRequest(req, res)
-    let client = createClientAddress(req, options)
+
+    let request: Request
+    try {
+      request = createRequest(req, res, options)
+    } catch (error) {
+      await sendResponseForCreationError(res, onError, error, isResponseClosed)
+      return
+    }
+
+    let client = createClientAddress(req, request.headers, options)
 
     let response: Response
     try {
@@ -179,6 +204,16 @@ async function sendResponseIfOpen(
 ): Promise<void> {
   if (isResponseClosed()) return
   await sendResponse(res, response)
+}
+
+async function sendResponseForCreationError(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  onError: ErrorHandler,
+  error: unknown,
+  isResponseClosed: () => boolean,
+): Promise<void> {
+  let response = await createErrorResponse(onError, error)
+  await sendResponseIfOpen(res, response, isResponseClosed)
 }
 
 async function sendErrorResponseForRequest(
@@ -217,16 +252,19 @@ async function sendResponseForRequest(
 
 async function createErrorResponse(onError: ErrorHandler, error: unknown): Promise<Response> {
   try {
-    return (await onError(error)) ?? internalServerError()
+    let response = await onError(error)
+    if (response != null) return response
+    return error instanceof RequestAuthorityError
+      ? new Response('Bad Request', { status: 400 })
+      : internalServerError()
   } catch (error) {
     console.error(`There was an error in the error handler: ${error}`)
     return internalServerError()
   }
 }
 
-function defaultErrorHandler(error: unknown): Response {
+function defaultErrorHandler(error: unknown): void {
   console.error(error)
-  return internalServerError()
 }
 
 function internalServerError(): Response {
@@ -300,7 +338,15 @@ function createRequestBodyStream(
   }
 
   function onData(chunk: Buffer) {
-    bodyController?.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+    if (bodyController == null) return
+    bodyController.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+
+    // Apply backpressure: once the stream's queue is full, stop pulling data off the socket until
+    // the consumer reads (see pull() below). Without this, an unread request body (e.g. a handler
+    // that rejects a large upload before reading it) would be buffered in the queue unboundedly.
+    if (bodyController.desiredSize != null && bodyController.desiredSize <= 0) {
+      req.pause()
+    }
   }
 
   function onEnd() {
@@ -341,6 +387,9 @@ function createRequestBodyStream(
         abortBody(createRequestAbortError(), { keepErrorListener: true })
       }
     },
+    pull() {
+      req.resume()
+    },
     cancel() {
       cancelBody()
     },
@@ -362,6 +411,7 @@ export type RequestOptions = Omit<RequestListenerOptions, 'onError'>
  * @param res The server response object
  * @param options Options for creating the request
  * @returns A `Request` object
+ * @throws If HTTP/2 `Host` and `:authority` values identify different hosts
  */
 export function createRequest(
   req: http.IncomingMessage | http2.Http2ServerRequest,
@@ -371,15 +421,6 @@ export function createRequest(
   let lifecycle = createRequestLifecycle()
   observeResponseForRequestLifecycle(res, lifecycle)
 
-  return createRequestWithLifecycle(req, res, options, lifecycle)
-}
-
-function createRequestWithLifecycle(
-  req: http.IncomingMessage | http2.Http2ServerRequest,
-  res: http.ServerResponse | http2.Http2ServerResponse,
-  options: RequestOptions | undefined,
-  lifecycle: RequestLifecycle,
-): Request {
   let method = req.method ?? 'GET'
   let headers = createHeaders(req)
 
@@ -416,11 +457,10 @@ function getRequestProtocol(
 
 function createClientAddress(
   req: http.IncomingMessage | http2.Http2ServerRequest,
+  headers: Headers,
   options?: RequestOptions,
 ): ClientAddress {
-  let forwardedClient = options?.trustProxy
-    ? getForwardedClientAddress(createHeaders(req))
-    : undefined
+  let forwardedClient = options?.trustProxy ? getForwardedClientAddress(headers) : undefined
   let address = forwardedClient?.address ?? req.socket.remoteAddress ?? ''
 
   return {
@@ -442,15 +482,41 @@ function getRequestHost(
   headers: Headers,
   options?: RequestOptions,
 ): string {
-  let authority = req.headers[':authority']
+  let authority = getRequestAuthority(req)
 
   return (
     options?.host ??
     (options?.trustProxy ? getForwardedHost(headers) : undefined) ??
+    authority ??
     headers.get('Host') ??
-    (Array.isArray(authority) ? authority[0] : authority) ??
     'localhost'
   )
+}
+
+class RequestAuthorityError extends Error {}
+
+function getRequestAuthority(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+): string | undefined {
+  let value = req.headers[':authority']
+  let authority = Array.isArray(value) ? value[0] : value
+  let host = req.headers.host
+
+  if (authority != null && host != null) {
+    // Compare using the incoming scheme, before deployment overrides are applied.
+    let scheme = req.headers[':scheme']
+    let protocol =
+      (Array.isArray(scheme) ? scheme[0] : scheme) ??
+      ('encrypted' in req.socket && req.socket.encrypted ? 'https' : 'http')
+    let authorityUrl = URL.parse(`${protocol}://${authority}`)
+    let hostUrl = URL.parse(`${protocol}://${host}`)
+
+    if (authorityUrl == null || hostUrl == null || authorityUrl.host !== hostUrl.host) {
+      throw new RequestAuthorityError('Host header does not match :authority')
+    }
+  }
+
+  return authority
 }
 
 function getForwardedProtocol(headers: Headers): string | undefined {

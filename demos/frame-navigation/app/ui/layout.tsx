@@ -1,6 +1,8 @@
-import type { Handle, RemixNode } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/component'
+import { css } from 'remix/component'
+import { ImportMap } from 'remix/component/server'
 
+import { getAssetEntry } from '../middleware/asset-entry.ts'
 import { routes } from '../routes.ts'
 import { NavLink } from './nav-link.tsx'
 
@@ -16,20 +18,27 @@ const navItems = [
   { id: 'dashboard', label: 'Dashboard', route: routes.main.index },
   { id: 'courses', label: 'Courses', route: routes.main.courses },
   { id: 'calendar', label: 'Calendar', route: routes.main.calendar },
-  { id: 'account', label: 'Account', route: routes.main.account },
+  { id: 'account', label: 'Account', route: routes.main.account.index },
   { id: 'settings', label: 'Settings', route: routes.settings.index },
 ]
 
 export function Layout(handle: Handle<LayoutProps>) {
   return () => {
     let { title, activeNav, children } = handle.props
+    let { scriptEntry } = getAssetEntry()
+    let { href, importMap, preloads } = scriptEntry
+
     return (
       <html lang="en">
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>{title} | LMS</title>
-          <script async type="module" src="/assets/entry.js" />
+          <ImportMap value={importMap} />
+          {preloads.map((preloadHref) => (
+            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
+          ))}
+          <script type="module" src={href} />
         </head>
         <body mix={bodyStyle}>
           <div mix={appShellStyle}>

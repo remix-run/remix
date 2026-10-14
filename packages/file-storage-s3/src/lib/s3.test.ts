@@ -170,6 +170,106 @@ describe('s3 file storage', () => {
     assert.ok(retrieved)
     assert.equal(await retrieved.text(), 'Hello, world!')
   })
+
+  it('rejects period-only key segments with path-style URLs', async () => {
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      fetch: async () => new Response(null, { status: 404 }),
+    })
+
+    await assert.rejects(
+      async () => storage.has('a/b/../../../c/d.txt'),
+      /period-only path segments are not supported/,
+    )
+    await assert.rejects(
+      async () => storage.has('a/b/./c.txt'),
+      /period-only path segments are not supported/,
+    )
+  })
+
+  it('rejects period-only key segments with virtual-host style URLs', async () => {
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      forcePathStyle: false,
+      fetch: async () => new Response(null, { status: 404 }),
+    })
+
+    await assert.rejects(
+      async () => storage.has('a/b/../../c/d.txt'),
+      /period-only path segments are not supported/,
+    )
+  })
+
+  it('rejects empty keys with path-style URLs', async () => {
+    let requestCount = 0
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      fetch: async () => {
+        requestCount++
+        return new Response(null, { status: 204 })
+      },
+    })
+
+    await assert.rejects(async () => storage.remove(''), /keys must not be empty/)
+    assert.equal(requestCount, 0)
+  })
+
+  it('rejects empty keys with virtual-host style URLs', async () => {
+    let requestCount = 0
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      forcePathStyle: false,
+      fetch: async () => {
+        requestCount++
+        return new Response(null, { status: 204 })
+      },
+    })
+
+    await assert.rejects(async () => storage.remove(''), /keys must not be empty/)
+    assert.equal(requestCount, 0)
+  })
+
+  it('supports non-period-only key segments', async () => {
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      fetch: createMockS3Fetch(),
+    })
+    let file = new File(['Hello, world!'], 'hello.txt')
+
+    await storage.set('folder/.hidden/file.txt', file)
+    await storage.set('folder/..backup/file.txt', file)
+    await storage.set('folder//file.txt', file)
+    await storage.set('folder/%2e%2e/file.txt', file)
+    await storage.set('folder/back\\slash.txt', file)
+    await storage.set('folder/control\u0001.txt', file)
+
+    assert.ok(await storage.has('folder/.hidden/file.txt'))
+    assert.ok(await storage.has('folder/..backup/file.txt'))
+    assert.ok(await storage.has('folder//file.txt'))
+    assert.ok(await storage.has('folder/%2e%2e/file.txt'))
+    assert.ok(await storage.has('folder/back\\slash.txt'))
+    assert.ok(await storage.has('folder/control\u0001.txt'))
+  })
 })
 
 function createMockS3Fetch(): typeof globalThis.fetch {

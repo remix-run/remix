@@ -1,7 +1,5 @@
-import { createMixin } from '../runtime/mixins/mixin.ts'
-import type { ElementProps } from '../runtime/jsx.ts'
-import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { createMixin } from '@remix-run/component'
+import type { ElementProps, MixinDescriptor } from '@remix-run/component'
 
 type AnimateTiming = {
   duration: number
@@ -37,7 +35,7 @@ type AnimationState = {
 }
 
 const animatingNodes = new WeakMap<Element, AnimationState>()
-const initialEntranceSeenByParent = new WeakMap<ParentNode, Set<string>>()
+const initialEntranceSeenByParent = new WeakMap<ParentNode, Set<unknown>>()
 
 function extractStyleProps(config: AnimateMixinConfig): Keyframe {
   let result: Keyframe = {}
@@ -152,14 +150,14 @@ function waitForAnimationOrAbort(animation: Animation, signal: AbortSignal): Pro
 }
 
 function shouldSkipInitialEntrance(
-  event: { key?: string; parent: ParentNode },
+  event: { key?: unknown; parent: ParentNode },
   config: AnimateMixinConfig,
 ): boolean {
   if (config.initial !== false) return false
   if (event.key == null) return false
   let seenForParent = initialEntranceSeenByParent.get(event.parent)
   if (!seenForParent) {
-    seenForParent = new Set<string>()
+    seenForParent = new Set<unknown>()
     initialEntranceSeenByParent.set(event.parent, seenForParent)
   }
   if (seenForParent.has(event.key)) return false
@@ -237,7 +235,7 @@ const animateExitMixin = createMixin<Element, [config: AnimationConfig], Element
     let config = resolveExitConfig(currentConfig)
     if (!config) return
     event.persistNode(async (signal) => {
-      invariant(node)
+      if (!node) throw new Error('Cannot animate an element before it is inserted')
       let current = animatingNodes.get(node)
       if (current && current.animation.playState === 'running') {
         current.animation.reverse()

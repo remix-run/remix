@@ -1,4 +1,4 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 const color = {
   surface: '#ffffff',
@@ -161,7 +161,30 @@ export const optional = css({
 })
 
 export const control = css({
+  boxSizing: 'border-box',
   width: '100%',
+  padding: '0.625rem 0.75rem',
+  border: `1px solid ${color.borderStrong}`,
+  borderRadius: '0.5rem',
+  background: color.surface,
+  color: color.text,
+  font: 'inherit',
+  '&[data-touched]:invalid, &[aria-invalid="true"]': {
+    borderColor: color.danger,
+    background: color.dangerSoft,
+  },
+  '&:focus-visible': {
+    outline: `2px solid ${color.accent}`,
+    outlineOffset: '2px',
+  },
+})
+
+export const checkbox = css({
+  accentColor: color.accent,
+  '&[data-touched]:invalid, &[aria-invalid="true"]': {
+    outline: `1px solid ${color.danger}`,
+    outlineOffset: '2px',
+  },
 })
 
 export const fieldError = css({
@@ -202,6 +225,18 @@ export const checkboxLabel = css({
 
 export const submitButton = css({
   justifySelf: 'start',
+  padding: '0.625rem 1rem',
+  border: 0,
+  borderRadius: '0.5rem',
+  background: color.accent,
+  color: color.surface,
+  font: 'inherit',
+  fontWeight: 650,
+  cursor: 'pointer',
+  '&:focus-visible': {
+    outline: `2px solid ${color.accent}`,
+    outlineOffset: '2px',
+  },
   '@media (max-width: 32rem)': {
     justifySelf: 'stretch',
   },

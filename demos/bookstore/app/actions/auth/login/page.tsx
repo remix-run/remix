@@ -1,8 +1,8 @@
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
 import type { FormSubmission } from 'remix/data-schema/form'
 
-import { LoginFields, type LoginSubmission } from '../../../assets/login-form.tsx'
+import { LoginFields, type LoginSubmission } from '../../fragments/public/login-form.tsx'
 import { routes } from '../../../routes.ts'
 import { Document } from '../../../ui/document.tsx'
 import { authCardStyle } from '../schemas.ts'

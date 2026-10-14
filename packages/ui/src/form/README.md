@@ -5,8 +5,7 @@
 ```tsx
 import * as s from 'remix/data-schema'
 import { createForm } from 'remix/data-schema/form'
-import { createInputMixin, form } from 'remix/ui/form'
-import input from 'remix/ui/input'
+import { createInputMixin, form } from '@remix-run/ui/form'
 
 let Signup = createForm(s.object({ email: s.string() }), {
   fields: { email: { label: 'Email', type: 'email' } },
@@ -17,7 +16,7 @@ function SignupPage() {
   return () => (
     <form method="post" mix={form()}>
       <label htmlFor="email">Email</label>
-      <input autoComplete="email" mix={[signupInput('email'), input()]} />
+      <input autoComplete="email" mix={signupInput('email')} />
       <button type="submit">Create account</button>
     </form>
   )

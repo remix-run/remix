@@ -45,7 +45,9 @@ export type AuthState<identity = unknown> = GoodAuth<identity> | BadAuth
  * Context key used to read auth state with `context.get(Auth)`.
  * The `auth()` middleware also installs auth state as `context.auth`.
  */
-export const Auth = createContextKey<AuthState>()
+// Keep exported context keys structurally typed so TypeScript 7 declaration emit does not
+// reference fetch-router internals. Logger and Renderer require the same annotation.
+export const Auth: { defaultValue?: AuthState } = createContextKey<AuthState>()
 
 /**
  * Successful result returned by an auth scheme.

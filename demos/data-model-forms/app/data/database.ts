@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
-import { createDatabase, type Database } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
+import type { Database } from 'remix/data-table'
+import { createSqliteDatabase } from 'remix/data-table/sqlite'
 
 export function createDataModelFormsDatabase(): Database {
   let sqlite = new DatabaseSync(':memory:')
@@ -15,5 +15,5 @@ export function createDataModelFormsDatabase(): Database {
     )
   `)
 
-  return createDatabase(createSqliteDatabaseAdapter(sqlite))
+  return createSqliteDatabase(sqlite)
 }

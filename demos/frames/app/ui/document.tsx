@@ -1,4 +1,7 @@
-import type { Handle, RemixNode } from 'remix/ui'
+import { css, type Handle, type RemixNode } from 'remix/component'
+import { ImportMap } from 'remix/component/server'
+
+import { getAssetEntry } from '../middleware/asset-entry.ts'
 
 type DocumentProps = {
   title: string
@@ -9,27 +12,37 @@ type DocumentProps = {
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { title, maxWidth = '760px', children } = handle.props
+    let { scriptEntry } = getAssetEntry()
+    let { href, importMap, preloads } = scriptEntry
+
     return (
       <html>
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>{title}</title>
-          <script async type="module" src="/assets/entry.js" />
+          <ImportMap value={importMap} />
+          {preloads.map((preloadHref) => (
+            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
+          ))}
+          <script type="module" src={href} />
         </head>
-        <body
-          style={{
-            fontFamily:
-              'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
-            margin: 0,
-            padding: 24,
-            background: '#0b1020',
-            color: '#e9eefc',
-          }}
-        >
-          <div style={{ maxWidth, margin: '0 auto' }}>{children}</div>
+        <body mix={bodyStyle}>
+          {/* `maxWidth` is caller-driven, so it stays an inline style. */}
+          <div mix={css({ margin: '0 auto' })} style={{ maxWidth }}>
+            {children}
+          </div>
         </body>
       </html>
     )
   }
 }
+
+const bodyStyle = css({
+  fontFamily:
+    'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
+  margin: 0,
+  padding: 24,
+  background: '#0b1020',
+  color: '#e9eefc',
+})

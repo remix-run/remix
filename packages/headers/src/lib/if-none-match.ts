@@ -1,5 +1,5 @@
 import { type HeaderValue } from './header-value.ts'
-import { quoteEtag } from './utils.ts'
+import { quoteEtag, splitList } from './utils.ts'
 
 /**
  * Initializer for an `If-None-Match` header value.
@@ -70,7 +70,7 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
 
     if (value !== null) {
       if (typeof value === 'string') {
-        header.tags.push(...value.split(/\s*,\s*/).map(quoteEtag))
+        header.tags.push(...splitList(value).map(quoteEtag))
       } else if (Array.isArray(value)) {
         header.tags.push(...value.map(quoteEtag))
       } else {

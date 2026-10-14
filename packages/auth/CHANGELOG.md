@@ -2,6 +2,61 @@
 
 This is the changelog for [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@1.0.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@1.0.0)
+  - [`session@1.0.0`](https://github.com/remix-run/remix/releases/tag/session@1.0.0)
+
+## v0.3.3
+
+### Patch Changes
+
+- Leave a missing GitHub profile email unset when the email API returns no verified addresses. Verified primary addresses remain preferred over other verified addresses.
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+  - [`session@0.4.3`](https://github.com/remix-run/remix/releases/tag/session@0.4.3)
+
+## v0.3.2
+
+### Patch Changes
+
+- Normalize post-auth return targets before accepting them as local paths, including targets read from existing OAuth transactions. Paths that normalize to an authority reference are omitted.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.1)
+
+## v0.3.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.0)
+
+## v0.3.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remove the built-in Atmosphere auth provider and the DPoP model that was coupled to it. This removes `createAtmosphereAuthProvider()`, the `Atmosphere*` and `OAuthDpop*` types, and `OAuthStandardTokens`.
+
+  Use `OAuthTokens` in place of `OAuthStandardTokens`. Custom provider packages can extend `OAuthTokens` with protocol-specific fields and preserve that type through `OAuthProvider`, `OAuthResult`, `finishExternalAuth()`, and `refreshExternalAuth()`. Use the new public `createOAuthProvider()` factory and `OAuthProviderRuntime` contract to integrate providers that are not built into Remix. Applications using the Atmosphere provider must remove it or move their atproto authentication to a separate package.
+
+## v0.2.7
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.21.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.21.0)
+
 ## v0.2.6
 
 ### Patch Changes
@@ -77,7 +132,6 @@ This is the changelog for [`auth`](https://github.com/remix-run/remix/tree/main/
 - Add `auth`, a high-level browser authentication package for Remix.
 
   Includes:
-
   - generic `oidc()` support for standards-based providers
   - thin `microsoft()`, `okta()`, and `auth0()` wrappers on top of OIDC
   - OAuth provider helpers for Google, GitHub, and Facebook

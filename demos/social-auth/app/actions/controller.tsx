@@ -1,7 +1,7 @@
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
-import { getReturnToQuery, requireAuth } from '../middleware/auth.ts'
+import { getReturnToHrefOptions, requireAuth } from '../middleware/auth.ts'
 import { routes } from '../routes.ts'
 import { AccountPage } from '../ui/account-page.tsx'
 import { LoginPage } from '../ui/home/page.tsx'
@@ -23,14 +23,17 @@ export function createRootController(
 
         let error = session.get('error')
         let success = session.get('success')
-        let returnToQuery = getReturnToQuery(url)
+        let returnToHrefOptions = getReturnToHrefOptions(url)
 
         return render(
           <LoginPage
-            formAction={routes.auth.login.href(undefined, returnToQuery)}
-            signupHref={routes.auth.signup.index.href(undefined, returnToQuery)}
-            forgotPasswordHref={routes.auth.forgotPassword.index.href(undefined, returnToQuery)}
-            providers={readExternalProviderLinks(returnToQuery, registry)}
+            formAction={routes.auth.login.href(undefined, returnToHrefOptions)}
+            signupHref={routes.auth.signup.index.href(undefined, returnToHrefOptions)}
+            forgotPasswordHref={routes.auth.forgotPassword.index.href(
+              undefined,
+              returnToHrefOptions,
+            )}
+            providers={readExternalProviderLinks(returnToHrefOptions, registry)}
             error={typeof error === 'string' ? error : undefined}
             success={typeof success === 'string' ? success : undefined}
           />,

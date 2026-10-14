@@ -1,3 +1,15 @@
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+## v0.3.1
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
 ## v0.3.0
 
 ### Minor Changes
@@ -23,7 +35,6 @@
 ### Minor Changes
 
 - Add `expect` API alongside the existing `assert.*` functions
-
   - `expect(value).toBe(expected)`
     - `toBe`, `toEqual`, `toBeNull`, `toBeUndefined`, `toBeDefined`, `toBeTruthy`, `toBeInstanceOf`
     - Numbers: `toBeGreaterThan`, `toBeGreaterThanOrEqual`, `toBeLessThan`, `toBeLessThanOrEqual`, `toBeCloseTo`
@@ -44,7 +55,6 @@
 - Initial release of `@remix-run/assert`.
 
   A compatible subset of `node:assert/strict` that works in any JavaScript environment, including browsers. Uses strict equality (`===`) for all comparisons — no type coercion.
-
   - `AssertionError` — compatible with `node:assert.AssertionError` (`actual`, `expected`, `operator`, `name`)
   - `assert.ok` — truthy check
   - `assert.equal` / `assert.notEqual` — strict equality (`===` / `!==`)

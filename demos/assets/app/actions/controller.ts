@@ -4,14 +4,14 @@ import { createController } from 'remix/router'
 import { routes } from '../routes.ts'
 import { assetServer } from '../utils/assets.ts'
 
-const entryFilePath = path.resolve(import.meta.dirname, '../client/entry.ts')
-const styleFilePath = path.resolve(import.meta.dirname, '../client/styles/app.css')
-const imageFilePath = path.resolve(import.meta.dirname, '../client/images/image.svg')
+const entryFilePath = path.resolve(import.meta.dirname, './public/entry.ts')
+const styleFilePath = path.resolve(import.meta.dirname, './public/styles/app.css')
+const imageFilePath = path.resolve(import.meta.dirname, './public/images/image.svg')
 
 export default createController(routes, {
   actions: {
     async home() {
-      let entryUrl = await assetServer.getHref(entryFilePath)
+      let { href, importMap, preloads } = await assetServer.getScriptEntry(entryFilePath)
       let imageUrl = await assetServer.getHref(imageFilePath)
       let styleUrl = await assetServer.getHref(styleFilePath)
       let transformedImageUrl = await assetServer.getHref(imageFilePath, {
@@ -25,6 +25,8 @@ export default createController(routes, {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>remix/assets demo</title>
     <link rel="stylesheet" href="${escapeHtml(styleUrl)}">
+    <script type="importmap">${serializeImportMap(importMap)}</script>
+    ${preloads.map((preloadHref) => `<link rel="modulepreload" href="${escapeHtml(preloadHref)}">`).join('\n    ')}
   </head>
   <body>
     <main class="page-shell">
@@ -44,8 +46,9 @@ export default createController(routes, {
         transformed-output caching.
       </p>
       <p>
-        Try editing <code>app/client/entry.ts</code>, <code>app/client/styles/app.css</code>,
-        or <code>app/client/images/image.svg</code>. You can also tweak the transforms in
+        Try editing <code>app/actions/public/entry.ts</code>,
+        <code>app/actions/public/styles/app.css</code>, or
+        <code>app/actions/public/images/image.svg</code>. You can also tweak the transforms in
         <code>app/utils/assets.ts</code>.
       </p>
       <div id="app-root" class="app" aria-live="polite">
@@ -81,7 +84,7 @@ export default createController(routes, {
           <figcaption>CSS request-transformed background image</figcaption>
         </figure>
       </div>
-      <script type="module" src="${escapeHtml(entryUrl)}"></script>
+      <script type="module" src="${escapeHtml(href)}"></script>
     </main>
   </body>
 </html>`
@@ -99,4 +102,8 @@ export default createController(routes, {
 
 function escapeHtml(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')
+}
+
+function serializeImportMap(importMap: unknown): string {
+  return JSON.stringify(importMap).replace(/</g, '\\u003c')
 }

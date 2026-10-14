@@ -34,6 +34,12 @@ npm i remix
 
 The `parseFormData` interface allows you to define an "upload handler" function for fine-grained control of handling file uploads.
 
+`parseFormData()` accepts `multipart/*` and `application/x-www-form-urlencoded` media types, matched case-insensitively. Other media types throw `FormDataParseError` before the request body is read.
+
+`FileUpload.name` and `FileUpload.type` are untrusted client input from the submitted multipart metadata. Filenames are not sanitized for filesystem use, including on files returned in `FormData`. Do not use these names directly as filesystem paths or join them to an upload directory. Generate storage names in your application; see [Filename Safety](https://github.com/remix-run/remix/tree/main/packages/headers#filename-safety).
+
+The parser does not verify that the contents match the media type or filename extension. Validate file contents before serving uploads inline. To serve uploads as downloads, set `Content-Disposition: attachment` on the file response; see [File Responses](https://github.com/remix-run/remix/tree/main/packages/response#file-responses).
+
 ```ts
 import * as fsp from 'node:fs/promises'
 import type { FileUpload } from 'remix/form-data-parser'
@@ -43,10 +49,10 @@ import { parseFormData } from 'remix/form-data-parser'
 async function uploadHandler(fileUpload: FileUpload) {
   // Is this file upload from the <input type="file" name="user-avatar"> field?
   if (fileUpload.fieldName === 'user-avatar') {
-    let filename = `/uploads/user-${user.id}-avatar.bin`
+    let filename = `/uploads/${crypto.randomUUID()}`
 
-    // Store the file safely on disk
-    await fsp.writeFile(filename, fileUpload.bytes)
+    // Store under an application-generated name in an existing upload directory
+    await fsp.writeFile(filename, new Uint8Array(await fileUpload.arrayBuffer()), { flag: 'wx' })
 
     // Return the file name to use in the FormData object so we don't
     // keep the file contents around in memory.

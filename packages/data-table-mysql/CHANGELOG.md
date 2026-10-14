@@ -2,6 +2,64 @@
 
 This is the changelog for [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@1.0.0`](https://github.com/remix-run/remix/releases/tag/data-table@1.0.0)
+
+## v0.5.4
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.7.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.7.0)
+
+## v0.5.3
+
+### Patch Changes
+
+- Reject invalid `orderBy` direction values at runtime before interpolating them into generated MySQL queries.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.6.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.6.0)
+
+## v0.5.2
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table@0.5.1)
+
+## v0.5.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.5.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.5.0)
+
+## v0.5.0
+
+### Minor Changes
+
+- Added `createMysqlDatabase()` with config-backed construction, connection-scoped migration locking, database wiping for `remix db`, and `close()` for releasing an internally created pool. Existing `mysql2` pools and connections remain supported for applications that own the driver lifecycle, but wiping requires config-backed construction (see #11608, #11639).
+
+  `wipe()` throws when no database name can be resolved from the connection config instead of guessing one. Failed migration runs and failed transaction startup destroy the reserved connection instead of returning a dirty session to the pool, and nested lock acquisition throws instead of deadlocking.
+
+  BREAKING CHANGE: Removed `MysqlDatabaseAdapter` and `createMysqlDatabaseAdapter()` from the public entry point. Use `MysqlDatabase` and `createMysqlDatabase()` to get a complete MySQL-backed `Database`; `MysqlDatabaseAdapterOptions` was renamed to `MysqlDatabaseOptions`.
+
+### Patch Changes
+
+- Use bound parameters for compiled `limit` and `offset` clauses.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.4.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.4.0)
+
 ## v0.4.0
 
 ### Minor Changes
@@ -31,7 +89,6 @@ This is the changelog for [`data-table-mysql`](https://github.com/remix-run/remi
 - BREAKING CHANGE: Removed adapter options
 
   **Affected APIs**
-
   - `MysqlDatabaseAdapterOptions` type: removed
   - `createMysqlDatabaseAdapter` function: `options` arg removed
   - `MysqlDatabaseAdapter` constructor: `options` arg removed

@@ -23,6 +23,91 @@ function createRequest(fromResponse?: Response): Request {
 }
 
 describe('session middleware', () => {
+  it('defaults Secure to the request protocol', async () => {
+    let cookie = createCookie('__sess', { secrets: ['secret1'] })
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, createCookieSessionStorage())],
+    })
+    router.map('/', ({ session }) => {
+      session.set('userId', '123')
+      return new Response('ok')
+    })
+
+    let httpsResponse = await router.fetch('https://remix.run')
+    assert.equal(new SetCookie(httpsResponse.headers.getSetCookie()[0]).secure, true)
+    let httpResponse = await router.fetch('http://localhost')
+    assert.equal(new SetCookie(httpResponse.headers.getSetCookie()[0]).secure, undefined)
+  })
+
+  it('preserves explicitly disabling Secure on HTTPS', async () => {
+    let cookie = createCookie('__sess', { secrets: ['secret1'], secure: false })
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, createCookieSessionStorage())],
+    })
+    router.map('/', ({ session }) => {
+      session.set('userId', '123')
+      return new Response('ok')
+    })
+
+    let response = await router.fetch('https://remix.run')
+    assert.equal(new SetCookie(response.headers.getSetCookie()[0]).secure, undefined)
+  })
+
+  it('preserves explicitly enabling Secure on HTTP', async () => {
+    let cookie = createCookie('__sess', { secrets: ['secret1'], secure: true })
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, createCookieSessionStorage())],
+    })
+    router.map('/', ({ session }) => {
+      session.set('userId', '123')
+      return new Response('ok')
+    })
+
+    let response = await router.fetch('http://localhost')
+    assert.equal(new SetCookie(response.headers.getSetCookie()[0]).secure, true)
+  })
+
+  it('defaults session cookies to HTTP-only', async () => {
+    let cookie = createCookie('__sess', { secrets: ['secret1'] })
+    let storage = createCookieSessionStorage()
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+
+    router.map('/', ({ session }) => {
+      session.set('userId', '123')
+      return new Response('ok')
+    })
+
+    let response = await router.fetch('https://remix.run')
+    let setCookie = new SetCookie(response.headers.getSetCookie()[0])
+
+    assert.equal(setCookie.httpOnly, true)
+  })
+
+  it('respects and warns about explicitly disabling HTTP-only', async (t) => {
+    let consoleWarn = t.mock.method(console, 'warn', () => {})
+    let cookie = createCookie('__sess', { secrets: ['secret1'], httpOnly: false })
+    let storage = createCookieSessionStorage()
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+
+    router.map('/', ({ session }) => {
+      session.set('userId', '123')
+      return new Response('ok')
+    })
+
+    let response = await router.fetch('https://remix.run')
+    let setCookie = new SetCookie(response.headers.getSetCookie()[0])
+
+    assert.equal(setCookie.httpOnly, undefined)
+    assert.equal(consoleWarn.mock.calls.length, 1)
+    assert.deepEqual(consoleWarn.mock.calls[0].arguments, [
+      'Session cookie "__sess" is configured with httpOnly: false and may be accessible to client-side JavaScript.',
+    ])
+  })
+
   it('persists session data across requests', async () => {
     let cookie = createCookie('__sess', { secrets: ['secret1'] })
     let storage = createCookieSessionStorage()

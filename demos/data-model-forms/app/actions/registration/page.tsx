@@ -1,6 +1,6 @@
 import type { FormFailure } from 'remix/data-schema/form'
 import type { TableRow } from 'remix/data-table'
-import type { Handle } from 'remix/ui'
+import type { Handle } from 'remix/component'
 
 import {
   RegistrationFields,

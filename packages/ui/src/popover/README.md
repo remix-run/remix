@@ -1,14 +1,12 @@
 # popover
 
-`popover` is a low-level primitive for anchored, dismissible floating panels.
+`popover` provides headless behavior for anchored, dismissible floating panels. Use it for custom surfaces like filters, inspectors, and view options. More specific widgets like menu, select, and combobox build on it.
 
-Use it for custom surfaces like filters, inspectors, and view options. Higher-level widgets like menu, select, and combobox should build on top of it instead of exposing raw `popover.*` mixins directly.
-
-## Primitive Usage
+## Usage
 
 ```tsx
-import { on, type Handle } from 'remix/ui'
-import * as popover from 'remix/ui/popover'
+import { on, type Handle } from 'remix/component'
+import * as popover from '@remix-run/ui/popover'
 import { panelStyle } from './popover.styles'
 
 export function ViewOptions(handle: Handle) {
@@ -58,7 +56,7 @@ export function ViewOptions(handle: Handle) {
 }
 ```
 
-## `remix/ui/popover`
+## `@remix-run/ui/popover`
 
 ### `popover.Context`
 

@@ -8,22 +8,21 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 export const assetServer = createAssetServer({
   basePath: assetsBase,
   rootDir: path.resolve(import.meta.dirname, '../../..'),
-  allow: [
+  allowFiles: [
     'demos/data-model-forms/app/assets/**',
     'demos/data-model-forms/app/actions/registration/registration-form.ts',
     'demos/data-model-forms/app/actions/registration/styles.ts',
     'demos/data-model-forms/app/data/account-schema.ts',
     'demos/data-model-forms/app/routes.ts',
-    'packages/*/src/**',
   ],
-  fileMap: {
-    '/app/*path': 'demos/data-model-forms/app/*path',
-    '/packages/*path': 'packages/*path',
+  allowPackages: ['remix', '@remix-run/ui'],
+  mounts: {
+    app: 'demos/data-model-forms/app',
+    npm: 'node_modules',
+    packages: 'packages',
   },
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
-  fingerprint: isDevelopment
-    ? undefined
-    : { buildId: process.env.GITHUB_SHA || String(Date.now()) },
+  fingerprint: !isDevelopment,
   watch: false,
 })

@@ -1,9 +1,9 @@
-import type { Handle } from 'remix/ui'
-import { Frame, css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { Frame, css } from 'remix/component'
 
 import type { Book } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
-import { ImageCarousel } from '../../assets/image-carousel.tsx'
+import { ImageCarousel } from './public/image-carousel.tsx'
 import { Layout } from '../../ui/layout.tsx'
 
 export interface ShowPageProps {

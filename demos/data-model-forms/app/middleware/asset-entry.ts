@@ -1,11 +1,11 @@
 import * as path from 'node:path'
 import { createContextKey, type Middleware } from 'remix/router'
+import type { ScriptEntry } from 'remix/assets'
 
 import { assetServer } from '../assets.ts'
 
 export interface AssetEntryValue {
-  scriptSrc: string
-  scriptPreloads: string[]
+  scriptEntry: ScriptEntry
 }
 
 export const AssetEntry = createContextKey<AssetEntryValue>()
@@ -13,12 +13,7 @@ const scriptEntry = path.resolve(import.meta.dirname, '../assets/entry.ts')
 
 export function loadAssetEntry(): Middleware<{ key: typeof AssetEntry; value: AssetEntryValue }> {
   return async (context, next) => {
-    let [scriptSrc, scriptPreloads] = await Promise.all([
-      assetServer.getHref(scriptEntry),
-      assetServer.getPreloads(scriptEntry).catch(() => []),
-    ])
-
-    context.set(AssetEntry, { scriptSrc, scriptPreloads })
+    context.set(AssetEntry, { scriptEntry: await assetServer.getScriptEntry(scriptEntry) })
     return next()
   }
 }

@@ -80,6 +80,14 @@ export class Cookie implements CookieProperties {
       sameSite = 'Lax',
     } = options ?? {}
 
+    if (sameSite === 'strict') {
+      sameSite = 'Strict'
+    } else if (sameSite === 'lax') {
+      sameSite = 'Lax'
+    } else if (sameSite === 'none') {
+      sameSite = 'None'
+    }
+
     if (partitioned === true) {
       // Partitioned cookies must be set with Secure
       // See https://developer.mozilla.org/en-US/docs/Web/Privacy/Guides/Privacy_sandbox/Partitioned_cookies
@@ -119,14 +127,12 @@ export class Cookie implements CookieProperties {
   }
 
   /**
-   * True if the cookie is HTTP-only.
+   * Whether the cookie is HTTP-only, or `undefined` when the option was not configured.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#httponly)
-   *
-   * @default false
    */
-  get httpOnly(): boolean {
-    return this.#httpOnly ?? false
+  get httpOnly(): boolean | undefined {
+    return this.#httpOnly
   }
 
   /**
@@ -189,7 +195,7 @@ export class Cookie implements CookieProperties {
   }
 
   /**
-   * The `SameSite` attribute of the cookie.
+   * The `SameSite` attribute of the cookie, normalized to `Strict`, `Lax`, or `None`.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value)
    *
@@ -200,14 +206,12 @@ export class Cookie implements CookieProperties {
   }
 
   /**
-   * True if the cookie is secure (only sent over HTTPS).
+   * Whether the cookie is only sent over HTTPS, or `undefined` when not configured.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure)
-   *
-   * @default false
    */
-  get secure(): boolean {
-    return this.#secure ?? false
+  get secure(): boolean | undefined {
+    return this.#secure
   }
 
   /**

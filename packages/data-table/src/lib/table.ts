@@ -1,4 +1,4 @@
-import type { ColumnDefinition } from './adapter.ts'
+import type { ColumnDefinition } from './driver.ts'
 import { ColumnBuilder } from './column.ts'
 import type { ColumnInput as ColumnBuilderInput, ColumnOutput } from './column.ts'
 import type { Predicate, WhereInput } from './operators.ts'

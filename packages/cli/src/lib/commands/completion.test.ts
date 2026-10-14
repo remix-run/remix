@@ -80,13 +80,16 @@ describe('completion command', () => {
       result.stdout,
       [
         'mode:values',
+        'assets',
         'completion',
+        'db',
         'doctor',
         'help',
         'new',
         'routes',
         'test',
         'version',
+        '--config',
         '-h',
         '--help',
         '--no-color',
@@ -95,6 +98,91 @@ describe('completion command', () => {
         '',
       ].join('\n'),
     )
+    assert.equal(result.stderr, '')
+  })
+
+  it('completes database subcommands', async () => {
+    let result = await captureOutput(() => runRemix(['completion', '--', '2', 'remix', 'db', '']))
+
+    assert.equal(result.exitCode, 0)
+    assert.equal(
+      result.stdout,
+      [
+        'mode:values',
+        'migrate',
+        'reset',
+        'rollback',
+        'seed',
+        'status',
+        'wipe',
+        '--config',
+        '-h',
+        '--help',
+        '--no-color',
+        '',
+      ].join('\n'),
+    )
+    assert.equal(result.stderr, '')
+  })
+
+  it('completes database subcommand flags', async () => {
+    let wipe = await captureOutput(() =>
+      runRemix(['completion', '--', '3', 'remix', 'db', 'wipe', '--']),
+    )
+    let reset = await captureOutput(() =>
+      runRemix(['completion', '--', '3', 'remix', 'db', 'reset', '--']),
+    )
+    let migrate = await captureOutput(() =>
+      runRemix(['completion', '--', '3', 'remix', 'db', 'migrate', '--']),
+    )
+
+    assert.equal(wipe.exitCode, 0)
+    assert.equal(
+      wipe.stdout,
+      ['mode:values', '--force', '--connection-env', '--config', '--help', '--no-color', ''].join(
+        '\n',
+      ),
+    )
+    assert.equal(reset.exitCode, 0)
+    assert.equal(
+      reset.stdout,
+      [
+        'mode:values',
+        '--force',
+        '--connection-env',
+        '--journal-table',
+        '--migrations',
+        '--seed',
+        '--config',
+        '--help',
+        '--no-color',
+        '',
+      ].join('\n'),
+    )
+    assert.equal(migrate.exitCode, 0)
+    assert.equal(
+      migrate.stdout,
+      [
+        'mode:values',
+        '--connection-env',
+        '--journal-table',
+        '--migrations',
+        '--to',
+        '--config',
+        '--help',
+        '--no-color',
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it('suspends completion while a migration target value is expected', async () => {
+    let result = await captureOutput(() =>
+      runRemix(['completion', '--', '4', 'remix', 'db', 'migrate', '--to', '']),
+    )
+
+    assert.equal(result.exitCode, 0)
+    assert.equal(result.stdout, 'mode:none\n')
     assert.equal(result.stderr, '')
   })
 })

@@ -45,20 +45,20 @@ export class Route<
   }
 
   /**
-   * Build a URL href for this route using the given parameters.
+   * Build a URL href for this route using the given route params and href options.
    *
-   * @param args The parameters to use for building the href
+   * @param args Route params and href options
    * @returns The built URL href
    */
   href(...args: CreateHrefArgs<pattern>): string {
-    return createHref(this.pattern, ...(args as any))
+    return createHref(this.pattern, ...args)
   }
 }
 
 /**
  * Build a {@link Route} type from a request method and pattern.
  */
-// prettier-ignore
+// oxfmt-ignore
 export type BuildRoute<method extends RequestMethod | 'ANY', pattern extends string | RoutePattern> =
   pattern extends string ? Route<method, pattern> :
   pattern extends RoutePattern<infer source extends string> ? Route<method, source> :
@@ -119,7 +119,7 @@ function buildRouteMap<base extends string, defs extends RouteDefs>(
   return routes
 }
 
-// prettier-ignore
+// oxfmt-ignore
 export type BuildRouteMap<base extends string, defs extends RouteDefs> = Simplify<{
   -readonly [name in keyof defs]: (
     defs[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? Route<method, JoinPatterns<base, pattern>> :
@@ -129,7 +129,7 @@ export type BuildRouteMap<base extends string, defs extends RouteDefs> = Simplif
   )
 }>
 
-// prettier-ignore
+// oxfmt-ignore
 type BuildRouteWithBase<base extends string, def extends RouteDef> =
   def extends string ? Route<'ANY', JoinPatterns<base, def>> :
   def extends RoutePattern<infer pattern extends string> ? Route<'ANY', JoinPatterns<base, pattern>> :

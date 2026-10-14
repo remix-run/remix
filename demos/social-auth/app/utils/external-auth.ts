@@ -1,21 +1,15 @@
 import { createGitHubAuthProvider, createGoogleAuthProvider, createXAuthProvider } from 'remix/auth'
-import type {
-  GitHubAuthProfile,
-  GoogleAuthProfile,
-  OAuthProvider,
-  OAuthStandardTokens,
-  XAuthProfile,
-} from 'remix/auth'
+import type { GitHubAuthProfile, GoogleAuthProfile, OAuthProvider, XAuthProfile } from 'remix/auth'
 
 import { routes } from '../routes.ts'
 
 export type ExternalProviderName = 'google' | 'github' | 'x'
 
 type ExternalProviderFor<name extends ExternalProviderName> = name extends 'google'
-  ? OAuthProvider<GoogleAuthProfile, 'google', OAuthStandardTokens>
+  ? OAuthProvider<GoogleAuthProfile, 'google'>
   : name extends 'github'
-    ? OAuthProvider<GitHubAuthProfile, 'github', OAuthStandardTokens>
-    : OAuthProvider<XAuthProfile, 'x', OAuthStandardTokens>
+    ? OAuthProvider<GitHubAuthProfile, 'github'>
+    : OAuthProvider<XAuthProfile, 'x'>
 
 export interface ExternalProviderRegistry {
   google: ExternalProviderFor<'google'> | null
@@ -90,7 +84,7 @@ export function getExternalProviderStatus(
 }
 
 export function readExternalProviderLinks(
-  returnToQuery: { returnTo?: string },
+  returnToHrefOptions: { searchParams: { returnTo?: string } },
   registry: ExternalProviderRegistry = externalProviderRegistry,
   env: ExternalProviderEnvironment = process.env,
 ): ExternalProviderLink[] {
@@ -99,7 +93,9 @@ export function readExternalProviderLinks(
 
     return {
       name,
-      href: status.enabled ? routes.auth[name].login.href(undefined, returnToQuery) : undefined,
+      href: status.enabled
+        ? routes.auth[name].login.href(undefined, returnToHrefOptions)
+        : undefined,
       disabledReason: status.enabled ? undefined : createDisabledReason(name, status),
     }
   })

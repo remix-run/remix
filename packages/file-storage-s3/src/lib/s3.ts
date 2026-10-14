@@ -269,9 +269,19 @@ function createObjectUrl(endpoint: URL, bucket: string, forcePathStyle: boolean,
 }
 
 function encodeS3Key(key: string): string {
+  if (key === '') {
+    throw new TypeError('Invalid S3 object key: keys must not be empty')
+  }
+
   return key
     .split('/')
-    .map((segment) => encodeURIComponent(segment))
+    .map((segment) => {
+      if (segment === '.' || segment === '..') {
+        throw new TypeError('Invalid S3 object key: period-only path segments are not supported')
+      }
+
+      return encodeURIComponent(segment)
+    })
     .join('/')
 }
 
