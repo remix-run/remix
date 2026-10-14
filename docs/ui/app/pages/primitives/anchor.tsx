@@ -13,17 +13,9 @@ export const meta = {
   importPath: '@remix-run/ui/anchor',
 } satisfies PageMeta
 
-const basic = await loadExample(
-  new URL('../../../../../packages/ui/src/anchor/basic.example.tsx', import.meta.url),
-)
-
-const coordinatesExample = await loadExample(
-  new URL('../../../../../packages/ui/src/anchor/coordinates.example.tsx', import.meta.url),
-)
-
-const relativeExample = await loadExample(
-  new URL('../../../../../packages/ui/src/anchor/relative.example.tsx', import.meta.url),
-)
+const basic = await loadExample('anchor/basic')
+const coordinatesExample = await loadExample('anchor/coordinates')
+const relativeExample = await loadExample('anchor/relative')
 
 const anatomyCode = await highlightSource(`import { anchor } from '@remix-run/ui/anchor'
 

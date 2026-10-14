@@ -13,21 +13,10 @@ export const meta = {
   importPath: '@remix-run/ui/menu',
 } satisfies PageMeta
 
-const basic = await loadExample(
-  new URL('../../../../../packages/ui/src/menu/basic.example.tsx', import.meta.url),
-)
-
-const checkboxExample = await loadExample(
-  new URL('../../../../../packages/ui/src/menu/checkbox.example.tsx', import.meta.url),
-)
-
-const radioExample = await loadExample(
-  new URL('../../../../../packages/ui/src/menu/radio.example.tsx', import.meta.url),
-)
-
-const submenuExample = await loadExample(
-  new URL('../../../../../packages/ui/src/menu/submenu.example.tsx', import.meta.url),
-)
+const basic = await loadExample('menu/basic')
+const checkboxExample = await loadExample('menu/checkbox')
+const radioExample = await loadExample('menu/radio')
+const submenuExample = await loadExample('menu/submenu')
 
 const anatomyCode = await highlightSource(`import * as menu from '@remix-run/ui/menu'
 

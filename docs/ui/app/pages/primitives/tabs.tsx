@@ -13,25 +13,11 @@ export const meta = {
   importPath: '@remix-run/ui/tabs',
 } satisfies PageMeta
 
-const basic = await loadExample(
-  new URL('../../../../../packages/ui/src/tabs/basic.example.tsx', import.meta.url),
-)
-
-const controlledExample = await loadExample(
-  new URL('../../../../../packages/ui/src/tabs/controlled.example.tsx', import.meta.url),
-)
-
-const disabledItemExample = await loadExample(
-  new URL('../../../../../packages/ui/src/tabs/disabled-item.example.tsx', import.meta.url),
-)
-
-const disabledExample = await loadExample(
-  new URL('../../../../../packages/ui/src/tabs/disabled.example.tsx', import.meta.url),
-)
-
-const eventsExample = await loadExample(
-  new URL('../../../../../packages/ui/src/tabs/events.example.tsx', import.meta.url),
-)
+const basic = await loadExample('tabs/basic')
+const controlledExample = await loadExample('tabs/controlled')
+const disabledItemExample = await loadExample('tabs/disabled-item')
+const disabledExample = await loadExample('tabs/disabled')
+const eventsExample = await loadExample('tabs/events')
 
 const anatomyCode = await highlightSource(`import * as tabs from '@remix-run/ui/tabs'
 

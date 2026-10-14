@@ -13,33 +13,13 @@ export const meta = {
   importPath: '@remix-run/ui/toggle',
 } satisfies PageMeta
 
-const basic = await loadExample(
-  new URL('../../../../../packages/ui/src/toggle/basic.example.tsx', import.meta.url),
-)
-
-const buttonExample = await loadExample(
-  new URL('../../../../../packages/ui/src/toggle/button.example.tsx', import.meta.url),
-)
-
-const controlledExample = await loadExample(
-  new URL('../../../../../packages/ui/src/toggle/controlled.example.tsx', import.meta.url),
-)
-
-const disabledExample = await loadExample(
-  new URL('../../../../../packages/ui/src/toggle/disabled.example.tsx', import.meta.url),
-)
-
-const readOnlyExample = await loadExample(
-  new URL('../../../../../packages/ui/src/toggle/read-only.example.tsx', import.meta.url),
-)
-
-const formExample = await loadExample(
-  new URL('../../../../../packages/ui/src/toggle/form.example.tsx', import.meta.url),
-)
-
-const eventsExample = await loadExample(
-  new URL('../../../../../packages/ui/src/toggle/events.example.tsx', import.meta.url),
-)
+const basic = await loadExample('toggle/basic')
+const buttonExample = await loadExample('toggle/button')
+const controlledExample = await loadExample('toggle/controlled')
+const disabledExample = await loadExample('toggle/disabled')
+const readOnlyExample = await loadExample('toggle/read-only')
+const formExample = await loadExample('toggle/form')
+const eventsExample = await loadExample('toggle/events')
 
 const anatomyCode = await highlightSource(`import { toggle } from '@remix-run/ui/toggle'
 

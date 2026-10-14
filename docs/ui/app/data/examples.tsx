@@ -1,6 +1,4 @@
 import { readFile } from 'node:fs/promises'
-import * as path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { clientEntry } from 'remix/component'
 import type { Handle, RemixNode } from 'remix/component'
 import { renderMarkdownHtml } from 'remix-docs-shared/markdown/render'
@@ -13,19 +11,13 @@ export interface LoadedExample {
   sourceHtml: string
 }
 
-const uiSourceDir = path.resolve(import.meta.dirname, '../../../../packages/ui/src')
+const uiSourceUrl = new URL('../../../../packages/ui/src/', import.meta.url)
 
-export async function loadExample(module: URL): Promise<LoadedExample> {
-  let relativePath = path.relative(uiSourceDir, fileURLToPath(module))
-  if (
-    relativePath.startsWith('..') ||
-    path.isAbsolute(relativePath) ||
-    !relativePath.endsWith('.example.tsx') ||
-    module.hash !== '' ||
-    module.search !== ''
-  ) {
-    throw new Error(`Example must be a .example.tsx file inside packages/ui/src: ${module}`)
+export async function loadExample(name: string): Promise<LoadedExample> {
+  if (!/^[\w-]+(?:\/[\w-]+)+$/.test(name)) {
+    throw new Error(`Invalid UI example name: ${name}`)
   }
+  let module = new URL(`${name}.example.tsx`, uiSourceUrl)
   let mod: unknown = await import(module.href)
   if (
     mod === null ||

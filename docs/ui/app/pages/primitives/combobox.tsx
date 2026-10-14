@@ -13,33 +13,13 @@ export const meta = {
   importPath: '@remix-run/ui/combobox',
 } satisfies PageMeta
 
-const basic = await loadExample(
-  new URL('../../../../../packages/ui/src/combobox/basic.example.tsx', import.meta.url),
-)
-
-const initialExample = await loadExample(
-  new URL('../../../../../packages/ui/src/combobox/initial.example.tsx', import.meta.url),
-)
-
-const richOptionsExample = await loadExample(
-  new URL('../../../../../packages/ui/src/combobox/rich-options.example.tsx', import.meta.url),
-)
-
-const disabledExample = await loadExample(
-  new URL('../../../../../packages/ui/src/combobox/disabled.example.tsx', import.meta.url),
-)
-
-const formExample = await loadExample(
-  new URL('../../../../../packages/ui/src/combobox/form.example.tsx', import.meta.url),
-)
-
-const eventsExample = await loadExample(
-  new URL('../../../../../packages/ui/src/combobox/events.example.tsx', import.meta.url),
-)
-
-const imperativeExample = await loadExample(
-  new URL('../../../../../packages/ui/src/combobox/imperative.example.tsx', import.meta.url),
-)
+const basic = await loadExample('combobox/basic')
+const initialExample = await loadExample('combobox/initial')
+const richOptionsExample = await loadExample('combobox/rich-options')
+const disabledExample = await loadExample('combobox/disabled')
+const formExample = await loadExample('combobox/form')
+const eventsExample = await loadExample('combobox/events')
+const imperativeExample = await loadExample('combobox/imperative')
 
 const anatomyCode = await highlightSource(`import * as combobox from '@remix-run/ui/combobox'
 

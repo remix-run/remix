@@ -35,23 +35,15 @@ describe('UI docs pages', () => {
   })
 
   it('loads the component and displays its source without rewriting imports', async () => {
-    let example = await loadExample(
-      new URL('../../../../packages/ui/src/accordion/basic.example.tsx', import.meta.url),
-    )
+    let example = await loadExample('accordion/basic')
     assert.equal(typeof example.Component, 'function')
     assert.match(example.sourceHtml, /remix\/component/)
     assert.match(example.sourceHtml, /@remix-run\/ui\/accordion/)
     assert.match(example.sourceHtml, /data-code-block-copy/)
   })
 
-  it('rejects modules outside the example source directory', async () => {
-    await assert.rejects(
-      () => loadExample(new URL('./docs.ts', import.meta.url)),
-      /Example must be a .example.tsx file inside packages\/ui\/src/,
-    )
-    await assert.rejects(
-      () => loadExample(new URL('../../../../packages/ui/src/accordion.tsx', import.meta.url)),
-      /Example must be a .example.tsx file inside packages\/ui\/src/,
-    )
+  it('rejects absolute paths and parent directories in example names', async () => {
+    await assert.rejects(() => loadExample('/accordion/basic'), /Invalid UI example name/)
+    await assert.rejects(() => loadExample('../accordion/basic'), /Invalid UI example name/)
   })
 })

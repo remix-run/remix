@@ -12,43 +12,14 @@ export const meta = {
   importPath: '@remix-run/ui/accordion',
 } satisfies PageMeta
 
-const basic = await loadExample(
-  new URL('../../../../../packages/ui/src/accordion/basic.example.tsx', import.meta.url),
-)
-
-const multiple = await loadExample(
-  new URL('../../../../../packages/ui/src/accordion/multiple.example.tsx', import.meta.url),
-)
-
-const controlledSingle = await loadExample(
-  new URL(
-    '../../../../../packages/ui/src/accordion/controlled-single.example.tsx',
-    import.meta.url,
-  ),
-)
-
-const controlledMultiple = await loadExample(
-  new URL(
-    '../../../../../packages/ui/src/accordion/controlled-multiple.example.tsx',
-    import.meta.url,
-  ),
-)
-
-const nonCollapsible = await loadExample(
-  new URL('../../../../../packages/ui/src/accordion/non-collapsible.example.tsx', import.meta.url),
-)
-
-const disabledExample = await loadExample(
-  new URL('../../../../../packages/ui/src/accordion/disabled.example.tsx', import.meta.url),
-)
-
-const disabledItem = await loadExample(
-  new URL('../../../../../packages/ui/src/accordion/disabled-item.example.tsx', import.meta.url),
-)
-
-const changeEvents = await loadExample(
-  new URL('../../../../../packages/ui/src/accordion/events.example.tsx', import.meta.url),
-)
+const basic = await loadExample('accordion/basic')
+const multiple = await loadExample('accordion/multiple')
+const controlledSingle = await loadExample('accordion/controlled-single')
+const controlledMultiple = await loadExample('accordion/controlled-multiple')
+const nonCollapsible = await loadExample('accordion/non-collapsible')
+const disabledExample = await loadExample('accordion/disabled')
+const disabledItem = await loadExample('accordion/disabled-item')
+const changeEvents = await loadExample('accordion/events')
 
 const anatomyCode = await highlightSource(`import * as accordion from '@remix-run/ui/accordion'
 

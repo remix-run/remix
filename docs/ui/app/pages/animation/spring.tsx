@@ -12,28 +12,11 @@ export const meta = {
   importPath: '@remix-run/ui/animation',
 } satisfies PageMeta
 
-const billing = await loadExample(
-  new URL('../../../../../packages/ui/src/animation/spring/billing.example.tsx', import.meta.url),
-)
-
-const presets = await loadExample(
-  new URL('../../../../../packages/ui/src/animation/spring/presets.example.tsx', import.meta.url),
-)
-
-const custom = await loadExample(
-  new URL('../../../../../packages/ui/src/animation/spring/custom.example.tsx', import.meta.url),
-)
-
-const webAnimationsExample = await loadExample(
-  new URL(
-    '../../../../../packages/ui/src/animation/spring/web-animations.example.tsx',
-    import.meta.url,
-  ),
-)
-
-const iteratorExample = await loadExample(
-  new URL('../../../../../packages/ui/src/animation/spring/iterator.example.tsx', import.meta.url),
-)
+const billing = await loadExample('animation/spring/billing')
+const presets = await loadExample('animation/spring/presets')
+const custom = await loadExample('animation/spring/custom')
+const webAnimationsExample = await loadExample('animation/spring/web-animations')
+const iteratorExample = await loadExample('animation/spring/iterator')
 
 const anatomyCode = await highlightSource(`import { css } from 'remix/component'
 import { spring } from '@remix-run/ui/animation'

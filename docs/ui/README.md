@@ -44,12 +44,10 @@ export default function AccordionPage(handle: Handle<PageProps>) {
 
 `PageLayout` reads the `Section` and titled `Example` elements in its children to build the table of contents. Keep these elements in the page JSX, including inside fragments or arrays; headings hidden inside another component's render function are not collected. Section and example IDs must be unique within a page. Give an example a `title` and optional `description` when it needs its own heading. Use `compact` for a shorter preview.
 
-Load examples and highlight snippets once at module scope:
+Load examples and highlight snippets once at module scope. Example names are relative to `packages/ui/src/`, without the `.example.tsx` suffix. For example, use `accordion/basic` or `animation/spring/billing`:
 
 ```tsx
-const basic = await loadExample(
-  new URL('../../../../../packages/ui/src/accordion/basic.example.tsx', import.meta.url),
-)
+const basic = await loadExample('accordion/basic')
 
 const anatomyCode = await highlightSource(`import * as accordion from '@remix-run/ui/accordion'
 

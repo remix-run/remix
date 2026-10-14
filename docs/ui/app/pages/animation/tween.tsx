@@ -12,9 +12,7 @@ export const meta = {
   importPath: '@remix-run/ui/animation',
 } satisfies PageMeta
 
-const timing = await loadExample(
-  new URL('../../../../../packages/ui/src/animation/tween/timing.example.tsx', import.meta.url),
-)
+const timing = await loadExample('animation/tween/timing')
 
 const anatomyCode = await highlightSource(
   `import { easings, tween } from '@remix-run/ui/animation'

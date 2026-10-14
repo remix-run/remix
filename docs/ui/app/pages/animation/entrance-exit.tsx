@@ -12,12 +12,7 @@ export const meta = {
   importPath: '@remix-run/ui/animation',
 } satisfies PageMeta
 
-const presence = await loadExample(
-  new URL(
-    '../../../../../packages/ui/src/animation/entrance-exit/presence.example.tsx',
-    import.meta.url,
-  ),
-)
+const presence = await loadExample('animation/entrance-exit/presence')
 
 const anatomyCode =
   await highlightSource(`import { animateEntrance, animateExit } from '@remix-run/ui/animation'

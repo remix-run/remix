@@ -12,16 +12,8 @@ export const meta = {
   importPath: '@remix-run/ui/animation',
 } satisfies PageMeta
 
-const reordering = await loadExample(
-  new URL(
-    '../../../../../packages/ui/src/animation/layout/reordering.example.tsx',
-    import.meta.url,
-  ),
-)
-
-const selection = await loadExample(
-  new URL('../../../../../packages/ui/src/animation/layout/selection.example.tsx', import.meta.url),
-)
+const reordering = await loadExample('animation/layout/reordering')
+const selection = await loadExample('animation/layout/selection')
 
 const anatomyCode = await highlightSource(`import { animateLayout } from '@remix-run/ui/animation'
 

@@ -13,13 +13,8 @@ export const meta = {
   importPath: '@remix-run/ui/popover',
 } satisfies PageMeta
 
-const basic = await loadExample(
-  new URL('../../../../../packages/ui/src/popover/basic.example.tsx', import.meta.url),
-)
-
-const editableAnchorExample = await loadExample(
-  new URL('../../../../../packages/ui/src/popover/editable-anchor.example.tsx', import.meta.url),
-)
+const basic = await loadExample('popover/basic')
+const editableAnchorExample = await loadExample('popover/editable-anchor')
 
 const anatomyCode = await highlightSource(`import * as popover from '@remix-run/ui/popover'
 

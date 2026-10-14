@@ -14,17 +14,9 @@ export const meta = {
   importPath: '@remix-run/ui/listbox',
 } satisfies PageMeta
 
-const basic = await loadExample(
-  new URL('../../../../../packages/ui/src/listbox/basic.example.tsx', import.meta.url),
-)
-
-const richOptionsExample = await loadExample(
-  new URL('../../../../../packages/ui/src/listbox/rich-options.example.tsx', import.meta.url),
-)
-
-const settledExample = await loadExample(
-  new URL('../../../../../packages/ui/src/listbox/settled.example.tsx', import.meta.url),
-)
+const basic = await loadExample('listbox/basic')
+const richOptionsExample = await loadExample('listbox/rich-options')
+const settledExample = await loadExample('listbox/settled')
 
 const anatomyCode = await highlightSource(`import * as listbox from '@remix-run/ui/listbox'
 

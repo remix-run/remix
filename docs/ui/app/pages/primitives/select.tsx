@@ -13,25 +13,11 @@ export const meta = {
   importPath: '@remix-run/ui/select',
 } satisfies PageMeta
 
-const basic = await loadExample(
-  new URL('../../../../../packages/ui/src/select/basic.example.tsx', import.meta.url),
-)
-
-const richOptionsExample = await loadExample(
-  new URL('../../../../../packages/ui/src/select/rich-options.example.tsx', import.meta.url),
-)
-
-const disabledExample = await loadExample(
-  new URL('../../../../../packages/ui/src/select/disabled.example.tsx', import.meta.url),
-)
-
-const formExample = await loadExample(
-  new URL('../../../../../packages/ui/src/select/form.example.tsx', import.meta.url),
-)
-
-const eventsExample = await loadExample(
-  new URL('../../../../../packages/ui/src/select/events.example.tsx', import.meta.url),
-)
+const basic = await loadExample('select/basic')
+const richOptionsExample = await loadExample('select/rich-options')
+const disabledExample = await loadExample('select/disabled')
+const formExample = await loadExample('select/form')
+const eventsExample = await loadExample('select/events')
 
 const anatomyCode = await highlightSource(`import * as select from '@remix-run/ui/select'
 import * as popover from '@remix-run/ui/popover'
