@@ -1226,7 +1226,9 @@ function appendSegment(seg: Segment, output: { html: string }): void {
   if (typeof seg === 'string') {
     output.html += seg
   } else if (Array.isArray(seg)) {
-    for (let part of seg) appendSegment(part, output)
+    for (let part of seg) {
+      if (part !== undefined) appendSegment(part, output)
+    }
   } else if (seg.kind === 'static') {
     output.html += seg.html
   } else {

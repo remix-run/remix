@@ -256,6 +256,16 @@ describe('stream', () => {
       expect(html).toBe('<div>One</div><span>Two</span>')
     })
 
+    it('renders sparse arrays without content for empty slots', async () => {
+      let children: RemixNode[] = []
+      children.length = 5
+      children[1] = 'First'
+      children[3] = [<span>Second</span>, , 'Third']
+
+      let html = await drain(renderToStream(children))
+      expect(html).toBe('First<span>Second</span>Third')
+    })
+
     it('renders mixed array of nodes', async () => {
       let stream = renderToStream([<div>One</div>, 'text', 42, null, undefined])
       let html = await drain(stream)
