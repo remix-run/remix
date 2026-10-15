@@ -62,7 +62,7 @@ const anatomyCode = await highlightSource(`
 `)
 ```
 
-`highlightSource` removes shared indentation and outer whitespace, then formats supported code snippets with the repository's Oxfmt rules before highlighting. If formatting fails, it logs a warning and displays the original snippet. Shell commands and other unsupported languages retain their source formatting.
+`highlightSource` removes shared indentation and outer whitespace, then formats supported code snippets with the repository's Oxfmt rules before highlighting. It omits defensive semicolons before standalone JSX only when formatting without them produces the same code. Required statement separators and literal text are preserved. If formatting fails, it logs a warning and displays the original snippet. Shell commands and other unsupported languages retain their source formatting.
 
 Examples live in `app/examples/**/*.example.tsx`. Each default exports a normal Remix component. Keep each example self-contained, including its styles, so readers can copy the whole file. The site reads the file for highlighted source and hydrates its default export with `clientEntry`; no source macros, generated copies or import rewriting are involved. These files belong to the site and import Remix UI through its public exports.
 

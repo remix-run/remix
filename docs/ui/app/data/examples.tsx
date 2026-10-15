@@ -61,6 +61,17 @@ export async function highlightSource(source: string, lang = 'tsx'): Promise<str
         throw new Error(result.errors.map((error) => error.codeframe ?? error.message).join('\n'))
       }
       value = result.code.trim()
+      if (extension === 'tsx' || extension === 'jsx') {
+        let fragment = value.replace(/^;(?=<)/gm, '')
+        if (fragment !== value) {
+          // Keep required separators and literal text by checking that removing
+          // JSX prefixes still formats to exactly the same code.
+          let checked = await format(`snippet.${extension}`, fragment, oxfmtConfig)
+          if (checked.errors.length === 0 && checked.code.trim() === value) {
+            value = fragment
+          }
+        }
+      }
     } catch (error) {
       console.warn(`Unable to format UI docs snippet (${lang}). Displaying original source.`, error)
     }

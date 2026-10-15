@@ -41,6 +41,33 @@ handle.update();},label: "Filters"})`)
     )
   })
 
+  it('omits defensive semicolons before standalone JSX and JSX after imports', async () => {
+    assert.equal(
+      await highlightSource('<button>Filters</button>'),
+      await renderSource('<button>Filters</button>'),
+    )
+    let source = `import { toggle } from '@remix-run/ui/toggle'
+
+<input type="checkbox" mix={toggle()} />`
+    assert.equal(await highlightSource(source), await renderSource(source))
+    assert.equal(
+      await highlightSource('<button>Filters</button>', 'jsx'),
+      await renderSource('<button>Filters</button>', 'jsx'),
+    )
+  })
+
+  it('preserves semicolons needed to separate statements', async () => {
+    let jsx = 'let content = render()\n;<div />'
+    assert.equal(await highlightSource(jsx), await renderSource(jsx))
+    let array = 'run()\n;[1, 2].forEach(log)'
+    assert.equal(await highlightSource(array), await renderSource(array))
+  })
+
+  it('preserves JSX-like text inside template literals', async () => {
+    let source = 'const markup = `start\n;<div />\nend`'
+    assert.equal(await highlightSource(source), await renderSource(source))
+  })
+
   it('renders the original snippet and warns when syntax prevents formatting', async (t) => {
     let warnings: string[] = []
     t.mock.method(console, 'warn', (message: string) => {
