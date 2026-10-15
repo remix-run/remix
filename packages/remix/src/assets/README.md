@@ -222,6 +222,9 @@ Use `assetServer.getScriptEntry()` to get everything needed to load a script and
 let { href, importMap, preloads } = await assetServer.getScriptEntry('app/assets/entry.tsx')
 ```
 
+Script entry metadata is cached between calls and refreshed when a watched file changes. Each
+call returns a separate copy, so changing the returned object does not affect later calls.
+
 This can be used when rendering a document shell:
 
 ```tsx
