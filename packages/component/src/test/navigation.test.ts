@@ -802,6 +802,11 @@ describe('navigate', () => {
   })
 
   it('ignores manual scroll and focus settings on traverse navigations', async (t) => {
+    let animationFrameCallbacks: FrameRequestCallback[] = []
+    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+      animationFrameCallbacks.push(callback)
+      return animationFrameCallbacks.length
+    })
     let dispatchNavigation = startStubNavigationListener(t)
     let event = createTraverseNavigateEvent({
       target: undefined,
@@ -817,6 +822,8 @@ describe('navigate', () => {
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
     await transition.runHandler()
     await transition.succeed()
+    animationFrameCallbacks.shift()?.(0)
+    animationFrameCallbacks.shift()?.(0)
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
@@ -967,6 +974,11 @@ describe('navigate', () => {
       },
     })
 
+    let animationFrameCallbacks: FrameRequestCallback[] = []
+    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+      animationFrameCallbacks.push(callback)
+      return animationFrameCallbacks.length
+    })
     let scroll = mock.fn()
     let intercept = mock.fn()
     let eventController = new AbortController()
@@ -1034,6 +1046,20 @@ describe('navigate', () => {
       resolveTransitionFinished()
       await transitionFinished
       await Promise.resolve()
+      // Scroll anchoring stays disabled while the page shrinks back to its own height.
+      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+      expect(document.adoptedStyleSheets[adoptedStyleSheetCount]).toBe(stylesheet)
+      let settledRule = stylesheet?.cssRules[0]
+      if (!(settledRule instanceof CSSStyleRule)) throw new Error('Expected scroll anchoring rule')
+      expect(settledRule.selectorText).toBe('html, body')
+      expect(settledRule.style.minHeight).toBe('')
+      expect(settledRule.style.overflowAnchor).toBe('none')
+      expect(settledRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
+      expect(stylesheet?.cssRules).toHaveLength(1)
+
+      animationFrameCallbacks.shift()?.(0)
+      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+      animationFrameCallbacks.shift()?.(0)
       expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
     } finally {
       eventController.abort()
