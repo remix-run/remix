@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { referenceTable } from '../reference-table.tsx'
+import { ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Popover',
@@ -81,6 +81,37 @@ const accessibilityCode = await highlightSource(`
   <div id="file-filters" role="dialog" aria-label="File filters" mix={popover.surface({ open, onHide })} />
 `)
 
+const typeDefinitions = {
+  PopoverProps: await highlightSource(
+    `export interface PopoverProps {
+  children?: RemixNode
+}`,
+  ),
+  PopoverContext: await highlightSource(
+    `export interface PopoverContext {
+  hideFocusTarget: HTMLElement | null
+  showFocusTarget: HTMLElement | null
+  surface: HTMLElement | null
+  anchor: { target: AnchorTarget; options: AnchorOptions } | null
+}`,
+  ),
+  PopoverSurfaceOptions: await highlightSource(
+    `export interface PopoverSurfaceOptions {
+  open: boolean
+  onHide: (request?: PopoverHideRequest) => void
+  closeOnAnchorClick?: boolean
+  restoreFocusOnHide?: boolean
+  stopOutsideClickPropagation?: boolean
+}`,
+  ),
+  PopoverHideRequest: await highlightSource(
+    `export interface PopoverHideRequest {
+  reason: 'escape-key' | 'outside-click'
+  target?: Node | null
+}`,
+  ),
+}
+
 export default function PopoverPage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>
@@ -143,72 +174,133 @@ export default function PopoverPage(handle: Handle<PageProps>) {
           Provides <code>PopoverContext</code> for one floating surface. Only accepts{' '}
           <code>children</code>.
         </p>
-        {referenceTable(
-          ['Provided member', 'Type', 'Meaning'],
-          [
-            [
-              'anchor',
-              '{ target: AnchorTarget, options: AnchorOptions } | null',
-              'Registered positioning target.',
-            ],
-            ['surface', 'HTMLElement | null', 'Registered floating root.'],
-            ['showFocusTarget, hideFocusTarget', 'HTMLElement | null', 'Registered focus targets.'],
-          ],
-        )}
+        <ApiTable
+          label="Provided member"
+          entries={[
+            {
+              name: 'anchor',
+              type: <code>{'{ target: AnchorTarget, options: AnchorOptions } | null'}</code>,
+              description: 'Registered positioning target.',
+            },
+            {
+              name: 'surface',
+              type: <code>{'HTMLElement | null'}</code>,
+              description: 'Registered floating root.',
+            },
+            {
+              name: 'showFocusTarget, hideFocusTarget',
+              type: <code>{'HTMLElement | null'}</code>,
+              description: 'Registered focus targets.',
+            },
+          ]}
+        />
         <h3 id="anchor-reference">anchor(options)</h3>
         <p>
           Registers its host as the anchor. Requires an options object, which may be empty. Accepts
           all <code>AnchorOptions</code>. Does not decorate the element with trigger semantics.
         </p>
         <h3 id="surface-reference">surface(options)</h3>
-        {referenceTable(
-          ['Option', 'Type', 'Behavior'],
-          [
-            ['open', 'boolean', 'Required controlled open state.'],
-            ['onHide', '(request?: PopoverHideRequest) => void', 'Required dismissal callback.'],
-            [
-              'closeOnAnchorClick',
-              'boolean',
-              'Defaults to true. False excludes anchor clicks from outside dismissal.',
-            ],
-            [
-              'restoreFocusOnHide',
-              'boolean',
-              'Defaults to true. Returns focus to the registered hide target.',
-            ],
-            [
-              'stopOutsideClickPropagation',
-              'boolean',
-              'Defaults to true. Stops the outside click after requesting dismissal.',
-            ],
-          ],
-        )}
-        {referenceTable(
-          ['Decoration', 'Value', 'Meaning'],
-          [['popover', 'manual', 'Controls the native top-layer surface.']],
-        )}
+        <ApiTable
+          label="Option"
+          defaults
+          entries={[
+            {
+              name: 'open',
+              type: <code>{'boolean'}</code>,
+              description: 'Controlled open state.',
+              required: true,
+            },
+            {
+              name: 'onHide',
+              type: <code>{'(request?: PopoverHideRequest) => void'}</code>,
+              description: 'Dismissal callback.',
+              required: true,
+            },
+            {
+              name: 'closeOnAnchorClick',
+              type: <code>{'boolean'}</code>,
+              description: 'False excludes anchor clicks from outside dismissal.',
+              defaultValue: <code>{'true'}</code>,
+            },
+            {
+              name: 'restoreFocusOnHide',
+              type: <code>{'boolean'}</code>,
+              description: 'Returns focus to the registered hide target.',
+              defaultValue: <code>{'true'}</code>,
+            },
+            {
+              name: 'stopOutsideClickPropagation',
+              type: <code>{'boolean'}</code>,
+              description: 'Stops the outside click after requesting dismissal.',
+              defaultValue: <code>{'true'}</code>,
+            },
+          ]}
+        />
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            {
+              name: 'popover',
+              type: <code>{'manual'}</code>,
+              description: 'Controls the native top-layer surface.',
+            },
+          ]}
+        />
         <h3 id="focus-on-show-reference">focusOnShow()</h3>
         <p>Registers its host as the focus target when the surface opens.</p>
         <h3 id="focus-on-hide-reference">focusOnHide()</h3>
         <p>Registers its host as the focus target when the surface closes.</p>
         <h3 id="hide-request-reference">PopoverHideRequest</h3>
-        {referenceTable(
-          ['Property', 'Type', 'Meaning'],
-          [
-            ['reason', "'escape-key' | 'outside-click'", 'Dismissal trigger.'],
-            ['target', 'Node | null | undefined', 'Outside-click target. Absent for Escape.'],
-          ],
-        )}
+        <ApiTable
+          label="Property"
+          entries={[
+            {
+              name: 'reason',
+              type: <code>{"'escape-key' | 'outside-click'"}</code>,
+              description: 'Dismissal trigger.',
+            },
+            {
+              name: 'target',
+              type: <code>{'Node | null | undefined'}</code>,
+              description: 'Outside-click target. Absent for Escape.',
+            },
+          ]}
+        />
         <h3 id="types-reference">Exported types</h3>
-        {referenceTable(
-          ['Type', 'Purpose'],
-          [
-            ['PopoverProps', 'Provider children.'],
-            ['PopoverContext', 'Registered surface, anchor and focus targets.'],
-            ['PopoverSurfaceOptions', 'Controlled state and dismissal options.'],
-            ['PopoverHideRequest', 'Reason and target supplied to onHide.'],
-          ],
-        )}
+        <ApiTable
+          detailsLabel="Definition"
+          entries={[
+            {
+              name: 'PopoverProps',
+              type: <code>{'interface'}</code>,
+              description: 'Provider children.',
+              id: 'type-PopoverProps',
+              details: <CodeBlock html={typeDefinitions.PopoverProps} />,
+            },
+            {
+              name: 'PopoverContext',
+              type: <code>{'interface'}</code>,
+              description: 'Registered surface, anchor and focus targets.',
+              id: 'type-PopoverContext',
+              details: <CodeBlock html={typeDefinitions.PopoverContext} />,
+            },
+            {
+              name: 'PopoverSurfaceOptions',
+              type: <code>{'interface'}</code>,
+              description: 'Controlled state and dismissal options.',
+              id: 'type-PopoverSurfaceOptions',
+              details: <CodeBlock html={typeDefinitions.PopoverSurfaceOptions} />,
+            },
+            {
+              name: 'PopoverHideRequest',
+              type: <code>{'interface'}</code>,
+              description: 'Reason and target supplied to onHide.',
+              id: 'type-PopoverHideRequest',
+              details: <CodeBlock html={typeDefinitions.PopoverHideRequest} />,
+            },
+          ]}
+        />
       </Section>
     </PageLayout>
   )

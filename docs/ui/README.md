@@ -24,7 +24,7 @@ Pages are normal Remix components in `app/pages/patterns/` and `app/pages/animat
 
 Pages follow the category order in `app/data/categories.ts`, then alphabetical title order within each category. The sidebar, landing card destinations and previous and next links all follow this list. Page navigation continues from Patterns into Animation.
 
-Write the body as JSX inside `PageLayout`. Shared helpers live beside the page folders in `app/pages/page.tsx`, `app/pages/example.tsx` and `app/pages/reference-table.tsx`. Place prose, code blocks and examples where readers should see them:
+Write the body as JSX inside `PageLayout`. Shared helpers live beside the page folders in `app/pages/page.tsx`, `app/pages/example.tsx` and `app/pages/api-table.tsx`. Place prose, code blocks and examples where readers should see them:
 
 ```tsx
 export default function AccordionPage(handle: Handle<PageProps>) {
@@ -45,6 +45,8 @@ export default function AccordionPage(handle: Handle<PageProps>) {
 ```
 
 `PageLayout` reads the `Section` and titled `Example` elements in its children to build the table of contents. Keep these elements in the page JSX, including inside fragments or arrays; headings hidden inside another component's render function are not collected. Section and example IDs must be unique within a page. Give an example a `title` and optional `description` when it needs its own heading. Use `compact` for a shorter preview.
+
+Use `ApiTable` for props, attributes, event fields and exported types. Each entry has a name, type and description, with optional default, required status and expanded detail. The shared component renders native disclosures with borderless detail tables. Keep full type definitions in expanded detail and put fragment IDs on their content so links reveal collapsed definitions. APIs with no options or fields can use concise prose.
 
 Load examples and highlight snippets once at module scope. Example names are relative to `app/examples/`, without the `.example.tsx` suffix. For example, use `accordion/basic` or `animation/spring/billing`:
 

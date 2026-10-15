@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { referenceTable } from '../reference-table.tsx'
+import { ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Tabs',
@@ -68,6 +68,53 @@ const accessibilityCode = await highlightSource(`
   </div>
 `)
 
+const typeDefinitions = {
+  TabsContextProps: await highlightSource(
+    `export interface TabsContextProps {
+  activeTab?: string
+  children?: RemixNode
+  defaultActiveTab?: string
+  disabled?: boolean
+  onActiveTabChange?: (activeTab: string) => void
+}`,
+  ),
+  TabsContextValue: await highlightSource(
+    `export interface TabsContextValue {
+  readonly activeTab: string | null
+  readonly disabled: boolean
+  activateTab(name: string): void
+  activateTabInDirection(name: string, direction: TabsActivationDirection): void
+  getPanelId(name: string): string
+  getTabId(name: string): string
+  isActiveTab(name: string): boolean
+  registerRoot(node: HTMLElement): void
+  registerTab(tab: TabsRegisteredTab): void
+  unregisterRoot(node: HTMLElement): void
+}`,
+  ),
+  TabOptions: await highlightSource(
+    `export interface TabOptions {
+  disabled?: boolean
+  name: string
+}`,
+  ),
+  TabPanelOptions: await highlightSource(
+    `export interface TabPanelOptions {
+  name: string
+}`,
+  ),
+  TabsRegisteredTab: await highlightSource(
+    `export interface TabsRegisteredTab {
+  disabled: boolean
+  getTabNode(): HTMLButtonElement | null
+  name: string
+}`,
+  ),
+  TabsActivationDirection: await highlightSource(
+    `export type TabsActivationDirection = 'first' | 'last' | 'next' | 'previous'`,
+  ),
+}
+
 export default function TabsPage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>
@@ -123,125 +170,280 @@ export default function TabsPage(handle: Handle<PageProps>) {
         <p>
           Coordinates named tabs and panels. Provides <code>TabsContextValue</code> to descendants.
         </p>
-        {referenceTable(
-          ['Option', 'Type', 'Behavior'],
-          [
-            ['activeTab', 'string', 'Controlled tab name.'],
-            [
-              'defaultActiveTab',
-              'string',
-              'Initial tab name. Defaults to the first enabled tab after registration.',
-            ],
-            [
-              'onActiveTabChange',
-              '(activeTab: string) => void',
-              'Called when a different enabled tab is requested.',
-            ],
-            ['disabled', 'boolean', 'Disables all tabs. Defaults to false.'],
-            ['children', 'RemixNode', 'Tab list and panels.'],
-          ],
-        )}
-        {referenceTable(
-          ['Provided member', 'Type or result', 'Meaning'],
-          [
-            ['activeTab', 'string | null', 'Current selection. May be null before tabs register.'],
-            ['disabled', 'boolean', 'Whether the whole group is disabled.'],
-            [
-              'activateTab(name)',
-              'void',
-              'Requests a tab selection. Disabled tabs and unchanged selections are ignored.',
-            ],
-            [
-              'activateTabInDirection(name, direction)',
-              'void',
-              'Moves focus and selection among enabled tabs.',
-            ],
-            ['isActiveTab(name)', 'boolean', 'Checks whether a name is selected.'],
-            ['getTabId(name), getPanelId(name)', 'string', 'Generated relationship IDs.'],
-            [
-              'registerRoot(node), unregisterRoot(node)',
-              'void',
-              'Root event target registration. Used by root().',
-            ],
-            ['registerTab(tab)', 'void', 'Tab registration. Used by tab().'],
-          ],
-        )}
+        <ApiTable
+          label="Option"
+          defaults
+          entries={[
+            {
+              name: 'activeTab',
+              type: <code>{'string'}</code>,
+              description: 'Controlled tab name.',
+            },
+            {
+              name: 'defaultActiveTab',
+              type: <code>{'string'}</code>,
+              description: 'Initial tab name.',
+              defaultValue: <code>{'First enabled tab'}</code>,
+            },
+            {
+              name: 'onActiveTabChange',
+              type: <code>{'(activeTab: string) => void'}</code>,
+              description: 'Called when a different enabled tab is requested.',
+            },
+            {
+              name: 'disabled',
+              type: <code>{'boolean'}</code>,
+              description: 'Disables all tabs.',
+              defaultValue: <code>{'false'}</code>,
+            },
+            {
+              name: 'children',
+              type: <code>{'RemixNode'}</code>,
+              description: 'Tab list and panels.',
+            },
+          ]}
+        />
+        <ApiTable
+          label="Provided member"
+          entries={[
+            {
+              name: 'activeTab',
+              type: <code>{'string | null'}</code>,
+              description: 'Current selection. May be null before tabs register.',
+            },
+            {
+              name: 'disabled',
+              type: <code>{'boolean'}</code>,
+              description: 'Whether the whole group is disabled.',
+            },
+            {
+              name: 'activateTab',
+              type: <code>{'(name: string) => void'}</code>,
+              description:
+                'Requests a tab selection. Disabled tabs and unchanged selections are ignored.',
+            },
+            {
+              name: 'activateTabInDirection',
+              type: <code>{'(name: string, direction: TabsActivationDirection) => void'}</code>,
+              description: 'Moves focus and selection among enabled tabs.',
+            },
+            {
+              name: 'isActiveTab',
+              type: <code>{'(name: string) => boolean'}</code>,
+              description: 'Checks whether a name is selected.',
+            },
+            {
+              name: 'getTabId',
+              type: <code>{'(name: string) => string'}</code>,
+              description: 'Generated tab ID for a name.',
+            },
+            {
+              name: 'getPanelId',
+              type: <code>{'(name: string) => string'}</code>,
+              description: 'Generated panel ID for a name.',
+            },
+            {
+              name: 'registerRoot',
+              type: <code>{'(node: HTMLElement) => void'}</code>,
+              description: 'Registers the root event target. Used by root().',
+            },
+            {
+              name: 'unregisterRoot',
+              type: <code>{'(node: HTMLElement) => void'}</code>,
+              description: 'Unregisters the root event target. Used by root().',
+            },
+            {
+              name: 'registerTab',
+              type: <code>{'(tab: TabsRegisteredTab) => void'}</code>,
+              description: 'Tab registration. Used by tab().',
+            },
+          ]}
+        />
         <h3 id="root-reference">root()</h3>
         <p>Registers the element from which change events bubble.</p>
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [['data-disabled', 'empty string | absent', 'Present when Context is disabled.']],
-        )}
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            {
+              name: 'data-disabled',
+              type: <code>{'empty string | absent'}</code>,
+              description: 'Present when Context is disabled.',
+            },
+          ]}
+        />
         <h3 id="list-reference">list()</h3>
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [
-            ['role', 'tablist', 'Tab list semantics.'],
-            ['aria-disabled', 'true | absent', 'Reflects Context disabled state.'],
-          ],
-        )}
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            { name: 'role', type: <code>{'tablist'}</code>, description: 'Tab list semantics.' },
+            {
+              name: 'aria-disabled',
+              type: <code>{'true | absent'}</code>,
+              description: 'Reflects Context disabled state.',
+            },
+          ]}
+        />
         <h3 id="tab-reference">tab(options)</h3>
-        {referenceTable(
-          ['Option', 'Type', 'Behavior'],
-          [
-            ['name', 'string', 'Required. Matches a panel name.'],
-            ['disabled', 'boolean', 'Disables this tab. Defaults to false.'],
-          ],
-        )}
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [
-            ['role', 'tab', 'Tab semantics.'],
-            ['id, aria-controls', 'string', 'Generated tab ID and matching panel ID.'],
-            ['aria-selected', 'true | false', 'Current selection.'],
-            ['data-state', 'active | inactive', 'Selection styling hook.'],
-            ['tabIndex', '0 | -1', 'Only the selected enabled tab is in the tab order.'],
-            ['disabled', 'true | absent', 'Native disabled state.'],
-            ['type', 'button', 'Applied to button hosts.'],
-          ],
-        )}
+        <ApiTable
+          label="Option"
+          defaults
+          entries={[
+            {
+              name: 'name',
+              type: <code>{'string'}</code>,
+              description: 'Matches a panel name.',
+              required: true,
+            },
+            {
+              name: 'disabled',
+              type: <code>{'boolean'}</code>,
+              description: 'Disables this tab.',
+              defaultValue: <code>{'false'}</code>,
+            },
+          ]}
+        />
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            { name: 'role', type: <code>{'tab'}</code>, description: 'Tab semantics.' },
+            {
+              name: 'id, aria-controls',
+              type: <code>{'string'}</code>,
+              description: 'Generated tab ID and matching panel ID.',
+            },
+            {
+              name: 'aria-selected',
+              type: <code>{'true | false'}</code>,
+              description: 'Current selection.',
+            },
+            {
+              name: 'data-state',
+              type: <code>{'active | inactive'}</code>,
+              description: 'Selection styling hook.',
+            },
+            {
+              name: 'tabIndex',
+              type: <code>{'0 | -1'}</code>,
+              description: 'Only the selected enabled tab is in the tab order.',
+            },
+            {
+              name: 'disabled',
+              type: <code>{'true | absent'}</code>,
+              description: 'Native disabled state.',
+            },
+            {
+              name: 'type',
+              type: <code>{'button'}</code>,
+              description: 'Applied to button hosts.',
+            },
+          ]}
+        />
         <h3 id="panel-reference">panel(options)</h3>
-        {referenceTable(
-          ['Option', 'Type', 'Behavior'],
-          [['name', 'string', 'Required. Matches a tab name.']],
-        )}
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [
-            ['role', 'tabpanel', 'Panel semantics.'],
-            ['id, aria-labelledby', 'string', 'Generated panel ID and matching tab ID.'],
-            ['data-state', 'active | inactive', 'Current selection.'],
-            ['hidden, inert', 'true | absent', 'Present for inactive panels.'],
-          ],
-        )}
+        <ApiTable
+          label="Option"
+          entries={[
+            {
+              name: 'name',
+              type: <code>{'string'}</code>,
+              description: 'Matches a tab name.',
+              required: true,
+            },
+          ]}
+        />
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            { name: 'role', type: <code>{'tabpanel'}</code>, description: 'Panel semantics.' },
+            {
+              name: 'id, aria-labelledby',
+              type: <code>{'string'}</code>,
+              description: 'Generated panel ID and matching tab ID.',
+            },
+            {
+              name: 'data-state',
+              type: <code>{'active | inactive'}</code>,
+              description: 'Current selection.',
+            },
+            {
+              name: 'hidden, inert',
+              type: <code>{'true | absent'}</code>,
+              description: 'Present for inactive panels.',
+            },
+          ]}
+        />
         <h3 id="change-listener-reference">onTabsChange(handler, captureBoolean?)</h3>
         <p>
           Listens for <code>rmx:tabs-change</code> on a root or ancestor. Receives the event and an
           abort signal. Capture defaults to false.
         </p>
         <h3 id="change-event-reference">TabsChangeEvent</h3>
-        {referenceTable(
-          ['Property', 'Type', 'Meaning'],
-          [
-            ['activeTab', 'string', 'Requested tab name.'],
-            ['previousActiveTab', 'string | null', 'Selection before the request.'],
-          ],
-        )}
+        <ApiTable
+          label="Property"
+          entries={[
+            {
+              name: 'activeTab',
+              type: <code>{'string'}</code>,
+              description: 'Requested tab name.',
+            },
+            {
+              name: 'previousActiveTab',
+              type: <code>{'string | null'}</code>,
+              description: 'Selection before the request.',
+            },
+          ]}
+        />
         <h3 id="types-reference">Exported types</h3>
-        {referenceTable(
-          ['Type', 'Purpose'],
-          [
-            ['TabsContextProps', 'Provider props.'],
-            ['TabsContextValue', 'State and operations supplied to descendants.'],
-            ['TabOptions', 'Tab name and disabled state.'],
-            ['TabPanelOptions', 'Panel name.'],
-            ['TabsRegisteredTab', 'name, disabled and getTabNode() for registration.'],
-            [
-              'TabsActivationDirection',
-              "'first' | 'last' | 'next' | 'previous' for directional activation.",
-            ],
-          ],
-        )}
+        <ApiTable
+          detailsLabel="Definition"
+          entries={[
+            {
+              name: 'TabsContextProps',
+              type: <code>{'interface'}</code>,
+              description: 'Provider props.',
+              id: 'type-TabsContextProps',
+              details: <CodeBlock html={typeDefinitions.TabsContextProps} />,
+            },
+            {
+              name: 'TabsContextValue',
+              type: <code>{'interface'}</code>,
+              description: 'State and operations supplied to descendants.',
+              id: 'type-TabsContextValue',
+              details: <CodeBlock html={typeDefinitions.TabsContextValue} />,
+            },
+            {
+              name: 'TabOptions',
+              type: <code>{'interface'}</code>,
+              description: 'Tab name and disabled state.',
+              id: 'type-TabOptions',
+              details: <CodeBlock html={typeDefinitions.TabOptions} />,
+            },
+            {
+              name: 'TabPanelOptions',
+              type: <code>{'interface'}</code>,
+              description: 'Panel name.',
+              id: 'type-TabPanelOptions',
+              details: <CodeBlock html={typeDefinitions.TabPanelOptions} />,
+            },
+            {
+              name: 'TabsRegisteredTab',
+              type: <code>{'interface'}</code>,
+              description: 'Name, disabled and getTabNode() for registration.',
+              id: 'type-TabsRegisteredTab',
+              details: <CodeBlock html={typeDefinitions.TabsRegisteredTab} />,
+            },
+            {
+              name: 'TabsActivationDirection',
+              type: <code>{"'first' | 'last' | 'next' | 'previous'"}</code>,
+              description: "'first' | 'last' | 'next' | 'previous' for directional activation.",
+              id: 'type-TabsActivationDirection',
+              details: <CodeBlock html={typeDefinitions.TabsActivationDirection} />,
+            },
+          ]}
+        />
       </Section>
     </PageLayout>
   )

@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { ReferenceTable } from '../reference-table.tsx'
+import { ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Accordion',
@@ -45,6 +45,42 @@ const eventsCode = await highlightSource(`
     {/* Accordion */}
   </div>
 `)
+
+const typeDefinitions = {
+  AccordionType: await highlightSource(`export type AccordionType = 'single' | 'multiple'`),
+  AccordionSingleValue: await highlightSource(`export type AccordionSingleValue = string | null`),
+  AccordionMultipleValue: await highlightSource(`export type AccordionMultipleValue = string[]`),
+  AccordionValue: await highlightSource(`export type AccordionValue = string | null | string[]`),
+  AccordionBaseContextProps: await highlightSource(`export interface AccordionBaseContextProps {
+  children?: RemixNode
+  disabled?: boolean
+}`),
+  AccordionSingleContextProps:
+    await highlightSource(`export interface AccordionSingleContextProps extends AccordionBaseContextProps {
+  type?: 'single'
+  value?: AccordionSingleValue
+  defaultValue?: AccordionSingleValue
+  onValueChange?: (value: AccordionSingleValue) => void
+  collapsible?: boolean
+}`),
+  AccordionMultipleContextProps:
+    await highlightSource(`export interface AccordionMultipleContextProps extends AccordionBaseContextProps {
+  type: 'multiple'
+  value?: AccordionMultipleValue
+  defaultValue?: AccordionMultipleValue
+  onValueChange?: (value: AccordionMultipleValue) => void
+}`),
+  AccordionContextProps: await highlightSource(
+    `export type AccordionContextProps = AccordionSingleContextProps | AccordionMultipleContextProps`,
+  ),
+  AccordionItemOptions: await highlightSource(`export interface AccordionItemOptions {
+  disabled?: boolean
+  value: string
+}`),
+  AccordionTriggerOptions: await highlightSource(`export interface AccordionTriggerOptions {
+  disabled?: boolean
+}`),
+}
 
 export const preview = basic
 
@@ -142,499 +178,402 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           Provides open state, mode and disabled state to descendant items. Renders its children
           without adding an element. Single mode opens one panel at a time by default.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Prop</th>
-              <th>Type</th>
-              <th>Default and behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>type</code>
-              </td>
-              <td>
-                <code>'single' | 'multiple'</code>
-              </td>
-              <td>
-                Defaults to <code>'single'</code>. Determines whether one or several panels can be
-                open.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>value</code>
-              </td>
-              <td>
-                <code>string | null</code> (single) or <code>string[]</code> (multiple)
-              </td>
-              <td>
-                Omitted for uncontrolled state. Providing a value makes state controlled.{' '}
-                <code>null</code> or <code>[]</code> closes all panels.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>defaultValue</code>
-              </td>
-              <td>
-                <code>string | null</code> (single) or <code>string[]</code> (multiple)
-              </td>
-              <td>
-                Sets the starting state without making it controlled. Defaults to <code>null</code>{' '}
-                in single mode or <code>[]</code> in multiple mode. Ignored when value is provided.
-                Later changes to defaultValue do not reset state.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>onValueChange</code>
-              </td>
-              <td>
-                <code>(value: string | null) =&gt; void</code> (single) or{' '}
-                <code>(value: string[]) =&gt; void</code> (multiple)
-              </td>
-              <td>
-                Called with the next value requested by a trigger, in either state mode. In
-                controlled mode, update your value to accept it.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>collapsible</code>
-              </td>
-              <td>
-                <code>boolean</code> (single only)
-              </td>
-              <td>
-                Defaults to <code>true</code>. When false, the selected trigger cannot close its
-                panel. Does not select an initial panel or prevent your application changing a
-                controlled value.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>disabled</code>
-              </td>
-              <td>
-                <code>boolean</code>
-              </td>
-              <td>
-                Defaults to <code>false</code>. Disables all items without changing the open value.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>children</code>
-              </td>
-              <td>
-                <code>RemixNode</code>
-              </td>
-              <td>Optional content rendered inside the provider.</td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Prop"
+          defaults
+          entries={[
+            {
+              name: 'type',
+              type: <code>'single' | 'multiple'</code>,
+              description: <>Determines whether one or several panels can be open.</>,
+              defaultValue: <code>'single'</code>,
+            },
+            {
+              name: 'value',
+              type: <code>string | null | string[]</code>,
+              details: (
+                <p>
+                  Single mode uses <a href="#type-AccordionSingleValue">AccordionSingleValue</a>.
+                  Multiple mode uses{' '}
+                  <a href="#type-AccordionMultipleValue">AccordionMultipleValue</a>.
+                </p>
+              ),
+              description: (
+                <>
+                  Omitted for uncontrolled state. Providing a value makes state controlled.{' '}
+                  <code>null</code> or <code>[]</code> closes all panels.
+                </>
+              ),
+            },
+            {
+              name: 'defaultValue',
+              type: <code>string | null | string[]</code>,
+              details: (
+                <p>
+                  Single mode uses <a href="#type-AccordionSingleValue">AccordionSingleValue</a>.
+                  Multiple mode uses{' '}
+                  <a href="#type-AccordionMultipleValue">AccordionMultipleValue</a>.
+                </p>
+              ),
+              description: (
+                <>
+                  Sets the starting state without making it controlled. Defaults to null in single
+                  mode or an empty array in multiple mode. Ignored when value is provided. Later
+                  changes to defaultValue do not reset state.
+                </>
+              ),
+              defaultValue: (
+                <>
+                  <code>null</code> or <code>[]</code>
+                </>
+              ),
+            },
+            {
+              name: 'onValueChange',
+              type: (
+                <>
+                  <code>(value: string | null) =&gt; void</code> (single) or{' '}
+                  <code>(value: string[]) =&gt; void</code> (multiple)
+                </>
+              ),
+              description: (
+                <>
+                  Called with the next value requested by a trigger, in either state mode. In
+                  controlled mode, update your value to accept it.
+                </>
+              ),
+            },
+            {
+              name: 'collapsible',
+              type: (
+                <>
+                  <code>boolean</code> (single only)
+                </>
+              ),
+              description: (
+                <>
+                  When false, the selected trigger cannot close its panel. Does not select an
+                  initial panel or prevent your application changing a controlled value.
+                </>
+              ),
+              defaultValue: <code>true</code>,
+            },
+            {
+              name: 'disabled',
+              type: <code>boolean</code>,
+              description: <>Disables all items without changing the open value.</>,
+              defaultValue: <code>false</code>,
+            },
+            {
+              name: 'children',
+              type: <code>RemixNode</code>,
+              description: <>Optional content rendered inside the provider.</>,
+            },
+          ]}
+        />
         <h3 id="root-reference">root()</h3>
         <p>
           Apply to one container inside Context. Takes no options. Change events bubble from this
           element.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Attribute</th>
-              <th>Value</th>
-              <th>Behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>data-type</code>
-              </td>
-              <td>
-                <code>'single' | 'multiple'</code>
-              </td>
-              <td>Reflects Context's mode. Always present.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>data-disabled</code>
-              </td>
-              <td>Empty string or absent</td>
-              <td>
-                Present when Context is disabled. Select with <code>[data-disabled]</code>.
-              </td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            {
+              name: 'data-type',
+              type: <code>'single' | 'multiple'</code>,
+              description: <>Reflects Context's mode. Always present.</>,
+            },
+            {
+              name: 'data-disabled',
+              type: <>Empty string or absent</>,
+              description: (
+                <>
+                  Present when Context is disabled. Select with <code>[data-disabled]</code>.
+                </>
+              ),
+            },
+          ]}
+        />
         <h3 id="item-context-reference">ItemContext</h3>
         <p>
           Provides state for one item inside Context. Renders its children without adding an
           element.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Prop</th>
-              <th>Type</th>
-              <th>Default and behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>value</code>
-              </td>
-              <td>
-                <code>string</code>
-              </td>
-              <td>
-                Required identifier, unique within the accordion. Used in open values and change
-                events.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>disabled</code>
-              </td>
-              <td>
-                <code>boolean</code>
-              </td>
-              <td>
-                Defaults to <code>false</code>. Disables this item and excludes it from arrow-key
-                navigation. An item also inherits a disabled Context. Its open state is preserved.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>children</code>
-              </td>
-              <td>
-                <code>RemixNode</code>
-              </td>
-              <td>Optional content rendered inside the provider.</td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Prop"
+          defaults
+          entries={[
+            {
+              name: 'value',
+              type: <code>string</code>,
+              description: (
+                <>Identifier, unique within the accordion. Used in open values and change events.</>
+              ),
+              required: true,
+            },
+            {
+              name: 'disabled',
+              type: <code>boolean</code>,
+              description: (
+                <>
+                  Disables this item and excludes it from arrow-key navigation. An item also
+                  inherits a disabled Context. Its open state is preserved.
+                </>
+              ),
+              defaultValue: <code>false</code>,
+            },
+            {
+              name: 'children',
+              type: <code>RemixNode</code>,
+              description: <>Optional content rendered inside the provider.</>,
+            },
+          ]}
+        />
         <h4 id="item-state-reference">Provided state</h4>
         <p>
           Read <code>handle.context.get(accordion.ItemContext)</code> inside the provider. Its
           readonly properties reflect the current item state. Read them during render.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Property</th>
-              <th>Type</th>
-              <th>Meaning</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>value</code>
-              </td>
-              <td>
-                <code>string</code>
-              </td>
-              <td>The item's identifier.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>open</code>
-              </td>
-              <td>
-                <code>boolean</code>
-              </td>
-              <td>Whether the accordion's open value includes this item.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>disabled</code>
-              </td>
-              <td>
-                <code>boolean</code>
-              </td>
-              <td>
-                Whether Context or ItemContext disables this item. Trigger-only disabling does not
-                change it.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>lockedOpen</code>
-              </td>
-              <td>
-                <code>boolean</code>
-              </td>
-              <td>Whether this item is open in single mode with collapsible false.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>triggerId</code>, <code>panelId</code>
-              </td>
-              <td>
-                <code>string</code>
-              </td>
-              <td>Generated IDs used by the trigger and content mixins to connect the elements.</td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Property"
+          entries={[
+            {
+              name: 'value',
+              type: <code>string</code>,
+              description: <>The item's identifier.</>,
+            },
+            {
+              name: 'open',
+              type: <code>boolean</code>,
+              description: <>Whether the accordion's open value includes this item.</>,
+            },
+            {
+              name: 'disabled',
+              type: <code>boolean</code>,
+              description: (
+                <>
+                  Whether Context or ItemContext disables this item. Trigger-only disabling does not
+                  change it.
+                </>
+              ),
+            },
+            {
+              name: 'lockedOpen',
+              type: <code>boolean</code>,
+              description: <>Whether this item is open in single mode with collapsible false.</>,
+            },
+            {
+              name: 'triggerId, panelId',
+              type: <code>string</code>,
+              description: (
+                <>Generated IDs used by the trigger and content mixins to connect the elements.</>
+              ),
+            },
+          ]}
+        />
         <h3 id="item-reference">item()</h3>
         <p>
           Apply to a wrapper inside ItemContext. Takes no options. Decorates it with state
           attributes for selectors in <code>css()</code>.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Attribute</th>
-              <th>Value</th>
-              <th>Behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>data-state</code>
-              </td>
-              <td>
-                <code>'open' | 'closed'</code>
-              </td>
-              <td>Reflects whether this item is open. Always present.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>data-disabled</code>
-              </td>
-              <td>Empty string or absent</td>
-              <td>
-                Present when Context or ItemContext disables this item. Select with{' '}
-                <code>[data-disabled]</code>.
-              </td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            {
+              name: 'data-state',
+              type: <code>'open' | 'closed'</code>,
+              description: <>Reflects whether this item is open. Always present.</>,
+            },
+            {
+              name: 'data-disabled',
+              type: <>Empty string or absent</>,
+              description: (
+                <>
+                  Present when Context or ItemContext disables this item. Select with{' '}
+                  <code>[data-disabled]</code>.
+                </>
+              ),
+            },
+          ]}
+        />
         <h3 id="trigger-reference">trigger(options?)</h3>
         <p>
           Apply to a native button inside ItemContext. Handles activation and{' '}
           <a href="#accessibility">keyboard navigation</a>, and connects the button to its panel.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Option</th>
-              <th>Type</th>
-              <th>Default</th>
-              <th>Behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>disabled</code>
-              </td>
-              <td>
-                <code>boolean</code>
-              </td>
-              <td>
-                <code>false</code>
-              </td>
-              <td>
-                Prevents activation. A native disabled prop on the button has the same effect.
-              </td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Option"
+          defaults
+          entries={[
+            {
+              name: 'disabled',
+              type: <code>boolean</code>,
+              description: (
+                <>Prevents activation. A native disabled prop on the button has the same effect.</>
+              ),
+              defaultValue: <code>false</code>,
+            },
+          ]}
+        />
         <p>
           A disabled item also disables its trigger. Trigger-only disabling prevents activation but
           does not exclude the item from arrow-key navigation. Use ItemContext disabled when the
           item should be skipped.
         </p>
         <h4>Element attributes</h4>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Attribute</th>
-              <th>Value</th>
-              <th>Behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>id</code>
-              </td>
-              <td>
-                <code>string</code>
-              </td>
-              <td>Generated trigger ID.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>aria-controls</code>
-              </td>
-              <td>
-                <code>string</code>
-              </td>
-              <td>The panel ID.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>aria-expanded</code>
-              </td>
-              <td>
-                <code>'true' | 'false'</code>
-              </td>
-              <td>Reflects whether the panel is open.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>aria-disabled</code>
-              </td>
-              <td>
-                <code>'true'</code> or absent
-              </td>
-              <td>
-                Present when the selected panel is locked open. The trigger remains focusable.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>disabled</code>
-              </td>
-              <td>Present or absent</td>
-              <td>
-                Present when the item, trigger option or native button prop disables the trigger.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>data-state</code>
-              </td>
-              <td>
-                <code>'open' | 'closed'</code>
-              </td>
-              <td>Reflects whether this item is open. Always present.</td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            {
+              name: 'id',
+              type: <code>string</code>,
+              description: <>Generated trigger ID.</>,
+            },
+            {
+              name: 'aria-controls',
+              type: <code>string</code>,
+              description: <>The panel ID.</>,
+            },
+            {
+              name: 'aria-expanded',
+              type: <code>'true' | 'false'</code>,
+              description: <>Reflects whether the panel is open.</>,
+            },
+            {
+              name: 'aria-disabled',
+              type: (
+                <>
+                  <code>'true'</code> or absent
+                </>
+              ),
+              description: (
+                <>Present when the selected panel is locked open. The trigger remains focusable.</>
+              ),
+            },
+            {
+              name: 'disabled',
+              type: <>Present or absent</>,
+              description: (
+                <>
+                  Present when the item, trigger option or native button prop disables the trigger.
+                </>
+              ),
+            },
+            {
+              name: 'data-state',
+              type: <code>'open' | 'closed'</code>,
+              description: <>Reflects whether this item is open. Always present.</>,
+            },
+          ]}
+        />
         <h3 id="content-reference">content()</h3>
         <p>
           Apply to a panel inside ItemContext. Takes no options. Keeps closed panels mounted and
           applies their accessibility attributes immediately, including during visual transitions.
           Use state selectors in <code>css()</code> to hide or animate the panel.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Attribute</th>
-              <th>Value</th>
-              <th>Behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>id</code>
-              </td>
-              <td>
-                <code>string</code>
-              </td>
-              <td>Generated panel ID.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>aria-labelledby</code>
-              </td>
-              <td>
-                <code>string</code>
-              </td>
-              <td>The trigger ID.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>aria-hidden</code>
-              </td>
-              <td>
-                <code>'true'</code> or absent
-              </td>
-              <td>Present while closed. Hides the panel from screen readers.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>inert</code>
-              </td>
-              <td>Present or absent</td>
-              <td>Present while closed. Prevents focus and interaction inside the panel.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>data-state</code>
-              </td>
-              <td>
-                <code>'open' | 'closed'</code>
-              </td>
-              <td>Reflects whether this item is open. Always present.</td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            {
+              name: 'id',
+              type: <code>string</code>,
+              description: <>Generated panel ID.</>,
+            },
+            {
+              name: 'aria-labelledby',
+              type: <code>string</code>,
+              description: <>The trigger ID.</>,
+            },
+            {
+              name: 'aria-hidden',
+              type: (
+                <>
+                  <code>'true'</code> or absent
+                </>
+              ),
+              description: <>Present while closed. Hides the panel from screen readers.</>,
+            },
+            {
+              name: 'inert',
+              type: <>Present or absent</>,
+              description: (
+                <>Present while closed. Prevents focus and interaction inside the panel.</>
+              ),
+            },
+            {
+              name: 'data-state',
+              type: <code>'open' | 'closed'</code>,
+              description: <>Reflects whether this item is open. Always present.</>,
+            },
+          ]}
+        />
         <h3 id="change-listener-reference">onAccordionChange(handler, captureBoolean?)</h3>
-        <p>
-          Event mixin for the root or an ancestor. The handler receives an{' '}
-          <code>AccordionChangeEvent</code> and an <code>AbortSignal</code>, and returns{' '}
-          <code>void | Promise&lt;void&gt;</code>. The capture flag defaults to false. Pass true to
-          listen in the capture phase.
-        </p>
+        <p>Event mixin for the root or an ancestor.</p>
+        <ApiTable
+          label="Parameter"
+          defaults
+          entries={[
+            {
+              name: 'handler',
+              required: true,
+              type: (
+                <code>
+                  (event: Dispatched&lt;AccordionChangeEvent, target&gt;, signal: AbortSignal) =&gt;
+                  void | Promise&lt;void&gt;
+                </code>
+              ),
+              description: (
+                <>
+                  Receives the <a href="#change-events-reference">change event</a> with
+                  currentTarget typed as the listening element. The signal is aborted when the
+                  listener is removed.
+                </>
+              ),
+            },
+            {
+              name: 'captureBoolean',
+              type: <code>boolean</code>,
+              defaultValue: <code>false</code>,
+              description: <>Listen in the capture phase when true.</>,
+            },
+          ]}
+        />
         <h3 id="change-events-reference">AccordionChangeEvent</h3>
         <p>
           Extends <code>Event</code> with type <code>'rmx:accordion-change'</code>. Bubbles and is
           not cancelable. The following readonly properties are on the event itself.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Property</th>
-              <th>Type</th>
-              <th>Meaning</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>accordionType</code>
-              </td>
-              <td>
-                <code>'single' | 'multiple'</code>
-              </td>
-              <td>The accordion's mode at activation.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>itemValue</code>
-              </td>
-              <td>
-                <code>string</code>
-              </td>
-              <td>The value of the item whose trigger was activated.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>value</code>
-              </td>
-              <td>
-                <code>string | null | string[]</code>
-              </td>
-              <td>
-                The requested next open value. A string or null in single mode, or an array in
-                multiple mode.
-              </td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Property"
+          entries={[
+            {
+              name: 'accordionType',
+              type: <code>'single' | 'multiple'</code>,
+              description: <>The accordion's mode at activation.</>,
+            },
+            {
+              name: 'itemValue',
+              type: <code>string</code>,
+              description: <>The value of the item whose trigger was activated.</>,
+            },
+            {
+              name: 'value',
+              type: <code>string | null | string[]</code>,
+              description: (
+                <>
+                  The requested next open value. A string or null in single mode, or an array in
+                  multiple mode.
+                </>
+              ),
+            },
+          ]}
+        />
         <p>
           Dispatched after <code>onValueChange</code>. In controlled mode, describes a request even
           if the application declines it. Programmatic value updates and disabled or locked-open
@@ -647,119 +586,103 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           Dispatching an event does not change accordion state.
         </p>
         <h3 id="types-reference">Exported types</h3>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Definition</th>
-              <th>Purpose</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>AccordionType</code>
-              </td>
-              <td>
-                <code>'single' | 'multiple'</code>
-              </td>
-              <td>The accordion mode.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>AccordionSingleValue</code>
-              </td>
-              <td>
-                <code>string | null</code>
-              </td>
-              <td>An open item identifier, or null when all panels are closed.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>AccordionMultipleValue</code>
-              </td>
-              <td>
-                <code>string[]</code>
-              </td>
-              <td>The open item identifiers. An empty array means all panels are closed.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>AccordionValue</code>
-              </td>
-              <td>
-                <code>AccordionSingleValue | AccordionMultipleValue</code>
-              </td>
-              <td>The open value accepted by AccordionChangeEvent.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>AccordionBaseContextProps</code>
-              </td>
-              <td>
-                <code>children?</code>, <code>disabled?</code>
-              </td>
-              <td>Props shared by both Context modes.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>AccordionSingleContextProps</code>
-              </td>
-              <td>
-                Base props with single-mode state and <code>collapsible?</code>
-              </td>
-              <td>
-                Context props for single mode. See <a href="#context-reference">Context</a> for
-                field types and defaults.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>AccordionMultipleContextProps</code>
-              </td>
-              <td>
-                Base props with <code>type="multiple"</code> and array state
-              </td>
-              <td>
-                Context props for multiple mode. See <a href="#context-reference">Context</a> for
-                field types and defaults.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>AccordionContextProps</code>
-              </td>
-              <td>
-                <code>AccordionSingleContextProps | AccordionMultipleContextProps</code>
-              </td>
-              <td>The union of both Context prop shapes.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>AccordionItemOptions</code>
-              </td>
-              <td>
-                <code>value</code>, <code>disabled?</code>
-              </td>
-              <td>
-                Item configuration. See <a href="#item-context-reference">ItemContext</a> for field
-                types and defaults.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>AccordionTriggerOptions</code>
-              </td>
-              <td>
-                <code>disabled?</code>
-              </td>
-              <td>
-                Trigger configuration. See <a href="#trigger-reference">trigger()</a> for behavior
-                and defaults.
-              </td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          detailsLabel="Definition"
+          entries={[
+            {
+              name: 'AccordionType',
+              type: <code>'single' | 'multiple'</code>,
+              description: <>The accordion mode.</>,
+              id: 'type-AccordionType',
+              details: <CodeBlock html={typeDefinitions.AccordionType} />,
+            },
+            {
+              name: 'AccordionSingleValue',
+              type: <code>string | null</code>,
+              description: <>An open item identifier, or null when all panels are closed.</>,
+              id: 'type-AccordionSingleValue',
+              details: <CodeBlock html={typeDefinitions.AccordionSingleValue} />,
+            },
+            {
+              name: 'AccordionMultipleValue',
+              type: <code>string[]</code>,
+              description: (
+                <>The open item identifiers. An empty array means all panels are closed.</>
+              ),
+              id: 'type-AccordionMultipleValue',
+              details: <CodeBlock html={typeDefinitions.AccordionMultipleValue} />,
+            },
+            {
+              name: 'AccordionValue',
+              type: <code>string | null | string[]</code>,
+              description: <>The open value accepted by AccordionChangeEvent.</>,
+              id: 'type-AccordionValue',
+              details: <CodeBlock html={typeDefinitions.AccordionValue} />,
+            },
+            {
+              name: 'AccordionBaseContextProps',
+              type: <code>interface</code>,
+              description: <>Props shared by both Context modes.</>,
+              id: 'type-AccordionBaseContextProps',
+              details: <CodeBlock html={typeDefinitions.AccordionBaseContextProps} />,
+            },
+            {
+              name: 'AccordionSingleContextProps',
+              type: <code>interface</code>,
+              description: (
+                <>
+                  Context props for single mode. See <a href="#context-reference">Context</a> for
+                  field types and defaults.
+                </>
+              ),
+              id: 'type-AccordionSingleContextProps',
+              details: <CodeBlock html={typeDefinitions.AccordionSingleContextProps} />,
+            },
+            {
+              name: 'AccordionMultipleContextProps',
+              type: <code>interface</code>,
+              description: (
+                <>
+                  Context props for multiple mode. See <a href="#context-reference">Context</a> for
+                  field types and defaults.
+                </>
+              ),
+              id: 'type-AccordionMultipleContextProps',
+              details: <CodeBlock html={typeDefinitions.AccordionMultipleContextProps} />,
+            },
+            {
+              name: 'AccordionContextProps',
+              type: <code>AccordionSingleContextProps | AccordionMultipleContextProps</code>,
+              description: <>The union of both Context prop shapes.</>,
+              id: 'type-AccordionContextProps',
+              details: <CodeBlock html={typeDefinitions.AccordionContextProps} />,
+            },
+            {
+              name: 'AccordionItemOptions',
+              type: <code>interface</code>,
+              description: (
+                <>
+                  Item configuration. See <a href="#item-context-reference">ItemContext</a> for
+                  field types and defaults.
+                </>
+              ),
+              id: 'type-AccordionItemOptions',
+              details: <CodeBlock html={typeDefinitions.AccordionItemOptions} />,
+            },
+            {
+              name: 'AccordionTriggerOptions',
+              type: <code>interface</code>,
+              description: (
+                <>
+                  Trigger configuration. See <a href="#trigger-reference">trigger()</a> for behavior
+                  and defaults.
+                </>
+              ),
+              id: 'type-AccordionTriggerOptions',
+              details: <CodeBlock html={typeDefinitions.AccordionTriggerOptions} />,
+            },
+          ]}
+        />
       </Section>
     </PageLayout>
   )

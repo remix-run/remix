@@ -117,4 +117,106 @@ describe('Live examples in the docs site', () => {
     await popover.locator('button[aria-label="Filter pull requests"]:focus').waitFor()
     assert.deepEqual(errors, [], errors.join('\n'))
   })
+  it('opens API details with the keyboard and follows type links without JavaScript', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    page.setDefaultTimeout(5000)
+    await page.route('**/*', (route) =>
+      route.request().resourceType() === 'script' ? route.abort() : route.continue(),
+    )
+    await page.goto('/patterns/accordion/')
+    let reference = page.locator('#api-reference')
+    let callback = reference.locator('details').filter({
+      has: page.locator('summary').filter({ hasText: 'onValueChange' }),
+    })
+    let signature = callback.getByRole('row', { name: /^Type / }).getByRole('cell')
+    assert.equal(await signature.isVisible(), false)
+    await callback.locator('summary').press('Enter')
+    assert.equal(await signature.isVisible(), true)
+    assert.match(await signature.innerText(), /\(value: string\[\]\) => void/)
+    await callback.locator('summary').press('Space')
+    assert.equal(await signature.isVisible(), false)
+
+    let value = reference
+      .locator('.ui-api-table')
+      .first()
+      .locator('details')
+      .filter({
+        has: page.locator('summary code').getByText('value', { exact: true }),
+      })
+    await value.locator('summary').click()
+    await value.getByRole('link', { name: 'AccordionMultipleValue', exact: true }).click()
+    let definition = page.locator('#type-AccordionMultipleValue')
+    await definition.waitFor({ state: 'visible' })
+    assert.match(
+      await definition.locator('pre').innerText(),
+      /type AccordionMultipleValue = string\[\]/,
+    )
+    assert.equal(await definition.evaluate((el) => el.closest('details')?.open), true)
+
+    let attributes = reference.locator('.ui-api-table').filter({
+      has: page.locator('summary code').getByText('aria-hidden', { exact: true }),
+    })
+    let hidden = attributes.locator('details').filter({
+      has: page.locator('summary code').getByText('aria-hidden', { exact: true }),
+    })
+    await hidden.locator('summary').click()
+    assert.equal(
+      await hidden.getByRole('rowheader', { name: 'Description', exact: true }).isVisible(),
+      true,
+    )
+    assert.equal(
+      await hidden.getByRole('rowheader', { name: 'Value', exact: true }).isVisible(),
+      true,
+    )
+    assert.match(
+      await hidden.getByRole('row', { name: /^Description / }).innerText(),
+      /Present while closed/,
+    )
+
+    await page.setViewportSize({ width: 390, height: 720 })
+    let props = reference.locator('details').filter({
+      has: page.locator('summary code').getByText('AccordionMultipleContextProps', { exact: true }),
+    })
+    await props.locator('summary').click()
+    assert.match(await props.locator('pre').innerText(), /onValueChange\?:/)
+    let layout = await props.evaluate((el) => {
+      let pre = el.querySelector('pre')
+      if (!pre) throw new Error('Missing type definition')
+      return {
+        width: el.clientWidth,
+        fullWidth: el.scrollWidth,
+        codeWidth: pre.clientWidth,
+        codeFullWidth: pre.scrollWidth,
+      }
+    })
+    assert.ok(layout.fullWidth <= layout.width + 1)
+    assert.ok(layout.codeFullWidth <= layout.codeWidth + 1)
+
+    await page.goto('/patterns/listbox/#context-reference')
+    let settled = page.locator('.ui-api-entry').filter({
+      has: page.locator('summary code').getByText('onSelectSettled', { exact: true }),
+    })
+    await settled.locator('summary').click()
+    assert.match(
+      await settled.getByRole('row', { name: /^Type / }).innerText(),
+      /option\?: ListboxRegisteredOption.*void \| Promise<void>/,
+    )
+    let referenceWidth = await settled.evaluate((el) => ({
+      width: el.clientWidth,
+      fullWidth: el.scrollWidth,
+    }))
+    assert.ok(referenceWidth.fullWidth <= referenceWidth.width + 1)
+
+    await page.goto('/animation/spring/#types-reference')
+    let springOptions = page.locator('.ui-api-entry').filter({
+      has: page.locator('summary code').getByText('SpringOptions', { exact: true }),
+    })
+    await springOptions.locator('summary').click()
+    assert.match(await springOptions.locator('pre').innerText(), /bounce\?: number/)
+    let definitionWidth = await springOptions.locator('pre').evaluate((el) => ({
+      width: el.clientWidth,
+      fullWidth: el.scrollWidth,
+    }))
+    assert.ok(definitionWidth.fullWidth <= definitionWidth.width + 1)
+  })
 })

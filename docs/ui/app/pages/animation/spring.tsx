@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { ReferenceTable } from '../reference-table.tsx'
+import { ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Spring',
@@ -43,6 +43,24 @@ const mixinsCode = await highlightSource(`
     animateExit({ opacity: 0, ...spring('snappy') }),
   ]}>Saved</div>
 `)
+
+const typeDefinitions = {
+  SpringPreset: await highlightSource(`export type SpringPreset = 'smooth' | 'snappy' | 'bouncy'`),
+  SpringOptions: await highlightSource(
+    `export interface SpringOptions {
+  duration?: number
+  bounce?: number
+  velocity?: number
+}`,
+  ),
+  SpringIterator: await highlightSource(
+    `export interface SpringIterator extends IterableIterator<number> {
+  duration: number
+  easing: string
+  toString(): string
+}`,
+  ),
+}
 
 export default function SpringPage(handle: Handle<PageProps>) {
   return () => (
@@ -120,258 +138,190 @@ export default function SpringPage(handle: Handle<PageProps>) {
           Computes a motion profile and returns a <code>SpringIterator</code>. Playback is handled
           by CSS, the browser or your code.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Argument</th>
-              <th>Type</th>
-              <th>Behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>presetOrOptions</code>
-              </td>
-              <td>
-                <code>SpringPreset | SpringOptions</code>
-              </td>
-              <td>
-                Defaults to <code>'snappy'</code>. An options object uses its own field defaults.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>overrides</code>
-              </td>
-              <td>
-                <code>Omit&lt;SpringOptions, 'bounce'&gt;</code>
-              </td>
-              <td>
-                Overrides duration or velocity when using a named preset. To change bounce, use an
-                options object.
-              </td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Argument"
+          defaults
+          entries={[
+            {
+              name: 'presetOrOptions',
+              type: <code>{'SpringPreset | SpringOptions'}</code>,
+              description: <>A preset name or an options object with its own field defaults.</>,
+              defaultValue: <code>{"'snappy'"}</code>,
+            },
+            {
+              name: 'overrides',
+              type: <code>{"Omit<SpringOptions, 'bounce'>"}</code>,
+              description: (
+                <>
+                  Overrides duration or velocity when using a named preset. To change bounce, use an
+                  options object.
+                </>
+              ),
+            },
+          ]}
+        />
         <h4>SpringOptions</h4>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Option</th>
-              <th>Type</th>
-              <th>Default and behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>duration</code>
-              </td>
-              <td>
-                <code>number</code>
-              </td>
-              <td>
-                300 ms. Perceptual duration used to derive stiffness. The returned settling duration
-                may be longer.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>bounce</code>
-              </td>
-              <td>
-                <code>number</code>
-              </td>
-              <td>
-                Zero. Negative values produce overdamped motion, zero is critically damped and
-                positive values oscillate around the target. Clamped between -1 and 0.95.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>velocity</code>
-              </td>
-              <td>
-                <code>number</code>
-              </td>
-              <td>
-                Zero. Initial velocity in progress units per second. Does not track an element's
-                existing velocity.
-              </td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Option"
+          defaults
+          entries={[
+            {
+              name: 'duration',
+              type: <code>{'number'}</code>,
+              description: (
+                <>
+                  Perceptual duration in milliseconds used to derive stiffness. The returned
+                  settling duration may be longer.
+                </>
+              ),
+              defaultValue: <code>{'300'}</code>,
+            },
+            {
+              name: 'bounce',
+              type: <code>{'number'}</code>,
+              description: (
+                <>
+                  Negative values produce overdamped motion, zero is critically damped and positive
+                  values oscillate around the target. Clamped between -1 and 0.95.
+                </>
+              ),
+              defaultValue: <code>{'0'}</code>,
+            },
+            {
+              name: 'velocity',
+              type: <code>{'number'}</code>,
+              description: (
+                <>
+                  Initial velocity in progress units per second. Does not track an element's
+                  existing velocity.
+                </>
+              ),
+              defaultValue: <code>{'0'}</code>,
+            },
+          ]}
+        />
         <p>
           <code>spring()</code> uses the snappy preset's 200 ms perceptual duration.{' '}
           <code>{'spring({})'}</code> uses the options default of 300 ms.
         </p>
         <h4>SpringIterator</h4>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Member</th>
-              <th>Type</th>
-              <th>Behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>duration</code>
-              </td>
-              <td>
-                <code>number</code>
-              </td>
-              <td>Calculated settling time in milliseconds. Enumerable.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>easing</code>
-              </td>
-              <td>
-                <code>string</code>
-              </td>
-              <td>
-                CSS <code>linear()</code> easing. Enumerable. Spreading the iterator supplies
-                duration and easing.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>toString()</code>
-              </td>
-              <td>
-                <code>() =&gt; string</code>
-              </td>
-              <td>Duration and easing pair suitable for CSS transition timing.</td>
-            </tr>
-            <tr>
-              <td>Iteration</td>
-              <td>
-                <code>IterableIterator&lt;number&gt;</code>
-              </td>
-              <td>
-                Finite sequence of progress samples ending at exactly 1. Values can overshoot and
-                are not clamped to zero through one. Iteration consumes the sequence.
-              </td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Member"
+          entries={[
+            {
+              name: 'duration',
+              type: <code>{'number'}</code>,
+              description: <>Calculated settling time in milliseconds. Enumerable.</>,
+            },
+            {
+              name: 'easing',
+              type: <code>{'string'}</code>,
+              description: (
+                <>
+                  CSS <code>linear()</code> easing. Enumerable. Spreading the iterator supplies
+                  duration and easing.
+                </>
+              ),
+            },
+            {
+              name: 'toString()',
+              type: <code>{'() => string'}</code>,
+              description: <>Duration and easing pair suitable for CSS transition timing.</>,
+            },
+            {
+              name: 'Iteration',
+              type: <code>{'IterableIterator<number>'}</code>,
+              description: (
+                <>
+                  Finite sequence of progress samples ending at exactly 1. Values can overshoot and
+                  are not clamped to zero through one. Iteration consumes the sequence.
+                </>
+              ),
+            },
+          ]}
+        />
         <h3 id="transition-reference">spring.transition(property, presetOrOptions?, overrides?)</h3>
         <p>
           Returns a CSS transition string. Timing arguments follow <code>spring()</code>. Requires
           browser support for <code>linear()</code> easing.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Argument</th>
-              <th>Type</th>
-              <th>Behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>property</code>
-              </td>
-              <td>
-                <code>string | string[]</code>
-              </td>
-              <td>Required. One or several CSS property names.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>presetOrOptions</code>
-              </td>
-              <td>
-                <code>SpringPreset | SpringOptions</code>
-              </td>
-              <td>
-                Defaults to <code>'snappy'</code>.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>overrides</code>
-              </td>
-              <td>
-                <code>Omit&lt;SpringOptions, 'bounce'&gt;</code>
-              </td>
-              <td>Duration and velocity overrides for a preset.</td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Argument"
+          defaults
+          entries={[
+            {
+              name: 'property',
+              type: <code>{'string | string[]'}</code>,
+              description: <>One or several CSS property names.</>,
+              required: true,
+            },
+            {
+              name: 'presetOrOptions',
+              type: <code>{'SpringPreset | SpringOptions'}</code>,
+              description: <>A preset name or custom spring options.</>,
+              defaultValue: <code>{"'snappy'"}</code>,
+            },
+            {
+              name: 'overrides',
+              type: <code>{"Omit<SpringOptions, 'bounce'>"}</code>,
+              description: <>Duration and velocity overrides for a preset.</>,
+            },
+          ]}
+        />
         <p>
           A spring can also be interpolated directly into a timing string, such as{' '}
           <code>{'`transform ${spring("bouncy")}`'}</code>.
         </p>
         <h3 id="presets-api-reference">spring.presets</h3>
         <p>Exposes the parameters for each named preset.</p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Preset</th>
-              <th>Perceptual duration</th>
-              <th>Bounce</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>smooth</code>
-              </td>
-              <td>400 ms</td>
-              <td>-0.3</td>
-            </tr>
-            <tr>
-              <td>
-                <code>snappy</code>
-              </td>
-              <td>200 ms</td>
-              <td>0</td>
-            </tr>
-            <tr>
-              <td>
-                <code>bouncy</code>
-              </td>
-              <td>400 ms</td>
-              <td>0.3</td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Preset"
+          typeLabel="Configuration"
+          entries={[
+            {
+              name: 'smooth',
+              type: <code>{'{ duration: 400, bounce: -0.3 }'}</code>,
+              description: <>Overdamped motion without overshoot.</>,
+            },
+            {
+              name: 'snappy',
+              type: <code>{'{ duration: 200, bounce: 0 }'}</code>,
+              description: <>Critically damped motion without overshoot.</>,
+            },
+            {
+              name: 'bouncy',
+              type: <code>{'{ duration: 400, bounce: 0.3 }'}</code>,
+              description: <>Underdamped motion with overshoot.</>,
+            },
+          ]}
+        />
         <h3 id="types-reference">Exported types</h3>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Purpose</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>SpringPreset</code>
-              </td>
-              <td>
-                <code>'smooth' | 'snappy' | 'bouncy'</code>.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>SpringOptions</code>
-              </td>
-              <td>Perceptual duration, bounce and initial velocity.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>SpringIterator</code>
-              </td>
-              <td>Progress iterator with duration, easing and string conversion.</td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          detailsLabel="Definition"
+          entries={[
+            {
+              name: 'SpringPreset',
+              type: <code>{"'smooth' | 'snappy' | 'bouncy'"}</code>,
+              description: 'A named spring motion profile.',
+              id: 'type-SpringPreset',
+              details: <CodeBlock html={typeDefinitions.SpringPreset} />,
+            },
+            {
+              name: 'SpringOptions',
+              type: <code>{'interface'}</code>,
+              description: <>Perceptual duration, bounce and initial velocity.</>,
+              id: 'type-SpringOptions',
+              details: <CodeBlock html={typeDefinitions.SpringOptions} />,
+            },
+            {
+              name: 'SpringIterator',
+              type: <code>{'interface'}</code>,
+              description: <>Progress iterator with duration, easing and string conversion.</>,
+              id: 'type-SpringIterator',
+              details: <CodeBlock html={typeDefinitions.SpringIterator} />,
+            },
+          ]}
+        />
       </Section>
     </PageLayout>
   )

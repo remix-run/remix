@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { referenceTable } from '../reference-table.tsx'
+import { ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Select',
@@ -60,6 +60,19 @@ const accessibilityCode = await highlightSource(`
   </button>
   <div aria-label="Delivery methods" mix={select.list()} />
 `)
+
+const typeDefinitions = {
+  SelectContextProps: await highlightSource(
+    `export interface SelectContextProps {
+  children?: RemixNode
+  defaultLabel: string
+  defaultValue?: string | null
+  disabled?: boolean
+  labelSwapDelayMs?: number
+  name?: string
+}`,
+  ),
+}
 
 export default function SelectPage(handle: Handle<PageProps>) {
   return () => (
@@ -137,21 +150,46 @@ export default function SelectPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="context-reference">Context</h3>
-        {referenceTable(
-          ['Option', 'Type', 'Behavior'],
-          [
-            ['defaultLabel', 'string', 'Required initial trigger text and fallback label.'],
-            ['defaultValue', 'string | null', 'Initial selected value. Defaults to null.'],
-            ['disabled', 'boolean', 'Defaults to false. Disables trigger and hidden input.'],
-            ['name', 'string', 'Form field name used by hiddenInput().'],
-            [
-              'labelSwapDelayMs',
-              'number',
-              'Additional label delay in milliseconds. Defaults to 75.',
-            ],
-            ['children', 'RemixNode', 'Trigger, popup and optional hidden input.'],
-          ],
-        )}
+        <ApiTable
+          label="Option"
+          defaults
+          entries={[
+            {
+              name: 'defaultLabel',
+              type: <code>{'string'}</code>,
+              description: 'Initial trigger text and fallback label.',
+              required: true,
+            },
+            {
+              name: 'defaultValue',
+              type: <code>{'string | null'}</code>,
+              description: 'Initial selected value.',
+              defaultValue: <code>{'null'}</code>,
+            },
+            {
+              name: 'disabled',
+              type: <code>{'boolean'}</code>,
+              description: 'Disables trigger and hidden input.',
+              defaultValue: <code>{'false'}</code>,
+            },
+            {
+              name: 'name',
+              type: <code>{'string'}</code>,
+              description: 'Form field name used by hiddenInput().',
+            },
+            {
+              name: 'labelSwapDelayMs',
+              type: <code>{'number'}</code>,
+              description: 'Additional label delay in milliseconds.',
+              defaultValue: <code>{'75'}</code>,
+            },
+            {
+              name: 'children',
+              type: <code>{'RemixNode'}</code>,
+              description: 'Trigger, popup and optional hidden input.',
+            },
+          ]}
+        />
         <p>
           Descendants can read <code>displayedLabel</code>, <code>value</code>, <code>isOpen</code>,{' '}
           <code>isExpanded</code>, <code>disabled</code>, <code>name</code>, <code>listId</code>,{' '}
@@ -160,16 +198,37 @@ export default function SelectPage(handle: Handle<PageProps>) {
           context-value type.
         </p>
         <h3 id="trigger-reference">trigger()</h3>
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [
-            ['aria-haspopup', 'listbox', 'Popup semantics.'],
-            ['aria-expanded', 'true | false', 'Popup expansion state.'],
-            ['aria-controls', 'string', 'Generated list ID.'],
-            ['aria-describedby', 'string | absent', 'Selected option ID.'],
-            ['disabled', 'true | absent', 'Reflects Context disabled state or host disabled.'],
-          ],
-        )}
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            {
+              name: 'aria-haspopup',
+              type: <code>{'listbox'}</code>,
+              description: 'Popup semantics.',
+            },
+            {
+              name: 'aria-expanded',
+              type: <code>{'true | false'}</code>,
+              description: 'Popup expansion state.',
+            },
+            {
+              name: 'aria-controls',
+              type: <code>{'string'}</code>,
+              description: 'Generated list ID.',
+            },
+            {
+              name: 'aria-describedby',
+              type: <code>{'string | absent'}</code>,
+              description: 'Selected option ID.',
+            },
+            {
+              name: 'disabled',
+              type: <code>{'true | absent'}</code>,
+              description: 'Reflects Context disabled state or host disabled.',
+            },
+          ]}
+        />
         <h3 id="popover-reference">popover()</h3>
         <p>
           Requires <code>popover.Context</code> from the Popover module. Positions the selected
@@ -178,40 +237,71 @@ export default function SelectPage(handle: Handle<PageProps>) {
           surface mixin.
         </p>
         <h3 id="list-reference">list()</h3>
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [
-            ['role', 'listbox', 'Supplied by Listbox.'],
-            ['id', 'string', 'Generated list ID.'],
-            ['tabIndex', '-1', 'Programmatic focus target.'],
-            ['aria-activedescendant', 'string | absent', 'Highlighted option ID.'],
-          ],
-        )}
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            { name: 'role', type: <code>{'listbox'}</code>, description: 'Supplied by Listbox.' },
+            { name: 'id', type: <code>{'string'}</code>, description: 'Generated list ID.' },
+            {
+              name: 'tabIndex',
+              type: <code>{'-1'}</code>,
+              description: 'Programmatic focus target.',
+            },
+            {
+              name: 'aria-activedescendant',
+              type: <code>{'string | absent'}</code>,
+              description: 'Highlighted option ID.',
+            },
+          ]}
+        />
         <h3 id="option-reference">option(options)</h3>
         <p>
           Uses the Listbox option contract. <code>label</code> and <code>value</code> are required.{' '}
           <code>disabled</code> and <code>textValue</code> are optional.
         </p>
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [
-            ['role', 'option', 'Option semantics.'],
-            ['id', 'string', 'Generated option ID.'],
-            ['aria-selected, aria-disabled', 'true | false', 'Selected and disabled state.'],
-            ['data-highlighted', 'true | false', 'Highlighted state.'],
-            ['data-select-flash', 'true | absent', 'Temporary selection feedback.'],
-          ],
-        )}
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            { name: 'role', type: <code>{'option'}</code>, description: 'Option semantics.' },
+            { name: 'id', type: <code>{'string'}</code>, description: 'Generated option ID.' },
+            {
+              name: 'aria-selected, aria-disabled',
+              type: <code>{'true | false'}</code>,
+              description: 'Selected and disabled state.',
+            },
+            {
+              name: 'data-highlighted',
+              type: <code>{'true | false'}</code>,
+              description: 'Highlighted state.',
+            },
+            {
+              name: 'data-select-flash',
+              type: <code>{'true | absent'}</code>,
+              description: 'Temporary selection feedback.',
+            },
+          ]}
+        />
         <h3 id="hidden-input-reference">hiddenInput()</h3>
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [
-            ['type', 'hidden', 'Native hidden input.'],
-            ['name', 'string | absent', 'Context name.'],
-            ['value', 'string', 'Selected value or empty string.'],
-            ['disabled', 'true | absent', 'Context disabled state.'],
-          ],
-        )}
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            { name: 'type', type: <code>{'hidden'}</code>, description: 'Native hidden input.' },
+            { name: 'name', type: <code>{'string | absent'}</code>, description: 'Context name.' },
+            {
+              name: 'value',
+              type: <code>{'string'}</code>,
+              description: 'Selected value or empty string.',
+            },
+            {
+              name: 'disabled',
+              type: <code>{'true | absent'}</code>,
+              description: 'Context disabled state.',
+            },
+          ]}
+        />
         <h3 id="change-listener-reference">onSelectChange(handler, captureBoolean?)</h3>
         <p>
           Listens for <code>rmx:select-change</code>. Receives the event and an abort signal.
@@ -219,24 +309,39 @@ export default function SelectPage(handle: Handle<PageProps>) {
           trigger is registered.
         </p>
         <h3 id="change-event-reference">SelectChangeEvent</h3>
-        {referenceTable(
-          ['Property', 'Type', 'Meaning'],
-          [
-            ['value', 'string | null', 'Committed option value.'],
-            ['label', 'string | null', 'Committed option label.'],
-            ['optionId', 'string | null', 'Generated option ID.'],
-          ],
-        )}
+        <ApiTable
+          label="Property"
+          entries={[
+            {
+              name: 'value',
+              type: <code>{'string | null'}</code>,
+              description: 'Committed option value.',
+            },
+            {
+              name: 'label',
+              type: <code>{'string | null'}</code>,
+              description: 'Committed option label.',
+            },
+            {
+              name: 'optionId',
+              type: <code>{'string | null'}</code>,
+              description: 'Generated option ID.',
+            },
+          ]}
+        />
         <h3 id="types-reference">Exported types</h3>
-        {referenceTable(
-          ['Type', 'Purpose'],
-          [
-            [
-              'SelectContextProps',
-              'Initial selection, label, timing, disabled state and form name.',
-            ],
-          ],
-        )}
+        <ApiTable
+          detailsLabel="Definition"
+          entries={[
+            {
+              name: 'SelectContextProps',
+              type: <code>{'interface'}</code>,
+              description: 'Initial selection, label, timing, disabled state and form name.',
+              id: 'type-SelectContextProps',
+              details: <CodeBlock html={typeDefinitions.SelectContextProps} />,
+            },
+          ]}
+        />
         <p>Option types belong to the Listbox module. Positioning types belong to Anchor.</p>
       </Section>
     </PageLayout>

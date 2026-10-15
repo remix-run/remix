@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { ReferenceTable } from '../reference-table.tsx'
+import { ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Layout',
@@ -80,75 +80,57 @@ export default function LayoutPage(handle: Handle<PageProps>) {
           transforms. Returns an element mixin. Interrupted animations resume from the current
           visual position. An unchanged target keeps its current animation.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Configuration</th>
-              <th>Behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                Omitted, <code>true</code> or <code>{'{}'}</code>
-              </td>
-              <td>Uses the default timing and animates position and size.</td>
-            </tr>
-            <tr>
-              <td>Options object</td>
-              <td>Overrides timing or size animation.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>false</code> or <code>null</code>
-              </td>
-              <td>Disables animation and clears any active layout transform.</td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Option</th>
-              <th>Type</th>
-              <th>Default and behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>duration</code>
-              </td>
-              <td>
-                <code>number</code>
-              </td>
-              <td>200 ms. Playback duration.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>easing</code>
-              </td>
-              <td>
-                <code>string</code>
-              </td>
-              <td>
-                <code>'ease-out'</code>. CSS easing function. Spread <code>spring()</code> for
-                spring timing.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>size</code>
-              </td>
-              <td>
-                <code>boolean</code>
-              </td>
-              <td>
-                True. Scales the element when its dimensions change. False animates position only.
-              </td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Configuration"
+          typeLabel="Value"
+          entries={[
+            {
+              name: 'Omitted, true or {}',
+              type: <code>{'undefined | true | {}'}</code>,
+              description: <>Uses the default timing and animates position and size.</>,
+            },
+            {
+              name: 'Options object',
+              type: <code>{'LayoutAnimationConfig'}</code>,
+              description: <>Overrides timing or size animation.</>,
+            },
+            {
+              name: 'false or null',
+              type: <code>{'false | null'}</code>,
+              description: <>Disables animation and clears any active layout transform.</>,
+            },
+          ]}
+        />
+        <ApiTable
+          label="Option"
+          defaults
+          entries={[
+            {
+              name: 'duration',
+              type: <code>{'number'}</code>,
+              description: <>Playback duration in milliseconds.</>,
+              defaultValue: <code>{'200'}</code>,
+            },
+            {
+              name: 'easing',
+              type: <code>{'string'}</code>,
+              description: (
+                <>
+                  CSS easing function. Spread <code>spring()</code> for spring timing.
+                </>
+              ),
+              defaultValue: <code>{"'ease-out'"}</code>,
+            },
+            {
+              name: 'size',
+              type: <code>{'boolean'}</code>,
+              description: (
+                <>Scales the element when its dimensions change. False animates position only.</>
+              ),
+              defaultValue: <code>{'true'}</code>,
+            },
+          ]}
+        />
         <p>
           Uses the Web Animations API. Reduced-motion preferences are not read automatically. The
           mixin clears its temporary transforms when playback finishes or the element is removed.

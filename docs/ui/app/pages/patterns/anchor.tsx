@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { referenceTable } from '../reference-table.tsx'
+import { ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Anchor',
@@ -67,6 +67,51 @@ const lifetimeCode = await highlightSource(`
     signal.addEventListener('abort', cleanup, { once: true })
   })
 `)
+
+const typeDefinitions = {
+  AnchorTarget: await highlightSource(`export type AnchorTarget = HTMLElement | AnchorPoint`),
+  AnchorPoint: await highlightSource(
+    `export interface AnchorPoint {
+  height?: number
+  width?: number
+  x: number
+  y: number
+}`,
+  ),
+  AnchorOptions: await highlightSource(
+    `export type AnchorOptions = {
+  placement?:
+    | 'top'
+    | 'top-start'
+    | 'top-end'
+    | 'bottom'
+    | 'bottom-start'
+    | 'bottom-end'
+    | 'left'
+    | 'left-start'
+    | 'left-end'
+    | 'right'
+    | 'right-start'
+    | 'right-end'
+  inset?: boolean
+  relativeTo?: string
+  offset?: number | ((floating: HTMLElement) => number)
+  offsetX?: number | ((floating: HTMLElement) => number)
+  offsetY?: number | ((floating: HTMLElement) => number)
+}`,
+  ),
+  AnchorPlacement: await highlightSource(
+    `export type AnchorPlacement =
+  | 'top'
+  | 'bottom'
+  | 'left'
+  | 'right'
+  | 'top-start'
+  | 'top-end'
+  | 'bottom-start'
+  | 'bottom-end'`,
+  ),
+}
 
 export default function AnchorPage(handle: Handle<PageProps>) {
   return () => (
@@ -132,14 +177,28 @@ export default function AnchorPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="anchor-reference">anchor(floating, target, options?)</h3>
-        {referenceTable(
-          ['Parameter', 'Type', 'Meaning'],
-          [
-            ['floating', 'HTMLElement', 'Required element to position.'],
-            ['target', 'AnchorTarget', 'Required element or viewport point/rectangle.'],
-            ['options', 'AnchorOptions', 'Optional placement and geometry configuration.'],
-          ],
-        )}
+        <ApiTable
+          label="Parameter"
+          entries={[
+            {
+              name: 'floating',
+              type: <code>{'HTMLElement'}</code>,
+              description: 'Element to position.',
+              required: true,
+            },
+            {
+              name: 'target',
+              type: <code>{'AnchorTarget'}</code>,
+              description: 'Element or viewport point/rectangle.',
+              required: true,
+            },
+            {
+              name: 'options',
+              type: <code>{'AnchorOptions'}</code>,
+              description: 'Optional placement and geometry configuration.',
+            },
+          ]}
+        />
         <p>
           Returns a cleanup function. Writes inline positioning and size constraints plus{' '}
           <code>data-anchor-placement</code>. Popover hosts and coordinate targets use fixed
@@ -147,58 +206,113 @@ export default function AnchorPage(handle: Handle<PageProps>) {
           fixed.
         </p>
         <h3 id="options-reference">AnchorOptions</h3>
-        {referenceTable(
-          ['Option', 'Type', 'Behavior'],
-          [
-            [
-              'placement',
-              "'top' | 'bottom' | 'left' | 'right' plus -start or -end",
-              'Defaults to bottom. All four sides accept aligned variants.',
-            ],
-            ['inset', 'boolean', 'Defaults to false. Aligns inside the target edge.'],
-            [
-              'relativeTo',
-              'string',
-              'Selector for a descendant to align within the floating element.',
-            ],
-            [
-              'offset',
-              'number | ((floating: HTMLElement) => number)',
-              'Axis distance in pixels. Defaults to 0.',
-            ],
-            [
-              'offsetX',
-              'number | ((floating: HTMLElement) => number)',
-              'Horizontal adjustment in pixels. Defaults to 0.',
-            ],
-            [
-              'offsetY',
-              'number | ((floating: HTMLElement) => number)',
-              'Vertical adjustment in pixels. Defaults to 0.',
-            ],
-          ],
-        )}
+        <ApiTable
+          label="Option"
+          defaults
+          entries={[
+            {
+              name: 'placement',
+              type: (
+                <code>
+                  {
+                    "'top' | 'top-start' | 'top-end' | 'bottom' | 'bottom-start' | 'bottom-end' | 'left' | 'left-start' | 'left-end' | 'right' | 'right-start' | 'right-end'"
+                  }
+                </code>
+              ),
+              description: 'All four sides accept aligned variants.',
+              defaultValue: <code>{"'bottom'"}</code>,
+            },
+            {
+              name: 'inset',
+              type: <code>{'boolean'}</code>,
+              description: 'Aligns inside the target edge.',
+              defaultValue: <code>{'false'}</code>,
+            },
+            {
+              name: 'relativeTo',
+              type: <code>{'string'}</code>,
+              description: 'Selector for a descendant to align within the floating element.',
+            },
+            {
+              name: 'offset',
+              type: <code>{'number | ((floating: HTMLElement) => number)'}</code>,
+              description: 'Axis distance in pixels.',
+              defaultValue: <code>{'0'}</code>,
+            },
+            {
+              name: 'offsetX',
+              type: <code>{'number | ((floating: HTMLElement) => number)'}</code>,
+              description: 'Horizontal adjustment in pixels.',
+              defaultValue: <code>{'0'}</code>,
+            },
+            {
+              name: 'offsetY',
+              type: <code>{'number | ((floating: HTMLElement) => number)'}</code>,
+              description: 'Vertical adjustment in pixels.',
+              defaultValue: <code>{'0'}</code>,
+            },
+          ]}
+        />
         <h3 id="point-reference">AnchorPoint</h3>
-        {referenceTable(
-          ['Property', 'Type', 'Meaning'],
-          [
-            ['x, y', 'number', 'Required viewport coordinates in pixels.'],
-            ['width, height', 'number', 'Rectangle dimensions in pixels. Default to 0.'],
-          ],
-        )}
+        <ApiTable
+          label="Property"
+          defaults
+          entries={[
+            {
+              name: 'x, y',
+              type: <code>{'number'}</code>,
+              description: 'Viewport coordinates in pixels.',
+              required: true,
+            },
+            {
+              name: 'width, height',
+              type: <code>{'number'}</code>,
+              description: 'Rectangle dimensions in pixels.',
+              defaultValue: <code>{'0'}</code>,
+            },
+          ]}
+        />
         <h3 id="types-reference">Exported types</h3>
-        {referenceTable(
-          ['Type', 'Purpose'],
-          [
-            ['AnchorTarget', 'HTMLElement | AnchorPoint.'],
-            ['AnchorPoint', 'Viewport point or rectangle.'],
-            ['AnchorOptions', 'Placement, inset, relative alignment and offsets.'],
-            [
-              'AnchorPlacement',
-              'Main sides and top/bottom aligned variants. Left/right aligned variants are accepted by AnchorOptions but omitted from this exported alias.',
-            ],
-          ],
-        )}
+        <ApiTable
+          detailsLabel="Definition"
+          entries={[
+            {
+              name: 'AnchorTarget',
+              type: <code>{'HTMLElement | AnchorPoint'}</code>,
+              description: 'An element or viewport point or rectangle.',
+              id: 'type-AnchorTarget',
+              details: <CodeBlock html={typeDefinitions.AnchorTarget} />,
+            },
+            {
+              name: 'AnchorPoint',
+              type: <code>{'interface'}</code>,
+              description: 'Viewport point or rectangle.',
+              id: 'type-AnchorPoint',
+              details: <CodeBlock html={typeDefinitions.AnchorPoint} />,
+            },
+            {
+              name: 'AnchorOptions',
+              type: <code>object</code>,
+              description: 'Placement, inset, relative alignment and offsets.',
+              id: 'type-AnchorOptions',
+              details: <CodeBlock html={typeDefinitions.AnchorOptions} />,
+            },
+            {
+              name: 'AnchorPlacement',
+              type: (
+                <code>
+                  {
+                    "| 'top'\n  | 'bottom'\n  | 'left'\n  | 'right'\n  | 'top-start'\n  | 'top-end'\n  | 'bottom-start'\n  | 'bottom-end'"
+                  }
+                </code>
+              ),
+              description:
+                'Main sides and top/bottom aligned variants. Left/right aligned variants are accepted by AnchorOptions but omitted from this exported alias.',
+              id: 'type-AnchorPlacement',
+              details: <CodeBlock html={typeDefinitions.AnchorPlacement} />,
+            },
+          ]}
+        />
       </Section>
     </PageLayout>
   )

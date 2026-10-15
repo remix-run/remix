@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { ReferenceTable } from '../reference-table.tsx'
+import { ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Entrance and exit',
@@ -95,151 +95,131 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
           Runs when the element is inserted, from the supplied style values to its normal styles.
           Returns an element mixin.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Configuration</th>
-              <th>Behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                Omitted or <code>true</code>
-              </td>
-              <td>150 ms opacity fade from zero with ease-out.</td>
-            </tr>
-            <tr>
-              <td>Options object</td>
-              <td>
-                Uses the supplied keyframe and timing. Requires <code>duration</code>.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>false</code> or <code>null</code>
-              </td>
-              <td>Disables entrance animation.</td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Option</th>
-              <th>Type</th>
-              <th>Behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>duration</code>
-              </td>
-              <td>
-                <code>number</code>
-              </td>
-              <td>Required in an options object. Playback time in milliseconds.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>easing</code>
-              </td>
-              <td>
-                <code>string</code>
-              </td>
-              <td>
-                CSS easing function. Defaults to the browser's linear easing when omitted from an
-                options object.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>delay</code>
-              </td>
-              <td>
-                <code>number</code>
-              </td>
-              <td>Delay before playback in milliseconds. Defaults to zero.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>composite</code>
-              </td>
-              <td>
-                <code>CompositeOperation</code>
-              </td>
-              <td>
-                How the keyframe combines with underlying styles. Accepts <code>'replace'</code>,{' '}
-                <code>'add'</code> or <code>'accumulate'</code>. Defaults to <code>'replace'</code>.
-              </td>
-            </tr>
-            <tr>
-              <td>Style properties</td>
-              <td>
-                <code>string | number</code>
-              </td>
-              <td>
-                Starting values for entrance or destination values for exit. Other value types are
-                ignored.
-              </td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Entrance option</th>
-              <th>Type</th>
-              <th>Default and behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>initial</code>
-              </td>
-              <td>
-                <code>boolean</code>
-              </td>
-              <td>Defaults to true. False skips the first entrance for a key within its parent.</td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Configuration"
+          typeLabel="Value"
+          entries={[
+            {
+              name: 'Omitted or true',
+              type: <code>{'undefined | true'}</code>,
+              description: <>150 ms opacity fade from zero with ease-out.</>,
+            },
+            {
+              name: 'Options object',
+              type: (
+                <code>
+                  {
+                    '{ duration: number, easing?: string, delay?: number, composite?: CompositeOperation, initial?: boolean, [property: string]: unknown }'
+                  }
+                </code>
+              ),
+              description: (
+                <>
+                  Uses the supplied keyframe and timing. Requires <code>duration</code>.
+                </>
+              ),
+            },
+            {
+              name: 'false or null',
+              type: <code>{'false | null'}</code>,
+              description: <>Disables entrance animation.</>,
+            },
+          ]}
+        />
+        <ApiTable
+          label="Option"
+          defaults
+          entries={[
+            {
+              name: 'duration',
+              type: <code>{'number'}</code>,
+              description: <>Playback time in milliseconds.</>,
+              required: true,
+            },
+            {
+              name: 'easing',
+              type: <code>{'string'}</code>,
+              description: <>CSS easing function.</>,
+              defaultValue: <code>{"'linear'"}</code>,
+            },
+            {
+              name: 'delay',
+              type: <code>{'number'}</code>,
+              description: <>Delay before playback in milliseconds.</>,
+              defaultValue: <code>{'0'}</code>,
+            },
+            {
+              name: 'composite',
+              type: <code>{'CompositeOperation'}</code>,
+              description: (
+                <>
+                  How the keyframe combines with underlying styles. Accepts <code>'replace'</code>,{' '}
+                  <code>'add'</code> or <code>'accumulate'</code>.
+                </>
+              ),
+              defaultValue: <code>{"'replace'"}</code>,
+            },
+            {
+              name: 'Style properties',
+              type: <code>{'string | number'}</code>,
+              description: (
+                <>
+                  Starting values for entrance or destination values for exit. Other value types are
+                  ignored.
+                </>
+              ),
+            },
+          ]}
+        />
+        <ApiTable
+          label="Entrance option"
+          defaults
+          entries={[
+            {
+              name: 'initial',
+              type: <code>{'boolean'}</code>,
+              description: <>False skips the first entrance for a key within its parent.</>,
+              defaultValue: <code>{'true'}</code>,
+            },
+          ]}
+        />
         <h3 id="exit-reference">animateExit(config?)</h3>
         <p>
           Runs when the element is removed, from its current styles to the supplied values. Keeps
           the element in the DOM until playback finishes. Returns an element mixin.
         </p>
-        <ReferenceTable>
-          <thead>
-            <tr>
-              <th>Configuration</th>
-              <th>Behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                Omitted or <code>true</code>
-              </td>
-              <td>150 ms opacity fade to zero with ease-in.</td>
-            </tr>
-            <tr>
-              <td>Options object</td>
-              <td>
-                Accepts the same timing and style options as <code>animateEntrance()</code>. The
-                style values are the destination keyframe. <code>initial</code> has no effect.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>false</code> or <code>null</code>
-              </td>
-              <td>Removes the element without an exit animation.</td>
-            </tr>
-          </tbody>
-        </ReferenceTable>
+        <ApiTable
+          label="Configuration"
+          typeLabel="Value"
+          entries={[
+            {
+              name: 'Omitted or true',
+              type: <code>{'undefined | true'}</code>,
+              description: <>150 ms opacity fade to zero with ease-in.</>,
+            },
+            {
+              name: 'Options object',
+              type: (
+                <code>
+                  {
+                    '{ duration: number, easing?: string, delay?: number, composite?: CompositeOperation, initial?: boolean, [property: string]: unknown }'
+                  }
+                </code>
+              ),
+              description: (
+                <>
+                  Accepts the same timing and style options as <code>animateEntrance()</code>. The
+                  style values are the destination keyframe. <code>initial</code> has no effect.
+                </>
+              ),
+            },
+            {
+              name: 'false or null',
+              type: <code>{'false | null'}</code>,
+              description: <>Removes the element without an exit animation.</>,
+            },
+          ]}
+        />
         <p>
           Both mixins use the Web Animations API and do not automatically read reduced-motion
           preferences.

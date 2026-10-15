@@ -208,12 +208,30 @@ describe('UI docs', () => {
       assert.match(html, /data-demo-source/)
       assert.ok(html.indexOf('data-demo-source') < html.indexOf('id="anatomy"'))
       assert.ok(html.indexOf('id="accessibility"') < html.indexOf('id="api-reference"'))
-      assert.match(html, /<table>/)
+      assert.match(html, /<table(?:\s|>)/)
       assert.match(
         html,
         new RegExp(`${page.slug === 'anchor' ? 'chart' : 'basic'}\\.example[^"<]*\\.tsx`),
       )
       assert.match(html, new RegExp(`href="/patterns/${page.slug}/" aria-current="page"`))
+    }
+  })
+
+  it('renders expandable references across patterns and animation', async () => {
+    for (let page of pages.filter((page) => page.slug !== 'reduced-motion')) {
+      let response = await router.fetch(
+        new Request(`http://localhost/${page.category}/${page.slug}/`),
+      )
+      assert.equal(response.status, 200)
+      let html = await response.text()
+      let reference = html.slice(html.indexOf('<section id="api-reference"'))
+      assert.match(reference, /<details class="ui-api-entry"><summary>/, page.slug)
+      assert.match(reference, /<th scope="row">Description<\/th>/, page.slug)
+      assert.doesNotMatch(reference, /class="ui-reference-table"/, page.slug)
+      if (page.category === 'patterns' || page.slug === 'spring' || page.slug === 'tween') {
+        assert.match(reference, /id="type-[^"]+" class="ui-api-entry-content"/, page.slug)
+        assert.match(reference, /<th scope="row">Definition<\/th>/, page.slug)
+      }
     }
   })
 

@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { referenceTable } from '../reference-table.tsx'
+import { ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Menu',
@@ -59,6 +59,50 @@ const labelsCode = await highlightSource(`
     Export PDF
   </div>
 `)
+
+const typeDefinitions = {
+  MenuProviderProps: await highlightSource(
+    `export interface MenuProviderProps {
+  children?: RemixNode
+  label?: string
+}`,
+  ),
+  MenuTriggerOptions: await highlightSource(
+    `export interface MenuTriggerOptions extends AnchorOptions {}`,
+  ),
+  MenuContextTriggerOptions: await highlightSource(
+    `export interface MenuContextTriggerOptions extends AnchorOptions {}`,
+  ),
+  MenuItemOptions: await highlightSource(
+    `export interface MenuItemOptions {
+  checked?: boolean
+  disabled?: boolean
+  label?: string
+  name: string
+  searchValue?: string | string[]
+  type?: 'checkbox' | 'radio'
+  value?: string
+}`,
+  ),
+  SubmenuTriggerOptions: await highlightSource(
+    `export interface SubmenuTriggerOptions {
+  disabled?: boolean
+  label?: string
+  searchValue?: string | string[]
+  value?: string
+}`,
+  ),
+  MenuSelectItem: await highlightSource(
+    `export interface MenuSelectItem {
+  checked?: boolean
+  id: string
+  label: string
+  name: string
+  type: 'item' | 'checkbox' | 'radio'
+  value: string | null
+}`,
+  ),
+}
 
 export default function MenuPage(handle: Handle<PageProps>) {
   return () => (
@@ -144,32 +188,51 @@ export default function MenuPage(handle: Handle<PageProps>) {
           Coordinates open state, focus, highlighted items and nested menus. There are no controlled
           open-state props.
         </p>
-        {referenceTable(
-          ['Option', 'Type', 'Behavior'],
-          [
-            [
-              'label',
-              'string',
-              'Accessible menu name. Defaults to the trigger label relationship.',
-            ],
-            ['children', 'RemixNode', 'Trigger, surface and items.'],
-          ],
-        )}
+        <ApiTable
+          label="Option"
+          defaults
+          entries={[
+            {
+              name: 'label',
+              type: <code>{'string'}</code>,
+              description: 'Accessible menu name.',
+              defaultValue: <code>{'Trigger label'}</code>,
+            },
+            {
+              name: 'children',
+              type: <code>{'RemixNode'}</code>,
+              description: 'Trigger, surface and items.',
+            },
+          ]}
+        />
         <h3 id="trigger-reference">trigger(options?)</h3>
         <p>
           Accepts <code>AnchorOptions</code>. Defaults to bottom-start placement. Click toggles the
           menu. ArrowDown opens at the first enabled item and ArrowUp at the last. Enter and Space
           focus the list.
         </p>
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [
-            ['id', 'string', 'Generated trigger ID.'],
-            ['aria-haspopup', 'menu', 'Menu popup semantics.'],
-            ['aria-expanded', 'true | false', 'Open state.'],
-            ['aria-controls', 'string', 'Generated list ID.'],
-          ],
-        )}
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            { name: 'id', type: <code>{'string'}</code>, description: 'Generated trigger ID.' },
+            {
+              name: 'aria-haspopup',
+              type: <code>{'menu'}</code>,
+              description: 'Menu popup semantics.',
+            },
+            {
+              name: 'aria-expanded',
+              type: <code>{'true | false'}</code>,
+              description: 'Open state.',
+            },
+            {
+              name: 'aria-controls',
+              type: <code>{'string'}</code>,
+              description: 'Generated list ID.',
+            },
+          ]}
+        />
         <h3 id="context-trigger-reference">contextTrigger(options?)</h3>
         <p>
           Accepts <code>AnchorOptions</code>. Defaults to bottom-start placement. Opens from
@@ -180,85 +243,207 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <p>
           Creates a manual native popover. Root and submenu surfaces coordinate dismissal and focus.
         </p>
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [
-            ['popover', 'manual', 'Native top-layer surface.'],
-            ['data-menu-submenu', 'true | absent', 'Present on child surfaces.'],
-            ['data-close-animation', 'none | absent', 'Skip close fading when none.'],
-          ],
-        )}
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            {
+              name: 'popover',
+              type: <code>{'manual'}</code>,
+              description: 'Native top-layer surface.',
+            },
+            {
+              name: 'data-menu-submenu',
+              type: <code>{'true | absent'}</code>,
+              description: 'Present on child surfaces.',
+            },
+            {
+              name: 'data-close-animation',
+              type: <code>{'none | absent'}</code>,
+              description: 'Skip close fading when none.',
+            },
+          ]}
+        />
         <h3 id="list-reference">list()</h3>
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [
-            ['role', 'menu', 'Menu semantics.'],
-            ['id', 'string', 'Generated list ID.'],
-            ['tabIndex', '-1', 'Programmatic focus target.'],
-            ['aria-label', 'string | absent', 'Context label.'],
-            ['aria-labelledby', 'string | absent', 'Trigger ID when Context has no label.'],
-          ],
-        )}
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            { name: 'role', type: <code>{'menu'}</code>, description: 'Menu semantics.' },
+            { name: 'id', type: <code>{'string'}</code>, description: 'Generated list ID.' },
+            {
+              name: 'tabIndex',
+              type: <code>{'-1'}</code>,
+              description: 'Programmatic focus target.',
+            },
+            {
+              name: 'aria-label',
+              type: <code>{'string | absent'}</code>,
+              description: 'Context label.',
+            },
+            {
+              name: 'aria-labelledby',
+              type: <code>{'string | absent'}</code>,
+              description: 'Trigger ID when Context has no label.',
+            },
+          ]}
+        />
         <h3 id="item-reference">item(options)</h3>
-        {referenceTable(
-          ['Option', 'Type', 'Behavior'],
-          [
-            ['name', 'string', 'Required action identifier.'],
-            ['value', 'string', 'Optional action payload.'],
-            ['type', "'checkbox' | 'radio'", 'Omit for a regular menu item.'],
-            ['checked', 'boolean', 'Current checkbox or radio state. Defaults to false.'],
-            ['disabled', 'boolean', 'Defaults to false. Prevents activation.'],
-            ['label', 'string', 'Event and search label. Defaults to normalized rendered text.'],
-            ['searchValue', 'string | string[]', 'Typeahead text. Defaults to label.'],
-          ],
-        )}
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [
-            ['role', 'menuitem | menuitemcheckbox | menuitemradio', 'Depends on type.'],
-            ['id', 'string', 'Generated item ID.'],
-            ['tabIndex', '-1', 'Focus managed by the menu.'],
-            [
-              'aria-checked',
-              'true | false | absent',
-              'Checkbox and radio state. During flash reflects requested state.',
-            ],
-            ['aria-disabled', 'true | absent', 'Disabled state.'],
-            ['data-highlighted', 'true | absent', 'Highlighted state.'],
-            ['data-menu-flash', 'true | absent', 'Temporary selection feedback.'],
-          ],
-        )}
+        <ApiTable
+          label="Option"
+          defaults
+          entries={[
+            {
+              name: 'name',
+              type: <code>{'string'}</code>,
+              description: 'Action identifier.',
+              required: true,
+            },
+            {
+              name: 'value',
+              type: <code>{'string'}</code>,
+              description: 'Optional action payload.',
+            },
+            {
+              name: 'type',
+              type: <code>{"'checkbox' | 'radio'"}</code>,
+              description: 'Omit for a regular menu item.',
+            },
+            {
+              name: 'checked',
+              type: <code>{'boolean'}</code>,
+              description: 'Current checkbox or radio state.',
+              defaultValue: <code>{'false'}</code>,
+            },
+            {
+              name: 'disabled',
+              type: <code>{'boolean'}</code>,
+              description: 'Prevents activation.',
+              defaultValue: <code>{'false'}</code>,
+            },
+            {
+              name: 'label',
+              type: <code>{'string'}</code>,
+              description: 'Event and search label.',
+              defaultValue: <code>{'Rendered text'}</code>,
+            },
+            {
+              name: 'searchValue',
+              type: <code>{'string | string[]'}</code>,
+              description: 'Typeahead text.',
+              defaultValue: <code>{'label'}</code>,
+            },
+          ]}
+        />
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            {
+              name: 'role',
+              type: <code>{'menuitem | menuitemcheckbox | menuitemradio'}</code>,
+              description: 'Depends on type.',
+            },
+            { name: 'id', type: <code>{'string'}</code>, description: 'Generated item ID.' },
+            {
+              name: 'tabIndex',
+              type: <code>{'-1'}</code>,
+              description: 'Focus managed by the menu.',
+            },
+            {
+              name: 'aria-checked',
+              type: <code>{'true | false | absent'}</code>,
+              description: 'Checkbox and radio state. During flash reflects requested state.',
+            },
+            {
+              name: 'aria-disabled',
+              type: <code>{'true | absent'}</code>,
+              description: 'Disabled state.',
+            },
+            {
+              name: 'data-highlighted',
+              type: <code>{'true | absent'}</code>,
+              description: 'Highlighted state.',
+            },
+            {
+              name: 'data-menu-flash',
+              type: <code>{'true | absent'}</code>,
+              description: 'Temporary selection feedback.',
+            },
+          ]}
+        />
         <h3 id="submenu-trigger-reference">submenuTrigger(options)</h3>
         <p>
           Must be inside the child menu provider. Accepts an options object. Defaults to right-start
           placement with inner menu-item alignment.
         </p>
-        {referenceTable(
-          ['Option', 'Type', 'Behavior'],
-          [
-            ['disabled', 'boolean', 'Disables this submenu entry.'],
-            ['label', 'string', 'Search label. Defaults to rendered text.'],
-            ['searchValue', 'string | string[]', 'Typeahead text. Defaults to label.'],
-            ['value', 'string', 'Registered item metadata.'],
-          ],
-        )}
-        {referenceTable(
-          ['Decoration', 'Values', 'Meaning'],
-          [
-            ['role', 'menuitem', 'Parent menu entry.'],
-            ['id, aria-controls', 'string', 'Generated trigger and child list IDs.'],
-            ['tabIndex', '-1', 'Managed focus.'],
-            ['aria-haspopup', 'menu', 'Child menu semantics.'],
-            ['aria-expanded', 'true | false', 'Child open state.'],
-            ['aria-disabled', 'true | absent', 'Disabled state.'],
-            ['data-highlighted', 'true | absent', 'Parent highlight.'],
-            [
-              'data-submenu-state',
-              'dismissing | selecting | absent',
-              'Child state. Absent while idle.',
-            ],
-          ],
-        )}
+        <ApiTable
+          label="Option"
+          defaults
+          entries={[
+            {
+              name: 'disabled',
+              type: <code>{'boolean'}</code>,
+              description: 'Disables this submenu entry.',
+              defaultValue: <code>{'false'}</code>,
+            },
+            {
+              name: 'label',
+              type: <code>{'string'}</code>,
+              description: 'Search label.',
+              defaultValue: <code>{'Rendered text'}</code>,
+            },
+            {
+              name: 'searchValue',
+              type: <code>{'string | string[]'}</code>,
+              description: 'Typeahead text.',
+              defaultValue: <code>{'label'}</code>,
+            },
+            {
+              name: 'value',
+              type: <code>{'string'}</code>,
+              description: 'Registered item metadata.',
+            },
+          ]}
+        />
+        <ApiTable
+          label="Attribute"
+          typeLabel="Value"
+          entries={[
+            { name: 'role', type: <code>{'menuitem'}</code>, description: 'Parent menu entry.' },
+            {
+              name: 'id, aria-controls',
+              type: <code>{'string'}</code>,
+              description: 'Generated trigger and child list IDs.',
+            },
+            { name: 'tabIndex', type: <code>{'-1'}</code>, description: 'Managed focus.' },
+            {
+              name: 'aria-haspopup',
+              type: <code>{'menu'}</code>,
+              description: 'Child menu semantics.',
+            },
+            {
+              name: 'aria-expanded',
+              type: <code>{'true | false'}</code>,
+              description: 'Child open state.',
+            },
+            {
+              name: 'aria-disabled',
+              type: <code>{'true | absent'}</code>,
+              description: 'Disabled state.',
+            },
+            {
+              name: 'data-highlighted',
+              type: <code>{'true | absent'}</code>,
+              description: 'Parent highlight.',
+            },
+            {
+              name: 'data-submenu-state',
+              type: <code>{'dismissing | selecting | absent'}</code>,
+              description: 'Child state. Absent while idle.',
+            },
+          ]}
+        />
         <h3 id="select-listener-reference">onMenuSelect(handler, captureBoolean?)</h3>
         <p>
           Listens for <code>rmx:menu-select</code>. Receives the event and an abort signal. Capture
@@ -269,33 +454,81 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <p>
           <code>item</code> contains <code>MenuSelectItem</code> metadata.
         </p>
-        {referenceTable(
-          ['Item property', 'Type', 'Meaning'],
-          [
-            ['id', 'string', 'Selected item ID.'],
-            ['name', 'string', 'Action identifier.'],
-            ['value', 'string | null', 'Optional payload.'],
-            ['label', 'string', 'Explicit or rendered label.'],
-            ['type', "'item' | 'checkbox' | 'radio'", 'Item semantics.'],
-            [
-              'checked',
-              'boolean | undefined',
-              'Requested checked state for checkbox and radio items.',
-            ],
-          ],
-        )}
+        <ApiTable
+          label="Item property"
+          entries={[
+            { name: 'id', type: <code>{'string'}</code>, description: 'Selected item ID.' },
+            { name: 'name', type: <code>{'string'}</code>, description: 'Action identifier.' },
+            {
+              name: 'value',
+              type: <code>{'string | null'}</code>,
+              description: 'Optional payload.',
+            },
+            {
+              name: 'label',
+              type: <code>{'string'}</code>,
+              description: 'Explicit or rendered label.',
+            },
+            {
+              name: 'type',
+              type: <code>{"'item' | 'checkbox' | 'radio'"}</code>,
+              description: 'Item semantics.',
+            },
+            {
+              name: 'checked',
+              type: <code>{'boolean | undefined'}</code>,
+              description: 'Requested checked state for checkbox and radio items.',
+            },
+          ]}
+        />
         <h3 id="types-reference">Exported types</h3>
-        {referenceTable(
-          ['Type', 'Purpose'],
-          [
-            ['MenuProviderProps', 'Provider children and label.'],
-            ['MenuTriggerOptions', 'Anchor options for button triggers.'],
-            ['MenuContextTriggerOptions', 'Anchor options for context-menu triggers.'],
-            ['MenuItemOptions', 'Item action, semantics and search metadata.'],
-            ['SubmenuTriggerOptions', 'Child trigger availability and search metadata.'],
-            ['MenuSelectItem', 'Selected item data supplied by MenuSelectEvent.'],
-          ],
-        )}
+        <ApiTable
+          detailsLabel="Definition"
+          entries={[
+            {
+              name: 'MenuProviderProps',
+              type: <code>{'interface'}</code>,
+              description: 'Provider children and label.',
+              id: 'type-MenuProviderProps',
+              details: <CodeBlock html={typeDefinitions.MenuProviderProps} />,
+            },
+            {
+              name: 'MenuTriggerOptions',
+              type: <code>{'interface'}</code>,
+              description: 'Anchor options for button triggers.',
+              id: 'type-MenuTriggerOptions',
+              details: <CodeBlock html={typeDefinitions.MenuTriggerOptions} />,
+            },
+            {
+              name: 'MenuContextTriggerOptions',
+              type: <code>{'interface'}</code>,
+              description: 'Anchor options for context-menu triggers.',
+              id: 'type-MenuContextTriggerOptions',
+              details: <CodeBlock html={typeDefinitions.MenuContextTriggerOptions} />,
+            },
+            {
+              name: 'MenuItemOptions',
+              type: <code>{'interface'}</code>,
+              description: 'Item action, semantics and search metadata.',
+              id: 'type-MenuItemOptions',
+              details: <CodeBlock html={typeDefinitions.MenuItemOptions} />,
+            },
+            {
+              name: 'SubmenuTriggerOptions',
+              type: <code>{'interface'}</code>,
+              description: 'Child trigger availability and search metadata.',
+              id: 'type-SubmenuTriggerOptions',
+              details: <CodeBlock html={typeDefinitions.SubmenuTriggerOptions} />,
+            },
+            {
+              name: 'MenuSelectItem',
+              type: <code>{'interface'}</code>,
+              description: 'Selected item data supplied by MenuSelectEvent.',
+              id: 'type-MenuSelectItem',
+              details: <CodeBlock html={typeDefinitions.MenuSelectItem} />,
+            },
+          ]}
+        />
       </Section>
     </PageLayout>
   )
