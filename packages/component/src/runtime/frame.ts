@@ -28,6 +28,13 @@ type FrameData = {
   status: 'pending' | 'resolved'
   name?: string
   src: string
+  reloadOnAdopt?: boolean
+  fallback?: SerializedFrameFallback
+}
+
+type SerializedFrameFallback = {
+  html: string
+  data: RmxData
 }
 
 type HydrationData = {
@@ -313,6 +320,7 @@ export type Frame = {
     options?: RenderOptions,
   ) => Promise<void>
   matchesIdentity: (src: string, name: string | undefined) => boolean
+  setReloadFallback: (fallback: RemixNode | SerializedFrameFallback | undefined) => void
   dispose: () => void
   handle: FrameHandle
 }
@@ -353,6 +361,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let inheritedReloadAbortUnsubscribe: (() => void) | undefined
   let disposed = false
   let lifecycleController = new AbortController()
+  let reloadFallback: RemixNode | SerializedFrameFallback | undefined = init.marker?.fallback
 
   async function consumeClientEntryResources(
     source: ParentNode,
@@ -426,6 +435,28 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     regionTailRef: container.regionTailRef,
     regionParent: container.regionParent,
   }
+
+  frame.addEventListener('reloadStart', () => {
+    if (!reloadFallback || displayedContentStatus !== 'resolved') return
+
+    let currentNodes = getContentNodes()
+    contentRoot?.dispose()
+    contentRoot = undefined
+    removeVirtualRoots(currentNodes)
+    disposeSubFrames(currentNodes, context)
+    clearFrameContent()
+    displayedContentStatus = 'pending'
+
+    if (isSerializedFrameFallback(reloadFallback)) {
+      void render(reloadFallback.html, {
+        contentStatus: 'pending',
+        data: cloneRmxData(reloadFallback.data),
+      })
+    } else {
+      contentRoot = createFrameContentRoot()
+      contentRoot.render(reloadFallback)
+    }
+  })
 
   async function render(content: InternalFrameContent, options?: RenderOptions): Promise<void> {
     if (disposed || lifecycleController.signal.aborted || options?.signal?.aborted) return
@@ -709,6 +740,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     updateMarker,
     renderMarkerContent,
     matchesIdentity: (src, name) => !disposed && frame.src === src && frameName === name,
+    setReloadFallback(fallback) {
+      reloadFallback = fallback
+    },
     dispose,
     handle: frame,
   }
@@ -1438,6 +1472,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function isSerializedFrameFallback(
+  fallback: RemixNode | SerializedFrameFallback,
+): fallback is SerializedFrameFallback {
+  return (
+    typeof fallback === 'object' &&
+    fallback !== null &&
+    'html' in fallback &&
+    typeof fallback.html === 'string' &&
+    'data' in fallback &&
+    typeof fallback.data === 'object' &&
+    fallback.data !== null
+  )
+}
+
+function cloneRmxData(data: RmxData): RmxData {
+  return {
+    ...(data.h ? { h: { ...data.h } } : {}),
+    ...(data.f ? { f: { ...data.f } } : {}),
+  }
+}
+
 function hydrateRegion(
   vElement: RemixElement,
   start: Comment,
@@ -1525,6 +1580,9 @@ async function createSubFrames(
         if (marker) {
           let frameMarker: FrameMarkerData = { ...marker, id }
           tasks.push(existingFrame.updateMarker(frameMarker, options))
+          if (marker.reloadOnAdopt) {
+            reloadAdoptedFrame(existingFrame, context, options)
+          }
         } else {
           existingFrame.clearPendingTemplateWatch()
         }
@@ -1553,6 +1611,9 @@ async function createSubFrames(
           if (frameMarker.status === 'resolved') {
             tasks.push(subFrame.ready())
           }
+          if (frameMarker.reloadOnAdopt) {
+            reloadAdoptedFrame(subFrame, context, options)
+          }
         }
       }
 
@@ -1566,6 +1627,18 @@ async function createSubFrames(
   }
 
   await Promise.all(tasks)
+}
+
+function reloadAdoptedFrame(frame: Frame, context: FrameContext, options?: RenderOptions): void {
+  void frame
+    .ready()
+    .then(() => {
+      if (options?.signal?.aborted || context.lifecycleSignal.aborted) {
+        return
+      }
+      return frame.handle.reload()
+    })
+    .catch(() => {})
 }
 
 function isHydrationMarkerLive(marker: HydrationMarker, context: FrameContext): boolean {
