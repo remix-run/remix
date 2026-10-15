@@ -110,19 +110,7 @@ export function createModuleStore<transformed, resolved, emitted>(
 
   return {
     get(identityPath) {
-      let existing = recordsByIdentityPath.get(identityPath)
-      if (existing) return existing
-
-      let record: MutableModuleRecord<transformed, resolved, emitted> = {
-        contentVersion: 0,
-        identityPath,
-        invalidationVersion: 0,
-        links: createEmptyLinks(),
-        trackedFiles: new Set(),
-        trackedDirectories: new Set(),
-      }
-      recordsByIdentityPath.set(identityPath, record)
-      return record
+      return getOrCreateMutableRecord(identityPath)
     },
 
     getAcceptedImporters(identityPath) {
