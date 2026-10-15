@@ -57,7 +57,7 @@ export default function LayoutPage(handle: Handle<PageProps>) {
           indicator to change size without stretching foreground text.
         </p>
 
-        <Example id="selection" example={selection} compact />
+        <Example id="selection" example={selection} />
       </Section>
       <Section id="transforms" title="Composing transforms">
         <p>

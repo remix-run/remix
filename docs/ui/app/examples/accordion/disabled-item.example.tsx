@@ -75,7 +75,7 @@ const rootCss = css({
     fontWeight: 600,
     textAlign: 'left',
     cursor: 'pointer',
-    '&:disabled': { cursor: 'default' },
+    '&:disabled': { cursor: 'not-allowed' },
     '&:hover:not(:disabled)': { background: 'light-dark(#f7f7fa, #24242b)' },
     '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '-3px' },
     '& svg': { transition: 'transform 280ms ease' },

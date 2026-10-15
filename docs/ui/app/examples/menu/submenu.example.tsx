@@ -57,7 +57,7 @@ const buttonCss = css({
   cursor: 'pointer',
   '&:hover:not(:disabled)': { background: 'light-dark(#f0f0f5, #303038)' },
   '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
-  '&:disabled': { opacity: 0.45, cursor: 'default' },
+  '&:disabled': { opacity: 0.45, cursor: 'not-allowed' },
 })
 
 const surfaceCss = css({
@@ -102,7 +102,7 @@ const itemCss = css({
     background: 'light-dark(#0578be, #80caff)',
     color: 'light-dark(#fff, #102332)',
   },
-  '&[aria-disabled="true"]': { opacity: 0.4 },
+  '&[aria-disabled="true"]': { opacity: 0.4, cursor: 'not-allowed' },
 })
 
 function ChevronDownIcon() {

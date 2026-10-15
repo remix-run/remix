@@ -55,12 +55,10 @@ const stackCss = css({
 })
 
 const cardCss = css({
-  padding: '20px',
+  overflow: 'hidden',
   border: '1px solid light-dark(#e0e0e6, #393940)',
   borderRadius: '12px',
   background: 'light-dark(#fff, #1b1b20)',
-  display: 'grid',
-  gap: '16px',
 })
 
 const detailsCss = css({
@@ -74,18 +72,15 @@ const detailsCss = css({
 
 const tabListCss = css({
   display: 'flex',
-  gap: '4px',
-  padding: '4px',
-  borderRadius: '9px',
-  background: 'light-dark(#eeeef3, #25252b)',
+  borderBottom: '1px solid light-dark(#e0e0e6, #393940)',
+  background: 'light-dark(#f6f6f9, #25252b)',
 })
 
 const tabCss = css({
   flex: 1,
   minWidth: 0,
-  padding: '8px 12px',
+  padding: '14px 12px',
   border: 0,
-  borderRadius: '6px',
   background: 'transparent',
   color: 'light-dark(#202027, #eeeef2)',
   font: 'inherit',
@@ -93,22 +88,20 @@ const tabCss = css({
   cursor: 'pointer',
   '@media (hover: hover)': {
     '&:not(:disabled):not([data-state="active"]):hover': {
-      background: 'light-dark(#e0e0e7, #32323b)',
+      background: 'light-dark(#eeeef3, #303038)',
     },
   },
-  '&:not(:disabled):active': { background: 'light-dark(#d8d8e1, #303038)' },
+  '&:not(:disabled):active': { background: 'light-dark(#e6e6ed, #393940)' },
   '&[data-state="active"]': {
-    background: 'light-dark(#fff, #393940)',
+    background: 'light-dark(#fff, #1b1b20)',
     color: 'light-dark(#202027, #eeeef2)',
-    boxShadow: '0 1px 3px #00000018',
+    boxShadow: 'inset 0 -1px light-dark(#62626c, #b0b0bb)',
   },
-  '&:focus-visible': { outline: '2px solid #5bb8ef' },
-  '&:disabled': { color: 'light-dark(#7b7b86, #92929e)', cursor: 'default' },
+  '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '-4px' },
+  '&:disabled': { color: 'light-dark(#7b7b86, #92929e)', cursor: 'not-allowed' },
 })
 
 const panelCss = css({
-  padding: '4px',
-  minHeight: '100px',
+  padding: '24px',
   '&[hidden]': { display: 'none' },
-  '& p': { marginBlock: '8px 0' },
 })

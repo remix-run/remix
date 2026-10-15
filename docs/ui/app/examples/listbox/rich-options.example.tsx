@@ -111,7 +111,7 @@ const optionCss = css({
     color: 'light-dark(#0578be, #80caff)',
     background: 'light-dark(#eaf5fc, #173348)',
   },
-  '&[aria-disabled="true"]': { color: 'light-dark(#62626c, #b0b0bb)' },
+  '&[aria-disabled="true"]': { color: 'light-dark(#62626c, #b0b0bb)', cursor: 'not-allowed' },
   '&[data-listbox-flash]': {
     background: 'light-dark(#0578be, #80caff)',
     color: 'light-dark(#fff, #102332)',

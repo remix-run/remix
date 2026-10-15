@@ -130,7 +130,7 @@ const inputCss = css({
   color: 'inherit',
   font: 'inherit',
   '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '2px' },
-  '&:disabled': { opacity: 0.45 },
+  '&:disabled': { opacity: 0.45, cursor: 'not-allowed' },
 })
 
 const surfaceCss = css({
@@ -175,7 +175,7 @@ const optionCss = css({
     color: 'light-dark(#0578be, #80caff)',
     background: 'light-dark(#eaf5fc, #173348)',
   },
-  '&[aria-disabled="true"]': { opacity: 0.4 },
+  '&[aria-disabled="true"]': { opacity: 0.4, cursor: 'not-allowed' },
   '&[data-combobox-flash]': {
     background: 'light-dark(#0578be, #80caff)',
     color: 'light-dark(#fff, #102332)',

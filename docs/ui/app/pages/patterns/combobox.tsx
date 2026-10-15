@@ -88,7 +88,7 @@ const typeDefinitions = {
 export default function ComboboxPage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>
-      <Example id="basic" example={basic} hero compact />
+      <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>
           Wrap the input, popover and options in one provider. Combobox supplies its Popover and
@@ -112,7 +112,7 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           On blur, an exact enabled label or alias match commits the option and preserves the typed
           text. Partial or unmatched text is cleared.
         </p>
-        <Example id="initial-example" example={initialExample} compact />
+        <Example id="initial-example" example={initialExample} />
       </Section>
       <Section id="options" title="Filtering and aliases">
         <p>
@@ -127,7 +127,7 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           input while editing. Clicking the closed input or pressing an arrow key reopens the full
           list when the text is an exact match or has no matches.
         </p>
-        <Example id="rich-options-example" example={richOptionsExample} compact />
+        <Example id="rich-options-example" example={richOptionsExample} />
       </Section>
       <Section id="forms" title="Forms">
         <p>
@@ -140,7 +140,7 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           from <code>FormData</code>.
         </p>
 
-        <Example id="form-example" example={formExample} compact />
+        <Example id="form-example" example={formExample} />
       </Section>
       <Section id="events" title="Change events">
         <p>
@@ -157,7 +157,7 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           <code>open()</code> can start at the selected option, an enabled boundary or no option.{' '}
           <code>close()</code> dismisses the popup.
         </p>
-        <Example id="imperative-example" example={imperativeExample} compact />
+        <Example id="imperative-example" example={imperativeExample} />
       </Section>
       <Section id="feedback" title="Popup and selection feedback">
         <p>
@@ -177,7 +177,7 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           <code>disabled</code> on <code>Context</code> disables the input and hidden input.
           Disabled options are skipped during highlighting and selection.
         </p>
-        <Example id="disabled-example" example={disabledExample} compact />
+        <Example id="disabled-example" example={disabledExample} />
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>

@@ -85,7 +85,7 @@ const typeDefinitions = {
 export default function TweenPage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>
-      <Example id="timing" example={timing} hero compact />
+      <Example id="timing" example={timing} hero />
       <Section id="anatomy" title="Anatomy">
         <p>Create a generator, prime it, then supply timestamps to advance playback.</p>
 

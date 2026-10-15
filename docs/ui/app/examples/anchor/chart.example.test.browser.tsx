@@ -6,7 +6,7 @@ import { button, element, key, mount, waitFor } from '../test-helpers.ts'
 describe('Chart anchor example', () => {
   it('reanchors the visit readout for pointer and keyboard selection', async (t) => {
     let result = await mount(t, <Example />)
-    let bubble = element(result.container, '[popover]')
+    let bubble = element(result.container, '[data-readout]')
     let monday = button(result.container, 'Mon, 840 visits')
     let tuesday = button(result.container, 'Tue, 1,120 visits')
     assert.equal(bubble.inert, true)

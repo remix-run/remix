@@ -56,7 +56,7 @@ export default function Example(handle: Handle) {
             disabled={active === 0}
             mix={[
               buttonCss,
-              css({ padding: '8px', '&:disabled': { opacity: 0.4, cursor: 'default' } }),
+              css({ padding: '8px', '&:disabled': { opacity: 0.4, cursor: 'not-allowed' } }),
               on('click', () => goTo(active - 1)),
             ]}
           >
@@ -68,7 +68,7 @@ export default function Example(handle: Handle) {
             disabled={active === slides.length - 1}
             mix={[
               buttonCss,
-              css({ padding: '8px', '&:disabled': { opacity: 0.4, cursor: 'default' } }),
+              css({ padding: '8px', '&:disabled': { opacity: 0.4, cursor: 'not-allowed' } }),
               on('click', () => goTo(active + 1)),
             ]}
           >

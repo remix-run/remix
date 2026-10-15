@@ -77,7 +77,7 @@ const typeDefinitions = {
 export default function SelectPage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>
-      <Example id="basic" example={basic} hero compact />
+      <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>
           Keep the trigger, popover, list and options inside the select provider. The surface also
@@ -101,7 +101,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
           Typeahead works in the popup and on the closed trigger. Closed-trigger matches select
           immediately.
         </p>
-        <Example id="rich-options-example" example={richOptionsExample} compact />
+        <Example id="rich-options-example" example={richOptionsExample} />
       </Section>
       <Section id="forms" title="Forms">
         <p>
@@ -109,7 +109,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
           input. It submits the selected value, with an empty string when no value is selected.
           Disabled selects are omitted from <code>FormData</code>.
         </p>
-        <Example id="form-example" example={formExample} compact />
+        <Example id="form-example" example={formExample} />
       </Section>
       <Section id="events" title="Change events">
         <p>
@@ -138,7 +138,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
           <code>disabled</code> on <code>Context</code> disables the trigger and hidden input.{' '}
           <code>disabled</code> on an option skips it during navigation, typeahead and selection.
         </p>
-        <Example id="disabled-example" example={disabledExample} compact />
+        <Example id="disabled-example" example={disabledExample} />
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>

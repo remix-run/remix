@@ -69,7 +69,7 @@ const typeDefinitions = {
 export default function TogglePage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>
-      <Example id="basic" example={basic} hero compact />
+      <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>
           Apply <code>toggle()</code> to a checkbox input or a custom switch element.
@@ -81,7 +81,7 @@ export default function TogglePage(handle: Handle<PageProps>) {
           A button host receives switch semantics and keyboard handling. Native checkbox inputs also
           participate in forms. Custom hosts do not submit a value.
         </p>
-        <Example id="button-example" example={buttonExample} compact />
+        <Example id="button-example" example={buttonExample} />
       </Section>
       <Section id="state" title="Controlled state">
         <p>
@@ -89,7 +89,7 @@ export default function TogglePage(handle: Handle<PageProps>) {
           switch. Without <code>checked</code>, the mixin manages state, starting from{' '}
           <code>defaultChecked</code> or false.
         </p>
-        <Example id="controlled-example" example={controlledExample} compact />
+        <Example id="controlled-example" example={controlledExample} />
       </Section>
       <Section id="forms" title="Forms">
         <p>
@@ -97,7 +97,7 @@ export default function TogglePage(handle: Handle<PageProps>) {
           contribute their value to <code>FormData</code>. Unchecked and disabled inputs are
           omitted.
         </p>
-        <Example id="form-example" example={formExample} compact />
+        <Example id="form-example" example={formExample} />
       </Section>
       <Section id="events" title="Change events">
         <p>
@@ -113,8 +113,8 @@ export default function TogglePage(handle: Handle<PageProps>) {
           <code>readOnly</code> blocks changes while preserving focus and native form participation.
           Set these options on the mixin or host.
         </p>
-        <Example id="disabled-example" example={disabledExample} compact title="Disabled" />
-        <Example id="read-only-example" example={readOnlyExample} compact title="Read-only" />
+        <Example id="disabled-example" example={disabledExample} title="Disabled" />
+        <Example id="read-only-example" example={readOnlyExample} title="Read-only" />
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>

@@ -65,14 +65,13 @@ export default function Example(handle: Handle) {
         ))}
       </div>
       <div
-        popover="manual"
+        data-readout
         aria-hidden="true"
         inert
         mix={[
           bubbleCss,
           ref((node, signal) => {
             surface = node
-            node.showPopover()
             let point = node.parentElement?.querySelector<HTMLElement>(
               `[data-day="${selected}"] [data-point]`,
             )

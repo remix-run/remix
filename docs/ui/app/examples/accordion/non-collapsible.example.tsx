@@ -69,7 +69,7 @@ const rootCss = css({
     fontWeight: 600,
     textAlign: 'left',
     cursor: 'pointer',
-    '&:disabled, &[aria-disabled="true"]': { cursor: 'default' },
+    '&:disabled, &[aria-disabled="true"]': { cursor: 'not-allowed' },
     '&:hover:not(:disabled):not([aria-disabled="true"])': {
       background: 'light-dark(#f7f7fa, #24242b)',
     },

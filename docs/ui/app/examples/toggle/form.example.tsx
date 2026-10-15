@@ -98,7 +98,7 @@ const buttonCss = css({
   cursor: 'pointer',
   '&:hover:not(:disabled)': { background: 'light-dark(#f0f0f5, #303038)' },
   '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
-  '&:disabled': { opacity: 0.45, cursor: 'default' },
+  '&:disabled': { opacity: 0.45, cursor: 'not-allowed' },
 })
 
 const switchCss = css({
@@ -129,7 +129,7 @@ const switchCss = css({
   },
   '&[data-state="checked"]::after': { transform: 'translateX(18px)' },
   '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
-  '&[aria-disabled="true"], &:disabled': { opacity: 0.4, cursor: 'default' },
+  '&[aria-disabled="true"], &:disabled': { opacity: 0.4, cursor: 'not-allowed' },
   '&[aria-readonly="true"], &[readonly]': { cursor: 'default' },
   '@media (prefers-reduced-motion: reduce)': {
     transition: 'none',

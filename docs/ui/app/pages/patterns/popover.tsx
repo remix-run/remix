@@ -115,7 +115,7 @@ const typeDefinitions = {
 export default function PopoverPage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>
-      <Example id="basic" example={basic} hero compact />
+      <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>Wrap the anchor, surface and focus targets in the same provider.</p>
         <CodeBlock html={anatomyCode} />

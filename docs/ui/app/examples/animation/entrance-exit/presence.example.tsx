@@ -23,7 +23,10 @@ export default function Example(handle: Handle) {
           <PlusIcon expanded={visible} />
           {visible ? 'Hide notification' : 'Show notification'}
         </button>
-        <div id="notification-preview" mix={css({ minHeight: '120px' })}>
+        <div
+          id="notification-preview"
+          mix={css({ minHeight: '96px', display: 'grid', alignItems: 'center' })}
+        >
           {visible && (
             <div
               key="notification"

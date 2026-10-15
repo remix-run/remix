@@ -44,6 +44,7 @@ const rowCss = css({
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: '16px',
+  '&:has(:disabled), &:has([aria-disabled="true"])': { cursor: 'not-allowed' },
 })
 
 const mutedCss = css({ margin: 0, fontSize: '12px', color: 'light-dark(#62626c, #b0b0bb)' })
@@ -76,7 +77,7 @@ const switchCss = css({
   },
   '&[data-state="checked"]::after': { transform: 'translateX(18px)' },
   '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
-  '&[aria-disabled="true"], &:disabled': { opacity: 0.4, cursor: 'default' },
+  '&[aria-disabled="true"], &:disabled': { opacity: 0.4, cursor: 'not-allowed' },
   '&[aria-readonly="true"], &[readonly]': { cursor: 'default' },
   '@media (prefers-reduced-motion: reduce)': {
     transition: 'none',

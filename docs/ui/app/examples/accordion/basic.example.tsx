@@ -104,7 +104,7 @@ const triggerCss = css({
   cursor: 'pointer',
   transition: 'background-color 160ms ease',
   '&:hover:not(:disabled)': { background: 'light-dark(#f7f7fa, #24242b)' },
-  '&:disabled': { cursor: 'default' },
+  '&:disabled': { cursor: 'not-allowed' },
   '&:focus-visible': {
     outline: '2px solid light-dark(#0578be, #5bb8ef)',
     outlineOffset: '-3px',

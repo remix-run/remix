@@ -149,19 +149,16 @@
 .ui-preview-card-demo {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  min-height: 300px;
-  padding: 32px 24px;
   place-items: center;
   isolation: isolate;
   background: var(--rmx-surface-lvl2);
 }
 .ui-demo-preview {
-  align-items: start;
-  min-height: 320px;
+  padding: 64px 32px;
 }
-.ui-demo-preview-compact {
-  align-items: center;
-  min-height: 180px;
+.ui-preview-card-demo {
+  min-height: 300px;
+  padding: 32px 24px;
 }
 .ui-demo-source {
   border-top: 1px solid var(--rmx-color-border-subtle);
@@ -350,7 +347,9 @@
   }
 }
 @media (width < 640px) {
-  .ui-demo-preview,
+  .ui-demo-preview {
+    padding: 48px 20px;
+  }
   .ui-preview-card-demo {
     padding: 24px 16px;
   }

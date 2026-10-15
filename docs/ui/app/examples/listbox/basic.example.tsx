@@ -92,7 +92,7 @@ const optionCss = css({
     color: 'light-dark(#0578be, #80caff)',
     background: 'light-dark(#eaf5fc, #173348)',
   },
-  '&[aria-disabled="true"]': { opacity: 0.4 },
+  '&[aria-disabled="true"]': { opacity: 0.4, cursor: 'not-allowed' },
   '&[data-listbox-flash]': {
     background: 'light-dark(#0578be, #80caff)',
     color: 'light-dark(#fff, #102332)',

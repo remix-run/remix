@@ -65,7 +65,7 @@ const typeDefinitions = {
 export default function SpringPage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>
-      <Example id="billing" example={billing} hero compact />
+      <Example id="billing" example={billing} hero />
       <Section id="anatomy" title="Anatomy">
         <p>
           Use <code>spring.transition()</code> in the <code>css()</code> mixin to animate between
@@ -90,7 +90,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
           determines when playback ends.
         </p>
 
-        <Example id="custom" example={custom} compact />
+        <Example id="custom" example={custom} />
       </Section>
       <Section id="css" title="Multiple properties">
         <p>
@@ -105,7 +105,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
           Spread a spring into the timing options for <code>element.animate()</code>.
         </p>
 
-        <Example id="web-animations-example" example={webAnimationsExample} compact />
+        <Example id="web-animations-example" example={webAnimationsExample} />
       </Section>
       <Section id="mixins" title="Animation mixins">
         <p>
@@ -123,7 +123,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
           playback, use <a href="/animation/tween/">Tween</a> or browser animation APIs.
         </p>
 
-        <Example id="iterator-example" example={iteratorExample} compact />
+        <Example id="iterator-example" example={iteratorExample} />
       </Section>
       <Section id="accessibility" title="Reduced motion">
         <p>
