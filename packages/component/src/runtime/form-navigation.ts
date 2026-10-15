@@ -119,11 +119,6 @@ export function createFormNavigationResolver(
       if (pending) clearPending(pending)
     } else {
       getSubmission = async () => {
-        // Chromium can omit formData for detached submitters or submitter-overridden POSTs,
-        // and may dispatch the fallback `formdata` event after `navigate`.
-        if (!formEvent.formData && pending && !pending.formData) {
-          await new Promise<void>((resolve) => setTimeout(resolve, 0))
-        }
         if (pending) clearPending(pending)
         return {
           formData: formEvent.formData ?? pending?.formData,
