@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/remix/schema/remix.json",
+  "assets": {
+    "rootDir": "../..",
+    "basePath": "/assets",
+    "mounts": {
+      "app": "demos/prefetch/app",
+      "npm": "node_modules",
+      "packages": "packages"
+    },
+    "allowFiles": ["demos/prefetch/app/**/public/**"],
+    "allowPackages": ["remix"],
+    "denyFiles": ["demos/prefetch/app/**/*.test.*"]
+  }
+}
