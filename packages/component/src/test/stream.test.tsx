@@ -56,6 +56,22 @@ describe('stream', () => {
       expect(html).toBe('<div>Hello, world!</div>')
     })
 
+    it('streams a large synchronous tree without yielding for every node', async () => {
+      let children = Array.from({ length: 1000 }, (_, index) => <span>{index}</span>)
+      let reader = renderToStream(<div>{children}</div>).getReader()
+      let ready = false
+      let firstChunk = reader.read().then((chunk) => {
+        ready = true
+        return chunk
+      })
+
+      for (let index = 0; index < 20; index++) await Promise.resolve()
+      expect(ready).toBe(true)
+      let chunk = await firstChunk
+      expect(new TextDecoder().decode(chunk.value)).toContain('<span>999</span>')
+      await reader.cancel()
+    })
+
     it('marks stream batches as documents or fragments', async () => {
       let fragmentChunks = readChunks(renderToStream(<div>Hello, world!</div>))
       let fragment = await fragmentChunks.next()
@@ -90,6 +106,20 @@ describe('stream', () => {
       let stream = renderToStream(<div>{'<script>alert(1)</script>'}</div>)
       let html = await drain(stream)
       expect(html).toBe('<div>&lt;script&gt;alert(1)&lt;/script&gt;</div>')
+    })
+
+    it('preserves Unicode and entity text while escaping text and attribute delimiters', async () => {
+      let value = `café 😀 "'<&> &amp; "'<&>`
+      let html = await drain(renderToStream(<p title={value}>{value}</p>))
+
+      expect(html).toBe(
+        '<p title="café 😀 &quot;&#39;&lt;&amp;&gt; &amp;amp; &quot;&#39;&lt;&amp;&gt;">' +
+          `café 😀 "'&lt;&amp;&gt; &amp;amp; "'&lt;&amp;&gt;</p>`,
+      )
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      expect(shelf.content.querySelector('p')?.getAttribute('title')).toBe(value)
+      expect(shelf.content.textContent).toBe(value)
     })
 
     it('renders script string children as raw text', async () => {
@@ -224,6 +254,19 @@ describe('stream', () => {
       let stream = renderToStream([<div>One</div>, <span>Two</span>])
       let html = await drain(stream)
       expect(html).toBe('<div>One</div><span>Two</span>')
+    })
+
+    it('renders sparse arrays without content for empty slots', async () => {
+      let nested: RemixNode[] = [<span>Second</span>]
+      nested[2] = 'Third'
+
+      let children: RemixNode[] = []
+      children.length = 5
+      children[1] = 'First'
+      children[3] = nested
+
+      let html = await drain(renderToStream(children))
+      expect(html).toBe('First<span>Second</span>Third')
     })
 
     it('renders mixed array of nodes', async () => {
@@ -591,6 +634,11 @@ describe('stream', () => {
       let stream = renderToStream(<div className="test-class">Content</div>)
       let html = await drain(stream)
       expect(html).toBe('<div class="test-class">Content</div>')
+    })
+
+    it('merges class and className in order', async () => {
+      let html = await drain(renderToStream(<div class="first" className="second" />))
+      expect(html).toBe('<div class="first second"></div>')
     })
 
     it('changes htmlFor to for', async () => {
@@ -3727,6 +3775,54 @@ describe('stream', () => {
       // Should be done after first chunk
       let done = await chunks.next()
       expect(done.done).toBe(true)
+    })
+
+    it('keeps sibling order and nested frame boundaries across the first chunk', async () => {
+      let [pending, resolvePending] = withResolvers<string>()
+      let chunks = readChunks(
+        renderToStream(
+          <main>
+            {[
+              'before',
+              <Frame src="/blocking" />,
+              [
+                null,
+                <span>between</span>,
+                <Frame
+                  src="/pending"
+                  fallback={
+                    <>
+                      <i>Loading</i>
+                      <Frame src="/nested" />
+                    </>
+                  }
+                />,
+              ],
+              'after',
+            ]}
+          </main>,
+          {
+            resolveFrame(src) {
+              if (src === '/pending') return pending
+              return src === '/blocking' ? '<b>Blocking</b>' : '<em>Nested</em>'
+            },
+          },
+        ),
+      )
+
+      let first = await chunks.next()
+      invariant(!first.done)
+      expect(first.value.replace(/<!-- rmx:f:[^ ]+ -->/g, '<!-- frame -->')).toContain(
+        '<main>before<!-- frame --><b>Blocking</b><!-- /rmx:f --><span>between</span>' +
+          '<!-- frame --><i>Loading</i><!-- frame --><em>Nested</em><!-- /rmx:f -->' +
+          '<!-- /rmx:f -->after</main>',
+      )
+
+      resolvePending('<strong>Done</strong>')
+      let second = await chunks.next()
+      invariant(!second.done)
+      expect(second.value).toContain('<strong>Done</strong>')
+      expect((await chunks.next()).done).toBe(true)
     })
 
     it('assigns IDs for nested non-blocking frames', async () => {
