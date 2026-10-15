@@ -1,1 +1,1 @@
-Pass `reload: false` to `navigate()` from `remix/component` to update the URL and history without fetching or rendering. Scroll position and focus stay in place, and back and forward traversal still renders the entry.
+Pass `reload: false` to `navigate()` from `remix/component` to update the URL and history without fetching or rendering. Scroll position and focus stay in place, and back and forward traversal still renders the entry (see #12003).
