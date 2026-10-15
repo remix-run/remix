@@ -155,7 +155,8 @@ export type NavigationOptions = {
    * Whether to reload frame content. Set to `false` to update the browser URL and history without
    * fetching or rendering anything, leaving scroll position and focus untouched. `src`, `target`,
    * `resetScroll`, and `resetFocus` are ignored. Back and forward traversal to the new entry
-   * reloads the top frame like any other entry. (default: `true`)
+   * reloads the top frame like any other entry. Without frame navigation, this falls back to
+   * document navigation like other `navigate()` calls. (default: `true`)
    */
   reload?: boolean
 }
@@ -169,33 +170,6 @@ export type NavigationOptions = {
  * @returns A promise that settles when the Navigation API transition finishes.
  */
 export async function navigate(href: string, options?: NavigationOptions) {
-  let navigation = getInterceptableNavigation()
-  if (options?.reload === false) {
-    if (navigation) {
-      let transition = navigation.navigate(href, {
-        state: {
-          target: undefined,
-          src: href,
-          resetScroll: 'after-transition',
-          resetFocus: 'after-transition',
-          $rmx: true,
-        } satisfies NavigationEntryState,
-        history: options.history,
-        info: {
-          type: frameRedirectNavigationInfoType,
-          resetScroll: 'manual',
-          resetFocus: 'manual',
-        } satisfies FrameRedirectNavigationInfo,
-      })
-      await transition.finished
-    } else if (options.history === 'replace') {
-      window.history.replaceState(window.history.state, '', href)
-    } else {
-      window.history.pushState(null, '', href)
-    }
-    return
-  }
-
   let state = {
     target: options?.target,
     src: options?.src ?? href,
@@ -203,12 +177,27 @@ export async function navigate(href: string, options?: NavigationOptions) {
     resetFocus: normalizeResetBehavior(options?.resetFocus),
     $rmx: true,
   } satisfies NavigationEntryState
+  let navigation = getInterceptableNavigation()
   if (!navigation) {
     if (options?.history === 'replace') {
       window.location.replace(href)
     } else {
       window.location.assign(href)
     }
+    return
+  }
+
+  if (options?.reload === false) {
+    let transition = navigation.navigate(href, {
+      state: { ...state, target: undefined, src: href },
+      history: options.history,
+      info: {
+        type: frameRedirectNavigationInfoType,
+        resetScroll: 'manual',
+        resetFocus: 'manual',
+      } satisfies FrameRedirectNavigationInfo,
+    })
+    await transition.finished
     return
   }
 
