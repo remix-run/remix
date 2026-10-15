@@ -1,32 +1,24 @@
 import { formData } from 'remix/middleware/form-data'
 import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
-import { createMiddleware, createRouter, type MiddlewareContext } from 'remix/router'
+import { createRouter, type RouterContext } from 'remix/router'
 
 import { rootController } from './actions/controller.tsx'
 import { assetServer } from './assets.ts'
 import { assetsRoute, routes } from './routes.ts'
 
-const appMiddleware = createMiddleware(
-  staticFiles('./public', {
-    cacheControl: 'no-store',
-    etag: false,
-    lastModified: false,
-  }),
-  formData(),
-  render({ assets: assetServer }),
-)
-
-type AppContext = MiddlewareContext<typeof appMiddleware>
-
-declare module 'remix/router' {
-  interface RouterTypes {
-    context: AppContext
-  }
-}
-
 export function createAppRouter() {
-  let router = createRouter<AppContext>({ middleware: appMiddleware })
+  let router = createRouter({
+    middleware: [
+      staticFiles('./public', {
+        cacheControl: 'no-store',
+        etag: false,
+        lastModified: false,
+      }),
+      formData(),
+      render({ assets: assetServer }),
+    ],
+  })
 
   router.get(
     assetsRoute,
@@ -39,3 +31,11 @@ export function createAppRouter() {
 }
 
 export const router = createAppRouter()
+
+type AppContext = RouterContext<typeof router>
+
+declare module 'remix' {
+  interface RouterTypes {
+    context: AppContext
+  }
+}
