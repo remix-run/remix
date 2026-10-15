@@ -94,29 +94,28 @@ export default function AccordionPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="multiple-state" title="Multiple open panels">
         <p>
-          Set <code>type="multiple"</code> to let several panels stay open at once. Opening a panel
-          leaves the others open. Select an open panel's trigger again to close it independently.
+          Set <code>type="multiple"</code> to open and close panels independently, allowing several
+          to stay open at once.
         </p>
         <Example id="multiple" example={multiple} />
       </Section>
       <Section id="state" title="Controlled state">
         <p>
-          Pass <code>value</code> to manage open panels from your application. Accept changes in{' '}
-          <code>onValueChange</code> and call <code>handle.update()</code> to render the new value.
-          Without <code>value</code>, the accordion manages its own state. <code>defaultValue</code>{' '}
-          only sets which panels start open.
+          Pass <code>value</code> and update it in <code>onValueChange</code> to control open
+          panels. Without <code>value</code>, the accordion manages its own state, with{' '}
+          <code>defaultValue</code> setting which panels start open.
         </p>
         <Example
           id="controlled-single"
           example={controlledSingle}
           title="Controlled single value"
-          description="A controlled single value identifies the open item. Use null when all panels are closed."
+          description="Use an item identifier to open one panel or null to close all panels."
         />
         <Example
           id="controlled-multiple"
           example={controlledMultiple}
           title="Controlled multiple values"
-          description="A controlled multiple value contains the open item identifiers. Update the array to open or close panels independently."
+          description="Use an array of open item identifiers or an empty array to close all panels."
         />
       </Section>
       <Section id="collapsing" title="Preventing collapse">
@@ -126,25 +125,6 @@ export default function AccordionPage(handle: Handle<PageProps>) {
         </p>
         <Example id="non-collapsible" example={nonCollapsible} />
       </Section>
-      <Section id="disabled" title="Disabled state">
-        <p>
-          Disable the whole accordion with <code>Context disabled</code>, or one item with{' '}
-          <code>ItemContext disabled</code>. Disabled items are skipped during keyboard navigation.
-          Disabling an item preserves its open state.
-        </p>
-        <Example
-          id="disabled-example"
-          example={disabledExample}
-          title="Disabling the accordion"
-          description="Set disabled on Context to disable every item. Open panels remain open."
-        />
-        <Example
-          id="disabled-item"
-          example={disabledItem}
-          title="Disabling one item"
-          description="Set disabled on ItemContext to disable its trigger and skip it during keyboard navigation. Other items remain interactive."
-        />
-      </Section>
       <Section id="events" title="Change events">
         <p>
           Use <code>onAccordionChange()</code> on the root or an ancestor to observe changes through
@@ -152,6 +132,15 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           mode, both report the requested value.
         </p>
         <CodeBlock html={eventsCode} />
+      </Section>
+      <Section id="disabled" title="Disabled state">
+        <p>
+          Disable the whole accordion with <code>Context disabled</code>, or one item with{' '}
+          <code>ItemContext disabled</code>. Disabled items are skipped during keyboard navigation.
+          Disabling an item preserves its open state.
+        </p>
+        <Example id="disabled-example" example={disabledExample} title="Disabling the accordion" />
+        <Example id="disabled-item" example={disabledItem} title="Disabling one item" />
       </Section>
       <Section id="accessibility" title="Accessibility and keyboard navigation">
         <p>

@@ -26,7 +26,7 @@ const anatomyCode = await highlightSource(`
     <div mix={menu.popover()}>
       <div mix={menu.list()}>
         <div mix={menu.item({ name: 'copy' })}>Copy</div>
-        <div mix={menu.item({ name: 'paste', disabled: true })}>Paste</div>
+        <div mix={menu.item({ name: 'paste' })}>Paste</div>
       </div>
     </div>
   </menu.Context>
@@ -112,12 +112,11 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <p>Wrap the trigger, floating surface and menu items in a provider.</p>
         <CodeBlock html={anatomyCode} />
       </Section>
-      <Section id="actions" title="Selection events">
+      <Section id="actions" title="Handling actions">
         <p>
           <code>onMenuSelect()</code> receives the selected item on the menu or an ancestor.{' '}
           <code>item.name</code> identifies the action. <code>item.value</code> carries an optional
-          string payload. Selection flashes the item, closes the whole menu tree and restores focus
-          to the root trigger.
+          string payload.
         </p>
         <CodeBlock html={actionsCode} />
       </Section>
@@ -125,7 +124,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <p>
           <code>{"type: 'checkbox'"}</code> gives an item checked semantics. Pass its current{' '}
           <code>checked</code> state and accept the next state from <code>event.item.checked</code>.
-          The menu does not retain checkbox state after selection.
+          The application owns the checked state.
         </p>
         <Example id="checkbox-example" example={checkboxExample} />
       </Section>
@@ -165,8 +164,8 @@ export default function MenuPage(handle: Handle<PageProps>) {
       <Section id="motion" title="Selection and close feedback">
         <p>
           <code>data-menu-flash</code> marks a fixed 60 ms selection flash. The selection event
-          fires at the start of the flash. The menu tree closes afterward, so event handlers run
-          while the menu is still visible.
+          fires at the start of the flash, while the menu is still visible. The menu tree then
+          closes and focus returns to the root trigger.
         </p>
         <p>
           Style the flash on items and the closing transition on the surface.{' '}
@@ -175,12 +174,17 @@ export default function MenuPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>
-          Use menus for actions rather than arbitrary form content. Arrow keys move between enabled
-          items without wrapping. Home and End select the boundaries. Enter and Space activate the
-          highlight. Printable keys perform typeahead. Escape closes the tree. Tab closes it without
-          explicitly returning focus. A provider label names the list. Without it, the list is
-          labeled by its trigger.
+          Use menus for actions rather than arbitrary form content. The provider's{' '}
+          <code>label</code> names the list. Without it, the trigger labels the list.
         </p>
+        <ul>
+          <li>Arrow keys move between enabled items without wrapping.</li>
+          <li>Home and End highlight the first and last enabled items.</li>
+          <li>Enter and Space activate the highlighted item.</li>
+          <li>Printable keys perform typeahead.</li>
+          <li>Escape closes the menu tree.</li>
+          <li>Tab closes the menu without explicitly returning focus.</li>
+        </ul>
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="context-reference">Context</h3>

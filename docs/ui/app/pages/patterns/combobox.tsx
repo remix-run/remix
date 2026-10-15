@@ -119,13 +119,6 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
         </p>
         <Example id="rich-options-example" example={richOptionsExample} compact />
       </Section>
-      <Section id="disabled" title="Disabled state">
-        <p>
-          <code>disabled</code> on <code>Context</code> disables the input and hidden input.
-          Disabled options are skipped during highlighting and selection.
-        </p>
-        <Example id="disabled-example" example={disabledExample} compact />
-      </Section>
       <Section id="forms" title="Forms">
         <p>
           The visible input contains the search text. A second input with <code>hiddenInput()</code>{' '}
@@ -150,9 +143,9 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="imperative" title="Imperative access">
         <p>
-          The provider’s <code>ref</code> receives a <code>ComboboxHandle</code>.{' '}
+          The provider's <code>ref</code> receives a <code>ComboboxHandle</code>.{' '}
           <code>open()</code> can start at the selected option, an enabled boundary or no option.{' '}
-          <code>close()</code> dismisses the popup without exposing its DOM.
+          <code>close()</code> dismisses the popup.
         </p>
         <Example id="imperative-example" example={imperativeExample} compact />
       </Section>
@@ -168,14 +161,25 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           <code>data-surface-visible</code> stays present through a navigation close.
         </p>
       </Section>
+      <Section id="disabled" title="Disabled state">
+        <p>
+          <code>disabled</code> on <code>Context</code> disables the input and hidden input.
+          Disabled options are skipped during highlighting and selection.
+        </p>
+        <Example id="disabled-example" example={disabledExample} compact />
+      </Section>
       <Section id="accessibility" title="Accessibility">
         <p>
-          Focus stays on the text input during arrow navigation and pointer selection. Arrow keys
-          open results or change the highlight. Enter selects the highlight. Escape dismisses the
-          popup. Tab moves focus away and triggers blur matching. Give the input a visible label and
-          the list an accessible name.
+          Focus stays on the text input during arrow navigation and pointer selection. Give the
+          input a visible label and the list an accessible name.
         </p>
         <CodeBlock html={accessibilityCode} />
+        <ul>
+          <li>Arrow keys open results or change the highlight.</li>
+          <li>Enter selects the highlighted option.</li>
+          <li>Escape dismisses the popup.</li>
+          <li>Tab moves focus away and triggers blur matching.</li>
+        </ul>
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="context-reference">Context</h3>

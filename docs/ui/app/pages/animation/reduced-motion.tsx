@@ -112,8 +112,7 @@ export default function ReducedMotionPage(handle: Handle<PageProps>) {
         </p>
         <p>
           Each call reads the current preference. It does not subscribe to changes, trigger renders
-          or stop animations already in progress. Calling it during render reads the preference
-          again whenever the component renders.
+          or stop animations already in progress.
         </p>
       </Section>
     </PageLayout>

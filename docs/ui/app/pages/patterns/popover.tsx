@@ -127,6 +127,12 @@ export default function PopoverPage(handle: Handle<PageProps>) {
           Opening uses the browser’s top layer and locks page scrolling.
         </p>
         <CodeBlock html={stateCode} />
+        <h3 id="anchor-interaction">Interactive anchors</h3>
+        <p>
+          Set <code>closeOnAnchorClick</code> to false to keep the surface open when its anchor is
+          clicked.
+        </p>
+        <CodeBlock html={anchorInteractionCode} />
       </Section>
       <Section id="position" title="Positioning">
         <p>
@@ -134,13 +140,6 @@ export default function PopoverPage(handle: Handle<PageProps>) {
           Anchor API. The surface tracks geometry changes and flips when needed to fit the viewport.
         </p>
         <CodeBlock html={positionCode} />
-      </Section>
-      <Section id="anchor-interaction" title="Interactive anchors">
-        <p>
-          Set <code>closeOnAnchorClick</code> to false when the anchor must remain interactive while
-          the surface is open. The surface remains open when its anchor is clicked.
-        </p>
-        <CodeBlock html={anchorInteractionCode} />
       </Section>
       <Section id="focus" title="Focus targets">
         <p>

@@ -85,9 +85,9 @@ export default function SpringPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="options" title="Customizing motion">
         <p>
-          Perceptual duration shapes how quickly a spring moves. Bounce controls overshoot, and
-          velocity sets its initial speed. The calculated settling duration determines when playback
-          ends.
+          <code>duration</code> sets the perceptual duration, <code>bounce</code> controls overshoot
+          and <code>velocity</code> sets the initial speed. The calculated settling duration
+          determines when playback ends.
         </p>
 
         <Example id="custom" example={custom} compact />
@@ -102,8 +102,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="web-animations" title="Web Animations">
         <p>
-          A spring provides timing options for <code>element.animate()</code>. Keyframes define the
-          animated properties. Interrupted playback can resume from the current visual value.
+          Spread a spring into the timing options for <code>element.animate()</code>.
         </p>
 
         <Example id="web-animations-example" example={webAnimationsExample} compact />
@@ -116,7 +115,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
 
         <CodeBlock html={mixinsCode} />
       </Section>
-      <Section id="javascript" title="JavaScript progress samples">
+      <Section id="javascript" title="Progress iterator">
         <p>
           A spring iterator yields numeric progress samples, including overshoot. Iteration is
           synchronous, with samples calculated at approximately 60 per second. Taking one sample per

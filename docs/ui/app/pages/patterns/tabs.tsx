@@ -125,20 +125,18 @@ export default function TabsPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="state" title="Controlled state">
         <p>
-          <code>activeTab</code> controls selection through <code>onActiveTabChange</code>.{' '}
-          <code>defaultActiveTab</code> sets an initial selection. Without either prop, the first
-          enabled tab becomes active.
+          Pass <code>activeTab</code> and update it in <code>onActiveTabChange</code> to control
+          selection. Without <code>activeTab</code>, the provider manages state, starting from{' '}
+          <code>defaultActiveTab</code> or the first enabled tab.
         </p>
         <Example id="controlled-example" example={controlledExample} />
-      </Section>
-      <Section id="disabled" title="Disabled tabs">
+        <h3 id="context">Reading selection</h3>
         <p>
-          Set <code>disabled</code> on <code>tab()</code> to disable one tab or on{' '}
-          <code>Context</code> to disable the whole group. Disabled tabs are skipped during
-          navigation. Their panels keep the current selection.
+          Descendants can read the current selection from <code>Context</code>.{' '}
+          <code>activateTab()</code> requests a selection using the same controlled or uncontrolled
+          contract as a tab trigger.
         </p>
-        <CodeBlock html={disabledCode} />
-        <Example id="disabled-item-example" example={disabledItemExample} />
+        <CodeBlock html={contextCode} />
       </Section>
       <Section id="events" title="Change events">
         <p>
@@ -148,21 +146,25 @@ export default function TabsPage(handle: Handle<PageProps>) {
         </p>
         <CodeBlock html={eventsCode} />
       </Section>
-      <Section id="context" title="Reading selection">
+      <Section id="disabled" title="Disabled tabs">
         <p>
-          Descendants can read the current selection from <code>Context</code>.{' '}
-          <code>activateTab()</code> requests a selection using the same controlled or uncontrolled
-          contract as a tab trigger.
+          Set <code>disabled</code> on <code>tab()</code> to disable one tab or on{' '}
+          <code>Context</code> to disable the whole group. Disabled tabs are skipped during
+          navigation. Disabling a tab does not change the current selection.
         </p>
-        <CodeBlock html={contextCode} />
+        <CodeBlock html={disabledCode} />
+        <Example id="disabled-item-example" example={disabledItemExample} />
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>
-          Arrow keys select adjacent enabled tabs and wrap at the boundaries. Home and End select
-          the first and last enabled tabs. Both horizontal and vertical arrow keys are handled.
-          There is no orientation option. Focus follows selection during arrow navigation. Inactive
-          panels stay mounted with <code>hidden</code> and <code>inert</code>.
+          Inactive panels stay mounted with <code>hidden</code> and <code>inert</code>. Focus
+          follows selection during arrow navigation.
         </p>
+        <ul>
+          <li>Arrow keys select adjacent enabled tabs and wrap at the boundaries.</li>
+          <li>Home and End select the first and last enabled tabs.</li>
+        </ul>
+        <p>Both horizontal and vertical arrow keys are handled. There is no orientation option.</p>
         <CodeBlock html={accessibilityCode} />
       </Section>
       <Section id="api-reference" title="API reference">

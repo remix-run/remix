@@ -103,13 +103,6 @@ export default function SelectPage(handle: Handle<PageProps>) {
         </p>
         <Example id="rich-options-example" example={richOptionsExample} compact />
       </Section>
-      <Section id="disabled" title="Disabled state">
-        <p>
-          <code>disabled</code> on <code>Context</code> disables the trigger and hidden input.{' '}
-          <code>disabled</code> on an option skips it during navigation, typeahead and selection.
-        </p>
-        <Example id="disabled-example" example={disabledExample} compact />
-      </Section>
       <Section id="forms" title="Forms">
         <p>
           Give <code>Context</code> a <code>name</code> and apply <code>hiddenInput()</code> to an
@@ -138,15 +131,28 @@ export default function SelectPage(handle: Handle<PageProps>) {
           closed trigger skips this sequence.
         </p>
       </Section>
+      <Section id="disabled" title="Disabled state">
+        <p>
+          <code>disabled</code> on <code>Context</code> disables the trigger and hidden input.{' '}
+          <code>disabled</code> on an option skips it during navigation, typeahead and selection.
+        </p>
+        <Example id="disabled-example" example={disabledExample} compact />
+      </Section>
       <Section id="accessibility" title="Accessibility">
         <p>
-          Give the trigger a field name and the list an accessible name. Click, ArrowDown and
-          ArrowUp open the popup. Focus moves to the list while <code>aria-activedescendant</code>{' '}
-          identifies the highlight. Enter or Space selects it. Escape and outside clicks close the
-          popup and return focus to the trigger. Navigation follows Listbox behavior, including its
-          current Tab interception.
+          Give the trigger and list accessible names. Focus moves to the list while{' '}
+          <code>aria-activedescendant</code> identifies the highlighted option.
         </p>
         <CodeBlock html={accessibilityCode} />
+        <ul>
+          <li>Click, ArrowDown and ArrowUp open the popup.</li>
+          <li>Enter and Space select the highlighted option.</li>
+          <li>Escape and outside clicks close the popup and return focus to the trigger.</li>
+        </ul>
+        <p>
+          List navigation follows <a href="/patterns/listbox/#accessibility">Listbox</a>, including
+          its current Tab interception.
+        </p>
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="context-reference">Context</h3>

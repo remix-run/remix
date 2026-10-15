@@ -66,6 +66,8 @@
   letter-spacing: -0.025em;
 }
 .ui-doc-section > p,
+.ui-doc-section > ul,
+.ui-doc-section > ol,
 .ui-example > p {
   color: var(--rmx-color-text-secondary);
 }

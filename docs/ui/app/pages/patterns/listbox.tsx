@@ -190,15 +190,14 @@ export default function ListboxPage(handle: Handle<PageProps>) {
         <p>
           <code>flashSelection</code> adds a temporary attribute to the selected option.{' '}
           <code>onSelect</code> runs immediately. <code>onSelectSettled</code> runs after the fixed
-          60 ms flash. Its duration is not configurable. Highlight and selection requests are
-          ignored while selection settles.
+          60 ms flash. Highlight and selection requests are ignored while selection settles.
         </p>
         <CodeBlock html={settlingCode} />
       </Section>
       <Section id="imperative" title="Imperative access">
         <p>
-          The provider’s <code>ref</code> receives a live <code>ListboxRef</code>. Read registered
-          options, navigate, search or select without reaching into the DOM.
+          The provider's <code>ref</code> receives a <code>ListboxRef</code> for reading registered
+          options, navigating, searching and selecting programmatically.
         </p>
         <CodeBlock html={imperativeCode} />
       </Section>
@@ -206,13 +205,23 @@ export default function ListboxPage(handle: Handle<PageProps>) {
         <p>
           Give a standalone list an accessible name and <code>tabIndex={0}</code>. Focus stays on
           the list while the highlight moves. Supply <code>aria-activedescendant</code> from the
-          highlighted option’s ID. ArrowDown wraps to the first option. ArrowUp stops at the first
-          option. Home and End move to the boundaries. Enter and Space select. Typing while the list
-          is focused highlights the next label or alias that starts with those characters without
-          selecting it. The current list mixin intercepts Tab to highlight the first option and does
-          not provide Escape dismissal.
+          highlighted option's ID.
         </p>
         <CodeBlock html={accessibilityCode} />
+        <ul>
+          <li>ArrowDown moves the highlight forward and wraps to the first option.</li>
+          <li>ArrowUp moves backward and stops at the first option.</li>
+          <li>Home and End highlight the first and last options.</li>
+          <li>Enter and Space select the highlighted option.</li>
+          <li>
+            Typing highlights the next label or alias that starts with those characters without
+            selecting it.
+          </li>
+        </ul>
+        <p>
+          The list mixin currently intercepts Tab to highlight the first option. It does not provide
+          Escape dismissal.
+        </p>
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="context-reference">Context</h3>
