@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import type { PageMeta, PageProps } from '../../data/page.ts'
+import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'

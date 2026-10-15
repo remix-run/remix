@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import uiPackage from '../../../../packages/ui/package.json' with { type: 'json' }
-import { pages } from './docs.ts'
+import { pages } from './pages.ts'
 import { loadExample } from './examples.tsx'
 
 describe('UI docs pages', () => {

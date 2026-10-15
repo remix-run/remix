@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import { createUiRouter } from '../../router.ts'
-import { pages } from '../../data/docs.ts'
+import { pages } from '../../data/pages.ts'
 
 describe('UI docs', () => {
   it('introduces the standalone package and links to both sections', async () => {

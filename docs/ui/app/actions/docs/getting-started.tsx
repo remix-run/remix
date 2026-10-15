@@ -1,6 +1,6 @@
 import { unsafeHTML } from 'remix/component'
 import type { Handle } from 'remix/component'
-import type { UiPage } from '../../data/page.ts'
+import type { UiPage } from '../../data/pages.ts'
 import type { LoadedExample } from '../../data/examples.tsx'
 import { routes } from '../../routes.ts'
 

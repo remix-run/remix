@@ -1,5 +1,5 @@
 import { createController } from 'remix/router'
-import { pages } from '../../data/docs.ts'
+import { pages } from '../../data/pages.ts'
 import { highlightSource } from '../../data/examples.tsx'
 import { routes } from '../../routes.ts'
 import { UiDocument } from '../../ui/document.tsx'

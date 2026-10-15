@@ -4,7 +4,7 @@ import { parseArgs } from 'node:util'
 import { discoverPublicModuleHrefs } from 'remix-docs-shared/prerender/public-modules'
 import { prerender } from 'remix-docs-shared/prerender/run'
 import { assetServer } from '../app/assets.ts'
-import { pages } from '../app/data/docs.ts'
+import { pages } from '../app/data/pages.ts'
 import { router } from '../app/router.ts'
 import { routes } from '../app/routes.ts'
 

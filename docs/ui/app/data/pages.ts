@@ -1,4 +1,5 @@
-import type { UiPage } from './page.ts'
+import type { Handle, RemixNode } from 'remix/component'
+import type { LoadedExample } from './examples.tsx'
 import AccordionPage, {
   meta as accordion,
   preview as accordionPreview,
@@ -15,6 +16,23 @@ import PopoverPage, { meta as popover } from '../pages/primitives/popover.tsx'
 import SelectPage, { meta as select } from '../pages/primitives/select.tsx'
 import TabsPage, { meta as tabs } from '../pages/primitives/tabs.tsx'
 import TogglePage, { meta as toggle } from '../pages/primitives/toggle.tsx'
+
+export interface PageMeta {
+  title: string
+  slug: string
+  category: 'primitives' | 'animation'
+  description: string
+  importPath: string
+}
+
+export interface PageProps {
+  pages: UiPage[]
+}
+
+export interface UiPage extends PageMeta {
+  Component: (handle: Handle<PageProps>) => () => RemixNode
+  preview?: LoadedExample
+}
 
 export const pages: UiPage[] = [
   { ...accordion, Component: AccordionPage, preview: accordionPreview },
