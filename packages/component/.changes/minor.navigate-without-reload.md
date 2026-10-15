@@ -4,4 +4,4 @@ Update the browser URL without reloading frames by passing `reload: false` to `n
 await navigate(`/products/shirt?variant=${variantId}`, { history: 'replace', reload: false })
 ```
 
-Remix keeps its navigation state on the new entry, so back and forward traversal reloads the top frame from that URL like any other entry. Calling `history.replaceState()` directly drops that state. If the update interrupts an unfinished frame navigation, Remix reloads the top frame instead so the content matches the URL. Browsers without frame navigation fall back to `history.replaceState()` or `history.pushState()`.
+Remix keeps its navigation state on the new entry, so back and forward traversal reloads the top frame from that URL like any other entry. Calling `history.replaceState()` directly drops that state. If the update interrupts an unfinished frame navigation, Remix reloads the top frame instead so the content matches the URL. Browsers without frame navigation fall back to `history.replaceState()` or `history.pushState()` (see #12003).
