@@ -776,7 +776,7 @@ router.get('/posts/:id', (context) => {
 
 Route params are only half of a handler's type contract. In many apps, handlers also depend on values that middleware loads into request context, like sessions, database connections, or authenticated users.
 
-`fetch-router` lets you carry that context contract through the router and into direct route registration, stored controllers, and stored actions. A common pattern in Remix apps is to derive one application context type from your middleware, augment `RouterTypes.context` in the `remix` module, then use `createAction()` and `createController()` to type stored handlers.
+`fetch-router` lets you carry that context contract through the router and into direct route registration, stored controllers, and stored actions. A common pattern in Remix apps is to derive one application context type from your router, augment `RouterTypes.context` in the `remix` module, then use `createAction()` and `createController()` to type stored handlers.
 
 ```ts
 import { Auth, requireAuth } from 'remix/middleware/auth'

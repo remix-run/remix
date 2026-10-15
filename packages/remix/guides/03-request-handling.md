@@ -211,10 +211,11 @@ import { createRouter, type RouterContext } from "remix/router";
 import controller from "./actions/controller.tsx";
 import albumsController from "./actions/albums/controller.tsx";
 import albumsEditController from "./actions/albums/edit/controller.tsx";
+import { assets } from "./assets.ts";
 import { routes } from "./routes.ts";
 
 export const router = createRouter({
-  middleware: [staticFiles("./public", { index: false }), formData(), render()],
+  middleware: [staticFiles("./public", { index: false }), formData(), render({ assets })],
 });
 
 export type AppContext = RouterContext<typeof router>;
@@ -271,6 +272,8 @@ import { render } from "remix/middleware/render";
 import { staticFiles } from "remix/middleware/static";
 import { createRouter } from "remix/router";
 
+import { assets } from "./assets.ts";
+
 export const router = createRouter({
   middleware: [
     logger(),
@@ -278,7 +281,7 @@ export const router = createRouter({
     staticFiles("./public", { index: false }),
     formData(),
     methodOverride(),
-    render(),
+    render({ assets }),
   ],
 });
 ```
