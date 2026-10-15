@@ -20,6 +20,7 @@ describe('Live examples in the docs site', () => {
       if (message.type() === 'error') errors.push(`${message.location().url} ${message.text()}`)
     })
 
+    await page.setViewportSize({ width: 390, height: 720 })
     await page.goto('/patterns/accordion/')
     let source = page.locator('#basic .ui-demo-source')
     let code = source.locator('.ui-demo-source-code')
@@ -31,8 +32,7 @@ describe('Live examples in the docs site', () => {
     assert.equal(await disclosure.getAttribute('aria-expanded'), 'true')
     assert.equal(await code.getAttribute('inert'), null)
 
-    // Long source must grow with the document, including on narrow screens.
-    await page.setViewportSize({ width: 390, height: 720 })
+    // Long source grows vertically with the document and scrolls horizontally.
     let layout = await code.evaluate((element) => {
       let pre = element.querySelector('pre')
       if (!pre) throw new Error('Missing example source')
@@ -41,13 +41,18 @@ describe('Live examples in the docs site', () => {
         fullHeight: element.scrollHeight,
         width: pre.clientWidth,
         fullWidth: pre.scrollWidth,
+        overflowX: getComputedStyle(pre).overflowX,
         preHeight: pre.clientHeight,
         preFullHeight: pre.scrollHeight,
+        sourceWidth: element.clientWidth,
+        sourceFullWidth: element.scrollWidth,
       }
     })
     assert.ok(layout.fullHeight <= layout.height + 1)
-    assert.ok(layout.fullWidth <= layout.width + 1)
+    assert.ok(layout.fullWidth > layout.width)
+    assert.equal(layout.overflowX, 'auto')
     assert.ok(layout.preFullHeight <= layout.preHeight + 1)
+    assert.ok(layout.sourceFullWidth <= layout.sourceWidth + 1)
     await disclosure.press('Space')
     disclosure = source.getByRole('button', { name: 'Show code', exact: true })
     assert.equal(await disclosure.getAttribute('aria-expanded'), 'false')
@@ -148,12 +153,11 @@ describe('Live examples in the docs site', () => {
       return {
         width: el.clientWidth,
         fullWidth: el.scrollWidth,
-        codeWidth: pre.clientWidth,
-        codeFullWidth: pre.scrollWidth,
+        overflowX: getComputedStyle(pre).overflowX,
       }
     })
     assert.ok(layout.fullWidth <= layout.width + 1)
-    assert.ok(layout.codeFullWidth <= layout.codeWidth + 1)
+    assert.equal(layout.overflowX, 'auto')
 
     await page.goto('/patterns/listbox/#context-reference')
     let settled = page.locator('.ui-api-entry').filter({
@@ -176,11 +180,10 @@ describe('Live examples in the docs site', () => {
     })
     await springOptions.locator('summary').click()
     assert.match(await springOptions.locator('pre').innerText(), /bounce\?: number/)
-    let definitionWidth = await springOptions.locator('pre').evaluate((el) => ({
-      width: el.clientWidth,
-      fullWidth: el.scrollWidth,
-    }))
-    assert.ok(definitionWidth.fullWidth <= definitionWidth.width + 1)
+    assert.equal(
+      await springOptions.locator('pre').evaluate((el) => getComputedStyle(el).overflowX),
+      'auto',
+    )
   })
 
   it('navigates to API parts and shares entries below the sticky navigation', async (t) => {
