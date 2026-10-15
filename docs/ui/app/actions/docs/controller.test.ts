@@ -98,6 +98,7 @@ describe('UI docs', () => {
     assert.match(html, /id="custom"/)
     assert.match(html, /id="web-animations-example"/)
     assert.match(html, /id="iterator-example"/)
+    assert.doesNotMatch(html, /id="reduced-motion-reference"/)
     assert.match(html, /Animate/)
     assert.doesNotMatch(html, /Reset/)
     assert.match(html, /prefers-reduced-motion/)
@@ -139,6 +140,22 @@ describe('UI docs', () => {
     assert.match(html, /id="tween-reference"/)
     assert.match(html, /done: true/)
     assert.match(html, /requestAnimationFrame/)
+  })
+
+  it('documents reduced motion on its own animation page', async () => {
+    let response = await router.fetch(new Request('http://localhost/animation/reduced-motion/'))
+    let html = await response.text()
+    assert.equal(response.status, 200)
+    assert.match(html, /<h1[^>]*>Reduced motion<\/h1>/)
+    assert.match(html, /href="\/animation\/reduced-motion\/" aria-current="page"/)
+    assert.match(html, /id="css-transitions"/)
+    assert.match(html, /id="javascript-playback"/)
+    assert.match(html, /id="animation-mixins"/)
+    assert.match(html, /id="prefers-reduced-motion-reference"/)
+    assert.match(html, /prefersReducedMotion\(\)/)
+    assert.match(html, /server rendering/)
+    assert.match(html, /does not subscribe to changes/)
+    assert.match(html, /data-code-block-copy/)
   })
 
   it('returns a useful 404 for an unknown page or category', async () => {

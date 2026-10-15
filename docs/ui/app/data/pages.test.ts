@@ -17,6 +17,7 @@ describe('UI docs pages', () => {
         'patterns/listbox',
         'patterns/menu',
         'patterns/popover',
+        'animation/reduced-motion',
         'patterns/select',
         'animation/spring',
         'patterns/tabs',

@@ -7,6 +7,7 @@ import AccordionPage, {
 import AnchorPage, { meta as anchor } from '../pages/patterns/anchor.tsx'
 import EntranceExitPage, { meta as entranceExit } from '../pages/animation/entrance-exit.tsx'
 import LayoutPage, { meta as layout } from '../pages/animation/layout.tsx'
+import ReducedMotionPage, { meta as reducedMotion } from '../pages/animation/reduced-motion.tsx'
 import SpringPage, { meta as spring, preview as springPreview } from '../pages/animation/spring.tsx'
 import TweenPage, { meta as tween } from '../pages/animation/tween.tsx'
 import ComboboxPage, { meta as combobox } from '../pages/patterns/combobox.tsx'
@@ -39,6 +40,7 @@ export const pages: UiPage[] = [
   { ...anchor, Component: AnchorPage },
   { ...entranceExit, Component: EntranceExitPage },
   { ...layout, Component: LayoutPage },
+  { ...reducedMotion, Component: ReducedMotionPage },
   { ...spring, Component: SpringPage, preview: springPreview },
   { ...tween, Component: TweenPage },
   { ...combobox, Component: ComboboxPage },

@@ -44,14 +44,6 @@ const mixinsCode = await highlightSource(`
   ]}>Saved</div>
 `)
 
-const accessibilityCode = await highlightSource(`
-  <div mix={css({
-    transform: moved ? 'translateX(200px)' : 'translateX(0)',
-    transition: spring.transition('transform', 'snappy'),
-    '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-  })} />
-`)
-
 export const preview = billing
 
 export default function SpringPage(handle: Handle<PageProps>) {
@@ -120,11 +112,9 @@ export default function SpringPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="accessibility" title="Reduced motion">
         <p>
-          Remove CSS transitions with a media query. For JavaScript playback, check{' '}
-          <code>prefersReducedMotion()</code> before starting and apply the final value immediately.
+          See <a href="/animation/reduced-motion/">Reduced motion</a> for CSS media queries and
+          JavaScript preference checks.
         </p>
-
-        <CodeBlock html={accessibilityCode} />
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="spring-reference">spring(presetOrOptions?, overrides?)</h3>
@@ -353,12 +343,6 @@ export default function SpringPage(handle: Handle<PageProps>) {
             </tr>
           </tbody>
         </ReferenceTable>
-        <h3 id="reduced-motion-reference">prefersReducedMotion()</h3>
-        <p>
-          Returns whether the browser currently matches <code>prefers-reduced-motion: reduce</code>.
-          Returns false during server rendering or when <code>matchMedia</code> is unavailable. Each
-          call reads the current preference; it does not subscribe to changes or trigger renders.
-        </p>
         <h3 id="types-reference">Exported types</h3>
         <ReferenceTable>
           <thead>

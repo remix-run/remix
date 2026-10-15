@@ -47,18 +47,6 @@ const initialEntranceCode = await highlightSource(
   'ts',
 )
 
-const reducedMotionCode = await highlightSource(
-  `
-    import { prefersReducedMotion, spring } from '@remix-run/ui/animation'
-
-    let timing = prefersReducedMotion() ? { duration: 0 } : { ...spring('snappy') }
-
-    animateEntrance({ opacity: 0, ...timing })
-    animateExit({ opacity: 0, ...timing })
-  `,
-  'ts',
-)
-
 export default function EntranceExitPage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>
@@ -94,12 +82,10 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="reduced-motion" title="Reduced motion">
         <p>
-          Call <code>prefersReducedMotion()</code> during render and set <code>duration</code> to
-          zero to complete insertion and removal immediately. The helper is safe to call during
-          server rendering.
+          Use zero-duration timing when motion is reduced. See{' '}
+          <a href="/animation/reduced-motion/">Reduced motion</a> for preference checks during
+          render.
         </p>
-
-        <CodeBlock html={reducedMotionCode} />
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="entrance-reference">animateEntrance(config?)</h3>
