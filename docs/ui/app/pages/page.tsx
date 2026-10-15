@@ -33,13 +33,6 @@ export function PageLayout(
           <p class="ui-description">{page.description}</p>
         </header>
         {children}
-        <aside class="ui-reference-link">
-          <p>
-            <a href={`https://api.remix.run/${page.importPath.replace(/^@/, '')}`}>
-              Generated API documentation
-            </a>
-          </p>
-        </aside>
         {index >= 0 ? (
           <nav class="ui-page-navigation" aria-label="Page navigation" data-pagefind-ignore>
             <a

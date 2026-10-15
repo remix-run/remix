@@ -288,13 +288,6 @@
   font-size: 14px;
   color: var(--rmx-color-text-secondary);
 }
-.ui-reference-link {
-  margin-top: 48px;
-  padding-top: 16px;
-  border-top: 1px solid var(--rmx-color-border-subtle);
-  font-size: 14px;
-  color: var(--rmx-color-text-secondary);
-}
 .ui-page-navigation {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
