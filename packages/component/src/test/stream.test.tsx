@@ -56,6 +56,22 @@ describe('stream', () => {
       expect(html).toBe('<div>Hello, world!</div>')
     })
 
+    it('streams a large synchronous tree without yielding for every node', async () => {
+      let children = Array.from({ length: 1000 }, (_, index) => <span>{index}</span>)
+      let reader = renderToStream(<div>{children}</div>).getReader()
+      let ready = false
+      let firstChunk = reader.read().then((chunk) => {
+        ready = true
+        return chunk
+      })
+
+      for (let index = 0; index < 20; index++) await Promise.resolve()
+      expect(ready).toBe(true)
+      let chunk = await firstChunk
+      expect(new TextDecoder().decode(chunk.value)).toContain('<span>999</span>')
+      await reader.cancel()
+    })
+
     it('marks stream batches as documents or fragments', async () => {
       let fragmentChunks = readChunks(renderToStream(<div>Hello, world!</div>))
       let fragment = await fragmentChunks.next()

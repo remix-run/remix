@@ -1204,17 +1204,20 @@ function validateClientEntriesForHydration(context: RenderContext): void {
 
 // Resolve all blocking frame content once
 async function resolveBlocking(segment: Segment): Promise<void> {
-  if (segment.kind === 'frame') {
-    if (segment.pending) {
-      await segment.pending
-      segment.pending = undefined
-    }
-    if (segment.content) await resolveBlocking(segment.content)
-    return
-  }
-  if (segment.kind === 'composite') {
-    for (let part of segment.parts) {
-      await resolveBlocking(part)
+  let stack = [segment]
+  while (stack.length > 0) {
+    let next = stack.pop()
+    if (!next) continue
+    if (next.kind === 'frame') {
+      if (next.pending) {
+        await next.pending
+        next.pending = undefined
+      }
+      if (next.content) stack.push(next.content)
+    } else if (next.kind === 'composite') {
+      for (let index = next.parts.length - 1; index >= 0; index--) {
+        stack.push(next.parts[index])
+      }
     }
   }
 }
