@@ -320,6 +320,8 @@ export interface AssetServer<transforms extends AssetRequestTransformMap = {}> {
   getHref(filePath: string, options?: AssetServerGetHrefOptions<transforms>): Promise<string>
   /**
    * Returns the href, preload URLs, and import map for a script entry module.
+   *
+   * Results are cached until a watched file changes. Each call returns a separate copy.
    */
   getScriptEntry(filePath: string): Promise<ScriptEntry>
   /**
@@ -429,6 +431,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     routes: resolvedOptions.routes,
   })
   let watcher: AssetServerWatcher | null = null
+  let scriptEntries = new Map<string, Promise<ScriptEntry>>()
   let chokidarWatcher: ChokidarWatcher | null = null
   let fileCompiler: FileCompiler | null = null
   let closed = false
@@ -568,6 +571,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   }
 
   async function handleWatchEvent(filePath: string, event: 'add' | 'change' | 'unlink') {
+    scriptEntries.clear()
     try {
       let normalizedFilePath = normalizeFilePath(filePath)
       accessPolicy.handleFileEvent(normalizedFilePath)
@@ -580,6 +584,20 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   }
 
   async function handleBrowserHmrFileEvents(
+    events: readonly BrowserHmrFileEvent[],
+  ): Promise<readonly BrowserHmrEvent[]> {
+    if (events.length === 0) return []
+    scriptEntries.clear()
+    try {
+      return await classifyBrowserHmrFileEvents(events)
+    } finally {
+      // Entries computed while events were processed may predate later invalidations or HMR
+      // timestamps, so drop them once every event has been handled.
+      scriptEntries.clear()
+    }
+  }
+
+  async function classifyBrowserHmrFileEvents(
     events: readonly BrowserHmrFileEvent[],
   ): Promise<readonly BrowserHmrEvent[]> {
     let browserHmrEvents: BrowserHmrEvent[] = []
@@ -847,13 +865,20 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       return scriptCompiler.getHref(filePath)
     },
     async getScriptEntry(filePath) {
-      let [href, preloads, importMap] = await Promise.all([
-        assetServer.getHref(filePath),
-        assetServer.getPreloads(filePath),
-        assetServer.getImportMap(filePath),
-      ])
+      let entry = scriptEntries.get(filePath)
+      if (!entry) {
+        entry = Promise.all([
+          assetServer.getHref(filePath),
+          assetServer.getPreloads(filePath),
+          assetServer.getImportMap(filePath),
+        ]).then(([href, preloads, importMap]) => ({ href, preloads, importMap }))
+        scriptEntries.set(filePath, entry)
+        void entry.catch(() => {
+          if (scriptEntries.get(filePath) === entry) scriptEntries.delete(filePath)
+        })
+      }
 
-      return { href, preloads, importMap }
+      return structuredClone(await entry)
     },
     async getPreloads(filePath) {
       let filePaths = Array.isArray(filePath) ? filePath : [filePath]
