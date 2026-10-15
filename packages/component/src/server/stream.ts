@@ -202,8 +202,9 @@ interface SsrFrameState {
 }
 
 type Segment =
+  | string
   | StaticSegment
-  | { kind: 'composite'; parts: Segment[] }
+  | Segment[]
   | {
       kind: 'frame'
       frameId: string
@@ -484,25 +485,17 @@ function isRemixElement(node: unknown): node is RemixElement {
   return typeof node === 'object' && node !== null && '$rmx' in node
 }
 
-function staticSeg(html: string): StaticSegment {
-  return { kind: 'static', html }
-}
-
-function compositeSeg(parts: Segment[]): Segment {
-  return { kind: 'composite', parts }
-}
-
 function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFrameState): Segment {
   if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
-    return staticSeg(escapeTextContent(String(node)))
+    return escapeTextContent(String(node))
   }
 
   if (node === null || node === undefined || typeof node === 'boolean') {
-    return staticSeg('')
+    return ''
   }
 
   if (Array.isArray(node)) {
-    return compositeSeg(node.map((child) => buildSegment(child, context, frameState)))
+    return node.map((child) => buildSegment(child, context, frameState))
   }
 
   if (isRemixElement(node)) {
@@ -511,7 +504,7 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
 
     if (type === Fragment) {
       let children = props.children
-      return children != null ? buildSegment(children, context, frameState) : staticSeg('')
+      return children != null ? buildSegment(children, context, frameState) : ''
     }
 
     if (typeof type === 'string') {
@@ -549,7 +542,7 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
     }
   }
 
-  return staticSeg('')
+  return ''
 }
 
 function buildFrameSegment(
@@ -590,7 +583,7 @@ function buildFrameSegment(
     ).then(async (resolved) => {
       let { html, tail } = await resolveFrameHtml(resolved)
       html = hoistClientEntryResourcesFromFrameHead(html, context.clientEntryHeadResources)
-      seg.content = staticSeg(html)
+      seg.content = html
       if (tail) {
         context.blockingFrameTails.push(tail)
       }
@@ -626,11 +619,11 @@ function buildElementSegment(
       : renderAttributes(tag, processedProps, currentIsSvg)
 
   if (SELF_CLOSING_TAGS.has(tag)) {
-    return staticSeg(`<${tag}${attrs} />`)
+    return `<${tag}${attrs} />`
   }
 
   if (innerHTML !== undefined) {
-    return staticSeg(`<${tag}${attrs}>${innerHTML}</${tag}>`)
+    return `<${tag}${attrs}>${innerHTML}</${tag}>`
   }
 
   if (tag === 'script') {
@@ -638,29 +631,28 @@ function buildElementSegment(
       if (context.insideHead) {
         collectAuthoredImportMap(context, tag, processedProps, props.children)
       }
-      return staticSeg(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
+      return `<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`
     }
     if (props.children != null) {
       console.error(new Error('script elements with children must have a single string child'))
     }
-    return staticSeg(`<${tag}${attrs}></${tag}>`)
+    return `<${tag}${attrs}></${tag}>`
   }
 
-  let open = staticSeg(`<${tag}${attrs}>`)
+  let open = `<${tag}${attrs}>`
   // Adjust svg context for children: foreignObject switches back to HTML
   let previousInsideSvg = context.insideSvg
   context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
-  let children =
-    props.children != null ? buildSegment(props.children, context, frameState) : staticSeg('')
+  let children = props.children != null ? buildSegment(props.children, context, frameState) : ''
   context.insideSvg = previousInsideSvg
-  let close = staticSeg(`</${tag}>`)
-  return compositeSeg([open, children, close])
+  let close = `</${tag}>`
+  return [open, children, close]
 }
 
 function buildTextareaElementSegment(tag: string, props: any): Segment {
   let attrs = renderAttributes(tag, props, false, TEXTAREA_VALUE_PROPS)
   let value = props.value ?? props.defaultValue ?? ''
-  return staticSeg(`<${tag}${attrs}>${escapeTextContent(String(value))}</${tag}>`)
+  return `<${tag}${attrs}>${escapeTextContent(String(value))}</${tag}>`
 }
 
 function collectAuthoredImportMap(
@@ -727,7 +719,7 @@ function buildImportMapSegment(props: ElementProps, context: RenderContext): Seg
 
   let { value: _value, ...scriptProps } = props
   let attrs = renderAttributes('script', scriptProps, false)
-  let segment = staticSeg('')
+  let segment: StaticSegment = { kind: 'static', html: '' }
   context.managedImportMaps.push({ attrs, segment, value })
   return segment
 }
@@ -756,15 +748,14 @@ function buildHeadElementSegment(
   let processedProps = processStyleProps(props)
   let attrs = renderAttributes(tag, processedProps, false)
 
-  let open = staticSeg(`<${tag}${attrs}>`)
+  let open = `<${tag}${attrs}>`
   let previousInsideHead = context.insideHead
   context.insideHead = true
-  let children =
-    props.children != null ? buildSegment(props.children, context, frameState) : staticSeg('')
+  let children = props.children != null ? buildSegment(props.children, context, frameState) : ''
   context.insideHead = previousInsideHead
-  let close = staticSeg(`</${tag}>`)
+  let close = `</${tag}>`
 
-  return compositeSeg([open, children, close])
+  return [open, children, close]
 }
 
 function renderAttributes(
@@ -1076,9 +1067,9 @@ function buildEntrySegment(
     props: JSON.parse(JSON.stringify(props, replacer)),
   })
 
-  let start = staticSeg(`<!-- rmx:h:${instanceId} -->`)
-  let end = staticSeg('<!-- /rmx:h -->')
-  return compositeSeg([start, rendered, end])
+  let start = `<!-- rmx:h:${instanceId} -->`
+  let end = '<!-- /rmx:h -->'
+  return [start, rendered, end]
 }
 
 function resolveDefaultClientEntry(
@@ -1207,33 +1198,46 @@ async function resolveBlocking(segment: Segment): Promise<void> {
   let stack = [segment]
   while (stack.length > 0) {
     let next = stack.pop()
-    if (!next) continue
-    if (next.kind === 'frame') {
+    if (next === undefined || typeof next === 'string') continue
+    if (Array.isArray(next)) {
+      for (let index = next.length - 1; index >= 0; index--) {
+        stack.push(next[index])
+      }
+    } else if (next.kind === 'frame') {
       if (next.pending) {
         await next.pending
         next.pending = undefined
       }
       if (next.content) stack.push(next.content)
-    } else if (next.kind === 'composite') {
-      for (let index = next.parts.length - 1; index >= 0; index--) {
-        stack.push(next.parts[index])
-      }
     }
   }
 }
 
 // Serialize the segment tree to HTML
 function serializeSegment(seg: Segment): string {
-  if (seg.kind === 'static') return seg.html
-  if (seg.kind === 'composite') return seg.parts.map(serializeSegment).join('')
-  // frame
-  let inner = seg.content ? serializeSegment(seg.content) : ''
-  let start = `<!-- rmx:f:${seg.frameId} -->`
-  let end = `<!-- /rmx:f -->`
-  return start + inner + end
+  if (typeof seg === 'string') return seg
+  if (!Array.isArray(seg) && seg.kind === 'static') return seg.html
+  let output = { html: '' }
+  appendSegment(seg, output)
+  return output.html
+}
+
+function appendSegment(seg: Segment, output: { html: string }): void {
+  if (typeof seg === 'string') {
+    output.html += seg
+  } else if (Array.isArray(seg)) {
+    for (let part of seg) appendSegment(part, output)
+  } else if (seg.kind === 'static') {
+    output.html += seg.html
+  } else {
+    output.html += `<!-- rmx:f:${seg.frameId} -->`
+    if (seg.content) appendSegment(seg.content, output)
+    output.html += '<!-- /rmx:f -->'
+  }
 }
 
 function escapeHtml(str: string): string {
+  if (!/[&<>"']/.test(str)) return str
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -1243,6 +1247,7 @@ function escapeHtml(str: string): string {
 }
 
 function escapeTextContent(str: string): string {
+  if (!/[&<>]/.test(str)) return str
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
@@ -1377,7 +1382,8 @@ function processStyleProps(props: any): any {
   let processedProps = { ...props }
   let classAttr = typeof props.class === 'string' ? props.class : ''
   let className = typeof props.className === 'string' ? props.className : ''
-  let mergedClassName = [classAttr, className].filter(Boolean).join(' ')
+  let mergedClassName = classAttr
+  if (className) mergedClassName = classAttr ? `${classAttr} ${className}` : className
 
   if (mergedClassName) {
     processedProps.className = mergedClassName

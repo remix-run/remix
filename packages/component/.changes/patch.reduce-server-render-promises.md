@@ -1,1 +1,1 @@
-Reduce server rendering allocations by waiting only for pending frames when walking the HTML tree, instead of creating promises for every static segment. Blocking frames still resolve before the first HTML chunk.
+Improve server rendering throughput and reduce allocations on pages with many static elements and attributes. Blocking frames still resolve before the first HTML chunk.
