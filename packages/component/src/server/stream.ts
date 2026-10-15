@@ -1392,13 +1392,21 @@ function hoistClientEntryResourcesFromFrameHead(
   return `${FRAME_HEAD_OPEN_TAG}${remainingHeadHtml}${FRAME_HEAD_CLOSE_TAG}${contentAfterHead}`
 }
 
-function processStyleProps(props: any): any {
-  let processedProps = { ...props }
+function processStyleProps(props: ElementProps): ElementProps {
+  if (
+    !('class' in props) &&
+    typeof props.style !== 'object' &&
+    Object.getPrototypeOf(props) === Object.prototype
+  ) {
+    return props
+  }
+
   let classAttr = typeof props.class === 'string' ? props.class : ''
   let className = typeof props.className === 'string' ? props.className : ''
   let mergedClassName = classAttr
   if (className) mergedClassName = classAttr ? `${classAttr} ${className}` : className
 
+  let processedProps = { ...props }
   if (mergedClassName) {
     processedProps.className = mergedClassName
     delete processedProps.class
