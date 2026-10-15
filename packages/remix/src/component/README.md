@@ -236,12 +236,6 @@ await handle.frame.reload({
 
 Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 
-Pass `reload: false` to `navigate()` to update the URL and history without fetching or rendering, such as when the page already shows the selected product variant. Scroll position and focus stay where they are, and back and forward traversal reloads the top frame from the entry's URL:
-
-```ts
-await navigate(`/products/shirt?variant=${variantId}`, { history: 'replace', reload: false })
-```
-
 ## Single-page Applications
 
 Use `render` and `run` from `remix/spa` when every route runs in the browser and returns a component
