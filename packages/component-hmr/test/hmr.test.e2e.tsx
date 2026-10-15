@@ -487,6 +487,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
         clientFieldSource.replace('<ClientMessage />', '<ClientMessage'),
       )
       await failedUpdate
+      assert.equal(server.readyCount, 1)
 
       await fs.writeFile(
         clientFieldPath,
@@ -507,7 +508,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
         'Client: after server update!!!!!',
       )
       await server.waitForReady(1)
-      assert.equal(server.readyCount, 2)
     } finally {
       await server?.close()
       await fixture.close()

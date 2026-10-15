@@ -429,7 +429,9 @@ describe('stream', () => {
         }),
       )
 
-      await expect(drain(stream)).rejects.toThrow('Invalid innerHTML prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid innerHTML prop: expected a value created with unsafeHTML()',
+      )
     })
 
     it('rejects JSON-shaped innerHTML values', async () => {
@@ -439,7 +441,9 @@ describe('stream', () => {
         }),
       )
 
-      await expect(drain(stream)).rejects.toThrow('Invalid innerHTML prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid innerHTML prop: expected a value created with unsafeHTML()',
+      )
     })
 
     it('renders branded iframe srcDoc as escaped attribute markup', async () => {
@@ -461,31 +465,41 @@ describe('stream', () => {
     it('rejects unbranded iframe srcDoc values', async () => {
       let stream = renderToStream(createElement('iframe', { srcDoc: '<p>HTML</p>' }))
 
-      await expect(drain(stream)).rejects.toThrow('Invalid srcDoc prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid srcDoc prop: expected a value created with unsafeHTML()',
+      )
     })
 
     it('rejects JSON-shaped iframe srcDoc values', async () => {
       let stream = renderToStream(createElement('iframe', { srcDoc: { value: '<p>HTML</p>' } }))
 
-      await expect(drain(stream)).rejects.toThrow('Invalid srcDoc prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid srcDoc prop: expected a value created with unsafeHTML()',
+      )
     })
 
     it('rejects unbranded iframe srcdoc values', async () => {
       let stream = renderToStream(createElement('iframe', { srcdoc: '<p>HTML</p>' }))
 
-      await expect(drain(stream)).rejects.toThrow('Invalid srcdoc prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid srcdoc prop: expected a value created with unsafeHTML()',
+      )
     })
 
     it('rejects JSON-shaped iframe srcdoc values', async () => {
       let stream = renderToStream(createElement('iframe', { srcdoc: { value: '<p>HTML</p>' } }))
 
-      await expect(drain(stream)).rejects.toThrow('Invalid srcdoc prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid srcdoc prop: expected a value created with unsafeHTML()',
+      )
     })
 
     it('rejects outerHTML values', async () => {
       let stream = renderToStream(createElement('div', { outerHTML: '<p>replacement</p>' }))
 
-      await expect(drain(stream)).rejects.toThrow('Invalid outerHTML prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid outerHTML prop: outerHTML is not supported on host elements',
+      )
     })
 
     it('omits invalid and reserved host prop names', async () => {

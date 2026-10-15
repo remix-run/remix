@@ -73,7 +73,7 @@ Listen for bubbling changes on the root or an ancestor:
 - `panel({ name })`: wires the matching tab panel id, hidden state, inert state, and label relationship.
 - `onTabsChange(...)`: event mixin for the bubbling `TabsChangeEvent`.
 - `TabsChangeEvent`: bubbling event with `activeTab` and `previousActiveTab`.
-- `TabsContextProps`, `TabsContextValue`, `TabsRegisteredTab`, `TabsActivationDirection`, `TabsRootOptions`, `TabListOptions`, `TabOptions`, and `TabPanelOptions`: context, state, and mixin option types.
+- `TabsContextProps`, `TabsContextValue`, `TabsRegisteredTab`, `TabsActivationDirection`, `TabOptions`, and `TabPanelOptions`: context, state, and mixin option types.
 
 ## Behavior Notes
 
