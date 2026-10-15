@@ -8,12 +8,12 @@ describe('UI docs', () => {
     let response = await router.fetch(new Request('http://localhost/'))
     let html = await response.text()
     assert.equal(response.status, 200)
-    assert.match(html, /Accessible UI behaviors and animation utilities/)
-    assert.match(html, /<h2>Behaviors<\/h2>/)
+    assert.match(html, /Accessible UI patterns and animation utilities/)
+    assert.match(html, /<h2>Patterns<\/h2>/)
     assert.match(html, /Currently unstable/)
     assert.match(html, /npm/)
     assert.match(html, /@remix-run\/ui/)
-    assert.match(html, /href="\/behaviors\/accordion\/"/)
+    assert.match(html, /href="\/patterns\/accordion\/"/)
     assert.match(html, /href="\/animation\/spring\/"/)
     assert.match(html, /data-code-block-copy/)
     assert.match(html, /<section id="installation"[^>]*><h2>Installation<\/h2>/)
@@ -36,8 +36,8 @@ describe('UI docs', () => {
     assert.doesNotMatch(html, /billing\.example[^"<]*\.tsx/)
   })
 
-  it('renders live examples and sections on the behavior page', async () => {
-    let response = await router.fetch(new Request('http://localhost/behaviors/accordion/'))
+  it('renders live examples and sections on the pattern page', async () => {
+    let response = await router.fetch(new Request('http://localhost/patterns/accordion/'))
     let html = await response.text()
     assert.equal(response.status, 200)
     assert.match(html, /<h1[^>]*>Accordion<\/h1>/)
@@ -143,7 +143,7 @@ describe('UI docs', () => {
 
   it('returns a useful 404 for an unknown page or category', async () => {
     let [missing, wrongCategory] = await Promise.all([
-      router.fetch(new Request('http://localhost/behaviors/missing/')),
+      router.fetch(new Request('http://localhost/patterns/missing/')),
       router.fetch(new Request('http://localhost/system/accordion/')),
     ])
     assert.equal(missing.status, 404)
@@ -153,9 +153,9 @@ describe('UI docs', () => {
     assert.doesNotMatch(html, /On this page|href="#installation"|href="#using-ui"|href="#explore"/)
   })
 
-  it('renders every behavior with a hero, visible source and a complete reference', async () => {
-    for (let page of pages.filter((page) => page.category === 'behaviors')) {
-      let response = await router.fetch(new Request(`http://localhost/behaviors/${page.slug}/`))
+  it('renders every pattern with a hero, visible source and a complete reference', async () => {
+    for (let page of pages.filter((page) => page.category === 'patterns')) {
+      let response = await router.fetch(new Request(`http://localhost/patterns/${page.slug}/`))
       let html = await response.text()
       assert.equal(response.status, 200)
       assert.match(html, /data-demo-source/)
@@ -166,14 +166,14 @@ describe('UI docs', () => {
         html,
         new RegExp(`${page.slug === 'anchor' ? 'chart' : 'basic'}\\.example[^"<]*\\.tsx`),
       )
-      assert.match(html, new RegExp(`href="/behaviors/${page.slug}/" aria-current="page"`))
+      assert.match(html, new RegExp(`href="/patterns/${page.slug}/" aria-current="page"`))
     }
   })
 
   it('serves example modules but keeps page components and controllers private', async () => {
     let [example, page, controller] = await Promise.all([
       router.fetch(new Request('http://localhost/assets/app/examples/accordion/basic.example.tsx')),
-      router.fetch(new Request('http://localhost/assets/app/pages/behaviors/accordion.tsx')),
+      router.fetch(new Request('http://localhost/assets/app/pages/patterns/accordion.tsx')),
       router.fetch(new Request('http://localhost/assets/app/actions/docs/controller.tsx')),
     ])
     assert.equal(example.status, 200)

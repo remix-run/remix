@@ -33,7 +33,7 @@ export default function GettingStarted() {
             Your styles.
           </h1>
           <p class="ui-description">
-            Accessible UI behaviors and animation utilities for Remix. Bring your own markup and
+            Accessible UI patterns and animation utilities for Remix. Bring your own markup and
             styles.
           </p>
           <div class="ui-landing-actions">
@@ -85,8 +85,7 @@ export default function GettingStarted() {
         </Section>
         <Section id="explore" title="Explore the library">
           <p>
-            Explore behaviors for accordions, menus, tabs and other controls, or browse the
-            animation utilities.
+            Explore patterns such as accordions, menus and tabs, or browse the animation utilities.
           </p>
           <div class="ui-preview-grid">
             {previews.map(({ page, Preview }) => (
@@ -96,7 +95,7 @@ export default function GettingStarted() {
                 </div>
                 <div class="ui-preview-card-content">
                   <p class="ui-eyebrow">
-                    {page.category === 'behaviors' ? 'Behaviors' : 'Animation'}
+                    {page.category === 'patterns' ? 'Patterns' : 'Animation'}
                   </p>
                   <h3>
                     <a href={routes.docs.page.href({ category: page.category, slug: page.slug })}>
@@ -114,7 +113,7 @@ export default function GettingStarted() {
     return (
       <UiDocument
         title="Remix UI"
-        description="Accessible UI behaviors and animation utilities for Remix."
+        description="Accessible UI patterns and animation utilities for Remix."
         pages={pages}
         headings={readPageHeadings(content)}
       >

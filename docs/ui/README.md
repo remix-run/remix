@@ -1,6 +1,6 @@
 # Remix UI docs
 
-A documentation site for the standalone `@remix-run/ui` package, with live examples, usage guidance and API references for each UI behavior and animation utility.
+A documentation site for the standalone `@remix-run/ui` package, with live examples, usage guidance and API references for each UI pattern and animation utility.
 
 ## Commands
 
@@ -20,7 +20,7 @@ Prerender writes the documentation pages, example modules, shared assets and Pag
 
 ## Authoring
 
-Pages are normal Remix components in `app/pages/behaviors/` and `app/pages/animation/`. Each exports a small `meta` object with its title, category, slug, description and package import path. Add the component and its metadata to [the page list](https://github.com/remix-run/remix/blob/main/docs/ui/app/data/pages.ts) to include it in routing, navigation and prerendering.
+Pages are normal Remix components in `app/pages/patterns/` and `app/pages/animation/`. Each exports a small `meta` object with its title, category, slug, description and package import path. Add the component and its metadata to [the page list](https://github.com/remix-run/remix/blob/main/docs/ui/app/data/pages.ts) to include it in routing, navigation and prerendering.
 
 Write the body as JSX inside `PageLayout`. Shared helpers live beside the page folders in `app/pages/page.tsx`, `app/pages/example.tsx` and `app/pages/reference-table.tsx`. Place prose, code blocks and examples where readers should see them:
 

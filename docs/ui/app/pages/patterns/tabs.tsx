@@ -8,7 +8,7 @@ import { referenceTable } from '../reference-table.tsx'
 export const meta = {
   title: 'Tabs',
   slug: 'tabs',
-  category: 'behaviors',
+  category: 'patterns',
   description: 'Switch between related panels with keyboard navigation.',
   importPath: '@remix-run/ui/tabs',
 } satisfies PageMeta

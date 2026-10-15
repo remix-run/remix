@@ -8,7 +8,7 @@ import { referenceTable } from '../reference-table.tsx'
 export const meta = {
   title: 'Toggle',
   slug: 'toggle',
-  category: 'behaviors',
+  category: 'patterns',
   description: 'A boolean switch with native input and custom host support.',
   importPath: '@remix-run/ui/toggle',
 } satisfies PageMeta

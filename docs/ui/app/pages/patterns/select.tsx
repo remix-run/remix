@@ -8,7 +8,7 @@ import { referenceTable } from '../reference-table.tsx'
 export const meta = {
   title: 'Select',
   slug: 'select',
-  category: 'behaviors',
+  category: 'patterns',
   description: 'Choose a single value from a button-triggered option list.',
   importPath: '@remix-run/ui/select',
 } satisfies PageMeta

@@ -8,7 +8,7 @@ import { ReferenceTable } from '../reference-table.tsx'
 export const meta = {
   title: 'Accordion',
   slug: 'accordion',
-  category: 'behaviors',
+  category: 'patterns',
   description: 'Expandable sections with keyboard navigation.',
   importPath: '@remix-run/ui/accordion',
 } satisfies PageMeta

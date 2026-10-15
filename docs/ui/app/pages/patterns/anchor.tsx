@@ -8,7 +8,7 @@ import { referenceTable } from '../reference-table.tsx'
 export const meta = {
   title: 'Anchor',
   slug: 'anchor',
-  category: 'behaviors',
+  category: 'patterns',
   description: 'Position floating elements against elements or viewport coordinates.',
   importPath: '@remix-run/ui/anchor',
 } satisfies PageMeta
@@ -126,7 +126,7 @@ export default function AnchorPage(handle: Handle<PageProps>) {
           to keep it from being announced or focused separately.
         </p>
         <p>
-          For interactive floating panels, use <a href="/behaviors/popover/">Popover</a> to
+          For interactive floating panels, use <a href="/patterns/popover/">Popover</a> to
           coordinate opening, dismissal and focus targets.
         </p>
       </Section>

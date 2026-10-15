@@ -8,7 +8,7 @@ import { referenceTable } from '../reference-table.tsx'
 export const meta = {
   title: 'Listbox',
   slug: 'listbox',
-  category: 'behaviors',
+  category: 'patterns',
   description:
     'Single-value selection with independent highlighting and typeahead when the list has keyboard focus.',
   importPath: '@remix-run/ui/listbox',
