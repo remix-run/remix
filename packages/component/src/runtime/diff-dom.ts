@@ -91,6 +91,7 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
                 data: context.data,
                 signal: context.signal,
                 reconciliationTracker: context.reconciliationTracker,
+                heldTasks: context.heldTasks,
               },
             )
             if (context.reconciliationTracker) context.reconciliationTracker.waitFor(render)
