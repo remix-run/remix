@@ -44,14 +44,9 @@ interface FrameRedirectNavigationInfo {
   resetFocus: NonNullable<NavigationInterceptOptions['focusReset']>
 }
 
-interface UrlUpdateNavigationInfo {
-  type: typeof urlUpdateNavigationInfoType
-}
-
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
 const replacedFormNavigationInfoType = Symbol('replaced-form-navigation')
 const frameRedirectNavigationInfoType = 'frame-redirect'
-const urlUpdateNavigationInfoType = 'url-update'
 
 // Lets the navigation handler tell the WebKit workaround once it has reset scroll.
 const webKitScrollResets = new WeakMap<NavigateEvent, () => void>()
@@ -176,7 +171,28 @@ export type NavigationOptions = {
 export async function navigate(href: string, options?: NavigationOptions) {
   let navigation = getInterceptableNavigation()
   if (options?.reload === false) {
-    await updateUrl(navigation, href, options.history)
+    if (navigation) {
+      let transition = navigation.navigate(href, {
+        state: {
+          target: undefined,
+          src: href,
+          resetScroll: 'after-transition',
+          resetFocus: 'after-transition',
+          $rmx: true,
+        } satisfies NavigationEntryState,
+        history: options.history,
+        info: {
+          type: frameRedirectNavigationInfoType,
+          resetScroll: 'manual',
+          resetFocus: 'manual',
+        } satisfies FrameRedirectNavigationInfo,
+      })
+      await transition.finished
+    } else if (options.history === 'replace') {
+      window.history.replaceState(window.history.state, '', href)
+    } else {
+      window.history.pushState(null, '', href)
+    }
     return
   }
 
@@ -188,51 +204,16 @@ export async function navigate(href: string, options?: NavigationOptions) {
     $rmx: true,
   } satisfies NavigationEntryState
   if (!navigation) {
-    navigateDocument(href, options?.history)
+    if (options?.history === 'replace') {
+      window.location.replace(href)
+    } else {
+      window.location.assign(href)
+    }
     return
   }
 
   let transition = navigation.navigate(href, { state, history: options?.history })
   await transition.finished
-}
-
-async function updateUrl(
-  navigation: Navigation | undefined,
-  href: string,
-  history: NavigationOptions['history'],
-): Promise<void> {
-  if (!navigation) {
-    if (!isSameOriginUrl(href)) {
-      navigateDocument(href, history)
-    } else if (history === 'replace') {
-      window.history.replaceState(window.history.state, '', href)
-    } else {
-      window.history.pushState(null, '', href)
-    }
-    return
-  }
-
-  let state = {
-    target: undefined,
-    src: href,
-    resetScroll: 'after-transition',
-    resetFocus: 'after-transition',
-    $rmx: true,
-  } satisfies NavigationEntryState
-  let transition = navigation.navigate(href, {
-    state,
-    history,
-    info: { type: urlUpdateNavigationInfoType } satisfies UrlUpdateNavigationInfo,
-  })
-  await transition.finished
-}
-
-function navigateDocument(href: string, history: NavigationOptions['history']): void {
-  if (history === 'replace') {
-    window.location.replace(href)
-  } else {
-    window.location.assign(href)
-  }
 }
 
 /**
@@ -467,18 +448,9 @@ export function startNavigationListenerImpl(
         return
       }
 
-      // Like hash changes, a URL update that interrupts frame work falls through to a top-frame
-      // reload so the page content still matches the URL.
-      if (isUrlUpdateNavigationInfo(event.info) && !needsFrameReload) {
-        interceptNavigation(navigation, event, false, {
-          async handler() {},
-          scroll: 'manual',
-          focusReset: 'manual',
-        })
-        return
-      }
-
-      if (isFrameRedirectNavigationInfo(event.info)) {
+      // Like hash changes, a URL-only navigate() that interrupts frame work falls through to a
+      // top-frame reload so the page content still matches the URL.
+      if (isFrameRedirectNavigationInfo(event.info) && !needsFrameReload) {
         interceptNavigation(navigation, event, event.info.resetScroll !== 'manual', {
           async handler() {},
           scroll: 'manual',
@@ -709,15 +681,6 @@ function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNa
     (value.resetScroll === 'after-transition' || value.resetScroll === 'manual') &&
     'resetFocus' in value &&
     (value.resetFocus === 'after-transition' || value.resetFocus === 'manual')
-  )
-}
-
-function isUrlUpdateNavigationInfo(value: unknown): value is UrlUpdateNavigationInfo {
-  return (
-    typeof value === 'object' &&
-    value != null &&
-    'type' in value &&
-    value.type === urlUpdateNavigationInfoType
   )
 }
 
