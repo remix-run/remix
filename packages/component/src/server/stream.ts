@@ -212,6 +212,10 @@ type Segment =
       pending?: Promise<void>
     }
 
+const MAX_BUFFERED_HTML_LENGTH = 64 * 1024
+// UTF-8 needs at most three bytes per UTF-16 code unit.
+const htmlEncodingBuffer = new Uint8Array(MAX_BUFFERED_HTML_LENGTH * 3)
+
 const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
 const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
 
@@ -330,7 +334,7 @@ export function renderToStream(
         finalizeManagedImportMap(context)
         let html = serializeSegment(root)
         let finalHtml = finalizeHtml(html, context)
-        let bytes = encoder.encode(appendFlushMarker(finalHtml, context.flushKind))
+        let bytes = encodeHtml(appendFlushMarker(finalHtml, context.flushKind), encoder)
         if (closeIfCancelled(controller, context)) return
         controller.enqueue(bytes)
 
@@ -365,6 +369,14 @@ export function renderToStream(
       cancel(reason)
     },
   })
+}
+
+function encodeHtml(html: string, encoder: TextEncoder): Uint8Array {
+  if (html.length > MAX_BUFFERED_HTML_LENGTH) return encoder.encode(html)
+
+  // Encoding is synchronous. Copy the written bytes so streams never share the scratch buffer.
+  let { written } = encoder.encodeInto(html, htmlEncodingBuffer)
+  return htmlEncodingBuffer.slice(0, written)
 }
 
 function isSignalAbortError(signal: AbortSignal, error: unknown): boolean {

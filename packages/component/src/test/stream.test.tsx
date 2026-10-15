@@ -56,6 +56,40 @@ describe('stream', () => {
       expect(html).toBe('<div>Hello, world!</div>')
     })
 
+    it('keeps earlier stream chunks intact while other renders finish', async () => {
+      let content = '日本語🙂'.repeat(1000)
+      let reader = renderToStream(<p>{content}</p>).getReader()
+      try {
+        let first = await reader.read()
+        invariant(!first.done)
+
+        await drain(renderToStream(<p>{'Other content'.repeat(3000)}</p>))
+
+        expect(new TextDecoder().decode(first.value)).toBe(
+          `<p>${content}</p><!-- rmx:flush fragment -->`,
+        )
+      } finally {
+        await reader.cancel()
+      }
+    })
+
+    it('encodes large ASCII output', async () => {
+      let content = 'Hello'.repeat(20_000)
+      let html = await drain(renderToStream(<p>{content}</p>))
+      expect(html).toBe(`<p>${content}</p>`)
+    })
+
+    it('encodes large multi-byte output', async () => {
+      let content = '日本語'.repeat(20_000) + '🙂'
+      let html = await drain(renderToStream(<p>{content}</p>))
+      expect(html).toBe(`<p>${content}</p>`)
+    })
+
+    it('encodes surrogate pairs across adjacent text nodes', async () => {
+      let html = await drain(renderToStream(<p>{['\ud83d', '\ude00', '\ud800', 'Å']}</p>))
+      expect(html).toBe('<p>😀�Å</p>')
+    })
+
     it('streams a large synchronous tree without yielding for every node', async () => {
       let children = Array.from({ length: 1000 }, (_, index) => <span>{index}</span>)
       let reader = renderToStream(<div>{children}</div>).getReader()
