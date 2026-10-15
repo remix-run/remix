@@ -675,6 +675,38 @@ describe('stream', () => {
       expect(html).toBe('<div class="first second"></div>')
     })
 
+    it('does not render inherited attributes from props', async () => {
+      let element = <p className="plain">Child</p>
+      Object.setPrototypeOf(element.props, { title: 'inherited' })
+
+      let html = await drain(renderToStream(element))
+
+      expect(html).toBe('<p class="plain">Child</p>')
+    })
+
+    it('renders reused frozen props without changing classes or styles', async () => {
+      let plain = <p className="plain">Plain</p>
+      let style = Object.freeze({ marginTop: 2 })
+      let styled = (
+        <p class="first" className="second" style={style}>
+          Styled
+        </p>
+      )
+      Object.freeze(plain.props)
+      Object.freeze(styled.props)
+
+      let first = await drain(renderToStream([plain, styled]))
+      let second = await drain(renderToStream([plain, styled]))
+
+      expect(first).toBe(
+        '<p class="plain">Plain</p><p class="first second" style="margin-top: 2px;">Styled</p>',
+      )
+      expect(second).toBe(first)
+      expect(styled.props.class).toBe('first')
+      expect(styled.props.className).toBe('second')
+      expect(styled.props.style).toBe(style)
+    })
+
     it('changes htmlFor to for', async () => {
       let stream = renderToStream(
         <>

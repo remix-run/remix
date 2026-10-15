@@ -8,6 +8,48 @@ import type { Handle, RemixNode } from '../runtime/component.ts'
 import type { Props } from '../index.ts'
 
 describe('vnode mixins', () => {
+  it('does not add mix to props retained by a mixin on an empty host', () => {
+    let seenProps: Array<Record<string, unknown>> = []
+    let inspect = createMixin((_handle) => (props: Record<string, unknown>) => {
+      seenProps.push(props)
+    })
+    let element = <input title="unchanged" mix={[inspect()]} />
+    Object.freeze(element.props)
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(element)
+    root.flush()
+
+    expect(container.innerHTML).toBe('<input title="unchanged">')
+    expect(seenProps).toEqual([{ title: 'unchanged' }])
+  })
+
+  it('keeps original props and earlier mixin inputs intact', () => {
+    let seenProps: Array<Record<string, unknown>> = []
+    let append = createMixin((handle) => (suffix: string, props: { title?: string }) => {
+      seenProps.push(props)
+      return <handle.element {...props} title={`${props.title}${suffix}`} />
+    })
+    let element = (
+      <div title="base" mix={[append('-one'), append('-two')]}>
+        Child
+      </div>
+    )
+    Object.freeze(element.props)
+    Object.freeze(element.props.mix)
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(element)
+    root.flush()
+
+    expect(container.innerHTML).toBe('<div title="base-one-two">Child</div>')
+    expect(element.props.title).toBe('base')
+    expect(element.props.children).toBe('Child')
+    expect(seenProps).toEqual([{ title: 'base' }, { title: 'base-one' }])
+  })
+
   it('composes mixins in order and does not leak mix to the DOM', () => {
     let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
       <handle.element {...props} title={title} />
