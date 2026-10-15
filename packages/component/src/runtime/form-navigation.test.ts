@@ -79,6 +79,70 @@ describe('form navigation', () => {
     }
   })
 
+  it('resolves an external submit button associated by its form attribute', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let initialKey = window.navigation.currentEntry?.key
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+    let submission: FormSubmission | undefined
+
+    let container = document.createElement('div')
+    container.innerHTML = `
+      <form
+        id="external-submitter-form"
+        action=""
+        method="get"
+        enctype="application/x-www-form-urlencoded"
+        data-rmx-target="form-frame"
+      >
+        <input name="name" value="Ada" />
+      </form>
+      <button
+        type="submit"
+        form="external-submitter-form"
+        name="intent"
+        value="save"
+        formmethod="post"
+        formenctype="multipart/form-data"
+        data-rmx-target="button-frame"
+      >Save</button>
+    `
+    let button = container.querySelector('button')
+    if (!button) throw new Error('Expected an external submit button')
+    document.body.append(container)
+
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        formNavigation = resolveFormNavigation(event)
+        event.intercept({
+          async handler() {
+            submission = await formNavigation?.getSubmission?.()
+          },
+        })
+      },
+      { signal: controller.signal },
+    )
+
+    try {
+      let navigationSucceeded = nextNavigation(controller.signal)
+      button.click()
+      await navigationSucceeded
+
+      expect(formNavigation?.getAttribute('data-rmx-target')).toBe('button-frame')
+      expect(submission?.method).toBe('post')
+      expect(submission?.encType).toBe('multipart/form-data')
+      expect(Array.from(submission?.formData?.entries() ?? [])).toEqual([
+        ['name', 'Ada'],
+        ['intent', 'save'],
+      ])
+    } finally {
+      container.remove()
+      controller.abort()
+      if (initialKey) await window.navigation.traverseTo(initialKey).finished
+    }
+  })
+
   it('preserves a reused submitter when its previous form submits again', async () => {
     let controller = new AbortController()
     let resolveFormNavigation = createFormNavigationResolver(controller.signal)
