@@ -110,6 +110,12 @@ describe('ContentDisposition', () => {
     assert.equal(header.toString(), 'attachment; filename="file \\"with\\" quotes.txt"')
   })
 
+  it('round trips backslashes in attribute values', () => {
+    let filename = String.raw`one\two.txt`
+    let value = ContentDisposition.from({ type: 'attachment', filename }).toString()
+    assert.equal(ContentDisposition.from(value).filename, filename)
+  })
+
   it('handles empty attribute values', () => {
     let header = new ContentDisposition('form-data; name=')
     assert.equal(header.name, '')
