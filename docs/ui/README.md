@@ -58,11 +58,29 @@ const anatomyCode = await highlightSource(`
 `)
 ```
 
-`highlightSource` removes shared indentation and outer whitespace before highlighting. Internal indentation and blank lines stay in the displayed and copied code.
+`highlightSource` removes shared indentation and outer whitespace, then formats supported code snippets with the repository's Oxfmt rules before highlighting. If formatting fails, it logs a warning and displays the original snippet. Shell commands and other unsupported languages retain their source formatting.
 
 Examples live in `app/examples/**/*.example.tsx`. Each default exports a normal Remix component. Keep each example self-contained, including its styles, so readers can copy the whole file. The site reads the file for highlighted source and hydrates its default export with `clientEntry`; no source macros, generated copies or import rewriting are involved. These files belong to the site and import the UI package through its public exports.
 
 Page components and their helpers stay on the server. Only example modules and the docs shell are sent to the browser. Export a loaded example as `preview` and include it in the page list to show it on Getting Started. Landing previews are decorative: server-rendered without hydration, inert and hidden from assistive technology.
+
+## Testing live examples
+
+Each `*.example.tsx` has a matching `*.example.test.browser.tsx` beside it. Import and render the actual example with `mount` from `app/examples/test-helpers.ts`. Test the behavior the example teaches, including its visible state and relevant keyboard, focus or form behavior. Keep exhaustive primitive coverage in the UI package.
+
+These are interaction smoke tests, not exhaustive primitive or visual regression tests. For each example, identify a plausible broken behavior its test must catch. Temporarily break that wiring when adding or substantially changing a test, verify that it fails for the expected reason, and restore the source. A companion filename alone does not prove meaningful coverage.
+
+Animation tests use real browser animations. Check that the first interaction and a return interaction animate and reach their intended endpoints. Assert motion on the intended element and property so an unrelated transition cannot satisfy the test. Wait for observable state or animation completion rather than fixed delays. The shared helpers register cleanup and provide bounded assertion polling. Check visual hiding as well as state attributes where it matters, and use a search alias that cannot match the normal label when testing aliases. Tests for snippets and page rendering run on the server. One docs-site smoke test covers hydration, real pointer and keyboard interaction, focus restoration and browser errors through the actual page layout.
+
+Run all docs tests or focus on one example from the repository root.
+
+```sh
+pnpm --filter remix-ui-docs run test
+pnpm --filter remix-ui-docs run test app/examples/toggle/controlled.example.test.browser.tsx
+pnpm --filter remix-ui-docs run typecheck
+```
+
+The standard test command runs browser tests in Chromium. A server test checks that every live example has a companion browser test. Typechecking includes both the example source and its tests. Test files and helpers are excluded from public example assets.
 
 ## Site ownership
 

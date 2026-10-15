@@ -435,6 +435,9 @@ importers:
       '@remix-run/ui':
         specifier: workspace:^
         version: link:../../packages/ui
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.51.0
       remix:
         specifier: workspace:^
         version: link:../../packages/remix

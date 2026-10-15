@@ -1,7 +1,9 @@
 import { readFile } from 'node:fs/promises'
+import { format } from 'oxfmt'
 import { clientEntry } from 'remix/component'
 import type { Handle, RemixNode } from 'remix/component'
 import { renderMarkdownHtml } from 'remix-docs-shared/markdown/render'
+import oxfmtConfig from '../../../../oxfmt.config.ts'
 
 type DemoComponent = (handle: Handle) => () => RemixNode
 
@@ -50,8 +52,35 @@ export async function highlightSource(source: string, lang = 'tsx'): Promise<str
     .map((line) => line.slice(indent))
     .join('\n')
     .trim()
+
+  let extension = snippetExtensions.get(lang)
+  if (value && extension) {
+    try {
+      let result = await format(`snippet.${extension}`, value, oxfmtConfig)
+      if (result.errors.length > 0) {
+        throw new Error(result.errors.map((error) => error.codeframe ?? error.message).join('\n'))
+      }
+      value = result.code.trim()
+    } catch (error) {
+      console.warn(`Unable to format UI docs snippet (${lang}). Displaying original source.`, error)
+    }
+  }
+
   return renderMarkdownHtml({ type: 'root', children: [{ type: 'code', lang, value }] })
 }
+
+const snippetExtensions = new Map([
+  ['ts', 'ts'],
+  ['typescript', 'ts'],
+  ['tsx', 'tsx'],
+  ['js', 'js'],
+  ['javascript', 'js'],
+  ['jsx', 'jsx'],
+  ['json', 'json'],
+  ['jsonc', 'jsonc'],
+  ['css', 'css'],
+  ['html', 'html'],
+])
 
 function isDemoComponent(value: unknown): value is DemoComponent {
   return typeof value === 'function'

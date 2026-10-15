@@ -16,6 +16,7 @@
   "dependencies": {
     "@remix-run/component": "workspace:^",
     "@remix-run/ui": "workspace:^",
+    "oxfmt": "catalog:",
     "remix": "workspace:^",
     "remix-docs-shared": "workspace:*"
   },

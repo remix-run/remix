@@ -20,9 +20,36 @@ describe('highlightSource', () => {
     assert.match(html, /data-code-block-copy/)
   })
 
-  it('removes shared tabs without flattening nested code', async () => {
+  it('normalizes tabs to the repository indentation style', async () => {
     let html = await highlightSource('\n\t\tfunction run() {\n\t\t\treturn 1\n\t\t}\n\t')
-    assert.equal(html, await renderSource('function run() {\n\treturn 1\n}'))
+    assert.equal(html, await renderSource('function run() {\n  return 1\n}'))
+  })
+
+  it('formats callbacks and applies the repository quote and semicolon rules', async () => {
+    let html = await highlightSource(`popover.surface({open,onHide(){open=false;
+handle.update();},label: "Filters"})`)
+    assert.equal(
+      html,
+      await renderSource(`popover.surface({
+  open,
+  onHide() {
+    open = false
+    handle.update()
+  },
+  label: 'Filters',
+})`),
+    )
+  })
+
+  it('renders the original snippet and warns when syntax prevents formatting', async (t) => {
+    let warnings: string[] = []
+    t.mock.method(console, 'warn', (message: string) => {
+      warnings.push(message)
+    })
+    let source = '<button mix={'
+    assert.equal(await highlightSource(`\n  ${source}\n`), await renderSource(source))
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0], /Displaying original source/)
   })
 
   it('keeps indentation when the snippet already starts at the left edge', async () => {

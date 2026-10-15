@@ -12,7 +12,7 @@ The docs also help maintainers evaluate an evolving library. Preserve observable
 ## Documentation architecture
 
 - Keep TSX documentation pages under `docs/ui/app/pages/` and runnable `.example.tsx` modules under `docs/ui/app/examples/`, grouped by feature. Use the existing page helpers, explicit source loading and normal Remix hydration rather than bundler-specific snippet machinery. Keep documentation authoring files out of published package output.
-- Treat UI as a standalone, currently unstable library. Put installation, package status and shared styling or composition concepts in Getting Started. Organize existing features under Behaviors and Animation. Do not introduce a speculative system layer.
+- Treat UI as a standalone, currently unstable library. Put installation, package status and shared styling or composition concepts in Getting Started. Organize existing features under Patterns and Animation. Do not introduce a speculative system layer.
 - Preserve shared docs branding, navigation positions and theme behavior. A UI-focused preview layout can differ without redesigning the rest of the docs site.
 
 ## Choose the interaction first
@@ -82,7 +82,8 @@ When it fails, return to scenario selection and compare alternatives. Shortening
 - Let the page description frame the hero without another redundant title or explanation. Anatomy should show minimal wiring with about one useful framing sentence. Put detailed contracts in the reference after examples.
 - Do not give every implementation technique its own preview or every explanation its own section. Place conceptual framing beside the first example that needs it and detailed edge rules with the relevant API.
 - Keep prose comprehensive through precision. Remove redundant headings, introductory filler, repeated code narration and statements true of every primitive. Preserve useful accessibility and keyboard guidance without reteaching the basic setup.
-- Use `remix/component`, the owning UI package's public imports and the `css()` mixin. Keep source self-contained and readable.
+- Use `remix/component`, the owning UI package's public imports and the `css()` mixin. Keep live example source self-contained and readable. Typecheck and format interactive examples as real source files, with focused browser tests for the behavior they demonstrate.
+- Short explanatory snippets may remain inline fragments when surrounding context is already clear. Format them as code using the repository rules before highlighting. Formatting failures must preserve the original snippet and warn without breaking the page. These fragments are not typechecked, so review them alongside API changes. Do not introduce source-region extraction or artificial setup solely to make every fragment independently executable.
 - Put CSS beneath the example, then helper components such as SVG icons. Keep SVG markup out of the main interaction, including conditional and repeated markup.
 - Use descriptive callback names. Reserve names such as `nextValue` for state changes. Name an API ref for the API it receives.
 - Use US English and concise feature-focused prose. Avoid redundant example subheadings and unnecessary colons, semicolons and em dashes in prose.
@@ -95,6 +96,8 @@ When it fails, return to scenario selection and compare alternatives. Shortening
 - Decorative previews must be inert and hidden from assistive technology. Interactive examples must remain accessible. Do not rely on right-click-only triggers.
 
 ## Verify the result
+
+Keep live-example tests focused on the behavior each example teaches. For each test, identify a plausible regression and temporarily introduce it to verify that the test fails for the expected reason, then restore the source. A companion filename or successful render is not enough. Assert the intended visible outcome as well as relevant state, focus or form behavior. Programmatic clicks can activate hidden elements, and unrelated transitions can satisfy broad animation checks. Keep assertions specific to the element and behavior being taught. Use a small docs-site smoke test for shared hydration and real browser interaction rather than duplicating every example as an end-to-end test. Keep exhaustive primitive coverage in the library tests.
 
 Run relevant typechecks, existing tests, lint and formatting checks. Use the browser to inspect changed interactions, including their first use, keyboard access, dismissal, repeated use and a narrow viewport. Check light and dark presentation when styling changes. Review both the preview and displayed source.
 
