@@ -8,30 +8,24 @@ import { createController } from 'remix/router'
 import { routes } from '../routes.ts'
 import { assetServer } from '../assets.ts'
 
-const defaultPagefindAssetsDir = path.resolve(
-  import.meta.dirname,
-  '../../build/site/assets/pagefind',
-)
+const pagefindAssetsDir = path.resolve(import.meta.dirname, '../../build/site/assets/pagefind')
 
-export function createRootController(pagefindAssetsDir = defaultPagefindAssetsDir) {
-  return createController(routes, {
-    actions: {
-      async assets({ request, params }) {
-        let pagefindResponse = await servePagefindAsset(request, params.path, pagefindAssetsDir)
-        if (pagefindResponse) {
-          return pagefindResponse
-        }
+export default createController(routes, {
+  actions: {
+    async assets({ request, params }) {
+      let pagefindResponse = await servePagefindAsset(request, params.path)
+      if (pagefindResponse) {
+        return pagefindResponse
+      }
 
-        return (await assetServer.fetch(request)) ?? new Response('Not Found', { status: 404 })
-      },
+      return (await assetServer.fetch(request)) ?? new Response('Not Found', { status: 404 })
     },
-  })
-}
+  },
+})
 
 async function servePagefindAsset(
   request: Request,
   requestPath: string,
-  pagefindAssetsDir: string,
 ): Promise<Response | undefined> {
   if (!requestPath.startsWith('pagefind/')) {
     return undefined

@@ -6,7 +6,7 @@ import { staticFiles } from 'remix/middleware/static'
 import { createRouter } from 'remix/router'
 import type { MiddlewareContext } from 'remix/router'
 
-import { createRootController } from './actions/controller.tsx'
+import rootController from './actions/controller.tsx'
 import docsController from './actions/docs/controller.tsx'
 import { assetServer } from './assets.ts'
 import { routes } from './routes.ts'
@@ -19,7 +19,7 @@ declare module 'remix' {
   }
 }
 
-export function createUiRouter(options: { pagefindAssetsDir?: string } = {}) {
+export function createUiRouter() {
   let router = createRouter<AppContext>({
     middleware: [
       compression(),
@@ -28,7 +28,7 @@ export function createUiRouter(options: { pagefindAssetsDir?: string } = {}) {
       render({ assets: assetServer }),
     ],
   })
-  router.map(routes, createRootController(options.pagefindAssetsDir))
+  router.map(routes, rootController)
   router.map(routes.docs, docsController)
   return router
 }
