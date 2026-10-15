@@ -163,13 +163,14 @@ export default createController(routes.albums, {
 
 Finally, we need to map the albums route map to our router in `app/router.ts`:
 
-```ts filename=app/router.ts lines=[6,12]
+```ts filename=app/router.ts lines=[6,13]
 import { createRouter, type RouterContext } from "remix/router";
 import { render } from "remix/middleware/render";
 import { staticFiles } from "remix/middleware/static";
 
 import controller from "./actions/controller.tsx";
 import albumsController from "./actions/albums/controller.tsx";
+import { assets } from "./assets.ts";
 import { routes } from "./routes.ts";
 
 // ...
@@ -434,7 +435,7 @@ export default createController(routes.albums.edit, {
 
 And map it to the router as well:
 
-```ts filename=app/router.ts lines=[7,14]
+```ts filename=app/router.ts lines=[7,15]
 import { createRouter, type RouterContext } from "remix/router";
 import { render } from "remix/middleware/render";
 import { staticFiles } from "remix/middleware/static";
@@ -442,6 +443,7 @@ import { staticFiles } from "remix/middleware/static";
 import controller from "./actions/controller.tsx";
 import albumsController from "./actions/albums/controller.tsx";
 import albumsEditController from "./actions/albums/edit/controller.tsx";
+import { assets } from "./assets.ts";
 import { routes } from "./routes.ts";
 
 // ...
@@ -535,15 +537,16 @@ Open [http://localhost:44100/albums/thriller/edit](http://localhost:44100/albums
 
 Before handling the `POST` request, add the `form-data` middleware in `app/router.ts`. It parses browser form bodies once and makes the `FormData` available to route actions.
 
-```ts filename=app/router.ts lines=[1-2,7-17]
+```ts filename=app/router.ts lines=[2,9]
 import { createRouter, type RouterContext } from "remix/router";
 import { formData } from "remix/middleware/form-data";
+import { render } from "remix/middleware/render";
 import { staticFiles } from "remix/middleware/static";
 
 // ...
 
 export const router = createRouter({
-  middleware: [staticFiles("./public", { index: false }), formData(), render()],
+  middleware: [staticFiles("./public", { index: false }), formData(), render({ assets })],
 });
 
 export type AppContext = RouterContext<typeof router>;
