@@ -6,6 +6,7 @@ export default function Example(handle: Handle) {
   let confirmation = ''
   return () => (
     <form
+      autocomplete="off"
       mix={[
         stackCss,
         on('submit', (event) => {

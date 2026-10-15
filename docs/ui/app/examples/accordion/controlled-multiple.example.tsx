@@ -60,7 +60,7 @@ function Item(handle: Handle<{ value: string; title: string; disabled?: boolean 
               {handle.props.value === 'shipping'
                 ? 'Standard delivery in 2–4 business days. Tracking is sent when your order ships.'
                 : handle.props.value === 'billing'
-                  ? 'Visa ending in 4242. Your receipt will be sent to the email on your account.'
+                  ? 'Card ending in 4242. Your receipt will be sent to the email on your account.'
                   : 'Past orders and receipts are saved here for your records.'}
             </p>
           </div>

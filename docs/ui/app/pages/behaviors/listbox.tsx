@@ -16,7 +16,6 @@ export const meta = {
 
 const basic = await loadExample('listbox/basic')
 const richOptionsExample = await loadExample('listbox/rich-options')
-const settledExample = await loadExample('listbox/settled')
 
 const anatomyCode = await highlightSource(`
   import * as listbox from '@remix-run/ui/listbox'
@@ -58,6 +57,21 @@ const stateCode = await highlightSource(`
   </listbox.Context>
 `)
 
+const settlingCode = await highlightSource(`
+  <listbox.Context
+    value={value}
+    activeValue={activeValue}
+    onSelect={onSelect}
+    onHighlight={onHighlight}
+    flashSelection
+    onSelectSettled={(value, option) => {
+      saveSelection(value, option?.label)
+    }}
+  >
+    {/* List and options */}
+  </listbox.Context>
+`)
+
 const imperativeCode = await highlightSource(`
   let control: listbox.ListboxRef | undefined
 
@@ -66,7 +80,7 @@ const imperativeCode = await highlightSource(`
     activeValue={activeValue}
     onSelect={onSelect}
     onHighlight={onHighlight}
-    ref={(next) => { control = next }}
+    ref={(listboxRef) => { control = listboxRef }}
   >
     {/* List and options */}
   </listbox.Context>
@@ -112,10 +126,11 @@ export default function ListboxPage(handle: Handle<PageProps>) {
       <Section id="settling" title="Selection feedback">
         <p>
           <code>flashSelection</code> adds a temporary attribute to the selected option.{' '}
-          <code>onSelect</code> runs immediately. <code>onSelectSettled</code> runs after the flash.
-          Highlight and selection requests are ignored while selection settles.
+          <code>onSelect</code> runs immediately. <code>onSelectSettled</code> runs after the fixed
+          60 ms flash. Its duration is not configurable. Highlight and selection requests are
+          ignored while selection settles.
         </p>
-        <Example id="settled-example" example={settledExample} />
+        <CodeBlock html={settlingCode} />
       </Section>
       <Section id="imperative" title="Imperative access">
         <p>

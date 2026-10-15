@@ -6,19 +6,19 @@ export default function Example(handle: Handle) {
   let confirmation = ''
   return () => (
     <form
+      autocomplete="off"
       mix={[
         stackCss,
         on('submit', (event) => {
           event.preventDefault()
           let data = new FormData(event.currentTarget)
           let state = options.find((option) => option.value === data.get('state'))
-          confirmation = state ? `Address saved in ${state.label}` : 'Choose a state'
+          confirmation = state ? `State saved as ${state.label}` : 'Choose a state'
           handle.update()
         }),
       ]}
     >
       <div mix={cardCss}>
-        <strong>Shipping address</strong>
         <combobox.Context name="state">
           <label for={`${handle.id}-state`}>State</label>
           <input
@@ -38,11 +38,13 @@ export default function Example(handle: Handle) {
           <input mix={combobox.hiddenInput()} />
         </combobox.Context>
         <button type="submit" mix={buttonCss}>
-          Save address
+          Save
         </button>
-        <p role="status" mix={mutedCss}>
-          {confirmation || 'Your address applies to future orders'}
-        </p>
+        {confirmation && (
+          <p role="status" mix={mutedCss}>
+            {confirmation}
+          </p>
+        )}
       </div>
     </form>
   )

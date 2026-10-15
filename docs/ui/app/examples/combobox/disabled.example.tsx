@@ -10,6 +10,7 @@ export default function Example(handle: Handle) {
         <input
           id={`${handle.id}-state`}
           placeholder="Search states"
+          aria-describedby={`${handle.id}-reason`}
           mix={[inputCss, combobox.input()]}
         />
         <div mix={[surfaceCss, combobox.popover()]}>
@@ -23,6 +24,9 @@ export default function Example(handle: Handle) {
         </div>
         <input mix={combobox.hiddenInput()} />
       </combobox.Context>
+      <p id={`${handle.id}-reason`} mix={reasonCss}>
+        Choose a country first.
+      </p>
     </div>
   )
 }
@@ -78,6 +82,8 @@ const options = [
   { value: 'WI', label: 'Wisconsin' },
   { value: 'WY', label: 'Wyoming' },
 ]
+
+const reasonCss = css({ margin: 0, fontSize: '12px', color: 'light-dark(#62626c, #b0b0bb)' })
 
 const stackCss = css({
   colorScheme: 'light dark',

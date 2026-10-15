@@ -14,7 +14,6 @@ export const meta = {
 } satisfies PageMeta
 
 const basic = await loadExample('popover/basic')
-const editableAnchorExample = await loadExample('popover/editable-anchor')
 
 const anatomyCode = await highlightSource(`
   import * as popover from '@remix-run/ui/popover'
@@ -34,7 +33,7 @@ const anatomyCode = await highlightSource(`
       onHide() { open = false
         handle.update() },
     })}>
-      <input aria-label="Filter projects" mix={popover.focusOnShow()} />
+      <input aria-label="Filter files" mix={popover.focusOnShow()} />
     </div>
   </popover.Context>
 `)
@@ -53,11 +52,15 @@ const positionCode = await highlightSource(`
   popover.anchor({ placement: 'bottom-end', offset: 8 })
 `)
 
+const anchorInteractionCode = await highlightSource(`
+  popover.surface({ open, onHide, closeOnAnchorClick: false })
+`)
+
 const focusCode = await highlightSource(`
   <button mix={popover.focusOnHide()}>Open filters</button>
 
   <div mix={popover.surface({ open, onHide, restoreFocusOnHide: false })}>
-    <input aria-label="Filter projects" mix={popover.focusOnShow()} />
+    <input aria-label="Filter files" mix={popover.focusOnShow()} />
   </div>
 `)
 
@@ -74,8 +77,8 @@ const motionCode = await highlightSource(`
 `)
 
 const accessibilityCode = await highlightSource(`
-  <button aria-expanded={open} aria-controls="project-filters">Filters</button>
-  <div id="project-filters" role="dialog" aria-label="Project filters" mix={popover.surface({ open, onHide })} />
+  <button aria-expanded={open} aria-controls="file-filters">Filters</button>
+  <div id="file-filters" role="dialog" aria-label="File filters" mix={popover.surface({ open, onHide })} />
 `)
 
 export default function PopoverPage(handle: Handle<PageProps>) {
@@ -104,9 +107,9 @@ export default function PopoverPage(handle: Handle<PageProps>) {
       <Section id="anchor-interaction" title="Interactive anchors">
         <p>
           Set <code>closeOnAnchorClick</code> to false when the anchor must remain interactive while
-          the surface is open. This is useful for inputs that update a floating preview.
+          the surface is open. The surface remains open when its anchor is clicked.
         </p>
-        <Example id="editable-anchor-example" example={editableAnchorExample} compact />
+        <CodeBlock html={anchorInteractionCode} />
       </Section>
       <Section id="focus" title="Focus targets">
         <p>

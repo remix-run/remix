@@ -17,7 +17,6 @@ const basic = await loadExample('select/basic')
 const richOptionsExample = await loadExample('select/rich-options')
 const disabledExample = await loadExample('select/disabled')
 const formExample = await loadExample('select/form')
-const eventsExample = await loadExample('select/events')
 
 const anatomyCode = await highlightSource(`
   import * as select from '@remix-run/ui/select'
@@ -47,23 +46,12 @@ const initialCode = await highlightSource(`
   </select.Context>
 `)
 
-const feedbackCode = await highlightSource(`
-  <select.Context defaultLabel="Choose delivery" labelSwapDelayMs={0}>
-    <button mix={select.trigger()}><SelectedLabel /></button>
-    <popover.Context>
-      <div mix={[
-        css({
-          opacity: 0,
-          transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-          '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
-          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-        }),
-        select.popover(),
-      ]}>
-        {/* List and options */}
-      </div>
-    </popover.Context>
-  </select.Context>
+const eventsCode = await highlightSource(`
+  <div mix={select.onSelectChange((event) => {
+    saveSelection(event.value, event.label)
+  })}>
+    {/* Select */}
+  </div>
 `)
 
 const accessibilityCode = await highlightSource(`
@@ -123,15 +111,19 @@ export default function SelectPage(handle: Handle<PageProps>) {
           committed <code>value</code>, <code>label</code> and <code>optionId</code> after the popup
           closes and its label settles. Selecting the same value again does not dispatch a change.
         </p>
-        <Example id="events-example" example={eventsExample} compact />
+        <CodeBlock html={eventsCode} />
       </Section>
       <Section id="feedback" title="Selection and close feedback">
         <p>
-          Options receive <code>data-select-flash</code> during selection. The popup’s CSS
-          transition completes before the trigger label changes. <code>labelSwapDelayMs</code> adds
-          a delay after closure. Motion preferences should be handled in the surface’s CSS.
+          <code>data-select-flash</code> marks a fixed 60 ms selection flash. Style it separately
+          from the surface’s closing transition.
         </p>
-        <CodeBlock html={feedbackCode} />
+        <p>
+          The trigger keeps its previous label through the flash and close transition.{' '}
+          <code>labelSwapDelayMs</code> adds a delay after closure, defaulting to 75 ms. The
+          displayed label then changes and the change event fires. Selecting through typeahead on a
+          closed trigger skips this sequence.
+        </p>
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>

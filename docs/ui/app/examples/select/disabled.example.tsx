@@ -2,13 +2,14 @@ import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
 import * as select from '@remix-run/ui/select'
 import * as popover from '@remix-run/ui/popover'
-export default function Example() {
+export default function Example(handle: Handle) {
   return () => (
     <div mix={stackCss}>
       <select.Context defaultLabel="Standard delivery" defaultValue="standard" disabled>
         <button
           type="button"
           aria-label="Delivery method"
+          aria-describedby={`${handle.id}-reason`}
           mix={[buttonCss, triggerLayoutCss, select.trigger()]}
         >
           <SelectedLabel />
@@ -27,6 +28,9 @@ export default function Example() {
         </popover.Context>
         <input mix={select.hiddenInput()} />
       </select.Context>
+      <p id={`${handle.id}-reason`} mix={reasonCss}>
+        Delivery cannot be changed after dispatch.
+      </p>
     </div>
   )
 }
@@ -118,6 +122,8 @@ function SelectedLabel(handle: Handle) {
   let context = handle.context.get(select.Context)
   return () => <span>{context.displayedLabel}</span>
 }
+const reasonCss = css({ margin: 0, fontSize: '12px', color: 'light-dark(#62626c, #b0b0bb)' })
+
 function ChevronDownIcon() {
   return () => (
     <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24">

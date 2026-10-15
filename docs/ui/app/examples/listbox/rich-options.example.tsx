@@ -3,13 +3,13 @@ import type { Handle } from 'remix/component'
 import * as listbox from '@remix-run/ui/listbox'
 
 export default function Example(handle: Handle) {
-  let value: string | null = 'design'
+  let value: string | null = 'standard'
   let activeValue: string | null = null
   let activeId: string | undefined
   return () => (
     <div mix={stackCss}>
       <div mix={cardCss}>
-        <strong>Assign to team</strong>
+        <strong>Delivery method</strong>
         <listbox.Context
           value={value}
           activeValue={activeValue}
@@ -25,7 +25,7 @@ export default function Example(handle: Handle) {
         >
           <div
             tabIndex={0}
-            aria-label="Team"
+            aria-label="Delivery method"
             aria-activedescendant={activeId}
             mix={[listCss, listbox.list()]}
           >
@@ -48,18 +48,23 @@ export default function Example(handle: Handle) {
 }
 const options = [
   {
-    value: 'design',
-    label: 'Design',
-    detail: 'Brand and product',
-    textValue: ['design', 'creative'],
+    value: 'standard',
+    label: 'Standard',
+    detail: 'Arrives in 5 to 7 business days',
+    textValue: ['standard', 'regular'],
   },
   {
-    value: 'engineering',
-    label: 'Engineering',
-    detail: 'Platform and infrastructure',
-    textValue: ['engineering', 'development'],
+    value: 'express',
+    label: 'Express',
+    detail: 'Arrives in 1 to 2 business days',
+    textValue: ['express', 'expedited'],
   },
-  { value: 'marketing', label: 'Marketing', detail: 'Invitations paused', disabled: true },
+  {
+    value: 'same-day',
+    label: 'Same-day',
+    detail: 'Unavailable for this address',
+    disabled: true,
+  },
 ]
 
 const stackCss = css({
@@ -89,6 +94,7 @@ const listCss = css({
   maxHeight: '240px',
   overflow: 'auto',
   outline: 0,
+  '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
 })
 
 const optionCss = css({
@@ -105,7 +111,7 @@ const optionCss = css({
     color: 'light-dark(#0578be, #80caff)',
     background: 'light-dark(#eaf5fc, #173348)',
   },
-  '&[aria-disabled="true"]': { opacity: 0.4 },
+  '&[aria-disabled="true"]': { color: 'light-dark(#62626c, #b0b0bb)' },
   '&[data-listbox-flash]': {
     background: 'light-dark(#0578be, #80caff)',
     color: 'light-dark(#fff, #102332)',

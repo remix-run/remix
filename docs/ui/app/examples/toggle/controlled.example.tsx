@@ -3,39 +3,42 @@ import type { Handle } from 'remix/component'
 import * as toggle from '@remix-run/ui/toggle'
 
 export default function Example(handle: Handle) {
-  let paused = false
+  let showPassword = false
+  let password = 'remix-ui-demo'
   return () => (
     <div mix={stackCss}>
       <div mix={cardCss}>
+        <label mix={fieldCss}>
+          <strong>Password</strong>
+          <input
+            {...(showPassword ? { type: 'text' } : { type: 'password' })}
+            autocomplete="off"
+            value={password}
+            mix={[
+              inputCss,
+              on('input', (event) => {
+                password = event.currentTarget.value
+                handle.update()
+              }),
+            ]}
+          />
+        </label>
         <label mix={rowCss}>
-          <strong>Pause notifications</strong>
+          <span>Show password</span>
           <input
             type="checkbox"
             mix={[
               switchCss,
               toggle.toggle({
-                checked: paused,
+                checked: showPassword,
                 onCheckedChange(next) {
-                  paused = next
+                  showPassword = next
                   handle.update()
                 },
               }),
             ]}
           />
         </label>
-        <button
-          type="button"
-          disabled={!paused}
-          mix={[
-            buttonCss,
-            on('click', () => {
-              paused = false
-              handle.update()
-            }),
-          ]}
-        >
-          Resume notifications
-        </button>
       </div>
     </div>
   )
@@ -65,24 +68,31 @@ const rowCss = css({
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: '16px',
+  padding: '8px',
+  margin: '-8px',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  transition: 'background-color 120ms ease',
+  '@media (hover: hover)': {
+    '&:hover': { background: 'light-dark(#f7f7fa, #24242b)' },
+  },
+  '&:active, &:has(input:active)': { background: 'light-dark(#eeeef3, #303038)' },
+  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
 })
 
-const buttonCss = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px',
-  padding: '9px 14px',
-  border: '1px solid light-dark(#d8d8df, #44444c)',
-  borderRadius: '8px',
-  background: 'light-dark(#fff, #25252b)',
+const fieldCss = css({ display: 'grid', gap: '8px' })
+
+const inputCss = css({
+  boxSizing: 'border-box',
+  width: '100%',
+  minWidth: 0,
+  padding: '10px 12px',
+  border: '1px solid light-dark(#c9c9d2, #494951)',
+  borderRadius: '6px',
+  background: 'light-dark(#fff, #24242b)',
   color: 'inherit',
   font: 'inherit',
-  fontWeight: 600,
-  cursor: 'pointer',
-  '&:hover:not(:disabled)': { background: 'light-dark(#f0f0f5, #303038)' },
   '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
-  '&:disabled': { opacity: 0.45, cursor: 'default' },
 })
 
 const switchCss = css({
@@ -113,8 +123,6 @@ const switchCss = css({
   },
   '&[data-state="checked"]::after': { transform: 'translateX(18px)' },
   '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
-  '&[aria-disabled="true"], &:disabled': { opacity: 0.4, cursor: 'default' },
-  '&[aria-readonly="true"], &[readonly]': { cursor: 'default' },
   '@media (prefers-reduced-motion: reduce)': {
     transition: 'none',
     '&::after': { transition: 'none' },

@@ -3,12 +3,13 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
+import { ReferenceTable } from '../reference-table.tsx'
 
 export const meta = {
   title: 'Tween',
   slug: 'tween',
   category: 'animation',
-  description: 'Interpolate numeric values over time with a cubic B\u00e9zier easing curve.',
+  description: 'Interpolate numeric values over time with a cubic Bézier easing curve.',
   importPath: '@remix-run/ui/animation',
 } satisfies PageMeta
 
@@ -123,7 +124,7 @@ export default function TweenPage(handle: Handle<PageProps>) {
           start time. Subsequent timestamps use the same clock and are measured in milliseconds.
           Completion returns <code>to</code> with <code>done: true</code>.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Option</th>
@@ -169,10 +170,10 @@ export default function TweenPage(handle: Handle<PageProps>) {
               <td>Required. Cubic Bézier control points.</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h3 id="easings-reference">easings</h3>
         <p>Built-in curves matching the corresponding CSS easing functions.</p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Name</th>
@@ -211,9 +212,9 @@ export default function TweenPage(handle: Handle<PageProps>) {
               <td>0.42, 0, 0.58, 1</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h3 id="curve-reference">BezierCurve</h3>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Property</th>
@@ -241,9 +242,9 @@ export default function TweenPage(handle: Handle<PageProps>) {
               <td>Second control point.</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h3 id="types-reference">Exported types</h3>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Type</th>
@@ -268,7 +269,7 @@ export default function TweenPage(handle: Handle<PageProps>) {
               </td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
       </Section>
     </PageLayout>
   )

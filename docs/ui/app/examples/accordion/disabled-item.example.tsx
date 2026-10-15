@@ -8,7 +8,7 @@ export default function Example() {
       <accordion.Context defaultValue="shipping">
         <div mix={[rootCss, accordion.root()]}>
           <Item value="shipping" title="Shipping" />
-          <Item value="returns" title="Returns" disabled />
+          <Item value="gift-wrapping" title="Gift wrapping" disabled />
           <Item value="billing" title="Billing" />
         </div>
       </accordion.Context>
@@ -22,8 +22,13 @@ function Item(handle: Handle<{ value: string; title: string; disabled?: boolean 
       <div mix={[itemCss, accordion.item()]}>
         <h3>
           <button type="button" mix={accordion.trigger()}>
-            {handle.props.title}
-            <ChevronDownIcon />
+            <span>
+              {handle.props.title}
+              {handle.props.disabled && (
+                <span mix={reasonCss}>Unavailable for oversized items</span>
+              )}
+            </span>
+            {!handle.props.disabled && <ChevronDownIcon />}
           </button>
         </h3>
         <div mix={[contentCss, accordion.content()]}>
@@ -32,8 +37,8 @@ function Item(handle: Handle<{ value: string; title: string; disabled?: boolean 
               {handle.props.value === 'shipping'
                 ? 'Standard delivery in 2–4 business days. Tracking is sent when your order ships.'
                 : handle.props.value === 'billing'
-                  ? 'Visa ending in 4242. Your receipt will be sent to the email on your account.'
-                  : 'Returns are unavailable for personalized items.'}
+                  ? 'Card ending in 4242. Your receipt will be sent to the email on your account.'
+                  : 'Add gift wrapping to your order.'}
             </p>
           </div>
         </div>
@@ -82,7 +87,14 @@ const rootCss = css({
 const itemCss = css({
   borderTop: '1px solid light-dark(#ebebef, #303037)',
   '&:first-child': { borderTop: 0 },
-  '&[data-disabled]': { opacity: 0.4 },
+  '&[data-disabled] button': { color: 'light-dark(#62626c, #b0b0bb)' },
+})
+const reasonCss = css({
+  display: 'block',
+  marginTop: '2px',
+  fontSize: '12px',
+  fontWeight: 400,
+  color: 'light-dark(#62626c, #b0b0bb)',
 })
 const contentCss = css({
   display: 'grid',

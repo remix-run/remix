@@ -3,6 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
+import { ReferenceTable } from '../reference-table.tsx'
 
 export const meta = {
   title: 'Spring',
@@ -131,7 +132,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
           Computes a motion profile and returns a <code>SpringIterator</code>. Playback is handled
           by CSS, the browser or your code.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Argument</th>
@@ -164,9 +165,9 @@ export default function SpringPage(handle: Handle<PageProps>) {
               </td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h4>SpringOptions</h4>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Option</th>
@@ -212,13 +213,13 @@ export default function SpringPage(handle: Handle<PageProps>) {
               </td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <p>
           <code>spring()</code> uses the snappy preset's 200 ms perceptual duration.{' '}
           <code>{'spring({})'}</code> uses the options default of 300 ms.
         </p>
         <h4>SpringIterator</h4>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Member</th>
@@ -268,13 +269,13 @@ export default function SpringPage(handle: Handle<PageProps>) {
               </td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h3 id="transition-reference">spring.transition(property, presetOrOptions?, overrides?)</h3>
         <p>
           Returns a CSS transition string. Timing arguments follow <code>spring()</code>. Requires
           browser support for <code>linear()</code> easing.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Argument</th>
@@ -313,14 +314,14 @@ export default function SpringPage(handle: Handle<PageProps>) {
               <td>Duration and velocity overrides for a preset.</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <p>
           A spring can also be interpolated directly into a timing string, such as{' '}
           <code>{'`transform ${spring("bouncy")}`'}</code>.
         </p>
         <h3 id="presets-api-reference">spring.presets</h3>
         <p>Exposes the parameters for each named preset.</p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Preset</th>
@@ -351,9 +352,9 @@ export default function SpringPage(handle: Handle<PageProps>) {
               <td>0.3</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h3 id="types-reference">Exported types</h3>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Type</th>
@@ -382,7 +383,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
               <td>Progress iterator with duration, easing and string conversion.</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
       </Section>
     </PageLayout>
   )

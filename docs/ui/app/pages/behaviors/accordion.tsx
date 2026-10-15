@@ -3,6 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
+import { ReferenceTable } from '../reference-table.tsx'
 
 export const meta = {
   title: 'Accordion',
@@ -19,7 +20,6 @@ const controlledMultiple = await loadExample('accordion/controlled-multiple')
 const nonCollapsible = await loadExample('accordion/non-collapsible')
 const disabledExample = await loadExample('accordion/disabled')
 const disabledItem = await loadExample('accordion/disabled-item')
-const changeEvents = await loadExample('accordion/events')
 
 const anatomyCode = await highlightSource(`
   import * as accordion from '@remix-run/ui/accordion'
@@ -36,6 +36,14 @@ const anatomyCode = await highlightSource(`
       </accordion.ItemContext>
     </div>
   </accordion.Context>
+`)
+
+const eventsCode = await highlightSource(`
+  <div mix={accordion.onAccordionChange((event) => {
+    saveOpenPanels(event.value)
+  })}>
+    {/* Accordion */}
+  </div>
 `)
 
 export const preview = basic
@@ -107,11 +115,11 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           a bubbling event. Use <code>onValueChange</code> on Context to manage state. In controlled
           mode, both report the requested value.
         </p>
-        <Example id="change-events" example={changeEvents} />
+        <CodeBlock html={eventsCode} />
       </Section>
       <Section id="accessibility" title="Accessibility and keyboard navigation">
         <p>
-          Accordion generates the trigger and panel IDs and connects them with{' '}
+          The primitive generates the trigger and panel IDs and connects them with{' '}
           <code>aria-controls</code> and <code>aria-labelledby</code>. It updates{' '}
           <code>aria-expanded</code> on the trigger and hides closed panels from assistive
           technology.
@@ -134,7 +142,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           Provides open state, mode and disabled state to descendant items. Renders its children
           without adding an element. Single mode opens one panel at a time by default.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Prop</th>
@@ -227,13 +235,13 @@ export default function AccordionPage(handle: Handle<PageProps>) {
               <td>Optional content rendered inside the provider.</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h3 id="root-reference">root()</h3>
         <p>
           Apply to one container inside Context. Takes no options. Change events bubble from this
           element.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Attribute</th>
@@ -261,13 +269,13 @@ export default function AccordionPage(handle: Handle<PageProps>) {
               </td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h3 id="item-context-reference">ItemContext</h3>
         <p>
           Provides state for one item inside Context. Renders its children without adding an
           element.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Prop</th>
@@ -310,13 +318,13 @@ export default function AccordionPage(handle: Handle<PageProps>) {
               <td>Optional content rendered inside the provider.</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h4 id="item-state-reference">Provided state</h4>
         <p>
           Read <code>handle.context.get(accordion.ItemContext)</code> inside the provider. Its
           readonly properties reflect the current item state. Read them during render.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Property</th>
@@ -374,13 +382,13 @@ export default function AccordionPage(handle: Handle<PageProps>) {
               <td>Generated IDs used by the trigger and content mixins to connect the elements.</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h3 id="item-reference">item()</h3>
         <p>
           Apply to a wrapper inside ItemContext. Takes no options. Decorates it with state
           attributes for selectors in <code>css()</code>.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Attribute</th>
@@ -409,13 +417,13 @@ export default function AccordionPage(handle: Handle<PageProps>) {
               </td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h3 id="trigger-reference">trigger(options?)</h3>
         <p>
           Apply to a native button inside ItemContext. Handles activation and{' '}
           <a href="#accessibility">keyboard navigation</a>, and connects the button to its panel.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Option</th>
@@ -440,14 +448,14 @@ export default function AccordionPage(handle: Handle<PageProps>) {
               </td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <p>
           A disabled item also disables its trigger. Trigger-only disabling prevents activation but
           does not exclude the item from arrow-key navigation. Use ItemContext disabled when the
           item should be skipped.
         </p>
         <h4>Element attributes</h4>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Attribute</th>
@@ -513,14 +521,14 @@ export default function AccordionPage(handle: Handle<PageProps>) {
               <td>Reflects whether this item is open. Always present.</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h3 id="content-reference">content()</h3>
         <p>
           Apply to a panel inside ItemContext. Takes no options. Keeps closed panels mounted and
           applies their accessibility attributes immediately, including during visual transitions.
           Use state selectors in <code>css()</code> to hide or animate the panel.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Attribute</th>
@@ -573,7 +581,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
               <td>Reflects whether this item is open. Always present.</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h3 id="change-listener-reference">onAccordionChange(handler, captureBoolean?)</h3>
         <p>
           Event mixin for the root or an ancestor. The handler receives an{' '}
@@ -586,7 +594,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           Extends <code>Event</code> with type <code>'rmx:accordion-change'</code>. Bubbles and is
           not cancelable. The following readonly properties are on the event itself.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Property</th>
@@ -626,7 +634,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
               </td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <p>
           Dispatched after <code>onValueChange</code>. In controlled mode, describes a request even
           if the application declines it. Programmatic value updates and disabled or locked-open
@@ -639,7 +647,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           Dispatching an event does not change accordion state.
         </p>
         <h3 id="types-reference">Exported types</h3>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Type</th>
@@ -751,7 +759,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
               </td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
       </Section>
     </PageLayout>
   )

@@ -3,6 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
+import { ReferenceTable } from '../reference-table.tsx'
 
 export const meta = {
   title: 'Layout',
@@ -90,7 +91,7 @@ export default function LayoutPage(handle: Handle<PageProps>) {
           transforms. Returns an element mixin. Interrupted animations resume from the current
           visual position. An unchanged target keeps its current animation.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Configuration</th>
@@ -115,8 +116,8 @@ export default function LayoutPage(handle: Handle<PageProps>) {
               <td>Disables animation and clears any active layout transform.</td>
             </tr>
           </tbody>
-        </table>
-        <table>
+        </ReferenceTable>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Option</th>
@@ -158,7 +159,7 @@ export default function LayoutPage(handle: Handle<PageProps>) {
               </td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <p>
           Uses the Web Animations API. Reduced-motion preferences are not read automatically. The
           mixin clears its temporary transforms when playback finishes or the element is removed.

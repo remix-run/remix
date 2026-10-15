@@ -13,23 +13,21 @@ export const meta = {
   importPath: '@remix-run/ui/anchor',
 } satisfies PageMeta
 
-const basic = await loadExample('anchor/basic')
-const coordinatesExample = await loadExample('anchor/coordinates')
-const relativeExample = await loadExample('anchor/relative')
+const example0 = await loadExample('anchor/chart')
 
 const anatomyCode = await highlightSource(`
   import { anchor } from '@remix-run/ui/anchor'
 
-  let cleanup = anchor(surface, trigger, {
-    placement: 'bottom-start',
-    offset: 8,
+  let cleanup = anchor(surface, target, {
+    placement: 'top',
+    offset: 10,
   })
 
   cleanup()
 `)
 
 const placementCode = await highlightSource(`
-  anchor(surface, trigger, { placement: 'right-start', offset: 8 })
+  anchor(surface, target, { placement: 'right-start', offset: 8 })
 
   <div mix={css({
     '&[data-anchor-placement^="right"]': { transformOrigin: 'left center' },
@@ -38,41 +36,42 @@ const placementCode = await highlightSource(`
 `)
 
 const offsetsCode = await highlightSource(`
-  anchor(surface, trigger, {
-    placement: 'bottom-start',
-    offset: 8,
+  anchor(surface, target, {
+    placement: 'top',
+    offset: 10,
     offsetX: 4,
     offsetY: (floating) => floating.offsetHeight / 20,
   })
 `)
 
-const lifetimeCode = await highlightSource(`
-  let cleanup = () => {}
+const coordinatesCode = await highlightSource(`
+  let bounds = event.currentTarget.getBoundingClientRect()
+  let point = event.detail === 0
+    ? { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 }
+    : { x: event.clientX, y: event.clientY }
 
-  <div popover="auto" mix={[
-    ref((node, signal) => {
-      signal.addEventListener('abort', () => cleanup(), { once: true })
-    }),
-    on('beforetoggle', (event) => {
-      cleanup()
-      if (event.newState === 'open') {
-        cleanup = anchor(event.currentTarget, trigger, { offset: 8 })
-      }
-    }),
-  ]} />
+  anchor(surface, point, { placement: 'top', offset: 12 })
 `)
 
-const accessibilityCode = await highlightSource(`
-  <button type="button" popovertarget="project-details">Project details</button>
-  <div id="project-details" popover="auto">
-    {/* Positioned content */}
-  </div>
+const relativeCode = await highlightSource(`
+  anchor(surface, target, {
+    placement: 'top-start',
+    inset: true,
+    relativeTo: '[data-alignment]',
+  })
+`)
+
+const lifetimeCode = await highlightSource(`
+  ref((surface, signal) => {
+    let cleanup = anchor(surface, target, { placement: 'top', offset: 10 })
+    signal.addEventListener('abort', cleanup, { once: true })
+  })
 `)
 
 export default function AnchorPage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>
-      <Example id="basic" example={basic} hero compact />
+      <Example id="basic" example={example0} hero />
       <Section id="anatomy" title="Anatomy">
         <p>
           Pass the floating element and its target to <code>anchor()</code> and clean up when
@@ -102,16 +101,15 @@ export default function AnchorPage(handle: Handle<PageProps>) {
           point into a rectangle. Pointer <code>clientX</code> and <code>clientY</code> use the same
           coordinate system.
         </p>
-        <Example id="coordinates-example" example={coordinatesExample} compact />
+        <CodeBlock html={coordinatesCode} />
       </Section>
       <Section id="relative" title="Inset and relative alignment">
         <p>
           <code>inset</code> aligns inside the target’s edge. <code>relativeTo</code> aligns a
-          matching descendant of the floating element instead of its outer box. Together they can
-          keep a heading aligned with its trigger as a detail card expands around it. Oversized
-          surfaces scroll an inner container when possible to preserve that alignment.
+          matching descendant of the floating element instead of its outer box. Oversized surfaces
+          scroll an inner container when possible to preserve that alignment.
         </p>
-        <Example id="relative-example" example={relativeExample} compact />
+        <CodeBlock html={relativeCode} />
       </Section>
       <Section id="lifetime" title="Tracking and cleanup">
         <p>
@@ -123,12 +121,14 @@ export default function AnchorPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="accessibility" title="Interaction and accessibility">
         <p>
-          Anchor only positions elements. It does not open or dismiss them, move focus, lock
-          scrolling or add accessibility semantics. Use native popovers or Popover when those
-          behaviors are needed. Use a native button for keyboard activation. For coordinate targets,
-          derive a point from its bounds when activation has no pointer coordinates.
+          Positioning does not move focus or assign accessibility semantics. When a visual callout
+          repeats its target’s accessible text, use <code>aria-hidden</code> and <code>inert</code>{' '}
+          to keep it from being announced or focused separately.
         </p>
-        <CodeBlock html={accessibilityCode} />
+        <p>
+          For interactive floating panels, use <a href="/behaviors/popover/">Popover</a> to
+          coordinate opening, dismissal and focus targets.
+        </p>
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="anchor-reference">anchor(floating, target, options?)</h3>

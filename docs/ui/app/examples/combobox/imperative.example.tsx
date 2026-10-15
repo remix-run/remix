@@ -7,8 +7,8 @@ export default function Example(handle: Handle) {
   return () => (
     <div mix={stackCss}>
       <combobox.Context
-        ref={(next) => {
-          control = next
+        ref={(comboboxHandle) => {
+          control = comboboxHandle
         }}
       >
         <label for={`${handle.id}-state`}>State</label>

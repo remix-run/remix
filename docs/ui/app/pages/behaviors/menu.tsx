@@ -21,12 +21,12 @@ const submenuExample = await loadExample('menu/submenu')
 const anatomyCode = await highlightSource(`
   import * as menu from '@remix-run/ui/menu'
 
-  <menu.Context label="Project actions">
-    <button type="button" mix={menu.trigger()}>Actions</button>
+  <menu.Context label="Edit">
+    <button type="button" mix={menu.trigger()}>Edit</button>
     <div mix={menu.popover()}>
       <div mix={menu.list()}>
-        <div mix={menu.item({ name: 'duplicate' })}>Duplicate project</div>
-        <div mix={menu.item({ name: 'archive', disabled: true })}>Archive project</div>
+        <div mix={menu.item({ name: 'copy' })}>Copy</div>
+        <div mix={menu.item({ name: 'paste', disabled: true })}>Paste</div>
       </div>
     </div>
   </menu.Context>
@@ -34,8 +34,8 @@ const anatomyCode = await highlightSource(`
 
 const actionsCode = await highlightSource(`
   <div mix={menu.onMenuSelect((event) => {
-    if (event.item.name === 'duplicate') {
-      duplicateProject()
+    if (event.item.name === 'copy') {
+      copySelection()
     }
   })}>
     {/* Menu */}
@@ -51,25 +51,13 @@ const contextMenuCode = await highlightSource(`
 
 const labelsCode = await highlightSource(`
   <div mix={menu.item({
-    name: 'move',
-    label: 'Move to workspace',
-    searchValue: ['move', 'workspace'],
+    name: 'export',
+    value: 'pdf',
+    label: 'Export PDF',
+    searchValue: ['export', 'pdf'],
   })}>
-    Move to workspace <ChevronRightIcon />
+    Export PDF
   </div>
-`)
-
-const motionCode = await highlightSource(`
-  <div mix={[
-    css({
-      opacity: 0,
-      transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-      '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
-      '&[data-close-animation="none"]': { transition: 'none' },
-      '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-    }),
-    menu.popover(),
-  ]} />
 `)
 
 export default function MenuPage(handle: Handle<PageProps>) {
@@ -130,13 +118,16 @@ export default function MenuPage(handle: Handle<PageProps>) {
         </p>
         <CodeBlock html={labelsCode} />
       </Section>
-      <Section id="motion" title="Close transitions">
+      <Section id="motion" title="Selection and close feedback">
         <p>
-          <code>data-menu-flash</code> marks selection feedback.{' '}
-          <code>data-close-animation=&quot;none&quot;</code> marks closures that should skip fading.
-          Apply transitions to the surface and respect reduced motion.
+          <code>data-menu-flash</code> marks a fixed 60 ms selection flash. The selection event
+          fires at the start of the flash. The menu tree closes afterward, so event handlers run
+          while the menu is still visible.
         </p>
-        <CodeBlock html={motionCode} />
+        <p>
+          Style the flash on items and the closing transition on the surface.{' '}
+          <code>data-close-animation="none"</code> marks closures that should skip fading.
+        </p>
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>

@@ -1,72 +1,46 @@
 import { css } from 'remix/component'
-import type { Handle } from 'remix/component'
 import * as menu from '@remix-run/ui/menu'
 
-export default function Example(handle: Handle) {
-  let workspace = 'Design'
+export default function Example() {
   return () => (
-    <div
-      mix={[
-        stackCss,
-        menu.onMenuSelect((event) => {
-          if (event.item.name === 'move') {
-            workspace = event.item.label
-            handle.update()
-          }
-        }),
-      ]}
-    >
-      <div mix={cardCss}>
-        <strong>Website refresh</strong>
-        <p mix={mutedCss}>{workspace} workspace</p>
-        <menu.Context label="Project actions">
-          <button type="button" mix={[buttonCss, menu.trigger({ offset: 8 })]}>
-            Project actions <ChevronDownIcon />
-          </button>
-          <div mix={[surfaceCss, menu.popover()]}>
-            <div mix={[listCss, menu.list()]}>
-              <menu.Context label="Move to workspace">
-                <div mix={[itemCss, menu.submenuTrigger({ label: 'Move to workspace' })]}>
-                  Move to workspace
-                  <ChevronRightIcon />
+    <div mix={stackCss}>
+      <menu.Context label="File">
+        <button type="button" mix={[buttonCss, menu.trigger({ offset: 8 })]}>
+          File <ChevronDownIcon />
+        </button>
+        <div mix={[surfaceCss, menu.popover()]}>
+          <div mix={[listCss, menu.list()]}>
+            <div mix={[itemCss, menu.item({ name: 'new' })]}>New file</div>
+            <div mix={[itemCss, menu.item({ name: 'open' })]}>Open file</div>
+            <menu.Context label="Export as">
+              <div mix={[itemCss, menu.submenuTrigger({ label: 'Export as' })]}>
+                Export as <ChevronRightIcon />
+              </div>
+              <div mix={[surfaceCss, menu.popover()]}>
+                <div mix={[listCss, menu.list()]}>
+                  <div mix={[itemCss, menu.item({ name: 'export', value: 'pdf' })]}>PDF</div>
+                  <div mix={[itemCss, menu.item({ name: 'export', value: 'png' })]}>PNG</div>
+                  <div mix={[itemCss, menu.item({ name: 'export', value: 'svg' })]}>SVG</div>
                 </div>
-                <div mix={[surfaceCss, menu.popover()]}>
-                  <div mix={[listCss, menu.list()]}>
-                    <div mix={[itemCss, menu.item({ name: 'move', value: 'design' })]}>Design</div>
-                    <div mix={[itemCss, menu.item({ name: 'move', value: 'engineering' })]}>
-                      Engineering
-                    </div>
-                  </div>
-                </div>
-              </menu.Context>
-            </div>
+              </div>
+            </menu.Context>
+            <div mix={[itemCss, menu.item({ name: 'print' })]}>Print</div>
           </div>
-        </menu.Context>
-      </div>
+        </div>
+      </menu.Context>
     </div>
   )
 }
 
 const stackCss = css({
   colorScheme: 'light dark',
-  width: '320px',
+  width: 'fit-content',
   maxWidth: '100%',
   display: 'grid',
   gap: '16px',
   color: 'light-dark(#202027, #eeeef2)',
   font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
 })
-
-const cardCss = css({
-  padding: '20px',
-  border: '1px solid light-dark(#e0e0e6, #393940)',
-  borderRadius: '12px',
-  background: 'light-dark(#fff, #1b1b20)',
-  display: 'grid',
-  gap: '16px',
-})
-
-const mutedCss = css({ margin: 0, fontSize: '12px', color: 'light-dark(#62626c, #b0b0bb)' })
 
 const buttonCss = css({
   display: 'inline-flex',
@@ -138,6 +112,7 @@ function ChevronDownIcon() {
     </svg>
   )
 }
+
 function ChevronRightIcon() {
   return () => (
     <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24">

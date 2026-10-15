@@ -18,7 +18,6 @@ const initialExample = await loadExample('combobox/initial')
 const richOptionsExample = await loadExample('combobox/rich-options')
 const disabledExample = await loadExample('combobox/disabled')
 const formExample = await loadExample('combobox/form')
-const eventsExample = await loadExample('combobox/events')
 const imperativeExample = await loadExample('combobox/imperative')
 
 const anatomyCode = await highlightSource(`
@@ -37,25 +36,12 @@ const anatomyCode = await highlightSource(`
   </combobox.Context>
 `)
 
-const draftsCode = await highlightSource(`
-  <combobox.Context name="state">
-    <input aria-label="State" mix={combobox.input()} />
-    {/* Popup options */}
-    <input mix={combobox.hiddenInput()} />
-  </combobox.Context>
-`)
-
-const feedbackCode = await highlightSource(`
-  <div mix={[
-    css({
-      opacity: 0,
-      transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-      '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
-      '&[data-show-reason="hint"]': { transition: 'none' },
-      '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-    }),
-    combobox.popover(),
-  ]} />
+const eventsCode = await highlightSource(`
+  <div mix={combobox.onComboboxChange((event) => {
+    saveSelection(event.value, event.label)
+  })}>
+    {/* Combobox */}
+  </div>
 `)
 
 const accessibilityCode = await highlightSource(`
@@ -75,13 +61,19 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
         </p>
         <CodeBlock html={anatomyCode} />
       </Section>
-      <Section id="initial" title="Initial selection">
+      <Section id="initial" title="Selection">
+        <p>
+          Combobox tracks the input text separately from the selected option’s value. The input text
+          can contain an unfinished search. The selected value always identifies an accepted option.
+          Editing clears the selected value, and choosing an option sets it again.
+        </p>
         <p>
           <code>defaultValue</code> sets the initial committed value. In the current implementation
           it also sets the input text to the value string. Selecting an option later replaces that
           text with its label. Combobox currently has no controlled <code>value</code> or{' '}
           <code>inputValue</code> prop.
         </p>
+
         <Example id="initial-example" example={initialExample} compact />
       </Section>
       <Section id="options" title="Filtering and aliases">
@@ -92,14 +84,6 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
         </p>
         <Example id="rich-options-example" example={richOptionsExample} compact />
       </Section>
-      <Section id="drafts" title="Draft text and committed values">
-        <p>
-          Editing clears the committed value immediately. Selecting an option commits its value and
-          label. Blur commits an exact enabled label or alias match. Other draft text is cleared.
-          Escape preserves an exact match but clears unmatched text and selection.
-        </p>
-        <CodeBlock html={draftsCode} />
-      </Section>
       <Section id="disabled" title="Disabled state">
         <p>
           <code>disabled</code> on <code>Context</code> disables the input and hidden input.
@@ -109,11 +93,15 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="forms" title="Forms">
         <p>
-          <code>hiddenInput()</code> submits the committed value under the provider’s{' '}
-          <code>name</code>. Draft text is not the form value. Editing empties the hidden input
-          until another option is committed. Disabled controls are omitted from{' '}
-          <code>FormData</code>.
+          The visible input contains the search text. A second input with <code>hiddenInput()</code>{' '}
+          submits the selected value under the provider’s <code>name</code>.
         </p>
+        <p>
+          Choosing California displays "California" and submits <code>state=CA</code>. While typing,
+          the submitted value is empty until a selection is committed. Disabled controls are omitted
+          from <code>FormData</code>.
+        </p>
+
         <Example id="form-example" example={formExample} compact />
       </Section>
       <Section id="events" title="Change events">
@@ -123,7 +111,7 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           when editing clears a selection. Recommitting an unchanged value does not dispatch another
           change.
         </p>
-        <Example id="events-example" example={eventsExample} compact />
+        <CodeBlock html={eventsCode} />
       </Section>
       <Section id="imperative" title="Imperative access">
         <p>
@@ -135,13 +123,15 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="feedback" title="Popup and selection feedback">
         <p>
-          The input’s <code>data-surface-visible</code> distinguishes visible results from logical
-          open state. The surface’s <code>data-show-reason</code> distinguishes typing hints from
-          navigation. <code>data-combobox-flash</code> marks selection feedback. No-match typing
-          closes immediately. Navigation closure waits for the surface transition before committing
-          the visible label.
+          <code>data-combobox-flash</code> marks a fixed 60 ms selection flash. The committed-value
+          change event fires after the flash, before closing starts.
         </p>
-        <CodeBlock html={feedbackCode} />
+        <p>
+          Navigation opens the surface with <code>data-show-reason="nav"</code>. The selected label
+          appears 50 ms after its close transition. This delay is fixed. Typing uses{' '}
+          <code>data-show-reason="hint"</code> and skips the close transition. The input’s{' '}
+          <code>data-surface-visible</code> stays present through a navigation close.
+        </p>
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>
@@ -173,6 +163,15 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           ],
         )}
         <h3 id="input-reference">input()</h3>
+        <p>
+          On blur, an exact match against an enabled option’s search values selects that option.
+          Search values default to the label and can be replaced with <code>searchValue</code>.
+          Unmatched text and selection are cleared.
+        </p>
+        <p>
+          Escape closes the list and clears unmatched text and selection. Exact matches remain in
+          the input, but Escape alone does not select them.
+        </p>
         {referenceTable(
           ['Decoration', 'Values or default', 'Meaning'],
           [

@@ -3,64 +3,63 @@ import type { Handle } from 'remix/component'
 import * as menu from '@remix-run/ui/menu'
 
 export default function Example(handle: Handle) {
-  let showCompleted = true
+  let enabled = new Set(['sidebar', 'toolbar'])
   return () => (
     <div
       mix={[
         stackCss,
         menu.onMenuSelect((event) => {
-          if (event.item.name === 'completed') {
-            showCompleted = event.item.checked === true
-            handle.update()
-          }
+          if (event.item.checked) enabled.add(event.item.name)
+          else enabled.delete(event.item.name)
+          handle.update()
         }),
       ]}
     >
-      <div mix={cardCss}>
-        <menu.Context label="View options">
-          <button type="button" mix={[buttonCss, menu.trigger({ offset: 8 })]}>
-            View options <ChevronDownIcon />
-          </button>
-          <div mix={[surfaceCss, menu.popover()]}>
-            <div mix={[listCss, menu.list()]}>
+      <menu.Context label="View">
+        <button type="button" mix={[buttonCss, menu.trigger({ offset: 8 })]}>
+          View <ChevronDownIcon />
+        </button>
+        <div mix={[surfaceCss, menu.popover()]}>
+          <div mix={[listCss, menu.list()]}>
+            {options.map((option) => (
               <div
+                key={option.name}
                 mix={[
                   itemCss,
-                  menu.item({ name: 'completed', type: 'checkbox', checked: showCompleted }),
+                  menu.item({
+                    name: option.name,
+                    type: 'checkbox',
+                    checked: enabled.has(option.name),
+                  }),
                 ]}
               >
-                Show completed
-                <span aria-hidden="true" mix={css({ opacity: showCompleted ? 1 : 0 })}>
+                {option.label}
+                <span aria-hidden="true" mix={css({ opacity: enabled.has(option.name) ? 1 : 0 })}>
                   <CheckIcon />
                 </span>
               </div>
-            </div>
+            ))}
           </div>
-        </menu.Context>
-        <div>Review navigation</div>
-        {showCompleted && <div mix={completedCss}>Share design files</div>}
-      </div>
+        </div>
+      </menu.Context>
     </div>
   )
 }
 
+const options = [
+  { name: 'sidebar', label: 'Sidebar' },
+  { name: 'toolbar', label: 'Toolbar' },
+  { name: 'status-bar', label: 'Status bar' },
+]
+
 const stackCss = css({
   colorScheme: 'light dark',
-  width: '320px',
+  width: 'fit-content',
   maxWidth: '100%',
   display: 'grid',
   gap: '16px',
   color: 'light-dark(#202027, #eeeef2)',
   font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-})
-
-const cardCss = css({
-  padding: '20px',
-  border: '1px solid light-dark(#e0e0e6, #393940)',
-  borderRadius: '12px',
-  background: 'light-dark(#fff, #1b1b20)',
-  display: 'grid',
-  gap: '16px',
 })
 
 const buttonCss = css({
@@ -126,8 +125,6 @@ const itemCss = css({
   '&[aria-disabled="true"]': { opacity: 0.4 },
 })
 
-const completedCss = css({ textDecoration: 'line-through', color: 'light-dark(#62626c, #b0b0bb)' })
-
 function ChevronDownIcon() {
   return () => (
     <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24">
@@ -135,6 +132,7 @@ function ChevronDownIcon() {
     </svg>
   )
 }
+
 function CheckIcon() {
   return () => (
     <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24">

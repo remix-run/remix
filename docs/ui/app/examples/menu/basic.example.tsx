@@ -1,79 +1,37 @@
 import { css } from 'remix/component'
-import type { Handle } from 'remix/component'
 import * as menu from '@remix-run/ui/menu'
 
-export default function Example(handle: Handle) {
-  let starred = false
-  let copies = 0
+export default function Example() {
   return () => (
-    <div
-      mix={[
-        stackCss,
-        menu.onMenuSelect((event) => {
-          if (event.item.name === 'duplicate') copies++
-          if (event.item.name === 'star') starred = !starred
-          handle.update()
-        }),
-      ]}
-    >
-      <div mix={cardCss}>
-        <div mix={rowCss}>
-          <strong>Website refresh</strong>
-          <span aria-label={starred ? 'Starred' : 'Not starred'}>{starred ? '★' : '☆'}</span>
-        </div>
-        <p mix={mutedCss}>
-          {copies
-            ? `${copies} project ${copies === 1 ? 'copy' : 'copies'} created`
-            : 'Design review is ready'}
-        </p>
-        <menu.Context label="Project actions">
-          <button type="button" mix={[buttonCss, menu.trigger({ offset: 8 })]}>
-            Project actions <ChevronDownIcon />
-          </button>
-          <div mix={[surfaceCss, menu.popover()]}>
-            <div mix={[listCss, menu.list()]}>
-              <div mix={[itemCss, menu.item({ name: 'star' })]}>
-                {starred ? 'Remove star' : 'Star project'}
-              </div>
-              <div mix={[itemCss, menu.item({ name: 'duplicate' })]}>Duplicate project</div>
-              <div mix={[itemCss, menu.item({ name: 'archive', disabled: true })]}>
-                Archive project
-              </div>
-            </div>
+    <div mix={stackCss}>
+      <menu.Context label="Edit">
+        <button type="button" mix={[buttonCss, menu.trigger({ offset: 8 })]}>
+          Edit <ChevronDownIcon />
+        </button>
+        <div mix={[surfaceCss, menu.popover()]}>
+          <div mix={[listCss, menu.list()]}>
+            <div mix={[itemCss, menu.item({ name: 'undo' })]}>Undo</div>
+            <div mix={[itemCss, menu.item({ name: 'redo' })]}>Redo</div>
+            <div role="separator" mix={separatorCss} />
+            <div mix={[itemCss, menu.item({ name: 'cut' })]}>Cut</div>
+            <div mix={[itemCss, menu.item({ name: 'copy' })]}>Copy</div>
+            <div mix={[itemCss, menu.item({ name: 'paste' })]}>Paste</div>
           </div>
-        </menu.Context>
-      </div>
+        </div>
+      </menu.Context>
     </div>
   )
 }
 
 const stackCss = css({
   colorScheme: 'light dark',
-  width: '320px',
+  width: 'fit-content',
   maxWidth: '100%',
   display: 'grid',
   gap: '16px',
   color: 'light-dark(#202027, #eeeef2)',
   font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
 })
-
-const cardCss = css({
-  padding: '20px',
-  border: '1px solid light-dark(#e0e0e6, #393940)',
-  borderRadius: '12px',
-  background: 'light-dark(#fff, #1b1b20)',
-  display: 'grid',
-  gap: '16px',
-})
-
-const rowCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: '16px',
-})
-
-const mutedCss = css({ margin: 0, fontSize: '12px', color: 'light-dark(#62626c, #b0b0bb)' })
 
 const buttonCss = css({
   display: 'inline-flex',
@@ -136,6 +94,12 @@ const itemCss = css({
     color: 'light-dark(#fff, #102332)',
   },
   '&[aria-disabled="true"]': { opacity: 0.4 },
+})
+
+const separatorCss = css({
+  height: '1px',
+  margin: '4px 6px',
+  background: 'light-dark(#e0e0e6, #393940)',
 })
 
 function ChevronDownIcon() {

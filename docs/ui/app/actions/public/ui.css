@@ -70,20 +70,25 @@
   font-weight: 600;
   letter-spacing: -0.025em;
 }
-.ui-doc-section p,
+.ui-doc-section > p,
 .ui-example > p {
   color: var(--rmx-color-text-secondary);
 }
-.ui-doc-section dt {
+.ui-doc-section > dl > dt {
   margin-top: 20px;
   font-weight: 600;
 }
-.ui-doc-section dd {
+.ui-doc-section > dl > dd {
   margin: 6px 0 0;
   color: var(--rmx-color-text-secondary);
 }
+.ui-reference-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
 .ui-doc-section table {
   width: 100%;
+  min-width: 40rem;
   border-collapse: collapse;
   font-size: 14px;
 }
@@ -92,10 +97,19 @@
   padding: 12px 8px;
   border-bottom: 1px solid var(--rmx-color-border-subtle);
   text-align: left;
+  vertical-align: top;
+}
+.ui-doc-section th:first-child,
+.ui-doc-section td:first-child {
+  width: 1%;
+  white-space: nowrap;
 }
 .ui-doc-section td code {
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+}
+.ui-doc-section td:first-child code {
+  white-space: nowrap;
 }
 .ui-nav-start {
   margin-bottom: 24px;

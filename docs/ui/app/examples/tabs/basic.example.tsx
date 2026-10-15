@@ -4,23 +4,31 @@ import * as tabs from '@remix-run/ui/tabs'
 export default function Example() {
   return () => (
     <div mix={stackCss}>
-      <tabs.Context defaultActiveTab="overview">
+      <tabs.Context defaultActiveTab="details">
         <div mix={[cardCss, tabs.root()]}>
-          <div aria-label="Project sections" mix={[tabListCss, tabs.list()]}>
-            <button type="button" mix={[tabCss, tabs.tab({ name: 'overview' })]}>
-              Overview
+          <div aria-label="File information" mix={[tabListCss, tabs.list()]}>
+            <button type="button" mix={[tabCss, tabs.tab({ name: 'details' })]}>
+              Details
             </button>
-            <button type="button" mix={[tabCss, tabs.tab({ name: 'activity' })]}>
-              Activity
+            <button type="button" mix={[tabCss, tabs.tab({ name: 'version' })]}>
+              Version
             </button>
           </div>
-          <div mix={[panelCss, tabs.panel({ name: 'overview' })]}>
-            <strong>Website refresh</strong>
-            <p mix={mutedCss}>Design review is ready. The next milestone is due next week.</p>
+          <div mix={[panelCss, tabs.panel({ name: 'details' })]}>
+            <dl mix={detailsCss}>
+              <dt>File</dt>
+              <dd>report.pdf</dd>
+              <dt>Size</dt>
+              <dd>240 KB</dd>
+            </dl>
           </div>
-          <div mix={[panelCss, tabs.panel({ name: 'activity' })]}>
-            <strong>Latest activity</strong>
-            <p mix={mutedCss}>Alex shared updated designs. Morgan approved the navigation.</p>
+          <div mix={[panelCss, tabs.panel({ name: 'version' })]}>
+            <dl mix={detailsCss}>
+              <dt>Version</dt>
+              <dd>2</dd>
+              <dt>Author</dt>
+              <dd>Alex Morgan</dd>
+            </dl>
           </div>
         </div>
       </tabs.Context>
@@ -47,7 +55,14 @@ const cardCss = css({
   gap: '16px',
 })
 
-const mutedCss = css({ margin: 0, fontSize: '12px', color: 'light-dark(#62626c, #b0b0bb)' })
+const detailsCss = css({
+  display: 'grid',
+  gridTemplateColumns: 'auto 1fr',
+  gap: '8px 24px',
+  margin: 0,
+  '& dt': { color: 'light-dark(#62626c, #b0b0bb)' },
+  '& dd': { margin: 0 },
+})
 
 const tabListCss = css({
   display: 'flex',
@@ -59,20 +74,28 @@ const tabListCss = css({
 
 const tabCss = css({
   flex: 1,
+  minWidth: 0,
   padding: '8px 12px',
   border: 0,
   borderRadius: '6px',
   background: 'transparent',
-  color: 'light-dark(#62626c, #b0b0bb)',
+  color: 'light-dark(#202027, #eeeef2)',
   font: 'inherit',
+  fontWeight: 600,
   cursor: 'pointer',
+  '@media (hover: hover)': {
+    '&:not(:disabled):not([data-state="active"]):hover': {
+      background: 'light-dark(#e0e0e7, #32323b)',
+    },
+  },
+  '&:not(:disabled):active': { background: 'light-dark(#d8d8e1, #303038)' },
   '&[data-state="active"]': {
     background: 'light-dark(#fff, #393940)',
     color: 'light-dark(#202027, #eeeef2)',
     boxShadow: '0 1px 3px #00000018',
   },
   '&:focus-visible': { outline: '2px solid #5bb8ef' },
-  '&:disabled': { opacity: 0.4, cursor: 'default' },
+  '&:disabled': { color: 'light-dark(#7b7b86, #92929e)', cursor: 'default' },
 })
 
 const panelCss = css({

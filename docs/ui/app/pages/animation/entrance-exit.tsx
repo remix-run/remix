@@ -3,6 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
+import { ReferenceTable } from '../reference-table.tsx'
 
 export const meta = {
   title: 'Entrance and exit',
@@ -104,7 +105,7 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
           Runs when the element is inserted, from the supplied style values to its normal styles.
           Returns an element mixin.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Configuration</th>
@@ -131,8 +132,8 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
               <td>Disables entrance animation.</td>
             </tr>
           </tbody>
-        </table>
-        <table>
+        </ReferenceTable>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Option</th>
@@ -194,8 +195,8 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
               </td>
             </tr>
           </tbody>
-        </table>
-        <table>
+        </ReferenceTable>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Entrance option</th>
@@ -214,13 +215,13 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
               <td>Defaults to true. False skips the first entrance for a key within its parent.</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <h3 id="exit-reference">animateExit(config?)</h3>
         <p>
           Runs when the element is removed, from its current styles to the supplied values. Keeps
           the element in the DOM until playback finishes. Returns an element mixin.
         </p>
-        <table>
+        <ReferenceTable>
           <thead>
             <tr>
               <th>Configuration</th>
@@ -248,7 +249,7 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
               <td>Removes the element without an exit animation.</td>
             </tr>
           </tbody>
-        </table>
+        </ReferenceTable>
         <p>
           Both mixins use the Web Animations API and do not automatically read reduced-motion
           preferences.

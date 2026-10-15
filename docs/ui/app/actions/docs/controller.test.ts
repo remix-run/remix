@@ -80,7 +80,6 @@ describe('UI docs', () => {
     assert.match(html, /<h3>Controlled multiple values<\/h3>/)
     assert.match(html, /<h3>Disabling one item<\/h3>/)
     assert.doesNotMatch(html, /Lock order details/)
-    assert.match(html, /Order #RMX-1042/)
     assert.match(html, /data-demo-source/)
     assert.doesNotMatch(html, /<details/)
     assert.match(html, /https:\/\/api\.remix\.run\/remix-run\/ui\/accordion/)
@@ -163,7 +162,10 @@ describe('UI docs', () => {
       assert.ok(html.indexOf('data-demo-source') < html.indexOf('id="anatomy"'))
       assert.ok(html.indexOf('id="accessibility"') < html.indexOf('id="api-reference"'))
       assert.match(html, /<table>/)
-      assert.match(html, /basic\.example[^"<]*\.tsx/)
+      assert.match(
+        html,
+        new RegExp(`${page.slug === 'anchor' ? 'chart' : 'basic'}\\.example[^"<]*\\.tsx`),
+      )
       assert.match(html, new RegExp(`href="/behaviors/${page.slug}/" aria-current="page"`))
     }
   })

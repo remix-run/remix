@@ -3,7 +3,7 @@ import type { Handle } from 'remix/component'
 import * as menu from '@remix-run/ui/menu'
 
 export default function Example(handle: Handle) {
-  let sort = 'recent'
+  let sort = 'name'
   return () => (
     <div
       mix={[
@@ -16,67 +16,55 @@ export default function Example(handle: Handle) {
         }),
       ]}
     >
-      <div mix={cardCss}>
-        <menu.Context label="Sort projects">
-          <button type="button" mix={[buttonCss, menu.trigger({ offset: 8 })]}>
-            Sort projects <ChevronDownIcon />
-          </button>
-          <div mix={[surfaceCss, menu.popover()]}>
-            <div mix={[listCss, menu.list()]}>
-              <div role="group" aria-label="Sort order">
-                {sortOptions.map((option) => (
-                  <div
-                    key={option.value}
-                    mix={[
-                      itemCss,
-                      menu.item({
-                        name: 'sort',
-                        value: option.value,
-                        type: 'radio',
-                        checked: sort === option.value,
-                      }),
-                    ]}
-                  >
-                    {option.label}
-                    <span aria-hidden="true" mix={css({ opacity: sort === option.value ? 1 : 0 })}>
-                      <CheckIcon />
-                    </span>
-                  </div>
-                ))}
-              </div>
+      <menu.Context label="Sort by">
+        <button type="button" mix={[buttonCss, menu.trigger({ offset: 8 })]}>
+          Sort by <ChevronDownIcon />
+        </button>
+        <div mix={[surfaceCss, menu.popover()]}>
+          <div mix={[listCss, menu.list()]}>
+            <div role="group" aria-label="Sort by">
+              {options.map((option) => (
+                <div
+                  key={option.value}
+                  mix={[
+                    itemCss,
+                    menu.item({
+                      name: 'sort',
+                      value: option.value,
+                      type: 'radio',
+                      checked: sort === option.value,
+                    }),
+                  ]}
+                >
+                  {option.label}
+                  <span aria-hidden="true" mix={css({ opacity: sort === option.value ? 1 : 0 })}>
+                    <CheckIcon />
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
-        </menu.Context>
-        {(sort === 'name' ? [...projects].sort() : projects).map((project) => (
-          <div key={project}>{project}</div>
-        ))}
-      </div>
+        </div>
+      </menu.Context>
     </div>
   )
 }
-const sortOptions = [
-  { value: 'recent', label: 'Recently updated' },
+
+const options = [
   { value: 'name', label: 'Name' },
+  { value: 'modified', label: 'Last modified' },
+  { value: 'size', label: 'Size' },
+  { value: 'kind', label: 'Kind' },
 ]
-const projects = ['Website refresh', 'Design system', 'Mobile app']
 
 const stackCss = css({
   colorScheme: 'light dark',
-  width: '320px',
+  width: 'fit-content',
   maxWidth: '100%',
   display: 'grid',
   gap: '16px',
   color: 'light-dark(#202027, #eeeef2)',
   font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-})
-
-const cardCss = css({
-  padding: '20px',
-  border: '1px solid light-dark(#e0e0e6, #393940)',
-  borderRadius: '12px',
-  background: 'light-dark(#fff, #1b1b20)',
-  display: 'grid',
-  gap: '16px',
 })
 
 const buttonCss = css({
@@ -149,6 +137,7 @@ function ChevronDownIcon() {
     </svg>
   )
 }
+
 function CheckIcon() {
   return () => (
     <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24">

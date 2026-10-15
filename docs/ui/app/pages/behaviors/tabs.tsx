@@ -16,8 +16,6 @@ export const meta = {
 const basic = await loadExample('tabs/basic')
 const controlledExample = await loadExample('tabs/controlled')
 const disabledItemExample = await loadExample('tabs/disabled-item')
-const disabledExample = await loadExample('tabs/disabled')
-const eventsExample = await loadExample('tabs/events')
 
 const anatomyCode = await highlightSource(`
   import * as tabs from '@remix-run/ui/tabs'
@@ -32,6 +30,20 @@ const anatomyCode = await highlightSource(`
       <div mix={tabs.panel({ name: 'activity' })}>Recent changes</div>
     </div>
   </tabs.Context>
+`)
+
+const disabledCode = await highlightSource(`
+  <tabs.Context defaultActiveTab="details" disabled>
+    {/* All tab triggers are disabled. The selected panel stays visible. */}
+  </tabs.Context>
+`)
+
+const eventsCode = await highlightSource(`
+  <div mix={tabs.onTabsChange((event) => {
+    recordTabChange(event.activeTab, event.previousActiveTab)
+  })}>
+    {/* Tabs */}
+  </div>
 `)
 
 const contextCode = await highlightSource(`
@@ -78,12 +90,8 @@ export default function TabsPage(handle: Handle<PageProps>) {
           <code>Context</code> to disable the whole group. Disabled tabs are skipped during
           navigation. Their panels keep the current selection.
         </p>
-        <Example
-          id="disabled-item-example"
-          example={disabledItemExample}
-          title="Disabling one tab"
-        />
-        <Example id="disabled-example" example={disabledExample} title="Disabling every tab" />
+        <CodeBlock html={disabledCode} />
+        <Example id="disabled-item-example" example={disabledItemExample} />
       </Section>
       <Section id="events" title="Change events">
         <p>
@@ -91,7 +99,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
           includes <code>activeTab</code> and <code>previousActiveTab</code>. Selecting the active
           tab again does not dispatch a change.
         </p>
-        <Example id="events-example" example={eventsExample} />
+        <CodeBlock html={eventsCode} />
       </Section>
       <Section id="context" title="Reading selection">
         <p>

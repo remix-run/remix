@@ -4,15 +4,13 @@ import * as toggle from '@remix-run/ui/toggle'
 export default function Example() {
   return () => (
     <div mix={stackCss}>
-      <div mix={cardCss}>
-        <label mix={rowCss}>
-          <span>
-            <strong>Email notifications</strong>
-            <p mix={mutedCss}>Updates about your projects</p>
-          </span>
-          <input type="checkbox" mix={[switchCss, toggle.toggle({ defaultChecked: true })]} />
-        </label>
-      </div>
+      <label mix={[cardCss, rowCss]}>
+        <span>
+          <strong>Email notifications</strong>
+          <p mix={mutedCss}>Updates about your projects</p>
+        </span>
+        <input type="checkbox" mix={[switchCss, toggle.toggle({ defaultChecked: true })]} />
+      </label>
     </div>
   )
 }
@@ -34,6 +32,18 @@ const cardCss = css({
   background: 'light-dark(#fff, #1b1b20)',
   display: 'grid',
   gap: '16px',
+  cursor: 'pointer',
+  transition: 'background-color 120ms ease, border-color 120ms ease',
+  '@media (hover: hover)': {
+    '&:hover': {
+      background: 'light-dark(#f7f7fa, #24242b)',
+      borderColor: 'light-dark(#bcbcc7, #5b5b68)',
+    },
+  },
+  '&:active, &:has(button:active), &:has(input:active)': {
+    background: 'light-dark(#eeeef3, #303038)',
+  },
+  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
 })
 
 const rowCss = css({

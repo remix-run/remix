@@ -43,17 +43,20 @@ export default function Example() {
           </div>
         </accordion.ItemContext>
 
-        <accordion.ItemContext disabled value="archived">
+        <accordion.ItemContext value="returns">
           <div mix={[itemCss, accordion.item()]}>
             <h3 mix={headingCss}>
               <button mix={[triggerCss, accordion.trigger()]} type="button">
-                Archived
+                Returns
                 <ChevronDownIcon />
               </button>
             </h3>
             <div mix={[contentCss, accordion.content()]}>
               <div mix={contentInnerCss}>
-                <p mix={descriptionCss}>Unavailable settings.</p>
+                <p mix={descriptionCss}>
+                  Return unused items within 30 days. Arrange a return and track your refund from
+                  your account.
+                </p>
               </div>
             </div>
           </div>

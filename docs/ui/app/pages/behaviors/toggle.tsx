@@ -19,7 +19,6 @@ const controlledExample = await loadExample('toggle/controlled')
 const disabledExample = await loadExample('toggle/disabled')
 const readOnlyExample = await loadExample('toggle/read-only')
 const formExample = await loadExample('toggle/form')
-const eventsExample = await loadExample('toggle/events')
 
 const anatomyCode = await highlightSource(`
   import { toggle } from '@remix-run/ui/toggle'
@@ -28,6 +27,14 @@ const anatomyCode = await highlightSource(`
     Email notifications
     <input type="checkbox" mix={toggle({ defaultChecked: true })} />
   </label>
+`)
+
+const eventsCode = await highlightSource(`
+  <div mix={toggle.onToggleChange((event) => {
+    savePreference(event.checked)
+  })}>
+    {/* Switch */}
+  </div>
 `)
 
 const accessibilityCode = await highlightSource(`
@@ -70,8 +77,20 @@ export default function TogglePage(handle: Handle<PageProps>) {
           preserving focus and native form participation. These options can be passed to the mixin
           or placed on the host.
         </p>
-        <Example id="disabled-example" example={disabledExample} compact title="Disabled" />
-        <Example id="read-only-example" example={readOnlyExample} compact title="Read-only" />
+        <Example
+          id="disabled-example"
+          example={disabledExample}
+          compact
+          title="Disabled"
+          description=""
+        />
+        <Example
+          id="read-only-example"
+          example={readOnlyExample}
+          compact
+          title="Read-only"
+          description=""
+        />
       </Section>
       <Section id="forms" title="Forms">
         <p>
@@ -87,7 +106,7 @@ export default function TogglePage(handle: Handle<PageProps>) {
           <code>event.checked</code> contains the requested state. Controlled switches still need to
           accept that state through <code>checked</code>.
         </p>
-        <Example id="events-example" example={eventsExample} compact />
+        <CodeBlock html={eventsCode} />
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>

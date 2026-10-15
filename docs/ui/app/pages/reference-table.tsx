@@ -1,11 +1,11 @@
-import type { RemixNode } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 
 export function referenceTable(
   columns: readonly string[],
   rows: readonly (readonly string[])[],
 ): RemixNode {
   return (
-    <table>
+    <ReferenceTable>
       <thead>
         <tr>
           {columns.map((column) => (
@@ -22,6 +22,14 @@ export function referenceTable(
           </tr>
         ))}
       </tbody>
-    </table>
+    </ReferenceTable>
+  )
+}
+
+export function ReferenceTable(handle: Handle<{ children?: RemixNode }>) {
+  return () => (
+    <div class="ui-reference-table">
+      <table>{handle.props.children}</table>
+    </div>
   )
 }

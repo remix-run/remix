@@ -1,9 +1,9 @@
-import { css, on } from 'remix/component'
+import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
 import * as tabs from '@remix-run/ui/tabs'
 
 export default function Example(handle: Handle) {
-  let activeTab = 'overview'
+  let activeTab = 'details'
   return () => (
     <div mix={stackCss}>
       <tabs.Context
@@ -14,37 +14,32 @@ export default function Example(handle: Handle) {
         }}
       >
         <div mix={[cardCss, tabs.root()]}>
-          <div aria-label="Project sections" mix={[tabListCss, tabs.list()]}>
-            <button type="button" mix={[tabCss, tabs.tab({ name: 'overview' })]}>
-              Overview
+          <div aria-label="File information" mix={[tabListCss, tabs.list()]}>
+            <button type="button" mix={[tabCss, tabs.tab({ name: 'details' })]}>
+              Details
             </button>
-            <button type="button" mix={[tabCss, tabs.tab({ name: 'activity' })]}>
-              Activity
+            <button type="button" mix={[tabCss, tabs.tab({ name: 'version' })]}>
+              Version
             </button>
           </div>
-          <div mix={[panelCss, tabs.panel({ name: 'overview' })]}>
-            <strong>Website refresh</strong>
-            <p mix={mutedCss}>Design review is ready. The next milestone is due next week.</p>
+          <div mix={[panelCss, tabs.panel({ name: 'details' })]}>
+            <dl mix={detailsCss}>
+              <dt>File</dt>
+              <dd>report.pdf</dd>
+              <dt>Size</dt>
+              <dd>240 KB</dd>
+            </dl>
           </div>
-          <div mix={[panelCss, tabs.panel({ name: 'activity' })]}>
-            <strong>Latest activity</strong>
-            <p mix={mutedCss}>Alex shared updated designs. Morgan approved the navigation.</p>
+          <div mix={[panelCss, tabs.panel({ name: 'version' })]}>
+            <dl mix={detailsCss}>
+              <dt>Version</dt>
+              <dd>2</dd>
+              <dt>Author</dt>
+              <dd>Alex Morgan</dd>
+            </dl>
           </div>
         </div>
       </tabs.Context>
-      <button
-        type="button"
-        disabled={activeTab === 'activity'}
-        mix={[
-          buttonCss,
-          on('click', () => {
-            activeTab = 'activity'
-            handle.update()
-          }),
-        ]}
-      >
-        View latest activity
-      </button>
     </div>
   )
 }
@@ -68,24 +63,13 @@ const cardCss = css({
   gap: '16px',
 })
 
-const mutedCss = css({ margin: 0, fontSize: '12px', color: 'light-dark(#62626c, #b0b0bb)' })
-
-const buttonCss = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px',
-  padding: '9px 14px',
-  border: '1px solid light-dark(#d8d8df, #44444c)',
-  borderRadius: '8px',
-  background: 'light-dark(#fff, #25252b)',
-  color: 'inherit',
-  font: 'inherit',
-  fontWeight: 600,
-  cursor: 'pointer',
-  '&:hover:not(:disabled)': { background: 'light-dark(#f0f0f5, #303038)' },
-  '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
-  '&:disabled': { opacity: 0.45, cursor: 'default' },
+const detailsCss = css({
+  display: 'grid',
+  gridTemplateColumns: 'auto 1fr',
+  gap: '8px 24px',
+  margin: 0,
+  '& dt': { color: 'light-dark(#62626c, #b0b0bb)' },
+  '& dd': { margin: 0 },
 })
 
 const tabListCss = css({
@@ -98,20 +82,28 @@ const tabListCss = css({
 
 const tabCss = css({
   flex: 1,
+  minWidth: 0,
   padding: '8px 12px',
   border: 0,
   borderRadius: '6px',
   background: 'transparent',
-  color: 'light-dark(#62626c, #b0b0bb)',
+  color: 'light-dark(#202027, #eeeef2)',
   font: 'inherit',
+  fontWeight: 600,
   cursor: 'pointer',
+  '@media (hover: hover)': {
+    '&:not(:disabled):not([data-state="active"]):hover': {
+      background: 'light-dark(#e0e0e7, #32323b)',
+    },
+  },
+  '&:not(:disabled):active': { background: 'light-dark(#d8d8e1, #303038)' },
   '&[data-state="active"]': {
     background: 'light-dark(#fff, #393940)',
     color: 'light-dark(#202027, #eeeef2)',
     boxShadow: '0 1px 3px #00000018',
   },
   '&:focus-visible': { outline: '2px solid #5bb8ef' },
-  '&:disabled': { opacity: 0.4, cursor: 'default' },
+  '&:disabled': { color: 'light-dark(#7b7b86, #92929e)', cursor: 'default' },
 })
 
 const panelCss = css({

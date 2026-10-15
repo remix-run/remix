@@ -9,11 +9,12 @@ export default function Example(handle: Handle) {
       <popover.Context>
         <button
           type="button"
+          aria-label="Filter pull requests"
+          aria-controls={`${handle.id}-surface`}
           aria-expanded={open}
-          aria-controls={`${handle.id}-filters`}
           mix={[
             buttonCss,
-            popover.anchor({ placement: 'bottom-start', offset: 8 }),
+            popover.anchor({ placement: 'bottom', offset: 8 }),
             popover.focusOnHide(),
             on('click', () => {
               open = !open
@@ -21,15 +22,14 @@ export default function Example(handle: Handle) {
             }),
           ]}
         >
-          Filters <ChevronDownIcon />
+          <FilterIcon />
         </button>
         <div
-          id={`${handle.id}-filters`}
+          id={`${handle.id}-surface`}
           role="dialog"
-          aria-label="Project filters"
+          aria-label="Filter pull requests"
           mix={[
             surfaceCss,
-            filterSurfaceCss,
             popover.surface({
               open,
               onHide() {
@@ -39,27 +39,27 @@ export default function Example(handle: Handle) {
             }),
           ]}
         >
-          <div mix={filterFieldsCss}>
-            <strong>Project filters</strong>
-            <label>
-              <input type="checkbox" mix={popover.focusOnShow()} /> Assigned to me
+          <fieldset mix={filtersCss}>
+            <legend>Status</legend>
+            <label mix={checkboxCss}>
+              <input
+                type="checkbox"
+                name="status"
+                value="open"
+                defaultChecked
+                mix={popover.focusOnShow()}
+              />
+              Open
             </label>
-            <label>
-              <input type="checkbox" /> Due this week
+            <label mix={checkboxCss}>
+              <input type="checkbox" name="status" value="merged" />
+              Merged
             </label>
-            <button
-              type="button"
-              mix={[
-                buttonCss,
-                on('click', () => {
-                  open = false
-                  handle.update()
-                }),
-              ]}
-            >
-              Done
-            </button>
-          </div>
+            <label mix={checkboxCss}>
+              <input type="checkbox" name="status" value="closed" />
+              Closed
+            </label>
+          </fieldset>
         </div>
       </popover.Context>
     </div>
@@ -70,8 +70,8 @@ const stackCss = css({
   colorScheme: 'light dark',
   width: '320px',
   maxWidth: '100%',
-  display: 'grid',
-  gap: '16px',
+  display: 'flex',
+  justifyContent: 'center',
   color: 'light-dark(#202027, #eeeef2)',
   font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
 })
@@ -80,26 +80,23 @@ const buttonCss = css({
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  gap: '8px',
-  padding: '9px 14px',
+  padding: '10px',
   border: '1px solid light-dark(#d8d8df, #44444c)',
   borderRadius: '8px',
   background: 'light-dark(#fff, #25252b)',
   color: 'inherit',
   font: 'inherit',
-  fontWeight: 600,
   cursor: 'pointer',
-  '&:hover:not(:disabled)': { background: 'light-dark(#f0f0f5, #303038)' },
+  '&:hover': { background: 'light-dark(#f0f0f5, #303038)' },
   '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
-  '&:disabled': { opacity: 0.45, cursor: 'default' },
 })
 
 const surfaceCss = css({
   colorScheme: 'light dark',
   boxSizing: 'border-box',
   margin: 0,
-  padding: '6px',
-  minWidth: '220px',
+  padding: '12px',
+  width: '196px',
   maxWidth: 'calc(100vw - 32px)',
   border: '1px solid light-dark(#e0e0e6, #393940)',
   borderRadius: '10px',
@@ -113,14 +110,46 @@ const surfaceCss = css({
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
 })
 
-const filterSurfaceCss = css({ padding: '18px', width: '260px' })
+const filtersCss = css({
+  margin: 0,
+  padding: 0,
+  border: 0,
+  '& legend': {
+    padding: '0 8px 6px',
+    fontSize: '12px',
+    fontWeight: 600,
+    color: 'light-dark(#62626c, #b0b0bb)',
+  },
+})
 
-const filterFieldsCss = css({ display: 'grid', gap: '16px' })
+const checkboxCss = css({
+  boxSizing: 'border-box',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  minHeight: '40px',
+  padding: '8px',
+  borderRadius: '5px',
+  fontSize: '13px',
+  cursor: 'pointer',
+  '&:hover': { background: 'light-dark(#f0f0f5, #303038)' },
+  '& input': { margin: 0, width: '16px', height: '16px', accentColor: '#7462e7' },
+  '& input:focus-visible': { outline: '2px solid #7462e7', outlineOffset: '3px' },
+})
 
-function ChevronDownIcon() {
+function FilterIcon() {
   return () => (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24">
-      <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.5" />
+    <svg
+      aria-hidden="true"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
+    >
+      <path d="M4 7h16M4 17h16M9 4v6M15 14v6" />
     </svg>
   )
 }

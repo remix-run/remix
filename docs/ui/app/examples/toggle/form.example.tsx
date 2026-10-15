@@ -7,6 +7,7 @@ export default function Example(handle: Handle) {
   let subscribed = true
   return () => (
     <form
+      autocomplete="off"
       mix={[
         stackCss,
         on('submit', (event) => {
@@ -68,6 +69,16 @@ const rowCss = css({
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: '16px',
+  padding: '8px',
+  margin: '-8px',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  transition: 'background-color 120ms ease',
+  '@media (hover: hover)': {
+    '&:hover': { background: 'light-dark(#f7f7fa, #24242b)' },
+  },
+  '&:active, &:has(input:active)': { background: 'light-dark(#eeeef3, #303038)' },
+  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
 })
 
 const mutedCss = css({ margin: 0, fontSize: '12px', color: 'light-dark(#62626c, #b0b0bb)' })

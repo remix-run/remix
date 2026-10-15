@@ -25,7 +25,7 @@ export default function Example(handle: Handle) {
       ]}
     >
       <BookmarkIcon saved={saved} />
-      {saved ? 'Saved' : 'Save'}
+      Bookmark
     </button>
   )
 }

@@ -11,6 +11,7 @@ export default function Example(handle: Handle) {
       <div mix={cardCss}>
         <strong>Assign to team</strong>
         <listbox.Context
+          flashSelection
           value={value}
           activeValue={activeValue}
           onSelect={(next) => {
@@ -74,6 +75,7 @@ const listCss = css({
   maxHeight: '240px',
   overflow: 'auto',
   outline: 0,
+  '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
 })
 
 const optionCss = css({

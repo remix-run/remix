@@ -2,37 +2,37 @@ import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
 import * as accordion from '@remix-run/ui/accordion'
 
-export default function Example() {
+export default function Example(handle: Handle) {
   return () => (
     <div mix={stackCss}>
-      <accordion.Context defaultValue="shipping" disabled>
+      <p id={`${handle.id}-reason`} mix={reasonCss}>
+        Sign in to use saved addresses and cards.
+      </p>
+      <accordion.Context disabled>
         <div mix={[rootCss, accordion.root()]}>
-          <Item value="shipping" title="Shipping" />
-          <Item value="billing" title="Billing" />
+          <Item value="addresses" title="Saved addresses" reasonId={`${handle.id}-reason`} />
+          <Item value="cards" title="Saved cards" reasonId={`${handle.id}-reason`} />
         </div>
       </accordion.Context>
     </div>
   )
 }
 
-function Item(handle: Handle<{ value: string; title: string }>) {
+function Item(handle: Handle<{ value: string; title: string; reasonId: string }>) {
   return () => (
     <accordion.ItemContext value={handle.props.value}>
       <div mix={[itemCss, accordion.item()]}>
         <h3>
-          <button type="button" mix={accordion.trigger()}>
+          <button type="button" aria-describedby={handle.props.reasonId} mix={accordion.trigger()}>
             {handle.props.title}
-            <ChevronDownIcon />
           </button>
         </h3>
         <div mix={[contentCss, accordion.content()]}>
           <div mix={css({ minHeight: 0, overflow: 'hidden' })}>
             <p>
-              {handle.props.value === 'shipping'
-                ? 'Standard delivery in 2–4 business days. Tracking is sent when your order ships.'
-                : handle.props.value === 'billing'
-                  ? 'Visa ending in 4242. Your receipt will be sent to the email on your account.'
-                  : 'Past orders and receipts are saved here for your records.'}
+              {handle.props.value === 'addresses'
+                ? 'Choose a saved delivery address.'
+                : 'Choose a saved payment card.'}
             </p>
           </div>
         </div>
@@ -72,16 +72,18 @@ const rootCss = css({
     '&:disabled': { cursor: 'default' },
     '&:hover:not(:disabled)': { background: 'light-dark(#f7f7fa, #24242b)' },
     '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '-3px' },
-    '& svg': { transition: 'transform 280ms ease' },
-    '&[data-state="open"] svg': { transform: 'rotate(180deg)' },
   },
   '& p': { margin: 0, padding: '0 20px 20px', color: 'light-dark(#62626c, #b0b0bb)' },
-  '@media (prefers-reduced-motion: reduce)': { '& button svg': { transition: 'none' } },
 })
 const itemCss = css({
   borderTop: '1px solid light-dark(#ebebef, #303037)',
   '&:first-child': { borderTop: 0 },
-  '&[data-disabled]': { opacity: 0.4 },
+  '&[data-disabled] button': { color: 'light-dark(#62626c, #b0b0bb)' },
+})
+const reasonCss = css({
+  margin: 0,
+  color: 'light-dark(#62626c, #b0b0bb)',
+  fontSize: '13px',
 })
 const contentCss = css({
   display: 'grid',
@@ -91,11 +93,3 @@ const contentCss = css({
   '&[data-state="open"]': { gridTemplateRows: '1fr', opacity: 1 },
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
 })
-
-function ChevronDownIcon() {
-  return () => (
-    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24">
-      <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.5" />
-    </svg>
-  )
-}
