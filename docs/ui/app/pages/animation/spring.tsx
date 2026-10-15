@@ -191,12 +191,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
             {
               name: 'velocity',
               type: <code>{'number'}</code>,
-              description: (
-                <>
-                  Initial velocity in progress units per second. Does not track an element's
-                  existing velocity.
-                </>
-              ),
+              description: <>Initial velocity in progress units per second.</>,
               defaultValue: <code>{'0'}</code>,
             },
           ]}

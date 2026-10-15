@@ -261,6 +261,36 @@ export default function AccordionPage(handle: Handle<PageProps>) {
             },
           ]}
         />
+        <p>
+          Descendants can read <code>handle.context.get(accordion.Context)</code> during render.
+        </p>
+        <ApiTable
+          id="context-state"
+          label="Provided member"
+          entries={[
+            {
+              name: 'type',
+              type: <code>'single' | 'multiple'</code>,
+              description: 'Current accordion mode.',
+            },
+            {
+              name: 'collapsible',
+              type: <code>boolean</code>,
+              description:
+                'Whether an open panel can be closed by its trigger. Always true in multiple mode.',
+            },
+            {
+              name: 'disabled',
+              type: <code>boolean</code>,
+              description: 'Provider disabled state.',
+            },
+            {
+              name: 'isOpen',
+              type: <code>{'(value: string) => boolean'}</code>,
+              description: 'Checks whether an item value is open.',
+            },
+          ]}
+        />
         <h3 id="root-reference">root()</h3>
         <p>
           Apply to one container inside Context. Takes no options. Change events bubble from this

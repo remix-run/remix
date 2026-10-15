@@ -4,6 +4,27 @@ import Example from './basic.example.tsx'
 import { element, enterText, input, key, mount, waitFor } from '../test-helpers.ts'
 
 describe('Combobox example', () => {
+  it('closes unmatched searches and reopens the full list with an arrow key', async (t) => {
+    let result = await mount(t, <Example />)
+    let search = input(result.container, '[role="combobox"]')
+    await result.act(() => {
+      search.focus()
+      enterText(search, 'Cali')
+    })
+    await waitFor(() => assert.ok(element(result.container, '[popover]').checkVisibility()))
+    await result.act(() => enterText(search, 'lifornia'))
+    assert.equal(search.value, 'lifornia')
+    assert.equal(search.getAttribute('aria-expanded'), 'false')
+    assert.equal(element(result.container, '[popover]').matches(':popover-open'), false)
+    await result.act(() => key(search, 'ArrowDown'))
+    await waitFor(() => assert.equal(search.getAttribute('aria-expanded'), 'true'))
+    assert.equal(result.container.querySelectorAll('[role="option"]:not([hidden])').length, 50)
+    assert.equal(search.value, 'lifornia')
+    assert.equal(input(result.container, 'input[type="hidden"]').value, '')
+    await result.act(() => enterText(search, ''))
+    assert.equal(search.getAttribute('aria-expanded'), 'false')
+  })
+
   it('filters states and separates search text from the selected value', async (t) => {
     let result = await mount(t, <Example />)
     let search = input(result.container, '[role="combobox"]')

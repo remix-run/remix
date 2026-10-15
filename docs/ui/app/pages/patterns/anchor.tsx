@@ -233,7 +233,8 @@ export default function AnchorPage(handle: Handle<PageProps>) {
             {
               name: 'relativeTo',
               type: <code>{'string'}</code>,
-              description: 'Selector for a descendant to align within the floating element.',
+              description:
+                'Selector for the first matching descendant to align within the floating element. Falls back to the outer box when no element matches.',
             },
             {
               name: 'offset',

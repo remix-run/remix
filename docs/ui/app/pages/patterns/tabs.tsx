@@ -164,7 +164,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
           <li>Arrow keys select adjacent enabled tabs and wrap at the boundaries.</li>
           <li>Home and End select the first and last enabled tabs.</li>
         </ul>
-        <p>Both horizontal and vertical arrow keys are handled. There is no orientation option.</p>
+        <p>Both horizontal and vertical arrow keys are handled.</p>
         <CodeBlock html={accessibilityCode} />
       </Section>
       <Section id="api-reference" title="API reference">
@@ -300,7 +300,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
             {
               name: 'name',
               type: <code>{'string'}</code>,
-              description: 'Matches a panel name.',
+              description: 'Identifier unique within the tab list. Matches a panel name.',
               required: true,
             },
             {
@@ -407,6 +407,14 @@ export default function TabsPage(handle: Handle<PageProps>) {
             },
           ]}
         />
+        <p>
+          Dispatched after <code>onActiveTabChange</code>. In controlled mode, it reports a request
+          even if the application leaves <code>activeTab</code> unchanged. Updating the prop
+          directly does not dispatch an event. The event is not cancelable.
+        </p>
+        <p>
+          Construct with <code>new TabsChangeEvent(activeTab, previousActiveTab)</code>.
+        </p>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
           id="types-types"

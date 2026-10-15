@@ -68,8 +68,11 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="identity" title="Keys and interrupted animations">
         <p>
-          A stable key lets an element return during its exit animation. Entrance resumes from its
-          current appearance, and removal waits until exit finishes.
+          The same element type and key under the same parent let an element return during exit.
+          Entrance resumes from its current appearance, and removal waits until exit finishes.
+          Removing an element while its entrance is running reverses that animation instead of
+          starting the configured exit. Returning during exit animates back to normal styles using
+          the exit configuration’s timing.
         </p>
 
         <CodeBlock html={identityCode} />
@@ -77,7 +80,8 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
       <Section id="initial-entrance" title="Skipping the first entrance">
         <p>
           Set <code>initial: false</code> to skip the first entrance for a key within its parent.
-          Later insertions still animate.
+          Later insertions of that key still animate. This tracks each key’s first insertion, even
+          if it first appears after the initial render.
         </p>
 
         <CodeBlock html={initialEntranceCode} />
@@ -181,7 +185,9 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
             {
               name: 'initial',
               type: <code>{'boolean'}</code>,
-              description: <>False skips the first entrance for a key within its parent.</>,
+              description: (
+                <>False skips the first entrance for each key within its parent. Requires a key.</>
+              ),
               defaultValue: <code>{'true'}</code>,
             },
           ]}

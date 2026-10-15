@@ -103,19 +103,29 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           Editing clears the selected value, and choosing an option sets it again.
         </p>
         <p>
-          <code>defaultValue</code> sets the initial committed value. In the current implementation
-          it also sets the input text to the value string. Selecting an option later replaces that
-          text with its label. Combobox currently has no controlled <code>value</code> or{' '}
-          <code>inputValue</code> prop.
+          Combobox manages selection and input text internally. <code>defaultValue</code> sets the
+          initial committed value and input text to a registered option’s value string. Selecting an
+          option later replaces the text with its label.
         </p>
 
+        <p>
+          On blur, an exact enabled label or alias match commits the option and preserves the typed
+          text. Partial or unmatched text is cleared.
+        </p>
         <Example id="initial-example" example={initialExample} compact />
       </Section>
       <Section id="options" title="Filtering and aliases">
         <p>
-          Typing filters options by case-insensitive substring matching. <code>searchValue</code>{' '}
+          Typing filters options by case-insensitive prefix matching. <code>searchValue</code>{' '}
           supplies a string or aliases in place of the label. Non-matching options receive{' '}
-          <code>hidden</code>. Disabled options can remain visible but cannot be selected.
+          <code>hidden</code>. Include the full label in custom search values so a selection still
+          matches when the input loses focus. Disabled options can remain visible but cannot be
+          selected.
+        </p>
+        <p>
+          An empty search or a search with no matches closes the popup. Unmatched text stays in the
+          input while editing. Clicking the closed input or pressing an arrow key reopens the full
+          list when the text is an exact match or has no matches.
         </p>
         <Example id="rich-options-example" example={richOptionsExample} compact />
       </Section>
@@ -137,7 +147,7 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           <code>onComboboxChange()</code> receives committed-value changes from the input or an
           ancestor. Its <code>value</code>, <code>label</code> and <code>optionId</code> become null
           when editing clears a selection. Recommitting an unchanged value does not dispatch another
-          change.
+          change. Blur matching commits immediately, without the selection flash.
         </p>
         <CodeBlock html={eventsCode} />
       </Section>
@@ -155,10 +165,11 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           change event fires after the flash, before closing starts.
         </p>
         <p>
-          Navigation opens the surface with <code>data-show-reason="nav"</code>. The selected label
-          appears 50 ms after its close transition. This delay is fixed. Typing uses{' '}
-          <code>data-show-reason="hint"</code> and skips the close transition. The input’s{' '}
-          <code>data-surface-visible</code> stays present through a navigation close.
+          Typing opens a hint with <code>data-show-reason="hint"</code>. Dismissing that hint skips
+          the close transition. Highlighting or selecting an option switches to{' '}
+          <code>data-show-reason="nav"</code>. Navigation closures keep{' '}
+          <code>data-surface-visible</code> on the input through the transition. The chosen label
+          appears 50 ms later. This delay is fixed.
         </p>
       </Section>
       <Section id="disabled" title="Disabled state">
@@ -175,8 +186,14 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
         </p>
         <CodeBlock html={accessibilityCode} />
         <ul>
-          <li>Arrow keys open results or change the highlight.</li>
-          <li>Enter selects the highlighted option.</li>
+          <li>
+            ArrowDown and ArrowUp open results or move the highlight using Listbox’s navigation
+            rules.
+          </li>
+          <li>
+            Typing opens matching results. Use an arrow key to highlight an option, then Enter to
+            select it.
+          </li>
           <li>Escape dismisses the popup.</li>
           <li>Tab moves focus away and triggers blur matching.</li>
         </ul>
@@ -221,7 +238,8 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
         <p>
           On blur, an exact match against an enabled option’s search values selects that option.
           Search values default to the label and can be replaced with <code>searchValue</code>.
-          Unmatched text and selection are cleared.
+          Matching ignores case and preserves the typed text, including aliases. Partial or
+          unmatched text and selection are cleared.
         </p>
         <p>
           Escape closes the list and clears unmatched text and selection. Exact matches remain in
@@ -325,7 +343,8 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
             {
               name: 'label',
               type: <code>{'string'}</code>,
-              description: 'Committed visible input label.',
+              description:
+                'Label displayed after pointer or keyboard selection. Blur matching preserves typed text.',
               required: true,
             },
             {
@@ -337,7 +356,8 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
             {
               name: 'searchValue',
               type: <code>{'string | string[]'}</code>,
-              description: 'Search aliases.',
+              description:
+                'Search text or aliases. Filtering matches prefixes and blur matches the full string, ignoring case. Defaults to the label.',
               defaultValue: <code>{'label'}</code>,
             },
             {
@@ -405,17 +425,20 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
             {
               name: 'value',
               type: <code>{'string | null'}</code>,
-              description: 'Committed option value.',
+              description:
+                'Selected value. Updates before the selection flash finishes and the change event fires.',
             },
             {
               name: 'label',
               type: <code>{'string | null'}</code>,
-              description: 'Committed option label.',
+              description:
+                'Selected option label, which can differ from the typed text after alias matching.',
             },
             {
               name: 'inputText',
               type: <code>{'string'}</code>,
-              description: 'Current draft text.',
+              description:
+                'Logical input text. On selection, changes to the label before the visible input finishes closing.',
             },
             { name: 'isOpen', type: <code>{'boolean'}</code>, description: 'Logical open state.' },
             { name: 'id', type: <code>{'string'}</code>, description: 'List ID.' },
@@ -428,7 +451,7 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
               name: 'open',
               type: <code>{'(strategy?: ComboboxOpenStrategy) => Promise<void>'}</code>,
               description:
-                'Opens matching results. Defaults to selected. No-op when disabled or no results match.',
+                'Opens filtered results, or the full list for exact or unmatched text. Defaults to selected. No-op when disabled or no options are registered.',
             },
             { name: 'close', type: <code>{'() => void'}</code>, description: 'Requests closure.' },
           ]}
@@ -440,7 +463,8 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
             {
               name: 'selected',
               type: <code>{'ComboboxOpenStrategy'}</code>,
-              description: 'Selected option, exact draft match or enabled fallback.',
+              description:
+                'Exact enabled draft match, then selected option, then first enabled result.',
             },
             {
               name: 'selected-or-none',
@@ -462,7 +486,8 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
         <h3 id="change-listener-reference">onComboboxChange(handler, captureBoolean?)</h3>
         <p>
           Listens for <code>rmx:combobox-change</code>. Receives the event and an abort signal.
-          Capture defaults to false.
+          Capture defaults to false. Events bubble from the input, or the surface if no input is
+          registered. They are not cancelable.
         </p>
         <h3 id="change-event-reference">ComboboxChangeEvent</h3>
         <ApiTable
@@ -486,6 +511,9 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
             },
           ]}
         />
+        <p>
+          Construct with <code>{'new ComboboxChangeEvent({ value, label, optionId })'}</code>.
+        </p>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
           id="types-types"

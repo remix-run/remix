@@ -1,9 +1,37 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import Example from './rich-options.example.tsx'
-import { element, enterText, input, mount, waitFor } from '../test-helpers.ts'
+import { element, enterText, input, key, mount, waitFor } from '../test-helpers.ts'
 
 describe('Rich combobox example', () => {
+  it('commits exact aliases on blur and preserves uncommitted matches on Escape', async (t) => {
+    let result = await mount(t, <Example />)
+    let search = input(result.container, '[role="combobox"]')
+    let value = input(result.container, 'input[type="hidden"]')
+    await result.act(() => {
+      search.focus()
+      enterText(search, 'massachusetts')
+    })
+    await result.act(() => search.blur())
+    assert.equal(value.value, 'BOS')
+    assert.equal(search.value, 'massachusetts')
+    await result.act(() => {
+      search.focus()
+      enterText(search, 'Mass')
+      search.blur()
+    })
+    assert.equal(search.value, '')
+    assert.equal(value.value, '')
+    await result.act(() => {
+      search.focus()
+      enterText(search, 'massachusetts')
+    })
+    await result.act(() => key(search, 'Escape'))
+    assert.equal(search.value, 'massachusetts')
+    assert.equal(value.value, '')
+    assert.equal(search.getAttribute('aria-expanded'), 'false')
+  })
+
   it('searches aliases and prevents choosing an unavailable airport', async (t) => {
     let result = await mount(t, <Example />)
     let search = input(result.container, '[role="combobox"]')
@@ -22,5 +50,8 @@ describe('Rich combobox example', () => {
     await result.act(() => boston.click())
     await waitFor(() => assert.equal(value.value, 'BOS'))
     await waitFor(() => assert.equal(search.value, 'Boston (BOS)'))
+    await result.act(() => search.blur())
+    assert.equal(value.value, 'BOS')
+    assert.equal(search.value, 'Boston (BOS)')
   })
 })

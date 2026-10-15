@@ -124,7 +124,8 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <p>
           <code>{"type: 'checkbox'"}</code> gives an item checked semantics. Pass its current{' '}
           <code>checked</code> state and accept the next state from <code>event.item.checked</code>.
-          The application owns the checked state.
+          The application owns the checked state. Selecting a checkbox closes the menu after its
+          selection feedback, just like a regular action.
         </p>
         <Example id="checkbox-example" example={checkboxExample} />
       </Section>
@@ -132,7 +133,8 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <p>
           <code>{"type: 'radio'"}</code> represents mutually exclusive choices. Selection requests{' '}
           <code>{'checked: true'}</code>. Your event handler updates the chosen value and derives
-          each item’s checked state. Group related items with an accessible name.
+          each item’s checked state. Group related items with an accessible name. Selecting an
+          already checked radio item still emits an event and closes the menu.
         </p>
         <Example id="radio-example" example={radioExample} />
       </Section>
@@ -157,7 +159,9 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <p>
           Items use their rendered text as the label unless <code>label</code> is provided.{' '}
           <code>searchValue</code> supplies a string or aliases for typeahead. Disabled items stay
-          visible but are excluded from navigation and selection.
+          visible but are excluded from navigation, typeahead and selection. Items with the native{' '}
+          <code>hidden</code> attribute are also excluded. Matching ignores case and uses prefixes
+          from <code>searchValue</code> in place of the label.
         </p>
         <CodeBlock html={labelsCode} />
       </Section>
@@ -180,7 +184,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <ul>
           <li>Arrow keys move between enabled items without wrapping.</li>
           <li>Home and End highlight the first and last enabled items.</li>
-          <li>Enter and Space activate the highlighted item.</li>
+          <li>Enter activates the highlighted item.</li>
           <li>Printable keys perform typeahead.</li>
           <li>Escape closes the menu tree.</li>
           <li>Tab closes the menu without explicitly returning focus.</li>
@@ -188,10 +192,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="context-reference">Context</h3>
-        <p>
-          Coordinates open state, focus, highlighted items and nested menus. There are no controlled
-          open-state props.
-        </p>
+        <p>Manages open state, focus, highlighted items and nested menus.</p>
         <ApiTable
           id="context-options"
           label="Option"
@@ -460,7 +461,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <p>
           Listens for <code>rmx:menu-select</code>. Receives the event and an abort signal. Capture
           defaults to false. One event bubbles from the selected item before the tree finishes
-          closing.
+          closing. The event is not cancelable.
         </p>
         <h3 id="select-event-reference">MenuSelectEvent</h3>
         <p>
@@ -494,6 +495,9 @@ export default function MenuPage(handle: Handle<PageProps>) {
             },
           ]}
         />
+        <p>
+          Construct with <code>new MenuSelectEvent(item)</code>.
+        </p>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
           id="types-types"

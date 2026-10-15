@@ -123,8 +123,8 @@ export default function PopoverPage(handle: Handle<PageProps>) {
       <Section id="state" title="Opening and dismissal">
         <p>
           <code>surface()</code> requires an <code>open</code> boolean. <code>onHide</code> requests
-          closure for Escape or an outside click. Update <code>open</code> to accept the request.
-          Opening uses the browser’s top layer and locks page scrolling.
+          closure for Escape from within the surface or an outside click. Update <code>open</code>{' '}
+          to accept the request. Opening uses the browser’s top layer and locks page scrolling.
         </p>
         <CodeBlock html={stateCode} />
         <h3 id="anchor-interaction">Interactive anchors</h3>
@@ -214,7 +214,8 @@ export default function PopoverPage(handle: Handle<PageProps>) {
             {
               name: 'onHide',
               type: <code>{'(request?: PopoverHideRequest) => void'}</code>,
-              description: 'Dismissal callback.',
+              description:
+                'Requests closure for Escape within the surface or an outside click. The surface stays open until open becomes false.',
               required: true,
             },
             {
@@ -232,7 +233,8 @@ export default function PopoverPage(handle: Handle<PageProps>) {
             {
               name: 'stopOutsideClickPropagation',
               type: <code>{'boolean'}</code>,
-              description: 'Stops the outside click after requesting dismissal.',
+              description:
+                'Stops outside clicks in the capture phase so they do not reach the clicked element’s handlers. Does not prevent the browser’s default action.',
               defaultValue: <code>{'true'}</code>,
             },
           ]}

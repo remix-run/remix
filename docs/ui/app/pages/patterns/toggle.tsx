@@ -30,7 +30,9 @@ const anatomyCode = await highlightSource(`
 `)
 
 const eventsCode = await highlightSource(`
-  <div mix={toggle.onToggleChange((event) => {
+  import { onToggleChange } from '@remix-run/ui/toggle'
+
+  <div mix={onToggleChange((event) => {
     savePreference(event.checked)
   })}>
     {/* Switch */}
@@ -124,12 +126,13 @@ export default function TogglePage(handle: Handle<PageProps>) {
         <CodeBlock html={accessibilityCode} />
       </Section>
       <Section id="api-reference" title="API reference">
-        <h3 id="toggle-reference">toggle(options)</h3>
+        <h3 id="toggle-reference">toggle(options?)</h3>
         <p>
-          Pass an options object, even when empty. Decorates the host with switch semantics and{' '}
-          <code>data-state</code>. State can also be controlled by the host’s <code>checked</code>{' '}
-          prop. The checked option takes precedence over the host checked prop. Disabled and
-          read-only state can be set by either the options or the host.
+          Adds switch semantics and <code>data-state</code> to the host. State can also be
+          controlled by the host’s <code>checked</code> prop. The checked option takes precedence
+          over the host checked prop. Disabled and read-only state can be set by either the options
+          or the host. Host <code>defaultChecked</code> is also supported, with the mixin option
+          taking precedence.
         </p>
         <ApiTable
           id="toggle-options"
@@ -187,7 +190,8 @@ export default function TogglePage(handle: Handle<PageProps>) {
             {
               name: 'tabIndex',
               type: <code>{'number'}</code>,
-              description: 'Native input override. Custom hosts default to 0 when enabled.',
+              description:
+                'Overrides the host tabIndex on either host type. Custom hosts default to 0 when enabled.',
             },
             {
               name: 'inputRef',
@@ -241,6 +245,9 @@ export default function TogglePage(handle: Handle<PageProps>) {
             },
           ]}
         />
+        <p>
+          Construct with <code>new ToggleChangeEvent(checked)</code>. The event is not cancelable.
+        </p>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
           id="types-types"

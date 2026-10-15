@@ -92,7 +92,7 @@ export default function LayoutPage(handle: Handle<PageProps>) {
             },
             {
               name: 'Options object',
-              type: <code>{'LayoutAnimationConfig'}</code>,
+              type: <code>{'{ duration?: number, easing?: string, size?: boolean }'}</code>,
               description: <>Overrides timing or size animation.</>,
             },
             {

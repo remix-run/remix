@@ -182,7 +182,8 @@ export default function ListboxPage(handle: Handle<PageProps>) {
         <p>
           <code>label</code> supplies option metadata. Rendered children can include secondary text.{' '}
           <code>textValue</code> supplies a string or aliases for typeahead. Disabled and hidden
-          options are excluded from navigation, typeahead and selection.
+          options are excluded from navigation, typeahead and selection. Hide an option with its
+          native <code>hidden</code> attribute so the library can detect it.
         </p>
         <Example id="rich-options-example" example={richOptionsExample} />
       </Section>
@@ -190,7 +191,8 @@ export default function ListboxPage(handle: Handle<PageProps>) {
         <p>
           <code>flashSelection</code> adds a temporary attribute to the selected option.{' '}
           <code>onSelect</code> runs immediately. <code>onSelectSettled</code> runs after the fixed
-          60 ms flash. Highlight and selection requests are ignored while selection settles.
+          60 ms flash when enabled, or immediately after <code>onSelect</code> otherwise. Highlight
+          and selection requests are ignored until <code>onSelectSettled</code> finishes.
         </p>
         <CodeBlock html={settlingCode} />
       </Section>
@@ -218,10 +220,7 @@ export default function ListboxPage(handle: Handle<PageProps>) {
             selecting it.
           </li>
         </ul>
-        <p>
-          The list mixin currently intercepts Tab to highlight the first option. It does not provide
-          Escape dismissal.
-        </p>
+        <p>The list mixin intercepts Tab to highlight the first option.</p>
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="context-reference">Context</h3>
@@ -299,8 +298,8 @@ export default function ListboxPage(handle: Handle<PageProps>) {
         />
         <h3 id="list-reference">list()</h3>
         <p>
-          Handles keyboard navigation and typeahead. It does not set{' '}
-          <code>aria-activedescendant</code> or a label.
+          Handles keyboard navigation and typeahead. Supply an accessible name and{' '}
+          <code>aria-activedescendant</code> from the highlighted option’s ID.
         </p>
         <ApiTable
           id="list-attributes"
@@ -398,7 +397,8 @@ export default function ListboxPage(handle: Handle<PageProps>) {
             {
               name: 'highlight',
               type: <code>{'(value: ListboxValue) => void'}</code>,
-              description: 'Requests a highlight, including null to clear it.',
+              description:
+                'Requests a highlight without checking availability. Null clears it. Unlike navigation, this does not scroll the option into view.',
             },
             {
               name: 'highlightSearchMatch',
@@ -418,22 +418,23 @@ export default function ListboxPage(handle: Handle<PageProps>) {
             {
               name: 'navigateFirst',
               type: <code>{'() => void'}</code>,
-              description: 'Requests and scrolls a new highlight.',
+              description: 'Highlights and scrolls to the first enabled visible option.',
             },
             {
               name: 'navigateLast',
               type: <code>{'() => void'}</code>,
-              description: 'Requests and scrolls a new highlight.',
+              description: 'Highlights and scrolls to the last enabled visible option.',
             },
             {
               name: 'navigateNext',
               type: <code>{'() => void'}</code>,
-              description: 'Requests and scrolls a new highlight.',
+              description: 'Highlights the next enabled visible option, wrapping at the end.',
             },
             {
               name: 'navigatePrevious',
               type: <code>{'() => void'}</code>,
-              description: 'Requests and scrolls a new highlight.',
+              description:
+                'Highlights the previous enabled visible option. Stops at the first, or starts at the last when none is highlighted.',
             },
             {
               name: 'scrollActiveOptionIntoView',
@@ -477,7 +478,8 @@ export default function ListboxPage(handle: Handle<PageProps>) {
             {
               name: 'highlight',
               type: <code>{'(value: ListboxValue) => void'}</code>,
-              description: 'Highlight request.',
+              description:
+                'Requests a highlight without checking availability or scrolling. Null clears it.',
             },
             {
               name: 'highlightSearchMatch',

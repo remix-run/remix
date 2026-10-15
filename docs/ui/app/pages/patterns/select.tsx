@@ -89,8 +89,8 @@ export default function SelectPage(handle: Handle<PageProps>) {
         <p>
           <code>defaultValue</code> sets the initial selected option. <code>defaultLabel</code> sets
           the initial trigger text independently. Read <code>displayedLabel</code> from{' '}
-          <code>Context</code> to follow committed labels. Select currently has no controlled{' '}
-          <code>value</code> prop or value-change callback.
+          <code>Context</code> to follow committed labels. Select manages selection internally.
+          Later changes to <code>defaultValue</code> do not reset selection.
         </p>
         <CodeBlock html={initialCode} />
       </Section>
@@ -115,7 +115,8 @@ export default function SelectPage(handle: Handle<PageProps>) {
         <p>
           <code>onSelectChange()</code> listens on the trigger or an ancestor. It receives the
           committed <code>value</code>, <code>label</code> and <code>optionId</code> after the popup
-          closes and its label settles. Selecting the same value again does not dispatch a change.
+          closes and its label settles. Closed-trigger typeahead dispatches after selection updates,
+          without the closing sequence. Selecting the same value again does not dispatch a change.
         </p>
         <CodeBlock html={eventsCode} />
       </Section>
@@ -126,9 +127,10 @@ export default function SelectPage(handle: Handle<PageProps>) {
         </p>
         <p>
           The trigger keeps its previous label through the flash and close transition.{' '}
-          <code>labelSwapDelayMs</code> adds a delay after closure, defaulting to 75 ms. The
-          displayed label then changes and the change event fires. Selecting through typeahead on a
-          closed trigger skips this sequence.
+          <code>labelSwapDelayMs</code> adds a delay after the surface’s close transition,
+          defaulting to 75 ms. Set it to zero to update the label as soon as that transition
+          finishes. The displayed label then changes and the change event fires. Selecting through
+          typeahead on a closed trigger skips this sequence.
         </p>
       </Section>
       <Section id="disabled" title="Disabled state">
@@ -198,12 +200,75 @@ export default function SelectPage(handle: Handle<PageProps>) {
           ]}
         />
         <p>
-          Descendants can read <code>displayedLabel</code>, <code>value</code>, <code>isOpen</code>,{' '}
-          <code>isExpanded</code>, <code>disabled</code>, <code>name</code>, <code>listId</code>,{' '}
-          <code>activeId</code> and <code>selectedId</code> from the provider context.{' '}
-          <code>open()</code> and <code>close()</code> request popup changes. There is no exported
-          context-value type.
+          Read these members with <code>handle.context.get(select.Context)</code> in a descendant.
         </p>
+        <ApiTable
+          id="context-state"
+          label="Provided member"
+          entries={[
+            {
+              name: 'value',
+              type: <code>string | null</code>,
+              description:
+                'Selected value. Updates at the start of selection feedback, before the displayed label and change event.',
+            },
+            {
+              name: 'displayedLabel',
+              type: <code>string</code>,
+              description:
+                'Trigger text. Retains the previous label until the close transition and label delay finish.',
+            },
+            {
+              name: 'isOpen',
+              type: <code>boolean</code>,
+              description:
+                'Whether the surface is logically open. False during its close transition.',
+            },
+            {
+              name: 'isExpanded',
+              type: <code>boolean</code>,
+              description:
+                'True while open or selection is settling, including the close transition and label delay. Drives the trigger’s aria-expanded.',
+            },
+            {
+              name: 'activeId',
+              type: <code>string | undefined</code>,
+              description: 'Highlighted option ID.',
+            },
+            {
+              name: 'selectedId',
+              type: <code>string | undefined</code>,
+              description: 'Selected option ID, resolved after mounting for an initial value.',
+            },
+            {
+              name: 'listId',
+              type: <code>string</code>,
+              description: 'Generated list ID.',
+            },
+            {
+              name: 'disabled',
+              type: <code>boolean</code>,
+              description: 'Provider disabled state.',
+            },
+            {
+              name: 'name',
+              type: <code>string | undefined</code>,
+              description: 'Form field name.',
+            },
+            {
+              name: 'open',
+              type: <code>{'() => void'}</code>,
+              description:
+                'Opens from the selected value. Ignored when disabled, already open or selection is settling.',
+            },
+            {
+              name: 'close',
+              type: <code>{'() => void'}</code>,
+              description:
+                'Closes an open surface without changing selection. Ignored while selection is settling.',
+            },
+          ]}
+        />
         <h3 id="trigger-reference">trigger()</h3>
         <ApiTable
           id="trigger-attributes"
@@ -267,7 +332,11 @@ export default function SelectPage(handle: Handle<PageProps>) {
         <h3 id="option-reference">option(options)</h3>
         <p>
           Uses the Listbox option contract. <code>label</code> and <code>value</code> are required.{' '}
-          <code>disabled</code> and <code>textValue</code> are optional.
+          <code>disabled</code> and <code>textValue</code> are optional. Typeahead uses{' '}
+          case-insensitive prefix matching against <code>textValue</code> instead of the label when
+          supplied. See the{' '}
+          <a href="/patterns/listbox/#option-reference">Listbox option reference</a>. Options with
+          the native <code>hidden</code> attribute are skipped.
         </p>
         <ApiTable
           id="option-attributes"
@@ -317,7 +386,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
         <p>
           Listens for <code>rmx:select-change</code>. Receives the event and an abort signal.
           Capture defaults to false. Events bubble from the trigger, or from the surface when no
-          trigger is registered.
+          trigger is registered. They are not cancelable.
         </p>
         <h3 id="change-event-reference">SelectChangeEvent</h3>
         <ApiTable
@@ -341,6 +410,9 @@ export default function SelectPage(handle: Handle<PageProps>) {
             },
           ]}
         />
+        <p>
+          Construct with <code>{'new SelectChangeEvent({ value, label, optionId })'}</code>.
+        </p>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
           id="types-types"
