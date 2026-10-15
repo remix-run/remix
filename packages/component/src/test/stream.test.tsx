@@ -257,10 +257,13 @@ describe('stream', () => {
     })
 
     it('renders sparse arrays without content for empty slots', async () => {
+      let nested: RemixNode[] = [<span>Second</span>]
+      nested[2] = 'Third'
+
       let children: RemixNode[] = []
       children.length = 5
       children[1] = 'First'
-      children[3] = [<span>Second</span>, , 'Third']
+      children[3] = nested
 
       let html = await drain(renderToStream(children))
       expect(html).toBe('First<span>Second</span>Third')
