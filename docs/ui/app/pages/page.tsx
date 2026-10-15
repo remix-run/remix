@@ -2,14 +2,21 @@ import { unsafeHTML } from 'remix/component'
 import type { Handle, RemixNode } from 'remix/component'
 import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
 import type { PageMeta, UiPage } from '../data/pages.ts'
+import { categories } from '../data/categories.ts'
 import { UiDocument } from '../ui/document.tsx'
 import { Example } from './example.tsx'
+import { routes } from '../routes.ts'
 
 export function PageLayout(
   handle: Handle<{ page: PageMeta; pages: UiPage[]; children: RemixNode }>,
 ) {
   return () => {
     let { page, pages, children } = handle.props
+    let index = pages.findIndex(
+      (entry) => entry.category === page.category && entry.slug === page.slug,
+    )
+    let previous = index > 0 ? pages[index - 1] : undefined
+    let next = index >= 0 ? pages[index + 1] : undefined
     return (
       <UiDocument
         title={page.title}
@@ -19,7 +26,9 @@ export function PageLayout(
         headings={readPageHeadings(children)}
       >
         <header class="ui-page-header">
-          <p class="ui-eyebrow">{page.category === 'patterns' ? 'Patterns' : 'Animation'}</p>
+          <p class="ui-eyebrow">
+            {categories.find((category) => category.id === page.category)?.title}
+          </p>
           <h1 class="rmx-page-title">{page.title}</h1>
           <p class="ui-description">{page.description}</p>
         </header>
@@ -31,6 +40,34 @@ export function PageLayout(
             </a>
           </p>
         </aside>
+        {index >= 0 ? (
+          <nav class="ui-page-navigation" aria-label="Page navigation" data-pagefind-ignore>
+            <a
+              href={
+                previous
+                  ? routes.docs.page.href({ category: previous.category, slug: previous.slug })
+                  : routes.docs.index.href()
+              }
+              rel="prev"
+            >
+              <span class="ui-page-navigation-direction">
+                <span aria-hidden="true">← </span>Previous
+              </span>
+              <span>{previous?.title ?? 'Getting Started'}</span>
+            </a>
+            {next ? (
+              <a
+                href={routes.docs.page.href({ category: next.category, slug: next.slug })}
+                rel="next"
+              >
+                <span class="ui-page-navigation-direction">
+                  Next<span aria-hidden="true"> →</span>
+                </span>
+                <span>{next.title}</span>
+              </a>
+            ) : null}
+          </nav>
+        ) : null}
       </UiDocument>
     )
   }

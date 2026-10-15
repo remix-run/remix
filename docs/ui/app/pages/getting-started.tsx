@@ -1,12 +1,14 @@
 import { highlightSource } from '../data/examples.tsx'
 import { pages } from '../data/pages.ts'
+import { categories } from '../data/categories.ts'
 import { routes } from '../routes.ts'
 import { UiDocument } from '../ui/document.tsx'
 import { CodeBlock, readPageHeadings, Section } from './page.tsx'
 
-const previews = pages.flatMap((page) =>
-  page.preview ? [{ page, Preview: page.preview.Preview }] : [],
-)
+const previews = categories.flatMap((category) => {
+  let page = pages.find((page) => page.category === category.id)
+  return page ? [{ category, page, Preview: page.preview?.Preview }] : []
+})
 
 const installCode = await highlightSource('npm i remix @remix-run/ui', 'sh')
 const configCode = await highlightSource(
@@ -27,44 +29,36 @@ export default function GettingStarted() {
       <>
         <header class="ui-page-header ui-landing-header">
           <p class="ui-eyebrow">Remix UI</p>
-          <h1 class="rmx-page-title">
-            Your interface.
-            <br />
-            Your styles.
-          </h1>
+          <h1 class="rmx-page-title">Unstyled, accessible UI patterns and animation for Remix</h1>
           <p class="ui-description">
-            Accessible UI patterns and animation utilities for Remix. Bring your own markup and
-            styles.
+            Compose accessible behavior directly onto your own elements with Remix's mixins feature,
+            without the need for extra wrapper components. Keep semantic markup explicit and provide
+            your own styles and motion.
           </p>
-          <div class="ui-landing-actions">
-            <a class="ui-primary-link" href="#installation">
-              Get started
-            </a>
-            <a href="#explore">
-              Explore the examples <span aria-hidden="true">↓</span>
-            </a>
-          </div>
         </header>
         <aside class="ui-notice" aria-label="Stability">
-          <strong>Currently unstable</strong>
+          <StabilityIcon />
           <p>
-            <code>@remix-run/ui</code> is versioned independently from Remix. APIs may change
-            between releases. Pin the version you use and review release notes before upgrading.
+            <code>@remix-run/ui</code> is currently unstable and versioned in the v0.x range
+            independently from Remix. APIs may change between minor releases. Pin the version you
+            use and review release notes before upgrading.
           </p>
         </aside>
         <Section id="installation" title="Installation">
-          <p>Install Remix and the separate UI package.</p>
+          <p>
+            Install Remix and <code>@remix-run/ui</code>.
+          </p>
           <CodeBlock html={installCode} />
           <p>
-            UI is currently available through <code>@remix-run/ui/*</code> imports. It is not yet
-            included in the <code>remix</code> package.
+            Remix UI is currently available through <code>@remix-run/ui/*</code> imports. It is not
+            yet included in the <code>remix</code> package.
           </p>
         </Section>
         <Section id="using-ui" title="Using the library">
           <p>
-            Add interaction and accessibility behavior to your own elements. Apply styles with the{' '}
-            <code>css()</code> mixin, and compose styles and behaviors with the <code>mix</code>{' '}
-            prop.
+            The <code>mix</code> prop applies behavior and styles to an element. Combine mixins in
+            an array, use <code>css()</code> for styling, and wrap related elements in providers to
+            share state.
           </p>
           <p>
             Remix UI is designed for the Remix component runtime. In a TypeScript project, configure
@@ -88,21 +82,20 @@ export default function GettingStarted() {
             Explore patterns such as accordions, menus and tabs, or browse the animation utilities.
           </p>
           <div class="ui-preview-grid">
-            {previews.map(({ page, Preview }) => (
-              <section key={page.slug} class="ui-preview-card">
-                <div class="ui-preview-card-demo" data-pagefind-ignore aria-hidden="true" inert>
-                  <Preview />
-                </div>
+            {previews.map(({ category, page, Preview }) => (
+              <section key={category.id} class="ui-preview-card">
+                {Preview ? (
+                  <div class="ui-preview-card-demo" data-pagefind-ignore aria-hidden="true" inert>
+                    <Preview />
+                  </div>
+                ) : null}
                 <div class="ui-preview-card-content">
-                  <p class="ui-eyebrow">
-                    {page.category === 'patterns' ? 'Patterns' : 'Animation'}
-                  </p>
                   <h3>
                     <a href={routes.docs.page.href({ category: page.category, slug: page.slug })}>
-                      {page.title} <span aria-hidden="true">→</span>
+                      {category.title} <span aria-hidden="true">→</span>
                     </a>
                   </h3>
-                  <p>{page.description}</p>
+                  <p>{category.description}</p>
                 </div>
               </section>
             ))}
@@ -121,4 +114,14 @@ export default function GettingStarted() {
       </UiDocument>
     )
   }
+}
+
+function StabilityIcon() {
+  return () => (
+    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" />
+      <path d="M12 7.5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="12" cy="16" r="1" fill="currentColor" />
+    </svg>
+  )
 }

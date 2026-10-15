@@ -22,6 +22,8 @@ Prerender writes the documentation pages, example modules, shared assets and Pag
 
 Pages are normal Remix components in `app/pages/patterns/` and `app/pages/animation/`. Each exports a small `meta` object with its title, category, slug, description and package import path. Add the component and its metadata to [the page list](https://github.com/remix-run/remix/blob/main/docs/ui/app/data/pages.ts) to include it in routing, navigation and prerendering.
 
+Pages follow the category order in `app/data/categories.ts`, then alphabetical title order within each category. The sidebar, landing card destinations and previous and next links all follow this list. Page navigation continues from Patterns into Animation.
+
 Write the body as JSX inside `PageLayout`. Shared helpers live beside the page folders in `app/pages/page.tsx`, `app/pages/example.tsx` and `app/pages/reference-table.tsx`. Place prose, code blocks and examples where readers should see them:
 
 ```tsx
@@ -60,13 +62,13 @@ const anatomyCode = await highlightSource(`
 
 `highlightSource` removes shared indentation and outer whitespace, then formats supported code snippets with the repository's Oxfmt rules before highlighting. If formatting fails, it logs a warning and displays the original snippet. Shell commands and other unsupported languages retain their source formatting.
 
-Examples live in `app/examples/**/*.example.tsx`. Each default exports a normal Remix component. Keep each example self-contained, including its styles, so readers can copy the whole file. The site reads the file for highlighted source and hydrates its default export with `clientEntry`; no source macros, generated copies or import rewriting are involved. These files belong to the site and import the UI package through its public exports.
+Examples live in `app/examples/**/*.example.tsx`. Each default exports a normal Remix component. Keep each example self-contained, including its styles, so readers can copy the whole file. The site reads the file for highlighted source and hydrates its default export with `clientEntry`; no source macros, generated copies or import rewriting are involved. These files belong to the site and import Remix UI through its public exports.
 
 Page components and their helpers stay on the server. Only example modules and the docs shell are sent to the browser. Export a loaded example as `preview` and include it in the page list to show it on Getting Started. Landing previews are decorative: server-rendered without hydration, inert and hidden from assistive technology.
 
 ## Testing live examples
 
-Each `*.example.tsx` has a matching `*.example.test.browser.tsx` beside it. Import and render the actual example with `mount` from `app/examples/test-helpers.ts`. Test the behavior the example teaches, including its visible state and relevant keyboard, focus or form behavior. Keep exhaustive primitive coverage in the UI package.
+Each `*.example.tsx` has a matching `*.example.test.browser.tsx` beside it. Import and render the actual example with `mount` from `app/examples/test-helpers.ts`. Test the behavior the example teaches, including its visible state and relevant keyboard, focus or form behavior. Keep exhaustive primitive coverage in the Remix UI package.
 
 These are interaction smoke tests, not exhaustive primitive or visual regression tests. For each example, identify a plausible broken behavior its test must catch. Temporarily break that wiring when adding or substantially changing a test, verify that it fails for the expected reason, and restore the source. A companion filename alone does not prove meaningful coverage.
 

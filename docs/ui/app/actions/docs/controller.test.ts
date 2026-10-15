@@ -2,6 +2,7 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import { router } from '../../router.ts'
 import { pages } from '../../data/pages.ts'
+import { routes } from '../../routes.ts'
 
 describe('UI docs', () => {
   it('introduces the standalone package and links to both sections', async () => {
@@ -10,11 +11,14 @@ describe('UI docs', () => {
     assert.equal(response.status, 200)
     assert.match(html, /Accessible UI patterns and animation utilities/)
     assert.match(html, /<h2>Patterns<\/h2>/)
-    assert.match(html, /Currently unstable/)
+    assert.match(html, /is currently unstable and versioned in the v0\.x range/)
     assert.match(html, /npm/)
     assert.match(html, /@remix-run\/ui/)
     assert.match(html, /href="\/patterns\/accordion\/"/)
     assert.match(html, /href="\/animation\/spring\/"/)
+    let cards = html.slice(html.indexOf('<section id="explore"'))
+    assert.match(cards, /href="\/patterns\/accordion\/">Patterns /)
+    assert.match(cards, /href="\/animation\/entrance-exit\/">Animation /)
     assert.match(html, /data-code-block-copy/)
     assert.match(html, /<section id="installation"[^>]*><h2>Installation<\/h2>/)
     assert.match(html, /<section id="using-ui"[^>]*><h2>Using the library<\/h2>/)
@@ -33,7 +37,33 @@ describe('UI docs', () => {
       previews?.every((tag) => tag.includes('aria-hidden="true"') && /\binert(?:[ =>])/.test(tag)),
     )
     assert.doesNotMatch(html, /basic\.example[^"<]*\.tsx/)
-    assert.doesNotMatch(html, /billing\.example[^"<]*\.tsx/)
+    assert.doesNotMatch(html, /presence\.example[^"<]*\.tsx/)
+  })
+
+  it('links through every page in sidebar order with matching previous links', async () => {
+    let href = '/patterns/accordion/'
+    let previousHref = '/'
+    let visited: string[] = []
+    while (href) {
+      assert.ok(!visited.includes(href), `Page navigation repeats ${href}`)
+      visited.push(href)
+      let response = await router.fetch(new Request(`http://localhost${href}`))
+      assert.equal(response.status, 200)
+      let html = await response.text()
+      let navigation = html.match(
+        /<nav[^>]*aria-label="Page navigation"[^>]*>([\s\S]*?)<\/nav>/,
+      )?.[1]
+      assert.ok(navigation, `Missing page navigation on ${href}`)
+      assert.equal(navigation.match(/href="([^"]+)" rel="prev"/)?.[1], previousHref)
+      previousHref = href
+      href = navigation.match(/href="([^"]+)" rel="next"/)?.[1] ?? ''
+    }
+    assert.deepEqual(
+      visited,
+      pages.map((page) => routes.docs.page.href({ category: page.category, slug: page.slug })),
+    )
+    assert.equal(visited.at(-1), '/animation/tween/')
+    assert.equal(visited[visited.indexOf('/patterns/toggle/') + 1], '/animation/entrance-exit/')
   })
 
   it('renders live examples and sections on the pattern page', async () => {

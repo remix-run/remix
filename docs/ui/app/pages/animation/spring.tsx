@@ -44,8 +44,6 @@ const mixinsCode = await highlightSource(`
   ]}>Saved</div>
 `)
 
-export const preview = billing
-
 export default function SpringPage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>

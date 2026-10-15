@@ -13,6 +13,7 @@ The docs also help maintainers evaluate an evolving library. Preserve observable
 
 - Keep TSX documentation pages under `docs/ui/app/pages/` and runnable `.example.tsx` modules under `docs/ui/app/examples/`, grouped by feature. Use the existing page helpers, explicit source loading and normal Remix hydration rather than bundler-specific snippet machinery. Keep documentation authoring files out of published package output.
 - Treat UI as a standalone, currently unstable library. Put installation, package status and shared styling or composition concepts in Getting Started. Organize existing features under Patterns and Animation. Do not introduce a speculative system layer.
+- Name the library Remix UI rather than using UI as a standalone product name in prose. Once identified within a passage, use the library, the package or a pronoun where clear instead of repeating Remix UI. Generic terms such as UI patterns and the shared UI navigation label are still appropriate.
 - Preserve shared docs branding, navigation positions and theme behavior. A UI-focused preview layout can differ without redesigning the rest of the docs site.
 
 ## Choose the interaction first

@@ -15,6 +15,8 @@ export const meta = {
 
 const presence = await loadExample('animation/entrance-exit/presence')
 
+export const preview = presence
+
 const anatomyCode = await highlightSource(`
   import { animateEntrance, animateExit } from '@remix-run/ui/animation'
 

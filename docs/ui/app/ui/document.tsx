@@ -9,6 +9,7 @@ import { DocsShell, DocsSecondaryNavigation } from 'remix-docs-shared/ui/docs-sh
 import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
 import type { PageMeta, UiPage } from '../data/pages.ts'
+import { categories } from '../data/categories.ts'
 
 import { scriptEntry, stylesheetHref, stylesheetPreloads } from '../assets.ts'
 import { routes } from '../routes.ts'
@@ -68,9 +69,9 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
               />
             }
             navigation={<Sidebar pages={pages} currentPage={currentPage} />}
-            navigationLabel="UI documentation"
+            navigationLabel="Remix UI documentation"
             mobileNavigationLabel={currentPage?.title ?? 'Getting Started'}
-            navigationName="UI navigation"
+            navigationName="Remix UI navigation"
             hasSecondaryNavigation={headings.length > 0}
             footer={<DocsFooter />}
           >
@@ -104,17 +105,17 @@ function Sidebar(handle: Handle<{ pages: UiPage[]; currentPage?: PageMeta }>) {
       >
         Getting Started
       </a>
-      {(['patterns', 'animation'] as const).map((category) => (
-        <section key={category} class="ui-nav-group">
-          <h2>{category === 'patterns' ? 'Patterns' : 'Animation'}</h2>
+      {categories.map((category) => (
+        <section key={category.id} class="ui-nav-group">
+          <h2>{category.title}</h2>
           <ul>
             {handle.props.pages
-              .filter((page) => page.category === category)
+              .filter((page) => page.category === category.id)
               .map((page) => (
                 <li key={page.slug}>
                   <a
                     class="ui-nav-link"
-                    href={routes.docs.page.href({ category, slug: page.slug })}
+                    href={routes.docs.page.href({ category: category.id, slug: page.slug })}
                     aria-current={
                       handle.props.currentPage?.category === page.category &&
                       handle.props.currentPage?.slug === page.slug

@@ -5,23 +5,23 @@ import { pages } from './pages.ts'
 import { loadExample } from './examples.tsx'
 
 describe('UI docs pages', () => {
-  it('lists each page once in title order', () => {
+  it('lists each page once in sidebar order', () => {
     assert.deepEqual(
       pages.map((page) => `${page.category}/${page.slug}`),
       [
         'patterns/accordion',
         'patterns/anchor',
         'patterns/combobox',
-        'animation/entrance-exit',
-        'animation/layout',
         'patterns/listbox',
         'patterns/menu',
         'patterns/popover',
-        'animation/reduced-motion',
         'patterns/select',
-        'animation/spring',
         'patterns/tabs',
         'patterns/toggle',
+        'animation/entrance-exit',
+        'animation/layout',
+        'animation/reduced-motion',
+        'animation/spring',
         'animation/tween',
       ],
     )
