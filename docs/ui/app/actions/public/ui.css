@@ -231,13 +231,6 @@
 .ui-demo-source [data-code-block] {
   margin: 0;
 }
-.ui-demo-source pre {
-  overflow: visible;
-}
-.ui-demo-source .line {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
 .ui-preview-grid {
   display: grid;
   gap: 20px;
@@ -515,12 +508,7 @@
 }
 .ui-api-details td pre {
   padding: 16px;
-  white-space: pre-wrap;
-  overflow: visible;
-}
-.ui-api-entry-content .line {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  white-space: pre;
 }
 @media (width < 600px) {
   .ui-api-table-header {
