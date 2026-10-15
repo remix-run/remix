@@ -221,6 +221,7 @@ export default function ListboxPage(handle: Handle<PageProps>) {
           and optionally a <code>ListboxRef</code>.
         </p>
         <ApiTable
+          id="context-options"
           label="Option"
           defaults
           entries={[
@@ -293,6 +294,7 @@ export default function ListboxPage(handle: Handle<PageProps>) {
           <code>aria-activedescendant</code> or a label.
         </p>
         <ApiTable
+          id="list-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -310,6 +312,7 @@ export default function ListboxPage(handle: Handle<PageProps>) {
         />
         <h3 id="option-reference">option(options)</h3>
         <ApiTable
+          id="option-options"
           label="Option"
           defaults
           entries={[
@@ -340,6 +343,7 @@ export default function ListboxPage(handle: Handle<PageProps>) {
           ]}
         />
         <ApiTable
+          id="option-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -364,6 +368,7 @@ export default function ListboxPage(handle: Handle<PageProps>) {
         />
         <h3 id="ref-reference">ListboxRef</h3>
         <ApiTable
+          id="ref-members"
           label="Member"
           entries={[
             {
@@ -442,6 +447,7 @@ export default function ListboxPage(handle: Handle<PageProps>) {
         />
         <h3 id="provided-context-reference">Provided context</h3>
         <ApiTable
+          id="provided-context-members"
           label="Member"
           entries={[
             {
@@ -488,6 +494,7 @@ export default function ListboxPage(handle: Handle<PageProps>) {
         />
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
+          id="types-types"
           detailsLabel="Definition"
           entries={[
             {

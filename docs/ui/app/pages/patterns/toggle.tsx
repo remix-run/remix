@@ -144,6 +144,7 @@ export default function TogglePage(handle: Handle<PageProps>) {
           read-only state can be set by either the options or the host.
         </p>
         <ApiTable
+          id="toggle-options"
           label="Option"
           defaults
           entries={[
@@ -209,6 +210,7 @@ export default function TogglePage(handle: Handle<PageProps>) {
           ]}
         />
         <ApiTable
+          id="toggle-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -241,6 +243,7 @@ export default function TogglePage(handle: Handle<PageProps>) {
         </p>
         <h3 id="change-event-reference">ToggleChangeEvent</h3>
         <ApiTable
+          id="change-event-properties"
           label="Property"
           entries={[
             {
@@ -252,6 +255,7 @@ export default function TogglePage(handle: Handle<PageProps>) {
         />
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
+          id="types-types"
           detailsLabel="Definition"
           entries={[
             {

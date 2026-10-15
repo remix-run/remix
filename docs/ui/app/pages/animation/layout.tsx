@@ -81,6 +81,7 @@ export default function LayoutPage(handle: Handle<PageProps>) {
           visual position. An unchanged target keeps its current animation.
         </p>
         <ApiTable
+          id="layout-config"
           label="Configuration"
           typeLabel="Value"
           entries={[
@@ -102,6 +103,7 @@ export default function LayoutPage(handle: Handle<PageProps>) {
           ]}
         />
         <ApiTable
+          id="layout-options"
           label="Option"
           defaults
           entries={[

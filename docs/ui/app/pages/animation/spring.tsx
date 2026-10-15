@@ -139,6 +139,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
           by CSS, the browser or your code.
         </p>
         <ApiTable
+          id="spring-parameters"
           label="Argument"
           defaults
           entries={[
@@ -162,6 +163,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
         />
         <h4>SpringOptions</h4>
         <ApiTable
+          id="springoptions-options"
           label="Option"
           defaults
           entries={[
@@ -206,6 +208,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
         </p>
         <h4>SpringIterator</h4>
         <ApiTable
+          id="springiterator-members"
           label="Member"
           entries={[
             {
@@ -246,6 +249,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
           browser support for <code>linear()</code> easing.
         </p>
         <ApiTable
+          id="transition-parameters"
           label="Argument"
           defaults
           entries={[
@@ -275,6 +279,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
         <h3 id="presets-api-reference">spring.presets</h3>
         <p>Exposes the parameters for each named preset.</p>
         <ApiTable
+          id="presets-api-presets"
           label="Preset"
           typeLabel="Configuration"
           entries={[
@@ -297,6 +302,7 @@ export default function SpringPage(handle: Handle<PageProps>) {
         />
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
+          id="types-types"
           detailsLabel="Definition"
           entries={[
             {

@@ -51,4 +51,40 @@ describe('UI page table of contents', () => {
       /Duplicate docs ID: state/,
     )
   })
+
+  it('includes API parts without listing individual fields or full argument lists', () => {
+    let headings = readPageHeadings(
+      <Section id="api-reference" title="API reference">
+        <h3 id="context-reference">Context</h3>
+        <h4>Provided state</h4>
+        <h3 id="trigger-reference">
+          <code>trigger(options?)</code>
+        </h3>
+        <h3 id="events-reference">onChange(handler, captureBoolean?)</h3>
+        <h3>Not linked</h3>
+        <h3 id="types-reference">Types &amp; definitions</h3>
+      </Section>,
+    )
+    assert.deepEqual(headings, [
+      { id: 'api-reference', title: 'API reference', titleHtml: 'API reference', depth: 2 },
+      { id: 'context-reference', title: 'Context', titleHtml: 'Context', depth: 3 },
+      { id: 'trigger-reference', title: 'trigger()', titleHtml: 'trigger()', depth: 3 },
+      { id: 'events-reference', title: 'onChange()', titleHtml: 'onChange()', depth: 3 },
+      {
+        id: 'types-reference',
+        title: 'Types & definitions',
+        titleHtml: 'Types &amp; definitions',
+        depth: 3,
+      },
+    ])
+    assert.throws(
+      () =>
+        readPageHeadings(
+          <Section id="context" title="Context">
+            <h3 id="context">Context</h3>
+          </Section>,
+        ),
+      /Duplicate docs ID: context/,
+    )
+  })
 })

@@ -96,6 +96,7 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
           Returns an element mixin.
         </p>
         <ApiTable
+          id="entrance-config"
           label="Configuration"
           typeLabel="Value"
           entries={[
@@ -127,6 +128,7 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
           ]}
         />
         <ApiTable
+          id="entrance-options"
           label="Option"
           defaults
           entries={[
@@ -172,6 +174,7 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
           ]}
         />
         <ApiTable
+          id="entrance-entrance-options"
           label="Entrance option"
           defaults
           entries={[
@@ -189,6 +192,7 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
           the element in the DOM until playback finishes. Returns an element mixin.
         </p>
         <ApiTable
+          id="exit-config"
           label="Configuration"
           typeLabel="Value"
           entries={[

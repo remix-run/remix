@@ -225,6 +225,24 @@ describe('UI docs', () => {
       assert.equal(response.status, 200)
       let html = await response.text()
       let reference = html.slice(html.indexOf('<section id="api-reference"'))
+      let ids = [...reference.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1])
+      assert.deepEqual(
+        ids.filter((id, index) => ids.indexOf(id) !== index),
+        [],
+        `Duplicate IDs on ${page.slug}`,
+      )
+      let entryIds = [...reference.matchAll(/id="([^"]+)" class="ui-api-entry-content"/g)].map(
+        (match) => match[1],
+      )
+      assert.ok(entryIds.length > 0, `Missing entry links on ${page.slug}`)
+      for (let id of entryIds) {
+        assert.ok(reference.includes(`href="#${id}"`), `Missing permalink for ${id}`)
+      }
+      let outline = html.match(/<ol[^>]*class="docs-toc__list[^>]*>([\s\S]*?)<\/ol>/)?.[1]
+      assert.ok(outline, `Missing page outline on ${page.slug}`)
+      for (let [, id] of reference.matchAll(/<h3 id="([^"]+)"/g)) {
+        assert.ok(outline.includes(`href="#${id}"`), `Missing outline link to ${id}`)
+      }
       assert.match(reference, /<details class="ui-api-entry"><summary>/, page.slug)
       assert.match(reference, /<th scope="row">Description<\/th>/, page.slug)
       assert.doesNotMatch(reference, /class="ui-reference-table"/, page.slug)

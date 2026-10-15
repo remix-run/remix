@@ -178,6 +178,7 @@ export default function AnchorPage(handle: Handle<PageProps>) {
       <Section id="api-reference" title="API reference">
         <h3 id="anchor-reference">anchor(floating, target, options?)</h3>
         <ApiTable
+          id="anchor-parameters"
           label="Parameter"
           entries={[
             {
@@ -207,6 +208,7 @@ export default function AnchorPage(handle: Handle<PageProps>) {
         </p>
         <h3 id="options-reference">AnchorOptions</h3>
         <ApiTable
+          id="options-options"
           label="Option"
           defaults
           entries={[
@@ -255,6 +257,7 @@ export default function AnchorPage(handle: Handle<PageProps>) {
         />
         <h3 id="point-reference">AnchorPoint</h3>
         <ApiTable
+          id="point-properties"
           label="Property"
           defaults
           entries={[
@@ -274,6 +277,7 @@ export default function AnchorPage(handle: Handle<PageProps>) {
         />
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
+          id="types-types"
           detailsLabel="Definition"
           entries={[
             {

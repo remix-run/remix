@@ -130,6 +130,7 @@ export default function TweenPage(handle: Handle<PageProps>) {
           Completion returns <code>to</code> with <code>done: true</code>.
         </p>
         <ApiTable
+          id="tween-options"
           label="Option"
           entries={[
             {
@@ -161,6 +162,7 @@ export default function TweenPage(handle: Handle<PageProps>) {
         <h3 id="easings-reference">easings</h3>
         <p>Built-in curves matching the corresponding CSS easing functions.</p>
         <ApiTable
+          id="easings-values"
           label="Name"
           typeLabel="Control points"
           entries={[
@@ -213,6 +215,7 @@ export default function TweenPage(handle: Handle<PageProps>) {
         />
         <h3 id="curve-reference">BezierCurve</h3>
         <ApiTable
+          id="curve-properties"
           label="Property"
           entries={[
             {
@@ -229,6 +232,7 @@ export default function TweenPage(handle: Handle<PageProps>) {
         />
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
+          id="types-types"
           detailsLabel="Definition"
           entries={[
             {

@@ -171,6 +171,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
           Coordinates named tabs and panels. Provides <code>TabsContextValue</code> to descendants.
         </p>
         <ApiTable
+          id="context-options"
           label="Option"
           defaults
           entries={[
@@ -204,6 +205,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
           ]}
         />
         <ApiTable
+          id="context-state"
           label="Provided member"
           entries={[
             {
@@ -262,6 +264,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
         <h3 id="root-reference">root()</h3>
         <p>Registers the element from which change events bubble.</p>
         <ApiTable
+          id="root-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -274,6 +277,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
         />
         <h3 id="list-reference">list()</h3>
         <ApiTable
+          id="list-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -287,6 +291,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
         />
         <h3 id="tab-reference">tab(options)</h3>
         <ApiTable
+          id="tab-options"
           label="Option"
           defaults
           entries={[
@@ -305,6 +310,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
           ]}
         />
         <ApiTable
+          id="tab-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -343,6 +349,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
         />
         <h3 id="panel-reference">panel(options)</h3>
         <ApiTable
+          id="panel-options"
           label="Option"
           entries={[
             {
@@ -354,6 +361,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
           ]}
         />
         <ApiTable
+          id="panel-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -382,6 +390,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
         </p>
         <h3 id="change-event-reference">TabsChangeEvent</h3>
         <ApiTable
+          id="change-event-properties"
           label="Property"
           entries={[
             {
@@ -398,6 +407,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
         />
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
+          id="types-types"
           detailsLabel="Definition"
           entries={[
             {

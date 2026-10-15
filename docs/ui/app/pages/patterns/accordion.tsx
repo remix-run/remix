@@ -179,6 +179,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           without adding an element. Single mode opens one panel at a time by default.
         </p>
         <ApiTable
+          id="context-props"
           label="Prop"
           defaults
           entries={[
@@ -277,6 +278,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           element.
         </p>
         <ApiTable
+          id="root-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -302,6 +304,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           element.
         </p>
         <ApiTable
+          id="item-context-props"
           label="Prop"
           defaults
           entries={[
@@ -337,6 +340,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           readonly properties reflect the current item state. Read them during render.
         </p>
         <ApiTable
+          id="item-state-properties"
           label="Property"
           entries={[
             {
@@ -379,6 +383,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           attributes for selectors in <code>css()</code>.
         </p>
         <ApiTable
+          id="item-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -405,6 +410,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           <a href="#accessibility">keyboard navigation</a>, and connects the button to its panel.
         </p>
         <ApiTable
+          id="trigger-options"
           label="Option"
           defaults
           entries={[
@@ -425,6 +431,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
         </p>
         <h4>Element attributes</h4>
         <ApiTable
+          id="element-attributes-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -477,6 +484,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           Use state selectors in <code>css()</code> to hide or animate the panel.
         </p>
         <ApiTable
+          id="content-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -516,6 +524,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
         <h3 id="change-listener-reference">onAccordionChange(handler, captureBoolean?)</h3>
         <p>Event mixin for the root or an ancestor.</p>
         <ApiTable
+          id="change-listener-parameters"
           label="Parameter"
           defaults
           entries={[
@@ -550,6 +559,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
           not cancelable. The following readonly properties are on the event itself.
         </p>
         <ApiTable
+          id="change-events-properties"
           label="Property"
           entries={[
             {
@@ -587,6 +597,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
         </p>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
+          id="types-types"
           detailsLabel="Definition"
           entries={[
             {

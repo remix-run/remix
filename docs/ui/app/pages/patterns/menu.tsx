@@ -189,6 +189,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
           open-state props.
         </p>
         <ApiTable
+          id="context-options"
           label="Option"
           defaults
           entries={[
@@ -212,6 +213,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
           focus the list.
         </p>
         <ApiTable
+          id="trigger-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -244,6 +246,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
           Creates a manual native popover. Root and submenu surfaces coordinate dismissal and focus.
         </p>
         <ApiTable
+          id="popover-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -266,6 +269,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
         />
         <h3 id="list-reference">list()</h3>
         <ApiTable
+          id="list-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -290,6 +294,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
         />
         <h3 id="item-reference">item(options)</h3>
         <ApiTable
+          id="item-options"
           label="Option"
           defaults
           entries={[
@@ -336,6 +341,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
           ]}
         />
         <ApiTable
+          id="item-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -378,6 +384,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
           placement with inner menu-item alignment.
         </p>
         <ApiTable
+          id="submenu-trigger-options"
           label="Option"
           defaults
           entries={[
@@ -407,6 +414,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
           ]}
         />
         <ApiTable
+          id="submenu-trigger-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -455,6 +463,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
           <code>item</code> contains <code>MenuSelectItem</code> metadata.
         </p>
         <ApiTable
+          id="select-event-properties"
           label="Item property"
           entries={[
             { name: 'id', type: <code>{'string'}</code>, description: 'Selected item ID.' },
@@ -483,6 +492,7 @@ export default function MenuPage(handle: Handle<PageProps>) {
         />
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
+          id="types-types"
           detailsLabel="Definition"
           entries={[
             {

@@ -1,4 +1,6 @@
 .ui-article {
+  --ui-anchor-offset: calc(var(--site-header-height) + 24px);
+
   max-width: none;
 }
 .ui-page-header {
@@ -47,7 +49,10 @@
 .ui-doc-section,
 .ui-example {
   margin-top: 48px;
-  scroll-margin-top: 140px;
+  scroll-margin-top: var(--ui-anchor-offset);
+}
+.ui-doc-section > h3[id] {
+  scroll-margin-top: var(--ui-anchor-offset);
 }
 .ui-example-hero {
   margin-top: 0;
@@ -452,7 +457,7 @@
 }
 .ui-api-entry-content {
   padding: 16px 20px 20px;
-  scroll-margin-top: 140px;
+  scroll-margin-top: calc(var(--ui-anchor-offset) + 56px);
   font-size: 14px;
   line-height: 1.65;
 }
@@ -464,6 +469,22 @@
 .ui-api-details td {
   padding: 10px 0;
   border: 0;
+}
+.ui-api-permalink {
+  display: inline-flex;
+  float: inline-end;
+  margin: -4px -4px 4px 12px;
+  padding: 4px;
+  border-radius: 4px;
+  color: var(--rmx-color-text-secondary);
+}
+.ui-api-permalink:hover {
+  background: var(--docs-nav-hover-background);
+  color: var(--rmx-color-text-primary);
+}
+.ui-api-permalink:focus-visible {
+  outline: 2px solid var(--rmx-color-focus-ring);
+  outline-offset: 2px;
 }
 .ui-api-details th:first-child {
   width: 104px;
@@ -537,10 +558,15 @@
   }
   .ui-api-entry-content {
     padding: 16px 16px 20px;
-    scroll-margin-top: 160px;
+    scroll-margin-top: calc(var(--ui-anchor-offset) + 88px);
   }
   .ui-api-details th:first-child {
     width: 84px;
     padding-right: 12px;
+  }
+}
+@media (width < 900px) {
+  .ui-article {
+    --ui-anchor-offset: 72px;
   }
 }

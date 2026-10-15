@@ -97,10 +97,17 @@ export function readPageHeadings(children: RemixNode): DocsHeadingLink[] {
     }
     if (!isRecord(node) || !isRecord(node.props)) return
     let { id, title, children } = node.props
-    if (node.type === Section || node.type === Example) {
+    let isApiHeading = node.type === 'h3' && typeof id === 'string'
+    if (node.type === Section || node.type === Example || isApiHeading) {
       if (typeof id !== 'string') throw new Error('A docs section or example needs an ID')
       if (ids.has(id)) throw new Error(`Duplicate docs ID: ${id}`)
       ids.add(id)
+      if (isApiHeading) {
+        title = readHeadingText(children)
+          .trim()
+          .replace(/\s+/g, ' ')
+          .replace(/\(.*\)$/, '()')
+      }
       if (typeof title === 'string') {
         headings.push({
           id,
@@ -115,6 +122,13 @@ export function readPageHeadings(children: RemixNode): DocsHeadingLink[] {
 
   visit(children)
   return headings
+}
+
+function readHeadingText(node: unknown): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(readHeadingText).join('')
+  if (isRecord(node) && isRecord(node.props)) return readHeadingText(node.props.children)
+  return ''
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

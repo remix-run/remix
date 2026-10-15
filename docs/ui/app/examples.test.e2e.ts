@@ -219,4 +219,63 @@ describe('Live examples in the docs site', () => {
     }))
     assert.ok(definitionWidth.fullWidth <= definitionWidth.width + 1)
   })
+
+  it('navigates to API parts and shares entries below the sticky navigation', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    page.setDefaultTimeout(5000)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.route('**/*', (route) =>
+      route.request().resourceType() === 'script' ? route.abort() : route.continue(),
+    )
+    await page.goto('/patterns/listbox/')
+    let outline = page.locator('#docs-secondary-navigation')
+    await outline.getByRole('link', { name: 'ListboxRef', exact: true }).click()
+    let heading = await page.locator('#ref-reference').boundingBox()
+    let header = await page.getByRole('banner').boundingBox()
+    assert.ok(heading && header)
+    assert.ok(heading.y >= header.y + header.height + 16)
+    assert.ok(heading.y < 140)
+
+    let method = page.locator('.ui-api-entry').filter({
+      has: page.locator('summary code').getByText('matchSearchText', { exact: true }),
+    })
+    await method.locator('summary').click()
+    let permalink = method.getByRole('link', { name: 'Link to matchSearchText', exact: true })
+    assert.equal(await permalink.getAttribute('href'), '#ref-members-matchSearchText')
+    await permalink.click()
+    assert.equal(new URL(page.url()).hash, '#ref-members-matchSearchText')
+    await page.goto('/patterns/accordion/')
+    await page.goto('/patterns/listbox/#ref-members-matchSearchText')
+    let entry = page.locator('#ref-members-matchSearchText')
+    await entry.waitFor({ state: 'visible' })
+    assert.match(await entry.innerText(), /fromValue\?: ListboxValue/)
+    let summary = await method.locator('summary').boundingBox()
+    assert.ok(summary)
+    assert.ok(summary.y >= header.y + header.height + 16)
+
+    await page.unroute('**/*')
+    await page.reload()
+    await entry.waitFor({ state: 'visible' })
+    await page.setViewportSize({ width: 390, height: 720 })
+    await page.goto('/patterns/listbox/')
+    let toggle = page.getByRole('button', { name: 'On this page', exact: true })
+    await toggle.click()
+    await outline.getByRole('link', { name: 'option()', exact: true }).click()
+    assert.equal(await toggle.getAttribute('aria-expanded'), 'false')
+    heading = await page.locator('#option-reference').boundingBox()
+    let toolbar = await page.locator('#docs-mobile-navigation-bar').boundingBox()
+    assert.ok(heading && toolbar)
+    assert.ok(heading.y >= toolbar.y + toolbar.height + 16)
+    assert.ok(heading.y < 100)
+    await outline.locator('a[href="#option-reference"][aria-current="location"]').waitFor({
+      state: 'attached',
+    })
+
+    await page.goto('/patterns/listbox/#context-options-onSelectSettled')
+    let callback = page.locator('#context-options-onSelectSettled')
+    await callback.waitFor({ state: 'visible' })
+    summary = await callback.locator('..').locator('summary').boundingBox()
+    assert.ok(summary)
+    assert.ok(summary.y >= toolbar.y + toolbar.height + 16)
+  })
 })

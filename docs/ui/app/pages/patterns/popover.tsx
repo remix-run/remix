@@ -175,6 +175,7 @@ export default function PopoverPage(handle: Handle<PageProps>) {
           <code>children</code>.
         </p>
         <ApiTable
+          id="context-state"
           label="Provided member"
           entries={[
             {
@@ -201,6 +202,7 @@ export default function PopoverPage(handle: Handle<PageProps>) {
         </p>
         <h3 id="surface-reference">surface(options)</h3>
         <ApiTable
+          id="surface-options"
           label="Option"
           defaults
           entries={[
@@ -237,6 +239,7 @@ export default function PopoverPage(handle: Handle<PageProps>) {
           ]}
         />
         <ApiTable
+          id="surface-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -253,6 +256,7 @@ export default function PopoverPage(handle: Handle<PageProps>) {
         <p>Registers its host as the focus target when the surface closes.</p>
         <h3 id="hide-request-reference">PopoverHideRequest</h3>
         <ApiTable
+          id="hide-request-properties"
           label="Property"
           entries={[
             {
@@ -269,6 +273,7 @@ export default function PopoverPage(handle: Handle<PageProps>) {
         />
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
+          id="types-types"
           detailsLabel="Definition"
           entries={[
             {

@@ -151,6 +151,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
       <Section id="api-reference" title="API reference">
         <h3 id="context-reference">Context</h3>
         <ApiTable
+          id="context-options"
           label="Option"
           defaults
           entries={[
@@ -199,6 +200,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
         </p>
         <h3 id="trigger-reference">trigger()</h3>
         <ApiTable
+          id="trigger-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -238,6 +240,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
         </p>
         <h3 id="list-reference">list()</h3>
         <ApiTable
+          id="list-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -261,6 +264,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
           <code>disabled</code> and <code>textValue</code> are optional.
         </p>
         <ApiTable
+          id="option-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -285,6 +289,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
         />
         <h3 id="hidden-input-reference">hiddenInput()</h3>
         <ApiTable
+          id="hidden-input-attributes"
           label="Attribute"
           typeLabel="Value"
           entries={[
@@ -310,6 +315,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
         </p>
         <h3 id="change-event-reference">SelectChangeEvent</h3>
         <ApiTable
+          id="change-event-properties"
           label="Property"
           entries={[
             {
@@ -331,6 +337,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
         />
         <h3 id="types-reference">Exported types</h3>
         <ApiTable
+          id="types-types"
           detailsLabel="Definition"
           entries={[
             {
