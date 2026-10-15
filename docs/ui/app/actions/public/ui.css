@@ -22,10 +22,6 @@
   font-size: clamp(36px, 4vw, 52px);
   letter-spacing: -0.04em;
 }
-.ui-import {
-  display: inline-block;
-  font-size: 13px;
-}
 .ui-landing-actions {
   display: flex;
   flex-wrap: wrap;

@@ -22,7 +22,6 @@ export function PageLayout(
           <p class="ui-eyebrow">{page.category === 'behaviors' ? 'Behaviors' : 'Animation'}</p>
           <h1 class="rmx-page-title">{page.title}</h1>
           <p class="ui-description">{page.description}</p>
-          <code class="ui-import">{page.importPath}</code>
         </header>
         {children}
         <aside class="ui-reference-link">
