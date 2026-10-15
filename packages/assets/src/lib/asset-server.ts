@@ -429,6 +429,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     routes: resolvedOptions.routes,
   })
   let watcher: AssetServerWatcher | null = null
+  let scriptEntries = new Map<string, Promise<ScriptEntry>>()
   let chokidarWatcher: ChokidarWatcher | null = null
   let fileCompiler: FileCompiler | null = null
   let closed = false
@@ -568,6 +569,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   }
 
   async function handleWatchEvent(filePath: string, event: 'add' | 'change' | 'unlink') {
+    scriptEntries.clear()
     try {
       let normalizedFilePath = normalizeFilePath(filePath)
       accessPolicy.handleFileEvent(normalizedFilePath)
@@ -582,6 +584,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   async function handleBrowserHmrFileEvents(
     events: readonly BrowserHmrFileEvent[],
   ): Promise<readonly BrowserHmrEvent[]> {
+    if (events.length > 0) scriptEntries.clear()
     let browserHmrEvents: BrowserHmrEvent[] = []
 
     for (let event of events) {
@@ -847,13 +850,20 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       return scriptCompiler.getHref(filePath)
     },
     async getScriptEntry(filePath) {
-      let [href, preloads, importMap] = await Promise.all([
-        assetServer.getHref(filePath),
-        assetServer.getPreloads(filePath),
-        assetServer.getImportMap(filePath),
-      ])
+      let entry = scriptEntries.get(filePath)
+      if (!entry) {
+        entry = Promise.all([
+          assetServer.getHref(filePath),
+          assetServer.getPreloads(filePath),
+          assetServer.getImportMap(filePath),
+        ]).then(([href, preloads, importMap]) => ({ href, preloads, importMap }))
+        scriptEntries.set(filePath, entry)
+        void entry.catch(() => {
+          if (scriptEntries.get(filePath) === entry) scriptEntries.delete(filePath)
+        })
+      }
 
-      return { href, preloads, importMap }
+      return structuredClone(await entry)
     },
     async getPreloads(filePath) {
       let filePaths = Array.isArray(filePath) ? filePath : [filePath]
